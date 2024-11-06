@@ -19,4 +19,26 @@ export class TriangleComponent extends BaseUIComponent {
     draw(renderer: NVRenderer): void {
         renderer.drawTriangle(this.headPoint, this.baseMidPoint, this.baseLength, this.color)
     }
+
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties from BaseUIComponent
+            className: 'TriangleComponent', // Class name for identification
+            headPoint: Array.from(this.headPoint), // Convert Vec2 to array
+            baseMidPoint: Array.from(this.baseMidPoint), // Convert Vec2 to array
+            baseLength: this.baseLength, // Serialize base length
+            color: Array.from(this.color) // Convert Color to array
+        }
+    }
+
+    public static fromJSON(data: any): TriangleComponent {
+        const headPoint: Vec2 = data.headPoint || [0, 0]
+        const baseMidPoint: Vec2 = data.baseMidPoint || [0, 0]
+        const baseLength: number = data.baseLength || 0
+        const color: Color = data.color || [1, 1, 1, 1]
+
+        return new TriangleComponent(headPoint, baseMidPoint, baseLength, color)
+    }
+
+
 }

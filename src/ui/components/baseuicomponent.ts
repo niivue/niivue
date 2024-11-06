@@ -1,7 +1,7 @@
 import { IUIComponent } from '../interfaces.js'
 import { NVRenderer } from '../nvrenderer.js'
 import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
-
+import { v4 as uuidv4 } from '@lukeed/uuid'
 // Applying centralized animation management in BaseUIComponent
 import { AnimationManager, Animation } from '../animationmanager.js'
 import { getObjectProperty, isEqual, setObjectProperty } from '../uiutils.js'
@@ -13,6 +13,9 @@ export abstract class BaseUIComponent implements IUIComponent {
     horizontalAlignment: HorizontalAlignment = HorizontalAlignment.NONE
     isVisible: boolean = true
     zIndex: number = 0
+    id: string = uuidv4()
+    tags: string[] = []
+    className: string
     protected position: Vec2 = [0, 0]
     protected bounds: Vec4 = [0, 0, 0, 0]
     protected scale: number = 1
@@ -219,4 +222,36 @@ export abstract class BaseUIComponent implements IUIComponent {
     setHorizontalAlignment(value: HorizontalAlignment): void {
         this.horizontalAlignment = value
     }
+
+    toJSON(): object {
+        return {
+            id: this.id,
+            className: this.className, // Include class name here
+            alignmentPoint: this.alignmentPoint,
+            verticalAlignment: this.verticalAlignment,
+            horizontalAlignment: this.horizontalAlignment,
+            isVisible: this.isVisible,
+            zIndex: this.zIndex,
+            tags: this.tags,
+            position: this.position,
+            bounds: this.bounds,
+            scale: this.scale,
+            eventEffects: Array.from(this.eventEffects.entries()).map(([event, effects]) => ({
+                event,
+                effects: effects.map(effect => ({
+                    type: effect.type,
+                    targetObjectId: effect.targetObject?.id,
+                    property: effect.property,
+                    value: effect.type === 'setValue' ? effect.value : undefined,
+                    from: effect.type === 'animateValue' ? effect.from : undefined,
+                    to: effect.type === 'animateValue' ? effect.to : undefined,
+                    duration: effect.type === 'animateValue' ? effect.duration : undefined,
+                    isBounce: effect.type === 'animateValue' ? effect.isBounce : undefined,
+                    value1: effect.type === 'toggleValue' ? effect.value1 : undefined,
+                    value2: effect.type === 'toggleValue' ? effect.value2 : undefined
+                }))
+            }))
+        }
+    }
+
 }

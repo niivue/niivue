@@ -28,4 +28,20 @@ export class CalendarComponent extends BaseUIComponent {
     draw(renderer: NVRenderer): void {
         renderer.drawCalendar(this.font, this.startX, this.startY, this.cellWidth, this.cellHeight, this.selectedDate, this.selectedColor, this.firstDayOfWeek)
     }
+
+    // toJSON method to serialize the CalendarComponent instance
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties
+            className: 'CalendarComponent', // Class name for identification
+            fontId: this.font.id, // Reference to the font by ID
+            startX: this.startX,
+            startY: this.startY,
+            cellWidth: this.cellWidth,
+            cellHeight: this.cellHeight,
+            selectedDate: this.selectedDate.toISOString(), // Serialize Date as an ISO string
+            selectedColor: Array.from(this.selectedColor), // Convert to a serializable format
+            firstDayOfWeek: this.firstDayOfWeek
+        }
+    }
 }

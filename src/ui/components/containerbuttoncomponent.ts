@@ -96,4 +96,20 @@ export class ContainerButtonComponent extends BaseContainerComponent {
         // Adding mouse leave effect to revert to original fill color
         this.addEventEffect('mouseLeave', this, 'fillColor', 'setValue', this.fillColor)
     }
+
+    // toJSON method to serialize the ContainerButtonComponent instance
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties from BaseContainerComponent
+            className: 'ContainerButtonComponent', // Class name for identification
+            outlineColor: Array.from(this.outlineColor), // Convert Color to array
+            fillColor: Array.from(this.fillColor), // Convert Color to array
+            highlightColor: Array.from(this.highlightColor), // Convert Color to array
+            roundness: this.roundness,
+            maxWidth: this.maxWidth,
+            maxHeight: this.maxHeight,
+            isHorizontal: this.isHorizontal,
+            padding: this.padding
+        }
+    }
 }

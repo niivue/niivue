@@ -1,51 +1,48 @@
+import { NVAsset } from './nvasset.js'
+import { Shader } from '../shader.js'
 import { TEXTURE4_THUMBNAIL } from '../niivue/index.js'
 import { vertBmpShader, fragBmpShader } from '../shader-srcs.js'
-import { Shader } from '../shader.js'
 
-export class NVBitmap {
-  private gl: WebGL2RenderingContext
-  private bitmapTexture: WebGLTexture | null = null
-  private width: number = 0
-  private height: number = 0
+export class NVBitmap extends NVAsset {
   public bitmapShader: Shader
+
   constructor(gl: WebGL2RenderingContext) {
-    this.gl = gl
+    super(gl)
     this.bitmapShader = new Shader(gl, vertBmpShader, fragBmpShader)
   }
 
-  public async loadBitmap(bitmapUrl: string): Promise<WebGLTexture | null> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = (): void => {
-        const texture = this.gl.createTexture()
-        this.gl.activeTexture(TEXTURE4_THUMBNAIL)
-        this.gl.bindTexture(this.gl.TEXTURE_2D, texture)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img)
-
-        this.bitmapTexture = texture
-        this.width = img.width
-        this.height = img.height
-
-        resolve(texture)
-      }
-      img.onerror = reject
-      img.src = bitmapUrl
-    })
+  public async loadBitmap(bitmapUrl: string): Promise<void> {
+    await this.loadTexture(bitmapUrl, TEXTURE4_THUMBNAIL)
   }
 
-  public getBitmapTexture(): WebGLTexture | null {
-    return this.bitmapTexture
+  public toJSON(): object {
+    return {
+      id: this.id,
+      className: 'NVBitmap',
+      width: this.width,
+      height: this.height
+    }
   }
 
-  public getWidth(): number {
-    return this.width
-  }
+  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<NVBitmap> {
+    const bitmap = new NVBitmap(gl)
+    bitmap.id = json.id
+    bitmap.width = json.width
+    bitmap.height = json.height
 
-  public getHeight(): number {
-    return this.height
+    // Decode and load the base64 texture if it exists
+    if (json.base64Texture) {
+      const textureData = atob(json.base64Texture)
+      const textureArray = Uint8Array.from(textureData, c => c.charCodeAt(0))
+      const blob = new Blob([textureArray], { type: 'image/png' })
+      const textureUrl = URL.createObjectURL(blob)
+
+      await bitmap.loadBitmap(textureUrl)
+
+      // Revoke the URL after loading
+      URL.revokeObjectURL(textureUrl)
+    }
+
+    return bitmap
   }
 }

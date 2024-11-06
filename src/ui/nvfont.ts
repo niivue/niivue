@@ -1,9 +1,10 @@
-import { vec2 } from 'gl-matrix'
+import { NVAsset } from './nvasset.js'
 import { Shader } from '../shader.js'
-import { fragRotatedFontShader, vertFontShader } from '../shader-srcs.js'
+import { TEXTURE3_FONT } from '../niivue/index.js'
+import { vertFontShader, fragRotatedFontShader } from '../shader-srcs.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
-import { TEXTURE3_FONT } from '../niivue/index.js'
+import { vec2 } from 'gl-matrix'
 
 export type FontMetrics = {
   distanceRange: number
@@ -18,22 +19,15 @@ export type FontMetrics = {
   >
 }
 
-export class NVFont {
-  private gl: WebGL2RenderingContext
-  private fontTexture: WebGLTexture | null = null
+export class NVFont extends NVAsset {
   public fontMetrics: any
   public fontMets: FontMetrics | null = null
   public fontShader: Shader | null = null
-  private DEFAULT_FONT_GLYPH_SHEET: string = defaultFontPNG
-  private DEFAULT_FONT_METRICS: any = defaultFontMetrics
-  private cuboidVertexBuffer?: WebGLBuffer
-  private genericVAO: WebGLVertexArrayObject | null = null
-  private unusedVAO = null
-  public isFontLoaded = false
   public fontColor: number[] | Float32Array
   public outlineColor: number[] | Float32Array
   public outlineThickness: number
   public textHeight: number
+  public isFontLoaded = false
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -42,71 +36,34 @@ export class NVFont {
     outlineColor: number[] | Float32Array = [0.0, 0.0, 0.0, 1.0],
     outlineThickness: number = 1,
   ) {
-    this.gl = gl
+    super(gl)
     this.fontColor = fontColor
     this.outlineColor = outlineColor
     this.outlineThickness = outlineThickness
     this.textHeight = textHeight
-
-    const rectStrip = [
-      1, 1, 0,
-      1, 0, 0,
-      0, 1, 0,
-      0, 0, 0
-    ]
-
-    this.cuboidVertexBuffer = gl.createBuffer()!
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rectStrip), gl.STATIC_DRAW)
-    this.genericVAO = gl.createVertexArray()!
-    gl.bindVertexArray(this.genericVAO)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.cuboidVertexBuffer)
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
-    gl.bindVertexArray(this.unusedVAO)
-
     this.fontShader = new Shader(this.gl, vertFontShader, fragRotatedFontShader)
+
   }
 
-  private requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
-    if (new URL(url, window.location.href).origin !== window.location.origin) {
-      img.crossOrigin = ''
+  public async loadFontTexture(fontUrl: string): Promise<void> {
+    await this.loadTexture(fontUrl, TEXTURE3_FONT)
+  }
+
+  public async loadFont(fontSheetUrl: string, metricsUrl: string): Promise<void> {
+    await this.loadFontTexture(fontSheetUrl)
+    const response = await fetch(metricsUrl)
+    if (!response.ok) {
+      throw new Error(response.statusText)
     }
+    const jsonText = await response.text()
+    this.fontMetrics = JSON.parse(jsonText)
+    this.initFontMets()
   }
 
-  public getFontTexture(): WebGLTexture | null {
-    return this.fontTexture
-  }
-
-  public async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = (): void => {
-        let pngTexture: WebGLTexture | null = null
-
-        this.fontShader!.use(this.gl)
-        this.gl.activeTexture(TEXTURE3_FONT)
-        this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
-        this.gl.uniform4fv(this.fontShader!.uniforms.fontColor, this.fontColor)
-        this.gl.uniform4fv(this.fontShader!.uniforms.outlineColor, this.outlineColor)
-        this.gl.uniform1f(this.fontShader!.uniforms.outlineThickness, this.outlineThickness)
-        if (this.fontTexture !== null) {
-          this.gl.deleteTexture(this.fontTexture)
-        }
-        this.fontTexture = this.gl.createTexture()
-        pngTexture = this.fontTexture
-        this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img)
-        resolve(pngTexture)
-      }
-      img.onerror = reject
-      this.requestCORSIfNotSameOrigin(img, fontUrl)
-      img.src = fontUrl
-    })
+  public async loadDefaultFont(): Promise<void> {
+    await this.loadFontTexture(defaultFontPNG)
+    this.fontMetrics = defaultFontMetrics
+    this.initFontMets()
   }
 
   private initFontMets(): void {
@@ -148,23 +105,6 @@ export class NVFont {
     }
 
     this.isFontLoaded = true
-  }
-
-  public async loadFont(fontSheetUrl: string, metricsUrl: string): Promise<void> {
-    this.fontTexture = await this.loadFontTexture(fontSheetUrl)
-    const response = await fetch(metricsUrl)
-    if (!response.ok) {
-      throw new Error(response.statusText)
-    }
-    const jsonText = await response.text()
-    this.fontMetrics = JSON.parse(jsonText)
-    this.initFontMets()
-  }
-
-  public async loadDefaultFont(): Promise<void> {
-    await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET)
-    this.fontMetrics = this.DEFAULT_FONT_METRICS
-    this.initFontMets()
   }
 
   public getTextWidth(str: string, scale: number = 1.0): number {
@@ -274,5 +214,43 @@ export class NVFont {
       }
     }
     return vec2.fromValues(Math.max(currentWidth, maxWidth), lineCount * maxHeight)
+  }
+
+  public toJSON(): object {
+    return {
+      id: this.id,
+      className: 'NVFont',
+      fontColor: Array.from(this.fontColor),
+      outlineColor: Array.from(this.outlineColor),
+      outlineThickness: this.outlineThickness,
+      textHeight: this.textHeight,
+      fontMetrics: this.fontMetrics
+    }
+  }
+
+  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<NVFont> {
+    const font = new NVFont(gl)
+    font.id = json.id
+    font.fontColor = new Float32Array(json.fontColor)
+    font.outlineColor = new Float32Array(json.outlineColor)
+    font.outlineThickness = json.outlineThickness
+    font.textHeight = json.textHeight
+    font.fontMetrics = json.fontMetrics
+    font.initFontMets()
+
+    // Decode and load the base64 texture if it exists
+    if (json.base64Texture) {
+      const textureData = atob(json.base64Texture)
+      const textureArray = Uint8Array.from(textureData, c => c.charCodeAt(0))
+      const blob = new Blob([textureArray], { type: 'image/png' })
+      const textureUrl = URL.createObjectURL(blob)
+
+      await font.loadFontTexture(textureUrl)
+
+      // Revoke the URL after loading
+      URL.revokeObjectURL(textureUrl)
+    }
+
+    return font
   }
 }

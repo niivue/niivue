@@ -8,6 +8,16 @@ import { NVBitmap } from './nvbitmap.js'
 import { LineTerminator } from './types.js'
 import { BaseContainerComponent } from './components/basecontainercomponent.js'
 import { AnimationManager } from './animationmanager.js'
+import { BitmapComponent } from './components/bitmapcomponent.js'
+import { NVAsset } from './nvasset.js'
+import { ButtonComponent } from './components/buttoncomponent.js'
+import { CaliperComponent } from './components/calipercomponent.js'
+import { CircleComponent } from './components/circlecomponent.js'
+import { LineComponent } from './components/linecomponent.js'
+import { TextBoxComponent } from './components/textboxcomponent.js'
+import { ToggleComponent } from './components/togglecomponent.js'
+import { TriangleComponent } from './components/trianglecomponent.js'
+import { TextComponent } from './components/textcomponent.js'
 
 export class NVUI {
     private gl: WebGL2RenderingContext
@@ -327,4 +337,107 @@ export class NVUI {
     drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
         this.renderer.drawCaliper(pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale)
     }
+
+    public async serializeComponents(): Promise<string> {
+        const components = this.quadTree.getAllElements()
+        const serializedComponents = []
+        const assets = { fonts: {}, bitmaps: {} } // Separate nodes for fonts and bitmaps
+
+        for (const component of components) {
+            if ('getFont' in component && typeof component.getFont === 'function') {
+                const font = component.getFont()
+                if (font && font.getBase64Texture) {
+                    const base64Texture = await font.getBase64Texture()
+                    if (base64Texture) {
+                        assets.fonts[font.id] = {
+                            ...font.toJSON(),
+                            texture: base64Texture
+                        }
+                    }
+                }
+            }
+            if ('getBitmap' in component && typeof component.getBitmap === 'function') {
+                const bitmap = component.getBitmap()
+                if (bitmap && bitmap.getBase64Texture) {
+                    const base64Texture = await bitmap.getBase64Texture()
+                    if (base64Texture) {
+                        assets.bitmaps[bitmap.id] = {
+                            ...bitmap.toJSON(),
+                            texture: base64Texture
+                        }
+                    }
+                }
+            }
+            serializedComponents.push(await component.toJSON())
+        }
+
+        return JSON.stringify({ components: serializedComponents, assets }, null, 2)
+    }
+
+    public static async fromJSON(json: any, gl: WebGL2RenderingContext): Promise<NVUI> {
+        const ui = new NVUI(gl)
+
+        // Deserialize fonts and bitmaps
+        const fonts: { [key: string]: NVFont } = {}
+        if (json.assets && json.assets.fonts) {
+            for (const [fontId, fontData] of Object.entries(json.assets.fonts)) {
+                const font = await NVFont.fromJSON(gl, fontData)
+                fonts[fontId] = font
+            }
+        }
+
+        const bitmaps: { [key: string]: NVBitmap } = {}
+        if (json.assets && json.assets.bitmaps) {
+            for (const [bitmapId, bitmapData] of Object.entries(json.assets.bitmaps)) {
+                const bitmap = await NVBitmap.fromJSON(gl, bitmapData)
+                bitmaps[bitmapId] = bitmap
+            }
+        }
+
+        // Deserialize components
+        if (json.components) {
+            json.components.forEach((componentData: any) => {
+                let component
+                switch (componentData.className) {
+                    case 'BitmapComponent':
+                        component = BitmapComponent.fromJSON(componentData, bitmaps)
+                        break
+                    case 'TextBoxComponent':
+                        component = TextBoxComponent.fromJSON(componentData, gl, fonts)
+                        break
+                    case 'TextComponent':
+                        component = TextComponent.fromJSON(componentData, fonts)
+                        break
+                    case 'ButtonComponent':
+                        component = ButtonComponent.fromJSON(componentData, gl, fonts)
+                        break
+                    case 'CircleComponent':
+                        component = CircleComponent.fromJSON(componentData)
+                        break
+                    case 'TriangleComponent':
+                        component = TriangleComponent.fromJSON(componentData)
+                        break
+                    case 'LineComponent':
+                        component = LineComponent.fromJSON(componentData)
+                        break
+                    case 'ToggleComponent':
+                        component = ToggleComponent.fromJSON(componentData)
+                        break
+                    case 'CaliperComponent':
+                        component = CaliperComponent.fromJSON(componentData, gl, fonts)
+                        break
+                    default:
+                        console.warn(`Unknown component class: ${componentData.className}`)
+                        return
+                }
+                if (component) {
+                    ui.addComponent(component)
+                }
+            })
+        }
+
+        return ui
+    }
+
+
 }

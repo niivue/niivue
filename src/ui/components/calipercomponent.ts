@@ -94,4 +94,38 @@ export class CaliperComponent extends BaseUIComponent {
     updateScale(scale: number): void {
         this.scale = scale
     }
+
+    // toJSON method to serialize the CaliperComponent instance
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties
+            className: 'CaliperComponent', // Class name for identification
+            pointA: Array.from(this.pointA), // Convert Vec2 to array
+            pointB: Array.from(this.pointB), // Convert Vec2 to array
+            length: this.length,
+            units: this.units,
+            fontId: this.font.id, // Reference to the font by ID
+            textColor: Array.from(this.textColor), // Convert Color to array
+            lineColor: Array.from(this.lineColor), // Convert Color to array
+            scale: this.scale
+        }
+    }
+
+    public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: NVFont }): CaliperComponent {
+        const font = fonts[data.fontId]
+        if (!font) {
+            throw new Error(`Font with ID ${data.fontId} not found`)
+        }
+
+        const pointA: Vec2 = data.pointA || [0, 0]
+        const pointB: Vec2 = data.pointB || [0, 0]
+        const length: number = data.length || 0
+        const units: string = data.units || ''
+        const textColor: Color = data.textColor || [1, 0, 0, 1]
+        const lineColor: Color = data.lineColor || [0, 0, 0, 1]
+        const scale: number = data.scale || 1.0
+
+        return new CaliperComponent(pointA, pointB, length, units, font, textColor, lineColor, scale)
+    }
+
 }

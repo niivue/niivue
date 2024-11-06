@@ -156,7 +156,7 @@ export class NVRenderer {
         // Bind the font texture
         const gl = this.gl
         gl.activeTexture(TEXTURE3_FONT)
-        gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
+        gl.bindTexture(gl.TEXTURE_2D, font.getTexture())
 
         font.fontShader.use(this.gl)
         const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
@@ -198,7 +198,7 @@ export class NVRenderer {
     }
 
     public drawBitmap(bitmap: NVBitmap, position: Vec2, scale: number): void {
-        if (!bitmap.getBitmapTexture()) {
+        if (!bitmap.getTexture()) {
             console.error('Bitmap texture not loaded')
             return
         }
@@ -208,7 +208,7 @@ export class NVRenderer {
         shader.use(gl)
 
         gl.activeTexture(gl.TEXTURE0)
-        const texture = bitmap.getBitmapTexture()
+        const texture = bitmap.getTexture()
         if (!texture) {
             console.error('Texture not found')
             return
@@ -603,7 +603,7 @@ export class NVRenderer {
 
         // Bind the font texture
         gl.activeTexture(gl.TEXTURE0)
-        gl.bindTexture(gl.TEXTURE_2D, font.getFontTexture())
+        gl.bindTexture(gl.TEXTURE_2D, font.getTexture())
 
         rotatedFontShader.use(gl)
 

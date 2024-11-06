@@ -13,10 +13,10 @@ export class TextBoxComponent extends BaseUIComponent {
     protected margin: number
     protected roundness: number
     protected maxWidth: number
-    protected fontOutlineColor = [0, 0, 0, 1]
+    protected fontOutlineColor: Color = [0, 0, 0, 1]
     protected fontOutlineThickness = 1
 
-    constructor(font: NVFont, position: Vec2, text: string, textColor: Color = [0, 0, 0, 1], outlineColor: Color = [1, 1, 1, 1], fillColor: Color = [0, 0, 0, 0.3], margin = 15, roundness = 0.0, scale = 1.0, maxWidth = 0, fontOutlineColor = [0, 0, 0, 1], fontOutlineThickness = 1) {
+    constructor(font: NVFont, position: Vec2, text: string, textColor: Color = [0, 0, 0, 1], outlineColor: Color = [1, 1, 1, 1], fillColor: Color = [0, 0, 0, 0.3], margin = 15, roundness = 0.0, scale = 1.0, maxWidth = 0, fontOutlineColor: Color = [0, 0, 0, 1], fontOutlineThickness = 1) {
         super()
         this.font = font
         this.position = position
@@ -60,4 +60,60 @@ export class TextBoxComponent extends BaseUIComponent {
     draw(renderer: NVRenderer): void {
         renderer.drawTextBox(this.font, this.position, this.text, this.textColor, this.outlineColor, this.fillColor, this.margin, this.roundness, this.scale, this.maxWidth, this.fontOutlineColor, this.fontOutlineThickness)
     }
+
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties from BaseUIComponent
+            className: 'TextBoxComponent', // Class name for identification
+            fontId: this.font.id, // Reference to the font by ID
+            text: this.text, // Serialize the text string
+            position: Array.from(this.position), // Convert Vec2 to array
+            textColor: Array.from(this.textColor), // Convert Color to array
+            outlineColor: Array.from(this.outlineColor), // Convert Color to array
+            fillColor: Array.from(this.fillColor), // Convert Color to array
+            margin: this.margin, // Serialize margin
+            roundness: this.roundness, // Serialize roundness
+            scale: this.scale, // Serialize scale
+            maxWidth: this.maxWidth, // Serialize maxWidth
+            fontOutlineColor: Array.from(this.fontOutlineColor), // Convert Color to array
+            fontOutlineThickness: this.fontOutlineThickness // Serialize font outline thickness
+        }
+    }
+
+    public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: NVFont }): TextBoxComponent {
+        const font = fonts[data.fontId]
+        if (!font) {
+            throw new Error(`Font with ID ${data.fontId} not found`)
+        }
+
+        const position: Vec2 = data.position || [0, 0]
+        const text: string = data.text || ''
+        const textColor: Color = data.textColor || [0, 0, 0, 1]
+        const outlineColor: Color = data.outlineColor || [1, 1, 1, 1]
+        const fillColor: Color = data.fillColor || [0, 0, 0, 0.3]
+        const margin: number = data.margin || 15
+        const roundness: number = data.roundness || 0.0
+        const scale: number = data.scale || 1.0
+        const maxWidth: number = data.maxWidth || 0
+        const fontOutlineColor: Color = data.fontOutlineColor || [0, 0, 0, 1]
+        const fontOutlineThickness: number = data.fontOutlineThickness || 1
+
+        const component = new TextBoxComponent(
+            font,
+            position,
+            text,
+            textColor,
+            outlineColor,
+            fillColor,
+            margin,
+            roundness,
+            scale,
+            maxWidth,
+            fontOutlineColor,
+            fontOutlineThickness
+        )
+
+        return component
+    }
+
 }

@@ -103,4 +103,32 @@ export class ToggleComponent extends BaseUIComponent {
             this.knobPosition = Math.max(0, Math.min(1, this.knobPosition))
         }
     }
+
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties from BaseUIComponent
+            className: 'ToggleComponent', // Class name for identification
+            position: Array.from(this.position), // Convert Vec2 to array
+            size: Array.from(this.size), // Convert Vec2 to array
+            isOn: this.isOn, // Serialize the toggle state
+            onColor: Array.from(this.onColor), // Convert Color to array
+            offColor: Array.from(this.offColor), // Convert Color to array
+            knobPosition: this.knobPosition // Serialize knob position
+        }
+    }
+
+    public static fromJSON(data: any): ToggleComponent {
+        const position: Vec2 = data.position || [0, 0]
+        const size: Vec2 = data.size || [50, 25] // Default size if not provided
+        const isOn: boolean = data.isOn || false
+        const onColor: Color = data.onColor || [0, 1, 0, 1]
+        const offColor: Color = data.offColor || [1, 0, 0, 1]
+        const knobPosition: number = data.knobPosition ?? (isOn ? 1.0 : 0.0)
+
+        const component = new ToggleComponent(position, size, isOn, onColor, offColor)
+        component.knobPosition = knobPosition
+
+        return component
+    }
+
 }

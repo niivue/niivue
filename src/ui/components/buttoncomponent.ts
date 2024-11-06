@@ -106,4 +106,14 @@ export class ButtonComponent extends TextBoxComponent {
         // Call the parent draw method to render the button as a text box
         super.draw(renderer)
     }
+
+    // toJSON method to serialize the ButtonComponent instance
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties from TextBoxComponent
+            className: 'ButtonComponent', // Class name for identification
+            highlightColor: Array.from(this.highlightColor), // Serialize the highlight color
+            onClickHandler: this.onClickHandler ? this.onClickHandler.toString() : null // Serialize the onClickHandler as a string if it's defined
+        }
+    }
 }

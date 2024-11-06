@@ -42,4 +42,18 @@ export class RotatedTextComponent extends BaseUIComponent implements IColorable 
     draw(renderer: NVRenderer): void {
         renderer.drawRotatedText(this.font, this.position, this.text, this.scale, this.color, this.rotation)
     }
+
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties from BaseUIComponent
+            className: 'RotatedTextComponent', // Class name for identification
+            fontId: this.font.id, // Reference to the font by ID
+            text: this.text, // Serialize the text string
+            position: Array.from(this.position), // Convert Vec2 to array
+            scale: this.scale, // Serialize scale
+            color: Array.from(this.color), // Convert Color to array
+            rotation: this.rotation // Serialize rotation angle
+        }
+    }
+
 }

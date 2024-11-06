@@ -38,4 +38,39 @@ export class BitmapComponent extends BaseUIComponent {
         renderer.drawBitmap(this.bitmap, this.position, this.scale)
     }
 
+    // Method to get the NVBitmap instance
+    public getBitmap(): NVBitmap {
+        return this.bitmap
+    }
+
+    // toJSON method to serialize the BitmapComponent instance
+    toJSON(): object {
+        return {
+            ...super.toJSON(), // Serialize base properties
+            className: 'BitmapComponent', // Class name for identification
+            bitmapId: this.bitmap.id, // Assuming bitmap has an id property
+            width: this.width,
+            height: this.height,
+            scale: this.scale
+        }
+    }
+
+    // Method to deserialize from JSON
+    public static fromJSON(data: any, bitmaps: { [key: string]: NVBitmap }): BitmapComponent {
+        const bitmap = bitmaps[data.bitmapId]
+        if (!bitmap) {
+            throw new Error(`Bitmap with ID ${data.bitmapId} not found`)
+        }
+
+        const position: Vec2 = data.position || [0, 0]
+        const scale: number = data.scale || 1.0
+        const component = new BitmapComponent(position, bitmap, scale)
+
+        // Set additional properties from JSON data if available
+        component.width = data.width ?? bitmap.getWidth() * scale
+        component.height = data.height ?? bitmap.getHeight() * scale
+        component.bounds = [position[0], position[1], component.width, component.height]
+
+        return component
+    }
 }

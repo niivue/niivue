@@ -11464,7 +11464,9 @@ export class Niivue {
     if (this.needsRefresh) {
       posString = this.drawScene()
     }
-    this.ui.draw()
+    if (this.ui) {
+      this.ui.draw()
+    }
     return posString
   }
 
