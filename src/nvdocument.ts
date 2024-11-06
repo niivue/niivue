@@ -65,6 +65,7 @@ export type NVConfigOptions = {
   colorbarHeight: number
   // 0 for no crosshairs
   crosshairWidth: number
+  crosshairWidthUnit: 'voxels' | 'mm' | 'percent'
   crosshairGap: number
   rulerWidth: number
   show3Dcrosshair: boolean
@@ -108,6 +109,7 @@ export type NVConfigOptions = {
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
   heroImageFraction: number
+  heroSliceType: SLICE_TYPE
   // sagittal slices can have Y+ going left or right
   sagittalNoseLeft: boolean
   isSliceMM: boolean
@@ -169,6 +171,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   textHeight: 0.06,
   colorbarHeight: 0.05,
   crosshairWidth: 1,
+  crosshairWidthUnit: 'voxels',
   crosshairGap: 0,
   rulerWidth: 4,
   show3Dcrosshair: false,
@@ -207,6 +210,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isDepthPickMesh: false,
   isCornerOrientationText: false,
   heroImageFraction: 0,
+  heroSliceType: SLICE_TYPE.RENDER,
   sagittalNoseLeft: false,
   isSliceMM: false,
   isV1SliceShader: false,

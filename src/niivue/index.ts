@@ -8101,33 +8101,43 @@ export class Niivue {
     }
     const frac10cm = 100.0 / fovMM[0]
     const pix10cm = frac10cm * ltwh[2]
-    const pixLeft = ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm
-    const pixTop = ltwh[1] + ltwh[3] - 2 * this.opts.rulerWidth
+    const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2)
+    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm)
+    const thick = Number(this.opts.rulerWidth)
+    const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * thick
     const startXYendXY = [pixLeft, pixTop, pixLeft + pix10cm, pixTop]
-    this.drawRuler10cm(startXYendXY)
+    let outlineColor = [0, 0, 0, 1]
+    if (this.opts.rulerColor[0] + this.opts.rulerColor[1] + this.opts.rulerColor[2] < 0.8) {
+      outlineColor = [1, 1, 1, 1]
+    }
+    this.drawRuler10cm(startXYendXY, outlineColor, thick + 1)
+    this.drawRuler10cm(startXYendXY, this.opts.rulerColor, thick)
   }
 
   // not included in public docs
   // draw 10cm ruler at desired coordinates
-  drawRuler10cm(startXYendXY: number[]): void {
+  drawRuler10cm(startXYendXY: number[], rulerColor: number[], rulerWidth: number = 1): void {
     if (!this.lineShader) {
       throw new Error('lineShader undefined')
     }
     this.gl.bindVertexArray(this.genericVAO)
     this.lineShader.use(this.gl)
-    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
+    this.gl.uniform4fv(this.lineShader.uniforms.lineColor, rulerColor)
     this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     // draw Line
-    this.gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
+    this.gl.uniform1f(this.lineShader.uniforms.thickness, rulerWidth)
     this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     // draw tick marks
+    // const w10cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
     const w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
-    const b = startXYendXY[1]
-    const t = b - 2 * this.opts.rulerWidth
-    const t2 = b - 4 * this.opts.rulerWidth
+    const b = startXYendXY[1] - Math.floor(0.5 * this.opts.rulerWidth)
+    const t = Math.floor(b - 0.35 * w1cm)
+    const t2 = Math.floor(b - 0.7 * w1cm)
     for (let i = 0; i < 11; i++) {
-      const l = startXYendXY[0] + i * w1cm
+      let l = startXYendXY[0] + i * w1cm
+      l = Math.max(l, startXYendXY[0] + 0.5 * rulerWidth)
+      l = Math.min(l, startXYendXY[2] - 0.5 * rulerWidth)
       const xyxy = [l, b, l, t]
       if (i % 5 === 0) {
         xyxy[3] = t2
@@ -9300,6 +9310,18 @@ export class Niivue {
     imageWidthHeight: number[] = [NaN, NaN]
   ): void {
     const padLeftTop = [NaN, NaN]
+    if (imageWidthHeight[0] === Infinity) {
+      const volScale = this.sliceScale().volScale
+      let scale = this.scaleSlice(volScale[0], volScale[1], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        scale = this.scaleSlice(volScale[0], volScale[2], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        scale = this.scaleSlice(volScale[1], volScale[2], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      }
+      imageWidthHeight[0] = scale[2]
+      imageWidthHeight[1] = scale[3]
+    }
     if (isNaN(imageWidthHeight[0])) {
       this.draw2DMain(leftTopWidthHeight, axCorSag, customMM)
     } else {
@@ -10388,7 +10410,6 @@ export class Niivue {
       })
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
-
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
@@ -10558,6 +10579,23 @@ export class Niivue {
     }
     const gl = this.gl
     const mm = this.frac2mm(this.scene.crosshairPos, 0, isSliceMM)
+    let radius = 1
+    const [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM)
+    if (this.volumes.length > 0) {
+      if (!this.back) {
+        throw new Error('back undefined')
+      }
+      radius = 0.5 * Math.min(Math.min(this.back.pixDims![1], this.back.pixDims![2]), this.back.pixDims![3])
+    } else if (range[0] < 50 || range[0] > 1000) {
+      radius = range[0] * 0.02
+    } // 2% of first dimension
+    radius *= this.opts.crosshairWidth
+    if (this.opts?.crosshairWidthUnit === 'percent') {
+      radius = range[0] * this.opts.crosshairWidth * 0.5 * 0.01
+    }
+    if (this.opts?.crosshairWidthUnit === 'mm') {
+      radius = this.opts.crosshairWidth * 0.5
+    }
     // generate our crosshairs for the base volume
     if (
       this.crosshairs3D === null ||
@@ -10569,19 +10607,9 @@ export class Niivue {
         gl.deleteBuffer(this.crosshairs3D.indexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
         gl.deleteBuffer(this.crosshairs3D.vertexBuffer) // TODO: handle in nvimage.js: create once, update with bufferSubData
       }
-      const [mn, mx, range] = this.sceneExtentsMinMax(isSliceMM)
-      let radius = 1
-      if (this.volumes.length > 0) {
-        if (!this.back) {
-          throw new Error('back undefined')
-        }
-        radius = 0.5 * Math.min(Math.min(this.back.pixDims![1], this.back.pixDims![2]), this.back.pixDims![3])
-      } else if (range[0] < 50 || range[0] > 1000) {
-        radius = range[0] * 0.02
-      } // 2% of first dimension
-      radius *= this.opts.crosshairWidth
       this.crosshairs3D = NiivueObject3D.generateCrosshairs(this.gl, 1, mm, mn, mx, radius, 20, this.opts.crosshairGap)
       this.crosshairs3D.mm = mm
+      // this.crosshairs3D.radius = radius
     }
 
     if (!this.surfaceShader) {
@@ -10599,7 +10627,7 @@ export class Niivue {
       )
     }
     gl.uniformMatrix4fv(crosshairsShader.uniforms.mvpMtx, false, mvpMtx)
-
+    gl.disable(gl.CULL_FACE)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.crosshairs3D.indexBuffer)
     gl.enable(gl.DEPTH_TEST)
     const color = [...this.opts.crosshairColor]
@@ -10771,7 +10799,6 @@ export class Niivue {
     padPixelsWH: [number, number] = [0, 0],
     canvasWH: [number, number] = [0, 0]
   ): number[] {
-    // mork
     // const canvasW = this.effectiveCanvasWidth() - padPixelsWH[0]
     // const canvasH = this.effectiveCanvasHeight() - padPixelsWH[1]
     const canvasW = canvasWH[0] === 0 ? this.effectiveCanvasWidth() - padPixelsWH[0] : canvasWH[0] - padPixelsWH[0]
@@ -11283,7 +11310,7 @@ export class Niivue {
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
       if (this.meshes.length > 0) {
         this.screenSlices = [] // empty array
-        this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
+        // this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
         this.draw3D() // meshes loaded but no volume
         if (this.opts.isColorbar) {
           this.drawColorbar()
@@ -11491,8 +11518,26 @@ export class Niivue {
           // issue1082 draw hero image
           const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0]
           const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1]
-          // this.draw3D([ltwh[0], ltwh[1], heroW, heroH])
-          this.draw3D([0, 0, heroW, heroH])
+          //
+          if (
+            this.opts?.heroSliceType === SLICE_TYPE.AXIAL ||
+            this.opts?.heroSliceType === SLICE_TYPE.CORONAL ||
+            this.opts?.heroSliceType === SLICE_TYPE.SAGITTAL
+          ) {
+            this.draw2D([0, 0, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity])
+          } else {
+            // let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
+            const ltwh2 = ltwh.slice()
+            const canvasW = this.effectiveCanvasWidth()
+            // console.log(`L ${ltwh[0]} T ${ltwh[1]} W ${heroW} H ${heroH} canvas ${canvasW}`)
+            if (heroW === canvasW) {
+              ltwh2[0] = 0
+            }
+            // console.log(`isWide ${heroW > heroH} L ${ltwh[0]} -> ${ltwh2[0]}`)
+            // this.draw3D([heroLTWH[0], heroLTWH[1], heroW, heroH])
+            this.draw3D([ltwh2[0], 0, heroW, heroH])
+          }
+          // this.draw3D([0, 0, heroW, heroH])
           ltwh[0] += heroImageWH[0]
           ltwh[1] += heroImageWH[1]
           isDraw3D = false
