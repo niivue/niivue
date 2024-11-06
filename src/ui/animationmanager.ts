@@ -134,6 +134,7 @@ export class Animation {
         this.cancelled = false
         this.redrawCallback = redrawCallback
         requestAnimationFrame(this.animate.bind(this))
+        console.log('starting animation', this)
     }
 
     public cancel(): void {
@@ -149,6 +150,12 @@ export class Animation {
 
         const elapsed = currentTime - this.startTime
         let progress = Math.min(elapsed / this.duration, 1)
+        if (elapsed > this.duration) {
+            setObjectProperty(this.targetObject, this.property, this.to)
+            console.log('ran out of time', this)
+            return
+        }
+
         const interpolate = (start: number, end: number, t: number) => {
             return start + (end - start) * Math.max(0, Math.min(1, t))
         }
@@ -162,6 +169,7 @@ export class Animation {
             const interpolatedValues = this.from.map((fromValue, index) =>
                 interpolate(fromValue, (this.to as number[])[index], progress)
             )
+
             setObjectProperty(this.targetObject, this.property, interpolatedValues)
         } else if (typeof this.from === 'number' && typeof this.to === 'number') {
             const value = interpolate(this.from, this.to, progress)

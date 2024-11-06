@@ -78,11 +78,10 @@
         // Adding mouse enter and leave effects
         text2.addEventEffect('mouseEnter', text2, 'textColor', 'setValue', [0, 0, 1, 1]); // Blue
         text2.addEventEffect('mouseLeave', text2, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
-        text2.addEventEffect('click', nv1.document.scene, 'renderAzimuth', 'animateValue', 270, 165, 200, true); // Bounce       
+        text2.addEventEffect('click', nv1.document.scene, 'renderAzimuth', 'animateValue', 270, 165, 2000, true); // Bounce       
         text3.addEventEffect('mouseEnter', text3, 'textColor', 'setValue', [0, 1, 0, 1]); // Green
         text3.addEventEffect('mouseLeave', text3, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
-        text2.addEventEffect('click', nv1.document.scene, 'clipPlaneDepthAziElev', 'animateValue', [2, 0, 0], [0, 270, 0], 200, true); // Bounce       
-        this.scene.clipPlaneDepthAziElev = [0, 270, 0]
+        text3.addEventEffect('click', nv1, 'clipPlane', 'animateValue', [2, 0, 0], [0, 270, 0], 2000, false, true); // Bounce       
 
         verticalContainer.addComponent(text1);
         verticalContainer.addComponent(text2);
