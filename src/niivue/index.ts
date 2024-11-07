@@ -912,9 +912,11 @@ export class Niivue {
 
     log.info('NIIVUE VERSION ', version)
 
-    // set parent background container to black (default empty canvas color)
-    // avoids white cube around image in 3D render mode
-    this.canvas!.parentElement!.style.backgroundColor = 'black'
+    let [r, g, b, a] = this.opts.backColor
+    r = Math.round(r * 255)
+    g = Math.round(g * 255)
+    b = Math.round(b * 255)
+    this.canvas!.parentElement!.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${a})`
     // fill all space in parent
     if (this.opts.isResizeCanvas) {
       this.canvas.style.width = '100%'
