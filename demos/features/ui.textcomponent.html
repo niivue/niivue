@@ -35,8 +35,8 @@
         const textComponent = new niivue.TextComponent(pos, str, font, textColor, scale)
 
         // Adding mouse enter and mouse leave effects
-        textComponent.addEventEffect('mouseEnter', textComponent, 'textColor', 'setValue', [0, 1, 0, 1]) // Set text color to green on mouse enter
-        textComponent.addEventEffect('mouseLeave', textComponent, 'textColor', 'animateValue', [0, 1, 0, 1], [1, 1, 1, 1], 3000) // Set text color to white on mouse leave
+        textComponent.addEventEffect('pointerenter', textComponent, 'textColor', 'setValue', [0, 1, 0, 1]) // Set text color to green on mouse enter
+        textComponent.addEventEffect('pointerleave', textComponent, 'textColor', 'animateValue', [0, 1, 0, 1], [1, 1, 1, 1], 3000) // Set text color to white on mouse leave
         nv1.ui.addComponent(textComponent)
         console.log(nv1.ui)
         nv1.drawScene()

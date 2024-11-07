@@ -15,7 +15,7 @@ export class ContainerButtonComponent extends BaseContainerComponent {
         canvas: HTMLCanvasElement,
         outlineColor: Color = [1, 1, 1, 1],
         fillColor: Color = [0, 0, 0, 0.3],
-        highlightColor: Color = [0.5, 0.5, 0.5, 1.0],
+        highlightColor: Color = [0.0, 0.0, 0.5, 0.3],
         roundness = 0.0,
         maxWidth = 0,
         maxHeight = 0,
@@ -30,31 +30,7 @@ export class ContainerButtonComponent extends BaseContainerComponent {
         this.maxWidth = maxWidth
         this.maxHeight = maxHeight
 
-        // Adding click effects to create a bounce animation
-
-        // Effect 1: Shrink the size of the button on click (bounce effect)
-        this.addEventEffect(
-            'click',
-            this,
-            'scale',
-            'animateValue',
-            1.0,  // start value (normal size)
-            0.9,  // target value (shrinked size)
-            100,  // duration in milliseconds
-            true  // isBounce - true to create a bounce effect
-        )
-
-        // Effect 2: Move the button down slightly to maintain the same center point (bounce effect)
-        this.addEventEffect(
-            'click',
-            this,
-            'position',
-            'animateValue',
-            [this.getPosition()[0], this.getPosition()[1]],        // start position
-            [this.getPosition()[0], this.getPosition()[1] + 5],    // target position (move down by 5 units)
-            100,                                                  // duration in milliseconds
-            true                                                  // isBounce - true to create a bounce effect
-        )
+        this.addMouseEffects()
 
     }
 
@@ -66,7 +42,7 @@ export class ContainerButtonComponent extends BaseContainerComponent {
             mousePosition[1] >= y &&
             mousePosition[1] <= y + height
         ) {
-            this.applyEventEffects('click')
+            this.applyEventEffects('pointerup')
             if (this.onClickHandler) {
                 this.onClickHandler()
             }
@@ -90,11 +66,38 @@ export class ContainerButtonComponent extends BaseContainerComponent {
     }
 
     addMouseEffects(): void {
+        // Adding click effects to create a bounce animation
+
+        // Effect 1: Shrink the size of the button on click (bounce effect)
+        this.addEventEffect(
+            'pointerup',
+            this,
+            'scale',
+            'animateValue',
+            1.0,  // start value (normal size)
+            0.9,  // target value (shrinked size)
+            100,  // duration in milliseconds
+            true  // isBounce - true to create a bounce effect
+        )
+
+        // Effect 2: Move the button down slightly to maintain the same center point (bounce effect)
+        this.addEventEffect(
+            'pointerup',
+            this,
+            'position',
+            'animateValue',
+            [this.getPosition()[0], this.getPosition()[1]],        // start position
+            [this.getPosition()[0], this.getPosition()[1] + 5],    // target position (move down by 5 units)
+            100,                                                  // duration in milliseconds
+            true                                                  // isBounce - true to create a bounce effect
+        )
+
+
         // Adding mouse enter effect to change fill color to highlight
-        this.addEventEffect('mouseEnter', this, 'fillColor', 'setValue', this.highlightColor)
+        this.addEventEffect('pointerenter', this, 'fillColor', 'setValue', this.highlightColor)
 
         // Adding mouse leave effect to revert to original fill color
-        this.addEventEffect('mouseLeave', this, 'fillColor', 'setValue', this.fillColor)
+        this.addEventEffect('pointerleave', this, 'fillColor', 'setValue', this.fillColor)
     }
 
     // toJSON method to serialize the ContainerButtonComponent instance

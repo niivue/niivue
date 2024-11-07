@@ -43,7 +43,7 @@
             nv1.canvas,
             [1, 1, 1, 1],     // Outline color
             [0, 0, 0, 0.3],   // Fill color
-            [0.5, 0.5, 0.5, 1.0], // Highlight color
+            [0.0, 0.0, 0.5, 0.3], // Highlight color
             0.2,              // Roundness
             0,                // Max width (no limit)
             0                 // Max height (no limit)
@@ -76,12 +76,12 @@
         const text3 = new niivue.TextComponent([0, 90], "clip", defaultFont, [1.0, 1.0, 1.0, 1.0], 0.5);
 
         // Adding mouse enter and leave effects
-        text2.addEventEffect('mouseEnter', text2, 'textColor', 'setValue', [0, 0, 1, 1]); // Blue
-        text2.addEventEffect('mouseLeave', text2, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
-        text2.addEventEffect('click', nv1.document.scene, 'renderAzimuth', 'animateValue', 270, 165, 2000, true); // Bounce       
-        text3.addEventEffect('mouseEnter', text3, 'textColor', 'setValue', [0, 1, 0, 1]); // Green
-        text3.addEventEffect('mouseLeave', text3, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
-        text3.addEventEffect('click', nv1, 'clipPlane', 'animateValue', [2, 0, 0], [0, 270, 0], 2000, false, true); // Bounce       
+        text2.addEventEffect('pointerenter', text2, 'textColor', 'setValue', [0, 0, 1, 1]); // Blue
+        text2.addEventEffect('pointerleave', text2, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
+        text2.addEventEffect('pointerup', nv1.document.scene, 'renderAzimuth', 'animateValue', 270, 165, 2000, true); // Bounce       
+        text3.addEventEffect('pointerenter', text3, 'textColor', 'setValue', [0, 1, 0, 1]); // Green
+        text3.addEventEffect('pointerleave', text3, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
+        text3.addEventEffect('pointerup', nv1, 'clipPlane', 'animateValue', [2, 0, 0], [0, 270, 0], 2000, false, true); // Bounce       
 
         verticalContainer.addComponent(text1);
         verticalContainer.addComponent(text2);

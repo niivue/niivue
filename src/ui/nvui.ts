@@ -1,4 +1,3 @@
-import { IUIComponent } from './interfaces.js'
 import { Rectangle } from './quadtree.js'
 import { Vec2, Vec4, Color } from './types.js'
 import { NVRenderer } from './nvrenderer.js'
@@ -18,11 +17,13 @@ import { TextBoxComponent } from './components/textboxcomponent.js'
 import { ToggleComponent } from './components/togglecomponent.js'
 import { TriangleComponent } from './components/trianglecomponent.js'
 import { TextComponent } from './components/textcomponent.js'
+import { IUIComponent } from './interfaces.js'
 
 export class NVUI {
     private gl: WebGL2RenderingContext
     private renderer: NVRenderer
     private quadTree: QuadTree<IUIComponent>
+    private _redrawRequested?: () => void
 
     // Style field
     public style: {
@@ -36,45 +37,58 @@ export class NVUI {
     private canvasHeight: number
     private dpr: number
     private resizeListener: () => void
-    public redrawRequested: () => void
+
 
     // Static enum for line terminators
     public static lineTerminator = LineTerminator
 
     private lastHoveredComponents: Set<IUIComponent> = new Set()
 
+    public get redrawRequested(): (() => void) | undefined {
+        return this._redrawRequested
+    }
+
+    public set redrawRequested(callback: (() => void) | undefined) {
+        const canvas = this.gl.canvas as HTMLCanvasElement
+        if (callback) {
+            canvas.removeEventListener('pointerdown', this.handlePointerDown.bind(this))
+            canvas.removeEventListener('pointermove', this.handlePointerMove.bind(this))
+            window.removeEventListener('resize', this.resizeListener)
+        } else {
+            canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this))
+            canvas.addEventListener('pointermove', this.handlePointerMove.bind(this))
+            window.addEventListener('resize', this.resizeListener)
+        }
+        this._redrawRequested = callback
+    }
+
     constructor(gl: WebGL2RenderingContext) {
         this.gl = gl
         this.renderer = new NVRenderer(gl)
         this.dpr = window.devicePixelRatio || 1
-        // Initialize canvasWidth and canvasHeight
         const canvas = this.gl.canvas as HTMLCanvasElement
         const rect = canvas.parentElement.getBoundingClientRect()
         this.canvasWidth = rect.width
         this.canvasHeight = rect.height
 
-        // Initialize style
         this.style = {
             textColor: [0, 0, 0, 1],
             foregroundColor: [1, 1, 1, 1],
             backgroundColor: [0, 0, 0, 1],
-            textSize: 12 // default text size
+            textSize: 12
         }
-        // Initialize QuadTree with canvas bounds
         const bounds = new Rectangle(0, 0, this.canvasWidth * this.dpr, this.canvasHeight * this.dpr)
         this.quadTree = new QuadTree<IUIComponent>(bounds)
 
-        // Assign the redraw call back for the animation manager
         const animationManager = AnimationManager.getInstance()
         animationManager.setRequestRedrawCallback(this.requestRedraw.bind(this))
 
-        // Add event listener for window resize
         this.resizeListener = this.handleWindowResize.bind(this)
         window.addEventListener('resize', this.resizeListener)
 
-        // Add event listeners for click, focus, and mouse movement
-        canvas.addEventListener('click', this.handleClick.bind(this))
-        canvas.addEventListener('mousemove', this.handleMouseMove.bind(this))
+        canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this))
+        canvas.addEventListener('pointerup', this.handlePointerUp.bind(this))
+        canvas.addEventListener('pointermove', this.handlePointerMove.bind(this))
     }
 
     // Method to add a component to the QuadTree
@@ -90,9 +104,6 @@ export class NVUI {
         this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
 
         // Update the WebGL viewport using canvasWidth and canvasHeight
-
-
-
         let components: IUIComponent[]
 
         if (boundsInScreenCoords) {
@@ -116,12 +127,48 @@ export class NVUI {
 
     // Method to request a redraw
     private requestRedraw(): void {
-        if (this.redrawRequested) {
-            this.redrawRequested()
+        if (this._redrawRequested) {
+            this._redrawRequested()
         }
         else {
             // no host
             this.draw()
+        }
+    }
+
+    public processPointerMove(x: number, y: number): void {
+        const point: Vec2 = [x * this.dpr, y * this.dpr]
+        const components = new Set(this.quadTree.queryPoint(point).filter(component => component.isVisible))
+        // console.log('components found', components)
+        for (const component of components) {
+            if (!component.isVisible) {
+                continue
+            }
+
+            if (!this.lastHoveredComponents.has(component)) {
+                // console.log('applying pointerenter to ', component)
+                component.applyEventEffects('pointerenter')
+            }
+        }
+        for (const component of this.lastHoveredComponents) {
+            if (!components.has(component)) {
+                component.applyEventEffects('pointerleave')
+            }
+        }
+        this.lastHoveredComponents = components
+    }
+
+    public processPointerDown(x: number, y: number, button: number): void {
+
+    }
+
+    public processPointerUp(x: number, y: number, button: number): void {
+        const point: Vec2 = [x * this.dpr, y * this.dpr]
+        const components = this.quadTree.queryPoint(point)
+        for (const component of components) {
+            if (component.isVisible) {
+                component.applyEventEffects('pointerup')
+            }
         }
     }
 
@@ -139,50 +186,43 @@ export class NVUI {
         this.quadTree.updateBoundary(bounds)
     }
 
-    // Method to handle click events
-    private handleClick(event: MouseEvent): void {
-        const canvas = this.gl.canvas as HTMLCanvasElement
-        const rect = canvas.getBoundingClientRect()
-        const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
-        const components = this.quadTree.queryPoint(point)
-        for (const component of components) {
-            if (component.isVisible) {
-                component.applyEventEffects('click')
-            }
+    // Handler for pointer down events
+    private handlePointerDown(event: PointerEvent): void {
+        const pos = this.getCanvasRelativePosition(event)
+        if (pos) {
+            this.processPointerDown(pos.x, pos.y, event.button)
         }
     }
 
-    // Method to handle mouse move events for mouse enter and mouse leave
-    private handleMouseMove(event: MouseEvent): void {
-        const canvas = this.gl.canvas as HTMLCanvasElement
-        const rect = canvas.getBoundingClientRect()
-        const point: Vec2 = [(event.clientX - rect.left) * this.dpr, (event.clientY - rect.top) * this.dpr]
-
-        const components = new Set(this.quadTree.queryPoint(point).filter(component => component.isVisible))
-        // Handle mouse enter for newly hovered components
-        for (const component of components) {
-            if (!this.lastHoveredComponents.has(component)) {
-                component.applyEventEffects('mouseEnter')
-            }
+    private handlePointerUp(event: PointerEvent): void {
+        const pos = this.getCanvasRelativePosition(event)
+        if (pos) {
+            this.processPointerUp(pos.x, pos.y, event.button)
         }
-
-        // Handle mouse leave for components that are no longer hovered
-        for (const component of this.lastHoveredComponents) {
-            if (!components.has(component)) {
-                component.applyEventEffects('mouseLeave')
-            }
-        }
-
-        this.lastHoveredComponents = components
-
     }
 
-    // Optional: Method to remove the resize listener when NVUI is no longer needed
+    // Handler for pointer move events
+    private handlePointerMove(event: PointerEvent): void {
+        const pos = this.getCanvasRelativePosition(event)
+        if (pos) {
+            this.processPointerMove(pos.x, pos.y)
+        }
+    }
+
+    // Utility method to calculate position relative to the canvas
+    private getCanvasRelativePosition(event: PointerEvent): { x: number, y: number } | null {
+        const canvas = this.gl.canvas as HTMLCanvasElement
+        const rect = canvas.getBoundingClientRect()
+        const x = (event.clientX - rect.left) * this.dpr
+        const y = (event.clientY - rect.top) * this.dpr
+        return { x, y }
+    }
+
     public destroy(): void {
         window.removeEventListener('resize', this.resizeListener)
         const canvas = this.gl.canvas as HTMLCanvasElement
-        canvas.removeEventListener('click', this.handleClick.bind(this))
-        canvas.removeEventListener('mousemove', this.handleMouseMove.bind(this))
+        canvas.removeEventListener('pointerdown', this.handlePointerDown.bind(this))
+        canvas.removeEventListener('pointermove', this.handlePointerMove.bind(this))
     }
 
     // Proxy methods for renderer's draw calls
@@ -441,3 +481,4 @@ export class NVUI {
 
 
 }
+

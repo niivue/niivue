@@ -42,7 +42,7 @@ export class ButtonComponent extends TextBoxComponent {
 
         // Effect 1: Shrink the size of the button on click (bounce effect)
         this.addEventEffect(
-            'click',
+            'pointerup',
             this,
             'scale',
             'animateValue',
@@ -54,7 +54,7 @@ export class ButtonComponent extends TextBoxComponent {
 
         // Effect 2: Move the button down slightly to maintain the same center point (bounce effect)
         this.addEventEffect(
-            'click',
+            'pointerup',
             this,
             'position',
             'animateValue',
@@ -66,7 +66,7 @@ export class ButtonComponent extends TextBoxComponent {
 
         // Effect 3: Change fillColor on mouse enter
         this.addEventEffect(
-            'mouseEnter',
+            'pointerenter',
             this,
             'fillColor',
             'setValue',
@@ -75,7 +75,7 @@ export class ButtonComponent extends TextBoxComponent {
 
         // Effect 4: Revert fillColor on mouse leave
         this.addEventEffect(
-            'mouseLeave',
+            'pointerleave',
             this,
             'fillColor',
             'setValue',
@@ -97,7 +97,7 @@ export class ButtonComponent extends TextBoxComponent {
             mousePosition[1] >= posY &&
             mousePosition[1] <= posY + sizeY
         ) {
-            this.applyEventEffects('click')
+            this.applyEventEffects('pointerup')
         }
     }
 

@@ -23,7 +23,7 @@ export class ToggleComponent extends BaseUIComponent {
 
         // Add click animation effect for knob position
         this.addEventEffect(
-            'click',
+            'pointerup',
             this,
             'knobPosition',
             'animateValue',
@@ -36,7 +36,7 @@ export class ToggleComponent extends BaseUIComponent {
 
         // Add click toggle value effect for isOn state
         this.addEventEffect(
-            'click',
+            'pointerup',
             this,
             'isOn',
             'toggleValue',

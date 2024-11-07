@@ -23,9 +23,9 @@ export abstract class BaseUIComponent implements IUIComponent {
     public requestRedraw?: () => void
 
     // Event handlers
-    public onClick?: (event: MouseEvent) => void
-    public onMouseEnter?: (event: MouseEvent) => void
-    public onMouseLeave?: (event: MouseEvent) => void
+    public onPointerUp?: (event: MouseEvent) => void
+    public onPointerEnter?: (event: MouseEvent) => void
+    public onPointerLeave?: (event: MouseEvent) => void
 
     abstract draw(renderer: NVRenderer): void
 
@@ -155,21 +155,25 @@ export abstract class BaseUIComponent implements IUIComponent {
     }
 
     applyEventEffects(eventName: string): void {
-        const effects = this.eventEffects.get(eventName)
+        if (!eventName) {
+            return
+        }
+        const eventNameLC = eventName.toLowerCase()
+        const effects = this.eventEffects.get(eventNameLC)
         if (effects) {
             effects.forEach((effect) => this.applyEffect(effect))
         }
 
         // Trigger user-defined event handlers
-        switch (eventName) {
-            case 'click':
-                if (this.onClick) this.onClick(new MouseEvent('click'))
+        switch (eventName.toLowerCase()) {
+            case 'pointerup':
+                if (this.onPointerUp) this.onPointerUp(new PointerEvent('pointerup'))
                 break
-            case 'mouseEnter':
-                if (this.onMouseEnter) this.onMouseEnter(new MouseEvent('mouseenter'))
+            case 'pointerenter':
+                if (this.onPointerEnter) this.onPointerEnter(new PointerEvent('pointerenter'))
                 break
-            case 'mouseLeave':
-                if (this.onMouseLeave) this.onMouseLeave(new MouseEvent('mouseleave'))
+            case 'pointerleave':
+                if (this.onPointerLeave) this.onPointerLeave(new PointerEvent('pointerleave'))
                 break
         }
     }

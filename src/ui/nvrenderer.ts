@@ -155,10 +155,11 @@ export class NVRenderer {
 
         // Bind the font texture
         const gl = this.gl
+        font.fontShader.use(gl)
         gl.activeTexture(TEXTURE3_FONT)
         gl.bindTexture(gl.TEXTURE_2D, font.getTexture())
+        this.gl.uniform1i(font.fontShader!.uniforms.fontTexture, 3)
 
-        font.fontShader.use(this.gl)
         const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
         this.gl.enable(this.gl.BLEND)
         this.gl.uniform2f(font.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)

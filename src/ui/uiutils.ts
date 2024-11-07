@@ -38,3 +38,25 @@ export function isEqual(value1: any, value2: any): boolean {
         return value1 === value2
     }
 }
+
+export function convertTouchToMouseEvent(touchEvent: TouchEvent, eventType: string = "click"): MouseEvent {
+    const touch = touchEvent.touches[0] || touchEvent.changedTouches[0]
+    if (!touch) return null
+
+    return new MouseEvent(eventType, {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        detail: touchEvent.detail,
+        screenX: touch.screenX,
+        screenY: touch.screenY,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        ctrlKey: touchEvent.ctrlKey,
+        altKey: touchEvent.altKey,
+        shiftKey: touchEvent.shiftKey,
+        metaKey: touchEvent.metaKey,
+        button: 0,  // Left mouse button equivalent
+        buttons: 1  // Indicating the primary button is pressed
+    })
+}

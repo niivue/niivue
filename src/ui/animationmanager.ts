@@ -134,7 +134,6 @@ export class Animation {
         this.cancelled = false
         this.redrawCallback = redrawCallback
         requestAnimationFrame(this.animate.bind(this))
-        console.log('starting animation', this)
     }
 
     public cancel(): void {
@@ -152,7 +151,6 @@ export class Animation {
         let progress = Math.min(elapsed / this.duration, 1)
         if (elapsed > this.duration) {
             setObjectProperty(this.targetObject, this.property, this.to)
-            console.log('ran out of time', this)
             return
         }
 
