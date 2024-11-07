@@ -151,6 +151,9 @@ export class Animation {
         let progress = Math.min(elapsed / this.duration, 1)
         if (elapsed > this.duration) {
             setObjectProperty(this.targetObject, this.property, this.to)
+            if (this.redrawCallback) {
+                this.redrawCallback()
+            }
             return
         }
 
