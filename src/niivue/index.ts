@@ -148,6 +148,7 @@ export { ButtonComponent } from '../ui/components/buttoncomponent.js'
 export { BaseContainerComponent } from '../ui/components/basecontainercomponent.js'
 export { ContainerButtonComponent } from '../ui/components/containerbuttoncomponent.js'
 export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
+export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
 
 type ColormapListEntry = {
   name: string

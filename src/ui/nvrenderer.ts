@@ -3,6 +3,7 @@ import { mat4, vec2, vec4 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import {
     fragCircleShader,
+    fragColorbarShader,
     fragEllipticalFillShader,
     fragRectShader,
     fragRotatedFontShader,
@@ -10,6 +11,7 @@ import {
     fragRoundedRectShader,
     fragTriangleShader,
     vertCircleShader,
+    vertColorbarShader,
     vertEllipticalFillShader,
     vertLineShader,
     vertRectShader,
@@ -38,7 +40,8 @@ export class NVRenderer {
     protected static lineTerminator = LineTerminator
     protected static rotatedTextShader: Shader
     protected static rotatedRectangularFillShader: Shader
-    protected static rectangleShader: Shader
+    protected static ellipticalFillShader: Shader
+    protected static colorbarShader: Shader
 
     /**
      * Creates an instance of NVRenderer.
@@ -73,8 +76,13 @@ export class NVRenderer {
             NVRenderer.rotatedRectangularFillShader = new Shader(gl, vertRotatedRectangularFillShader, fragRotatedRectangularFillShader)
         }
 
-        if (!NVRenderer.rectangleShader) {
-            NVRenderer.rectangleShader = new Shader(gl, vertEllipticalFillShader, fragEllipticalFillShader)
+        if (!NVRenderer.ellipticalFillShader) {
+            NVRenderer.ellipticalFillShader = new Shader(gl, vertEllipticalFillShader, fragEllipticalFillShader)
+        }
+
+        // Initialize colorbarShader if not already done
+        if (!NVRenderer.colorbarShader) {
+            NVRenderer.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
         }
 
         if (!NVRenderer.genericVAO) {
@@ -1088,7 +1096,7 @@ export class NVRenderer {
 
 
     public drawRectangle(tx: number, ty: number, sx: number, sy: number, color: [number, number, number, number], rotation: number = 0, mixValue: number = 0.1) {
-        const rectangleShader = NVRenderer.rectangleShader;
+        const rectangleShader = NVRenderer.ellipticalFillShader;
 
         rectangleShader.use(this.gl);
 
@@ -1120,6 +1128,48 @@ export class NVRenderer {
 
         this.gl.bindVertexArray(NVRenderer.genericVAO);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    public drawColorbar(
+        font: NVFont,          // Font used for rendering labels
+        position: Vec2,        // Position of the color bar [x, y]
+        size: Vec2,            // Size of the color bar [width, height]
+        gradientTexture: WebGLTexture, // Texture for gradient if applicable
+        labels: string[],      // Array of labels for tick marks
+        minMax: [number, number] = [0, 1], // Minimum and maximum values for labels
+    ): void {
+        const gl = this.gl
+        const [x, y] = position
+        const [width, height] = size
+
+        // Use the colorbarShader for rendering
+        NVRenderer.colorbarShader.use(gl)
+
+        // Set up uniforms for the colorbar shader
+        gl.uniform2fv(NVRenderer.colorbarShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+        gl.uniform4fv(NVRenderer.colorbarShader.uniforms.leftTopWidthHeight, [x, y, width, height])
+
+        // Bind the gradient texture
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D, gradientTexture)
+        gl.uniform1i(NVRenderer.colorbarShader.uniforms.gradientTexture, 0) // Assumes gradient texture is bound to TEXTURE0
+
+        // Bind VAO and draw color bar rectangle
+        gl.bindVertexArray(NVRenderer.genericVAO)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+        // Draw tick marks and labels if any, using the provided font
+        const range = minMax[1] - minMax[0]
+        const spacing = width / (labels.length - 1)
+        labels.forEach((label, i) => {
+            const labelX = x + i * spacing
+            const labelPos: Vec2 = [labelX, y + height + 5]
+            this.drawText(font, labelPos, label, 0.5, [0, 0, 0, 1]) // Adjust scale and color as needed
+        })
+
+        // Unbind texture and VAO after drawing
+        gl.bindTexture(gl.TEXTURE_2D, null)
+        gl.bindVertexArray(null)
     }
 
 

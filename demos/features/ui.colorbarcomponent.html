@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Color Bar Component Demo</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+        <label for="colormap-select">Select Colormap:</label>
+        <select id="colormap-select">
+            <!-- Add more colormaps as needed -->
+            <option value="viridis">Viridis</option>
+            <option value="magma">Magma</option>
+            <option value="plasma">Plasma</option>
+            <option value="inferno">Inferno</option>
+            <option value="cividis">Cividis</option>
+        </select>
+    </header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js";
+
+        const nv1 = new niivue.Niivue();
+        await nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+
+        // Load the font for text rendering
+        const font = new niivue.NVFont(nv1.gl);
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
+
+        // Define color bar properties
+        const colorbarLabels = ["Low", "Medium", "High"];
+        const minMax = [0, 1];
+        const size = [300, 20]; // Set size as needed
+        const position = [(nv1.canvas.width - size[0]) / 2, nv1.canvas.height / 4]; // Set position as needed
+
+        const colormapName = "viridis"; // Choose a colormap name
+        const bounds = [position[0], position[1], size[0], size[1]]
+
+        // Create the ColorbarComponent
+        const colorbarComponent = new niivue.ColorbarComponent(
+            nv1.gl,         // Pass the WebGL context
+            font,           // Pass the font
+            colorbarLabels, // Pass the labels
+            minMax,         // Pass the min and max range
+            colormapName,    // Pass the colormap name
+            bounds
+        );
+
+        // Set bounds for the color bar component
+        // colorbarComponent.setBounds([position[0], position[1], size[0], size[1]]);
+
+        // Add the color bar component to the UI
+        nv1.ui.addComponent(colorbarComponent);
+
+        // Set up the draw button to render the scene
+        nv1.drawScene()
+
+        // Handle colormap selection
+        document.getElementById("colormap-select").addEventListener("change", (event) => {
+            const selectedColormap = event.target.value;
+            colorbarComponent.colormapName = selectedColormap; // Update colormapName, regenerating the texture
+            nv1.drawScene(); // Redraw scene with the updated colormap
+        });
+
+    </script>
+</body>
+
+</html>
