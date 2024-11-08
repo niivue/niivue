@@ -913,6 +913,269 @@ export class NVRenderer {
         this.drawText(font, textPosition, str, scale, textColor, maxWidth, fontOutlineColor, fontOutlineThickness)
     }
 
+    // public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
+    //     // Calculate the angle between the points
+    //     const deltaX = pointB[0] - pointA[0]
+    //     const deltaY = pointB[1] - pointA[1]
+    //     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    //     let angle = Math.atan2(deltaY, deltaX)
+
+    //     // Calculate the midpoint
+    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
+
+    //     // Format the length text
+    //     const text = `${length.toFixed(2)}`
+
+    //     // Adjust the text position to ensure it's centered above the parallel line
+    //     const textWidth = font.getTextWidth(text, scale)
+    //     const textHeight = font.getTextHeight(text, scale)
+    //     const halfTextWidth = textWidth / 2
+    //     const halfTextHeight = textHeight / 2
+    //     let textPosition: Vec2 = [
+    //         midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
+    //         midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
+    //     ]
+
+    //     // Ensure text is not upside down
+    //     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+    //         angle += Math.PI
+    //         textPosition = [
+    //             midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
+    //             midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
+    //         ]
+    //     }
+
+    //     // Draw the rotated length text at the adjusted position
+    //     this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
+    //     this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
+    //     this.drawRotatedText(font, textPosition, text, scale, textColor, angle, [1, 1, 1, 1], 4)
+
+
+    //     // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
+    //     const unitsText = units
+    //     const unitsScale = scale / 2
+    //     const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
+    //     const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
+    //     const unitsTextPosition: Vec2 = [
+    //         textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
+    //         textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
+    //     ]
+    //     this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
+
+    //     // Draw a parallel line of equal length to the original line
+    //     const parallelPointA: Vec2 = [
+    //         pointA[0] + offset * deltaY / actualLength,
+    //         pointA[1] - offset * deltaX / actualLength
+    //     ]
+    //     const parallelPointB: Vec2 = [
+    //         pointB[0] + offset * deltaY / actualLength,
+    //         pointB[1] - offset * deltaX / actualLength
+    //     ]
+    //     this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
+
+    //     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
+    //     this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
+    //     this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
+    // }
+    // public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
+    //     // Calculate the angle between the points
+    //     const deltaX = pointB[0] - pointA[0]
+    //     const deltaY = pointB[1] - pointA[1]
+    //     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    //     let angle = Math.atan2(deltaY, deltaX)
+
+    //     // Calculate the midpoint
+    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
+
+    //     // Format the length text
+    //     const text = `${length.toFixed(2)}`
+
+    //     // Adjust the text position to ensure it's centered above the parallel line
+    //     const textWidth = font.getTextWidth(text, scale)
+    //     const textHeight = font.getTextHeight(text, scale)
+    //     const halfTextWidth = textWidth / 2
+    //     const halfTextHeight = textHeight / 2
+    //     let textPosition: Vec2 = [
+    //         midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
+    //         midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
+    //     ]
+
+    //     // Ensure text is not upside down
+    //     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+    //         angle += Math.PI
+    //         textPosition = [
+    //             midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
+    //             midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
+    //         ]
+    //     }
+
+    //     // Draw the rotated length text at the adjusted position
+    //     this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
+
+    //     // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
+    //     const unitsText = units
+    //     const unitsScale = scale / 2
+    //     const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
+    //     const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
+    //     const unitsTextPosition: Vec2 = [
+    //         textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
+    //         textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
+    //     ]
+    //     this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
+
+    //     // Draw a parallel line of equal length to the original line
+    //     const parallelPointA: Vec2 = [
+    //         pointA[0] + offset * deltaY / actualLength,
+    //         pointA[1] - offset * deltaX / actualLength
+    //     ]
+    //     const parallelPointB: Vec2 = [
+    //         pointB[0] + offset * deltaY / actualLength,
+    //         pointB[1] - offset * deltaX / actualLength
+    //     ]
+    //     this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
+
+    //     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
+    //     this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
+    //     this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
+
+    //     // Draw perpendicular hash marks like a ruler, moved closer to the parallel line and made parallel with the arrows
+    //     const numHashMarks = Math.floor(length) // Draw a hash mark for every unit
+    //     const hashLength = 8 // Shorten hash length to move closer to the parallel line
+    //     const parallelOffset = offset / 1.5 // Move hash marks closer to the parallel line
+
+    //     for (let i = 1; i <= numHashMarks; i++) {
+    //         const t = i / length
+    //         const hashPoint: Vec2 = [
+    //             pointA[0] + t * deltaX,
+    //             pointA[1] + t * deltaY
+    //         ]
+
+    //         // Make every 5th hash mark twice as long
+    //         const currentHashLength = (i % 5 === 0) ? hashLength * 2 : hashLength
+
+    //         const perpOffsetX = deltaY / actualLength * parallelOffset
+    //         const perpOffsetY = -deltaX / actualLength * parallelOffset
+
+    //         const hashStart: Vec2 = [
+    //             hashPoint[0] + perpOffsetX - (currentHashLength / 2) * Math.cos(angle),
+    //             hashPoint[1] + perpOffsetY - (currentHashLength / 2) * Math.sin(angle)
+    //         ]
+    //         const hashEnd: Vec2 = [
+    //             hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle),
+    //             hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle)
+    //         ]
+
+    //         // Set hash line thickness to 1
+    //         this.drawLine([hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], 1, lineColor)
+
+    //         // Draw the text centered above every 5th hash mark and scale the size to 1/5 of the scale, positioned closer to the parallel line
+    //         if (i % 5 === 0) {
+    //             const hashText = `${i}`
+    //             const hashTextScale = scale / 5 // Scale down the text size to 1/5 of the scale
+    //             const hashTextWidth = font.getTextWidth(hashText, hashTextScale)
+    //             const hashTextHeight = font.getTextHeight(hashText, hashTextScale)
+    //             const hashTextPosition: Vec2 = [
+    //                 hashPoint[0] + perpOffsetX - (hashTextWidth / 2) * Math.cos(angle) + (currentHashLength / 4) * Math.sin(angle),
+    //                 hashPoint[1] + perpOffsetY - (hashTextWidth / 2) * Math.sin(angle) - (currentHashLength / 4) * Math.cos(angle)
+    //             ]
+    //             this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, textColor, angle)
+    //         }
+    //     }
+    // }
+
+    // public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
+    //     // Calculate the angle between the points
+    //     const deltaX = pointB[0] - pointA[0]
+    //     const deltaY = pointB[1] - pointA[1]
+    //     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    //     let angle = Math.atan2(deltaY, deltaX)
+
+    //     // Calculate the midpoint
+    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
+
+    //     // Format the length text
+    //     const text = `${length.toFixed(2)}`
+
+    //     // Adjust the text position to ensure it's centered above the parallel line
+    //     const textWidth = font.getTextWidth(text, scale)
+    //     const textHeight = font.getTextHeight(text, scale)
+    //     const halfTextWidth = textWidth / 2
+    //     const halfTextHeight = textHeight / 2
+    //     let textPosition: Vec2 = [
+    //         midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
+    //         midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
+    //     ]
+
+    //     // Ensure text is not upside down
+    //     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+    //         angle += Math.PI
+    //         textPosition = [
+    //             midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
+    //             midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
+    //         ]
+    //     }
+
+    //     // Draw the rotated length text at the adjusted position
+    //     this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
+
+    //     // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
+    //     const unitsText = units
+    //     const unitsScale = scale / 2
+    //     const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
+    //     const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
+    //     const unitsTextPosition: Vec2 = [
+    //         textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
+    //         textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
+    //     ]
+    //     this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
+
+    //     // Draw a parallel line of equal length to the original line
+    //     const parallelPointA: Vec2 = [
+    //         pointA[0] + offset * deltaY / actualLength,
+    //         pointA[1] - offset * deltaX / actualLength
+    //     ]
+    //     const parallelPointB: Vec2 = [
+    //         pointB[0] + offset * deltaY / actualLength,
+    //         pointB[1] - offset * deltaX / actualLength
+    //     ]
+    //     this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
+
+    //     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
+    //     this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
+    //     this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
+
+    //     // Draw perpendicular hash marks like a ruler
+    //     const numHashMarks = Math.floor(length) // Draw a hash mark for every unit
+    //     const hashLength = 8 // Length of each hash mark
+    //     const parallelOffset = offset / 1.5 // Move hash marks closer to the parallel line
+
+    //     for (let i = 1; i <= numHashMarks; i++) {
+    //         const t = i / length
+    //         const hashPoint: Vec2 = [
+    //             pointA[0] + t * deltaX,
+    //             pointA[1] + t * deltaY
+    //         ]
+
+    //         // Make every 5th hash mark twice as long
+    //         const currentHashLength = (i % 5 === 0) ? hashLength * 2 : hashLength
+
+    //         const perpOffsetX = deltaY / actualLength * parallelOffset
+    //         const perpOffsetY = -deltaX / actualLength * parallelOffset
+
+    //         const hashStart: Vec2 = [
+    //             hashPoint[0] + perpOffsetX - (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
+    //             hashPoint[1] + perpOffsetY - (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
+    //         ]
+    //         const hashEnd: Vec2 = [
+    //             hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
+    //             hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
+    //         ]
+
+    //         // Set hash line thickness to 1
+    //         this.drawLine([hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], 1, lineColor)
+    //     }
+    // }
+
     public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
         // Calculate the angle between the points
         const deltaX = pointB[0] - pointA[0]
@@ -949,7 +1212,7 @@ export class NVRenderer {
         this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
         this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
         this.drawRotatedText(font, textPosition, text, scale, textColor, angle, [1, 1, 1, 1], 4)
-
+        // this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
 
         // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
         const unitsText = units
@@ -976,39 +1239,64 @@ export class NVRenderer {
         // Draw lines terminating in arrows from the ends of the parallel line to points A and B
         this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
         this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
+
+        // Draw perpendicular hash marks like a ruler, moved closer to the arrows
+        const numHashMarks = Math.floor(length) // Draw a hash mark for every unit
+        const hashLength = 8 // Length of each hash mark
+        const parallelOffset = offset / 4 // Move hash marks closer to the arrows
+
+        for (let i = 1; i <= numHashMarks; i++) {
+            const t = i / length
+            const hashPoint: Vec2 = [
+                pointA[0] + t * deltaX,
+                pointA[1] + t * deltaY
+            ]
+
+            // Make every 5th hash mark twice as long
+            const currentHashLength = (i % 5 === 0) ? hashLength * 2 : hashLength
+
+
+            const perpOffsetX = deltaY / actualLength * parallelOffset
+            const perpOffsetY = -deltaX / actualLength * parallelOffset
+
+            if (i % 5 === 0) {
+                const hashText = `${i}`
+                const hashTextScale = scale / 5 // Scale down the text size to 1/5 of the scale
+                const hashTextWidth = font.getTextWidth(hashText, hashTextScale)
+                const hashTextHeight = font.getTextHeight(hashText, hashTextScale)
+                const hashTextPosition: Vec2 = [
+                    hashPoint[0] + perpOffsetX - (hashTextWidth / 2) * Math.cos(angle) + (currentHashLength / 4) * Math.sin(angle),
+                    hashPoint[1] + perpOffsetY - (hashTextWidth / 2) * Math.sin(angle) - (currentHashLength / 4) * Math.cos(angle)
+                ]
+                this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
+                this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
+                this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, textColor, angle)
+            }
+
+            const hashStart: Vec2 = [
+                hashPoint[0] + perpOffsetX - (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
+                hashPoint[1] + perpOffsetY - (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
+            ]
+            const hashEnd: Vec2 = [
+                hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
+                hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
+            ]
+
+            // Set hash line thickness to 1
+            this.drawLine([hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], 1, lineColor)
+        }
     }
 
 
-    // public drawRectangle(tx: number, ty: number, sx: number, sy: number, color: [number, number, number, number], rotation: number = 0) {
-    //     const rectangleShader = NVRenderer.rectangleShader;
 
-    //     rectangleShader.use(this.gl);
 
-    //     const orthoMatrix = mat4.create();
-    //     mat4.ortho(orthoMatrix, 0, this.gl.canvas.width, 0, this.gl.canvas.height, -1, 1);
 
-    //     const modelMatrix = mat4.create();
-    //     // Translate to the center of the rectangle
-    //     mat4.translate(modelMatrix, modelMatrix, [tx + sx / 2, ty + sy / 2, 0]);
-    //     // Apply the rotation around the center
-    //     mat4.rotateZ(modelMatrix, modelMatrix, rotation);
-    //     // Translate back to the top-left corner
-    //     mat4.translate(modelMatrix, modelMatrix, [-sx / 2, -sy / 2, 0]);
-    //     // Scale the rectangle
-    //     mat4.scale(modelMatrix, modelMatrix, [sx, sy, 1]);
 
-    //     const transformMatrix = mat4.create();
-    //     mat4.multiply(transformMatrix, orthoMatrix, modelMatrix);
 
-    //     // Set the transform uniform
-    //     this.gl.uniformMatrix4fv(rectangleShader.uniforms.u_transform, false, transformMatrix);
 
-    //     // Set the color uniform
-    //     this.gl.uniform4fv(rectangleShader.uniforms.u_color, color);
 
-    //     this.gl.bindVertexArray(NVRenderer.genericVAO);
-    //     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-    // }
+
+
     public drawRectangle(tx: number, ty: number, sx: number, sy: number, color: [number, number, number, number], rotation: number = 0, mixValue: number = 0.1) {
         const rectangleShader = NVRenderer.rectangleShader;
 
