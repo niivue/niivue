@@ -14,7 +14,7 @@ export interface IUIComponent {
 
     isVisible: boolean
     zIndex: number
-
+    tags: string[]
     getScale(): number
     setScale(value: number): void
     applyEventEffects(eventName: string): void

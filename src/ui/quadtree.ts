@@ -31,6 +31,16 @@ export class Rectangle {
             range.y + range.height < this.y
         )
     }
+
+    static fromVec4(vec: Vec4): Rectangle {
+        const rectangle = new Rectangle(
+            vec[0],
+            vec[1],
+            vec[2],
+            vec[3]
+        )
+        return rectangle
+    }
 }
 
 export class QuadTree<T extends IUIComponent> {

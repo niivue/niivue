@@ -18,6 +18,7 @@ import { ToggleComponent } from './components/togglecomponent.js'
 import { TriangleComponent } from './components/trianglecomponent.js'
 import { TextComponent } from './components/textcomponent.js'
 import { IUIComponent } from './interfaces.js'
+import { BaseUIComponent } from './components/baseuicomponent.js'
 
 export class NVUI {
     private gl: WebGL2RenderingContext
@@ -99,6 +100,29 @@ export class NVUI {
         component.requestRedraw = this.requestRedraw.bind(this)
         this.quadTree.insert(component)
     }
+
+    getComponents(boundsInScreenCoords?: Vec4, tags: string[] = [], useAnd: boolean = true, useNot: boolean = false): IUIComponent[] {
+        // Retrieve components within the specified bounds from the quadtree
+
+        if (boundsInScreenCoords) {
+            const queryRectangle = new Rectangle(
+                boundsInScreenCoords[0],
+                boundsInScreenCoords[1],
+                boundsInScreenCoords[2],
+                boundsInScreenCoords[3]
+            )
+        }
+        const candidates = (boundsInScreenCoords) ? this.quadTree.query(Rectangle.fromVec4(boundsInScreenCoords)) : this.quadTree.getAllElements()
+
+        return candidates.filter(component => {
+            const hasTags = useAnd
+                ? tags.every(tag => component.tags.includes(tag))
+                : tags.some(tag => component.tags.includes(tag))
+
+            return useNot ? !hasTags : hasTags
+        })
+    }
+
 
     public draw(boundsInScreenCoords?: Vec4): void {
         this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
