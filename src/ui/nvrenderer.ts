@@ -946,7 +946,10 @@ export class NVRenderer {
         }
 
         // Draw the rotated length text at the adjusted position
+        this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
+        this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
         this.drawRotatedText(font, textPosition, text, scale, textColor, angle, [1, 1, 1, 1], 4)
+
 
         // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
         const unitsText = units
