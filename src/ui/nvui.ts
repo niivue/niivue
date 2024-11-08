@@ -1,5 +1,5 @@
 import { Rectangle } from './quadtree.js'
-import { Vec2, Vec4, Color } from './types.js'
+import { Vec2, Vec4, Color, LineStyle } from './types.js'
 import { NVRenderer } from './nvrenderer.js'
 import { QuadTree } from './quadtree.js'
 import { NVFont } from './nvfont.js'
@@ -42,6 +42,7 @@ export class NVUI {
 
     // Static enum for line terminators
     public static lineTerminator = LineTerminator
+    public static lineStyle = LineStyle
 
     private lastHoveredComponents: Set<IUIComponent> = new Set()
 

@@ -20,7 +20,7 @@ import {
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
-import { LineTerminator, Color, Vec2, Vec4 } from './types.js'
+import { LineTerminator, Color, Vec2, Vec4, LineStyle } from './types.js'
 
 
 
@@ -262,54 +262,104 @@ export class NVRenderer {
     }
 
     /**
- * Draws a line.
- * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
- * @param thickness - The thickness of the line.
- * @param lineColor - The color of the line.
- */
+     * Draws a line with specified start and end coordinates, thickness, color, and style.
+     * Supports solid, dashed, or dotted lines, with optional terminators (such as arrows or rings).
+     * For dashed and dotted lines, segments or dots will adjust to reach the endpoint or terminator.
+     *
+     * @param startEnd - The start and end coordinates of the line, as a Vec4 array in the form [startX, startY, endX, endY].
+     * @param thickness - The thickness of the line. Defaults to 1.
+     * @param lineColor - The color of the line, as a Color array in [R, G, B, A] format. Defaults to red ([1, 0, 0, -1]).
+     * @param terminator - The type of terminator at the end of the line (e.g., NONE, ARROW, CIRCLE, or RING). Defaults to NONE.
+     * @param lineStyle - The style of the line: solid, dashed, or dotted. Defaults to solid.
+     * @param dashDotLength - The length of dashes or diameter of dots for dashed/dotted lines. Defaults to 5.
+     *
+     * If a terminator is specified, the line will be shortened by half the width of the terminator to avoid overlap.
+     * For dashed lines, segments are spaced out by a factor of 1.5 * dashDotLength.
+     * For dotted lines, dots are spaced out by a factor of 2 * dashDotLength.
+     */
     public drawLine(
         startEnd: Vec4,
         thickness = 1,
         lineColor: Color = [1, 0, 0, -1],
-        terminator: LineTerminator = LineTerminator.NONE
+        terminator: LineTerminator = LineTerminator.NONE,
+        lineStyle: LineStyle = LineStyle.NORMAL,
+        dashDotLength: number = 5  // Default length for dash or dot size
     ): void {
-        const gl = this.gl;
+        const gl = this.gl
 
         // Extract start and end points
         const lineCoords = Array.isArray(startEnd)
             ? vec4.fromValues(startEnd[0], startEnd[1], startEnd[2], startEnd[3])
-            : startEnd;
+            : startEnd
 
-        let [startX, startY, endX, endY] = lineCoords;
+        let [startX, startY, endX, endY] = lineCoords
 
         // Calculate direction and adjust for terminator
-        const direction = vec2.sub(vec2.create(), [endX, endY], [startX, startY]);
-        vec2.normalize(direction, direction);
+        const direction = vec2.sub(vec2.create(), [endX, endY], [startX, startY])
+        vec2.normalize(direction, direction)
 
-        const terminatorSize = thickness * 3;  // Example terminator size based on thickness
+        const terminatorSize = thickness * 3  // Example terminator size based on thickness
 
-        // Adjust line length to fit terminator bounds
-        switch (terminator) {
-            case LineTerminator.ARROW:
-            case LineTerminator.CIRCLE:
-            case LineTerminator.RING:
-                endX -= direction[0] * (terminatorSize / 2 - thickness / 2);
-                endY -= direction[1] * (terminatorSize / 2 - thickness / 2);
-                break;
+        // Adjust line length by half the terminator width if a terminator exists
+        if (terminator !== LineTerminator.NONE) {
+            endX -= direction[0] * (terminatorSize / 2)
+            endY -= direction[1] * (terminatorSize / 2)
         }
 
-        // Set the adjusted endpoint
-        const shortenedLine = vec4.fromValues(startX, startY, endX, endY);
-        this.lineShader.use(gl);
-        gl.enable(gl.BLEND);
-        gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor as Float32List);
-        gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height]);
-        gl.uniform1f(this.lineShader.uniforms.thickness, thickness);
-        gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine);
+        if (lineStyle === LineStyle.DASHED || lineStyle === LineStyle.DOTTED) {
+            const lineLength = vec2.distance([startX, startY], [endX, endY])
+            const segmentSpacing = lineStyle === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
+            const segmentCount = Math.floor(lineLength / segmentSpacing)
 
-        gl.bindVertexArray(NVRenderer.genericVAO);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        gl.bindVertexArray(null); // Unbind to avoid side effects
+            for (let i = 0; i <= segmentCount; i++) {
+                const segmentStart = vec2.scaleAndAdd(vec2.create(), [startX, startY], direction, i * segmentSpacing)
+
+                if (i === segmentCount) {
+                    // Connect the last dash or dot to the adjusted endpoint
+                    if (lineStyle === LineStyle.DASHED) {
+                        const segmentCoords = vec4.fromValues(segmentStart[0], segmentStart[1], endX, endY)
+                        this.drawSegment(segmentCoords, thickness, lineColor)
+                    } else if (lineStyle === LineStyle.DOTTED) {
+                        const dotParams = vec4.fromValues(
+                            endX - dashDotLength / 2,
+                            endY - dashDotLength / 2,
+                            dashDotLength,
+                            dashDotLength
+                        )
+                        this.drawCircle(dotParams, lineColor)
+                    }
+                } else {
+                    if (lineStyle === LineStyle.DASHED) {
+                        // Draw dashed segment
+                        const segmentEnd = vec2.scaleAndAdd(vec2.create(), segmentStart, direction, dashDotLength)
+                        const segmentCoords = vec4.fromValues(segmentStart[0], segmentStart[1], segmentEnd[0], segmentEnd[1])
+                        this.drawSegment(segmentCoords, thickness, lineColor)
+                    } else if (lineStyle === LineStyle.DOTTED) {
+                        // Draw dot as a small circle
+                        const dotParams = vec4.fromValues(
+                            segmentStart[0] - dashDotLength / 2,
+                            segmentStart[1] - dashDotLength / 2,
+                            dashDotLength,
+                            dashDotLength
+                        )
+                        this.drawCircle(dotParams, lineColor)
+                    }
+                }
+            }
+        } else {
+            // Draw solid line if no dash/dot style specified
+            const shortenedLine = vec4.fromValues(startX, startY, endX, endY)
+            this.lineShader.use(gl)
+            gl.enable(gl.BLEND)
+            gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor as Float32List)
+            gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+            gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+            gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine)
+
+            gl.bindVertexArray(NVRenderer.genericVAO)
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+            gl.bindVertexArray(null) // Unbind to avoid side effects
+        }
 
         // Draw the terminator
         switch (terminator) {
@@ -319,33 +369,50 @@ export class NVRenderer {
                     [endX - direction[0] * terminatorSize / 2, endY - direction[1] * terminatorSize / 2],
                     terminatorSize,
                     lineColor
-                );
-                break;
+                )
+                break
             case LineTerminator.CIRCLE:
                 this.drawCircle(
                     [startEnd[2] - terminatorSize / 2, startEnd[3] - terminatorSize / 2, terminatorSize, terminatorSize],
                     lineColor
-                );
-                break;
+                )
+                break
             case LineTerminator.RING:
                 this.drawCircle(
                     [startEnd[2] - terminatorSize / 2, startEnd[3] - terminatorSize / 2, terminatorSize, terminatorSize],
                     lineColor,
                     0.5
-                );
-                break;
+                )
+                break
         }
+    }
+
+    // Helper method to draw individual dashed segments
+    private drawSegment(
+        segmentCoords: Vec4,
+        thickness: number,
+        color: Color
+    ): void {
+        const gl = this.gl
+        this.lineShader.use(gl)
+        gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
+        gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+        gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentCoords)
+
+        gl.bindVertexArray(NVRenderer.genericVAO)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.bindVertexArray(null) // Unbind to avoid side effects
     }
 
 
 
     /**
- * Draws an elbow line.
- * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
- * @param thickness - The thickness of the line.
- * @param lineColor - The color of the line.
- * @param horizontalFirst - If true, draw the horizontal segment first, otherwise draw the vertical segment first.
- */
+    * Draws an elbow line.
+    * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
+    * @param thickness - The thickness of the line.
+    * @param lineColor - The color of the line.
+    * @param horizontalFirst - If true, draw the horizontal segment first, otherwise draw the vertical segment first.
+    */
     public drawElbowLine(
         startEnd: Vec4,
         thickness = 1,
@@ -476,23 +543,9 @@ export class NVRenderer {
         this.gl.uniform4fv(shader.uniforms.u_gradientColor, gradientColor as Float32List)
         this.gl.uniform4fv(shader.uniforms.u_leftTopWidthHeight, rectParams as Float32List)
 
-        // Calculate the model-view-projection matrix
-        // const modelMatrix = mat4.create()
-        // mat4.translate(modelMatrix, modelMatrix, [
-        //     leftTopWidthHeight[0] + leftTopWidthHeight[2] / 2,
-        //     leftTopWidthHeight[1] + leftTopWidthHeight[3] / 2,
-        //     0
-        // ])
-        // mat4.rotateZ(modelMatrix, modelMatrix, rotation)
-        // mat4.translate(modelMatrix, modelMatrix, [
-        //     -leftTopWidthHeight[2] / 2,
-        //     -leftTopWidthHeight[3] / 2,
-        //     0
-        // ])
-
         const modelMatrix = mat4.create();
         mat4.translate(modelMatrix, modelMatrix, [leftTopWidthHeight[0], leftTopWidthHeight[1], 0.0])
-        // mat4.rotateZ(modelMatrix, modelMatrix, rotation)
+        mat4.rotateZ(modelMatrix, modelMatrix, rotation)
 
 
         mat4.scale(modelMatrix, modelMatrix, [leftTopWidthHeight[2], leftTopWidthHeight[3], 1.0])
@@ -912,269 +965,6 @@ export class NVRenderer {
         // Render the text
         this.drawText(font, textPosition, str, scale, textColor, maxWidth, fontOutlineColor, fontOutlineThickness)
     }
-
-    // public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
-    //     // Calculate the angle between the points
-    //     const deltaX = pointB[0] - pointA[0]
-    //     const deltaY = pointB[1] - pointA[1]
-    //     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-    //     let angle = Math.atan2(deltaY, deltaX)
-
-    //     // Calculate the midpoint
-    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
-
-    //     // Format the length text
-    //     const text = `${length.toFixed(2)}`
-
-    //     // Adjust the text position to ensure it's centered above the parallel line
-    //     const textWidth = font.getTextWidth(text, scale)
-    //     const textHeight = font.getTextHeight(text, scale)
-    //     const halfTextWidth = textWidth / 2
-    //     const halfTextHeight = textHeight / 2
-    //     let textPosition: Vec2 = [
-    //         midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
-    //         midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
-    //     ]
-
-    //     // Ensure text is not upside down
-    //     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-    //         angle += Math.PI
-    //         textPosition = [
-    //             midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
-    //             midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
-    //         ]
-    //     }
-
-    //     // Draw the rotated length text at the adjusted position
-    //     this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
-    //     this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
-    //     this.drawRotatedText(font, textPosition, text, scale, textColor, angle, [1, 1, 1, 1], 4)
-
-
-    //     // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
-    //     const unitsText = units
-    //     const unitsScale = scale / 2
-    //     const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
-    //     const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
-    //     const unitsTextPosition: Vec2 = [
-    //         textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
-    //         textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
-    //     ]
-    //     this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
-
-    //     // Draw a parallel line of equal length to the original line
-    //     const parallelPointA: Vec2 = [
-    //         pointA[0] + offset * deltaY / actualLength,
-    //         pointA[1] - offset * deltaX / actualLength
-    //     ]
-    //     const parallelPointB: Vec2 = [
-    //         pointB[0] + offset * deltaY / actualLength,
-    //         pointB[1] - offset * deltaX / actualLength
-    //     ]
-    //     this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
-
-    //     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
-    //     this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
-    //     this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
-    // }
-    // public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
-    //     // Calculate the angle between the points
-    //     const deltaX = pointB[0] - pointA[0]
-    //     const deltaY = pointB[1] - pointA[1]
-    //     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-    //     let angle = Math.atan2(deltaY, deltaX)
-
-    //     // Calculate the midpoint
-    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
-
-    //     // Format the length text
-    //     const text = `${length.toFixed(2)}`
-
-    //     // Adjust the text position to ensure it's centered above the parallel line
-    //     const textWidth = font.getTextWidth(text, scale)
-    //     const textHeight = font.getTextHeight(text, scale)
-    //     const halfTextWidth = textWidth / 2
-    //     const halfTextHeight = textHeight / 2
-    //     let textPosition: Vec2 = [
-    //         midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
-    //         midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
-    //     ]
-
-    //     // Ensure text is not upside down
-    //     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-    //         angle += Math.PI
-    //         textPosition = [
-    //             midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
-    //             midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
-    //         ]
-    //     }
-
-    //     // Draw the rotated length text at the adjusted position
-    //     this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
-
-    //     // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
-    //     const unitsText = units
-    //     const unitsScale = scale / 2
-    //     const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
-    //     const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
-    //     const unitsTextPosition: Vec2 = [
-    //         textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
-    //         textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
-    //     ]
-    //     this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
-
-    //     // Draw a parallel line of equal length to the original line
-    //     const parallelPointA: Vec2 = [
-    //         pointA[0] + offset * deltaY / actualLength,
-    //         pointA[1] - offset * deltaX / actualLength
-    //     ]
-    //     const parallelPointB: Vec2 = [
-    //         pointB[0] + offset * deltaY / actualLength,
-    //         pointB[1] - offset * deltaX / actualLength
-    //     ]
-    //     this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
-
-    //     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
-    //     this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
-    //     this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
-
-    //     // Draw perpendicular hash marks like a ruler, moved closer to the parallel line and made parallel with the arrows
-    //     const numHashMarks = Math.floor(length) // Draw a hash mark for every unit
-    //     const hashLength = 8 // Shorten hash length to move closer to the parallel line
-    //     const parallelOffset = offset / 1.5 // Move hash marks closer to the parallel line
-
-    //     for (let i = 1; i <= numHashMarks; i++) {
-    //         const t = i / length
-    //         const hashPoint: Vec2 = [
-    //             pointA[0] + t * deltaX,
-    //             pointA[1] + t * deltaY
-    //         ]
-
-    //         // Make every 5th hash mark twice as long
-    //         const currentHashLength = (i % 5 === 0) ? hashLength * 2 : hashLength
-
-    //         const perpOffsetX = deltaY / actualLength * parallelOffset
-    //         const perpOffsetY = -deltaX / actualLength * parallelOffset
-
-    //         const hashStart: Vec2 = [
-    //             hashPoint[0] + perpOffsetX - (currentHashLength / 2) * Math.cos(angle),
-    //             hashPoint[1] + perpOffsetY - (currentHashLength / 2) * Math.sin(angle)
-    //         ]
-    //         const hashEnd: Vec2 = [
-    //             hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle),
-    //             hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle)
-    //         ]
-
-    //         // Set hash line thickness to 1
-    //         this.drawLine([hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], 1, lineColor)
-
-    //         // Draw the text centered above every 5th hash mark and scale the size to 1/5 of the scale, positioned closer to the parallel line
-    //         if (i % 5 === 0) {
-    //             const hashText = `${i}`
-    //             const hashTextScale = scale / 5 // Scale down the text size to 1/5 of the scale
-    //             const hashTextWidth = font.getTextWidth(hashText, hashTextScale)
-    //             const hashTextHeight = font.getTextHeight(hashText, hashTextScale)
-    //             const hashTextPosition: Vec2 = [
-    //                 hashPoint[0] + perpOffsetX - (hashTextWidth / 2) * Math.cos(angle) + (currentHashLength / 4) * Math.sin(angle),
-    //                 hashPoint[1] + perpOffsetY - (hashTextWidth / 2) * Math.sin(angle) - (currentHashLength / 4) * Math.cos(angle)
-    //             ]
-    //             this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, textColor, angle)
-    //         }
-    //     }
-    // }
-
-    // public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
-    //     // Calculate the angle between the points
-    //     const deltaX = pointB[0] - pointA[0]
-    //     const deltaY = pointB[1] - pointA[1]
-    //     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-    //     let angle = Math.atan2(deltaY, deltaX)
-
-    //     // Calculate the midpoint
-    //     const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
-
-    //     // Format the length text
-    //     const text = `${length.toFixed(2)}`
-
-    //     // Adjust the text position to ensure it's centered above the parallel line
-    //     const textWidth = font.getTextWidth(text, scale)
-    //     const textHeight = font.getTextHeight(text, scale)
-    //     const halfTextWidth = textWidth / 2
-    //     const halfTextHeight = textHeight / 2
-    //     let textPosition: Vec2 = [
-    //         midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
-    //         midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
-    //     ]
-
-    //     // Ensure text is not upside down
-    //     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-    //         angle += Math.PI
-    //         textPosition = [
-    //             midPoint[0] - (textWidth / 2) * Math.cos(angle) - (textHeight / 2 + offset) * Math.sin(angle) - offset * Math.sin(angle),
-    //             midPoint[1] - (textWidth / 2) * Math.sin(angle) + (textHeight / 2 + offset) * Math.cos(angle) + offset * Math.cos(angle)
-    //         ]
-    //     }
-
-    //     // Draw the rotated length text at the adjusted position
-    //     this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
-
-    //     // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
-    //     const unitsText = units
-    //     const unitsScale = scale / 2
-    //     const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
-    //     const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
-    //     const unitsTextPosition: Vec2 = [
-    //         textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
-    //         textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
-    //     ]
-    //     this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
-
-    //     // Draw a parallel line of equal length to the original line
-    //     const parallelPointA: Vec2 = [
-    //         pointA[0] + offset * deltaY / actualLength,
-    //         pointA[1] - offset * deltaX / actualLength
-    //     ]
-    //     const parallelPointB: Vec2 = [
-    //         pointB[0] + offset * deltaY / actualLength,
-    //         pointB[1] - offset * deltaX / actualLength
-    //     ]
-    //     this.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], lineThickness, lineColor)
-
-    //     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
-    //     this.drawLine([parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]], lineThickness, lineColor, LineTerminator.ARROW)
-    //     this.drawLine([parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]], lineThickness, lineColor, LineTerminator.ARROW)
-
-    //     // Draw perpendicular hash marks like a ruler
-    //     const numHashMarks = Math.floor(length) // Draw a hash mark for every unit
-    //     const hashLength = 8 // Length of each hash mark
-    //     const parallelOffset = offset / 1.5 // Move hash marks closer to the parallel line
-
-    //     for (let i = 1; i <= numHashMarks; i++) {
-    //         const t = i / length
-    //         const hashPoint: Vec2 = [
-    //             pointA[0] + t * deltaX,
-    //             pointA[1] + t * deltaY
-    //         ]
-
-    //         // Make every 5th hash mark twice as long
-    //         const currentHashLength = (i % 5 === 0) ? hashLength * 2 : hashLength
-
-    //         const perpOffsetX = deltaY / actualLength * parallelOffset
-    //         const perpOffsetY = -deltaX / actualLength * parallelOffset
-
-    //         const hashStart: Vec2 = [
-    //             hashPoint[0] + perpOffsetX - (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
-    //             hashPoint[1] + perpOffsetY - (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
-    //         ]
-    //         const hashEnd: Vec2 = [
-    //             hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
-    //             hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
-    //         ]
-
-    //         // Set hash line thickness to 1
-    //         this.drawLine([hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], 1, lineColor)
-    //     }
-    // }
 
     public drawCaliper(pointA: Vec2, pointB: Vec2, length: number, units: string, font: NVFont, textColor: Color = [1, 0, 0, 1], lineColor: Color = [0, 0, 0, 1], lineThickness: number = 1, offset: number = 40, scale: number = 1.0): void {
         // Calculate the angle between the points

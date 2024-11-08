@@ -18,6 +18,12 @@ export enum LineTerminator {
     RING = 3
 }
 
+export enum LineStyle {
+    NORMAL = 'normal',
+    DASHED = 'dashed',
+    DOTTED = 'dotted'
+}
+
 // Enums for alignment
 export enum AlignmentFlag {
     NONE = 0,
