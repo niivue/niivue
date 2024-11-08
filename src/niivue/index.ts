@@ -149,6 +149,7 @@ export { BaseContainerComponent } from '../ui/components/basecontainercomponent.
 export { ContainerButtonComponent } from '../ui/components/containerbuttoncomponent.js'
 export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
 export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
+export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
 
 type ColormapListEntry = {
   name: string

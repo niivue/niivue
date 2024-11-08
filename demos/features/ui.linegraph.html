@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Line Graph Component Demo</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+        <button id="draw-button">Draw Graph</button>
+    </header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js"
+
+        // Initialize Niivue and renderer
+        const nv1 = new niivue.Niivue()
+        await nv1.attachTo("gl1")
+        nv1.setSliceType(nv1.sliceTypeRender)
+
+        // Load font for graph labels
+        const font = new niivue.NVFont(nv1.gl)
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
+
+        // Define graph properties and data
+        const graphOptions = {
+            position: [50, 50], // Position on canvas
+            size: [600, 300],   // Width and height
+            backgroundColor: [0.9, 0.9, 0.9, 1],
+            lineColor: [1, 0, 0, 1],
+            axisColor: [0, 0, 0, 1],
+            textColor: [0, 0, 0, 1],
+            data: [0, 2, 3, 5, 8, 12, 8, 5, 3, 2, 0], // Sample data
+            xLabel: "Time (s)",
+            yLabel: "Intensity",
+            yRange: [0, 15],
+            lineThickness: 2,
+            font: font,
+            textScale: 0.2
+        }
+
+        // Create the LineGraphComponent
+        const lineGraphComponent = new niivue.LineGraphComponent(graphOptions)
+
+        // Add component to the UI
+        nv1.ui.addComponent(lineGraphComponent)
+
+        // Draw function to trigger rendering
+        document.getElementById("draw-button").addEventListener("click", () => {
+            nv1.drawScene()
+        })
+    </script>
+</body>
+
+</html>

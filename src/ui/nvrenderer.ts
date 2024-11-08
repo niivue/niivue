@@ -22,7 +22,7 @@ import {
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
-import { LineTerminator, Color, Vec2, Vec4, LineStyle } from './types.js'
+import { LineTerminator, Color, Vec2, Vec4, LineStyle, Graph } from './types.js'
 
 
 
@@ -1171,6 +1171,124 @@ export class NVRenderer {
         gl.bindTexture(gl.TEXTURE_2D, null)
         gl.bindVertexArray(null)
     }
+
+
+    /**
+     * Draws a line graph based on provided Graph settings.
+     * @param options - Graph object with settings for rendering the graph.
+     */
+    public drawLineGraph(options: Graph): void {
+        const {
+            position,
+            size,
+            backgroundColor,
+            lineColor,
+            axisColor,
+            data,
+            xLabel,
+            yLabel,
+            yRange,
+            lineThickness = 2,
+            textColor,
+            font,
+            textScale = 1
+        } = options
+
+        // Define margins to prevent clipping of labels
+        const leftMargin = 50   // leave space for y-axis label
+        const bottomMargin = 60 // increased bottom margin for x-label
+        const rightMargin = 20  // slight margin on right side
+        const topMargin = 20    // small margin at the top
+
+        // Calculate plot area within the graph space
+        const plotPosition: Vec2 = [position[0] + leftMargin, position[1] + topMargin]
+        const plotSize: Vec2 = [size[0] - leftMargin - rightMargin, size[1] - topMargin - bottomMargin]
+
+        // Draw background for the graph
+        this.drawRect([position[0], position[1], size[0], size[1]], backgroundColor)
+
+        // Draw Y-axis
+        this.drawLine(
+            [plotPosition[0], plotPosition[1], plotPosition[0], plotPosition[1] + plotSize[1]],
+            1,
+            axisColor
+        )
+
+        // Draw X-axis
+        this.drawLine(
+            [plotPosition[0], plotPosition[1] + plotSize[1], plotPosition[0] + plotSize[0], plotPosition[1] + plotSize[1]],
+            1,
+            axisColor
+        )
+
+        // Calculate Y-axis range and scale
+        const [minY, maxY] = yRange ?? [Math.min(...data), Math.max(...data)]
+        const yScale = plotSize[1] / (maxY - minY)
+
+        // Calculate X-axis spacing based on data length
+        const xSpacing = plotSize[0] / (data.length - 1)
+
+        // Draw data line connecting points
+        for (let i = 0; i < data.length - 1; i++) {
+            const x0 = plotPosition[0] + i * xSpacing
+            const y0 = plotPosition[1] + plotSize[1] - (data[i] - minY) * yScale
+            const x1 = plotPosition[0] + (i + 1) * xSpacing
+            const y1 = plotPosition[1] + plotSize[1] - (data[i + 1] - minY) * yScale
+
+            this.drawLine([x0, y0, x1, y1], lineThickness, lineColor)
+        }
+
+        // Draw Y-axis label, shifted slightly to the right of the Y-axis
+        if (yLabel) {
+            const yLabelPosition: Vec2 = [plotPosition[0] - 25, position[1] + size[1] / 2]
+            this.drawRotatedText(font, yLabelPosition, yLabel, 0.8 * textScale, textColor, -Math.PI / 2)
+        }
+
+        // Draw X-axis label, positioned below the X-axis ticks
+        if (xLabel) {
+            const xLabelPosition: Vec2 = [position[0] + size[0] / 2, position[1] + size[1] - 20]
+            this.drawText(font, xLabelPosition, xLabel, 0.8 * textScale, textColor)
+        }
+
+        // Draw Y-axis ticks and labels with equal spacing
+        const yTickCount = 5
+        const yTickSpacing = plotSize[1] / yTickCount
+        const yValueSpacing = (maxY - minY) / yTickCount
+
+        for (let i = 0; i <= yTickCount; i++) {
+            const yPos = plotPosition[1] + plotSize[1] - i * yTickSpacing
+            const yValue = (minY + i * yValueSpacing).toFixed(2)
+
+            // Draw Y tick
+            this.drawLine([plotPosition[0] - 5, yPos, plotPosition[0], yPos], 1, axisColor)
+
+            // Draw Y tick label with left padding for alignment
+            this.drawText(font, [plotPosition[0] - 10, yPos], yValue, 0.6 * textScale, textColor)
+        }
+
+        // Draw X-axis ticks and labels with limited count for readability
+        const xTickCount = Math.min(data.length, 10)
+        const xTickSpacing = plotSize[0] / xTickCount
+
+        for (let i = 0; i <= xTickCount; i++) {
+            const xPos = plotPosition[0] + i * xTickSpacing
+            const xValue = (i * Math.floor(data.length / xTickCount)).toString()
+
+            // Draw X tick
+            this.drawLine([xPos, plotPosition[1] + plotSize[1], xPos, plotPosition[1] + plotSize[1] + 5], 1, axisColor)
+
+            // Draw X tick label with downward padding
+            this.drawText(font, [xPos, plotPosition[1] + plotSize[1] + 15], xValue, 0.6 * textScale, textColor)
+        }
+    }
+
+
+
+
+
+
+
+
 
 
 }

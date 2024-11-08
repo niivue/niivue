@@ -1,6 +1,7 @@
 // types.ts
 
 import { vec2, vec3, vec4 } from 'gl-matrix'
+import { NVFont } from './nvfont.js'
 
 // Define Color type for clarity
 export type Color = [number, number, number, number] | Float32List
@@ -89,3 +90,19 @@ export type Effect =
         isBounce: boolean
         isToggle: boolean
     }
+
+export type Graph = {
+    position: Vec2              // Position of the graph's top-left corner
+    size: Vec2                  // Width and height of the graph
+    backgroundColor: Color      // Background color of the graph area
+    lineColor: Color            // Color of the graph line
+    axisColor: Color            // Color of the graph axis lines
+    data: number[]              // Array of data points to plot
+    xLabel?: string             // Label for the x-axis
+    yLabel?: string             // Label for the y-axis
+    yRange?: [number, number]   // Optional range for y-axis (min, max)
+    lineThickness?: number      // Thickness of the graph line
+    textColor: Color            // Color for text labels
+    font: NVFont                // Font for rendering text labels
+    textScale: number           // Text scale
+}
