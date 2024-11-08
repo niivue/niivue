@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Draw Rectangle Demo</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+    </header>
+    <main>
+        <canvas id="gl1" width="800" height="600"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js";
+
+        function drawRectangleWithComparison() {
+            const ui = new niivue.NVUI(nv1.gl);
+            const tx = nv1.canvas.width / 2 - 100;
+            const ty = nv1.canvas.height / 2 - 50;
+            const sx = 300;
+            const sy = 100;
+            const color = [1, 0, 0, 0.9]; // Red with some transparency
+
+            nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
+            nv1.gl.clearColor(1.0, 1.0, 1.0, 1.0); // Set a white background
+            nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT | nv1.gl.DEPTH_BUFFER_BIT);
+
+            try {
+                const rotation = Math.PI / 4; // 45 degrees
+                ui.drawRectangle(tx, ty, sx, sy, color, rotation);
+
+                // Draw another rectangle without rotation to compare
+                const color2 = [0, 0, 1, 0.9]; // Blue with some transparency
+                ui.drawRect([tx, ty, sx, sy], [0, 0, 0, 0.2]);
+                ui.drawRectangle(tx, ty, sx, sy, color2, 0.0, 0.9);
+
+            } catch (e) {
+                console.error("Error during drawing: ", e);
+            }
+        }
+
+        var nv1 = new niivue.Niivue();
+        await nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+        drawRectangleWithComparison();
+    </script>
+</body>
+
+</html>

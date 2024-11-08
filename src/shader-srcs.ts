@@ -2226,6 +2226,87 @@ void main() {
     color = vec4(fontColor.rgb, fontColor.a * opacity);
 }`
 
+export const vertRotatedRectangularFillShader = `#version 300 es
+#line 4
+layout(location=0) in vec3 pos;
+uniform mat4 modelViewProjectionMatrix;
+uniform vec4 u_leftTopWidthHeight;
+
+void main(void) {
+    // Apply MVP matrix to position
+    vec4 localPosition = vec4(
+        pos.x * u_leftTopWidthHeight.z,  // Scale x by width
+        pos.y * u_leftTopWidthHeight.w,  // Scale y by height
+        0.0,
+        1.0
+    );
+
+    // gl_Position = modelViewProjectionMatrix * localPosition;
+	gl_Position = modelViewProjectionMatrix * vec4(pos, 1.0);
+}`
+
+// Fragment Shader
+export const fragRotatedRectangularFillShader = `#version 300 es
+    precision highp int;
+    precision highp float;
+
+    uniform vec4 u_fillColor;
+    uniform vec4 u_gradientColor;
+    uniform vec2 u_gradientCenter;
+    uniform float u_gradientRadius;
+    out vec4 color;
+
+    void main() {
+        vec2 fragCoord = gl_FragCoord.xy;
+        float dist = distance(fragCoord, u_gradientCenter);
+        float t = smoothstep(0.0, u_gradientRadius, dist);
+        color = mix(u_fillColor, u_gradientColor, t);
+		color = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+`
+
+export const vertEllipticalFillShader = `#version 300 es
+in vec3 position;
+uniform mat4 u_transform;
+
+out vec2 v_position;
+
+void main() {
+    gl_Position = u_transform * vec4(position, 1.0);
+    // Pass position in the range [-1, 1] for use in the fragment shader
+    v_position = position.xy;
+    v_position = (v_position * 2.0) - 1.0;
+}
+
+`
+
+export const fragEllipticalFillShader = `#version 300 es
+precision mediump float;
+
+in vec2 v_position;
+
+uniform vec4 u_color;
+uniform float u_mixValue;
+
+out vec4 outColor;
+
+void main() {
+    // Center the ellipse at the origin (0.0, 0.0)
+    vec2 center = vec2(0.0, 0.0);
+
+    // Calculate the distance from the center, normalized
+    float value = pow((v_position.x - center.x), 2.0) + pow((v_position.y - center.y), 2.0);
+
+    // Use smoothstep with wider values to create a fuzzier edge
+    float alpha = smoothstep(0.3, 1.0, value);
+
+    // Mix between color and transparency based on u_mixValue
+    vec4 blendedColor = mix(vec4(0.0, 0.0, 0.0, 0.0), u_color, u_mixValue);
+    outColor = vec4(blendedColor.rgb, blendedColor.a * (1.0 - alpha));
+}
+
+`
+
 
 
 

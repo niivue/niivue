@@ -3,20 +3,26 @@ import { mat4, vec2, vec4 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import {
     fragCircleShader,
+    fragEllipticalFillShader,
     fragRectShader,
     fragRotatedFontShader,
+    fragRotatedRectangularFillShader,
     fragRoundedRectShader,
     fragTriangleShader,
     vertCircleShader,
+    vertEllipticalFillShader,
     vertLineShader,
     vertRectShader,
     vertRotatedFontShader,
+    vertRotatedRectangularFillShader,
     vertTriangleShader
 } from '../shader-srcs.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
 import { LineTerminator, Color, Vec2, Vec4 } from './types.js'
+
+
 
 // NVRenderer class with rendering methods
 export class NVRenderer {
@@ -31,6 +37,8 @@ export class NVRenderer {
     protected static triangleVertexBuffer: WebGLBuffer
     protected static lineTerminator = LineTerminator
     protected static rotatedTextShader: Shader
+    protected static rotatedRectangularFillShader: Shader
+    protected static rectangleShader: Shader
 
     /**
      * Creates an instance of NVRenderer.
@@ -59,6 +67,14 @@ export class NVRenderer {
 
         if (!NVRenderer.rotatedTextShader) {
             NVRenderer.rotatedTextShader = new Shader(gl, vertRotatedFontShader, fragRotatedFontShader)
+        }
+
+        if (!NVRenderer.rotatedRectangularFillShader) {
+            NVRenderer.rotatedRectangularFillShader = new Shader(gl, vertRotatedRectangularFillShader, fragRotatedRectangularFillShader)
+        }
+
+        if (!NVRenderer.rectangleShader) {
+            NVRenderer.rectangleShader = new Shader(gl, vertEllipticalFillShader, fragEllipticalFillShader)
         }
 
         if (!NVRenderer.genericVAO) {
@@ -420,6 +436,84 @@ export class NVRenderer {
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
         this.gl.bindVertexArray(null)
     }
+
+    public drawRotatedRectangularFill(
+        leftTopWidthHeight: Vec4,
+        rotation: number,
+        fillColor: Color,
+        gradientCenter: Vec2,
+        gradientRadius: number,
+        gradientColor: Color
+    ): void {
+        if (!NVRenderer.rotatedRectangularFillShader) {
+            throw new Error('rotatedRectangularFillShader undefined')
+        }
+
+        const gl = this.gl
+
+        // Use the rotated rectangle shader program
+        NVRenderer.rotatedRectangularFillShader.use(gl)
+
+        // Enable blending for transparency
+        gl.enable(gl.BLEND)
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+        // Set the necessary uniforms
+        const shader = NVRenderer.rotatedRectangularFillShader
+
+        const rectParams = Array.isArray(leftTopWidthHeight)
+            ? vec4.fromValues(
+                leftTopWidthHeight[0],
+                leftTopWidthHeight[1],
+                leftTopWidthHeight[2],
+                leftTopWidthHeight[3]
+            )
+            : leftTopWidthHeight
+
+        this.gl.uniform4fv(shader.uniforms.u_fillColor, fillColor as Float32List)
+        this.gl.uniform2fv(shader.uniforms.u_gradientCenter, gradientCenter as Float32List)
+        this.gl.uniform1f(shader.uniforms.u_gradientRadius, gradientRadius)
+        this.gl.uniform4fv(shader.uniforms.u_gradientColor, gradientColor as Float32List)
+        this.gl.uniform4fv(shader.uniforms.u_leftTopWidthHeight, rectParams as Float32List)
+
+        // Calculate the model-view-projection matrix
+        // const modelMatrix = mat4.create()
+        // mat4.translate(modelMatrix, modelMatrix, [
+        //     leftTopWidthHeight[0] + leftTopWidthHeight[2] / 2,
+        //     leftTopWidthHeight[1] + leftTopWidthHeight[3] / 2,
+        //     0
+        // ])
+        // mat4.rotateZ(modelMatrix, modelMatrix, rotation)
+        // mat4.translate(modelMatrix, modelMatrix, [
+        //     -leftTopWidthHeight[2] / 2,
+        //     -leftTopWidthHeight[3] / 2,
+        //     0
+        // ])
+
+        const modelMatrix = mat4.create();
+        mat4.translate(modelMatrix, modelMatrix, [leftTopWidthHeight[0], leftTopWidthHeight[1], 0.0])
+        // mat4.rotateZ(modelMatrix, modelMatrix, rotation)
+
+
+        mat4.scale(modelMatrix, modelMatrix, [leftTopWidthHeight[2], leftTopWidthHeight[3], 1.0])
+
+        // Set up orthographic projection matrix
+        const orthoMatrix = mat4.create()
+        mat4.ortho(orthoMatrix, 0, gl.canvas.width, gl.canvas.height, 0, -1, 1)
+
+        // Combine the orthographic matrix with the model matrix to create the final MVP matrix
+        const mvpMatrix = mat4.create()
+        mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
+
+        this.gl.uniformMatrix4fv(shader.uniforms.modelViewProjectionMatrix, false, mvpMatrix as Float32List)
+
+        // Bind the generic VAO
+        this.gl.bindVertexArray(NVRenderer.genericVAO)
+
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+        this.gl.bindVertexArray(null)
+    }
+
 
     /**
      * Draws a circle.
@@ -882,8 +976,70 @@ export class NVRenderer {
     }
 
 
+    // public drawRectangle(tx: number, ty: number, sx: number, sy: number, color: [number, number, number, number], rotation: number = 0) {
+    //     const rectangleShader = NVRenderer.rectangleShader;
+
+    //     rectangleShader.use(this.gl);
+
+    //     const orthoMatrix = mat4.create();
+    //     mat4.ortho(orthoMatrix, 0, this.gl.canvas.width, 0, this.gl.canvas.height, -1, 1);
+
+    //     const modelMatrix = mat4.create();
+    //     // Translate to the center of the rectangle
+    //     mat4.translate(modelMatrix, modelMatrix, [tx + sx / 2, ty + sy / 2, 0]);
+    //     // Apply the rotation around the center
+    //     mat4.rotateZ(modelMatrix, modelMatrix, rotation);
+    //     // Translate back to the top-left corner
+    //     mat4.translate(modelMatrix, modelMatrix, [-sx / 2, -sy / 2, 0]);
+    //     // Scale the rectangle
+    //     mat4.scale(modelMatrix, modelMatrix, [sx, sy, 1]);
+
+    //     const transformMatrix = mat4.create();
+    //     mat4.multiply(transformMatrix, orthoMatrix, modelMatrix);
+
+    //     // Set the transform uniform
+    //     this.gl.uniformMatrix4fv(rectangleShader.uniforms.u_transform, false, transformMatrix);
+
+    //     // Set the color uniform
+    //     this.gl.uniform4fv(rectangleShader.uniforms.u_color, color);
+
+    //     this.gl.bindVertexArray(NVRenderer.genericVAO);
+    //     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    // }
+    public drawRectangle(tx: number, ty: number, sx: number, sy: number, color: [number, number, number, number], rotation: number = 0, mixValue: number = 0.1) {
+        const rectangleShader = NVRenderer.rectangleShader;
+
+        rectangleShader.use(this.gl);
+
+        const orthoMatrix = mat4.create();
+        mat4.ortho(orthoMatrix, 0, this.gl.canvas.width, 0, this.gl.canvas.height, -1, 1);
+
+        const modelMatrix = mat4.create();
+        // Translate to the center of the rectangle
+        mat4.translate(modelMatrix, modelMatrix, [tx + sx / 2, ty + sy / 2, 0]);
+        // Apply the rotation around the center
+        mat4.rotateZ(modelMatrix, modelMatrix, rotation);
+        // Translate back to the top-left corner
+        mat4.translate(modelMatrix, modelMatrix, [-sx / 2, -sy / 2, 0]);
+        // Scale the rectangle
+        mat4.scale(modelMatrix, modelMatrix, [sx, sy, 1]);
+
+        const transformMatrix = mat4.create();
+        mat4.multiply(transformMatrix, orthoMatrix, modelMatrix);
+
+        // Set the transform uniform
+        this.gl.uniformMatrix4fv(rectangleShader.uniforms.u_transform, false, transformMatrix);
+
+        // Set the color uniform
+        this.gl.uniform4fv(rectangleShader.uniforms.u_color, color);
+
+        // Set the mix value uniform
+        this.gl.uniform1f(rectangleShader.uniforms.u_mixValue, mixValue);
 
 
+        this.gl.bindVertexArray(NVRenderer.genericVAO);
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    }
 
 
 }

@@ -378,6 +378,21 @@ export class NVUI {
         this.renderer.drawCaliper(pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale)
     }
 
+    public drawRotatedRectangularFill(
+        leftTopWidthHeight: Vec4,
+        rotation: number,
+        fillColor: Color,
+        gradientCenter: Vec2,
+        gradientRadius: number,
+        gradientColor: Color
+    ): void {
+        this.renderer.drawRotatedRectangularFill(leftTopWidthHeight, rotation, fillColor, gradientCenter, gradientRadius, gradientColor)
+    }
+
+    public drawRectangle(tx: number, ty: number, sx: number, sy: number, color: [number, number, number, number], rotation: number = 0, mixValue: number = 0.5) {
+        this.renderer.drawRectangle(tx, ty, sx, sy, color, rotation, mixValue)
+    }
+
     public async serializeComponents(): Promise<string> {
         const components = this.quadTree.getAllElements()
         const serializedComponents = []
@@ -478,7 +493,6 @@ export class NVUI {
 
         return ui
     }
-
 
 }
 
