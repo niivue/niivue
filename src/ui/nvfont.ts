@@ -1,10 +1,10 @@
-import { NVAsset } from './nvasset.js'
+import { vec2 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { vertFontShader, fragRotatedFontShader } from '../shader-srcs.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
-import { vec2 } from 'gl-matrix'
+import { NVAsset } from './nvasset.js'
 
 export type FontMetrics = {
   distanceRange: number
@@ -34,7 +34,7 @@ export class NVFont extends NVAsset {
     fontColor: number[] | Float32Array = [1.0, 0.0, 0.0, 1.0],
     textHeight = 0.06,
     outlineColor: number[] | Float32Array = [0.0, 0.0, 0.0, 1.0],
-    outlineThickness: number = 1,
+    outlineThickness: number = 1
   ) {
     super(gl)
     this.fontColor = fontColor
@@ -42,7 +42,6 @@ export class NVFont extends NVAsset {
     this.outlineThickness = outlineThickness
     this.textHeight = textHeight
     this.fontShader = new Shader(this.gl, vertFontShader, fragRotatedFontShader)
-
   }
 
   public async loadFontTexture(fontUrl: string): Promise<void> {
@@ -120,8 +119,7 @@ export class NVFont extends NVAsset {
           w += scale * glyph.xadv
         }
       }
-    }
-    catch (e) {
+    } catch (e) {
       console.log(e)
       return 0
     }
@@ -241,7 +239,7 @@ export class NVFont extends NVAsset {
     // Decode and load the base64 texture if it exists
     if (json.base64Texture) {
       const textureData = atob(json.base64Texture)
-      const textureArray = Uint8Array.from(textureData, c => c.charCodeAt(0))
+      const textureArray = Uint8Array.from(textureData, (c) => c.charCodeAt(0))
       const blob = new Blob([textureArray], { type: 'image/png' })
       const textureUrl = URL.createObjectURL(blob)
 

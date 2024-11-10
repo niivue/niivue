@@ -1,7 +1,7 @@
-import { NVAsset } from './nvasset.js'
 import { Shader } from '../shader.js'
 import { TEXTURE4_THUMBNAIL } from '../niivue/index.js'
 import { vertBmpShader, fragBmpShader } from '../shader-srcs.js'
+import { NVAsset } from './nvasset.js'
 
 export class NVBitmap extends NVAsset {
   public bitmapShader: Shader
@@ -33,7 +33,7 @@ export class NVBitmap extends NVAsset {
     // Decode and load the base64 texture if it exists
     if (json.base64Texture) {
       const textureData = atob(json.base64Texture)
-      const textureArray = Uint8Array.from(textureData, c => c.charCodeAt(0))
+      const textureArray = Uint8Array.from(textureData, (c) => c.charCodeAt(0))
       const blob = new Blob([textureArray], { type: 'image/png' })
       const textureUrl = URL.createObjectURL(blob)
 
