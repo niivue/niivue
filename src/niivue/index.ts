@@ -106,6 +106,8 @@ import {
 import { NVFont } from '../ui/nvfont.js'
 import { NVUI } from '../ui/nvui.js'
 import { convertTouchToPointerEvent } from '../ui/uiutils.js'
+import { Vec2, Vec4 } from '../ui/types.js'
+import { isProjectable } from '../ui/interfaces.js'
 import {
   clamp,
   decodeRLE,
@@ -150,6 +152,7 @@ export { ContainerButtonComponent } from '../ui/components/containerbuttoncompon
 export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
 export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
 export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
+export { ProjectedLineComponent } from '../ui/components/projectedlinecomponent.js'
 
 type ColormapListEntry = {
   name: string
@@ -9146,6 +9149,23 @@ export class Niivue {
       // issue1065
       this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
     }
+
+    // Draw slice-specific components
+    const components = this.ui.getComponents(undefined, [axCorSag.toString()])
+    console.log('components found for ', components, axCorSag)
+    for (const component of components) {
+      if (isProjectable(component)) {
+        const screenPoints = component.modelPoints.map((modelPoint) => {
+          return [
+            leftTopWidthHeight[0] + leftTopWidthHeight[2] / 2,
+            leftTopWidthHeight[1] + leftTopWidthHeight[3] / 2
+          ] as Vec2
+        })
+        component.setScreenPoints(screenPoints)
+      }
+    }
+    console.log('slice', axCorSag.toString())
+    this.ui.draw(undefined, [axCorSag.toString()])
   }
 
   // not included in public docs
@@ -10220,7 +10240,11 @@ export class Niivue {
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
     gl.clearDepth(0.0)
-    this.draw3DLabels(mvpMatrix, relativeLTWH, false)
+
+    // Draw components specific to 3D view before drawImage3D and drawMesh3D
+    this.ui.draw(leftTopWidthHeight as Vec4, ['3D_PRE'])
+
+    // this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
 
@@ -10262,7 +10286,9 @@ export class Niivue {
     // bus.$emit('crosshair-pos-change', posString);
     this.readyForSync = true
     this.sync()
-    this.draw3DLabels(mvpMatrix, relativeLTWH, true)
+    // this.draw3DLabels(mvpMatrix, relativeLTWH, true)
+    // Draw additional 3D components or overlays after main rendering
+    this.ui.draw(leftTopWidthHeight as Vec4, ['3D_POST'])
 
     return posString
   }

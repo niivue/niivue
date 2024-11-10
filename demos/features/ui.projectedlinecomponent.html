@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Line Component with Model</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header></header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js"
+
+        async function drawModelLines() {
+            const textColor = [1.0, 1.0, 1.0, 1.0]
+            const str = 'Model Point [0, 0, 0]'
+            const scale = 0.5
+
+            // Get the width of the text to center it and move it higher on the screen
+            const width = nv1.defaultFont.getTextWidth(str, scale)
+            const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height - 250] // Raised position
+
+            // Create the text component using the default font
+            const labelText = new niivue.TextComponent(pos, str, nv1.defaultFont, textColor, scale)
+            ui.addComponent(labelText)
+
+            // Model point in 3D space
+            const modelPoint = [0, 0, 0]
+
+            // Define line color and set line terminator to arrow
+            const lineColor = [0.529, 0.808, 0.980, 1.0] // Light blue color (RGB for light blue)
+
+            // Array to hold the slice types
+            const sliceTypes = [
+                niivue.SLICE_TYPE.AXIAL,
+                niivue.SLICE_TYPE.CORONAL,
+                niivue.SLICE_TYPE.SAGITTAL
+            ]
+
+            // Add a ProjectedLineComponent for each slice type
+            sliceTypes.forEach(sliceType => {
+                const line = new niivue.ProjectedLineComponent(
+                    [modelPoint], // Model point in 3D space
+                    pos, // Initial end position of line at label
+                    labelText, // Target component
+                    10, // Thickness
+                    lineColor, // Line color
+                    niivue.NVUI.lineTerminator.ARROW // Line terminator as arrow
+                )
+                
+                // Add the line component to the UI
+                ui.addComponent(line)
+                
+                // Assign the slice type tag as a string after construction
+                line.tags = [sliceType.toString()]
+            })
+
+            // Draw the scene
+            nv1.drawScene()
+        }
+
+        // Initialize Niivue and attach it to the canvas
+        const volumeList1 = [
+            { 
+                url: "../images/mni152.nii.gz",
+                colormap: "gray",
+                visible: true,
+                opacity: 1
+            }, 
+            {
+                url: "../images/hippo.nii.gz", 
+                colormap: "red",
+                visible: true,
+                opacity: 1
+            }
+        ];
+
+        const nv1 = new niivue.Niivue();
+
+        nv1.attachTo("gl1");
+        await nv1.loadVolumes(volumeList1);
+        nv1.setSliceType(nv1.sliceTypeMultiplanar);
+
+        // UI component initialization
+        const ui = nv1.ui;
+
+        // Draw the model lines initially
+        drawModelLines();
+    </script>
+</body>
+</html>

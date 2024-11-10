@@ -1,7 +1,7 @@
 // interfaces.ts
 
 import { NVRenderer } from './nvrenderer.js'
-import { AlignmentPoint, Color, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from './types.js'
+import { AlignmentPoint, Color, HorizontalAlignment, Vec2, Vec3, Vec4, VerticalAlignment } from './types.js'
 
 // interfaces.ts
 export interface IUIComponent {
@@ -40,4 +40,13 @@ export interface IUIContainer extends IUIComponent {
   removeChild(child: IUIComponent): void
   getChildren(): IUIComponent[]
   alignItems(): void
+}
+
+export interface IProjectable {
+  modelPoints: Vec3[] // Array to handle one or two points
+  setScreenPoints(screenPoints: Vec2[]): void
+}
+
+export function isProjectable(component: any): component is IProjectable {
+  return 'modelPoints' in component && typeof component.setScreenPoints === 'function'
 }

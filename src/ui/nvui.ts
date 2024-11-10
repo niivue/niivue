@@ -105,13 +105,16 @@ export class NVUI {
     useAnd: boolean = true,
     useNot: boolean = false
   ): IUIComponent[] {
-    // Retrieve components within the specified bounds from the quadtree
-
     const candidates = boundsInScreenCoords
       ? this.quadTree.query(Rectangle.fromVec4(boundsInScreenCoords))
       : this.quadTree.getAllElements()
 
     return candidates.filter((component) => {
+      // If tags array is empty, return only components without tags
+      if (tags.length === 0) {
+        return component.tags.length === 0
+      }
+      console.log('looking for tag in component', tags, component)
       const hasTags = useAnd
         ? tags.every((tag) => component.tags.includes(tag))
         : tags.some((tag) => component.tags.includes(tag))
@@ -120,25 +123,25 @@ export class NVUI {
     })
   }
 
-  public draw(boundsInScreenCoords?: Vec4): void {
+  public draw(leftTopWidthHeight?: Vec4, tags: string[] = []): void {
     this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
 
-    // Update the WebGL viewport using canvasWidth and canvasHeight
-    let components: IUIComponent[]
+    // Set up bounds for filtering and positioning
+    const bounds = leftTopWidthHeight ? Rectangle.fromVec4(leftTopWidthHeight) : null
 
-    if (boundsInScreenCoords) {
-      const queryRectangle = new Rectangle(
-        boundsInScreenCoords[0],
-        boundsInScreenCoords[1],
-        boundsInScreenCoords[2],
-        boundsInScreenCoords[3]
-      )
-      components = this.quadTree.query(queryRectangle)
-    } else {
-      components = this.quadTree.getAllElements()
-    }
+    // Retrieve components that match the specified tags and are within bounds
+    const components = this.getComponents(
+      leftTopWidthHeight,
+      tags,
+      true // Match all specified tags
+    )
 
     for (const component of components) {
+      // Align component within bounds if specified
+      if (bounds) {
+        component.align(leftTopWidthHeight)
+      }
+      // Draw the component using NVRenderer
       if (component.isVisible) {
         component.draw(this.renderer)
       }
@@ -158,14 +161,11 @@ export class NVUI {
   public processPointerMove(x: number, y: number, event: PointerEvent): void {
     const point: Vec2 = [x * this.dpr, y * this.dpr]
     const components = new Set(this.quadTree.queryPoint(point).filter((component) => component.isVisible))
-    // console.log('components found', components)
     for (const component of components) {
       if (!component.isVisible) {
         continue
       }
-
       if (!this.lastHoveredComponents.has(component)) {
-        // console.log('applying pointerenter to ', component)
         component.applyEventEffects('pointerenter', event)
       }
     }

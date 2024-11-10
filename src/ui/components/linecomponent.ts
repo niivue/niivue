@@ -25,6 +25,30 @@ export class LineComponent extends BaseUIComponent {
     this.terminator = terminator
     this.lineStyle = lineStyle
     this.dashDotLength = dashDotLength
+    this.updateBounds() // Initial bounds calculation
+  }
+
+  // Calculate the bounding rectangle based on start and end points
+  private updateBounds(): void {
+    const [x1, y1, x2, y2] = this.startEnd
+    const minX = Math.min(x1, x2)
+    const minY = Math.min(y1, y2)
+    const maxX = Math.max(x1, x2)
+    const maxY = Math.max(y1, y2)
+
+    // Set the bounds to encompass the line with an added buffer for thickness
+    this.bounds = [
+      minX - this.thickness / 2,
+      minY - this.thickness / 2,
+      maxX - minX + this.thickness,
+      maxY - minY + this.thickness
+    ]
+  }
+
+  // Override startEnd setter to recalculate bounds whenever startEnd changes
+  setStartEnd(startEnd: Vec4): void {
+    this.startEnd = startEnd
+    this.updateBounds()
   }
 
   draw(renderer: NVRenderer): void {
