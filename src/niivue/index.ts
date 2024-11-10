@@ -1479,7 +1479,7 @@ export class Niivue {
     }
     // this.ui.processPointerUp(this.mousePos[0], this.mousePos[1], e.button)
     const rect = this.canvas!.getBoundingClientRect()
-    this.ui.processPointerUp(e.clientX - rect.left, e.clientY - rect.top, e.button)
+    this.ui.processPointerUp(e.clientX - rect.left, e.clientY - rect.top, e)
     this.drawScene()
   }
 
@@ -1566,7 +1566,7 @@ export class Niivue {
   // note: no test yet
   mouseMoveListener(e: PointerEvent): void {
     const rect = this.canvas!.getBoundingClientRect()
-    this.ui.processPointerMove(e.clientX - rect.left, e.clientY - rect.top)
+    this.ui.processPointerMove(e.clientX - rect.left, e.clientY - rect.top, e)
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)

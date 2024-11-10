@@ -63,7 +63,6 @@ export enum VerticalAlignment {
   BOTTOM = AlignmentFlag.BOTTOM
 }
 
-// Updated Effect type
 export type Effect =
   | {
       type: 'setValue'
@@ -71,6 +70,8 @@ export type Effect =
       property: string
       value: any
       isToggle: boolean
+      event?: PointerEvent
+      onComplete?: (event?) => void
     }
   | {
       type: 'toggleValue'
@@ -78,6 +79,8 @@ export type Effect =
       property: string
       value1: any
       value2: any
+      event?: PointerEvent
+      onComplete?: (event?) => void
     }
   | {
       type: 'animateValue'
@@ -88,6 +91,8 @@ export type Effect =
       duration: number
       isBounce: boolean
       isToggle: boolean
+      event?: PointerEvent
+      onComplete?: (event?) => void
     }
 
 export type Graph = {

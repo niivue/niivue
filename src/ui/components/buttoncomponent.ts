@@ -5,7 +5,7 @@ import { TextBoxComponent } from './textboxcomponent.js'
 // Button Component extending TextBoxComponent
 export class ButtonComponent extends TextBoxComponent {
   highlightColor: Color
-  onClickHandler?: (event: MouseEvent) => void
+  onClick?: (event: PointerEvent) => void
 
   constructor(
     font: NVFont,
@@ -61,7 +61,9 @@ export class ButtonComponent extends TextBoxComponent {
       [this.position[0], this.position[1]], // start position
       [this.position[0], this.position[1] + 5], // target position (move down by 5 units)
       100, // duration in milliseconds
-      true // isBounce - true to create a bounce effect
+      true, // isBounce - true to create a bounce effect
+      false,
+      this.handleClick.bind(this)
     )
 
     // Effect 3: Change fillColor on mouse enter
@@ -98,6 +100,13 @@ export class ButtonComponent extends TextBoxComponent {
       mousePosition[1] <= posY + sizeY
     ) {
       this.applyEventEffects('pointerup')
+    }
+  }
+
+  handleClick(event: PointerEvent): void {
+    console.log('handle click', event)
+    if (this.onClick) {
+      this.onClick(event)
     }
   }
 

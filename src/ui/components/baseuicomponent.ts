@@ -93,6 +93,10 @@ export abstract class BaseUIComponent implements IUIComponent {
         if (this.requestRedraw) {
           this.requestRedraw()
         }
+
+        if (effect.onComplete) {
+          effect.onComplete(effect.event)
+        }
         break
 
       case 'animateValue':
@@ -105,7 +109,9 @@ export abstract class BaseUIComponent implements IUIComponent {
             effect.to,
             effect.duration,
             effect.isBounce,
-            effect.isToggle
+            effect.isToggle,
+            effect.onComplete,
+            effect.event
           )
           animationManager.addAnimation(animation)
         }
@@ -117,6 +123,9 @@ export abstract class BaseUIComponent implements IUIComponent {
           setObjectProperty(effect.targetObject, property, effect.value2)
         } else {
           setObjectProperty(effect.targetObject, property, effect.value1)
+        }
+        if (effect.onComplete) {
+          effect.onComplete(effect.event)
         }
       }
     }
@@ -131,7 +140,8 @@ export abstract class BaseUIComponent implements IUIComponent {
     to?: any,
     duration?: number,
     isBounce: boolean = false,
-    isToggle: boolean = false
+    isToggle: boolean = false,
+    onComplete?: (event?: Event) => void // New onComplete handler
   ): void {
     let effect: Effect
     switch (effectType) {
@@ -141,7 +151,8 @@ export abstract class BaseUIComponent implements IUIComponent {
           targetObject,
           property,
           value: valueOrFrom,
-          isToggle
+          isToggle,
+          onComplete // Assign onComplete
         }
         break
       case 'toggleValue':
@@ -150,7 +161,8 @@ export abstract class BaseUIComponent implements IUIComponent {
           targetObject,
           property,
           value1: valueOrFrom,
-          value2: to
+          value2: to,
+          onComplete // Assign onComplete
         }
         break
       case 'animateValue':
@@ -162,7 +174,8 @@ export abstract class BaseUIComponent implements IUIComponent {
           to: to!,
           duration: duration!,
           isBounce,
-          isToggle
+          isToggle,
+          onComplete // Assign onComplete
         }
         break
     }

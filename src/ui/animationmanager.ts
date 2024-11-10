@@ -13,6 +13,8 @@ export class Animation {
   private redrawCallback?: () => void
   public isBounce: boolean
   public isToggle: boolean
+  private onComplete?: (event?: Event) => void // Updated to accept event
+  private event?: Event // Store the optional event
 
   constructor(
     targetObject: any,
@@ -21,7 +23,9 @@ export class Animation {
     to: number | number[],
     duration: number,
     isBounce: boolean = false,
-    isToggle: boolean = false
+    isToggle: boolean = false,
+    onComplete?: (event?: Event) => void,
+    event?: Event
   ) {
     this.targetObject = targetObject
     this.property = property
@@ -30,6 +34,8 @@ export class Animation {
     this.duration = duration
     this.isBounce = isBounce
     this.isToggle = isToggle
+    this.onComplete = onComplete
+    this.event = event // Store the event
   }
 
   public start(redrawCallback?: () => void): void {
@@ -58,6 +64,9 @@ export class Animation {
       setObjectProperty(this.targetObject, this.property, this.to)
       if (this.redrawCallback) {
         this.redrawCallback()
+      }
+      if (this.onComplete) {
+        this.onComplete(this.event) // Pass the event to onComplete
       }
       return
     }
@@ -193,7 +202,9 @@ export class AnimationManager {
             effect.to,
             effect.duration,
             effect.isBounce,
-            effect.isToggle
+            effect.isToggle,
+            effect.onComplete,
+            effect.event // Pass the event to the animation
           )
         )
         break

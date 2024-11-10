@@ -31,7 +31,7 @@
         const width = font.getTextWidth(str, scale);
         const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height / 2 - 50];
         const buttonComponent = new niivue.ButtonComponent(font, pos, str, textColor, [0.2, 0.5, 0.8, 1.0], [0.1, 0.1, 0.1, 0.3], highLightColor, 15, 10, scale);
-        // buttonComponent.onClick = () => { alert('clicked!') }
+        buttonComponent.onClick = () => { alert('clicked!') }
 
         // Adding the button component to the Niivue UI
         nv1.ui.addComponent(buttonComponent);

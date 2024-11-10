@@ -17,7 +17,7 @@ export interface IUIComponent {
   tags: string[]
   getScale(): number
   setScale(value: number): void
-  applyEventEffects(eventName: string): void
+  applyEventEffects(eventName: string, event: Event): void
   toJSON(): object
   requestRedraw?: () => void
 

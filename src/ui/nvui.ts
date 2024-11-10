@@ -155,7 +155,7 @@ export class NVUI {
     }
   }
 
-  public processPointerMove(x: number, y: number): void {
+  public processPointerMove(x: number, y: number, event: PointerEvent): void {
     const point: Vec2 = [x * this.dpr, y * this.dpr]
     const components = new Set(this.quadTree.queryPoint(point).filter((component) => component.isVisible))
     // console.log('components found', components)
@@ -166,12 +166,12 @@ export class NVUI {
 
       if (!this.lastHoveredComponents.has(component)) {
         // console.log('applying pointerenter to ', component)
-        component.applyEventEffects('pointerenter')
+        component.applyEventEffects('pointerenter', event)
       }
     }
     for (const component of this.lastHoveredComponents) {
       if (!components.has(component)) {
-        component.applyEventEffects('pointerleave')
+        component.applyEventEffects('pointerleave', event)
       }
     }
     this.lastHoveredComponents = components
@@ -179,12 +179,12 @@ export class NVUI {
 
   public processPointerDown(_x: number, _y: number, _button: number): void {}
 
-  public processPointerUp(x: number, y: number, _button: number): void {
+  public processPointerUp(x: number, y: number, event: PointerEvent): void {
     const point: Vec2 = [x * this.dpr, y * this.dpr]
     const components = this.quadTree.queryPoint(point)
     for (const component of components) {
       if (component.isVisible) {
-        component.applyEventEffects('pointerup')
+        component.applyEventEffects('pointerup', event)
       }
     }
   }
@@ -214,7 +214,7 @@ export class NVUI {
   private handlePointerUp(event: PointerEvent): void {
     const pos = this.getCanvasRelativePosition(event)
     if (pos) {
-      this.processPointerUp(pos.x, pos.y, event.button)
+      this.processPointerUp(pos.x, pos.y, event)
     }
   }
 
@@ -222,7 +222,7 @@ export class NVUI {
   private handlePointerMove(event: PointerEvent): void {
     const pos = this.getCanvasRelativePosition(event)
     if (pos) {
-      this.processPointerMove(pos.x, pos.y)
+      this.processPointerMove(pos.x, pos.y, event)
     }
   }
 
