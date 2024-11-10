@@ -62,3 +62,31 @@ export function convertTouchToMouseEvent(touchEvent: TouchEvent, eventType: stri
     buttons: 1 // Indicating the primary button is pressed
   })
 }
+
+export function convertTouchToPointerEvent(
+  touchEvent: TouchEvent,
+  eventType: string = 'pointerdown'
+): PointerEvent | null {
+  const touch = touchEvent.touches[0] || touchEvent.changedTouches[0]
+  if (!touch) {
+    return null
+  }
+
+  return new PointerEvent(eventType, {
+    bubbles: true,
+    cancelable: true,
+    pointerId: touch.identifier,
+    pointerType: 'touch',
+    isPrimary: true,
+    screenX: touch.screenX,
+    screenY: touch.screenY,
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    ctrlKey: touchEvent.ctrlKey,
+    altKey: touchEvent.altKey,
+    shiftKey: touchEvent.shiftKey,
+    metaKey: touchEvent.metaKey,
+    button: 0, // Left mouse button equivalent
+    buttons: 1 // Indicating the primary button is pressed
+  })
+}

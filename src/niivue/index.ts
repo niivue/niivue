@@ -105,7 +105,7 @@ import {
 } from '../types.js'
 import { NVFont } from '../ui/nvfont.js'
 import { NVUI } from '../ui/nvui.js'
-import { convertTouchToMouseEvent } from '../ui/uiutils.js'
+import { convertTouchToPointerEvent } from '../ui/uiutils.js'
 import {
   clamp,
   decodeRLE,
@@ -1157,7 +1157,7 @@ export class Niivue {
    * @internal
    * @returns the mouse position relative to the canvas
    */
-  getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null): { x: number; y: number } | undefined {
+  getRelativeMousePosition(event: PointerEvent, target?: EventTarget | null): { x: number; y: number } | undefined {
     target = target || event.target
     if (!target) {
       return
@@ -1174,7 +1174,7 @@ export class Niivue {
   // assumes target or event.target is canvas
   // note: no test yet
   getNoPaddingNoBorderCanvasRelativeMousePosition(
-    event: MouseEvent,
+    event: PointerEvent,
     target: EventTarget
   ): { x: number; y: number } | undefined {
     target = target || event.target
@@ -1187,14 +1187,14 @@ export class Niivue {
   // here, we disable the normal context menu so that
   // we can use some custom right click events
   // note: no test yet
-  mouseContextMenuListener(e: MouseEvent): void {
+  mouseContextMenuListener(e: PointerEvent): void {
     e.preventDefault()
   }
 
   // not included in public docs
   // handler for all mouse button presses
   // note: no test yet
-  mouseDownListener(e: MouseEvent): void {
+  mouseDownListener(e: PointerEvent): void {
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
@@ -1256,7 +1256,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse left button down
   // note: no test yet
-  mouseLeftButtonHandler(e: MouseEvent): void {
+  mouseLeftButtonHandler(e: PointerEvent): void {
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mouseDown(pos!.x, pos!.y)
     this.mouseClick(pos!.x, pos!.y)
@@ -1265,7 +1265,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse center button down
   // note: no test yet
-  mouseCenterButtonHandler(e: MouseEvent): void {
+  mouseCenterButtonHandler(e: PointerEvent): void {
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
@@ -1282,7 +1282,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse right button down
   // note: no test yet
-  mouseRightButtonHandler(e: MouseEvent): void {
+  mouseRightButtonHandler(e: PointerEvent): void {
     // this.uiData.isDragging = true;
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
@@ -1414,7 +1414,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse button up (all buttons)
   // note: no test yet
-  mouseUpListener(e: MouseEvent): void {
+  mouseUpListener(e: PointerEvent): void {
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
@@ -1557,14 +1557,14 @@ export class Niivue {
       this.generateMouseUpCallback(fracStart, fracEnd)
     }
     // mouseUp generates this.drawScene();
-    const mouseUpEvent = convertTouchToMouseEvent(e, 'mouseup')
-    this.mouseUpListener(mouseUpEvent)
+    const pointerUpEvent = convertTouchToPointerEvent(e, 'mouseup')
+    this.mouseUpListener(pointerUpEvent)
   }
 
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
-  mouseMoveListener(e: MouseEvent): void {
+  mouseMoveListener(e: PointerEvent): void {
     const rect = this.canvas!.getBoundingClientRect()
     this.ui.processPointerMove(e.clientX - rect.left, e.clientY - rect.top)
     // move crosshair and change slices if mouse click and move
@@ -1866,19 +1866,13 @@ export class Niivue {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-    // add mousedown
-    this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this))
-    // add mouseup
-    this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this))
-    // add mouse move
-    this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this))
 
-    // add touchstart
-    this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this))
-    // add touchend
-    this.canvas.addEventListener('touchend', this.touchEndListener.bind(this))
-    // add touchmove
-    this.canvas.addEventListener('touchmove', this.touchMoveListener.bind(this))
+    // add pointerdown
+    this.canvas.addEventListener('pointerdown', this.pointerDownListener.bind(this))
+    // add pointerup
+    this.canvas.addEventListener('pointerup', this.pointerUpListener.bind(this))
+    // add pointermove
+    this.canvas.addEventListener('pointermove', this.pointerMoveListener.bind(this))
 
     // add scroll wheel
     this.canvas.addEventListener('wheel', this.wheelListener.bind(this))
@@ -1888,7 +1882,7 @@ export class Niivue {
     // add double click
     this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this))
 
-    //  drag and drop support
+    // drag and drop support
     this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), false)
     this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), false)
     this.canvas.addEventListener('drop', this.dropListener.bind(this), false)
@@ -1899,6 +1893,25 @@ export class Niivue {
 
     // keydown
     this.canvas.addEventListener('keydown', this.keyDownListener.bind(this), false)
+  }
+
+  // updated listeners for pointer events
+  pointerDownListener(e: PointerEvent): void {
+    // handle pointer down
+    e.preventDefault()
+    this.mouseDownListener(e)
+  }
+
+  pointerUpListener(e: PointerEvent): void {
+    // handle pointer up
+    e.preventDefault()
+    this.mouseUpListener(e)
+  }
+
+  pointerMoveListener(e: PointerEvent): void {
+    // handle pointer move
+    e.preventDefault()
+    this.mouseMoveListener(e)
   }
 
   // not included in public docs
