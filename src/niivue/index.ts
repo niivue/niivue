@@ -327,6 +327,12 @@ const defaultSaveImageOptions: SaveImageOptions = {
   volumeByIndex: 0
 }
 
+const OTHER_DIMENSIONS = [
+  [0, 1], // For AXIAL (sliceDim = 2), the other dimensions are 0 (X) and 1 (Y)
+  [0, 2], // For CORONAL (sliceDim = 1), the other dimensions are 0 (X) and 2 (Z)
+  [1, 2] // For SAGITTAL (sliceDim = 0), the other dimensions are 1 (Y) and 2 (Z)
+]
+
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -9038,6 +9044,26 @@ export class Niivue {
       tile.fovMM = obj.fovMM
       return
     }
+
+    // update our projected points for this slice
+    // Draw slice-specific components
+    const components = this.ui.getComponents(undefined, [axCorSag.toString()])
+    console.log('components found for ', components, axCorSag)
+    for (const component of components) {
+      if (isProjectable(component)) {
+        // we're only going to look at the relevant dimensions for the slice
+        const screenPoints = component.modelPoints.map((modelPoint) => {
+          const mm = this.frac2mm(this.scene.crosshairPos)
+          const otherDims = OTHER_DIMENSIONS[sliceDim]
+          const modelPointMM = [modelPoint[otherDims[0]], modelPoint[otherDims[1]]] as [number, number]
+          modelPointMM[sliceDim] = mm[sliceDim]
+          const screenPoint = this.calculateScreenPointFromVec2(modelPointMM, axCorSag, leftTopWidthHeight, customMM)
+          return vec2.fromValues(screenPoint[0], screenPoint[1])
+        })
+        component.setScreenPoints(screenPoints)
+      }
+    }
+
     gl.enable(gl.DEPTH_TEST)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // draw the slice
@@ -9149,23 +9175,6 @@ export class Niivue {
       // issue1065
       this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
     }
-
-    // Draw slice-specific components
-    const components = this.ui.getComponents(undefined, [axCorSag.toString()])
-    console.log('components found for ', components, axCorSag)
-    for (const component of components) {
-      if (isProjectable(component)) {
-        const screenPoints = component.modelPoints.map((modelPoint) => {
-          return [
-            leftTopWidthHeight[0] + leftTopWidthHeight[2] / 2,
-            leftTopWidthHeight[1] + leftTopWidthHeight[3] / 2
-          ] as Vec2
-        })
-        component.setScreenPoints(screenPoints)
-      }
-    }
-    console.log('slice', axCorSag.toString())
-    this.ui.draw(undefined, [axCorSag.toString()])
   }
 
   // not included in public docs
@@ -9912,6 +9921,99 @@ export class Niivue {
       screenPoint[1] += leftTopWidthHeight[1]
     }
     return screenPoint
+  }
+
+  // Function to calculate screen point from a Vec2 point on a slice plane
+  calculateScreenPointFromVec2(
+    point: [number, number],
+    sliceType: SLICE_TYPE,
+    leftTopWidthHeight: number[],
+    customMM: number
+  ): vec4 {
+    // Determine the slice dimension based on the slice type
+    let sliceDim: number
+    switch (sliceType) {
+      case SLICE_TYPE.AXIAL:
+        sliceDim = 2
+        break
+      case SLICE_TYPE.CORONAL:
+        sliceDim = 1
+        break
+      case SLICE_TYPE.SAGITTAL:
+        sliceDim = 0
+        break
+      default:
+        throw new Error('Invalid slice type specified')
+    }
+    const screen = this.screenFieldOfViewExtendedMM(sliceType)
+    let isRadiological = this.opts.isRadiologicalConvention && sliceType < SLICE_TYPE.SAGITTAL
+    if (customMM === Infinity || customMM === -Infinity) {
+      isRadiological = customMM !== Infinity
+      if (sliceType === SLICE_TYPE.CORONAL) {
+        isRadiological = !isRadiological
+      }
+    } else if (this.opts.sagittalNoseLeft && sliceType === SLICE_TYPE.SAGITTAL) {
+      isRadiological = !isRadiological
+    }
+
+    let elevation = 0
+    let azimuth = 0
+    if (sliceType === SLICE_TYPE.SAGITTAL) {
+      azimuth = isRadiological ? 90 : -90
+    } else if (sliceType === SLICE_TYPE.CORONAL) {
+      azimuth = isRadiological ? 180 : 0
+    } else {
+      azimuth = isRadiological ? 180 : 0
+      elevation = isRadiological ? -90 : 90
+    }
+
+    // Calculate sliceFrac based on crosshair position and customMM
+    let sliceFrac = this.scene.crosshairPos[sliceDim]
+    let mm = this.frac2mm(this.scene.crosshairPos)
+
+    if (!isNaN(customMM) && customMM !== Infinity && customMM !== -Infinity) {
+      mm = this.frac2mm([0.5, 0.5, 0.5])
+      mm[sliceDim] = customMM
+      const frac = this.mm2frac(mm)
+      sliceFrac = frac[sliceDim]
+    }
+
+    const sliceMM = mm[sliceDim]
+
+    // Calculate the MVP matrix for the slice view using the member function calculateMvpMatrix2D
+    const mvpMatrix = this.calculateMvpMatrix2D(
+      leftTopWidthHeight,
+      screen.mnMM,
+      screen.mxMM,
+      Infinity,
+      0,
+      azimuth,
+      elevation,
+      isRadiological
+    )
+
+    // Construct the 3D model point using the Vec2 and sliceFrac
+    const modelPoint: [number, number, number] = [0, 0, 0]
+    switch (sliceType) {
+      case SLICE_TYPE.AXIAL:
+        modelPoint[0] = point[0]
+        modelPoint[1] = point[1]
+        modelPoint[2] = sliceMM
+        break
+      case SLICE_TYPE.CORONAL:
+        modelPoint[0] = point[0]
+        modelPoint[1] = sliceMM
+        modelPoint[2] = point[1]
+        break
+      case SLICE_TYPE.SAGITTAL:
+        modelPoint[0] = sliceMM
+        modelPoint[1] = point[0]
+        modelPoint[2] = point[1]
+        break
+    }
+
+    // Use calculateScreenPointFromVec3 to transform the modelPoint with the MVP matrix
+    return this.calculateScreenPoint(modelPoint, mvpMatrix.modelViewProjectionMatrix, leftTopWidthHeight)
   }
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
@@ -11527,6 +11629,25 @@ export class Niivue {
       posString = this.drawScene()
     }
     if (this.ui) {
+      // draw our slice related components
+      switch (this.opts.sliceType) {
+        case SLICE_TYPE.AXIAL:
+          this.ui.draw(undefined, [SLICE_TYPE.AXIAL.toString()])
+          break
+        case SLICE_TYPE.CORONAL:
+          this.ui.draw(undefined, [SLICE_TYPE.CORONAL.toString()])
+          break
+        case SLICE_TYPE.SAGITTAL:
+          this.ui.draw(undefined, [SLICE_TYPE.SAGITTAL.toString()])
+          break
+        case SLICE_TYPE.MULTIPLANAR:
+          this.ui.draw(undefined, [SLICE_TYPE.AXIAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.CORONAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.SAGITTAL.toString()])
+          break
+      }
+
+      // draw our global components
       this.ui.draw()
     }
     return posString
