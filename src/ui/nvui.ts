@@ -282,16 +282,21 @@ export class NVUI {
     this.renderer.drawRoundedRect(leftTopWidthHeight, fillColor, outlineColor, cornerRadius, thickness)
   }
 
-  public drawCircle(leftTopWidthHeight: Vec4, circleColor: Color = [1, 1, 1, 1], fillPercent = 1.0): void {
-    this.renderer.drawCircle(leftTopWidthHeight, circleColor, fillPercent)
+  public drawCircle(
+    leftTopWidthHeight: Vec4,
+    circleColor: Color = [1, 1, 1, 1],
+    fillPercent = 1.0,
+    z: number = 0
+  ): void {
+    this.renderer.drawCircle(leftTopWidthHeight, circleColor, fillPercent, z)
   }
 
   public drawToggle(position: Vec2, size: Vec2, isOn: boolean, onColor: Color, offColor: Color): void {
     this.renderer.drawToggle(position, size, isOn, onColor, offColor)
   }
 
-  public drawTriangle(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color): void {
-    this.renderer.drawTriangle(headPoint, baseMidPoint, baseLength, color)
+  public drawTriangle(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color, z: number = 0): void {
+    this.renderer.drawTriangle(headPoint, baseMidPoint, baseLength, color, z)
   }
 
   public drawRotatedText(

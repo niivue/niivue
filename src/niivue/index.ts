@@ -8273,9 +8273,10 @@ export class Niivue {
   drawCircle(
     leftTopWidthHeight: [number, number, number, number],
     circleColor = this.opts.fontColor,
-    fillPercent = 1.0
+    fillPercent = 1.0,
+    z: number = 0
   ): void {
-    this.ui.drawCircle(vec4.fromValues(...leftTopWidthHeight), circleColor, fillPercent)
+    this.ui.drawCircle(vec4.fromValues(...leftTopWidthHeight), circleColor, fillPercent, z)
   }
 
   // not included in public docs
@@ -10406,10 +10407,10 @@ export class Niivue {
     // bus.$emit('crosshair-pos-change', posString);
     this.readyForSync = true
     this.sync()
-    // this.draw3DLabels(mvpMatrix, relativeLTWH, true)
+    this.draw3DLabels(mvpMatrix, relativeLTWH, true)
     // Draw additional 3D components or overlays after main rendering
     gl.depthFunc(gl.ALWAYS)
-    // this.ui.draw(undefined, ['3D_POST'])
+    this.ui.draw(undefined, ['3D_POST'])
 
     return posString
   }

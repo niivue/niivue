@@ -909,6 +909,7 @@ layout(location=0) in vec3 pos;
 uniform vec2 canvasWidthHeight;
 uniform vec4 leftTopWidthHeight;
 uniform vec4 uvLeftTopWidthHeight;
+uniform float z;
 out vec2 vUV;
 void main(void) {
 	//convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL 1..-1,-1..1
@@ -916,7 +917,7 @@ void main(void) {
 	frac.x = (leftTopWidthHeight.x + (pos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; //0..1
 	frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - pos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); //1..0
 	frac = (frac * 2.0) - 1.0;
-	gl_Position = vec4(frac, 0.0, 1.0);
+	gl_Position = vec4(frac, z, 1.0);
 	vUV = pos.xy;
 }`
 
@@ -2056,7 +2057,7 @@ uniform float u_z;
 
 void main() {
     // Set the position of the vertex in clip space
-    gl_Position = vec4(a_position, -0.7, 1.0);
+    gl_Position = vec4(a_position, u_z, 1.0);
 }
 `
 
@@ -2081,32 +2082,6 @@ void main() {
 }
 
 `
-
-export const vertRotatedFontShaderOld = `#version 300 es
-#line 576
-layout(location=0) in vec3 pos;
-uniform vec2 canvasWidthHeight;
-uniform vec4 leftTopWidthHeight;
-uniform vec4 uvLeftTopWidthHeight;
-uniform float rotation; // Rotation in radians
-out vec2 vUV;
-void main(void) {
-    // Apply rotation to position
-    mat2 rotationMatrix = mat2(cos(rotation), -sin(rotation), sin(rotation), cos(rotation));
-    vec2 rotatedPos = rotationMatrix * pos.xy;
-
-    // Convert pixel x,y space 1..canvasWidth,1..canvasHeight to WebGL -1..1,-1..1
-    vec2 frac;
-    frac.x = (leftTopWidthHeight.x + (rotatedPos.x * leftTopWidthHeight.z)) / canvasWidthHeight.x; // 0..1
-    frac.y = 1.0 - ((leftTopWidthHeight.y + ((1.0 - rotatedPos.y) * leftTopWidthHeight.w)) / canvasWidthHeight.y); // 1..0
-    frac = (frac * 2.0) - 1.0;
-    gl_Position = vec4(frac, 0.0, 1.0);
-
-    // Calculate normalized UV coordinates
-    vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y + ((1.0 - pos.y) * uvLeftTopWidthHeight.w));
-    vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
-}`
-
 export const vertRotatedFontShader = `#version 300 es
 #line 576
 layout(location=0) in vec3 pos;
@@ -2121,48 +2096,6 @@ void main(void) {
     // Calculate normalized UV coordinates
     vUV = vec2(uvLeftTopWidthHeight.x + (pos.x * uvLeftTopWidthHeight.z), uvLeftTopWidthHeight.y + ((1.0 - pos.y) * uvLeftTopWidthHeight.w));
     vUV = clamp(vUV, 0.0, 1.0); // Clamp UV coordinates to the range [0, 1]
-}`
-
-export const fragRotatedFontShaderO = `#version 300 es
-#line 593
-precision highp int;
-precision highp float;
-
-uniform highp sampler2D fontTexture;
-uniform vec4 fontColor;
-uniform vec4 outlineColor;
-uniform float screenPxRange;
-uniform float outlineThickness;
-uniform vec2 canvasWidthHeight;
-
-in vec2 vUV;
-out vec4 color;
-
-float median(float r, float g, float b) {
-    return max(min(r, g), min(max(r, g), b));
-}
-
-void main() {
-    vec3 msd = texture(fontTexture, vUV).rgb;
-    float sd = median(msd.r, msd.g, msd.b);
-    
-    // Convert outline thickness from pixels to normalized device coordinates (NDC)
-    float outlineThicknessNDC = outlineThickness / max(canvasWidthHeight.x, canvasWidthHeight.y);
-    float screenPxDistance = screenPxRange * (sd - 0.5);
-
-    // Calculate factors for the outline and glyph, aiming for a sharp outline fall-off
-    float outlineFactor = smoothstep(-outlineThicknessNDC, 0.0, screenPxDistance);
-    float glyphFactor = smoothstep(0.0, screenPxRange * 0.5, screenPxDistance + 0.5);
-    
-    // Combine factors to determine the final color
-    float finalOutline = outlineFactor * (1.0 - glyphFactor);
-    float finalGlyph = glyphFactor;
-
-    // Determine the final color
-    vec3 finalColor = mix(outlineColor.rgb, fontColor.rgb, finalGlyph);
-    float finalAlpha = max(outlineColor.a * finalOutline, fontColor.a * finalGlyph);
-
-    color = vec4(finalColor, finalAlpha);
 }`
 
 export const fragRotatedFontShader = `#version 300 es

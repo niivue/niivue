@@ -1,5 +1,5 @@
 // nvrenderer.ts
-import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { mat4, vec2, vec4 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import {
   fragCircleShader,
@@ -602,7 +602,12 @@ export class NVRenderer {
    * @param circleColor - The color of the circle.
    * @param fillPercent - The percentage of the circle to fill (0 to 1).
    */
-  public drawCircle(leftTopWidthHeight: Vec4, circleColor: Color = [1, 1, 1, 1], fillPercent = 1.0): void {
+  public drawCircle(
+    leftTopWidthHeight: Vec4,
+    circleColor: Color = [1, 1, 1, 1],
+    fillPercent = 1.0,
+    z: number = 0
+  ): void {
     if (!NVRenderer.circleShader) {
       throw new Error('circleShader undefined')
     }
@@ -620,6 +625,7 @@ export class NVRenderer {
 
     this.gl.uniform4fv(NVRenderer.circleShader.uniforms.leftTopWidthHeight, rectParams as Float32List)
     this.gl.uniform1f(NVRenderer.circleShader.uniforms.fillPercent, fillPercent)
+    this.gl.uniform1f(NVRenderer.circleShader.uniforms.z, z)
     this.gl.bindVertexArray(NVRenderer.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null) // Unbind to avoid side effects
