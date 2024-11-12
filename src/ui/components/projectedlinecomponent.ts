@@ -5,12 +5,11 @@ import { LineComponent } from './linecomponent.js'
 
 export class ProjectedLineComponent extends LineComponent implements IProjectable {
   modelPoints: Vec3[] // Array for one or two model points
-  private projectedPoint: Vec2 // Projected screen point
+  private projectedPoint: Vec3 // Projected screen point
   private targetComponent: IUIComponent // Reference to the target component
 
   constructor(
     modelPoints: Vec3[],
-    projectedPoint: Vec2,
     targetComponent: IUIComponent,
     thickness = 1,
     lineColor: Color = [1, 0, 0, 1],
@@ -20,12 +19,12 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
   ) {
     super([0, 0, 0, 0], thickness, lineColor, terminator, lineStyle, dashDotLength)
     this.modelPoints = modelPoints
-    this.projectedPoint = projectedPoint
     this.targetComponent = targetComponent
+    this.projectedPoint = [0, 0, 0]
   }
 
   // Set the projected screen points
-  setScreenPoints(screenPoints: Vec2[]): void {
+  setScreenPoints(screenPoints: Vec3[]): void {
     if (screenPoints.length > 0) {
       this.projectedPoint = screenPoints[0]
       this.updateLinePosition()
@@ -39,7 +38,7 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
 
   private calculateMidpoint(): Vec2 {
     const [x, y, width, height] = this.targetComponent.getBounds()
-    const [px, py] = this.projectedPoint
+    const [px, py] = [this.projectedPoint[0], this.projectedPoint[1]]
 
     // Determine the closest side (left, right, top, bottom) to the projected point
     const distances = [

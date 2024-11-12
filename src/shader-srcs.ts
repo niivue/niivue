@@ -2306,3 +2306,82 @@ void main() {
 }
 
 `
+export const vertScreenToModelLine3DShader = `#version 300 es
+#line 534
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float thickness;
+uniform vec3 startXYZ; // Starting point in screen space with depth
+uniform vec3 endXYZ; // Ending point in model space with depth
+
+void main(void) {
+    // Linearly interpolate between startXYZ and endXYZ
+    vec2 posXY = mix(startXYZ.xy, endXYZ.xy, pos.x);
+    vec2 direction = normalize(startXYZ.xy - endXYZ.xy);
+    posXY += vec2(-direction.y, direction.x) * thickness * (pos.y - 0.5);
+
+    // Convert to normalized device coordinates
+    posXY.x = (posXY.x) / canvasWidthHeight.x;
+    posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y);
+    
+    // Interpolate Z based on current distance
+    float totalDistance = length(endXYZ.xy - startXYZ.xy);
+    float currentDistance = length(endXYZ.xy - posXY);
+    float z = mix(startXYZ.z, endXYZ.z, 1.0 - abs(currentDistance / totalDistance));
+    
+    // Output final position
+    gl_Position = vec4((posXY * 2.0) - 1.0, z, 1.0);
+}`
+
+export const vertTriangle3DShader = `#version 300 es
+#line 534
+precision highp float;
+
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float thickness;
+uniform vec2 baseMidXY;
+uniform vec3 headXYZ; // 3D point for the head of the triangle
+
+void main(void) {	
+	vec2 posXY = mix(baseMidXY, headXYZ.xy, pos.x);
+	vec2 direction = normalize(baseMidXY - headXYZ.xy);
+	float triangleHalfWidth = thickness * 1.5; // Adjust based on your desired triangle width
+
+	// Calculate offset to create triangle shape
+	vec2 offset = vec2(-direction.y, direction.x) * triangleHalfWidth * (pos.y - 0.5);
+	posXY += offset;
+
+	// Normalize screen coordinates
+	posXY.x = posXY.x / canvasWidthHeight.x;
+	posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y);
+
+	// Interpolate Z for depth effect
+	float z = headXYZ.z * (1.0 - pos.x);
+	gl_Position = vec4((posXY * 2.0) - 1.0, z, 1.0);
+}`
+
+export const vertCircle3DShader = `#version 300 es
+#line 534
+precision highp float;
+
+layout(location=0) in vec3 pos;
+uniform vec2 canvasWidthHeight;
+uniform float radius;
+uniform vec3 centerXYZ; // 3D center of the circle
+out vec2 vUV; // Pass vUV to the fragment shader
+
+void main(void) {
+    // Calculate the vUV coordinates within the circle (range 0 to 1)
+    vUV = pos.xy * 0.5 + 0.5; // Transform [-1,1] range to [0,1] for vUV
+
+    // Position circle in screen space relative to the center
+    vec2 posXY = centerXYZ.xy + pos.xy * radius;
+
+    // Normalize screen coordinates
+    posXY.x = posXY.x / canvasWidthHeight.x;
+    posXY.y = 1.0 - (posXY.y / canvasWidthHeight.y);
+
+    // Depth based on Z value of the center (uniform depth for all vertices in the circle)
+    gl_Position = vec4((posXY * 2.0) - 1.0, centerXYZ.z, 1.0);
+}`

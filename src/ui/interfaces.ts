@@ -44,7 +44,7 @@ export interface IUIContainer extends IUIComponent {
 
 export interface IProjectable {
   modelPoints: Vec3[] // Array to handle one or two points
-  setScreenPoints(screenPoints: Vec2[]): void
+  setScreenPoints(screenPoints: Vec3[]): void
 }
 
 export function isProjectable(component: any): component is IProjectable {

@@ -9058,7 +9058,7 @@ export class Niivue {
           const modelPointMM = [modelPoint[otherDims[0]], modelPoint[otherDims[1]]] as [number, number]
           modelPointMM[sliceDim] = mm[sliceDim]
           const screenPoint = this.calculateScreenPointFromVec2(modelPointMM, axCorSag, leftTopWidthHeight, customMM)
-          return vec2.fromValues(screenPoint[0], screenPoint[1])
+          return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
         })
         component.setScreenPoints(screenPoints)
       }
@@ -10338,6 +10338,19 @@ export class Niivue {
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
 
+    // project our model points
+    const components = this.ui.getComponents(undefined, ['3D_PRE', '3D_POST'], false)
+    for (const component of components) {
+      if (isProjectable(component)) {
+        // we're only going to look at the relevant dimensions for the slice
+        const screenPoints = component.modelPoints.map((modelPoint) => {
+          const screenPoint = this.calculateScreenPoint(modelPoint as [number, number, number], mvpMatrix, relativeLTWH)
+          return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
+        })
+        component.setScreenPoints(screenPoints)
+      }
+    }
+
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
@@ -10371,7 +10384,14 @@ export class Niivue {
     if (this.opts.meshXRay > 0.0) {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
     }
+    const isBlenEnabled = gl.isEnabled(gl.BLEND)
 
+    gl.disable(gl.BLEND)
+    gl.depthFunc(gl.GREATER)
+    this.ui.draw(undefined, ['3D_PRE'])
+    if (isBlenEnabled) {
+      gl.enable(gl.BLEND)
+    }
     //
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
@@ -10390,7 +10410,8 @@ export class Niivue {
     this.sync()
     // this.draw3DLabels(mvpMatrix, relativeLTWH, true)
     // Draw additional 3D components or overlays after main rendering
-    this.ui.draw(leftTopWidthHeight as Vec4, ['3D_POST'])
+    gl.depthFunc(gl.ALWAYS)
+    this.ui.draw(undefined, ['3D_POST'])
 
     return posString
   }
