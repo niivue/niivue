@@ -63,6 +63,13 @@ export enum VerticalAlignment {
   BOTTOM = AlignmentFlag.BOTTOM
 }
 
+export enum ComponentSide {
+  LEFT,
+  RIGHT,
+  TOP,
+  BOTTOM
+}
+
 export type Effect =
   | {
       type: 'setValue'
