@@ -10356,9 +10356,6 @@ export class Niivue {
     gl.depthMask(true)
     gl.clearDepth(0.0)
 
-    // Draw components specific to 3D view before drawImage3D and drawMesh3D
-    this.ui.draw(undefined, ['3D_PRE'])
-
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
@@ -10384,6 +10381,7 @@ export class Niivue {
     if (this.opts.meshXRay > 0.0) {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
     }
+
     const isBlenEnabled = gl.isEnabled(gl.BLEND)
 
     gl.disable(gl.BLEND)
@@ -10411,7 +10409,7 @@ export class Niivue {
     // this.draw3DLabels(mvpMatrix, relativeLTWH, true)
     // Draw additional 3D components or overlays after main rendering
     gl.depthFunc(gl.ALWAYS)
-    this.ui.draw(undefined, ['3D_POST'])
+    // this.ui.draw(undefined, ['3D_POST'])
 
     return posString
   }

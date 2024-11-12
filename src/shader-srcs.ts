@@ -2052,10 +2052,11 @@ export const vertTriangleShader = `#version 300 es
 precision highp float;
 
 in vec2 a_position;  // The vertex position in 2D coordinates
+uniform float u_z;
 
 void main() {
     // Set the position of the vertex in clip space
-    gl_Position = vec4(a_position, 0.0, 1.0);
+    gl_Position = vec4(a_position, -0.7, 1.0);
 }
 `
 
@@ -2410,3 +2411,23 @@ void main(void) {
     float z = mix(startXYZ.z, endXYZ.z, 1.0 - currentDistance / startDistance);
     gl_Position = vec4((posXY * 2.0) - 1.0, z, 1.0);
 }`
+
+export const vertProjectedTriangleShader = `#version 300 es
+precision highp float;
+
+in vec3 a_position;  // 3D vertex position
+
+void main() {
+    // Directly set the vertex position in clip space
+    // gl_Position = vec4(a_position.xy, -0.5, 1.0);
+		gl_Position = vec4(a_position, 1.0); // Directly set in clip space
+}
+`
+
+export const fragProjectedTriangleShader = `#version 300 es
+precision highp float;
+out vec4 fragColor;
+void main() {
+    fragColor = vec4(1.0, 0.0, 0.0, 1.0); // Solid red color for testing
+}
+`

@@ -1,10 +1,11 @@
 // nvrenderer.ts
-import { mat4, vec2, vec4 } from 'gl-matrix'
+import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import {
   fragCircleShader,
   fragColorbarShader,
   fragEllipticalFillShader,
+  fragProjectedTriangleShader,
   fragRectShader,
   fragRotatedFontShader,
   fragRotatedRectangularFillShader,
@@ -15,6 +16,7 @@ import {
   vertEllipticalFillShader,
   vertLineShader,
   vertProjectedLineShader,
+  vertProjectedTriangleShader,
   vertRectShader,
   vertRotatedFontShader,
   vertRotatedRectangularFillShader,
@@ -36,12 +38,14 @@ export class NVRenderer {
   protected static bitmapShader: Shader
   protected static genericVAO: WebGLVertexArrayObject
   protected static triangleVertexBuffer: WebGLBuffer
+  protected static projectedTriangleVertexBuffer: WebGLBuffer
   protected static lineTerminator = LineTerminator
   protected static rotatedTextShader: Shader
   protected static rotatedRectangularFillShader: Shader
   protected static ellipticalFillShader: Shader
   protected static colorbarShader: Shader
   protected static projectedLineShader: Shader
+  protected static projectedTriangleShader: Shader
 
   /**
    * Creates an instance of NVRenderer.
@@ -90,6 +94,10 @@ export class NVRenderer {
 
     if (!NVRenderer.projectedLineShader) {
       NVRenderer.projectedLineShader = new Shader(gl, vertProjectedLineShader, fragRectShader)
+    }
+
+    if (!NVRenderer.projectedTriangleShader) {
+      NVRenderer.projectedTriangleShader = new Shader(gl, vertProjectedTriangleShader, fragProjectedTriangleShader)
     }
 
     if (!NVRenderer.genericVAO) {
@@ -151,6 +159,22 @@ export class NVRenderer {
       // Allocate space for 3 vertices (triangle), each with 2 components (x, y)
       const initialVertices = new Float32Array(6)
       this.gl.bufferData(this.gl.ARRAY_BUFFER, initialVertices, this.gl.DYNAMIC_DRAW)
+    }
+
+    if (!NVRenderer.projectedTriangleVertexBuffer) {
+      NVRenderer.projectedTriangleVertexBuffer = this.gl.createBuffer()
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, NVRenderer.projectedTriangleVertexBuffer)
+
+      // Allocate memory for 3 vertices (3D coordinates for x, y, z)
+      const vertexCount = 3 // 1 triangle
+      const componentsPerVertex = 3 // x, y, z for each vertex
+      const projectedTriangleVertexData = new Float32Array(vertexCount * componentsPerVertex)
+
+      // Initialize the buffer with empty data
+      this.gl.bufferData(this.gl.ARRAY_BUFFER, projectedTriangleVertexData, this.gl.DYNAMIC_DRAW)
+
+      // Unbind the buffer to prevent accidental modification
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
     }
   }
 
@@ -652,7 +676,7 @@ export class NVRenderer {
     this.drawCircle([knobX, knobY, knobSize, knobSize], new Float32Array([1.0, 1.0, 1.0, 1.0]))
   }
 
-  public drawTriangle(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color): void {
+  public drawTriangle(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color, z: number = 0): void {
     const canvas = this.gl.canvas as HTMLCanvasElement
 
     // Convert screen points to WebGL coordinates
@@ -709,6 +733,9 @@ export class NVRenderer {
 
     // Set the color uniform
     this.gl.uniform4fv(NVRenderer.triangleShader.uniforms.u_color, color as Float32List)
+
+    // Set z value
+    this.gl.uniform1f(NVRenderer.triangleShader.uniforms.u_z, z)
 
     // Draw the triangle
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
@@ -1382,8 +1409,17 @@ export class NVRenderer {
           [endXYZ[0], endXYZ[1]],
           [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
           terminatorSize, // pass size as a number
-          lineColor
+          lineColor,
+          endXYZ[2]
         )
+        // Calculate the midpoint for the base of the arrow
+        // const baseMidPoint: Vec3 = [
+        //   adjustedEndX - (direction[0] * terminatorSize) / 2,
+        //   adjustedEndY - (direction[1] * terminatorSize) / 2,
+        //   -1 // endZ
+        // ]
+        // // Use drawProjectedTriangle for the arrow
+        // this.drawProjectedTriangle() // [endXYZ[0], endXYZ[1], -1], baseMidPoint, terminatorSize, lineColor)
         break
       }
       case LineTerminator.CIRCLE:
@@ -1401,4 +1437,63 @@ export class NVRenderer {
         break
     }
   }
+
+  //   public drawProjectedTriangle(headPoint: Vec3, baseMidPoint: Vec3, baseLength: number, color: Color): void {
+  //     // Calculate direction vector from base midpoint to the head point
+  //     const direction = vec3.sub(vec3.create(), headPoint, baseMidPoint)
+  //     vec3.normalize(direction, direction)
+
+  //     // Calculate a perpendicular vector for the triangle's base
+  //     const perpVector = vec3.cross(vec3.create(), direction, [0, 0, 1])
+  //     vec3.normalize(perpVector, perpVector)
+
+  //     // Calculate the left and right base vertices in 3D
+  //     const halfBaseLength = baseLength / 2
+  //     const leftBasePoint = vec3.scaleAndAdd(vec3.create(), baseMidPoint, perpVector, -halfBaseLength)
+  //     const rightBasePoint = vec3.scaleAndAdd(vec3.create(), baseMidPoint, perpVector, halfBaseLength)
+
+  //     // Bind the projected triangle vertex buffer
+  //     if (!NVRenderer.projectedTriangleVertexBuffer) {
+  //       console.error('Projected triangle vertex buffer is not defined at draw time')
+  //       return
+  //     }
+  //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, NVRenderer.projectedTriangleVertexBuffer)
+  //     console.log('Buffer data:', this.gl.getBufferParameter(this.gl.ARRAY_BUFFER, this.gl.BUFFER_SIZE))
+
+  //     // Update the buffer with triangle vertices (3 vertices with x, y, z)
+  //     const vertices = new Float32Array([
+  //       headPoint[0],
+  //       headPoint[1],
+  //       headPoint[2],
+  //       leftBasePoint[0],
+  //       leftBasePoint[1],
+  //       leftBasePoint[2],
+  //       rightBasePoint[0],
+  //       rightBasePoint[1],
+  //       rightBasePoint[2]
+  //     ])
+  //     this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.DYNAMIC_DRAW)
+
+  //     // Use the triangle shader program
+  //     NVRenderer.projectedTriangleShader.use(this.gl)
+
+  //     // Bind the position attribute
+  //     const positionLocation = NVRenderer.projectedTriangleShader.uniforms.a_position as GLuint
+  //     this.gl.enableVertexAttribArray(positionLocation)
+  //     this.gl.vertexAttribPointer(positionLocation, 3, this.gl.FLOAT, false, 0, 0)
+
+  //     // Set the color uniform
+  //     this.gl.uniform4fv(NVRenderer.projectedTriangleShader.uniforms.u_color, color as Float32List)
+
+  //     // Enable depth testing for proper layering, but reset after
+  //     // this.gl.enable(this.gl.DEPTH_TEST)
+  //     // this.gl.depthFunc(this.gl.LEQUAL)
+
+  //     // Draw the triangle
+  //     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
+
+  //     // Reset bindings and disable vertex attributes to avoid side effects
+  //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
+  //     this.gl.disableVertexAttribArray(positionLocation)
+  //   }
 }
