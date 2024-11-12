@@ -1374,9 +1374,18 @@ export class NVRenderer {
 
     // Draw terminator if specified
     switch (terminator) {
-      case LineTerminator.ARROW:
-        this.drawTriangle([adjustedEndX, adjustedEndY], [endX, endY], terminatorSize, lineColor)
+      case LineTerminator.ARROW: {
+        // Calculate triangle points for arrow terminator
+        const triangleDirection = vec2.sub(vec2.create(), [endX, endY], [adjustedEndX, adjustedEndY])
+        vec2.normalize(triangleDirection, triangleDirection)
+        this.drawTriangle(
+          [endXYZ[0], endXYZ[1]],
+          [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
+          terminatorSize, // pass size as a number
+          lineColor
+        )
         break
+      }
       case LineTerminator.CIRCLE:
         this.drawCircle(
           [adjustedEndX - terminatorSize / 2, adjustedEndY - terminatorSize / 2, terminatorSize, terminatorSize],
