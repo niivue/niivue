@@ -10357,9 +10357,9 @@ export class Niivue {
     gl.clearDepth(0.0)
 
     // Draw components specific to 3D view before drawImage3D and drawMesh3D
-    this.ui.draw(leftTopWidthHeight as Vec4, ['3D_PRE'])
+    this.ui.draw(undefined, ['3D_PRE'])
 
-    // this.draw3DLabels(mvpMatrix, relativeLTWH, false)
+    this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
 

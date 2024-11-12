@@ -15,7 +15,7 @@ export class LineComponent extends BaseUIComponent {
     thickness = 1,
     lineColor: Color = [1, 0, 0, -1],
     terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.NORMAL, // Default to solid line
+    lineStyle: LineStyle = LineStyle.SOLID, // Default to solid line
     dashDotLength: number = 5 // Default dash/dot length
   ) {
     super()
@@ -81,7 +81,7 @@ export class LineComponent extends BaseUIComponent {
     const thickness: number = data.thickness || 1
     const lineColor: Color = data.lineColor || [1, 0, 0, -1]
     const terminator: LineTerminator = data.terminator || LineTerminator.NONE
-    const lineStyle: LineStyle = data.lineStyle || LineStyle.NORMAL
+    const lineStyle: LineStyle = data.lineStyle || LineStyle.SOLID
     const dashDotLength: number = data.dashDotLength || 5
 
     return new LineComponent(startEnd, thickness, lineColor, terminator, lineStyle, dashDotLength)

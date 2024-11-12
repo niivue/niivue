@@ -20,7 +20,7 @@ export enum LineTerminator {
 }
 
 export enum LineStyle {
-  NORMAL = 'normal',
+  SOLID = 'solid',
   DASHED = 'dashed',
   DOTTED = 'dotted'
 }

@@ -14,6 +14,7 @@ import {
   vertColorbarShader,
   vertEllipticalFillShader,
   vertLineShader,
+  vertProjectedLineShader,
   vertRectShader,
   vertRotatedFontShader,
   vertRotatedRectangularFillShader,
@@ -22,7 +23,7 @@ import {
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { NVFont } from './nvfont.js'
 import { NVBitmap } from './nvbitmap.js'
-import { LineTerminator, Color, Vec2, Vec4, LineStyle, Graph } from './types.js'
+import { LineTerminator, Color, Vec2, Vec4, LineStyle, Graph, Vec3 } from './types.js'
 
 // NVRenderer class with rendering methods
 export class NVRenderer {
@@ -40,6 +41,7 @@ export class NVRenderer {
   protected static rotatedRectangularFillShader: Shader
   protected static ellipticalFillShader: Shader
   protected static colorbarShader: Shader
+  protected static projectedLineShader: Shader
 
   /**
    * Creates an instance of NVRenderer.
@@ -82,9 +84,12 @@ export class NVRenderer {
       NVRenderer.ellipticalFillShader = new Shader(gl, vertEllipticalFillShader, fragEllipticalFillShader)
     }
 
-    // Initialize colorbarShader if not already done
     if (!NVRenderer.colorbarShader) {
       NVRenderer.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
+    }
+
+    if (!NVRenderer.projectedLineShader) {
+      NVRenderer.projectedLineShader = new Shader(gl, vertProjectedLineShader, fragRectShader)
     }
 
     if (!NVRenderer.genericVAO) {
@@ -304,7 +309,7 @@ export class NVRenderer {
     thickness = 1,
     lineColor: Color = [1, 0, 0, -1],
     terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.NORMAL,
+    lineStyle: LineStyle = LineStyle.SOLID,
     dashDotLength: number = 5 // Default length for dash or dot size
   ): void {
     const gl = this.gl
@@ -1279,6 +1284,112 @@ export class NVRenderer {
 
       // Draw X tick label with downward padding
       this.drawText(font, [xPos, plotPosition[1] + plotSize[1] + 15], xValue, 0.6 * textScale, textColor)
+    }
+  }
+
+  drawProjectedLineSegment(startXYZ: Vec3, endXYZ: Vec3, thickness = 1, lineColor: Color = [1, 0, 0, 1]): void {
+    this.gl.bindVertexArray(NVRenderer.genericVAO)
+    if (!NVRenderer.projectedLineShader) {
+      throw new Error('projectedLineShader undefined')
+    }
+    console.log('start and end renderer', startXYZ, endXYZ)
+    NVRenderer.projectedLineShader.use(this.gl)
+
+    this.gl.uniform4fv(NVRenderer.projectedLineShader.uniforms.lineColor, lineColor)
+    this.gl.uniform2fv(NVRenderer.projectedLineShader.uniforms.canvasWidthHeight, [
+      this.gl.canvas.width,
+      this.gl.canvas.height
+    ])
+    // draw Line
+    this.gl.uniform1f(NVRenderer.projectedLineShader.uniforms.thickness, thickness)
+    this.gl.uniform3fv(NVRenderer.projectedLineShader.uniforms.startXYZ, startXYZ)
+    this.gl.uniform3fv(NVRenderer.projectedLineShader.uniforms.endXYZ, endXYZ)
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+    this.gl.bindVertexArray(null) // set vertex attributes
+  }
+
+  public drawProjectedLine(
+    startXYZ: Vec3,
+    endXYZ: Vec3,
+    thickness = 1,
+    lineColor: Color = [1, 0, 0, 1],
+    terminator: LineTerminator = LineTerminator.NONE,
+    lineStyle: LineStyle = LineStyle.SOLID,
+    dashDotLength = 5
+  ): void {
+    const [startX, startY, startZ] = startXYZ
+    const [endX, endY, endZ] = endXYZ
+
+    // Calculate direction vector and line length
+    const direction = vec2.sub(vec2.create(), [endX, endY], [startX, startY])
+    vec2.normalize(direction, direction)
+    const lineLength = vec2.distance([startX, startY], [endX, endY])
+
+    // Adjust for terminator if needed
+    const terminatorSize = thickness * 3
+    let adjustedEndX = endX
+    let adjustedEndY = endY
+    if (terminator !== LineTerminator.NONE) {
+      adjustedEndX -= direction[0] * (terminatorSize / 2)
+      adjustedEndY -= direction[1] * (terminatorSize / 2)
+    }
+
+    if (lineStyle === LineStyle.DASHED || lineStyle === LineStyle.DOTTED) {
+      const segmentSpacing = lineStyle === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
+      const segmentCount = Math.floor(lineLength / segmentSpacing)
+
+      for (let i = 0; i <= segmentCount; i++) {
+        const segmentStartXY = vec2.scaleAndAdd(vec2.create(), [startX, startY], direction, i * segmentSpacing)
+        const segmentStart: Vec3 = [segmentStartXY[0], segmentStartXY[1], startZ] // Use startXYZ.z as initial z value
+
+        if (i === segmentCount) {
+          if (lineStyle === LineStyle.DASHED) {
+            // Final dashed segment to adjusted endpoint
+            this.drawProjectedLineSegment(segmentStart, [adjustedEndX, adjustedEndY, endZ], thickness, lineColor)
+          } else if (lineStyle === LineStyle.DOTTED) {
+            // Final dot at the adjusted endpoint
+            this.drawCircle(
+              [adjustedEndX - dashDotLength / 2, adjustedEndY - dashDotLength / 2, dashDotLength, dashDotLength],
+              lineColor
+            )
+          }
+        } else {
+          if (lineStyle === LineStyle.DASHED) {
+            const segmentEndXY = vec2.scaleAndAdd(vec2.create(), segmentStartXY, direction, dashDotLength)
+            const segmentEnd: Vec3 = [segmentEndXY[0], segmentEndXY[1], startZ] // Use startXYZ.z as z value for segment end as well
+            this.drawProjectedLineSegment(segmentStart, segmentEnd, thickness, lineColor)
+          } else if (lineStyle === LineStyle.DOTTED) {
+            // Draw dot as a small circle
+            this.drawCircle(
+              [segmentStart[0] - dashDotLength / 2, segmentStart[1] - dashDotLength / 2, dashDotLength, dashDotLength],
+              lineColor
+            )
+          }
+        }
+      }
+    } else {
+      // Draw solid line if no dash/dot style specified
+      this.drawProjectedLineSegment(startXYZ, [adjustedEndX, adjustedEndY, endZ], thickness, lineColor)
+    }
+
+    // Draw terminator if specified
+    switch (terminator) {
+      case LineTerminator.ARROW:
+        this.drawTriangle([adjustedEndX, adjustedEndY], [endX, endY], terminatorSize, lineColor)
+        break
+      case LineTerminator.CIRCLE:
+        this.drawCircle(
+          [adjustedEndX - terminatorSize / 2, adjustedEndY - terminatorSize / 2, terminatorSize, terminatorSize],
+          lineColor
+        )
+        break
+      case LineTerminator.RING:
+        this.drawCircle(
+          [adjustedEndX - terminatorSize / 2, adjustedEndY - terminatorSize / 2, terminatorSize, terminatorSize],
+          lineColor,
+          0.5
+        )
+        break
     }
   }
 }

@@ -14,7 +14,7 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
     thickness = 1,
     lineColor: Color = [1, 0, 0, 1],
     terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.NORMAL,
+    lineStyle: LineStyle = LineStyle.SOLID,
     dashDotLength = 5
   ) {
     super([0, 0, 0, 0], thickness, lineColor, terminator, lineStyle, dashDotLength)
@@ -67,6 +67,15 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
   draw(renderer: NVRenderer): void {
     // Ensure line position is up-to-date before drawing
     this.updateLinePosition()
-    super.draw(renderer)
+
+    renderer.drawProjectedLine(
+      [this.startEnd[0], this.startEnd[1], -1],
+      this.projectedPoint,
+      this.thickness,
+      this.lineColor,
+      this.terminator,
+      this.lineStyle,
+      this.dashDotLength
+    )
   }
 }
