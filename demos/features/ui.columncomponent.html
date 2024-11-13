@@ -23,7 +23,7 @@
         var nv1 = new niivue.Niivue()
         nv1.attachTo("gl1")
         nv1.setSliceType(nv1.sliceTypeRender)
-        const font = new niivue.NVFont(nv1.gl)
+        const font = new niivue.UIKFont(nv1.gl)
         await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
 
         const textColor = [1.0, 1.0, 1.0, 1.0]

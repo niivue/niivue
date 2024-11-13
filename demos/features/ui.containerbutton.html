@@ -29,10 +29,10 @@
         nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
         nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
 
-        const bitmap = new niivue.NVBitmap(nv1.gl);
+        const bitmap = new niivue.UIKBitmap(nv1.gl);
         await bitmap.loadBitmap("../images/rorden.png");
 
-        const font = new niivue.NVFont(nv1.gl);
+        const font = new niivue.UIKFont(nv1.gl);
         await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
         nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
         nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);

@@ -1,4 +1,4 @@
-import { NVFont } from '../nvfont.js'
+import { UIKFont } from '../uikfont.js'
 import { Vec2, Color } from '../types.js'
 import { TextBoxComponent } from './textboxcomponent.js'
 
@@ -8,7 +8,7 @@ export class ButtonComponent extends TextBoxComponent {
   onClick?: (event: PointerEvent) => void
 
   constructor(
-    font: NVFont,
+    font: UIKFont,
     position: Vec2,
     text: string,
     textColor: Color = [0, 0, 0, 1],

@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2 } from '../types.js'
 import { QuadTree, Rectangle } from '../quadtree.js'
 import { IUIComponent } from '../interfaces.js'
@@ -96,7 +96,7 @@ export class BaseContainerComponent extends BaseUIComponent {
     }
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     console.log('draw called i base with', this.components)
     if (!this.isVisible) {
       return

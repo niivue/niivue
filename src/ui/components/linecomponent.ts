@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color, LineTerminator, LineStyle } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -51,7 +51,7 @@ export class LineComponent extends BaseUIComponent {
     this.updateBounds()
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawLine(
       this.startEnd,
       this.thickness,

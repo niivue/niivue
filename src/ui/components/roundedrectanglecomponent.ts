@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -19,7 +19,7 @@ export class RoundedRectComponent extends BaseUIComponent {
     this.thickness = thickness
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawRoundedRect(
       this.leftTopWidthHeight,
       this.fillColor,

@@ -1,6 +1,6 @@
 // interfaces.ts
 
-import { NVRenderer } from './nvrenderer.js'
+import { UIKRenderer } from './uikrenderer.js'
 import { AlignmentPoint, Color, HorizontalAlignment, Vec2, Vec3, Vec4, VerticalAlignment } from './types.js'
 
 // interfaces.ts
@@ -9,7 +9,7 @@ export interface IUIComponent {
   setBounds(bounds: Vec4): void
   getPosition(): Vec2
   setPosition(position: Vec2): void
-  draw(renderer: NVRenderer): void
+  draw(renderer: UIKRenderer): void
   align(bounds: Vec4): void
 
   isVisible: boolean

@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -14,7 +14,7 @@ export class CircleComponent extends BaseUIComponent {
     this.fillPercent = fillPercent
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawCircle(this.leftTopWidthHeight, this.circleColor, this.fillPercent)
   }
 

@@ -23,12 +23,12 @@ import {
   vertTriangleShader
 } from '../shader-srcs.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
-import { NVFont } from './nvfont.js'
-import { NVBitmap } from './nvbitmap.js'
+import { UIKFont } from './uikfont.js'
+import { UIKBitmap } from './uikbitmap.js'
 import { LineTerminator, Color, Vec2, Vec4, LineStyle, Graph, Vec3 } from './types.js'
 
 // NVRenderer class with rendering methods
-export class NVRenderer {
+export class UIKRenderer {
   private gl: WebGL2RenderingContext
   private lineShader: Shader
   protected static triangleShader: Shader
@@ -56,51 +56,51 @@ export class NVRenderer {
     this.gl = gl
     this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
 
-    if (!NVRenderer.rectShader) {
-      NVRenderer.rectShader = new Shader(gl, vertRectShader, fragRectShader)
+    if (!UIKRenderer.rectShader) {
+      UIKRenderer.rectShader = new Shader(gl, vertRectShader, fragRectShader)
     }
 
-    if (!NVRenderer.roundedRectShader) {
-      NVRenderer.roundedRectShader = new Shader(gl, vertRectShader, fragRoundedRectShader)
+    if (!UIKRenderer.roundedRectShader) {
+      UIKRenderer.roundedRectShader = new Shader(gl, vertRectShader, fragRoundedRectShader)
     }
 
-    if (!NVRenderer.circleShader) {
-      NVRenderer.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
+    if (!UIKRenderer.circleShader) {
+      UIKRenderer.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
     }
 
-    if (!NVRenderer.triangleShader) {
-      NVRenderer.triangleShader = new Shader(gl, vertTriangleShader, fragTriangleShader)
+    if (!UIKRenderer.triangleShader) {
+      UIKRenderer.triangleShader = new Shader(gl, vertTriangleShader, fragTriangleShader)
     }
 
-    if (!NVRenderer.rotatedTextShader) {
-      NVRenderer.rotatedTextShader = new Shader(gl, vertRotatedFontShader, fragRotatedFontShader)
+    if (!UIKRenderer.rotatedTextShader) {
+      UIKRenderer.rotatedTextShader = new Shader(gl, vertRotatedFontShader, fragRotatedFontShader)
     }
 
-    if (!NVRenderer.rotatedRectangularFillShader) {
-      NVRenderer.rotatedRectangularFillShader = new Shader(
+    if (!UIKRenderer.rotatedRectangularFillShader) {
+      UIKRenderer.rotatedRectangularFillShader = new Shader(
         gl,
         vertRotatedRectangularFillShader,
         fragRotatedRectangularFillShader
       )
     }
 
-    if (!NVRenderer.ellipticalFillShader) {
-      NVRenderer.ellipticalFillShader = new Shader(gl, vertEllipticalFillShader, fragEllipticalFillShader)
+    if (!UIKRenderer.ellipticalFillShader) {
+      UIKRenderer.ellipticalFillShader = new Shader(gl, vertEllipticalFillShader, fragEllipticalFillShader)
     }
 
-    if (!NVRenderer.colorbarShader) {
-      NVRenderer.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
+    if (!UIKRenderer.colorbarShader) {
+      UIKRenderer.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
     }
 
-    if (!NVRenderer.projectedLineShader) {
-      NVRenderer.projectedLineShader = new Shader(gl, vertProjectedLineShader, fragRectShader)
+    if (!UIKRenderer.projectedLineShader) {
+      UIKRenderer.projectedLineShader = new Shader(gl, vertProjectedLineShader, fragRectShader)
     }
 
-    if (!NVRenderer.projectedTriangleShader) {
-      NVRenderer.projectedTriangleShader = new Shader(gl, vertProjectedTriangleShader, fragProjectedTriangleShader)
+    if (!UIKRenderer.projectedTriangleShader) {
+      UIKRenderer.projectedTriangleShader = new Shader(gl, vertProjectedTriangleShader, fragProjectedTriangleShader)
     }
 
-    if (!NVRenderer.genericVAO) {
+    if (!UIKRenderer.genericVAO) {
       const rectStrip = [
         1,
         1,
@@ -148,22 +148,22 @@ export class NVRenderer {
 
       gl.bindVertexArray(null) // Unbind VAO when done
 
-      NVRenderer.genericVAO = vao
+      UIKRenderer.genericVAO = vao
     }
 
-    if (!NVRenderer.triangleVertexBuffer) {
+    if (!UIKRenderer.triangleVertexBuffer) {
       // Create a static vertex buffer
-      NVRenderer.triangleVertexBuffer = this.gl.createBuffer() as WebGLBuffer
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, NVRenderer.triangleVertexBuffer)
+      UIKRenderer.triangleVertexBuffer = this.gl.createBuffer() as WebGLBuffer
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.triangleVertexBuffer)
 
       // Allocate space for 3 vertices (triangle), each with 2 components (x, y)
       const initialVertices = new Float32Array(6)
       this.gl.bufferData(this.gl.ARRAY_BUFFER, initialVertices, this.gl.DYNAMIC_DRAW)
     }
 
-    if (!NVRenderer.projectedTriangleVertexBuffer) {
-      NVRenderer.projectedTriangleVertexBuffer = this.gl.createBuffer()
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, NVRenderer.projectedTriangleVertexBuffer)
+    if (!UIKRenderer.projectedTriangleVertexBuffer) {
+      UIKRenderer.projectedTriangleVertexBuffer = this.gl.createBuffer()
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.projectedTriangleVertexBuffer)
 
       // Allocate memory for 3 vertices (3D coordinates for x, y, z)
       const vertexCount = 3 // 1 triangle
@@ -179,7 +179,7 @@ export class NVRenderer {
   }
 
   // Function to support drawing characters, including RTL
-  public drawChar(font: NVFont, position: Vec2, size: number, char: string): number {
+  public drawChar(font: UIKFont, position: Vec2, size: number, char: string): number {
     if (!font.fontShader) {
       throw new Error('fontShader undefined')
     }
@@ -202,7 +202,7 @@ export class NVRenderer {
 
   // Updated drawText to support Vec2 position
   public drawText(
-    font: NVFont,
+    font: UIKFont,
     position: Vec2,
     str: string,
     scale = 1.0,
@@ -242,7 +242,7 @@ export class NVRenderer {
     this.gl.uniform4fv(font.fontShader.uniforms.outlineColor, outlineColor as Float32List)
     this.gl.uniform1f(font.fontShader.uniforms.outlineThickness, outlineThickness)
 
-    this.gl.bindVertexArray(NVRenderer.genericVAO)
+    this.gl.bindVertexArray(UIKRenderer.genericVAO)
 
     const pos = Array.isArray(position) ? vec2.fromValues(position[0], position[1]) : position
 
@@ -265,7 +265,7 @@ export class NVRenderer {
     this.gl.bindVertexArray(null)
   }
 
-  public drawBitmap(bitmap: NVBitmap, position: Vec2, scale: number): void {
+  public drawBitmap(bitmap: UIKBitmap, position: Vec2, scale: number): void {
     if (!bitmap.getTexture()) {
       console.error('Bitmap texture not loaded')
       return
@@ -299,7 +299,7 @@ export class NVRenderer {
     gl.viewport(0, 0, canvasWidth, canvasHeight)
 
     // Bind the VAO and draw the bitmap
-    gl.bindVertexArray(NVRenderer.genericVAO)
+    gl.bindVertexArray(UIKRenderer.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
     // Check for WebGL errors
@@ -407,7 +407,7 @@ export class NVRenderer {
       gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
       gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine)
 
-      gl.bindVertexArray(NVRenderer.genericVAO)
+      gl.bindVertexArray(UIKRenderer.genericVAO)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       gl.bindVertexArray(null) // Unbind to avoid side effects
     }
@@ -446,7 +446,7 @@ export class NVRenderer {
     gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
     gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentCoords)
 
-    gl.bindVertexArray(NVRenderer.genericVAO)
+    gl.bindVertexArray(UIKRenderer.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(null) // Unbind to avoid side effects
   }
@@ -505,21 +505,21 @@ export class NVRenderer {
     cornerRadius: number = -1,
     thickness: number = 10
   ): void {
-    if (!NVRenderer.roundedRectShader) {
+    if (!UIKRenderer.roundedRectShader) {
       throw new Error('roundedRectShader undefined')
     }
 
     const gl = this.gl
 
     // Use the rounded rectangle shader program
-    NVRenderer.roundedRectShader.use(gl)
+    UIKRenderer.roundedRectShader.use(gl)
 
     // Enable blending for transparency
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
     // Set the necessary uniforms
-    const shader = NVRenderer.roundedRectShader
+    const shader = UIKRenderer.roundedRectShader
     if (cornerRadius === -1) {
       cornerRadius = thickness * 2
     }
@@ -534,7 +534,7 @@ export class NVRenderer {
     this.gl.uniform4fv(shader.uniforms.fillColor, fillColor as Float32List)
     this.gl.uniform2fv(shader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     this.gl.uniform4fv(shader.uniforms.leftTopWidthHeight, rectParams as Float32List)
-    this.gl.bindVertexArray(NVRenderer.genericVAO)
+    this.gl.bindVertexArray(UIKRenderer.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null)
   }
@@ -547,21 +547,21 @@ export class NVRenderer {
     gradientRadius: number,
     gradientColor: Color
   ): void {
-    if (!NVRenderer.rotatedRectangularFillShader) {
+    if (!UIKRenderer.rotatedRectangularFillShader) {
       throw new Error('rotatedRectangularFillShader undefined')
     }
 
     const gl = this.gl
 
     // Use the rotated rectangle shader program
-    NVRenderer.rotatedRectangularFillShader.use(gl)
+    UIKRenderer.rotatedRectangularFillShader.use(gl)
 
     // Enable blending for transparency
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
     // Set the necessary uniforms
-    const shader = NVRenderer.rotatedRectangularFillShader
+    const shader = UIKRenderer.rotatedRectangularFillShader
 
     const rectParams = Array.isArray(leftTopWidthHeight)
       ? vec4.fromValues(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
@@ -590,7 +590,7 @@ export class NVRenderer {
     this.gl.uniformMatrix4fv(shader.uniforms.modelViewProjectionMatrix, false, mvpMatrix as Float32List)
 
     // Bind the generic VAO
-    this.gl.bindVertexArray(NVRenderer.genericVAO)
+    this.gl.bindVertexArray(UIKRenderer.genericVAO)
 
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null)
@@ -608,13 +608,13 @@ export class NVRenderer {
     fillPercent = 1.0,
     z: number = 0
   ): void {
-    if (!NVRenderer.circleShader) {
+    if (!UIKRenderer.circleShader) {
       throw new Error('circleShader undefined')
     }
-    NVRenderer.circleShader.use(this.gl)
+    UIKRenderer.circleShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(NVRenderer.circleShader.uniforms.circleColor, circleColor as Float32List)
-    this.gl.uniform2fv(NVRenderer.circleShader.uniforms.canvasWidthHeight, [
+    this.gl.uniform4fv(UIKRenderer.circleShader.uniforms.circleColor, circleColor as Float32List)
+    this.gl.uniform2fv(UIKRenderer.circleShader.uniforms.canvasWidthHeight, [
       this.gl.canvas.width,
       this.gl.canvas.height
     ])
@@ -623,10 +623,10 @@ export class NVRenderer {
       ? vec4.fromValues(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
       : leftTopWidthHeight
 
-    this.gl.uniform4fv(NVRenderer.circleShader.uniforms.leftTopWidthHeight, rectParams as Float32List)
-    this.gl.uniform1f(NVRenderer.circleShader.uniforms.fillPercent, fillPercent)
-    this.gl.uniform1f(NVRenderer.circleShader.uniforms.z, z)
-    this.gl.bindVertexArray(NVRenderer.genericVAO)
+    this.gl.uniform4fv(UIKRenderer.circleShader.uniforms.leftTopWidthHeight, rectParams as Float32List)
+    this.gl.uniform1f(UIKRenderer.circleShader.uniforms.fillPercent, fillPercent)
+    this.gl.uniform1f(UIKRenderer.circleShader.uniforms.z, z)
+    this.gl.bindVertexArray(UIKRenderer.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null) // Unbind to avoid side effects
   }
@@ -694,11 +694,11 @@ export class NVRenderer {
     const webglBaseMidY = 1 - (bmp[1] / canvas.height) * 2
 
     // Ensure the vertex buffer is defined
-    if (!NVRenderer.triangleVertexBuffer) {
+    if (!UIKRenderer.triangleVertexBuffer) {
       console.error('Vertex buffer is not defined at draw time')
       return
     }
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, NVRenderer.triangleVertexBuffer)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.triangleVertexBuffer)
 
     // Calculate left and right base vertices
     const directionX = webglHeadX - webglBaseMidX
@@ -726,22 +726,22 @@ export class NVRenderer {
     this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, vertices)
 
     // Use the shader program
-    NVRenderer.triangleShader.use(this.gl)
+    UIKRenderer.triangleShader.use(this.gl)
 
     // Bind the position attribute
-    const positionLocation = NVRenderer.triangleShader.uniforms.a_position as GLuint
+    const positionLocation = UIKRenderer.triangleShader.uniforms.a_position as GLuint
     this.gl.enableVertexAttribArray(positionLocation)
     this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0)
 
     // Set u_antialiasing in pixels and canvas size in pixels
-    this.gl.uniform1f(NVRenderer.triangleShader.uniforms.u_antialiasing, baseLength * 0.01) // Example proportion
-    this.gl.uniform2f(NVRenderer.triangleShader.uniforms.u_canvasSize, canvas.width, canvas.height)
+    this.gl.uniform1f(UIKRenderer.triangleShader.uniforms.u_antialiasing, baseLength * 0.01) // Example proportion
+    this.gl.uniform2f(UIKRenderer.triangleShader.uniforms.u_canvasSize, canvas.width, canvas.height)
 
     // Set the color uniform
-    this.gl.uniform4fv(NVRenderer.triangleShader.uniforms.u_color, color as Float32List)
+    this.gl.uniform4fv(UIKRenderer.triangleShader.uniforms.u_color, color as Float32List)
 
     // Set z value
-    this.gl.uniform1f(NVRenderer.triangleShader.uniforms.u_z, z)
+    this.gl.uniform1f(UIKRenderer.triangleShader.uniforms.u_z, z)
 
     // Draw the triangle
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
@@ -750,7 +750,7 @@ export class NVRenderer {
 
   // Function to draw rotated text, supporting individual character drawing including RTL
   public drawRotatedText(
-    font: NVFont,
+    font: UIKFont,
     xy: Vec2,
     str: string,
     scale = 1.0,
@@ -764,11 +764,11 @@ export class NVRenderer {
       return
     }
 
-    if (!NVRenderer.rotatedTextShader) {
+    if (!UIKRenderer.rotatedTextShader) {
       throw new Error('rotatedTextShader undefined')
     }
 
-    const rotatedFontShader = NVRenderer.rotatedTextShader
+    const rotatedFontShader = UIKRenderer.rotatedTextShader
     const gl = this.gl
 
     // Bind the font texture
@@ -798,7 +798,7 @@ export class NVRenderer {
     this.gl.uniform1f(rotatedFontShader.uniforms.outlineThickness, outlineThickness)
 
     // Bind VAO for generic rectangle
-    gl.bindVertexArray(NVRenderer.genericVAO)
+    gl.bindVertexArray(UIKRenderer.genericVAO)
 
     // Set up orthographic projection matrix
     const orthoMatrix = mat4.create()
@@ -853,7 +853,7 @@ export class NVRenderer {
   }
 
   drawCalendar(
-    font: NVFont,
+    font: UIKFont,
     startX: number,
     startY: number,
     cellWidth: number,
@@ -952,7 +952,7 @@ export class NVRenderer {
   }
 
   drawTextBox(
-    font: NVFont,
+    font: UIKFont,
     xy: Vec2,
     str: string,
     textColor: Color = [0, 0, 0, 1.0],
@@ -995,7 +995,7 @@ export class NVRenderer {
     pointB: Vec2,
     length: number,
     units: string,
-    font: NVFont,
+    font: UIKFont,
     textColor: Color = [1, 0, 0, 1],
     lineColor: Color = [0, 0, 0, 1],
     lineThickness: number = 1,
@@ -1140,7 +1140,7 @@ export class NVRenderer {
     rotation: number = 0,
     mixValue: number = 0.1
   ): void {
-    const rectangleShader = NVRenderer.ellipticalFillShader
+    const rectangleShader = UIKRenderer.ellipticalFillShader
 
     rectangleShader.use(this.gl)
 
@@ -1169,12 +1169,12 @@ export class NVRenderer {
     // Set the mix value uniform
     this.gl.uniform1f(rectangleShader.uniforms.u_mixValue, mixValue)
 
-    this.gl.bindVertexArray(NVRenderer.genericVAO)
+    this.gl.bindVertexArray(UIKRenderer.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
   }
 
   public drawColorbar(
-    font: NVFont, // Font used for rendering labels
+    font: UIKFont, // Font used for rendering labels
     position: Vec2, // Position of the color bar [x, y]
     size: Vec2, // Size of the color bar [width, height]
     gradientTexture: WebGLTexture, // Texture for gradient if applicable
@@ -1186,19 +1186,19 @@ export class NVRenderer {
     const [width, height] = size
 
     // Use the colorbarShader for rendering
-    NVRenderer.colorbarShader.use(gl)
+    UIKRenderer.colorbarShader.use(gl)
 
     // Set up uniforms for the colorbar shader
-    gl.uniform2fv(NVRenderer.colorbarShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
-    gl.uniform4fv(NVRenderer.colorbarShader.uniforms.leftTopWidthHeight, [x, y, width, height])
+    gl.uniform2fv(UIKRenderer.colorbarShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+    gl.uniform4fv(UIKRenderer.colorbarShader.uniforms.leftTopWidthHeight, [x, y, width, height])
 
     // Bind the gradient texture
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, gradientTexture)
-    gl.uniform1i(NVRenderer.colorbarShader.uniforms.gradientTexture, 0) // Assumes gradient texture is bound to TEXTURE0
+    gl.uniform1i(UIKRenderer.colorbarShader.uniforms.gradientTexture, 0) // Assumes gradient texture is bound to TEXTURE0
 
     // Bind VAO and draw color bar rectangle
-    gl.bindVertexArray(NVRenderer.genericVAO)
+    gl.bindVertexArray(UIKRenderer.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
     // Draw tick marks and labels if any, using the provided font
@@ -1321,22 +1321,22 @@ export class NVRenderer {
   }
 
   drawProjectedLineSegment(startXYZ: Vec3, endXYZ: Vec3, thickness = 1, lineColor: Color = [1, 0, 0, 1]): void {
-    this.gl.bindVertexArray(NVRenderer.genericVAO)
-    if (!NVRenderer.projectedLineShader) {
+    this.gl.bindVertexArray(UIKRenderer.genericVAO)
+    if (!UIKRenderer.projectedLineShader) {
       throw new Error('projectedLineShader undefined')
     }
     console.log('start and end renderer', startXYZ, endXYZ)
-    NVRenderer.projectedLineShader.use(this.gl)
+    UIKRenderer.projectedLineShader.use(this.gl)
 
-    this.gl.uniform4fv(NVRenderer.projectedLineShader.uniforms.lineColor, lineColor)
-    this.gl.uniform2fv(NVRenderer.projectedLineShader.uniforms.canvasWidthHeight, [
+    this.gl.uniform4fv(UIKRenderer.projectedLineShader.uniforms.lineColor, lineColor)
+    this.gl.uniform2fv(UIKRenderer.projectedLineShader.uniforms.canvasWidthHeight, [
       this.gl.canvas.width,
       this.gl.canvas.height
     ])
     // draw Line
-    this.gl.uniform1f(NVRenderer.projectedLineShader.uniforms.thickness, thickness)
-    this.gl.uniform3fv(NVRenderer.projectedLineShader.uniforms.startXYZ, startXYZ)
-    this.gl.uniform3fv(NVRenderer.projectedLineShader.uniforms.endXYZ, endXYZ)
+    this.gl.uniform1f(UIKRenderer.projectedLineShader.uniforms.thickness, thickness)
+    this.gl.uniform3fv(UIKRenderer.projectedLineShader.uniforms.startXYZ, startXYZ)
+    this.gl.uniform3fv(UIKRenderer.projectedLineShader.uniforms.endXYZ, endXYZ)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null) // set vertex attributes
   }

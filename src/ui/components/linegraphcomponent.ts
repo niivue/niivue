@@ -1,6 +1,6 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
-import { NVFont } from '../nvfont.js'
+import { UIKFont } from '../uikfont.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export interface LineGraphOptions {
@@ -15,7 +15,7 @@ export interface LineGraphOptions {
   yLabel: string
   yRange: [number, number]
   lineThickness: number
-  font: NVFont
+  font: UIKFont
   textScale: number // New property to control text size
 }
 
@@ -48,7 +48,7 @@ export class LineGraphComponent extends BaseUIComponent {
   }
 
   // Implement draw method from BaseUIComponent
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawLineGraph(this.options)
   }
 }

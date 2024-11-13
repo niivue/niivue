@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color, LineTerminator } from '../types.js'
 import { LineComponent } from './linecomponent.js'
 
@@ -16,7 +16,7 @@ export class ElbowLineComponent extends LineComponent {
     this.horizontalFirst = horizontalFirst
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawElbowLine(this.startEnd, this.thickness, this.lineColor, this.horizontalFirst, this.terminator)
   }
 }

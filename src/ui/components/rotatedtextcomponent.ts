@@ -1,17 +1,17 @@
 import { IColorable } from '../interfaces.js'
-import { NVFont } from '../nvfont.js'
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKFont } from '../uikfont.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Color, Vec2 } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 // Draw Rotated Text Component
 export class RotatedTextComponent extends BaseUIComponent implements IColorable {
-  private font: NVFont
+  private font: UIKFont
   private text: string
   private color: Color
   private rotation: number
 
-  constructor(font: NVFont, position: Vec2, text: string, scale = 1.0, color: Color = [1, 0, 0, 1], rotation = 0.0) {
+  constructor(font: UIKFont, position: Vec2, text: string, scale = 1.0, color: Color = [1, 0, 0, 1], rotation = 0.0) {
     super()
     this.font = font
     this.position = position
@@ -45,7 +45,7 @@ export class RotatedTextComponent extends BaseUIComponent implements IColorable 
     throw new Error('Method not implemented.')
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawRotatedText(this.font, this.position, this.text, this.scale, this.color, this.rotation)
   }
 

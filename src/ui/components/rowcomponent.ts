@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { VerticalAlignment } from '../types.js'
 import { BaseContainerComponent } from './basecontainercomponent.js'
 
@@ -10,7 +10,7 @@ export class RowComponent extends BaseContainerComponent {
     this.alignment = alignment
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     if (!this.isVisible) {
       return
     }

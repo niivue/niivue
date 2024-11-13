@@ -103,8 +103,8 @@ import {
   NiiVueLocationValue,
   SyncOpts
 } from '../types.js'
-import { NVFont } from '../ui/nvfont.js'
-import { NVUI } from '../ui/nvui.js'
+import { UIKFont } from '../ui/uikfont.js'
+import { UIKit } from '../ui/uikit.js'
 import { convertTouchToPointerEvent } from '../ui/uiutils.js'
 import { Vec2, Vec4 } from '../ui/types.js'
 import { isProjectable } from '../ui/interfaces.js'
@@ -138,9 +138,9 @@ export { NVMeshUtilities } from '../nvmesh-utilities.js'
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '../types.js'
-export { NVUI } from '../ui/nvui.js'
-export { NVFont } from '../ui/nvfont.js'
-export { NVBitmap } from '../ui/nvbitmap.js'
+export { UIKit } from '../ui/uikit.js'
+export { UIKFont } from '../ui/uikfont.js'
+export { UIKBitmap } from '../ui/uikbitmap.js'
 
 export { RoundedRectComponent } from '../ui/components/roundedrectanglecomponent.js'
 export { TextComponent } from '../ui/components/textcomponent.js'
@@ -776,8 +776,8 @@ export class Niivue {
   initialized = false
   currentDrawUndoBitmap: number
   loadingText: string
-  defaultFont: NVFont
-  ui: NVUI
+  defaultFont: UIKFont
+  ui: UIKit
 
   /**
    * @param options  - options object to set modifiable Niivue properties
@@ -913,7 +913,7 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
-    this.ui = new NVUI(this.gl)
+    this.ui = new UIKit(this.gl)
     this.ui.redrawRequested = this.drawScene.bind(this)
     log.info('NIIVUE VERSION ', version)
 
@@ -5444,7 +5444,7 @@ export class Niivue {
   // not included in public docs
   async initText(): Promise<void> {
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
-    this.defaultFont = new NVFont(this.gl, this.opts.fontColor)
+    this.defaultFont = new UIKFont(this.gl, this.opts.fontColor)
     await this.defaultFont.loadDefaultFont()
     await this.loadDefaultMatCap()
     this.drawLoadingText(this.loadingText)
@@ -9050,7 +9050,6 @@ export class Niivue {
     // update our projected points for this slice
     // Draw slice-specific components
     const components = this.ui.getComponents(undefined, [axCorSag.toString()])
-    console.log('components found for ', components, axCorSag)
     for (const component of components) {
       if (isProjectable(component)) {
         // we're only going to look at the relevant dimensions for the slice

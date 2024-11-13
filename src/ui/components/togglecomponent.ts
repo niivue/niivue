@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -68,7 +68,7 @@ export class ToggleComponent extends BaseUIComponent {
   }
 
   // Draw the toggle component, with an optional hover effect
-  draw(renderer: NVRenderer, isHovered: boolean = false): void {
+  draw(renderer: UIKRenderer, isHovered: boolean = false): void {
     const posX = Array.isArray(this.position) ? this.position[0] : this.position[0]
     const posY = Array.isArray(this.position) ? this.position[1] : this.position[1]
     const sizeX = Array.isArray(this.size) ? this.size[0] : this.size[0]

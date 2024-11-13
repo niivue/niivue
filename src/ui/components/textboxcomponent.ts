@@ -1,5 +1,5 @@
-import { NVFont } from '../nvfont.js'
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKFont } from '../uikfont.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color, Vec4 } from '../types.js'
 import { TextComponent } from './textcomponent.js'
 
@@ -13,7 +13,7 @@ export class TextBoxComponent extends TextComponent {
   protected fontOutlineThickness = 1
 
   constructor(
-    font: NVFont,
+    font: UIKFont,
     position: Vec2,
     text: string,
     textColor: Color = [0, 0, 0, 1],
@@ -67,7 +67,7 @@ export class TextBoxComponent extends TextComponent {
     ]
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawTextBox(
       this.font,
       this.position,
@@ -103,7 +103,7 @@ export class TextBoxComponent extends TextComponent {
     }
   }
 
-  public static fromJSON(data: any, fonts: { [key: string]: NVFont }): TextBoxComponent {
+  public static fromJSON(data: any, fonts: { [key: string]: UIKFont }): TextBoxComponent {
     const font = fonts[data.fontId]
     if (!font) {
       throw new Error(`Font with ID ${data.fontId} not found`)

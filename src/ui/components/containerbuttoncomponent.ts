@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
 import { BaseContainerComponent } from './basecontainercomponent.js'
 
@@ -47,7 +47,7 @@ export class ContainerButtonComponent extends BaseContainerComponent {
     }
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     if (!this.isVisible) {
       return
     }

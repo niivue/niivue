@@ -1,7 +1,7 @@
 // types.ts
 
 import { vec2, vec3, vec4 } from 'gl-matrix'
-import { NVFont } from './nvfont.js'
+import { UIKFont } from './uikfont.js'
 
 // Define Color type for clarity
 export type Color = [number, number, number, number] | Float32List
@@ -114,6 +114,6 @@ export type Graph = {
   yRange?: [number, number] // Optional range for y-axis (min, max)
   lineThickness?: number // Thickness of the graph line
   textColor: Color // Color for text labels
-  font: NVFont // Font for rendering text labels
+  font: UIKFont // Font for rendering text labels
   textScale: number // Text scale
 }

@@ -1,12 +1,12 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Vec4 } from '../types.js'
-import { NVFont } from '../nvfont.js'
+import { UIKFont } from '../uikfont.js'
 import { cmapper } from '../../colortables.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class ColorbarComponent extends BaseUIComponent {
   private gl: WebGL2RenderingContext
-  private font: NVFont
+  private font: UIKFont
   private gradientTexture: WebGLTexture
   private labels: string[]
   private minMax: [number, number]
@@ -14,7 +14,7 @@ export class ColorbarComponent extends BaseUIComponent {
 
   constructor(
     gl: WebGL2RenderingContext,
-    font: NVFont,
+    font: UIKFont,
     labels: string[] = ['Min', 'Max'],
     minMax: [number, number] = [0, 1],
     colormapName: string = 'viridis',
@@ -42,7 +42,7 @@ export class ColorbarComponent extends BaseUIComponent {
     return texture
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     const position: Vec2 = [this.bounds[0] * this.scale, this.bounds[1] * this.scale]
     const size: Vec2 = [this.bounds[2] * this.scale, this.bounds[3] * this.scale]
     renderer.drawColorbar(this.font, position, size, this.gradientTexture, this.labels) //, this.minMax)

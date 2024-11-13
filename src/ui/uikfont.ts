@@ -4,7 +4,7 @@ import { TEXTURE3_FONT } from '../niivue/index.js'
 import { vertFontShader, fragRotatedFontShader } from '../shader-srcs.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
-import { NVAsset } from './nvasset.js'
+import { UIKAsset } from './uikasset.js'
 
 export type FontMetrics = {
   distanceRange: number
@@ -19,7 +19,7 @@ export type FontMetrics = {
   >
 }
 
-export class NVFont extends NVAsset {
+export class UIKFont extends UIKAsset {
   public fontMetrics: any
   public fontMets: FontMetrics | null = null
   public fontShader: Shader | null = null
@@ -226,8 +226,8 @@ export class NVFont extends NVAsset {
     }
   }
 
-  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<NVFont> {
-    const font = new NVFont(gl)
+  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<UIKFont> {
+    const font = new UIKFont(gl)
     font.id = json.id
     font.fontColor = new Float32Array(json.fontColor)
     font.outlineColor = new Float32Array(json.outlineColor)

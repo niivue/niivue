@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from '@lukeed/uuid'
 
-export abstract class NVAsset {
+export abstract class UIKAsset {
   protected gl: WebGL2RenderingContext
   protected texture: WebGLTexture | null = null
   protected width: number = 0

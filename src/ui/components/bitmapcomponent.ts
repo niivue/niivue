@@ -1,14 +1,14 @@
-import { NVRenderer } from '../nvrenderer.js'
-import { NVBitmap } from '../nvbitmap.js'
+import { UIKRenderer } from '../uikrenderer.js'
+import { UIKBitmap } from '../uikbitmap.js'
 import { Vec2 } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class BitmapComponent extends BaseUIComponent {
-  private bitmap: NVBitmap
+  private bitmap: UIKBitmap
   private width: number
   private height: number
 
-  constructor(position: Vec2, bitmap: NVBitmap, scale = 1.0) {
+  constructor(position: Vec2, bitmap: UIKBitmap, scale = 1.0) {
     super()
     this.position = position
     this.bitmap = bitmap
@@ -33,13 +33,13 @@ export class BitmapComponent extends BaseUIComponent {
     this.bounds = [this.position[0], this.position[1], this.width, this.height]
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     // Draw the bitmap using screen coordinates
     renderer.drawBitmap(this.bitmap, this.position, this.scale)
   }
 
   // Method to get the NVBitmap instance
-  public getBitmap(): NVBitmap {
+  public getBitmap(): UIKBitmap {
     return this.bitmap
   }
 
@@ -56,7 +56,7 @@ export class BitmapComponent extends BaseUIComponent {
   }
 
   // Method to deserialize from JSON
-  public static fromJSON(data: any, bitmaps: { [key: string]: NVBitmap }): BitmapComponent {
+  public static fromJSON(data: any, bitmaps: { [key: string]: UIKBitmap }): BitmapComponent {
     const bitmap = bitmaps[data.bitmapId]
     if (!bitmap) {
       throw new Error(`Bitmap with ID ${data.bitmapId} not found`)

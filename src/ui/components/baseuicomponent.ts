@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { IUIComponent } from '../interfaces.js'
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
 // Applying centralized animation management in BaseUIComponent
 import { AnimationManager, Animation } from '../animationmanager.js'
@@ -26,7 +26,7 @@ export abstract class BaseUIComponent implements IUIComponent {
   public onPointerEnter?: (event: MouseEvent) => void
   public onPointerLeave?: (event: MouseEvent) => void
 
-  abstract draw(renderer: NVRenderer): void
+  abstract draw(renderer: UIKRenderer): void
 
   align(bounds: Vec4): void {
     let offsetX = 0

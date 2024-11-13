@@ -1,7 +1,7 @@
 import { IColorable } from '../interfaces.js'
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Color, Vec2, Vec4 } from '../types.js'
-import { NVFont } from '../nvfont.js'
+import { UIKFont } from '../uikfont.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class TextComponent extends BaseUIComponent implements IColorable {
@@ -9,12 +9,12 @@ export class TextComponent extends BaseUIComponent implements IColorable {
   protected backgroundColor: Color = [0, 0, 0, 1]
   protected foregroundColor: Color = [1, 1, 1, 1]
   protected text: string
-  protected font: NVFont
+  protected font: UIKFont
   protected maxWidth: number
   protected width: number
   protected height: number
 
-  constructor(position: Vec2, text: string, font: NVFont, textColor: Color = [0, 0, 0, 1], scale = 1.0, maxWidth = 0) {
+  constructor(position: Vec2, text: string, font: UIKFont, textColor: Color = [0, 0, 0, 1], scale = 1.0, maxWidth = 0) {
     super()
     this.position = position
     this.text = text
@@ -66,7 +66,7 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     this.setBounds([offsetX, offsetY, this.width, this.height])
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawText(this.font, this.position, this.text, this.scale, this.textColor, this.maxWidth)
   }
 
@@ -111,7 +111,7 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     }
   }
 
-  public static fromJSON(data: any, fonts: { [key: string]: NVFont }): TextComponent {
+  public static fromJSON(data: any, fonts: { [key: string]: UIKFont }): TextComponent {
     const font = fonts[data.fontId]
     if (!font) {
       throw new Error(`Font with ID ${data.fontId} not found`)

@@ -1,8 +1,8 @@
 import { Rectangle, QuadTree } from './quadtree.js'
 import { Vec2, Vec4, Color, LineStyle, LineTerminator, ComponentSide } from './types.js'
-import { NVRenderer } from './nvrenderer.js'
-import { NVFont } from './nvfont.js'
-import { NVBitmap } from './nvbitmap.js'
+import { UIKRenderer } from './uikrenderer.js'
+import { UIKFont } from './uikfont.js'
+import { UIKBitmap } from './uikbitmap.js'
 import { BaseContainerComponent } from './components/basecontainercomponent.js'
 import { AnimationManager } from './animationmanager.js'
 import { BitmapComponent } from './components/bitmapcomponent.js'
@@ -18,9 +18,9 @@ import { TextComponent } from './components/textcomponent.js'
 import { IUIComponent } from './interfaces.js'
 // import { BaseUIComponent } from './components/baseuicomponent.js'
 
-export class NVUI {
+export class UIKit {
   private gl: WebGL2RenderingContext
-  private renderer: NVRenderer
+  private renderer: UIKRenderer
   private quadTree: QuadTree<IUIComponent>
   private _redrawRequested?: () => void
 
@@ -64,7 +64,7 @@ export class NVUI {
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
-    this.renderer = new NVRenderer(gl)
+    this.renderer = new UIKRenderer(gl)
     this.dpr = window.devicePixelRatio || 1
     const canvas = this.gl.canvas as HTMLCanvasElement
     const rect = canvas.parentElement.getBoundingClientRect()
@@ -245,7 +245,7 @@ export class NVUI {
   // Proxy methods for renderer's draw calls
 
   public drawText(
-    font: NVFont,
+    font: UIKFont,
     position: Vec2,
     text: string,
     scale = 1.0,
@@ -255,7 +255,7 @@ export class NVUI {
     this.renderer.drawText(font, position, text, scale, color, maxWidth)
   }
 
-  public drawBitmap(bitmap: NVBitmap, position: Vec2, scale: number): void {
+  public drawBitmap(bitmap: UIKBitmap, position: Vec2, scale: number): void {
     this.renderer.drawBitmap(bitmap, position, scale)
   }
 
@@ -300,7 +300,7 @@ export class NVUI {
   }
 
   public drawRotatedText(
-    font: NVFont,
+    font: UIKFont,
     position: Vec2,
     text: string,
     scale = 1.0,
@@ -315,7 +315,7 @@ export class NVUI {
   // Updated drawTextBox method to support maxWidth and word wrapping
   // Updated drawTextBox method to support maxWidth and word wrapping
   drawTextBox(
-    font: NVFont,
+    font: UIKFont,
     xy: Vec2,
     str: string,
     textColor: Color = [0, 0, 0, 1.0],
@@ -345,7 +345,7 @@ export class NVUI {
   }
 
   drawTextBoxCenteredOn(
-    font: NVFont,
+    font: UIKFont,
     xy: Vec2,
     str: string,
     textColor: Color = [0, 0, 0, 1.0],
@@ -382,7 +382,7 @@ export class NVUI {
   }
 
   public drawCalendar(
-    font: NVFont,
+    font: UIKFont,
     startX: number,
     startY: number,
     cellWidth: number,
@@ -399,7 +399,7 @@ export class NVUI {
     pointB: Vec2,
     length: number,
     units: string,
-    font: NVFont,
+    font: UIKFont,
     textColor: Color = [1, 0, 0, 1],
     lineColor: Color = [0, 0, 0, 1],
     lineThickness: number = 1,
@@ -475,22 +475,22 @@ export class NVUI {
     return JSON.stringify({ components: serializedComponents, assets }, null, 2)
   }
 
-  public static async fromJSON(json: any, gl: WebGL2RenderingContext): Promise<NVUI> {
-    const ui = new NVUI(gl)
+  public static async fromJSON(json: any, gl: WebGL2RenderingContext): Promise<UIKit> {
+    const ui = new UIKit(gl)
 
     // Deserialize fonts and bitmaps
-    const fonts: { [key: string]: NVFont } = {}
+    const fonts: { [key: string]: UIKFont } = {}
     if (json.assets && json.assets.fonts) {
       for (const [fontId, fontData] of Object.entries(json.assets.fonts)) {
-        const font = await NVFont.fromJSON(gl, fontData)
+        const font = await UIKFont.fromJSON(gl, fontData)
         fonts[fontId] = font
       }
     }
 
-    const bitmaps: { [key: string]: NVBitmap } = {}
+    const bitmaps: { [key: string]: UIKBitmap } = {}
     if (json.assets && json.assets.bitmaps) {
       for (const [bitmapId, bitmapData] of Object.entries(json.assets.bitmaps)) {
-        const bitmap = await NVBitmap.fromJSON(gl, bitmapData)
+        const bitmap = await UIKBitmap.fromJSON(gl, bitmapData)
         bitmaps[bitmapId] = bitmap
       }
     }

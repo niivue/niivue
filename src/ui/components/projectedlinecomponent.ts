@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Vec3, Color, LineTerminator, LineStyle, ComponentSide } from '../types.js'
 import { IUIComponent, IProjectable } from '../interfaces.js'
 import { LineComponent } from './linecomponent.js'
@@ -57,7 +57,7 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
     }
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     // Ensure line position is up-to-date before drawing
     this.updateLinePosition()
 

@@ -23,7 +23,7 @@
 
         function makeDrawText(font, text) {
             return function drawText() {
-                const ui = new niivue.NVUI(nv1.gl)
+                const ui = new niivue.UIKit(nv1.gl)
                 const textHeight = font.getTextHeight(text)
                 const textWidth = font.getTextWidth(text)
                 ui.drawText(font, [(nv1.canvas.width - textWidth) / 2, (nv1.canvas.height - textHeight) / 2], text)
@@ -36,11 +36,11 @@
         var nv1 = new niivue.Niivue();
         nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
-        const russianFont = new niivue.NVFont(nv1.gl)
+        const russianFont = new niivue.UIKFont(nv1.gl)
         await russianFont.loadFont("../fonts/Roboto-Regular-Extra.png", "../fonts/Roboto-Regular-Extra.json")
         var button = document.getElementById("draw-text");
         button.onclick = makeDrawText(russianFont, russian);
-        const hebrewFont = new niivue.NVFont(nv1.gl)
+        const hebrewFont = new niivue.UIKFont(nv1.gl)
         await hebrewFont.loadFont("../fonts/Heebo-Regular.png", "../fonts/Heebo-Regular.json")
         button = document.getElementById("draw-hebrew-text");
         button.onclick = makeDrawText(hebrewFont, hebrew);

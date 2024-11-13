@@ -1,9 +1,9 @@
 import { Shader } from '../shader.js'
 import { TEXTURE4_THUMBNAIL } from '../niivue/index.js'
 import { vertBmpShader, fragBmpShader } from '../shader-srcs.js'
-import { NVAsset } from './nvasset.js'
+import { UIKAsset } from './uikasset.js'
 
-export class NVBitmap extends NVAsset {
+export class UIKBitmap extends UIKAsset {
   public bitmapShader: Shader
 
   constructor(gl: WebGL2RenderingContext) {
@@ -24,8 +24,8 @@ export class NVBitmap extends NVAsset {
     }
   }
 
-  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<NVBitmap> {
-    const bitmap = new NVBitmap(gl)
+  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<UIKBitmap> {
+    const bitmap = new UIKBitmap(gl)
     bitmap.id = json.id
     bitmap.width = json.width
     bitmap.height = json.height

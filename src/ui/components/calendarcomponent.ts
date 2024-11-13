@@ -1,10 +1,10 @@
-import { NVFont } from '../nvfont.js'
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKFont } from '../uikfont.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Color } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CalendarComponent extends BaseUIComponent {
-  private font: NVFont
+  private font: UIKFont
   private startX: number
   private startY: number
   private cellWidth: number
@@ -14,7 +14,7 @@ export class CalendarComponent extends BaseUIComponent {
   private firstDayOfWeek: number
 
   constructor(
-    font: NVFont,
+    font: UIKFont,
     startX: number,
     startY: number,
     cellWidth: number,
@@ -34,7 +34,7 @@ export class CalendarComponent extends BaseUIComponent {
     this.firstDayOfWeek = firstDayOfWeek
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawCalendar(
       this.font,
       this.startX,

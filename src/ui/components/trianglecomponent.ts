@@ -1,4 +1,4 @@
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -16,7 +16,7 @@ export class TriangleComponent extends BaseUIComponent {
     this.color = color
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     renderer.drawTriangle(this.headPoint, this.baseMidPoint, this.baseLength, this.color)
   }
 

@@ -1,5 +1,5 @@
-import { NVFont } from '../nvfont.js'
-import { NVRenderer } from '../nvrenderer.js'
+import { UIKFont } from '../uikfont.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color, LineTerminator } from '../types.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -8,7 +8,7 @@ export class CaliperComponent extends BaseUIComponent {
   private pointB: Vec2
   private length: number
   private units: string
-  private font: NVFont
+  private font: UIKFont
   private textColor: Color
   private lineColor: Color
 
@@ -17,7 +17,7 @@ export class CaliperComponent extends BaseUIComponent {
     pointB: Vec2,
     length: number,
     units: string,
-    font: NVFont,
+    font: UIKFont,
     textColor: Color = [1, 0, 0, 1],
     lineColor: Color = [0, 0, 0, 1],
     scale: number = 1.0
@@ -33,7 +33,7 @@ export class CaliperComponent extends BaseUIComponent {
     this.scale = scale
   }
 
-  draw(renderer: NVRenderer): void {
+  draw(renderer: UIKRenderer): void {
     // Calculate the angle between the points
     const deltaX = this.pointB[0] - this.pointA[0]
     const deltaY = this.pointB[1] - this.pointA[1]
@@ -133,7 +133,7 @@ export class CaliperComponent extends BaseUIComponent {
     }
   }
 
-  public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: NVFont }): CaliperComponent {
+  public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: UIKFont }): CaliperComponent {
     const font = fonts[data.fontId]
     if (!font) {
       throw new Error(`Font with ID ${data.fontId} not found`)

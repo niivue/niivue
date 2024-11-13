@@ -49,10 +49,10 @@
                 const line = new niivue.ProjectedLineComponent(
                     [modelPoint], // Model point in 3D space
                     labelText, // Target component
-                    niivue.NVUI.componentSide.LEFT,
+                    niivue.UIKit.componentSide.LEFT,
                     10, // Thickness
                     lineColor, // Line color
-                    niivue.NVUI.lineTerminator.ARROW // Line terminator as arrow
+                    niivue.UIKit.lineTerminator.ARROW // Line terminator as arrow
                 )
                 
                 // Add the line component to the UI
@@ -70,10 +70,10 @@
             const line3DPre = new niivue.ProjectedLineComponent(
                 [modelPoint], // Model point in 3D space
                 labelText, // Target component
-                niivue.NVUI.componentSide.LEFT,
+                niivue.UIKit.componentSide.LEFT,
                 10, // Thickness
                 solidLineColor, // Solid line color
-                niivue.NVUI.lineTerminator.ARROW // Arrow terminator
+                niivue.UIKit.lineTerminator.ARROW // Arrow terminator
             )
             line3DPre.tags = ['3D_PRE']
             ui.addComponent(line3DPre)
@@ -82,11 +82,11 @@
             const line3DPost = new niivue.ProjectedLineComponent(
                 [modelPoint], // Model point in 3D space
                 labelText, // Target component
-                niivue.NVUI.componentSide.LEFT,
+                niivue.UIKit.componentSide.LEFT,
                 10, // Thickness
                 dottedLineColor, // Dotted line color, semitransparent
-                niivue.NVUI.lineTerminator.ARROW, // Arrow terminator
-                niivue.NVUI.lineStyle.DOTTED, // Dotted line style
+                niivue.UIKit.lineTerminator.ARROW, // Arrow terminator
+                niivue.UIKit.lineStyle.DOTTED, // Dotted line style
                 8 // Dot length for dotted line
             )
             line3DPost.tags = ['3D_POST']
