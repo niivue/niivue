@@ -4,8 +4,8 @@ import { QuadTree, Rectangle } from '../quadtree.js'
 import { IUIComponent } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
-export abstract class BaseContainerComponent extends BaseUIComponent {
-  protected components: BaseUIComponent[] = []
+export class BaseContainerComponent extends BaseUIComponent {
+  public components: BaseUIComponent[] = []
   protected isHorizontal: boolean
   protected padding: number
   protected _quadTree: QuadTree<IUIComponent>
@@ -97,6 +97,7 @@ export abstract class BaseContainerComponent extends BaseUIComponent {
   }
 
   draw(renderer: NVRenderer): void {
+    console.log('draw called i base with', this.components)
     if (!this.isVisible) {
       return
     }
@@ -113,6 +114,7 @@ export abstract class BaseContainerComponent extends BaseUIComponent {
       }
 
       if (component.isVisible) {
+        console.log('drawing component', component)
         component.draw(renderer)
       }
     })

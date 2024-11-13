@@ -1,18 +1,14 @@
 import { NVFont } from '../nvfont.js'
 import { NVRenderer } from '../nvrenderer.js'
 import { Vec2, Color, Vec4 } from '../types.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { TextComponent } from './textcomponent.js'
 
 // Draw Text Box Component
-export class TextBoxComponent extends BaseUIComponent {
-  protected font: NVFont
-  protected text: string
-  protected textColor: Color
+export class TextBoxComponent extends TextComponent {
   protected outlineColor: Color
   protected fillColor: Color
   protected margin: number
   protected roundness: number
-  protected maxWidth: number
   protected fontOutlineColor: Color = [0, 0, 0, 1]
   protected fontOutlineThickness = 1
 
@@ -30,20 +26,14 @@ export class TextBoxComponent extends BaseUIComponent {
     fontOutlineColor: Color = [0, 0, 0, 1],
     fontOutlineThickness = 1
   ) {
-    super()
-    this.font = font
-    this.position = position
-    this.text = text
-    this.textColor = textColor
+    super(position, text, font, textColor, scale, maxWidth)
     this.outlineColor = outlineColor
     this.fillColor = fillColor
     this.margin = margin
     this.roundness = roundness
-    this.scale = scale
-    this.maxWidth = maxWidth
     this.fontOutlineColor = fontOutlineColor
     this.fontOutlineThickness = fontOutlineThickness
-
+    console.log('setting bounds ', this.bounds)
     // Setting bounds for the button component to be found in the quad tree
     this.bounds = [
       position[0],
@@ -51,6 +41,9 @@ export class TextBoxComponent extends BaseUIComponent {
       this.font.getTextWidth(this.text, this.scale),
       this.font.getTextHeight(this.text, this.scale) + this.margin * 2
     ]
+    console.log('width', this.font.getTextWidth(this.text, this.scale))
+    console.log('size for text', this.text)
+    console.log('set bounds ', this.bounds)
   }
 
   // Override the setScale method to update bounds when scale changes
@@ -110,7 +103,7 @@ export class TextBoxComponent extends BaseUIComponent {
     }
   }
 
-  public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: NVFont }): TextBoxComponent {
+  public static fromJSON(data: any, fonts: { [key: string]: NVFont }): TextBoxComponent {
     const font = fonts[data.fontId]
     if (!font) {
       throw new Error(`Font with ID ${data.fontId} not found`)

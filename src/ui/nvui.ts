@@ -115,7 +115,6 @@ export class NVUI {
       if (tags.length === 0) {
         return component.tags.length === 0
       }
-      console.log('looking for tag in component', tags, component)
       const hasTags = useAnd
         ? tags.every((tag) => component.tags.includes(tag))
         : tags.some((tag) => component.tags.includes(tag))
@@ -505,13 +504,13 @@ export class NVUI {
             component = BitmapComponent.fromJSON(componentData, bitmaps)
             break
           case 'TextBoxComponent':
-            component = TextBoxComponent.fromJSON(componentData, gl, fonts)
+            component = TextBoxComponent.fromJSON(componentData, fonts)
             break
           case 'TextComponent':
             component = TextComponent.fromJSON(componentData, fonts)
             break
           case 'ButtonComponent':
-            component = ButtonComponent.fromJSON(componentData, gl, fonts)
+            component = ButtonComponent.fromJSON(componentData, fonts)
             break
           case 'CircleComponent':
             component = CircleComponent.fromJSON(componentData)

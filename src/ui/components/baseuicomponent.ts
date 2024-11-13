@@ -84,6 +84,28 @@ export abstract class BaseUIComponent implements IUIComponent {
     this.setScale(Math.min(scaleX, scaleY))
   }
 
+  fitBounds(targetBounds: Vec4): void {
+    // Calculate the scaling factors based on the target bounds
+    const scaleX = targetBounds[2] / this.bounds[2]
+    const scaleY = targetBounds[3] / this.bounds[3]
+
+    // Use the smaller scale factor to maintain aspect ratio
+    const newScale = Math.min(scaleX, scaleY)
+
+    // Update the component's scale
+    this.setScale(newScale)
+
+    // Adjust position based on the scaled bounds to center the component within target bounds
+    const newWidth = this.bounds[2] * newScale
+    const newHeight = this.bounds[3] * newScale
+    const offsetX = targetBounds[0] + (targetBounds[2] - newWidth) / 2
+    const offsetY = targetBounds[1] + (targetBounds[3] - newHeight) / 2
+
+    // Set the new position and bounds
+    this.setPosition([offsetX, offsetY])
+    this.setBounds([offsetX, offsetY, newWidth, newHeight])
+  }
+
   applyEffect(effect: Effect): void {
     const { targetObject, property } = effect
 

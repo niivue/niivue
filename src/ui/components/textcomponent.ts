@@ -1,18 +1,18 @@
 import { IColorable } from '../interfaces.js'
 import { NVRenderer } from '../nvrenderer.js'
-import { Color, Vec2 } from '../types.js'
+import { Color, Vec2, Vec4 } from '../types.js'
 import { NVFont } from '../nvfont.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class TextComponent extends BaseUIComponent implements IColorable {
-  private textColor: Color
-  private backgroundColor: Color = [0, 0, 0, 1]
-  private foregroundColor: Color = [1, 1, 1, 1]
-  private text: string
-  private font: NVFont
-  private maxWidth: number
-  private width: number
-  private height: number
+  protected textColor: Color
+  protected backgroundColor: Color = [0, 0, 0, 1]
+  protected foregroundColor: Color = [1, 1, 1, 1]
+  protected text: string
+  protected font: NVFont
+  protected maxWidth: number
+  protected width: number
+  protected height: number
 
   constructor(position: Vec2, text: string, font: NVFont, textColor: Color = [0, 0, 0, 1], scale = 1.0, maxWidth = 0) {
     super()
@@ -27,6 +27,43 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     this.height = this.font.getTextHeight(this.text, this.scale)
 
     this.bounds = [position[0], position[1], this.width, this.height]
+  }
+
+  fitBounds(targetBounds: Vec4): void {
+    // Check if maxWidth is set, and if so, adjust scale to fit within maxWidth first
+    if (this.maxWidth > 0) {
+      const textWidth = this.font.getTextWidth(this.text, 1) // Width at scale 1
+      const maxWidthScale = this.maxWidth / textWidth
+
+      // Adjust scale based on maxWidth
+      this.setScale(Math.min(this.scale, maxWidthScale))
+    }
+
+    // Calculate the actual scaled width and height after applying maxWidth
+    this.width = this.font.getTextWidth(this.text, this.scale)
+    this.height = this.font.getTextHeight(this.text, this.scale)
+
+    // Calculate scaling factors for the bounds
+    const scaleX = targetBounds[2] / this.width
+    const scaleY = targetBounds[3] / this.height
+
+    // Use the smaller of the two scales to fit within the target bounds
+    const newScale = Math.min(scaleX, scaleY, this.scale)
+
+    // Update the component's scale
+    this.setScale(newScale)
+
+    // Recalculate width and height after scaling to fit target bounds
+    this.width = this.font.getTextWidth(this.text, this.scale)
+    this.height = this.font.getTextHeight(this.text, this.scale)
+
+    // Calculate centered position within target bounds
+    const offsetX = targetBounds[0] + (targetBounds[2] - this.width) / 2
+    const offsetY = targetBounds[1] + (targetBounds[3] - this.height) / 2
+
+    // Set new position and bounds
+    this.setPosition([offsetX, offsetY])
+    this.setBounds([offsetX, offsetY, this.width, this.height])
   }
 
   draw(renderer: NVRenderer): void {

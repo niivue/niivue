@@ -153,6 +153,7 @@ export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
 export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
 export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
 export { ProjectedLineComponent } from '../ui/components/projectedlinecomponent.js'
+export { DrawerComponent } from '../ui/components/drawercomponent.js'
 
 type ColormapListEntry = {
   name: string
