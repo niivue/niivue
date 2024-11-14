@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>UI Widgets - Draw Bitmap</title>
+  <title>UI Widgets - Bitmap Component</title>
   <link rel="stylesheet" href="light.css" />
 </head>
-
 <body>
   <noscript>niivue requires JavaScript.</noscript>
   <header>
@@ -19,44 +17,38 @@
   <script type="module" async>
     import * as niivue from "../dist/index.js";
 
-    async function drawBitmap() {
-      nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
-      nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
+    async function setupBitmapComponent() {
+      // Initialize Niivue and attach to canvas
+      const nv1 = new niivue.Niivue();
+      nv1.attachTo("gl1");
+      nv1.setSliceType(nv1.sliceTypeRender);
 
+      // Load bitmap
       const bitmap = new niivue.UIKBitmap(nv1.gl);
       await bitmap.loadBitmap("../images/rorden.png");
 
-      
+      // Define component properties
       const scale = 2.0;
+      const position = [
+        (nv1.canvas.width - bitmap.getWidth() * scale) / 2,
+        (nv1.canvas.height - bitmap.getHeight() * scale) / 2
+      ];
 
-      
-      const left = nv1.canvas.width / 2 // 0; // 
-      const top = nv1.canvas.height / 2; // 0; // 
-      const width = bitmap.getWidth() * scale + 20; //400; // 
-      const height =  bitmap.getHeight() * scale + 20; // 200; //
-      
-      const fillColor = [0, 1, 0, 0.2]
-      const outlineColor = [1, 1, 1, 1]
-      nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height)
-      nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
-      const xy = [(nv1.canvas.width - width) / 2, (nv1.canvas.height - height) / 2];
-      ui.drawBitmap(bitmap, xy, scale);
-      const leftTopWidthHeight = [xy[0] - 10, xy[1] - 10, width, height]
-      ui.drawRoundedRect(
-        leftTopWidthHeight,
-        fillColor,
-        outlineColor,
-        0
-      )
+      // Create and configure BitmapComponent
+      const bitmapComponent = new niivue.BitmapComponent(position, bitmap, scale);
+      bitmapComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLECENTER;
+
+      // Add component to UI and trigger initial drawing
+      nv1.ui.addComponent(bitmapComponent);
+      nv1.drawScene();
+
+      // Optional: add effects for interactivity
+      bitmapComponent.addEventEffect('pointerenter', bitmapComponent, 'scale', 'setValue', scale * 1.1); // Increase scale on hover
+      bitmapComponent.addEventEffect('pointerleave', bitmapComponent, 'scale', 'animateValue', scale * 1.1, scale, 500); // Restore scale on leave
     }
 
-
-    var nv1 = new niivue.Niivue();
-    nv1.attachTo("gl1");
-    nv1.setSliceType(nv1.sliceTypeRender);
-    var ui = new niivue.UIKit(nv1.gl);
-    drawBitmap();
+    // Execute setup function
+    setupBitmapComponent();
   </script>
 </body>
-
 </html>

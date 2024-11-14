@@ -20,7 +20,7 @@
         import * as niivue from "../dist/index.js";
 
         function drawText(font) {
-            const ui = new niivue.UIKit(nv1.gl)
+            const ui = nv1.ui
             const maxWidth = nv1.canvas.width / 8
             const textColor = [0, 0, 1, 1]
             const fillColor = [1, 1, 1, 0.6]
@@ -33,16 +33,32 @@
             nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT)
 
             let str = 'Sharing neuroimaging datasets enables reproducibility, education, tool development, and new discoveries. Neuroimaging from many studies are publicly available, providing a glimpse into progressive disorders and human development.'
-            ui.drawTextBox(font, [50, 50], str, textColor, outlineColor, fillColor, 15, roundness, scale, maxWidth)
+            // ui.drawTextBox(font, [50, 50], str, textColor, outlineColor, fillColor, 15, roundness, scale, maxWidth)
+            const textBox = new niivue.TextBoxComponent(
+                nv1.defaultFont,         // font
+                [50, 50],                      // position
+                str,         // text
+                textColor,                // textColor
+                [1, 1, 1, 1],             // outlineColor
+                [1, 1, 1, 0.7],           // fillColor
+                15,                       // margin
+                roundness,                // roundness
+                scale,                    // scale
+                nv1.canvas.width / 8,                        // maxWidth
+                [0, 0, 0, 1],             // fontOutlineColor
+                1                         // fontOutlineThickness
+            );
+            textBox.alignmentPoint = niivue.UIKit.alignmentPoint.TOPLEFT
+            ui.addComponent(textBox)
+            nv1.drawScene()
 
-            
         }
 
-        var nv1 = new niivue.Niivue();
-        nv1.attachTo("gl1");
-        nv1.setSliceType(nv1.sliceTypeRender);
+        var nv1 = new niivue.Niivue()
+        await nv1.attachTo("gl1")
+        nv1.setSliceType(nv1.sliceTypeRender)
         const font = new niivue.UIKFont(nv1.gl)
-        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")        
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
         drawText(font)
     </script>
 </body>
