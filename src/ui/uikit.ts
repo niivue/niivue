@@ -8,7 +8,8 @@ import {
   ComponentSide,
   AlignmentPoint,
   HorizontalAlignment,
-  VerticalAlignment
+  VerticalAlignment,
+  Plane
 } from './types.js'
 import { UIKRenderer } from './uikrenderer.js'
 import { UIKFont } from './uikfont.js'
@@ -55,6 +56,7 @@ export class UIKit {
   public static alignmentPoint = AlignmentPoint
   public static horizontalAlignment = HorizontalAlignment
   public static verticalAlignment = VerticalAlignment
+  public static plane = Plane
 
   private lastHoveredComponents: Set<IUIComponent> = new Set()
 
@@ -438,7 +440,7 @@ export class UIKit {
     offset: number = 40,
     scale: number = 1.0
   ): void {
-    this.renderer.drawCaliper(pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale)
+    this.renderer.drawRuler(pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale)
   }
 
   public drawRotatedRectangularFill(

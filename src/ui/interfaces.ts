@@ -45,10 +45,25 @@ export interface IUIContainer extends IUIComponent {
 }
 
 export interface IProjectable {
-  modelPoints: Vec3[] // Array to handle one or two points
   setScreenPoints(screenPoints: Vec3[]): void
 }
 
+export interface IProjectable3D extends IProjectable {
+  modelPoints: Vec3[] // Array to handle one or two points
+}
+
+export interface IProjectable2D extends IProjectable {
+  modelPlanePoints: Vec2[] // Array to handle one or two points
+}
+
 export function isProjectable(component: any): component is IProjectable {
-  return 'modelPoints' in component && typeof component.setScreenPoints === 'function'
+  return typeof component.setScreenPoints === 'function'
+}
+
+export function isProjectable2D(component: any): component is IProjectable2D {
+  return 'modelPlanePoints' in component && Array.isArray(component.modelPlanePoints)
+}
+
+export function isProjectable3D(component: any): component is IProjectable3D {
+  return 'modelPoints' in component && Array.isArray(component.modelPoints)
 }

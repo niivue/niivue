@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { Niivue, NVUI, NVFont } from '../../dist/index.js'
+import { Niivue, UIKit, UIKFont } from '../../dist/index.js'
 import { httpServerAddress } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
 
@@ -11,8 +11,8 @@ test('nvui drawTextBoxCenteredOn roundness', async ({ page }) => {
   await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
-    const ui = new NVUI(nv.gl)
-    const font = new NVFont(nv.gl)
+    const ui = new UIKit(nv.gl)
+    const font = new UIKFont(nv.gl)
     await font.loadFont('./fonts/Roboto-Regular-Extra.png', './fonts/Roboto-Regular-Extra.json')
 
     const str = 'hello world'
@@ -121,12 +121,12 @@ test('nvui drawTextBoxCenteredOn roundness', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('nvui drawTextBoxCenteredOn aspect ratio sides stay rounded', async ({ page }) => {
+test('uikit drawTextBoxCenteredOn aspect ratio sides stay rounded', async ({ page }) => {
   await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
-    const ui = new NVUI(nv.gl)
-    const font = new NVFont(nv.gl)
+    const ui = new UIKit(nv.gl)
+    const font = new UIKFont(nv.gl)
     await font.loadFont('./fonts/Roboto-Regular-Extra.png', './fonts/Roboto-Regular-Extra.json')
 
     let str = 'very long rectangular box'

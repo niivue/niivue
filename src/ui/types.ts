@@ -70,6 +70,13 @@ export enum ComponentSide {
   BOTTOM
 }
 
+// Enum for specifying the plane
+export enum Plane {
+  XY = 'XY',
+  XZ = 'XZ',
+  YZ = 'YZ'
+}
+
 export type Effect =
   | {
       type: 'setValue'

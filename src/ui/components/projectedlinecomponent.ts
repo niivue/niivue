@@ -1,9 +1,9 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Vec3, Color, LineTerminator, LineStyle, ComponentSide } from '../types.js'
-import { IUIComponent, IProjectable } from '../interfaces.js'
+import { IUIComponent, IProjectable3D } from '../interfaces.js'
 import { LineComponent } from './linecomponent.js'
 
-export class ProjectedLineComponent extends LineComponent implements IProjectable {
+export class ProjectedLineComponent extends LineComponent implements IProjectable3D {
   modelPoints: Vec3[] // Array for one or two model points
   private projectedPoint: Vec3 // Projected screen point
   private targetComponent: IUIComponent // Reference to the target component
@@ -28,7 +28,6 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
   }
 
   handleResize(): void {
-    console.log('reize event fired')
     this.updateLinePosition()
   }
 

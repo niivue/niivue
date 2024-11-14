@@ -106,8 +106,8 @@ import {
 import { UIKFont } from '../ui/uikfont.js'
 import { UIKit } from '../ui/uikit.js'
 import { convertTouchToPointerEvent } from '../ui/uiutils.js'
-import { Vec2, Vec4 } from '../ui/types.js'
-import { isProjectable } from '../ui/interfaces.js'
+import { Vec2, Vec3, Vec4 } from '../ui/types.js'
+import { isProjectable3D, isProjectable2D, isProjectable } from '../ui/interfaces.js'
 import {
   clamp,
   decodeRLE,
@@ -155,6 +155,7 @@ export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
 export { ProjectedLineComponent } from '../ui/components/projectedlinecomponent.js'
 export { DrawerComponent } from '../ui/components/drawercomponent.js'
 export { TextBoxComponent } from '../ui/components/textboxcomponent.js'
+export { RulerComponent } from '../ui/components/rulercomponent.js'
 
 type ColormapListEntry = {
   name: string
@@ -330,9 +331,9 @@ const defaultSaveImageOptions: SaveImageOptions = {
 }
 
 const OTHER_DIMENSIONS = [
-  [0, 1], // For AXIAL (sliceDim = 2), the other dimensions are 0 (X) and 1 (Y)
+  [1, 2], // For SAGITTAL (sliceDim = 0), the other dimensions are 1 (Y) and 2 (Z)
   [0, 2], // For CORONAL (sliceDim = 1), the other dimensions are 0 (X) and 2 (Z)
-  [1, 2] // For SAGITTAL (sliceDim = 0), the other dimensions are 1 (Y) and 2 (Z)
+  [0, 1] // For AXIAL (sliceDim = 2), the other dimensions are 0 (X) and 1 (Y)
 ]
 
 /**
@@ -9052,16 +9053,34 @@ export class Niivue {
     // Draw slice-specific components
     const components = this.ui.getComponents(undefined, [axCorSag.toString()])
     for (const component of components) {
+      let screenPoints: Vec3[]
       if (isProjectable(component)) {
-        // we're only going to look at the relevant dimensions for the slice
-        const screenPoints = component.modelPoints.map((modelPoint) => {
+        if (isProjectable3D(component)) {
+          // we're only going to look at the relevant dimensions for the slice
+          screenPoints = component.modelPoints.map((modelPoint) => {
+            const screenPoint = this.calculateScreenPoint(
+              modelPoint as [number, number, number],
+              obj.modelViewProjectionMatrix,
+              leftTopWidthHeight
+            )
+            return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
+          })
+        } else if (isProjectable2D(component)) {
           const mm = this.frac2mm(this.scene.crosshairPos)
-          const otherDims = OTHER_DIMENSIONS[sliceDim]
-          const modelPointMM = [modelPoint[otherDims[0]], modelPoint[otherDims[1]]] as [number, number]
-          modelPointMM[sliceDim] = mm[sliceDim]
-          const screenPoint = this.calculateScreenPointFromVec2(modelPointMM, axCorSag, leftTopWidthHeight, customMM)
-          return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
-        })
+          screenPoints = component.modelPlanePoints.map((modelPlanePoint) => {
+            const sliceDimMM = mm[sliceDim]
+            const modelPoint = [3]
+            modelPoint[OTHER_DIMENSIONS[sliceDim][0]] = modelPlanePoint[0]
+            modelPoint[OTHER_DIMENSIONS[sliceDim][1]] = modelPlanePoint[1]
+            modelPoint[sliceDim] = sliceDimMM
+            const screenPoint = this.calculateScreenPoint(
+              modelPoint as [number, number, number],
+              obj.modelViewProjectionMatrix,
+              leftTopWidthHeight
+            )
+            return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
+          })
+        }
         component.setScreenPoints(screenPoints)
       }
     }
@@ -10343,7 +10362,7 @@ export class Niivue {
     // project our model points
     const components = this.ui.getComponents(undefined, ['3D_PRE', '3D_POST'], false)
     for (const component of components) {
-      if (isProjectable(component)) {
+      if (isProjectable3D(component)) {
         // we're only going to look at the relevant dimensions for the slice
         const screenPoints = component.modelPoints.map((modelPoint) => {
           const screenPoint = this.calculateScreenPoint(modelPoint as [number, number, number], mvpMatrix, relativeLTWH)

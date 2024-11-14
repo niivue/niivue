@@ -990,7 +990,7 @@ export class UIKRenderer {
     this.drawText(font, textPosition, str, scale, textColor, maxWidth, fontOutlineColor, fontOutlineThickness)
   }
 
-  public drawCaliper(
+  public drawRuler(
     pointA: Vec2,
     pointB: Vec2,
     length: number,

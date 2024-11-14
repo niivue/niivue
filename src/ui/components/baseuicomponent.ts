@@ -239,7 +239,6 @@ export abstract class BaseUIComponent implements IUIComponent {
   private triggerResizeEvent(): void {
     const listeners = this.eventListeners.get('resize')
     if (listeners) {
-      console.log('resize triggered', listeners)
       listeners.forEach((callback) => callback(new Event('resize')))
     }
   }
