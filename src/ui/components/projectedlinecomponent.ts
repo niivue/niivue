@@ -22,8 +22,14 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
     super([0, 0, 0, 0], thickness, lineColor, terminator, lineStyle, dashDotLength)
     this.modelPoints = modelPoints
     this.targetComponent = targetComponent
+    this.targetComponent.addEventListener('resize', this.handleResize.bind(this))
     this.side = side
     this.projectedPoint = [0, 0, 0]
+  }
+
+  handleResize(): void {
+    console.log('reize event fired')
+    this.updateLinePosition()
   }
 
   // Set the projected screen points

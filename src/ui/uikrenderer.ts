@@ -1325,7 +1325,6 @@ export class UIKRenderer {
     if (!UIKRenderer.projectedLineShader) {
       throw new Error('projectedLineShader undefined')
     }
-    console.log('start and end renderer', startXYZ, endXYZ)
     UIKRenderer.projectedLineShader.use(this.gl)
 
     this.gl.uniform4fv(UIKRenderer.projectedLineShader.uniforms.lineColor, lineColor)

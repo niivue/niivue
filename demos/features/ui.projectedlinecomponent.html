@@ -16,26 +16,44 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js"
 
+        // Define line color and set line terminator to arrow
+        const lineColor = [0.529, 0.808, 0.980, 1.0] // Light blue color
+
         async function drawModelLines() {
             const textColor = [1.0, 1.0, 1.0, 1.0]
+            const outlineColor = [1, 1, 1, 1]
+            const fillColor = [0, 0, 0, 0.3]
             const str = 'Hippocampus'
             const scale = 0.5
+            const margin = 15
+            const roundness = 0.3
 
             // Get the width of the text to center it and move it higher on the screen
             const width = nv1.defaultFont.getTextWidth(str, scale)
-            // const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height - 250] // Raised position
-            const pos = [nv1.canvas.width - width - 20, nv1.canvas.height / 2] // Raised position
+            const pos = [nv1.canvas.width - width - 20, nv1.canvas.height / 2] // Positioned on the right
 
-            // Create the text component using the default font
-            const labelText = new niivue.TextComponent(pos, str, nv1.defaultFont, textColor, scale)
+            // Create the text box component using the default font
+            const labelText = new niivue.TextBoxComponent(
+                nv1.defaultFont,         // font
+                pos,                     // position
+                str,                     // text
+                textColor,               // text color
+                lineColor,            // outline color
+                fillColor,               // fill color
+                margin,                  // margin
+                roundness,               // roundness
+                scale,                   // scale
+                0,                       // maxWidth
+                [0, 0, 0, 1],            // font outline color
+                1                        // font outline thickness
+            );
+            labelText.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLERIGHT
             ui.addComponent(labelText)
 
             // Model point in 3D space
             const modelPoint = [-25, -15.0, -25.0]
-            // nv1.addLabel("hippocampus", {textColor:[1, 0, 0, 1], lineWidth: 3.0, lineColor: [1, 0, 0, 1]}, [-25, -15.0, -25.0]);
 
-            // Define line color and set line terminator to arrow
-            const lineColor = [0.529, 0.808, 0.980, 1.0] // Light blue color (RGB for light blue)
+            
 
             // Array to hold the slice types
             const sliceTypes = [
@@ -62,7 +80,7 @@
                 line.tags = [sliceType.toString()]
             })
 
-            // Define line colors
+            // Define additional line colors
             const solidLineColor = [0.529, 0.808, 0.980, 1.0] // Light blue color (solid)
             const dottedLineColor = [0.529, 0.808, 0.980, 0.5] // Light blue color, semitransparent
 

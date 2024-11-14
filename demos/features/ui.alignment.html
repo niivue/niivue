@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Text component</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>niivue requires JavaScript.</noscript>
+  <header>
+  </header>
+  <main>
+    <canvas id="gl1"></canvas>
+  </main>
+  <script type="module" async>
+    import * as niivue from "../dist/index.js";
+
+    async function createTextBoxesAtAlignmentPoints() {
+      const textColor = [1.0, 1.0, 1.0, 1.0];
+      const str = 'Alignment Text';
+      const scale = 0.5;
+      const ui = nv1.ui;
+      const alignmentPoints = [
+        niivue.UIKit.alignmentPoint.TOPLEFT, niivue.UIKit.alignmentPoint.TOPCENTER, niivue.UIKit.alignmentPoint.TOPRIGHT,
+        niivue.UIKit.alignmentPoint.MIDDLELEFT, niivue.UIKit.alignmentPoint.MIDDLECENTER, niivue.UIKit.alignmentPoint.MIDDLERIGHT,
+        niivue.UIKit.alignmentPoint.BOTTOMLEFT, niivue.UIKit.alignmentPoint.BOTTOMCENTER, niivue.UIKit.alignmentPoint.BOTTOMRIGHT
+      ];
+
+      alignmentPoints.forEach((alignment, index) => {
+        // Create varying roundness from 0 to 1 based on the index
+        const roundness = index / (alignmentPoints.length - 1);
+        const bounds = [0, 0, nv1.canvas.width, nv1.canvas.height];
+
+        // Position according to alignment
+        let pos = [0, 0];
+        switch (alignment) {
+          case niivue.UIKit.alignmentPoint.TOPLEFT:
+            pos = [10, 10];
+            break;
+          case niivue.UIKit.alignmentPoint.TOPCENTER:
+            pos = [nv1.canvas.width / 2, 10];
+            break;
+          case niivue.UIKit.alignmentPoint.TOPRIGHT:
+            pos = [nv1.canvas.width - 10, 10];
+            break;
+          case niivue.UIKit.alignmentPoint.MIDDLELEFT:
+            pos = [10, nv1.canvas.height / 2];
+            break;
+          case niivue.UIKit.alignmentPoint.MIDDLECENTER:
+            pos = [nv1.canvas.width / 2, nv1.canvas.height / 2];
+            break;
+          case niivue.UIKit.alignmentPoint.MIDDLERIGHT:
+            pos = [nv1.canvas.width - 10, nv1.canvas.height / 2];
+            break;
+          case niivue.UIKit.alignmentPoint.BOTTOMLEFT:
+            pos = [10, nv1.canvas.height - 10];
+            break;
+          case niivue.UIKit.alignmentPoint.BOTTOMCENTER:
+            pos = [nv1.canvas.width / 2, nv1.canvas.height - 10];
+            break;
+          case niivue.UIKit.alignmentPoint.BOTTOMRIGHT:
+            pos = [nv1.canvas.width - 10, nv1.canvas.height - 10];
+            break;
+          default:
+            pos = [10, 10];
+        }
+
+        // Instantiate the TextBoxComponent with all required arguments
+        const textBox = new niivue.TextBoxComponent(
+          nv1.defaultFont,         // font
+          pos,                      // position
+          'Alignment Text',         // text
+          textColor,                // textColor
+          [1, 1, 1, 1],             // outlineColor
+          [0, 0, 0, 0.3],           // fillColor
+          15,                       // margin
+          roundness,                // roundness
+          scale,                    // scale
+          0,                        // maxWidth
+          [0, 0, 0, 1],             // fontOutlineColor
+          1                         // fontOutlineThickness
+        );
+        textBox.alignmentPoint = alignment;
+
+        // Align and add to UI
+        ui.addComponent(textBox);
+      });
+
+      nv1.drawScene();
+
+    }
+
+
+
+    var nv1 = new niivue.Niivue();
+    await nv1.attachTo("gl1");
+    nv1.setSliceType(nv1.sliceTypeRender);
+
+    createTextBoxesAtAlignmentPoints();
+
+  </script>
+</body>
+
+</html>

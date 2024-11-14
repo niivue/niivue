@@ -154,6 +154,7 @@ export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
 export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
 export { ProjectedLineComponent } from '../ui/components/projectedlinecomponent.js'
 export { DrawerComponent } from '../ui/components/drawercomponent.js'
+export { TextBoxComponent } from '../ui/components/textboxcomponent.js'
 
 type ColormapListEntry = {
   name: string
@@ -11636,6 +11637,12 @@ export class Niivue {
     }
     this.isBusy = false
     this.needsRefresh = false
+
+    // align global items
+    if (this.ui) {
+      this.ui.alignItems()
+    }
+
     let posString = this.drawSceneCore()
 
     // Chrome and Safari get much more bogged down by concurrent draw calls than Safari
@@ -11652,17 +11659,23 @@ export class Niivue {
       // draw our slice related components
       switch (this.opts.sliceType) {
         case SLICE_TYPE.AXIAL:
+          this.ui.alignItems(undefined, [SLICE_TYPE.AXIAL.toString()])
           this.ui.draw(undefined, [SLICE_TYPE.AXIAL.toString()])
           break
         case SLICE_TYPE.CORONAL:
+          this.ui.alignItems(undefined, [SLICE_TYPE.CORONAL.toString()])
           this.ui.draw(undefined, [SLICE_TYPE.CORONAL.toString()])
           break
         case SLICE_TYPE.SAGITTAL:
+          this.ui.alignItems(undefined, [SLICE_TYPE.SAGITTAL.toString()])
           this.ui.draw(undefined, [SLICE_TYPE.SAGITTAL.toString()])
           break
         case SLICE_TYPE.MULTIPLANAR:
+          this.ui.alignItems(undefined, [SLICE_TYPE.AXIAL.toString()])
           this.ui.draw(undefined, [SLICE_TYPE.AXIAL.toString()])
+          this.ui.alignItems(undefined, [SLICE_TYPE.CORONAL.toString()])
           this.ui.draw(undefined, [SLICE_TYPE.CORONAL.toString()])
+          this.ui.alignItems(undefined, [SLICE_TYPE.SAGITTAL.toString()])
           this.ui.draw(undefined, [SLICE_TYPE.SAGITTAL.toString()])
           break
       }

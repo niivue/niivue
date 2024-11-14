@@ -1,5 +1,15 @@
 import { Rectangle, QuadTree } from './quadtree.js'
-import { Vec2, Vec4, Color, LineStyle, LineTerminator, ComponentSide } from './types.js'
+import {
+  Vec2,
+  Vec4,
+  Color,
+  LineStyle,
+  LineTerminator,
+  ComponentSide,
+  AlignmentPoint,
+  HorizontalAlignment,
+  VerticalAlignment
+} from './types.js'
 import { UIKRenderer } from './uikrenderer.js'
 import { UIKFont } from './uikfont.js'
 import { UIKBitmap } from './uikbitmap.js'
@@ -36,11 +46,15 @@ export class UIKit {
   private canvasHeight: number
   private dpr: number
   private resizeListener: () => void
+  private resizeObserver: ResizeObserver
 
   // Static enum for line terminators
   public static lineTerminator = LineTerminator
   public static lineStyle = LineStyle
   public static componentSide = ComponentSide
+  public static alignmentPoint = AlignmentPoint
+  public static horizontalAlignment = HorizontalAlignment
+  public static verticalAlignment = VerticalAlignment
 
   private lastHoveredComponents: Set<IUIComponent> = new Set()
 
@@ -67,6 +81,8 @@ export class UIKit {
     this.renderer = new UIKRenderer(gl)
     this.dpr = window.devicePixelRatio || 1
     const canvas = this.gl.canvas as HTMLCanvasElement
+    this.resizeObserver = new ResizeObserver(this.handleWindowResize.bind(this))
+    this.resizeObserver.observe((this.gl.canvas as HTMLCanvasElement).parentElement!)
     const rect = canvas.parentElement.getBoundingClientRect()
     this.canvasWidth = rect.width
     this.canvasHeight = rect.height
@@ -123,11 +139,9 @@ export class UIKit {
     })
   }
 
-  public draw(leftTopWidthHeight?: Vec4, tags: string[] = []): void {
-    this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
-
+  public alignItems(leftTopWidthHeight?: Vec4, tags: string[] = []): void {
     // Set up bounds for filtering and positioning
-    const bounds = leftTopWidthHeight ? Rectangle.fromVec4(leftTopWidthHeight) : null
+    const bounds: Vec4 = leftTopWidthHeight || [0, 0, this.gl.canvas.width, this.gl.canvas.height]
 
     // Retrieve components that match the specified tags and are within bounds
     const components = this.getComponents(
@@ -138,9 +152,27 @@ export class UIKit {
 
     for (const component of components) {
       // Align component within bounds if specified
-      if (bounds) {
-        component.align(leftTopWidthHeight)
-      }
+      component.align(bounds)
+    }
+  }
+
+  public draw(leftTopWidthHeight?: Vec4, tags: string[] = []): void {
+    this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
+
+    // Set up bounds for filtering and positioning
+    // const bounds: Vec4 = leftTopWidthHeight || [0, 0, this.gl.canvas.width, this.gl.canvas.height]
+
+    // Retrieve components that match the specified tags and are within bounds
+    const components = this.getComponents(
+      leftTopWidthHeight,
+      tags,
+      true // Match all specified tags
+    )
+
+    for (const component of components) {
+      // Align component within bounds if specified
+      // component.align(bounds)
+
       // Draw the component using NVRenderer
       if (component.isVisible) {
         component.draw(this.renderer)

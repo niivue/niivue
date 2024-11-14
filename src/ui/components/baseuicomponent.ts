@@ -18,7 +18,9 @@ export abstract class BaseUIComponent implements IUIComponent {
   protected position: Vec2 = [0, 0]
   protected bounds: Vec4 = [0, 0, 0, 0]
   protected scale: number = 1
+  protected margin: number = 25
   private eventEffects: Map<string, Effect[]> = new Map()
+  private eventListeners: Map<string, Array<(event: Event) => void>> = new Map()
   public requestRedraw?: () => void
 
   // Event handlers
@@ -35,19 +37,19 @@ export abstract class BaseUIComponent implements IUIComponent {
     // Calculate alignment offsets based on alignmentPoint
     switch (this.alignmentPoint) {
       case AlignmentPoint.TOPLEFT:
-        offsetX = bounds[0]
-        offsetY = bounds[1]
+        offsetX = bounds[0] + this.margin
+        offsetY = bounds[1] + this.margin
         break
       case AlignmentPoint.TOPCENTER:
         offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2
-        offsetY = bounds[1]
+        offsetY = bounds[1] + this.margin
         break
       case AlignmentPoint.TOPRIGHT:
-        offsetX = bounds[0] + (bounds[2] - this.bounds[2])
-        offsetY = bounds[1]
+        offsetX = bounds[0] + (bounds[2] - this.bounds[2] - this.margin)
+        offsetY = bounds[1] + this.margin
         break
       case AlignmentPoint.MIDDLELEFT:
-        offsetX = bounds[0]
+        offsetX = bounds[0] + this.margin
         offsetY = bounds[1] + (bounds[3] - this.bounds[3]) / 2
         break
       case AlignmentPoint.MIDDLECENTER:
@@ -55,20 +57,20 @@ export abstract class BaseUIComponent implements IUIComponent {
         offsetY = bounds[1] + (bounds[3] - this.bounds[3]) / 2
         break
       case AlignmentPoint.MIDDLERIGHT:
-        offsetX = bounds[0] + (bounds[2] - this.bounds[2])
+        offsetX = bounds[0] + (bounds[2] - this.bounds[2] - this.margin)
         offsetY = bounds[1] + (bounds[3] - this.bounds[3]) / 2
         break
       case AlignmentPoint.BOTTOMLEFT:
-        offsetX = bounds[0]
-        offsetY = bounds[1] + (bounds[3] - this.bounds[3])
+        offsetX = bounds[0] + this.margin
+        offsetY = bounds[1] + (bounds[3] - this.bounds[3] - this.margin)
         break
       case AlignmentPoint.BOTTOMCENTER:
         offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2
-        offsetY = bounds[1] + (bounds[3] - this.bounds[3])
+        offsetY = bounds[1] + (bounds[3] - this.bounds[3] - this.margin)
         break
       case AlignmentPoint.BOTTOMRIGHT:
-        offsetX = bounds[0] + (bounds[2] - this.bounds[2])
-        offsetY = bounds[1] + (bounds[3] - this.bounds[3])
+        offsetX = bounds[0] + (bounds[2] - this.bounds[2] - this.margin)
+        offsetY = bounds[1] + (bounds[3] - this.bounds[3] - this.margin)
         break
       default:
         offsetX = bounds[0]
@@ -77,11 +79,6 @@ export abstract class BaseUIComponent implements IUIComponent {
 
     // Set new position
     this.setPosition([offsetX, offsetY])
-
-    // Optionally update scale to fit within bounds
-    const scaleX = bounds[2] / this.bounds[2]
-    const scaleY = bounds[3] / this.bounds[3]
-    this.setScale(Math.min(scaleX, scaleY))
   }
 
   fitBounds(targetBounds: Vec4): void {
@@ -238,12 +235,40 @@ export abstract class BaseUIComponent implements IUIComponent {
     }
   }
 
+  // Trigger resize event callbacks
+  private triggerResizeEvent(): void {
+    const listeners = this.eventListeners.get('resize')
+    if (listeners) {
+      console.log('resize triggered', listeners)
+      listeners.forEach((callback) => callback(new Event('resize')))
+    }
+  }
+
+  addEventListener(eventName: string, callback: (event: Event) => void): void {
+    if (!this.eventListeners.has(eventName)) {
+      this.eventListeners.set(eventName, [])
+    }
+    this.eventListeners.get(eventName)!.push(callback)
+  }
+
+  removeEventListener(eventName: string, callback: (event: Event) => void): void {
+    const listeners = this.eventListeners.get(eventName)
+    if (listeners) {
+      this.eventListeners.set(
+        eventName,
+        listeners.filter((fn) => fn !== callback)
+      )
+    }
+  }
+
   getBounds(): Vec4 {
     return this.bounds
   }
 
   setBounds(bounds: Vec4): void {
     this.bounds = bounds
+    // Trigger a resize event with the updated bounds as the contentRect
+    this.triggerResizeEvent()
   }
 
   getPosition(): Vec2 {
@@ -252,7 +277,7 @@ export abstract class BaseUIComponent implements IUIComponent {
 
   setPosition(position: Vec2): void {
     this.position = position
-    this.bounds = [this.position[0], this.position[1], this.bounds[2], this.bounds[3]]
+    this.setBounds([this.position[0], this.position[1], this.bounds[2], this.bounds[3]])
   }
 
   getScale(): number {

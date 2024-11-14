@@ -18,6 +18,8 @@ export interface IUIComponent {
   getScale(): number
   setScale(value: number): void
   applyEventEffects(eventName: string, event: Event): void
+  addEventListener(eventName: string, callback: (event: Event) => void): void
+  removeEventListener(eventName: string, callback: (event: Event) => void): void
   toJSON(): object
   requestRedraw?: () => void
 
