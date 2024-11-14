@@ -47,6 +47,10 @@ export class LineGraphComponent extends BaseUIComponent {
     }
   }
 
+  setPosition(position: Vec2): void {
+    this.options.position = position
+  }
+
   // Implement draw method from BaseUIComponent
   draw(renderer: UIKRenderer): void {
     renderer.drawLineGraph(this.options)

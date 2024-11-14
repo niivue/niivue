@@ -50,9 +50,9 @@
         );
 
         // Create and add bitmap component
-        const bitmapComponent = new niivue.BitmapComponent([10, 10], bitmap, 1.5);
+        const bitmapComponent = new niivue.BitmapComponent([10, 10], bitmap, 1.5);        
         containerButton.addComponent(bitmapComponent);
-
+        containerButton.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLELEFT
         // Create and add text component
         const scale = 2.0;
         const xy = [0, 0]; // Position of the bitmap inside the container
@@ -68,7 +68,6 @@
             15      // Padding between components
         );
 
-        console.log(defaultFont)
 
         // Create and add text components to vertical container
         const text1 = new niivue.TextComponent([0, 0], "Figure 1.", font, [1.0, 1.0, 1.0, 1.0], 0.5);
@@ -88,7 +87,6 @@
         verticalContainer.addComponent(text3);
 
         containerButton.addComponent(verticalContainer);
-        console.log(nv1.ui);
         var volumeList1 = [
             {
                 url: "../images/mni152.nii.gz",

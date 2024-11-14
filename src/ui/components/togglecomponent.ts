@@ -47,7 +47,7 @@ export class ToggleComponent extends BaseUIComponent {
 
   // Method to toggle the state and animate the knob position
   toggle(): void {
-    this.applyEventEffects('click')
+    this.applyEventEffects('pointerup')
   }
 
   // Handle mouse click to toggle state if clicked inside component bounds

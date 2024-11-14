@@ -22,7 +22,6 @@ export class BaseContainerComponent extends BaseUIComponent {
   }
 
   set quadTree(quadTree: QuadTree<IUIComponent>) {
-    console.log('components being moved', this.components)
     this.components.forEach((child) => {
       quadTree.insert(child)
       if (child instanceof BaseContainerComponent) {
@@ -97,7 +96,6 @@ export class BaseContainerComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    console.log('draw called i base with', this.components)
     if (!this.isVisible) {
       return
     }
@@ -114,7 +112,6 @@ export class BaseContainerComponent extends BaseUIComponent {
       }
 
       if (component.isVisible) {
-        console.log('drawing component', component)
         component.draw(renderer)
       }
     })

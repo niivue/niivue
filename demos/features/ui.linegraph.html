@@ -12,7 +12,6 @@
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-        <button id="draw-button">Draw Graph</button>
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -48,14 +47,11 @@
 
         // Create the LineGraphComponent
         const lineGraphComponent = new niivue.LineGraphComponent(graphOptions)
+        lineGraphComponent.alignmentPoint = niivue.UIKit.alignmentPoint.TOPRIGHT
 
         // Add component to the UI
         nv1.ui.addComponent(lineGraphComponent)
-
-        // Draw function to trigger rendering
-        document.getElementById("draw-button").addEventListener("click", () => {
-            nv1.drawScene()
-        })
+        nv1.drawScene()        
     </script>
 </body>
 

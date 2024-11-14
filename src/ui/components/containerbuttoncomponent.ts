@@ -51,7 +51,7 @@ export class ContainerButtonComponent extends BaseContainerComponent {
     if (!this.isVisible) {
       return
     }
-
+    this.updateLayout()
     // Draw the button background
     // renderer.drawRect(this.getBounds(), this.fillColor)
     const bounds = this.getBounds()

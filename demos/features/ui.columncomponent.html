@@ -57,6 +57,7 @@
         textComponents.forEach(textComponent => containerComponent.addComponent(textComponent))
         const bounds = containerComponent.getBounds()
         containerComponent.setPosition([(nv1.canvas.width - bounds[2]) / 2, (nv1.canvas.height - bounds[3]) / 2])
+        containerComponent.alignmentPoint = niivue.UIKit.alignmentPoint.TOPCENTER
         nv1.ui.addComponent(containerComponent)
         console.log(nv1.ui)
         nv1.drawScene()

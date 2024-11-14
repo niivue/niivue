@@ -33,7 +33,7 @@
 
     // Create the toggle component
     const toggleComponent = new niivue.ToggleComponent(togglePos, toggleSize, isOn, onColor, offColor);
-
+    toggleComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLERIGHT
     // Add the toggle component to the scene
     nv1.ui.addComponent(toggleComponent);
 

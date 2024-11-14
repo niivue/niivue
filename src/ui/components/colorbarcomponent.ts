@@ -78,8 +78,5 @@ export class ColorbarComponent extends BaseUIComponent {
 
   setBounds(bounds: [number, number, number, number]): void {
     super.setBounds(bounds)
-    if (this.requestRedraw) {
-      this.requestRedraw()
-    }
   }
 }

@@ -12,7 +12,6 @@
 <body>
   <noscript>niivue requires JavaScript.</noscript>
   <header>
-    <button id="draw-bitmap-button">Draw Bitmap</button>
   </header>
   <main>
     <canvas id="gl1"></canvas>
@@ -52,8 +51,6 @@
     }
 
 
-    const button = document.getElementById('draw-bitmap-button');
-    button.onclick = drawBitmap;
     var nv1 = new niivue.Niivue();
     nv1.attachTo("gl1");
     nv1.setSliceType(nv1.sliceTypeRender);
