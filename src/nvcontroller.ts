@@ -1,8 +1,8 @@
-import { SessionBus, SessionUser } from './sessionBus.js'
+import { SessionBus, SessionUser } from './sessionbus.js'
 import { ImageFromUrlOptions, NVImage } from './nvImage/index.js'
 import { LoadFromUrlParams, NVMesh } from './nvmesh.js'
 import { Niivue } from './niivue/index.js'
-import { Message, NVMESSAGE } from './nvMessage.js'
+import { Message, NVMESSAGE } from './nvmessage.js'
 import { log } from './logger.js'
 
 /**

@@ -1,7 +1,7 @@
 import { mat4, vec3, vec4 } from 'gl-matrix'
 import { log } from '../logger.js'
 import { NiftiHeader, Volume } from '../types.js'
-import { NVUtilities } from '../nvUtilities.js'
+import { NVUtilities } from '../nvutilities.js'
 
 // rotate image to match right-anterior-superior voxel order
 export function img2ras16(volume: Volume): Int16Array {

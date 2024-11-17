@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from '@lukeed/uuid'
 import { log } from './logger.js'
 import { NiivueObject3D } from './niivueObject3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
-import { NVMeshUtilities } from './nvMeshUtilities.js'
-import { NVMeshLoaders } from './nvMeshLoaders.js'
+import { NVMeshUtilities } from './nvmeshutilities.js'
+import { NVMeshLoaders } from './nvmeshloaders.js'
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
 import {
   ANNOT,
@@ -21,7 +21,7 @@ import {
   ValuesArray,
   X3D,
   AnyNumberArray
-} from './nvMeshTypes.js'
+} from './nvmeshtypes.js'
 
 /** Enum for text alignment
  */

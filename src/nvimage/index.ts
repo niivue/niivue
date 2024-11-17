@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivueObject3D.js'
 import { log } from '../logger.js'
-import { NVUtilities } from '../nvUtilities.js'
+import { NVUtilities } from '../nvutilities.js'
 import {
   ImageFromBase64,
   ImageFromFileOptions,

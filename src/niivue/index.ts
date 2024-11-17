@@ -56,7 +56,7 @@ import {
   blurFragShader,
   sobelFragShader
 } from '../shaders'
-import { orientCube } from '../orientCube'
+import { orientCube } from '../orientcube'
 import { NiivueObject3D } from '../niivueObject3D'
 import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh'
 import defaultMatCap from '../matcaps/Shiny.jpg'
@@ -82,7 +82,7 @@ import {
   LabelAnchorPoint,
   LabelAnchorFlag
 } from '../nvlabel'
-import { FreeSurferConnectome, NVConnectome } from '../nvConnectome'
+import { FreeSurferConnectome, NVConnectome } from '../nvconnectome'
 import {
   NVImage,
   NVImageFromUrlOptions,
@@ -91,8 +91,8 @@ import {
   NiiIntentCode,
   ImageFromUrlOptions
 } from '../nvImage/index'
-import { NVUtilities } from '../nvUtilities'
-import { NVMeshUtilities } from '../nvMeshUtilities'
+import { NVUtilities } from '../nvutilities'
+import { NVMeshUtilities } from '../nvmeshutilities'
 import {
   Connectome,
   LegacyConnectome,
@@ -123,17 +123,17 @@ import {
   unpackFloatFromVec4i
 } from './utils'
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh'
-export { NVController } from '../nvController'
+export { NVController } from '../nvcontroller'
 export { ColorTables as colortables, cmapper } from '../colortables'
 
 export { NVImage, NVImageFromUrlOptions } from '../nvImage'
 // export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.ts'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '../nvdocument'
-export { NVUtilities } from '../nvUtilities'
+export { NVUtilities } from '../nvutilities'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel'
-export { NVMeshLoaders } from '../nvMeshLoaders'
-export { NVMeshUtilities } from '../nvMeshUtilities'
+export { NVMeshLoaders } from '../nvmeshloaders'
+export { NVMeshUtilities } from '../nvmeshutilities'
 
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore

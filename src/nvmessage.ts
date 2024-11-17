@@ -1,5 +1,5 @@
 import { LoadFromUrlParams } from './nvmesh.js'
-import { SessionUser } from './sessionBus.js'
+import { SessionUser } from './sessionbus.js'
 
 /**
  * Enum for sync operations
