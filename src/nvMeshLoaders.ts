@@ -2,7 +2,7 @@ import { mat4, vec4, vec3 } from 'gl-matrix'
 import { decompressSync, unzipSync } from 'fflate/browser'
 import { log } from './logger.js'
 import { NVUtilities } from './nvUtilities.js'
-import { ColorMap, LUT, cmapper } from './colorTables.js'
+import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivueObject3D.js'
 import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
 import {

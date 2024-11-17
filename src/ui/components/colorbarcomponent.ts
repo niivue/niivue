@@ -1,7 +1,7 @@
 import { UIKRenderer } from '../uikRenderer.js'
 import { Vec2, Vec4 } from '../types.js'
 import { UIKFont } from '../uikFont.js'
-import { cmapper } from '../../colorTables.js'
+import { cmapper } from '../../colortables.js'
 import { BaseUIComponent } from './baseUiComponent.js'
 
 export class ColorbarComponent extends BaseUIComponent {
