@@ -1,3 +1,4 @@
+// nvrenderer.ts
 import { mat4, vec2, vec4 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import {
@@ -20,10 +21,10 @@ import {
   vertRotatedFontShader,
   vertRotatedRectangularFillShader,
   vertTriangleShader
-} from '../shaders.js'
+} from '../shader-srcs.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
-import { UIKFont } from './uikFont.js'
-import { UIKBitmap } from './uikBitmap.js'
+import { UIKFont } from './uikfont.js'
+import { UIKBitmap } from './uikbitmap.js'
 import { LineTerminator, Color, Vec2, Vec4, LineStyle, Graph, Vec3 } from './types.js'
 
 // NVRenderer class with rendering methods

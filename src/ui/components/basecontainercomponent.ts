@@ -1,8 +1,8 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2 } from '../types.js'
 import { QuadTree, Rectangle } from '../quadtree.js'
 import { IUIComponent } from '../interfaces.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class BaseContainerComponent extends BaseUIComponent {
   public components: BaseUIComponent[] = []

@@ -1,7 +1,7 @@
-import { UIKFont } from '../uikFont.js'
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKFont } from '../uikfont.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Color } from '../types.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CalendarComponent extends BaseUIComponent {
   private font: UIKFont

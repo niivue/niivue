@@ -3,7 +3,7 @@ import { decompressSync, unzipSync } from 'fflate/browser'
 import { log } from './logger.js'
 import { NVUtilities } from './nvutilities.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
-import { NiivueObject3D } from './niivueObject3D.js'
+import { NiivueObject3D } from './niivue-object3D.js'
 import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
 import {
   ANNOT,
@@ -22,7 +22,7 @@ import {
   X3D,
   XmlTag,
   AnyNumberArray
-} from './nvmeshtypes.js'
+} from './nvmesh-types.js'
 
 const utiltiesLogger = log
 

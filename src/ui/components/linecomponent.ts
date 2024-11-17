@@ -1,6 +1,6 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color, LineTerminator, LineStyle } from '../types.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class LineComponent extends BaseUIComponent {
   protected startEnd: Vec4

@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           cache: npm
-          node-version: 22
+          node-version: 20
       - run: npm ci
       - run: npm run lint
       - run: npm run lint:ts
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           cache: npm
-          node-version: 22
+          node-version: 20
       - run: npm ci
       - run: npm run test:unit
 
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           cache: npm
-          node-version: 22
+          node-version: 20
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright Browsers

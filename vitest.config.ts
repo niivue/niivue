@@ -1,5 +1,4 @@
 import { defineConfig, coverageConfigDefaults } from 'vitest/config'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
   test: {
@@ -21,6 +20,5 @@ export default defineConfig({
     },
     dir: 'tests/unit',
     environment: 'happy-dom'
-  },
-  plugins: [tsconfigPaths()]
+  }
 })

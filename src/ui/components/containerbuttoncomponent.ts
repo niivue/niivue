@@ -1,6 +1,6 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
-import { BaseContainerComponent } from './baseContainerComponent.js'
+import { BaseContainerComponent } from './basecontainercomponent.js'
 
 export class ContainerButtonComponent extends BaseContainerComponent {
   private onClickHandler?: () => void

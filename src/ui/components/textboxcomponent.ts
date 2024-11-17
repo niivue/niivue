@@ -1,7 +1,7 @@
-import { UIKFont } from '../uikFont.js'
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKFont } from '../uikfont.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color, Vec4 } from '../types.js'
-import { TextComponent } from './textComponent.js'
+import { TextComponent } from './textcomponent.js'
 
 // Draw Text Box Component
 export class TextBoxComponent extends TextComponent {

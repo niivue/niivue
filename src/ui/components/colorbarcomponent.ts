@@ -1,8 +1,8 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Vec4 } from '../types.js'
-import { UIKFont } from '../uikFont.js'
+import { UIKFont } from '../uikfont.js'
 import { cmapper } from '../../colortables.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class ColorbarComponent extends BaseUIComponent {
   private gl: WebGL2RenderingContext

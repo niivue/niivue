@@ -6,17 +6,14 @@
     "outDir": "ts-build",
     "module": "NodeNext",
     "target": "esnext",
-    "moduleResolution": "nodenext",
+    "moduleResolution": "NodeNext",
     "strict": false,
     "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "src/*": ["./src/*"]
-    }
+    "resolveJsonModule": true
   },
   "include": ["src", "types.d.ts"]
 }

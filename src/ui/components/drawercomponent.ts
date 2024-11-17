@@ -1,10 +1,10 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
-import { UIKFont } from '../uikFont.js'
-import { BaseContainerComponent } from './baseContainerComponent.js'
-import { ButtonComponent } from './buttonComponent.js'
-import { TriangleComponent } from './triangleComponent.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { UIKFont } from '../uikfont.js'
+import { BaseContainerComponent } from './basecontainercomponent.js'
+import { ButtonComponent } from './buttoncomponent.js'
+import { TriangleComponent } from './trianglecomponent.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class DrawerComponent extends BaseContainerComponent {
   private isOpen: boolean = false

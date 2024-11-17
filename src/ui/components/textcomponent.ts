@@ -1,8 +1,8 @@
 import { IColorable } from '../interfaces.js'
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Color, Vec2, Vec4 } from '../types.js'
-import { UIKFont } from '../uikFont.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { UIKFont } from '../uikfont.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class TextComponent extends BaseUIComponent implements IColorable {
   protected textColor: Color

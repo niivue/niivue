@@ -1,6 +1,6 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color } from '../types.js'
-import { BaseUIComponent } from './baseUiComponent.js'
+import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CircleComponent extends BaseUIComponent {
   private leftTopWidthHeight: Vec4

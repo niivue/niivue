@@ -1,4 +1,4 @@
-import { SessionBus, SessionUser } from './sessionbus.js'
+import { SessionBus, SessionUser } from './session-bus.js'
 import { ImageFromUrlOptions, NVImage } from './nvimage/index.js'
 import { LoadFromUrlParams, NVMesh } from './nvmesh.js'
 import { Niivue } from './niivue/index.js'

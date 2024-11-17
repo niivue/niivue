@@ -1,5 +1,5 @@
 import { Effect } from './types.js'
-import { getObjectProperty, isEqual, setObjectProperty } from './uiUtils.js'
+import { getObjectProperty, isEqual, setObjectProperty } from './uiutils.js'
 
 // Animation class to handle each individual animation
 export class Animation {

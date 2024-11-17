@@ -1,7 +1,7 @@
-import { UIKRenderer } from '../uikRenderer.js'
+import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Vec3, Color, LineTerminator, LineStyle, ComponentSide } from '../types.js'
 import { IUIComponent, IProjectable3D } from '../interfaces.js'
-import { LineComponent } from './lineComponent.js'
+import { LineComponent } from './linecomponent.js'
 
 export class ProjectedLineComponent extends LineComponent implements IProjectable3D {
   modelPoints: Vec3[] // Array for one or two model points
