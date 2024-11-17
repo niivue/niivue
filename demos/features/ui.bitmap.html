@@ -44,7 +44,7 @@
 
       // Optional: add effects for interactivity
       bitmapComponent.addEventEffect('pointerenter', bitmapComponent, 'scale', 'setValue', scale * 1.1); // Increase scale on hover
-      bitmapComponent.addEventEffect('pointerleave', bitmapComponent, 'scale', 'animateValue', scale * 1.1, scale, 500); // Restore scale on leave
+      bitmapComponent.addEventEffect('pointerleave', bitmapComponent, 'scale', 'setValue', scale); // Restore scale on leave
     }
 
     // Execute setup function

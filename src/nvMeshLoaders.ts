@@ -22,7 +22,7 @@ import {
   X3D,
   XmlTag,
   AnyNumberArray
-} from './nvmesh-types.js'
+} from './nvMeshTypes.js'
 
 const utiltiesLogger = log
 
