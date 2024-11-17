@@ -1,7 +1,7 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
-import { Shader } from '../shader'
-import { log } from '../logger'
+import { Shader } from '../shader.js'
+import { log } from '../logger.js'
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -55,12 +55,12 @@ import {
   blurVertShader,
   blurFragShader,
   sobelFragShader
-} from '../shaders'
-import { orientCube } from '../orientCube'
-import { NiivueObject3D } from '../niivueObject3D'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh'
+} from '../shaders.js'
+import { orientCube } from '../orientCube.js'
+import { NiivueObject3D } from '../niivueObject3D.js'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
-import { ColorMap, cmapper } from '../colortables'
+import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
   NVConfigOptions,
@@ -72,7 +72,7 @@ import {
   DEFAULT_OPTIONS,
   ExportDocumentData,
   INITIAL_SCENE_DATA
-} from '../nvdocument'
+} from '../nvdocument.js'
 
 import {
   LabelTextAlignment,
@@ -81,8 +81,8 @@ import {
   NVLabel3DStyle,
   LabelAnchorPoint,
   LabelAnchorFlag
-} from '../nvlabel'
-import { FreeSurferConnectome, NVConnectome } from '../nvconnectome'
+} from '../nvlabel.js'
+import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
 import {
   NVImage,
   NVImageFromUrlOptions,
@@ -90,9 +90,9 @@ import {
   NiiDataType,
   NiiIntentCode,
   ImageFromUrlOptions
-} from '../nvImage'
-import { NVUtilities } from '../nvutilities'
-import { NVMeshUtilities } from '../nvmeshutilities'
+} from '../nvImage/index.js'
+import { NVUtilities } from '../nvutilities.js'
+import { NVMeshUtilities } from '../nvmeshutilities.js'
 import {
   Connectome,
   LegacyConnectome,
@@ -102,12 +102,12 @@ import {
   NiiVueLocation,
   NiiVueLocationValue,
   SyncOpts
-} from '../types'
-import { UIKFont } from '../ui/uikFont'
-import { UIKit } from '../ui/uiKit'
-import { convertTouchToPointerEvent } from '../ui/uiUtils'
-import { Vec3 } from '../ui/types'
-import { isProjectable3D, isProjectable2D, isProjectable } from '../ui/interfaces'
+} from '../types.js'
+import { UIKFont } from '../ui/uikFont.js'
+import { UIKit } from '../ui/uiKit.js'
+import { convertTouchToPointerEvent } from '../ui/uiUtils.js'
+import { Vec3 } from '../ui/types.js'
+import { isProjectable3D, isProjectable2D, isProjectable } from '../ui/interfaces.js'
 import {
   clamp,
   decodeRLE,
@@ -121,41 +121,41 @@ import {
   tickSpacing,
   unProject,
   unpackFloatFromVec4i
-} from './utils'
-export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh'
-export { NVController } from '../nvcontroller'
-export { ColorTables as colortables, cmapper } from '../colortables'
+} from './utils.js'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
+export { NVController } from '../nvcontroller.js'
+export { ColorTables as colortables, cmapper } from '../colortables.js'
 
-export { NVImage, NVImageFromUrlOptions } from '../nvImage'
+export { NVImage, NVImageFromUrlOptions } from '../nvImage/index.js'
 // export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.ts'
 // address rollup error - https://github.com/rollup/plugins/issues/71
-export * from '../nvdocument'
-export { NVUtilities } from '../nvutilities'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel'
-export { NVMeshLoaders } from '../nvmeshloaders'
-export { NVMeshUtilities } from '../nvmeshutilities'
+export * from '../nvdocument.js'
+export { NVUtilities } from '../nvutilities.js'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel.js'
+export { NVMeshLoaders } from '../nvmeshloaders.js'
+export { NVMeshUtilities } from '../nvmeshutilities.js'
 
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
-export * from '../types'
-export { UIKit } from '../ui/uiKit'
-export { UIKFont } from '../ui/uikFont'
-export { UIKBitmap } from '../ui/uikBitmap'
+export * from '../types.js'
+export { UIKit } from '../ui/uiKit.js'
+export { UIKFont } from '../ui/uikFont.js'
+export { UIKBitmap } from '../ui/uikBitmap.js'
 
-export { RoundedRectComponent } from '../ui/components/roundedRectangleComponent'
-export { TextComponent } from '../ui/components/textComponent'
-export { LineComponent } from '../ui/components/lineComponent'
-export { ToggleComponent } from '../ui/components/toggleComponent'
-export { ButtonComponent } from '../ui/components/buttonComponent'
-export { BaseContainerComponent } from '../ui/components/baseContainerComponent'
-export { ContainerButtonComponent } from '../ui/components/containerButtonComponent'
-export { BitmapComponent } from '../ui/components/bitmapComponent'
-export { ColorbarComponent } from '../ui/components/colorbarComponent'
-export { LineGraphComponent } from '../ui/components/lineGraphComponent'
-export { ProjectedLineComponent } from '../ui/components/projectedLineComponent'
-export { DrawerComponent } from '../ui/components/drawerComponent'
-export { TextBoxComponent } from '../ui/components/textBoxComponent'
-export { RulerComponent } from '../ui/components/rulerComponent'
+export { RoundedRectComponent } from '../ui/components/roundedRectangleComponent.js'
+export { TextComponent } from '../ui/components/textComponent.js'
+export { LineComponent } from '../ui/components/lineComponent.js'
+export { ToggleComponent } from '../ui/components/toggleComponent.js'
+export { ButtonComponent } from '../ui/components/buttonComponent.js'
+export { BaseContainerComponent } from '../ui/components/baseContainerComponent.js'
+export { ContainerButtonComponent } from '../ui/components/containerButtonComponent.js'
+export { BitmapComponent } from '../ui/components/bitmapComponent.js'
+export { ColorbarComponent } from '../ui/components/colorbarComponent.js'
+export { LineGraphComponent } from '../ui/components/lineGraphComponent.js'
+export { ProjectedLineComponent } from '../ui/components/projectedLineComponent.js'
+export { DrawerComponent } from '../ui/components/drawerComponent.js'
+export { TextBoxComponent } from '../ui/components/textBoxComponent.js'
+export { RulerComponent } from '../ui/components/rulerComponent.js'
 
 type ColormapListEntry = {
   name: string

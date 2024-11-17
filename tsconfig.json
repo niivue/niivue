@@ -4,9 +4,9 @@
     // This doesn't do anything, as we don't compile using tsc.
     // It needs to be set so that ts linting doesn't complain about overwriting input files.
     "outDir": "ts-build",
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "nodenext",
     "strict": false,
     "downlevelIteration": true,
     "skipLibCheck": true,
