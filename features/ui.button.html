@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Button Component Example</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+    </header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js";
+
+        var nv1 = new niivue.Niivue();
+        nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+        const font = new niivue.UIKFont(nv1.gl);
+        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
+        const textColor = [1.0, 1.0, 1.0, 1.0];
+        const highLightColor = [0, 1.0, 0, 1];
+        const str = 'Click Me!';
+        const scale = 0.5;
+        const width = font.getTextWidth(str, scale);
+        const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height / 2 - 50];
+        const buttonComponent = new niivue.ButtonComponent(font, pos, str, textColor, [0.2, 0.5, 0.8, 1.0], [0.1, 0.1, 0.1, 0.3], highLightColor, 15, 10, scale);
+        buttonComponent.onClick = () => { alert('clicked!') }
+        buttonComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLECENTER
+        // Adding the button component to the Niivue UI
+        nv1.ui.addComponent(buttonComponent);
+        console.log(nv1.ui);
+        nv1.drawScene();    
+    </script>
+</body>
+
+</html>
