@@ -8192,26 +8192,6 @@ export class Niivue {
     //   throw new Error('lineShader undefined')
     // }
 
-    // this.lineShader.use(this.gl)
-    // gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
-    // gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
-    // // draw Line
-    // gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
-    // gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
-    // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    // // draw startCap
-    // const color = this.opts.rulerColor
-    // color[3] = 1.0 // opaque
-    // gl.uniform4fv(this.lineShader.uniforms.lineColor, color)
-    // const w = this.opts.rulerWidth
-    // gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
-    // let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
-    // gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
-    // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    // // end cap
-    // sXYeXY = [startXYendXY[2], startXYendXY[3] - w, startXYendXY[2], startXYendXY[3] + w]
-    // gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
-    // gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // distance between start and stop
     let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]])
     let endXY = this.canvasPos2frac([startXYendXY[2], startXYendXY[3]])
@@ -8231,18 +8211,6 @@ export class Niivue {
         decimals = 0
       }
       const stringMM = lenMM.toFixed(decimals)
-      // this.drawTextBetween(startXYendXY, stringMM, 1, color)
-      // const pos = [(startXYendXY[0] + startXYendXY[2]) / 2, (startXYendXY[1] + startXYendXY[3]) / 2] as [number, number]
-      // this.ui.drawTextBoxCenteredOn(
-      //   this.defaultFont,
-      //   pos,
-      //   stringMM,
-      //   this.opts.rulerColor,
-      //   this.opts.rulerColor,
-      //   [0, 0, 0, 0.3],
-      //   15,
-      //   0.2
-      // )
       this.ui.drawCaliper(
         [startXYendXY[0], startXYendXY[1]],
         [startXYendXY[2], startXYendXY[3]],
@@ -8253,6 +8221,7 @@ export class Niivue {
         this.opts.rulerColor,
         this.opts.rulerWidth,
         100
+
       )
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
@@ -10406,7 +10375,6 @@ export class Niivue {
       })
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
-
     // project our model points
     const components = this.ui.getComponents(undefined, ['3D_PRE', '3D_POST'], false)
     for (const component of components) {
@@ -10419,7 +10387,6 @@ export class Niivue {
         component.setScreenPoints(screenPoints)
       }
     }
-
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
