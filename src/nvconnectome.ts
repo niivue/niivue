@@ -1,5 +1,5 @@
 import { vec3 } from 'gl-matrix'
-import { NVMesh, MeshType } from './nvMesh.js'
+import { NVMesh, MeshType } from './nvmesh.js'
 import { NVUtilities } from './nvUtilities.js'
 import { NiivueObject3D } from './niivueObject3D.js'
 import { NVMeshUtilities } from './nvMeshUtilities.js'

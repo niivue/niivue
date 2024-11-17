@@ -4,7 +4,7 @@ import { log } from './logger.js'
 import { NVUtilities } from './nvUtilities.js'
 import { ColorMap, LUT, cmapper } from './colorTables.js'
 import { NiivueObject3D } from './niivueObject3D.js'
-import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvMesh.js'
+import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
 import {
   ANNOT,
   DefaultMeshType,

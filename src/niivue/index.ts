@@ -58,7 +58,7 @@ import {
 } from '../shaders'
 import { orientCube } from '../orientCube'
 import { NiivueObject3D } from '../niivueObject3D'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvMesh'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh'
 import defaultMatCap from '../matcaps/Shiny.jpg'
 import { ColorMap, cmapper } from '../colorTables'
 import {
@@ -122,7 +122,7 @@ import {
   unProject,
   unpackFloatFromVec4i
 } from './utils'
-export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvMesh'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh'
 export { NVController } from '../nvController'
 export { ColorTables as colortables, cmapper } from '../colorTables'
 

@@ -1,4 +1,4 @@
-import { LoadFromUrlParams } from './nvMesh.js'
+import { LoadFromUrlParams } from './nvmesh.js'
 import { SessionUser } from './sessionBus.js'
 
 /**
