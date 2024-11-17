@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Toggle Component Example</title>
+  <link rel="stylesheet" href="light.css" />
+</head>
+
+<body>
+  <noscript>niivue requires JavaScript.</noscript>
+  <header>
+    <button id="toggle-button">Toggle</button>
+  </header>
+  <main>
+    <canvas id="gl1"></canvas>
+  </main>
+  <script type="module" async>
+    import * as niivue from "../dist/index.js";
+
+    var nv1 = new niivue.Niivue();
+    nv1.attachTo("gl1");
+    nv1.setSliceType(nv1.sliceTypeRender);
+
+    // Define the toggle component properties
+    const togglePos = [nv1.canvas.width / 2, nv1.canvas.height / 2]; // Position of the toggle
+    const toggleSize = [100, 50]; // Size of the toggle
+    const isOn = true; // Initial state of the toggle
+    const onColor = [0, 0.478, 1, 1]; // Blue color when on
+    const offColor = [0.5, 0.5, 0.5, 1]; // Grey color when off
+
+    // Create the toggle component
+    const toggleComponent = new niivue.ToggleComponent(togglePos, toggleSize, isOn, onColor, offColor);
+    toggleComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLERIGHT
+    // Add the toggle component to the scene
+    nv1.ui.addComponent(toggleComponent);
+
+    // Draw the scene
+    nv1.drawScene();
+
+    // Toggle button handler
+    const button = document.getElementById('toggle-button');
+    button.onclick = () => {
+      toggleComponent.toggle();
+      nv1.drawScene();
+    }
+  </script>
+</body>
+
+</html>

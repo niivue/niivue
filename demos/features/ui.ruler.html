@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Ruler Components</title>
+    <link rel="stylesheet" href="light.css" />
+</head>
+<body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header></header>
+    <main>
+        <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+        import * as niivue from "../dist/index.js"
+        
+        // Define colors and other constants
+        const lineColor = [0.529, 0.808, 0.980, 1.0] // Light blue color
+        const textColor = [1.0, 1.0, 1.0, 1.0]
+        const units = "mm"
+        const lineThickness = 2
+
+        async function drawModelLines() {
+            const font = nv1.defaultFont
+
+            // Set starting points and end points for the rulers on the XY plane
+            const horizontalStartPoint = [-50, 20] 
+            const horizontalEndPoint = [50, 20]    
+
+            const verticalStartPoint = [20, 60]      
+            const verticalEndPoint = [20, -30]
+
+            const diagonalStartPoint = [-25, -25]      
+            const diagonalEndPoint = [25, 25]
+
+            const axial = niivue.SLICE_TYPE.AXIAL
+            const coronal = niivue.SLICE_TYPE.CORONAL
+            const sagittal = niivue.SLICE_TYPE.SAGITTAL
+
+            // Create horizontal ruler component along the x-axis on the XY plane
+            const horizontalRuler = new niivue.RulerComponent(
+                horizontalStartPoint,
+                horizontalEndPoint,
+                units,
+                font,
+                textColor,
+                lineColor,
+                lineThickness
+            )
+            horizontalRuler.tags = [axial.toString()]
+            // Create vertical ruler component along the y-axis on the XY plane
+            const verticalRuler = new niivue.RulerComponent(
+                verticalStartPoint,
+                verticalEndPoint,
+                units,
+                font,
+                textColor,
+                lineColor,
+                lineThickness
+            )
+            verticalRuler.tags = [coronal.toString()]
+
+             // Create vertical ruler component along the y-axis on the XY plane
+             const diagonalRuler = new niivue.RulerComponent(
+              diagonalStartPoint,
+              diagonalEndPoint,
+                units,
+                font,
+                textColor,
+                lineColor,
+                lineThickness
+            )
+            diagonalRuler.tags = [sagittal.toString()]
+
+            // Add rulers to the UI
+            ui.addComponent(horizontalRuler)
+            ui.addComponent(verticalRuler)
+            ui.addComponent(diagonalRuler)
+
+            // Draw the scene
+            nv1.drawScene()
+        }
+
+        // Initialize Niivue and attach it to the canvas
+        const volumeList1 = [
+            { 
+                url: "../images/mni152.nii.gz",
+                colormap: "gray",
+                visible: true,
+                opacity: 1
+            }, 
+            {
+                url: "../images/hippo.nii.gz", 
+                colormap: "red",
+                visible: true,
+                opacity: 1
+            }
+        ];
+
+        const nv1 = new niivue.Niivue();
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+        nv1.setSliceType(nv1.sliceTypeMultiplanar);
+        nv1.attachTo("gl1");
+        await nv1.loadVolumes(volumeList1);
+
+        // UI component initialization
+        const ui = nv1.ui;
+
+        // Draw the model lines and rulers initially
+        drawModelLines();
+    </script>
+</body>
+</html>

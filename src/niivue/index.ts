@@ -19,10 +19,6 @@ import {
   fragRenderSliceShader,
   vertColorbarShader,
   fragColorbarShader,
-  vertFontShader,
-  fragFontShader,
-  vertCircleShader,
-  fragCircleShader,
   vertBmpShader,
   fragBmpShader,
   vertOrientShader,
@@ -64,8 +60,6 @@ import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
 import defaultMatCap from '../matcaps/Shiny.jpg'
-import defaultFontPNG from '../fonts/Roboto-Regular.png'
-import defaultFontMetrics from '../fonts/Roboto-Regular.json'
 import { ColorMap, cmapper } from '../colortables.js'
 import {
   NVDocument,
@@ -109,6 +103,11 @@ import {
   NiiVueLocationValue,
   SyncOpts
 } from '../types.js'
+import { UIKFont } from '../ui/uikfont.js'
+import { UIKit } from '../ui/uikit.js'
+import { convertTouchToPointerEvent } from '../ui/uiutils.js'
+import { Vec3 } from '../ui/types.js'
+import { isProjectable3D, isProjectable2D, isProjectable } from '../ui/interfaces.js'
 import {
   clamp,
   decodeRLE,
@@ -139,19 +138,24 @@ export { NVMeshUtilities } from '../nvmesh-utilities.js'
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '../types.js'
+export { UIKit } from '../ui/uikit.js'
+export { UIKFont } from '../ui/uikfont.js'
+export { UIKBitmap } from '../ui/uikbitmap.js'
 
-type FontMetrics = {
-  distanceRange: number
-  size: number
-  mets: Record<
-    number,
-    {
-      xadv: number
-      uv_lbwh: number[]
-      lbwh: number[]
-    }
-  >
-}
+export { RoundedRectComponent } from '../ui/components/roundedrectanglecomponent.js'
+export { TextComponent } from '../ui/components/textcomponent.js'
+export { LineComponent } from '../ui/components/linecomponent.js'
+export { ToggleComponent } from '../ui/components/togglecomponent.js'
+export { ButtonComponent } from '../ui/components/buttoncomponent.js'
+export { BaseContainerComponent } from '../ui/components/basecontainercomponent.js'
+export { ContainerButtonComponent } from '../ui/components/containerbuttoncomponent.js'
+export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
+export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
+export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
+export { ProjectedLineComponent } from '../ui/components/projectedlinecomponent.js'
+export { DrawerComponent } from '../ui/components/drawercomponent.js'
+export { TextBoxComponent } from '../ui/components/textboxcomponent.js'
+export { RulerComponent } from '../ui/components/rulercomponent.js'
 
 type ColormapListEntry = {
   name: string
@@ -269,23 +273,23 @@ const RIGHT_MOUSE_BUTTON = 2
 // gl.TEXTURE0..31 are constants 0x84C0..0x84DF = 33984..34015
 // https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md
 // persistent textures
-const TEXTURE0_BACK_VOL = 33984
-const TEXTURE1_COLORMAPS = 33985
-const TEXTURE2_OVERLAY_VOL = 33986
-const TEXTURE3_FONT = 33987
-const TEXTURE4_THUMBNAIL = 33988
-const TEXTURE5_MATCAP = 33989
-const TEXTURE6_GRADIENT = 33990
-const TEXTURE7_DRAW = 33991
+export const TEXTURE0_BACK_VOL = 33984
+export const TEXTURE1_COLORMAPS = 33985
+export const TEXTURE2_OVERLAY_VOL = 33986
+export const TEXTURE3_FONT = 33987
+export const TEXTURE4_THUMBNAIL = 33988
+export const TEXTURE5_MATCAP = 33989
+export const TEXTURE6_GRADIENT = 33990
+export const TEXTURE7_DRAW = 33991
 // subsequent textures only used transiently
-const TEXTURE8_GRADIENT_TEMP = 33992
-const TEXTURE9_ORIENT = 33993
-const TEXTURE10_BLEND = 33994
-const TEXTURE11_GC_BACK = 33995
-const TEXTURE12_GC_STRENGTH0 = 33996
-const TEXTURE13_GC_STRENGTH1 = 33997
-const TEXTURE14_GC_LABEL0 = 33998
-const TEXTURE15_GC_LABEL1 = 33999
+export const TEXTURE8_GRADIENT_TEMP = 33992
+export const TEXTURE9_ORIENT = 33993
+export const TEXTURE10_BLEND = 33994
+export const TEXTURE11_GC_BACK = 33995
+export const TEXTURE12_GC_STRENGTH0 = 33996
+export const TEXTURE13_GC_STRENGTH1 = 33997
+export const TEXTURE14_GC_LABEL0 = 33998
+export const TEXTURE15_GC_LABEL1 = 33999
 
 type UIData = {
   mousedown: boolean
@@ -325,6 +329,12 @@ const defaultSaveImageOptions: SaveImageOptions = {
   isSaveDrawing: false,
   volumeByIndex: 0
 }
+
+const OTHER_DIMENSIONS = [
+  [1, 2], // For SAGITTAL (sliceDim = 0), the other dimensions are 1 (Y) and 2 (Z)
+  [0, 2], // For CORONAL (sliceDim = 1), the other dimensions are 0 (X) and 2 (Z)
+  [0, 1] // For AXIAL (sliceDim = 2), the other dimensions are 0 (X) and 1 (Y)
+]
 
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
@@ -375,10 +385,8 @@ export class Niivue {
   pickingMeshShader?: Shader
   pickingImageShader?: Shader
   colorbarShader?: Shader
-  fontShader: Shader | null = null
   fiberShader?: Shader
   fontTexture: WebGLTexture | null = null
-  circleShader?: Shader
   matCapTexture: WebGLTexture | null = null
   bmpShader: Shader | null = null
   bmpTexture: WebGLTexture | null = null // thumbnail WebGLTexture object
@@ -397,10 +405,6 @@ export class Niivue {
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
-  private DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
-  private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
-  private fontMetrics?: typeof defaultFontMetrics
-  private fontMets: FontMetrics | null = null
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
@@ -774,6 +778,8 @@ export class Niivue {
   initialized = false
   currentDrawUndoBitmap: number
   loadingText: string
+  defaultFont: UIKFont
+  ui: UIKit
 
   /**
    * @param options  - options object to set modifiable Niivue properties
@@ -909,7 +915,8 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
-
+    this.ui = new UIKit(this.gl)
+    this.ui.redrawRequested = this.drawScene.bind(this)
     log.info('NIIVUE VERSION ', version)
 
     // set parent background container to black (default empty canvas color)
@@ -1147,6 +1154,7 @@ export class Niivue {
       this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr
       this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr
     }
+    this.ui.handleWindowResize()
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     this.drawScene()
   }
@@ -1161,7 +1169,7 @@ export class Niivue {
    * @internal
    * @returns the mouse position relative to the canvas
    */
-  getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null): { x: number; y: number } | undefined {
+  getRelativeMousePosition(event: PointerEvent, target?: EventTarget | null): { x: number; y: number } | undefined {
     target = target || event.target
     if (!target) {
       return
@@ -1178,7 +1186,7 @@ export class Niivue {
   // assumes target or event.target is canvas
   // note: no test yet
   getNoPaddingNoBorderCanvasRelativeMousePosition(
-    event: MouseEvent,
+    event: PointerEvent,
     target: EventTarget
   ): { x: number; y: number } | undefined {
     target = target || event.target
@@ -1191,14 +1199,14 @@ export class Niivue {
   // here, we disable the normal context menu so that
   // we can use some custom right click events
   // note: no test yet
-  mouseContextMenuListener(e: MouseEvent): void {
+  mouseContextMenuListener(e: PointerEvent): void {
     e.preventDefault()
   }
 
   // not included in public docs
   // handler for all mouse button presses
   // note: no test yet
-  mouseDownListener(e: MouseEvent): void {
+  mouseDownListener(e: PointerEvent): void {
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
@@ -1260,7 +1268,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse left button down
   // note: no test yet
-  mouseLeftButtonHandler(e: MouseEvent): void {
+  mouseLeftButtonHandler(e: PointerEvent): void {
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mouseDown(pos!.x, pos!.y)
     this.mouseClick(pos!.x, pos!.y)
@@ -1269,7 +1277,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse center button down
   // note: no test yet
-  mouseCenterButtonHandler(e: MouseEvent): void {
+  mouseCenterButtonHandler(e: PointerEvent): void {
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
     if (this.opts.dragMode === DRAG_MODE.none) {
@@ -1286,7 +1294,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse right button down
   // note: no test yet
-  mouseRightButtonHandler(e: MouseEvent): void {
+  mouseRightButtonHandler(e: PointerEvent): void {
     // this.uiData.isDragging = true;
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
@@ -1418,7 +1426,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse button up (all buttons)
   // note: no test yet
-  mouseUpListener(): void {
+  mouseUpListener(e: PointerEvent): void {
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
@@ -1481,6 +1489,9 @@ export class Niivue {
       this.calculateNewRange({ volIdx: 0 })
       this.refreshLayers(this.volumes[0], 0)
     }
+    // this.ui.processPointerUp(this.mousePos[0], this.mousePos[1], e.button)
+    const rect = this.canvas!.getBoundingClientRect()
+    this.ui.processPointerUp(e.clientX - rect.left, e.clientY - rect.top, e)
     this.drawScene()
   }
 
@@ -1558,13 +1569,16 @@ export class Niivue {
       this.generateMouseUpCallback(fracStart, fracEnd)
     }
     // mouseUp generates this.drawScene();
-    this.mouseUpListener()
+    const pointerUpEvent = convertTouchToPointerEvent(e, 'mouseup')
+    this.mouseUpListener(pointerUpEvent)
   }
 
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
-  mouseMoveListener(e: MouseEvent): void {
+  mouseMoveListener(e: PointerEvent): void {
+    const rect = this.canvas!.getBoundingClientRect()
+    this.ui.processPointerMove(e.clientX - rect.left, e.clientY - rect.top, e)
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
@@ -1864,19 +1878,13 @@ export class Niivue {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-    // add mousedown
-    this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this))
-    // add mouseup
-    this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this))
-    // add mouse move
-    this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this))
 
-    // add touchstart
-    this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this))
-    // add touchend
-    this.canvas.addEventListener('touchend', this.touchEndListener.bind(this))
-    // add touchmove
-    this.canvas.addEventListener('touchmove', this.touchMoveListener.bind(this))
+    // add pointerdown
+    this.canvas.addEventListener('pointerdown', this.pointerDownListener.bind(this))
+    // add pointerup
+    this.canvas.addEventListener('pointerup', this.pointerUpListener.bind(this))
+    // add pointermove
+    this.canvas.addEventListener('pointermove', this.pointerMoveListener.bind(this))
 
     // add scroll wheel
     this.canvas.addEventListener('wheel', this.wheelListener.bind(this))
@@ -1886,7 +1894,7 @@ export class Niivue {
     // add double click
     this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this))
 
-    //  drag and drop support
+    // drag and drop support
     this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), false)
     this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), false)
     this.canvas.addEventListener('drop', this.dropListener.bind(this), false)
@@ -1897,6 +1905,25 @@ export class Niivue {
 
     // keydown
     this.canvas.addEventListener('keydown', this.keyDownListener.bind(this), false)
+  }
+
+  // updated listeners for pointer events
+  pointerDownListener(e: PointerEvent): void {
+    // handle pointer down
+    e.preventDefault()
+    this.mouseDownListener(e)
+  }
+
+  pointerUpListener(e: PointerEvent): void {
+    // handle pointer up
+    e.preventDefault()
+    this.mouseUpListener(e)
+  }
+
+  pointerMoveListener(e: PointerEvent): void {
+    // handle pointer move
+    e.preventDefault()
+    this.mouseMoveListener(e)
   }
 
   // not included in public docs
@@ -5373,15 +5400,6 @@ export class Niivue {
           }
           this.matCapTexture = this.gl.createTexture()
           pngTexture = this.matCapTexture
-        } else {
-          this.fontShader!.use(this.gl)
-          this.gl.activeTexture(TEXTURE3_FONT)
-          this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
-          if (this.fontTexture !== null) {
-            this.gl.deleteTexture(this.fontTexture)
-          }
-          this.fontTexture = this.gl.createTexture()
-          pngTexture = this.fontTexture
         }
         this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture)
         // Set the parameters so we can render any size image.
@@ -5403,12 +5421,6 @@ export class Niivue {
   }
 
   // not included in public docs
-  // load font stored as PNG bitmap with texture unit 3
-  async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null> {
-    return this.loadPngAsTexture(fontUrl, 3)
-  }
-
-  // not included in public docs
   // load PNG bitmap with texture unit 4
   async loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null> {
     return this.loadPngAsTexture(bmpUrl, 4)
@@ -5426,91 +5438,16 @@ export class Niivue {
   }
 
   // not included in public docs
-  // load font bitmap and metrics
-  initFontMets(): void {
-    if (!this.fontMetrics) {
-      throw new Error('fontMetrics undefined')
-    }
-
-    this.fontMets = {
-      distanceRange: this.fontMetrics.atlas.distanceRange,
-      size: this.fontMetrics.atlas.size,
-      mets: {}
-    }
-    for (let id = 0; id < 256; id++) {
-      // clear ASCII codes 0..256
-      this.fontMets.mets[id] = {
-        xadv: 0,
-        uv_lbwh: [0, 0, 0, 0],
-        lbwh: [0, 0, 0, 0]
-      }
-    }
-    const scaleW = this.fontMetrics.atlas.width
-    const scaleH = this.fontMetrics.atlas.height
-    for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
-      const glyph = this.fontMetrics.glyphs[i]
-      const id = glyph.unicode
-      this.fontMets.mets[id].xadv = glyph.advance
-      if (glyph.planeBounds === undefined) {
-        continue
-      }
-      let l = glyph.atlasBounds.left / scaleW
-      let b = (scaleH - glyph.atlasBounds.top) / scaleH
-      let w = (glyph.atlasBounds.right - glyph.atlasBounds.left) / scaleW
-      let h = (glyph.atlasBounds.top - glyph.atlasBounds.bottom) / scaleH
-      this.fontMets.mets[id].uv_lbwh = [l, b, w, h]
-      l = glyph.planeBounds.left
-      b = glyph.planeBounds.bottom
-      w = glyph.planeBounds.right - glyph.planeBounds.left
-      h = glyph.planeBounds.top - glyph.planeBounds.bottom
-      this.fontMets.mets[id].lbwh = [l, b, w, h]
-    }
-  }
-
-  /**
-   * Load typeface for colorbars, measurements and orientation text.
-   * @param name - name of matcap to load ("Roboto", "Garamond", "Ubuntu")
-   * @example
-   * niivue.loadMatCapTexture("Cortex");
-   * @see {@link https://niivue.github.io/niivue/features/selectfont.html | live demo usage}
-   */
-  async loadFont(fontSheetUrl = defaultFontPNG, metricsUrl = defaultFontMetrics): Promise<void> {
-    await this.loadFontTexture(fontSheetUrl)
-    // @ts-expect-error FIXME this doesn't look right - metricsUrl is a huge object
-    const response = await fetch(metricsUrl)
-    if (!response.ok) {
-      throw Error(response.statusText)
-    }
-
-    const jsonText = await response.text()
-    this.fontMetrics = JSON.parse(jsonText)
-
-    this.initFontMets()
-
-    this.fontShader!.use(this.gl)
-    this.drawScene()
-  }
-
-  // not included in public docs
   async loadDefaultMatCap(): Promise<WebGLTexture | null> {
     return this.loadMatCapTexture(defaultMatCap)
   }
-
   // not included in public docs
-  async loadDefaultFont(): Promise<void> {
-    await this.loadFontTexture(this.DEFAULT_FONT_GLYPH_SHEET)
-    this.fontMetrics = this.DEFAULT_FONT_METRICS
-    this.initFontMets()
-  }
 
   // not included in public docs
   async initText(): Promise<void> {
-    // font shader
     // multi-channel signed distance font https://github.com/Chlumsky/msdfgen
-    this.fontShader = new Shader(this.gl, vertFontShader, fragFontShader)
-    this.fontShader.use(this.gl)
-
-    await this.loadDefaultFont()
+    this.defaultFont = new UIKFont(this.gl, this.opts.fontColor)
+    await this.defaultFont.loadDefaultFont()
     await this.loadDefaultMatCap()
     this.drawLoadingText(this.loadingText)
   }
@@ -5737,9 +5674,6 @@ export class Niivue {
     // 3D line shader
     this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader)
     this.line3DShader.use(gl)
-    // circle shader
-    this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
-    this.circleShader.use(gl)
     // render shader (3D)
     this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader)
     this.initRenderShader(this.renderVolumeShader)
@@ -8254,30 +8188,10 @@ export class Niivue {
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-    if (!this.lineShader) {
-      throw new Error('lineShader undefined')
-    }
+    // if (!this.lineShader) {
+    //   throw new Error('lineShader undefined')
+    // }
 
-    this.lineShader.use(this.gl)
-    gl.uniform4fv(this.lineShader.uniforms.lineColor, this.opts.rulerColor)
-    gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
-    // draw Line
-    gl.uniform1f(this.lineShader.uniforms.thickness, this.opts.rulerWidth)
-    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    // draw startCap
-    const measureLineColor = this.opts.measureLineColor
-    measureLineColor[3] = 1.0 // opaque
-    gl.uniform4fv(this.lineShader.uniforms.lineColor, measureLineColor)
-    const w = this.opts.rulerWidth
-    gl.uniform1f(this.lineShader.uniforms.thickness, w * 2)
-    let sXYeXY = [startXYendXY[0], startXYendXY[1] - w, startXYendXY[0], startXYendXY[1] + w]
-    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    // end cap
-    sXYeXY = [startXYendXY[2], startXYendXY[3] - w, startXYendXY[2], startXYendXY[3] + w]
-    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, sXYeXY)
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     // distance between start and stop
     let startXY = this.canvasPos2frac([startXYendXY[0], startXYendXY[1]])
     let endXY = this.canvasPos2frac([startXYendXY[2], startXYendXY[3]])
@@ -8296,29 +8210,17 @@ export class Niivue {
       if (lenMM > 99) {
         decimals = 0
       }
-      let stringMM = lenMM.toFixed(decimals)
-      if (this.opts.showMeasureUnits) {
-        stringMM = `${stringMM} mm` // append mm for millimeters to show units
-      }
-      let textCoords = startXYendXY
-      const [x0, y0, x1, y1] = startXYendXY
-      const { origin, terminus } = extendTo(x0, y0, x1, y1, 30)
-      switch (this.opts.measureTextJustify) {
-        case 'start':
-          textCoords = [...origin, ...origin.map((point) => point + 1)]
-          break
-        case 'end':
-          textCoords = textCoords = [...terminus, ...terminus.map((point) => point + 1)]
-          break
-        default:
-          textCoords = startXYendXY
-          break
-      }
-      this.drawTextBetween(
-        textCoords,
-        stringMM,
-        this.opts.measureTextHeight / this.opts.textHeight,
-        this.opts.measureTextColor
+      const stringMM = lenMM.toFixed(decimals)
+      this.ui.drawCaliper(
+        [startXYendXY[0], startXYendXY[1]],
+        [startXYendXY[2], startXYendXY[3]],
+        lenMM,
+        'mm',
+        this.defaultFont,
+        this.opts.rulerColor,
+        this.opts.rulerColor,
+        this.opts.rulerWidth,
+        100
       )
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
@@ -8327,7 +8229,7 @@ export class Niivue {
   // not included in public docs
   // draw a rectangle at specified location
   // unless Alpha is > 0, default color is opts.crosshairColor
-  drawRect(leftTopWidthHeight: number[], lineColor = [1, 0, 0, -1]): void {
+  drawRect(leftTopWidthHeight: [number, number, number, number], lineColor = [1, 0, 0, -1]): void {
     if (lineColor[3] < 0) {
       lineColor = this.opts.crosshairColor
     }
@@ -8374,31 +8276,18 @@ export class Niivue {
     }
   }
 
-  drawCircle(leftTopWidthHeight: number[], circleColor = this.opts.fontColor, fillPercent = 1.0): void {
-    if (!this.circleShader) {
-      throw new Error('circleShader undefined')
-    }
-    this.circleShader.use(this.gl)
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
-    this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
-    this.gl.uniform4f(
-      this.circleShader.uniforms.leftTopWidthHeight,
-      leftTopWidthHeight[0],
-      leftTopWidthHeight[1],
-      leftTopWidthHeight[2],
-      leftTopWidthHeight[3]
-    )
-    this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent)
-    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor)
-    this.gl.bindVertexArray(this.genericVAO)
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+  drawCircle(
+    leftTopWidthHeight: [number, number, number, number],
+    circleColor = this.opts.fontColor,
+    fillPercent = 1.0,
+    z: number = 0
+  ): void {
+    this.ui.drawCircle(vec4.fromValues(...leftTopWidthHeight), circleColor, fillPercent, z)
   }
 
   // not included in public docs
   // draw a rectangle at desired location
-  drawSelectionBox(leftTopWidthHeight: number[]): void {
+  drawSelectionBox(leftTopWidthHeight: [number, number, number, number]): void {
     if (this.opts.dragMode === DRAG_MODE.roiSelection) {
       this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1)
       return
@@ -8560,7 +8449,7 @@ export class Niivue {
     this.gl.disable(this.gl.DEPTH_TEST)
     this.colorbarHeight = leftTopWidthHeight[3] + 1
     const barLTWH = [leftTopWidthHeight[0] + margin, leftTopWidthHeight[1], leftTopWidthHeight[2] - 2 * margin, barHt]
-    const rimLTWH = [barLTWH[0] - 1, barLTWH[1] - 1, barLTWH[2] + 2, barLTWH[3] + 2]
+    const rimLTWH = [barLTWH[0] - 1, barLTWH[1] - 1, barLTWH[2] + 2, barLTWH[3] + 2] as [number, number, number, number]
     this.drawRect(rimLTWH, this.opts.crosshairColor)
 
     if (!this.colorbarShader) {
@@ -8609,7 +8498,7 @@ export class Niivue {
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
     let tic = ticMin
-    const ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75]
+    const ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75] as [number, number, number, number]
     const txtTop = ticLTWH[1] + ticLTWH[3]
     const isNeg = 1
     while (tic <= max) {
@@ -8628,7 +8517,7 @@ export class Niivue {
         2,
         barLTWH[3] * 1.5
       ]
-      this.drawRect(tticLTWH)
+      this.drawRect(tticLTWH as [number, number, number, number])
     }
   }
 
@@ -8669,49 +8558,16 @@ export class Niivue {
   }
 
   // not included in public docs
+  // TODO(cdrake): remove all instances of textWidth
   textWidth(scale: number, str: string): number {
-    if (!str) {
-      return 0
-    }
-
-    let w = 0
-    const bytes = new TextEncoder().encode(str)
-    for (let i = 0; i < str.length; i++) {
-      w += scale * this.fontMets!.mets[bytes[i]].xadv!
-    }
-    return w
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    return this.defaultFont.getTextWidth(str, scale) / size
   }
 
+  // TODO(cdrake): remove all instances of textHeight
   textHeight(scale: number, str: string): number {
-    if (!str) {
-      return 0
-    }
-    const byteSet = new Set(Array.from(str))
-    const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
-
-    const tallest = Object.values(this.fontMets!.mets)
-      .filter((_, index) => bytes.includes(index))
-      .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
-    const height = tallest.lbwh[3]
-    return scale * height
-  }
-
-  // not included in public docs
-  drawChar(xy: number[], scale: number, char: number): number {
-    if (!this.fontShader) {
-      throw new Error('fontShader undefined')
-    }
-    // draw single character, never call directly: ALWAYS call from drawText()
-    const metrics = this.fontMets!.mets[char]!
-    const l = xy[0] + scale * metrics.lbwh[0]
-    const b = -(scale * metrics.lbwh[1])
-    const w = scale * metrics.lbwh[2]
-    const h = scale * metrics.lbwh[3]
-    const t = xy[1] + (b - h) + scale
-    this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
-    this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    return scale * metrics.xadv
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    return this.defaultFont.getTextHeight(str, scale) / size
   }
 
   // not included in public docs
@@ -8727,30 +8583,7 @@ export class Niivue {
 
   // not included in public docs
   drawText(xy: number[], str: string, scale = 1, color: Float32List | null = null): void {
-    if (this.opts.textHeight <= 0) {
-      return
-    }
-    if (!this.fontShader) {
-      throw new Error('fontShader undefined')
-    }
-    this.fontShader.use(this.gl)
-    // let size = this.opts.textHeight * this.gl.canvas.height * scale;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
-    if (color === null) {
-      color = this.opts.fontColor
-    }
-    this.gl.uniform4fv(this.fontShader.uniforms.fontColor, color as Float32List)
-    let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
-    screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
-    this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
-    const bytes = new TextEncoder().encode(str)
-    this.gl.bindVertexArray(this.genericVAO)
-    for (let i = 0; i < str.length; i++) {
-      xy[0] += this.drawChar(xy, size, bytes[i])
-    }
-    this.gl.bindVertexArray(this.unusedVAO)
+    this.ui.drawText(this.defaultFont, vec2.fromValues(xy[0], xy[1]), str, scale, color)
   }
 
   // not included in public docs
@@ -8796,7 +8629,7 @@ export class Niivue {
     const w = this.textWidth(size, str)
     xy[0] -= 0.5 * w
     xy[1] -= 0.5 * size
-    const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2]
+    const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2] as [number, number, number, number]
     let clr = color
     if (clr === null) {
       clr = this.opts.crosshairColor
@@ -9219,6 +9052,43 @@ export class Niivue {
       tile.fovMM = obj.fovMM
       return
     }
+
+    // update our projected points for this slice
+    // Draw slice-specific components
+    const components = this.ui.getComponents(undefined, [axCorSag.toString()])
+    for (const component of components) {
+      let screenPoints: Vec3[]
+      if (isProjectable(component)) {
+        if (isProjectable3D(component)) {
+          // we're only going to look at the relevant dimensions for the slice
+          screenPoints = component.modelPoints.map((modelPoint) => {
+            const screenPoint = this.calculateScreenPoint(
+              modelPoint as [number, number, number],
+              obj.modelViewProjectionMatrix,
+              leftTopWidthHeight
+            )
+            return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
+          })
+        } else if (isProjectable2D(component)) {
+          const mm = this.frac2mm(this.scene.crosshairPos)
+          screenPoints = component.modelPlanePoints.map((modelPlanePoint) => {
+            const sliceDimMM = mm[sliceDim]
+            const modelPoint = [3]
+            modelPoint[OTHER_DIMENSIONS[sliceDim][0]] = modelPlanePoint[0]
+            modelPoint[OTHER_DIMENSIONS[sliceDim][1]] = modelPlanePoint[1]
+            modelPoint[sliceDim] = sliceDimMM
+            const screenPoint = this.calculateScreenPoint(
+              modelPoint as [number, number, number],
+              obj.modelViewProjectionMatrix,
+              leftTopWidthHeight
+            )
+            return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
+          })
+        }
+        component.setScreenPoints(screenPoints)
+      }
+    }
+
     gl.enable(gl.DEPTH_TEST)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // draw the slice
@@ -9663,7 +9533,7 @@ export class Niivue {
     if (mn >= mx) {
       mx = mn + 1.0
     }
-    this.drawRect(graph.LTWH, graph.backColor)
+    this.drawRect(graph.LTWH as [number, number, number, number], graph.backColor)
     const [spacing, ticMin, ticMax] = tickSpacing(mn, mx)
     const digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)))
     mn = Math.min(ticMin, mn)
@@ -9675,7 +9545,7 @@ export class Niivue {
     }
     const minWH = Math.min(graph.LTWH[2], graph.LTWH[3])
     // n.b. dpr encodes retina displays
-    const fntScale = 0.07 * (minWH / (this.fontMets!.size * this.uiData.dpr!))
+    const fntScale = 0.07 * (minWH / (this.defaultFont.fontMets!.size * this.uiData.dpr!))
     let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale
     if (fntSize < 16) {
       fntSize = 0
@@ -9704,7 +9574,7 @@ export class Niivue {
     ]
     this.graph.LTWH = graph.LTWH
     this.graph.plotLTWH = plotLTWH
-    this.drawRect(plotLTWH, this.opts.backColor) // this.opts.backColor
+    this.drawRect(plotLTWH as [number, number, number, number], this.opts.backColor) // this.opts.backColor
     // draw horizontal lines
     const rangeH = mx - mn
     const scaleH = plotLTWH[3] / rangeH
@@ -10090,6 +9960,99 @@ export class Niivue {
     return screenPoint
   }
 
+  // Function to calculate screen point from a Vec2 point on a slice plane
+  calculateScreenPointFromVec2(
+    point: [number, number],
+    sliceType: SLICE_TYPE,
+    leftTopWidthHeight: number[],
+    customMM: number
+  ): vec4 {
+    // Determine the slice dimension based on the slice type
+    let sliceDim: number
+    switch (sliceType) {
+      case SLICE_TYPE.AXIAL:
+        sliceDim = 2
+        break
+      case SLICE_TYPE.CORONAL:
+        sliceDim = 1
+        break
+      case SLICE_TYPE.SAGITTAL:
+        sliceDim = 0
+        break
+      default:
+        throw new Error('Invalid slice type specified')
+    }
+    const screen = this.screenFieldOfViewExtendedMM(sliceType)
+    let isRadiological = this.opts.isRadiologicalConvention && sliceType < SLICE_TYPE.SAGITTAL
+    if (customMM === Infinity || customMM === -Infinity) {
+      isRadiological = customMM !== Infinity
+      if (sliceType === SLICE_TYPE.CORONAL) {
+        isRadiological = !isRadiological
+      }
+    } else if (this.opts.sagittalNoseLeft && sliceType === SLICE_TYPE.SAGITTAL) {
+      isRadiological = !isRadiological
+    }
+
+    let elevation = 0
+    let azimuth = 0
+    if (sliceType === SLICE_TYPE.SAGITTAL) {
+      azimuth = isRadiological ? 90 : -90
+    } else if (sliceType === SLICE_TYPE.CORONAL) {
+      azimuth = isRadiological ? 180 : 0
+    } else {
+      azimuth = isRadiological ? 180 : 0
+      elevation = isRadiological ? -90 : 90
+    }
+
+    // Calculate sliceFrac based on crosshair position and customMM
+    let sliceFrac = this.scene.crosshairPos[sliceDim]
+    let mm = this.frac2mm(this.scene.crosshairPos)
+
+    if (!isNaN(customMM) && customMM !== Infinity && customMM !== -Infinity) {
+      mm = this.frac2mm([0.5, 0.5, 0.5])
+      mm[sliceDim] = customMM
+      const frac = this.mm2frac(mm)
+      sliceFrac = frac[sliceDim]
+    }
+
+    const sliceMM = mm[sliceDim]
+
+    // Calculate the MVP matrix for the slice view using the member function calculateMvpMatrix2D
+    const mvpMatrix = this.calculateMvpMatrix2D(
+      leftTopWidthHeight,
+      screen.mnMM,
+      screen.mxMM,
+      Infinity,
+      0,
+      azimuth,
+      elevation,
+      isRadiological
+    )
+
+    // Construct the 3D model point using the Vec2 and sliceFrac
+    const modelPoint: [number, number, number] = [0, 0, 0]
+    switch (sliceType) {
+      case SLICE_TYPE.AXIAL:
+        modelPoint[0] = point[0]
+        modelPoint[1] = point[1]
+        modelPoint[2] = sliceMM
+        break
+      case SLICE_TYPE.CORONAL:
+        modelPoint[0] = point[0]
+        modelPoint[1] = sliceMM
+        modelPoint[2] = point[1]
+        break
+      case SLICE_TYPE.SAGITTAL:
+        modelPoint[0] = sliceMM
+        modelPoint[1] = point[0]
+        modelPoint[2] = point[1]
+        break
+    }
+
+    // Use calculateScreenPointFromVec3 to transform the modelPoint with the MVP matrix
+    return this.calculateScreenPoint(modelPoint, mvpMatrix.modelViewProjectionMatrix, leftTopWidthHeight)
+  }
+
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
     const scale = 1.0
     const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
@@ -10320,6 +10283,7 @@ export class Niivue {
       const text = label.text
       const textHeight = this.textHeight(label.style.textScale, text) * size
       const textWidth = this.textWidth(label.style.textScale, text) * size
+      console.log('textwidht, height', textWidth, textHeight)
       let left: number
       let top: number
 
@@ -10410,10 +10374,23 @@ export class Niivue {
       })
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
+    // project our model points
+    const components = this.ui.getComponents(undefined, ['3D_PRE', '3D_POST'], false)
+    for (const component of components) {
+      if (isProjectable3D(component)) {
+        // we're only going to look at the relevant dimensions for the slice
+        const screenPoints = component.modelPoints.map((modelPoint) => {
+          const screenPoint = this.calculateScreenPoint(modelPoint as [number, number, number], mvpMatrix, relativeLTWH)
+          return vec3.fromValues(screenPoint[0], screenPoint[1], screenPoint[2])
+        })
+        component.setScreenPoints(screenPoints)
+      }
+    }
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
     gl.clearDepth(0.0)
+
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
@@ -10440,6 +10417,14 @@ export class Niivue {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
     }
 
+    const isBlenEnabled = gl.isEnabled(gl.BLEND)
+
+    gl.disable(gl.BLEND)
+    gl.depthFunc(gl.GREATER)
+    this.ui.draw(undefined, ['3D_PRE'])
+    if (isBlenEnabled) {
+      gl.enable(gl.BLEND)
+    }
     //
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
@@ -10457,6 +10442,9 @@ export class Niivue {
     this.readyForSync = true
     this.sync()
     this.draw3DLabels(mvpMatrix, relativeLTWH, true)
+    // Draw additional 3D components or overlays after main rendering
+    gl.depthFunc(gl.ALWAYS)
+    this.ui.draw(undefined, ['3D_POST'])
 
     return posString
   }
@@ -11318,6 +11306,7 @@ export class Niivue {
         return
       }
       this.drawLoadingText(this.loadingText)
+
       return
     }
     if (this.back === null) {
@@ -11698,13 +11687,21 @@ export class Niivue {
   // called to refresh canvas
   drawScene(): string | void {
     if (this.isBusy) {
+      console.log('this.isBusy is true')
       // limit concurrent draw calls (chrome v FireFox)
       this.needsRefresh = true
       return
     }
     this.isBusy = false
     this.needsRefresh = false
+
+    // align global items
+    if (this.ui) {
+      this.ui.alignItems()
+    }
+
     let posString = this.drawSceneCore()
+
     // Chrome and Safari get much more bogged down by concurrent draw calls than Safari
     // https://stackoverflow.com/questions/51710067/webgl-async-operations
     // glFinish operation and the documentation for it says: "does not return until the effects of all previously called GL commands are complete."
@@ -11714,6 +11711,34 @@ export class Niivue {
     }
     if (this.needsRefresh) {
       posString = this.drawScene()
+    }
+    if (this.ui) {
+      // draw our slice related components
+      switch (this.opts.sliceType) {
+        case SLICE_TYPE.AXIAL:
+          this.ui.alignItems(undefined, [SLICE_TYPE.AXIAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.AXIAL.toString()])
+          break
+        case SLICE_TYPE.CORONAL:
+          this.ui.alignItems(undefined, [SLICE_TYPE.CORONAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.CORONAL.toString()])
+          break
+        case SLICE_TYPE.SAGITTAL:
+          this.ui.alignItems(undefined, [SLICE_TYPE.SAGITTAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.SAGITTAL.toString()])
+          break
+        case SLICE_TYPE.MULTIPLANAR:
+          this.ui.alignItems(undefined, [SLICE_TYPE.AXIAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.AXIAL.toString()])
+          this.ui.alignItems(undefined, [SLICE_TYPE.CORONAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.CORONAL.toString()])
+          this.ui.alignItems(undefined, [SLICE_TYPE.SAGITTAL.toString()])
+          this.ui.draw(undefined, [SLICE_TYPE.SAGITTAL.toString()])
+          break
+      }
+
+      // draw our global components
+      this.ui.draw()
     }
     return posString
   }
