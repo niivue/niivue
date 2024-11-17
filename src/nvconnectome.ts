@@ -4,7 +4,7 @@ import { NVUtilities } from './nvUtilities.js'
 import { NiivueObject3D } from './niivueObject3D.js'
 import { NVMeshUtilities } from './nvMeshUtilities.js'
 import { cmapper } from './colortables.js'
-import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from './nvLabel.js'
+import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from './nvlabel.js'
 import { Connectome, ConnectomeOptions, LegacyConnectome, NVConnectomeEdge, NVConnectomeNode } from './types.js'
 import { log } from './logger.js'
 

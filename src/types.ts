@@ -1,5 +1,5 @@
 import { vec3, vec4 } from 'gl-matrix'
-import { NVLabel3D } from './nvLabel.js'
+import { NVLabel3D } from './nvlabel.js'
 import { SLICE_TYPE } from './nvdocument.js'
 
 export type NiftiHeader = {

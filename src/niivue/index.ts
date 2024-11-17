@@ -81,7 +81,7 @@ import {
   NVLabel3DStyle,
   LabelAnchorPoint,
   LabelAnchorFlag
-} from '../nvLabel'
+} from '../nvlabel'
 import { FreeSurferConnectome, NVConnectome } from '../nvConnectome'
 import {
   NVImage,
@@ -131,7 +131,7 @@ export { NVImage, NVImageFromUrlOptions } from '../nvImage'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '../nvdocument'
 export { NVUtilities } from '../nvUtilities'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvLabel'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel'
 export { NVMeshLoaders } from '../nvMeshLoaders'
 export { NVMeshUtilities } from '../nvMeshUtilities'
 
