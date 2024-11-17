@@ -1,6 +1,6 @@
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Vec4, Color } from '../types.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 // Draw Rounded Rectangle Component
 export class RoundedRectComponent extends BaseUIComponent {

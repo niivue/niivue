@@ -1,8 +1,8 @@
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Vec2, Vec3, Color } from '../types.js'
 import { IProjectable2D } from '../interfaces.js'
-import { UIKFont } from '../uikfont.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { UIKFont } from '../uikFont.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 export class RulerComponent extends BaseUIComponent implements IProjectable2D {
   modelPlanePoints: Vec2[] // Array to hold start and end points in model space

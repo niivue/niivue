@@ -1,7 +1,7 @@
 import { Shader } from '../shader.js'
 import { TEXTURE4_THUMBNAIL } from '../niivue/index.js'
-import { vertBmpShader, fragBmpShader } from '../shader-srcs.js'
-import { UIKAsset } from './uikasset.js'
+import { vertBmpShader, fragBmpShader } from '../shaders.js'
+import { UIKAsset } from './uikAsset.js'
 
 export class UIKBitmap extends UIKAsset {
   public bitmapShader: Shader

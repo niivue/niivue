@@ -1,7 +1,5 @@
-// types.ts
-
 import { vec2, vec3, vec4 } from 'gl-matrix'
-import { UIKFont } from './uikfont.js'
+import { UIKFont } from './uikFont.js'
 
 // Define Color type for clarity
 export type Color = [number, number, number, number] | Float32List

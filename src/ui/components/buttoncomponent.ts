@@ -1,6 +1,6 @@
-import { UIKFont } from '../uikfont.js'
+import { UIKFont } from '../uikFont.js'
 import { Vec2, Color } from '../types.js'
-import { TextBoxComponent } from './textboxcomponent.js'
+import { TextBoxComponent } from './textBoxComponent.js'
 
 // Button Component extending TextBoxComponent
 export class ButtonComponent extends TextBoxComponent {

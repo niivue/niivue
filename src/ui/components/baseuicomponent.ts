@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { IUIComponent } from '../interfaces.js'
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
 // Applying centralized animation management in BaseUIComponent
-import { AnimationManager, Animation } from '../animationmanager.js'
-import { getObjectProperty, isEqual, setObjectProperty } from '../uiutils.js'
+import { AnimationManager, Animation } from '../animationManager.js'
+import { getObjectProperty, isEqual, setObjectProperty } from '../uiUtils.js'
 
 export abstract class BaseUIComponent implements IUIComponent {
   alignmentPoint: AlignmentPoint = AlignmentPoint.NONE

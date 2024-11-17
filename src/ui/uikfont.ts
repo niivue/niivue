@@ -1,10 +1,10 @@
 import { vec2 } from 'gl-matrix'
 import { Shader } from '../shader.js'
 import { TEXTURE3_FONT } from '../niivue/index.js'
-import { vertFontShader, fragRotatedFontShader } from '../shader-srcs.js'
+import { vertFontShader, fragRotatedFontShader } from '../shaders.js'
 import defaultFontPNG from '../fonts/Roboto-Regular.png'
 import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
-import { UIKAsset } from './uikasset.js'
+import { UIKAsset } from './uikAsset.js'
 
 export type FontMetrics = {
   distanceRange: number

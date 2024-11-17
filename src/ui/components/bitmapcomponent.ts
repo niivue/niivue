@@ -1,7 +1,7 @@
-import { UIKRenderer } from '../uikrenderer.js'
-import { UIKBitmap } from '../uikbitmap.js'
+import { UIKRenderer } from '../uikRenderer.js'
+import { UIKBitmap } from '../uikBitmap.js'
 import { Vec2 } from '../types.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 export class BitmapComponent extends BaseUIComponent {
   private bitmap: UIKBitmap

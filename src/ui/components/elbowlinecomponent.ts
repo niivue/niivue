@@ -1,6 +1,6 @@
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Vec4, Color, LineTerminator } from '../types.js'
-import { LineComponent } from './linecomponent.js'
+import { LineComponent } from './lineComponent.js'
 
 export class ElbowLineComponent extends LineComponent {
   private horizontalFirst: boolean

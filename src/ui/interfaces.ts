@@ -1,9 +1,6 @@
-// interfaces.ts
-
-import { UIKRenderer } from './uikrenderer.js'
+import { UIKRenderer } from './uikRenderer.js'
 import { AlignmentPoint, Color, HorizontalAlignment, Vec2, Vec3, Vec4, VerticalAlignment } from './types.js'
 
-// interfaces.ts
 export interface IUIComponent {
   getBounds(): Vec4
   setBounds(bounds: Vec4): void

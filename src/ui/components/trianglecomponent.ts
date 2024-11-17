@@ -1,6 +1,6 @@
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Vec2, Color } from '../types.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 export class TriangleComponent extends BaseUIComponent {
   private headPoint: Vec2

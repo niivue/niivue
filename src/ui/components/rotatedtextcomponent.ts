@@ -1,8 +1,8 @@
 import { IColorable } from '../interfaces.js'
-import { UIKFont } from '../uikfont.js'
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKFont } from '../uikFont.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Color, Vec2 } from '../types.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 // Draw Rotated Text Component
 export class RotatedTextComponent extends BaseUIComponent implements IColorable {

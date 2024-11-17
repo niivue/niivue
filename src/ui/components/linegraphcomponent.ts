@@ -1,7 +1,7 @@
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Vec2, Color } from '../types.js'
-import { UIKFont } from '../uikfont.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { UIKFont } from '../uikFont.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 export interface LineGraphOptions {
   position: Vec2

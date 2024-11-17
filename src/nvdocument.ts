@@ -1,10 +1,10 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
 import { vec3, vec4 } from 'gl-matrix'
-import { NVUtilities } from './nvutilities.js'
-import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvimage/index.js'
-import { MeshType, NVMesh } from './nvmesh.js'
-import { NVLabel3D } from './nvlabel.js'
-import { NVConnectome } from './nvconnectome.js'
+import { NVUtilities } from './nvUtilities.js'
+import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvImage/index.js'
+import { MeshType, NVMesh } from './nvMesh.js'
+import { NVLabel3D } from './nvLabel.js'
+import { NVConnectome } from './nvConnectome.js'
 import { log } from './logger.js'
 
 /**

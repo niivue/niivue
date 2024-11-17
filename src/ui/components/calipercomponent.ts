@@ -1,7 +1,7 @@
-import { UIKFont } from '../uikfont.js'
-import { UIKRenderer } from '../uikrenderer.js'
+import { UIKFont } from '../uikFont.js'
+import { UIKRenderer } from '../uikRenderer.js'
 import { Vec2, Color, LineTerminator } from '../types.js'
-import { BaseUIComponent } from './baseuicomponent.js'
+import { BaseUIComponent } from './baseUiComponent.js'
 
 export class CaliperComponent extends BaseUIComponent {
   private pointA: Vec2

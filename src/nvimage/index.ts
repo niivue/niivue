@@ -3,10 +3,10 @@ import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
 import { v4 as uuidv4 } from '@lukeed/uuid'
-import { ColorMap, LUT, cmapper } from '../colortables.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
+import { ColorMap, LUT, cmapper } from '../colorTables.js'
+import { NiivueObject3D } from '../niivueObject3D.js'
 import { log } from '../logger.js'
-import { NVUtilities } from '../nvutilities.js'
+import { NVUtilities } from '../nvUtilities.js'
 import {
   ImageFromBase64,
   ImageFromFileOptions,
