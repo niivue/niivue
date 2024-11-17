@@ -56,7 +56,7 @@ import {
   blurFragShader,
   sobelFragShader
 } from '../shaders'
-import { orientCube } from '../orientcube'
+import { orientCube } from '../orientCube'
 import { NiivueObject3D } from '../niivueObject3D'
 import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh'
 import defaultMatCap from '../matcaps/Shiny.jpg'
