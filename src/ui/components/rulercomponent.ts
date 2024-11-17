@@ -72,6 +72,4 @@ export class RulerComponent extends BaseUIComponent implements IProjectable2D {
       this.scale // Pass scale from BaseUIComponent
     )
   }
-
-  // Additional methods to implement IUIComponent can be added here if needed
 }

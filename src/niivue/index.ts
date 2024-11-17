@@ -8221,7 +8221,6 @@ export class Niivue {
         this.opts.rulerColor,
         this.opts.rulerWidth,
         100
-
       )
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
