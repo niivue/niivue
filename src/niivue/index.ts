@@ -90,7 +90,7 @@ import {
   NiiDataType,
   NiiIntentCode,
   ImageFromUrlOptions
-} from '../nvImage/index'
+} from '../nvImage'
 import { NVUtilities } from '../nvutilities'
 import { NVMeshUtilities } from '../nvmeshutilities'
 import {
