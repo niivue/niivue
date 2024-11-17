@@ -90,7 +90,7 @@ import {
   NiiDataType,
   NiiIntentCode,
   ImageFromUrlOptions
-} from '../nvImage/index.js'
+} from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { NVMeshUtilities } from '../nvmeshutilities.js'
 import {
@@ -126,7 +126,7 @@ export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
-export { NVImage, NVImageFromUrlOptions } from '../nvImage/index.js'
+export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
 // export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.ts'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '../nvdocument.js'

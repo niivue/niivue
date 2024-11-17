@@ -1,5 +1,5 @@
 import { SessionBus, SessionUser } from './sessionbus.js'
-import { ImageFromUrlOptions, NVImage } from './nvImage/index.js'
+import { ImageFromUrlOptions, NVImage } from './nvimage/index.js'
 import { LoadFromUrlParams, NVMesh } from './nvmesh.js'
 import { Niivue } from './niivue/index.js'
 import { Message, NVMESSAGE } from './nvmessage.js'
