@@ -72,7 +72,7 @@ import {
   DEFAULT_OPTIONS,
   ExportDocumentData,
   INITIAL_SCENE_DATA
-} from '../nvDocument'
+} from '../nvdocument'
 
 import {
   LabelTextAlignment,
@@ -129,7 +129,7 @@ export { ColorTables as colortables, cmapper } from '../colortables'
 export { NVImage, NVImageFromUrlOptions } from '../nvImage'
 // export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.ts'
 // address rollup error - https://github.com/rollup/plugins/issues/71
-export * from '../nvDocument'
+export * from '../nvdocument'
 export { NVUtilities } from '../nvUtilities'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvLabel'
 export { NVMeshLoaders } from '../nvMeshLoaders'
