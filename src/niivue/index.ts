@@ -153,7 +153,6 @@ export { BitmapComponent } from '../ui/components/bitmapcomponent.js'
 export { ColorbarComponent } from '../ui/components/colorbarcomponent.js'
 export { LineGraphComponent } from '../ui/components/linegraphcomponent.js'
 export { ProjectedLineComponent } from '../ui/components/projectedlinecomponent.js'
-export { DrawerComponent } from '../ui/components/drawercomponent.js'
 export { TextBoxComponent } from '../ui/components/textboxcomponent.js'
 export { RulerComponent } from '../ui/components/rulercomponent.js'
 

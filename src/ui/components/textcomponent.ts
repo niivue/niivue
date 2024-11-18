@@ -1,6 +1,6 @@
-import { IColorable } from '../interfaces.js'
+import { IColorable, TextComponentConfig } from '../interfaces.js'
 import { UIKRenderer } from '../uikrenderer.js'
-import { Color, Vec2, Vec4 } from '../types.js'
+import { Color, Vec4 } from '../types.js'
 import { UIKFont } from '../uikfont.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
@@ -14,19 +14,18 @@ export class TextComponent extends BaseUIComponent implements IColorable {
   protected width: number
   protected height: number
 
-  constructor(position: Vec2, text: string, font: UIKFont, textColor: Color = [0, 0, 0, 1], scale = 1.0, maxWidth = 0) {
-    super()
-    this.position = position
-    this.text = text
-    this.font = font
-    this.textColor = textColor
-    this.scale = scale
-    this.maxWidth = maxWidth
+  constructor(config: TextComponentConfig) {
+    super(config)
+    this.text = config.text
+    this.font = config.font
+    this.textColor = config.textColor ?? [0, 0, 0, 1]
+    this.scale = config.scale ?? 1.0
+    this.maxWidth = config.maxWidth ?? 0
 
-    this.width = this.font.getTextWidth(this.text, this.scale)
-    this.height = this.font.getTextHeight(this.text, this.scale)
-
-    this.bounds = [position[0], position[1], this.width, this.height]
+    const size = this.font.getWordWrappedSize(this.text, this.scale, this.maxWidth)
+    this.width = size[0]
+    this.height = size[1]
+    this.bounds = [this.position[0], this.position[1], this.width, this.height]
   }
 
   fitBounds(targetBounds: Vec4): void {
@@ -64,6 +63,18 @@ export class TextComponent extends BaseUIComponent implements IColorable {
     // Set new position and bounds
     this.setPosition([offsetX, offsetY])
     this.setBounds([offsetX, offsetY, this.width, this.height])
+  }
+
+  updateBounds(): void {
+    const size = this.font.getWordWrappedSize(this.text, this.scale, this.maxWidth)
+    this.width = size[0]
+    this.height = size[1]
+    this.setBounds([this.position[0], this.position[1], size[0], size[1]])
+  }
+
+  getBounds(): Vec4 {
+    this.updateBounds()
+    return this.bounds
   }
 
   draw(renderer: UIKRenderer): void {
@@ -117,20 +128,22 @@ export class TextComponent extends BaseUIComponent implements IColorable {
       throw new Error(`Font with ID ${data.fontId} not found`)
     }
 
-    const position: Vec2 = data.position || [0, 0]
-    const text: string = data.text || ''
-    const textColor: Color = data.textColor || [0, 0, 0, 1]
-    const backgroundColor: Color = data.backgroundColor || [0, 0, 0, 1]
-    const foregroundColor: Color = data.foregroundColor || [1, 1, 1, 1]
-    const scale: number = data.scale || 1.0
-    const maxWidth: number = data.maxWidth || 0
+    const config: TextComponentConfig = {
+      className: 'TextComponent',
+      position: data.position || [0, 0],
+      text: data.text || '',
+      font,
+      textColor: data.textColor || [0, 0, 0, 1],
+      scale: data.scale || 1.0,
+      maxWidth: data.maxWidth || 0
+    }
 
-    const component = new TextComponent(position, text, font, textColor, scale, maxWidth)
-    component.backgroundColor = backgroundColor
-    component.foregroundColor = foregroundColor
-    component.width = data.width ?? component.font.getTextWidth(text, scale)
-    component.height = data.height ?? component.font.getTextHeight(text, scale)
-    component.bounds = [position[0], position[1], component.width, component.height]
+    const component = new TextComponent(config)
+    component.backgroundColor = data.backgroundColor || [0, 0, 0, 1]
+    component.foregroundColor = data.foregroundColor || [1, 1, 1, 1]
+    component.width = data.width ?? component.font.getTextWidth(config.text, config.scale)
+    component.height = data.height ?? component.font.getTextHeight(config.text, config.scale)
+    component.bounds = [config.position[0], config.position[1], component.width, component.height]
 
     return component
   }

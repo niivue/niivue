@@ -1,6 +1,7 @@
 import { UIKFont } from '../uikfont.js'
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color, LineTerminator } from '../types.js'
+import { CaliperComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CaliperComponent extends BaseUIComponent {
@@ -12,25 +13,16 @@ export class CaliperComponent extends BaseUIComponent {
   private textColor: Color
   private lineColor: Color
 
-  constructor(
-    pointA: Vec2,
-    pointB: Vec2,
-    length: number,
-    units: string,
-    font: UIKFont,
-    textColor: Color = [1, 0, 0, 1],
-    lineColor: Color = [0, 0, 0, 1],
-    scale: number = 1.0
-  ) {
-    super()
-    this.pointA = pointA
-    this.pointB = pointB
-    this.length = length
-    this.units = units
-    this.font = font
-    this.textColor = textColor
-    this.lineColor = lineColor
-    this.scale = scale
+  constructor(config: CaliperComponentConfig) {
+    super(config)
+    this.pointA = config.pointA
+    this.pointB = config.pointB
+    this.length = config.length
+    this.units = config.units
+    this.font = config.font
+    this.textColor = config.textColor ?? [1, 0, 0, 1]
+    this.lineColor = config.lineColor ?? [0, 0, 0, 1]
+    this.scale = config.scale ?? 1.0
   }
 
   draw(renderer: UIKRenderer): void {
@@ -133,20 +125,24 @@ export class CaliperComponent extends BaseUIComponent {
     }
   }
 
-  public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: UIKFont }): CaliperComponent {
+  public static fromJSON(data: any, fonts: { [key: string]: UIKFont }): CaliperComponent {
     const font = fonts[data.fontId]
     if (!font) {
       throw new Error(`Font with ID ${data.fontId} not found`)
     }
 
-    const pointA: Vec2 = data.pointA || [0, 0]
-    const pointB: Vec2 = data.pointB || [0, 0]
-    const length: number = data.length || 0
-    const units: string = data.units || ''
-    const textColor: Color = data.textColor || [1, 0, 0, 1]
-    const lineColor: Color = data.lineColor || [0, 0, 0, 1]
-    const scale: number = data.scale || 1.0
+    const config: CaliperComponentConfig = {
+      className: 'CaliperComponent',
+      pointA: data.pointA || [0, 0],
+      pointB: data.pointB || [0, 0],
+      length: data.length || 0,
+      units: data.units || '',
+      font,
+      textColor: data.textColor || [1, 0, 0, 1],
+      lineColor: data.lineColor || [0, 0, 0, 1],
+      scale: data.scale || 1.0
+    }
 
-    return new CaliperComponent(pointA, pointB, length, units, font, textColor, lineColor, scale)
+    return new CaliperComponent(config)
   }
 }

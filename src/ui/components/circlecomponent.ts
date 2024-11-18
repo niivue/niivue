@@ -1,5 +1,6 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color } from '../types.js'
+import { CircleComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CircleComponent extends BaseUIComponent {
@@ -7,11 +8,11 @@ export class CircleComponent extends BaseUIComponent {
   private circleColor: Color
   private fillPercent: number
 
-  constructor(leftTopWidthHeight: Vec4, circleColor: Color = [1, 1, 1, 1], fillPercent = 1.0) {
-    super()
-    this.leftTopWidthHeight = leftTopWidthHeight
-    this.circleColor = circleColor
-    this.fillPercent = fillPercent
+  constructor(config: CircleComponentConfig) {
+    super(config)
+    this.leftTopWidthHeight = config.leftTopWidthHeight
+    this.circleColor = config.circleColor ?? [1, 1, 1, 1]
+    this.fillPercent = config.fillPercent ?? 1.0
   }
 
   draw(renderer: UIKRenderer): void {
@@ -30,10 +31,13 @@ export class CircleComponent extends BaseUIComponent {
   }
 
   public static fromJSON(data: any): CircleComponent {
-    const leftTopWidthHeight: Vec4 = data.leftTopWidthHeight || [0, 0, 0, 0]
-    const circleColor: Color = data.circleColor || [1, 1, 1, 1]
-    const fillPercent: number = data.fillPercent || 1.0
+    const config: CircleComponentConfig = {
+      className: 'CircleComponent',
+      leftTopWidthHeight: data.leftTopWidthHeight || [0, 0, 0, 0],
+      circleColor: data.circleColor || [1, 1, 1, 1],
+      fillPercent: data.fillPercent || 1.0
+    }
 
-    return new CircleComponent(leftTopWidthHeight, circleColor, fillPercent)
+    return new CircleComponent(config)
   }
 }

@@ -12,7 +12,6 @@
 <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -20,95 +19,105 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-
-
-        var nv1 = new niivue.Niivue();
+        const nv1 = new niivue.Niivue();
         await nv1.attachTo("gl1");
         nv1.setSliceType(nv1.sliceTypeRender);
-        var ui = nv1.ui
-        nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
-        nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
 
+        // Load bitmap for the bitmap component
         const bitmap = new niivue.UIKBitmap(nv1.gl);
         await bitmap.loadBitmap("../images/rorden.png");
 
+        // Load font for text components
         const font = new niivue.UIKFont(nv1.gl);
         await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
-        nv1.gl.viewport(0, 0, nv1.canvas.width, nv1.canvas.height);
-        nv1.gl.clear(nv1.gl.COLOR_BUFFER_BIT);
 
+        // Define container button position and properties
         const position = [nv1.canvas.width / 6 - 100, nv1.canvas.height / 2 - 100];
-        const containerButton = new niivue.ContainerButtonComponent(
-            position,
-            nv1.canvas,
-            [1, 1, 1, 1],     // Outline color
-            [0, 0, 0, 0.3],   // Fill color
-            [0.0, 0.0, 0.5, 0.3], // Highlight color
-            0.2,              // Roundness
-            0,                // Max width (no limit)
-            0                 // Max height (no limit)
-        );
+        const containerButtonConfig = {
+            position: position,
+            canvas: nv1.canvas,
+            outlineColor: [1, 1, 1, 1],    // White outline
+            fillColor: [0, 0, 0, 0.3],    // Transparent black
+            highlightColor: [0.0, 0.0, 0.5, 0.3], // Blue highlight
+            roundness: 0.2,               // Rounded corners
+            maxWidth: 0,                  // No max width
+            maxHeight: 0                  // No max height
+        };
+        const containerButton = new niivue.ContainerButtonComponent(containerButtonConfig);
 
-        // Create and add bitmap component
-        const bitmapComponent = new niivue.BitmapComponent([10, 10], bitmap, 1.5);        
+        // Create and add a bitmap component
+        const bitmapComponentConfig = {
+            position: [10, 10], // Position inside the container
+            bitmap: bitmap,
+            scale: 1.5
+        };
+        const bitmapComponent = new niivue.BitmapComponent(bitmapComponentConfig);
         containerButton.addComponent(bitmapComponent);
-        containerButton.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLELEFT
-        // Create and add text component
-        const scale = 2.0;
-        const xy = [0, 0]; // Position of the bitmap inside the container
 
-        nv1.ui.addComponent(containerButton);
+        // Add a vertical container inside the button
+        const verticalContainerConfig = {
+            position: [0, 0],
+            canvas: nv1.canvas,
+            isHorizontal: false, // Vertical layout
+            padding: 15
+        };
+        const verticalContainer = new niivue.BaseContainerComponent(verticalContainerConfig);
 
-        // Draw vertical container and add it to the horizontal container
-        const defaultFont = nv1.defaultFont;
-        const verticalContainer = new niivue.BaseContainerComponent(
-            [0, 0],
-            nv1.canvas,
-            false,  // Vertical layout
-            15      // Padding between components
-        );
+        // Add text components with effects to the vertical container
+        const text1Config = {
+            position: [0, 0],
+            text: "Figure 1.",
+            font: font,
+            textColor: [1.0, 1.0, 1.0, 1.0],
+            scale: 0.5
+        };
+        const text2Config = {
+            position: [0, 50],
+            text: "rotate",
+            font: font,
+            textColor: [1.0, 1.0, 1.0, 1.0],
+            scale: 0.5
+        };
+        const text3Config = {
+            position: [0, 90],
+            text: "clip",
+            font: font,
+            textColor: [1.0, 1.0, 1.0, 1.0],
+            scale: 0.5
+        };
+        const text1 = new niivue.TextComponent(text1Config);
+        const text2 = new niivue.TextComponent(text2Config);
+        const text3 = new niivue.TextComponent(text3Config);
 
+        // Add effects for text2 (rotate) and text3 (clip)
+        text2.addEventEffect("pointerenter", text2, "textColor", "setValue", [0, 0, 1, 1]); // Blue on hover
+        text2.addEventEffect("pointerleave", text2, "textColor", "setValue", [1, 1, 1, 1]); // White on leave
+        text2.addEventEffect("pointerup", nv1.scene, "renderAzimuth", "animateValue", 270, 165, 2000, true); // Rotate azimuth
 
-        // Create and add text components to vertical container
-        const text1 = new niivue.TextComponent([0, 0], "Figure 1.", font, [1.0, 1.0, 1.0, 1.0], 0.5);
-        const text2 = new niivue.TextComponent([0, 50], "rotate", defaultFont, [1.0, 1.0, 1.0, 1.0], 0.5);
-        const text3 = new niivue.TextComponent([0, 90], "clip", defaultFont, [1.0, 1.0, 1.0, 1.0], 0.5);
+        text3.addEventEffect("pointerenter", text3, "textColor", "setValue", [0, 1, 0, 1]); // Green on hover
+        text3.addEventEffect("pointerleave", text3, "textColor", "setValue", [1, 1, 1, 1]); // White on leave
+        text3.addEventEffect("pointerup", nv1, "clipPlane", "animateValue", [2, 0, 0], [0, 270, 0], 2000, false, true); // Clip animation
 
-        // Adding mouse enter and leave effects
-        text2.addEventEffect('pointerenter', text2, 'textColor', 'setValue', [0, 0, 1, 1]); // Blue
-        text2.addEventEffect('pointerleave', text2, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
-        text2.addEventEffect('pointerup', nv1.document.scene, 'renderAzimuth', 'animateValue', 270, 165, 2000, true); // Bounce       
-        text3.addEventEffect('pointerenter', text3, 'textColor', 'setValue', [0, 1, 0, 1]); // Green
-        text3.addEventEffect('pointerleave', text3, 'textColor', 'setValue', [1, 1, 1, 1]); // Back to black
-        text3.addEventEffect('pointerup', nv1, 'clipPlane', 'animateValue', [2, 0, 0], [0, 270, 0], 2000, false, true); // Bounce       
-
+        // Add text components to the vertical container
         verticalContainer.addComponent(text1);
         verticalContainer.addComponent(text2);
         verticalContainer.addComponent(text3);
 
+        // Add the vertical container to the container button
         containerButton.addComponent(verticalContainer);
-        var volumeList1 = [
-            {
-                url: "../images/mni152.nii.gz",
-                colormap: "gray",
-                visible: true,
-                opacity: 1
-            },
-            {
-                url: "../images/hippo.nii.gz",
-                colormap: "red",
-                visible: true,
-                opacity: 1
-            }
+
+        // Add the container button to the UI and draw the scene
+        nv1.ui.addComponent(containerButton);
+
+        // Load volumes for rendering
+        const volumeList = [
+            { url: "../images/mni152.nii.gz", colormap: "gray", visible: true, opacity: 1 },
+            { url: "../images/hippo.nii.gz", colormap: "red", visible: true, opacity: 1 }
         ];
-        await nv1.loadVolumes(volumeList1);
-        nv1.setSliceType(nv1.sliceTypeRender);
-        nv1.onAzimuthElevationChange = (azimuth, elevation) => {
-            console.log('a, e', azimuth, elevation)
-        }
+        await nv1.loadVolumes(volumeList);
+
+        // Redraw the scene
         nv1.drawScene();
-
-
     </script>
 </body>
 

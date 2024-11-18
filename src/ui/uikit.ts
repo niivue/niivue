@@ -111,6 +111,7 @@ export class UIKit {
 
   // Method to add a component to the QuadTree
   public addComponent(component: IUIComponent): void {
+    console.log('adding component', component)
     if (component instanceof BaseContainerComponent) {
       component.quadTree = this.quadTree
     }
@@ -159,6 +160,7 @@ export class UIKit {
   }
 
   public draw(leftTopWidthHeight?: Vec4, tags: string[] = []): void {
+    console.log('draw called', leftTopWidthHeight, tags)
     this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
 
     // Set up bounds for filtering and positioning
@@ -170,13 +172,14 @@ export class UIKit {
       tags,
       true // Match all specified tags
     )
-
+    console.log('components to draw', components)
     for (const component of components) {
       // Align component within bounds if specified
       // component.align(bounds)
-
+      console.log('component is visible', component.isVisible)
       // Draw the component using NVRenderer
       if (component.isVisible) {
+        console.log('drawing', component)
         component.draw(this.renderer)
       }
     }
@@ -512,63 +515,81 @@ export class UIKit {
   public static async fromJSON(json: any, gl: WebGL2RenderingContext): Promise<UIKit> {
     const ui = new UIKit(gl)
 
-    // Deserialize fonts and bitmaps
+    // Deserialize fonts
     const fonts: { [key: string]: UIKFont } = {}
-    if (json.assets && json.assets.fonts) {
-      for (const [fontId, fontData] of Object.entries(json.assets.fonts)) {
-        const font = await UIKFont.fromJSON(gl, fontData)
-        fonts[fontId] = font
-      }
+    if (json.assets?.fonts) {
+      await Promise.all(
+        Object.entries(json.assets.fonts).map(async ([fontId, fontData]) => {
+          try {
+            const font = await UIKFont.fromJSON(gl, fontData)
+            fonts[fontId] = font
+          } catch (error) {
+            console.error(`Failed to load font with ID ${fontId}:`, error)
+          }
+        })
+      )
     }
 
+    // Deserialize bitmaps
     const bitmaps: { [key: string]: UIKBitmap } = {}
-    if (json.assets && json.assets.bitmaps) {
-      for (const [bitmapId, bitmapData] of Object.entries(json.assets.bitmaps)) {
-        const bitmap = await UIKBitmap.fromJSON(gl, bitmapData)
-        bitmaps[bitmapId] = bitmap
-      }
+    if (json.assets?.bitmaps) {
+      await Promise.all(
+        Object.entries(json.assets.bitmaps).map(async ([bitmapId, bitmapData]) => {
+          try {
+            const bitmap = await UIKBitmap.fromJSON(gl, bitmapData)
+            bitmaps[bitmapId] = bitmap
+          } catch (error) {
+            console.error(`Failed to load bitmap with ID ${bitmapId}:`, error)
+          }
+        })
+      )
     }
 
     // Deserialize components
-    if (json.components) {
+    if (Array.isArray(json.components)) {
       json.components.forEach((componentData: any) => {
-        let component
-        switch (componentData.className) {
-          case 'BitmapComponent':
-            component = BitmapComponent.fromJSON(componentData, bitmaps)
-            break
-          case 'TextBoxComponent':
-            component = TextBoxComponent.fromJSON(componentData, fonts)
-            break
-          case 'TextComponent':
-            component = TextComponent.fromJSON(componentData, fonts)
-            break
-          case 'ButtonComponent':
-            component = ButtonComponent.fromJSON(componentData, fonts)
-            break
-          case 'CircleComponent':
-            component = CircleComponent.fromJSON(componentData)
-            break
-          case 'TriangleComponent':
-            component = TriangleComponent.fromJSON(componentData)
-            break
-          case 'LineComponent':
-            component = LineComponent.fromJSON(componentData)
-            break
-          case 'ToggleComponent':
-            component = ToggleComponent.fromJSON(componentData)
-            break
-          case 'CaliperComponent':
-            component = CaliperComponent.fromJSON(componentData, gl, fonts)
-            break
-          default:
-            console.warn(`Unknown component class: ${componentData.className}`)
-            return
-        }
-        if (component) {
-          ui.addComponent(component)
+        try {
+          let component
+          switch (componentData.className) {
+            case 'BitmapComponent':
+              component = BitmapComponent.fromJSON(componentData, bitmaps)
+              break
+            case 'TextBoxComponent':
+              component = TextBoxComponent.fromJSON(componentData, fonts)
+              break
+            case 'TextComponent':
+              component = TextComponent.fromJSON(componentData, fonts)
+              break
+            case 'ButtonComponent':
+              component = ButtonComponent.fromJSON(componentData, fonts)
+              break
+            case 'CircleComponent':
+              component = CircleComponent.fromJSON(componentData)
+              break
+            case 'TriangleComponent':
+              component = TriangleComponent.fromJSON(componentData)
+              break
+            case 'LineComponent':
+              component = LineComponent.fromJSON(componentData)
+              break
+            case 'ToggleComponent':
+              component = ToggleComponent.fromJSON(componentData)
+              break
+            case 'CaliperComponent':
+              component = CaliperComponent.fromJSON(componentData, fonts)
+              break
+            default:
+              console.warn(`Unknown component class: ${componentData.className}`)
+          }
+          if (component) {
+            ui.addComponent(component)
+          }
+        } catch (error) {
+          console.error(`Failed to deserialize component:`, error)
         }
       })
+    } else {
+      console.warn('No valid components array found in JSON data.')
     }
 
     return ui

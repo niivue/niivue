@@ -1,5 +1,6 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
+import { ToggleComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class ToggleComponent extends BaseUIComponent {
@@ -9,14 +10,15 @@ export class ToggleComponent extends BaseUIComponent {
   private offColor: Color
   public knobPosition: number
 
-  constructor(position: Vec2, size: Vec2, isOn: boolean, onColor: Color, offColor: Color) {
-    super()
-    this.position = position
-    this.size = size
-    this.isOn = isOn
-    this.onColor = onColor
-    this.offColor = offColor
-    this.knobPosition = isOn ? 1.0 : 0.0 // Default knob position based on the initial state
+  constructor(config: ToggleComponentConfig) {
+    super(config) // Pass BaseUIComponentConfig properties to the parent constructor
+
+    this.position = config.position
+    this.size = config.size
+    this.isOn = config.isOn
+    this.onColor = config.onColor
+    this.offColor = config.offColor
+    this.knobPosition = config.knobPosition ?? (this.isOn ? 1.0 : 0.0)
 
     // Initialize bounds based on position and size
     this.setBounds([this.position[0], this.position[1], this.size[0], this.size[1]])
@@ -83,7 +85,6 @@ export class ToggleComponent extends BaseUIComponent {
       drawColor[1] = Math.min(drawColor[1] * 1.2, 1)
       drawColor[2] = Math.min(drawColor[2] * 1.2, 1)
     }
-
     // Draw the toggle with animation support using knobPosition
     renderer.drawToggle([posX, posY], [sizeX, sizeY], this.isOn, this.onColor, this.offColor, this.knobPosition)
   }
@@ -106,28 +107,29 @@ export class ToggleComponent extends BaseUIComponent {
 
   toJSON(): object {
     return {
-      ...super.toJSON(), // Serialize base properties from BaseUIComponent
-      className: 'ToggleComponent', // Class name for identification
-      position: Array.from(this.position), // Convert Vec2 to array
+      ...super.toJSON(),
+      className: 'ToggleComponent',
       size: Array.from(this.size), // Convert Vec2 to array
-      isOn: this.isOn, // Serialize the toggle state
+      isOn: this.isOn,
       onColor: Array.from(this.onColor), // Convert Color to array
       offColor: Array.from(this.offColor), // Convert Color to array
-      knobPosition: this.knobPosition // Serialize knob position
+      knobPosition: this.knobPosition
     }
   }
 
   public static fromJSON(data: any): ToggleComponent {
-    const position: Vec2 = data.position || [0, 0]
-    const size: Vec2 = data.size || [50, 25] // Default size if not provided
-    const isOn: boolean = data.isOn || false
-    const onColor: Color = data.onColor || [0, 1, 0, 1]
-    const offColor: Color = data.offColor || [1, 0, 0, 1]
-    const knobPosition: number = data.knobPosition ?? (isOn ? 1.0 : 0.0)
+    const config: ToggleComponentConfig = {
+      className: 'ToggleComponent',
+      position: data.position || [0, 0],
+      size: data.size || [50, 25], // Default size if not provided
+      isOn: data.isOn ?? false,
+      onColor: data.onColor || [0, 1, 0, 1], // Green
+      offColor: data.offColor || [1, 0, 0, 1], // Red
+      knobPosition: data.knobPosition ?? (data.isOn ? 1.0 : 0.0),
+      isVisible: data.isVisible ?? true,
+      zIndex: data.zIndex ?? 0
+    }
 
-    const component = new ToggleComponent(position, size, isOn, onColor, offColor)
-    component.knobPosition = knobPosition
-
-    return component
+    return new ToggleComponent(config)
   }
 }

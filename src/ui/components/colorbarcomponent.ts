@@ -1,7 +1,8 @@
 import { UIKRenderer } from '../uikrenderer.js'
-import { Vec2, Vec4 } from '../types.js'
+import { Vec2 } from '../types.js'
 import { UIKFont } from '../uikfont.js'
 import { cmapper } from '../../colortables.js'
+import { ColorbarComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class ColorbarComponent extends BaseUIComponent {
@@ -12,23 +13,15 @@ export class ColorbarComponent extends BaseUIComponent {
   private minMax: [number, number]
   private _colormapName: string // Private variable for colormap name
 
-  constructor(
-    gl: WebGL2RenderingContext,
-    font: UIKFont,
-    labels: string[] = ['Min', 'Max'],
-    minMax: [number, number] = [0, 1],
-    colormapName: string = 'viridis',
-    bounds: Vec4
-  ) {
-    super()
-    this.gl = gl
-    this.font = font
-    this.labels = labels
-    this.minMax = minMax
-    this._colormapName = colormapName
-    this.gradientTexture = this.generateColorMapTexture(gl, colormapName)
-    this.className = 'ColorbarComponent'
-    this.bounds = bounds
+  constructor(config: ColorbarComponentConfig) {
+    super(config)
+    this.gl = config.gl
+    this.font = config.font
+    this.labels = config.labels ?? ['Min', 'Max']
+    this.minMax = config.minMax ?? [0, 1]
+    this._colormapName = config.colormapName ?? 'viridis'
+    this.gradientTexture = this.generateColorMapTexture(this.gl, this._colormapName)
+    this.bounds = config.bounds
   }
 
   private generateColorMapTexture(gl: WebGL2RenderingContext, colormapName: string): WebGLTexture {
@@ -78,5 +71,16 @@ export class ColorbarComponent extends BaseUIComponent {
 
   setBounds(bounds: [number, number, number, number]): void {
     super.setBounds(bounds)
+  }
+
+  toJSON(): object {
+    return {
+      ...super.toJSON(),
+      className: 'ColorbarComponent',
+      labels: this.labels,
+      minMax: this.minMax,
+      colormapName: this._colormapName,
+      bounds: Array.from(this.bounds)
+    }
   }
 }

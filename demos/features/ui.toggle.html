@@ -4,48 +4,80 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Toggle Component Example</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Toggle Component</title>
   <link rel="stylesheet" href="light.css" />
+  <style>
+   
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #34495e;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #1abc9c;
+    }
+  </style>
 </head>
 
 <body>
   <noscript>niivue requires JavaScript.</noscript>
   <header>
     <button id="toggle-button">Toggle</button>
+    <p id="toggle-state" style="color: white; font-size: 18px; margin-top: 10px;">State: ON</p>
   </header>
   <main>
-    <canvas id="gl1"></canvas>
+    <canvas id="gl1" style="min-width: 500px;"></canvas>
   </main>
   <script type="module" async>
     import * as niivue from "../dist/index.js";
 
-    var nv1 = new niivue.Niivue();
-    nv1.attachTo("gl1");
+    // Initialize Niivue and attach to the canvas
+    const nv1 = new niivue.Niivue();
+    await nv1.attachTo("gl1");
     nv1.setSliceType(nv1.sliceTypeRender);
+    console.log(nv1.canvas)
+    // Define toggle configuration
+    const toggleConfig = {
+      position: [
+        (nv1.canvas.width - 100) / 2, // Center horizontally
+        (nv1.canvas.height - 50) / 2 // Center vertically
+      ],
+      size: [100, 50], // Width and height
+      isOn: true, // Initial state
+      onColor: [0, 0.478, 1, 1], // Blue color for ON state
+      offColor: [0.5, 0.5, 0.5, 1], // Grey color for OFF state
+      alignmentPoint: niivue.UIKit.alignmentPoint.MIDDLECENTER
+    };
 
-    // Define the toggle component properties
-    const togglePos = [nv1.canvas.width / 2, nv1.canvas.height / 2]; // Position of the toggle
-    const toggleSize = [100, 50]; // Size of the toggle
-    const isOn = true; // Initial state of the toggle
-    const onColor = [0, 0.478, 1, 1]; // Blue color when on
-    const offColor = [0.5, 0.5, 0.5, 1]; // Grey color when off
+    console.log('toggle config', toggleConfig)
 
-    // Create the toggle component
-    const toggleComponent = new niivue.ToggleComponent(togglePos, toggleSize, isOn, onColor, offColor);
-    toggleComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLERIGHT
+    // Create the toggle component using the config
+    const toggleComponent = new niivue.ToggleComponent(toggleConfig);
+    console.log('toggle', toggleComponent)
+
     // Add the toggle component to the scene
     nv1.ui.addComponent(toggleComponent);
+    console.log(nv1.ui)
 
     // Draw the scene
     nv1.drawScene();
 
     // Toggle button handler
     const button = document.getElementById('toggle-button');
+    const toggleStateText = document.getElementById('toggle-state');
+
     button.onclick = () => {
       toggleComponent.toggle();
+      const state = toggleComponent.isOn ? 'ON' : 'OFF';
+      toggleStateText.textContent = `State: ${state}`;
       nv1.drawScene();
-    }
+    };
   </script>
 </body>
 

@@ -1,6 +1,7 @@
 import { UIKFont } from '../uikfont.js'
 import { UIKRenderer } from '../uikrenderer.js'
-import { Vec2, Color, Vec4 } from '../types.js'
+import { Color, Vec4 } from '../types.js'
+import { TextBoxComponentConfig } from '../interfaces.js'
 import { TextComponent } from './textcomponent.js'
 
 // Draw Text Box Component
@@ -12,34 +13,16 @@ export class TextBoxComponent extends TextComponent {
   protected fontOutlineColor: Color = [0, 0, 0, 1]
   protected fontOutlineThickness = 1
 
-  constructor(
-    font: UIKFont,
-    position: Vec2,
-    text: string,
-    textColor: Color = [0, 0, 0, 1],
-    outlineColor: Color = [1, 1, 1, 1],
-    fillColor: Color = [0, 0, 0, 0.3],
-    innerMargin = 15,
-    roundness = 0.0,
-    scale = 1.0,
-    maxWidth = 0,
-    fontOutlineColor: Color = [0, 0, 0, 1],
-    fontOutlineThickness = 1
-  ) {
-    super(position, text, font, textColor, scale, maxWidth)
-    this.outlineColor = outlineColor
-    this.fillColor = fillColor
-    this.innerMargin = innerMargin
-    this.roundness = roundness
-    this.fontOutlineColor = fontOutlineColor
-    this.fontOutlineThickness = fontOutlineThickness
-    // Setting bounds for the button component to be found in the quad tree
-    this.bounds = [
-      position[0],
-      position[1],
-      this.font.getTextWidth(this.text, this.scale) + this.innerMargin * 2,
-      this.font.getTextHeight(this.text, this.scale) + this.innerMargin * 2
-    ]
+  constructor(config: TextBoxComponentConfig) {
+    super(config)
+    this.outlineColor = config.outlineColor ?? [1, 1, 1, 1]
+    this.fillColor = config.fillColor ?? [0, 0, 0, 0.3]
+    this.innerMargin = config.innerMargin ?? 15
+    this.roundness = config.roundness ?? 0.0
+    this.fontOutlineColor = config.fontOutlineColor ?? [0, 0, 0, 1]
+    this.fontOutlineThickness = config.fontOutlineThickness ?? 1
+
+    this.updateBounds()
   }
 
   // Override the setScale method to update bounds when scale changes
@@ -55,14 +38,16 @@ export class TextBoxComponent extends TextComponent {
 
   // Update bounds based on current position, scale, and text dimensions
   updateBounds(): void {
-    const textWidth = this.font.getTextWidth(this.text, this.scale)
     const textHeight = this.font.getTextHeight(this.text, this.scale)
+    const size = this.font.getWordWrappedSize(this.text, this.scale, this.maxWidth)
+    const wordWrappedTextWidth = size[0]
+    const wordWrappedTextHeight = size[1]
 
     this.bounds = [
       this.position[0],
       this.position[1],
-      textWidth + this.innerMargin * this.scale * 2 + textHeight, // DrawTextBox draws the text at x + margin * scale + textHeight / 2
-      textHeight + this.innerMargin * this.scale * 4
+      wordWrappedTextWidth + this.innerMargin * this.scale * 2 + textHeight, // DrawTextBox draws the text at x + margin * scale + textHeight / 2
+      wordWrappedTextHeight + this.innerMargin * this.scale * 4
     ]
   }
 
@@ -108,33 +93,24 @@ export class TextBoxComponent extends TextComponent {
       throw new Error(`Font with ID ${data.fontId} not found`)
     }
 
-    const position: Vec2 = data.position || [0, 0]
-    const text: string = data.text || ''
-    const textColor: Color = data.textColor || [0, 0, 0, 1]
-    const outlineColor: Color = data.outlineColor || [1, 1, 1, 1]
-    const fillColor: Color = data.fillColor || [0, 0, 0, 0.3]
-    const innerMargin: number = data.innerMargin || 15
-    const roundness: number = data.roundness || 0.0
-    const scale: number = data.scale || 1.0
-    const maxWidth: number = data.maxWidth || 0
-    const fontOutlineColor: Color = data.fontOutlineColor || [0, 0, 0, 1]
-    const fontOutlineThickness: number = data.fontOutlineThickness || 1
-
-    const component = new TextBoxComponent(
+    const config: TextBoxComponentConfig = {
+      className: 'TextBoxComponent',
+      position: data.position || [0, 0],
+      text: data.text || '',
       font,
-      position,
-      text,
-      textColor,
-      outlineColor,
-      fillColor,
-      innerMargin,
-      roundness,
-      scale,
-      maxWidth,
-      fontOutlineColor,
-      fontOutlineThickness
-    )
+      textColor: data.textColor || [0, 0, 0, 1],
+      outlineColor: data.outlineColor || [1, 1, 1, 1],
+      fillColor: data.fillColor || [0, 0, 0, 0.3],
+      innerMargin: data.innerMargin || 15,
+      roundness: data.roundness || 0.0,
+      scale: data.scale || 1.0,
+      maxWidth: data.maxWidth || 0,
+      fontOutlineColor: data.fontOutlineColor || [0, 0, 0, 1],
+      fontOutlineThickness: data.fontOutlineThickness || 1
+    }
 
+    const component = new TextBoxComponent(config)
+    component.updateBounds()
     return component
   }
 }

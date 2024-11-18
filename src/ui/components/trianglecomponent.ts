@@ -1,5 +1,6 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
+import { TriangleComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class TriangleComponent extends BaseUIComponent {
@@ -8,12 +9,13 @@ export class TriangleComponent extends BaseUIComponent {
   private baseLength: number
   private color: Color
 
-  constructor(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color) {
-    super()
-    this.headPoint = headPoint
-    this.baseMidPoint = baseMidPoint
-    this.baseLength = baseLength
-    this.color = color
+  constructor(config: TriangleComponentConfig) {
+    super(config) // Pass BaseUIComponentConfig properties to the parent constructor
+
+    this.headPoint = config.headPoint
+    this.baseMidPoint = config.baseMidPoint
+    this.baseLength = config.baseLength
+    this.color = config.color
   }
 
   draw(renderer: UIKRenderer): void {
@@ -22,21 +24,27 @@ export class TriangleComponent extends BaseUIComponent {
 
   toJSON(): object {
     return {
-      ...super.toJSON(), // Serialize base properties from BaseUIComponent
-      className: 'TriangleComponent', // Class name for identification
+      ...super.toJSON(),
+      className: 'TriangleComponent',
       headPoint: Array.from(this.headPoint), // Convert Vec2 to array
       baseMidPoint: Array.from(this.baseMidPoint), // Convert Vec2 to array
-      baseLength: this.baseLength, // Serialize base length
+      baseLength: this.baseLength,
       color: Array.from(this.color) // Convert Color to array
     }
   }
 
   public static fromJSON(data: any): TriangleComponent {
-    const headPoint: Vec2 = data.headPoint || [0, 0]
-    const baseMidPoint: Vec2 = data.baseMidPoint || [0, 0]
-    const baseLength: number = data.baseLength || 0
-    const color: Color = data.color || [1, 1, 1, 1]
+    const config: TriangleComponentConfig = {
+      className: 'TriangleComponent',
+      headPoint: data.headPoint || [0, 0],
+      baseMidPoint: data.baseMidPoint || [0, 0],
+      baseLength: data.baseLength || 0,
+      color: data.color || [1, 1, 1, 1],
+      position: data.position, // Optional position from BaseUIComponentConfig
+      isVisible: data.isVisible ?? true,
+      zIndex: data.zIndex ?? 0
+    }
 
-    return new TriangleComponent(headPoint, baseMidPoint, baseLength, color)
+    return new TriangleComponent(config)
   }
 }
