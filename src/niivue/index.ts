@@ -10268,6 +10268,8 @@ export class Niivue {
     if (!secondPass) {
       gl.disable(gl.BLEND)
       gl.depthFunc(gl.GREATER)
+    } else {
+      gl.depthFunc(gl.ALWAYS)
     }
 
     for (const label of labels) {
@@ -10276,18 +10278,17 @@ export class Niivue {
       const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
 
-      top += textHeight // Math.max(textHeight, bulletHeight);
+      top += textHeight
       top += size / 2
     }
 
-    // connectome labels
-
     if (!secondPass) {
-      gl.depthFunc(depthFunc)
       if (blend) {
         gl.enable(gl.BLEND)
       }
     }
+    // restore depth function
+    gl.depthFunc(depthFunc)
   }
 
   drawAnchoredLabels(): void {
