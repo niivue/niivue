@@ -46,7 +46,7 @@ export class UIKit {
   private canvasWidth: number
   private canvasHeight: number
   private dpr: number
-  private resizeListener: () => void
+
   private resizeObserver: ResizeObserver
 
   // Static enum for line terminators
@@ -101,12 +101,48 @@ export class UIKit {
     const animationManager = AnimationManager.getInstance()
     animationManager.setRequestRedrawCallback(this.requestRedraw.bind(this))
 
-    this.resizeListener = this.handleWindowResize.bind(this)
-    window.addEventListener('resize', this.resizeListener)
+    window.addEventListener('resize', () => {
+      requestAnimationFrame(() => {
+        this.resizeListener()
+      })
+    })
+    this.resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(() => {
+        this.resizeListener()
+      })
+    })
+    this.resizeObserver.observe(canvas.parentElement!)
 
     canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this))
     canvas.addEventListener('pointerup', this.handlePointerUp.bind(this))
     canvas.addEventListener('pointermove', this.handlePointerMove.bind(this))
+  }
+
+  /**
+   * callback function to handle resize window events, redraws the scene.
+   * @internal
+   */
+  resizeListener(): void {
+    if (!this.gl) {
+      return
+    }
+
+    const canvas = this.gl.canvas as HTMLCanvasElement
+    canvas.style.width = '100%'
+    canvas.style.height = '100%'
+    canvas.style.display = 'block'
+
+    if ('width' in canvas.parentElement!) {
+      canvas.width = (canvas.parentElement.width as number) * this.dpr
+      // @ts-expect-error not sure why height is not defined for HTMLElement
+      canvas.height = this.canvas.parentElement.height * this.uiData.dpr
+    } else {
+      canvas.width = canvas.offsetWidth * this.dpr
+      canvas.height = canvas.offsetHeight * this.dpr
+    }
+
+    const bounds = new Rectangle(0, 0, canvas.width, canvas.height)
+    this.quadTree.updateBoundary(bounds)
   }
 
   // Method to add a component to the QuadTree
