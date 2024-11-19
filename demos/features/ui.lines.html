@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Line Component</title>
+    <title>Line Component Demo</title>
     <link rel="stylesheet" href="light.css" />
 </head>
 
@@ -27,85 +27,85 @@
             const dashedColor = [0.75, 0, 0.75, 1.0] // Purple for dashed line
 
             // Solid line with arrow terminator
-            const line1 = new niivue.LineComponent(
-                [nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200],
-                10,
-                onColor,
-                niivue.UIKit.lineTerminator.ARROW,
-                niivue.UIKit.lineStyle.NORMAL
-            )
+            const line1 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 2, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 + 200],
+                thickness: 10,
+                lineColor: onColor,
+                terminator: niivue.UIKit.lineTerminator.ARROW,
+                lineStyle: niivue.UIKit.lineStyle.NORMAL
+            })
             ui.addComponent(line1)
 
             // Dashed line with circle terminator
-            const line2 = new niivue.LineComponent(
-                [nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100],
-                5,
-                dashedColor,
-                niivue.UIKit.lineTerminator.CIRCLE,
-                niivue.UIKit.lineStyle.DASHED,
-                15 // Dash length
-            )
+            const line2 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 2 + 60, nv1.canvas.height / 2 + 20, nv1.canvas.width / 2 + 200, nv1.canvas.height / 2 - 100],
+                thickness: 5,
+                lineColor: dashedColor,
+                terminator: niivue.UIKit.lineTerminator.CIRCLE,
+                lineStyle: niivue.UIKit.lineStyle.DASHED,
+                dashDotLength: 15 // Dash length
+            })
             ui.addComponent(line2)
 
             // Dotted line with ring terminator
-            const line3 = new niivue.LineComponent(
-                [nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100],
-                5,
-                dottedColor,
-                niivue.UIKit.lineTerminator.RING,
-                niivue.UIKit.lineStyle.DOTTED,
-                8 // Dot diameter
-            )
+            const line3 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 2 - 60, nv1.canvas.height / 2 - 20, nv1.canvas.width / 2 - 200, nv1.canvas.height / 2 + 100],
+                thickness: 5,
+                lineColor: dottedColor,
+                terminator: niivue.UIKit.lineTerminator.RING,
+                lineStyle: niivue.UIKit.lineStyle.DOTTED,
+                dashDotLength: 8 // Dot diameter
+            })
             ui.addComponent(line3)
 
             // Solid line with no terminator
-            const line4 = new niivue.LineComponent(
-                [nv1.canvas.width / 2 - 150, nv1.canvas.height / 2 + 100, nv1.canvas.width / 2 + 150, nv1.canvas.height / 2 + 100],
-                3,
-                offColor,
-                niivue.UIKit.lineTerminator.NONE,
-                niivue.UIKit.lineStyle.NORMAL
-            )
+            const line4 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 2 - 150, nv1.canvas.height / 2 + 100, nv1.canvas.width / 2 + 150, nv1.canvas.height / 2 + 100],
+                thickness: 3,
+                lineColor: offColor,
+                terminator: niivue.UIKit.lineTerminator.NONE,
+                lineStyle: niivue.UIKit.lineStyle.NORMAL
+            })
             ui.addComponent(line4)
 
-            // Overlaid solid and dashed lines reaching the same endpoint, with no terminators
-            const overlayLine1 = new niivue.LineComponent(
-                [nv1.canvas.width / 4, nv1.canvas.height / 4, nv1.canvas.width / 4 + 200, nv1.canvas.height / 4],
-                6,
-                highlightColor,
-                niivue.UIKit.lineTerminator.NONE,
-                niivue.UIKit.lineStyle.NORMAL
-            )
+            // Overlaid solid and dashed lines reaching the same endpoint
+            const overlayLine1 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 4, nv1.canvas.height / 4, nv1.canvas.width / 4 + 200, nv1.canvas.height / 4],
+                thickness: 6,
+                lineColor: highlightColor,
+                terminator: niivue.UIKit.lineTerminator.NONE,
+                lineStyle: niivue.UIKit.lineStyle.NORMAL
+            })
             ui.addComponent(overlayLine1)
 
-            const overlayDashedLine1 = new niivue.LineComponent(
-                [nv1.canvas.width / 4, nv1.canvas.height / 4, nv1.canvas.width / 4 + 200, nv1.canvas.height / 4],
-                4,
-                dashedColor,
-                niivue.UIKit.lineTerminator.NONE,
-                niivue.UIKit.lineStyle.DASHED,
-                10 // Dash length
-            )
+            const overlayDashedLine1 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 4, nv1.canvas.height / 4, nv1.canvas.width / 4 + 200, nv1.canvas.height / 4],
+                thickness: 4,
+                lineColor: dashedColor,
+                terminator: niivue.UIKit.lineTerminator.NONE,
+                lineStyle: niivue.UIKit.lineStyle.DASHED,
+                dashDotLength: 10 // Dash length
+            })
             ui.addComponent(overlayDashedLine1)
 
-            // Overlaid solid and dotted lines reaching the same endpoint, with terminators on the dotted line only
-            const overlayLine2 = new niivue.LineComponent(
-                [nv1.canvas.width / 1.5, nv1.canvas.height / 3, nv1.canvas.width / 1.5, nv1.canvas.height / 3 + 200],
-                6,
-                onColor,
-                niivue.UIKit.lineTerminator.NONE,
-                niivue.UIKit.lineStyle.NORMAL
-            )
+            // Overlaid solid and dotted lines with terminators
+            const overlayLine2 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 1.5, nv1.canvas.height / 3, nv1.canvas.width / 1.5, nv1.canvas.height / 3 + 200],
+                thickness: 6,
+                lineColor: onColor,
+                terminator: niivue.UIKit.lineTerminator.NONE,
+                lineStyle: niivue.UIKit.lineStyle.NORMAL
+            })
             ui.addComponent(overlayLine2)
 
-            const overlayDottedLine2 = new niivue.LineComponent(
-                [nv1.canvas.width / 1.5, nv1.canvas.height / 3, nv1.canvas.width / 1.5, nv1.canvas.height / 3 + 200],
-                4,
-                dottedColor,
-                niivue.UIKit.lineTerminator.CIRCLE,
-                niivue.UIKit.lineStyle.DOTTED,
-                8 // Dot diameter
-            )
+            const overlayDottedLine2 = new niivue.LineComponent({
+                startEnd: [nv1.canvas.width / 1.5, nv1.canvas.height / 3, nv1.canvas.width / 1.5, nv1.canvas.height / 3 + 200],
+                thickness: 4,
+                lineColor: dottedColor,
+                terminator: niivue.UIKit.lineTerminator.CIRCLE,
+                lineStyle: niivue.UIKit.lineStyle.DOTTED,
+                dashDotLength: 8 // Dot diameter
+            })
             ui.addComponent(overlayDottedLine2)
 
             // Render the scene with the added lines
@@ -113,9 +113,9 @@
         }
 
         // Initialize Niivue and attach it to the canvas
-        var nv1 = new niivue.Niivue()
-        nv1.attachTo("gl1")
-        var ui = nv1.ui
+        const nv1 = new niivue.Niivue()
+        await nv1.attachTo("gl1")
+        const ui = nv1.ui
 
         // Draw the lines initially
         drawLines()

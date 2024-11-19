@@ -1,6 +1,7 @@
 import { UIKFont } from '../uikfont.js'
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color, LineTerminator } from '../types.js'
+import { CaliperComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CaliperComponent extends BaseUIComponent {
@@ -12,27 +13,23 @@ export class CaliperComponent extends BaseUIComponent {
   private textColor: Color
   private lineColor: Color
 
-  constructor(
-    pointA: Vec2,
-    pointB: Vec2,
-    length: number,
-    units: string,
-    font: UIKFont,
-    textColor: Color = [1, 0, 0, 1],
-    lineColor: Color = [0, 0, 0, 1],
-    scale: number = 1.0
-  ) {
-    super()
-    this.pointA = pointA
-    this.pointB = pointB
-    this.length = length
-    this.units = units
-    this.font = font
-    this.textColor = textColor
-    this.lineColor = lineColor
-    this.scale = scale
+  constructor(config: CaliperComponentConfig) {
+    super(config)
+    this.pointA = config.pointA
+    this.pointB = config.pointB
+    this.length = config.length
+    this.units = config.units
+    this.font = config.font
+    this.textColor = config.textColor ?? [1, 0, 0, 1]
+    this.lineColor = config.lineColor ?? [0, 0, 0, 1]
+    this.scale = config.scale ?? 1.0
   }
 
+  /**
+   * Draws the ruler or caliper component.
+   *
+   * @param renderer - The UIKRenderer instance used for drawing.
+   */
   draw(renderer: UIKRenderer): void {
     // Calculate the angle between the points
     const deltaX = this.pointB[0] - this.pointA[0]
@@ -69,7 +66,14 @@ export class CaliperComponent extends BaseUIComponent {
     }
 
     // Draw the rotated text at the adjusted position
-    renderer.drawRotatedText(this.font, textPosition, text, this.scale, this.textColor, angle)
+    renderer.drawRotatedText({
+      font: this.font,
+      xy: textPosition,
+      str: text,
+      scale: this.scale,
+      color: this.textColor,
+      rotation: angle
+    })
 
     // Draw a parallel line of equal length to the original line
     const parallelPointA: Vec2 = [
@@ -80,21 +84,25 @@ export class CaliperComponent extends BaseUIComponent {
       this.pointB[0] + (10 * deltaY) / actualLength,
       this.pointB[1] - (10 * deltaX) / actualLength
     ]
-    renderer.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], 1, this.lineColor)
+    renderer.drawLine({
+      startEnd: [parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]],
+      thickness: 1,
+      color: this.lineColor
+    })
 
     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
-    renderer.drawLine(
-      [parallelPointA[0], parallelPointA[1], this.pointA[0], this.pointA[1]],
-      1,
-      this.lineColor,
-      LineTerminator.ARROW
-    )
-    renderer.drawLine(
-      [parallelPointB[0], parallelPointB[1], this.pointB[0], this.pointB[1]],
-      1,
-      this.lineColor,
-      LineTerminator.ARROW
-    )
+    renderer.drawLine({
+      startEnd: [parallelPointA[0], parallelPointA[1], this.pointA[0], this.pointA[1]],
+      thickness: 1,
+      color: this.lineColor,
+      terminator: LineTerminator.ARROW
+    })
+    renderer.drawLine({
+      startEnd: [parallelPointB[0], parallelPointB[1], this.pointB[0], this.pointB[1]],
+      thickness: 1,
+      color: this.lineColor,
+      terminator: LineTerminator.ARROW
+    })
   }
 
   updatePointA(pointA: Vec2): void {
@@ -133,20 +141,24 @@ export class CaliperComponent extends BaseUIComponent {
     }
   }
 
-  public static fromJSON(data: any, gl: WebGL2RenderingContext, fonts: { [key: string]: UIKFont }): CaliperComponent {
+  public static fromJSON(data: any, fonts: { [key: string]: UIKFont }): CaliperComponent {
     const font = fonts[data.fontId]
     if (!font) {
       throw new Error(`Font with ID ${data.fontId} not found`)
     }
 
-    const pointA: Vec2 = data.pointA || [0, 0]
-    const pointB: Vec2 = data.pointB || [0, 0]
-    const length: number = data.length || 0
-    const units: string = data.units || ''
-    const textColor: Color = data.textColor || [1, 0, 0, 1]
-    const lineColor: Color = data.lineColor || [0, 0, 0, 1]
-    const scale: number = data.scale || 1.0
+    const config: CaliperComponentConfig = {
+      className: 'CaliperComponent',
+      pointA: data.pointA || [0, 0],
+      pointB: data.pointB || [0, 0],
+      length: data.length || 0,
+      units: data.units || '',
+      font,
+      textColor: data.textColor || [1, 0, 0, 1],
+      lineColor: data.lineColor || [0, 0, 0, 1],
+      scale: data.scale || 1.0
+    }
 
-    return new CaliperComponent(pointA, pointB, length, units, font, textColor, lineColor, scale)
+    return new CaliperComponent(config)
   }
 }

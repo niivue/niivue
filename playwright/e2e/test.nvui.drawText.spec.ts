@@ -27,9 +27,21 @@ test('nvui drawText unicode rtl fonts', async ({ page }) => {
 
     nv.gl.viewport(0, 0, nv.canvas.width, nv.canvas.height)
     nv.gl.clear(nv.gl.COLOR_BUFFER_BIT)
-    ui.drawText(russianFont, [left, top], russian)
+
+    // Draw the Russian text
+    ui.drawText({
+      font: russianFont,
+      position: [left, top],
+      text: russian
+    })
     top += textHeight * 2
-    ui.drawText(hebrewFont, [left, top], hebrew)
+
+    // Draw the Hebrew text
+    ui.drawText({
+      font: hebrewFont,
+      position: [left, top],
+      text: hebrew
+    })
   }, TEST_OPTIONS)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

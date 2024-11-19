@@ -1,5 +1,6 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2, Color } from '../types.js'
+import { ContainerButtonComponentConfig } from '../interfaces.js'
 import { BaseContainerComponent } from './basecontainercomponent.js'
 
 export class ContainerButtonComponent extends BaseContainerComponent {
@@ -9,25 +10,14 @@ export class ContainerButtonComponent extends BaseContainerComponent {
   outlineColor: Color
   roundness: number
 
-  constructor(
-    position: Vec2,
-    canvas: HTMLCanvasElement,
-    outlineColor: Color = [1, 1, 1, 1],
-    fillColor: Color = [0, 0, 0, 0.3],
-    highlightColor: Color = [0.0, 0.0, 0.5, 0.3],
-    roundness = 0.0,
-    maxWidth = 0,
-    maxHeight = 0,
-    isHorizontal: boolean = true,
-    padding: number = 50
-  ) {
-    super(position, canvas, isHorizontal, padding)
-    this.fillColor = fillColor
-    this.highlightColor = highlightColor
-    this.outlineColor = outlineColor
-    this.roundness = roundness
-    this.maxWidth = maxWidth
-    this.maxHeight = maxHeight
+  constructor(config: ContainerButtonComponentConfig) {
+    super(config)
+    this.fillColor = config.fillColor ?? [0, 0, 0, 0.3]
+    this.highlightColor = config.highlightColor ?? [0.0, 0.0, 0.5, 0.3]
+    this.outlineColor = config.outlineColor ?? [1, 1, 1, 1]
+    this.roundness = config.roundness ?? 0.0
+    this.maxWidth = config.maxWidth ?? 0
+    this.maxHeight = config.maxHeight ?? 0
 
     this.addMouseEffects()
   }
@@ -51,16 +41,18 @@ export class ContainerButtonComponent extends BaseContainerComponent {
     if (!this.isVisible) {
       return
     }
+
     this.updateLayout()
-    // Draw the button background
-    // renderer.drawRect(this.getBounds(), this.fillColor)
+
+    // Draw the button background using the updated drawRoundedRect configuration
     const bounds = this.getBounds()
-    renderer.drawRoundedRect(
+    renderer.drawRoundedRect({
       bounds,
-      this.fillColor,
-      this.outlineColor,
-      (Math.min(1.0, this.roundness) / 2) * Math.min(bounds[2], bounds[3])
-    )
+      fillColor: this.fillColor,
+      outlineColor: this.outlineColor,
+      cornerRadius: (Math.min(1.0, this.roundness) / 2) * Math.min(bounds[2], bounds[3]),
+      thickness: 1 // Default thickness or adjust based on your requirements
+    })
 
     // Draw the child components
     this.components.forEach((component) => {
@@ -107,16 +99,34 @@ export class ContainerButtonComponent extends BaseContainerComponent {
   // toJSON method to serialize the ContainerButtonComponent instance
   toJSON(): object {
     return {
-      ...super.toJSON(), // Serialize base properties from BaseContainerComponent
-      className: 'ContainerButtonComponent', // Class name for identification
-      outlineColor: Array.from(this.outlineColor), // Convert Color to array
-      fillColor: Array.from(this.fillColor), // Convert Color to array
-      highlightColor: Array.from(this.highlightColor), // Convert Color to array
+      ...super.toJSON(),
+      className: 'ContainerButtonComponent',
+      outlineColor: Array.from(this.outlineColor),
+      fillColor: Array.from(this.fillColor),
+      highlightColor: Array.from(this.highlightColor),
       roundness: this.roundness,
       maxWidth: this.maxWidth,
       maxHeight: this.maxHeight,
       isHorizontal: this.isHorizontal,
       padding: this.padding
     }
+  }
+
+  public static fromJSON(data: any, canvas: HTMLCanvasElement): ContainerButtonComponent {
+    const config: ContainerButtonComponentConfig = {
+      className: 'ContainerButtonComponent',
+      position: data.position || [0, 0],
+      canvas,
+      outlineColor: data.outlineColor || [1, 1, 1, 1],
+      fillColor: data.fillColor || [0, 0, 0, 0.3],
+      highlightColor: data.highlightColor || [0.0, 0.0, 0.5, 0.3],
+      roundness: data.roundness || 0.0,
+      maxWidth: data.maxWidth || 0,
+      maxHeight: data.maxHeight || 0,
+      isHorizontal: data.isHorizontal ?? true,
+      padding: data.padding ?? 50
+    }
+
+    return new ContainerButtonComponent(config)
   }
 }

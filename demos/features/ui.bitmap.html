@@ -20,34 +20,60 @@
     async function setupBitmapComponent() {
       // Initialize Niivue and attach to canvas
       const nv1 = new niivue.Niivue();
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeRender);
 
       // Load bitmap
       const bitmap = new niivue.UIKBitmap(nv1.gl);
       await bitmap.loadBitmap("../images/rorden.png");
 
-      // Define component properties
+      // Define scale and position for the bitmap component
       const scale = 2.0;
       const position = [
         (nv1.canvas.width - bitmap.getWidth() * scale) / 2,
         (nv1.canvas.height - bitmap.getHeight() * scale) / 2
       ];
 
-      // Create and configure BitmapComponent
-      const bitmapComponent = new niivue.BitmapComponent(position, bitmap, scale);
-      bitmapComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLECENTER;
+      // Create BitmapComponentConfig
+      const bitmapConfig = {
+        position: position,
+        bitmap: bitmap,
+        scale: scale,
+        alignmentPoint: niivue.UIKit.alignmentPoint.MIDDLECENTER
+      };
 
-      // Add component to UI and trigger initial drawing
+      // Create BitmapComponent using the configuration
+      const bitmapComponent = new niivue.BitmapComponent(bitmapConfig);
+
+      // Add component to UI
       nv1.ui.addComponent(bitmapComponent);
+
+      // Trigger initial rendering
       nv1.drawScene();
 
-      // Optional: add effects for interactivity
-      bitmapComponent.addEventEffect('pointerenter', bitmapComponent, 'scale', 'setValue', scale * 1.1); // Increase scale on hover
-      bitmapComponent.addEventEffect('pointerleave', bitmapComponent, 'scale', 'animateValue', scale * 1.1, scale, 500); // Restore scale on leave
+      // Add interactivity effects
+      bitmapComponent.addEventEffect(
+        'pointerenter',
+        bitmapComponent,
+        'scale',
+        'animateValue',
+        scale,
+        scale * 1.1,
+        200 // Duration of the hover animation
+      );
+
+      bitmapComponent.addEventEffect(
+        'pointerleave',
+        bitmapComponent,
+        'scale',
+        'animateValue',
+        scale * 1.1,
+        scale,
+        200 // Duration of the restore animation
+      );
     }
 
-    // Execute setup function
+    // Execute the setup function
     setupBitmapComponent();
   </script>
 </body>

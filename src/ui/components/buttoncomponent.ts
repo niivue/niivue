@@ -1,4 +1,4 @@
-import { UIKFont } from '../uikfont.js'
+import { ButtonComponentConfig } from '../interfaces.js'
 import { Vec2, Color } from '../types.js'
 import { TextBoxComponent } from './textboxcomponent.js'
 
@@ -7,37 +7,11 @@ export class ButtonComponent extends TextBoxComponent {
   highlightColor: Color
   onClick?: (event: PointerEvent) => void
 
-  constructor(
-    font: UIKFont,
-    position: Vec2,
-    text: string,
-    textColor: Color = [0, 0, 0, 1],
-    outlineColor: Color = [1, 1, 1, 1],
-    fillColor: Color = [0, 0, 0, 0.3],
-    highlightColor: Color = [0.5, 0.5, 0.5, 1.0],
-    margin = 15,
-    roundness = 0.0,
-    scale = 1.0,
-    maxWidth = 0,
-    fontOutlineColor = [0, 0, 0, 1],
-    fontOutlineThickness = 1
-  ) {
-    // Call parent constructor to initialize base properties
-    super(
-      font,
-      position,
-      text,
-      textColor,
-      outlineColor,
-      fillColor,
-      margin,
-      roundness,
-      scale,
-      maxWidth,
-      fontOutlineColor,
-      fontOutlineThickness
-    )
-    this.highlightColor = highlightColor
+  constructor(config: ButtonComponentConfig) {
+    super(config)
+    this.highlightColor = config.highlightColor ?? [0.5, 0.5, 0.5, 1.0]
+    this.onClick = config.onClick
+
     // Adding click effects to create a bounce animation
 
     // Effect 1: Shrink the size of the button on click (bounce effect)
@@ -46,8 +20,8 @@ export class ButtonComponent extends TextBoxComponent {
       this,
       'scale',
       'animateValue',
-      scale, // start value (normal size)
-      0.9 * scale, // target value (shrinked size)
+      this.scale, // start value (normal size)
+      0.9 * this.scale, // target value (shrunk size)
       100, // duration in milliseconds
       true // isBounce - true to create a bounce effect
     )
@@ -81,7 +55,7 @@ export class ButtonComponent extends TextBoxComponent {
       this,
       'fillColor',
       'setValue',
-      fillColor // Revert to original fill color
+      config.fillColor ?? [0, 0, 0, 0.3] // Revert to original fill color
     )
   }
 
@@ -104,7 +78,6 @@ export class ButtonComponent extends TextBoxComponent {
   }
 
   handleClick(event: PointerEvent): void {
-    console.log('handle click', event)
     if (this.onClick) {
       this.onClick(event)
     }

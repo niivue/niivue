@@ -1,7 +1,7 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2 } from '../types.js'
 import { QuadTree, Rectangle } from '../quadtree.js'
-import { IUIComponent } from '../interfaces.js'
+import { BaseContainerComponentConfig, IUIComponent } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class BaseContainerComponent extends BaseUIComponent {
@@ -12,12 +12,13 @@ export class BaseContainerComponent extends BaseUIComponent {
   protected maxWidth: number = 0
   protected maxHeight: number = 0
 
-  constructor(position: Vec2, canvas: HTMLCanvasElement, isHorizontal: boolean = true, padding: number = 10) {
-    super()
-    this.setPosition(position)
-    this.isHorizontal = isHorizontal
-    this.padding = padding
-    const bounds = new Rectangle(0, 0, canvas.width, canvas.height)
+  constructor(config: BaseContainerComponentConfig) {
+    super(config)
+    this.isHorizontal = config.isHorizontal ?? true
+    this.padding = config.padding ?? 10
+    this.maxWidth = config.maxWidth ?? 0
+    this.maxHeight = config.maxHeight ?? 0
+    const bounds = new Rectangle(0, 0, config.canvas.width, config.canvas.height)
     this._quadTree = new QuadTree<IUIComponent>(bounds)
   }
 

@@ -1,6 +1,7 @@
 import { UIKFont } from '../uikfont.js'
 import { UIKRenderer } from '../uikrenderer.js'
 import { Color } from '../types.js'
+import { CalendarComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class CalendarComponent extends BaseUIComponent {
@@ -13,38 +14,29 @@ export class CalendarComponent extends BaseUIComponent {
   private selectedColor: Color
   private firstDayOfWeek: number
 
-  constructor(
-    font: UIKFont,
-    startX: number,
-    startY: number,
-    cellWidth: number,
-    cellHeight: number,
-    selectedDate: Date,
-    selectedColor: Color,
-    firstDayOfWeek = 0
-  ) {
-    super()
-    this.font = font
-    this.startX = startX
-    this.startY = startY
-    this.cellWidth = cellWidth
-    this.cellHeight = cellHeight
-    this.selectedDate = selectedDate
-    this.selectedColor = selectedColor
-    this.firstDayOfWeek = firstDayOfWeek
+  constructor(config: CalendarComponentConfig) {
+    super(config)
+    this.font = config.font
+    this.startX = config.startX
+    this.startY = config.startY
+    this.cellWidth = config.cellWidth
+    this.cellHeight = config.cellHeight
+    this.selectedDate = config.selectedDate
+    this.selectedColor = config.selectedColor
+    this.firstDayOfWeek = config.firstDayOfWeek ?? 0
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawCalendar(
-      this.font,
-      this.startX,
-      this.startY,
-      this.cellWidth,
-      this.cellHeight,
-      this.selectedDate,
-      this.selectedColor,
-      this.firstDayOfWeek
-    )
+    renderer.drawCalendar({
+      font: this.font,
+      startX: this.startX,
+      startY: this.startY,
+      cellWidth: this.cellWidth,
+      cellHeight: this.cellHeight,
+      selectedDate: this.selectedDate,
+      selectedColor: this.selectedColor,
+      firstDayOfWeek: this.firstDayOfWeek
+    })
   }
 
   // toJSON method to serialize the CalendarComponent instance

@@ -1,5 +1,6 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec4, Color, LineTerminator, LineStyle } from '../types.js'
+import { LineComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class LineComponent extends BaseUIComponent {
@@ -10,26 +11,24 @@ export class LineComponent extends BaseUIComponent {
   protected lineStyle: LineStyle // New property for line style
   protected dashDotLength: number // New property for dash/dot length
 
-  constructor(
-    startEnd: Vec4,
-    thickness = 1,
-    lineColor: Color = [1, 0, 0, -1],
-    terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.SOLID, // Default to solid line
-    dashDotLength: number = 5 // Default dash/dot length
-  ) {
-    super()
-    this.startEnd = startEnd
-    this.thickness = thickness
-    this.lineColor = lineColor
-    this.terminator = terminator
-    this.lineStyle = lineStyle
-    this.dashDotLength = dashDotLength
+  constructor(config: LineComponentConfig) {
+    super(config)
+    this.startEnd = config.startEnd
+    this.thickness = config.thickness ?? 1
+    this.lineColor = config.lineColor ?? [1, 0, 0, -1]
+    this.terminator = config.terminator ?? LineTerminator.NONE
+    this.lineStyle = config.lineStyle ?? LineStyle.SOLID
+    this.dashDotLength = config.dashDotLength ?? 5
     this.updateBounds() // Initial bounds calculation
   }
 
   // Calculate the bounding rectangle based on start and end points
   private updateBounds(): void {
+    // handle our child classes
+    if (!this.startEnd) {
+      return
+    }
+
     const [x1, y1, x2, y2] = this.startEnd
     const minX = Math.min(x1, x2)
     const minY = Math.min(y1, y2)
@@ -52,14 +51,14 @@ export class LineComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawLine(
-      this.startEnd,
-      this.thickness,
-      this.lineColor,
-      this.terminator,
-      this.lineStyle, // Pass line style to renderer
-      this.dashDotLength // Pass dash/dot length to renderer
-    )
+    renderer.drawLine({
+      startEnd: this.startEnd,
+      thickness: this.thickness,
+      color: this.lineColor,
+      terminator: this.terminator,
+      style: this.lineStyle, // Use the updated field name for line style
+      dashDotLength: this.dashDotLength // Pass dash/dot length for dashed/dotted styles
+    })
   }
 
   // toJSON method to serialize the LineComponent instance
@@ -77,13 +76,19 @@ export class LineComponent extends BaseUIComponent {
   }
 
   public static fromJSON(data: any): LineComponent {
-    const startEnd: Vec4 = data.startEnd || [0, 0, 0, 0]
-    const thickness: number = data.thickness || 1
-    const lineColor: Color = data.lineColor || [1, 0, 0, -1]
-    const terminator: LineTerminator = data.terminator || LineTerminator.NONE
-    const lineStyle: LineStyle = data.lineStyle || LineStyle.SOLID
-    const dashDotLength: number = data.dashDotLength || 5
+    const config: LineComponentConfig = {
+      className: 'LineComponent',
+      position: data.position || [0, 0],
+      startEnd: data.startEnd || [0, 0, 0, 0],
+      thickness: data.thickness || 1,
+      lineColor: data.lineColor || [1, 0, 0, -1],
+      terminator: data.terminator || LineTerminator.NONE,
+      lineStyle: data.lineStyle || LineStyle.SOLID,
+      dashDotLength: data.dashDotLength || 5,
+      isVisible: data.isVisible ?? true,
+      zIndex: data.zIndex ?? 0
+    }
 
-    return new LineComponent(startEnd, thickness, lineColor, terminator, lineStyle, dashDotLength)
+    return new LineComponent(config)
   }
 }

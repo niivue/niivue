@@ -25,9 +25,8 @@ import {
 import { TEXTURE3_FONT } from '../niivue/index.js'
 import { UIKFont } from './uikfont.js'
 import { UIKBitmap } from './uikbitmap.js'
-import { LineTerminator, Color, Vec2, Vec4, LineStyle, Graph, Vec3 } from './types.js'
+import { LineTerminator, Color, Vec2, Vec4, LineStyle, Vec3 } from './types.js'
 
-// NVRenderer class with rendering methods
 export class UIKRenderer {
   private gl: WebGL2RenderingContext
   private lineShader: Shader
@@ -47,12 +46,7 @@ export class UIKRenderer {
   protected static projectedLineShader: Shader
   protected static projectedTriangleShader: Shader
 
-  /**
-   * Creates an instance of NVRenderer.
-   * @param gl - The WebGL2RenderingContext to be used for rendering.
-   */
   constructor(gl: WebGL2RenderingContext) {
-    // Initialize shaders and buffers if not already initialized
     this.gl = gl
     this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
 
@@ -178,12 +172,20 @@ export class UIKRenderer {
     }
   }
 
-  // Function to support drawing characters, including RTL
-  public drawChar(font: UIKFont, position: Vec2, size: number, char: string): number {
+  public drawChar({
+    font,
+    position,
+    size,
+    char
+  }: {
+    font: UIKFont
+    position: Vec2
+    size: number
+    char: string
+  }): number {
     if (!font.fontShader) {
       throw new Error('fontShader undefined')
     }
-    // Draw single character, never call directly: ALWAYS call from drawText()
     const metrics = font.fontMets!.mets[char]!
     if (!metrics) {
       return 0
@@ -200,17 +202,25 @@ export class UIKRenderer {
     return size * metrics.xadv
   }
 
-  // Updated drawText to support Vec2 position
-  public drawText(
-    font: UIKFont,
-    position: Vec2,
-    str: string,
+  public drawText({
+    font,
+    position,
+    text,
     scale = 1.0,
-    color: Color = [1.0, 0.0, 0.0, 1.0],
+    color = null,
     maxWidth = 0,
-    outlineColor: Color = [0, 0, 0, 1],
-    outlineThickness: number = 1
-  ): void {
+    outlineColor = [0, 0, 0, 1],
+    outlineThickness = 1
+  }: {
+    font: UIKFont
+    position: Vec2
+    text: string
+    scale?: number
+    color?: Color
+    maxWidth?: number
+    outlineColor?: Color
+    outlineThickness?: number
+  }): void {
     if (!font.isFontLoaded) {
       console.error('font not loaded')
       return
@@ -220,7 +230,10 @@ export class UIKRenderer {
       throw new Error('fontShader undefined')
     }
 
-    // Bind the font texture
+    if (!color) {
+      color = font.fontColor
+    }
+
     const gl = this.gl
     font.fontShader.use(gl)
     gl.activeTexture(TEXTURE3_FONT)
@@ -230,15 +243,11 @@ export class UIKRenderer {
     const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform2f(font.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
-    if (color === null) {
-      color = font.fontColor
-    }
     this.gl.uniform4fv(font.fontShader.uniforms.fontColor, color as Float32List)
     let screenPxRange = (size / font.fontMets!.size) * font.fontMets!.distanceRange
     screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
     this.gl.uniform1f(font.fontShader.uniforms.screenPxRange, screenPxRange)
 
-    // outline
     this.gl.uniform4fv(font.fontShader.uniforms.outlineColor, outlineColor as Float32List)
     this.gl.uniform1f(font.fontShader.uniforms.outlineThickness, outlineThickness)
 
@@ -246,8 +255,7 @@ export class UIKRenderer {
 
     const pos = Array.isArray(position) ? vec2.fromValues(position[0], position[1]) : position
 
-    // Calculate word-wrapped size
-    const words = str.split(' ')
+    const words = text.split(' ')
     let currentX = pos[0]
     let currentY = pos[1]
 
@@ -259,13 +267,21 @@ export class UIKRenderer {
       }
       const chars = Array.from(word + ' ')
       for (let i = 0; i < chars.length; i++) {
-        currentX += this.drawChar(font, [currentX, currentY], size, chars[i])
+        currentX += this.drawChar({ font, position: [currentX, currentY], size, char: chars[i] })
       }
     }
     this.gl.bindVertexArray(null)
   }
 
-  public drawBitmap(bitmap: UIKBitmap, position: Vec2, scale: number): void {
+  /**
+   * Draws a bitmap on the canvas.
+   *
+   * @param config - Configuration object containing the bitmap, position, and scale.
+   * @param config.bitmap - The bitmap to draw.
+   * @param config.position - The position to place the bitmap ([x, y]).
+   * @param config.scale - The scale factor for the bitmap.
+   */
+  public drawBitmap({ bitmap, position, scale }: { bitmap: UIKBitmap; position: Vec2; scale: number }): void {
     if (!bitmap.getTexture()) {
       console.error('Bitmap texture not loaded')
       return
@@ -284,6 +300,7 @@ export class UIKRenderer {
     gl.bindTexture(gl.TEXTURE_2D, texture)
 
     gl.uniform1i(shader.uniforms.u_textureLocation, 0)
+
     // Set the canvas size
     const canvasWidth = gl.canvas.width
     const canvasHeight = gl.canvas.height
@@ -317,25 +334,30 @@ export class UIKRenderer {
    * Supports solid, dashed, or dotted lines, with optional terminators (such as arrows or rings).
    * For dashed and dotted lines, segments or dots will adjust to reach the endpoint or terminator.
    *
-   * @param startEnd - The start and end coordinates of the line, as a Vec4 array in the form [startX, startY, endX, endY].
-   * @param thickness - The thickness of the line. Defaults to 1.
-   * @param lineColor - The color of the line, as a Color array in [R, G, B, A] format. Defaults to red ([1, 0, 0, -1]).
-   * @param terminator - The type of terminator at the end of the line (e.g., NONE, ARROW, CIRCLE, or RING). Defaults to NONE.
-   * @param lineStyle - The style of the line: solid, dashed, or dotted. Defaults to solid.
-   * @param dashDotLength - The length of dashes or diameter of dots for dashed/dotted lines. Defaults to 5.
-   *
-   * If a terminator is specified, the line will be shortened by half the width of the terminator to avoid overlap.
-   * For dashed lines, segments are spaced out by a factor of 1.5 * dashDotLength.
-   * For dotted lines, dots are spaced out by a factor of 2 * dashDotLength.
+   * @param config - Configuration object containing the following properties:
+   *   - startEnd: The start and end coordinates of the line, as a Vec4 array in the form [startX, startY, endX, endY].
+   *   - thickness?: The thickness of the line. Defaults to 1.
+   *   - color?: The color of the line, as a Color array in [R, G, B, A] format. Defaults to red ([1, 0, 0, -1]).
+   *   - terminator?: The type of terminator at the end of the line (e.g., NONE, ARROW, CIRCLE, or RING). Defaults to NONE.
+   *   - style?: The style of the line: solid, dashed, or dotted. Defaults to solid.
+   *   - dashDotLength?: The length of dashes or diameter of dots for dashed/dotted lines. Defaults to 5.
    */
-  public drawLine(
-    startEnd: Vec4,
-    thickness = 1,
-    lineColor: Color = [1, 0, 0, -1],
-    terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.SOLID,
-    dashDotLength: number = 5 // Default length for dash or dot size
-  ): void {
+  public drawLine(config: {
+    startEnd: Vec4
+    thickness?: number
+    color?: Color
+    terminator?: LineTerminator
+    style?: LineStyle
+    dashDotLength?: number
+  }): void {
+    const {
+      startEnd,
+      thickness = 1,
+      color = [1, 0, 0, -1],
+      terminator = LineTerminator.NONE,
+      style = LineStyle.SOLID,
+      dashDotLength = 5
+    } = config
     const gl = this.gl
 
     // Extract start and end points
@@ -357,9 +379,9 @@ export class UIKRenderer {
       endY -= direction[1] * (terminatorSize / 2)
     }
 
-    if (lineStyle === LineStyle.DASHED || lineStyle === LineStyle.DOTTED) {
+    if (style === LineStyle.DASHED || style === LineStyle.DOTTED) {
       const lineLength = vec2.distance([startX, startY], [endX, endY])
-      const segmentSpacing = lineStyle === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
+      const segmentSpacing = style === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
       const segmentCount = Math.floor(lineLength / segmentSpacing)
 
       for (let i = 0; i <= segmentCount; i++) {
@@ -367,33 +389,32 @@ export class UIKRenderer {
 
         if (i === segmentCount) {
           // Connect the last dash or dot to the adjusted endpoint
-          if (lineStyle === LineStyle.DASHED) {
+          if (style === LineStyle.DASHED) {
             const segmentCoords = vec4.fromValues(segmentStart[0], segmentStart[1], endX, endY)
-            this.drawSegment(segmentCoords, thickness, lineColor)
-          } else if (lineStyle === LineStyle.DOTTED) {
-            const dotParams = vec4.fromValues(
-              endX - dashDotLength / 2,
-              endY - dashDotLength / 2,
-              dashDotLength,
-              dashDotLength
-            )
-            this.drawCircle(dotParams, lineColor)
+            this.drawSegment({ segmentCoords, thickness, color })
+          } else if (style === LineStyle.DOTTED) {
+            this.drawCircle({
+              leftTopWidthHeight: [endX - dashDotLength / 2, endY - dashDotLength / 2, dashDotLength, dashDotLength],
+              circleColor: color
+            })
           }
         } else {
-          if (lineStyle === LineStyle.DASHED) {
+          if (style === LineStyle.DASHED) {
             // Draw dashed segment
             const segmentEnd = vec2.scaleAndAdd(vec2.create(), segmentStart, direction, dashDotLength)
             const segmentCoords = vec4.fromValues(segmentStart[0], segmentStart[1], segmentEnd[0], segmentEnd[1])
-            this.drawSegment(segmentCoords, thickness, lineColor)
-          } else if (lineStyle === LineStyle.DOTTED) {
+            this.drawSegment({ segmentCoords, thickness, color })
+          } else if (style === LineStyle.DOTTED) {
             // Draw dot as a small circle
-            const dotParams = vec4.fromValues(
-              segmentStart[0] - dashDotLength / 2,
-              segmentStart[1] - dashDotLength / 2,
-              dashDotLength,
-              dashDotLength
-            )
-            this.drawCircle(dotParams, lineColor)
+            this.drawCircle({
+              leftTopWidthHeight: [
+                segmentStart[0] - dashDotLength / 2,
+                segmentStart[1] - dashDotLength / 2,
+                dashDotLength,
+                dashDotLength
+              ],
+              circleColor: color
+            })
           }
         }
       }
@@ -402,7 +423,7 @@ export class UIKRenderer {
       const shortenedLine = vec4.fromValues(startX, startY, endX, endY)
       this.lineShader.use(gl)
       gl.enable(gl.BLEND)
-      gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor as Float32List)
+      gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
       gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
       gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
       gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine)
@@ -415,32 +436,50 @@ export class UIKRenderer {
     // Draw the terminator
     switch (terminator) {
       case LineTerminator.ARROW:
-        this.drawTriangle(
-          [startEnd[2], startEnd[3]],
-          [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
-          terminatorSize,
-          lineColor
-        )
+        this.drawTriangle({
+          headPoint: [startEnd[2], startEnd[3]],
+          baseMidPoint: [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
+          baseLength: terminatorSize,
+          color
+        })
         break
       case LineTerminator.CIRCLE:
-        this.drawCircle(
-          [startEnd[2] - terminatorSize / 2, startEnd[3] - terminatorSize / 2, terminatorSize, terminatorSize],
-          lineColor
-        )
+        this.drawCircle({
+          leftTopWidthHeight: [
+            startEnd[2] - terminatorSize / 2,
+            startEnd[3] - terminatorSize / 2,
+            terminatorSize,
+            terminatorSize
+          ],
+          circleColor: color
+        })
         break
       case LineTerminator.RING:
-        this.drawCircle(
-          [startEnd[2] - terminatorSize / 2, startEnd[3] - terminatorSize / 2, terminatorSize, terminatorSize],
-          lineColor,
-          0.5
-        )
+        this.drawCircle({
+          leftTopWidthHeight: [
+            startEnd[2] - terminatorSize / 2,
+            startEnd[3] - terminatorSize / 2,
+            terminatorSize,
+            terminatorSize
+          ],
+          circleColor: color,
+          fillPercent: 0.5
+        })
         break
     }
   }
 
-  // Helper method to draw individual dashed segments
-  private drawSegment(segmentCoords: Vec4, thickness: number, color: Color): void {
+  /**
+   * Helper method to draw individual dashed segments.
+   * @param config - Configuration object containing the following properties:
+   *   - segmentCoords: The start and end coordinates of the segment, as a Vec4 array in the form [startX, startY, endX, endY].
+   *   - thickness: The thickness of the segment.
+   *   - color: The color of the segment, as a Color array in [R, G, B, A] format.
+   */
+  private drawSegment(config: { segmentCoords: Vec4; thickness: number; color: Color }): void {
+    const { segmentCoords, thickness, color } = config
     const gl = this.gl
+
     this.lineShader.use(gl)
     gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
     gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
@@ -452,42 +491,25 @@ export class UIKRenderer {
   }
 
   /**
-   * Draws an elbow line.
-   * @param startEnd - The start and end coordinates of the line ([startX, startY, endX, endY]).
-   * @param thickness - The thickness of the line.
-   * @param lineColor - The color of the line.
-   * @param horizontalFirst - If true, draw the horizontal segment first, otherwise draw the vertical segment first.
-   */
-  public drawElbowLine(
-    startEnd: Vec4,
-    thickness = 1,
-    lineColor: Color = [1, 0, 0, -1],
-    horizontalFirst = true,
-    terminator: LineTerminator = LineTerminator.NONE
-  ): void {
-    // Extract start and end points
-    const [startX, startY, endX, endY] = startEnd
-
-    // Calculate the midpoint for the elbow
-    const midX = horizontalFirst ? startX + (endX - startX) / 2 : startX
-    const midY = horizontalFirst ? startY : startY + (endY - startY) / 2
-
-    // Draw the first segment (either horizontal or vertical)
-    const firstSegment: Vec4 = horizontalFirst ? [startX, startY, midX, startY] : [startX, startY, startX, midY]
-    this.drawLine(firstSegment, thickness, lineColor)
-
-    // Draw the second segment (the other direction)
-    const secondSegment: Vec4 = horizontalFirst ? [midX, startY, endX, endY] : [startX, midY, endX, endY]
-    this.drawLine(secondSegment, thickness, lineColor, terminator)
-  }
-
-  /**
    * Draws a rectangle.
-   * @param leftTopWidthHeight - The bounding box of the rectangle (left, top, width, height).
-   * @param lineColor - The color of the rectangle.
+   * @param config - Configuration object containing:
+   *   - leftTopWidthHeight: The bounding box of the rectangle (left, top, width, height).
+   *   - lineColor: The color of the rectangle. Defaults to red ([1, 0, 0, -1]).
    */
-  public drawRect(leftTopWidthHeight: Vec4, lineColor: Color = [1, 0, 0, -1]): void {
-    this.drawRoundedRect(leftTopWidthHeight, lineColor, [0, 0, 0, 0], 0, 0)
+  public drawRect({
+    leftTopWidthHeight,
+    fillColor = [0, 0, 0, 0]
+  }: {
+    leftTopWidthHeight: Vec4
+    fillColor?: Color
+  }): void {
+    this.drawRoundedRect({
+      bounds: [leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]],
+      outlineColor: [0, 0, 0, 0],
+      fillColor,
+      cornerRadius: 0,
+      thickness: 0
+    })
   }
 
   /**
@@ -498,13 +520,15 @@ export class UIKRenderer {
    * @param cornerRadius - The corner radius.
    * @param thickness - The thickness of the outline.
    */
-  public drawRoundedRect(
-    leftTopWidthHeight: Vec4,
-    fillColor: Color,
-    outlineColor: Color,
-    cornerRadius: number = -1,
-    thickness: number = 10
-  ): void {
+  public drawRoundedRect(config: {
+    bounds: Vec4
+    fillColor: Color
+    outlineColor: Color
+    cornerRadius?: number
+    thickness?: number
+  }): void {
+    const { bounds, fillColor, outlineColor, cornerRadius = -1, thickness = 10 } = config
+
     if (!UIKRenderer.roundedRectShader) {
       throw new Error('roundedRectShader undefined')
     }
@@ -520,16 +544,12 @@ export class UIKRenderer {
 
     // Set the necessary uniforms
     const shader = UIKRenderer.roundedRectShader
-    if (cornerRadius === -1) {
-      cornerRadius = thickness * 2
-    }
+    const adjustedCornerRadius = cornerRadius === -1 ? thickness * 2 : cornerRadius
 
-    const rectParams = Array.isArray(leftTopWidthHeight)
-      ? vec4.fromValues(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
-      : leftTopWidthHeight
+    const rectParams = Array.isArray(bounds) ? vec4.fromValues(bounds[0], bounds[1], bounds[2], bounds[3]) : bounds
 
     this.gl.uniform1f(shader.uniforms.thickness, thickness)
-    this.gl.uniform1f(shader.uniforms.cornerRadius, cornerRadius)
+    this.gl.uniform1f(shader.uniforms.cornerRadius, adjustedCornerRadius)
     this.gl.uniform4fv(shader.uniforms.borderColor, outlineColor as Float32List)
     this.gl.uniform4fv(shader.uniforms.fillColor, fillColor as Float32List)
     this.gl.uniform2fv(shader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
@@ -598,19 +618,27 @@ export class UIKRenderer {
 
   /**
    * Draws a circle.
-   * @param leftTopWidthHeight - The bounding box of the circle (left, top, width, height).
-   * @param circleColor - The color of the circle.
-   * @param fillPercent - The percentage of the circle to fill (0 to 1).
+   * @param params - Object containing the circle parameters.
+   * @param params.leftTopWidthHeight - The bounding box of the circle (left, top, width, height).
+   * @param params.circleColor - The color of the circle.
+   * @param params.fillPercent - The percentage of the circle to fill (0 to 1).
+   * @param params.z - The z-index value of the circle.
    */
-  public drawCircle(
-    leftTopWidthHeight: Vec4,
-    circleColor: Color = [1, 1, 1, 1],
+  public drawCircle({
+    leftTopWidthHeight,
+    circleColor = [1, 1, 1, 1],
     fillPercent = 1.0,
-    z: number = 0
-  ): void {
+    z = 0
+  }: {
+    leftTopWidthHeight: Vec4
+    circleColor?: Color
+    fillPercent?: number
+    z?: number
+  }): void {
     if (!UIKRenderer.circleShader) {
       throw new Error('circleShader undefined')
     }
+
     UIKRenderer.circleShader.use(this.gl)
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform4fv(UIKRenderer.circleShader.uniforms.circleColor, circleColor as Float32List)
@@ -633,22 +661,29 @@ export class UIKRenderer {
 
   /**
    * Draws a toggle switch with support for an animated knob position.
-   * @param position - The position of the top-left corner of the toggle.
-   * @param size - The size of the toggle ([width, height]).
-   * @param isOn - Whether the toggle is on or off.
-   * @param onColor - The color when the toggle is on.
-   * @param offColor - The color when the toggle is off.
-   * @param knobPosition - The position of the knob (0 for off, 1 for on, values in between for animation).
+   * @param params - Object containing the toggle parameters.
+   * @param params.position - The position of the top-left corner of the toggle.
+   * @param params.size - The size of the toggle ([width, height]).
+   * @param params.isOn - Whether the toggle is on or off.
+   * @param params.onColor - The color when the toggle is on.
+   * @param params.offColor - The color when the toggle is off.
+   * @param params.knobPosition - The position of the knob (0 for off, 1 for on, values in between for animation).
    */
-
-  public drawToggle(
-    position: Vec2,
-    size: Vec2,
-    isOn: boolean,
-    onColor: Color,
-    offColor: Color,
-    knobPosition: number = isOn ? 1.0 : 0.0 // Default to fully on or off
-  ): void {
+  public drawToggle({
+    position,
+    size,
+    isOn,
+    onColor,
+    offColor,
+    knobPosition = isOn ? 1.0 : 0.0 // Default to fully on or off
+  }: {
+    position: Vec2
+    size: Vec2
+    isOn: boolean
+    onColor: Color
+    offColor: Color
+    knobPosition?: number
+  }): void {
     // Handle Vec2 types to ensure compatibility with both gl-matrix vec2 and [number, number]
     const posX = Array.isArray(position) ? position[0] : position[0]
     const posY = Array.isArray(position) ? position[1] : position[1]
@@ -661,13 +696,14 @@ export class UIKRenderer {
     const fillColor = new Float32Array(isOn ? onColor : offColor)
 
     // Draw the background rounded rectangle
-    this.drawRoundedRect(
-      [posX, posY, sizeX, sizeY],
+    this.drawRoundedRect({
+      bounds: [posX, posY, sizeX, sizeY],
       fillColor,
-      new Float32Array([0.2, 0.2, 0.2, 1.0]), // Outline color
+      outlineColor: new Float32Array([0.2, 0.2, 0.2, 1.0]), // Outline color
       cornerRadius,
-      2.0 // Outline thickness
-    )
+      thickness: 2.0 // Outline thickness
+    })
+
     // Clamp knobPosition between 0 and 1
     knobPosition = Math.max(0, Math.min(1, knobPosition))
 
@@ -679,10 +715,34 @@ export class UIKRenderer {
     const knobY = posY + (sizeY - knobSize) / 2
 
     // Draw the toggle knob as a circle
-    this.drawCircle([knobX, knobY, knobSize, knobSize], new Float32Array([1.0, 1.0, 1.0, 1.0]))
+    this.drawCircle({
+      leftTopWidthHeight: [knobX, knobY, knobSize, knobSize],
+      circleColor: new Float32Array([1.0, 1.0, 1.0, 1.0])
+    })
   }
 
-  public drawTriangle(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color, z: number = 0): void {
+  /**
+   * Draws a triangle.
+   * @param params - Object containing the triangle parameters.
+   * @param params.headPoint - The coordinates of the triangle's head (top vertex).
+   * @param params.baseMidPoint - The midpoint of the triangle's base.
+   * @param params.baseLength - The length of the triangle's base.
+   * @param params.color - The color of the triangle.
+   * @param params.z - The z-coordinate of the triangle. Defaults to 0.
+   */
+  public drawTriangle({
+    headPoint,
+    baseMidPoint,
+    baseLength,
+    color,
+    z = 0
+  }: {
+    headPoint: Vec2
+    baseMidPoint: Vec2
+    baseLength: number
+    color: Color
+    z?: number
+  }): void {
     const canvas = this.gl.canvas as HTMLCanvasElement
 
     // Convert screen points to WebGL coordinates
@@ -748,17 +808,37 @@ export class UIKRenderer {
     this.gl.bindVertexArray(null)
   }
 
-  // Function to draw rotated text, supporting individual character drawing including RTL
-  public drawRotatedText(
-    font: UIKFont,
-    xy: Vec2,
-    str: string,
+  /**
+   * Draws rotated text, supporting individual character rendering and RTL.
+   * @param params - Object containing parameters for rendering rotated text.
+   * @param params.font - The font object for rendering text.
+   * @param params.xy - The starting position of the text.
+   * @param params.str - The string to render.
+   * @param params.scale - The scale of the text. Defaults to 1.0.
+   * @param params.color - The color of the text. Defaults to red.
+   * @param params.rotation - The rotation angle in radians. Defaults to 0.
+   * @param params.outlineColor - The outline color of the text. Defaults to black.
+   * @param params.outlineThickness - The thickness of the text outline. Defaults to 2.
+   */
+  public drawRotatedText({
+    font,
+    xy,
+    str,
     scale = 1.0,
-    color: Color = [1.0, 0.0, 0.0, 1.0],
-    rotation = 0.0, // Rotation in radians
-    outlineColor: Color = [0, 0, 0, 1.0],
-    outlineThickness: number = 2
-  ): void {
+    color = [1.0, 0.0, 0.0, 1.0],
+    rotation = 0.0,
+    outlineColor = [0, 0, 0, 1.0],
+    outlineThickness = 2
+  }: {
+    font: UIKFont
+    xy: Vec2
+    str: string
+    scale?: number
+    color?: Color
+    rotation?: number
+    outlineColor?: Color
+    outlineThickness?: number
+  }): void {
     if (!font.isFontLoaded) {
       console.error('font not loaded')
       return
@@ -784,38 +864,37 @@ export class UIKRenderer {
     gl.disable(gl.CULL_FACE)
 
     // Set uniform values
-    if (color === null) {
-      color = font.fontColor
-    }
-    gl.uniform4fv(rotatedFontShader.uniforms.fontColor, color as Float32List)
+    const finalColor = color || font.fontColor
+    gl.uniform4fv(rotatedFontShader.uniforms.fontColor, finalColor as Float32List)
     let screenPxRange = (scale / font.fontMets!.size) * font.fontMets!.distanceRange
     screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
     gl.uniform1f(rotatedFontShader.uniforms.screenPxRange, screenPxRange)
     gl.uniform1i(rotatedFontShader.uniforms.fontTexture, 0)
 
-    // outline
-    this.gl.uniform4fv(rotatedFontShader.uniforms.outlineColor, outlineColor as Float32List)
-    this.gl.uniform1f(rotatedFontShader.uniforms.outlineThickness, outlineThickness)
+    // Outline uniforms
+    gl.uniform4fv(rotatedFontShader.uniforms.outlineColor, outlineColor as Float32List)
+    gl.uniform1f(rotatedFontShader.uniforms.outlineThickness, outlineThickness)
 
     // Bind VAO for generic rectangle
     gl.bindVertexArray(UIKRenderer.genericVAO)
 
     // Set up orthographic projection matrix
     const orthoMatrix = mat4.create()
-    // mat4.ortho(orthoMatrix, 0, gl.canvas.width, 0, gl.canvas.height, -1, 1); // Swap top and bottom
     mat4.ortho(orthoMatrix, 0, gl.canvas.width, gl.canvas.height, 0, -1, 1)
+
     const dpr = window.devicePixelRatio || 1
     gl.canvas.width = (gl.canvas as HTMLCanvasElement).clientWidth * dpr
     gl.canvas.height = (gl.canvas as HTMLCanvasElement).clientHeight * dpr
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+
     // Iterate over each character in the string
     let x = xy[0]
     let y = xy[1]
     const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
 
     const chars = Array.from(str)
-    for (let i = 0; i < chars.length; i++) {
-      const metrics = font.fontMets!.mets[chars[i]]
+    for (const char of chars) {
+      const metrics = font.fontMets!.mets[char]
       if (!metrics) {
         continue
       }
@@ -827,14 +906,11 @@ export class UIKRenderer {
         0.0
       ])
       mat4.rotateZ(modelMatrix, modelMatrix, rotation)
-
       mat4.scale(modelMatrix, modelMatrix, [metrics.lbwh[2] * size, -metrics.lbwh[3] * size, 1.0])
 
       // Combine the orthographic matrix with the model matrix to create the final MVP matrix
       const mvpMatrix = mat4.create()
       mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
-      // Log MVP matrix for debugging
-      // console.log('MVP Matrix modified:', mvpMatrix)
 
       // Set uniform values for MVP matrix and UV coordinates
       gl.uniformMatrix4fv(rotatedFontShader.uniforms.modelViewProjectionMatrix, false, mvpMatrix)
@@ -852,16 +928,37 @@ export class UIKRenderer {
     gl.bindVertexArray(null)
   }
 
-  drawCalendar(
-    font: UIKFont,
-    startX: number,
-    startY: number,
-    cellWidth: number,
-    cellHeight: number,
-    selectedDate: Date,
-    selectedColor: Float32List,
-    firstDayOfWeek: number = 0 // 0 represents Sunday
-  ): void {
+  /**
+   * Draws a calendar grid with headers and dates.
+   * @param params - Object containing parameters for rendering the calendar.
+   * @param params.font - The font object for rendering text.
+   * @param params.startX - The X-coordinate of the top-left corner of the calendar.
+   * @param params.startY - The Y-coordinate of the top-left corner of the calendar.
+   * @param params.cellWidth - The width of each calendar cell.
+   * @param params.cellHeight - The height of each calendar cell.
+   * @param params.selectedDate - The selected date to highlight.
+   * @param params.selectedColor - The color to highlight the selected date.
+   * @param params.firstDayOfWeek - The starting day of the week (0 for Sunday, 1 for Monday, etc.). Defaults to 0.
+   */
+  public drawCalendar({
+    font,
+    startX,
+    startY,
+    cellWidth,
+    cellHeight,
+    selectedDate,
+    selectedColor,
+    firstDayOfWeek = 0
+  }: {
+    font: UIKFont
+    startX: number
+    startY: number
+    cellWidth: number
+    cellHeight: number
+    selectedDate: Date
+    selectedColor: Float32List
+    firstDayOfWeek?: number
+  }): void {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const margin = 10
 
@@ -895,13 +992,13 @@ export class UIKRenderer {
       const y = startY
 
       // Draw the cell background
-      this.drawRoundedRect(
-        [x, y, cellWidth, cellHeight],
-        [0.8, 0.8, 0.8, 0.3],
-        [0.2, 0.2, 0.2, 1.0],
-        0, // No roundness for the headers
-        2.0
-      )
+      this.drawRoundedRect({
+        bounds: [x, y, cellWidth, cellHeight],
+        fillColor: [0.8, 0.8, 0.8, 0.3],
+        outlineColor: [0.2, 0.2, 0.2, 1.0],
+        cornerRadius: 0, // No roundness for the headers
+        thickness: 2.0
+      })
 
       // Calculate text position to center it in the cell
       const textWidth = font.getTextWidth(day, scale)
@@ -910,7 +1007,7 @@ export class UIKRenderer {
       const textY = y + (cellHeight - textHeight) / 2
 
       // Draw the day name
-      this.drawText(font, [textX, textY], day, scale, [1, 1, 1, 1])
+      this.drawText({ font, position: [textX, textY], text: day, scale, color: [1, 1, 1, 1] })
     })
 
     // Draw the days of the calendar
@@ -928,13 +1025,13 @@ export class UIKRenderer {
         const y = startY + row * cellHeight
 
         // Draw the cell background
-        this.drawRoundedRect(
-          [x, y, cellWidth, cellHeight],
-          [0.8, 0.8, 0.8, 0.3],
-          [0.2, 0.2, 0.2, 1.0],
-          0, // No roundness for the day cells
-          2.0
-        )
+        this.drawRoundedRect({
+          bounds: [x, y, cellWidth, cellHeight],
+          fillColor: [0.8, 0.8, 0.8, 0.3],
+          outlineColor: [0.2, 0.2, 0.2, 1.0],
+          cornerRadius: 0, // No roundness for the day cells
+          thickness: 2.0
+        })
 
         // Calculate text position to center it in the cell
         const dayTextWidth = font.getTextWidth(dayCount.toString(), scale)
@@ -944,40 +1041,70 @@ export class UIKRenderer {
 
         // Draw the day number
         const textColor: Float32List = dayCount === selectedDate.getDate() ? selectedColor : [0, 0, 0, 1]
-        this.drawText(font, [dayTextX, dayTextY], dayCount.toString(), scale, textColor)
+        this.drawText({ font, position: [dayTextX, dayTextY], text: dayCount.toString(), scale, color: textColor })
 
         dayCount++
       }
     }
   }
 
-  drawTextBox(
-    font: UIKFont,
-    xy: Vec2,
-    str: string,
-    textColor: Color = [0, 0, 0, 1.0],
-    outlineColor: Color = [1.0, 1.0, 1.0, 1.0],
-    fillColor: Color = [0.0, 0.0, 0.0, 0.3],
-    margin: number = 15,
-    roundness: number = 0.0,
+  /**
+   * Draws a text box with customizable text, colors, and margins.
+   * @param params - Object containing parameters for rendering the text box.
+   * @param params.font - The font object for rendering the text.
+   * @param params.xy - The position of the top-left corner of the text box.
+   * @param params.str - The text to render inside the text box.
+   * @param params.textColor - The color of the text. Defaults to black with full opacity.
+   * @param params.outlineColor - The color of the box's outline. Defaults to white with full opacity.
+   * @param params.fillColor - The fill color of the box. Defaults to a transparent black.
+   * @param params.margin - The margin between the text and the edges of the box. Defaults to 15.
+   * @param params.roundness - The roundness of the box corners (0 to 1). Defaults to 0 (square corners).
+   * @param params.scale - The scaling factor for the text. Defaults to 1.0.
+   * @param params.maxWidth - The maximum width for text wrapping. Defaults to 0 (no wrapping).
+   * @param params.fontOutlineColor - The outline color for the text. Defaults to black.
+   * @param params.fontOutlineThickness - The thickness of the text outline. Defaults to 1.
+   */
+  public drawTextBox({
+    font,
+    xy,
+    text,
+    textColor = [0, 0, 0, 1.0],
+    outlineColor = [1.0, 1.0, 1.0, 1.0],
+    fillColor = [0.0, 0.0, 0.0, 0.3],
+    margin = 15,
+    roundness = 0.0,
     scale = 1.0,
     maxWidth = 0,
-    fontOutlineColor: Color = [0, 0, 0, 1],
-    fontOutlineThickness: number = 1
-  ): void {
-    const textHeight = font.getTextHeight(str, scale)
-    const wrappedSize = font.getWordWrappedSize(str, scale, maxWidth)
+    fontOutlineColor = [0, 0, 0, 1],
+    fontOutlineThickness = 1
+  }: {
+    font: UIKFont
+    xy: Vec2
+    text: string
+    textColor?: Color
+    outlineColor?: Color
+    fillColor?: Color
+    margin?: number
+    roundness?: number
+    scale?: number
+    maxWidth?: number
+    fontOutlineColor?: Color
+    fontOutlineThickness?: number
+  }): void {
+    const textHeight = font.getTextHeight(text, scale)
+    const wrappedSize = font.getWordWrappedSize(text, scale, maxWidth)
     const rectWidth = wrappedSize[0] + 2 * margin * scale + textHeight
     const rectHeight = wrappedSize[1] + 4 * margin * scale // Height of the rectangle enclosing the text
 
     const leftTopWidthHeight = [xy[0], xy[1], rectWidth, rectHeight] as [number, number, number, number]
-    this.drawRoundedRect(
-      leftTopWidthHeight,
+    this.drawRoundedRect({
+      bounds: leftTopWidthHeight,
       fillColor,
       outlineColor,
-      (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3])
-    )
-    const descenderDepth = font.getDescenderDepth(str, scale)
+      cornerRadius: (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3]),
+      thickness: 1 // Add thickness parameter to match drawRoundedRect signature
+    })
+    const descenderDepth = font.getDescenderDepth(text, scale)
 
     const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
     // Adjust the position of the text with a margin, ensuring it's vertically centered
@@ -987,21 +1114,55 @@ export class UIKRenderer {
     ] as [number, number]
 
     // Render the text
-    this.drawText(font, textPosition, str, scale, textColor, maxWidth, fontOutlineColor, fontOutlineThickness)
+    this.drawText({
+      font,
+      position: textPosition,
+      text,
+      scale,
+      color: textColor,
+      maxWidth,
+      outlineColor: fontOutlineColor,
+      outlineThickness: fontOutlineThickness
+    })
   }
 
-  public drawRuler(
-    pointA: Vec2,
-    pointB: Vec2,
-    length: number,
-    units: string,
-    font: UIKFont,
-    textColor: Color = [1, 0, 0, 1],
-    lineColor: Color = [0, 0, 0, 1],
-    lineThickness: number = 1,
-    offset: number = 40,
-    scale: number = 1.0
-  ): void {
+  /**
+   * Draws a ruler with length text, units, and hash marks.
+   * @param params - Object containing parameters for rendering the ruler.
+   * @param params.pointA - Start point of the ruler.
+   * @param params.pointB - End point of the ruler.
+   * @param params.length - Length value to display.
+   * @param params.units - Units to display alongside the length.
+   * @param params.font - Font object for rendering text.
+   * @param params.textColor - Color of the text. Defaults to red.
+   * @param params.lineColor - Color of the ruler lines. Defaults to black.
+   * @param params.lineThickness - Thickness of the ruler lines. Defaults to 1.
+   * @param params.offset - Offset distance for parallel line and text. Defaults to 40.
+   * @param params.scale - Scale factor for text size. Defaults to 1.0.
+   */
+  public drawRuler({
+    pointA,
+    pointB,
+    length,
+    units,
+    font,
+    textColor = [1, 0, 0, 1],
+    lineColor = [0, 0, 0, 1],
+    lineThickness = 1,
+    offset = 40,
+    scale = 1.0
+  }: {
+    pointA: Vec2
+    pointB: Vec2
+    length: number
+    units: string
+    font: UIKFont
+    textColor?: Color
+    lineColor?: Color
+    lineThickness?: number
+    offset?: number
+    scale?: number
+  }): void {
     // Calculate the angle between the points
     const deltaX = pointB[0] - pointA[0]
     const deltaY = pointB[1] - pointA[1]
@@ -1040,21 +1201,23 @@ export class UIKRenderer {
     }
 
     // Draw the rotated length text at the adjusted position
-    this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
-    this.drawRotatedText(font, textPosition, text, scale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
-    this.drawRotatedText(font, textPosition, text, scale, textColor, angle, [1, 1, 1, 1], 4)
-    // this.drawRotatedText(font, textPosition, text, scale, textColor, angle)
+    this.drawRotatedText({ font, xy: textPosition, str: text, scale, color: textColor, rotation: angle })
 
-    // Draw the units at half the requested scale, positioned closer to the end of the length text, with the same rotation and vertically aligned to the middle of the length text
-    const unitsText = units
+    // Draw the units at half the requested scale
     const unitsScale = scale / 2
-    const unitsTextWidth = font.getTextWidth(unitsText, unitsScale)
-    // const unitsTextHeight = font.getTextHeight(unitsText, unitsScale)
+    const unitsTextWidth = font.getTextWidth(units, unitsScale)
     const unitsTextPosition: Vec2 = [
       textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
       textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
     ]
-    this.drawRotatedText(font, unitsTextPosition, unitsText, unitsScale, textColor, angle)
+    this.drawRotatedText({
+      font,
+      xy: unitsTextPosition,
+      str: units,
+      scale: unitsScale,
+      color: textColor,
+      rotation: angle
+    })
 
     // Draw a parallel line of equal length to the original line
     const parallelPointA: Vec2 = [
@@ -1065,46 +1228,42 @@ export class UIKRenderer {
       pointB[0] + (offset * deltaY) / actualLength,
       pointB[1] - (offset * deltaX) / actualLength
     ]
-    this.drawLine(
-      [parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]],
-      lineThickness,
-      lineColor
-    )
+    this.drawLine({
+      startEnd: [parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]],
+      thickness: lineThickness,
+      color: lineColor
+    })
 
     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
-    this.drawLine(
-      [parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]],
-      lineThickness,
-      lineColor,
-      LineTerminator.ARROW
-    )
-    this.drawLine(
-      [parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]],
-      lineThickness,
-      lineColor,
-      LineTerminator.ARROW
-    )
+    this.drawLine({
+      startEnd: [parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]],
+      thickness: lineThickness,
+      color: lineColor,
+      terminator: LineTerminator.ARROW
+    })
+    this.drawLine({
+      startEnd: [parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]],
+      thickness: lineThickness,
+      color: lineColor,
+      terminator: LineTerminator.ARROW
+    })
 
-    // Draw perpendicular hash marks like a ruler, moved closer to the arrows
-    const numHashMarks = Math.floor(length) // Draw a hash mark for every unit
-    const hashLength = 8 // Length of each hash mark
-    const parallelOffset = offset / 4 // Move hash marks closer to the arrows
+    // Draw perpendicular hash marks like a ruler
+    const numHashMarks = Math.floor(length)
+    const hashLength = 8
+    const parallelOffset = offset / 4
 
     for (let i = 1; i <= numHashMarks; i++) {
       const t = i / length
       const hashPoint: Vec2 = [pointA[0] + t * deltaX, pointA[1] + t * deltaY]
-
-      // Make every 5th hash mark twice as long
       const currentHashLength = i % 5 === 0 ? hashLength * 2 : hashLength
-
       const perpOffsetX = (deltaY / actualLength) * parallelOffset
       const perpOffsetY = (-deltaX / actualLength) * parallelOffset
 
       if (i % 5 === 0) {
         const hashText = `${i}`
-        const hashTextScale = scale / 5 // Scale down the text size to 1/5 of the scale
+        const hashTextScale = scale / 5
         const hashTextWidth = font.getTextWidth(hashText, hashTextScale)
-        // const hashTextHeight = font.getTextHeight(hashText, hashTextScale)
         const hashTextPosition: Vec2 = [
           hashPoint[0] +
             perpOffsetX -
@@ -1112,9 +1271,14 @@ export class UIKRenderer {
             (currentHashLength / 4) * Math.sin(angle),
           hashPoint[1] + perpOffsetY - (hashTextWidth / 2) * Math.sin(angle) - (currentHashLength / 4) * Math.cos(angle)
         ]
-        this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
-        this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, [0, 0, 0, 1], angle, [1, 1, 1, 1], 4)
-        this.drawRotatedText(font, hashTextPosition, hashText, hashTextScale, textColor, angle)
+        this.drawRotatedText({
+          font,
+          xy: hashTextPosition,
+          str: hashText,
+          scale: hashTextScale,
+          color: textColor,
+          rotation: angle
+        })
       }
 
       const hashStart: Vec2 = [
@@ -1125,21 +1289,38 @@ export class UIKRenderer {
         hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
         hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
       ]
-
-      // Set hash line thickness to 1
-      this.drawLine([hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], 1, lineColor)
+      this.drawLine({ startEnd: [hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], thickness: 1, color: lineColor })
     }
   }
 
-  public drawRectangle(
-    tx: number,
-    ty: number,
-    sx: number,
-    sy: number,
-    color: [number, number, number, number],
-    rotation: number = 0,
-    mixValue: number = 0.1
-  ): void {
+  /**
+   * Draws an ellipsoid fill with rotation and mix value.
+   * @param params - Object containing parameters for rendering the ellipsoid.
+   * @param params.tx - X-coordinate of the top-left corner.
+   * @param params.ty - Y-coordinate of the top-left corner.
+   * @param params.sx - Width of the ellipsoid.
+   * @param params.sy - Height of the ellipsoid.
+   * @param params.color - Color of the ellipsoid in [R, G, B, A] format.
+   * @param params.rotation - Rotation of the ellipsoid in radians. Defaults to 0.
+   * @param params.mixValue - Mix value for blending. Defaults to 0.1.
+   */
+  public drawEllipsoidFill({
+    tx,
+    ty,
+    sx,
+    sy,
+    color,
+    rotation = 0,
+    mixValue = 0.1
+  }: {
+    tx: number
+    ty: number
+    sx: number
+    sy: number
+    color: [number, number, number, number]
+    rotation?: number
+    mixValue?: number
+  }): void {
     const rectangleShader = UIKRenderer.ellipticalFillShader
 
     rectangleShader.use(this.gl)
@@ -1173,14 +1354,28 @@ export class UIKRenderer {
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
   }
 
-  public drawColorbar(
-    font: UIKFont, // Font used for rendering labels
-    position: Vec2, // Position of the color bar [x, y]
-    size: Vec2, // Size of the color bar [width, height]
-    gradientTexture: WebGLTexture, // Texture for gradient if applicable
-    labels: string[] // Array of labels for tick marks
-    // minMax: [number, number] = [0, 1] // Minimum and maximum values for labels
-  ): void {
+  /**
+   * Draws a color bar with gradient and tick labels.
+   * @param params - Object containing parameters for rendering the color bar.
+   * @param params.font - Font used for rendering labels.
+   * @param params.position - Position of the color bar [x, y].
+   * @param params.size - Size of the color bar [width, height].
+   * @param params.gradientTexture - Texture for gradient if applicable.
+   * @param params.labels - Array of labels for tick marks.
+   */
+  public drawColorbar({
+    font,
+    position,
+    size,
+    gradientTexture,
+    labels
+  }: {
+    font: UIKFont
+    position: Vec2
+    size: Vec2
+    gradientTexture: WebGLTexture
+    labels: string[]
+  }): void {
     const gl = this.gl
     const [x, y] = position
     const [width, height] = size
@@ -1202,12 +1397,17 @@ export class UIKRenderer {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
     // Draw tick marks and labels if any, using the provided font
-    // const range = minMax[1] - minMax[0]
     const spacing = width / (labels.length - 1)
     labels.forEach((label, i) => {
       const labelX = x + i * spacing
       const labelPos: Vec2 = [labelX, y + height + 5]
-      this.drawText(font, labelPos, label, 0.5, [0, 0, 0, 1]) // Adjust scale and color as needed
+      this.drawText({
+        font,
+        position: labelPos,
+        text: label,
+        scale: 0.5,
+        color: [0, 0, 0, 1] // Adjust scale and color as needed
+      })
     })
 
     // Unbind texture and VAO after drawing
@@ -1217,25 +1417,37 @@ export class UIKRenderer {
 
   /**
    * Draws a line graph based on provided Graph settings.
-   * @param options - Graph object with settings for rendering the graph.
+   * @param params - Object containing settings for rendering the graph.
    */
-  public drawLineGraph(options: Graph): void {
-    const {
-      position,
-      size,
-      backgroundColor,
-      lineColor,
-      axisColor,
-      data,
-      xLabel,
-      yLabel,
-      yRange,
-      lineThickness = 2,
-      textColor,
-      font,
-      textScale = 1
-    } = options
-
+  public drawLineGraph({
+    position,
+    size,
+    backgroundColor,
+    lineColor,
+    axisColor,
+    data,
+    xLabel,
+    yLabel,
+    yRange,
+    lineThickness = 2,
+    textColor,
+    font,
+    textScale = 1
+  }: {
+    position: Vec2
+    size: Vec2
+    backgroundColor: Color
+    lineColor: Color
+    axisColor: Color
+    data: number[]
+    xLabel?: string
+    yLabel?: string
+    yRange?: [number, number]
+    lineThickness?: number
+    textColor: Color
+    font: UIKFont
+    textScale?: number
+  }): void {
     // Define margins to prevent clipping of labels
     const leftMargin = 50 // leave space for y-axis label
     const bottomMargin = 60 // increased bottom margin for x-label
@@ -1245,19 +1457,30 @@ export class UIKRenderer {
     // Calculate plot area within the graph space
     const plotPosition: Vec2 = [position[0] + leftMargin, position[1] + topMargin]
     const plotSize: Vec2 = [size[0] - leftMargin - rightMargin, size[1] - topMargin - bottomMargin]
-
     // Draw background for the graph
-    this.drawRect([position[0], position[1], size[0], size[1]], backgroundColor)
+    this.drawRect({
+      leftTopWidthHeight: [position[0], position[1], size[0], size[1]],
+      fillColor: backgroundColor
+    })
 
     // Draw Y-axis
-    this.drawLine([plotPosition[0], plotPosition[1], plotPosition[0], plotPosition[1] + plotSize[1]], 1, axisColor)
+    this.drawLine({
+      startEnd: [plotPosition[0], plotPosition[1], plotPosition[0], plotPosition[1] + plotSize[1]],
+      thickness: 1,
+      color: axisColor
+    })
 
     // Draw X-axis
-    this.drawLine(
-      [plotPosition[0], plotPosition[1] + plotSize[1], plotPosition[0] + plotSize[0], plotPosition[1] + plotSize[1]],
-      1,
-      axisColor
-    )
+    this.drawLine({
+      startEnd: [
+        plotPosition[0],
+        plotPosition[1] + plotSize[1],
+        plotPosition[0] + plotSize[0],
+        plotPosition[1] + plotSize[1]
+      ],
+      thickness: 1,
+      color: axisColor
+    })
 
     // Calculate Y-axis range and scale
     const [minY, maxY] = yRange ?? [Math.min(...data), Math.max(...data)]
@@ -1273,19 +1496,36 @@ export class UIKRenderer {
       const x1 = plotPosition[0] + (i + 1) * xSpacing
       const y1 = plotPosition[1] + plotSize[1] - (data[i + 1] - minY) * yScale
 
-      this.drawLine([x0, y0, x1, y1], lineThickness, lineColor)
+      this.drawLine({
+        startEnd: [x0, y0, x1, y1],
+        thickness: lineThickness,
+        color: lineColor
+      })
     }
 
     // Draw Y-axis label, shifted slightly to the right of the Y-axis
     if (yLabel) {
       const yLabelPosition: Vec2 = [plotPosition[0] - 25, position[1] + size[1] / 2]
-      this.drawRotatedText(font, yLabelPosition, yLabel, 0.8 * textScale, textColor, -Math.PI / 2)
+      this.drawRotatedText({
+        font,
+        xy: yLabelPosition,
+        str: yLabel,
+        scale: 0.8 * textScale,
+        color: textColor,
+        rotation: -Math.PI / 2
+      })
     }
 
     // Draw X-axis label, positioned below the X-axis ticks
     if (xLabel) {
       const xLabelPosition: Vec2 = [position[0] + size[0] / 2, position[1] + size[1] - 20]
-      this.drawText(font, xLabelPosition, xLabel, 0.8 * textScale, textColor)
+      this.drawText({
+        font,
+        position: xLabelPosition,
+        text: xLabel,
+        scale: 0.8 * textScale,
+        color: textColor
+      })
     }
 
     // Draw Y-axis ticks and labels with equal spacing
@@ -1298,10 +1538,20 @@ export class UIKRenderer {
       const yValue = (minY + i * yValueSpacing).toFixed(2)
 
       // Draw Y tick
-      this.drawLine([plotPosition[0] - 5, yPos, plotPosition[0], yPos], 1, axisColor)
+      this.drawLine({
+        startEnd: [plotPosition[0] - 5, yPos, plotPosition[0], yPos],
+        thickness: 1,
+        color: axisColor
+      })
 
       // Draw Y tick label with left padding for alignment
-      this.drawText(font, [plotPosition[0] - 10, yPos], yValue, 0.6 * textScale, textColor)
+      this.drawText({
+        font,
+        position: [plotPosition[0] - 10, yPos],
+        text: yValue,
+        scale: 0.6 * textScale,
+        color: textColor
+      })
     }
 
     // Draw X-axis ticks and labels with limited count for readability
@@ -1313,14 +1563,34 @@ export class UIKRenderer {
       const xValue = (i * Math.floor(data.length / xTickCount)).toString()
 
       // Draw X tick
-      this.drawLine([xPos, plotPosition[1] + plotSize[1], xPos, plotPosition[1] + plotSize[1] + 5], 1, axisColor)
+      this.drawLine({
+        startEnd: [xPos, plotPosition[1] + plotSize[1], xPos, plotPosition[1] + plotSize[1] + 5],
+        thickness: 1,
+        color: axisColor
+      })
 
       // Draw X tick label with downward padding
-      this.drawText(font, [xPos, plotPosition[1] + plotSize[1] + 15], xValue, 0.6 * textScale, textColor)
+      this.drawText({
+        font,
+        position: [xPos, plotPosition[1] + plotSize[1] + 15],
+        text: xValue,
+        scale: 0.6 * textScale,
+        color: textColor
+      })
     }
   }
 
-  drawProjectedLineSegment(startXYZ: Vec3, endXYZ: Vec3, thickness = 1, lineColor: Color = [1, 0, 0, 1]): void {
+  private drawProjectedLineSegment({
+    startXYZ,
+    endXYZ,
+    thickness = 1,
+    lineColor = [1, 0, 0, 1]
+  }: {
+    startXYZ: Vec3
+    endXYZ: Vec3
+    thickness?: number
+    lineColor?: Color
+  }): void {
     this.gl.bindVertexArray(UIKRenderer.genericVAO)
     if (!UIKRenderer.projectedLineShader) {
       throw new Error('projectedLineShader undefined')
@@ -1332,23 +1602,82 @@ export class UIKRenderer {
       this.gl.canvas.width,
       this.gl.canvas.height
     ])
-    // draw Line
+    // Draw Line
     this.gl.uniform1f(UIKRenderer.projectedLineShader.uniforms.thickness, thickness)
     this.gl.uniform3fv(UIKRenderer.projectedLineShader.uniforms.startXYZ, startXYZ)
     this.gl.uniform3fv(UIKRenderer.projectedLineShader.uniforms.endXYZ, endXYZ)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    this.gl.bindVertexArray(null) // set vertex attributes
+    this.gl.bindVertexArray(null) // Unbind to avoid side effects
   }
 
-  public drawProjectedLine(
-    startXYZ: Vec3,
-    endXYZ: Vec3,
+  /**
+   * Draws a 3D projected line in WebGL with support for solid, dashed, or dotted styles,
+   * as well as optional terminators (e.g., arrows, circles, or rings).
+   *
+   * @param config - Configuration object containing the following properties:
+   *   - `startXYZ`: The starting point of the line in 3D space as a Vec3 ([x, y, z]).
+   *   - `endXYZ`: The ending point of the line in 3D space as a Vec3 ([x, y, z]).
+   *   - `thickness` (optional): The thickness of the line. Defaults to 1.
+   *   - `lineColor` (optional): The color of the line in [R, G, B, A] format. Defaults to `[1, 0, 0, 1]` (red).
+   *   - `terminator` (optional): The type of terminator to draw at the endpoint of the line. Defaults to `LineTerminator.NONE`.
+   *                              Supported terminators include:
+   *                              - `LineTerminator.ARROW` for an arrowhead.
+   *                              - `LineTerminator.CIRCLE` for a filled circle.
+   *                              - `LineTerminator.RING` for a hollow circle (ring).
+   *   - `lineStyle` (optional): The style of the line. Defaults to `LineStyle.SOLID`.
+   *                              Supported styles include:
+   *                              - `LineStyle.SOLID` for a continuous line.
+   *                              - `LineStyle.DASHED` for a dashed line.
+   *                              - `LineStyle.DOTTED` for a dotted line.
+   *   - `dashDotLength` (optional): The length of dashes or dots in dashed or dotted lines. Defaults to 5.
+   *
+   * If the `lineStyle` is dashed or dotted, the method calculates evenly spaced segments or dots
+   * along the length of the line. If a terminator is used, the line is adjusted to prevent overlap
+   * with the terminator.
+   *
+   * ### Examples
+   * Draw a solid blue line with an arrow terminator:
+   * ```typescript
+   * renderer.drawProjectedLine({
+   *   startXYZ: [0, 0, 0],
+   *   endXYZ: [100, 100, 0],
+   *   thickness: 2,
+   *   lineColor: [0, 0, 1, 1],
+   *   terminator: LineTerminator.ARROW
+   * })
+   * ```
+   *
+   * Draw a dashed red line with no terminator:
+   * ```typescript
+   * renderer.drawProjectedLine({
+   *   startXYZ: [0, 0, 0],
+   *   endXYZ: [200, 50, 0],
+   *   thickness: 3,
+   *   lineColor: [1, 0, 0, 1],
+   *   lineStyle: LineStyle.DASHED,
+   *   dashDotLength: 10
+   * })
+   * ```
+   *
+   * @throws Will throw an error if the shader for drawing the line is not defined.
+   */
+  public drawProjectedLine({
+    startXYZ,
+    endXYZ,
     thickness = 1,
-    lineColor: Color = [1, 0, 0, 1],
-    terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.SOLID,
+    lineColor = [1, 0, 0, 1],
+    terminator = LineTerminator.NONE,
+    lineStyle = LineStyle.SOLID,
     dashDotLength = 5
-  ): void {
+  }: {
+    startXYZ: Vec3
+    endXYZ: Vec3
+    thickness?: number
+    lineColor?: Color
+    terminator?: LineTerminator
+    lineStyle?: LineStyle
+    dashDotLength?: number
+  }): void {
     const [startX, startY, startZ] = startXYZ
     const [endX, endY, endZ] = endXYZ
 
@@ -1372,133 +1701,104 @@ export class UIKRenderer {
 
       for (let i = 0; i <= segmentCount; i++) {
         const segmentStartXY = vec2.scaleAndAdd(vec2.create(), [startX, startY], direction, i * segmentSpacing)
-        const segmentStart: Vec3 = [segmentStartXY[0], segmentStartXY[1], startZ] // Use startXYZ.z as initial z value
+        const segmentStart: Vec3 = [segmentStartXY[0], segmentStartXY[1], startZ]
 
         if (i === segmentCount) {
           if (lineStyle === LineStyle.DASHED) {
             // Final dashed segment to adjusted endpoint
-            this.drawProjectedLineSegment(segmentStart, [adjustedEndX, adjustedEndY, endZ], thickness, lineColor)
+            this.drawProjectedLineSegment({
+              startXYZ: segmentStart,
+              endXYZ: [adjustedEndX, adjustedEndY, endZ],
+              thickness,
+              lineColor
+            })
           } else if (lineStyle === LineStyle.DOTTED) {
             // Final dot at the adjusted endpoint
-            this.drawCircle(
-              [adjustedEndX - dashDotLength / 2, adjustedEndY - dashDotLength / 2, dashDotLength, dashDotLength],
-              lineColor
-            )
+            this.drawCircle({
+              leftTopWidthHeight: [
+                adjustedEndX - dashDotLength / 2,
+                adjustedEndY - dashDotLength / 2,
+                dashDotLength,
+                dashDotLength
+              ],
+              circleColor: lineColor,
+              z: endZ
+            })
           }
         } else {
           if (lineStyle === LineStyle.DASHED) {
             const segmentEndXY = vec2.scaleAndAdd(vec2.create(), segmentStartXY, direction, dashDotLength)
-            const segmentEnd: Vec3 = [segmentEndXY[0], segmentEndXY[1], startZ] // Use startXYZ.z as z value for segment end as well
-            this.drawProjectedLineSegment(segmentStart, segmentEnd, thickness, lineColor)
+            const segmentEnd: Vec3 = [segmentEndXY[0], segmentEndXY[1], startZ]
+            this.drawProjectedLineSegment({
+              startXYZ: segmentStart,
+              endXYZ: segmentEnd,
+              thickness,
+              lineColor
+            })
           } else if (lineStyle === LineStyle.DOTTED) {
             // Draw dot as a small circle
-            this.drawCircle(
-              [segmentStart[0] - dashDotLength / 2, segmentStart[1] - dashDotLength / 2, dashDotLength, dashDotLength],
-              lineColor
-            )
+            this.drawCircle({
+              leftTopWidthHeight: [
+                segmentStart[0] - dashDotLength / 2,
+                segmentStart[1] - dashDotLength / 2,
+                dashDotLength,
+                dashDotLength
+              ],
+              circleColor: lineColor,
+              z: startZ
+            })
           }
         }
       }
     } else {
       // Draw solid line if no dash/dot style specified
-      this.drawProjectedLineSegment(startXYZ, [adjustedEndX, adjustedEndY, endZ], thickness, lineColor)
+      this.drawProjectedLineSegment({
+        startXYZ,
+        endXYZ: [adjustedEndX, adjustedEndY, endZ],
+        thickness,
+        lineColor
+      })
     }
 
     // Draw terminator if specified
     switch (terminator) {
       case LineTerminator.ARROW: {
-        // Calculate triangle points for arrow terminator
         const triangleDirection = vec2.sub(vec2.create(), [endX, endY], [adjustedEndX, adjustedEndY])
         vec2.normalize(triangleDirection, triangleDirection)
-        this.drawTriangle(
-          [endXYZ[0], endXYZ[1]],
-          [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
-          terminatorSize, // pass size as a number
-          lineColor,
-          endXYZ[2]
-        )
-        // Calculate the midpoint for the base of the arrow
-        // const baseMidPoint: Vec3 = [
-        //   adjustedEndX - (direction[0] * terminatorSize) / 2,
-        //   adjustedEndY - (direction[1] * terminatorSize) / 2,
-        //   -1 // endZ
-        // ]
-        // // Use drawProjectedTriangle for the arrow
-        // this.drawProjectedTriangle() // [endXYZ[0], endXYZ[1], -1], baseMidPoint, terminatorSize, lineColor)
+        this.drawTriangle({
+          headPoint: [endXYZ[0], endXYZ[1]],
+          baseMidPoint: [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
+          baseLength: terminatorSize,
+          color: lineColor,
+          z: endZ
+        })
         break
       }
       case LineTerminator.CIRCLE:
-        this.drawCircle(
-          [adjustedEndX - terminatorSize / 2, adjustedEndY - terminatorSize / 2, terminatorSize, terminatorSize],
-          lineColor
-        )
+        this.drawCircle({
+          leftTopWidthHeight: [
+            adjustedEndX - terminatorSize / 2,
+            adjustedEndY - terminatorSize / 2,
+            terminatorSize,
+            terminatorSize
+          ],
+          circleColor: lineColor,
+          z: endZ
+        })
         break
       case LineTerminator.RING:
-        this.drawCircle(
-          [adjustedEndX - terminatorSize / 2, adjustedEndY - terminatorSize / 2, terminatorSize, terminatorSize],
-          lineColor,
-          0.5
-        )
+        this.drawCircle({
+          leftTopWidthHeight: [
+            adjustedEndX - terminatorSize / 2,
+            adjustedEndY - terminatorSize / 2,
+            terminatorSize,
+            terminatorSize
+          ],
+          circleColor: lineColor,
+          fillPercent: 0.5,
+          z: endZ
+        })
         break
     }
   }
-
-  //   public drawProjectedTriangle(headPoint: Vec3, baseMidPoint: Vec3, baseLength: number, color: Color): void {
-  //     // Calculate direction vector from base midpoint to the head point
-  //     const direction = vec3.sub(vec3.create(), headPoint, baseMidPoint)
-  //     vec3.normalize(direction, direction)
-
-  //     // Calculate a perpendicular vector for the triangle's base
-  //     const perpVector = vec3.cross(vec3.create(), direction, [0, 0, 1])
-  //     vec3.normalize(perpVector, perpVector)
-
-  //     // Calculate the left and right base vertices in 3D
-  //     const halfBaseLength = baseLength / 2
-  //     const leftBasePoint = vec3.scaleAndAdd(vec3.create(), baseMidPoint, perpVector, -halfBaseLength)
-  //     const rightBasePoint = vec3.scaleAndAdd(vec3.create(), baseMidPoint, perpVector, halfBaseLength)
-
-  //     // Bind the projected triangle vertex buffer
-  //     if (!NVRenderer.projectedTriangleVertexBuffer) {
-  //       console.error('Projected triangle vertex buffer is not defined at draw time')
-  //       return
-  //     }
-  //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, NVRenderer.projectedTriangleVertexBuffer)
-  //     console.log('Buffer data:', this.gl.getBufferParameter(this.gl.ARRAY_BUFFER, this.gl.BUFFER_SIZE))
-
-  //     // Update the buffer with triangle vertices (3 vertices with x, y, z)
-  //     const vertices = new Float32Array([
-  //       headPoint[0],
-  //       headPoint[1],
-  //       headPoint[2],
-  //       leftBasePoint[0],
-  //       leftBasePoint[1],
-  //       leftBasePoint[2],
-  //       rightBasePoint[0],
-  //       rightBasePoint[1],
-  //       rightBasePoint[2]
-  //     ])
-  //     this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.DYNAMIC_DRAW)
-
-  //     // Use the triangle shader program
-  //     NVRenderer.projectedTriangleShader.use(this.gl)
-
-  //     // Bind the position attribute
-  //     const positionLocation = NVRenderer.projectedTriangleShader.uniforms.a_position as GLuint
-  //     this.gl.enableVertexAttribArray(positionLocation)
-  //     this.gl.vertexAttribPointer(positionLocation, 3, this.gl.FLOAT, false, 0, 0)
-
-  //     // Set the color uniform
-  //     this.gl.uniform4fv(NVRenderer.projectedTriangleShader.uniforms.u_color, color as Float32List)
-
-  //     // Enable depth testing for proper layering, but reset after
-  //     // this.gl.enable(this.gl.DEPTH_TEST)
-  //     // this.gl.depthFunc(this.gl.LEQUAL)
-
-  //     // Draw the triangle
-  //     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
-
-  //     // Reset bindings and disable vertex attributes to avoid side effects
-  //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
-  //     this.gl.disableVertexAttribArray(positionLocation)
-  //   }
 }

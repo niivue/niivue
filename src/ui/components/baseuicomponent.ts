@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from '@lukeed/uuid'
-import { IUIComponent } from '../interfaces.js'
+import { BaseUIComponentConfig, IUIComponent } from '../interfaces.js'
 import { UIKRenderer } from '../uikrenderer.js'
 import { AlignmentPoint, Effect, HorizontalAlignment, Vec2, Vec4, VerticalAlignment } from '../types.js'
 // Applying centralized animation management in BaseUIComponent
@@ -30,6 +30,22 @@ export abstract class BaseUIComponent implements IUIComponent {
 
   abstract draw(renderer: UIKRenderer): void
 
+  constructor(config: BaseUIComponentConfig) {
+    this.alignmentPoint = config.alignmentPoint ?? AlignmentPoint.NONE
+    this.verticalAlignment = config.verticalAlignment ?? VerticalAlignment.NONE
+    this.horizontalAlignment = config.horizontalAlignment ?? HorizontalAlignment.NONE
+    this.isVisible = config.isVisible ?? true
+    this.zIndex = config.zIndex ?? 0
+    this.id = config.id ?? uuidv4()
+    this.tags = config.tags ?? []
+    this.className = config.className
+    this.position = config.position ?? [0, 0]
+    this.bounds = config.bounds ?? [0, 0, 0, 0]
+    this.scale = config.scale ?? 1
+    this.margin = config.margin ?? 25
+    this.requestRedraw = config.requestRedraw
+  }
+
   align(bounds: Vec4): void {
     let offsetX = 0
     let offsetY = 0
@@ -41,7 +57,7 @@ export abstract class BaseUIComponent implements IUIComponent {
         offsetY = bounds[1] + this.margin
         break
       case AlignmentPoint.TOPCENTER:
-        offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2
+        offsetX = bounds[0] + (bounds[2] - this.bounds[2]) / 2 + this.margin
         offsetY = bounds[1] + this.margin
         break
       case AlignmentPoint.TOPRIGHT:

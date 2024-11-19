@@ -1,6 +1,6 @@
 import { UIKRenderer } from '../uikrenderer.js'
-import { Vec2, Vec3, Color, LineTerminator, LineStyle, ComponentSide } from '../types.js'
-import { IUIComponent, IProjectable3D } from '../interfaces.js'
+import { Vec2, Vec3, ComponentSide } from '../types.js'
+import { IUIComponent, IProjectable3D, ProjectedLineComponentConfig } from '../interfaces.js'
 import { LineComponent } from './linecomponent.js'
 
 export class ProjectedLineComponent extends LineComponent implements IProjectable3D {
@@ -9,21 +9,13 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
   private targetComponent: IUIComponent // Reference to the target component
   private side: ComponentSide // Side of the target component to attach the line
 
-  constructor(
-    modelPoints: Vec3[],
-    targetComponent: IUIComponent,
-    side: ComponentSide,
-    thickness = 1,
-    lineColor: Color = [1, 0, 0, 1],
-    terminator: LineTerminator = LineTerminator.NONE,
-    lineStyle: LineStyle = LineStyle.SOLID,
-    dashDotLength = 5
-  ) {
-    super([0, 0, 0, 0], thickness, lineColor, terminator, lineStyle, dashDotLength)
-    this.modelPoints = modelPoints
-    this.targetComponent = targetComponent
+  constructor(config: ProjectedLineComponentConfig) {
+    super(config) // Pass LineComponentConfig properties to the parent constructor
+
+    this.modelPoints = config.modelPoints
+    this.targetComponent = config.targetComponent
     this.targetComponent.addEventListener('resize', this.handleResize.bind(this))
-    this.side = side
+    this.side = config.side
     this.projectedPoint = [0, 0, 0]
   }
 
@@ -66,14 +58,24 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
     // Ensure line position is up-to-date before drawing
     this.updateLinePosition()
 
-    renderer.drawProjectedLine(
-      [this.startEnd[0], this.startEnd[1], -1],
-      this.projectedPoint,
-      this.thickness,
-      this.lineColor,
-      this.terminator,
-      this.lineStyle,
-      this.dashDotLength
-    )
+    renderer.drawProjectedLine({
+      startXYZ: [this.startEnd[0], this.startEnd[1], -1],
+      endXYZ: this.projectedPoint,
+      thickness: this.thickness,
+      lineColor: this.lineColor,
+      terminator: this.terminator,
+      lineStyle: this.lineStyle,
+      dashDotLength: this.dashDotLength
+    })
+  }
+
+  toJSON(): object {
+    return {
+      ...super.toJSON(),
+      className: 'ProjectedLineComponent',
+      modelPoints: this.modelPoints,
+      targetComponentId: this.targetComponent.id, // Assuming `id` exists on the target component
+      side: this.side
+    }
   }
 }

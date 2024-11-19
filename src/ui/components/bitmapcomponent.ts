@@ -1,6 +1,7 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { UIKBitmap } from '../uikbitmap.js'
 import { Vec2 } from '../types.js'
+import { BitmapComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class BitmapComponent extends BaseUIComponent {
@@ -8,17 +9,16 @@ export class BitmapComponent extends BaseUIComponent {
   private width: number
   private height: number
 
-  constructor(position: Vec2, bitmap: UIKBitmap, scale = 1.0) {
-    super()
-    this.position = position
-    this.bitmap = bitmap
-    this.scale = scale
+  constructor(config: BitmapComponentConfig) {
+    super(config)
+    this.bitmap = config.bitmap
+    this.scale = config.scale ?? 1.0
 
     // Calculate width and height based on bitmap dimensions and scale
-    this.width = bitmap.getWidth() * this.scale
-    this.height = bitmap.getHeight() * this.scale
+    this.width = this.bitmap.getWidth() * this.scale
+    this.height = this.bitmap.getHeight() * this.scale
 
-    this.bounds = [position[0], position[1], this.width, this.height]
+    this.bounds = [this.position[0], this.position[1], this.width, this.height]
   }
 
   getScale(): number {
@@ -34,8 +34,11 @@ export class BitmapComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    // Draw the bitmap using screen coordinates
-    renderer.drawBitmap(this.bitmap, this.position, this.scale)
+    renderer.drawBitmap({
+      bitmap: this.bitmap,
+      position: this.position,
+      scale: this.scale
+    })
   }
 
   // Method to get the NVBitmap instance
@@ -64,7 +67,12 @@ export class BitmapComponent extends BaseUIComponent {
 
     const position: Vec2 = data.position || [0, 0]
     const scale: number = data.scale || 1.0
-    const component = new BitmapComponent(position, bitmap, scale)
+    const component = new BitmapComponent({
+      className: 'BitmapComponent',
+      position,
+      bitmap,
+      scale
+    })
 
     // Set additional properties from JSON data if available
     component.width = data.width ?? bitmap.getWidth() * scale
