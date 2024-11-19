@@ -49,9 +49,21 @@
         const lineGraphComponent = new niivue.LineGraphComponent(graphOptions)
         lineGraphComponent.alignmentPoint = niivue.UIKit.alignmentPoint.TOPRIGHT
 
-        // Add component to the UI
+        // Add interactivity: Update data dynamically
+        const updateData = () => {
+            const newData = Array.from({ length: 11 }, () => Math.floor(Math.random() * 15))
+            lineGraphComponent.setData(newData)
+            nv1.drawScene()
+        }
+
+        // Add the component to the UI
         nv1.ui.addComponent(lineGraphComponent)
-        nv1.drawScene()        
+
+        // Draw the scene
+        nv1.drawScene()
+
+        // Optional: Update graph every 5 seconds
+        setInterval(updateData, 5000)
     </script>
 </body>
 

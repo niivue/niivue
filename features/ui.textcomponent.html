@@ -4,43 +4,71 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Text component</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Text Component</title>
     <link rel="stylesheet" href="light.css" />
+    <style>
+        body, canvas {            
+            background-color: #2c3e50; /* Dark background for contrast */
+        }
+    </style>
 </head>
 
 <body>
     <noscript>niivue requires JavaScript.</noscript>
-    <header>
-    </header>
     <main>
         <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        var added = false
-        var nv1 = new niivue.Niivue();
-        nv1.attachTo("gl1");
-        nv1.setSliceType(nv1.sliceTypeRender);
-        const font = new niivue.UIKFont(nv1.gl)
-        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
-        const textColor = [1.0, 1.0, 1.0, 1.0]
-        const str = 'The quick brown fox jumps over the lazy dog!'
-        const scale = 0.5
-        const width = font.getTextWidth(str, scale)
-        const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height / 2 - 150]
-        console.log('pos', pos)
-        const textComponent = new niivue.TextComponent(pos, str, font, textColor, scale)
+        async function setupInteractiveText() {
+            const nv1 = new niivue.Niivue();
+            await nv1.attachTo("gl1");
+            nv1.setSliceType(nv1.sliceTypeRender);
+            console.log(nv1.canvas)
+            // Load font
+            const font = new niivue.UIKFont(nv1.gl);
+            await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
 
-        // Adding mouse enter and mouse leave effects
-        textComponent.addEventEffect('pointerenter', textComponent, 'textColor', 'setValue', [0, 1, 0, 1]) // Set text color to green on mouse enter
-        textComponent.addEventEffect('pointerleave', textComponent, 'textColor', 'animateValue', [0, 1, 0, 1], [1, 1, 1, 1], 3000) // Set text color to white on mouse leave
-        textComponent.alignmentPoint = niivue.UIKit.alignmentPoint.BOTTOMCENTER
-        nv1.ui.addComponent(textComponent)
-        console.log(nv1.ui)
-        nv1.drawScene()
+            // Define configuration object for the text component
+            const textConfig = {
+                text: 'The quick brown fox jumps over the lazy dog!', // Text string
+                font: font,                                          // Font object
+                textColor: [1.0, 1.0, 1.0, 1.0],                     // Initial text color (white)
+                scale: 0.5,                                          // Text scale
+                position: [                                          // Center text horizontally
+                    nv1.canvas.width  / 2,
+                    nv1.canvas.height / 2 - 150
+                ],
+                alignmentPoint: niivue.UIKit.alignmentPoint.BOTTOMCENTER, // Alignment point
+                hoverColor: [0, 1, 0, 1],                              // Hover color (green)
+                resetColor: [1, 1, 1, 1]                               // Reset color (white)
+            };
 
+            // Create and configure TextComponent
+            const textComponent = new niivue.TextComponent(textConfig);
+            textComponent.alignmentPoint = textConfig.alignmentPoint;
+
+            // Add interactivity effects
+            textComponent.addEventEffect('pointerenter', textComponent, 'textColor', 'setValue', textConfig.hoverColor);
+            textComponent.addEventEffect(
+                'pointerleave',
+                textComponent,
+                'textColor',
+                'animateValue',
+                textConfig.hoverColor,
+                textConfig.resetColor,
+                3000
+            );
+
+            // Add to UI and draw
+            nv1.ui.addComponent(textComponent);
+            console.log('UI Structure:', nv1.ui);
+            nv1.drawScene();
+        }
+
+        setupInteractiveText();
     </script>
 </body>
 

@@ -5,13 +5,13 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Two Fonts</title>
+    <title>Two Fonts with Config Object</title>
     <link rel="stylesheet" href="light.css" />
 </head>
 
 <body>
     <noscript>niivue requires JavaScript.</noscript>
-    <header>        
+    <header>
     </header>
     <main>
         <canvas id="gl1"></canvas>
@@ -19,32 +19,65 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        function addTextComponent(font, text) {
-            const textColor = [1.0, 1.0, 1.0, 1.0]
-            const str = 'The quick brown fox jumps over the lazy dog!'
-            const scale = 0.5
-            const width = font.getTextWidth(str, scale)
-            const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height / 2 - 150]
-            const textComponent = new niivue.TextComponent(pos, text, font, textColor, scale)
-            textComponent.alignmentPoint = (textComponentCount++ > 0) ? niivue.UIKit.alignmentPoint.MIDDLERIGHT : niivue.UIKit.alignmentPoint.MIDDLELEFT
-            const ui = nv1.ui
-            ui.addComponent(textComponent)
+        // Function to create and add a text component using a configuration object
+        function addTextComponent(config) {
+            const textComponent = new niivue.TextComponent(config);
+            textComponent.alignmentPoint = config.alignmentPoint;
+
+            // Add mouse hover effects for text color
+            textComponent.addEventEffect('pointerenter', textComponent, 'textColor', 'setValue', config.hoverColor); // On hover
+            textComponent.addEventEffect('pointerleave', textComponent, 'textColor', 'setValue', config.textColor); // Reset
+
+            // Add the text component to the UI
+            nv1.ui.addComponent(textComponent);
         }
 
+        // Hebrew and Russian sample texts
         const hebrew = 'קומיסורה קדמית';
         const russian = 'передняя комиссура';
-        var textComponentCount = 0;
-        var nv1 = new niivue.Niivue();
-        nv1.attachTo("gl1");
-        nv1.setSliceType(nv1.sliceTypeRender);
-        const russianFont = new niivue.UIKFont(nv1.gl)
-        await russianFont.loadFont("../fonts/Roboto-Regular-Extra.png", "../fonts/Roboto-Regular-Extra.json")
-        addTextComponent(russianFont, russian)
-        const hebrewFont = new niivue.UIKFont(nv1.gl)
-        await hebrewFont.loadFont("../fonts/Heebo-Regular.png", "../fonts/Heebo-Regular.json")
-        addTextComponent(hebrewFont, hebrew)
-        nv1.drawScene()
 
+        // Initialize Niivue
+        const nv1 = new niivue.Niivue();
+        await nv1.attachTo("gl1");
+        nv1.setSliceType(nv1.sliceTypeRender);
+
+        // Load Russian font and add the Russian text component
+        const russianFont = new niivue.UIKFont(nv1.gl);
+        await russianFont.loadFont("../fonts/Roboto-Regular-Extra.png", "../fonts/Roboto-Regular-Extra.json");
+
+        // Russian text configuration
+        const russianConfig = {
+            font: russianFont,
+            text: russian,
+            position: [10, (nv1.canvas.height - russianFont.getTextHeight(russian, 0.5)) / 2],
+            textColor: [1.0, 1.0, 1.0, 1.0],
+            hoverColor: [0, 1, 0, 1], // Green on hover
+            scale: 0.5,
+            alignmentPoint: niivue.UIKit.alignmentPoint.MIDDLELEFT
+        };
+        addTextComponent(russianConfig);
+
+        // Load Hebrew font and add the Hebrew text component
+        const hebrewFont = new niivue.UIKFont(nv1.gl);
+        await hebrewFont.loadFont("../fonts/Heebo-Regular.png", "../fonts/Heebo-Regular.json");
+
+        // Hebrew text configuration
+        const hebrewConfig = {
+            font: hebrewFont,
+            text: hebrew,
+            position: [
+                nv1.canvas.width - hebrewFont.getTextWidth(hebrew, 0.5) - 10,
+                (nv1.canvas.height - hebrewFont.getTextHeight(hebrew, 0.5)) / 2
+            ],
+            textColor: [1.0, 1.0, 1.0, 1.0],
+            hoverColor: [0, 1, 0, 1], // Green on hover
+            scale: 0.5,
+            alignmentPoint: niivue.UIKit.alignmentPoint.MIDDLERIGHT
+        };
+        addTextComponent(hebrewConfig);
+
+        // Draw the scene
+        nv1.drawScene();
     </script>
 </body>
 

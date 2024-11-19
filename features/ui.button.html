@@ -19,24 +19,66 @@
     <script type="module" async>
         import * as niivue from "../dist/index.js";
 
-        var nv1 = new niivue.Niivue();
-        nv1.attachTo("gl1");
-        nv1.setSliceType(nv1.sliceTypeRender);
-        const font = new niivue.UIKFont(nv1.gl);
-        await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
-        const textColor = [1.0, 1.0, 1.0, 1.0];
-        const highLightColor = [0, 1.0, 0, 1];
-        const str = 'Click Me!';
-        const scale = 0.5;
-        const width = font.getTextWidth(str, scale);
-        const pos = [(nv1.canvas.width - width) / 2, nv1.canvas.height / 2 - 50];
-        const buttonComponent = new niivue.ButtonComponent(font, pos, str, textColor, [0.2, 0.5, 0.8, 1.0], [0.1, 0.1, 0.1, 0.3], highLightColor, 15, 10, scale);
-        buttonComponent.onClick = () => { alert('clicked!') }
-        buttonComponent.alignmentPoint = niivue.UIKit.alignmentPoint.MIDDLECENTER
-        // Adding the button component to the Niivue UI
-        nv1.ui.addComponent(buttonComponent);
-        console.log(nv1.ui);
-        nv1.drawScene();    
+        async function setupButtonComponent() {
+            // Initialize Niivue and attach to canvas
+            const nv1 = new niivue.Niivue();
+            await nv1.attachTo("gl1");
+            nv1.setSliceType(nv1.sliceTypeRender);
+
+            // Load font
+            const font = new niivue.UIKFont(nv1.gl);
+            await font.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
+
+            // Button properties
+            const text = "Click Me!";
+            const textColor = [1.0, 1.0, 1.0, 1.0];
+            const outlineColor = [0.2, 0.5, 0.8, 1.0];
+            const fillColor = [0.1, 0.1, 0.1, 0.3];
+            const highlightColor = [0.0, 1.0, 0.0, 1.0];
+            const scale = 0.5;
+            const margin = 15;
+            const roundness = 10;
+
+            // Calculate button dimensions and position
+            const width = font.getTextWidth(text, scale);
+            const position = [
+                (nv1.canvas.width - width) / 2,
+                nv1.canvas.height / 2 - 50,
+            ];
+
+            // Create ButtonComponentConfig
+            const buttonConfig = {
+                position: position,
+                font: font,
+                text: text,
+                textColor: textColor,
+                outlineColor: outlineColor,
+                fillColor: fillColor,
+                highlightColor: highlightColor,
+                margin: margin,
+                roundness: roundness,
+                scale: scale,
+                maxWidth: 0, // No maxWidth limit
+                fontOutlineColor: [0, 0, 0, 1], // Default outline color
+                fontOutlineThickness: 1, // Default outline thickness
+                alignmentPoint: niivue.UIKit.alignmentPoint.MIDDLECENTER, // Center alignment
+            };
+
+            // Create ButtonComponent
+            const buttonComponent = new niivue.ButtonComponent(buttonConfig);
+
+            // Add click handler
+            buttonComponent.onClick = () => {
+                alert("Button clicked!");
+            };
+
+            // Add the button to the UI and draw the scene
+            nv1.ui.addComponent(buttonComponent);
+            nv1.drawScene();
+        }
+
+        // Execute the setup function
+        setupButtonComponent();
     </script>
 </body>
 
