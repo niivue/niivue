@@ -120,6 +120,7 @@ export interface CircleComponentConfig extends BaseUIComponentConfig {
   leftTopWidthHeight: Vec4
   circleColor?: Color
   fillPercent?: number
+  z?: number
 }
 
 export interface ColorbarComponentConfig extends BaseUIComponentConfig {

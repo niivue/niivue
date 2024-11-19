@@ -7,6 +7,7 @@ export class CircleComponent extends BaseUIComponent {
   private leftTopWidthHeight: Vec4
   private circleColor: Color
   private fillPercent: number
+  private z: number
 
   constructor(config: CircleComponentConfig) {
     super(config)
@@ -16,7 +17,12 @@ export class CircleComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawCircle(this.leftTopWidthHeight, this.circleColor, this.fillPercent)
+    renderer.drawCircle({
+      leftTopWidthHeight: this.leftTopWidthHeight,
+      circleColor: this.circleColor,
+      fillPercent: this.fillPercent,
+      z: this.z // Ensure you pass `z` if it is defined in the component
+    })
   }
 
   // toJSON method to serialize the CircleComponent instance

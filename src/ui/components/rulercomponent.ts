@@ -48,19 +48,20 @@ export class RulerComponent extends BaseUIComponent implements IProjectable2D {
   draw(renderer: UIKRenderer): void {
     // Calculate the dynamic length based on projected screen points
     const length = this.calculateLength()
+
     // Draw the ruler component on the screen using projected points
-    renderer.drawRuler(
-      this.projectedStart,
-      this.projectedEnd,
+    renderer.drawRuler({
+      pointA: this.projectedStart,
+      pointB: this.projectedEnd,
       length,
-      this.units,
-      this.font,
-      this.textColor,
-      this.lineColor,
-      this.lineThickness,
-      this.offset,
-      this.scale // Pass scale from BaseUIComponent
-    )
+      units: this.units,
+      font: this.font,
+      textColor: this.textColor,
+      lineColor: this.lineColor,
+      lineThickness: this.lineThickness,
+      offset: this.offset,
+      scale: this.scale // Pass scale from BaseUIComponent
+    })
   }
 
   toJSON(): object {

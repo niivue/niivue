@@ -8210,17 +8210,17 @@ export class Niivue {
         decimals = 0
       }
       const stringMM = lenMM.toFixed(decimals)
-      this.ui.drawCaliper(
-        [startXYendXY[0], startXYendXY[1]],
-        [startXYendXY[2], startXYendXY[3]],
-        lenMM,
-        'mm',
-        this.defaultFont,
-        this.opts.rulerColor,
-        this.opts.rulerColor,
-        this.opts.rulerWidth,
-        100
-      )
+      this.ui.drawRuler({
+        pointA: [startXYendXY[0], startXYendXY[1]],
+        pointB: [startXYendXY[2], startXYendXY[3]],
+        length: lenMM,
+        units: 'mm',
+        font: this.defaultFont,
+        textColor: this.opts.rulerColor,
+        lineColor: this.opts.rulerColor,
+        lineThickness: this.opts.rulerWidth,
+        offset: 100
+      })
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
   }
@@ -8281,7 +8281,12 @@ export class Niivue {
     fillPercent = 1.0,
     z: number = 0
   ): void {
-    this.ui.drawCircle(vec4.fromValues(...leftTopWidthHeight), circleColor, fillPercent, z)
+    this.ui.drawCircle({
+      leftTopWidthHeight: vec4.fromValues(...leftTopWidthHeight),
+      circleColor,
+      fillPercent,
+      z
+    })
   }
 
   // not included in public docs
@@ -8581,8 +8586,18 @@ export class Niivue {
   }
 
   // not included in public docs
-  drawText(xy: number[], str: string, scale = 1, color: Float32List | null = null): void {
-    this.ui.drawText(this.defaultFont, vec2.fromValues(xy[0], xy[1]), str, scale, color)
+  drawText(xy, str, scale = 1, color = null): void {
+    if (!color) {
+      color = this.opts.fontColor
+    }
+
+    this.ui.drawText({
+      font: this.defaultFont,
+      position: vec2.fromValues(xy[0], xy[1]),
+      text: str,
+      scale,
+      color
+    })
   }
 
   // not included in public docs

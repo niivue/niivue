@@ -25,6 +25,11 @@ export class CaliperComponent extends BaseUIComponent {
     this.scale = config.scale ?? 1.0
   }
 
+  /**
+   * Draws the ruler or caliper component.
+   *
+   * @param renderer - The UIKRenderer instance used for drawing.
+   */
   draw(renderer: UIKRenderer): void {
     // Calculate the angle between the points
     const deltaX = this.pointB[0] - this.pointA[0]
@@ -61,7 +66,14 @@ export class CaliperComponent extends BaseUIComponent {
     }
 
     // Draw the rotated text at the adjusted position
-    renderer.drawRotatedText(this.font, textPosition, text, this.scale, this.textColor, angle)
+    renderer.drawRotatedText({
+      font: this.font,
+      xy: textPosition,
+      str: text,
+      scale: this.scale,
+      color: this.textColor,
+      rotation: angle
+    })
 
     // Draw a parallel line of equal length to the original line
     const parallelPointA: Vec2 = [
@@ -72,21 +84,25 @@ export class CaliperComponent extends BaseUIComponent {
       this.pointB[0] + (10 * deltaY) / actualLength,
       this.pointB[1] - (10 * deltaX) / actualLength
     ]
-    renderer.drawLine([parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]], 1, this.lineColor)
+    renderer.drawLine({
+      startEnd: [parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]],
+      thickness: 1,
+      color: this.lineColor
+    })
 
     // Draw lines terminating in arrows from the ends of the parallel line to points A and B
-    renderer.drawLine(
-      [parallelPointA[0], parallelPointA[1], this.pointA[0], this.pointA[1]],
-      1,
-      this.lineColor,
-      LineTerminator.ARROW
-    )
-    renderer.drawLine(
-      [parallelPointB[0], parallelPointB[1], this.pointB[0], this.pointB[1]],
-      1,
-      this.lineColor,
-      LineTerminator.ARROW
-    )
+    renderer.drawLine({
+      startEnd: [parallelPointA[0], parallelPointA[1], this.pointA[0], this.pointA[1]],
+      thickness: 1,
+      color: this.lineColor,
+      terminator: LineTerminator.ARROW
+    })
+    renderer.drawLine({
+      startEnd: [parallelPointB[0], parallelPointB[1], this.pointB[0], this.pointB[1]],
+      thickness: 1,
+      color: this.lineColor,
+      terminator: LineTerminator.ARROW
+    })
   }
 
   updatePointA(pointA: Vec2): void {

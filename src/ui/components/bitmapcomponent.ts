@@ -34,8 +34,11 @@ export class BitmapComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    // Draw the bitmap using screen coordinates
-    renderer.drawBitmap(this.bitmap, this.position, this.scale)
+    renderer.drawBitmap({
+      bitmap: this.bitmap,
+      position: this.position,
+      scale: this.scale
+    })
   }
 
   // Method to get the NVBitmap instance

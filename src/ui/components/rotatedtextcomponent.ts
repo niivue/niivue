@@ -47,7 +47,14 @@ export class RotatedTextComponent extends BaseUIComponent implements IColorable 
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawRotatedText(this.font, this.position, this.text, this.scale, this.color, this.rotation)
+    renderer.drawRotatedText({
+      font: this.font,
+      xy: this.position,
+      str: this.text,
+      scale: this.scale,
+      color: this.color,
+      rotation: this.rotation
+    })
   }
 
   toJSON(): object {

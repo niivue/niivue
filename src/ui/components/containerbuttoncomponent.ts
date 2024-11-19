@@ -41,16 +41,18 @@ export class ContainerButtonComponent extends BaseContainerComponent {
     if (!this.isVisible) {
       return
     }
+
     this.updateLayout()
-    // Draw the button background
-    // renderer.drawRect(this.getBounds(), this.fillColor)
+
+    // Draw the button background using the updated drawRoundedRect configuration
     const bounds = this.getBounds()
-    renderer.drawRoundedRect(
+    renderer.drawRoundedRect({
       bounds,
-      this.fillColor,
-      this.outlineColor,
-      (Math.min(1.0, this.roundness) / 2) * Math.min(bounds[2], bounds[3])
-    )
+      fillColor: this.fillColor,
+      outlineColor: this.outlineColor,
+      cornerRadius: (Math.min(1.0, this.roundness) / 2) * Math.min(bounds[2], bounds[3]),
+      thickness: 1 // Default thickness or adjust based on your requirements
+    })
 
     // Draw the child components
     this.components.forEach((component) => {

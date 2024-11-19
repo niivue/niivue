@@ -19,7 +19,12 @@ export class TriangleComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawTriangle(this.headPoint, this.baseMidPoint, this.baseLength, this.color)
+    renderer.drawTriangle({
+      headPoint: this.headPoint,
+      baseMidPoint: this.baseMidPoint,
+      baseLength: this.baseLength,
+      color: this.color
+    })
   }
 
   toJSON(): object {

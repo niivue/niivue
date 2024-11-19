@@ -38,7 +38,15 @@ export class ColorbarComponent extends BaseUIComponent {
   draw(renderer: UIKRenderer): void {
     const position: Vec2 = [this.bounds[0] * this.scale, this.bounds[1] * this.scale]
     const size: Vec2 = [this.bounds[2] * this.scale, this.bounds[3] * this.scale]
-    renderer.drawColorbar(this.font, position, size, this.gradientTexture, this.labels) //, this.minMax)
+
+    renderer.drawColorbar({
+      font: this.font,
+      position,
+      size,
+      gradientTexture: this.gradientTexture,
+      labels: this.labels // Add `minMax` if applicable and uncomment
+      // minMax: this.minMax
+    })
   }
 
   get colormapName(): string {

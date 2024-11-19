@@ -111,7 +111,6 @@ export class UIKit {
 
   // Method to add a component to the QuadTree
   public addComponent(component: IUIComponent): void {
-    console.log('adding component', component)
     if (component instanceof BaseContainerComponent) {
       component.quadTree = this.quadTree
     }
@@ -160,26 +159,20 @@ export class UIKit {
   }
 
   public draw(leftTopWidthHeight?: Vec4, tags: string[] = []): void {
-    console.log('draw called', leftTopWidthHeight, tags)
     this.gl.viewport(0, 0, this.canvasWidth, this.canvasHeight)
 
     // Set up bounds for filtering and positioning
-    // const bounds: Vec4 = leftTopWidthHeight || [0, 0, this.gl.canvas.width, this.gl.canvas.height]
-
     // Retrieve components that match the specified tags and are within bounds
     const components = this.getComponents(
       leftTopWidthHeight,
       tags,
       true // Match all specified tags
     )
-    console.log('components to draw', components)
     for (const component of components) {
       // Align component within bounds if specified
       // component.align(bounds)
-      console.log('component is visible', component.isVisible)
       // Draw the component using NVRenderer
       if (component.isVisible) {
-        console.log('drawing', component)
         component.draw(this.renderer)
       }
     }
@@ -281,199 +274,183 @@ export class UIKit {
 
   // Proxy methods for renderer's draw calls
 
-  public drawText(
-    font: UIKFont,
-    position: Vec2,
-    text: string,
+  // Proxy methods for renderer's draw calls
+  public drawText({
+    font,
+    position,
+    text,
     scale = 1.0,
-    color: Color = [1, 1, 1, 1],
+    color = [1, 1, 1, 1],
     maxWidth = 0
-  ): void {
-    this.renderer.drawText(font, position, text, scale, color, maxWidth)
+  }: {
+    font: UIKFont
+    position: Vec2
+    text: string
+    scale?: number
+    color?: Color
+    maxWidth?: number
+  }): void {
+    this.renderer.drawText({ font, position, text, scale, color, maxWidth })
   }
 
-  public drawBitmap(bitmap: UIKBitmap, position: Vec2, scale: number): void {
-    this.renderer.drawBitmap(bitmap, position, scale)
+  public drawBitmap({ bitmap, position, scale }: { bitmap: UIKBitmap; position: Vec2; scale: number }): void {
+    this.renderer.drawBitmap({ bitmap, position, scale })
   }
 
-  public drawLine(
-    startEnd: Vec4,
+  public drawLine({
+    startEnd,
     thickness = 1,
-    lineColor: Color = [1, 0, 0, 1],
-    terminator: LineTerminator = LineTerminator.NONE
-  ): void {
-    this.renderer.drawLine(startEnd, thickness, lineColor, terminator)
+    color = [1, 0, 0, 1],
+    terminator = LineTerminator.NONE,
+    style = LineStyle.SOLID,
+    dashDotLength = 5
+  }: {
+    startEnd: Vec4
+    thickness?: number
+    color?: Color
+    terminator?: LineTerminator
+    style?: LineStyle
+    dashDotLength?: number
+  }): void {
+    this.renderer.drawLine({ startEnd, thickness, color, terminator, style, dashDotLength })
   }
 
-  public drawRect(leftTopWidthHeight: Vec4, lineColor: Color = [1, 0, 0, 1]): void {
-    this.renderer.drawRect(leftTopWidthHeight, lineColor)
+  public drawRect({
+    leftTopWidthHeight,
+    fillColor = [1, 0, 0, 1]
+  }: {
+    leftTopWidthHeight: Vec4
+    fillColor?: Color
+  }): void {
+    this.renderer.drawRect({ leftTopWidthHeight, fillColor })
   }
 
-  public drawRoundedRect(
-    leftTopWidthHeight: Vec4,
-    fillColor: Color,
-    outlineColor: Color,
-    cornerRadius: number = -1,
-    thickness: number = 10
-  ): void {
-    this.renderer.drawRoundedRect(leftTopWidthHeight, fillColor, outlineColor, cornerRadius, thickness)
+  public drawRoundedRect({
+    bounds,
+    fillColor,
+    outlineColor,
+    cornerRadius = 0,
+    thickness = 10
+  }: {
+    bounds: Vec4
+    fillColor: Color
+    outlineColor: Color
+    cornerRadius?: number
+    thickness?: number
+  }): void {
+    this.renderer.drawRoundedRect({ bounds, fillColor, outlineColor, cornerRadius, thickness })
   }
 
-  public drawCircle(
-    leftTopWidthHeight: Vec4,
-    circleColor: Color = [1, 1, 1, 1],
+  public drawCircle({
+    leftTopWidthHeight,
+    circleColor = [1, 1, 1, 1],
     fillPercent = 1.0,
-    z: number = 0
-  ): void {
-    this.renderer.drawCircle(leftTopWidthHeight, circleColor, fillPercent, z)
+    z = 0
+  }: {
+    leftTopWidthHeight: Vec4
+    circleColor?: Color
+    fillPercent?: number
+    z?: number
+  }): void {
+    this.renderer.drawCircle({ leftTopWidthHeight, circleColor, fillPercent, z })
   }
 
-  public drawToggle(position: Vec2, size: Vec2, isOn: boolean, onColor: Color, offColor: Color): void {
-    this.renderer.drawToggle(position, size, isOn, onColor, offColor)
+  public drawToggle({
+    position,
+    size,
+    isOn,
+    onColor,
+    offColor,
+    knobPosition
+  }: {
+    position: Vec2
+    size: Vec2
+    isOn: boolean
+    onColor: Color
+    offColor: Color
+    knobPosition?: number
+  }): void {
+    this.renderer.drawToggle({ position, size, isOn, onColor, offColor, knobPosition })
   }
 
-  public drawTriangle(headPoint: Vec2, baseMidPoint: Vec2, baseLength: number, color: Color, z: number = 0): void {
-    this.renderer.drawTriangle(headPoint, baseMidPoint, baseLength, color, z)
+  public drawTriangle({
+    headPoint,
+    baseMidPoint,
+    baseLength,
+    color,
+    z = 0
+  }: {
+    headPoint: Vec2
+    baseMidPoint: Vec2
+    baseLength: number
+    color: Color
+    z?: number
+  }): void {
+    this.renderer.drawTriangle({ headPoint, baseMidPoint, baseLength, color, z })
   }
 
-  public drawRotatedText(
-    font: UIKFont,
-    position: Vec2,
-    text: string,
+  /**
+   * Draws rotated text using the renderer.
+   *
+   * @param font - The font used for rendering the text.
+   * @param xy - The position of the text.
+   * @param str - The string to render.
+   * @param scale - The scale of the text. Defaults to 1.0.
+   * @param color - The color of the text. Defaults to [1.0, 0.0, 0.0, 1.0].
+   * @param rotation - The rotation of the text in radians. Defaults to 0.0.
+   * @param outlineColor - The outline color of the text. Defaults to [0, 0, 0, 1.0].
+   * @param outlineThickness - The thickness of the outline. Defaults to 2.
+   */
+  public drawRotatedText({
+    font,
+    xy,
+    str,
     scale = 1.0,
-    color: Color = [1, 0, 0, 1],
-    rotation = 0.0, // Rotation in radians
-    outlineColor: Color = [0, 0, 0, 1],
-    outlineThickness: number = 1
-  ): void {
-    this.renderer.drawRotatedText(font, position, text, scale, color, rotation, outlineColor, outlineThickness)
+    color = [1.0, 0.0, 0.0, 1.0],
+    rotation = 0.0,
+    outlineColor = [0, 0, 0, 1.0],
+    outlineThickness = 2
+  }: {
+    font: UIKFont
+    xy: Vec2
+    str: string
+    scale?: number
+    color?: Color
+    rotation?: number
+    outlineColor?: Color
+    outlineThickness?: number
+  }): void {
+    this.renderer.drawRotatedText({ font, xy, str, scale, color, rotation, outlineColor, outlineThickness })
   }
 
-  // Updated drawTextBox method to support maxWidth and word wrapping
-  // Updated drawTextBox method to support maxWidth and word wrapping
-  drawTextBox(
-    font: UIKFont,
-    xy: Vec2,
-    str: string,
-    textColor: Color = [0, 0, 0, 1.0],
-    outlineColor: Color = [1.0, 1.0, 1.0, 1.0],
-    fillColor: Color = [0.0, 0.0, 0.0, 0.3],
-    margin: number = 15,
-    roundness: number = 0.0,
-    scale = 1.0,
-    maxWidth = 0,
-    fontOutlineColor: Color = [0, 0, 0, 1],
-    fontOutlineThickness: number = 1
-  ): void {
-    this.renderer.drawTextBox(
-      font,
-      xy,
-      str,
-      textColor,
-      outlineColor,
-      fillColor,
-      margin,
-      roundness,
-      scale,
-      maxWidth,
-      fontOutlineColor,
-      fontOutlineThickness
-    )
-  }
-
-  drawTextBoxCenteredOn(
-    font: UIKFont,
-    xy: Vec2,
-    str: string,
-    textColor: Color = [0, 0, 0, 1.0],
-    outlineColor: Color = [1.0, 1.0, 1.0, 1.0],
-    fillColor: Color = [0.0, 0.0, 0.0, 0.3],
-    margin: number = 15,
-    roundness: number = 0.0,
-    scale = 1.0,
-    maxWidth = 0,
-    fontOutlineColor: Color = [0, 0, 0, 1],
-    fontOutlineThickness: number = 1
-  ): void {
-    const textWidth = font.getTextWidth(str, scale)
-    const textHeight = font.getTextHeight(str, scale)
-    const padding = textHeight > textWidth ? textHeight - textWidth : 0
-    const rectWidth = textWidth + 2 * margin * scale + textHeight + padding
-    const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
-    const centeredPos = [xy[0] - rectWidth / 2, xy[1] - rectHeight / 2] as Vec2
-
-    this.drawTextBox(
-      font,
-      centeredPos,
-      str,
-      textColor,
-      outlineColor,
-      fillColor,
-      margin,
-      roundness,
-      scale,
-      maxWidth,
-      fontOutlineColor,
-      fontOutlineThickness
-    )
-  }
-
-  public drawCalendar(
-    font: UIKFont,
-    startX: number,
-    startY: number,
-    cellWidth: number,
-    cellHeight: number,
-    selectedDate: Date,
-    selectedColor: Color,
-    firstDayOfWeek: number = 0 // 0 represents Sunday
-  ): void {
-    this.renderer.drawCalendar(font, startX, startY, cellWidth, cellHeight, selectedDate, selectedColor, firstDayOfWeek)
-  }
-
-  drawCaliper(
-    pointA: Vec2,
-    pointB: Vec2,
-    length: number,
-    units: string,
-    font: UIKFont,
-    textColor: Color = [1, 0, 0, 1],
-    lineColor: Color = [0, 0, 0, 1],
-    lineThickness: number = 1,
-    offset: number = 40,
-    scale: number = 1.0
-  ): void {
-    this.renderer.drawRuler(pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale)
-  }
-
-  public drawRotatedRectangularFill(
-    leftTopWidthHeight: Vec4,
-    rotation: number,
-    fillColor: Color,
-    gradientCenter: Vec2,
-    gradientRadius: number,
-    gradientColor: Color
-  ): void {
-    this.renderer.drawRotatedRectangularFill(
-      leftTopWidthHeight,
-      rotation,
-      fillColor,
-      gradientCenter,
-      gradientRadius,
-      gradientColor
-    )
-  }
-
-  public drawRectangle(
-    tx: number,
-    ty: number,
-    sx: number,
-    sy: number,
-    color: [number, number, number, number],
-    rotation: number = 0,
-    mixValue: number = 0.5
-  ): void {
-    this.renderer.drawRectangle(tx, ty, sx, sy, color, rotation, mixValue)
+  /**
+   * Proxy method to draw a ruler using the renderer.
+   *
+   * @param config - Configuration object for drawing the ruler.
+   * @param config.pointA - The starting point of the ruler as a Vec2 ([x, y]).
+   * @param config.pointB - The ending point of the ruler as a Vec2 ([x, y]).
+   * @param config.length - The length of the ruler.
+   * @param config.units - The units to display on the ruler.
+   * @param config.font - The font to use for ruler labels.
+   * @param config.textColor - The color of the ruler labels.
+   * @param config.lineColor - The color of the ruler lines.
+   * @param config.lineThickness - The thickness of the ruler lines.
+   * @param config.offset - The offset distance of the ruler from the main line.
+   * @param config.scale - The scale for the text and elements of the ruler.
+   */
+  public drawRuler(config: {
+    pointA: Vec2
+    pointB: Vec2
+    length: number
+    units: string
+    font: UIKFont
+    textColor?: Color
+    lineColor?: Color
+    lineThickness?: number
+    offset?: number
+    scale?: number
+  }): void {
+    this.renderer.drawRuler(config)
   }
 
   public async serializeComponents(): Promise<string> {

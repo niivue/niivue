@@ -58,15 +58,15 @@ export class ProjectedLineComponent extends LineComponent implements IProjectabl
     // Ensure line position is up-to-date before drawing
     this.updateLinePosition()
 
-    renderer.drawProjectedLine(
-      [this.startEnd[0], this.startEnd[1], -1],
-      this.projectedPoint,
-      this.thickness,
-      this.lineColor,
-      this.terminator,
-      this.lineStyle,
-      this.dashDotLength
-    )
+    renderer.drawProjectedLine({
+      startXYZ: [this.startEnd[0], this.startEnd[1], -1],
+      endXYZ: this.projectedPoint,
+      thickness: this.thickness,
+      lineColor: this.lineColor,
+      terminator: this.terminator,
+      lineStyle: this.lineStyle,
+      dashDotLength: this.dashDotLength
+    })
   }
 
   toJSON(): object {

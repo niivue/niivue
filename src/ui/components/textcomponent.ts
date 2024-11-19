@@ -78,7 +78,14 @@ export class TextComponent extends BaseUIComponent implements IColorable {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawText(this.font, this.position, this.text, this.scale, this.textColor, this.maxWidth)
+    renderer.drawText({
+      font: this.font,
+      position: this.position,
+      text: this.text,
+      scale: this.scale,
+      color: this.textColor,
+      maxWidth: this.maxWidth
+    })
   }
 
   getTextColor(): Color {

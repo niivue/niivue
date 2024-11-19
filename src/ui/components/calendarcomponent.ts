@@ -27,16 +27,16 @@ export class CalendarComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawCalendar(
-      this.font,
-      this.startX,
-      this.startY,
-      this.cellWidth,
-      this.cellHeight,
-      this.selectedDate,
-      this.selectedColor,
-      this.firstDayOfWeek
-    )
+    renderer.drawCalendar({
+      font: this.font,
+      startX: this.startX,
+      startY: this.startY,
+      cellWidth: this.cellWidth,
+      cellHeight: this.cellHeight,
+      selectedDate: this.selectedDate,
+      selectedColor: this.selectedColor,
+      firstDayOfWeek: this.firstDayOfWeek
+    })
   }
 
   // toJSON method to serialize the CalendarComponent instance

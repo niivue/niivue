@@ -52,20 +52,20 @@ export class TextBoxComponent extends TextComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawTextBox(
-      this.font,
-      this.position,
-      this.text,
-      this.textColor,
-      this.outlineColor,
-      this.fillColor,
-      this.innerMargin,
-      this.roundness,
-      this.scale,
-      this.maxWidth,
-      this.fontOutlineColor,
-      this.fontOutlineThickness
-    )
+    renderer.drawTextBox({
+      font: this.font,
+      xy: this.position,
+      text: this.text,
+      textColor: this.textColor,
+      outlineColor: this.outlineColor,
+      fillColor: this.fillColor,
+      margin: this.innerMargin,
+      roundness: this.roundness,
+      scale: this.scale,
+      maxWidth: this.maxWidth,
+      fontOutlineColor: this.fontOutlineColor,
+      fontOutlineThickness: this.fontOutlineThickness
+    })
   }
 
   toJSON(): object {

@@ -51,14 +51,14 @@ export class LineComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawLine(
-      this.startEnd,
-      this.thickness,
-      this.lineColor,
-      this.terminator,
-      this.lineStyle, // Pass line style to renderer
-      this.dashDotLength // Pass dash/dot length to renderer
-    )
+    renderer.drawLine({
+      startEnd: this.startEnd,
+      thickness: this.thickness,
+      color: this.lineColor,
+      terminator: this.terminator,
+      style: this.lineStyle, // Use the updated field name for line style
+      dashDotLength: this.dashDotLength // Pass dash/dot length for dashed/dotted styles
+    })
   }
 
   // toJSON method to serialize the LineComponent instance

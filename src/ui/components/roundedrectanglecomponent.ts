@@ -22,13 +22,13 @@ export class RoundedRectComponent extends BaseUIComponent {
   }
 
   draw(renderer: UIKRenderer): void {
-    renderer.drawRoundedRect(
-      this.leftTopWidthHeight,
-      this.fillColor,
-      this.outlineColor,
-      this.cornerRadius,
-      this.thickness
-    )
+    renderer.drawRoundedRect({
+      bounds: this.leftTopWidthHeight,
+      fillColor: this.fillColor,
+      outlineColor: this.outlineColor,
+      cornerRadius: this.cornerRadius,
+      thickness: this.thickness
+    })
   }
 
   toJSON(): object {

@@ -79,14 +79,21 @@ export class ToggleComponent extends BaseUIComponent {
     // Handle hover effect for drawing color
     let drawColor: Color = this.isOn ? this.onColor : this.offColor
     if (isHovered) {
-      // Assuming drawColor is a Float32List, we need to create a new instance for adjusted brightness
       drawColor = [...drawColor] as Color
       drawColor[0] = Math.min(drawColor[0] * 1.2, 1)
       drawColor[1] = Math.min(drawColor[1] * 1.2, 1)
       drawColor[2] = Math.min(drawColor[2] * 1.2, 1)
     }
+
     // Draw the toggle with animation support using knobPosition
-    renderer.drawToggle([posX, posY], [sizeX, sizeY], this.isOn, this.onColor, this.offColor, this.knobPosition)
+    renderer.drawToggle({
+      position: [posX, posY],
+      size: [sizeX, sizeY],
+      isOn: this.isOn,
+      onColor: this.onColor,
+      offColor: this.offColor,
+      knobPosition: this.knobPosition
+    })
   }
 
   setKnobPosition(position: number): void {
