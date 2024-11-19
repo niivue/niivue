@@ -125,8 +125,6 @@ export interface CircleComponentConfig extends BaseUIComponentConfig {
 
 export interface ColorbarComponentConfig extends BaseUIComponentConfig {
   gl: WebGL2RenderingContext
-  font: UIKFont
-  labels?: string[]
   minMax?: [number, number]
   colormapName?: string
   bounds: Vec4

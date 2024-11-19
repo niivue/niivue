@@ -1364,17 +1364,13 @@ export class UIKRenderer {
    * @param params.labels - Array of labels for tick marks.
    */
   public drawColorbar({
-    font,
     position,
     size,
-    gradientTexture,
-    labels
+    gradientTexture
   }: {
-    font: UIKFont
     position: Vec2
     size: Vec2
     gradientTexture: WebGLTexture
-    labels: string[]
   }): void {
     const gl = this.gl
     const [x, y] = position

@@ -1,13 +1,11 @@
 import { UIKRenderer } from '../uikrenderer.js'
 import { Vec2 } from '../types.js'
-import { UIKFont } from '../uikfont.js'
 import { cmapper } from '../../colortables.js'
 import { ColorbarComponentConfig } from '../interfaces.js'
 import { BaseUIComponent } from './baseuicomponent.js'
 
 export class ColorbarComponent extends BaseUIComponent {
   private gl: WebGL2RenderingContext
-  private font: UIKFont
   private gradientTexture: WebGLTexture
   private labels: string[]
   private minMax: [number, number]
@@ -16,8 +14,6 @@ export class ColorbarComponent extends BaseUIComponent {
   constructor(config: ColorbarComponentConfig) {
     super(config)
     this.gl = config.gl
-    this.font = config.font
-    this.labels = config.labels ?? ['Min', 'Max']
     this.minMax = config.minMax ?? [0, 1]
     this._colormapName = config.colormapName ?? 'viridis'
     this.gradientTexture = this.generateColorMapTexture(this.gl, this._colormapName)
@@ -40,11 +36,9 @@ export class ColorbarComponent extends BaseUIComponent {
     const size: Vec2 = [this.bounds[2] * this.scale, this.bounds[3] * this.scale]
 
     renderer.drawColorbar({
-      font: this.font,
       position,
       size,
-      gradientTexture: this.gradientTexture,
-      labels: this.labels // Add `minMax` if applicable and uncomment
+      gradientTexture: this.gradientTexture
       // minMax: this.minMax
     })
   }
