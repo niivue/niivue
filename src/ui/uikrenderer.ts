@@ -1395,21 +1395,6 @@ export class UIKRenderer {
     // Bind VAO and draw color bar rectangle
     gl.bindVertexArray(UIKRenderer.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-
-    // Draw tick marks and labels if any, using the provided font
-    const spacing = width / (labels.length - 1)
-    labels.forEach((label, i) => {
-      const labelX = x + i * spacing
-      const labelPos: Vec2 = [labelX, y + height + 5]
-      this.drawText({
-        font,
-        position: labelPos,
-        text: label,
-        scale: 0.5,
-        color: [0, 0, 0, 1] // Adjust scale and color as needed
-      })
-    })
-
     // Unbind texture and VAO after drawing
     gl.bindTexture(gl.TEXTURE_2D, null)
     gl.bindVertexArray(null)
