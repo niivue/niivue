@@ -293,6 +293,99 @@ export class UIKit {
     this.renderer.drawText({ font, position, text, scale, color, maxWidth })
   }
 
+  public drawTextBox({
+    font,
+    position,
+    str,
+    textColor = [0, 0, 0, 1.0],
+    outlineColor = [1.0, 1.0, 1.0, 1.0],
+    fillColor = [0.0, 0.0, 0.0, 0.3],
+    margin = 15,
+    roundness = 0.0,
+    scale = 1.0,
+    maxWidth = 0,
+    fontOutlineColor = [0, 0, 0, 1],
+    fontOutlineThickness = 1
+  }: {
+    font: UIKFont
+    position: Vec2
+    str: string
+    textColor?: Color
+    outlineColor?: Color
+    fillColor?: Color
+    margin?: number
+    roundness?: number
+    scale?: number
+    maxWidth?: number
+    fontOutlineColor?: Color
+    fontOutlineThickness?: number
+  }): void {
+    this.renderer.drawTextBox({
+      font,
+      xy: position,
+      text: str,
+      textColor,
+      outlineColor,
+      fillColor,
+      margin,
+      roundness,
+      scale,
+      maxWidth,
+      fontOutlineColor,
+      fontOutlineThickness
+    })
+  }
+
+  public drawTextBoxCenteredOn({
+    font,
+    position,
+    str,
+    textColor = [0, 0, 0, 1.0],
+    outlineColor = [1.0, 1.0, 1.0, 1.0],
+    fillColor = [0.0, 0.0, 0.0, 0.3],
+    margin = 15,
+    roundness = 0.0,
+    scale = 1.0,
+    maxWidth = 0,
+    fontOutlineColor = [0, 0, 0, 1],
+    fontOutlineThickness = 1
+  }: {
+    font: UIKFont
+    position: Vec2
+    str: string
+    textColor?: Color
+    outlineColor?: Color
+    fillColor?: Color
+    margin?: number
+    roundness?: number
+    scale?: number
+    maxWidth?: number
+    fontOutlineColor?: Color
+    fontOutlineThickness?: number
+  }): void {
+    const textWidth = font.getTextWidth(str, scale)
+    const textHeight = font.getTextHeight(str, scale)
+    const padding = textHeight > textWidth ? textHeight - textWidth : 0
+    const rectWidth = textWidth + 2 * margin * scale + textHeight + padding
+    const rectHeight = font.getTextHeight(str, scale) + 4 * margin * scale // Height of the rectangle enclosing the text
+    const centeredPos = [position[0] - rectWidth / 2, position[1] - rectHeight / 2] as Vec2
+
+    this.drawTextBox({
+      font,
+      position: centeredPos,
+      str,
+      textColor,
+      outlineColor,
+      fillColor,
+      margin,
+      roundness,
+      scale,
+      maxWidth,
+      fontOutlineColor,
+      fontOutlineThickness
+    })
+  }
+
   public drawBitmap({ bitmap, position, scale }: { bitmap: UIKBitmap; position: Vec2; scale: number }): void {
     this.renderer.drawBitmap({ bitmap, position, scale })
   }
