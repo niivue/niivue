@@ -120,6 +120,10 @@ export class UIKit {
     canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this))
     canvas.addEventListener('pointerup', this.handlePointerUp.bind(this))
     canvas.addEventListener('pointermove', this.handlePointerMove.bind(this))
+
+    const mqString = `(resolution: ${window.devicePixelRatio}dppx)`
+    const media = matchMedia(mqString)
+    media.addEventListener('change', this.handleUpdatedPixelRatio.bind(this))
   }
 
   /**
@@ -147,6 +151,19 @@ export class UIKit {
 
     const bounds = new Rectangle(0, 0, canvas.width, canvas.height)
     this.quadTree.updateBoundary(bounds)
+  }
+
+  handleUpdatedPixelRatio(): void {
+    this.dpr = window.devicePixelRatio
+    this.resizeListener()
+    if (this.redrawRequested) {
+      this.redrawRequested()
+    } else {
+      this.draw()
+    }
+    const mqString = `(resolution: ${window.devicePixelRatio}dppx)`
+    const media = matchMedia(mqString)
+    media.addEventListener('change', this.handleUpdatedPixelRatio.bind(this))
   }
 
   // Method to add a component to the QuadTree

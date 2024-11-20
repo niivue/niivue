@@ -1092,6 +1092,8 @@ export class UIKRenderer {
     fontOutlineColor?: Color
     fontOutlineThickness?: number
   }): void {
+    const dpr = window.devicePixelRatio || 1
+    scale *= dpr
     const textHeight = font.getTextHeight(text, scale)
     const wrappedSize = font.getWordWrappedSize(text, scale, maxWidth)
     const rectWidth = wrappedSize[0] + 2 * margin * scale + textHeight
@@ -1103,7 +1105,7 @@ export class UIKRenderer {
       fillColor,
       outlineColor,
       cornerRadius: (Math.min(1.0, roundness) / 2) * Math.min(leftTopWidthHeight[2], leftTopWidthHeight[3]),
-      thickness: 1 // Add thickness parameter to match drawRoundedRect signature
+      thickness: 5 // Add thickness parameter to match drawRoundedRect signature
     })
     const descenderDepth = font.getDescenderDepth(text, scale)
 
