@@ -240,7 +240,8 @@ export class UIKRenderer {
     gl.bindTexture(gl.TEXTURE_2D, font.getTexture())
     this.gl.uniform1i(font.fontShader!.uniforms.fontTexture, 3)
 
-    const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    // const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const size = font.textHeight * this.gl.canvas.height * scale
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform2f(font.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
     this.gl.uniform4fv(font.fontShader.uniforms.fontColor, color as Float32List)
@@ -1106,7 +1107,7 @@ export class UIKRenderer {
     })
     const descenderDepth = font.getDescenderDepth(text, scale)
 
-    const size = font.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const size = font.textHeight * this.gl.canvas.height * scale
     // Adjust the position of the text with a margin, ensuring it's vertically centered
     const textPosition = [
       leftTopWidthHeight[0] + margin * scale + textHeight / 2,
