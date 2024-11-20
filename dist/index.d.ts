@@ -1300,839 +1300,6 @@ declare class NVMesh {
     static readTRACT(buffer: ArrayBuffer): TRACT;
 }
 
-declare abstract class UIKAsset {
-    protected gl: WebGL2RenderingContext;
-    protected texture: WebGLTexture | null;
-    protected width: number;
-    protected height: number;
-    id: string;
-    constructor(gl: WebGL2RenderingContext);
-    getTexture(): WebGLTexture | null;
-    getWidth(): number;
-    getHeight(): number;
-    loadTexture(textureUrl: string, activeTexture: number): Promise<WebGLTexture | null>;
-    getBase64Texture(): Promise<string | null>;
-    abstract toJSON(): object;
-}
-
-type FontMetrics = {
-    distanceRange: number;
-    size: number;
-    mets: Record<number, {
-        xadv: number;
-        uv_lbwh: number[];
-        lbwh: number[];
-    }>;
-};
-declare class UIKFont extends UIKAsset {
-    fontMetrics: any;
-    fontMets: FontMetrics | null;
-    fontShader: Shader | null;
-    fontColor: number[] | Float32Array;
-    outlineColor: number[] | Float32Array;
-    outlineThickness: number;
-    textHeight: number;
-    isFontLoaded: boolean;
-    constructor(gl: WebGL2RenderingContext, fontColor?: number[] | Float32Array, textHeight?: number, outlineColor?: number[] | Float32Array, outlineThickness?: number);
-    loadFontTexture(fontUrl: string): Promise<void>;
-    loadFont(fontSheetUrl: string, metricsUrl: string): Promise<void>;
-    loadDefaultFont(): Promise<void>;
-    private initFontMets;
-    getTextWidth(str: string, scale?: number): number;
-    getDescenderDepth(str: string, scale?: number): number;
-    getAscenderHeight(str: string, scale?: number): number;
-    getTextHeight(str: string, scale?: number): number;
-    getTextBounds(scale: number, str: string): number[];
-    getWordWrappedSize(text: string, scale?: number, maxWidth?: number): vec2;
-    toJSON(): object;
-    static fromJSON(gl: WebGL2RenderingContext, json: any): Promise<UIKFont>;
-}
-
-type Color = [number, number, number, number] | Float32List;
-type Vec2 = vec2 | [number, number];
-type Vec3 = vec3 | [number, number, number];
-type Vec4 = vec4 | [number, number, number, number];
-declare enum LineTerminator {
-    NONE = 0,
-    ARROW = 1,
-    CIRCLE = 2,
-    RING = 3
-}
-declare enum LineStyle {
-    SOLID = "solid",
-    DASHED = "dashed",
-    DOTTED = "dotted"
-}
-declare enum AlignmentPoint {
-    NONE = 0,
-    TOPLEFT = 9,
-    TOPCENTER = 10,
-    TOPRIGHT = 12,
-    MIDDLELEFT = 17,
-    MIDDLECENTER = 18,
-    MIDDLERIGHT = 20,
-    BOTTOMLEFT = 33,
-    BOTTOMCENTER = 34,
-    BOTTOMRIGHT = 36
-}
-declare enum HorizontalAlignment {
-    NONE = 0,
-    LEFT = 1,
-    CENTER = 2,
-    RIGHT = 4
-}
-declare enum VerticalAlignment {
-    NONE = 0,
-    TOP = 8,
-    CENTER = 16,
-    BOTTOM = 32
-}
-declare enum ComponentSide {
-    LEFT = 0,
-    RIGHT = 1,
-    TOP = 2,
-    BOTTOM = 3
-}
-declare enum Plane {
-    XY = "XY",
-    XZ = "XZ",
-    YZ = "YZ"
-}
-type Effect = {
-    type: 'setValue';
-    targetObject: any;
-    property: string;
-    value: any;
-    isToggle: boolean;
-    event?: PointerEvent;
-    onComplete?: (event?: any) => void;
-} | {
-    type: 'toggleValue';
-    targetObject: any;
-    property: string;
-    value1: any;
-    value2: any;
-    event?: PointerEvent;
-    onComplete?: (event?: any) => void;
-} | {
-    type: 'animateValue';
-    targetObject: any;
-    property: string;
-    from: number | number[];
-    to: number | number[];
-    duration: number;
-    isBounce: boolean;
-    isToggle: boolean;
-    event?: PointerEvent;
-    onComplete?: (event?: any) => void;
-};
-
-declare class UIKBitmap extends UIKAsset {
-    bitmapShader: Shader;
-    constructor(gl: WebGL2RenderingContext);
-    loadBitmap(bitmapUrl: string): Promise<void>;
-    toJSON(): object;
-    static fromJSON(gl: WebGL2RenderingContext, json: any): Promise<UIKBitmap>;
-}
-
-declare class UIKRenderer {
-    private gl;
-    private lineShader;
-    protected static triangleShader: Shader;
-    protected static circleShader: Shader;
-    protected static rectShader: Shader;
-    protected static roundedRectShader: Shader;
-    protected static bitmapShader: Shader;
-    protected static genericVAO: WebGLVertexArrayObject;
-    protected static triangleVertexBuffer: WebGLBuffer;
-    protected static projectedTriangleVertexBuffer: WebGLBuffer;
-    protected static lineTerminator: typeof LineTerminator;
-    protected static rotatedTextShader: Shader;
-    protected static rotatedRectangularFillShader: Shader;
-    protected static ellipticalFillShader: Shader;
-    protected static colorbarShader: Shader;
-    protected static projectedLineShader: Shader;
-    protected static projectedTriangleShader: Shader;
-    constructor(gl: WebGL2RenderingContext);
-    drawChar({ font, position, size, char }: {
-        font: UIKFont;
-        position: Vec2;
-        size: number;
-        char: string;
-    }): number;
-    drawText({ font, position, text, scale, color, maxWidth, outlineColor, outlineThickness }: {
-        font: UIKFont;
-        position: Vec2;
-        text: string;
-        scale?: number;
-        color?: Color;
-        maxWidth?: number;
-        outlineColor?: Color;
-        outlineThickness?: number;
-    }): void;
-    /**
-     * Draws a bitmap on the canvas.
-     *
-     * @param config - Configuration object containing the bitmap, position, and scale.
-     * @param config.bitmap - The bitmap to draw.
-     * @param config.position - The position to place the bitmap ([x, y]).
-     * @param config.scale - The scale factor for the bitmap.
-     */
-    drawBitmap({ bitmap, position, scale }: {
-        bitmap: UIKBitmap;
-        position: Vec2;
-        scale: number;
-    }): void;
-    /**
-     * Draws a line with specified start and end coordinates, thickness, color, and style.
-     * Supports solid, dashed, or dotted lines, with optional terminators (such as arrows or rings).
-     * For dashed and dotted lines, segments or dots will adjust to reach the endpoint or terminator.
-     *
-     * @param config - Configuration object containing the following properties:
-     *   - startEnd: The start and end coordinates of the line, as a Vec4 array in the form [startX, startY, endX, endY].
-     *   - thickness?: The thickness of the line. Defaults to 1.
-     *   - color?: The color of the line, as a Color array in [R, G, B, A] format. Defaults to red ([1, 0, 0, -1]).
-     *   - terminator?: The type of terminator at the end of the line (e.g., NONE, ARROW, CIRCLE, or RING). Defaults to NONE.
-     *   - style?: The style of the line: solid, dashed, or dotted. Defaults to solid.
-     *   - dashDotLength?: The length of dashes or diameter of dots for dashed/dotted lines. Defaults to 5.
-     */
-    drawLine(config: {
-        startEnd: Vec4;
-        thickness?: number;
-        color?: Color;
-        terminator?: LineTerminator;
-        style?: LineStyle;
-        dashDotLength?: number;
-    }): void;
-    /**
-     * Helper method to draw individual dashed segments.
-     * @param config - Configuration object containing the following properties:
-     *   - segmentCoords: The start and end coordinates of the segment, as a Vec4 array in the form [startX, startY, endX, endY].
-     *   - thickness: The thickness of the segment.
-     *   - color: The color of the segment, as a Color array in [R, G, B, A] format.
-     */
-    private drawSegment;
-    /**
-     * Draws a rectangle.
-     * @param config - Configuration object containing:
-     *   - leftTopWidthHeight: The bounding box of the rectangle (left, top, width, height).
-     *   - lineColor: The color of the rectangle. Defaults to red ([1, 0, 0, -1]).
-     */
-    drawRect({ leftTopWidthHeight, fillColor }: {
-        leftTopWidthHeight: Vec4;
-        fillColor?: Color;
-    }): void;
-    /**
-     * Draws a rounded rectangle.
-     * @param leftTopWidthHeight - The bounding box of the rounded rectangle (left, top, width, height).
-     * @param fillColor - The fill color of the rectangle.
-     * @param outlineColor - The outline color of the rectangle.
-     * @param cornerRadius - The corner radius.
-     * @param thickness - The thickness of the outline.
-     */
-    drawRoundedRect(config: {
-        bounds: Vec4;
-        fillColor: Color;
-        outlineColor: Color;
-        cornerRadius?: number;
-        thickness?: number;
-    }): void;
-    drawRotatedRectangularFill(leftTopWidthHeight: Vec4, rotation: number, fillColor: Color, gradientCenter: Vec2, gradientRadius: number, gradientColor: Color): void;
-    /**
-     * Draws a circle.
-     * @param params - Object containing the circle parameters.
-     * @param params.leftTopWidthHeight - The bounding box of the circle (left, top, width, height).
-     * @param params.circleColor - The color of the circle.
-     * @param params.fillPercent - The percentage of the circle to fill (0 to 1).
-     * @param params.z - The z-index value of the circle.
-     */
-    drawCircle({ leftTopWidthHeight, circleColor, fillPercent, z }: {
-        leftTopWidthHeight: Vec4;
-        circleColor?: Color;
-        fillPercent?: number;
-        z?: number;
-    }): void;
-    /**
-     * Draws a toggle switch with support for an animated knob position.
-     * @param params - Object containing the toggle parameters.
-     * @param params.position - The position of the top-left corner of the toggle.
-     * @param params.size - The size of the toggle ([width, height]).
-     * @param params.isOn - Whether the toggle is on or off.
-     * @param params.onColor - The color when the toggle is on.
-     * @param params.offColor - The color when the toggle is off.
-     * @param params.knobPosition - The position of the knob (0 for off, 1 for on, values in between for animation).
-     */
-    drawToggle({ position, size, isOn, onColor, offColor, knobPosition }: {
-        position: Vec2;
-        size: Vec2;
-        isOn: boolean;
-        onColor: Color;
-        offColor: Color;
-        knobPosition?: number;
-    }): void;
-    /**
-     * Draws a triangle.
-     * @param params - Object containing the triangle parameters.
-     * @param params.headPoint - The coordinates of the triangle's head (top vertex).
-     * @param params.baseMidPoint - The midpoint of the triangle's base.
-     * @param params.baseLength - The length of the triangle's base.
-     * @param params.color - The color of the triangle.
-     * @param params.z - The z-coordinate of the triangle. Defaults to 0.
-     */
-    drawTriangle({ headPoint, baseMidPoint, baseLength, color, z }: {
-        headPoint: Vec2;
-        baseMidPoint: Vec2;
-        baseLength: number;
-        color: Color;
-        z?: number;
-    }): void;
-    /**
-     * Draws rotated text, supporting individual character rendering and RTL.
-     * @param params - Object containing parameters for rendering rotated text.
-     * @param params.font - The font object for rendering text.
-     * @param params.xy - The starting position of the text.
-     * @param params.str - The string to render.
-     * @param params.scale - The scale of the text. Defaults to 1.0.
-     * @param params.color - The color of the text. Defaults to red.
-     * @param params.rotation - The rotation angle in radians. Defaults to 0.
-     * @param params.outlineColor - The outline color of the text. Defaults to black.
-     * @param params.outlineThickness - The thickness of the text outline. Defaults to 2.
-     */
-    drawRotatedText({ font, xy, str, scale, color, rotation, outlineColor, outlineThickness }: {
-        font: UIKFont;
-        xy: Vec2;
-        str: string;
-        scale?: number;
-        color?: Color;
-        rotation?: number;
-        outlineColor?: Color;
-        outlineThickness?: number;
-    }): void;
-    /**
-     * Draws a calendar grid with headers and dates.
-     * @param params - Object containing parameters for rendering the calendar.
-     * @param params.font - The font object for rendering text.
-     * @param params.startX - The X-coordinate of the top-left corner of the calendar.
-     * @param params.startY - The Y-coordinate of the top-left corner of the calendar.
-     * @param params.cellWidth - The width of each calendar cell.
-     * @param params.cellHeight - The height of each calendar cell.
-     * @param params.selectedDate - The selected date to highlight.
-     * @param params.selectedColor - The color to highlight the selected date.
-     * @param params.firstDayOfWeek - The starting day of the week (0 for Sunday, 1 for Monday, etc.). Defaults to 0.
-     */
-    drawCalendar({ font, startX, startY, cellWidth, cellHeight, selectedDate, selectedColor, firstDayOfWeek }: {
-        font: UIKFont;
-        startX: number;
-        startY: number;
-        cellWidth: number;
-        cellHeight: number;
-        selectedDate: Date;
-        selectedColor: Float32List;
-        firstDayOfWeek?: number;
-    }): void;
-    /**
-     * Draws a text box with customizable text, colors, and margins.
-     * @param params - Object containing parameters for rendering the text box.
-     * @param params.font - The font object for rendering the text.
-     * @param params.xy - The position of the top-left corner of the text box.
-     * @param params.str - The text to render inside the text box.
-     * @param params.textColor - The color of the text. Defaults to black with full opacity.
-     * @param params.outlineColor - The color of the box's outline. Defaults to white with full opacity.
-     * @param params.fillColor - The fill color of the box. Defaults to a transparent black.
-     * @param params.margin - The margin between the text and the edges of the box. Defaults to 15.
-     * @param params.roundness - The roundness of the box corners (0 to 1). Defaults to 0 (square corners).
-     * @param params.scale - The scaling factor for the text. Defaults to 1.0.
-     * @param params.maxWidth - The maximum width for text wrapping. Defaults to 0 (no wrapping).
-     * @param params.fontOutlineColor - The outline color for the text. Defaults to black.
-     * @param params.fontOutlineThickness - The thickness of the text outline. Defaults to 1.
-     */
-    drawTextBox({ font, xy, text, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth, fontOutlineColor, fontOutlineThickness }: {
-        font: UIKFont;
-        xy: Vec2;
-        text: string;
-        textColor?: Color;
-        outlineColor?: Color;
-        fillColor?: Color;
-        margin?: number;
-        roundness?: number;
-        scale?: number;
-        maxWidth?: number;
-        fontOutlineColor?: Color;
-        fontOutlineThickness?: number;
-    }): void;
-    /**
-     * Draws a ruler with length text, units, and hash marks.
-     * @param params - Object containing parameters for rendering the ruler.
-     * @param params.pointA - Start point of the ruler.
-     * @param params.pointB - End point of the ruler.
-     * @param params.length - Length value to display.
-     * @param params.units - Units to display alongside the length.
-     * @param params.font - Font object for rendering text.
-     * @param params.textColor - Color of the text. Defaults to red.
-     * @param params.lineColor - Color of the ruler lines. Defaults to black.
-     * @param params.lineThickness - Thickness of the ruler lines. Defaults to 1.
-     * @param params.offset - Offset distance for parallel line and text. Defaults to 40.
-     * @param params.scale - Scale factor for text size. Defaults to 1.0.
-     */
-    drawRuler({ pointA, pointB, length, units, font, textColor, lineColor, lineThickness, offset, scale }: {
-        pointA: Vec2;
-        pointB: Vec2;
-        length: number;
-        units: string;
-        font: UIKFont;
-        textColor?: Color;
-        lineColor?: Color;
-        lineThickness?: number;
-        offset?: number;
-        scale?: number;
-    }): void;
-    /**
-     * Draws an ellipsoid fill with rotation and mix value.
-     * @param params - Object containing parameters for rendering the ellipsoid.
-     * @param params.tx - X-coordinate of the top-left corner.
-     * @param params.ty - Y-coordinate of the top-left corner.
-     * @param params.sx - Width of the ellipsoid.
-     * @param params.sy - Height of the ellipsoid.
-     * @param params.color - Color of the ellipsoid in [R, G, B, A] format.
-     * @param params.rotation - Rotation of the ellipsoid in radians. Defaults to 0.
-     * @param params.mixValue - Mix value for blending. Defaults to 0.1.
-     */
-    drawEllipsoidFill({ tx, ty, sx, sy, color, rotation, mixValue }: {
-        tx: number;
-        ty: number;
-        sx: number;
-        sy: number;
-        color: [number, number, number, number];
-        rotation?: number;
-        mixValue?: number;
-    }): void;
-    /**
-     * Draws a color bar with gradient and tick labels.
-     * @param params - Object containing parameters for rendering the color bar.
-     * @param params.font - Font used for rendering labels.
-     * @param params.position - Position of the color bar [x, y].
-     * @param params.size - Size of the color bar [width, height].
-     * @param params.gradientTexture - Texture for gradient if applicable.
-     * @param params.labels - Array of labels for tick marks.
-     */
-    drawColorbar({ font, position, size, gradientTexture, labels }: {
-        font: UIKFont;
-        position: Vec2;
-        size: Vec2;
-        gradientTexture: WebGLTexture;
-        labels: string[];
-    }): void;
-    /**
-     * Draws a line graph based on provided Graph settings.
-     * @param params - Object containing settings for rendering the graph.
-     */
-    drawLineGraph({ position, size, backgroundColor, lineColor, axisColor, data, xLabel, yLabel, yRange, lineThickness, textColor, font, textScale }: {
-        position: Vec2;
-        size: Vec2;
-        backgroundColor: Color;
-        lineColor: Color;
-        axisColor: Color;
-        data: number[];
-        xLabel?: string;
-        yLabel?: string;
-        yRange?: [number, number];
-        lineThickness?: number;
-        textColor: Color;
-        font: UIKFont;
-        textScale?: number;
-    }): void;
-    private drawProjectedLineSegment;
-    /**
-     * Draws a 3D projected line in WebGL with support for solid, dashed, or dotted styles,
-     * as well as optional terminators (e.g., arrows, circles, or rings).
-     *
-     * @param config - Configuration object containing the following properties:
-     *   - `startXYZ`: The starting point of the line in 3D space as a Vec3 ([x, y, z]).
-     *   - `endXYZ`: The ending point of the line in 3D space as a Vec3 ([x, y, z]).
-     *   - `thickness` (optional): The thickness of the line. Defaults to 1.
-     *   - `lineColor` (optional): The color of the line in [R, G, B, A] format. Defaults to `[1, 0, 0, 1]` (red).
-     *   - `terminator` (optional): The type of terminator to draw at the endpoint of the line. Defaults to `LineTerminator.NONE`.
-     *                              Supported terminators include:
-     *                              - `LineTerminator.ARROW` for an arrowhead.
-     *                              - `LineTerminator.CIRCLE` for a filled circle.
-     *                              - `LineTerminator.RING` for a hollow circle (ring).
-     *   - `lineStyle` (optional): The style of the line. Defaults to `LineStyle.SOLID`.
-     *                              Supported styles include:
-     *                              - `LineStyle.SOLID` for a continuous line.
-     *                              - `LineStyle.DASHED` for a dashed line.
-     *                              - `LineStyle.DOTTED` for a dotted line.
-     *   - `dashDotLength` (optional): The length of dashes or dots in dashed or dotted lines. Defaults to 5.
-     *
-     * If the `lineStyle` is dashed or dotted, the method calculates evenly spaced segments or dots
-     * along the length of the line. If a terminator is used, the line is adjusted to prevent overlap
-     * with the terminator.
-     *
-     * ### Examples
-     * Draw a solid blue line with an arrow terminator:
-     * ```typescript
-     * renderer.drawProjectedLine({
-     *   startXYZ: [0, 0, 0],
-     *   endXYZ: [100, 100, 0],
-     *   thickness: 2,
-     *   lineColor: [0, 0, 1, 1],
-     *   terminator: LineTerminator.ARROW
-     * })
-     * ```
-     *
-     * Draw a dashed red line with no terminator:
-     * ```typescript
-     * renderer.drawProjectedLine({
-     *   startXYZ: [0, 0, 0],
-     *   endXYZ: [200, 50, 0],
-     *   thickness: 3,
-     *   lineColor: [1, 0, 0, 1],
-     *   lineStyle: LineStyle.DASHED,
-     *   dashDotLength: 10
-     * })
-     * ```
-     *
-     * @throws Will throw an error if the shader for drawing the line is not defined.
-     */
-    drawProjectedLine({ startXYZ, endXYZ, thickness, lineColor, terminator, lineStyle, dashDotLength }: {
-        startXYZ: Vec3;
-        endXYZ: Vec3;
-        thickness?: number;
-        lineColor?: Color;
-        terminator?: LineTerminator;
-        lineStyle?: LineStyle;
-        dashDotLength?: number;
-    }): void;
-}
-
-interface IUIComponent {
-    id: string;
-    getBounds(): Vec4;
-    setBounds(bounds: Vec4): void;
-    getPosition(): Vec2;
-    setPosition(position: Vec2): void;
-    draw(renderer: UIKRenderer): void;
-    align(bounds: Vec4): void;
-    isVisible: boolean;
-    zIndex: number;
-    tags: string[];
-    getScale(): number;
-    setScale(value: number): void;
-    applyEventEffects(eventName: string, event: Event): void;
-    addEventListener(eventName: string, callback: (event: Event) => void): void;
-    removeEventListener(eventName: string, callback: (event: Event) => void): void;
-    toJSON(): object;
-    requestRedraw?: () => void;
-    alignmentPoint: AlignmentPoint;
-    verticalAlignment: VerticalAlignment;
-    horizontalAlignment: HorizontalAlignment;
-}
-interface BaseUIComponentConfig {
-    alignmentPoint?: AlignmentPoint;
-    verticalAlignment?: VerticalAlignment;
-    horizontalAlignment?: HorizontalAlignment;
-    isVisible?: boolean;
-    zIndex?: number;
-    id?: string;
-    tags?: string[];
-    className: string;
-    position?: Vec2;
-    bounds?: Vec4;
-    scale?: number;
-    margin?: number;
-    requestRedraw?: () => void;
-}
-interface BaseContainerComponentConfig extends BaseUIComponentConfig {
-    canvas: HTMLCanvasElement;
-    isHorizontal?: boolean;
-    padding?: number;
-    maxWidth?: number;
-    maxHeight?: number;
-}
-interface BitmapComponentConfig extends BaseUIComponentConfig {
-    bitmap: UIKBitmap;
-    scale?: number;
-}
-interface TextComponentConfig extends BaseUIComponentConfig {
-    text: string;
-    font: UIKFont;
-    textColor?: Color;
-    scale?: number;
-    maxWidth?: number;
-}
-interface TextBoxComponentConfig extends TextComponentConfig {
-    outlineColor?: Color;
-    fillColor?: Color;
-    innerMargin?: number;
-    roundness?: number;
-    fontOutlineColor?: Color;
-    fontOutlineThickness?: number;
-}
-interface ButtonComponentConfig extends TextBoxComponentConfig {
-    highlightColor?: Color;
-    onClick?: (event: PointerEvent) => void;
-}
-interface ColorbarComponentConfig extends BaseUIComponentConfig {
-    gl: WebGL2RenderingContext;
-    font: UIKFont;
-    labels?: string[];
-    minMax?: [number, number];
-    colormapName?: string;
-    bounds: Vec4;
-}
-interface ContainerButtonComponentConfig extends BaseContainerComponentConfig {
-    outlineColor?: Color;
-    fillColor?: Color;
-    highlightColor?: Color;
-    roundness?: number;
-    maxWidth?: number;
-    maxHeight?: number;
-}
-interface LineGraphComponentConfig extends Omit<BaseUIComponentConfig, 'position'> {
-    position: Vec2;
-    size: Vec2;
-    backgroundColor: Color;
-    lineColor: Color;
-    axisColor: Color;
-    textColor: Color;
-    data: number[];
-    xLabel: string;
-    yLabel: string;
-    yRange: [number, number];
-    lineThickness: number;
-    font: UIKFont;
-    textScale: number;
-}
-interface LineComponentConfig extends BaseUIComponentConfig {
-    startEnd: Vec4;
-    thickness?: number;
-    lineColor?: Color;
-    terminator?: LineTerminator;
-    lineStyle?: LineStyle;
-    dashDotLength?: number;
-}
-interface ProjectedLineComponentConfig extends LineComponentConfig {
-    modelPoints: Vec3[];
-    targetComponent: IUIComponent;
-    side: ComponentSide;
-}
-interface RoundedRectComponentConfig extends BaseUIComponentConfig {
-    leftTopWidthHeight: Vec4;
-    fillColor: Color;
-    outlineColor: Color;
-    cornerRadius?: number;
-    thickness?: number;
-}
-interface RulerComponentConfig extends BaseUIComponentConfig {
-    startPoint: Vec2;
-    endPoint: Vec2;
-    units: string;
-    font: UIKFont;
-    textColor?: Color;
-    lineColor?: Color;
-    lineThickness?: number;
-    offset?: number;
-    scale?: number;
-}
-interface ToggleComponentConfig extends BaseUIComponentConfig {
-    size: Vec2;
-    isOn: boolean;
-    onColor: Color;
-    offColor: Color;
-    knobPosition?: number;
-}
-interface IColorable extends IUIComponent {
-    getTextColor(): Color;
-    setTextColor(color: Color): void;
-    getBackgroundColor(): Color;
-    setBackgroundColor(color: Color): void;
-    getForegroundColor(): Color;
-    setForegroundColor(color: Color): void;
-}
-interface IProjectable {
-    setScreenPoints(screenPoints: Vec3[]): void;
-}
-interface IProjectable3D extends IProjectable {
-    modelPoints: Vec3[];
-}
-interface IProjectable2D extends IProjectable {
-    modelPlanePoints: Vec2[];
-}
-
-declare class UIKit {
-    private gl;
-    private renderer;
-    private quadTree;
-    private _redrawRequested?;
-    style: {
-        textColor: Color;
-        foregroundColor: Color;
-        backgroundColor: Color;
-        textSize: number;
-    };
-    private canvasWidth;
-    private canvasHeight;
-    private dpr;
-    private resizeListener;
-    private resizeObserver;
-    static lineTerminator: typeof LineTerminator;
-    static lineStyle: typeof LineStyle;
-    static componentSide: typeof ComponentSide;
-    static alignmentPoint: typeof AlignmentPoint;
-    static horizontalAlignment: typeof HorizontalAlignment;
-    static verticalAlignment: typeof VerticalAlignment;
-    static plane: typeof Plane;
-    private lastHoveredComponents;
-    get redrawRequested(): (() => void) | undefined;
-    set redrawRequested(callback: (() => void) | undefined);
-    constructor(gl: WebGL2RenderingContext);
-    addComponent(component: IUIComponent): void;
-    getComponents(boundsInScreenCoords?: Vec4, tags?: string[], useAnd?: boolean, useNot?: boolean): IUIComponent[];
-    alignItems(leftTopWidthHeight?: Vec4, tags?: string[]): void;
-    draw(leftTopWidthHeight?: Vec4, tags?: string[]): void;
-    private requestRedraw;
-    processPointerMove(x: number, y: number, event: PointerEvent): void;
-    processPointerDown(_x: number, _y: number, _button: number): void;
-    processPointerUp(x: number, y: number, event: PointerEvent): void;
-    handleWindowResize(): void;
-    private handlePointerDown;
-    private handlePointerUp;
-    private handlePointerMove;
-    private getCanvasRelativePosition;
-    destroy(): void;
-    drawText({ font, position, text, scale, color, maxWidth }: {
-        font: UIKFont;
-        position: Vec2;
-        text: string;
-        scale?: number;
-        color?: Color;
-        maxWidth?: number;
-    }): void;
-    drawTextBox({ font, position, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth, fontOutlineColor, fontOutlineThickness }: {
-        font: UIKFont;
-        position: Vec2;
-        str: string;
-        textColor?: Color;
-        outlineColor?: Color;
-        fillColor?: Color;
-        margin?: number;
-        roundness?: number;
-        scale?: number;
-        maxWidth?: number;
-        fontOutlineColor?: Color;
-        fontOutlineThickness?: number;
-    }): void;
-    drawTextBoxCenteredOn({ font, position, str, textColor, outlineColor, fillColor, margin, roundness, scale, maxWidth, fontOutlineColor, fontOutlineThickness }: {
-        font: UIKFont;
-        position: Vec2;
-        str: string;
-        textColor?: Color;
-        outlineColor?: Color;
-        fillColor?: Color;
-        margin?: number;
-        roundness?: number;
-        scale?: number;
-        maxWidth?: number;
-        fontOutlineColor?: Color;
-        fontOutlineThickness?: number;
-    }): void;
-    drawBitmap({ bitmap, position, scale }: {
-        bitmap: UIKBitmap;
-        position: Vec2;
-        scale: number;
-    }): void;
-    drawLine({ startEnd, thickness, color, terminator, style, dashDotLength }: {
-        startEnd: Vec4;
-        thickness?: number;
-        color?: Color;
-        terminator?: LineTerminator;
-        style?: LineStyle;
-        dashDotLength?: number;
-    }): void;
-    drawRect({ leftTopWidthHeight, fillColor }: {
-        leftTopWidthHeight: Vec4;
-        fillColor?: Color;
-    }): void;
-    drawRoundedRect({ bounds, fillColor, outlineColor, cornerRadius, thickness }: {
-        bounds: Vec4;
-        fillColor: Color;
-        outlineColor: Color;
-        cornerRadius?: number;
-        thickness?: number;
-    }): void;
-    drawCircle({ leftTopWidthHeight, circleColor, fillPercent, z }: {
-        leftTopWidthHeight: Vec4;
-        circleColor?: Color;
-        fillPercent?: number;
-        z?: number;
-    }): void;
-    drawToggle({ position, size, isOn, onColor, offColor, knobPosition }: {
-        position: Vec2;
-        size: Vec2;
-        isOn: boolean;
-        onColor: Color;
-        offColor: Color;
-        knobPosition?: number;
-    }): void;
-    drawTriangle({ headPoint, baseMidPoint, baseLength, color, z }: {
-        headPoint: Vec2;
-        baseMidPoint: Vec2;
-        baseLength: number;
-        color: Color;
-        z?: number;
-    }): void;
-    /**
-     * Draws rotated text using the renderer.
-     *
-     * @param font - The font used for rendering the text.
-     * @param xy - The position of the text.
-     * @param str - The string to render.
-     * @param scale - The scale of the text. Defaults to 1.0.
-     * @param color - The color of the text. Defaults to [1.0, 0.0, 0.0, 1.0].
-     * @param rotation - The rotation of the text in radians. Defaults to 0.0.
-     * @param outlineColor - The outline color of the text. Defaults to [0, 0, 0, 1.0].
-     * @param outlineThickness - The thickness of the outline. Defaults to 2.
-     */
-    drawRotatedText({ font, xy, str, scale, color, rotation, outlineColor, outlineThickness }: {
-        font: UIKFont;
-        xy: Vec2;
-        str: string;
-        scale?: number;
-        color?: Color;
-        rotation?: number;
-        outlineColor?: Color;
-        outlineThickness?: number;
-    }): void;
-    /**
-     * Proxy method to draw a ruler using the renderer.
-     *
-     * @param config - Configuration object for drawing the ruler.
-     * @param config.pointA - The starting point of the ruler as a Vec2 ([x, y]).
-     * @param config.pointB - The ending point of the ruler as a Vec2 ([x, y]).
-     * @param config.length - The length of the ruler.
-     * @param config.units - The units to display on the ruler.
-     * @param config.font - The font to use for ruler labels.
-     * @param config.textColor - The color of the ruler labels.
-     * @param config.lineColor - The color of the ruler lines.
-     * @param config.lineThickness - The thickness of the ruler lines.
-     * @param config.offset - The offset distance of the ruler from the main line.
-     * @param config.scale - The scale for the text and elements of the ruler.
-     */
-    drawRuler(config: {
-        pointA: Vec2;
-        pointB: Vec2;
-        length: number;
-        units: string;
-        font: UIKFont;
-        textColor?: Color;
-        lineColor?: Color;
-        lineThickness?: number;
-        offset?: number;
-        scale?: number;
-    }): void;
-    serializeComponents(): Promise<string>;
-    static fromJSON(json: any, gl: WebGL2RenderingContext): Promise<UIKit>;
-}
-
 /**
  * Enum for sync operations
  */
@@ -2440,289 +1607,6 @@ declare class NVMeshUtilities {
     static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
 }
 
-declare abstract class BaseUIComponent implements IUIComponent {
-    alignmentPoint: AlignmentPoint;
-    verticalAlignment: VerticalAlignment;
-    horizontalAlignment: HorizontalAlignment;
-    isVisible: boolean;
-    zIndex: number;
-    id: string;
-    tags: string[];
-    className: string;
-    protected position: Vec2;
-    protected bounds: Vec4;
-    protected scale: number;
-    protected margin: number;
-    private eventEffects;
-    private eventListeners;
-    requestRedraw?: () => void;
-    onPointerUp?: (event: MouseEvent) => void;
-    onPointerEnter?: (event: MouseEvent) => void;
-    onPointerLeave?: (event: MouseEvent) => void;
-    abstract draw(renderer: UIKRenderer): void;
-    constructor(config: BaseUIComponentConfig);
-    align(bounds: Vec4): void;
-    fitBounds(targetBounds: Vec4): void;
-    applyEffect(effect: Effect): void;
-    addEventEffect(event: string, targetObject: any, property: string, effectType: 'setValue' | 'animateValue' | 'toggleValue', valueOrFrom: any, to?: any, duration?: number, isBounce?: boolean, isToggle?: boolean, onComplete?: (event?: Event) => void): void;
-    applyEventEffects(eventName: string): void;
-    private triggerResizeEvent;
-    addEventListener(eventName: string, callback: (event: Event) => void): void;
-    removeEventListener(eventName: string, callback: (event: Event) => void): void;
-    getBounds(): Vec4;
-    setBounds(bounds: Vec4): void;
-    getPosition(): Vec2;
-    setPosition(position: Vec2): void;
-    getScale(): number;
-    setScale(value: number): void;
-    getAlignmentPoint(): AlignmentPoint;
-    setAlignmentPoint(value: AlignmentPoint): void;
-    getVerticalAlignment(): VerticalAlignment;
-    setVerticalAlignment(value: VerticalAlignment): void;
-    getHorizontalAlignment(): HorizontalAlignment;
-    setHorizontalAlignment(value: HorizontalAlignment): void;
-    toJSON(): object;
-}
-
-declare class RoundedRectComponent extends BaseUIComponent {
-    private leftTopWidthHeight;
-    private fillColor;
-    private outlineColor;
-    private cornerRadius;
-    private thickness;
-    constructor(config: RoundedRectComponentConfig);
-    draw(renderer: UIKRenderer): void;
-    toJSON(): object;
-    static fromJSON(data: any): RoundedRectComponent;
-}
-
-declare class TextComponent extends BaseUIComponent implements IColorable {
-    protected textColor: Color;
-    protected backgroundColor: Color;
-    protected foregroundColor: Color;
-    protected text: string;
-    protected font: UIKFont;
-    protected maxWidth: number;
-    protected width: number;
-    protected height: number;
-    constructor(config: TextComponentConfig);
-    fitBounds(targetBounds: Vec4): void;
-    updateBounds(): void;
-    getBounds(): Vec4;
-    draw(renderer: UIKRenderer): void;
-    getTextColor(): Color;
-    setTextColor(color: Color): void;
-    getBackgroundColor(): Color;
-    setBackgroundColor(color: Color): void;
-    getForegroundColor(): Color;
-    setForegroundColor(color: Color): void;
-    toJSON(): object;
-    static fromJSON(data: any, fonts: {
-        [key: string]: UIKFont;
-    }): TextComponent;
-}
-
-declare class LineComponent extends BaseUIComponent {
-    protected startEnd: Vec4;
-    protected thickness: number;
-    protected lineColor: Color;
-    protected terminator: LineTerminator;
-    protected lineStyle: LineStyle;
-    protected dashDotLength: number;
-    constructor(config: LineComponentConfig);
-    private updateBounds;
-    setStartEnd(startEnd: Vec4): void;
-    draw(renderer: UIKRenderer): void;
-    toJSON(): object;
-    static fromJSON(data: any): LineComponent;
-}
-
-declare class ToggleComponent extends BaseUIComponent {
-    private size;
-    isOn: boolean;
-    private onColor;
-    private offColor;
-    knobPosition: number;
-    constructor(config: ToggleComponentConfig);
-    toggle(): void;
-    handleMouseClick(mousePosition: Vec2): void;
-    draw(renderer: UIKRenderer, isHovered?: boolean): void;
-    setKnobPosition(position: number): void;
-    updateKnobPosition(deltaTime: number): void;
-    toJSON(): object;
-    static fromJSON(data: any): ToggleComponent;
-}
-
-declare class TextBoxComponent extends TextComponent {
-    protected outlineColor: Color;
-    protected fillColor: Color;
-    protected innerMargin: number;
-    protected roundness: number;
-    protected fontOutlineColor: Color;
-    protected fontOutlineThickness: number;
-    constructor(config: TextBoxComponentConfig);
-    setScale(newScale: number): void;
-    getBounds(): Vec4;
-    updateBounds(): void;
-    draw(renderer: UIKRenderer): void;
-    toJSON(): object;
-    static fromJSON(data: any, fonts: {
-        [key: string]: UIKFont;
-    }): TextBoxComponent;
-}
-
-declare class ButtonComponent extends TextBoxComponent {
-    highlightColor: Color;
-    onClick?: (event: PointerEvent) => void;
-    constructor(config: ButtonComponentConfig);
-    handleMouseClick(mousePosition: Vec2): void;
-    handleClick(event: PointerEvent): void;
-    draw(renderer: any): void;
-    toJSON(): object;
-}
-
-declare class Rectangle {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    constructor(x: number, y: number, width: number, height: number);
-    contains(point: Vec2): boolean;
-    intersects(range: Rectangle): boolean;
-    static fromVec4(vec: Vec4): Rectangle;
-}
-declare class QuadTree<T extends IUIComponent> {
-    boundary: Rectangle;
-    capacity: number;
-    components: T[];
-    divided: boolean;
-    northeast: QuadTree<T> | null;
-    northwest: QuadTree<T> | null;
-    southeast: QuadTree<T> | null;
-    southwest: QuadTree<T> | null;
-    constructor(boundary: Rectangle, capacity?: number);
-    insert(component: T): boolean;
-    subdivide(): void;
-    remove(component: T): boolean;
-    query(range: Rectangle, found?: T[]): T[];
-    queryPoint(point: Vec2, found?: T[]): T[];
-    getAllElements(): T[];
-    updateBoundary(newBoundary: Rectangle): void;
-    getBoundary(): Vec4;
-}
-
-declare class BaseContainerComponent extends BaseUIComponent {
-    components: BaseUIComponent[];
-    protected isHorizontal: boolean;
-    protected padding: number;
-    protected _quadTree: QuadTree<IUIComponent>;
-    protected maxWidth: number;
-    protected maxHeight: number;
-    constructor(config: BaseContainerComponentConfig);
-    set quadTree(quadTree: QuadTree<IUIComponent>);
-    get quadTree(): QuadTree<IUIComponent>;
-    addComponent(component: BaseUIComponent): void;
-    removeComponent(component: BaseUIComponent): void;
-    updateLayout(): void;
-    updateBounds(): void;
-    draw(renderer: UIKRenderer): void;
-    setPosition(position: Vec2): void;
-}
-
-declare class ContainerButtonComponent extends BaseContainerComponent {
-    private onClickHandler?;
-    private fillColor;
-    private highlightColor;
-    outlineColor: Color;
-    roundness: number;
-    constructor(config: ContainerButtonComponentConfig);
-    handleMouseClick(mousePosition: Vec2): void;
-    draw(renderer: UIKRenderer): void;
-    addMouseEffects(): void;
-    toJSON(): object;
-    static fromJSON(data: any, canvas: HTMLCanvasElement): ContainerButtonComponent;
-}
-
-declare class BitmapComponent extends BaseUIComponent {
-    private bitmap;
-    private width;
-    private height;
-    constructor(config: BitmapComponentConfig);
-    getScale(): number;
-    setScale(value: number): void;
-    draw(renderer: UIKRenderer): void;
-    getBitmap(): UIKBitmap;
-    toJSON(): object;
-    static fromJSON(data: any, bitmaps: {
-        [key: string]: UIKBitmap;
-    }): BitmapComponent;
-}
-
-declare class ColorbarComponent extends BaseUIComponent {
-    private gl;
-    private font;
-    private gradientTexture;
-    private labels;
-    private minMax;
-    private _colormapName;
-    constructor(config: ColorbarComponentConfig);
-    private generateColorMapTexture;
-    draw(renderer: UIKRenderer): void;
-    get colormapName(): string;
-    set colormapName(value: string);
-    setLabels(newLabels: string[]): void;
-    setMinMax(newMinMax: [number, number]): void;
-    setBounds(bounds: [number, number, number, number]): void;
-    toJSON(): object;
-}
-
-declare class LineGraphComponent extends BaseUIComponent {
-    private options;
-    constructor(options: LineGraphComponentConfig);
-    setData(newData: number[]): void;
-    setLabels(xLabel: string, yLabel: string): void;
-    setPosition(position: Vec2): void;
-    draw(renderer: UIKRenderer): void;
-    toJSON(): object;
-    static fromJSON(data: any, fonts: {
-        [key: string]: UIKFont;
-    }): LineGraphComponent;
-}
-
-declare class ProjectedLineComponent extends LineComponent implements IProjectable3D {
-    modelPoints: Vec3[];
-    private projectedPoint;
-    private targetComponent;
-    private side;
-    constructor(config: ProjectedLineComponentConfig);
-    handleResize(): void;
-    setScreenPoints(screenPoints: Vec3[]): void;
-    private updateLinePosition;
-    private calculateMidpoint;
-    draw(renderer: UIKRenderer): void;
-    toJSON(): object;
-}
-
-declare class RulerComponent extends BaseUIComponent implements IProjectable2D {
-    modelPlanePoints: Vec2[];
-    private projectedStart;
-    private projectedEnd;
-    private units;
-    private font;
-    private textColor;
-    private lineColor;
-    private lineThickness;
-    private offset;
-    constructor(config: RulerComponentConfig);
-    setScreenPoints(screenPoints: Vec3[]): void;
-    private calculateLength;
-    draw(renderer: UIKRenderer): void;
-    toJSON(): object;
-    static fromJSON(data: any, fonts: {
-        [key: string]: UIKFont;
-    }): RulerComponent;
-}
-
 type ColormapListEntry = {
     name: string;
     min: number;
@@ -2787,22 +1671,6 @@ type MM = {
     rotation: mat4;
     fovMM: vec3;
 };
-declare const TEXTURE0_BACK_VOL = 33984;
-declare const TEXTURE1_COLORMAPS = 33985;
-declare const TEXTURE2_OVERLAY_VOL = 33986;
-declare const TEXTURE3_FONT = 33987;
-declare const TEXTURE4_THUMBNAIL = 33988;
-declare const TEXTURE5_MATCAP = 33989;
-declare const TEXTURE6_GRADIENT = 33990;
-declare const TEXTURE7_DRAW = 33991;
-declare const TEXTURE8_GRADIENT_TEMP = 33992;
-declare const TEXTURE9_ORIENT = 33993;
-declare const TEXTURE10_BLEND = 33994;
-declare const TEXTURE11_GC_BACK = 33995;
-declare const TEXTURE12_GC_STRENGTH0 = 33996;
-declare const TEXTURE13_GC_STRENGTH1 = 33997;
-declare const TEXTURE14_GC_LABEL0 = 33998;
-declare const TEXTURE15_GC_LABEL1 = 33999;
 type UIData = {
     mousedown: boolean;
     touchdown: boolean;
@@ -2882,8 +1750,10 @@ declare class Niivue {
     pickingMeshShader?: Shader;
     pickingImageShader?: Shader;
     colorbarShader?: Shader;
+    fontShader: Shader | null;
     fiberShader?: Shader;
     fontTexture: WebGLTexture | null;
+    circleShader?: Shader;
     matCapTexture: WebGLTexture | null;
     bmpShader: Shader | null;
     bmpTexture: WebGLTexture | null;
@@ -2902,6 +1772,10 @@ declare class Niivue {
     genericVAO: WebGLVertexArrayObject | null;
     unusedVAO: any;
     crosshairs3D: NiivueObject3D | null;
+    private DEFAULT_FONT_GLYPH_SHEET;
+    private DEFAULT_FONT_METRICS;
+    private fontMetrics?;
+    private fontMets;
     backgroundMasksOverlays: number;
     overlayOutlineWidth: number;
     overlayAlphaShader: number;
@@ -3140,8 +2014,6 @@ declare class Niivue {
     initialized: boolean;
     currentDrawUndoBitmap: number;
     loadingText: string;
-    defaultFont: UIKFont;
-    ui: UIKit;
     /**
      * @param options  - options object to set modifiable Niivue properties
      */
@@ -3245,19 +2117,19 @@ declare class Niivue {
      * @internal
      * @returns the mouse position relative to the canvas
      */
-    getRelativeMousePosition(event: PointerEvent, target?: EventTarget | null): {
+    getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null): {
         x: number;
         y: number;
     } | undefined;
-    getNoPaddingNoBorderCanvasRelativeMousePosition(event: PointerEvent, target: EventTarget): {
+    getNoPaddingNoBorderCanvasRelativeMousePosition(event: MouseEvent, target: EventTarget): {
         x: number;
         y: number;
     } | undefined;
-    mouseContextMenuListener(e: PointerEvent): void;
-    mouseDownListener(e: PointerEvent): void;
-    mouseLeftButtonHandler(e: PointerEvent): void;
-    mouseCenterButtonHandler(e: PointerEvent): void;
-    mouseRightButtonHandler(e: PointerEvent): void;
+    mouseContextMenuListener(e: MouseEvent): void;
+    mouseDownListener(e: MouseEvent): void;
+    mouseLeftButtonHandler(e: MouseEvent): void;
+    mouseCenterButtonHandler(e: MouseEvent): void;
+    mouseRightButtonHandler(e: MouseEvent): void;
     /**
      * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
      * @param array - an array of two values
@@ -3268,11 +2140,11 @@ declare class Niivue {
         volIdx?: number;
     }): void;
     generateMouseUpCallback(fracStart: vec3, fracEnd: vec3): void;
-    mouseUpListener(e: PointerEvent): void;
+    mouseUpListener(): void;
     checkMultitouch(e: TouchEvent): void;
     touchStartListener(e: TouchEvent): void;
     touchEndListener(e: TouchEvent): void;
-    mouseMoveListener(e: PointerEvent): void;
+    mouseMoveListener(e: MouseEvent): void;
     resetBriCon(msg?: TouchEvent | MouseEvent | null): void;
     setDragStart(x: number, y: number): void;
     setDragEnd(x: number, y: number): void;
@@ -3282,9 +2154,6 @@ declare class Niivue {
     keyDownListener(e: KeyboardEvent): void;
     wheelListener(e: WheelEvent): void;
     registerInteractions(): void;
-    pointerDownListener(e: PointerEvent): void;
-    pointerUpListener(e: PointerEvent): void;
-    pointerMoveListener(e: PointerEvent): void;
     dragEnterListener(e: MouseEvent): void;
     dragOverListener(e: MouseEvent): void;
     getFileExt(fullname: string, upperCase?: boolean): string;
@@ -3917,6 +2786,7 @@ declare class Niivue {
     rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
     requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
     loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null>;
+    loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>;
     loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null>;
     /**
      * Load matcap for illumination model.
@@ -3926,7 +2796,56 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
      */
     loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null>;
+    initFontMets(): void;
+    /**
+     * Load typeface for colorbars, measurements and orientation text.
+     * @param name - name of matcap to load ("Roboto", "Garamond", "Ubuntu")
+     * @example
+     * niivue.loadMatCapTexture("Cortex");
+     * @see {@link https://niivue.github.io/niivue/features/selectfont.html | live demo usage}
+     */
+    loadFont(fontSheetUrl?: any, metricsUrl?: {
+        atlas: {
+            type: string;
+            distanceRange: number;
+            size: number;
+            width: number;
+            height: number;
+            yOrigin: string;
+        };
+        metrics: {
+            emSize: number;
+            lineHeight: number;
+            ascender: number;
+            descender: number;
+            underlineY: number;
+            underlineThickness: number;
+        };
+        glyphs: ({
+            unicode: number;
+            advance: number;
+            planeBounds?: undefined;
+            atlasBounds?: undefined;
+        } | {
+            unicode: number;
+            advance: number;
+            planeBounds: {
+                left: number;
+                bottom: number;
+                right: number;
+                top: number;
+            };
+            atlasBounds: {
+                left: number;
+                bottom: number;
+                right: number;
+                top: number;
+            };
+        })[];
+        kerning: any[];
+    }): Promise<void>;
     loadDefaultMatCap(): Promise<WebGLTexture | null>;
+    loadDefaultFont(): Promise<void>;
     initText(): Promise<void>;
     meshShaderNameToNumber(meshShaderName?: string): number | undefined;
     /**
@@ -4131,9 +3050,9 @@ declare class Niivue {
     dragForCenterButton(startXYendXY: number[]): void;
     dragForSlicer3D(startXYendXY: number[]): void;
     drawMeasurementTool(startXYendXY: number[]): void;
-    drawRect(leftTopWidthHeight: [number, number, number, number], lineColor?: number[]): void;
-    drawCircle(leftTopWidthHeight: [number, number, number, number], circleColor?: Float32List, fillPercent?: number, z?: number): void;
-    drawSelectionBox(leftTopWidthHeight: [number, number, number, number]): void;
+    drawRect(leftTopWidthHeight: number[], lineColor?: number[]): void;
+    drawCircle(leftTopWidthHeight: number[], circleColor?: Float32List, fillPercent?: number): void;
+    drawSelectionBox(leftTopWidthHeight: number[]): void;
     effectiveCanvasHeight(): number;
     effectiveCanvasWidth(): number;
     getAllLabels(): NVLabel3D[];
@@ -4146,8 +3065,9 @@ declare class Niivue {
     drawColorbar(): void;
     textWidth(scale: number, str: string): number;
     textHeight(scale: number, str: string): number;
+    drawChar(xy: number[], scale: number, char: number): number;
     drawLoadingText(text: string): void;
-    drawText(xy: any, str: any, scale?: number, color?: any): void;
+    drawText(xy: number[], str: string, scale?: number, color?: Float32List | null): void;
     drawTextRight(xy: number[], str: string, scale?: number, color?: number[] | null): void;
     drawTextLeft(xy: number[], str: string, scale?: number, color?: number[] | null): void;
     drawTextRightBelow(xy: number[], str: string, scale?: number, color?: number[] | null): void;
@@ -4192,7 +3112,6 @@ declare class Niivue {
      */
     addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint, onClick?: (label: NVLabel3D) => void): NVLabel3D;
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4;
-    calculateScreenPointFromVec2(point: [number, number], sliceType: SLICE_TYPE, leftTopWidthHeight: number[], customMM: number): vec4;
     getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null;
     drawLabelLine(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
     draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix?: mat4, leftTopWidthHeight?: number[], bulletMargin?: number, legendWidth?: number, secondPass?: boolean): void;
@@ -4237,4 +3156,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { BaseContainerComponent, BitmapComponent, ButtonComponent, ColorbarComponent, type Connectome, type ConnectomeOptions, ContainerButtonComponent, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, LineComponent, LineGraphComponent, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, ProjectedLineComponent, RoundedRectComponent, RulerComponent, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, TEXTURE0_BACK_VOL, TEXTURE10_BLEND, TEXTURE11_GC_BACK, TEXTURE12_GC_STRENGTH0, TEXTURE13_GC_STRENGTH1, TEXTURE14_GC_LABEL0, TEXTURE15_GC_LABEL1, TEXTURE1_COLORMAPS, TEXTURE2_OVERLAY_VOL, TEXTURE3_FONT, TEXTURE4_THUMBNAIL, TEXTURE5_MATCAP, TEXTURE6_GRADIENT, TEXTURE7_DRAW, TEXTURE8_GRADIENT_TEMP, TEXTURE9_ORIENT, TextBoxComponent, TextComponent, ToggleComponent, UIKBitmap, UIKFont, UIKit, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };

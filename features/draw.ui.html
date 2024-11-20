@@ -1,144 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="niivue.css" />
-  <title>Drawing User Interface</title>
-</head>
-
-<body>
-  <header>
-    <div class="dropdown">
-      <button class="dropbtn">
-        File
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn" id="SaveDraw" accesskey="s">Save Drawing ^S</a>
-        <a class="viewBtn" id="CloseDraw">Close Drawing</a>
-        <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
-        <a class="viewBtn" id="ShowHeader">Show Header</a>
-        <a class="linker" href="https://github.com/niivue/niivue">About</a>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="niivue.css" />
+    <title>Drawing User Interface</title>
+  </head>
+  <body>
+    <header>
+      <div class="dropdown">
+        <button class="dropbtn">
+          File
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="SaveDraw" accesskey="s">Save Drawing ^S</a>
+          <a class="viewBtn" id="CloseDraw">Close Drawing</a>
+          <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
+          <a class="viewBtn" id="ShowHeader">Show Header</a>
+          <a class="linker" href="https://github.com/niivue/niivue">About</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">
-        Edit
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn" id="Undo" accesskey="z">Undo Draw ^Z</a>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Edit
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="Undo" accesskey="z">Undo Draw ^Z</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn" data-toggle="dropdown">
-        View
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a href="#" class="viewBtn" id="|Axial">Axial</a>
-        <a class="viewBtn" id="|Sagittal">Sagittal</a>
-        <a class="viewBtn" id="|Coronal">Coronal</a>
-        <a class="viewBtn" id="|Render">Render</a>
-        <a class="viewBtn dropdown-item-checked" id="|MultiPlanar">A+C+S</a>
-        <a class="viewBtn" id="|MultiPlanarRender">A+C+S+R</a>
-        <a class="viewBtn divider dropdown-item-checked" id="Colorbar">Colorbar</a>
-        <a class="viewBtn" id="Radiological">Radiological</a>
-        <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
-        <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
-        <a class="viewBtn dropdown-item-checked" id="WorldSpace">World Space</a>
-        <a class="viewBtn dropdown-item-checked" id="Interpolate">Smooth Interpolation</a>
-        <a class="viewBtn" id="RemoveHaze">Remove Haze</a>
-        <a class="viewBtn divider" id="Left">Left</a>
-        <a class="viewBtn" id="Right">Right</a>
-        <a class="viewBtn" id="Anterior">Anterior</a>
-        <a class="viewBtn" id="Posterior">Posterior</a>
-        <a class="viewBtn" id="Inferior">Inferior</a>
-        <a class="viewBtn" id="Superior">Superior</a>
+      <div class="dropdown">
+        <button class="dropbtn" data-toggle="dropdown">
+          View
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a href="#" class="viewBtn" id="|Axial">Axial</a>
+          <a class="viewBtn" id="|Sagittal">Sagittal</a>
+          <a class="viewBtn" id="|Coronal">Coronal</a>
+          <a class="viewBtn" id="|Render">Render</a>
+          <a class="viewBtn dropdown-item-checked" id="|MultiPlanar">A+C+S</a>
+          <a class="viewBtn" id="|MultiPlanarRender">A+C+S+R</a>
+          <a class="viewBtn divider dropdown-item-checked" id="Colorbar"
+            >Colorbar</a
+          >
+          <a class="viewBtn" id="Radiological">Radiological</a>
+          <a class="viewBtn dropdown-item-checked" id="Crosshair"
+            >Render Crosshair</a
+          >
+          <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
+          <a class="viewBtn dropdown-item-checked" id="WorldSpace"
+            >World Space</a
+          >
+          <a class="viewBtn dropdown-item-checked" id="Interpolate"
+            >Smooth Interpolation</a
+          >
+          <a class="viewBtn" id="RemoveHaze">Remove Haze</a>
+          <a class="viewBtn divider" id="Left">Left</a>
+          <a class="viewBtn" id="Right">Right</a>
+          <a class="viewBtn" id="Anterior">Anterior</a>
+          <a class="viewBtn" id="Posterior">Posterior</a>
+          <a class="viewBtn" id="Inferior">Inferior</a>
+          <a class="viewBtn" id="Superior">Superior</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">
-        Color
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn dropdown-item-checked" id="!Gray">Gray</a>
-        <a class="viewBtn" id="!Plasma">Plasma</a>
-        <a class="viewBtn" id="!Viridis">Viridis</a>
-        <a class="viewBtn" id="!Inferno">Inferno</a>
-        <a class="viewBtn divider dropdown-item-checked" id="BackColor">Dark Background</a>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Color
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="!Gray">Gray</a>
+          <a class="viewBtn" id="!Plasma">Plasma</a>
+          <a class="viewBtn" id="!Viridis">Viridis</a>
+          <a class="viewBtn" id="!Inferno">Inferno</a>
+          <a class="viewBtn divider dropdown-item-checked" id="BackColor"
+            >Dark Background</a
+          >
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">
-        Draw
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn dropdown-item-checked" id="@Off" accesskey="0">Off ^0</a>
-        <a class="viewBtn" id="@Red" accesskey="1">Red ^1</a>
-        <a class="viewBtn" id="@Green" accesskey="2">Green ^2</a>
-        <a class="viewBtn" id="@Blue" accesskey="3">Blue ^3</a>
-        <a class="viewBtn" id="@Yellow" accesskey="4">Yellow ^4</a>
-        <a class="viewBtn" id="@Cyan" accesskey="5">Cyan ^5</a>
-        <a class="viewBtn" id="@Purple" accesskey="6">Purple ^6</a>
-        <a class="viewBtn" id="@Erase" accesskey="4">Erase ^7</a>
-        <a class="viewBtn" id="@Cluster" accesskey="5">Erase Cluster ^8</a>
-        <a class="viewBtn" id="@GrowCluster">Grow Cluster</a>
-        <a class="viewBtn" id="@GrowClusterDark">Grow Cluster Dark</a>
-        <a class="viewBtn" id="@GrowClusterBright">Grow Cluster Bright</a>
-        <a class="viewBtn" id="@ClickToSegmentBright">Click To Segment Bright</a>
-        <a class="viewBtn" id="@ClickToSegmentDark">Click To Segment Dark</a>
-        <a class="viewBtn divider dropdown-item-checked" id="{$itksnap">ITK Palette</a>
-        <a class="viewBtn" id="{$slicer3d">Slicer3D Palette</a>
-        <a class="viewBtn" id="{$Custom">Custom Palette</a>
-        <a class="viewBtn divider dropdown-item-checked" id="DrawFilled" accesskey="f">Fill Outline ^F</a>
-        <a class="viewBtn dropdown-item-checked" id="DrawOverwrite" accesskey="o">Pen Overwrites Existing ^O</a>
-        <a class="viewBtn dropdown-item-checked" id="Translucent" accesskey="t">Translucent ^T</a>
-        <a class="viewBtn" id="Growcut">Grow Cut</a>
-        <a class="viewBtn" id="DrawOtsu">Otsu</a>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Draw
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="@Off" accesskey="0"
+            >Off ^0</a
+          >
+          <a class="viewBtn" id="@Red" accesskey="1">Red ^1</a>
+          <a class="viewBtn" id="@Green" accesskey="2">Green ^2</a>
+          <a class="viewBtn" id="@Blue" accesskey="3">Blue ^3</a>
+          <a class="viewBtn" id="@Yellow" accesskey="4">Yellow ^4</a>
+          <a class="viewBtn" id="@Cyan" accesskey="5">Cyan ^5</a>
+          <a class="viewBtn" id="@Purple" accesskey="6">Purple ^6</a>
+          <a class="viewBtn" id="@Erase" accesskey="4">Erase ^7</a>
+          <a class="viewBtn" id="@Cluster" accesskey="5">Erase Cluster ^8</a>
+          <a class="viewBtn" id="@GrowCluster">Grow Cluster</a>
+          <a class="viewBtn" id="@GrowClusterDark">Grow Cluster Dark</a>
+          <a class="viewBtn" id="@GrowClusterBright">Grow Cluster Bright</a>
+          <a class="viewBtn" id="@ClickToSegmentBright">Click To Segment Bright</a>
+          <a class="viewBtn" id="@ClickToSegmentDark">Click To Segment Dark</a>
+          <a
+            class="viewBtn divider dropdown-item-checked"
+            id="{$itksnap"
+            >ITK Palette</a
+          >
+          <a class="viewBtn" id="{$slicer3d">Slicer3D Palette</a>
+          <a class="viewBtn" id="{$Custom">Custom Palette</a>
+          <a
+            class="viewBtn divider dropdown-item-checked"
+            id="DrawFilled"
+            accesskey="f"
+            >Fill Outline ^F</a
+          >
+          <a
+            class="viewBtn dropdown-item-checked"
+            id="DrawOverwrite"
+            accesskey="o"
+            >Pen Overwrites Existing ^O</a
+          >
+          <a
+            class="viewBtn dropdown-item-checked"
+            id="Translucent"
+            accesskey="t"
+            >Translucent ^T</a
+          >
+          <a class="viewBtn" id="Growcut">Grow Cut</a>
+          <a class="viewBtn" id="DrawOtsu">Otsu</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">
-        Drag
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn" id="^contrast">Contrast</a>
-        <a class="viewBtn dropdown-item-checked" id="^measurement">Measurement</a>
-        <a class="viewBtn" id="^pan">Pan/Zoom</a>
-        <a class="viewBtn" id="^none">None</a>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Drag
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="^contrast">Contrast</a>
+          <a class="viewBtn" id="^measurement">Measurement</a>
+          <a class="viewBtn" id="^pan">Pan/Zoom</a>
+          <a class="viewBtn" id="^none">None</a>
+        </div>
       </div>
-    </div>
-    <div class="dropdown">
-      <button class="dropbtn">
-        Script
-        <i class="fa fa-caret-down"></i>
-      </button>
-      <div class="dropdown-content">
-        <a class="viewBtn dropdown-item-checked" id="_FLAIR">FLAIR</a>
-        <a class="viewBtn" id="_mni152">mni152</a>
-        <a class="viewBtn" id="_shear">CT</a>
-        <a class="viewBtn" id="_ct_perfusion">CT CBF</a>
-        <a class="viewBtn" id="_pcasl">pCASL</a>
-        <a class="viewBtn" id="_mesh">mesh</a>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Script
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="_FLAIR">FLAIR</a>
+          <a class="viewBtn" id="_mni152">mni152</a>
+          <a class="viewBtn" id="_shear">CT</a>
+          <a class="viewBtn" id="_ct_perfusion">CT CBF</a>
+          <a class="viewBtn" id="_pcasl">pCASL</a>
+          <a class="viewBtn" id="_mesh">mesh</a>
+        </div>
       </div>
-    </div>
-  </header>
-  <main id="container">
-    <canvas id="gl1"></canvas>
-  </main>
-  <footer id="intensity">&nbsp;</footer>
-</body>
-
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+  </body>
 </html>
 <script type="module" async>
   import * as niivue from "../dist/index.js";
-
+  
   const isTouchDevice =
     "ontouchstart" in window ||
     navigator.maxTouchPoints > 0 ||
@@ -163,7 +191,6 @@
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.setSliceMM(true);
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
-  nv1.opts.dragMode = nv1.dragModes.measurement;
   nv1.graph.autoSizeMultiplanar = true;
   nv1.graph.opacity = 1.0;
   nv1.drawOpacity = 0.5;
@@ -192,7 +219,7 @@
         }, 500)*/
     }
     if (event.target.id === "SaveDraw") {
-      nv1.saveImage({ filename: 'draw.nii', isSaveDrawing: true })
+      nv1.saveImage({ filename: 'draw.nii', isSaveDrawing: true})
       return;
     }
     if (event.target.id === "CloseDraw") {
@@ -242,11 +269,11 @@
       // change color labels https://github.com/niivue/niivue/issues/575
       if (event.target.id === "{$Custom") {
         let cmap = {
-          R: [0, 255, 22, 127],
-          G: [0, 20, 192, 187],
-          B: [0, 152, 80, 255],
-          A: [0, 255, 255, 255],
-          labels: ["", "pink", "lime", "sky"],
+            R: [0, 255, 22, 127],
+            G: [0, 20, 192, 187],
+            B: [0, 152, 80, 255],
+            A: [0, 255, 255, 255],
+            labels: ["", "pink","lime","sky"],
         };
         nv1.setDrawColormap(cmap)
       } else
@@ -281,7 +308,7 @@
         if (nv1.opts.penValue < 1 || nv1.opts.penValue > 6) nv1.setPenValue(1, isFilled);
         nv1.opts.clickToSegment = true
         nv1.opts.clickToSegmentBright = true // use true for bright
-      }
+      } 
       // click to segment dark
       if (event.target.id === "@ClickToSegmentDark") {
         nv1.setPenValue(1, isFilled);
