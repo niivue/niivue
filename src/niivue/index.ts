@@ -105,7 +105,6 @@ import {
 } from '../types.js'
 import { UIKFont } from '../ui/uikfont.js'
 import { UIKit } from '../ui/uikit.js'
-import { convertTouchToPointerEvent } from '../ui/uiutils.js'
 import { Vec3 } from '../ui/types.js'
 import { isProjectable3D, isProjectable2D, isProjectable } from '../ui/interfaces.js'
 import {
