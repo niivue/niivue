@@ -14,6 +14,7 @@ export class RulerComponent extends BaseUIComponent implements IProjectable2D {
   private lineColor: Color
   private lineThickness: number
   private offset: number
+  private showTickmarkNumbers: boolean
 
   constructor(config: RulerComponentConfig) {
     super(config) // Pass BaseUIComponentConfig properties to the parent constructor
@@ -26,6 +27,7 @@ export class RulerComponent extends BaseUIComponent implements IProjectable2D {
     this.lineThickness = config.lineThickness ?? 1
     this.offset = config.offset ?? 40
     this.scale = config.scale ?? 1.0
+    this.showTickmarkNumbers = config.showTickmarkNumbers ?? true
     this.projectedStart = [0, 0]
     this.projectedEnd = [0, 0]
   }
@@ -60,7 +62,8 @@ export class RulerComponent extends BaseUIComponent implements IProjectable2D {
       lineColor: this.lineColor,
       lineThickness: this.lineThickness,
       offset: this.offset,
-      scale: this.scale // Pass scale from BaseUIComponent
+      scale: this.scale, // Pass scale from BaseUIComponent
+      showTickmarkNumbers: this.showTickmarkNumbers
     })
   }
 

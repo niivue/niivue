@@ -195,6 +195,7 @@ export interface RulerComponentConfig extends BaseUIComponentConfig {
   lineThickness?: number // Thickness of the line (default to 1)
   offset?: number // Offset for text position (default to 40)
   scale?: number // Scale of the ruler (default to 1.0)
+  showTickmarkNumbers?: boolean // Show numbers above every fifth tickmark
 }
 
 export interface ToggleComponentConfig extends BaseUIComponentConfig {

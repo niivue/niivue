@@ -1151,7 +1151,8 @@ export class UIKRenderer {
     lineColor = [0, 0, 0, 1],
     lineThickness = 1,
     offset = 40,
-    scale = 1.0
+    scale = 1.0,
+    showTickmarkNumbers = true
   }: {
     pointA: Vec2
     pointB: Vec2
@@ -1163,6 +1164,7 @@ export class UIKRenderer {
     lineThickness?: number
     offset?: number
     scale?: number
+    showTickmarkNumbers?: boolean
   }): void {
     // Calculate the angle between the points
     const deltaX = pointB[0] - pointA[0]
@@ -1272,14 +1274,16 @@ export class UIKRenderer {
             (currentHashLength / 4) * Math.sin(angle),
           hashPoint[1] + perpOffsetY - (hashTextWidth / 2) * Math.sin(angle) - (currentHashLength / 4) * Math.cos(angle)
         ]
-        this.drawRotatedText({
-          font,
-          xy: hashTextPosition,
-          str: hashText,
-          scale: hashTextScale,
-          color: textColor,
-          rotation: angle
-        })
+        if (showTickmarkNumbers) {
+          this.drawRotatedText({
+            font,
+            xy: hashTextPosition,
+            str: hashText,
+            scale: hashTextScale,
+            color: textColor,
+            rotation: angle
+          })
+        }
       }
 
       const hashStart: Vec2 = [
