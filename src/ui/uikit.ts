@@ -48,6 +48,7 @@ export class UIKit {
   private dpr: number
 
   private resizeObserver: ResizeObserver
+  private lastClickTime: DOMHighResTimeStamp = 0
 
   // Static enum for line terminators
   public static lineTerminator = LineTerminator
@@ -67,11 +68,14 @@ export class UIKit {
   public set redrawRequested(callback: (() => void) | undefined) {
     const canvas = this.gl.canvas as HTMLCanvasElement
     if (callback) {
+      canvas.removeEventListener('pointerup', this.handlePointerUp.bind(this))
       canvas.removeEventListener('pointerdown', this.handlePointerDown.bind(this))
       canvas.removeEventListener('pointermove', this.handlePointerMove.bind(this))
       window.removeEventListener('resize', this.resizeListener)
+      console.log('event handlers removed')
     } else {
       canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this))
+      canvas.addEventListener('pointerup', this.handlePointerUp.bind(this))
       canvas.addEventListener('pointermove', this.handlePointerMove.bind(this))
       window.addEventListener('resize', this.resizeListener)
     }
@@ -243,7 +247,15 @@ export class UIKit {
     this.lastHoveredComponents = components
   }
 
-  public processPointerDown(_x: number, _y: number, _button: number): void {}
+  public processPointerDown(x: number, y: number, event: PointerEvent): void {
+    const point: Vec2 = [x * this.dpr, y * this.dpr]
+    const components = this.quadTree.queryPoint(point)
+    for (const component of components) {
+      if (component.isVisible) {
+        component.applyEventEffects('pointerdown', event)
+      }
+    }
+  }
 
   public processPointerUp(x: number, y: number, event: PointerEvent): void {
     const point: Vec2 = [x * this.dpr, y * this.dpr]
@@ -251,6 +263,7 @@ export class UIKit {
     for (const component of components) {
       if (component.isVisible) {
         component.applyEventEffects('pointerup', event)
+        console.log('applying pointer up event to', component)
       }
     }
   }
@@ -273,14 +286,22 @@ export class UIKit {
   private handlePointerDown(event: PointerEvent): void {
     const pos = this.getCanvasRelativePosition(event)
     if (pos) {
-      this.processPointerDown(pos.x, pos.y, event.button)
+      this.processPointerDown(pos.x, pos.y, event)
     }
   }
 
   private handlePointerUp(event: PointerEvent): void {
     const pos = this.getCanvasRelativePosition(event)
     if (pos) {
-      this.processPointerUp(pos.x, pos.y, event)
+      console.log('handle click called')
+      const currentClickTime = performance.now()
+      console.log('current click time', currentClickTime)
+      const elapsed = currentClickTime - this.lastClickTime
+      console.log('elapsed', elapsed)
+      if (elapsed > 200) {
+        this.processPointerUp(pos.x, pos.y, event)
+      }
+      this.lastClickTime = currentClickTime
     }
   }
 
@@ -306,6 +327,7 @@ export class UIKit {
     const canvas = this.gl.canvas as HTMLCanvasElement
     canvas.removeEventListener('pointerdown', this.handlePointerDown.bind(this))
     canvas.removeEventListener('pointermove', this.handlePointerMove.bind(this))
+    canvas.removeEventListener('pointerup', this.handlePointerUp.bind(this))
   }
 
   // Proxy methods for renderer's draw calls

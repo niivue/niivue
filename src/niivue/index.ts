@@ -1425,7 +1425,7 @@ export class Niivue {
   // not included in public docs
   // handler for mouse button up (all buttons)
   // note: no test yet
-  mouseUpListener(e: PointerEvent): void {
+  mouseUpListener(): void {
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
@@ -1488,9 +1488,6 @@ export class Niivue {
       this.calculateNewRange({ volIdx: 0 })
       this.refreshLayers(this.volumes[0], 0)
     }
-    // this.ui.processPointerUp(this.mousePos[0], this.mousePos[1], e.button)
-    const rect = this.canvas!.getBoundingClientRect()
-    this.ui.processPointerUp(e.clientX - rect.left, e.clientY - rect.top, e)
     this.drawScene()
   }
 
@@ -1568,16 +1565,13 @@ export class Niivue {
       this.generateMouseUpCallback(fracStart, fracEnd)
     }
     // mouseUp generates this.drawScene();
-    const pointerUpEvent = convertTouchToPointerEvent(e, 'mouseup')
-    this.mouseUpListener(pointerUpEvent)
+    this.mouseUpListener()
   }
 
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
   mouseMoveListener(e: PointerEvent): void {
-    const rect = this.canvas!.getBoundingClientRect()
-    this.ui.processPointerMove(e.clientX - rect.left, e.clientY - rect.top, e)
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)

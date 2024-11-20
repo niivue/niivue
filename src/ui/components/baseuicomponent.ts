@@ -25,6 +25,7 @@ export abstract class BaseUIComponent implements IUIComponent {
 
   // Event handlers
   public onPointerUp?: (event: MouseEvent) => void
+  public onPointerDown?: (event: MouseEvent) => void
   public onPointerEnter?: (event: MouseEvent) => void
   public onPointerLeave?: (event: MouseEvent) => void
 
@@ -222,6 +223,7 @@ export abstract class BaseUIComponent implements IUIComponent {
   }
 
   applyEventEffects(eventName: string): void {
+    console.log('event being applied', eventName, this)
     if (!eventName) {
       return
     }
@@ -236,6 +238,11 @@ export abstract class BaseUIComponent implements IUIComponent {
       case 'pointerup':
         if (this.onPointerUp) {
           this.onPointerUp(new PointerEvent('pointerup'))
+        }
+        break
+      case 'pointerdown':
+        if (this.onPointerDown) {
+          this.onPointerDown(new PointerEvent('pointerdown'))
         }
         break
       case 'pointerenter':

@@ -91,6 +91,7 @@ export interface TextBoxComponentConfig extends TextComponentConfig {
 
 export interface ButtonComponentConfig extends TextBoxComponentConfig {
   highlightColor?: Color
+  buttonDownColor?: Color
   onClick?: (event: PointerEvent) => void
 }
 

@@ -5,11 +5,13 @@ import { TextBoxComponent } from './textboxcomponent.js'
 // Button Component extending TextBoxComponent
 export class ButtonComponent extends TextBoxComponent {
   highlightColor: Color
+  buttonDownColor: Color
   onClick?: (event: PointerEvent) => void
 
   constructor(config: ButtonComponentConfig) {
     super(config)
     this.highlightColor = config.highlightColor ?? [0.5, 0.5, 0.5, 1.0]
+    this.buttonDownColor = config.buttonDownColor ?? [0.529, 0.808, 0.98, 1.0] // Light blue color
     this.onClick = config.onClick
 
     // Adding click effects to create a bounce animation
@@ -42,11 +44,20 @@ export class ButtonComponent extends TextBoxComponent {
 
     // Effect 3: Change fillColor on mouse enter
     this.addEventEffect(
+      'pointerdown',
+      this,
+      'fillColor',
+      'setValue',
+      this.buttonDownColor // Change fill color to a light gray
+    )
+
+    // Effect 3: Change fillColor on mouse enter
+    this.addEventEffect(
       'pointerenter',
       this,
       'fillColor',
       'setValue',
-      [0.5, 0.5, 0.5, 1.0] // Change fill color to a light gray
+      this.highlightColor // Change fill color to a light gray
     )
 
     // Effect 4: Revert fillColor on mouse leave
@@ -79,6 +90,7 @@ export class ButtonComponent extends TextBoxComponent {
 
   handleClick(event: PointerEvent): void {
     if (this.onClick) {
+      console.log('click called')
       this.onClick(event)
     }
   }
