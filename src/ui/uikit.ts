@@ -246,7 +246,7 @@ export class UIKit {
   }
 
   public processPointerMove(x: number, y: number, event: PointerEvent): void {
-    const point: Vec2 = [x * this.dpr, y * this.dpr]
+    const point: Vec2 = [x, y]
     const components = new Set(this.quadTree.queryPoint(point).filter((component) => component.isVisible))
     for (const component of components) {
       if (!component.isVisible) {
@@ -265,7 +265,7 @@ export class UIKit {
   }
 
   public processPointerDown(x: number, y: number, event: PointerEvent): void {
-    const point: Vec2 = [x * this.dpr, y * this.dpr]
+    const point: Vec2 = [x, y]
     const components = this.quadTree.queryPoint(point)
     for (const component of components) {
       if (component.isVisible) {
@@ -275,7 +275,7 @@ export class UIKit {
   }
 
   public processPointerUp(x: number, y: number, event: PointerEvent): void {
-    const point: Vec2 = [x * this.dpr, y * this.dpr]
+    const point: Vec2 = [x, y]
     const components = this.quadTree.queryPoint(point)
     for (const component of components) {
       if (component.isVisible) {
