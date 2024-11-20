@@ -1910,7 +1910,7 @@ export class Niivue {
   pointerUpListener(e: PointerEvent): void {
     // handle pointer up
     e.preventDefault()
-    this.mouseUpListener(e)
+    this.mouseUpListener()
   }
 
   pointerMoveListener(e: PointerEvent): void {
