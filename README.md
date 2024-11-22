@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-The command `npm run demo` will minify the project and locally host all of the [live demos](https://niivue.github.io/niivue/). The [DEVELOP.md file provides more details for developers](./DEVELOP.md).
+The command `npm run demo` will minify the project and locally host all of the [live demos](https://niivue.github.io/niivue/). The [DEVELOP.md file provides more details for developers](./packages/niivue/DEVELOP.md).
 
 # Developer Documentation
 
