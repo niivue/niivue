@@ -20,8 +20,7 @@ jobs:
           cache: npm
           node-version: 20
       - run: npm ci
-      - run: npm run lint
-      - run: npm run lint:ts
+      - run: npm run lint:niivue
 
   test-unit:
     runs-on: ubuntu-latest
@@ -51,10 +50,26 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run test-playwright
+        run: npm run test:e2e
       - uses: actions/upload-artifact@v3
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+  build-demos-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install and Build
+        run: |
+          npm ci
+          npm run build:github
+          npm run build:docs
+          version=$(node -p "require('./packages/niivue/package.json').version")
+          cp -r packages/niivue/dist packages/niivue/demos/dist
+          cp -r packages/niivue/devdocs packages/niivue/demos/
+          mkdir -p packages/niivue/demos/devdocs/$version
+          cp -r packages/niivue/devdocs/* packages/niivue/demos/devdocs/$version
