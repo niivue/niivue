@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_niivue_docs=self.webpackChunk_niivue_docs||[]).push([["627"],{7548:function(e){e.exports=JSON.parse('{"blogBasePath":"/niivue/blog","blogTitle":"Blog","authorsListPath":"/niivue/blog/authors"}')}}]);
