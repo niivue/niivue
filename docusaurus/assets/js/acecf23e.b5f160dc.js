@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_niivue_docs=self.webpackChunk_niivue_docs||[]).push([["627"],{7548:function(s){s.exports=JSON.parse('{"blogBasePath":"/niivue/docusaurus/blog","blogTitle":"Blog","authorsListPath":"/niivue/docusaurus/blog/authors"}')}}]);
