@@ -24,6 +24,7 @@ jobs:
       - name: Build Docusaurus docs
         run: |
           npm install
+          npm run build:niivue
           npm run build:docusaurus
           mkdir -p packages/niivue/demos/docusaurus
           cp -r packages/docs/build/* packages/niivue/demos/docusaurus
