@@ -10,8 +10,11 @@
       "build:niivue": "npm run build -w @niivue/niivue",
       "build:docs": "npm run docs -w @niivue/niivue",
       "build:github": "npm run build:forTests -w @niivue/niivue", 
+      "build:docusaurus": "npm run build -w @niivue/docs",
+      "serve:docs": "npm run serve -w @niivue/docs",
       "publish:niivue": "npm run pub -w @niivue/niivue",
       "dev": "npm run dev -w @niivue/niivue",
+      "dev:docs": "npm run start -w @niivue/docs",
       "test:e2e": "npm run test-playwright -w @niivue/niivue",
       "test:unit": "npm run test:unit -w @niivue/niivue",
       "lint:niivue": "npm run lint -w @niivue/niivue && npm run lint:ts -w @niivue/niivue"
