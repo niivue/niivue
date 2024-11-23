@@ -10,9 +10,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install and Build
+      - name: Build demos and typedoc
         run: |
-          npm install
+          npm ci
           npm run build:github
           npm run build:docs
           version=$(node -p "require('./packages/niivue/package.json').version")
@@ -20,6 +20,13 @@ jobs:
           cp -r packages/niivue/devdocs packages/niivue/demos/
           mkdir -p packages/niivue/demos/devdocs/$version
           cp -r packages/niivue/devdocs/* packages/niivue/demos/devdocs/$version
+
+      - name: Build Docusaurus docs
+        run: |
+          npm install
+          npm run build:docusaurus
+          mkdir -p packages/niivue/demos/docusaurus
+          cp -r packages/docs/build/* packages/niivue/demos/docusaurus
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
