@@ -46,15 +46,15 @@ const config = {
           sidebarPath: './sidebars.js',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/niivue/niivue'
+          // editUrl:
+            // 'https://github.com/niivue/niivue'
         },
         blog: {
           showReadingTime: true,
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/niivue/niivue'
+          // editUrl:
+            // 'https://github.com/niivue/niivue'
         },
         theme: {
           customCss: './src/css/custom.css',
