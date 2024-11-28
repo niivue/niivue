@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+      "declaration": true, // Generate .d.ts files
+      "declarationDir": "./dist/types", // Output directory for .d.ts files
+      "emitDeclarationOnly": true, // Only generate declaration files
+      "outDir": "./dist", // Output directory for compiled files
+      "rootDir": "./src",
+      "module": "ESNext", // Ensure ES module support
+      "target": "ESNext", // Modern JavaScript target
+      "strict": true, // Enable strict type checking
+      "moduleResolution": "node", // Resolve node_modules correctly
+      "esModuleInterop": true, // Enable compatibility with CommonJS modules
+      "resolveJsonModule": true,
+      "types": [
+        "vite-plugin-glsl/ext"
+      ]
+    },
+    "include": ["src/**/*", "types"]
+  }
