@@ -1,5 +1,5 @@
 {
-  "name": "@medview/uikit",
+  "name": "@niivue/uikit",
   "version": "0.1.0",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
@@ -20,7 +20,7 @@
   },
   "keywords": [],
   "author": "Chris Drake",
-  "license": "ISC",
+  "license": "BSD-2-Clause",
   "description": "",
   "type": "module",
   "dependencies": {
