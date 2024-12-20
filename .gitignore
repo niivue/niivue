@@ -1,6 +1,7 @@
 .DS_Store
 node_modules
 packages/*/build
+!packages/niivue-desktop/build
 packages/*/dist
 packages/*/distForTests
 tests-out
