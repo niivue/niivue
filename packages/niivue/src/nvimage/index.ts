@@ -2500,9 +2500,55 @@ export class NVImage {
     this.calculateOblique()
   }
 
+  // Reorient raw header data to RAS
+  // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
+
+  hdr2RAS(nVolumes: number = 1): nifti.NIFTI1 | nifti.NIFTI2 {
+    if (!this.permRAS) {
+      throw new Error('permRAS undefined')
+    }
+    if (!this.hdr) {
+      throw new Error('hdr undefined')
+    }
+    // make a deep clone
+    const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, false)
+    const hdr = nifti.readHeader(hdrBytes.buffer, true)
+    // n.b. if nVolumes < 1, input volumes = output volumess
+    if (nVolumes === 1) {
+      // 3D
+      hdr.dims[0] = 3
+      hdr.dims[4] = 1
+    } else if (nVolumes > 1) {
+      // 4D
+      hdr.dims[0] = 4
+      hdr.dims[4] = nVolumes
+    }
+    const perm = this.permRAS.slice()
+    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
+      return hdr
+    } // header is already in RAS
+    hdr.qform_code = 0
+    for (let i = 1; i < 4; i++) {
+      hdr.dims[i] = this.dimsRAS[i]
+    }
+
+    for (let i = 0; i < this.pixDimsRAS.length; i++) {
+      hdr.pixDims[i] = this.pixDimsRAS[i]
+    }
+    let k = 0
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        hdr.affine[i][j] = this.matRAS[k]
+        k++
+      }
+    }
+    return hdr
+  }
+
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
-  img2RAS(): TypedVoxelArray {
+  // returns single 3D volume even for 4D input. Use nVolume to select volume (0 indexed)
+  img2RAS(nVolume: number = 0): TypedVoxelArray {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
     }
@@ -2518,8 +2564,14 @@ export class NVImage {
       return this.img
     } // image is already in RAS
     const hdr = this.hdr
+    const nVox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+    let volSkip = nVolume * nVox
+    if (volSkip + nVox > this.img.length || volSkip < 0) {
+      volSkip = 0
+      log.warn(`img2RAS nVolume (${nVolume}) out of bounds (${nVolume}+1)×${nVox} > ${this.img.length}`)
+    }
     // preallocate/clone image (only 3D for 4D datasets!)
-    const imgRAS = this.img.slice(0, hdr.dims[1] * hdr.dims[1] * hdr.dims[2] * hdr.dims[3])
+    const imgRAS = this.img.slice(0, nVox)
     const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])]
     const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]]
     const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]] // increment i,j,k
@@ -2539,7 +2591,7 @@ export class NVImage {
         const yi = outStart[1] + y * outStep[1]
         for (let x = 0; x < outdim[0]; x++) {
           const xi = outStart[0] + x * outStep[0]
-          imgRAS[j] = this.img[xi + yi + zi]
+          imgRAS[j] = this.img[xi + yi + zi + volSkip]
           j++
         } // for x
       } // for y
