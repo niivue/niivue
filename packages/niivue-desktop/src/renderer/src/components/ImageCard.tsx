@@ -13,6 +13,7 @@ import { NVImage, NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '@renderer/App'
 
+// TODO: ImageCard should support both NVImage and NVMesh
 export function ImageCard({ image }: { image: NVImage | NVMesh }): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [colormap, setColormap] = useState<string>(
