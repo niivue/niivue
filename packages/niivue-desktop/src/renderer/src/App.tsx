@@ -1,8 +1,8 @@
 import { Sidebar } from './components/Sidebar'
 import { Viewer } from './components/Viewer'
 import { Divider } from './components/Divider'
-import { createContext, useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, SLICE_TYPE } from '@niivue/niivue'
+import React, { createContext, useEffect, useRef, useState } from 'react'
+import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 
@@ -23,6 +23,8 @@ type AppCtx = {
   setSelectedImage: (image: NVImage | null) => void
   sliceType: SLICE_TYPE | null
   setSliceType: (sliceType: SLICE_TYPE | null) => void
+  // store niivue instance as a ref type
+  nvRef: React.MutableRefObject<Niivue>
 }
 
 // setup context provider for the app
@@ -61,12 +63,13 @@ function App(): JSX.Element {
         selectedImage,
         setSelectedImage,
         sliceType,
-        setSliceType
+        setSliceType,
+        nvRef: useRef<Niivue>(new Niivue({ loadingText: '' }))
       }}
     >
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar />
-        <Divider />
+        {/* <Divider /> */}
         <Viewer />
       </div>
     </AppContext.Provider>

@@ -4,13 +4,18 @@ import { useContext } from 'react'
 import { AppContext } from '../App'
 
 export function Viewer(): JSX.Element {
-  const { volumes } = useContext(AppContext)
+  const context = useContext(AppContext)
+  const { volumes } = context
+  const { nvRef } = context
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const nvRef = useRef<Niivue>(
-    new Niivue({
-      loadingText: ''
-    })
-  )
+  // const nvRef = useRef<Niivue>(
+  //   new Niivue({
+  //     loadingText: ''
+  //   })
+  // )
+  // if (!nv) {
+  //   nv = nvRef
+  // }
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -32,6 +37,7 @@ export function Viewer(): JSX.Element {
 
   return (
     <div className="flex flex-col bg-black basis-2/3 h-full">
+      {/* toolbar */}
       <div className="flex flex-row h-12 bg-black"></div>
       <div>
         <canvas className="outline-none" ref={canvasRef} width={800} height={600}></canvas>
