@@ -3,7 +3,7 @@ import { join } from 'path'
 import { loadFromFile } from './utils/loadFromFile'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { menu } from './utils/menu'
+import { createMenu } from './utils/menu'
 
 function createWindow(): void {
   // Create the browser window.
@@ -20,6 +20,8 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    const menu = createMenu(mainWindow)
+    Menu.setApplicationMenu(menu)
     mainWindow.show()
   })
 
@@ -43,8 +45,6 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
-
-  Menu.setApplicationMenu(menu)
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

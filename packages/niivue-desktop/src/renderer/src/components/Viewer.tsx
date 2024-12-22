@@ -22,6 +22,14 @@ export function Viewer(): JSX.Element {
       const nv = nvRef.current
       nv.attachToCanvas(canvasRef.current)
     }
+    window.api.onToggleCrosshair((state: boolean) => {
+      const nv = nvRef.current
+      if (state) {
+        nv.setCrosshairWidth(1)
+      } else {
+        nv.setCrosshairWidth(0)
+      }
+    })
   }, [])
 
   // when volumes array changes (added, removed), update the scene

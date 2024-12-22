@@ -1,18 +1,31 @@
 import { Sidebar } from './components/Sidebar'
 import { Viewer } from './components/Viewer'
-import { Divider } from './components/Divider'
 import React, { createContext, useEffect, useRef, useState } from 'react'
 import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 
+const nv = new Niivue({ loadingText: '' })
+
+// declare global types for window.api for better type checking.
+// These are the custom APIs exposed to the renderer process from our preload script.
 declare global {
   interface Window {
     api: {
       loadFromFile: (path: string) => Promise<string>
+      onToggleCrosshair: (callback: (state: boolean) => void) => void
     }
   }
 }
+
+// listen for toggleCrosshair event from main process
+window.api.onToggleCrosshair((state: boolean) => {
+  if (state) {
+    nv.setCrosshairWidth(1)
+  } else {
+    nv.setCrosshairWidth(0)
+  }
+})
 
 type AppCtx = {
   volumes: NVImage[]
@@ -64,12 +77,11 @@ function App(): JSX.Element {
         setSelectedImage,
         sliceType,
         setSliceType,
-        nvRef: useRef<Niivue>(new Niivue({ loadingText: '' }))
+        nvRef: useRef<Niivue>(nv)
       }}
     >
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar />
-        {/* <Divider /> */}
         <Viewer />
       </div>
     </AppContext.Provider>

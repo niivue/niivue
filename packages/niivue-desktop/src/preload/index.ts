@@ -7,6 +7,9 @@ const api = {
   loadFromFile: async (path: string): Promise<string> => {
     const base64 = await ipcRenderer.invoke('loadFromFile', path)
     return base64
+  },
+  onToggleCrosshair: (callback: (state: boolean) => void): void => {
+    ipcRenderer.on('toggleCrosshair', (_, state) => callback(state))
   }
 }
 
