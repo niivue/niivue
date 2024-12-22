@@ -404,7 +404,8 @@ declare class NVImage {
     readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
     calculateRAS(): void;
-    img2RAS(): TypedVoxelArray;
+    hdr2RAS(nVolumes?: number): nifti.NIFTI1 | nifti.NIFTI2;
+    img2RAS(nVolume?: number): TypedVoxelArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     mm2vox(mm: number[], frac?: boolean): Float32Array | vec3;
     arrayEquals(a: unknown[], b: unknown[]): boolean;
