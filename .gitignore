@@ -16,6 +16,13 @@ niivue.es.js
 niivue.umd.js
 packages/*/downloads
 __diff_output__
+coverage
+build
+demos/dist
+dist
+test-results
+playwright-report
+playwright/**/*.js
 packages/*/coverage
 # local env files
 .env.local

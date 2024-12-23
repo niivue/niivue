@@ -1,7 +1,5 @@
 // types.ts
-
 import { vec2, vec3, vec4 } from 'gl-matrix'
-import { UIKFont } from './assets/uikfont'
 
 // Define Color type for clarity
 export type Color = [number, number, number, number] | Float32List
@@ -11,19 +9,6 @@ export type Vec2 = vec2 | [number, number]
 export type Vec3 = vec3 | [number, number, number]
 export type Vec4 = vec4 | [number, number, number, number]
 
-// LineTerminator enum
-export enum LineTerminator {
-  NONE = 0,
-  ARROW = 1,
-  CIRCLE = 2,
-  RING = 3
-}
-
-export enum LineStyle {
-  SOLID = 'solid',
-  DASHED = 'dashed',
-  DOTTED = 'dotted'
-}
 
 // Enums for alignment
 export enum AlignmentFlag {
@@ -63,64 +48,10 @@ export enum VerticalAlignment {
   BOTTOM = AlignmentFlag.BOTTOM
 }
 
-export enum ComponentSide {
-  LEFT,
-  RIGHT,
-  TOP,
-  BOTTOM
-}
-
-// Enum for specifying the plane
-export enum Plane {
-  XY = 'XY',
-  XZ = 'XZ',
-  YZ = 'YZ'
-}
-
-export type Effect =
-  | {
-      type: 'setValue'
-      targetObject: any
-      property: string
-      value: any
-      isToggle: boolean
-      event?: PointerEvent
-      onComplete?: (event?: Event) => void
-    }
-  | {
-      type: 'toggleValue'
-      targetObject: any
-      property: string
-      value1: any
-      value2: any
-      event?: PointerEvent
-      onComplete?: (event?: Event) => void
-    }
-  | {
-      type: 'animateValue'
-      targetObject: any
-      property: string
-      from: number | number[]
-      to: number | number[]
-      duration: number
-      isBounce: boolean
-      isToggle: boolean
-      event?: PointerEvent
-      onComplete?: (event?: Event) => void
-    }
-
-export type Graph = {
-  position: Vec2 // Position of the graph's top-left corner
-  size: Vec2 // Width and height of the graph
-  backgroundColor: Color // Background color of the graph area
-  lineColor: Color // Color of the graph line
-  axisColor: Color // Color of the graph axis lines
-  data: number[] // Array of data points to plot
-  xLabel: string // Label for the x-axis
-  yLabel: string // Label for the y-axis
-  yRange: [number, number] // Range for y-axis (min, max)
-  lineThickness: number // Thickness of the graph line
-  textColor: Color // Color for text labels
-  font: UIKFont // Font for rendering text labels
-  textScale: number // Text scale
+export enum OffsetDirection {
+  Below,
+  Above,
+  LeftOf,
+  RightOf,
+  CenteredOn
 }

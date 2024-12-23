@@ -15,7 +15,8 @@
     "dist"
   ],
   "scripts": {
-    "test": "vitest run",
+    "test:unit": "vitest",
+    "test:browser": "npx playwright test",
     "build": "vite build && tsc --project tsconfig.json"
   },
   "keywords": [],
@@ -28,7 +29,9 @@
     "gl-matrix": "^3.4.3"
   },
   "devDependencies": {
+    "@vitest/browser": "^2.1.8",
+    "playwright": "^1.49.1",
     "vite-plugin-glsl": "^1.3.0",
-    "vitest": "^2.1.6"
+    "vitest": "^2.1.8"
   }
 }
