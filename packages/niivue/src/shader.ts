@@ -16,7 +16,7 @@ export const compileShader = function (gl: WebGL2RenderingContext, vert: string,
   gl.attachShader(program, fs)
   gl.linkProgram(program)
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    //issue1128 report shader errors to console
+    // issue1128 report shader errors to console
     console.log(gl.getProgramInfoLog(program))
     if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
       console.log('Vertex shader compilation error:', gl.getShaderInfoLog(vs))
