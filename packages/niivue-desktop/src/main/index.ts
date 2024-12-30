@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'path'
 import { loadFromFile } from './utils/loadFromFile'
+import { loadStandard } from './utils/loadStandard'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createMenu } from './utils/menu'
@@ -55,6 +56,8 @@ app.whenReady().then(() => {
 
   // set read.file handler to read a file from disk given a path
   ipcMain.handle('loadFromFile', loadFromFile)
+  // handler for loadStandard
+  ipcMain.handle('loadStandard', loadStandard)
 
   createWindow()
 

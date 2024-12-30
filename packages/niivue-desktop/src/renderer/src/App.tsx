@@ -5,7 +5,8 @@ import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 
-const nv = new Niivue({ loadingText: '' })
+// disable niivue drag and drop handler in favor of the electron handler
+const nv = new Niivue({ loadingText: '', dragAndDropEnabled: false })
 
 // declare global types for window.api for better type checking.
 // These are the custom APIs exposed to the renderer process from our preload script.
@@ -13,6 +14,7 @@ declare global {
   interface Window {
     api: {
       loadFromFile: (path: string) => Promise<string>
+      loadStandard: (path: string) => Promise<string>
       onToggleCrosshair: (callback: (state: boolean) => void) => void
     }
   }
@@ -36,7 +38,7 @@ type AppCtx = {
   setSelectedImage: (image: NVImage | null) => void
   sliceType: SLICE_TYPE | null
   setSliceType: (sliceType: SLICE_TYPE | null) => void
-  // store niivue instance as a ref type
+  // store niivue instance as a ref
   nvRef: React.MutableRefObject<Niivue>
 }
 
@@ -55,15 +57,37 @@ function App(): JSX.Element {
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
-    loadDroppedFiles(e, setVolumes)
+    nv.volumes = []
+    nv.meshes = []
+    nv.updateGLVolume()
+    loadDroppedFiles(e, setVolumes, setMeshes, nv.gl)
   }
 
   useEffect(() => {
+    console.log('nv.gl', nv._gl)
+    if (!nv._gl) return
     const init = async (): Promise<void> => {
       const niimath = niimathRef.current
       await niimath.init()
     }
     init()
+    const loadImages = async (): Promise<void> => {
+      const volBase64 = await window.api.loadStandard('mni152.nii.gz')
+      const vol = NVImage.loadFromBase64({
+        base64: volBase64,
+        name: 'mni152.nii.gz'
+      })
+      const meshBase64 = await window.api.loadStandard('aal.mz3')
+      const arrayBuffer = Uint8Array.from(atob(meshBase64), (c) => c.charCodeAt(0)).buffer
+      const mesh = await NVMesh.loadFromFile({
+        file: new File([arrayBuffer], 'aal.mz3'),
+        gl: nv.gl,
+        name: 'aal.mz3'
+      })
+      setVolumes([vol])
+      setMeshes([mesh])
+    }
+    loadImages()
   }, [])
 
   return (
