@@ -1,7 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, shell, BrowserWindow, Menu } from 'electron'
 import { join } from 'path'
-import { loadFromFile } from './utils/loadFromFile'
-import { loadStandard } from './utils/loadStandard'
+import { registerIpcHandlers } from './utils/ipcHandlers'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createMenu } from './utils/menu'
@@ -16,7 +15,9 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      contextIsolation: false,
+      nodeIntegration: true
     }
   })
 
@@ -54,10 +55,8 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // set read.file handler to read a file from disk given a path
-  ipcMain.handle('loadFromFile', loadFromFile)
-  // handler for loadStandard
-  ipcMain.handle('loadStandard', loadStandard)
+  // register all IPC events at once
+  registerIpcHandlers()
 
   createWindow()
 

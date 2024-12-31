@@ -4,24 +4,13 @@ import React, { createContext, useEffect, useRef, useState } from 'react'
 import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
+import { registerLoadStandardHandler } from './ipcHandlers/loadStandard'
+const electron = window.electron
 
 // disable niivue drag and drop handler in favor of the electron handler
 const nv = new Niivue({ loadingText: '', dragAndDropEnabled: false })
 
-// declare global types for window.api for better type checking.
-// These are the custom APIs exposed to the renderer process from our preload script.
-declare global {
-  interface Window {
-    api: {
-      loadFromFile: (path: string) => Promise<string>
-      loadStandard: (path: string) => Promise<string>
-      onToggleCrosshair: (callback: (state: boolean) => void) => void
-    }
-  }
-}
-
-// listen for toggleCrosshair event from main process
-window.api.onToggleCrosshair((state: boolean) => {
+electron.ipcRenderer.on('toggleCrosshair', (_, state) => {
   if (state) {
     nv.setCrosshairWidth(1)
   } else {
@@ -31,9 +20,9 @@ window.api.onToggleCrosshair((state: boolean) => {
 
 type AppCtx = {
   volumes: NVImage[]
-  setVolumes: (volumes: NVImage[]) => void
+  setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
   meshes: NVMesh[]
-  setMeshes: (meshes: NVMesh[]) => void
+  setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   selectedImage: NVImage | null
   setSelectedImage: (image: NVImage | null) => void
   sliceType: SLICE_TYPE | null
@@ -66,18 +55,18 @@ function App(): JSX.Element {
   useEffect(() => {
     console.log('nv.gl', nv._gl)
     if (!nv._gl) return
-    const init = async (): Promise<void> => {
+    const initNiimath = async (): Promise<void> => {
       const niimath = niimathRef.current
       await niimath.init()
     }
-    init()
+    initNiimath()
     const loadImages = async (): Promise<void> => {
-      const volBase64 = await window.api.loadStandard('mni152.nii.gz')
+      const volBase64 = await electron.ipcRenderer.invoke('loadStandard', 'mni152.nii.gz')
       const vol = NVImage.loadFromBase64({
         base64: volBase64,
         name: 'mni152.nii.gz'
       })
-      const meshBase64 = await window.api.loadStandard('aal.mz3')
+      const meshBase64 = await electron.ipcRenderer.invoke('loadStandard', 'aal.mz3')
       const arrayBuffer = Uint8Array.from(atob(meshBase64), (c) => c.charCodeAt(0)).buffer
       const mesh = await NVMesh.loadFromFile({
         file: new File([arrayBuffer], 'aal.mz3'),
@@ -88,6 +77,7 @@ function App(): JSX.Element {
       setMeshes([mesh])
     }
     loadImages()
+    registerLoadStandardHandler({ nv, setVolumes, setMeshes })
   }, [])
 
   return (

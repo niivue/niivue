@@ -1,17 +1,39 @@
 import { useEffect, useRef } from 'react'
 import { useContext } from 'react'
 import { AppContext } from '../App'
+import { loadDroppedFiles } from '../utils/dragAndDrop'
 
 export function Viewer(): JSX.Element {
   const context = useContext(AppContext)
-  const { volumes } = context
-  const { meshes } = context
-  const { nvRef } = context
+  const { volumes, meshes, setVolumes, setMeshes, nvRef } = context
+  const nv = nvRef.current
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  const handleDragOver = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
+    console.log('drag over')
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
+    if (!e.dataTransfer) {
+      throw new Error('No dataTransfer object found on drag event object')
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    nv.volumes = []
+    nv.meshes = []
+    nv.updateGLVolume()
+    console.log('dropped files', e.dataTransfer.files)
+    loadDroppedFiles(e, setVolumes, setMeshes, nv.gl)
+  }
 
   useEffect(() => {
     if (canvasRef.current) {
       const nv = nvRef.current
+      // register dragover and drop events
+      canvasRef.current.addEventListener('dragover', handleDragOver)
+      canvasRef.current.addEventListener('drop', handleDrop)
       nv.attachToCanvas(canvasRef.current)
     }
   }, [])
@@ -43,7 +65,14 @@ export function Viewer(): JSX.Element {
       {/* toolbar (empty for now) */}
       <div className="flex flex-row h-12 bg-black"></div>
       <div>
-        <canvas className="outline-none" ref={canvasRef} width={800} height={600}></canvas>
+        <canvas
+          className="outline-none"
+          ref={canvasRef}
+          width={800}
+          height={600}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        ></canvas>
       </div>
     </div>
   )
