@@ -4,7 +4,12 @@ import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '@renderer/App'
 
-export function MeshImageCard({ image }: { image: NVMesh }): JSX.Element {
+interface MeshImageCardProps {
+  image: NVMesh
+  onRemoveMesh: (mesh: NVMesh) => void
+}
+
+export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [visible, setVisible] = useState<boolean>(true)
   const { nvRef } = useContext(AppContext)
@@ -36,8 +41,13 @@ export function MeshImageCard({ image }: { image: NVMesh }): JSX.Element {
             </Text>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
-            <ContextMenu.Item>Open</ContextMenu.Item>
-            <ContextMenu.Item>Close</ContextMenu.Item>
+            <ContextMenu.Item
+              onClick={() => {
+                onRemoveMesh(image)
+              }}
+            >
+              Remove
+            </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
         <Checkbox checked={visible} onCheckedChange={handleVisibilityChange} />

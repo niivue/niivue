@@ -5,17 +5,30 @@ import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 import { registerLoadStandardHandler } from './ipcHandlers/loadStandard'
+import {
+  registerLayoutHandler,
+  registerSliceTypeHandler,
+  registerCrosshairHandler,
+  registerOrientationLabelsPositionHandler,
+  registerOrientationLabelsHeightHandler,
+  registerOrientationCubeHandler,
+  registerColorbarHandler,
+  registerRulerHander,
+  register3DCrosshairHandler,
+  registerDragModeHandler,
+  registerMultiplanarEqualSizeHandler,
+  registerOrientationLabelsInMarginHandler
+} from './ipcHandlers/menuHandlers'
+import { registerLoadMeshHandler } from './ipcHandlers/loadMesh'
+import { registerLoadVolumeHandler } from './ipcHandlers/loadVolume'
 const electron = window.electron
 
-// disable niivue drag and drop handler in favor of the electron handler
-const nv = new Niivue({ loadingText: '', dragAndDropEnabled: false })
-
-electron.ipcRenderer.on('toggleCrosshair', (_, state) => {
-  if (state) {
-    nv.setCrosshairWidth(1)
-  } else {
-    nv.setCrosshairWidth(0)
-  }
+// disable niivue drag and drop handler in favor of our custom electron solution
+const nv = new Niivue({
+  loadingText: '',
+  dragAndDropEnabled: false,
+  multiplanarEqualSize: true,
+  tileMargin: -1
 })
 
 type AppCtx = {
@@ -52,8 +65,17 @@ function App(): JSX.Element {
     loadDroppedFiles(e, setVolumes, setMeshes, nv.gl)
   }
 
+  const handleRemoveMesh = (mesh: NVMesh): void => {
+    nv.removeMesh(mesh)
+    setMeshes((prev) => prev.filter((m) => m.id !== mesh.id))
+  }
+
+  const handleRemoveVolume = (vol: NVImage): void => {
+    nv.removeVolume(vol)
+    setVolumes((prev) => prev.filter((v) => v.id !== vol.id))
+  }
+
   useEffect(() => {
-    console.log('nv.gl', nv._gl)
     if (!nv._gl) return
     const initNiimath = async (): Promise<void> => {
       const niimath = niimathRef.current
@@ -78,6 +100,20 @@ function App(): JSX.Element {
     }
     loadImages()
     registerLoadStandardHandler({ nv, setVolumes, setMeshes })
+    registerSliceTypeHandler(nv)
+    registerLayoutHandler(nv)
+    registerCrosshairHandler(nv)
+    registerOrientationLabelsPositionHandler(nv)
+    registerOrientationLabelsHeightHandler(nv)
+    registerOrientationCubeHandler(nv)
+    registerColorbarHandler(nv)
+    registerRulerHander(nv)
+    register3DCrosshairHandler(nv)
+    registerDragModeHandler(nv)
+    registerMultiplanarEqualSizeHandler(nv)
+    registerOrientationLabelsInMarginHandler(nv)
+    registerLoadMeshHandler({ nv, setMeshes })
+    registerLoadVolumeHandler({ setVolumes })
   }, [])
 
   return (
@@ -95,7 +131,7 @@ function App(): JSX.Element {
       }}
     >
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
-        <Sidebar />
+        <Sidebar onRemoveMesh={handleRemoveMesh} onRemoveVolume={handleRemoveVolume} />
         <Viewer />
       </div>
     </AppContext.Provider>
