@@ -13,7 +13,12 @@ import { NVImage } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '@renderer/App'
 
-export function VolumeImageCard({ image }: { image: NVImage }): JSX.Element {
+interface VolumeImageCardProps {
+  image: NVImage
+  onRemoveVolume: (volume: NVImage) => void
+}
+
+export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [colormap, setColormap] = useState<string>(
     typeof image.colormap === 'string' ? image.colormap : 'gray'
@@ -80,6 +85,7 @@ export function VolumeImageCard({ image }: { image: NVImage }): JSX.Element {
     // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setOpacity(volIdx, checked ? 1 : 0)
+      nv.updateGLVolume()
     })
   }
 
@@ -87,14 +93,19 @@ export function VolumeImageCard({ image }: { image: NVImage }): JSX.Element {
     <Card className="flex flex-col p-2 my-1 gap-2 bg-white">
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
-          <ContextMenu.Trigger className="mr-auto">
-            <Text title={image.name} size="2" weight="bold" className="mr-auto" truncate>
+          <ContextMenu.Trigger>
+            <Text title={image.name} size="2" weight="bold" className="mr-auto">
               {displayName}
             </Text>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
-            <ContextMenu.Item>Open</ContextMenu.Item>
-            <ContextMenu.Item>Close</ContextMenu.Item>
+            <ContextMenu.Item
+              onClick={() => {
+                onRemoveVolume(image)
+              }}
+            >
+              Remove
+            </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
         <Checkbox checked={visible} onCheckedChange={handleVisibilityChange} />
@@ -160,6 +171,9 @@ export function VolumeImageCard({ image }: { image: NVImage }): JSX.Element {
             </div>
           </Popover.Content>
         </Popover.Root>
+        <Text size="1" color="gray">
+          volume
+        </Text>
       </div>
     </Card>
   )

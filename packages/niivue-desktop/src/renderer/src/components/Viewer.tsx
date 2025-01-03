@@ -61,10 +61,14 @@ export function Viewer(): JSX.Element {
   }, [meshes])
 
   return (
-    <div className="flex flex-col bg-black basis-2/3 h-full">
+    <div className="flex flex-col bg-black basis-2/3 h-full grow">
       {/* toolbar (empty for now) */}
       <div className="flex flex-row h-12 bg-black"></div>
-      <div>
+      {/* 
+        must account for h-12 (48px) toolbar height here or the resize
+        behavior could get stuck in a loop
+       */}
+      <div className="w-full h-[calc(100%-48px)]">
         <canvas
           className="outline-none"
           ref={canvasRef}

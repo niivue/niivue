@@ -1,7 +1,97 @@
 import { app, Menu, dialog } from 'electron'
-import { readStandardFile } from './loadStandard'
+import { sliceTypeMap } from '../../common/sliceTypes'
+import { layouts } from '../../common/layouts'
+import { orientationLabelMap } from '../../common/orientationLabels'
+import { dragModeMap } from '../../common/dragMode'
+import { DEFAULT_OPTIONS } from '@niivue/niivue'
 
 const isMac = process.platform === 'darwin'
+
+const createDragModeSubmenu = (
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] => {
+  return Object.keys(dragModeMap).map((dragModeLabel) => {
+    return {
+      label: dragModeLabel,
+      id: `dragMode_${dragModeLabel}`,
+      type: 'radio',
+      checked: dragModeMap[dragModeLabel] === DEFAULT_OPTIONS.dragMode, // default to this drag mode
+      click: (): void => {
+        // get the drag mode value from the DRAG_MODE object
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(`dragMode_${dragModeLabel}`)
+        const state = menuItem ? menuItem.checked : false
+        win.webContents.send(
+          'setDragMode',
+          state ? dragModeMap[dragModeLabel] : DEFAULT_OPTIONS.dragMode
+        )
+      }
+    }
+  })
+}
+
+const createSliceTypeSubmenu = (
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] => {
+  return Object.keys(sliceTypeMap).map((sliceType) => {
+    return {
+      label: sliceType,
+      id: sliceType,
+      type: 'radio',
+      checked: sliceType === 'Multiplanar', // default to this slice type
+      click: (): void => {
+        // get the slice type value from the sliceTypeMap object
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(sliceType)
+        const state = menuItem ? menuItem.checked : false
+        win.webContents.send('setSliceType', state ? sliceTypeMap[sliceType].name : 'multiplanar')
+      }
+    }
+  })
+}
+
+const createLayoutSubmenu = (
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] => {
+  return Object.keys(layouts).map((layout) => {
+    return {
+      label: layout,
+      id: layout,
+      type: 'radio',
+      checked: layout === 'Auto', // default to this layout
+      click: (): void => {
+        // get the layout value from the layouts object
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layout)
+        const state = menuItem ? menuItem.checked : false
+        win.webContents.send('setLayout', state ? layout : 'Auto')
+      }
+    }
+  })
+}
+
+const createOrientationLabelHeightSubmenu = (
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] => {
+  return Object.keys(orientationLabelMap).map((orientationLabel) => {
+    return {
+      label: orientationLabel,
+      id: `labelHeight_${orientationLabel}`,
+      type: 'radio',
+      checked:
+        orientationLabel ===
+        Object.keys(orientationLabelMap).find(
+          (key) => orientationLabelMap[key] === DEFAULT_OPTIONS.textHeight
+        ),
+      click: (): void => {
+        // get the orientation label value from the orientationLabelMap object
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(
+          `labelHeight_${orientationLabel}`
+        )
+        const state = menuItem ? menuItem.checked : false
+        console.log('orientationLabel', orientationLabel)
+        win.webContents.send('setOrientationLabelsHeight', state ? orientationLabel : 'small')
+      }
+    }
+  })
+}
 
 export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
   const template = [
@@ -30,6 +120,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       submenu: [
         isMac ? { role: 'close' } : { role: 'quit' },
         {
+          // TODO: implement recent file loading
           label: 'Open Recent',
           role: 'recentdocuments',
           submenu: [
@@ -38,6 +129,38 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               role: 'clearrecentdocuments'
             }
           ]
+        },
+        // Open Volume Image
+        {
+          label: 'Open Volume Image',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Open Volume Image',
+                properties: ['openFile']
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  win.webContents.send('loadVolume', result.filePaths[0])
+                }
+              })
+          }
+        },
+        // Open Mesh Image
+        {
+          label: 'Open Mesh Image',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Open Mesh Image',
+                properties: ['openFile']
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  win.webContents.send('loadMesh', result.filePaths[0])
+                }
+              })
+          }
         },
         // Open standard images with submenu
         {
@@ -325,38 +448,24 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        ...(isMac
-          ? [
-              { role: 'pasteAndMatchStyle' },
-              { role: 'delete' },
-              { role: 'selectAll' },
-              { type: 'separator' },
-              {
-                label: 'Speech',
-                submenu: [{ role: 'startSpeaking' }, { role: 'stopSpeaking' }]
-              }
-            ]
-          : [{ role: 'delete' }, { type: 'separator' }, { role: 'selectAll' }])
+        {
+          label: 'Drag mode (right click)',
+          submenu: [...createDragModeSubmenu(win)]
+        },
+        { type: 'separator' }
       ]
     },
     // { role: 'viewMenu' }
     {
       label: 'View',
       submenu: [
-        { label: '3D Render' },
-        { label: 'Axial' },
-        { label: 'Coronal' },
-        { label: 'Sagittal' },
-        { label: 'Sagittal (nose left)' },
-        { label: 'Multiplanar' },
-        { label: 'Multiplanar + 3D render' },
-        { label: 'Mosaic' },
+        ...createSliceTypeSubmenu(win),
+        // separator
+        { type: 'separator' },
+        {
+          label: 'Layout',
+          submenu: createLayoutSubmenu(win)
+        },
         // separator
         { type: 'separator' },
         {
@@ -372,27 +481,117 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             win.webContents.send('toggleCrosshair', state)
           }
         },
-        { label: 'Show 3D orientation cube' },
-        { label: 'Show orientation labels' },
-        { label: 'Show colorbar' },
-        { label: 'Show ruler' },
-        // separator
-        { type: 'separator' },
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' }
+        {
+          label: 'Show 3D crosshair',
+          type: 'checkbox',
+          id: 'crosshair3D',
+          checked: DEFAULT_OPTIONS.show3Dcrosshair,
+          click: (): void => {
+            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('crosshair3D')
+            const state = menuItem ? menuItem.checked : false
+            win.webContents.send('setCrosshair3D', state)
+          }
+        },
+        {
+          label: 'Show 3D orientation cube',
+          type: 'checkbox',
+          id: 'orientationCube',
+          checked: DEFAULT_OPTIONS.isOrientCube,
+          click: (): void => {
+            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientationCube')
+            const state = menuItem ? menuItem.checked : false
+            win.webContents.send('setOrientationCube', state)
+          }
+        },
+        {
+          label: 'Orientation label size',
+          submenu: createOrientationLabelHeightSubmenu(win)
+        },
+        {
+          label: 'Orientation label position',
+          submenu: [
+            {
+              label: 'Corner',
+              type: 'radio',
+              id: 'orientLabelCorner',
+              checked: DEFAULT_OPTIONS.isCornerOrientationText,
+              click: (): void => {
+                const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCorner')
+                const state = menuItem ? menuItem.checked : false
+                win.webContents.send('setOrientationLabelsPosition', state ? 'corner' : 'centered')
+              }
+            },
+            {
+              label: 'Centered',
+              type: 'radio',
+              id: 'orientLabelCentered',
+              checked: DEFAULT_OPTIONS.isCornerOrientationText,
+              click: (): void => {
+                const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCentered')
+                const state = menuItem ? menuItem.checked : false
+                win.webContents.send('setOrientationLabelsPosition', state ? 'centered' : 'corner')
+              }
+            }
+          ]
+        },
+        {
+          label: 'Orientation Labels in Margin',
+          type: 'checkbox',
+          id: 'orientLabelsInMargin',
+          checked: true,
+          click: (): void => {
+            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelsInMargin')
+            const state = menuItem ? menuItem.checked : false
+            win.webContents.send('setOrientationLabelsInMargin', state)
+          }
+        },
+        // equal size tiles
+        {
+          label: 'Equal size tiles (multiplanar)',
+          type: 'checkbox',
+          id: 'multiplanarEqualSize',
+          checked: true,
+          click: (): void => {
+            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('multiplanarEqualSize')
+            const state = menuItem ? menuItem.checked : false
+            win.webContents.send('setMultiplanarEqualSize', state)
+          }
+        },
+        {
+          label: 'Show colorbar',
+          type: 'checkbox',
+          id: 'colorbar',
+          checked: DEFAULT_OPTIONS.isColorbar,
+          click: (): void => {
+            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('colorbar')
+            const state = menuItem ? menuItem.checked : false
+            win.webContents.send('setColorbar', state)
+          }
+        },
+        {
+          label: 'Show ruler',
+          type: 'checkbox',
+          id: 'ruler',
+          checked: DEFAULT_OPTIONS.isRuler,
+          click: (): void => {
+            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('ruler')
+            const state = menuItem ? menuItem.checked : false
+            win.webContents.send('setRuler', state)
+          }
+        }
       ]
     },
     // { role: 'windowMenu' }
     {
       label: 'Window',
       submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { role: 'togglefullscreen' },
         { role: 'minimize' },
         { role: 'zoom' },
         ...(isMac
