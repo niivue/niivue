@@ -88,17 +88,18 @@ function App(): JSX.Element {
         base64: volBase64,
         name: 'mni152.nii.gz'
       })
-      const meshBase64 = await electron.ipcRenderer.invoke('loadStandard', 'aal.mz3')
-      const arrayBuffer = Uint8Array.from(atob(meshBase64), (c) => c.charCodeAt(0)).buffer
-      const mesh = await NVMesh.loadFromFile({
-        file: new File([arrayBuffer], 'aal.mz3'),
+      const meshBase64ICBM = await electron.ipcRenderer.invoke('loadStandard', 'ICBM152.lh.mz3')
+      const arrayBufferICBM = Uint8Array.from(atob(meshBase64ICBM), (c) => c.charCodeAt(0)).buffer
+
+      const meshICBM = await NVMesh.loadFromFile({
+        file: new File([arrayBufferICBM], 'ICBM152.lh.mz3'),
         gl: nv.gl,
-        name: 'aal.mz3'
+        name: 'ICBM152.lh.mz3'
       })
       setVolumes([vol])
-      setMeshes([mesh])
+      setMeshes([meshICBM])
     }
-    loadImages()
+    loadImages() // loads the default images. Useful for development (one volume and one mesh)
     registerLoadStandardHandler({ nv, setVolumes, setMeshes })
     registerSliceTypeHandler(nv)
     registerLayoutHandler(nv)

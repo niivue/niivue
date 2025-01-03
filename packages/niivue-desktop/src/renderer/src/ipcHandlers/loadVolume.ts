@@ -21,7 +21,7 @@ export const registerLoadVolumeHandler = ({ setVolumes }: HandlerProps): void =>
         base64,
         name: path
       })
-      setVolumes([vol])
+      setVolumes((prev) => [...prev, vol])
     }
   })
 }

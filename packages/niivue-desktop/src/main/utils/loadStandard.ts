@@ -2,6 +2,8 @@ import { readFile } from 'fs/promises'
 import { app } from 'electron'
 import volumeMni152 from '../../../resources/images/standard/mni152.nii.gz?asset'
 import meshaal from '../../../resources/images/standard/aal.mz3?asset'
+import ICBM152LH from '../../../resources/images/standard/ICBM152.lh.mz3?asset'
+import ICBM152LHMotor from '../../../resources/images/standard/ICBM152.lh.motor.mz3?asset'
 
 // read a known standard file and return it as a base64 string
 export const readStandardFile = async (path: string): Promise<string> => {
@@ -12,6 +14,12 @@ export const readStandardFile = async (path: string): Promise<string> => {
       break
     case 'aal.mz3':
       standardFilePath = meshaal
+      break
+    case 'ICBM152.lh.mz3':
+      standardFilePath = ICBM152LH
+      break
+    case 'ICBM152.lh.motor.mz3':
+      standardFilePath = ICBM152LHMotor
       break
     default:
       break

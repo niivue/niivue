@@ -21,7 +21,7 @@ export const registerLoadMeshHandler = ({ nv, setMeshes }: HandlerProps): void =
         gl: nv.gl,
         name: path
       })
-      setMeshes([mesh])
+      setMeshes((prev) => [...prev, mesh])
     } else {
       alert(`File is not a mesh that Niivue can parse: ${path}`)
       throw new Error('File is not a mesh')

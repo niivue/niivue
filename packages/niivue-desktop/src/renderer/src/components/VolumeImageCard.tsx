@@ -171,6 +171,9 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
             </div>
           </Popover.Content>
         </Popover.Root>
+        <Text size="1" color="gray">
+          volume
+        </Text>
       </div>
     </Card>
   )
