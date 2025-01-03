@@ -452,25 +452,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           label: 'Drag mode (right click)',
           submenu: [...createDragModeSubmenu(win)]
         },
-        { type: 'separator' },
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        ...(isMac
-          ? [
-              { role: 'pasteAndMatchStyle' },
-              { role: 'delete' },
-              { role: 'selectAll' },
-              { type: 'separator' },
-              {
-                label: 'Speech',
-                submenu: [{ role: 'startSpeaking' }, { role: 'stopSpeaking' }]
-              }
-            ]
-          : [{ role: 'delete' }, { type: 'separator' }, { role: 'selectAll' }])
+        { type: 'separator' }
       ]
     },
     // { role: 'viewMenu' }

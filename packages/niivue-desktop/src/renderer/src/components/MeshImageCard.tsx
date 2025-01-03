@@ -34,8 +34,6 @@ export function MeshImageCard({
         name: path,
         opacity: 1,
         colormap: 'warm',
-        cal_min: 0.5,
-        cal_max: 5.5,
         base64: layerBase64
       }
       await NVMesh.loadLayer(layer, image)
