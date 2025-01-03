@@ -510,7 +510,9 @@ export class NVMesh {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(idxs), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(f32), gl.STATIC_DRAW)
+    // issue1129
+    // gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(f32), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, u8, gl.STATIC_DRAW)
     this.indexCount = nidx
   } // linesToCylinders
 
@@ -1291,7 +1293,9 @@ export class NVMesh {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(this.tris), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW)
+    // issue1129
+    // gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, u8, gl.STATIC_DRAW)
     this.indexCount = this.tris.length
     this.vertexCount = this.pts.length
   } // updateMesh()
