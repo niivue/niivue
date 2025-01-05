@@ -4,7 +4,7 @@ import { AppContext } from '../App'
 
 export const SliderMeshXRay = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
-  const [xRay, setXRay] = useState([1])
+  const [xRay, setXRay] = useState([0])
   const nv = nvRef.current
 
   const handleXRayChange = (value: number[]): void => {
