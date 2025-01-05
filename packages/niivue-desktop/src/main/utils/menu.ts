@@ -605,5 +605,10 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
   ]
 
   const menu = Menu.buildFromTemplate(template as Electron.MenuItemConstructorOptions[])
+  if (isMac) {
+    const {systemPreferences} = require('electron')
+    systemPreferences.setUserDefault('NSDisabledDictationMenuItem', 'boolean', true)
+    systemPreferences.setUserDefault('NSDisabledCharacterPaletteMenuItem', 'boolean', true)
+  }
   return menu
 }
