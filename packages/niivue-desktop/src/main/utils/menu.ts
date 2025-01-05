@@ -472,13 +472,14 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           label: 'Show crosshair',
           type: 'checkbox',
           id: 'crosshair',
+          accelerator: 'Shift+CommandOrControl+X',
           checked: true,
           click: (): void => {
             // get the current state of this menu item checkbox and send it to the renderer.
             // Note that getApplicationMenu() is executed after the menu is built and attached to the window.
             const menuItem = Menu.getApplicationMenu()?.getMenuItemById('crosshair')
             const state = menuItem ? menuItem.checked : false
-            win.webContents.send('toggleCrosshair', state)
+            win.webContents.send('setCrosshair', state)
           }
         },
         {
