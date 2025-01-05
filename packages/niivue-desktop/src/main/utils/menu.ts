@@ -525,7 +525,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               label: 'Centered',
               type: 'radio',
               id: 'orientLabelCentered',
-              checked: DEFAULT_OPTIONS.isCornerOrientationText,
+              checked: !DEFAULT_OPTIONS.isCornerOrientationText,
               click: (): void => {
                 const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCentered')
                 const state = menuItem ? menuItem.checked : false
