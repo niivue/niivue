@@ -32,7 +32,7 @@ export const CrosshairSize = (): JSX.Element => {
           }}
           size="1"
           variant="ghost"
-          className="font-mono mx-1 my-0.5"
+          className="font-mono mx-1 my-0.0"
           color="gray"
         >
           &#9650;
@@ -43,7 +43,7 @@ export const CrosshairSize = (): JSX.Element => {
           }}
           size="1"
           variant="ghost"
-          className="font-mono mx-1 my-0.5"
+          className="font-mono mx-1 my-0.0"
           color="gray"
         >
           &#9660;
