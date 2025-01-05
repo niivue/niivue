@@ -32,6 +32,7 @@ export const ZoomSlider = (): JSX.Element => {
       <Slider
         style={{ width: '40%' }}
         size="1"
+        id="sliderZoom"
         min={INITIAL_SCENE_DATA.pan2Dxyzmm[3]}
         max={10}
         step={0.1}
@@ -46,6 +47,7 @@ export const ZoomSlider = (): JSX.Element => {
           if (checked === true) {
             setYoke2d3d(true)
             nv.opts.yoke3Dto2DZoom = true
+            nv.volScaleMultiplier = zoom
           }
           if (checked === false) {
             setYoke2d3d(false)
