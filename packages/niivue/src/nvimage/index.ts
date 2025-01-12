@@ -21,7 +21,8 @@ import {
   getExtents,
   hdrToArrayBuffer,
   isAffineOK,
-  isPlatformLittleEndian
+  isPlatformLittleEndian,
+  uncompressStream
 } from './utils.js'
 
 export * from './utils.js'
@@ -3054,115 +3055,181 @@ export class NVImage {
     if (url === '') {
       throw Error('url must not be empty')
     }
-    let nvimage = null
-    let dataBuffer = null
+
+    let nvimage = null;
+    let dataBuffer = null;
+
+    // Handle input buffer types
     if (url instanceof Uint8Array) {
-      url = url.buffer as ArrayBuffer
-    } // convert Uint8Array -> ArrayBuffer
+      url = url.buffer as ArrayBuffer;
+    }
     if (buffer.byteLength > 0) {
-      url = buffer
+      url = buffer;
     }
     if (url instanceof ArrayBuffer) {
-      dataBuffer = url
+      dataBuffer = url;
       if (name !== '') {
-        url = name
+        url = name;
       } else {
-        url = 'array.nii'
-        const bytes = new Uint8Array(dataBuffer)
-        if (bytes[0] === 31 && bytes[1] === 139) {
-          url = 'array.nii.gz'
-        }
+        const bytes = new Uint8Array(dataBuffer);
+        url = bytes[0] === 31 && bytes[1] === 139 ? 'array.nii.gz' : 'array.nii';
       }
     }
-    // fetch data associated with image
+
+    // Handle limited frame loading for NIfTI
     if (!isNaN(limitFrames4D)) {
-      // let response = await fetch(url, { headers: { range: "bytes=0-352" } });
-      // NIfTI header first 352 bytes
-      // however, GZip header might can add bloat https://en.wikipedia.org/wiki/Gzip
-      let response = await this.fetchPartial(url, 512, headers)
-      dataBuffer = await response.arrayBuffer()
-      let bytes = new Uint8Array(dataBuffer)
-      let isGz = false
-      if (bytes[0] === 31 && bytes[1] === 139) {
-        isGz = true
-        const dcmpStrm = new Decompress((chunk) => {
-          bytes = chunk
-        })
-        dcmpStrm.push(bytes)
-        dataBuffer = bytes.buffer
+      try {
+        const response = await fetch(url, { headers });
+        if (!response.ok) throw new Error(response.statusText);
+        if (!response.body) throw new Error('No readable stream available');
+
+        // Handle potential compression automatically
+        const stream = await uncompressStream(response.body);
+        
+        // Read header data (first 352 bytes minimum)
+        const reader = stream.getReader();
+        const headerChunks: Uint8Array[] = [];
+        let headerBytes = 0;
+        
+        while (headerBytes < 352) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          headerChunks.push(value);
+          headerBytes += value.length;
+        }
+
+        // Combine header chunks
+        const headerBuffer = new Uint8Array(headerBytes);
+        let offset = 0;
+        for (const chunk of headerChunks) {
+          headerBuffer.set(chunk, offset);
+          offset += chunk.length;
+        }
+
+        // Check if valid NIfTI
+        const isNifti1 = (headerBuffer[0] === 92 && headerBuffer[1] === 1) ||
+                        (headerBuffer[1] === 92 && headerBuffer[0] === 1);
+        
+        if (!isNifti1) {
+          reader.releaseLock();
+          return null;
+        }
+
+        const hdr = nifti.readHeader(headerBuffer.buffer);
+        if (!hdr) throw new Error('Could not read NIfTI header');
+
+        // Calculate required data size
+        const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+        const nVox3D = [1, 2, 3].reduce((acc, i) => 
+          acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+        const nFrame4D = [4, 5, 6].reduce((acc, i) => 
+          acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+        
+        const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+        const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+
+        // Continue reading required data
+        const chunks = [...headerChunks];
+        let totalSize = headerBytes;
+
+        while (totalSize < bytesToLoad) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          totalSize += value.length;
+        }
+
+        reader.releaseLock();
+
+        // Combine chunks into final buffer
+        dataBuffer = new ArrayBuffer(bytesToLoad);
+        const dataView = new Uint8Array(dataBuffer);
+        offset = 0;
+        for (const chunk of chunks) {
+          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset);
+          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset);
+          offset += bytesToCopy;
+          if (offset >= bytesToLoad) break;
+        }
+      } catch (error) {
+        console.error('Error loading limited frames:', error);
+        dataBuffer = null;
       }
-      let isNifti1 = bytes[0] === 92 && bytes[1] === 1
-      if (!isNifti1) {
-        isNifti1 = bytes[1] === 92 && bytes[0] === 1
-      }
-      if (!isNifti1) {
-        dataBuffer = null
+    }
+
+    // Handle non-limited cases
+    if (!dataBuffer) {
+      if (isManifest) {
+        dataBuffer = await NVImage.fetchDicomData(url, headers);
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
       } else {
-        const hdr = nifti.readHeader(dataBuffer)
-        if (hdr === null) {
-          throw new Error('could not read nifti header')
+        const response = await fetch(url, { headers });
+        if (!response.ok) throw Error(response.statusText);
+        
+        if (!response.body) throw new Error('No readable stream available');
+        
+        const stream = await uncompressStream(response.body);
+        const chunks: Uint8Array[] = [];
+        const reader = stream.getReader();
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
         }
-        const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
-        let nVox3D = 1
-        for (let i = 1; i < 4; i++) {
-          if (hdr.dims[i] > 1) {
-            nVox3D *= hdr.dims[i]
-          }
+        
+        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        dataBuffer = new ArrayBuffer(totalLength);
+        const dataView = new Uint8Array(dataBuffer);
+        let offset = 0;
+        for (const chunk of chunks) {
+          dataView.set(chunk, offset);
+          offset += chunk.length;
         }
-        let nFrame4D = 1
-        for (let i = 4; i < 7; i++) {
-          if (hdr.dims[i] > 1) {
-            nFrame4D *= hdr.dims[i]
-          }
-        }
-        const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1)
-        const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel
-        if (dataBuffer.byteLength < bytesToLoad) {
-          response = await this.fetchPartial(url, bytesToLoad, headers)
-          dataBuffer = await response.arrayBuffer()
-          if (isGz) {
-            let bytes = new Uint8Array(dataBuffer)
-            const dcmpStrm2 = new Decompress((chunk) => {
-              bytes = chunk
-            })
-            dcmpStrm2.push(bytes)
-            dataBuffer = bytes.buffer
-          }
-        } // load image data
-        if (dataBuffer.byteLength < bytesToLoad) {
-          // fail: e.g. incompressible data
-          dataBuffer = null
-        } else {
-          dataBuffer = dataBuffer.slice(0, bytesToLoad)
-        }
-      } // if isNifti1
-    }
-    if (dataBuffer) {
-      //
-    } else if (isManifest) {
-      dataBuffer = await NVImage.fetchDicomData(url, headers)
-      imageType = NVIMAGE_TYPE.DCM_MANIFEST
-    } else {
-      const response = await fetch(url, { headers })
-      if (!response.ok) {
-        throw Error(response.statusText)
-      }
-      dataBuffer = await response.arrayBuffer()
-    }
-    const re = /(?:\.([^.]+))?$/
-    let ext = ''
-    if (name === '') {
-      ext = re.exec(url)![1]
-    } else {
-      ext = re.exec(name)![1]
-    }
-    if (ext.toUpperCase() === 'HEAD') {
-      if (urlImgData === '') {
-        urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + 'BRIK'
       }
     }
-    let urlParts
-    if (name === '') {
+
+    // Handle paired image data if necessary
+    let pairedImgData = null;
+    if (urlImgData) {
+      try {
+        let response = await fetch(urlImgData, { headers });
+        if (response.status === 404 && urlImgData.includes('BRIK')) {
+          response = await fetch(`${urlImgData}.gz`, { headers });
+        }
+        
+        if (response.ok && response.body) {
+          const stream = await uncompressStream(response.body);
+          const chunks: Uint8Array[] = [];
+          const reader = stream.getReader();
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          
+          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          pairedImgData = new ArrayBuffer(totalLength);
+          const dataView = new Uint8Array(pairedImgData);
+          let offset = 0;
+          for (const chunk of chunks) {
+            dataView.set(chunk, offset);
+            offset += chunk.length;
+          }
+        }
+      } catch (error) {
+        console.error('Error loading paired image data:', error);
+      }
+    }
+
+    if (!dataBuffer) {
+      throw new Error('Unable to load buffer properly from volume');
+    }
+
+    // Get filename from URL if not provided
+    if (!name) {
+      let urlParts: string[];
       try {
         // if a full url like https://domain/path/file.nii.gz?query=filter
         // parse the url and get the pathname component without the query
@@ -3177,19 +3244,6 @@ export class NVImage {
       }
     }
 
-    let pairedImgData = null
-    if (urlImgData.length > 0) {
-      let resp = await fetch(urlImgData, { headers })
-      if (resp.status === 404) {
-        if (urlImgData.lastIndexOf('BRIK') !== -1) {
-          resp = await fetch(urlImgData + '.gz', { headers })
-        }
-      }
-      pairedImgData = await resp.arrayBuffer()
-    }
-    if (!dataBuffer) {
-      throw new Error('Unable to load buffer properly from volume')
-    }
     nvimage = new NVImage(
       dataBuffer,
       name,
@@ -3205,10 +3259,10 @@ export class NVImage {
       colormapNegative,
       frame4D,
       imageType
-    )
-    nvimage.url = url
-    nvimage.colorbarVisible = colorbarVisible
-    return nvimage
+    );
+    nvimage.url = url;
+    nvimage.colorbarVisible = colorbarVisible;
+    return nvimage;
   }
 
   // not included in public docs
