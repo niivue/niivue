@@ -6489,6 +6489,18 @@ export class Niivue {
         mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
       }
     }
+    //issue 1139
+    if ((layer > 0) && (this.overlayOutlineWidth > 0.0)) {
+      let A = overlayItem.cal_min
+      let B = overlayItem.cal_max
+      let isZeroCrossing = Math.min(A, B) <= 0 && Math.max(A, B) >= 0
+      if ((!isZeroCrossing) && (mnNeg < mxNeg)) {
+        isZeroCrossing = mnNeg <= 0 && mxNeg >= 0
+      }
+      if (isZeroCrossing) {
+        log.error('issue1139: do not use overlayOutlineWidth when thresholds cross or touch zero')
+      }
+    }
     if (!orientShader) {
       throw new Error('orientShader undefined')
     }
