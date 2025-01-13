@@ -3118,13 +3118,13 @@ export class Niivue {
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html | live demo usage}
    */
-  setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): void {
+  async setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
       return
     }
-    this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
+    await this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
     this.updateGLVolume()
   }
 

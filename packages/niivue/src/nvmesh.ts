@@ -1430,10 +1430,12 @@ export class NVMesh {
       if (typeof val === 'object') {
         // assume JSON
         layer[key] = cmapper.makeLabelLut(val)
-      } else if  (typeof val === 'string') {
+      } else if (typeof val === 'string') {
         // assume URL
         const cmap = await cmapper.makeLabelLutFromUrl(val)
         layer[key] = cmap
+        this.updateMesh(gl) // apply the new properties...
+        return
       } else {
         log.error('colormapLabel requires a string or object')
       }

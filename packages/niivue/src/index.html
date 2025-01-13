@@ -4,42 +4,66 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>NiiVue</title>
+    <title>Mesh Atlas</title>
     <link rel="stylesheet" href="niivue.css" />
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
   <body>
     <noscript>
-      <strong>niivue requires JavaScript.</strong>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
     </noscript>
     <header>
-      <label for="alphaSlider">Opacity</label>
+      <label for="decimateSelect">Decimate</label>
+      <select id="decimateSelect">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7" selected>7</option>
+      </select>
+      <label for="meshSlider">Atlas transparency</label>
       <input
         type="range"
-        min="1"
+        min="0"
+        max="255"
+        value="127"
+        class="slider"
+        id="meshSlider"
+      />
+      <label for="meshSlider2">Statistical transparency</label>
+      <input
+        type="range"
+        min="0"
         max="255"
         value="255"
         class="slider"
-        id="alphaSlider"
+        id="meshSlider2"
       />
-      <button id="aboutBtn">About</button>
+      <label for="check1">Atlas outline</label>
+      <input type="checkbox" id="check1" unchecked />
+      <label for="check2">Statistical outline</label>
+      <input type="checkbox" id="check2" unchecked />
     </header>
-    <main>
+    <main id="container">
       <canvas id="gl1"></canvas>
     </main>
-    <footer>&nbsp;
-      <textarea id="scriptText" name="customText" rows="8" cols="60">
-let cmap = {
-R: [25, 25, 125, 200, 120, 220, 220, 180, 220, 180, 140, 20, 35, 225, 200, 160, 20, 60, 220, 20, 220, 120, 220, 220, 60, 160, 80, 75, 20, 20, 140, 80, 100, 70, 150, 255],
-G: [5, 100, 100, 25, 70, 20, 20, 220, 60, 40, 20, 30, 75, 140, 35, 100, 220, 220, 180, 100, 60, 100, 20, 180, 20, 140, 20, 50, 220, 180, 220, 160, 0, 20, 150, 192],
-B: [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 60, 140, 50, 20, 60, 20, 220, 220, 180, 140, 125, 160, 140, 220, 20, 100, 170, 200, 32],
- I: [-1,0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],
- labels: ['unknown', 'bankssts', 'caudalanteriorcingulate', 'caudalmiddlefrontal', 'corpuscallosum', 'cuneus', 'entorhinal', 'fusiform', 'inferiorparietal', 'inferiortemporal', 'isthmuscingulate', 'lateraloccipital', 'lateralorbitofrontal', 'lingual', 'medialorbitofrontal', 'middletemporal', 'parahippocampal', 'paracentral', 'parsopercularis', 'parsorbitalis', 'parstriangularis', 'pericalcarine', 'postcentral', 'posteriorcingulate', 'precentral', 'precuneus', 'rostralanteriorcingulate', 'rostralmiddlefrontal', 'superiorfrontal', 'superiorparietal', 'superiortemporal', 'supramarginal', 'frontalpole', 'temporalpole', 'transversetemporal', 'insula']
-}
-      </textarea>
-      &nbsp;<button id="colormapBtn">Apply</button>
+    <footer>
+      <p id="shaders">Shaders:<button id="gridBtn">Custom: Grid</button></p>
+      <p>custom shader:</p>
+      <textarea id="customText" name="customText" rows="4" cols="50">
+#version 300 es&#10;precision highp int;&#10;precision highp float;&#10;uniform float opacity;&#10;in vec4 vClrTypo;&#10;in vec3 vN, vL, vV;&#10;out vec4 color;&#10;void main() {&#10; vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)&#10; float ambient = 0.35;&#10; float diffuse = 0.5;&#10; vec3 n = normalize(vN);&#10; vec3 l = normalize(vec3(0.0, 10.0, -5.0));&#10; float lightNormDot = dot(n, l);&#10; vec3 a = vClr.rgb * ambient;&#10; vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;&#10; color = vec4(a + d, opacity);&#10;}</textarea
+      >
+      <br />
+      <button id="customShaderBtn" style="color: red;">Compile broken shader</button>
     </footer>
-    <script type="module" async>
+  </body>
+</html>
+<script type="module" async>
       import {
         Niivue,
         NVImage,
@@ -47,34 +71,126 @@ B: [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 6
         NVMeshLoaders,
         SHOW_RENDER,
       } from "./niivue/index.ts"
-      alphaSlider.oninput = function () {
-        nv1.setMeshLayerProperty(
-          nv1.meshes[0].id,
-          0,
-          "opacity",
-          this.value / 255.0
-        )
-      }
-      aboutBtn.onclick = function () {
-        const url = "https://www.nature.com/articles/s41592-024-02346-y"
-        window.open(url, "_blank")
-      }
-      colormapBtn.onclick = function (event) {
-        var val = document.getElementById("scriptText").value
-        val += ';nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", cmap, nv1.gl)'
-        val && eval(val)
-      }
-      let defaults = {
-        dragAndDropEnabled: true,
-        loglevel: 'debug',
-        backColor: [1, 1, 1, 1],
-        show3Dcrosshair: true,
-      }
-      var nv1 = new Niivue(defaults)
-      nv1.attachTo("gl1")
-      await nv1.loadMeshes([{url: "../demos/images/lhpialparc.mz3",}])
-      await nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", "../demos/images/parc.json", nv1.gl)
-      nv1.updateGLVolume()
-    </script>
-  </body>
-</html>
+const fragMeshGridShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr, vP;
+in vec3 vN;
+out vec4 color;
+void main() {
+	float GridSpacing = 20.0;
+	float WireWidth = 0.025;
+	float o = GridSpacing * WireWidth * 0.5;
+	float xDx = mod(vP.x, GridSpacing);
+	float yDx = mod(vP.y, GridSpacing);
+	float zDx = mod(vP.z, GridSpacing);
+	float minDx = min(min(xDx, yDx), zDx);
+	if ( ( GridSpacing * WireWidth) < minDx) discard;
+	
+	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
+	float ambient = 0.35;
+	float diffuse = 0.5;
+	float specular = 0.2;
+	float shininess = 10.0;
+	vec3 n = normalize(vN);
+	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
+	vec3 l = normalize(lightPosition);
+	float lightNormDot = dot(n, l);
+	vec3 a = vClr.rgb * ambient;
+	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
+	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
+	color = vec4(a + d + s, opacity);
+}`
+  decimateSelect.onchange = async function () {
+    nv1.decimateHierarchicalMesh(nv1.meshes[0].id, decimateSelect.selectedIndex)
+    for (let i = decimateSelect.options.length - 1; i > decimateSelect.selectedIndex; i--) {
+      decimateSelect.remove(i);
+    }
+  }
+  meshSlider.oninput = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "opacity",
+      this.value / 255.0
+    )
+  }
+  meshSlider2.oninput = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      2,
+      "opacity",
+      this.value / 255.0
+    )
+  }
+  check1.onchange = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "outlineBorder",
+      this.checked
+    )
+  }
+  check2.onchange = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      2,
+      "outlineBorder",
+      this.checked
+    )
+  }
+  customShaderBtn.onclick = function () {
+    let idx = nv1.setCustomMeshShader(
+      document.getElementById("customText").value
+    )
+    let id = nv1.meshes[0].id
+    nv1.setMeshShader(id, idx)
+  }
+  gridBtn.onclick = function () {
+    let idx = nv1.setCustomMeshShader(fragMeshGridShader)
+    let id = nv1.meshes[0].id
+    nv1.setMeshShader(id, idx)
+  }
+  var nv1 = new Niivue({
+    show3Dcrosshair: true,
+    backColor: [0.9, 0.9, 1, 1],
+    loglevel: 'debug',
+  })
+  nv1.setSliceType(nv1.sliceTypeRender)
+  nv1.attachTo("gl1")
+  var meshLayersList1 = [
+    {
+      url: "../demos/images/lh.curv",
+      colormap: "gray",
+      cal_min: 0.3,
+      cal_max: 0.5,
+      opacity: 1,
+    },
+    { url: "../demos/images/boggle.lh.annot", colormap: "rocket", opacity: 0.5 },
+    {
+      url: "../demos/images/pval.LH.nii.gz",
+      cal_min: 25,
+      cal_max: 35.0,
+      opacity: 0.9,
+    },
+  ]
+  await nv1.loadMeshes([
+    {
+      url: "../demos/images/lh.pial",
+      rgba255: [255, 255, 255, 255],
+      layers: meshLayersList1,
+    },
+    {url: "../demos/images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
+  ])
+  let cmaps = nv1.meshShaderNames()
+  let cmapEl = document.getElementById("shaders")
+  for (let i = 0; i < cmaps.length; i++) {
+    let btn = document.createElement("button")
+    btn.innerHTML = cmaps[i]
+    btn.onclick = function () {
+      nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
+    }
+    cmapEl.appendChild(btn)
+  }
+</script>
