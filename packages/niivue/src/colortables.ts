@@ -95,7 +95,9 @@ export class ColorTables {
     const idxs = cm.I ?? [...Array(nLabels).keys()]
 
     if (nLabels !== cm.G.length || nLabels !== cm.B.length || nLabels !== idxs.length) {
-      throw new Error(`colormap does not make sense: ${cm}`)
+      throw new Error(
+        `colormap does not make sense: ${cm} Rs ${cm.R.length} Gs ${cm.G.length} Bs ${cm.B.length} Is ${idxs.length}`
+      )
     }
 
     let As = new Uint8ClampedArray(nLabels).fill(alphaFill)

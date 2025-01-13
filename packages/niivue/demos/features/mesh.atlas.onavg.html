@@ -40,13 +40,7 @@ B: [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 6
       &nbsp;<button id="colormapBtn">Apply</button>
     </footer>
     <script type="module" async>
-      import {
-        Niivue,
-        NVImage,
-        NVMesh,
-        NVMeshLoaders,
-        SHOW_RENDER,
-      } from "./niivue/index.ts"
+      import * as niivue from "../dist/index.js"
       alphaSlider.oninput = function () {
         nv1.setMeshLayerProperty(
           nv1.meshes[0].id,
@@ -70,10 +64,10 @@ B: [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 6
         backColor: [1, 1, 1, 1],
         show3Dcrosshair: true,
       }
-      var nv1 = new Niivue(defaults)
+      var nv1 = new niivue.Niivue(defaults)
       nv1.attachTo("gl1")
-      await nv1.loadMeshes([{url: "../demos/images/lhpialparc.mz3",}])
-      await nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", "../demos/images/parc.json", nv1.gl)
+      await nv1.loadMeshes([{url: "../images/lhpialparc.mz3",}])
+      await nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", "../images/parc.json", nv1.gl)
       nv1.updateGLVolume()
     </script>
   </body>
