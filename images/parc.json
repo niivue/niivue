@@ -1,0 +1,7 @@
+{
+ "R": [25, 25, 125, 100, 120, 220, 220, 180, 220, 180, 140, 20, 35, 225, 200, 160, 20, 60, 220, 20, 220, 120, 220, 220, 60, 160, 80, 75, 20, 20, 140, 80, 100, 70, 150, 255],
+ "G": [5, 100, 100, 25, 70, 20, 20, 220, 60, 40, 20, 30, 75, 140, 35, 100, 220, 220, 180, 100, 60, 100, 20, 180, 20, 140, 20, 50, 220, 180, 220, 160, 0, 20, 150, 192],
+ "B": [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 60, 140, 50, 20, 60, 20, 220, 220, 180, 140, 125, 160, 140, 220, 20, 100, 170, 200, 32],
+ "I": [-1,0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],
+ "labels": ["unknown", "bankssts", "caudalanteriorcingulate", "caudalmiddlefrontal", "corpuscallosum", "cuneus", "entorhinal", "fusiform", "inferiorparietal", "inferiortemporal", "isthmuscingulate", "lateraloccipital", "lateralorbitofrontal", "lingual", "medialorbitofrontal", "middletemporal", "parahippocampal", "paracentral", "parsopercularis", "parsorbitalis", "parstriangularis", "pericalcarine", "postcentral", "posteriorcingulate", "precentral", "precuneus", "rostralanteriorcingulate", "rostralmiddlefrontal", "superiorfrontal", "superiorparietal", "superiortemporal", "supramarginal", "frontalpole", "temporalpole", "transversetemporal", "insula"]
+}
