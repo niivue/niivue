@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="alphaSlider">Opacity</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="255"
+        class="slider"
+        id="alphaSlider"
+      />
+      <button id="aboutBtn">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>&nbsp;
+      <textarea id="scriptText" name="customText" rows="8" cols="60">
+let cmap = {
+R: [25, 25, 125, 200, 120, 220, 220, 180, 220, 180, 140, 20, 35, 225, 200, 160, 20, 60, 220, 20, 220, 120, 220, 220, 60, 160, 80, 75, 20, 20, 140, 80, 100, 70, 150, 255],
+G: [5, 100, 100, 25, 70, 20, 20, 220, 60, 40, 20, 30, 75, 140, 35, 100, 220, 220, 180, 100, 60, 100, 20, 180, 20, 140, 20, 50, 220, 180, 220, 160, 0, 20, 150, 192],
+B: [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 60, 140, 50, 20, 60, 20, 220, 220, 180, 140, 125, 160, 140, 220, 20, 100, 170, 200, 32],
+ I: [-1,0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],
+ labels: ['unknown', 'bankssts', 'caudalanteriorcingulate', 'caudalmiddlefrontal', 'corpuscallosum', 'cuneus', 'entorhinal', 'fusiform', 'inferiorparietal', 'inferiortemporal', 'isthmuscingulate', 'lateraloccipital', 'lateralorbitofrontal', 'lingual', 'medialorbitofrontal', 'middletemporal', 'parahippocampal', 'paracentral', 'parsopercularis', 'parsorbitalis', 'parstriangularis', 'pericalcarine', 'postcentral', 'posteriorcingulate', 'precentral', 'precuneus', 'rostralanteriorcingulate', 'rostralmiddlefrontal', 'superiorfrontal', 'superiorparietal', 'superiortemporal', 'supramarginal', 'frontalpole', 'temporalpole', 'transversetemporal', 'insula']
+}
+      </textarea>
+      &nbsp;<button id="colormapBtn">Apply</button>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      alphaSlider.oninput = function () {
+        nv1.setMeshLayerProperty(
+          nv1.meshes[0].id,
+          0,
+          "opacity",
+          this.value / 255.0
+        )
+      }
+      aboutBtn.onclick = function () {
+        const url = "https://www.nature.com/articles/s41592-024-02346-y"
+        window.open(url, "_blank")
+      }
+      colormapBtn.onclick = function (event) {
+        var val = document.getElementById("scriptText").value
+        val += ';nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", cmap, nv1.gl)'
+        val && eval(val)
+      }
+      let defaults = {
+        dragAndDropEnabled: true,
+        loglevel: 'debug',
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      nv1.attachTo("gl1")
+      await nv1.loadMeshes([{url: "../images/lhpialparc.mz3",}])
+      await nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", "../images/parc.json", nv1.gl)
+      nv1.updateGLVolume()
+    </script>
+  </body>
+</html>

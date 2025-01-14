@@ -3118,13 +3118,13 @@ export class Niivue {
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html | live demo usage}
    */
-  setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): void {
+  async setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
       return
     }
-    this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
+    await this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
     this.updateGLVolume()
   }
 
@@ -6487,6 +6487,18 @@ export class Niivue {
         // explicit range for negative colormap: allows asymmetric maps
         mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
         mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
+      }
+    }
+    // issue 1139
+    if (layer > 0 && this.overlayOutlineWidth > 0.0) {
+      const A = overlayItem.cal_min
+      const B = overlayItem.cal_max
+      let isZeroCrossing = Math.min(A, B) <= 0 && Math.max(A, B) >= 0
+      if (!isZeroCrossing && mnNeg < mxNeg) {
+        isZeroCrossing = mnNeg <= 0 && mxNeg >= 0
+      }
+      if (isZeroCrossing) {
+        log.error('issue1139: do not use overlayOutlineWidth when thresholds cross or touch zero')
       }
     }
     if (!orientShader) {

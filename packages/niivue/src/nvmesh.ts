@@ -1415,19 +1415,34 @@ export class NVMesh {
 
   // adjust attributes of a mesh layer. invoked by niivue.setMeshLayerProperty()
   // TODO this method is a bit too generic
-  setLayerProperty(
+  async setLayerProperty(
     id: number,
     key: keyof NVMeshLayer,
     val: number | string | boolean,
     gl: WebGL2RenderingContext
-  ): void {
+  ): Promise<void> {
     const layer = this.layers[id]
     if (!layer || !(key in layer)) {
       log.warn('mesh does not have property ', key, ' for layer ', layer)
       return
     }
-    // @ts-expect-error TODO generic property access
-    layer[key] = val
+    if (key === 'colormapLabel') {
+      if (typeof val === 'object') {
+        // assume JSON
+        layer[key] = cmapper.makeLabelLut(val)
+      } else if (typeof val === 'string') {
+        // assume URL
+        const cmap = await cmapper.makeLabelLutFromUrl(val)
+        layer[key] = cmap
+        this.updateMesh(gl) // apply the new properties...
+        return
+      } else {
+        log.error('colormapLabel requires a string or object')
+      }
+    } else {
+      // @ts-expect-error TODO generic property access
+      layer[key] = val
+    }
     this.updateMesh(gl) // apply the new properties...
   }
 
@@ -1660,8 +1675,13 @@ export class NVMesh {
       anatomicalStructurePrimary
     )
     if ('scalars' in obj && obj.scalars.length > 0) {
-      NVMeshLoaders.readLayer(name, buffer, nvm, opacity, 'gray')
-      nvm.updateMesh(gl)
+      const newLayer = NVMeshLoaders.readLayer(name, buffer, nvm, opacity, 'gray')
+      if (typeof newLayer === 'undefined') {
+        log.warn('readLayer() failed to convert scalars')
+      } else {
+        nvm.layers.push(newLayer)
+        nvm.updateMesh(gl)
+      }
     }
     return nvm
   }

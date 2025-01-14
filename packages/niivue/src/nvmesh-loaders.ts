@@ -852,7 +852,8 @@ export class NVMeshLoaders {
       alphaThreshold: false,
       isTransparentBelowCalMin: true,
       isAdditiveBlend: false,
-      colorbarVisible: true
+      colorbarVisible: true,
+      colormapLabel: null
     }
     const isReadColortables = true
     const re = /(?:\.([^.]+))?$/
