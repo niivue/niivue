@@ -10,7 +10,7 @@ The NiiVue iOS app is now available on iPhone and iPad.
 
 ### [Click here to see NiiVue live demos](https://niivue.github.io/niivue/)
 
-What makes NiiVue unique is its ability to simultaneously display all the datatypes popular with neuroimaging: voxels, meshes, tractography streamlines, statistical maps and connectomes. Alternative voxel-based web tools include [ami](https://fnndsc.github.io/ami/), [BioImage Suite Web](https://bioimagesuiteweb.github.io/webapp/viewer.html), [BrainBrowser](https://brainbrowser.cbrain.mcgill.ca/volume-viewer), [nifti-drop](http://vsoch.github.io/nifti-drop), [OHIF DICOM Viewer](https://viewer.ohif.org/), [Papaya](https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html), [VTK.js](https://kitware.github.io/paraview-glance/app/), and [slicedrop](https://slicedrop.com/).
+What makes NiiVue unique is its ability to simultaneously display all the datatypes popular with neuroimaging: voxels, meshes, tractography streamlines, statistical maps and connectomes. Alternative voxel-based web tools include [ami](https://fnndsc.github.io/ami/), [BioImage Suite Web](https://bioimagesuiteweb.github.io/webapp/viewer.html), [BrainBrowser](https://brainbrowser.cbrain.mcgill.ca/volume-viewer), [nifti-drop](http://vsoch.github.io/nifti-drop), [OHIF DICOM Viewer](https://viewer.ohif.org/), [Papaya](https://www.fmrib.ox.ac.uk/ukbiobank/group_means/index.html), and [VTK.js](https://kitware.github.io/paraview-glance/app/).
 
 ## Local Development
 
@@ -56,6 +56,9 @@ The command `npm run demo` will minify the project and locally host all of the [
 - [NiiVue iOS](https://github.com/niivue/ios) (from the NiiVue team) uses NiiVue in a hybrid Swift + webView mobile app
 - [NiiVue Neglect](https://niivue.github.io/niivue-neglect/) uses NiiVue to visualise stroke lesion data in the spatial neglect severity prediction tool
 - [Plurimedia](https://www.plurimedia.it/) uses NiiVue in client work for medical image visualization
+- [Slice:Drop Reloaded](https://gaiborjosue.github.io/slicedrop.github.com/reload/) uses WebGL2-based NiiVue to extend the pioneering WebGL1-based [slicedrop](https://slicedrop.com/) that used the seminal XTK library.
+- [VoxLogicA-UI](https://voxlogica-project.github.io/VoxLogicA-UI/) makes advanced medical
+imaging analysis intuitive
 
 # Funding
 
