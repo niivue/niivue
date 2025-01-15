@@ -1044,6 +1044,9 @@ void main(void) {
 	float r = max(0.00001, abs(mx - mn));
 	mn = min(mn, mx);
 	float txl = mix(0.0, 1.0, (f - mn) / r);
+	if (f > mn) { //issue1139: survives threshold, so round up to opaque voxel
+		txl = max(txl, 2.0/256.0);
+	}
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y);
 	//each volume has two color maps:
@@ -1060,6 +1063,8 @@ void main(void) {
 		r = max(0.00001, abs(mx - mn));
 		mn = min(mn, mx);
 		txl = 1.0 - mix(0.0, 1.0, (f - mn) / r);
+		//issue1139: survives threshold, so round up to opaque voxel
+		txl = max(txl, 2.0/256.0);
 		y = ((2.0 * layer) + 0.5)/nlayer;
 		FragColor = texture(colormap, vec2(txl, y));
 	}
