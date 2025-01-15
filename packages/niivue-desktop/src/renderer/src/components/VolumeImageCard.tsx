@@ -24,8 +24,10 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     typeof image.colormap === 'string' ? image.colormap : 'gray'
   )
   const [intensity, setIntensity] = useState<number[]>([image.cal_min, image.cal_max])
+  const [opacity, setOpacity] = useState<number>(1.0)
   const [colormaps, setColormaps] = useState<string[]>([])
   const [visible, setVisible] = useState<boolean>(true)
+  const [isOpacityDisabled, setIsOpacityDisabled] = useState(false)
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
 
@@ -77,11 +79,23 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     handleIntensityCommit([intensity[0], value])
   }
 
+  const handleOpacityChange = (e: number[]): void => {
+    const value = e[0]
+    setOpacity(value)
+    const volIdx = nv.getVolumeIndexByID(image.id)
+    // request animation frame removes the lag between react state rerenders and niivue updates
+    requestAnimationFrame(() => {
+      nv.setOpacity(volIdx, value)
+      nv.updateGLVolume()
+    })
+  }
+
   const handleVisibilityChange = (value: boolean): void => {
     const id = image.id
     const volIdx = nv.getVolumeIndexByID(id)
     const checked = value
     setVisible(checked)
+    setIsOpacityDisabled(!checked)
     // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setOpacity(volIdx, checked ? 1 : 0)
@@ -168,6 +182,22 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
                   value={intensity[1]}
                 />
               </div>
+
+              <Text size="1">Opacity</Text>
+              {/* slider for volume alpha */}
+              <div className="flex gap-1 items-center">
+                <Slider
+                  size="1"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  defaultValue={[1.0]}
+                  value={opacity[0]}
+                  onValueChange={handleOpacityChange}
+                  disabled={isOpacityDisabled}
+                />
+              </div>
+
             </div>
           </Popover.Content>
         </Popover.Root>
