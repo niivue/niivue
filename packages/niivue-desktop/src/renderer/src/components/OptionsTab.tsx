@@ -11,6 +11,8 @@ const OptionsTab: React.FC = () => {
   const [show3Dcrosshair, setShow3Dcrosshair] = useState(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState(nv.opts.crosshairColor)
   const [fontColor, setFontColor] = useState(nv.opts.fontColor)
+  const [isCrosshairPickerVisible, setIsCrosshairPickerVisible] = useState(false)
+  const [isFontPickerVisible, setIsFontPickerVisible] = useState(false)
 
   const handleTextHeightChange = (value: number[]): void => {
     setTextHeight(value)
@@ -29,6 +31,7 @@ const OptionsTab: React.FC = () => {
     setCrosshairColor(rgbaColor)
     nv.opts.crosshairColor = rgbaColor
     nv.drawScene()
+    setIsCrosshairPickerVisible(false) // Collapse picker after selection
   }
 
   const handleFontColorChange = (color: any): void => {
@@ -36,6 +39,7 @@ const OptionsTab: React.FC = () => {
     setFontColor(rgbaColor)
     nv.opts.fontColor = rgbaColor
     nv.drawScene()
+    setIsFontPickerVisible(false) // Collapse picker after selection
   }
 
   return (
@@ -78,15 +82,27 @@ const OptionsTab: React.FC = () => {
         <Text size="2" className="mb-1">
           Crosshair Color
         </Text>
-        <SketchPicker
-          color={{
-            r: crosshairColor[0] * 255,
-            g: crosshairColor[1] * 255,
-            b: crosshairColor[2] * 255,
-            a: crosshairColor[3]
+        <div
+          style={{
+            width: '24px',
+            height: '24px',
+            backgroundColor: `rgba(${crosshairColor[0] * 255}, ${crosshairColor[1] * 255}, ${crosshairColor[2] * 255}, ${crosshairColor[3]})`,
+            border: '1px solid #ccc',
+            cursor: 'pointer'
           }}
-          onChangeComplete={handleCrosshairColorChange}
+          onClick={() => setIsCrosshairPickerVisible(!isCrosshairPickerVisible)}
         />
+        {isCrosshairPickerVisible && (
+          <SketchPicker
+            color={{
+              r: crosshairColor[0] * 255,
+              g: crosshairColor[1] * 255,
+              b: crosshairColor[2] * 255,
+              a: crosshairColor[3]
+            }}
+            onChangeComplete={handleCrosshairColorChange}
+          />
+        )}
       </div>
 
       {/* Font Color Picker */}
@@ -94,15 +110,27 @@ const OptionsTab: React.FC = () => {
         <Text size="2" className="mb-1">
           Font Color
         </Text>
-        <SketchPicker
-          color={{
-            r: fontColor[0] * 255,
-            g: fontColor[1] * 255,
-            b: fontColor[2] * 255,
-            a: fontColor[3]
+        <div
+          style={{
+            width: '24px',
+            height: '24px',
+            backgroundColor: `rgba(${fontColor[0] * 255}, ${fontColor[1] * 255}, ${fontColor[2] * 255}, ${fontColor[3]})`,
+            border: '1px solid #ccc',
+            cursor: 'pointer'
           }}
-          onChangeComplete={handleFontColorChange}
+          onClick={() => setIsFontPickerVisible(!isFontPickerVisible)}
         />
+        {isFontPickerVisible && (
+          <SketchPicker
+            color={{
+              r: fontColor[0] * 255,
+              g: fontColor[1] * 255,
+              b: fontColor[2] * 255,
+              a: fontColor[3]
+            }}
+            onChangeComplete={handleFontColorChange}
+          />
+        )}
       </div>
     </div>
   )
