@@ -11,8 +11,10 @@ const OptionsTab: React.FC = () => {
   const [show3Dcrosshair, setShow3Dcrosshair] = useState(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState(nv.opts.crosshairColor)
   const [fontColor, setFontColor] = useState(nv.opts.fontColor)
+  const [backgroundColor, setBackgroundColor] = useState(nv.opts.backColor)
   const [isCrosshairPickerVisible, setIsCrosshairPickerVisible] = useState(false)
   const [isFontPickerVisible, setIsFontPickerVisible] = useState(false)
+  const [isBackgroundPickerVisible, setIsBackgroundPickerVisible] = useState(false)
 
   const handleTextHeightChange = (value: number[]): void => {
     setTextHeight(value)
@@ -31,7 +33,7 @@ const OptionsTab: React.FC = () => {
     setCrosshairColor(rgbaColor)
     nv.opts.crosshairColor = rgbaColor
     nv.drawScene()
-    setIsCrosshairPickerVisible(false) // Collapse picker after selection
+    setIsCrosshairPickerVisible(false)
   }
 
   const handleFontColorChange = (color: any): void => {
@@ -39,7 +41,15 @@ const OptionsTab: React.FC = () => {
     setFontColor(rgbaColor)
     nv.opts.fontColor = rgbaColor
     nv.drawScene()
-    setIsFontPickerVisible(false) // Collapse picker after selection
+    setIsFontPickerVisible(false)
+  }
+
+  const handleBackgroundColorChange = (color: any): void => {
+    const rgbaColor = [color.rgb.r / 255, color.rgb.g / 255, color.rgb.b / 255, color.rgb.a]
+    setBackgroundColor(rgbaColor)
+    nv.opts.backColor = rgbaColor
+    nv.drawScene()
+    setIsBackgroundPickerVisible(false)
   }
 
   return (
@@ -129,6 +139,34 @@ const OptionsTab: React.FC = () => {
               a: fontColor[3]
             }}
             onChangeComplete={handleFontColorChange}
+          />
+        )}
+      </div>
+
+      {/* Background Color Picker */}
+      <div className="flex flex-col mb-4">
+        <Text size="2" className="mb-1">
+          Background Color
+        </Text>
+        <div
+          style={{
+            width: '24px',
+            height: '24px',
+            backgroundColor: `rgba(${backgroundColor[0] * 255}, ${backgroundColor[1] * 255}, ${backgroundColor[2] * 255}, ${backgroundColor[3]})`,
+            border: '1px solid #ccc',
+            cursor: 'pointer'
+          }}
+          onClick={() => setIsBackgroundPickerVisible(!isBackgroundPickerVisible)}
+        />
+        {isBackgroundPickerVisible && (
+          <SketchPicker
+            color={{
+              r: backgroundColor[0] * 255,
+              g: backgroundColor[1] * 255,
+              b: backgroundColor[2] * 255,
+              a: backgroundColor[3]
+            }}
+            onChangeComplete={handleBackgroundColorChange}
           />
         )}
       </div>
