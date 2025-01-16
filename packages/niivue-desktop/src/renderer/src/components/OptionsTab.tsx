@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react'
-import { SLICE_TYPE } from '@niivue/niivue'
-import { Text, Slider } from '@radix-ui/themes'
+import { SketchPicker } from 'react-color'
+import { Text, Slider, Switch } from '@radix-ui/themes'
 import { AppContext } from '../App'
 
 const OptionsTab: React.FC = () => {
@@ -8,8 +8,9 @@ const OptionsTab: React.FC = () => {
   const nv = nvRef.current
 
   const [textHeight, setTextHeight] = useState([nv.opts.textHeight])
-  const [colorbarHeight, setColorbarHeight] = useState([nv.opts.colorbarHeight])
-  const [heroSliceType, setHeroSliceType] = useState(nv.opts.heroSliceType)
+  const [show3Dcrosshair, setShow3Dcrosshair] = useState(nv.opts.show3Dcrosshair)
+  const [crosshairColor, setCrosshairColor] = useState(nv.opts.crosshairColor)
+  const [fontColor, setFontColor] = useState(nv.opts.fontColor)
 
   const handleTextHeightChange = (value: number[]): void => {
     setTextHeight(value)
@@ -17,15 +18,23 @@ const OptionsTab: React.FC = () => {
     nv.drawScene()
   }
 
-  const handleColorbarHeightChange = (value: number[]): void => {
-    setColorbarHeight(value)
-    nv.opts.colorbarHeight = value[0]
+  const handleShow3DcrosshairChange = (checked: boolean): void => {
+    setShow3Dcrosshair(checked)
+    nv.opts.show3Dcrosshair = checked
     nv.drawScene()
   }
 
-  const handleHeroSliceTypeChange = (value: SLICE_TYPE): void => {
-    setHeroSliceType(value)
-    nv.opts.heroSliceType = value
+  const handleCrosshairColorChange = (color: any): void => {
+    const rgbaColor = [color.rgb.r / 255, color.rgb.g / 255, color.rgb.b / 255, color.rgb.a]
+    setCrosshairColor(rgbaColor)
+    nv.opts.crosshairColor = rgbaColor
+    nv.drawScene()
+  }
+
+  const handleFontColorChange = (color: any): void => {
+    const rgbaColor = [color.rgb.r / 255, color.rgb.g / 255, color.rgb.b / 255, color.rgb.a]
+    setFontColor(rgbaColor)
+    nv.opts.fontColor = rgbaColor
     nv.drawScene()
   }
 
@@ -52,39 +61,48 @@ const OptionsTab: React.FC = () => {
         />
       </div>
 
-      {/* Colorbar Height Slider */}
+      {/* Show 3D Crosshair Switch */}
       <div className="flex flex-col mb-4">
         <Text size="2" className="mb-1">
-          Colorbar Height
+          Show 3D Crosshair
         </Text>
-        <Slider
-          size="1"
-          min={0}
-          max={0.2}
-          step={0.01}
-          value={colorbarHeight}
+        <Switch
+          checked={show3Dcrosshair}
+          onCheckedChange={handleShow3DcrosshairChange}
           className="mb-2"
-          style={{ width: '90%' }}
-          onValueChange={handleColorbarHeightChange}
         />
       </div>
 
-      {/* Hero Slice Type Dropdown */}
+      {/* Crosshair Color Picker */}
       <div className="flex flex-col mb-4">
         <Text size="2" className="mb-1">
-          Hero Slice Type
+          Crosshair Color
         </Text>
-        <select
-          value={heroSliceType}
-          onChange={(e) => handleHeroSliceTypeChange(parseInt(e.target.value) as SLICE_TYPE)}
-          className="p-2 border rounded"
-        >
-          {Object.entries(SLICE_TYPE).map(([key, value]) => (
-            <option key={key} value={value}>
-              {key}
-            </option>
-          ))}
-        </select>
+        <SketchPicker
+          color={{
+            r: crosshairColor[0] * 255,
+            g: crosshairColor[1] * 255,
+            b: crosshairColor[2] * 255,
+            a: crosshairColor[3]
+          }}
+          onChangeComplete={handleCrosshairColorChange}
+        />
+      </div>
+
+      {/* Font Color Picker */}
+      <div className="flex flex-col mb-4">
+        <Text size="2" className="mb-1">
+          Font Color
+        </Text>
+        <SketchPicker
+          color={{
+            r: fontColor[0] * 255,
+            g: fontColor[1] * 255,
+            b: fontColor[2] * 255,
+            a: fontColor[3]
+          }}
+          onChangeComplete={handleFontColorChange}
+        />
       </div>
     </div>
   )
