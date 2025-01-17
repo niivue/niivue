@@ -150,8 +150,9 @@
     document.getElementById("location").innerHTML =
       "&nbsp;&nbsp;" + data.string;
   }
-  function saveAsHtml() {
-    const javascript = nv1.generateLoadDocumentJavaScript("gl1", decodeURIComponent(esm));
+  async function saveAsHtml() {
+    const javascript = await nv1.generateLoadDocumentJavaScript("gl1", decodeURIComponent(esm));
+    console.log('js length', javascript.length )
     const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
