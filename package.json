@@ -4,43 +4,46 @@
     "private": true,
     "description": "The niivue workspace for niivue related packages",
     "workspaces": [
-      "packages/*"
+        "packages/*"
     ],
     "scripts": {
-      "build:niivue": "npm run build -w @niivue/niivue",
-      "build:docs": "npm run docs -w @niivue/niivue",
-      "build:github": "npm run build:forTests -w @niivue/niivue", 
-      "build:docusaurus": "npm run build -w @niivue/docs",
-      "prebuild:desktop-mac": "npm run build:niivue",
-      "build:desktop-mac": "npm run build:mac -w niivue-desktop",
-      "prebuild:desktop-win": "npm run build:niivue",
-      "build:desktop-win": "npm run build:win -w niivue-desktop",
-      "prebuild:desktop-linux": "npm run build:niivue",
-      "build:desktop-linux": "npm run build:linux -w niivue-desktop",
-      "serve:docs": "npm run serve -w @niivue/docs",
-      "publish:niivue": "npm run pub -w @niivue/niivue",
-      "demo": "npm run demo -w @niivue/niivue",
-      "dev": "npm run dev -w @niivue/niivue", 
-      "predev:desktop": "npm run build:niivue",
-      "dev:desktop": "npm run dev -w niivue-desktop",
-      "dev:docs": "npm run start -w @niivue/docs",
-      "test:e2e": "npm run test-playwright -w @niivue/niivue",
-      "test:unit": "npm run test:unit -w @niivue/niivue",
-      "lint": "npm run lint -w @niivue/niivue",
-      "lint:fix": "npm run lint:fix -w @niivue/niivue",
-      "lint:niivue": "npm run lint -w @niivue/niivue && npm run lint:ts -w @niivue/niivue"
+        "build:niivue": "npm run build -w @niivue/niivue",
+        "build:docs": "npm run docs -w @niivue/niivue",
+        "build:github": "npm run build:forTests -w @niivue/niivue",
+        "build:docusaurus": "npm run build -w @niivue/docs",
+        "prebuild:desktop-mac": "npm run build:niivue",
+        "build:desktop-mac": "npm run build:mac -w niivue-desktop",
+        "prebuild:desktop-win": "npm run build:niivue",
+        "build:desktop-win": "npm run build:win -w niivue-desktop",
+        "prebuild:desktop-linux": "npm run build:niivue",
+        "build:desktop-linux": "npm run build:linux -w niivue-desktop",
+        "serve:docs": "npm run serve -w @niivue/docs",
+        "publish:niivue": "npm run pub -w @niivue/niivue",
+        "demo": "npm run demo -w @niivue/niivue",
+        "dev": "npm run dev -w @niivue/niivue",
+        "predev:desktop": "npm run build:niivue",
+        "dev:desktop": "npm run dev -w niivue-desktop",
+        "dev:docs": "npm run start -w @niivue/docs",
+        "test:e2e": "npm run test-playwright -w @niivue/niivue",
+        "test:unit": "npm run test:unit -w @niivue/niivue",
+        "lint": "npm run lint -w @niivue/niivue",
+        "lint:fix": "npm run lint:fix -w @niivue/niivue",
+        "lint:niivue": "npm run lint -w @niivue/niivue && npm run lint:ts -w @niivue/niivue"
     },
     "author": "niivue authors",
     "license": "BSD-2-Clause",
     "repository": {
-      "type": "git",
-      "url": "git+https://github.com/niivue/niivue.git"
+        "type": "git",
+        "url": "git+https://github.com/niivue/niivue.git"
     },
     "keywords": [
-      "niivue",
-      "webgl2",
-      "nifti",
-      "image",
-      "viewer"
-    ]
-  }
+        "niivue",
+        "webgl2",
+        "nifti",
+        "image",
+        "viewer"
+    ],
+    "peerDependencies": {
+        "@niivue/dcm2niix": "^1.0.0"
+    }
+}

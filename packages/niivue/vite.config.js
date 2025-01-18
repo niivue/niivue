@@ -11,11 +11,12 @@ export default defineConfig({
     open: '/src/index.html',
     fs: {
       // Allow serving files from one level up to the project root
-      allow: ['..']
+      allow: ['../..']
     }
   },
   optimizeDeps: {
-    include: ['nifti-reader-js']
+    include: ['nifti-reader-js'],
+    exclude: ['@niivue/dcm2niix']
   },
   plugins: [
     commonjs({
