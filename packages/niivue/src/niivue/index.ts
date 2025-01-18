@@ -1,4 +1,5 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { Dcm2niix } from '@niivue/dcm2niix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
@@ -2062,20 +2063,27 @@ export class Niivue {
           readEntries()
         } else {
           getFileObjects(allEntiresInDir)
-            .then((allFileObjects) => {
-              NVImage.loadFromFile({
-                file: allFileObjects, // an array of file objects
-                name: directory.name,
-                urlImgData: null, // nothing
-                imageType: NVIMAGE_TYPE.DCM_FOLDER // signify that this is a dicom directory
-              })
-                .then((volume) => {
-                  this.addVolume(volume)
-                  this.setDrawingEnabled(true)
+            .then(async (allFileObjects) => {
+              console.log(allFileObjects)
+              let dcm2niix = new Dcm2niix()
+              await dcm2niix.init()
+              const resultFileList = await dcm2niix.input(allFileObjects).run() 
+              console.log(resultFileList)
+              for (let i = 0; i < resultFileList.length; i++) {
+                // if file does not end in .nii or .nii.gz, skip.
+                // This is to avoid loading files that are not nifti (e.g. json, bval, bvec)
+                if (!resultFileList[i].name.endsWith('.nii') && !resultFileList[i].name.endsWith('.nii.gz')) {
+                  continue
+                }
+                const niiImage = await NVImage.loadFromFile({
+                  file: resultFileList[i],
+                  name: resultFileList[i].name,
+                  imageType: NVIMAGE_TYPE.NII
                 })
-                .catch((e) => {
-                  throw e
-                })
+                this.addVolume(niiImage)
+              }
+              // null dcm2niix instance to free up memory after wasm use
+              dcm2niix = null
             })
             .catch((e) => {
               throw e

@@ -65,11 +65,13 @@
     "@lukeed/uuid": "^2.0.1",
     "@ungap/structured-clone": "^1.2.0",
     "array-equal": "^1.0.2",
-    "daikon": "^1.2.46",
     "fflate": "^0.8.2",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.6.8",
     "rxjs": "^7.8.1"
+  },
+  "peerDependencies": {
+    "@niivue/dcm2niix": "^1.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.2",

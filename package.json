@@ -45,5 +45,8 @@
     ],
     "dependencies": {
         "@radix-ui/react-select": "^2.1.5"
+    },
+    "peerDependencies": {
+        "@niivue/dcm2niix": "^1.0.0"
     }
 }

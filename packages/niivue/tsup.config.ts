@@ -12,5 +12,6 @@ export default defineConfig({
     '.jpg': 'dataurl',
     '.png': 'dataurl'
   },
-  dts: true
+  dts: true,
+  metafile: true
 })
