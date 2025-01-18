@@ -1,4 +1,5 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { Dcm2niix } from '@niivue/dcm2niix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
