@@ -600,7 +600,7 @@ export async function uncompressStream(stream: ReadableStream<Uint8Array>): Prom
   if (done) {
     reader.releaseLock()
     return new ReadableStream({
-      start(controller) {
+      start(controller): void {
         controller.close()
       }
     })
@@ -610,7 +610,7 @@ export async function uncompressStream(stream: ReadableStream<Uint8Array>): Prom
   if (!value || value.length < 2) {
     reader.releaseLock()
     return new ReadableStream({
-      start(controller) {
+      start(controller): void {
         if (value) {
           controller.enqueue(value)
         }
@@ -623,7 +623,7 @@ export async function uncompressStream(stream: ReadableStream<Uint8Array>): Prom
 
   // Create new stream starting with the first chunk
   const uncompressedStream = new ReadableStream<Uint8Array>({
-    async start(controller) {
+    async start(controller): Promise<void> {
       try {
         // Enqueue the first chunk we already read
         controller.enqueue(value)
