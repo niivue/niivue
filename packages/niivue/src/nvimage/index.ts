@@ -3065,180 +3065,198 @@ export class NVImage {
       throw Error('url must not be empty')
     }
 
-    let nvimage = null;
-    let dataBuffer = null;
+    let nvimage = null
+    let dataBuffer = null
 
     // Handle input buffer types
     if (url instanceof Uint8Array) {
-      url = url.buffer as ArrayBuffer;
+      url = url.buffer as ArrayBuffer
     }
     if (buffer.byteLength > 0) {
-      url = buffer;
+      url = buffer
     }
     if (url instanceof ArrayBuffer) {
-      dataBuffer = url;
+      dataBuffer = url
       if (name !== '') {
-        url = name;
+        url = name
       } else {
-        const bytes = new Uint8Array(dataBuffer);
-        url = bytes[0] === 31 && bytes[1] === 139 ? 'array.nii.gz' : 'array.nii';
+        const bytes = new Uint8Array(dataBuffer)
+        url = bytes[0] === 31 && bytes[1] === 139 ? 'array.nii.gz' : 'array.nii'
       }
     }
 
     // Handle limited frame loading for NIfTI
     if (!isNaN(limitFrames4D)) {
       try {
-        const response = await fetch(url, { headers });
-        if (!response.ok) throw new Error(response.statusText);
-        if (!response.body) throw new Error('No readable stream available');
+        const response = await fetch(url, { headers })
+        if (!response.ok) {
+          throw new Error(response.statusText)
+        }
+        if (!response.body) {
+          throw new Error('No readable stream available')
+        }
 
         // Handle potential compression automatically
-        const stream = await uncompressStream(response.body);
-        
+        const stream = await uncompressStream(response.body)
+
         // Read header data (first 352 bytes minimum)
-        const reader = stream.getReader();
-        const headerChunks: Uint8Array[] = [];
-        let headerBytes = 0;
-        
+        const reader = stream.getReader()
+        const headerChunks: Uint8Array[] = []
+        let headerBytes = 0
+
         while (headerBytes < 352) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          headerChunks.push(value);
-          headerBytes += value.length;
+          const { done, value } = await reader.read()
+          if (done) {
+            break
+          }
+          headerChunks.push(value)
+          headerBytes += value.length
         }
 
         // Combine header chunks
-        const headerBuffer = new Uint8Array(headerBytes);
-        let offset = 0;
+        const headerBuffer = new Uint8Array(headerBytes)
+        let offset = 0
         for (const chunk of headerChunks) {
-          headerBuffer.set(chunk, offset);
-          offset += chunk.length;
+          headerBuffer.set(chunk, offset)
+          offset += chunk.length
         }
 
         // Check if valid NIfTI
-        const isNifti1 = (headerBuffer[0] === 92 && headerBuffer[1] === 1) ||
-                        (headerBuffer[1] === 92 && headerBuffer[0] === 1);
-        
+        const isNifti1 =
+          (headerBuffer[0] === 92 && headerBuffer[1] === 1) || (headerBuffer[1] === 92 && headerBuffer[0] === 1)
+
         if (!isNifti1) {
-          reader.releaseLock();
-          return null;
+          reader.releaseLock()
+          return null
         }
 
-        const hdr = nifti.readHeader(headerBuffer.buffer);
-        if (!hdr) throw new Error('Could not read NIfTI header');
+        const hdr = nifti.readHeader(headerBuffer.buffer)
+        if (!hdr) {
+          throw new Error('Could not read NIfTI header')
+        }
 
         // Calculate required data size
-        const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-        const nVox3D = [1, 2, 3].reduce((acc, i) => 
-          acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-        const nFrame4D = [4, 5, 6].reduce((acc, i) => 
-          acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-        
-        const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
-        const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+        const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
+        const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
+        const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
+
+        const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1)
+        const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel
 
         // Continue reading required data
-        const chunks = [...headerChunks];
-        let totalSize = headerBytes;
+        const chunks = [...headerChunks]
+        let totalSize = headerBytes
 
         while (totalSize < bytesToLoad) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          totalSize += value.length;
+          const { done, value } = await reader.read()
+          if (done) {
+            break
+          }
+          chunks.push(value)
+          totalSize += value.length
         }
 
-        reader.releaseLock();
+        reader.releaseLock()
 
         // Combine chunks into final buffer
-        dataBuffer = new ArrayBuffer(bytesToLoad);
-        const dataView = new Uint8Array(dataBuffer);
-        offset = 0;
+        dataBuffer = new ArrayBuffer(bytesToLoad)
+        const dataView = new Uint8Array(dataBuffer)
+        offset = 0
         for (const chunk of chunks) {
-          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset);
-          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset);
-          offset += bytesToCopy;
-          if (offset >= bytesToLoad) break;
+          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset)
+          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset)
+          offset += bytesToCopy
+          if (offset >= bytesToLoad) {
+            break
+          }
         }
       } catch (error) {
-        console.error('Error loading limited frames:', error);
-        dataBuffer = null;
+        console.error('Error loading limited frames:', error)
+        dataBuffer = null
       }
     }
 
     // Handle non-limited cases
     if (!dataBuffer) {
       if (isManifest) {
-        dataBuffer = await NVImage.fetchDicomData(url, headers);
-        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
+        dataBuffer = await NVImage.fetchDicomData(url, headers)
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST
       } else {
-        const response = await fetch(url, { headers });
-        if (!response.ok) throw Error(response.statusText);
-        
-        if (!response.body) throw new Error('No readable stream available');
-        
-        const stream = await uncompressStream(response.body);
-        const chunks: Uint8Array[] = [];
-        const reader = stream.getReader();
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
+        const response = await fetch(url, { headers })
+        if (!response.ok) {
+          throw Error(response.statusText)
         }
-        
-        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-        dataBuffer = new ArrayBuffer(totalLength);
-        const dataView = new Uint8Array(dataBuffer);
-        let offset = 0;
+
+        if (!response.body) {
+          throw new Error('No readable stream available')
+        }
+
+        const stream = await uncompressStream(response.body)
+        const chunks: Uint8Array[] = []
+        const reader = stream.getReader()
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            break
+          }
+          chunks.push(value)
+        }
+
+        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+        dataBuffer = new ArrayBuffer(totalLength)
+        const dataView = new Uint8Array(dataBuffer)
+        let offset = 0
         for (const chunk of chunks) {
-          dataView.set(chunk, offset);
-          offset += chunk.length;
+          dataView.set(chunk, offset)
+          offset += chunk.length
         }
       }
     }
 
     // Handle paired image data if necessary
-    let pairedImgData = null;
+    let pairedImgData = null
     if (urlImgData) {
       try {
-        let response = await fetch(urlImgData, { headers });
+        let response = await fetch(urlImgData, { headers })
         if (response.status === 404 && urlImgData.includes('BRIK')) {
-          response = await fetch(`${urlImgData}.gz`, { headers });
+          response = await fetch(`${urlImgData}.gz`, { headers })
         }
-        
+
         if (response.ok && response.body) {
-          const stream = await uncompressStream(response.body);
-          const chunks: Uint8Array[] = [];
-          const reader = stream.getReader();
-          
+          const stream = await uncompressStream(response.body)
+          const chunks: Uint8Array[] = []
+          const reader = stream.getReader()
+
           while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
+            const { done, value } = await reader.read()
+            if (done) {
+              break
+            }
+            chunks.push(value)
           }
-          
-          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-          pairedImgData = new ArrayBuffer(totalLength);
-          const dataView = new Uint8Array(pairedImgData);
-          let offset = 0;
+
+          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+          pairedImgData = new ArrayBuffer(totalLength)
+          const dataView = new Uint8Array(pairedImgData)
+          let offset = 0
           for (const chunk of chunks) {
-            dataView.set(chunk, offset);
-            offset += chunk.length;
+            dataView.set(chunk, offset)
+            offset += chunk.length
           }
         }
       } catch (error) {
-        console.error('Error loading paired image data:', error);
+        console.error('Error loading paired image data:', error)
       }
     }
 
     if (!dataBuffer) {
-      throw new Error('Unable to load buffer properly from volume');
+      throw new Error('Unable to load buffer properly from volume')
     }
 
     // Get filename from URL if not provided
     if (!name) {
-      let urlParts: string[];
+      let urlParts: string[]
       try {
         // if a full url like https://domain/path/file.nii.gz?query=filter
         // parse the url and get the pathname component without the query
@@ -3268,10 +3286,10 @@ export class NVImage {
       colormapNegative,
       frame4D,
       imageType
-    );
-    nvimage.url = url;
-    nvimage.colorbarVisible = colorbarVisible;
-    return nvimage;
+    )
+    nvimage.url = url
+    nvimage.colorbarVisible = colorbarVisible
+    return nvimage
   }
 
   // not included in public docs
