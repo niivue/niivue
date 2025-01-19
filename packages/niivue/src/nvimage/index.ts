@@ -3214,6 +3214,20 @@ export class NVImage {
       }
     }
 
+    // Resolve paired image URL if necessary
+    const re = /(?:\.([^.]+))?$/
+    let ext = ''
+    if (name === '') {
+      ext = re.exec(url)![1]
+    } else {
+      ext = re.exec(name)![1]
+    }
+    if (ext.toUpperCase() === 'HEAD') {
+      if (urlImgData === '') {
+        urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + 'BRIK'
+      }
+    }
+
     // Handle paired image data if necessary
     let pairedImgData = null
     if (urlImgData) {
@@ -3299,7 +3313,7 @@ export class NVImage {
       const reader = new FileReader()
       reader.onload = (): void => {
         if (file.name.lastIndexOf('gz') !== -1 && isNaN(bytesToLoad)) {
-          resolve(nifti.decompress(reader.result as ArrayBuffer))
+          resolve(nifti.decompress(reader.result as ArrayBuffer) as ArrayBuffer)
         } else {
           resolve(reader.result as ArrayBuffer)
         }
