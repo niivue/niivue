@@ -1,5 +1,4 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
-import { Dcm2niix } from '@niivue/dcm2niix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
@@ -2035,58 +2034,58 @@ export class Niivue {
     }
   }
 
-  readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
-    const reader = directory.createReader()
-    let allEntiresInDir: FileSystemEntry[] = []
-    const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
-      const allFileObects: File[] = []
-      // https://stackoverflow.com/a/53113059
-      const getFile = async (fileEntry: FileSystemFileEntry): Promise<File> => {
-        return new Promise((resolve, reject) => fileEntry.file(resolve, reject))
-      }
-      for (let i = 0; i < fileSystemEntries.length; i++) {
-        allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
-      }
-      return allFileObects
-    }
-    const readEntries = (): void => {
-      reader.readEntries((entries) => {
-        if (entries.length) {
-          allEntiresInDir = allEntiresInDir.concat(entries)
-          readEntries()
-        } else {
-          getFileObjects(allEntiresInDir)
-            .then(async (allFileObjects) => {
-              console.log(allFileObjects)
-              let dcm2niix = new Dcm2niix()
-              await dcm2niix.init()
-              const resultFileList = await dcm2niix.input(allFileObjects).run() 
-              console.log(resultFileList)
-              for (let i = 0; i < resultFileList.length; i++) {
-                // if file does not end in .nii or .nii.gz, skip.
-                // This is to avoid loading files that are not nifti (e.g. json, bval, bvec)
-                if (!resultFileList[i].name.endsWith('.nii') && !resultFileList[i].name.endsWith('.nii.gz')) {
-                  continue
-                }
-                const niiImage = await NVImage.loadFromFile({
-                  file: resultFileList[i],
-                  name: resultFileList[i].name,
-                  imageType: NVIMAGE_TYPE.NII
-                })
-                this.addVolume(niiImage)
-              }
-              // null dcm2niix instance to free up memory after wasm use
-              dcm2niix = null
-            })
-            .catch((e) => {
-              throw e
-            })
-        }
-      })
-    }
-    readEntries()
-    return allEntiresInDir
-  }
+  // readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
+  //   const reader = directory.createReader()
+  //   let allEntiresInDir: FileSystemEntry[] = []
+  //   const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
+  //     const allFileObects: File[] = []
+  //     // https://stackoverflow.com/a/53113059
+  //     const getFile = async (fileEntry: FileSystemFileEntry): Promise<File> => {
+  //       return new Promise((resolve, reject) => fileEntry.file(resolve, reject))
+  //     }
+  //     for (let i = 0; i < fileSystemEntries.length; i++) {
+  //       allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
+  //     }
+  //     return allFileObects
+  //   }
+  //   const readEntries = (): void => {
+  //     reader.readEntries((entries) => {
+  //       if (entries.length) {
+  //         allEntiresInDir = allEntiresInDir.concat(entries)
+  //         readEntries()
+  //       } else {
+  //         getFileObjects(allEntiresInDir)
+  //           .then(async (allFileObjects) => {
+  //             console.log(allFileObjects)
+  //             let dcm2niix = new Dcm2niix()
+  //             await dcm2niix.init()
+  //             const resultFileList = await dcm2niix.input(allFileObjects).run() 
+  //             console.log(resultFileList)
+  //             for (let i = 0; i < resultFileList.length; i++) {
+  //               // if file does not end in .nii or .nii.gz, skip.
+  //               // This is to avoid loading files that are not nifti (e.g. json, bval, bvec)
+  //               if (!resultFileList[i].name.endsWith('.nii') && !resultFileList[i].name.endsWith('.nii.gz')) {
+  //                 continue
+  //               }
+  //               const niiImage = await NVImage.loadFromFile({
+  //                 file: resultFileList[i],
+  //                 name: resultFileList[i].name,
+  //                 imageType: NVIMAGE_TYPE.NII
+  //               })
+  //               this.addVolume(niiImage)
+  //             }
+  //             // null dcm2niix instance to free up memory after wasm use
+  //             dcm2niix = null
+  //           })
+  //           .catch((e) => {
+  //             throw e
+  //           })
+  //       }
+  //     })
+  //   }
+  //   readEntries()
+  //   return allEntiresInDir
+  // }
 
   /**
    * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
@@ -2322,7 +2321,8 @@ export class Niivue {
               }
             })
           } else if (entry.isDirectory) {
-            this.readDirectory(entry as FileSystemDirectoryEntry)
+            // TODO: re-implement directory loading (assuming dicoms) using external dicom loader via useLoader
+            // this.readDirectory(entry as FileSystemDirectoryEntry)
           }
         }
       }
