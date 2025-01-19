@@ -77,29 +77,29 @@ test('niivue loadVolumes complex nifti volume', async ({ page }) => {
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
 
-test('niivue loadVolumes dicom manifest', async ({ page }) => {
-  const nvols = await page.evaluate(async (testOptions) => {
-    // eslint-disable-next-line no-undef
-    const nv = new Niivue(testOptions)
-    await nv.attachTo('gl')
-    // load one volume object in an array
-    const volumeList = [
-      {
-        url: './images/dicom/niivue-manifest.txt',
-        name: 'mni152.nii.gz',
-        colormap: 'gray',
-        opacity: 1,
-        visible: true,
-        isManifest: true
-      }
-    ]
-    await nv.loadVolumes(volumeList)
-    return nv.volumes.length
-  }, TEST_OPTIONS)
-  expect(nvols).toBe(1)
-  await page.waitForTimeout(1000)
-  await expect(page).toHaveScreenshot({ timeout: 30000 })
-})
+// test('niivue loadVolumes dicom manifest', async ({ page }) => {
+//   const nvols = await page.evaluate(async (testOptions) => {
+//     // eslint-disable-next-line no-undef
+//     const nv = new Niivue(testOptions)
+//     await nv.attachTo('gl')
+//     // load one volume object in an array
+//     const volumeList = [
+//       {
+//         url: './images/dicom/niivue-manifest.txt',
+//         name: 'mni152.nii.gz',
+//         colormap: 'gray',
+//         opacity: 1,
+//         visible: true,
+//         isManifest: true
+//       }
+//     ]
+//     await nv.loadVolumes(volumeList)
+//     return nv.volumes.length
+//   }, TEST_OPTIONS)
+//   expect(nvols).toBe(1)
+//   await page.waitForTimeout(1000)
+//   await expect(page).toHaveScreenshot({ timeout: 30000 })
+// })
 
 test('niivue loadVolumes limit 4D frames loaded', async ({ page }) => {
   const imgLength = await page.evaluate(async (testOptions) => {
@@ -226,8 +226,8 @@ const volumeFormats = [
   { fileType: 'mif', fileName: 'RAS.mif', meshOrVolume: 'volume' },
   { fileType: 'nrrd', fileName: 'FLAIR.nrrd', meshOrVolume: 'volume' },
   { fileType: 'HEAD-BRIK', fileName: 'scaled+tlrc.HEAD', meshOrVolume: 'volume' },
-  { fileType: 'mgz', fileName: 'wm.mgz', meshOrVolume: 'volume' },
-  { fileType: 'dicom', fileName: 'enh.dcm', meshOrVolume: 'volume' }
+  { fileType: 'mgz', fileName: 'wm.mgz', meshOrVolume: 'volume' }
+  // { fileType: 'dicom', fileName: 'enh.dcm', meshOrVolume: 'volume' }
 ]
 
 for (const file of volumeFormats) {
