@@ -1,7 +1,7 @@
 import * as nifti from 'nifti-reader-js'
 // import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
-import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
+import { decompressSync, gzipSync } from 'fflate/browser'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
@@ -3308,24 +3308,54 @@ export class NVImage {
 
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file: File, bytesToLoad = NaN): Promise<ArrayBuffer> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (): void => {
-        if (file.name.lastIndexOf('gz') !== -1 && isNaN(bytesToLoad)) {
-          resolve(nifti.decompress(reader.result as ArrayBuffer) as ArrayBuffer)
-        } else {
-          resolve(reader.result as ArrayBuffer)
-        }
-      }
+  static async readFileAsync(file: File, bytesToLoad = NaN): Promise<ArrayBuffer> {
+    let stream = file.stream()
 
-      reader.onerror = reject
-      if (isNaN(bytesToLoad)) {
-        reader.readAsArrayBuffer(file)
-      } else {
-        reader.readAsArrayBuffer(file.slice(0, bytesToLoad))
+    if (!isNaN(bytesToLoad)) {
+      let bytesRead = 0
+      const limiter = new TransformStream({
+        transform(chunk: Uint8Array, controller: TransformStreamDefaultController): void {
+          if (bytesRead >= bytesToLoad) {
+            controller.terminate()
+            return
+          }
+          const remainingBytes = bytesToLoad - bytesRead
+          if (chunk.length > remainingBytes) {
+            controller.enqueue(chunk.slice(0, remainingBytes))
+            controller.terminate()
+          } else {
+            controller.enqueue(chunk)
+          }
+          bytesRead += chunk.length
+        }
+      })
+      stream = stream.pipeThrough(limiter)
+    }
+
+    const uncompressedStream = await uncompressStream(stream)
+
+    const chunks: Uint8Array[] = []
+    const reader = uncompressedStream.getReader()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
       }
-    })
+      chunks.push(value)
+    }
+
+    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+    const result = new ArrayBuffer(totalLength)
+    const resultView = new Uint8Array(result)
+
+    let offset = 0
+    for (const chunk of chunks) {
+      resultView.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    return result
   }
 
   /**
@@ -3352,70 +3382,33 @@ export class NVImage {
     let dataBuffer: ArrayBuffer | ArrayBuffer[] = []
     try {
       if (Array.isArray(file)) {
-        for (let i = 0; i < file.length; i++) {
-          dataBuffer.push(await this.readFileAsync(file[i]))
-        }
+        dataBuffer = await Promise.all(file.map((f) => this.readFileAsync(f)))
       } else {
         if (!isNaN(limitFrames4D)) {
-          dataBuffer = await this.readFileAsync(file, 512)
-          let bytes = new Uint8Array(dataBuffer)
-          let isGz = false
-          if (bytes[0] === 31 && bytes[1] === 139) {
-            isGz = true
-            const dcmpStrm = new Decompress((chunk) => {
-              bytes = chunk
-            })
-            dcmpStrm.push(bytes)
-            dataBuffer = bytes.buffer
-          }
-          let isNifti1 = bytes[0] === 92 && bytes[1] === 1
-          if (!isNifti1) {
-            isNifti1 = bytes[1] === 92 && bytes[0] === 1
-          }
+          const headerBuffer = await this.readFileAsync(file, 512)
+          const headerView = new Uint8Array(headerBuffer)
+
+          const isNifti1 =
+            (headerView[0] === 92 && headerView[1] === 1) || (headerView[1] === 92 && headerView[0] === 1)
+
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file)
           } else {
-            const hdr = nifti.readHeader(dataBuffer)
+            const hdr = nifti.readHeader(headerBuffer)
             if (!hdr) {
               throw new Error('could not read nifti header')
             }
+
             const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
-            let nVox3D = 1
-            for (let i = 1; i < 4; i++) {
-              if (hdr.dims[i] > 1) {
-                nVox3D *= hdr.dims[i]
-              }
-            }
-            let nFrame4D = 1
-            for (let i = 4; i < 7; i++) {
-              if (hdr.dims[i] > 1) {
-                nFrame4D *= hdr.dims[i]
-              }
-            }
+            const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
+            const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
+
             const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1)
             const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel
-            if (dataBuffer.byteLength < bytesToLoad) {
-              // response = await this.fetchPartial(url, bytesToLoad);
-              // dataBuffer = await response.arrayBuffer();
-              dataBuffer = await this.readFileAsync(file, bytesToLoad)
-              if (isGz) {
-                let bytes = new Uint8Array(dataBuffer)
-                const dcmpStrm2 = new Decompress((chunk) => {
-                  bytes = chunk
-                })
-                dcmpStrm2.push(bytes)
-                dataBuffer = bytes.buffer
-              }
-            } // load image data
-            if (dataBuffer.byteLength < bytesToLoad) {
-              // fail: e.g. incompressible data
-              throw new Error('failed to load image data (e.g. incompressible data)')
-            } else {
-              dataBuffer = dataBuffer.slice(0, bytesToLoad)
-            }
-          } // if isNifti1
+            dataBuffer = await this.readFileAsync(file, bytesToLoad)
+          }
         } else {
-          dataBuffer = await this.readFileAsync(file, limitFrames4D)
+          dataBuffer = await this.readFileAsync(file)
         }
         name = file.name
       }
@@ -3445,7 +3438,7 @@ export class NVImage {
       nvimage.fileObject = file
     } catch (err) {
       log.error(err)
-      log.error(err)
+      throw new Error('could not build NVImage')
     }
     if (nvimage === null) {
       throw new Error('could not build NVImage')
