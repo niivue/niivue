@@ -111,7 +111,7 @@ export class NVUtilities {
     }
     return mat
   } // readMatV4()
-
+  
   static b64toUint8(base64: string): Uint8Array {
     const binaryString = atob(base64)
     const length = binaryString.length
@@ -122,6 +122,7 @@ export class NVUtilities {
     return bytes
   }
 
+  
   /*
 https://gist.github.com/jonleighton/958841
 MIT LICENSE
