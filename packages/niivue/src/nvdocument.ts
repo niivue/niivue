@@ -625,55 +625,7 @@ export class NVDocument {
     // volumes
     // TODO move this to a per-volume export function in NVImage?
     if (this.volumes.length) {
-      let imageOptions = this.imageOptionsArray[0]
-      if (!imageOptions) {
-        log.debug('no image options for base image')
-        imageOptions = {
-          name: '',
-          colormap: 'gray',
-          opacity: 1.0,
-          pairedImgData: null,
-          cal_min: NaN,
-          cal_max: NaN,
-          trustCalMinMax: true,
-          percentileFrac: 0.02,
-          ignoreZeroVoxels: false,
-          useQFormNotSForm: false,
-          colormapNegative: '',
-          colormapLabel: null,
-          imageType: NVIMAGE_TYPE.NII,
-          frame4D: 0,
-          limitFrames4D: NaN,
-          // TODO the following fields were previously not included
-          url: '',
-          urlImageData: '',
-          alphaThreshold: false,
-          cal_minNeg: NaN,
-          cal_maxNeg: NaN,
-          colorbarVisible: true
-        }
-      }
-
-      // update image options on current image settings
-      imageOptions.colormap = this.volumes[0].colormap
-      imageOptions.opacity = this.volumes[0].opacity
-      imageOptions.cal_max = this.volumes[0].cal_max || NaN
-      imageOptions.cal_min = this.volumes[0].cal_min || NaN
-
-      if (imageOptions) {
-        imageOptionsArray.push(imageOptions)
-        const encodedImageBlob = NVUtilities.uint8tob64(this.volumes[0].toUint8Array())
-        data.encodedImageBlobs!.push(encodedImageBlob)
-        if (this.drawBitmap) {
-          data.encodedDrawingBlob = NVUtilities.uint8tob64(this.volumes[0].toUint8Array(this.drawBitmap))
-        }
-
-        data.imageOptionsMap!.set(this.volumes[0].id, 0)
-      } else {
-        throw new Error('image options for base layer not found')
-      }
-
-      for (let i = 1; i < this.volumes.length; i++) {
+      for (let i = 0; i < this.volumes.length; i++) {
         const volume = this.volumes[i]
         let imageOptions = this.getImageOptions(volume)
 
@@ -788,6 +740,11 @@ export class NVDocument {
       meshes.push(copyMesh)
     }
     data.meshesString = JSON.stringify(serialize(meshes))
+    // Serialize drawBitmap
+    if (this.drawBitmap) {
+      data.encodedDrawingBlob = NVUtilities.uint8tob64(this.drawBitmap)
+    }
+
     return data as ExportDocumentData
   }
 
