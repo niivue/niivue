@@ -3810,7 +3810,7 @@ export class Niivue {
 
     if (this.volumes.length > 0) {
       this.back = this.volumes[0]
-    }    
+    }
 
     for (const meshDataObject of document.meshDataObjects ?? []) {
       const meshInit = { gl: this.gl, ...meshDataObject }
@@ -3869,7 +3869,7 @@ export class Niivue {
         this.refreshDrawing()
       }
     }
-    
+
     this.updateGLVolume()
     this.drawScene()
     this.onDocumentLoaded(document)

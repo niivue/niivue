@@ -624,7 +624,7 @@ export class NVDocument {
 
     // volumes
     // TODO move this to a per-volume export function in NVImage?
-    if (this.volumes.length) {      
+    if (this.volumes.length) {
       for (let i = 0; i < this.volumes.length; i++) {
         const volume = this.volumes[i]
         let imageOptions = this.getImageOptions(volume)
