@@ -150,8 +150,8 @@
     document.getElementById("location").innerHTML =
       "&nbsp;&nbsp;" + data.string;
   }
-  function saveAsHtml() {
-    const javascript = nv1.generateLoadDocumentJavaScript("gl1", decodeURIComponent(esm));
+  async function saveAsHtml() {
+    const javascript = await nv1.generateLoadDocumentJavaScript("gl1", decodeURIComponent(esm));
     const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -418,7 +418,6 @@ div {
   var button = document.getElementById("save");
     button.onclick = saveAsHtml;
   nv1.setRadiologicalConvention(false);
-  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;  
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
 <\/script>`;
     niivue.NVUtilities.download(html, "niivue.drawing.html", "application/html");

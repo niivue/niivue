@@ -1516,6 +1516,7 @@ type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array 
 declare class NVUtilities {
     static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string;
     static readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray>;
+    static b64toUint8(base64: string): Uint8Array;
     static uint8tob64(bytes: Uint8Array): string;
     static download(content: string | ArrayBuffer, fileName: string, contentType: string): void;
     static readFileAsync(file: Blob): Promise<ArrayBuffer>;
