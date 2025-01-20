@@ -122,7 +122,6 @@ export class NVUtilities {
     return bytes
   }
 
-  
   /*
 https://gist.github.com/jonleighton/958841
 MIT LICENSE
