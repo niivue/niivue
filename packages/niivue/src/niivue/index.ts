@@ -3810,16 +3810,7 @@ export class Niivue {
 
     if (this.volumes.length > 0) {
       this.back = this.volumes[0]
-    }
-
-    const base64 = document.encodedDrawingBlob
-    if (base64) {
-      const imageOptions = document.imageOptionsArray[0]
-      const drawingBitmap = NVImage.loadFromBase64({ base64, ...imageOptions })
-      if (drawingBitmap) {
-        this.loadDrawing(drawingBitmap)
-      }
-    }
+    }    
 
     for (const meshDataObject of document.meshDataObjects ?? []) {
       const meshInit = { gl: this.gl, ...meshDataObject }
@@ -3864,6 +3855,21 @@ export class Niivue {
       }
     }
 
+    // Deserialize drawBitmap
+    this.createEmptyDrawing()
+    const drawingBase64 = document.encodedDrawingBlob
+    if (drawingBase64) {
+      const drawingBitmap = NVUtilities.b64toUint8(drawingBase64) // Convert base64 back to Uint8Array
+      if (drawingBitmap) {
+        const dims = this.back.dims
+        if (drawingBitmap.length !== dims[1] * dims[2] * dims[3]) {
+          throw new Error('drawBitmap size does not match the texture dimensions.')
+        }
+        this.drawBitmap = drawingBitmap // Set the deserialized drawBitmap
+        this.refreshDrawing()
+      }
+    }
+    
     this.updateGLVolume()
     this.drawScene()
     this.onDocumentLoaded(document)
