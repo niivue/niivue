@@ -740,6 +740,11 @@ export class NVDocument {
       meshes.push(copyMesh)
     }
     data.meshesString = JSON.stringify(serialize(meshes))
+    // Serialize drawBitmap
+    if (this.drawBitmap) {
+      data.encodedDrawingBlob = NVUtilities.uint8tob64(this.drawBitmap)
+    }
+
     return data as ExportDocumentData
   }
 
