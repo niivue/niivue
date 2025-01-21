@@ -17,9 +17,6 @@ export const SceneTabs = (): JSX.Element => {
         <Tabs.Trigger value="mesh">
           <Text size="1">Mesh</Text>
         </Tabs.Trigger>
-        <Tabs.Trigger value="options">
-          <Text size="1">Options</Text>
-        </Tabs.Trigger>
       </Tabs.List>
       <div className="flex flex-col grow w-full">
         <Tabs.Content value="general">
@@ -30,9 +27,6 @@ export const SceneTabs = (): JSX.Element => {
         </Tabs.Content>
         <Tabs.Content value="mesh">
           <MeshTab />
-        </Tabs.Content>
-        <Tabs.Content value="options">
-          <OptionsTab />
         </Tabs.Content>
       </div>
     </Tabs.Root>
