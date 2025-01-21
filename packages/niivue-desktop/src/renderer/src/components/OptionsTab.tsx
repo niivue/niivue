@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react'
-import { SketchPicker } from 'react-color'
 import { Text, Slider, Switch } from '@radix-ui/themes'
 import { AppContext } from '../App'
+import ColorPickerControl from './ColorPickerControl'
 
 const OptionsTab: React.FC = () => {
   const { nvRef } = useContext(AppContext)
@@ -12,9 +12,6 @@ const OptionsTab: React.FC = () => {
   const [crosshairColor, setCrosshairColor] = useState(nv.opts.crosshairColor)
   const [fontColor, setFontColor] = useState(nv.opts.fontColor)
   const [backgroundColor, setBackgroundColor] = useState(nv.opts.backColor)
-  const [isCrosshairPickerVisible, setIsCrosshairPickerVisible] = useState(false)
-  const [isFontPickerVisible, setIsFontPickerVisible] = useState(false)
-  const [isBackgroundPickerVisible, setIsBackgroundPickerVisible] = useState(false)
 
   const handleTextHeightChange = (value: number[]): void => {
     setTextHeight(value)
@@ -26,30 +23,6 @@ const OptionsTab: React.FC = () => {
     setShow3Dcrosshair(checked)
     nv.opts.show3Dcrosshair = checked
     nv.drawScene()
-  }
-
-  const handleCrosshairColorChange = (color: any): void => {
-    const rgbaColor = [color.rgb.r / 255, color.rgb.g / 255, color.rgb.b / 255, color.rgb.a]
-    setCrosshairColor(rgbaColor)
-    nv.opts.crosshairColor = rgbaColor
-    nv.drawScene()
-    setIsCrosshairPickerVisible(false)
-  }
-
-  const handleFontColorChange = (color: any): void => {
-    const rgbaColor = [color.rgb.r / 255, color.rgb.g / 255, color.rgb.b / 255, color.rgb.a]
-    setFontColor(rgbaColor)
-    nv.opts.fontColor = rgbaColor
-    nv.drawScene()
-    setIsFontPickerVisible(false)
-  }
-
-  const handleBackgroundColorChange = (color: any): void => {
-    const rgbaColor = [color.rgb.r / 255, color.rgb.g / 255, color.rgb.b / 255, color.rgb.a]
-    setBackgroundColor(rgbaColor)
-    nv.opts.backColor = rgbaColor
-    nv.drawScene()
-    setIsBackgroundPickerVisible(false)
   }
 
   return (
@@ -88,88 +61,37 @@ const OptionsTab: React.FC = () => {
       </div>
 
       {/* Crosshair Color Picker */}
-      <div className="flex flex-col mb-4">
-        <Text size="2" className="mb-1">
-          Crosshair Color
-        </Text>
-        <div
-          style={{
-            width: '24px',
-            height: '24px',
-            backgroundColor: `rgba(${crosshairColor[0] * 255}, ${crosshairColor[1] * 255}, ${crosshairColor[2] * 255}, ${crosshairColor[3]})`,
-            border: '1px solid #ccc',
-            cursor: 'pointer'
-          }}
-          onClick={() => setIsCrosshairPickerVisible(!isCrosshairPickerVisible)}
-        />
-        {isCrosshairPickerVisible && (
-          <SketchPicker
-            color={{
-              r: crosshairColor[0] * 255,
-              g: crosshairColor[1] * 255,
-              b: crosshairColor[2] * 255,
-              a: crosshairColor[3]
-            }}
-            onChangeComplete={handleCrosshairColorChange}
-          />
-        )}
-      </div>
+      <ColorPickerControl
+        label="Crosshair Color"
+        color={crosshairColor}
+        onChange={(color) => {
+          setCrosshairColor(color)
+          nv.opts.crosshairColor = color
+          nv.drawScene()
+        }}
+      />
 
       {/* Font Color Picker */}
-      <div className="flex flex-col mb-4">
-        <Text size="2" className="mb-1">
-          Font Color
-        </Text>
-        <div
-          style={{
-            width: '24px',
-            height: '24px',
-            backgroundColor: `rgba(${fontColor[0] * 255}, ${fontColor[1] * 255}, ${fontColor[2] * 255}, ${fontColor[3]})`,
-            border: '1px solid #ccc',
-            cursor: 'pointer'
-          }}
-          onClick={() => setIsFontPickerVisible(!isFontPickerVisible)}
-        />
-        {isFontPickerVisible && (
-          <SketchPicker
-            color={{
-              r: fontColor[0] * 255,
-              g: fontColor[1] * 255,
-              b: fontColor[2] * 255,
-              a: fontColor[3]
-            }}
-            onChangeComplete={handleFontColorChange}
-          />
-        )}
-      </div>
+      <ColorPickerControl
+        label="Font Color"
+        color={fontColor as number[]}
+        onChange={(color) => {
+          setFontColor(color)
+          nv.opts.fontColor = color
+          nv.drawScene()
+        }}
+      />
 
       {/* Background Color Picker */}
-      <div className="flex flex-col mb-4">
-        <Text size="2" className="mb-1">
-          Background Color
-        </Text>
-        <div
-          style={{
-            width: '24px',
-            height: '24px',
-            backgroundColor: `rgba(${backgroundColor[0] * 255}, ${backgroundColor[1] * 255}, ${backgroundColor[2] * 255}, ${backgroundColor[3]})`,
-            border: '1px solid #ccc',
-            cursor: 'pointer'
-          }}
-          onClick={() => setIsBackgroundPickerVisible(!isBackgroundPickerVisible)}
-        />
-        {isBackgroundPickerVisible && (
-          <SketchPicker
-            color={{
-              r: backgroundColor[0] * 255,
-              g: backgroundColor[1] * 255,
-              b: backgroundColor[2] * 255,
-              a: backgroundColor[3]
-            }}
-            onChangeComplete={handleBackgroundColorChange}
-          />
-        )}
-      </div>
+      <ColorPickerControl
+        label="Background Color"
+        color={backgroundColor}
+        onChange={(color) => {
+          setBackgroundColor(color)
+          nv.opts.backColor = color
+          nv.drawScene()
+        }}
+      />
     </div>
   )
 }
