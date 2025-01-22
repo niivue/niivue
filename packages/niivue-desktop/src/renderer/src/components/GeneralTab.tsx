@@ -1,10 +1,10 @@
 import React, { useState, useContext } from 'react'
 import { ScrollArea, Text, Switch } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'
-import { CrosshairSize } from './CrosshairSize'
 import { SliceSelection } from './SliceSelection'
 import { AppContext } from '../App'
-import ColorPickerControl from './ColorPickerControl'
+import { ColorPicker } from './ColorPicker'
+import { hexToRgba10 } from '../utils/colors'
 
 export const GeneralTab: React.FC = () => {
   const { nvRef } = useContext(AppContext)
@@ -15,21 +15,28 @@ export const GeneralTab: React.FC = () => {
   const [fontColor, setFontColor] = useState(nv.opts.fontColor)
   const [backgroundColor, setBackgroundColor] = useState(nv.opts.backColor)
 
-  const handleCrosshairColorChange = (color: number[]): void => {
-    setCrosshairColor(color)
-    nv.opts.crosshairColor = color
+  const handleCrosshairColorChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const color = e.target.value
+    const rgba = hexToRgba10(color)
+    setCrosshairColor(rgba)
+    nv.opts.crosshairColor = rgba
     nv.drawScene()
   }
 
-  const handleFontColorChange = (color: number[]): void => {
-    setFontColor(color)
-    nv.opts.fontColor = color
+  const handleFontColorChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const color = e.target.value
+    const rgba = hexToRgba10(color)
+    setFontColor(rgba)
+    nv.opts.fontColor = rgba
     nv.drawScene()
   }
 
-  const handleBackgroundColorChange = (color: number[]): void => {
-    setBackgroundColor(color)
-    nv.opts.backColor = color
+  const handleBackgroundColorChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    console.log(e.target.value)
+    const color = e.target.value
+    const rgba = hexToRgba10(color)
+    setBackgroundColor(rgba)
+    nv.opts.backColor = rgba
     nv.drawScene()
   }
 
@@ -57,18 +64,22 @@ export const GeneralTab: React.FC = () => {
           className="mr-2"
         />
       </div>
-      <Text size="2" weight="bold" className="mb-1">
-        Crosshair Color
-      </Text>
-      <ColorPickerControl color={crosshairColor} onChange={handleCrosshairColorChange} />
-      <Text size="2" weight="bold" className="mb-1">
-        Font Color
-      </Text>
-      <ColorPickerControl color={fontColor as number[]} onChange={handleFontColorChange} />
-      <Text size="2" weight="bold" className="mb-1">
-        Background Color
-      </Text>
-      <ColorPickerControl color={backgroundColor} onChange={handleBackgroundColorChange} />
+      <ColorPicker
+        label="Crosshair Color"
+        colorRGBA10={crosshairColor}
+        onChange={handleCrosshairColorChange}
+      />
+
+      {/* font color */}
+      <ColorPicker label="Font Color" colorRGBA10={fontColor} onChange={handleFontColorChange} />
+
+      {/* background color */}
+      <ColorPicker
+        label="Background Color"
+        colorRGBA10={backgroundColor}
+        onChange={handleBackgroundColorChange}
+      />
+
       <Text size="2" weight="bold" className="mb-1">
         2D Zoom
       </Text>
