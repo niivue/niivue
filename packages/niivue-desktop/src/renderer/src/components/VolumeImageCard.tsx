@@ -1,14 +1,7 @@
 import { useEffect, useState, useContext } from 'react'
-import {
-  ContextMenu,
-  Card,
-  Text,
-  Checkbox,
-  Select,
-  Popover,
-  Slider,
-  TextField
-} from '@radix-ui/themes'
+import { ContextMenu, Card, Text, Select, Popover, Slider, TextField } from '@radix-ui/themes'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { IconButton } from '@mui/material'
 import { NVImage } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '@renderer/App'
@@ -36,15 +29,12 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
   }, [image.name])
 
   useEffect(() => {
-    // if (nv.volumes.length > 0) {
     setColormaps(nv.colormaps())
-    // }
   }, [nv])
 
   const handleColormapChange = (value: string): void => {
     const id = image.id
     setColormap(value)
-    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setColormap(id, value)
     })
@@ -59,7 +49,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     const volIdx = nv.getVolumeIndexByID(id)
     const vol = nv.volumes[volIdx]
     const [min, max] = value
-    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       vol.cal_min = min
       vol.cal_max = max
@@ -83,22 +72,20 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     const value = e[0]
     setOpacity(value)
     const volIdx = nv.getVolumeIndexByID(image.id)
-    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setOpacity(volIdx, value)
       nv.updateGLVolume()
     })
   }
 
-  const handleVisibilityChange = (value: boolean): void => {
+  const handleVisibilityToggle = (): void => {
     const id = image.id
     const volIdx = nv.getVolumeIndexByID(id)
-    const checked = value
-    setVisible(checked)
-    setIsOpacityDisabled(!checked)
-    // request animation frame removes the lag between react state rerenders and niivue updates
+    const newVisibility = !visible
+    setVisible(newVisibility)
+    setIsOpacityDisabled(!newVisibility)
     requestAnimationFrame(() => {
-      nv.setOpacity(volIdx, checked ? 1 : 0)
+      nv.setOpacity(volIdx, newVisibility ? 1 : 0)
       nv.updateGLVolume()
     })
   }
@@ -122,7 +109,9 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
-        <Checkbox checked={visible} onCheckedChange={handleVisibilityChange} />
+        <IconButton onClick={handleVisibilityToggle}>
+          {visible ? <Visibility /> : <VisibilityOff />}
+        </IconButton>
       </div>
       <div className="flex flex-row justify-between gap-2">
         <Popover.Root>
@@ -143,9 +132,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
                 >
                   <Select.Trigger className="truncate w-3/4 min-w-3/4" />
                   <Select.Content className="truncate">
-                    {/* <Select.Item value="gray">gra</Select.Item>
-                  <Select.Item value="red">red</Select.Item>
-                  <Select.Item value="blue">blue</Select.Item> */}
                     {colormaps.map((cmap, idx) => (
                       <Select.Item key={idx} value={cmap}>
                         {cmap}
@@ -156,7 +142,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
               </div>
 
               <Text size="1">Intensity range</Text>
-              {/* slider for intensity range */}
               <div className="flex gap-1 items-center">
                 <TextField.Root
                   onChange={handleMinChange}
@@ -184,7 +169,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
               </div>
 
               <Text size="1">Opacity</Text>
-              {/* slider for volume alpha */}
               <div className="flex gap-1 items-center">
                 <Slider
                   size="1"
@@ -192,12 +176,11 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
                   max={1}
                   step={0.1}
                   defaultValue={[1.0]}
-                  value={opacity[0]}
+                  value={opacity}
                   onValueChange={handleOpacityChange}
                   disabled={isOpacityDisabled}
                 />
               </div>
-
             </div>
           </Popover.Content>
         </Popover.Root>
