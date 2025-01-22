@@ -37,15 +37,12 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
   }, [image.name])
 
   useEffect(() => {
-    // if (nv.volumes.length > 0) {
     setColormaps(nv.colormaps())
-    // }
   }, [nv])
 
   const handleColormapChange = (value: string): void => {
     const id = image.id
     setColormap(value)
-    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setColormap(id, value)
     })
@@ -60,7 +57,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     const volIdx = nv.getVolumeIndexByID(id)
     const vol = nv.volumes[volIdx]
     const [min, max] = value
-    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       vol.cal_min = min
       vol.cal_max = max
@@ -84,7 +80,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     const value = e[0]
     setOpacity(value)
     const volIdx = nv.getVolumeIndexByID(image.id)
-    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setOpacity(volIdx, value)
       nv.updateGLVolume()
@@ -159,7 +154,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
               </div>
 
               <Text size="1">Intensity range</Text>
-              {/* slider for intensity range */}
               <div className="flex gap-1 items-center">
                 <TextField.Root
                   onChange={handleMinChange}
@@ -187,7 +181,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
               </div>
 
               <Text size="1">Opacity</Text>
-              {/* slider for volume alpha */}
               <div className="flex gap-1 items-center">
                 <Slider
                   size="1"
@@ -195,7 +188,7 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
                   max={1}
                   step={0.1}
                   defaultValue={[1.0]}
-                  value={opacity[0]}
+                  value={opacity}
                   onValueChange={handleOpacityChange}
                   disabled={isOpacityDisabled}
                 />
