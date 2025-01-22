@@ -1,21 +1,24 @@
 import React, { useEffect, useState, useContext } from 'react'
-import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
-import { IconButton } from '@mui/material'
+import { ContextMenu, Card, Text, Checkbox, Popover, Select, Button } from '@radix-ui/themes'
 import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '../App'
 import { MeshLayerCard } from './MeshLayerCard'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { IconButton } from '@mui/material'
+
 const electron = window.electron
 
 interface MeshImageCardProps {
   image: NVMesh
   onRemoveMesh: (mesh: NVMesh) => void
+  // meshLayers: NVMeshLayer[]
 }
 
 export function MeshImageCard({
   image,
   onRemoveMesh
+  // meshLayers
 }: MeshImageCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [visible, setVisible] = useState<boolean>(true)
@@ -27,6 +30,7 @@ export function MeshImageCard({
   useEffect(() => {
     electron.ipcRenderer.on('openMeshFileDialogResult', async (_, path) => {
       console.log('openMeshFileDialogResult', path)
+      // // ICBM152.lh.motor.mz3 mesh
       const layerBase64 = await electron.ipcRenderer.invoke('loadFromFile', path)
       const layer = {
         url: path,
@@ -36,8 +40,11 @@ export function MeshImageCard({
         base64: layerBase64
       }
       await NVMesh.loadLayer(layer, image)
+      // patch for missing url and name properties in the NVMeshLayer once it is added to the mesh object.
+      // TODO: fix this in Niivue
       image.layers[image.layers.length - 1].url = path
       image.layers[image.layers.length - 1].name = path
+      // update the mesh and set meshes
       setMeshes((prev) => {
         const idx = prev.findIndex((m) => m.id === image.id)
         prev[idx] = image
@@ -68,7 +75,9 @@ export function MeshImageCard({
   const handleShaderChange = (value: string): void => {
     const id = image.id
     setShader(value)
+    // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
+      //@ts-expect-error - id is a string, but niivue expects a number. TODO: fix this type error in Niivue
       nv.setMeshShader(id, value)
     })
   }
@@ -110,6 +119,7 @@ export function MeshImageCard({
             </Popover.Trigger>
             <Popover.Content side="right">
               <div className="flex flex-col gap-2 width-[200px] min-w-[200px]">
+                {/* button to load layer */}
                 <Button
                   className="w-full"
                   onClick={handleLoadLayer}
