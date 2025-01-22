@@ -26,20 +26,6 @@ export function Sidebar({ onRemoveMesh, onRemoveVolume }: SidebarProps): JSX.Ele
           <MeshImageCard key={idx} image={mesh} onRemoveMesh={onRemoveMesh} />
         ))}
       </ScrollArea>
-      {/* <ScrollArea style={{ height: '50%', paddingRight: '10px' }}>
-        <Text size="2" weight="bold" className="mb-2">
-          Crosshair size
-        </Text>
-        <CrosshairSize />
-        <Text size="2" weight="bold" className="mb-2">
-          Move crosshair
-        </Text>
-        <SliceSelection />
-        <Text size="2" weight="bold" className="mb-2">
-          Zoom
-        </Text>
-        <ZoomSlider />
-      </ScrollArea> */}
       <SceneTabs />
     </div>
   )

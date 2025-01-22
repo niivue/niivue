@@ -146,9 +146,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
                 >
                   <Select.Trigger className="truncate w-3/4 min-w-3/4" />
                   <Select.Content className="truncate">
-                    {/* <Select.Item value="gray">gra</Select.Item>
-                  <Select.Item value="red">red</Select.Item>
-                  <Select.Item value="blue">blue</Select.Item> */}
                     {colormaps.map((cmap, idx) => (
                       <Select.Item key={idx} value={cmap}>
                         {cmap}
@@ -200,7 +197,6 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
                   disabled={isOpacityDisabled}
                 />
               </div>
-
             </div>
           </Popover.Content>
         </Popover.Root>
