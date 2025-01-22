@@ -4,6 +4,9 @@ import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '../App'
 import { MeshLayerCard } from './MeshLayerCard'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { IconButton } from '@mui/material'
+
 const electron = window.electron
 
 interface MeshImageCardProps {
@@ -58,14 +61,13 @@ export function MeshImageCard({
     setDisplayName(baseName(image.name))
   }, [image.name])
 
-  const handleVisibilityChange = (value: boolean): void => {
+  const handleVisibilityChange = (): void => {
     const id = image.id
     const volIdx = nv.getMeshIndexByID(id)
-    const checked = value
-    setVisible(checked)
-    // request animation frame removes the lag between react state rerenders and niivue updates
+    const newVisibility = !visible
+    setVisible(newVisibility)
     requestAnimationFrame(() => {
-      nv.meshes[volIdx].visible = checked
+      nv.meshes[volIdx].visible = newVisibility
       nv.updateGLVolume()
     })
   }
@@ -104,7 +106,9 @@ export function MeshImageCard({
               </ContextMenu.Item>
             </ContextMenu.Content>
           </ContextMenu.Root>
-          <Checkbox checked={visible} onCheckedChange={handleVisibilityChange} />
+          <IconButton onClick={handleVisibilityChange}>
+            {visible ? <Visibility /> : <VisibilityOff />}
+          </IconButton>
         </div>
         <div className="flex flex-row justify-between gap-2">
           <Popover.Root>

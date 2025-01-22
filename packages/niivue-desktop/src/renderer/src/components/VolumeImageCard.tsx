@@ -12,6 +12,8 @@ import {
 import { NVImage } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '@renderer/App'
+import { IconButton } from '@mui/material'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
 
 interface VolumeImageCardProps {
   image: NVImage
@@ -90,15 +92,14 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
     })
   }
 
-  const handleVisibilityChange = (value: boolean): void => {
+  const handleVisibilityToggle = (): void => {
     const id = image.id
     const volIdx = nv.getVolumeIndexByID(id)
-    const checked = value
-    setVisible(checked)
-    setIsOpacityDisabled(!checked)
-    // request animation frame removes the lag between react state rerenders and niivue updates
+    const newVisibility = !visible
+    setVisible(newVisibility)
+    setIsOpacityDisabled(!newVisibility)
     requestAnimationFrame(() => {
-      nv.setOpacity(volIdx, checked ? 1 : 0)
+      nv.setOpacity(volIdx, newVisibility ? 1 : 0)
       nv.updateGLVolume()
     })
   }
@@ -122,7 +123,9 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
-        <Checkbox checked={visible} onCheckedChange={handleVisibilityChange} />
+        <IconButton onClick={handleVisibilityToggle}>
+          {visible ? <Visibility /> : <VisibilityOff />}
+        </IconButton>
       </div>
       <div className="flex flex-row justify-between gap-2">
         <Popover.Root>
