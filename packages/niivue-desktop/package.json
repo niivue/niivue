@@ -33,8 +33,7 @@
     "@niivue/dcm2niix": "^1.0.0",
     "@niivue/niimath": "^0.3.0",
     "@radix-ui/themes": "^3.1.6",
-    "electron-updater": "^6.1.7",
-    "react-color": "^2.19.3"
+    "electron-updater": "^6.1.7"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
