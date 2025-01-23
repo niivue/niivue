@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext } from 'react'
-import { ContextMenu, Card, Text, Checkbox, Popover, Select } from '@radix-ui/themes'
+import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
+import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '../App'
@@ -32,10 +33,10 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): J
     if (image.name) setDisplayName(baseName(image.name))
   }, [image.name])
 
-  const handleVisibilityChange = (value: boolean): void => {
-    const checked = value
-    const opacity = checked ? 1 : 0
-    setVisible(checked)
+  const handleVisibilityChange = (): void => {
+    const newVisibility = !visible
+    setVisible(newVisibility)
+    const opacity = newVisibility ? 1 : 0
     // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
       nv.setMeshLayerProperty(parentMesh.id, idx, 'opacity', opacity)
@@ -76,7 +77,9 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): J
             <ContextMenu.Item onClick={handleRemove}>Remove</ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
-        <Checkbox checked={visible} onCheckedChange={handleVisibilityChange} />
+        <Button onClick={handleVisibilityChange}>
+          {visible ? <EyeOpenIcon /> : <EyeNoneIcon />}
+        </Button>
       </div>
       <div className="flex flex-row justify-between gap-2">
         <Popover.Root>

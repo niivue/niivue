@@ -42,3 +42,9 @@ packages/*/blob-report/
 packages/*/playwright/.cache/
 packages/*/playwright/e2e/index.js
 packages/*/tests/index.js
+coverage
+build
+dist
+playwright/e2e/*.js
+playwright-report
+test-results
