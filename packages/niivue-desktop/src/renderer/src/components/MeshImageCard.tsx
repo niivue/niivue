@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useContext } from 'react'
-import { ContextMenu, Card, Text, Checkbox, Popover, Select, Button } from '@radix-ui/themes'
+import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '../App'
 import { MeshLayerCard } from './MeshLayerCard'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
-import { IconButton } from '@mui/material'
+import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 const electron = window.electron
 
@@ -106,9 +105,9 @@ export function MeshImageCard({
               </ContextMenu.Item>
             </ContextMenu.Content>
           </ContextMenu.Root>
-          <IconButton onClick={handleVisibilityChange}>
-            {visible ? <Visibility /> : <VisibilityOff />}
-          </IconButton>
+          <Button onClick={handleVisibilityChange}>
+            {visible ? <EyeOpenIcon /> : <EyeNoneIcon />}
+          </Button>
         </div>
         <div className="flex flex-row justify-between gap-2">
           <Popover.Root>

@@ -1,9 +1,9 @@
 import { useEffect, useState, useContext } from 'react'
 import {
+  Button,
   ContextMenu,
   Card,
   Text,
-  Checkbox,
   Select,
   Popover,
   Slider,
@@ -12,8 +12,7 @@ import {
 import { NVImage } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '@renderer/App'
-import { IconButton } from '@mui/material'
-import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 interface VolumeImageCardProps {
   image: NVImage
@@ -123,9 +122,9 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
-        <IconButton onClick={handleVisibilityToggle}>
-          {visible ? <Visibility /> : <VisibilityOff />}
-        </IconButton>
+        <Button onClick={handleVisibilityToggle}>
+          {visible ? <EyeOpenIcon /> : <EyeNoneIcon />}
+        </Button>
       </div>
       <div className="flex flex-row justify-between gap-2">
         <Popover.Root>
