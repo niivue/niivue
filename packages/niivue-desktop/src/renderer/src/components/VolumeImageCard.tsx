@@ -122,8 +122,12 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
-        <Button onClick={handleVisibilityToggle}>
-          {visible ? <EyeOpenIcon /> : <EyeNoneIcon />}
+        <Button onClick={handleVisibilityToggle} variant="ghost" color="gray">
+          {visible ? (
+            <EyeOpenIcon width="20" height="20" />
+          ) : (
+            <EyeNoneIcon width="20" height="20" />
+          )}
         </Button>
       </div>
       <div className="flex flex-row justify-between gap-2">

@@ -77,8 +77,12 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): J
             <ContextMenu.Item onClick={handleRemove}>Remove</ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
-        <Button onClick={handleVisibilityChange}>
-          {visible ? <EyeOpenIcon /> : <EyeNoneIcon />}
+        <Button onClick={handleVisibilityChange} variant="ghost" color="gray">
+          {visible ? (
+            <EyeOpenIcon width="20" height="20" />
+          ) : (
+            <EyeNoneIcon width="20" height="20" />
+          )}
         </Button>
       </div>
       <div className="flex flex-row justify-between gap-2">
