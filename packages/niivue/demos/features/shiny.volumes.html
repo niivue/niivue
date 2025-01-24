@@ -91,7 +91,7 @@
       }
       var volumeList1 = [
         { url: "../images/mni152.nii.gz", cal_min: 30, cal_max: 80 },
-        {url: "../images/spmMotor.nii.gz",cal_min: 3,cal_max: 8,colormap: "warm"}
+        {url: "../images/spmMotor.nii.gz",cal_min: 3, cal_max: 8,colormap: "warm"}
       ]
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML =
@@ -108,13 +108,13 @@
       nv1.attachTo("gl1")
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
-      nv1.setVolumeRenderIllumination(1.0)
       nv1.setClipPlane([0.3, 180, 20])
       await nv1.loadVolumes(volumeList1)
       await nv1.loadMeshes([
         { url: "../images/connectome.jcon" },
         { url: "../images/dpsv.trx", rgba255: [0, 142, 0, 255] },
       ])
+      nv1.setVolumeRenderIllumination(1.0)
       matCaps.dispatchEvent(new Event("change"))
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
       nv1.graph.autoSizeMultiplanar = true
