@@ -772,6 +772,7 @@ export class Niivue {
   get isAlphaClipDark(): boolean {
     return this.document.opts.isAlphaClipDark
   }
+
   set isAlphaClipDark(newVal) {
     this.document.opts.isAlphaClipDark = newVal
   }
