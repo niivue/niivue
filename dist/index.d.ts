@@ -698,6 +698,7 @@ type NVConfigOptions = {
     measureTextColor: number[];
     measureLineColor: number[];
     measureTextHeight: number;
+    isAlphaClipDark: boolean;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -1781,7 +1782,6 @@ declare class Niivue {
     backgroundMasksOverlays: number;
     overlayOutlineWidth: number;
     overlayAlphaShader: number;
-    isAlphaClipDark: boolean;
     position?: vec3;
     extentsMin?: vec3;
     extentsMax?: vec3;
@@ -2012,6 +2012,8 @@ declare class Niivue {
     get opts(): NVConfigOptions;
     get sliceMosaicString(): string;
     set sliceMosaicString(newSliceMosaicString: string);
+    get isAlphaClipDark(): boolean;
+    set isAlphaClipDark(newVal: boolean);
     mediaUrlMap: Map<NVImage | NVMesh, string>;
     initialized: boolean;
     currentDrawUndoBitmap: number;
