@@ -7,19 +7,17 @@ import { AppContext } from '../App'
 import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
 import { NVConfigOptions } from '@niivue/niivue'
-import '../styles/GeneralTab.css'
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
 
   const [show3Dcrosshair, setShow3Dcrosshair] = useState<boolean>(nv.opts.show3Dcrosshair)
-  const [crosshairColor, setCrosshairColor] = useState<number[]>(nv.opts.crosshairColor)
+  const [crosshairColor, setCrosshairColor] = useState<number[]>(Array.from(nv.opts.crosshairColor))
   const [fontColor, setFontColor] = useState<number[]>(Array.from(nv.opts.fontColor))
-  const [backgroundColor, setBackgroundColor] = useState<number[]>(nv.opts.backColor)
+  const [backgroundColor, setBackgroundColor] = useState<number[]>(Array.from(nv.opts.backColor))
   const [isAlphaClipDark, setIsAlphaClipDark] = useState<boolean>(nv.opts.isAlphaClipDark)
 
-  // Define a type-safe utility function for updating options
   const updateOption = <K extends keyof NVConfigOptions>(
     optionKey: K,
     value: NVConfigOptions[K]
@@ -52,20 +50,20 @@ export const GeneralTab: React.FC = (): JSX.Element => {
 
   return (
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>
-      <Accordion.Root type="multiple" defaultValue={[]}>
+      <Accordion.Root type="multiple" defaultValue={[]} className="w-full">
         {/* Crosshair Settings */}
-        <Accordion.Item value="crosshair-settings">
+        <Accordion.Item value="crosshair-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="accordion-trigger">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
               <Text size="2" weight="bold">
                 Crosshair Settings
               </Text>
-              <span className="accordion-indicator" aria-hidden="true">
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
                 ▼
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Content>
+          <Accordion.Content className="px-4 py-2">
             <SliceSelection />
             <div className="flex items-center mb-4">
               <Text size="2" weight="bold" className="mr-2">
@@ -85,18 +83,18 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Font Settings */}
-        <Accordion.Item value="font-settings">
+        <Accordion.Item value="font-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="accordion-trigger">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
               <Text size="2" weight="bold">
                 Font Settings
               </Text>
-              <span className="accordion-indicator" aria-hidden="true">
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
                 ▼
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Content>
+          <Accordion.Content className="px-4 py-2">
             <ColorPicker
               label="Font Color"
               colorRGBA10={fontColor}
@@ -106,18 +104,18 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Background Settings */}
-        <Accordion.Item value="background-settings">
+        <Accordion.Item value="background-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="accordion-trigger">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
               <Text size="2" weight="bold">
                 Background Settings
               </Text>
-              <span className="accordion-indicator" aria-hidden="true">
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
                 ▼
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Content>
+          <Accordion.Content className="px-4 py-2">
             <ColorPicker
               label="Background Color"
               colorRGBA10={backgroundColor}
@@ -136,18 +134,18 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Zoom Settings */}
-        <Accordion.Item value="zoom-settings">
+        <Accordion.Item value="zoom-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="accordion-trigger">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
               <Text size="2" weight="bold">
                 Zoom Settings
               </Text>
-              <span className="accordion-indicator" aria-hidden="true">
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
                 ▼
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Content>
+          <Accordion.Content className="px-4 py-2">
             <ZoomSlider />
           </Accordion.Content>
         </Accordion.Item>
