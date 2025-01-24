@@ -404,7 +404,6 @@ export class Niivue {
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
-  isAlphaClipDark = false
   position?: vec3
   extentsMin?: vec3
   extentsMax?: vec3
@@ -768,6 +767,13 @@ export class Niivue {
 
   set sliceMosaicString(newSliceMosaicString: string) {
     this.document.opts.sliceMosaicString = newSliceMosaicString
+  }
+
+  get isAlphaClipDark(): boolean {
+    return this.document.opts.isAlphaClipDark
+  }
+  set isAlphaClipDark(newVal) {
+    this.document.opts.isAlphaClipDark = newVal
   }
 
   mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
