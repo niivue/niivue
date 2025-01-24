@@ -1,0 +1,23 @@
+.accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.accordion-trigger:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.accordion-indicator {
+  transition: transform 0.2s ease;
+}
+
+[data-state='open'] > .accordion-trigger .accordion-indicator {
+  transform: rotate(180deg);
+}
