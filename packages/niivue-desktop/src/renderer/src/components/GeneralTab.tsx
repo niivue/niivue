@@ -7,6 +7,7 @@ import { AppContext } from '../App'
 import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
 import { NVConfigOptions } from '@niivue/niivue'
+import '../styles/GeneralTab.css'
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -55,10 +56,13 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         {/* Crosshair Settings */}
         <Accordion.Item value="crosshair-settings">
           <Accordion.Header>
-            <Accordion.Trigger>
+            <Accordion.Trigger className="accordion-trigger">
               <Text size="2" weight="bold">
                 Crosshair Settings
               </Text>
+              <span className="accordion-indicator" aria-hidden="true">
+                ▼
+              </span>
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content>
@@ -83,10 +87,13 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         {/* Font Settings */}
         <Accordion.Item value="font-settings">
           <Accordion.Header>
-            <Accordion.Trigger>
+            <Accordion.Trigger className="accordion-trigger">
               <Text size="2" weight="bold">
                 Font Settings
               </Text>
+              <span className="accordion-indicator" aria-hidden="true">
+                ▼
+              </span>
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content>
@@ -101,10 +108,13 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         {/* Background Settings */}
         <Accordion.Item value="background-settings">
           <Accordion.Header>
-            <Accordion.Trigger>
+            <Accordion.Trigger className="accordion-trigger">
               <Text size="2" weight="bold">
                 Background Settings
               </Text>
+              <span className="accordion-indicator" aria-hidden="true">
+                ▼
+              </span>
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content>
@@ -128,10 +138,13 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         {/* Zoom Settings */}
         <Accordion.Item value="zoom-settings">
           <Accordion.Header>
-            <Accordion.Trigger>
+            <Accordion.Trigger className="accordion-trigger">
               <Text size="2" weight="bold">
                 Zoom Settings
               </Text>
+              <span className="accordion-indicator" aria-hidden="true">
+                ▼
+              </span>
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content>
