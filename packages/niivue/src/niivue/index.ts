@@ -1,5 +1,4 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
-import { Dcm2niix } from '@niivue/dcm2niix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
@@ -90,14 +89,7 @@ import {
   LabelAnchorFlag
 } from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
-import {
-  NVImage,
-  NVImageFromUrlOptions,
-  NVIMAGE_TYPE,
-  NiiDataType,
-  NiiIntentCode,
-  ImageFromUrlOptions
-} from '../nvimage/index.js'
+import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { NVMeshUtilities } from '../nvmesh-utilities.js'
 import {
@@ -2067,7 +2059,7 @@ export class Niivue {
   //             console.log(allFileObjects)
   //             let dcm2niix = new Dcm2niix()
   //             await dcm2niix.init()
-  //             const resultFileList = await dcm2niix.input(allFileObjects).run() 
+  //             const resultFileList = await dcm2niix.input(allFileObjects).run()
   //             console.log(resultFileList)
   //             for (let i = 0; i < resultFileList.length; i++) {
   //               // if file does not end in .nii or .nii.gz, skip.
