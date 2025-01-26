@@ -71,6 +71,7 @@
         NVMeshLoaders,
         SHOW_RENDER,
       } from "./niivue/index.ts"
+      import { Dcm2niix } from "@niivue/dcm2niix"
 const fragMeshGridShader = `#version 300 es
 precision highp int;
 precision highp float;
@@ -159,30 +160,78 @@ void main() {
   })
   nv1.setSliceType(nv1.sliceTypeRender)
   nv1.attachTo("gl1")
-  var meshLayersList1 = [
-    {
-      url: "../demos/images/lh.curv",
-      colormap: "gray",
-      cal_min: 0.3,
-      cal_max: 0.5,
-      opacity: 1,
-    },
-    { url: "../demos/images/boggle.lh.annot", colormap: "rocket", opacity: 0.5 },
-    {
-      url: "../demos/images/pval.LH.nii.gz",
-      cal_min: 25,
-      cal_max: 35.0,
-      opacity: 0.9,
-    },
-  ]
-  await nv1.loadMeshes([
-    {
-      url: "../demos/images/lh.pial",
-      rgba255: [255, 255, 255, 255],
-      layers: meshLayersList1,
-    },
-    {url: "../demos/images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
+
+  const dicomLoader = async (data) => {
+    const dcm2niix = new Dcm2niix()
+    await dcm2niix.init()
+    // if data is an ArrayBuffer, convert it to a File object
+    let returnedFiles = []
+    if (data instanceof ArrayBuffer) {
+      const file = new File([data], "input.dcm", { type: "application/octet-stream" })
+      returnedFiles = await dcm2niix.input([file]).run()
+    } // else if data is an array of array buffers, only take the first
+    else if (Array.isArray(data) && data.length > 0) {
+      // check if the first item is an ArrayBuffer
+      const files = []
+      if (data[0] instanceof ArrayBuffer) {
+        // loop over all items and conver them to file objects
+        for (let i = 0; i < data.length; i++) {
+          const file = new File([data[i]], `input_${i}.dcm`, { type: "application/octet-stream" })
+          files.push(file)
+        }
+        returnedFiles = await dcm2niix.input(files).run()
+      } // else if data[0] is already a file, just use them as is
+      else {
+        returnedFiles = await dcm2niix.input(data).run()
+      }
+    }
+    const niiFiles = []
+    // filter the returned files to only include those that end in .nii or .nii.gz
+    for (let i = 0; i < returnedFiles.length; i++) {
+      const file = returnedFiles[i]
+      if (file.name.endsWith('.nii') || file.name.endsWith('.nii.gz')) {
+        niiFiles.push(file)
+      }
+    }
+    // return the first nifti file as an ArrayBuffer
+    const niiFile = niiFiles[0]
+    // read the nifti file as an ArrayBuffer and return it
+    const niiArrayBuffer = await niiFile.arrayBuffer()
+    return niiArrayBuffer
+  }
+
+  nv1.useLoader(
+    dicomLoader,
+    'dcm',
+    'nii'
+  )
+  nv1.loadImages([
+    { url: "../demos/images/enh.dcm"},
   ])
+  // var meshLayersList1 = [
+  //   {
+  //     url: "../demos/images/lh.curv",
+  //     colormap: "gray",
+  //     cal_min: 0.3,
+  //     cal_max: 0.5,
+  //     opacity: 1,
+  //   },
+  //   { url: "../demos/images/boggle.lh.annot", colormap: "rocket", opacity: 0.5 },
+  //   {
+  //     url: "../demos/images/pval.LH.nii.gz",
+  //     cal_min: 25,
+  //     cal_max: 35.0,
+  //     opacity: 0.9,
+  //   },
+  // ]
+  // await nv1.loadMeshes([
+  //   {
+  //     url: "../demos/images/lh.pial",
+  //     rgba255: [255, 255, 255, 255],
+  //     layers: meshLayersList1,
+  //   },
+  //   {url: "../demos/images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
+  // ])
   let cmaps = nv1.meshShaderNames()
   let cmapEl = document.getElementById("shaders")
   for (let i = 0; i < cmaps.length; i++) {

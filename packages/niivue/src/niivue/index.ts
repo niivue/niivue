@@ -2034,58 +2034,72 @@ export class Niivue {
     }
   }
 
-  // readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
-  //   const reader = directory.createReader()
-  //   let allEntiresInDir: FileSystemEntry[] = []
-  //   const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
-  //     const allFileObects: File[] = []
-  //     // https://stackoverflow.com/a/53113059
-  //     const getFile = async (fileEntry: FileSystemFileEntry): Promise<File> => {
-  //       return new Promise((resolve, reject) => fileEntry.file(resolve, reject))
-  //     }
-  //     for (let i = 0; i < fileSystemEntries.length; i++) {
-  //       allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
-  //     }
-  //     return allFileObects
-  //   }
-  //   const readEntries = (): void => {
-  //     reader.readEntries((entries) => {
-  //       if (entries.length) {
-  //         allEntiresInDir = allEntiresInDir.concat(entries)
-  //         readEntries()
-  //       } else {
-  //         getFileObjects(allEntiresInDir)
-  //           .then(async (allFileObjects) => {
-  //             console.log(allFileObjects)
-  //             let dcm2niix = new Dcm2niix()
-  //             await dcm2niix.init()
-  //             const resultFileList = await dcm2niix.input(allFileObjects).run()
-  //             console.log(resultFileList)
-  //             for (let i = 0; i < resultFileList.length; i++) {
-  //               // if file does not end in .nii or .nii.gz, skip.
-  //               // This is to avoid loading files that are not nifti (e.g. json, bval, bvec)
-  //               if (!resultFileList[i].name.endsWith('.nii') && !resultFileList[i].name.endsWith('.nii.gz')) {
-  //                 continue
-  //               }
-  //               const niiImage = await NVImage.loadFromFile({
-  //                 file: resultFileList[i],
-  //                 name: resultFileList[i].name,
-  //                 imageType: NVIMAGE_TYPE.NII
-  //               })
-  //               this.addVolume(niiImage)
-  //             }
-  //             // null dcm2niix instance to free up memory after wasm use
-  //             dcm2niix = null
-  //           })
-  //           .catch((e) => {
-  //             throw e
-  //           })
-  //       }
-  //     })
-  //   }
-  //   readEntries()
-  //   return allEntiresInDir
-  // }
+  async traverseFileTree(item, path = '', fileArray): Promise<File[]> {
+    return new Promise((resolve) => {
+      if (item.isFile) {
+        item.file(file => {
+          file.fullPath = path + file.name; 
+          // IMPORTANT: _webkitRelativePath is required for dcm2niix to work.
+          // We need to add this property so we can parse multiple directories correctly.
+          // the "webkitRelativePath" property on File objects is read-only, so we can't set it directly, hence the underscore.
+          file._webkitRelativePath = path + file.name;
+          fileArray.push(file);
+          resolve(fileArray)
+        });
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        const readAllEntries = () => {
+          dirReader.readEntries(entries => {
+            if (entries.length > 0) {
+              const promises = [];
+              for (const entry of entries) {
+                promises.push(this.traverseFileTree(entry, path + item.name + '/', fileArray));
+              }
+              Promise.all(promises).then(readAllEntries);
+            } else {
+              resolve(fileArray);
+            }
+          });
+        };
+        readAllEntries();
+      }
+    });
+  }
+
+  readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
+    const reader = directory.createReader()
+    let allEntiresInDir: FileSystemEntry[] = []
+    const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
+      const allFileObects: File[] = []
+      // https://stackoverflow.com/a/53113059
+      const getFile = async (fileEntry: FileSystemFileEntry): Promise<File> => {
+        return new Promise((resolve, reject) => fileEntry.file(resolve, reject))
+      }
+      for (let i = 0; i < fileSystemEntries.length; i++) {
+        allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
+        console.log(allFileObects)
+      }
+      return allFileObects
+    }
+    const readEntries = (): void => {
+      reader.readEntries((entries) => {
+        if (entries.length) {
+          allEntiresInDir = allEntiresInDir.concat(entries)
+          readEntries()
+        } else {
+          getFileObjects(allEntiresInDir)
+            .then(async (allFileObjects) => {
+              console.log(allFileObjects)
+            })
+            .catch((e) => {
+              throw e
+            })
+        }
+      })
+    }
+    readEntries()
+    return allEntiresInDir
+  }
 
   /**
    * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
@@ -2163,6 +2177,21 @@ export class Niivue {
   })
 
   */
+
+  // interface LoaderMap {
+  //   [key: string]: {
+  //     loader: LoaderFunction;
+  //     toExt: string;
+  //   };
+  // }
+  
+  
+  
+  // Example usage:
+  // const loaderMap: LoaderMap = {
+  //   'TXT': { loader: (file: File) => file.text(), toExt: 'json' }
+  // };
+  // loader can either be a function that takes a file or ArrayBuffer, or the async version of that.  
   useLoader(loader: unknown, fileExt: string, toExt: string): void {
     this.loaders = {
       ...this.loaders,
@@ -2173,6 +2202,23 @@ export class Niivue {
     }
   }
 
+  getLoader(fileExt: string): unknown {
+    return this.loaders[fileExt.toUpperCase()].loader
+  }
+
+  // dicom loading is a special case because it can take a list
+  // of files (e.g. from a user supplied DICOM directory) or a single file.
+  // Our preferred DICOM loader is the WASM port of dcm2niix (implemented in a separate niivue loader module).
+  // useDicomLoader(loader: unknown, toExt: string) {
+  //   this.loaders = {
+  //     ...this.loaders,
+  //     ['DCM']: {
+  //       loader,
+  //       toExt,
+  //     },
+  //   }
+  // }
+
   // not included in public docs
   dropListener(e: DragEvent): void {
     e.stopPropagation()
@@ -2182,6 +2228,7 @@ export class Niivue {
       return
     }
     const urlsToLoad: string[] = []
+    const files = []
     const dt = e.dataTransfer
     if (!dt) {
       return
@@ -2323,6 +2370,28 @@ export class Niivue {
           } else if (entry.isDirectory) {
             // TODO: re-implement directory loading (assuming dicoms) using external dicom loader via useLoader
             // this.readDirectory(entry as FileSystemDirectoryEntry)
+            this.traverseFileTree(entry, '', files)
+            .then((files) => {
+              // assume directories are only used for dicom loading.
+              // Get the loader registered for DCM files and call it
+              // const loader = this.loaders['DCM']
+              const loader = this.getLoader('dcm')
+              // @ts-expect-error - loader
+              loader(files)
+                .then((firstFile) => {
+                  // firstFile is ArrayBuffer type
+                  NVImage.loadFromUrl({
+                    url: firstFile,
+                    limitFrames4D: this.opts.limitFrames4D
+                  })
+                  .then((volume) => {
+                    this.addVolume(volume)
+                  }) 
+                })
+                .catch((error) => {
+                  console.error('Error loading DICOM files:', error)
+                })
+            })
           }
         }
       }
