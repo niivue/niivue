@@ -2037,33 +2037,33 @@ export class Niivue {
   async traverseFileTree(item, path = '', fileArray): Promise<File[]> {
     return new Promise((resolve) => {
       if (item.isFile) {
-        item.file(file => {
-          file.fullPath = path + file.name; 
+        item.file((file) => {
+          file.fullPath = path + file.name
           // IMPORTANT: _webkitRelativePath is required for dcm2niix to work.
           // We need to add this property so we can parse multiple directories correctly.
           // the "webkitRelativePath" property on File objects is read-only, so we can't set it directly, hence the underscore.
-          file._webkitRelativePath = path + file.name;
-          fileArray.push(file);
+          file._webkitRelativePath = path + file.name
+          fileArray.push(file)
           resolve(fileArray)
-        });
+        })
       } else if (item.isDirectory) {
-        const dirReader = item.createReader();
+        const dirReader = item.createReader()
         const readAllEntries = () => {
-          dirReader.readEntries(entries => {
+          dirReader.readEntries((entries) => {
             if (entries.length > 0) {
-              const promises = [];
+              const promises = []
               for (const entry of entries) {
-                promises.push(this.traverseFileTree(entry, path + item.name + '/', fileArray));
+                promises.push(this.traverseFileTree(entry, path + item.name + '/', fileArray))
               }
-              Promise.all(promises).then(readAllEntries);
+              Promise.all(promises).then(readAllEntries)
             } else {
-              resolve(fileArray);
+              resolve(fileArray)
             }
-          });
-        };
-        readAllEntries();
+          })
+        }
+        readAllEntries()
       }
-    });
+    })
   }
 
   readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
@@ -2184,14 +2184,12 @@ export class Niivue {
   //     toExt: string;
   //   };
   // }
-  
-  
-  
+
   // Example usage:
   // const loaderMap: LoaderMap = {
   //   'TXT': { loader: (file: File) => file.text(), toExt: 'json' }
   // };
-  // loader can either be a function that takes a file or ArrayBuffer, or the async version of that.  
+  // loader can either be a function that takes a file or ArrayBuffer, or the async version of that.
   useLoader(loader: unknown, fileExt: string, toExt: string): void {
     this.loaders = {
       ...this.loaders,
@@ -2370,8 +2368,7 @@ export class Niivue {
           } else if (entry.isDirectory) {
             // TODO: re-implement directory loading (assuming dicoms) using external dicom loader via useLoader
             // this.readDirectory(entry as FileSystemDirectoryEntry)
-            this.traverseFileTree(entry, '', files)
-            .then((files) => {
+            this.traverseFileTree(entry, '', files).then((files) => {
               // assume directories are only used for dicom loading.
               // Get the loader registered for DCM files and call it
               // const loader = this.loaders['DCM']
@@ -2383,10 +2380,9 @@ export class Niivue {
                   NVImage.loadFromUrl({
                     url: firstFile,
                     limitFrames4D: this.opts.limitFrames4D
-                  })
-                  .then((volume) => {
+                  }).then((volume) => {
                     this.addVolume(volume)
-                  }) 
+                  })
                 })
                 .catch((error) => {
                   console.error('Error loading DICOM files:', error)
