@@ -17,7 +17,6 @@ import {
   NiiDataType,
   NiiIntentCode,
   NVImageFromUrlOptions,
-  getBestTransform,
   getExtents,
   hdrToArrayBuffer,
   isAffineOK,
@@ -910,7 +909,7 @@ export class NVImage {
   //   } // for images.length
   //   return buffer.buffer
   // } // readDICOM()
-  //-----------------------
+  // -----------------------
 
   // not included in public docs
   // read ECAT7 format image
