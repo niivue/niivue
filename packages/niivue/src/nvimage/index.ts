@@ -2978,7 +2978,10 @@ export class NVImage {
     return saveData
   } // saveToDisk()
 
-  static async fetchDicomData(url: string, headers: Record<string, string> = {}): Promise<ArrayBuffer[]> {
+  static async fetchDicomData(
+    url: string,
+    headers: Record<string, string> = {}
+  ): Promise<Array<{ name: string; data: ArrayBuffer }>> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -3010,7 +3013,10 @@ export class NVImage {
         throw Error(response.statusText)
       }
       const contents = await response.arrayBuffer()
-      dataBuffer.push(contents)
+      dataBuffer.push({
+        name: line,
+        data: contents
+      })
     }
     return dataBuffer
   }
