@@ -153,10 +153,40 @@ void main() {
     let id = nv1.meshes[0].id
     nv1.setMeshShader(id, idx)
   }
+  const onDicomLoaderFinishedWithImages = async (images) => {
+    // for (let i = 0; i < images.length; i++) {
+    //   const image = images[i]
+    //   console.log(image)
+    //   nv1.addVolume(image)
+    // } 
+
+    // demonstration of how a user could choose which volume to add
+    const choice = window.prompt(
+      images
+        .map((image, index) => `${index}: ${image.name}`)
+        .join("\n"),
+      "0"
+    )
+
+    if (choice === null) {
+      return
+    }
+    const imageIndex = parseInt(choice)
+    if (isNaN(imageIndex)) {
+      return
+    }
+    if (imageIndex < 0 || imageIndex >= images.length) {
+      return
+    }
+    nv1.addVolume(images[imageIndex])
+  }
+
+
   var nv1 = new Niivue({
     show3Dcrosshair: true,
     backColor: [0.9, 0.9, 1, 1],
     loglevel: 'debug',
+    onDicomLoaderFinishedWithImages
   })
   nv1.setSliceType(nv1.sliceTypeRender)
   nv1.attachTo("gl1")
@@ -166,17 +196,18 @@ void main() {
     await dcm2niix.init()
     // if data is an ArrayBuffer, convert it to a File object
     let returnedFiles = []
-    if (data instanceof ArrayBuffer) {
-      const file = new File([data], "input.dcm", { type: "application/octet-stream" })
+    console.log(data)
+    if (Array.isArray(data) && data.length === 1 && data[0].data instanceof ArrayBuffer) {
+      const file = new File([data[0].data], data[0].name, { type: "application/octet-stream" })
       returnedFiles = await dcm2niix.input([file]).run()
     } // else if data is an array of array buffers, only take the first
     else if (Array.isArray(data) && data.length > 0) {
       // check if the first item is an ArrayBuffer
       const files = []
-      if (data[0] instanceof ArrayBuffer) {
+      if (data[0].data instanceof ArrayBuffer) {
         // loop over all items and conver them to file objects
         for (let i = 0; i < data.length; i++) {
-          const file = new File([data[i]], `input_${i}.dcm`, { type: "application/octet-stream" })
+          const file = new File([data[i].data], data[i].name, { type: "application/octet-stream" })
           files.push(file)
         }
         returnedFiles = await dcm2niix.input(files).run()
@@ -194,19 +225,28 @@ void main() {
       }
     }
     // return the first nifti file as an ArrayBuffer
-    const niiFile = niiFiles[0]
-    // read the nifti file as an ArrayBuffer and return it
-    const niiArrayBuffer = await niiFile.arrayBuffer()
-    return niiArrayBuffer
+    const arrayBuffers = []
+    // read the nifti file as an ArrayBuffer and add it to the arrayBuffers array
+    for (let i = 0; i < niiFiles.length; i++) {
+      const niiArrayBuffer = await niiFiles[i].arrayBuffer()
+      const name = niiFiles[i].name
+      const nameAndBuffer = { name, data: niiArrayBuffer }
+      arrayBuffers.push(nameAndBuffer)
+    }
+    return arrayBuffers
   }
 
-  nv1.useLoader(
-    dicomLoader,
-    'dcm',
-    'nii'
-  )
-  nv1.loadImages([
-    { url: "../demos/images/enh.dcm"},
+  
+
+  nv1.useDicomLoader({
+    loader: dicomLoader,
+    toExt: 'nii'
+  })
+  nv1.loadDicoms([
+    // manifest example
+    { url: "../tests/images/dicom/niivue-manifest.txt", isManifest: true},
+    // single file example
+    // { url: "../demos/images/enh.dcm"}
   ])
   // var meshLayersList1 = [
   //   {
