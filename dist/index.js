@@ -11235,6 +11235,7 @@ __export(cmaps_exports, {
   actc: () => actc_default,
   afni_blues_inv: () => afni_blues_inv_default,
   afni_reds_inv: () => afni_reds_inv_default,
+  batlow: () => batlow_default,
   bcgwhw: () => bcgwhw_default,
   bcgwhw_dark: () => bcgwhw_dark_default,
   blue: () => blue_default,
@@ -11280,9 +11281,12 @@ __export(cmaps_exports, {
   hsv: () => hsv_default,
   inferno: () => inferno_default,
   jet: () => jet_default,
+  kry: () => kry_default,
   linspecer: () => linspecer_default,
+  lipari: () => lipari_default,
   magma: () => magma_default,
   mako: () => mako_default,
+  navia: () => navia_default,
   nih: () => nih_default,
   plasma: () => plasma_default,
   random: () => random_default,
@@ -11291,6 +11295,7 @@ __export(cmaps_exports, {
   rocket: () => rocket_default,
   roi_i256: () => roi_i256_default,
   surface: () => surface_default,
+  thermal: () => thermal_default,
   turbo: () => turbo_default,
   violet: () => violet_default,
   viridis: () => viridis_default,
@@ -13527,6 +13532,15 @@ var actc_default = {
   B: [0, 136, 0, 0, 0],
   A: [0, 32, 64, 78, 128],
   I: [0, 64, 128, 156, 255]
+};
+
+// src/cmaps/batlow.json
+var batlow_default = {
+  R: [1, 10, 15, 17, 21, 27, 36, 49, 65, 82, 99, 118, 140, 161, 183, 203, 222, 238, 248, 253, 253, 253, 252, 250],
+  G: [25, 42, 56, 68, 79, 88, 97, 105, 111, 116, 122, 127, 133, 138, 142, 146, 150, 155, 162, 170, 178, 186, 195, 204],
+  B: [89, 92, 95, 96, 98, 98, 96, 91, 83, 74, 64, 55, 46, 43, 49, 62, 79, 100, 126, 151, 175, 199, 223, 250],
+  A: [0, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64],
+  I: [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 133, 144, 155, 166, 177, 188, 199, 210, 221, 232, 243, 255]
 };
 
 // src/cmaps/bcgwhw_dark.json
@@ -16291,6 +16305,15 @@ var jet_default = {
   I: [0, 63, 128, 192, 255]
 };
 
+// src/cmaps/kry.json
+var kry_default = {
+  R: [0, 255, 255],
+  G: [0, 0, 255],
+  B: [0, 0, 0],
+  A: [0, 64, 64],
+  I: [0, 86, 255]
+};
+
 // src/cmaps/linspecer.json
 var linspecer_default = {
   R: [94, 50, 90, 152, 215, 238, 249, 254, 252, 241, 209, 158],
@@ -16298,6 +16321,15 @@ var linspecer_default = {
   B: [162, 189, 167, 164, 155, 169, 168, 123, 86, 68, 79, 66],
   A: [0, 12, 23, 35, 47, 58, 70, 81, 93, 105, 116, 128],
   I: [0, 23, 46, 70, 93, 116, 139, 162, 185, 209, 232, 255]
+};
+
+// src/cmaps/lipari.json
+var lipari_default = {
+  R: [3, 7, 13, 25, 45, 67, 84, 98, 110, 124, 138, 154, 173, 191, 210, 225, 233, 233, 231, 229, 230, 235, 243, 253],
+  G: [19, 33, 48, 63, 77, 87, 92, 94, 95, 96, 96, 97, 99, 101, 106, 118, 133, 149, 163, 177, 192, 208, 225, 245],
+  B: [38, 58, 79, 99, 114, 122, 122, 120, 117, 113, 110, 105, 101, 97, 94, 96, 103, 112, 122, 134, 149, 169, 192, 218],
+  A: [0, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64],
+  I: [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 133, 144, 155, 166, 177, 188, 199, 210, 221, 232, 243, 255]
 };
 
 // src/cmaps/magma.json
@@ -16316,6 +16348,15 @@ var mako_default = {
   B: [5, 91, 172, 229],
   A: [0, 23, 70, 107],
   I: [0, 56, 167, 255]
+};
+
+// src/cmaps/navia.json
+var navia_default = {
+  R: [3, 5, 6, 8, 12, 19, 28, 36, 42, 48, 54, 61, 68, 76, 86, 96, 110, 129, 154, 181, 205, 224, 239, 252],
+  G: [19, 32, 44, 58, 72, 86, 98, 108, 116, 122, 128, 134, 141, 149, 157, 167, 178, 191, 204, 216, 225, 232, 239, 244],
+  B: [39, 60, 82, 104, 123, 137, 144, 145, 142, 138, 134, 130, 126, 121, 116, 110, 105, 104, 112, 131, 155, 178, 198, 217],
+  A: [0, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64],
+  I: [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 133, 144, 155, 166, 177, 188, 199, 210, 221, 232, 243, 255]
 };
 
 // src/cmaps/nih.json
@@ -17664,6 +17705,15 @@ var surface_default = {
   B: [1, 128, 255],
   A: [0, 76, 128],
   I: [0, 153, 255]
+};
+
+// src/cmaps/thermal.json
+var thermal_default = {
+  R: [0, 5, 18, 34, 53, 72, 90, 107, 126, 144, 161, 178, 194, 209, 222, 233, 242, 248, 251, 251, 249, 244, 241, 252],
+  G: [0, 4, 10, 11, 9, 11, 17, 23, 30, 36, 43, 50, 59, 70, 83, 98, 117, 136, 157, 177, 199, 220, 240, 254],
+  B: [3, 24, 50, 76, 96, 106, 109, 110, 108, 104, 97, 89, 79, 67, 55, 42, 26, 12, 6, 22, 47, 79, 121, 164],
+  A: [0, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64],
+  I: [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 133, 144, 155, 166, 177, 188, 199, 210, 221, 232, 243, 255]
 };
 
 // src/cmaps/turbo.json
@@ -36548,6 +36598,9 @@ var Niivue = class {
     this.renderShader.use(this.gl);
     this.setClipPlaneColor(this.opts.clipPlaneColor);
     this.gradientTextureAmount = gradientAmount;
+    if (this.volumes.length < 1) {
+      return;
+    }
     this.refreshLayers(this.volumes[0], 0);
     this.drawScene();
   }
@@ -38670,10 +38723,10 @@ var Niivue = class {
   // not included in public docs
   // apply slow computations when image properties have changed
   refreshLayers(overlayItem, layer) {
-    this.refreshColormaps();
     if (this.volumes.length < 1) {
       return;
     }
+    this.refreshColormaps();
     const hdr = overlayItem.hdr;
     let img = overlayItem.img;
     if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D) {
