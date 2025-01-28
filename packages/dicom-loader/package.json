@@ -1,0 +1,50 @@
+{
+  "name": "@niivue/dicom-loader",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "vitest",
+    "build": "tsup --config tsup.config.ts",
+    "lint:fix": "eslint --fix .",
+    "pub": "npm run build && npm publish --access public"
+  },
+  "dependencies": {
+    "@niivue/dcm2niix": "^1.0.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "@vitest/coverage-v8": "^2.0.3",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-tsdoc": "^0.3.0",
+    "jsdom": "^26.0.0",
+    "prettier": "^3.3.3",
+    "terser": "^5.31.3",
+    "tsup": "^8.1.2",
+    "typedoc": "^0.26.4",
+    "typescript": "^5.5.3",
+    "vitest": "^3.0.4"
+  },
+  "keywords": [
+    "dicom",
+    "loader",
+    "niivue",
+    "dcm2niix"
+  ],
+  "author": "Taylor Hanayik",
+  "license": "BSD-2-Clause",
+  "description": "a module to load DICOM files into a format that can be used by niivue"
+}
