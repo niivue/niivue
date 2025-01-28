@@ -1016,7 +1016,7 @@ var require_node = __commonJS({
         err2(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
       return (d[1] >> 3 & 4) + 2;
     };
-    function StrmOpt2(opts, cb) {
+    function StrmOpt(opts, cb) {
       if (typeof opts == "function")
         cb = opts, opts = {};
       this.ondata = cb;
@@ -1087,7 +1087,7 @@ var require_node = __commonJS({
           function() {
             return [astrm, Deflate];
           }
-        ], this, StrmOpt2.call(this, opts, cb), function(ev) {
+        ], this, StrmOpt.call(this, opts, cb), function(ev) {
           var strm = new Deflate(ev.data);
           onmessage = astrm(strm);
         }, 6, 1);
@@ -1111,8 +1111,8 @@ var require_node = __commonJS({
       return dopt2(data, opts || {}, 0, 0);
     }
     exports.deflateSync = deflateSync2;
-    var Inflate2 = /* @__PURE__ */ function() {
-      function Inflate3(opts, cb) {
+    var Inflate = /* @__PURE__ */ function() {
+      function Inflate2(opts, cb) {
         if (typeof opts == "function")
           cb = opts, opts = {};
         this.ondata = cb;
@@ -1123,7 +1123,7 @@ var require_node = __commonJS({
         if (dict)
           this.o.set(dict);
       }
-      Inflate3.prototype.e = function(c) {
+      Inflate2.prototype.e = function(c) {
         if (!this.ondata)
           err2(5);
         if (this.d)
@@ -1135,7 +1135,7 @@ var require_node = __commonJS({
           n.set(this.p), n.set(c, this.p.length), this.p = n;
         }
       };
-      Inflate3.prototype.c = function(final) {
+      Inflate2.prototype.c = function(final) {
         this.s.i = +(this.d = final || false);
         var bts = this.s.b;
         var dt = inflt2(this.p, this.s, this.o);
@@ -1143,21 +1143,21 @@ var require_node = __commonJS({
         this.o = slc2(dt, this.s.b - 32768), this.s.b = this.o.length;
         this.p = slc2(this.p, this.s.p / 8 | 0), this.s.p &= 7;
       };
-      Inflate3.prototype.push = function(chunk, final) {
+      Inflate2.prototype.push = function(chunk, final) {
         this.e(chunk), this.c(final);
       };
-      return Inflate3;
+      return Inflate2;
     }();
-    exports.Inflate = Inflate2;
+    exports.Inflate = Inflate;
     var AsyncInflate = /* @__PURE__ */ function() {
       function AsyncInflate2(opts, cb) {
         astrmify([
           bInflt2,
           function() {
-            return [astrm, Inflate2];
+            return [astrm, Inflate];
           }
-        ], this, StrmOpt2.call(this, opts, cb), function(ev) {
-          var strm = new Inflate2(ev.data);
+        ], this, StrmOpt.call(this, opts, cb), function(ev) {
+          var strm = new Inflate(ev.data);
           onmessage = astrm(strm);
         }, 7, 0);
       }
@@ -1215,7 +1215,7 @@ var require_node = __commonJS({
           function() {
             return [astrm, Deflate, Gzip];
           }
-        ], this, StrmOpt2.call(this, opts, cb), function(ev) {
+        ], this, StrmOpt.call(this, opts, cb), function(ev) {
           var strm = new Gzip(ev.data);
           onmessage = astrm(strm);
         }, 8, 1);
@@ -1251,14 +1251,14 @@ var require_node = __commonJS({
     }
     exports.gzipSync = gzipSync2;
     exports.compressSync = gzipSync2;
-    var Gunzip2 = /* @__PURE__ */ function() {
-      function Gunzip3(opts, cb) {
+    var Gunzip = /* @__PURE__ */ function() {
+      function Gunzip2(opts, cb) {
         this.v = 1;
         this.r = 0;
-        Inflate2.call(this, opts, cb);
+        Inflate.call(this, opts, cb);
       }
-      Gunzip3.prototype.push = function(chunk, final) {
-        Inflate2.prototype.e.call(this, chunk);
+      Gunzip2.prototype.push = function(chunk, final) {
+        Inflate.prototype.e.call(this, chunk);
         this.r += chunk.length;
         if (this.v) {
           var p = this.p.subarray(this.v - 1);
@@ -1271,7 +1271,7 @@ var require_node = __commonJS({
           }
           this.p = p.subarray(s), this.v = 0;
         }
-        Inflate2.prototype.c.call(this, final);
+        Inflate.prototype.c.call(this, final);
         if (this.s.f && !this.s.l && !final) {
           this.v = shft2(this.s.p) + 9;
           this.s = { i: 0 };
@@ -1279,9 +1279,9 @@ var require_node = __commonJS({
           this.push(new u82(0), final);
         }
       };
-      return Gunzip3;
+      return Gunzip2;
     }();
-    exports.Gunzip = Gunzip2;
+    exports.Gunzip = Gunzip;
     var AsyncGunzip = /* @__PURE__ */ function() {
       function AsyncGunzip2(opts, cb) {
         var _this = this;
@@ -1289,10 +1289,10 @@ var require_node = __commonJS({
           bInflt2,
           guze2,
           function() {
-            return [astrm, Inflate2, Gunzip2];
+            return [astrm, Inflate, Gunzip];
           }
-        ], this, StrmOpt2.call(this, opts, cb), function(ev) {
-          var strm = new Gunzip2(ev.data);
+        ], this, StrmOpt.call(this, opts, cb), function(ev) {
+          var strm = new Gunzip(ev.data);
           strm.onmember = function(offset) {
             return postMessage(offset);
           };
@@ -1359,7 +1359,7 @@ var require_node = __commonJS({
           function() {
             return [astrm, Deflate, Zlib];
           }
-        ], this, StrmOpt2.call(this, opts, cb), function(ev) {
+        ], this, StrmOpt.call(this, opts, cb), function(ev) {
           var strm = new Zlib(ev.data);
           onmessage = astrm(strm);
         }, 10, 1);
@@ -1392,13 +1392,13 @@ var require_node = __commonJS({
       return zlh(d, opts), wbytes2(d, d.length - 4, a.d()), d;
     }
     exports.zlibSync = zlibSync;
-    var Unzlib2 = /* @__PURE__ */ function() {
-      function Unzlib3(opts, cb) {
-        Inflate2.call(this, opts, cb);
+    var Unzlib = /* @__PURE__ */ function() {
+      function Unzlib2(opts, cb) {
+        Inflate.call(this, opts, cb);
         this.v = opts && opts.dictionary ? 2 : 1;
       }
-      Unzlib3.prototype.push = function(chunk, final) {
-        Inflate2.prototype.e.call(this, chunk);
+      Unzlib2.prototype.push = function(chunk, final) {
+        Inflate.prototype.e.call(this, chunk);
         if (this.v) {
           if (this.p.length < 6 && !final)
             return;
@@ -1409,21 +1409,21 @@ var require_node = __commonJS({
             err2(6, "invalid zlib data");
           this.p = this.p.subarray(0, -4);
         }
-        Inflate2.prototype.c.call(this, final);
+        Inflate.prototype.c.call(this, final);
       };
-      return Unzlib3;
+      return Unzlib2;
     }();
-    exports.Unzlib = Unzlib2;
+    exports.Unzlib = Unzlib;
     var AsyncUnzlib = /* @__PURE__ */ function() {
       function AsyncUnzlib2(opts, cb) {
         astrmify([
           bInflt2,
           zule2,
           function() {
-            return [astrm, Inflate2, Unzlib2];
+            return [astrm, Inflate, Unzlib];
           }
-        ], this, StrmOpt2.call(this, opts, cb), function(ev) {
-          var strm = new Unzlib2(ev.data);
+        ], this, StrmOpt.call(this, opts, cb), function(ev) {
+          var strm = new Unzlib(ev.data);
           onmessage = astrm(strm);
         }, 11, 0);
       }
@@ -1450,20 +1450,20 @@ var require_node = __commonJS({
       return inflt2(data.subarray(zls2(data, opts && opts.dictionary), -4), { i: 2 }, opts && opts.out, opts && opts.dictionary);
     }
     exports.unzlibSync = unzlibSync2;
-    var Decompress2 = /* @__PURE__ */ function() {
-      function Decompress3(opts, cb) {
-        this.o = StrmOpt2.call(this, opts, cb) || {};
-        this.G = Gunzip2;
-        this.I = Inflate2;
-        this.Z = Unzlib2;
+    var Decompress = /* @__PURE__ */ function() {
+      function Decompress2(opts, cb) {
+        this.o = StrmOpt.call(this, opts, cb) || {};
+        this.G = Gunzip;
+        this.I = Inflate;
+        this.Z = Unzlib;
       }
-      Decompress3.prototype.i = function() {
+      Decompress2.prototype.i = function() {
         var _this = this;
         this.s.ondata = function(dat, final) {
           _this.ondata(dat, final);
         };
       };
-      Decompress3.prototype.push = function(chunk, final) {
+      Decompress2.prototype.push = function(chunk, final) {
         if (!this.ondata)
           err2(5);
         if (!this.s) {
@@ -1481,12 +1481,12 @@ var require_node = __commonJS({
         } else
           this.s.push(chunk, final);
       };
-      return Decompress3;
+      return Decompress2;
     }();
-    exports.Decompress = Decompress2;
+    exports.Decompress = Decompress;
     var AsyncDecompress = /* @__PURE__ */ function() {
       function AsyncDecompress2(opts, cb) {
-        Decompress2.call(this, opts, cb);
+        Decompress.call(this, opts, cb);
         this.queuedSize = 0;
         this.G = AsyncGunzip;
         this.I = AsyncInflate;
@@ -1505,7 +1505,7 @@ var require_node = __commonJS({
       };
       AsyncDecompress2.prototype.push = function(chunk, final) {
         this.queuedSize += chunk.length;
-        Decompress2.prototype.push.call(this, chunk, final);
+        Decompress.prototype.push.call(this, chunk, final);
       };
       return AsyncDecompress2;
     }();
@@ -2079,7 +2079,7 @@ var require_node = __commonJS({
     var UnzipInflate = /* @__PURE__ */ function() {
       function UnzipInflate2() {
         var _this = this;
-        this.i = new Inflate2(function(dat, final) {
+        this.i = new Inflate(function(dat, final) {
           _this.ondata(null, dat, final);
         });
       }
@@ -2098,7 +2098,7 @@ var require_node = __commonJS({
       function AsyncUnzipInflate2(_, sz) {
         var _this = this;
         if (sz < 32e4) {
-          this.i = new Inflate2(function(dat, final) {
+          this.i = new Inflate(function(dat, final) {
             _this.ondata(null, dat, final);
           });
         } else {
@@ -20105,52 +20105,9 @@ var zls = function(d, dict) {
     err(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
   return (d[1] >> 3 & 4) + 2;
 };
-function StrmOpt(opts, cb) {
-  if (typeof opts == "function")
-    cb = opts, opts = {};
-  this.ondata = cb;
-  return opts;
-}
 function deflateSync(data, opts) {
   return dopt(data, opts || {}, 0, 0);
 }
-var Inflate = /* @__PURE__ */ function() {
-  function Inflate2(opts, cb) {
-    if (typeof opts == "function")
-      cb = opts, opts = {};
-    this.ondata = cb;
-    var dict = opts && opts.dictionary && opts.dictionary.subarray(-32768);
-    this.s = { i: 0, b: dict ? dict.length : 0 };
-    this.o = new u8(32768);
-    this.p = new u8(0);
-    if (dict)
-      this.o.set(dict);
-  }
-  Inflate2.prototype.e = function(c) {
-    if (!this.ondata)
-      err(5);
-    if (this.d)
-      err(4);
-    if (!this.p.length)
-      this.p = c;
-    else if (c.length) {
-      var n = new u8(this.p.length + c.length);
-      n.set(this.p), n.set(c, this.p.length), this.p = n;
-    }
-  };
-  Inflate2.prototype.c = function(final) {
-    this.s.i = +(this.d = final || false);
-    var bts = this.s.b;
-    var dt = inflt(this.p, this.s, this.o);
-    this.ondata(slc(dt, bts, this.s.b), this.d);
-    this.o = slc(dt, this.s.b - 32768), this.s.b = this.o.length;
-    this.p = slc(this.p, this.s.p / 8 | 0), this.s.p &= 7;
-  };
-  Inflate2.prototype.push = function(chunk, final) {
-    this.e(chunk), this.c(final);
-  };
-  return Inflate2;
-}();
 function inflate(data, opts, cb) {
   if (!cb)
     cb = opts, opts = {};
@@ -20188,36 +20145,6 @@ function gzipSync(data, opts) {
   var d = dopt(data, opts, gzhl(opts), 8), s = d.length;
   return gzh(d, opts), wbytes(d, s - 8, c.d()), wbytes(d, s - 4, l), d;
 }
-var Gunzip = /* @__PURE__ */ function() {
-  function Gunzip2(opts, cb) {
-    this.v = 1;
-    this.r = 0;
-    Inflate.call(this, opts, cb);
-  }
-  Gunzip2.prototype.push = function(chunk, final) {
-    Inflate.prototype.e.call(this, chunk);
-    this.r += chunk.length;
-    if (this.v) {
-      var p = this.p.subarray(this.v - 1);
-      var s = p.length > 3 ? gzs(p) : 4;
-      if (s > p.length) {
-        if (!final)
-          return;
-      } else if (this.v > 1 && this.onmember) {
-        this.onmember(this.r - p.length);
-      }
-      this.p = p.subarray(s), this.v = 0;
-    }
-    Inflate.prototype.c.call(this, final);
-    if (this.s.f && !this.s.l && !final) {
-      this.v = shft(this.s.p) + 9;
-      this.s = { i: 0 };
-      this.o = new u8(0);
-      this.push(new u8(0), final);
-    }
-  };
-  return Gunzip2;
-}();
 function gunzip(data, opts, cb) {
   if (!cb)
     cb = opts, opts = {};
@@ -20239,27 +20166,6 @@ function gunzipSync(data, opts) {
     err(6, "invalid gzip data");
   return inflt(data.subarray(st, -8), { i: 2 }, opts && opts.out || new u8(gzl(data)), opts && opts.dictionary);
 }
-var Unzlib = /* @__PURE__ */ function() {
-  function Unzlib2(opts, cb) {
-    Inflate.call(this, opts, cb);
-    this.v = opts && opts.dictionary ? 2 : 1;
-  }
-  Unzlib2.prototype.push = function(chunk, final) {
-    Inflate.prototype.e.call(this, chunk);
-    if (this.v) {
-      if (this.p.length < 6 && !final)
-        return;
-      this.p = this.p.subarray(zls(this.p, this.v - 1)), this.v = 0;
-    }
-    if (final) {
-      if (this.p.length < 4)
-        err(6, "invalid zlib data");
-      this.p = this.p.subarray(0, -4);
-    }
-    Inflate.prototype.c.call(this, final);
-  };
-  return Unzlib2;
-}();
 function unzlib(data, opts, cb) {
   if (!cb)
     cb = opts, opts = {};
@@ -20278,39 +20184,6 @@ function unzlib(data, opts, cb) {
 function unzlibSync(data, opts) {
   return inflt(data.subarray(zls(data, opts && opts.dictionary), -4), { i: 2 }, opts && opts.out, opts && opts.dictionary);
 }
-var Decompress = /* @__PURE__ */ function() {
-  function Decompress2(opts, cb) {
-    this.o = StrmOpt.call(this, opts, cb) || {};
-    this.G = Gunzip;
-    this.I = Inflate;
-    this.Z = Unzlib;
-  }
-  Decompress2.prototype.i = function() {
-    var _this = this;
-    this.s.ondata = function(dat, final) {
-      _this.ondata(dat, final);
-    };
-  };
-  Decompress2.prototype.push = function(chunk, final) {
-    if (!this.ondata)
-      err(5);
-    if (!this.s) {
-      if (this.p && this.p.length) {
-        var n = new u8(this.p.length + chunk.length);
-        n.set(this.p), n.set(chunk, this.p.length);
-      } else
-        this.p = chunk;
-      if (this.p.length > 2) {
-        this.s = this.p[0] == 31 && this.p[1] == 139 && this.p[2] == 8 ? new this.G(this.o) : (this.p[0] & 15) != 8 || this.p[0] >> 4 > 7 || (this.p[0] << 8 | this.p[1]) % 31 ? new this.I(this.o) : new this.Z(this.o);
-        this.i();
-        this.s.push(this.p, final);
-        this.p = null;
-      }
-    } else
-      this.s.push(chunk, final);
-  };
-  return Decompress2;
-}();
 function decompress(data, opts, cb) {
   if (!cb)
     cb = opts, opts = {};
@@ -27929,6 +27802,53 @@ function isAffineOK(mtx) {
   }
   return true;
 }
+async function uncompressStream(stream) {
+  const reader = stream.getReader();
+  const { done, value } = await reader.read();
+  if (done) {
+    reader.releaseLock();
+    return new ReadableStream({
+      start(controller) {
+        controller.close();
+      }
+    });
+  }
+  if (!value || value.length < 2) {
+    reader.releaseLock();
+    return new ReadableStream({
+      start(controller) {
+        if (value) {
+          controller.enqueue(value);
+        }
+        controller.close();
+      }
+    });
+  }
+  const isGzip = value[0] === 31 && value[1] === 139;
+  const uncompressedStream = new ReadableStream({
+    async start(controller) {
+      try {
+        controller.enqueue(value);
+        while (true) {
+          const { done: done2, value: value2 } = await reader.read();
+          if (done2) {
+            controller.close();
+            reader.releaseLock();
+            break;
+          }
+          controller.enqueue(value2);
+        }
+      } catch (error) {
+        controller.error(error);
+        reader.releaseLock();
+      }
+    }
+  });
+  if (isGzip) {
+    return uncompressedStream.pipeThrough(new DecompressionStream("gzip"));
+  }
+  return uncompressedStream;
+}
 
 // src/nvimage/index.ts
 var NVImage = class _NVImage {
@@ -30698,81 +30618,109 @@ var NVImage = class _NVImage {
       if (name !== "") {
         url = name;
       } else {
-        url = "array.nii";
         const bytes = new Uint8Array(dataBuffer);
-        if (bytes[0] === 31 && bytes[1] === 139) {
-          url = "array.nii.gz";
-        }
+        url = bytes[0] === 31 && bytes[1] === 139 ? "array.nii.gz" : "array.nii";
       }
     }
     if (!isNaN(limitFrames4D)) {
-      let response = await this.fetchPartial(url, 512, headers);
-      dataBuffer = await response.arrayBuffer();
-      let bytes = new Uint8Array(dataBuffer);
-      let isGz = false;
-      if (bytes[0] === 31 && bytes[1] === 139) {
-        isGz = true;
-        const dcmpStrm = new Decompress((chunk) => {
-          bytes = chunk;
-        });
-        dcmpStrm.push(bytes);
-        dataBuffer = bytes.buffer;
-      }
-      let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
-      if (!isNifti1) {
-        isNifti1 = bytes[1] === 92 && bytes[0] === 1;
-      }
-      if (!isNifti1) {
-        dataBuffer = null;
-      } else {
-        const hdr = nifti.readHeader(dataBuffer);
-        if (hdr === null) {
-          throw new Error("could not read nifti header");
+      try {
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+        if (!response.body) {
+          throw new Error("No readable stream available");
+        }
+        const stream = await uncompressStream(response.body);
+        const reader = stream.getReader();
+        const headerChunks = [];
+        let headerBytes = 0;
+        while (headerBytes < 352) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          headerChunks.push(value);
+          headerBytes += value.length;
+        }
+        const headerBuffer = new Uint8Array(headerBytes);
+        let offset = 0;
+        for (const chunk of headerChunks) {
+          headerBuffer.set(chunk, offset);
+          offset += chunk.length;
+        }
+        const isNifti1 = headerBuffer[0] === 92 && headerBuffer[1] === 1 || headerBuffer[1] === 92 && headerBuffer[0] === 1;
+        if (!isNifti1) {
+          reader.releaseLock();
+          return null;
+        }
+        const hdr = nifti.readHeader(headerBuffer.buffer);
+        if (!hdr) {
+          throw new Error("Could not read NIfTI header");
         }
         const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-        let nVox3D = 1;
-        for (let i = 1; i < 4; i++) {
-          if (hdr.dims[i] > 1) {
-            nVox3D *= hdr.dims[i];
-          }
-        }
-        let nFrame4D = 1;
-        for (let i = 4; i < 7; i++) {
-          if (hdr.dims[i] > 1) {
-            nFrame4D *= hdr.dims[i];
-          }
-        }
+        const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+        const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
         const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
         const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
-        if (dataBuffer.byteLength < bytesToLoad) {
-          response = await this.fetchPartial(url, bytesToLoad, headers);
-          dataBuffer = await response.arrayBuffer();
-          if (isGz) {
-            let bytes2 = new Uint8Array(dataBuffer);
-            const dcmpStrm2 = new Decompress((chunk) => {
-              bytes2 = chunk;
-            });
-            dcmpStrm2.push(bytes2);
-            dataBuffer = bytes2.buffer;
+        const chunks = [...headerChunks];
+        let totalSize = headerBytes;
+        while (totalSize < bytesToLoad) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          chunks.push(value);
+          totalSize += value.length;
+        }
+        reader.releaseLock();
+        dataBuffer = new ArrayBuffer(bytesToLoad);
+        const dataView = new Uint8Array(dataBuffer);
+        offset = 0;
+        for (const chunk of chunks) {
+          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset);
+          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset);
+          offset += bytesToCopy;
+          if (offset >= bytesToLoad) {
+            break;
           }
         }
-        if (dataBuffer.byteLength < bytesToLoad) {
-          dataBuffer = null;
-        } else {
-          dataBuffer = dataBuffer.slice(0, bytesToLoad);
-        }
+      } catch (error) {
+        console.error("Error loading limited frames:", error);
+        dataBuffer = null;
       }
     }
-    if (dataBuffer) {
-    } else if (isManifest) {
-      dataBuffer = await _NVImage.fetchDicomData(url, headers);
-      imageType = NVIMAGE_TYPE.DCM_MANIFEST;
-    } else {
-      const response = await fetch(url, { headers });
-      if (!response.ok) {
-        throw Error(response.statusText);
+    if (!dataBuffer) {
+      if (isManifest) {
+        dataBuffer = await _NVImage.fetchDicomData(url, headers);
+        imageType = NVIMAGE_TYPE.DCM_MANIFEST;
+      } else {
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          throw Error(response.statusText);
+        }
+        if (!response.body) {
+          throw new Error("No readable stream available");
+        }
+        const stream = await uncompressStream(response.body);
+        const chunks = [];
+        const reader = stream.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          chunks.push(value);
+        }
+        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        dataBuffer = new ArrayBuffer(totalLength);
+        const dataView = new Uint8Array(dataBuffer);
+        let offset = 0;
+        for (const chunk of chunks) {
+          dataView.set(chunk, offset);
+          offset += chunk.length;
+        }
       }
-      dataBuffer = await response.arrayBuffer();
     }
     const re = /(?:\.([^.]+))?$/;
     let ext = "";
@@ -30786,8 +30734,42 @@ var NVImage = class _NVImage {
         urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
       }
     }
-    let urlParts;
-    if (name === "") {
+    let pairedImgData = null;
+    if (urlImgData) {
+      try {
+        let response = await fetch(urlImgData, { headers });
+        if (response.status === 404 && urlImgData.includes("BRIK")) {
+          response = await fetch(`${urlImgData}.gz`, { headers });
+        }
+        if (response.ok && response.body) {
+          const stream = await uncompressStream(response.body);
+          const chunks = [];
+          const reader = stream.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            chunks.push(value);
+          }
+          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          pairedImgData = new ArrayBuffer(totalLength);
+          const dataView = new Uint8Array(pairedImgData);
+          let offset = 0;
+          for (const chunk of chunks) {
+            dataView.set(chunk, offset);
+            offset += chunk.length;
+          }
+        }
+      } catch (error) {
+        console.error("Error loading paired image data:", error);
+      }
+    }
+    if (!dataBuffer) {
+      throw new Error("Unable to load buffer properly from volume");
+    }
+    if (!name) {
+      let urlParts;
       try {
         urlParts = new URL(url).pathname.split("/");
       } catch (e) {
@@ -30797,19 +30779,6 @@ var NVImage = class _NVImage {
       if (name.indexOf("?") > -1) {
         name = name.slice(0, name.indexOf("?"));
       }
-    }
-    let pairedImgData = null;
-    if (urlImgData.length > 0) {
-      let resp = await fetch(urlImgData, { headers });
-      if (resp.status === 404) {
-        if (urlImgData.lastIndexOf("BRIK") !== -1) {
-          resp = await fetch(urlImgData + ".gz", { headers });
-        }
-      }
-      pairedImgData = await resp.arrayBuffer();
-    }
-    if (!dataBuffer) {
-      throw new Error("Unable to load buffer properly from volume");
     }
     nvimage = new _NVImage(
       dataBuffer,
@@ -30833,23 +30802,47 @@ var NVImage = class _NVImage {
   }
   // not included in public docs
   // loading Nifti files
-  static readFileAsync(file, bytesToLoad = NaN) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (file.name.lastIndexOf("gz") !== -1 && isNaN(bytesToLoad)) {
-          resolve(nifti.decompress(reader.result));
-        } else {
-          resolve(reader.result);
+  static async readFileAsync(file, bytesToLoad = NaN) {
+    let stream = file.stream();
+    if (!isNaN(bytesToLoad)) {
+      let bytesRead = 0;
+      const limiter = new TransformStream({
+        transform(chunk, controller) {
+          if (bytesRead >= bytesToLoad) {
+            controller.terminate();
+            return;
+          }
+          const remainingBytes = bytesToLoad - bytesRead;
+          if (chunk.length > remainingBytes) {
+            controller.enqueue(chunk.slice(0, remainingBytes));
+            controller.terminate();
+          } else {
+            controller.enqueue(chunk);
+          }
+          bytesRead += chunk.length;
         }
-      };
-      reader.onerror = reject;
-      if (isNaN(bytesToLoad)) {
-        reader.readAsArrayBuffer(file);
-      } else {
-        reader.readAsArrayBuffer(file.slice(0, bytesToLoad));
+      });
+      stream = stream.pipeThrough(limiter);
+    }
+    const uncompressedStream = await uncompressStream(stream);
+    const chunks = [];
+    const reader = uncompressedStream.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
       }
-    });
+      chunks.push(value);
+    }
+    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const result = new ArrayBuffer(totalLength);
+    const resultView = new Uint8Array(result);
+    let offset = 0;
+    for (const chunk of chunks) {
+      resultView.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return result;
   }
   /**
    * factory function to load and return a new NVImage instance from a file in the browser
@@ -30876,67 +30869,28 @@ var NVImage = class _NVImage {
     let dataBuffer = [];
     try {
       if (Array.isArray(file)) {
-        for (let i = 0; i < file.length; i++) {
-          dataBuffer.push(await this.readFileAsync(file[i]));
-        }
+        dataBuffer = await Promise.all(file.map((f) => this.readFileAsync(f)));
       } else {
         if (!isNaN(limitFrames4D)) {
-          dataBuffer = await this.readFileAsync(file, 512);
-          let bytes = new Uint8Array(dataBuffer);
-          let isGz = false;
-          if (bytes[0] === 31 && bytes[1] === 139) {
-            isGz = true;
-            const dcmpStrm = new Decompress((chunk) => {
-              bytes = chunk;
-            });
-            dcmpStrm.push(bytes);
-            dataBuffer = bytes.buffer;
-          }
-          let isNifti1 = bytes[0] === 92 && bytes[1] === 1;
-          if (!isNifti1) {
-            isNifti1 = bytes[1] === 92 && bytes[0] === 1;
-          }
+          const headerBuffer = await this.readFileAsync(file, 512);
+          const headerView = new Uint8Array(headerBuffer);
+          const isNifti1 = headerView[0] === 92 && headerView[1] === 1 || headerView[1] === 92 && headerView[0] === 1;
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file);
           } else {
-            const hdr = nifti.readHeader(dataBuffer);
+            const hdr = nifti.readHeader(headerBuffer);
             if (!hdr) {
               throw new Error("could not read nifti header");
             }
             const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-            let nVox3D = 1;
-            for (let i = 1; i < 4; i++) {
-              if (hdr.dims[i] > 1) {
-                nVox3D *= hdr.dims[i];
-              }
-            }
-            let nFrame4D = 1;
-            for (let i = 4; i < 7; i++) {
-              if (hdr.dims[i] > 1) {
-                nFrame4D *= hdr.dims[i];
-              }
-            }
+            const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+            const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
             const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
             const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
-            if (dataBuffer.byteLength < bytesToLoad) {
-              dataBuffer = await this.readFileAsync(file, bytesToLoad);
-              if (isGz) {
-                let bytes2 = new Uint8Array(dataBuffer);
-                const dcmpStrm2 = new Decompress((chunk) => {
-                  bytes2 = chunk;
-                });
-                dcmpStrm2.push(bytes2);
-                dataBuffer = bytes2.buffer;
-              }
-            }
-            if (dataBuffer.byteLength < bytesToLoad) {
-              throw new Error("failed to load image data (e.g. incompressible data)");
-            } else {
-              dataBuffer = dataBuffer.slice(0, bytesToLoad);
-            }
+            dataBuffer = await this.readFileAsync(file, bytesToLoad);
           }
         } else {
-          dataBuffer = await this.readFileAsync(file, limitFrames4D);
+          dataBuffer = await this.readFileAsync(file);
         }
         name = file.name;
       }
@@ -30963,7 +30917,7 @@ var NVImage = class _NVImage {
       nvimage.fileObject = file;
     } catch (err2) {
       log.error(err2);
-      log.error(err2);
+      throw new Error("could not build NVImage");
     }
     if (nvimage === null) {
       throw new Error("could not build NVImage");
