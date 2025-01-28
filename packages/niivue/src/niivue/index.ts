@@ -3800,6 +3800,9 @@ export class Niivue {
     this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
+    if (this.volumes.length < 1) {
+      return
+    } // issue1158
     this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
   }
@@ -6315,10 +6318,10 @@ export class Niivue {
   // not included in public docs
   // apply slow computations when image properties have changed
   refreshLayers(overlayItem: NVImage, layer: number): void {
-    this.refreshColormaps()
     if (this.volumes.length < 1) {
       return
     } // e.g. only meshes
+    this.refreshColormaps()
     const hdr = overlayItem.hdr
     let img = overlayItem.img
     if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D!) {
