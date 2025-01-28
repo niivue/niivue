@@ -1,12 +1,39 @@
 import React, { useState, useContext } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
+import * as Select from '@radix-ui/react-select'
 import { ScrollArea, Text, Switch } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'
 import { SliceSelection } from './SliceSelection'
 import { AppContext } from '../App'
 import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
-import { NVConfigOptions } from '@niivue/niivue'
+import { MULTIPLANAR_TYPE, NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
+
+// Utility to get only key-value mappings from the enum
+const filterEnum = (enumObj: object): Record<string, number> =>
+  Object.fromEntries(Object.entries(enumObj).filter(([key, value]) => isNaN(Number(key))))
+
+const EnumSelect: React.FC<{
+  value: string
+  onChange: (value: string) => void
+  options: Record<string, number>
+}> = ({ value, onChange, options }) => (
+  <Select.Root value={value} onValueChange={onChange}>
+    <Select.Trigger className="flex items-center justify-between border rounded px-2 py-1">
+      <Select.Value />
+      <Select.Icon>▼</Select.Icon>
+    </Select.Trigger>
+    <Select.Content className="bg-white border rounded shadow">
+      <Select.Viewport>
+        {Object.entries(options).map(([label, val]) => (
+          <Select.Item key={val} value={val.toString()} className="p-2 hover:bg-gray-100">
+            <Select.ItemText>{label}</Select.ItemText>
+          </Select.Item>
+        ))}
+      </Select.Viewport>
+    </Select.Content>
+  </Select.Root>
+)
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -17,6 +44,12 @@ export const GeneralTab: React.FC = (): JSX.Element => {
   const [fontColor, setFontColor] = useState<number[]>(Array.from(nv.opts.fontColor))
   const [backgroundColor, setBackgroundColor] = useState<number[]>(Array.from(nv.opts.backColor))
   const [isAlphaClipDark, setIsAlphaClipDark] = useState<boolean>(nv.opts.isAlphaClipDark)
+  // State for sliceType
+  // State for sliceType and multiplanarLayout
+  const [sliceType, setSliceType] = useState<string>(nv.opts.sliceType.toString())
+  const [multiplanarLayout, setMultiplanarLayout] = useState<string>(
+    nv.opts.multiplanarLayout.toString()
+  )
 
   const updateOption = <K extends keyof NVConfigOptions>(
     optionKey: K,
@@ -81,7 +114,50 @@ export const GeneralTab: React.FC = (): JSX.Element => {
             />
           </Accordion.Content>
         </Accordion.Item>
+        {/* Slice Settings */}
+        <Accordion.Item value="slice-settings" className="border-b border-gray-200">
+          <Accordion.Header>
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Text size="2" weight="bold">
+                Slice Settings
+              </Text>
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                ▼
+              </span>
+            </Accordion.Trigger>
+          </Accordion.Header>
+          <Accordion.Content className="px-4 py-2">
+            {/* Slice Type Dropdown */}
+            <div className="mb-4">
+              <Text size="2" weight="bold" className="mb-1">
+                Slice Type
+              </Text>
+              <EnumSelect
+                value={sliceType}
+                onChange={(value) => {
+                  setSliceType(value)
+                  updateOption('sliceType', parseInt(value, 10))
+                }}
+                options={filterEnum(SLICE_TYPE)}
+              />
+            </div>
 
+            {/* Multiplanar Layout Dropdown */}
+            <div>
+              <Text size="2" weight="bold" className="mb-1">
+                Multiplanar Layout
+              </Text>
+              <EnumSelect
+                value={multiplanarLayout}
+                onChange={(value) => {
+                  setMultiplanarLayout(value)
+                  updateOption('multiplanarLayout', parseInt(value, 10))
+                }}
+                options={filterEnum(MULTIPLANAR_TYPE)}
+              />
+            </div>
+          </Accordion.Content>
+        </Accordion.Item>
         {/* Font Settings */}
         <Accordion.Item value="font-settings" className="border-b border-gray-200">
           <Accordion.Header>
