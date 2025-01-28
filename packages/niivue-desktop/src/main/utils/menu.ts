@@ -288,162 +288,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         }
       ]
     },
-    // Draw menu
-    {
-      label: 'Draw',
-      submenu: [
-        // open drawing
-        {
-          label: 'Open Drawing',
-          click: (): void => {
-            dialog.showMessageBox(win, {
-              title: 'Open Drawing',
-              message: 'This feature is not implemented yet.'
-            })
-          }
-        },
-        // save drawing
-        {
-          label: 'Save Drawing',
-          click: (): void => {
-            dialog.showMessageBox(win, {
-              title: 'Save Drawing',
-              message: 'This feature is not implemented yet.'
-            })
-          }
-        },
-        // Close drawing
-        {
-          label: 'Close Drawing',
-          click: (): void => {
-            dialog.showMessageBox(win, {
-              title: 'Close Drawing',
-              message: 'This feature is not implemented yet.'
-            })
-          }
-        },
-        // separator
-        { type: 'separator' },
-        // undo draw
-        {
-          label: 'Undo',
-          click: (): void => {
-            dialog.showMessageBox(win, {
-              title: 'Undo',
-              message: 'This feature is not implemented yet.'
-            })
-          }
-        },
-        // transparency
-        {
-          label: 'Transparency',
-          submenu: [
-            {
-              label: '0%',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Transparency',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: '25%',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Transparency',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: '50%',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Transparency',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: '90%',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Transparency',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            }
-          ]
-        },
-        // Draw color
-        {
-          label: 'Color',
-          submenu: [
-            {
-              label: 'Red',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Color',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: 'Green',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Color',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: 'Blue',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Color',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: 'Yellow',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Color',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            }
-          ]
-        },
-        // Draw pen
-        {
-          label: 'Pen',
-          submenu: [
-            {
-              label: 'Filled',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Pen',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            {
-              label: 'Overwrite existing colors',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Pen',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            }
-          ]
-        }
-      ]
-    },
+
     // { role: 'editMenu' }
     {
       label: 'Edit',
@@ -451,6 +296,162 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         {
           label: 'Drag mode (right click)',
           submenu: [...createDragModeSubmenu(win)]
+        },
+        // Draw menu
+        {
+          label: 'Draw',
+          submenu: [
+            // open drawing
+            {
+              label: 'Open Drawing',
+              click: (): void => {
+                dialog.showMessageBox(win, {
+                  title: 'Open Drawing',
+                  message: 'This feature is not implemented yet.'
+                })
+              }
+            },
+            // save drawing
+            {
+              label: 'Save Drawing',
+              click: (): void => {
+                dialog.showMessageBox(win, {
+                  title: 'Save Drawing',
+                  message: 'This feature is not implemented yet.'
+                })
+              }
+            },
+            // Close drawing
+            {
+              label: 'Close Drawing',
+              click: (): void => {
+                dialog.showMessageBox(win, {
+                  title: 'Close Drawing',
+                  message: 'This feature is not implemented yet.'
+                })
+              }
+            },
+            // separator
+            { type: 'separator' },
+            // undo draw
+            {
+              label: 'Undo',
+              click: (): void => {
+                dialog.showMessageBox(win, {
+                  title: 'Undo',
+                  message: 'This feature is not implemented yet.'
+                })
+              }
+            },
+            // transparency
+            {
+              label: 'Transparency',
+              submenu: [
+                {
+                  label: '0%',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Transparency',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: '25%',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Transparency',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: '50%',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Transparency',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: '90%',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Transparency',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                }
+              ]
+            },
+            // Draw color
+            {
+              label: 'Color',
+              submenu: [
+                {
+                  label: 'Red',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Color',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: 'Green',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Color',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: 'Blue',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Color',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: 'Yellow',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Color',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                }
+              ]
+            },
+            // Draw pen
+            {
+              label: 'Pen',
+              submenu: [
+                {
+                  label: 'Filled',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Pen',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                },
+                {
+                  label: 'Overwrite existing colors',
+                  click: (): void => {
+                    dialog.showMessageBox(win, {
+                      title: 'Pen',
+                      message: 'This feature is not implemented yet.'
+                    })
+                  }
+                }
+              ]
+            }
+          ]
         },
         { type: 'separator' }
       ]
@@ -607,7 +608,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
 
   const menu = Menu.buildFromTemplate(template as Electron.MenuItemConstructorOptions[])
   if (isMac) {
-    const {systemPreferences} = require('electron')
+    const { systemPreferences } = require('electron')
     systemPreferences.setUserDefault('NSDisabledDictationMenuItem', 'boolean', true)
     systemPreferences.setUserDefault('NSDisabledCharacterPaletteMenuItem', 'boolean', true)
   }

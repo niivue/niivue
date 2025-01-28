@@ -2,7 +2,6 @@ import { Tabs, Text } from '@radix-ui/themes'
 import { GeneralTab } from './GeneralTab'
 import { MeshTab } from './MeshTab'
 import { VolumeTab } from './VolumeTab'
-import OptionsTab from './OptionsTab'
 
 export const SceneTabs = (): JSX.Element => {
   return (

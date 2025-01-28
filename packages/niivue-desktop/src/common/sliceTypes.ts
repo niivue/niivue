@@ -1,4 +1,4 @@
-import { SHOW_RENDER, SLICE_TYPE } from "@niivue/niivue"
+import { SHOW_RENDER, SLICE_TYPE } from '@niivue/niivue'
 export const sliceTypeMap = {
   '3D Render': {
     name: '3D Render',
