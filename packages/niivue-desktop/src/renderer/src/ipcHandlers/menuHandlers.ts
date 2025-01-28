@@ -1,4 +1,4 @@
-import { Niivue, SLICE_TYPE, SHOW_RENDER } from '@niivue/niivue'
+import { Niivue } from '@niivue/niivue'
 import { sliceTypeMap } from '../../../common/sliceTypes'
 import { layouts } from '../../../common/layouts'
 import { orientationLabelMap } from '../../../common/orientationLabels'
