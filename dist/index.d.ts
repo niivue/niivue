@@ -392,7 +392,6 @@ declare class NVImage {
     calculateOblique(): void;
     THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void;
     SetPixDimFromSForm(): void;
-    readDICOM(buf: ArrayBuffer | ArrayBuffer[]): ArrayBuffer;
     readECAT(buffer: ArrayBuffer): ArrayBuffer;
     readV16(buffer: ArrayBuffer): ArrayBuffer;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
@@ -429,7 +428,10 @@ declare class NVImage {
     intensityScaled2Raw(scaled: number): number;
     saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Uint8Array;
     saveToDisk(fnm?: string, drawing8?: Uint8Array | null): Uint8Array;
-    static fetchDicomData(url: string, headers?: Record<string, string>): Promise<ArrayBuffer[]>;
+    static fetchDicomData(url: string, headers?: Record<string, string>): Promise<Array<{
+        name: string;
+        data: ArrayBuffer;
+    }>>;
     static fetchPartial(url: string, bytesToLoad: number, headers?: Record<string, string>): Promise<Response>;
     /**
      * factory function to load and return a new NVImage instance from a given URL
@@ -1704,6 +1706,14 @@ type SaveImageOptions = {
     isSaveDrawing: boolean;
     volumeByIndex: number;
 };
+type DicomLoaderInput = ArrayBuffer | ArrayBuffer[] | File[];
+type DicomLoader = {
+    loader: (data: DicomLoaderInput) => Promise<Array<{
+        name: string;
+        data: ArrayBuffer;
+    }>>;
+    toExt: string;
+};
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -1713,6 +1723,7 @@ type SaveImageOptions = {
  */
 declare class Niivue {
     loaders: {};
+    dicomLoader: DicomLoader | null;
     canvas: HTMLCanvasElement | null;
     _gl: WebGL2RenderingContext | null;
     isBusy: boolean;
@@ -1999,6 +2010,7 @@ declare class Niivue {
     onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void;
     onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void;
     onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void;
+    onDicomLoaderFinishedWithImages: (files: NVImage[] | NVMesh[]) => void;
     /**
      * callback function to run when the user loads a new NiiVue document
      * @example
@@ -2177,6 +2189,7 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
      */
     removeVolumeByUrl(url: string): void;
+    traverseFileTree(item: any, path: string, fileArray: any): Promise<File[]>;
     readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[];
     /**
      * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
@@ -2196,6 +2209,8 @@ declare class Niivue {
      */
     loadFromFile(file: File): Promise<void>;
     useLoader(loader: unknown, fileExt: string, toExt: string): void;
+    useDicomLoader(loader: DicomLoader): void;
+    getDicomLoader(): DicomLoader;
     dropListener(e: DragEvent): void;
     /**
      * insert a gap between slices of a mutliplanar view.
@@ -2683,6 +2698,7 @@ declare class Niivue {
      */
     saveDocument(fileName?: string, compress?: boolean): Promise<void>;
     loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this>;
+    loadDicoms(dicomList: ImageFromUrlOptions[]): Promise<this>;
     /**
      * load an array of volume objects
      * @param volumeList - the array of objects to load. each object must have a resolvable "url" property at a minimum
@@ -3160,4 +3176,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
+export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
