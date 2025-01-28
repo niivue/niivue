@@ -444,14 +444,14 @@ export class NVDocument {
 
       get gamma(): number {
         return this.sceneData.gamma
-        },
-        
-        /**
-        * Sets current gamma
-        */
-        set gamma(newGamma) {
+      },
+
+      /**
+       * Sets current gamma
+       */
+      set gamma(newGamma) {
         this.sceneData.gamma = newGamma
-        }
+      }
     }
   }
 
