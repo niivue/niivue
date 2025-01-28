@@ -1,5 +1,5 @@
 import * as nifti from 'nifti-reader-js'
-import daikon from 'daikon'
+// import daikon from 'daikon'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { Decompress, decompressSync, gzipSync } from 'fflate/browser'
 import { v4 as uuidv4 } from '@lukeed/uuid'
@@ -17,7 +17,6 @@ import {
   NiiDataType,
   NiiIntentCode,
   NVImageFromUrlOptions,
-  getBestTransform,
   getExtents,
   hdrToArrayBuffer,
   isAffineOK,
@@ -195,8 +194,10 @@ export class NVImage {
       case NVIMAGE_TYPE.DCM_FOLDER:
       case NVIMAGE_TYPE.DCM_MANIFEST:
       case NVIMAGE_TYPE.DCM:
-        imgRaw = this.readDICOM(dataBuffer)
-        break
+        // TODO: use dcm2niix here...
+        // imgRaw = this.readDICOM(dataBuffer)
+        // break
+        return
       case NVIMAGE_TYPE.FIB:
         ;[imgRaw, this.v1] = this.readFIB(dataBuffer as ArrayBuffer)
         break
@@ -782,131 +783,133 @@ export class NVImage {
 
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
-  readDICOM(buf: ArrayBuffer | ArrayBuffer[]): ArrayBuffer {
-    this.series = new daikon.Series()
-    // parse DICOM file
-    if (Array.isArray(buf)) {
-      for (let i = 0; i < buf.length; i++) {
-        const dataview = new DataView(buf[i])
-        const image = daikon.Series.parseImage(dataview)
-        if (image === null) {
-          log.error(daikon.Series.parserError)
-        } else if (image.hasPixelData()) {
-          // if it's part of the same series, add it
-          if (this.series.images.length === 0 || image.getSeriesId() === this.series.images[0].getSeriesId()) {
-            this.series.addImage(image)
-          }
-        } // if hasPixelData
-      } // for i
-    } else {
-      // not a dicom folder drop
-      const image = daikon.Series.parseImage(new DataView(buf))
-      if (image === null) {
-        log.error(daikon.Series.parserError)
-      } else if (image.hasPixelData()) {
-        // if it's part of the same series, add it
-        if (this.series.images.length === 0 || image.getSeriesId() === this.series.images[0].getSeriesId()) {
-          this.series.addImage(image)
-        }
-      }
-    }
-    // order the image files, determines number of frames, etc.
-    this.series.buildSeries()
-    // output some header info
-    this.hdr = new nifti.NIFTI1()
-    const hdr = this.hdr
-    hdr.scl_inter = 0
-    hdr.scl_slope = 1
-    if (this.series.images[0].getDataScaleIntercept()) {
-      hdr.scl_inter = this.series.images[0].getDataScaleIntercept()
-    }
-    if (this.series.images[0].getDataScaleSlope()) {
-      hdr.scl_slope = this.series.images[0].getDataScaleSlope()
-    }
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    hdr.dims[1] = this.series.images[0].getCols()
-    hdr.dims[2] = this.series.images[0].getRows()
-    hdr.dims[3] = this.series.images[0].getNumberOfFrames()
-    if (this.series.images.length > 1) {
-      if (hdr.dims[3] > 1) {
-        log.debug('To Do: multiple slices per file and multiple files (XA30 DWI)')
-      }
-      hdr.dims[3] = this.series.images.length
-    }
-    const rc = this.series.images[0].getPixelSpacing() // TODO: order?
-    hdr.pixDims[1] = rc[0]
-    hdr.pixDims[2] = rc[1]
-    if (this.series.images.length > 1) {
-      // Multiple slices. The depth of a pixel is the physical distance between offsets. This is not the same as slice
-      // spacing for tilted slices (skew).
-      const p0 = vec3.fromValues(...(this.series.images[0].getImagePosition() as [number, number, number]))
-      const p1 = vec3.fromValues(...(this.series.images[1].getImagePosition() as [number, number, number]))
-      const n = vec3.fromValues(0, 0, 0)
-      vec3.subtract(n, p0, p1)
-      hdr.pixDims[3] = vec3.length(n)
-    } else {
-      // Single slice. Use the slice thickness as pixel depth.
-      hdr.pixDims[3] = this.series.images[0].getSliceThickness()
-    }
-    hdr.pixDims[4] = this.series.images[0].getTR() / 1000.0 // msec -> sec
-    const dt = this.series.images[0].getDataType() // 2=int,3=uint,4=float,
-    const bpv = this.series.images[0].getBitsAllocated()
-    hdr.numBitsPerVoxel = bpv
-    this.hdr.littleEndian = this.series.images[0].littleEndian
-    if (bpv === 8 && dt === 2) {
-      hdr.datatypeCode = NiiDataType.DT_INT8
-    } else if (bpv === 8 && dt === 3) {
-      hdr.datatypeCode = NiiDataType.DT_UINT8
-    } else if (bpv === 16 && dt === 2) {
-      hdr.datatypeCode = NiiDataType.DT_INT16
-    } else if (bpv === 16 && dt === 3) {
-      hdr.datatypeCode = NiiDataType.DT_UINT16
-    } else if (bpv === 32 && dt === 2) {
-      hdr.datatypeCode = NiiDataType.DT_INT32
-    } else if (bpv === 32 && dt === 3) {
-      hdr.datatypeCode = NiiDataType.DT_UINT32
-    } else if (bpv === 32 && dt === 4) {
-      hdr.datatypeCode = NiiDataType.DT_FLOAT32
-    } else if (bpv === 64 && dt === 4) {
-      hdr.datatypeCode = NiiDataType.DT_FLOAT64
-    } else if (bpv === 1) {
-      hdr.datatypeCode = NiiDataType.DT_BINARY
-    } else {
-      log.warn('Unsupported DICOM format: ' + dt + ' ' + bpv)
-    }
-    const voxelDimensions = hdr.pixDims.slice(1, 4)
-    const m = getBestTransform(
-      this.series.images[0].getImageDirections(),
-      voxelDimensions,
-      this.series.images[0].getImagePosition()
-    )
-    if (m) {
-      hdr.sform_code = 1
-      hdr.affine = [
-        [m[0][0], m[0][1], m[0][2], m[0][3]],
-        [m[1][0], m[1][1], m[1][2], m[1][3]],
-        [m[2][0], m[2][1], m[2][2], m[2][3]],
-        [0, 0, 0, 1]
-      ]
-    }
-    let data
-    let length = this.series.validatePixelDataLength(this.series.images[0])
-    const buffer = new Uint8Array(new ArrayBuffer(length * this.series.images.length))
-    // implementation copied from:
-    // https://github.com/rii-mango/Daikon/blob/bbe08bad9758dfbdf31ca22fb79048c7bad85706/src/series.js#L496
-    for (let i = 0; i < this.series.images.length; i++) {
-      if (this.series.isMosaic) {
-        data = this.series.getMosaicData(this.series.images[i], this.series.images[i].getPixelDataBytes())
-      } else {
-        data = this.series.images[i].getPixelDataBytes()
-      }
-      length = this.series.validatePixelDataLength(this.series.images[i])
-      this.series.images[i].clearPixelData()
-      buffer.set(new Uint8Array(data, 0, length), length * i)
-    } // for images.length
-    return buffer.buffer
-  } // readDICOM()
+  // -----------------
+  // readDICOM(buf: ArrayBuffer | ArrayBuffer[]): ArrayBuffer {
+  //   this.series = new daikon.Series()
+  //   // parse DICOM file
+  //   if (Array.isArray(buf)) {
+  //     for (let i = 0; i < buf.length; i++) {
+  //       const dataview = new DataView(buf[i])
+  //       const image = daikon.Series.parseImage(dataview)
+  //       if (image === null) {
+  //         log.error(daikon.Series.parserError)
+  //       } else if (image.hasPixelData()) {
+  //         // if it's part of the same series, add it
+  //         if (this.series.images.length === 0 || image.getSeriesId() === this.series.images[0].getSeriesId()) {
+  //           this.series.addImage(image)
+  //         }
+  //       } // if hasPixelData
+  //     } // for i
+  //   } else {
+  //     // not a dicom folder drop
+  //     const image = daikon.Series.parseImage(new DataView(buf))
+  //     if (image === null) {
+  //       log.error(daikon.Series.parserError)
+  //     } else if (image.hasPixelData()) {
+  //       // if it's part of the same series, add it
+  //       if (this.series.images.length === 0 || image.getSeriesId() === this.series.images[0].getSeriesId()) {
+  //         this.series.addImage(image)
+  //       }
+  //     }
+  //   }
+  //   // order the image files, determines number of frames, etc.
+  //   this.series.buildSeries()
+  //   // output some header info
+  //   this.hdr = new nifti.NIFTI1()
+  //   const hdr = this.hdr
+  //   hdr.scl_inter = 0
+  //   hdr.scl_slope = 1
+  //   if (this.series.images[0].getDataScaleIntercept()) {
+  //     hdr.scl_inter = this.series.images[0].getDataScaleIntercept()
+  //   }
+  //   if (this.series.images[0].getDataScaleSlope()) {
+  //     hdr.scl_slope = this.series.images[0].getDataScaleSlope()
+  //   }
+  //   hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
+  //   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+  //   hdr.dims[1] = this.series.images[0].getCols()
+  //   hdr.dims[2] = this.series.images[0].getRows()
+  //   hdr.dims[3] = this.series.images[0].getNumberOfFrames()
+  //   if (this.series.images.length > 1) {
+  //     if (hdr.dims[3] > 1) {
+  //       log.debug('To Do: multiple slices per file and multiple files (XA30 DWI)')
+  //     }
+  //     hdr.dims[3] = this.series.images.length
+  //   }
+  //   const rc = this.series.images[0].getPixelSpacing() // TODO: order?
+  //   hdr.pixDims[1] = rc[0]
+  //   hdr.pixDims[2] = rc[1]
+  //   if (this.series.images.length > 1) {
+  //     // Multiple slices. The depth of a pixel is the physical distance between offsets. This is not the same as slice
+  //     // spacing for tilted slices (skew).
+  //     const p0 = vec3.fromValues(...(this.series.images[0].getImagePosition() as [number, number, number]))
+  //     const p1 = vec3.fromValues(...(this.series.images[1].getImagePosition() as [number, number, number]))
+  //     const n = vec3.fromValues(0, 0, 0)
+  //     vec3.subtract(n, p0, p1)
+  //     hdr.pixDims[3] = vec3.length(n)
+  //   } else {
+  //     // Single slice. Use the slice thickness as pixel depth.
+  //     hdr.pixDims[3] = this.series.images[0].getSliceThickness()
+  //   }
+  //   hdr.pixDims[4] = this.series.images[0].getTR() / 1000.0 // msec -> sec
+  //   const dt = this.series.images[0].getDataType() // 2=int,3=uint,4=float,
+  //   const bpv = this.series.images[0].getBitsAllocated()
+  //   hdr.numBitsPerVoxel = bpv
+  //   this.hdr.littleEndian = this.series.images[0].littleEndian
+  //   if (bpv === 8 && dt === 2) {
+  //     hdr.datatypeCode = NiiDataType.DT_INT8
+  //   } else if (bpv === 8 && dt === 3) {
+  //     hdr.datatypeCode = NiiDataType.DT_UINT8
+  //   } else if (bpv === 16 && dt === 2) {
+  //     hdr.datatypeCode = NiiDataType.DT_INT16
+  //   } else if (bpv === 16 && dt === 3) {
+  //     hdr.datatypeCode = NiiDataType.DT_UINT16
+  //   } else if (bpv === 32 && dt === 2) {
+  //     hdr.datatypeCode = NiiDataType.DT_INT32
+  //   } else if (bpv === 32 && dt === 3) {
+  //     hdr.datatypeCode = NiiDataType.DT_UINT32
+  //   } else if (bpv === 32 && dt === 4) {
+  //     hdr.datatypeCode = NiiDataType.DT_FLOAT32
+  //   } else if (bpv === 64 && dt === 4) {
+  //     hdr.datatypeCode = NiiDataType.DT_FLOAT64
+  //   } else if (bpv === 1) {
+  //     hdr.datatypeCode = NiiDataType.DT_BINARY
+  //   } else {
+  //     log.warn('Unsupported DICOM format: ' + dt + ' ' + bpv)
+  //   }
+  //   const voxelDimensions = hdr.pixDims.slice(1, 4)
+  //   const m = getBestTransform(
+  //     this.series.images[0].getImageDirections(),
+  //     voxelDimensions,
+  //     this.series.images[0].getImagePosition()
+  //   )
+  //   if (m) {
+  //     hdr.sform_code = 1
+  //     hdr.affine = [
+  //       [m[0][0], m[0][1], m[0][2], m[0][3]],
+  //       [m[1][0], m[1][1], m[1][2], m[1][3]],
+  //       [m[2][0], m[2][1], m[2][2], m[2][3]],
+  //       [0, 0, 0, 1]
+  //     ]
+  //   }
+  //   let data
+  //   let length = this.series.validatePixelDataLength(this.series.images[0])
+  //   const buffer = new Uint8Array(new ArrayBuffer(length * this.series.images.length))
+  //   // implementation copied from:
+  //   // https://github.com/rii-mango/Daikon/blob/bbe08bad9758dfbdf31ca22fb79048c7bad85706/src/series.js#L496
+  //   for (let i = 0; i < this.series.images.length; i++) {
+  //     if (this.series.isMosaic) {
+  //       data = this.series.getMosaicData(this.series.images[i], this.series.images[i].getPixelDataBytes())
+  //     } else {
+  //       data = this.series.images[i].getPixelDataBytes()
+  //     }
+  //     length = this.series.validatePixelDataLength(this.series.images[i])
+  //     this.series.images[i].clearPixelData()
+  //     buffer.set(new Uint8Array(data, 0, length), length * i)
+  //   } // for images.length
+  //   return buffer.buffer
+  // } // readDICOM()
+  // -----------------------
 
   // not included in public docs
   // read ECAT7 format image
@@ -2975,7 +2978,10 @@ export class NVImage {
     return saveData
   } // saveToDisk()
 
-  static async fetchDicomData(url: string, headers: Record<string, string> = {}): Promise<ArrayBuffer[]> {
+  static async fetchDicomData(
+    url: string,
+    headers: Record<string, string> = {}
+  ): Promise<Array<{ name: string; data: ArrayBuffer }>> {
     if (url === '') {
       throw Error('url must not be empty')
     }
@@ -3007,7 +3013,10 @@ export class NVImage {
         throw Error(response.statusText)
       }
       const contents = await response.arrayBuffer()
-      dataBuffer.push(contents)
+      dataBuffer.push({
+        name: line,
+        data: contents
+      })
     }
     return dataBuffer
   }

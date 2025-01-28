@@ -89,14 +89,7 @@ import {
   LabelAnchorFlag
 } from '../nvlabel.js'
 import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
-import {
-  NVImage,
-  NVImageFromUrlOptions,
-  NVIMAGE_TYPE,
-  NiiDataType,
-  NiiIntentCode,
-  ImageFromUrlOptions
-} from '../nvimage/index.js'
+import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '../nvimage/index.js'
 import { NVUtilities } from '../nvutilities.js'
 import { NVMeshUtilities } from '../nvmesh-utilities.js'
 import {
@@ -326,6 +319,13 @@ const defaultSaveImageOptions: SaveImageOptions = {
   volumeByIndex: 0
 }
 
+export type DicomLoaderInput = ArrayBuffer | ArrayBuffer[] | File[]
+
+export type DicomLoader = {
+  loader: (data: DicomLoaderInput) => Promise<Array<{ name: string; data: ArrayBuffer }>>
+  toExt: string
+}
+
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -335,6 +335,16 @@ const defaultSaveImageOptions: SaveImageOptions = {
  */
 export class Niivue {
   loaders = {}
+  // create a dicom loader
+  dicomLoader: DicomLoader | null = null
+  // {
+  //   loader: (data: DicomLoaderInput) => {
+  //     return new Promise<{name: string; data: ArrayBuffer}[]>((resolve, reject) => {
+  //       reject('No DICOM loader provided')
+  //     })
+  //   },
+  //   toExt: 'nii'
+  // }
   canvas: HTMLCanvasElement | null = null // the reference to the canvas element on the page
   _gl: WebGL2RenderingContext | null = null // the gl context
   isBusy = false // flag to indicate if the scene is busy drawing
@@ -741,6 +751,8 @@ export class Niivue {
   onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
   onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => {}
   onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => {}
+
+  onDicomLoaderFinishedWithImages: (files: NVImage[] | NVMesh[]) => void = () => {}
 
   /**
    * callback function to run when the user loads a new NiiVue document
@@ -1960,6 +1972,10 @@ export class Niivue {
       // registered a custom loader for this file type.
       // if so, use that loader to load the file.
       const ext = this.getFileExt(imageItem.name || imageItem.url)
+      if (ext === 'DCM') {
+        // throw an error if the user tries to load a DICOM file without using the DICOM loader
+        throw new Error('DICOM files must be loaded using useDicomLoader')
+      }
       if (this.loaders[ext]) {
         let itemToLoad: string | Uint8Array | ArrayBuffer = imageItem.url
         const toExt = this.loaders[ext].toExt
@@ -2041,6 +2057,42 @@ export class Niivue {
     }
   }
 
+  async traverseFileTree(item, path = '', fileArray): Promise<File[]> {
+    return new Promise((resolve) => {
+      if (item.isFile) {
+        item.file((file) => {
+          file.fullPath = path + file.name
+          // IMPORTANT: _webkitRelativePath is required for dcm2niix to work.
+          // We need to add this property so we can parse multiple directories correctly.
+          // the "webkitRelativePath" property on File objects is read-only, so we can't set it directly, hence the underscore.
+          file._webkitRelativePath = path + file.name
+          fileArray.push(file)
+          resolve(fileArray)
+        })
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader()
+        const readAllEntries = (): void => {
+          dirReader.readEntries((entries) => {
+            if (entries.length > 0) {
+              const promises = []
+              for (const entry of entries) {
+                promises.push(this.traverseFileTree(entry, path + item.name + '/', fileArray))
+              }
+              Promise.all(promises)
+                .then(readAllEntries)
+                .catch((e) => {
+                  throw e
+                })
+            } else {
+              resolve(fileArray)
+            }
+          })
+        }
+        readAllEntries()
+      }
+    })
+  }
+
   readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
     const reader = directory.createReader()
     let allEntiresInDir: FileSystemEntry[] = []
@@ -2052,6 +2104,7 @@ export class Niivue {
       }
       for (let i = 0; i < fileSystemEntries.length; i++) {
         allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
+        console.log(allFileObects)
       }
       return allFileObects
     }
@@ -2062,20 +2115,8 @@ export class Niivue {
           readEntries()
         } else {
           getFileObjects(allEntiresInDir)
-            .then((allFileObjects) => {
-              NVImage.loadFromFile({
-                file: allFileObjects, // an array of file objects
-                name: directory.name,
-                urlImgData: null, // nothing
-                imageType: NVIMAGE_TYPE.DCM_FOLDER // signify that this is a dicom directory
-              })
-                .then((volume) => {
-                  this.addVolume(volume)
-                  this.setDrawingEnabled(true)
-                })
-                .catch((e) => {
-                  throw e
-                })
+            .then(async (allFileObjects) => {
+              console.log(allFileObjects)
             })
             .catch((e) => {
               throw e
@@ -2163,6 +2204,19 @@ export class Niivue {
   })
 
   */
+
+  // interface LoaderMap {
+  //   [key: string]: {
+  //     loader: LoaderFunction;
+  //     toExt: string;
+  //   };
+  // }
+
+  // Example usage:
+  // const loaderMap: LoaderMap = {
+  //   'TXT': { loader: (file: File) => file.text(), toExt: 'json' }
+  // };
+  // loader can either be a function that takes a file or ArrayBuffer, or the async version of that.
   useLoader(loader: unknown, fileExt: string, toExt: string): void {
     this.loaders = {
       ...this.loaders,
@@ -2173,6 +2227,27 @@ export class Niivue {
     }
   }
 
+  useDicomLoader(loader: DicomLoader): void {
+    this.dicomLoader = loader
+  }
+
+  getDicomLoader(): DicomLoader {
+    return this.dicomLoader
+  }
+
+  // dicom loading is a special case because it can take a list
+  // of files (e.g. from a user supplied DICOM directory) or a single file.
+  // Our preferred DICOM loader is the WASM port of dcm2niix (implemented in a separate niivue loader module).
+  // useDicomLoader(loader: unknown, toExt: string) {
+  //   this.loaders = {
+  //     ...this.loaders,
+  //     ['DCM']: {
+  //       loader,
+  //       toExt,
+  //     },
+  //   }
+  // }
+
   // not included in public docs
   dropListener(e: DragEvent): void {
     e.stopPropagation()
@@ -2182,6 +2257,7 @@ export class Niivue {
       return
     }
     const urlsToLoad: string[] = []
+    const files = []
     const dt = e.dataTransfer
     if (!dt) {
       return
@@ -2321,7 +2397,41 @@ export class Niivue {
               }
             })
           } else if (entry.isDirectory) {
-            this.readDirectory(entry as FileSystemDirectoryEntry)
+            // assume that directories are only use for DICOM files
+            this.traverseFileTree(entry, '', files)
+              .then((files) => {
+                const loader = this.getDicomLoader().loader
+                if (!loader) {
+                  throw new Error('No loader for DICOM files')
+                }
+                loader(files)
+                  .then(async (fileArrayBuffers) => {
+                    console.log(fileArrayBuffers)
+                    const promises = fileArrayBuffers.map((loaderImage) =>
+                      NVImage.loadFromUrl({
+                        url: loaderImage.data,
+                        name: loaderImage.name,
+                        limitFrames4D: this.opts.limitFrames4D
+                      })
+                    )
+
+                    Promise.all(promises)
+                      .then(async (loadedNvImages) => {
+                        console.log('from dicom loader')
+                        console.log(loadedNvImages)
+                        await this.onDicomLoaderFinishedWithImages(loadedNvImages)
+                      })
+                      .catch((e) => {
+                        throw e
+                      })
+                  })
+                  .catch((error) => {
+                    console.error('Error loading DICOM files:', error)
+                  })
+              })
+              .catch((e) => {
+                throw e
+              })
           }
         }
       }
@@ -4081,6 +4191,48 @@ export class Niivue {
       await this.loadMeshes(meshes as LoadFromUrlParams[])
     }
 
+    return this
+  }
+
+  async loadDicoms(dicomList: ImageFromUrlOptions[]): Promise<this> {
+    // check if this.dicomLoader is set
+    if (!this.getDicomLoader()) {
+      throw new Error('No dicom loader set. Please set a dicom loader before loading dicoms')
+    }
+    this.drawScene()
+    this.volumes = []
+    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    const promises = dicomList.map(async (dicom) => {
+      let dicomData = null
+      if (dicom.isManifest) {
+        dicomData = await NVImage.fetchDicomData(dicom.url)
+      } else {
+        const response = await fetch(dicom.url)
+        if (!response.ok) {
+          throw new Error(`Failed to load file: ${response.statusText}`)
+        }
+        const dicomArrayBuffer = await response.arrayBuffer()
+        const basename = dicom.url.split('/').pop()
+        const data = dicomArrayBuffer
+        dicomData = [{ name: basename, data }]
+      }
+      const dicomLoader = this.getDicomLoader().loader
+      const convertedArrayBuffer = await dicomLoader(dicomData)
+      console.log(convertedArrayBuffer)
+      const name = convertedArrayBuffer[0].name
+      const data = convertedArrayBuffer[0].data
+      const image = NVImage.loadFromUrl({ url: data, name })
+      return image
+    })
+
+    const nvImages = await Promise.all(promises)
+    // if only one nvImage, then add it to the scene ,else call onLoaderFinishedWithImages
+    if (nvImages.length === 1) {
+      this.addVolume(nvImages[0])
+    } else {
+      this.onDicomLoaderFinishedWithImages(nvImages)
+    }
     return this
   }
 

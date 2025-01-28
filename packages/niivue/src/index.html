@@ -71,6 +71,8 @@
         NVMeshLoaders,
         SHOW_RENDER,
       } from "./niivue/index.ts"
+      // import { Dcm2niix } from "@niivue/dcm2niix"
+      import { dicomLoader } from "@niivue/dicom-loader"
 const fragMeshGridShader = `#version 300 es
 precision highp int;
 precision highp float;
@@ -152,13 +154,15 @@ void main() {
     let id = nv1.meshes[0].id
     nv1.setMeshShader(id, idx)
   }
+
   var nv1 = new Niivue({
     show3Dcrosshair: true,
     backColor: [0.9, 0.9, 1, 1],
-    loglevel: 'debug',
+    loglevel: 'debug'
   })
   nv1.setSliceType(nv1.sliceTypeRender)
   nv1.attachTo("gl1")
+
   var meshLayersList1 = [
     {
       url: "../demos/images/lh.curv",
