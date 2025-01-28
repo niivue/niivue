@@ -3800,7 +3800,9 @@ export class Niivue {
     this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
     this.gradientTextureAmount = gradientAmount
-    if (this.volumes.length < 1) return //issue1158
+    if (this.volumes.length < 1) {
+      return
+    } // issue1158
     this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
   }
