@@ -9,7 +9,7 @@ export const EnumSelect: React.FC<{
   <Select.Root value={value} onValueChange={onChange}>
     <Select.Trigger className="flex items-center justify-between border rounded px-2 py-1">
       <Select.Value />
-      <Select.Icon>▼</Select.Icon>
+      <Select.Icon className="ml-2">▼</Select.Icon>
     </Select.Trigger>
     <Select.Content className="bg-white border rounded shadow">
       <Select.Viewport>
