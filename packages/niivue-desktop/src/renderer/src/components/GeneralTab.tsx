@@ -1,6 +1,5 @@
 import React, { useState, useContext } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import * as Select from '@radix-ui/react-select'
 import { ScrollArea, Text, Switch } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'
 import { SliceSelection } from './SliceSelection'
@@ -9,28 +8,9 @@ import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
 import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
 import { filterEnum } from '@renderer/utils/config'
+import { EnumSelect } from './EnumSelect'
 
-const EnumSelect: React.FC<{
-  value: string
-  onChange: (value: string) => void
-  options: Record<string, number>
-}> = ({ value, onChange, options }) => (
-  <Select.Root value={value} onValueChange={onChange}>
-    <Select.Trigger className="flex items-center justify-between border rounded px-2 py-1">
-      <Select.Value />
-      <Select.Icon>▼</Select.Icon>
-    </Select.Trigger>
-    <Select.Content className="bg-white border rounded shadow">
-      <Select.Viewport>
-        {Object.entries(options).map(([label, val]) => (
-          <Select.Item key={val} value={val.toString()} className="p-2 hover:bg-gray-100">
-            <Select.ItemText>{label}</Select.ItemText>
-          </Select.Item>
-        ))}
-      </Select.Viewport>
-    </Select.Content>
-  </Select.Root>
-)
+
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
