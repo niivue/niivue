@@ -8,10 +8,7 @@ import { AppContext } from '../App'
 import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
 import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
-
-// Utility to filter valid enum key-value pairs
-const filterEnum = (enumObj: object): Record<string, number> =>
-  Object.fromEntries(Object.entries(enumObj).filter(([key]) => isNaN(Number(key))))
+import { filterEnum } from '@renderer/utils/config'
 
 const EnumSelect: React.FC<{
   value: string
