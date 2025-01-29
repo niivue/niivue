@@ -1021,6 +1021,7 @@ uniform float cal_min;
 uniform float cal_maxNeg;
 uniform float cal_minNeg;
 uniform bool isAlphaThreshold;
+uniform bool isColorbarFromZero;
 uniform bool isAdditiveBlend;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
@@ -1039,7 +1040,7 @@ void main(void) {
 	float f = (scl_slope * float(texture(intensityVol, vx.xyz).r)) + scl_inter;
 	float mn = cal_min;
 	float mx = cal_max;
-	if (isAlphaThreshold)
+	if ((isAlphaThreshold) || (isColorbarFromZero))
 		mn = 0.0;
 	float r = max(0.00001, abs(mx - mn));
 	mn = min(mn, mx);
@@ -1056,7 +1057,7 @@ void main(void) {
 	//negative colors
 	mn = cal_minNeg;
 	mx = cal_maxNeg;
-	if (isAlphaThreshold)
+	if ((isAlphaThreshold) || (isColorbarFromZero))
 		mx = 0.0;
 	//if ((!isnan(cal_minNeg)) && ( f < mx)) {
 	if ((cal_minNeg < cal_maxNeg) && ( f < mx)) {
@@ -1079,6 +1080,12 @@ void main(void) {
 		else if ((f > 0.0) && (cal_min > 0.0))
 			FragColor.a *= pow(f / cal_min, 2.0); //issue435:  A = (V/X)**2
 		//FragColor.g = 0.0;
+	} else if (isColorbarFromZero) {
+		if ((cal_minNeg != cal_maxNeg) && ( f < 0.0) && (f > cal_maxNeg))
+			FragColor.a = 0.0;
+		else if ((f > 0.0) && (cal_min > 0.0) && (f < cal_min))
+			FragColor.a *= 0.0;
+
 	}
 	if (modulation == 1) {
 		FragColor.rgb *= texture(modulationVol, vx.xyz).r;

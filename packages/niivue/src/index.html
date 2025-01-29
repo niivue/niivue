@@ -4,66 +4,93 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Mesh Atlas</title>
+    <title>Statistical Thresholds</title>
     <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>
-      <strong
-        >niivue doesn't work properly without JavaScript enabled. Please enable
-        it to continue.</strong
-      >
+      <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-      <label for="decimateSelect">Decimate</label>
-      <select id="decimateSelect">
-        <option value="0">0</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7" selected>7</option>
+      <label for="dpiCheck" title="higher resolution for 'retina' displays">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" checked />
+      <label for="checkNegative">&nbsp;&nbsp; NegativeColors</label>
+      <input type="checkbox" id="checkNegative" checked />
+      <label for="checkSmooth" title="trilinear interpolation blurs data, but can change which voxels survive a threshold">&nbsp;&nbsp; Smooth</label>
+      <input type="checkbox" id="checkSmooth" unchecked />
+      <label for="checkWorld">&nbsp;&nbsp; World</label>
+      <input type="checkbox" id="checkWorld" unchecked />
+      <label for="slideNeg"> &nbsp; -Thresh</label>
+      <input
+        type="range"
+        min="1"
+        max="50"
+        value="30"
+        class="slider"
+        id="slideNeg"
+      />
+      <label for="slideMin"> &nbsp; -Max</label>
+      <input
+        type="range"
+        min="51"
+        max="150"
+        value="60"
+        class="slider"
+        id="slideMin"
+      />
+      <label for="slidePos"> &nbsp; +Thresh</label>
+      <input
+        type="range"
+        min="1"
+        max="50"
+        value="30"
+        class="slider"
+        id="slidePos"
+      />
+      <label for="slideMax"> &nbsp; +Max</label>
+      <input
+        type="range"
+        min="51"
+        max="150"
+        value="60"
+        class="slider"
+        id="slideMax"
+      />
+      <label for="slideOutline"> &nbsp; Outline</label>
+      <input
+        type="range"
+        min="0"
+        max="4"
+        value="1"
+        class="slider"
+        id="slideOutline"
+      />
+      <select id="alphaMode">
+        <option selected>restrict colorbar to range</option>
+        <option>colorbar from 0,transparent subthreshold</option>
+        <option>colorbar from 0, translucent subthreshold</option>
       </select>
-      <label for="meshSlider">Atlas transparency</label>
-      <input
-        type="range"
-        min="0"
-        max="255"
-        value="127"
-        class="slider"
-        id="meshSlider"
-      />
-      <label for="meshSlider2">Statistical transparency</label>
-      <input
-        type="range"
-        min="0"
-        max="255"
-        value="255"
-        class="slider"
-        id="meshSlider2"
-      />
-      <label for="check1">Atlas outline</label>
-      <input type="checkbox" id="check1" unchecked />
-      <label for="check2">Statistical outline</label>
-      <input type="checkbox" id="check2" unchecked />
+      <label for="checkAlphaClipDark">AlphaClipDark</label>
+      <input type="checkbox" id="checkAlphaClipDark" unchecked />
+      <label for="checkDiverge">Diverging Colors</label>
+      <input type="checkbox" id="checkDiverge" checked />
+      <select id="outlineMesh">
+        <option value="0" selected>mesh: no outline</option>
+        <option value="1" >mesh: opaque outline</option>
+        <option value="-1">mesh: black outline</option>
+      </select>
+      <select id="alphaModeMesh">
+        <option selected>restrict colorbar to range</option>
+        <option>colorbar from 0,transparent subthreshold</option>
+        <option>colorbar from 0, translucent subthreshold</option>
+      </select>
+      <button id="about">About</button>
     </header>
-    <main id="container">
+    <main>
       <canvas id="gl1"></canvas>
     </main>
-    <footer>
-      <p id="shaders">Shaders:<button id="gridBtn">Custom: Grid</button></p>
-      <p>custom shader:</p>
-      <textarea id="customText" name="customText" rows="4" cols="50">
-#version 300 es&#10;precision highp int;&#10;precision highp float;&#10;uniform float opacity;&#10;in vec4 vClrTypo;&#10;in vec3 vN, vL, vV;&#10;out vec4 color;&#10;void main() {&#10; vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)&#10; float ambient = 0.35;&#10; float diffuse = 0.5;&#10; vec3 n = normalize(vN);&#10; vec3 l = normalize(vec3(0.0, 10.0, -5.0));&#10; float lightNormDot = dot(n, l);&#10; vec3 a = vClr.rgb * ambient;&#10; vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;&#10; color = vec4(a + d, opacity);&#10;}</textarea
-      >
-      <br />
-      <button id="customShaderBtn" style="color: red;">Compile broken shader</button>
-    </footer>
-  </body>
-</html>
-<script type="module" async>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
       import {
         Niivue,
         NVImage,
@@ -71,130 +98,131 @@
         NVMeshLoaders,
         SHOW_RENDER,
       } from "./niivue/index.ts"
-      // import { Dcm2niix } from "@niivue/dcm2niix"
-      import { dicomLoader } from "@niivue/dicom-loader"
-const fragMeshGridShader = `#version 300 es
-precision highp int;
-precision highp float;
-uniform float opacity;
-in vec4 vClr, vP;
-in vec3 vN;
-out vec4 color;
-void main() {
-	float GridSpacing = 20.0;
-	float WireWidth = 0.025;
-	float o = GridSpacing * WireWidth * 0.5;
-	float xDx = mod(vP.x, GridSpacing);
-	float yDx = mod(vP.y, GridSpacing);
-	float zDx = mod(vP.z, GridSpacing);
-	float minDx = min(min(xDx, yDx), zDx);
-	if ( ( GridSpacing * WireWidth) < minDx) discard;
-	
-	vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)
-	float ambient = 0.35;
-	float diffuse = 0.5;
-	float specular = 0.2;
-	float shininess = 10.0;
-	vec3 n = normalize(vN);
-	vec3 lightPosition = vec3(0.0, 10.0, -5.0);
-	vec3 l = normalize(lightPosition);
-	float lightNormDot = dot(n, l);
-	vec3 a = vClr.rgb * ambient;
-	vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;
-	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
-	color = vec4(a + d + s, opacity);
-}`
-  decimateSelect.onchange = async function () {
-    nv1.decimateHierarchicalMesh(nv1.meshes[0].id, decimateSelect.selectedIndex)
-    for (let i = decimateSelect.options.length - 1; i > decimateSelect.selectedIndex; i--) {
-      decimateSelect.remove(i);
-    }
-  }
-  meshSlider.oninput = function () {
-    nv1.setMeshLayerProperty(
-      nv1.meshes[0].id,
-      1,
-      "opacity",
-      this.value / 255.0
-    )
-  }
-  meshSlider2.oninput = function () {
-    nv1.setMeshLayerProperty(
-      nv1.meshes[0].id,
-      2,
-      "opacity",
-      this.value / 255.0
-    )
-  }
-  check1.onchange = function () {
-    nv1.setMeshLayerProperty(
-      nv1.meshes[0].id,
-      1,
-      "outlineBorder",
-      this.checked
-    )
-  }
-  check2.onchange = function () {
-    nv1.setMeshLayerProperty(
-      nv1.meshes[0].id,
-      2,
-      "outlineBorder",
-      this.checked
-    )
-  }
-  customShaderBtn.onclick = function () {
-    let idx = nv1.setCustomMeshShader(
-      document.getElementById("customText").value
-    )
-    let id = nv1.meshes[0].id
-    nv1.setMeshShader(id, idx)
-  }
-  gridBtn.onclick = function () {
-    let idx = nv1.setCustomMeshShader(fragMeshGridShader)
-    let id = nv1.meshes[0].id
-    nv1.setMeshShader(id, idx)
-  }
+      dpiCheck.onchange = function() {
+        nv1.setHighResolutionCapable(this.checked)
+      }
+      checkNegative.onchange = function () {
+        if (this.checked) nv1.setColormapNegative(nv1.volumes[1].id, "winter")
+        else nv1.setColormapNegative(nv1.volumes[1].id, "")
+        nv1.drawScene()
+      }
+      checkSmooth.onchange = function () {
+        nv1.setInterpolation(!this.checked)
+      }
+      checkWorld.onchange = function () {
+        nv1.setSliceMM(this.checked)
+      }
+      slidePos.oninput = function () {
+        nv1.volumes[1].cal_min = 0.1 * this.value
+        nv1.updateGLVolume()
+      }
+      slideMin.oninput = function () {
+        nv1.volumes[1].cal_minNeg = -0.1 * this.value
+        nv1.updateGLVolume()
+      }
+      slideMax.oninput = function () {
+        nv1.volumes[1].cal_max = 0.1 * this.value
+        nv1.updateGLVolume()
+      }
+      slideOutline.oninput = function () {
+        nv1.overlayOutlineWidth = 0.25 * this.value
+        nv1.updateGLVolume()
+      }
+      slideNeg.oninput = function () {
+        nv1.volumes[1].cal_maxNeg = -0.1 * this.value
+        nv1.updateGLVolume()
+      }
+      alphaMode.onchange = function () {
+        nv1.volumes[1].colormapType = this.selectedIndex
+        nv1.updateGLVolume()
+      }
+      
+      alphaModeMesh.onchange = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapType", this.selectedIndex) 
+      }
+      outlineMesh.onchange = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "outlineBorder", parseInt(this.value)) 
+      }
+      checkDiverge.onchange = function () {
+        if (!this.checked) {
+            nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", "warm") 
+            nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapNegative", "winter") 
+        } else {
+            nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", "green2orange") 
+            nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapNegative", "green2cyan") 
+        }
+      } 
 
-  var nv1 = new Niivue({
-    show3Dcrosshair: true,
-    backColor: [0.9, 0.9, 1, 1],
-    loglevel: 'debug'
-  })
-  nv1.setSliceType(nv1.sliceTypeRender)
-  nv1.attachTo("gl1")
-
-  var meshLayersList1 = [
-    {
-      url: "../demos/images/lh.curv",
-      colormap: "gray",
-      cal_min: 0.3,
-      cal_max: 0.5,
-      opacity: 1,
-    },
-    { url: "../demos/images/boggle.lh.annot", colormap: "rocket", opacity: 0.5 },
-    {
-      url: "../demos/images/pval.LH.nii.gz",
-      cal_min: 25,
-      cal_max: 35.0,
-      opacity: 0.9,
-    },
-  ]
-  await nv1.loadMeshes([
-    {
-      url: "../demos/images/lh.pial",
-      rgba255: [255, 255, 255, 255],
-      layers: meshLayersList1,
-    },
-    {url: "../demos/images/CIT168.mz3", rgba255 : [0, 0, 255, 255]},
-  ])
-  let cmaps = nv1.meshShaderNames()
-  let cmapEl = document.getElementById("shaders")
-  for (let i = 0; i < cmaps.length; i++) {
-    let btn = document.createElement("button")
-    btn.innerHTML = cmaps[i]
-    btn.onclick = function () {
-      nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
-    }
-    cmapEl.appendChild(btn)
-  }
-</script>
+      checkAlphaClipDark.onchange = function () {
+        nv1.isAlphaClipDark = this.checked
+        nv1.updateGLVolume()
+      }
+      
+      about.onclick = function () {
+        window.alert(
+          "NiiVue allows asymmetric positive and negative statistical thresholds. It can also make subthreshold values translucent (only apply to unsmoothed images)"
+        )
+      }
+      var volumeList1 = [
+        { url: "../demos/images/fslmean.nii.gz" },
+        {
+          url: "../demos/images/fslt.nii.gz",
+          colormap: "warm",
+          colormapNegative: "winter",
+          cal_min: 3,
+          cal_max: 6,
+        },
+      ]
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      var nv1 = new Niivue({
+        loadingText: "there are no images",
+        backColor: [1, 1, 1, 1],
+        show3Dcrosshair: true,
+        onLocationChange: handleLocationChange,
+      })
+      nv1.setRadiologicalConvention(false)
+      nv1.attachTo("gl1")
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceMM(false)
+      nv1.opts.isColorbar = true
+      await nv1.loadVolumes(volumeList1)
+      var meshLHLayersList1 = [
+        {
+          url: "../demos/images/BrainMesh_ICBM152.lh.curv",
+          colormap: "gray",
+          cal_min: 0.3,
+          cal_max: 0.5,
+          opacity: 0.7,
+        },
+        {
+          url: "../demos/images/BrainMesh_ICBM152.lh.motor.mz3",
+          cal_min: 4,
+          cal_max: 5,
+          colormap: "green2orange",
+          colormapNegative: "green2cyan",
+          useNegativeCmap: true,
+          opacity: 0.7,
+        },
+    
+      ] 
+      await nv1.loadMeshes([
+        { url: "../demos/images/BrainMesh_ICBM152.lh.mz3", layers: meshLHLayersList1 },
+      ]) 
+      slideOutline.oninput()
+      nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
+      nv1.volumes[1].cal_minNeg = -6
+      nv1.volumes[1].cal_maxNeg = -3.0
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_minNeg", -1.0) 
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_maxNeg", -3.5) 
+      nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false)
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+      nv1.setInterpolation(true)
+      slidePos.oninput()
+      slideMax.oninput()
+      slideMin.oninput()
+    </script>
+  </body>
+</html>

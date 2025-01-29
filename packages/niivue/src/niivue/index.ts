@@ -74,6 +74,7 @@ import {
   SLICE_TYPE,
   SHOW_RENDER,
   DRAG_MODE,
+  COLORMAP_TYPE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
   ExportDocumentData,
@@ -6642,7 +6643,20 @@ export class Niivue {
       this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min!)
       this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max!)
     }
-    this.gl.uniform1i(orientShader.uniforms.isAlphaThreshold, overlayItem.alphaThreshold!)
+    if ('alphaThreshold' in overlayItem) {
+      log.warn('alphaThreshold is deprecated: use colormapType')
+      if (overlayItem.alphaThreshold === true) {
+        overlayItem.colormapType = COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN
+      }
+      if (overlayItem.alphaThreshold === false) {
+        overlayItem.colormapType = COLORMAP_TYPE.ZERO_TO_MAX_TRANSPARENT_BELOW_MIN
+      }
+      delete overlayItem.alphaThreshold
+    }
+    const isColorbarFromZero = overlayItem.colormapType !== COLORMAP_TYPE.MIN_TO_MAX ? 1 : 0
+    const isAlphaThreshold = overlayItem.colormapType === COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN ? 1 : 0
+    this.gl.uniform1i(orientShader.uniforms.isAlphaThreshold, isAlphaThreshold)
+    this.gl.uniform1i(orientShader.uniforms.isColorbarFromZero, isColorbarFromZero)
     this.gl.uniform1i(orientShader.uniforms.isAdditiveBlend, this.opts.isAdditiveBlend ? 1 : 0)
     // if unused colormapNegative https://github.com/niivue/niivue/issues/490
     let mnNeg = Number.POSITIVE_INFINITY
@@ -7809,12 +7823,13 @@ export class Niivue {
       for (let i = 0; i < nVol; i++) {
         const volume = this.volumes[i]
         const neg = negMinMax(volume.cal_min!, volume.cal_max!, volume.cal_minNeg, volume.cal_maxNeg)
+        const isColorbarFromZero = volume.colormapType !== COLORMAP_TYPE.MIN_TO_MAX
         // add negative colormaps BEFORE positive ones: we draw them in order from left to right
         this.addColormapList(
           volume.colormapNegative,
           neg[0],
           neg[1],
-          volume.alphaThreshold !== undefined,
+          isColorbarFromZero,
           true,
           volume.colorbarVisible,
           volume.colormapInvert
@@ -7823,7 +7838,7 @@ export class Niivue {
           volume.colormap,
           volume.cal_min,
           volume.cal_max,
-          volume.alphaThreshold !== undefined,
+          isColorbarFromZero,
           false,
           volume.colorbarVisible,
           volume.colormapInvert
@@ -7856,12 +7871,13 @@ export class Niivue {
           if (layer.colormap.length < 1) {
             continue
           }
+          const isColorbarFromZero = layer.colormapType !== COLORMAP_TYPE.MIN_TO_MAX
           const neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg)
           this.addColormapList(
             layer.colormapNegative,
             neg[0],
             neg[1],
-            layer.alphaThreshold,
+            isColorbarFromZero,
             true, // neg
             true, // vis
             layer.colormapInvert
@@ -7870,7 +7886,7 @@ export class Niivue {
             layer.colormap,
             layer.cal_min,
             layer.cal_max,
-            layer.alphaThreshold,
+            isColorbarFromZero,
             false, // neg
             true, // vis
             layer.colormapInvert

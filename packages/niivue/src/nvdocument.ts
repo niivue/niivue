@@ -50,6 +50,12 @@ export enum DRAG_MODE {
   roiSelection = 6
 }
 
+export enum COLORMAP_TYPE {
+  MIN_TO_MAX = 0,
+  ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
+  ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 2
+}
+
 // make mutable type
 type Mutable<T> = {
   -readonly [P in keyof T]: T[P]
