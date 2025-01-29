@@ -1007,7 +1007,7 @@ export class NVMesh {
     invert: boolean = false
   ): void {
     const nvtx = this.pts.length / 3
-    const opacity = layer.opacity
+    const opacity = Math.min(layer.opacity, 1.0)
     function lerp(x: number, y: number, a: number): number {
       // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/mix.xhtml
       return x * (1 - a) + y * a
@@ -1050,10 +1050,12 @@ export class NVMesh {
       let minOpaque = Math.round((mnCal - mn) * scale255)
       minOpaque = Math.max(minOpaque, 1)
       for (let j = 1; j < minOpaque; j++) {
-        alphas[j] = Math.pow(j / minOpaque, 2.0)
+        alphas[j] = opacity *Math.pow(j / minOpaque, 2.0)
       }
+      alphas[0] = 0
       mnCal = mn + Number.EPSILON
     }
+    
     for (let j = 0; j < nvtx; j++) {
       const v = scaleFlip * layer.values[j + frameOffset]
       if (v < mnCal) {
@@ -1214,7 +1216,7 @@ export class NVMesh {
           continue
         }
         if (layer.useNegativeCmap) {
-          layer.cal_min = Math.max(0, layer.cal_min)
+          layer.cal_min = Math.max(Number.EPSILON, layer.cal_min)
           layer.cal_max = Math.max(layer.cal_min + 0.000001, layer.cal_max)
         }
         if (layer.isTransparentBelowCalMin === undefined) {

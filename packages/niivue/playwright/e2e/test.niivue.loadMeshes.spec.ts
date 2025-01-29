@@ -24,7 +24,7 @@ const defaultLayerOptions = {
   nFrame4D: 0,
   values: [],
   isOutlineBorder: false,
-  alphaThreshold: false
+  colormapType: 0
 }
 
 test('niivue loadMeshes MZ3', async ({ page }) => {

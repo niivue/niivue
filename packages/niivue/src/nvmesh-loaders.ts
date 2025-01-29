@@ -849,7 +849,7 @@ export class NVMeshLoaders {
     const layer: NVMeshLayer = {
       ...NVMeshLayerDefaults,
       colormapInvert: false,
-      alphaThreshold: false,
+      colormapType: 0, // COLORMAP_TYPE.MIN_TO_MAX
       isTransparentBelowCalMin: true,
       isAdditiveBlend: false,
       colorbarVisible: true,

@@ -151,7 +151,7 @@ type ColormapListEntry = {
   name: string
   min: number
   max: number
-  alphaThreshold: boolean
+  isColorbarFromZero: boolean
   negative: boolean
   visible: boolean
   invert: boolean
@@ -7804,7 +7804,7 @@ export class Niivue {
       name: nm,
       min: mn,
       max: mx,
-      alphaThreshold: alpha,
+      isColorbarFromZero: alpha,
       negative: neg,
       visible: vis,
       invert: inv
@@ -8859,7 +8859,7 @@ export class Niivue {
       if (!maps[i].visible) {
         continue
       }
-      this.drawColorbarCore(i, leftTopWidthHeight, maps[i].negative, maps[i].min, maps[i].max, maps[i].alphaThreshold)
+      this.drawColorbarCore(i, leftTopWidthHeight, maps[i].negative, maps[i].min, maps[i].max, maps[i].isColorbarFromZero)
       leftTopWidthHeight[0] += wid
     }
   }

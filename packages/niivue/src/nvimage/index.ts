@@ -61,7 +61,7 @@ export class NVImage {
   maxShearDeg?: number
   useQFormNotSForm: boolean
 
-  alphaThreshold?: number
+  colormapType?: number
 
   pixDims?: number[]
   matRAS?: mat4
@@ -155,7 +155,8 @@ export class NVImage {
     cal_minNeg = NaN,
     cal_maxNeg = NaN,
     colorbarVisible = true,
-    colormapLabel: LUT | null = null
+    colormapLabel: LUT | null = null,
+    colormapType = 0
   ) {
     this.name = name
     this.id = uuidv4()
@@ -170,7 +171,7 @@ export class NVImage {
     this.cal_minNeg = cal_minNeg
     this.cal_maxNeg = cal_maxNeg
     this.colorbarVisible = colorbarVisible
-
+    this.colormapType = colormapType // COLORMAP_TYPE MIN_TO_MAX
     // TODO this was missing
     this.useQFormNotSForm = useQFormNotSForm
     // Added to support zerosLike
@@ -4009,7 +4010,8 @@ export class NVImage {
       this.useQFormNotSForm, // useQFormNotSForm
       this.colormapNegative, // colormapNegative
       this.frame4D,
-      this.imageType // imageType
+      this.imageType, // imageType
+      this.colormapType
     )
     return options
   }

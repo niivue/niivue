@@ -15,6 +15,16 @@
       >
     </noscript>
     <header>
+      <label for="shaderDrop">Shader</label>
+      <select id="shaderDrop">
+        <option value="Edge">Edge</option>
+        <option value="Flat">Flat</option>
+        <option value="Matcap" selected>Matcap</option>
+        <option value="Matte">Matte</option>
+        <option value="Outline">Outline</option>
+        <option value="Phong">Phong</option>
+        <option value="Toon">Toon</option>
+      </select>
       <label for="curveSlider">Curvature</label>
       <input
         type="range"
@@ -27,9 +37,9 @@
       <label for="threshSlider">Threshold</label>
       <input
         type="range"
-        min="0"
-        max="5"
-        value="2"
+        min="1"
+        max="20"
+        value="90"
         class="slider"
         id="threshSlider"
       />
@@ -37,25 +47,34 @@
       <input
         type="range"
         min="1"
-        max="9"
-        value="3"
+        max="90"
+        value="30"
         class="slider"
         id="rangeSlider"
       />
-      <label for="shaderDrop">Shader</label>
-      <select id="shaderDrop">
-        <option value="Edge">Edge</option>
-        <option value="Flat">Flat</option>
-        <option value="Matcap" selected>Matcap</option>
-        <option value="Matte">Matte</option>
-        <option value="Outline">Outline</option>
-        <option value="Phong">Phong</option>
-        <option value="Toon">Toon</option>
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="10"
+        value="7"
+        class="slider"
+        id="opacitySlider"
+      />
+      <label for="negativeCheck">&nbsp;&nbsp; NegativeColors</label>
+      <input type="checkbox" id="negativeCheck" checked />
+      <label for="divergeCheck">Diverging Colors</label>
+      <input type="checkbox" id="divergeCheck" unchecked />
+      <select id="colormapTypeDrop">
+        <option selected>restrict colorbar to range</option>
+        <option>colorbar from 0,transparent subthreshold</option>
+        <option>colorbar from 0, translucent subthreshold</option>
       </select>
-      <label for="check1">Diverging Colors</label>
-      <input type="checkbox" id="check1" checked />
-      <label for="check2">AlphaThresh</label>
-      <input type="checkbox" id="check2" unchecked />
+      <select id="outlineDrop">
+        <option value="0" selected>no outline</option>
+        <option value="1" >opaque outline</option>
+        <option value="-1">black outline</option>
+      </select>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -63,41 +82,50 @@
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
+  import * as niivue from "../dist/index.js"
   curveSlider.onchange = function () {
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1);
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1)
   }
-  document.getElementById("threshSlider").addEventListener("change", doThreshChange);
-  document.getElementById("rangeSlider").addEventListener("change", doThreshChange);
+  document.getElementById("threshSlider").addEventListener("change", doThreshChange)
+  document.getElementById("rangeSlider").addEventListener("change", doThreshChange)
   function doThreshChange() {
-    let mn = document.getElementById("threshSlider").value * 1.0;
-    let mx = mn + (document.getElementById("rangeSlider").value * 1.0);
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_min", mn);
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_max", mx);
-  };
+    let mn = document.getElementById("threshSlider").value * 0.1
+    let mx = mn + (document.getElementById("rangeSlider").value * 0.1)
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_min", mn)
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_max", mx)
+  }
   shaderDrop.onchange = function () {
-    const shaderName = this.value;
-    nv1.setMeshShader(nv1.meshes[0].id, shaderName);
-  };
-  check1.onchange = function () {
-    if (!check1.checked) {
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", "warm");
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapNegative", "winter");
+    const shaderName = this.value
+    nv1.setMeshShader(nv1.meshes[0].id, shaderName)
+  }
+  divergeCheck.onchange = function () {
+    if (!this.checked) {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", "warm")
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapNegative", "winter")
     } else {
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", "green2orange");
-        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapNegative", "green2cyan");
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormap", "green2orange")
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapNegative", "green2cyan")
     }
-  };
-  check2.onchange = function () {
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "alphaThreshold", check2.checked);
-  };
+  }
+  opacitySlider.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "opacity", this.value * 0.1) 
+  }
+  colormapTypeDrop.onchange = function () {
+     nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapType", this.selectedIndex) 
+  }
+  negativeCheck.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "useNegativeCmap", this.checked) 
+  }
+  outlineDrop.onchange = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "outlineBorder", parseInt(this.value)) 
+  }
   var nv1 = new niivue.Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
-  });
-  nv1.setSliceType(nv1.sliceTypeRender);
-  nv1.attachTo("gl1");
-  nv1.opts.isColorbar = true;
+  })
+  nv1.setSliceType(nv1.sliceTypeRender)
+  nv1.attachTo("gl1")
+  nv1.opts.isColorbar = true
   var meshLHLayersList1 = [
     {
       url: "../images/BrainMesh_ICBM152.lh.curv",
@@ -108,20 +136,20 @@
     },
     {
       url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
-      cal_min: 2,
+      cal_min: 1.5,
       cal_max: 5,
-      colormap: "green2orange",
-      colormapNegative: "green2cyan",
+      colormap: "warm",
+      colormapNegative: "winter",
       useNegativeCmap: true,
       opacity: 0.7,
     },
-
-  ];
+  ]
   await nv1.loadMeshes([
     { url: "../images/BrainMesh_ICBM152.lh.mz3", layers: meshLHLayersList1 },
-  ]);
-  nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false);
-  nv1.setClipPlane([-0.1, 270, 0]);
-  doThreshChange();
-  shaderDrop.onchange();
+  ])
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false)
+  doThreshChange()
+  shaderDrop.onchange()
+  divergeCheck.onchange()
+  colormapTypeDrop.onchange()
 </script>
