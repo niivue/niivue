@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import { ScrollArea, Text, Switch } from '@radix-ui/themes'
+import { ScrollArea, Text, Switch, Slider } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'
 import { SliceSelection } from './SliceSelection'
 import { AppContext } from '../App'
@@ -9,8 +9,6 @@ import { hexToRgba10 } from '../utils/colors'
 import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
 import { filterEnum } from '@renderer/utils/config'
 import { EnumSelect } from './EnumSelect'
-
-
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -115,20 +113,25 @@ export const GeneralTab: React.FC = (): JSX.Element => {
               <Text size="2" weight="bold" className="mb-1">
                 Hero Image Fraction
               </Text>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={heroImageFraction}
-                onChange={(e) => {
-                  const newValue = parseFloat(e.target.value)
-                  setHeroImageFraction(newValue)
-                  updateOption('heroImageFraction', newValue)
-                }}
-                className="w-full"
-              />
-              <div className="text-center text-sm mt-1">{heroImageFraction.toFixed(2)}</div>
+              <Text size="2" weight="bold" className="mb-1">
+                Hero Image Fraction
+              </Text>
+              {/* slider for volume alpha */}
+              <div className="flex gap-1 items-center">
+                <Slider
+                  size="1"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  defaultValue={[1.0]}
+                  value={[heroImageFraction]}
+                  onValueChange={(newValue) => {
+                    setHeroImageFraction(newValue[0])
+                    updateOption('heroImageFraction', newValue[0])
+                  }}
+                />
+                <div className="text-center text-sm mt-1">{heroImageFraction.toFixed(2)}</div>
+              </div>
             </div>
           </Accordion.Content>
         </Accordion.Item>
