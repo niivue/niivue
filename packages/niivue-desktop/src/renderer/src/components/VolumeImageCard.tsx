@@ -17,9 +17,11 @@ import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 interface VolumeImageCardProps {
   image: NVImage
   onRemoveVolume: (volume: NVImage) => void
+  onMoveVolumeUp: (volume: NVImage) => void
+  onMoveVolumeDown: (volume: NVImage) => void
 }
 
-export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps): JSX.Element {
+export function VolumeImageCard({ image, onRemoveVolume, onMoveVolumeUp, onMoveVolumeDown }: VolumeImageCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [colormap, setColormap] = useState<string>(
     typeof image.colormap === 'string' ? image.colormap : 'gray'
@@ -119,6 +121,20 @@ export function VolumeImageCard({ image, onRemoveVolume }: VolumeImageCardProps)
               }}
             >
               Remove
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              onClick={() => {
+                onMoveVolumeUp(image)
+              }}
+            >
+              Move Up
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              onClick={() => {
+                onMoveVolumeDown(image)
+              }}
+            >
+              Move Down
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
