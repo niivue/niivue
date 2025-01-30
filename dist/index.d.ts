@@ -320,7 +320,7 @@ declare class NVImage {
     oblique_angle?: number;
     maxShearDeg?: number;
     useQFormNotSForm: boolean;
-    alphaThreshold?: number;
+    colormapType?: number;
     pixDims?: number[];
     matRAS?: mat4;
     pixDimsRAS?: number[];
@@ -385,7 +385,7 @@ declare class NVImage {
      * @param colorbarVisible - TODO
      * @param colormapLabel - TODO
      */
-    constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null);
+    constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number);
     computeObliqueAngle(mtx44: mat4): number;
     float32V1asRGBA(inImg: Float32Array): Uint8Array;
     loadImgV1(isFlipX?: boolean, isFlipY?: boolean, isFlipZ?: boolean): boolean;
@@ -609,6 +609,11 @@ declare enum DRAG_MODE {
     slicer3D = 4,
     callbackOnly = 5,
     roiSelection = 6
+}
+declare enum COLORMAP_TYPE {
+    MIN_TO_MAX = 0,
+    ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
+    ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 2
 }
 /**
  * NVConfigOptions
@@ -1120,7 +1125,7 @@ type NVMeshLayer = {
     values: AnyNumberArray;
     outlineBorder?: number;
     isTransparentBelowCalMin?: boolean;
-    alphaThreshold?: boolean;
+    colormapType?: number;
     base64?: string;
     colorbarVisible?: boolean;
 };
@@ -1134,6 +1139,7 @@ declare const NVMeshLayerDefaults: {
     cal_max: number;
     cal_minNeg: number;
     cal_maxNeg: number;
+    colormapType: COLORMAP_TYPE;
     values: number[];
 };
 declare class NVMeshFromUrlOptions {
@@ -1248,6 +1254,7 @@ declare class NVMesh {
     updateFibers(gl: WebGL2RenderingContext): void;
     indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[];
     unloadMesh(gl: WebGL2RenderingContext): void;
+    blendColormap(u8: Uint8Array, additiveRGBA: Uint8Array, layer: NVMeshLayer, mn: number, mx: number, lut: Uint8ClampedArray, invert?: boolean): void;
     updateMesh(gl: WebGL2RenderingContext): void;
     reverseFaces(gl: WebGL2RenderingContext): void;
     hierarchicalOrder(): number;
@@ -1616,7 +1623,7 @@ type ColormapListEntry = {
     name: string;
     min: number;
     max: number;
-    alphaThreshold: boolean;
+    isColorbarFromZero: boolean;
     negative: boolean;
     visible: boolean;
     invert: boolean;
@@ -3176,4 +3183,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
+export { COLORMAP_TYPE, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
