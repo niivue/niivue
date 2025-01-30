@@ -14,11 +14,7 @@ interface MeshImageCardProps {
   // meshLayers: NVMeshLayer[]
 }
 
-export function MeshImageCard({
-  image,
-  onRemoveMesh
-  // meshLayers
-}: MeshImageCardProps): JSX.Element {
+export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [visible, setVisible] = useState<boolean>(true)
   const [shaders, setShaders] = useState<string[]>([])

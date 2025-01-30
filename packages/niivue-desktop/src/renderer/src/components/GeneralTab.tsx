@@ -1,12 +1,14 @@
 import React, { useState, useContext } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import { ScrollArea, Text, Switch } from '@radix-ui/themes'
+import { ScrollArea, Text, Switch, Slider } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'
 import { SliceSelection } from './SliceSelection'
 import { AppContext } from '../App'
 import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
-import { NVConfigOptions } from '@niivue/niivue'
+import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
+import { filterEnum } from '@renderer/utils/config'
+import { EnumSelect } from './EnumSelect'
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -18,6 +20,10 @@ export const GeneralTab: React.FC = (): JSX.Element => {
   const [backgroundColor, setBackgroundColor] = useState<number[]>(Array.from(nv.opts.backColor))
   const [isAlphaClipDark, setIsAlphaClipDark] = useState<boolean>(nv.opts.isAlphaClipDark)
 
+  // State for heroSliceType and heroImageFraction
+  const [heroSliceType, setHeroSliceType] = useState<string>(nv.opts.heroSliceType.toString())
+  const [heroImageFraction, setHeroImageFraction] = useState<number>(nv.opts.heroImageFraction)
+
   const updateOption = <K extends keyof NVConfigOptions>(
     optionKey: K,
     value: NVConfigOptions[K]
@@ -26,26 +32,14 @@ export const GeneralTab: React.FC = (): JSX.Element => {
     nv.drawScene()
   }
 
-  const handleColorChange =
+  const handleEnumChange =
     (
-      setter: React.Dispatch<React.SetStateAction<number[]>>,
-      optionKey: keyof NVConfigOptions
-    ): ((e: React.ChangeEvent<HTMLInputElement>) => void) =>
-    (e: React.ChangeEvent<HTMLInputElement>): void => {
-      const color = e.target.value
-      const rgba = hexToRgba10(color)
-      setter(rgba)
-      updateOption(optionKey, rgba)
-    }
-
-  const handleSwitchChange =
-    (
-      setter: React.Dispatch<React.SetStateAction<boolean>>,
-      optionKey: keyof NVConfigOptions
-    ): ((checked: boolean) => void) =>
-    (checked: boolean): void => {
-      setter(checked)
-      updateOption(optionKey, checked)
+      optionKey: keyof NVConfigOptions,
+      setter: React.Dispatch<React.SetStateAction<string>>
+    ): ((value: string) => void) =>
+    (value: string): void => {
+      setter(value)
+      updateOption(optionKey, parseInt(value, 10))
     }
 
   return (
@@ -71,14 +65,74 @@ export const GeneralTab: React.FC = (): JSX.Element => {
               </Text>
               <Switch
                 checked={show3Dcrosshair}
-                onCheckedChange={handleSwitchChange(setShow3Dcrosshair, 'show3Dcrosshair')}
+                onCheckedChange={(checked) => {
+                  setShow3Dcrosshair(checked)
+                  updateOption('show3Dcrosshair', checked)
+                }}
               />
             </div>
             <ColorPicker
               label="Crosshair Color"
               colorRGBA10={crosshairColor}
-              onChange={handleColorChange(setCrosshairColor, 'crosshairColor')}
+              onChange={(e) => {
+                const rgba = hexToRgba10(e.target.value)
+                setCrosshairColor(rgba)
+                updateOption('crosshairColor', rgba)
+              }}
             />
+          </Accordion.Content>
+        </Accordion.Item>
+
+        {/* Hero Settings */}
+        <Accordion.Item value="hero-settings" className="border-b border-gray-200">
+          <Accordion.Header>
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Text size="2" weight="bold">
+                Hero Settings
+              </Text>
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                ▼
+              </span>
+            </Accordion.Trigger>
+          </Accordion.Header>
+          <Accordion.Content className="px-4 py-2">
+            {/* Hero Slice Type Dropdown */}
+            <div className="mb-4">
+              <Text size="2" weight="bold" className="mb-1">
+                Hero Slice Type
+              </Text>
+              <EnumSelect
+                value={heroSliceType}
+                onChange={handleEnumChange('heroSliceType', setHeroSliceType)}
+                options={filterEnum(SLICE_TYPE)}
+              />
+            </div>
+
+            {/* Hero Image Fraction Slider */}
+            <div className="mb-4">
+              <Text size="2" weight="bold" className="mb-1">
+                Hero Image Fraction
+              </Text>
+              <Text size="2" weight="bold" className="mb-1">
+                Hero Image Fraction
+              </Text>
+              {/* slider for volume alpha */}
+              <div className="flex gap-1 items-center">
+                <Slider
+                  size="1"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  defaultValue={[1.0]}
+                  value={[heroImageFraction]}
+                  onValueChange={(newValue) => {
+                    setHeroImageFraction(newValue[0])
+                    updateOption('heroImageFraction', newValue[0])
+                  }}
+                />
+                <div className="text-center text-sm mt-1">{heroImageFraction.toFixed(2)}</div>
+              </div>
+            </div>
           </Accordion.Content>
         </Accordion.Item>
 
@@ -98,7 +152,11 @@ export const GeneralTab: React.FC = (): JSX.Element => {
             <ColorPicker
               label="Font Color"
               colorRGBA10={fontColor}
-              onChange={handleColorChange(setFontColor, 'fontColor')}
+              onChange={(e) => {
+                const rgba = hexToRgba10(e.target.value)
+                setFontColor(rgba)
+                updateOption('fontColor', rgba)
+              }}
             />
           </Accordion.Content>
         </Accordion.Item>
@@ -119,7 +177,11 @@ export const GeneralTab: React.FC = (): JSX.Element => {
             <ColorPicker
               label="Background Color"
               colorRGBA10={backgroundColor}
-              onChange={handleColorChange(setBackgroundColor, 'backColor')}
+              onChange={(e) => {
+                const rgba = hexToRgba10(e.target.value)
+                setBackgroundColor(rgba)
+                updateOption('backColor', rgba)
+              }}
             />
             <div className="flex items-center mt-4">
               <Text size="2" weight="bold" className="mr-2">
@@ -127,7 +189,10 @@ export const GeneralTab: React.FC = (): JSX.Element => {
               </Text>
               <Switch
                 checked={isAlphaClipDark}
-                onCheckedChange={handleSwitchChange(setIsAlphaClipDark, 'isAlphaClipDark')}
+                onCheckedChange={(checked) => {
+                  setIsAlphaClipDark(checked)
+                  updateOption('isAlphaClipDark', checked)
+                }}
               />
             </div>
           </Accordion.Content>
