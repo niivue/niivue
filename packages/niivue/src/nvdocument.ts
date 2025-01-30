@@ -446,6 +446,17 @@ export class NVDocument {
        */
       set pan2Dxyzmm(pan2Dxyzmm) {
         this.sceneData.pan2Dxyzmm = pan2Dxyzmm
+      },
+
+      get gamma(): number {
+        return this.sceneData.gamma
+      },
+
+      /**
+       * Sets current gamma
+       */
+      set gamma(newGamma) {
+        this.sceneData.gamma = newGamma
       }
     }
   }

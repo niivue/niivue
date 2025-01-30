@@ -75,6 +75,30 @@ function App(): JSX.Element {
     setVolumes((prev) => prev.filter((v) => v.id !== vol.id))
   }
 
+  const handleMoveVolumeUp = (vol: NVImage): void => {
+    // deduplicate images
+    const set = new Set<NVImage>([...volumes])
+    nv.volumes = Array.from(set)
+    let index = nv.volumes.indexOf(vol)
+    if (index > 0) {
+      --index
+      nv.setVolume(vol, index)
+      setVolumes([...nv.volumes])
+    }
+  }
+
+  const handleMoveVolumeDown = (vol: NVImage): void => {
+    // deduplicate images
+    const set = new Set<NVImage>([...volumes])
+    nv.volumes = Array.from(set)
+    let index = nv.volumes.indexOf(vol)
+    if (index < nv.volumes.length - 1) {
+      ++index
+      nv.setVolume(vol, index)
+      setVolumes([...nv.volumes])
+    }
+  }
+
   useEffect(() => {
     if (!nv._gl) return
     const initNiimath = async (): Promise<void> => {
@@ -132,7 +156,12 @@ function App(): JSX.Element {
       }}
     >
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
-        <Sidebar onRemoveMesh={handleRemoveMesh} onRemoveVolume={handleRemoveVolume} />
+        <Sidebar
+          onRemoveMesh={handleRemoveMesh}
+          onRemoveVolume={handleRemoveVolume}
+          onMoveVolumeUp={handleMoveVolumeUp}
+          onMoveVolumeDown={handleMoveVolumeDown}
+        />
         <Viewer />
       </div>
     </AppContext.Provider>
