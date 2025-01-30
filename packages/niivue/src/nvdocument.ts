@@ -447,7 +447,7 @@ export class NVDocument {
       set pan2Dxyzmm(pan2Dxyzmm) {
         this.sceneData.pan2Dxyzmm = pan2Dxyzmm
       },
-      
+
       get gamma(): number {
         return this.sceneData.gamma
       },
