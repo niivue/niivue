@@ -34,10 +34,10 @@ test('afni anat2temp', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
-    nv.volumes[1].alphaThreshold = 1 // was true in example from PT
+    nv.volumes[1].colormapType = 2 // ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN
     nv.overlayOutlineWidth = 0
     nv.opts.multiplanarForceRender = true
-    nv.backgroundMasksOverlays = 1 // was true in example from PT
+    nv.backgroundMasksOverlays = 1
     nv.scene.crosshairPos = nv.mm2frac([-1, -17, 5.0])
     nv.updateGLVolume()
     return nv.volumes.length
@@ -119,10 +119,10 @@ test('afni vis 0 coef', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
-    nv.volumes[1].alphaThreshold = 1 // was true in example from PT
+    nv.volumes[1].colormapType = 2 // ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN
     nv.overlayOutlineWidth = 1
     nv.opts.multiplanarForceRender = true
-    nv.backgroundMasksOverlays = 1 // was true in example from PT
+    nv.backgroundMasksOverlays = 1
     nv.setModulationImage(
       nv.volumes[1].id,
       nv.volumes[2].id,

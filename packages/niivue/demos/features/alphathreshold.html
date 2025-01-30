@@ -66,9 +66,9 @@
         id="slideOutline"
       />
       <select id="alphaMode">
-        <option value="0">colorbar from 0, translucent subthreshold</option>
-        <option value="1">colorbar from 0,transparent subthreshold</option>
-        <option value="2" selected>restrict colorbar to range</option>
+        <option selected>restrict colorbar to range</option>
+        <option>colorbar from 0,transparent subthreshold</option>
+        <option>colorbar from 0, translucent subthreshold</option>
       </select>
       <button id="about">About</button>
     </header>
@@ -113,14 +113,7 @@
         nv1.updateGLVolume()
       }
       alphaMode.onchange = function () {
-        const m = parseInt(this.value)
-        if (m === 0)
-          nv1.volumes[1].alphaThreshold = true
-        if (m === 1)
-          nv1.volumes[1].alphaThreshold = false
-        if (m === 2) {
-          delete nv1.volumes[1].alphaThreshold
-        }
+        nv1.volumes[1].colormapType = this.selectedIndex
         nv1.updateGLVolume()
       }
       document.getElementById("about").addEventListener("click", doAbout)
@@ -157,7 +150,6 @@
       await nv1.loadVolumes(volumeList1)
       slideOutline.oninput()
       nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
-      //nv1.volumes[1].alphaThreshold = false
       nv1.volumes[1].cal_minNeg = -6
       nv1.volumes[1].cal_maxNeg = -3.0
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
