@@ -8859,7 +8859,14 @@ export class Niivue {
       if (!maps[i].visible) {
         continue
       }
-      this.drawColorbarCore(i, leftTopWidthHeight, maps[i].negative, maps[i].min, maps[i].max, maps[i].isColorbarFromZero)
+      this.drawColorbarCore(
+        i,
+        leftTopWidthHeight,
+        maps[i].negative,
+        maps[i].min,
+        maps[i].max,
+        maps[i].isColorbarFromZero
+      )
       leftTopWidthHeight[0] += wid
     }
   }

@@ -34,7 +34,7 @@ test('afni anat2temp', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
-    nv.volumes[1].colormapType = 2 //ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN
+    nv.volumes[1].colormapType = 2 // ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN
     nv.overlayOutlineWidth = 0
     nv.opts.multiplanarForceRender = true
     nv.backgroundMasksOverlays = 1

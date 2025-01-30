@@ -1050,12 +1050,12 @@ export class NVMesh {
       let minOpaque = Math.round((mnCal - mn) * scale255)
       minOpaque = Math.max(minOpaque, 1)
       for (let j = 1; j < minOpaque; j++) {
-        alphas[j] = opacity *Math.pow(j / minOpaque, 2.0)
+        alphas[j] = opacity * Math.pow(j / minOpaque, 2.0)
       }
       alphas[0] = 0
       mnCal = mn + Number.EPSILON
     }
-    
+
     for (let j = 0; j < nvtx; j++) {
       const v = scaleFlip * layer.values[j + frameOffset]
       if (v < mnCal) {
@@ -1268,6 +1268,7 @@ export class NVMesh {
     this.indexCount = this.tris.length
     this.vertexCount = this.pts.length
   } // updateMesh()
+
   // internal function filters mesh to identify which color of triangulated mesh vertices
   reverseFaces(gl: WebGL2RenderingContext): void {
     if (this.offsetPt0) {
