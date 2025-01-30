@@ -28676,6 +28676,15 @@ var NVDocument = class _NVDocument {
        */
       set pan2Dxyzmm(pan2Dxyzmm) {
         this.sceneData.pan2Dxyzmm = pan2Dxyzmm;
+      },
+      get gamma() {
+        return this.sceneData.gamma;
+      },
+      /**
+       * Sets current gamma
+       */
+      set gamma(newGamma) {
+        this.sceneData.gamma = newGamma;
       }
     };
   }
