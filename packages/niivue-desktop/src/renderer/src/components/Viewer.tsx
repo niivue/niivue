@@ -42,6 +42,7 @@ export function Viewer(): JSX.Element {
   useEffect(() => {
     if (volumes.length > 0 && canvasRef.current) {
       const nv = nvRef.current
+      nv.volumes = []
       for (let i = 0; i < volumes.length; i++) {
         console.log('adding volume', volumes[i])
         nv.addVolume(volumes[i])
@@ -53,6 +54,7 @@ export function Viewer(): JSX.Element {
   useEffect(() => {
     if (meshes.length > 0 && canvasRef.current) {
       const nv = nvRef.current
+      nv.meshes = []
       for (let i = 0; i < meshes.length; i++) {
         console.log('adding mesh', meshes[i])
         nv.addMesh(meshes[i])
