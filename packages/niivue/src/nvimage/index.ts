@@ -3105,7 +3105,7 @@ export class NVImage {
     const pixDims = [1, 1, 1]
     const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
     const datatypeCode = 2304
-    return this.createNiftiArray(dims, pixDims, affine, datatypeCode, data)
+    return this.createNiftiArray(dims, pixDims, affine, datatypeCode, Uint8Array.from(data))
   }
 
   /**
