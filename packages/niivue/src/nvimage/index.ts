@@ -3073,6 +3073,41 @@ export class NVImage {
     }
   }
 
+  static async fetchImageData(url: string): Promise<ImageData> {
+    return new Promise<ImageData>((resolve, reject): void => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous' // Allow CORS if needed
+      img.src = url
+
+      img.onload = (): void => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) {
+          reject(new Error('Failed to get 2D context'))
+          return // Ensure function exits after reject
+        }
+
+        ctx.drawImage(img, 0, 0)
+        resolve(ctx.getImageData(0, 0, img.width, img.height))
+      }
+
+      img.onerror = (err): void => reject(err)
+    })
+  }
+
+  static async png2nii(url: string): Promise<Uint8Array> {
+    const imageData = await this.fetchImageData(url)
+    const { width, height, data } = imageData
+    const dims = [width, height, 1]
+    const pixDims = [1, 1, 1]
+    const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
+    const datatypeCode = 2304
+    return this.createNiftiArray(dims, pixDims, affine, datatypeCode, data)
+  }
+
   /**
    * factory function to load and return a new NVImage instance from a given URL
    * @returns  NVImage instance
@@ -3111,6 +3146,9 @@ export class NVImage {
     }
     if (buffer.byteLength > 0) {
       url = buffer
+    }
+    if (typeof url === 'string' && /\.(bmp|gif|jpe?g|png)$/i.test(url)) {
+      url = (await this.png2nii(url)).buffer
     }
     if (url instanceof ArrayBuffer) {
       dataBuffer = url
@@ -3542,7 +3580,7 @@ export class NVImage {
       bpv = 8
     } else if (datatypeCode === 512 || datatypeCode === 4) {
       bpv = 16
-    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8) {
+    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8 || datatypeCode === 2304) {
       bpv = 32
     } else if (datatypeCode === 64) {
       bpv = 64
