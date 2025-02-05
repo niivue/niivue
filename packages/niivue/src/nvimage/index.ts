@@ -2720,7 +2720,6 @@ export class NVImage {
     vol = Math.min(vol, nVol - 1)
     const skipVox = vol * nVox3D
     let img = []
-    const startTime = performance.now()
     if (!isBorder) {
       img = new (this.img.constructor as new (length: number) => any)(nVox3D)
       for (let i = 0; i < nVox3D; i++) {
@@ -2921,7 +2920,6 @@ export class NVImage {
     }
     this.cal_min = pct2
     this.cal_max = pct98
-    console.log(` robust range ${this.cal_min}...${this.cal_max} ${performance.now() - startTime}ms`)
     this.robust_min = this.cal_min
     this.robust_max = this.cal_max
     this.global_min = mnScale
