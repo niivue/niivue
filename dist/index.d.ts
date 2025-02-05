@@ -420,10 +420,11 @@ declare class NVImage {
     /**
      * set contrast/brightness to robust range (2%..98%)
      * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
+     * @param isBorder - if true (default) only center of volume used for estimate
      * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
      * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
      */
-    calMinMax(vol?: number): number[];
+    calMinMax(vol?: number, isBorder?: boolean): number[];
     intensityRaw2Scaled(raw: number): number;
     intensityScaled2Raw(scaled: number): number;
     saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Uint8Array;
@@ -433,6 +434,8 @@ declare class NVImage {
         data: ArrayBuffer;
     }>>;
     static fetchPartial(url: string, bytesToLoad: number, headers?: Record<string, string>): Promise<Response>;
+    static fetchImageData(url: string): Promise<ImageData>;
+    static png2nii(url: string): Promise<Uint8Array>;
     /**
      * factory function to load and return a new NVImage instance from a given URL
      * @returns  NVImage instance
