@@ -2695,10 +2695,11 @@ export class NVImage {
   /**
    * set contrast/brightness to robust range (2%..98%)
    * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
+   * @param isBorder - if true (default) only center of volume used for estimate
    * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
    * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
    */
-  calMinMax(vol: number = Number.POSITIVE_INFINITY): number[] {
+  calMinMax(vol: number = Number.POSITIVE_INFINITY, isBorder: boolean = true): number[] {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2710,46 +2711,81 @@ export class NVImage {
     let mx = Number.NEGATIVE_INFINITY // this.img[0] in case ignoreZeroVoxels
     let nZero = 0
     let nNan = 0
-    let voxEnd = this.img.length
-    let voxStart = 0 // offset to first voxel
-    const nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
+    let nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
     // n.b. due to limitFrames4D nVol may not equal dims[4]
-    const nVol = Math.floor(voxEnd / nVox3D)
+    const nVol = Math.floor(this.img.length / nVox3D)
     if (vol >= nVol) {
-      // use currently selected volume
       vol = this.frame4D
     }
-    if (vol >= 0 && vol < nVol) {
-      voxStart = vol * nVox3D
-      voxEnd = voxStart + nVox3D
+    vol = Math.min(vol, nVol - 1)
+    const skipVox = vol * nVox3D
+    let img = []
+    if (!isBorder) {
+      img = new (this.img.constructor as new (length: number) => any)(nVox3D)
+      for (let i = 0; i < nVox3D; i++) {
+        img[i] = this.img[i + skipVox]
+      }
+    } else {
+      const borderFrac = 0.25
+      const borders = [
+        Math.floor(borderFrac * this.hdr.dims[1]),
+        Math.floor(borderFrac * this.hdr.dims[2]),
+        Math.floor(borderFrac * this.hdr.dims[3])
+      ]
+      const dims = [
+        this.hdr.dims[1] - 2 * borders[0],
+        this.hdr.dims[2] - 2 * borders[1],
+        this.hdr.dims[3] - 2 * borders[2]
+      ]
+      const bordersHi = [dims[0] + borders[0], dims[1] + borders[1], dims[2] + borders[2]]
+      nVox3D = dims[0] * dims[1] * dims[2]
+      img = new (this.img.constructor as new (length: number) => any)(nVox3D)
+      let j = -1
+      let i = 0
+      for (let z = 0; z < this.hdr.dims[3]; z++) {
+        for (let y = 0; y < this.hdr.dims[2]; y++) {
+          for (let x = 0; x < this.hdr.dims[1]; x++) {
+            j++
+            if (x < borders[0] || y < borders[1] || z < borders[2]) {
+              continue
+            }
+            if (x >= bordersHi[0] || y >= bordersHi[1] || z >= bordersHi[2]) {
+              continue
+            }
+            img[i] = this.img[j + skipVox]
+            i++
+          }
+        }
+      }
     }
+    /* for (let i = 0; i < nVox3D; i++) {
+      img[i] = this.img[i + skipVox]
+    } */
     // we can accelerate loops for integer data (which can not store NaN)
     // n.b. do to stack size, we can not use Math.max.apply()
-    const isFastCalc =
-      this.img.constructor !== Float64Array && this.img.constructor !== Float32Array && this.ignoreZeroVoxels
-
+    const isFastCalc = img.constructor !== Float64Array && img.constructor !== Float32Array && this.ignoreZeroVoxels
     if (isFastCalc) {
-      for (let i = voxStart; i < voxEnd; i++) {
-        mn = Math.min(this.img[i], mn)
-        mx = Math.max(this.img[i], mx)
-        if (this.img[i] === 0) {
+      for (let i = 0; i < nVox3D; i++) {
+        mn = Math.min(img[i], mn)
+        mx = Math.max(img[i], mx)
+        if (img[i] === 0) {
           nZero++
         }
       }
     } else {
-      for (let i = voxStart; i < voxEnd; i++) {
-        if (isNaN(this.img[i])) {
+      for (let i = 0; i < nVox3D; i++) {
+        if (isNaN(img[i])) {
           nNan++
           continue
         }
-        if (this.img[i] === 0) {
+        if (img[i] === 0) {
           nZero++
           if (this.ignoreZeroVoxels) {
             continue
           }
         }
-        mn = Math.min(this.img[i], mn)
-        mx = Math.max(this.img[i], mx)
+        mn = Math.min(img[i], mn)
+        mx = Math.max(img[i], mx)
       }
     }
     if (this.ignoreZeroVoxels && mn === mx && nZero > 0) {
@@ -2789,7 +2825,7 @@ export class NVImage {
       this.robust_max = this.cal_max
       return [cmMin, cmMax, cmMin, cmMax]
     }
-    const percentZero = (100 * nZero) / (voxEnd - voxStart)
+    const percentZero = (100 * nZero) / (nVox3D - 0)
     let isOverrideIgnoreZeroVoxels = false
     if (percentZero > 60 && !this.ignoreZeroVoxels) {
       log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
@@ -2800,7 +2836,7 @@ export class NVImage {
       nZero = 0
     }
     nZero += nNan
-    const n2pct = Math.round((voxEnd - voxStart - nZero) * this.percentileFrac)
+    const n2pct = Math.round((nVox3D - 0 - nZero) * this.percentileFrac)
     if (n2pct < 1 || mn === mx) {
       log.debug('no variability in image intensity?')
       this.cal_min = mnScale
@@ -2818,25 +2854,25 @@ export class NVImage {
       hist[i] = 0
     }
     if (isFastCalc) {
-      for (let i = voxStart; i < voxEnd; i++) {
-        hist[Math.round((this.img[i] - mn) * scl)]++
+      for (let i = 0; i < nVox3D; i++) {
+        hist[Math.round((img[i] - mn) * scl)]++
       }
     } else if (this.ignoreZeroVoxels) {
-      for (let i = voxStart; i < voxEnd; i++) {
-        if (this.img[i] === 0) {
+      for (let i = 0; i < nVox3D; i++) {
+        if (img[i] === 0) {
           continue
         }
-        if (isNaN(this.img[i])) {
+        if (isNaN(img[i])) {
           continue
         }
-        hist[Math.round((this.img[i] - mn) * scl)]++
+        hist[Math.round((img[i] - mn) * scl)]++
       }
     } else {
-      for (let i = voxStart; i < voxEnd; i++) {
-        if (isNaN(this.img[i])) {
+      for (let i = 0; i < nVox3D; i++) {
+        if (isNaN(img[i])) {
           continue
         }
-        hist[Math.round((this.img[i] - mn) * scl)]++
+        hist[Math.round((img[i] - mn) * scl)]++
       }
     }
     let n = 0
@@ -3037,6 +3073,41 @@ export class NVImage {
     }
   }
 
+  static async fetchImageData(url: string): Promise<ImageData> {
+    return new Promise<ImageData>((resolve, reject): void => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous' // Allow CORS if needed
+      img.src = url
+
+      img.onload = (): void => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) {
+          reject(new Error('Failed to get 2D context'))
+          return // Ensure function exits after reject
+        }
+
+        ctx.drawImage(img, 0, 0)
+        resolve(ctx.getImageData(0, 0, img.width, img.height))
+      }
+
+      img.onerror = (err): void => reject(err)
+    })
+  }
+
+  static async png2nii(url: string): Promise<Uint8Array> {
+    const imageData = await this.fetchImageData(url)
+    const { width, height, data } = imageData
+    const dims = [width, height, 1]
+    const pixDims = [1, 1, 1]
+    const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
+    const datatypeCode = 2304
+    return this.createNiftiArray(dims, pixDims, affine, datatypeCode, Uint8Array.from(data))
+  }
+
   /**
    * factory function to load and return a new NVImage instance from a given URL
    * @returns  NVImage instance
@@ -3075,6 +3146,9 @@ export class NVImage {
     }
     if (buffer.byteLength > 0) {
       url = buffer
+    }
+    if (typeof url === 'string' && /\.(bmp|gif|jpe?g|png)$/i.test(url)) {
+      url = (await this.png2nii(url)).buffer
     }
     if (url instanceof ArrayBuffer) {
       dataBuffer = url
@@ -3506,7 +3580,7 @@ export class NVImage {
       bpv = 8
     } else if (datatypeCode === 512 || datatypeCode === 4) {
       bpv = 16
-    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8) {
+    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8 || datatypeCode === 2304) {
       bpv = 32
     } else if (datatypeCode === 64) {
       bpv = 64

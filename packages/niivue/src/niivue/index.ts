@@ -3711,14 +3711,7 @@ export class Niivue {
    */
   setOpacity(volIdx: number, newOpacity: number): void {
     this.volumes[volIdx].opacity = newOpacity
-    if (volIdx === 0) {
-      // background layer opacity set dynamically with shader
-      this.drawScene()
-      return
-    }
-    // all overlays are combined as a single texture, so changing opacity to one requires us to refresh textures
     this.updateGLVolume()
-    //
   }
 
   /**
