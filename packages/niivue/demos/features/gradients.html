@@ -63,15 +63,6 @@
       <section>
         <label id="images"></label>
       </section>
-      <label for="matCaps">Choose a MatCap:</label>
-      <select id="matCaps">
-        <option value="Shiny">Shiny</option>
-        <option value="Cortex" selected>Cortex</option>
-        <option value="Cream">Cream</option>
-        <option value="Fuzzy">Fuzzy</option>
-        <option value="Peach">Peach</option>
-        <option value="Plastic">Plastic</option>
-      </select>
     </header>
     <main id="container">
       <div class='page-wrapper'>
@@ -114,30 +105,21 @@
   </body>
 </html>
 <script type="module">
-    import {
-      Niivue,
-      NVImage,
-      NVMesh,
-      NVMeshLoaders,
-      SHOW_RENDER
-    } from "./niivue/index.ts";
+  import * as niivue from "../dist/index.js";
+
+  const backColor = [0.7, 0.7, 0.9, 1];
   const clipPlane = [0.35, 270, 0];
   const illumination = 0.8;
-  let defaults = {
-    backColor: [0.5, 0.5, 1, 1],
-    show3Dcrosshair: true,
-    loglevel: 'debug',
-    isRuler: true
-  }
+  
   const volumeList1 = [
     {
-      url: "../demos/images/shear.nii.gz",
-      colormap: "ct_surface",
+      url: "../images/mni152.nii.gz",
+      colormap: "gray",
       opacity: 1,
       visible: true,
     },
   ];
-  const nv1 = new Niivue(defaults);
+  const nv1 = new niivue.Niivue({ backColor });
   nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
   nv1.opts.isColorbar = true;
@@ -145,7 +127,7 @@
   nv1.setClipPlane(clipPlane);
   nv1.setVolumeRenderIllumination(illumination);
 
-  const nv2 = new Niivue(defaults);
+  const nv2 = new niivue.Niivue({ backColor });
   nv2.attachTo("gl2");
   nv2.loadVolumes(volumeList1);
   nv2.opts.isColorbar = true;
@@ -153,30 +135,26 @@
   nv2.setClipPlane(clipPlane);
   nv2.setVolumeRenderIllumination(illumination);
 
-  const nv3 = new Niivue(defaults);
+  const nv3 = new niivue.Niivue({ backColor });
   nv3.attachTo("gl3");
   nv3.loadVolumes(volumeList1);
   nv3.opts.isColorbar = true;
   nv3.setSliceType(nv3.sliceTypeRender);
   nv3.setClipPlane(clipPlane);
   nv3.setVolumeRenderIllumination(illumination);
-  nv3.setRenderGradientValues(true);
 
-  const nv4 = new Niivue(defaults);
+  const nv4 = new niivue.Niivue({ backColor });
   nv4.attachTo("gl4");
   nv4.loadVolumes(volumeList1);
   nv4.opts.isColorbar = true;
   nv4.setSliceType(nv4.sliceTypeRender);
   nv4.setClipPlane(clipPlane);
   nv4.setVolumeRenderIllumination(illumination);
-  nv4.setRenderGradientValues(true);
 
-  const renderers = [nv1, nv2, nv3, nv4]
-
-  nv1.broadcastTo([nv2, nv3, nv4], { "3d": true, clipPlane: true });
-  nv2.broadcastTo([nv1, nv3, nv4], { "3d": true, clipPlane: true });
-  nv3.broadcastTo([nv1, nv2, nv4], { "3d": true, clipPlane: true });
-  nv4.broadcastTo([nv1, nv2, nv3], { "3d": true, clipPlane: true });
+  nv1.broadcastTo([nv2, nv3, nv4], { "3d": true });
+  nv2.broadcastTo([nv1, nv3, nv4], { "3d": true });
+  nv3.broadcastTo([nv1, nv2, nv4], { "3d": true });
+  nv4.broadcastTo([nv1, nv2, nv3], { "3d": true });
 
   let imgs = [
     "chris_MRA",
@@ -206,38 +184,22 @@
       let img = root + imgs[i] + ".nii.gz";
       console.log("Loading: " + img);
       volumeList1[0].url = img;
-      renderers.forEach((nv) => {
+      [nv1, nv2, nv3, nv4].forEach((nv) => {
         nv.loadVolumes(volumeList1);
         nv.updateGLVolume();
       });
     };
     imgEl.appendChild(btn);
   }
-  let cmaps = nv1.colormaps();
-  let cmapEl = document.getElementById("colormaps");
-  for (let i = 0; i < cmaps.length; i++) {
-    const btn = document.createElement("button");
-    btn.innerHTML = cmaps[i];
-    btn.onclick = function () {
-      renderers.forEach((nv) => {
-        nv.setColormap(nv.volumes[0].id, cmaps[i]);
-      })
-    };
-    cmapEl.appendChild(btn);
-  }
-  matCaps.onchange = function () {
-    const matCapName = document.getElementById("matCaps").value
-    renderers.forEach((nv) => {
-      nv.loadMatCapTexture("../demos/matcaps/" + matCapName + ".jpg")
-    })
-  }
+
   canvasHeight.onchange = function () {
     gl1.height = this.value;
     gl2.height = this.value;
     gl3.height = this.value;
     gl4.height = this.value;
-    renderers.forEach((nv) => {
-      nv.resizeListener();
-    })
+    nv1.resizeListener();
+    nv2.resizeListener();
+    nv3.resizeListener();
+    nv4.resizeListener();
   }
 </script>

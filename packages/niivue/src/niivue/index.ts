@@ -16,6 +16,7 @@ import {
   vertRenderShader,
   fragRenderShader,
   fragRenderGradientShader,
+  fragRenderGradientValuesShader,
   fragRenderSliceShader,
   vertColorbarShader,
   fragColorbarShader,
@@ -353,8 +354,9 @@ export class Niivue {
   colormapTexture: WebGLTexture | null = null // the GPU memory storage of the colormap
   colormapLists: ColormapListEntry[] = [] // one entry per colorbar: min, max, tic
   volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
-  gradientTexture: WebGLTexture | null = null // 3D texture for volume rnedering lighting
+  gradientTexture: WebGLTexture | null = null // 3D texture for volume rendering lighting
   gradientTextureAmount = 0.0
+  renderGradientValues = false // Render gradient values otherwise used for rendering the volume
   drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -381,6 +383,7 @@ export class Niivue {
   line3DShader?: Shader
   passThroughShader?: Shader
   renderGradientShader?: Shader
+  renderGradientValuesShader?: Shader
   renderSliceShader?: Shader
   renderVolumeShader?: Shader
   pickingMeshShader?: Shader
@@ -3785,7 +3788,11 @@ export class Niivue {
   async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
     this.renderShader = this.renderVolumeShader
     if (gradientAmount > 0.0) {
-      this.renderShader = this.renderGradientShader
+      if (this.renderGradientValues) {
+        this.renderShader = this.renderGradientValuesShader
+      } else {
+        this.renderShader = this.renderGradientShader
+      }
     }
     if (gradientAmount < 0.0) {
       this.renderShader = this.renderSliceShader
@@ -3799,6 +3806,18 @@ export class Niivue {
     } // issue1158
     this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
+  }
+
+  /**
+   * set whether to render the gradient values used by the volume renderer
+   * @param renderGradientValues - render gradient values instead of intensity, default false
+   * @example
+   * niivue.setRenderGradientValues(true);
+   * @see {@link https://niivue.github.io/niivue/features/gradient.html | live demo usage}
+   */
+  async setRenderGradientValues(renderGradientValues: boolean): Promise<void> {
+    this.renderGradientValues = renderGradientValues
+    return this.setVolumeRenderIllumination(this.gradientTextureAmount)
   }
 
   // not included in public docs.
@@ -5911,6 +5930,10 @@ export class Niivue {
     this.initRenderShader(this.renderGradientShader, 0.3)
     gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5)
     gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6)
+    this.renderGradientValuesShader = new Shader(gl, vertRenderShader, fragRenderGradientValuesShader)
+    this.initRenderShader(this.renderGradientValuesShader)
+    gl.uniform1i(this.renderGradientValuesShader.uniforms.matCap, 5)
+    gl.uniform1i(this.renderGradientValuesShader.uniforms.gradient, 6)
     this.renderShader = this.renderVolumeShader
     // colorbar shader
     this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
