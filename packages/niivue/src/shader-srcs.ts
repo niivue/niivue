@@ -442,8 +442,8 @@ out vec4 fColor;
 ` +
   kRenderTail
 
-export const fragRenderGradientShader =
-  `#version 300 es
+const kFragRenderGradientDecl = 
+	`#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -470,7 +470,9 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 in vec3 vColor;
 out vec4 fColor;
-` +
+`
+export const fragRenderGradientShader =
+  kFragRenderGradientDecl +
   kRenderFunc +
   kRenderInit +
   `
@@ -492,6 +494,34 @@ out vec4 fColor;
 			mc = mix(vec4(1.0), mc, gradientAmount);
 			if (samplePos.a > clipClose)
 				colorSample.rgb *= mc.rgb;
+			if (firstHit.a > lenNoClip)
+				firstHit = samplePos;
+			backNearest = min(backNearest, samplePos.a);
+			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			colorSample.rgb *= colorSample.a;
+			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+			if ( colAcc.a > earlyTermination )
+				break;
+		}
+		samplePos += deltaDir; //advance ray position
+	}
+` +
+  kRenderTail
+
+export const fragRenderGradientValuesShader =
+  kFragRenderGradientDecl +
+  kRenderFunc +
+  kRenderInit +
+  `
+	float startPos = samplePos.a;
+	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
+	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
+	//vec4 prevGrad = vec4(0.0);
+	while (samplePos.a <= len) {
+		vec4 colorSample = texture(volume, samplePos.xyz);
+		if (colorSample.a >= 0.0) {
+			vec4 grad = texture(gradient, samplePos.xyz);
+			colorSample.rgb = abs(normalize(grad.rgb*2.0 - 1.0));
 			if (firstHit.a > lenNoClip)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
