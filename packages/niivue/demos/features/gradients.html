@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Gradients</title>
+    <style>
+      html {
+        height: auto;
+        min-height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        min-height: 100%;
+        width: 100%;
+        position: absolute;
+        font-family: system-ui, Arial, Helvetica, sans-serif;
+        user-select: none; /* Standard syntax */
+        color: white;
+        background: #202020;
+      }
+      header {
+        margin: 10px;
+      }
+      footer {
+        margin: 5px;
+      }
+      .page-wrapper {
+        margin: 2px;
+      }
+      .row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        min-height: 40%;
+        margin: 2px;
+      }
+      .column {
+        display: flex;
+        flex-direction: column;
+        flex-basis: 100%;
+        flex: 1;
+        background: #404040;
+      }
+      canvas:focus {
+        outline: red 1px solid;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+      <section>
+        <label id="images"></label>
+      </section>
+    </header>
+    <main id="container">
+      <div class='page-wrapper'>
+        <div class='row'>
+          <div class='column'>
+            <div>
+              <canvas id="gl1" height="512"></canvas>
+            </div>
+          </div>
+          <div class='column'>
+            <div>
+              <canvas id="gl2" height="512"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class='row'>
+          <div class='column'>
+            <div>
+              <canvas id="gl3" height="512"></canvas>
+            </div>
+          </div>
+          <div class='column'>
+            <div>
+              <canvas id="gl4" height="512"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <label for="canvasHeight">Height</label>
+      <select id="canvasHeight">
+        <option value="256">256</option>
+        <option value="640" selected>512</option>
+        <option value="768">768</option>
+      </select>
+
+      <label id="colormaps"></label>
+    </footer>
+  </body>
+</html>
+<script type="module">
+  import * as niivue from "../dist/index.js";
+
+  const backColor = [0.7, 0.7, 0.9, 1];
+  const clipPlane = [0.35, 270, 0];
+  const illumination = 0.8;
+  
+  const volumeList1 = [
+    {
+      url: "../images/mni152.nii.gz",
+      colormap: "gray",
+      opacity: 1,
+      visible: true,
+    },
+  ];
+  const nv1 = new niivue.Niivue({ backColor });
+  nv1.attachTo("gl1");
+  nv1.loadVolumes(volumeList1);
+  nv1.opts.isColorbar = true;
+  nv1.setSliceType(nv1.sliceTypeRender);
+  nv1.setClipPlane(clipPlane);
+  nv1.setVolumeRenderIllumination(illumination);
+
+  const nv2 = new niivue.Niivue({ backColor });
+  nv2.attachTo("gl2");
+  nv2.loadVolumes(volumeList1);
+  nv2.opts.isColorbar = true;
+  nv2.setSliceType(nv2.sliceTypeRender);
+  nv2.setClipPlane(clipPlane);
+  nv2.setVolumeRenderIllumination(illumination);
+
+  const nv3 = new niivue.Niivue({ backColor });
+  nv3.attachTo("gl3");
+  nv3.loadVolumes(volumeList1);
+  nv3.opts.isColorbar = true;
+  nv3.setSliceType(nv3.sliceTypeRender);
+  nv3.setClipPlane(clipPlane);
+  nv3.setVolumeRenderIllumination(illumination);
+
+  const nv4 = new niivue.Niivue({ backColor });
+  nv4.attachTo("gl4");
+  nv4.loadVolumes(volumeList1);
+  nv4.opts.isColorbar = true;
+  nv4.setSliceType(nv4.sliceTypeRender);
+  nv4.setClipPlane(clipPlane);
+  nv4.setVolumeRenderIllumination(illumination);
+
+  nv1.broadcastTo([nv2, nv3, nv4], { "3d": true });
+  nv2.broadcastTo([nv1, nv3, nv4], { "3d": true });
+  nv3.broadcastTo([nv1, nv2, nv4], { "3d": true });
+  nv4.broadcastTo([nv1, nv2, nv3], { "3d": true });
+
+  let imgs = [
+    "chris_MRA",
+    "chris_PD",
+    "chris_t1",
+    "chris_t2",
+    "CT_Abdo",
+    "CT_AVM",
+    "CT_Electrodes",
+    "CT_Philips",
+    "CT_pitch",
+    "fmri_pitch",
+    "Iguana",
+    "mni152",
+    "MR_Gd",
+    "pcasl",
+    "spm152",
+    "spmMotor",
+    "visiblehuman",
+  ];
+  let imgEl = document.getElementById("images");
+  for (let i = 0; i < imgs.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = imgs[i];
+    btn.onclick = function () {
+      let root = "https://niivue.github.io/niivue-demo-images/";
+      let img = root + imgs[i] + ".nii.gz";
+      console.log("Loading: " + img);
+      volumeList1[0].url = img;
+      [nv1, nv2, nv3, nv4].forEach((nv) => {
+        nv.loadVolumes(volumeList1);
+        nv.updateGLVolume();
+      });
+    };
+    imgEl.appendChild(btn);
+  }
+
+  canvasHeight.onchange = function () {
+    gl1.height = this.value;
+    gl2.height = this.value;
+    gl3.height = this.value;
+    gl4.height = this.value;
+    nv1.resizeListener();
+    nv2.resizeListener();
+    nv3.resizeListener();
+    nv4.resizeListener();
+  }
+</script>
