@@ -1840,7 +1840,7 @@ void main(void) {
  FragColor = samp*0.125;
 }`
 
-export const sobelFragShader = `#version 300 es
+export const sobelFirstOrderFragShader = `#version 300 es
 #line 323
 precision highp int;
 precision highp float;
@@ -1866,6 +1866,47 @@ void main(void) {
   gradientSample.r =   BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
   gradientSample.g =  TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
   gradientSample.b =  TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
+  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+  gradientSample.rgb = normalize(gradientSample.rgb);
+  gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
+  FragColor = gradientSample;
+}`
+
+export const sobelSecondOrderFragShader = `#version 300 es
+#line 323
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float dX;
+uniform float dY;
+uniform float dZ;
+uniform float dX2;
+uniform float dY2;
+uniform float dZ2;
+uniform highp sampler3D intensityVol;
+void main(void) {
+  vec3 vx = vec3(TexCoord.xy, coordZ);
+  //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
+  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).r;
+  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).r;
+  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).r;
+  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).r;
+  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).r;
+  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).r;
+  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
+  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
+  float T = texture(intensityVol,vx+vec3(+dX2,0.0,0.0)).r;
+  float A = texture(intensityVol,vx+vec3(0.0,+dY2,0.0)).r;
+  float R = texture(intensityVol,vx+vec3(0.0,0.0,+dZ2)).r;
+  float B = texture(intensityVol,vx+vec3(-dX2,0.0,0.0)).r;
+  float P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0)).r;
+  float L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2)).r;
+  vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
+  gradientSample.r =  -4.0*B +8.0*(BAR+BAL+BPR+BPL) -8.0*(TAR+TAL+TPR+TPL) +4.0*T;
+  gradientSample.g =  -4.0*P +8.0*(TPR+TPL+BPR+BPL) -8.0*(TAR+TAL+BAR+BAL) +4.0*A;
+  gradientSample.b =  -4.0*L +8.0*(TAL+TPL+BAL+BPL) -8.0*(TAR+TPR+BAR+BPR) +4.0*R;
   gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;

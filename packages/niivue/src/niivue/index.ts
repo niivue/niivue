@@ -59,7 +59,8 @@ import {
   fragVolumePickingShader,
   blurVertShader,
   blurFragShader,
-  sobelFragShader
+  sobelFirstOrderFragShader,
+  sobelSecondOrderFragShader
 } from '../shader-srcs.js'
 import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
@@ -411,7 +412,8 @@ export class Niivue {
   orientShaderRGBU: Shader | null = null
   surfaceShader: Shader | null = null
   blurShader: Shader | null = null
-  sobelShader: Shader | null = null
+  sobelFirstOrderShader: Shader | null = null
+  sobelSecondOrderShader: Shader | null = null
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
@@ -6035,7 +6037,8 @@ export class Niivue {
     this.colorbarShader.use(gl)
     gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
     this.blurShader = new Shader(gl, blurVertShader, blurFragShader)
-    this.sobelShader = new Shader(gl, blurVertShader, sobelFragShader)
+    this.sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader)
+    this.sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader)
 
     this.growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader)
 
@@ -6118,7 +6121,7 @@ export class Niivue {
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
-    const sobelShader = this.sobelShader!
+    const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
@@ -6127,6 +6130,11 @@ export class Niivue {
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
     gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2])
     gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3])
+    if (this.opts.gradientOrder === 2) {
+      gl.uniform1f(sobelShader.uniforms.dX2, 2.0*sobelRadius / hdr.dims[1])
+      gl.uniform1f(sobelShader.uniforms.dY2, 2.0*sobelRadius / hdr.dims[2])
+      gl.uniform1f(sobelShader.uniforms.dZ2, 2.0*sobelRadius / hdr.dims[3])
+    }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
     gl.activeTexture(TEXTURE0_BACK_VOL)
@@ -6941,7 +6949,10 @@ export class Niivue {
     if (layer === 0) {
       this.volumeTexture = outTexture
       if (this.gradientTextureAmount > 0.0) {
+        const t0 = performance.now()
         this.gradientGL(hdr)
+        const t1 = performance.now()
+        console.log(`gradientGL took ${t1-t0} ms`)
       } else {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture)
