@@ -59,6 +59,7 @@ import {
   fragVolumePickingShader,
   blurVertShader,
   blurFragShader,
+  sobelBlurFragShader,
   sobelFirstOrderFragShader,
   sobelSecondOrderFragShader
 } from '../shader-srcs.js'
@@ -412,6 +413,7 @@ export class Niivue {
   orientShaderRGBU: Shader | null = null
   surfaceShader: Shader | null = null
   blurShader: Shader | null = null
+  sobelBlurShader: Shader | null = null
   sobelFirstOrderShader: Shader | null = null
   sobelSecondOrderShader: Shader | null = null
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
@@ -6037,6 +6039,7 @@ export class Niivue {
     this.colorbarShader.use(gl)
     gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
     this.blurShader = new Shader(gl, blurVertShader, blurFragShader)
+    this.sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader)
     this.sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader)
     this.sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader)
 
@@ -6103,7 +6106,7 @@ export class Niivue {
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
     const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
-    const blurShader = this.blurShader!
+    const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
 
     gl.activeTexture(TEXTURE0_BACK_VOL)
@@ -6131,9 +6134,9 @@ export class Niivue {
     gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2])
     gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3])
     if (this.opts.gradientOrder === 2) {
-      gl.uniform1f(sobelShader.uniforms.dX2, 2.0*sobelRadius / hdr.dims[1])
-      gl.uniform1f(sobelShader.uniforms.dY2, 2.0*sobelRadius / hdr.dims[2])
-      gl.uniform1f(sobelShader.uniforms.dZ2, 2.0*sobelRadius / hdr.dims[3])
+      gl.uniform1f(sobelShader.uniforms.dX2, (2.0 * sobelRadius) / hdr.dims[1])
+      gl.uniform1f(sobelShader.uniforms.dY2, (2.0 * sobelRadius) / hdr.dims[2])
+      gl.uniform1f(sobelShader.uniforms.dZ2, (2.0 * sobelRadius) / hdr.dims[3])
     }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
@@ -6952,7 +6955,7 @@ export class Niivue {
         const t0 = performance.now()
         this.gradientGL(hdr)
         const t1 = performance.now()
-        console.log(`gradientGL took ${t1-t0} ms`)
+        console.log(`gradientGL took ${t1 - t0} ms`)
       } else {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture)

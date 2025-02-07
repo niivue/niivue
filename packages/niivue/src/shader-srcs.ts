@@ -442,8 +442,7 @@ out vec4 fColor;
 ` +
   kRenderTail
 
-const kFragRenderGradientDecl = 
-	`#version 300 es
+const kFragRenderGradientDecl = `#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -1840,6 +1839,56 @@ void main(void) {
  FragColor = samp*0.125;
 }`
 
+export const sobelBlurFragShader = `#version 300 es
+#line 298
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float dX;
+uniform float dY;
+uniform float dZ;
+uniform highp sampler3D intensityVol;
+void main(void) {
+ vec3 vx = vec3(TexCoord.xy, coordZ);
+ vec4 XYZ = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
+ vec4 OYZ = texture(intensityVol,vx+vec3(0.0,+dY,+dZ));
+ vec4 xYZ = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
+ vec4 XOZ = texture(intensityVol,vx+vec3(+dX,0.0,+dZ));
+ vec4 OOZ = texture(intensityVol,vx+vec3(0.0,0.0,+dZ));
+ vec4 xOZ = texture(intensityVol,vx+vec3(-dX,0.0,+dZ));
+ vec4 XyZ = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
+ vec4 OyZ = texture(intensityVol,vx+vec3(0.0,-dY,+dZ));
+ vec4 xyZ = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
+
+ vec4 XYO = texture(intensityVol,vx+vec3(+dX,+dY,0.0));
+ vec4 OYO = texture(intensityVol,vx+vec3(0.0,+dY,0.0));
+ vec4 xYO = texture(intensityVol,vx+vec3(-dX,+dY,0.0));
+ vec4 XOO = texture(intensityVol,vx+vec3(+dX,0.0,0.0));
+ vec4 OOO = texture(intensityVol,vx+vec3(0.0,0.0,0.0));
+ vec4 xOO = texture(intensityVol,vx+vec3(-dX,0.0,0.0));
+ vec4 XyO = texture(intensityVol,vx+vec3(+dX,-dY,0.0));
+ vec4 OyO = texture(intensityVol,vx+vec3(0.0,-dY,0.0));
+ vec4 xyO = texture(intensityVol,vx+vec3(-dX,-dY,0.0));
+
+ vec4 XYz = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
+ vec4 OYz = texture(intensityVol,vx+vec3(0.0,+dY,-dZ));
+ vec4 xYz = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
+ vec4 XOz = texture(intensityVol,vx+vec3(+dX,0.0,-dZ));
+ vec4 OOz = texture(intensityVol,vx+vec3(0.0,0.0,-dZ));
+ vec4 xOz = texture(intensityVol,vx+vec3(-dX,0.0,-dZ));
+ vec4 Xyz = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
+ vec4 Oyz = texture(intensityVol,vx+vec3(0.0,-dY,-dZ));
+ vec4 xyz = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
+
+ vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
+ blurred.r = 2.0*(xOz.r +xOZ.r +xyO.r +xYO.r +xOO.r +XOz.r +XOZ.r +XyO.r +XYO.r +XOO.r) +xyz.r +xyZ.r +xYz.r +xYZ.r +Xyz.r +XyZ.r +XYz.r +XYZ.r;
+ blurred.g = 2.0*(Oyz.r +OyZ.r +xyO.r +XyO.r +OyO.r +OYz.r +OYZ.r +xYO.r +XYO.r +OYO.r) +xyz.r +Xyz.r +xyZ.r +XyZ.r +xYz.r +XYz.r +xYZ.r +XYZ.r;
+ blurred.b = 2.0*(Oyz.r +OYz.r +xOz.r +XOz.r +OOz.r +OyZ.r +OYZ.r +xOZ.r +XOZ.r +OOZ.r) +xyz.r +Xyz.r +xYz.r +XYz.r +xyZ.r +XyZ.r +XyZ.r +XYZ.r;
+ FragColor = blurred*0.0357;
+}`
+
 export const sobelFirstOrderFragShader = `#version 300 es
 #line 323
 precision highp int;
@@ -1889,24 +1938,24 @@ uniform highp sampler3D intensityVol;
 void main(void) {
   vec3 vx = vec3(TexCoord.xy, coordZ);
   //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
-  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).r;
-  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).r;
-  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).r;
-  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).r;
-  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).r;
-  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).r;
-  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
-  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
-  float T = texture(intensityVol,vx+vec3(+dX2,0.0,0.0)).r;
-  float A = texture(intensityVol,vx+vec3(0.0,+dY2,0.0)).r;
-  float R = texture(intensityVol,vx+vec3(0.0,0.0,+dZ2)).r;
-  float B = texture(intensityVol,vx+vec3(-dX2,0.0,0.0)).r;
-  float P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0)).r;
-  float L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2)).r;
+  vec4 TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
+  vec4 TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
+  vec4 TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
+  vec4 TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
+  vec4 BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
+  vec4 BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
+  vec4 BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
+  vec4 BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
+  vec4 T = texture(intensityVol,vx+vec3(+dX2,0.0,0.0));
+  vec4 A = texture(intensityVol,vx+vec3(0.0,+dY2,0.0));
+  vec4 R = texture(intensityVol,vx+vec3(0.0,0.0,+dZ2));
+  vec4 B = texture(intensityVol,vx+vec3(-dX2,0.0,0.0));
+  vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
+  vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r =  -4.0*B +8.0*(BAR+BAL+BPR+BPL) -8.0*(TAR+TAL+TPR+TPL) +4.0*T;
-  gradientSample.g =  -4.0*P +8.0*(TPR+TPL+BPR+BPL) -8.0*(TAR+TAL+BAR+BAL) +4.0*A;
-  gradientSample.b =  -4.0*L +8.0*(TAL+TPL+BAL+BPL) -8.0*(TAR+TPR+BAR+BPR) +4.0*R;
+  gradientSample.r =  -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
+  gradientSample.g =  -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
+  gradientSample.b =  -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
   gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
