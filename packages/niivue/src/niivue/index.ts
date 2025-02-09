@@ -5619,6 +5619,43 @@ export class Niivue {
   }
 
   // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) uint16 texture on GPU
+  rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
+    // Not: cannot be gl.LINEAR for integer textures
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2)
+    this.gl.pixelStorei(this.gl.PACK_ALIGNMENT, 2)
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA16UI, dims[1], dims[2], dims[3]) // output background dimensions
+    if (isInit) {
+      const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4)
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RGBA_INTEGER,
+        this.gl.UNSIGNED_SHORT,
+        img16
+      )
+    }
+    return texID
+  }
+
+  // not included in public docs
   // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
   requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
     if (new URL(url, window.location.href).origin !== window.location.origin) {
@@ -6105,7 +6142,10 @@ export class Niivue {
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
-    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
+    const tempTex3D =
+      this.opts.gradientOrder === 2
+        ? this.rgba16Tex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
+        : this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
     const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
 
@@ -6121,9 +6161,14 @@ export class Niivue {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i)
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        log.error('framebuffer status: ', status)
+      }
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
+
     const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
@@ -6140,7 +6185,6 @@ export class Niivue {
     }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
-    gl.activeTexture(TEXTURE0_BACK_VOL)
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture)
     }
@@ -6149,9 +6193,14 @@ export class Niivue {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(sobelShader.uniforms.coordZ, coordZ)
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i)
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        log.error('framebuffer status: ', status)
+      }
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
+
     gl.deleteFramebuffer(fb)
     gl.deleteTexture(tempTex3D)
     gl.deleteBuffer(vbo2)
@@ -6952,10 +7001,7 @@ export class Niivue {
     if (layer === 0) {
       this.volumeTexture = outTexture
       if (this.gradientTextureAmount > 0.0) {
-        const t0 = performance.now()
         this.gradientGL(hdr)
-        const t1 = performance.now()
-        console.log(`gradientGL took ${t1 - t0} ms`)
       } else {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture)
