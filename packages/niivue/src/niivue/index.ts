@@ -5524,6 +5524,76 @@ export class Niivue {
   }
 
   // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) uint16 texture on GPU
+  rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2)
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA16UI, dims[1], dims[2], dims[3]) // output background dimensions
+    if (isInit) {
+      const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4)
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RGB16UI,
+        this.gl.UNSIGNED_SHORT,
+        img16
+      )
+    }
+    return texID
+  }
+
+  // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) float32 texture on GPU
+  rgba32Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2)
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA32F, dims[1], dims[2], dims[3]) // output background dimensions
+    if (isInit) {
+      const img32 = new Float32Array(dims[1] * dims[2] * dims[3] * 4)
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RGBA32F,
+        this.gl.FLOAT,
+        img32
+      )
+    }
+    return texID
+  }
+
+  // not included in public docs
   // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
   requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
     if (new URL(url, window.location.href).origin !== window.location.origin) {
@@ -6010,7 +6080,13 @@ export class Niivue {
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
-    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
+    const tempTex3D =
+      this.opts.gradientOrder === 2
+        ? this.rgba16Tex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
+        : this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
+    // const tempTex3D = false
+    //   ? this.rgba16Tex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
+    //   : this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
     const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
 
@@ -6045,7 +6121,7 @@ export class Niivue {
     }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
-    gl.activeTexture(TEXTURE0_BACK_VOL)
+    // gl.activeTexture(TEXTURE0_BACK_VOL)
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture)
     }
