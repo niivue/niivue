@@ -89,6 +89,7 @@
     "http-server": "^14.1.1",
     "prettier": "^3.3.3",
     "regenerator-runtime": "^0.14.1",
+    "spectorjs": "^0.9.30",
     "terser": "^5.31.3",
     "tsup": "^8.1.2",
     "typedoc": "^0.26.4",

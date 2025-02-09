@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Gradients</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/spectorjs@0.9.30/dist/spector.bundle.js"></script>
     <style>
       html {
         height: auto;
@@ -108,11 +109,14 @@
         <option value="640" selected>512</option>
         <option value="768">768</option>
       </select>
-
+      <footer id="intensity">&nbsp;</footer>
     </footer>
   </body>
 </html>
 <script type="module">
+  // const spector = new SPECTOR.Spector();
+  // spector.displayUI();
+  // spector.spyCanvases();
     import {
       Niivue,
       NVImage,
@@ -120,13 +124,17 @@
       NVMeshLoaders,
       SHOW_RENDER
     } from "./niivue/index.ts";
+  function handleIntensityChange(data) {
+    document.getElementById("intensity").innerHTML = data.string
+  }
   const clipPlane = [0.35, 290, 0];
   const illumination = 1.0;
   let defaults = {
     backColor: [0.5, 0.5, 1, 1],
     show3Dcrosshair: true,
     loglevel: 'debug',
-    isRuler: true
+    isRuler: true,
+    onLocationChange: handleIntensityChange,
   }
   const volumeList1 = [
     {

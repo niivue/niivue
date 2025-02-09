@@ -1844,7 +1844,7 @@ export const sobelBlurFragShader = `#version 300 es
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
-out vec4 FragColor;
+out mediump uvec4 FragColor;
 uniform float coordZ;
 uniform float dX;
 uniform float dY;
@@ -1886,7 +1886,8 @@ void main(void) {
  blurred.r = 2.0*(xOz.r +xOZ.r +xyO.r +xYO.r +xOO.r +XOz.r +XOZ.r +XyO.r +XYO.r +XOO.r) +xyz.r +xyZ.r +xYz.r +xYZ.r +Xyz.r +XyZ.r +XYz.r +XYZ.r;
  blurred.g = 2.0*(Oyz.r +OyZ.r +xyO.r +XyO.r +OyO.r +OYz.r +OYZ.r +xYO.r +XYO.r +OYO.r) +xyz.r +Xyz.r +xyZ.r +XyZ.r +xYz.r +XYz.r +xYZ.r +XYZ.r;
  blurred.b = 2.0*(Oyz.r +OYz.r +xOz.r +XOz.r +OOz.r +OyZ.r +OYZ.r +xOZ.r +XOZ.r +OOZ.r) +xyz.r +Xyz.r +xYz.r +XYz.r +xyZ.r +XyZ.r +XyZ.r +XYZ.r;
- FragColor = blurred*0.0357;
+ // 0.0357 = 1/28 to account for weights, rescale to 2**16,
+ FragColor = uvec4(blurred*0.0357*65536.0);
 }`
 
 export const sobelFirstOrderFragShader = `#version 300 es
@@ -1912,18 +1913,18 @@ void main(void) {
   float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
   float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r =   BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
-  gradientSample.g =  TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
-  gradientSample.b =  TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
+  gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
+  gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
+  gradientSample.b = TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
   gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
   gradientSample.rgb = normalize(gradientSample.rgb);
-  gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
+  gradientSample.rgb = (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
 }`
 
 export const sobelSecondOrderFragShader = `#version 300 es
 #line 323
-precision highp int;
+precision mediump int;
 precision highp float;
 in vec2 TexCoord;
 out vec4 FragColor;
@@ -1934,30 +1935,54 @@ uniform float dZ;
 uniform float dX2;
 uniform float dY2;
 uniform float dZ2;
-uniform highp sampler3D intensityVol;
+uniform mediump usampler3D intensityVol;
 void main(void) {
   vec3 vx = vec3(TexCoord.xy, coordZ);
   //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
-  vec4 TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
-  vec4 TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
-  vec4 TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
-  vec4 TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
-  vec4 BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
-  vec4 BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
-  vec4 BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
-  vec4 BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
-  vec4 T = texture(intensityVol,vx+vec3(+dX2,0.0,0.0));
-  vec4 A = texture(intensityVol,vx+vec3(0.0,+dY2,0.0));
-  vec4 R = texture(intensityVol,vx+vec3(0.0,0.0,+dZ2));
-  vec4 B = texture(intensityVol,vx+vec3(-dX2,0.0,0.0));
-  vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
-  vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
+  vec4 TAR = vec4(texture(intensityVol,vx+vec3(+dX,+dY,+dZ)));
+  vec4 TAL = vec4(texture(intensityVol,vx+vec3(+dX,+dY,-dZ)));
+  vec4 TPR = vec4(texture(intensityVol,vx+vec3(+dX,-dY,+dZ)));
+  vec4 TPL = vec4(texture(intensityVol,vx+vec3(+dX,-dY,-dZ)));
+  vec4 BAR = vec4(texture(intensityVol,vx+vec3(-dX,+dY,+dZ)));
+  vec4 BAL = vec4(texture(intensityVol,vx+vec3(-dX,+dY,-dZ)));
+  vec4 BPR = vec4(texture(intensityVol,vx+vec3(-dX,-dY,+dZ)));
+  vec4 BPL = vec4(texture(intensityVol,vx+vec3(-dX,-dY,-dZ)));
+  vec4 T = vec4(texture(intensityVol,vx+vec3(+dX2,0.0,0.0)));
+  vec4 A = vec4(texture(intensityVol,vx+vec3(0.0,+dY2,0.0)));
+  vec4 R = vec4(texture(intensityVol,vx+vec3(0.0,0.0,+dZ2)));
+  vec4 B = vec4(texture(intensityVol,vx+vec3(-dX2,0.0,0.0)));
+  vec4 P = vec4(texture(intensityVol,vx+vec3(0.0,-dY2,0.0)));
+  vec4 L = vec4(texture(intensityVol,vx+vec3(0.0,0.0,-dZ2)));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r =  -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
-  gradientSample.g =  -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
-  gradientSample.b =  -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
-  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
+  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
+  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
   gradientSample.rgb = normalize(gradientSample.rgb);
+  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.000005;
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
 }`
+
+// export const sobelSecondOrderFragShader = `#version 300 es
+// #line 323
+// precision highp int;
+// precision highp float;
+// in vec2 TexCoord;
+// out vec4 FragColor;
+// uniform float coordZ;
+// uniform float dX;
+// uniform float dY;
+// uniform float dZ;
+// uniform float dX2;
+// uniform float dY2;
+// uniform float dZ2;
+// uniform mediump usampler3D intensityVol;
+// void main(void) {
+//   vec3 vx = vec3(TexCoord.xy, coordZ);
+//   //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
+//   vec4 samp = vec4(texture(intensityVol,vx+vec3(0.0,0.0,0.0)));
+//   // samp.rgb = normalize(samp.rgb);
+// 	vec4 temp = vec4(1.0, 0.0, 0.0, 0.0);
+//   // FragColor = samp / 65536.0;
+//   FragColor = temp;
+// }`
