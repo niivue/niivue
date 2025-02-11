@@ -23,6 +23,24 @@ export class NVUtilities {
     return NVUtilities.uint8tob64(bytes)
   }
 
+  static async decompress(data: Uint8Array): Promise<Uint8Array> {
+    const format =
+      data[0] === 31 && data[1] === 139 && data[2] === 8
+        ? 'gzip'
+        : data[0] === 120 && (data[1] === 1 || data[1] === 94 || data[1] === 156 || data[1] === 218)
+          ? 'deflate'
+          : 'deflate-raw'
+    const stream = new DecompressionStream(format)
+    const writer = stream.writable.getWriter()
+    writer.write(data).catch(console.error) // Do not await this
+    // Close without awaiting directly, preventing the hang issue
+    const closePromise = writer.close().catch(console.error)
+    const response = new Response(stream.readable)
+    const result = new Uint8Array(await response.arrayBuffer())
+    await closePromise // Ensure close happens eventually
+    return result
+  }
+
   static readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray> {
     let len = buffer.byteLength
     if (len < 40) {

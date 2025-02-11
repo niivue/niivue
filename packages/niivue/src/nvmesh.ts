@@ -1055,7 +1055,6 @@ export class NVMesh {
       alphas[0] = 0
       mnCal = mn + Number.EPSILON
     }
-
     for (let j = 0; j < nvtx; j++) {
       const v = scaleFlip * layer.values[j + frameOffset]
       if (v < mnCal) {
@@ -1475,14 +1474,14 @@ export class NVMesh {
   }
 
   // wrapper to read meshes, tractograms and connectomes regardless of format
-  static readMesh(
+  static async readMesh(
     buffer: ArrayBuffer,
     name: string,
     gl: WebGL2RenderingContext,
     opacity = 1.0,
     rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true
-  ): NVMesh {
+  ): Promise<NVMesh> {
     let tris: Uint32Array = new Uint32Array([])
     let pts: Float32Array = new Float32Array([])
     let anatomicalStructurePrimary = ''
@@ -1513,7 +1512,7 @@ export class NVMesh {
       } else if (ext === 'TRX') {
         obj = NVMeshLoaders.readTRX(buffer)
       } else {
-        obj = NVMeshLoaders.readTRK(buffer)
+        obj = await NVMeshLoaders.readTRK(buffer)
       }
       if (typeof obj === 'undefined') {
         const pts = new Float32Array([0, 0, 0, 0, 0, 0])
@@ -1537,9 +1536,9 @@ export class NVMesh {
       )
     } // is fibers
     if (ext === 'GII') {
-      obj = NVMeshLoaders.readGII(buffer)
+      obj = await NVMeshLoaders.readGII(buffer)
     } else if (ext === 'MZ3') {
-      obj = NVMeshLoaders.readMZ3(buffer)
+      obj = await NVMeshLoaders.readMZ3(buffer)
       if (obj instanceof Float32Array || obj.positions === null) {
         log.warn('MZ3 does not have positions (statistical overlay?)')
       }
@@ -1580,7 +1579,7 @@ export class NVMesh {
         )
       } // if streamlines, not mesh
     } else if (ext === 'SRF') {
-      obj = NVMeshLoaders.readSRF(buffer)
+      obj = await NVMeshLoaders.readSRF(buffer)
     } else if (ext === 'STL') {
       obj = NVMeshLoaders.readSTL(buffer)
     } else {
@@ -1644,7 +1643,7 @@ export class NVMesh {
       anatomicalStructurePrimary
     )
     if ('scalars' in obj && obj.scalars.length > 0) {
-      const newLayer = NVMeshLoaders.readLayer(name, buffer, nvm, opacity, 'gray')
+      const newLayer = await NVMeshLoaders.readLayer(name, buffer, nvm, opacity, 'gray')
       if (typeof newLayer === 'undefined') {
         log.warn('readLayer() failed to convert scalars')
       } else {
@@ -1733,7 +1732,7 @@ export class NVMesh {
       cal_max = layer.cal_max
     }
 
-    const newLayer = NVMeshLoaders.readLayer(
+    const newLayer = await NVMeshLoaders.readLayer(
       layerName,
       buffer,
       nvmesh,
@@ -1848,7 +1847,7 @@ export class NVMesh {
     }
 
     const buffer = await NVMesh.readFileAsync(file)
-    const nvmesh = NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
+    const nvmesh = await NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible)
 
     if (!layers || layers.length < 1) {
       return nvmesh
@@ -1909,7 +1908,7 @@ export class NVMesh {
   }
 
   // loaders
-  static readGII(buffer: ArrayBuffer): GII {
+  static async readGII(buffer: ArrayBuffer): Promise<GII> {
     return NVMeshLoaders.readGII(buffer)
   }
 
@@ -1917,15 +1916,15 @@ export class NVMesh {
     return NVMeshLoaders.readX3D(buffer)
   }
 
-  static readNII(buffer: ArrayBuffer, n_vert = 0): Uint8Array | Float32Array | Int32Array | Int16Array {
+  static async readNII(buffer: ArrayBuffer, n_vert = 0): Promise<Float32Array | Uint8Array | Int16Array | Int32Array> {
     return NVMeshLoaders.readNII(buffer, n_vert)
   }
 
-  static readNII2(buffer: ArrayBuffer, n_vert = 0): Uint8Array | Float32Array | Int32Array | Int16Array {
+  static async readNII2(buffer: ArrayBuffer, n_vert = 0): Promise<Float32Array | Uint8Array | Int16Array | Int32Array> {
     return NVMeshLoaders.readNII2(buffer, n_vert)
   }
 
-  static readMGH(buffer: ArrayBuffer): MGH {
+  static async readMGH(buffer: ArrayBuffer): Promise<MGH> {
     return NVMeshLoaders.readMGH(buffer)
   }
 
@@ -1937,7 +1936,7 @@ export class NVMesh {
     return NVMeshLoaders.readTxtSTL(buffer)
   }
 
-  static readSRF(buffer: ArrayBuffer): DefaultMeshType {
+  static async readSRF(buffer: ArrayBuffer): Promise<DefaultMeshType> {
     return NVMeshLoaders.readSRF(buffer)
   }
 
@@ -1965,7 +1964,7 @@ export class NVMesh {
     return NVMeshLoaders.readPLY(buffer)
   }
 
-  static readMZ3(buffer: ArrayBuffer, n_vert = 0): MZ3 {
+  static async readMZ3(buffer: ArrayBuffer, n_vert = 0): Promise<MZ3> {
     return NVMeshLoaders.readMZ3(buffer, n_vert)
   }
 
@@ -1993,7 +1992,7 @@ export class NVMesh {
     return NVMeshLoaders.readSTC(buffer, n_vert)
   }
 
-  static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array {
+  static async readSMP(buffer: ArrayBuffer, n_vert: number): Promise<Float32Array> {
     return NVMeshLoaders.readSMP(buffer, n_vert)
   }
 
@@ -2001,7 +2000,7 @@ export class NVMesh {
     return NVMeshLoaders.readTxtVTK(buffer)
   }
 
-  static readTRK(buffer: ArrayBuffer): TRK {
+  static async readTRK(buffer: ArrayBuffer): Promise<TRK> {
     return NVMeshLoaders.readTRK(buffer)
   }
 
