@@ -4338,7 +4338,7 @@ export class Niivue {
         }
         const { positions, indices } = await this.loaders[ext].loader(itemToLoad)
         meshItem.name = `${name}.${toExt}`
-        const mz3 = NVMeshUtilities.createMZ3(positions, indices, false)
+        const mz3 = await NVMeshUtilities.createCompressedMZ3(positions, indices, false)
         meshItem.buffer = mz3
         // return await this.loadFromArrayBuffer(mz3, meshItem.name)
       }
