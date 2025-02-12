@@ -5,9 +5,9 @@ import { orientationLabelMap } from '../../common/orientationLabels'
 import { dragModeMap } from '../../common/dragMode'
 import { DEFAULT_OPTIONS } from '@niivue/niivue'
 import { store } from './appStore'
+import { getMainWindow } from '..'
 
 const isMac = process.platform === 'darwin'
-const template: Electron.MenuItemConstructorOptions[] = []
 
 const getRecentFilesMenu = (win: Electron.BrowserWindow): Electron.MenuItemConstructorOptions[] => {
   const recentFiles = store.getRecentFiles()
@@ -24,8 +24,12 @@ const getRecentFilesMenu = (win: Electron.BrowserWindow): Electron.MenuItemConst
 }
 
 // Function to refresh menu dynamically
-const refreshMenu = (): void => {
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+export const refreshMenu = (): void => {
+  const win = getMainWindow()
+  if (win) {
+    const menu = createMenu(win)
+    Menu.setApplicationMenu(menu)
+  }
 }
 
 const createDragModeSubmenu = (

@@ -5,9 +5,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createMenu } from './utils/menu'
 
+let mainWindow: BrowserWindow | null = null // Global variable to store the window instance
+
 function createWindow(): void {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: true,
@@ -21,9 +23,9 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    const menu = createMenu(mainWindow)
+    const menu = createMenu(mainWindow!)
     Menu.setApplicationMenu(menu)
-    mainWindow.show()
+    mainWindow!.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -69,3 +71,6 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   app.quit()
 })
+
+// Function to get the main window instance safely
+export const getMainWindow = (): BrowserWindow | null => mainWindow
