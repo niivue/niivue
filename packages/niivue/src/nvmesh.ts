@@ -1561,6 +1561,8 @@ export class NVMesh {
       obj = NVMeshLoaders.readOBJ(buffer)
     } else if (ext === 'PLY') {
       obj = NVMeshLoaders.readPLY(buffer)
+    } else if (ext === 'WRL') {
+      obj = NVMeshLoaders.readWRL(buffer)
     } else if (ext === 'X3D') {
       obj = NVMeshLoaders.readX3D(buffer)
     } else if (ext === 'FIB' || ext === 'VTK') {
@@ -1971,6 +1973,10 @@ export class NVMesh {
 
   static readVTK(buffer: ArrayBuffer): VTK {
     return NVMeshLoaders.readVTK(buffer)
+  }
+
+  static readWRL(buffer: ArrayBuffer): DefaultMeshType {
+    return NVMeshLoaders.readWRL(buffer)
   }
 
   static readASC(buffer: ArrayBuffer): DefaultMeshType {
