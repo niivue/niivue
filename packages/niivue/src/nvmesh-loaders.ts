@@ -529,7 +529,6 @@ export class NVMeshLoaders {
       reader = new DataView(buffer)
       magic = reader.getUint32(0, true) // 'TRAC'
     }
-    console.log('>>>>morkTRK!')
     const vers = reader.getUint32(992, true) // 2
     const hdr_sz = reader.getUint32(996, true) // 1000
     if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388) {
