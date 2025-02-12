@@ -5,6 +5,7 @@ import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 import { registerLoadStandardHandler } from './ipcHandlers/loadStandard'
+import { registerLoadRecentFileHandler } from './ipcHandlers/loadRecentFiles'
 import {
   registerLayoutHandler,
   registerSliceTypeHandler,
@@ -125,6 +126,7 @@ function App(): JSX.Element {
     }
     loadImages() // loads the default images. Useful for development (one volume and one mesh)
     registerLoadStandardHandler({ nv, setVolumes, setMeshes })
+    registerLoadRecentFileHandler({ nv, setVolumes, setMeshes })
     registerSliceTypeHandler(nv)
     registerLayoutHandler(nv)
     registerCrosshairHandler(nv)
