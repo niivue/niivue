@@ -49,11 +49,7 @@ export class NVMeshUtilities {
     return result
   }
 
-  static createMZ3(
-    vertices: Float32Array,
-    indices: Uint32Array,
-    compress: boolean = false
-  ): ArrayBuffer {
+  static createMZ3(vertices: Float32Array, indices: Uint32Array, compress: boolean = false): ArrayBuffer {
     // generate binary MZ3 format mesh
     // n.b. small, precise and small but support is not widespread
     // n.b. result can be compressed with gzip
@@ -87,11 +83,11 @@ export class NVMeshUtilities {
     }
     return buffer
   }
-  
+
   static async createCompressedMZ3(
     vertices: Float32Array,
     indices: Uint32Array,
-    compress: boolean = false
+    compress: boolean = true
   ): Promise<ArrayBuffer> {
     const buffer = this.createMZ3(vertices, indices)
     if (compress) {
