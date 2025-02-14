@@ -17,6 +17,192 @@ type TypedNumberArray =
  * Namespace for utility functions
  * @ignore
  */
+
+/**
+ * Read ZIP files using asynchronous compression streams API, supports data descriptors
+ * todo: check ZIP64 support
+ * https://github.com/libyal/assorted/blob/main/documentation/ZIP%20archive%20format.asciidoc
+ * https://en.wikipedia.org/wiki/ZIP_(file_format)
+ * https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+ * https://dev.to/ndesmic/writing-a-simple-browser-zip-file-decompressor-with-compressionstreams-5che
+ */
+
+interface Entry {
+  signature: string
+  version: number
+  generalPurpose: number
+  compressionMethod: number
+  lastModifiedTime: number
+  lastModifiedDate: number
+  crc: number
+  compressedSize: number
+  uncompressedSize: number
+  fileNameLength: number
+  extraLength: number
+  fileName: string
+  extra: string
+  startsAt?: number
+  extract?: () => Promise<Uint8Array>
+}
+
+interface CentralDirectoryEntry {
+  versionCreated: number
+  versionNeeded: number
+  fileCommentLength: number
+  diskNumber: number
+  internalAttributes: number
+  externalAttributes: number
+  offset: number
+  comments: string
+  fileNameLength: number
+  extraLength: number
+}
+
+interface EndOfCentralDirectory {
+  signature: string
+  numberOfDisks: number
+  centralDirectoryStartDisk: number
+  numberCentralDirectoryRecordsOnThisDisk: number
+  numberCentralDirectoryRecords: number
+  centralDirectorySize: number
+  centralDirectoryOffset: number
+  commentLength: number
+  comment: string
+}
+
+export class Zip {
+  #dataView: DataView
+  #index: number = 0
+  #localFiles: Entry[] = []
+  #centralDirectories: CentralDirectoryEntry[] = []
+  #endOfCentralDirectory?: EndOfCentralDirectory
+
+  constructor(arrayBuffer: ArrayBuffer) {
+    this.#dataView = new DataView(arrayBuffer)
+    this.read()
+  }
+
+  async extract(entry: Entry): Promise<Uint8Array> {
+    const buffer = new Uint8Array(this.#dataView.buffer.slice(entry.startsAt!, entry.startsAt! + entry.compressedSize))
+
+    if (entry.compressionMethod === 0x00) {
+      return buffer
+    } else if (entry.compressionMethod === 0x08) {
+      const stream = new DecompressionStream('deflate-raw')
+      const writer = stream.writable.getWriter()
+      writer.write(buffer).catch(console.error)
+      const closePromise = writer.close().catch(console.error)
+      const response = new Response(stream.readable)
+      const result = new Uint8Array(await response.arrayBuffer())
+      await closePromise
+      return result
+    }
+
+    throw new Error(`Unsupported compression method: ${entry.compressionMethod}`)
+  }
+
+  private read(): void {
+    while (!this.#endOfCentralDirectory && this.#index < this.#dataView.byteLength) {
+      const signature = this.#dataView.getUint32(this.#index, true)
+      if (signature === 0x04034b50) {
+        const entry = this.readLocalFile(this.#index)
+        entry.extract = this.extract.bind(this, entry)
+        this.#localFiles.push(entry)
+        const hasDataDescriptor = (entry.generalPurpose & 0x0008) !== 0
+        entry.startsAt = this.#index + 30 + entry.fileNameLength + entry.extraLength
+        if (entry.compressedSize === 0 && hasDataDescriptor) {
+          let scanIndex = entry.startsAt
+          while (scanIndex! + 20 <= this.#dataView.byteLength) {
+            const possibleSignature = this.#dataView.getUint32(scanIndex!, true)
+            if (possibleSignature === 0x08074b50) {
+              const nextPK = this.#dataView.getUint16(scanIndex! + 16, true) === 0x4b50
+              if (nextPK) {
+                scanIndex! += 4
+                break
+              }
+            }
+            scanIndex!++
+          }
+          entry.crc = this.#dataView.getUint32(scanIndex!, true)
+          entry.compressedSize = this.#dataView.getUint32(scanIndex! + 4, true)
+          entry.uncompressedSize = this.#dataView.getUint32(scanIndex! + 8, true)
+          this.#index = scanIndex! + 12
+        } else {
+          this.#index = entry.startsAt + entry.compressedSize
+        }
+      } else if (signature === 0x02014b50) {
+        const entry = this.readCentralDirectory(this.#index)
+        this.#centralDirectories.push(entry)
+        this.#index += 46 + entry.fileNameLength + entry.extraLength + entry.fileCommentLength
+      } else if (signature === 0x06054b50) {
+        this.#endOfCentralDirectory = this.readEndCentralDirectory(this.#index)
+        break
+      } else {
+        console.error(`Unexpected ZIP signature 0x${signature.toString(16).padStart(8, '0')} at index ${this.#index}`)
+        break
+      }
+    }
+  }
+
+  private readLocalFile(offset: number): Entry {
+    const fileNameLength = this.#dataView.getUint16(offset + 26, true)
+    const extraLength = this.#dataView.getUint16(offset + 28, true)
+    return {
+      signature: this.readString(offset, 4),
+      version: this.#dataView.getUint16(offset + 4, true),
+      generalPurpose: this.#dataView.getUint16(offset + 6, true),
+      compressionMethod: this.#dataView.getUint16(offset + 8, true),
+      lastModifiedTime: this.#dataView.getUint16(offset + 10, true),
+      lastModifiedDate: this.#dataView.getUint16(offset + 12, true),
+      crc: this.#dataView.getUint32(offset + 14, true),
+      compressedSize: this.#dataView.getUint32(offset + 18, true),
+      uncompressedSize: this.#dataView.getUint32(offset + 22, true),
+      fileNameLength,
+      extraLength,
+      fileName: this.readString(offset + 30, fileNameLength),
+      extra: this.readString(offset + 30 + fileNameLength, extraLength)
+    }
+  }
+
+  private readCentralDirectory(offset: number): CentralDirectoryEntry {
+    return {
+      versionCreated: this.#dataView.getUint16(offset + 4, true),
+      versionNeeded: this.#dataView.getUint16(offset + 6, true),
+      fileNameLength: this.#dataView.getUint16(offset + 28, true),
+      extraLength: this.#dataView.getUint16(offset + 30, true),
+      fileCommentLength: this.#dataView.getUint16(offset + 32, true),
+      diskNumber: this.#dataView.getUint16(offset + 34, true),
+      internalAttributes: this.#dataView.getUint16(offset + 36, true),
+      externalAttributes: this.#dataView.getUint32(offset + 38, true),
+      offset: this.#dataView.getUint32(offset + 42, true),
+      comments: this.readString(offset + 46, this.#dataView.getUint16(offset + 32, true))
+    }
+  }
+
+  private readEndCentralDirectory(offset: number): EndOfCentralDirectory {
+    const commentLength = this.#dataView.getUint16(offset + 20, true)
+    return {
+      signature: this.readString(offset, 4),
+      numberOfDisks: this.#dataView.getUint16(offset + 4, true),
+      centralDirectoryStartDisk: this.#dataView.getUint16(offset + 6, true),
+      numberCentralDirectoryRecordsOnThisDisk: this.#dataView.getUint16(offset + 8, true),
+      numberCentralDirectoryRecords: this.#dataView.getUint16(offset + 10, true),
+      centralDirectorySize: this.#dataView.getUint32(offset + 12, true),
+      centralDirectoryOffset: this.#dataView.getUint32(offset + 16, true),
+      commentLength,
+      comment: this.readString(offset + 22, commentLength)
+    }
+  }
+
+  private readString(offset: number, length: number): string {
+    return Array.from({ length }, (_, i) => String.fromCharCode(this.#dataView.getUint8(offset + i))).join('')
+  }
+
+  get entries(): Entry[] {
+    return this.#localFiles
+  }
+}
+
 export class NVUtilities {
   static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string {
     const bytes = new Uint8Array(arrayBuffer)
