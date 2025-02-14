@@ -1,35 +1,71 @@
-export abstract class NVFileLoader<T> {
-    data: T
-  
-    protected constructor(data: T) {
-      this.data = data
-    }
-  
-    static async fetchBinary(url: string): Promise<ArrayBuffer> {
-      const response = await fetch(url)
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`)
-      return await response.arrayBuffer()
-    }
-  
-    static async create<T, U extends NVFileLoader<T>>(this: new (data: T) => U, url: string): Promise<U> {
-      const buffer = await NVFileLoader.fetchBinary(url) // Explicitly reference NVFileLoader
-      return new this(this.prototype.parse(buffer)) // Use `this.prototype.parse`
-    }
-  
-    static async createFromFile<T, U extends NVFileLoader<T>>(this: new (data: T) => U, file: File): Promise<U> {
-      const buffer = await NVFileLoader.readFile(file) // Explicitly reference NVFileLoader
-      return new this(this.prototype.parse(buffer))
-    }
-  
-    static async readFile(file: File): Promise<ArrayBuffer> {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as ArrayBuffer)
-        reader.onerror = () => reject(new Error('Failed to read file'))
-        reader.readAsArrayBuffer(file)
-      })
-    }
-  
-    protected abstract parse(buffer: ArrayBuffer): T
+/**
+ * Enum for supported image types (e.g. NII, NRRD, DICOM)
+ */
+export enum DataFileType {
+  UNKNOWN = 0,
+  NII = 1,
+  DCM = 2,
+  DCM_MANIFEST = 3,
+  MIH = 4,
+  MIF = 5,
+  NHDR = 6,
+  NRRD = 7,
+  MHD = 8,
+  MHA = 9,
+  MGH = 10,
+  MGZ = 11,
+  V = 12,
+  V16 = 13,
+  VMR = 14,
+  HEAD = 15,
+  DCM_FOLDER = 16,
+  SRC = 17,
+  FIB = 18
+}
+export class NVFileLoader<T> {
+  data: T
+
+  constructor(data: T) {
+    this.data = data
   }
-  
+
+  protected parse(buffer: ArrayBuffer): T {
+    throw new Error('parse must be implemented in a subclass')
+  }
+
+  /** Reads a file as an ArrayBuffer, with gzip decompression if necessary */
+  static async readFile(file: File): Promise<ArrayBuffer> {
+    const buffer = await file.arrayBuffer()
+
+    // Check if the file is gzipped (magic bytes: 1F 8B)
+    const isGzipped = buffer.byteLength > 2 &&
+      new Uint8Array(buffer, 0, 2)[0] === 0x1F &&
+      new Uint8Array(buffer, 0, 2)[1] === 0x8B
+
+    if (!isGzipped) return buffer
+
+    console.log(`Decompressing file: ${file.name}`)
+    return NVFileLoader.decompressGzip(buffer)
+  }
+
+  /** Fetches a binary file from a URL, decompressing if necessary */
+  static async fetchBinary(url: string): Promise<ArrayBuffer> {
+    const response = await fetch(url, {
+      headers: { 'Accept-Encoding': 'gzip, deflate' },
+    })
+
+    if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`)
+
+    const isGzipped = response.headers.get('Content-Encoding') === 'gzip'
+
+    const buffer = await response.arrayBuffer()
+    return isGzipped ? NVFileLoader.decompressGzip(buffer) : buffer
+  }
+
+  /** Decompress a gzipped ArrayBuffer using the Compression Streams API */
+  static async decompressGzip(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+    const compressedStream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'))
+    const decompressedBlob = await new Response(compressedStream).blob()
+    return decompressedBlob.arrayBuffer()
+  }
+}
