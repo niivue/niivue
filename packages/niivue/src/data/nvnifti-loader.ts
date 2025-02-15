@@ -1,12 +1,11 @@
-import { NVVolumeLoader, NVDataType } from './nvvolume-loader.js'
-import { NVFileLoader } from './nvfile-loader.js'
 import * as nifti from 'nifti-reader-js'
 import { mat4, vec3 } from 'gl-matrix'
 import { v4 as uuidv4 } from 'uuid'
 import { LUT } from '../colortables.js'
 import { TypedVoxelArray } from '../nvimage/index.js'
 import { ImageType, isAffineOK } from '../nvimage/utils.js'
-import { DataFileType } from './nvfile-loader.js'
+import { NVFileLoader, DataFileType } from './nvfile-loader.js'
+import { NVVolumeLoader, NVDataType } from './nvvolume-loader.js'
 
 export interface NiftiLoaderConfig {
   url?: string | Uint8Array | ArrayBuffer
@@ -106,17 +105,15 @@ export class NVNiftiLoader extends NVVolumeLoader {
 
   constructor(buffer: ArrayBuffer, config: NiftiLoaderConfig) {
     const parsedHeader = nifti.readHeader(buffer)
-    if (!parsedHeader) throw new Error('Invalid NIfTI file')
+    if (!parsedHeader) {
+      throw new Error('Invalid NIfTI file')
+    }
 
-    const dimensions: [number, number, number] = [
-      parsedHeader.dims[1],
-      parsedHeader.dims[2],
-      parsedHeader.dims[3]
-    ]
+    const dimensions: [number, number, number] = [parsedHeader.dims[1], parsedHeader.dims[2], parsedHeader.dims[3]]
 
     const imageData = nifti.isCompressed(buffer)
-  ? nifti.readImage(parsedHeader, nifti.decompress(buffer) as ArrayBuffer)
-  : nifti.readImage(parsedHeader, buffer)
+      ? nifti.readImage(parsedHeader, nifti.decompress(buffer) as ArrayBuffer)
+      : nifti.readImage(parsedHeader, buffer)
 
     // 🔹 Determine `NVDataType` from header
     const datatype = NVNiftiLoader.mapNiftiToNVDataType(parsedHeader.datatypeCode)
@@ -157,7 +154,9 @@ export class NVNiftiLoader extends NVVolumeLoader {
       for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
           affine[i][j] = quatern_R[i][j] * hdr.pixDims[j + 1]
-          if (j === 2) affine[i][j] *= qfac
+          if (j === 2) {
+            affine[i][j] *= qfac
+          }
         }
       }
 
@@ -189,7 +188,7 @@ export class NVNiftiLoader extends NVVolumeLoader {
       case nifti.NIFTI1.TYPE_UINT32:
         return NVDataType.UINT32
       case nifti.NIFTI1.TYPE_RGB24:
-        return NVDataType.RGB24      
+        return NVDataType.RGB24
       case nifti.NIFTI1.TYPE_INT64:
         return NVDataType.FLOAT64 // Convert INT64 to FLOAT64 (since JS lacks native int64)
       default:
@@ -197,8 +196,8 @@ export class NVNiftiLoader extends NVVolumeLoader {
         return NVDataType.FLOAT32
     }
   }
-  
-  private extractMetadata(hdr: nifti.NIFTI1 | nifti.NIFTI2) {
+
+  private extractMetadata(hdr: nifti.NIFTI1 | nifti.NIFTI2): void {
     this.pixDims = hdr.pixDims.slice(1, 4)
     this.dims = hdr.dims.slice(1, 4)
     this.matRAS = mat4.create()

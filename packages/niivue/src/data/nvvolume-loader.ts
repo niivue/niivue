@@ -1,4 +1,4 @@
-import { NVFileLoader } from "./nvfile-loader.js";
+import { NVFileLoader } from './nvfile-loader.js'
 
 export type TypedArray =
   | Uint8Array
@@ -53,7 +53,7 @@ export class NVVolumeLoader extends NVFileLoader<ArrayBuffer> {
       case NVDataType.UINT32:
         return new Float64Array(new Uint32Array(buffer).map((v) => v)) // Convert to Float64
       case NVDataType.INT64: {
-        const bigIntArray = new BigInt64Array(buffer) 
+        const bigIntArray = new BigInt64Array(buffer)
         return new Float64Array(bigIntArray.length).map((_, i) => Number(bigIntArray[i])) // ✅ Convert safely
       }
       case NVDataType.FLOAT32:
@@ -73,7 +73,6 @@ export class NVVolumeLoader extends NVFileLoader<ArrayBuffer> {
         throw new Error(`Unsupported datatype: ${datatype}`)
     }
   }
-  
 
   static convertBinaryToUint8(imgRaw: Uint8Array): Uint8Array {
     const nvox = imgRaw.length * 8
@@ -82,7 +81,9 @@ export class NVVolumeLoader extends NVFileLoader<ArrayBuffer> {
     let i1 = -1
     for (let i = 0; i < nvox; i++) {
       const bit = i % 8
-      if (bit === 0) i1++
+      if (bit === 0) {
+        i1++
+      }
       binaryData[i] = (imgRaw[i1] & lut[bit]) !== 0 ? 1 : 0
     }
     return binaryData
@@ -97,11 +98,5 @@ export class NVVolumeLoader extends NVFileLoader<ArrayBuffer> {
       r += 2
     }
     return realPart
-  }  
+  }
 }
-
-
-
-
-
-

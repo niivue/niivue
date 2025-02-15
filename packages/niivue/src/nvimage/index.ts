@@ -1247,7 +1247,11 @@ export class NVImage {
   // not included in public docs
   // read DSI-Studio FIB format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readFIB(buffer: ArrayBuffer): [ArrayBuffer, Float32Array] {
+    throw new Error(`TODO: readFIB must be async`)
+    /*
     this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
@@ -1309,14 +1313,17 @@ export class NVImage {
     if ('report' in mat) {
       hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)))
     }
-    return [buff8.buffer, new Float32Array(buff8v1.buffer)]
+    return [buff8.buffer, new Float32Array(buff8v1.buffer)] */
   } // readFIB()
 
   // not included in public docs
   // read DSI-Studio SRC format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readSRC(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    throw new Error(`TODO: readSRC must be async`)
+    /* this.hdr = new nifti.NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1380,7 +1387,7 @@ export class NVImage {
     if ('report' in mat) {
       hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)))
     }
-    return buff8.buffer
+    return buff8.buffer */
   } // readSRC()
 
   // not included in public docs

@@ -108,6 +108,7 @@
         NVImage,
         NVMesh,
         NVMeshLoaders,
+        NVUtilities,
         SHOW_RENDER,
         DRAG_MODE
       } from "./niivue/index.ts";
@@ -254,11 +255,6 @@
       nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
       nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
       nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
-      console.log(
-        "fiber vertex intensity range:",
-        nv1.meshes[0].dpv[0].global_min,
-        nv1.meshes[0].dpv[0].global_max,
-      );
       nv1.setSelectionBoxColor([0, 1, 0, 0.5]);
       nv1.setClipPlane([0.2, 0, 120]);
       let cmaps = nv1.meshShaderNames();
@@ -272,6 +268,14 @@
         cmapEl.appendChild(btn);
       }
       equalCheck.onchange()
+
+      const dataText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+      let content = await NVUtilities.compressStringToArrayBuffer(dataText)
+      let dataText2 = await NVUtilities.decompressArrayBuffer(content)
+      console.log(`compression sizes ${dataText.length}->${content.byteLength}->${dataText2.length}`)
+      if (dataText2 !== dataText) {
+        throw new Error("compression failed catastrophically")
+      }
     </script>
   </body>
 </html>

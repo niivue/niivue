@@ -249,6 +249,7 @@ const MESH_EXTENSIONS = [
   'TT',
   'TRX',
   'VTK',
+  'WRL',
   'X3D',
   'JCON',
   'JSON'

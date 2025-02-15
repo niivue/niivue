@@ -1508,9 +1508,9 @@ export class NVMesh {
       } else if (ext === 'TRACT') {
         obj = NVMeshLoaders.readTRACT(buffer)
       } else if (ext === 'TT') {
-        obj = NVMeshLoaders.readTT(buffer)
+        obj = await NVMeshLoaders.readTT(buffer)
       } else if (ext === 'TRX') {
-        obj = NVMeshLoaders.readTRX(buffer)
+        obj = await NVMeshLoaders.readTRX(buffer)
       } else {
         obj = await NVMeshLoaders.readTRK(buffer)
       }
@@ -1560,6 +1560,8 @@ export class NVMesh {
       obj = NVMeshLoaders.readOBJ(buffer)
     } else if (ext === 'PLY') {
       obj = NVMeshLoaders.readPLY(buffer)
+    } else if (ext === 'WRL') {
+      obj = NVMeshLoaders.readWRL(buffer)
     } else if (ext === 'X3D') {
       obj = NVMeshLoaders.readX3D(buffer)
     } else if (ext === 'FIB' || ext === 'VTK') {
@@ -1972,6 +1974,10 @@ export class NVMesh {
     return NVMeshLoaders.readVTK(buffer)
   }
 
+  static readWRL(buffer: ArrayBuffer): DefaultMeshType {
+    return NVMeshLoaders.readWRL(buffer)
+  }
+
   static readASC(buffer: ArrayBuffer): DefaultMeshType {
     return NVMeshLoaders.readASC(buffer)
   }
@@ -2012,11 +2018,11 @@ export class NVMesh {
     return NVMeshLoaders.readTSF(buffer)
   }
 
-  static readTT(buffer: ArrayBuffer): TT {
+  static async readTT(buffer: ArrayBuffer): Promise<TT> {
     return NVMeshLoaders.readTT(buffer)
   }
 
-  static readTRX(buffer: ArrayBuffer): TRX {
+  static async readTRX(buffer: ArrayBuffer): Promise<TRX> {
     return NVMeshLoaders.readTRX(buffer)
   }
 

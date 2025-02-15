@@ -29,20 +29,21 @@ export class NVFileLoader<T> {
     this.data = data
   }
 
-  protected parse(buffer: ArrayBuffer): T {
+  /* protected parse(buffer: ArrayBuffer): T {
     throw new Error('parse must be implemented in a subclass')
-  }
+  } */
 
   /** Reads a file as an ArrayBuffer, with gzip decompression if necessary */
   static async readFile(file: File): Promise<ArrayBuffer> {
     const buffer = await file.arrayBuffer()
 
     // Check if the file is gzipped (magic bytes: 1F 8B)
-    const isGzipped = buffer.byteLength > 2 &&
-      new Uint8Array(buffer, 0, 2)[0] === 0x1F &&
-      new Uint8Array(buffer, 0, 2)[1] === 0x8B
+    const isGzipped =
+      buffer.byteLength > 2 && new Uint8Array(buffer, 0, 2)[0] === 0x1f && new Uint8Array(buffer, 0, 2)[1] === 0x8b
 
-    if (!isGzipped) return buffer
+    if (!isGzipped) {
+      return buffer
+    }
 
     console.log(`Decompressing file: ${file.name}`)
     return NVFileLoader.decompressGzip(buffer)
@@ -51,10 +52,12 @@ export class NVFileLoader<T> {
   /** Fetches a binary file from a URL, decompressing if necessary */
   static async fetchBinary(url: string): Promise<ArrayBuffer> {
     const response = await fetch(url, {
-      headers: { 'Accept-Encoding': 'gzip, deflate' },
+      headers: { 'Accept-Encoding': 'gzip, deflate' }
     })
 
-    if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.statusText}`)
+    }
 
     const isGzipped = response.headers.get('Content-Encoding') === 'gzip'
 

@@ -1,7 +1,6 @@
 import { mat4, vec4, vec3 } from 'gl-matrix'
-import { unzipSync } from 'fflate/browser'
 import { log } from './logger.js'
-import { NVUtilities } from './nvutilities.js'
+import { NVUtilities, Zip } from './nvutilities.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
 import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
@@ -116,12 +115,12 @@ export class NVMeshLoaders {
 
   // https://dsi-studio.labsolver.org/doc/cli_data.html
   // https://brain.labsolver.org/hcp_trk_atlas.html
-  static readTT(buffer: ArrayBuffer): TT {
+  static async readTT(buffer: ArrayBuffer): Promise<TT> {
     // Read a Matlab V4 file, n.b. does not support modern versions
     // https://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
     let offsetPt0 = new Uint32Array(0)
     let pts = new Float32Array(0)
-    const mat = NVUtilities.readMatV4(buffer)
+    const mat = await NVUtilities.readMatV4(buffer)
     if (!('trans_to_mni' in mat)) {
       throw new Error("TT format file must have 'trans_to_mni'")
     }
@@ -211,7 +210,7 @@ export class NVMeshLoaders {
 
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
-  static readTRX(buffer: ArrayBuffer): TRX {
+  static async readTRX(buffer: ArrayBuffer): Promise<TRX> {
     // Javascript does not support float16, so we convert to float32
     // https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
     function decodeFloat16(binary: number): number {
@@ -238,27 +237,31 @@ export class NVMeshLoaders {
     const dpv = []
     let header = []
     let isOverflowUint64 = false
-    const decompressed = unzipSync(new Uint8Array(buffer), {
-      filter(file) {
-        return file.originalSize > 0
+    const zip = new Zip(buffer)
+    for (let i = 0; i < zip.entries.length; i++) {
+      const entry = zip.entries[i]
+      if (entry.uncompressedSize === 0) {
+        continue // e.g. folder
       }
-    })
-    const keys = Object.keys(decompressed)
-    for (let i = 0, len = keys.length; i < len; i++) {
-      const parts = keys[i].split('/')
+
+      const parts = entry.fileName.split('/')
       const fname = parts.slice(-1)[0] // my.trx/dpv/fx.float32 -> fx.float32
       if (fname.startsWith('.')) {
         continue
       }
       const pname = parts.slice(-2)[0] // my.trx/dpv/fx.float32 -> dpv
       const tag = fname.split('.')[0] // "positions.3.float16 -> "positions"
-      // todo: should tags be censored for invalid characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
-      const data = decompressed[keys[i]]
+      const data = await entry.extract()
+      // const data = await NVUtilities.zipInflate(buffer, entry.startsAt, entry.compressedSize, entry.uncompressedSize, entry.compressionMethod )
+      console.log(`entry ${pname}  ${fname}  ${tag} : ${data.length}`)
       if (fname.includes('header.json')) {
+        // const dat = await entry.extract()
+        // console.log(dat)
         const jsonString = new TextDecoder().decode(data)
         header = JSON.parse(jsonString)
         continue
       }
+
       // next read arrays for all possible datatypes: int8/16/32/64 uint8/16/32/64 float16/32/64
       let nval = 0
       let vals: AnyNumberArray = []
@@ -1597,6 +1600,51 @@ export class NVMeshLoaders {
     }
   } // readVTK()
 
+  static readWRL(buffer: ArrayBuffer): DefaultMeshType {
+    const wrlText = new TextDecoder('utf-8').decode(buffer)
+    const coordRegex = /coord\s+Coordinate\s*\{\s*point\s*\[([\s\S]*?)\]/
+    const indexRegex = /coordIndex\s*\[([\s\S]*?)\]/
+    const colorRegex = /color\s+Color\s*\{\s*color\s*\[([\s\S]*?)\]/
+    const coordMatch = coordRegex.exec(wrlText)
+    const indexMatch = indexRegex.exec(wrlText)
+    const colorMatch = colorRegex.exec(wrlText)
+
+    if (!coordMatch || !indexMatch) {
+      throw new Error('Invalid WRL file: Could not find vertices or indices.')
+    }
+    // Extract vertex positions
+    const positions = new Float32Array(
+      coordMatch[1]
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number)
+    )
+    // Extract per-vertex colors (if they exist)
+    let colors: Float32Array | null = null
+    if (colorMatch) {
+      colors = new Float32Array(
+        colorMatch[1]
+          .trim()
+          .split(/[\s,]+/)
+          .map(Number)
+      )
+      const nVert = positions.length / 3
+      if (colors.length !== nVert * 3) {
+        console.warn(`Unexpected color count: expected ${nVert * 3}, got ${colors.length}`)
+        colors = null // Ignore malformed color data
+      }
+    }
+    // Extract triangle indices (ignoring `-1` separators)
+    const indices = new Uint32Array(
+      indexMatch[1]
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number)
+        .filter((v) => v !== -1)
+    )
+    return { positions, indices, colors }
+  } // readWRL()
+
   // read brainsuite DFS format
   // http://brainsuite.org/formats/dfs/
   static readDFS(buffer: ArrayBuffer): DefaultMeshType {
@@ -2242,10 +2290,11 @@ export class NVMeshLoaders {
     if (txt[0] === 'P') {
       return this.readOBJMNI(buffer)
     }
+
     const lines = txt.split('\n')
     const n = lines.length
     const pts = []
-    const t = []
+    const tris = []
     for (let i = 0; i < n; i++) {
       const str = lines[i]
       if (str[0] === 'v' && str[1] === ' ') {
@@ -2269,15 +2318,32 @@ export class NVMeshLoaders {
         for (let j = 0; j < new_t; j++) {
           tn = items[3 + j].split('/')
           const tcurr = parseInt(tn[0]) - 1 // current vertex
-          t.push(t0)
-          t.push(tprev)
-          t.push(tcurr)
+          tris.push(t0)
+          tris.push(tprev)
+          tris.push(tcurr)
           tprev = tcurr
         }
       }
     } // for all lines
     const positions = new Float32Array(pts)
-    const indices = new Uint32Array(t)
+    const indices = new Uint32Array(tris)
+    // next vertex indices are supposed to be from 1, not 0
+    let min = indices[0]
+    let max = indices[0]
+    for (let i = 1; i < indices.length; i++) {
+      if (indices[i] < min) {
+        min = indices[i]
+      }
+      if (indices[i] > max) {
+        max = indices[i]
+      }
+    }
+    if (max - min + 1 > positions.length / 3) {
+      throw new Error('Not a valid OBJ file')
+    }
+    for (let i = 0; i < indices.length; i++) {
+      indices[i] -= min
+    }
     return {
       positions,
       indices
