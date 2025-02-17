@@ -42,7 +42,7 @@ export default defineConfig({
         headless: true,
         launchOptions: {
           // args: ['--headless', '--no-sandbox', '--use-angle=angle', '--use-gl=swiftshader']
-          args: ['--window-size=1280,720']
+          args: ['--window-size=1280,720', '--no-sandbox']
         }
       }
     }

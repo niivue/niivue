@@ -172,6 +172,7 @@ export type NVConfigOptions = {
   measureLineColor: number[]
   measureTextHeight: number
   isAlphaClipDark: boolean
+  gradientOrder: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -266,7 +267,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   measureTextColor: [1, 0, 0, 1], // red
   measureLineColor: [1, 0, 0, 1], // red
   measureTextHeight: 0.03,
-  isAlphaClipDark: false
+  isAlphaClipDark: false,
+  gradientOrder: 1
 }
 
 type SceneData = {
