@@ -1,9 +1,9 @@
 import { readFile } from 'fs/promises'
-import { app } from 'electron'
 import volumeMni152 from '../../../resources/images/standard/mni152.nii.gz?asset'
 import meshaal from '../../../resources/images/standard/aal.mz3?asset'
 import ICBM152LH from '../../../resources/images/standard/ICBM152.lh.mz3?asset'
 import ICBM152LHMotor from '../../../resources/images/standard/ICBM152.lh.motor.mz3?asset'
+import { store } from './appStore'
 
 // read a known standard file and return it as a base64 string
 export const readStandardFile = async (path: string): Promise<string> => {
@@ -27,7 +27,7 @@ export const readStandardFile = async (path: string): Promise<string> => {
   try {
     const data = Buffer.from(await readFile(standardFilePath))
     const base64 = data.toString('base64')
-    app.addRecentDocument(standardFilePath)
+    store.addRecentFile(standardFilePath)
     return base64
   } catch (error) {
     console.error(error)
