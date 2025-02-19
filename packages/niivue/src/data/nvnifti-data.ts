@@ -1,12 +1,13 @@
 import * as nifti from 'nifti-reader-js'
 import { mat4, vec3 } from 'gl-matrix'
-import { v4 as uuidv4 } from 'uuid'
+import { v4 as uuidv4 } from '@lukeed/uuid'
 import { LUT } from '../colortables.js'
 import { TypedVoxelArray } from '../nvimage/index.js'
-import { ImageType, isAffineOK } from '../nvimage/utils.js'
+import { ImageType, isAffineOK, NVIMAGE_TYPE } from '../nvimage/utils.js'
 import { NVData, DataFileType } from './nvdata.js'
 import { NVVolumeData, NVDataType } from './nvvolume-data.js'
 import { NVImage } from '../nvimage/index.js'
+import { hdrToArrayBuffer } from '../nvimage/utils.js'
 
 export interface NiftiLoaderConfig {
   url?: string | Uint8Array | ArrayBuffer
@@ -328,53 +329,50 @@ export class NVNiftiData extends NVVolumeData {
    */
   toNVImage(): NVImage {
     if (!this.hdr) {
-      throw new Error('NVNiftiData has no header information')
+      throw new Error('HDR is not set in NVNiftiData')
     }
-
-    // Ensure affine transformation is in the correct format
-    const matRAS = NVNiftiData.convertToMat4(this.affine)
-
-    // Extract voxel dimensions
-    const pixDimsRAS = this.pixDims ? [...this.pixDims] : [1, 1, 1]
-
-    // Ensure the voxel buffer is an ArrayBuffer
-    const imgBuffer = this.volumeData.buffer as ArrayBuffer
-
-    // Create NVImage instance
+  
+    // 🔹 Convert header to a valid NIfTI header buffer
+    const headerBuffer = hdrToArrayBuffer(this.hdr)
+    const imageBuffer = new Uint8Array(this.volumeData.buffer) // Image data
+  
+    // 🔹 Concatenate header and image data to reconstruct original NIfTI file
+    const reconstructedBuffer = new Uint8Array(headerBuffer.length + imageBuffer.length)
+    reconstructedBuffer.set(headerBuffer, 0)
+    reconstructedBuffer.set(imageBuffer, headerBuffer.length)
+  
+    // 🔹 Create NVImage with NVIMAGE_TYPE.NII
     const nvImage = new NVImage(
-      imgBuffer,
-      this.name || 'Converted Image',
-      this._colormap || 'gray',
-      this._opacity || 1.0,
-      null, // pairedImgData (only relevant for separate header/image formats)
-      this.cal_min ?? NaN,
-      this.cal_max ?? NaN,
+      reconstructedBuffer.buffer, // Fully reconstructed NIfTI file
+      this.name,
+      this._colormap,
+      this._opacity,
+      null, // No paired image data
+      this.cal_min,
+      this.cal_max,
       this.trustCalMinMax,
       this.percentileFrac,
       this.ignoreZeroVoxels,
       this.useQFormNotSForm,
-      this.colormapNegative || '',
-      this.frame4D || 0,
-      this.imageType || 0,
-      this.cal_minNeg ?? NaN,
-      this.cal_maxNeg ?? NaN,
+      this.colormapNegative,
+      this.frame4D,
+      NVIMAGE_TYPE.NII, // ✅ Ensure correct type
+      this.cal_minNeg,
+      this.cal_maxNeg,
       this.colorbarVisible,
-      this.colormapLabel || null,
-      this.colormapType ?? 0
+      this.colormapLabel,
+      this.colormapType
     )
-
-    // Assign affine transformation and voxel information
-    nvImage.matRAS = matRAS
-    nvImage.pixDimsRAS = pixDimsRAS
-    nvImage.dimsRAS = this.dimsRAS ? [...this.dimsRAS] : [1, 1, 1, 1]
-    nvImage.permRAS = this.permRAS ? [...this.permRAS] : [1, 2, 3]
-
-    // Ensure mm000, mm100, mm010, mm001 are vec3 (Float32Array)
-    nvImage.mm000 = NVNiftiData.convertToVec3(this.mm000)
-    nvImage.mm100 = NVNiftiData.convertToVec3(this.mm100)
-    nvImage.mm010 = NVNiftiData.convertToVec3(this.mm010)
-    nvImage.mm001 = NVNiftiData.convertToVec3(this.mm001)
-
+  
+    // // 🔹 Assign additional properties
+    // nvImage.hdr = this.hdr
+    // nvImage.matRAS = this.matRAS
+    // nvImage.toRAS = this.toRAS
+    // nvImage.dimsRAS = this.dimsRAS
+    // nvImage.pixDimsRAS = this.pixDimsRAS
+    // nvImage.toRASvox = this.toRASvox
+    nvImage.calculateRAS()
+  
     return nvImage
   }
 
