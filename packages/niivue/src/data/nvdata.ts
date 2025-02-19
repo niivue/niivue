@@ -22,7 +22,7 @@ export enum DataFileType {
   SRC = 17,
   FIB = 18
 }
-export class NVFileLoader<T> {
+export class NVData<T> {
   data: T
 
   constructor(data: T) {
@@ -46,7 +46,7 @@ export class NVFileLoader<T> {
     }
 
     console.log(`Decompressing file: ${file.name}`)
-    return NVFileLoader.decompressGzip(buffer)
+    return NVData.decompressGzip(buffer)
   }
 
   /** Fetches a binary file from a URL, decompressing if necessary */
@@ -62,7 +62,7 @@ export class NVFileLoader<T> {
     const isGzipped = response.headers.get('Content-Encoding') === 'gzip'
 
     const buffer = await response.arrayBuffer()
-    return isGzipped ? NVFileLoader.decompressGzip(buffer) : buffer
+    return isGzipped ? NVData.decompressGzip(buffer) : buffer
   }
 
   /** Decompress a gzipped ArrayBuffer using the Compression Streams API */

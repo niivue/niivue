@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { LUT } from '../colortables.js'
 import { TypedVoxelArray } from '../nvimage/index.js'
 import { ImageType, isAffineOK } from '../nvimage/utils.js'
-import { NVFileLoader, DataFileType } from './nvfile-loader.js'
-import { NVVolumeLoader, NVDataType } from './nvvolume-loader.js'
+import { NVData, DataFileType } from './nvdata.js'
+import { NVVolumeData, NVDataType } from './nvvolume-data.js'
 
 export interface NiftiLoaderConfig {
   url?: string | Uint8Array | ArrayBuffer
@@ -30,7 +30,7 @@ export interface NiftiLoaderConfig {
   buffer?: ArrayBuffer
 }
 
-export class NVNiftiLoader extends NVVolumeLoader {
+export class NVNiftiData extends NVVolumeData {
   name: string
   id: string
   url?: string
@@ -84,8 +84,8 @@ export class NVNiftiLoader extends NVVolumeLoader {
   dims?: number[]
   affine: number[][] = []
 
-  onColormapChange: (img: NVNiftiLoader) => void = () => {}
-  onOpacityChange: (img: NVNiftiLoader) => void = () => {}
+  onColormapChange: (img: NVNiftiData) => void = () => {}
+  onOpacityChange: (img: NVNiftiData) => void = () => {}
 
   mm000?: vec3
   mm100?: vec3
@@ -116,7 +116,7 @@ export class NVNiftiLoader extends NVVolumeLoader {
       : nifti.readImage(parsedHeader, buffer)
 
     // 🔹 Determine `NVDataType` from header
-    const datatype = NVNiftiLoader.mapNiftiToNVDataType(parsedHeader.datatypeCode)
+    const datatype = NVNiftiData.mapNiftiToNVDataType(parsedHeader.datatypeCode)
     super(imageData, dimensions, datatype)
 
     this.hdr = parsedHeader
@@ -206,13 +206,13 @@ export class NVNiftiLoader extends NVVolumeLoader {
     this.nTotalFrame4D = this.nFrame4D
   }
 
-  static async create(config: NiftiLoaderConfig): Promise<NVNiftiLoader> {
-    const buffer = await NVFileLoader.fetchBinary(config.url! as string)
-    return new NVNiftiLoader(buffer, config)
+  static async create(config: NiftiLoaderConfig): Promise<NVNiftiData> {
+    const buffer = await NVData.fetchBinary(config.url! as string)
+    return new NVNiftiData(buffer, config)
   }
 
-  static async createFromFile(config: NiftiLoaderConfig): Promise<NVNiftiLoader> {
-    const fileBuffer = await NVFileLoader.readFile(config.file! as File)
-    return new NVNiftiLoader(fileBuffer, config)
+  static async createFromFile(config: NiftiLoaderConfig): Promise<NVNiftiData> {
+    const fileBuffer = await NVData.readFile(config.file! as File)
+    return new NVNiftiData(fileBuffer, config)
   }
 }

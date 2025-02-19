@@ -1,4 +1,4 @@
-import { NVFileLoader } from './nvfile-loader.js'
+import { NVData } from './nvdata.js'
 
 export type TypedArray =
   | Uint8Array
@@ -28,12 +28,12 @@ export enum NVDataType {
   COMPLEX64 = 8192
 }
 
-export class NVVolumeLoader extends NVFileLoader<ArrayBuffer> {
+export class NVVolumeData extends NVData<ArrayBuffer> {
   volumeData: TypedArray
   dimensions: [number, number, number]
 
   constructor(buffer: ArrayBuffer, dimensions: [number, number, number], datatype: NVDataType) {
-    const parsedData = NVVolumeLoader.convertToTypedArray(buffer, datatype)
+    const parsedData = NVVolumeData.convertToTypedArray(buffer, datatype)
     super(buffer) // Pass raw ArrayBuffer to base class
 
     this.volumeData = parsedData
@@ -64,9 +64,9 @@ export class NVVolumeLoader extends NVFileLoader<ArrayBuffer> {
       case NVDataType.RGBA32:
         return new Uint8Array(buffer) // Store as raw bytes
       case NVDataType.BINARY:
-        return NVVolumeLoader.convertBinaryToUint8(new Uint8Array(buffer))
+        return NVVolumeData.convertBinaryToUint8(new Uint8Array(buffer))
       case NVDataType.COMPLEX64:
-        return NVVolumeLoader.convertComplexToFloat32(new Float32Array(buffer))
+        return NVVolumeData.convertComplexToFloat32(new Float32Array(buffer))
       case NVDataType.INT8:
         return new Int16Array(new Int8Array(buffer).map((v) => v)) // Convert Int8 to Int16
       default:
