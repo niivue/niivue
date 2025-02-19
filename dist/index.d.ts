@@ -613,6 +613,19 @@ declare enum DRAG_MODE {
     callbackOnly = 5,
     roiSelection = 6
 }
+declare enum DRAG_MODE_SECONDARY {
+    none = 0,
+    contrast = 1,
+    measurement = 2,
+    pan = 3,
+    slicer3D = 4,
+    callbackOnly = 5,
+    roiSelection = 6
+}
+declare enum DRAG_MODE_PRIMARY {
+    crosshair = 0,
+    windowing = 1
+}
 declare enum COLORMAP_TYPE {
     MIN_TO_MAX = 0,
     ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
@@ -657,7 +670,8 @@ type NVConfigOptions = {
     multiplanarShowRender: SHOW_RENDER;
     isRadiologicalConvention: boolean;
     meshThicknessOn2D: number | string;
-    dragMode: DRAG_MODE;
+    dragMode: DRAG_MODE | DRAG_MODE_SECONDARY;
+    dragModePrimary: DRAG_MODE_PRIMARY;
     yoke3Dto2DZoom: boolean;
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
@@ -1710,6 +1724,8 @@ type UIData = {
     lastTwoTouchDistance: number;
     multiTouchGesture: boolean;
     dpr?: number;
+    windowX: number;
+    windowY: number;
 };
 type SaveImageOptions = {
     filename: string;
@@ -2170,6 +2186,7 @@ declare class Niivue {
     checkMultitouch(e: TouchEvent): void;
     touchStartListener(e: TouchEvent): void;
     touchEndListener(e: TouchEvent): void;
+    windowingHandler(x: number, y: number, volIdx?: number): void;
     mouseMoveListener(e: MouseEvent): void;
     resetBriCon(msg?: TouchEvent | MouseEvent | null): void;
     setDragStart(x: number, y: number): void;
@@ -3186,4 +3203,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { COLORMAP_TYPE, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
+export { COLORMAP_TYPE, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, DRAG_MODE_PRIMARY, DRAG_MODE_SECONDARY, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVController, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };

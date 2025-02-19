@@ -28539,6 +28539,21 @@ var DRAG_MODE = /* @__PURE__ */ ((DRAG_MODE2) => {
   DRAG_MODE2[DRAG_MODE2["roiSelection"] = 6] = "roiSelection";
   return DRAG_MODE2;
 })(DRAG_MODE || {});
+var DRAG_MODE_SECONDARY = /* @__PURE__ */ ((DRAG_MODE_SECONDARY2) => {
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["none"] = 0] = "none";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["contrast"] = 1] = "contrast";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["measurement"] = 2] = "measurement";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["pan"] = 3] = "pan";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["slicer3D"] = 4] = "slicer3D";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["callbackOnly"] = 5] = "callbackOnly";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["roiSelection"] = 6] = "roiSelection";
+  return DRAG_MODE_SECONDARY2;
+})(DRAG_MODE_SECONDARY || {});
+var DRAG_MODE_PRIMARY = /* @__PURE__ */ ((DRAG_MODE_PRIMARY2) => {
+  DRAG_MODE_PRIMARY2[DRAG_MODE_PRIMARY2["crosshair"] = 0] = "crosshair";
+  DRAG_MODE_PRIMARY2[DRAG_MODE_PRIMARY2["windowing"] = 1] = "windowing";
+  return DRAG_MODE_PRIMARY2;
+})(DRAG_MODE_PRIMARY || {});
 var COLORMAP_TYPE = /* @__PURE__ */ ((COLORMAP_TYPE2) => {
   COLORMAP_TYPE2[COLORMAP_TYPE2["MIN_TO_MAX"] = 0] = "MIN_TO_MAX";
   COLORMAP_TYPE2[COLORMAP_TYPE2["ZERO_TO_MAX_TRANSPARENT_BELOW_MIN"] = 1] = "ZERO_TO_MAX_TRANSPARENT_BELOW_MIN";
@@ -28585,6 +28600,7 @@ var DEFAULT_OPTIONS = {
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
   dragMode: 1 /* contrast */,
+  dragModePrimary: 0 /* crosshair */,
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
@@ -33688,7 +33704,9 @@ var Niivue = class {
       dragEnd: [0, 0],
       dragClipPlaneStartDepthAziElev: [0, 0, 0],
       lastTwoTouchDistance: 0,
-      multiTouchGesture: false
+      multiTouchGesture: false,
+      windowX: 0,
+      windowY: 0
     });
     __publicField(this, "back", null);
     // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -34419,9 +34437,14 @@ var Niivue = class {
   // handler for mouse left button down
   // note: no test yet
   mouseLeftButtonHandler(e) {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-    this.mouseDown(pos.x, pos.y);
-    this.mouseClick(pos.x, pos.y);
+    if (e.ctrlKey || this.opts.dragModePrimary === 0 /* crosshair */) {
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+      this.mouseDown(pos.x, pos.y);
+      this.mouseClick(pos.x, pos.y);
+    } else if (this.opts.dragModePrimary === 1 /* windowing */) {
+      this.uiData.windowX = e.x;
+      this.uiData.windowY = e.y;
+    }
   }
   // not included in public docs
   // handler for mouse center button down
@@ -34687,6 +34710,45 @@ var Niivue = class {
     }
     this.mouseUpListener();
   }
+  windowingHandler(x, y, volIdx = 0) {
+    const wx = this.uiData.windowX;
+    const wy = this.uiData.windowY;
+    let mn = this.volumes[0].cal_min;
+    let mx = this.volumes[0].cal_max;
+    const gmn = this.volumes[0].global_min;
+    const gmx = this.volumes[0].global_max;
+    if (y < wy) {
+      mn += 1;
+      mx += 1;
+    } else if (y > wy) {
+      mn -= 1;
+      mx -= 1;
+    }
+    if (x > wx) {
+      mn -= 1;
+      mx += 1;
+    } else if (x < wx) {
+      mn += 1;
+      mx -= 1;
+    }
+    if (mx - mn < 1) {
+      mx = mn + 1;
+    }
+    if (mn < gmn) {
+      mn = gmn;
+    }
+    if (mx > gmx) {
+      mx = gmx;
+    }
+    if (mn > mx) {
+      mn = mx - 1;
+    }
+    this.volumes[volIdx].cal_min = mn;
+    this.volumes[volIdx].cal_max = mx;
+    this.refreshLayers(this.volumes[volIdx], 0);
+    this.uiData.windowX = x;
+    this.uiData.windowY = y;
+  }
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
@@ -34703,8 +34765,15 @@ var Niivue = class {
         return;
       }
       if (this.uiData.mouseButtonLeftDown) {
-        this.mouseMove(pos.x, pos.y);
-        this.mouseClick(pos.x, pos.y);
+        const isCrosshairMode = this.opts.dragModePrimary === 0 /* crosshair */;
+        const isWindowingMode = this.opts.dragModePrimary === 1 /* windowing */;
+        const ctrlKey = e.ctrlKey;
+        if (ctrlKey || isCrosshairMode) {
+          this.mouseMove(pos.x, pos.y);
+          this.mouseClick(pos.x, pos.y);
+        } else if (isWindowingMode) {
+          this.windowingHandler(e.x, e.y);
+        }
       } else if (this.uiData.mouseButtonRightDown || this.uiData.mouseButtonCenterDown) {
         this.setDragEnd(pos.x, pos.y);
       }
@@ -34801,8 +34870,15 @@ var Niivue = class {
         this.drawScene();
         return;
       }
-      this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-      this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+      const isCrosshairMode = this.opts.dragModePrimary === 0 /* crosshair */;
+      const isWindowingMode = this.opts.dragModePrimary === 1 /* windowing */;
+      if (isCrosshairMode) {
+        this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+        this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+      } else if (isWindowingMode) {
+        this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY);
+        this.drawScene();
+      }
     } else {
       this.handlePinchZoom(e);
     }
@@ -43585,6 +43661,8 @@ export {
   COLORMAP_TYPE,
   DEFAULT_OPTIONS,
   DRAG_MODE,
+  DRAG_MODE_PRIMARY,
+  DRAG_MODE_SECONDARY,
   INITIAL_SCENE_DATA,
   LabelAnchorPoint,
   LabelLineTerminator,
