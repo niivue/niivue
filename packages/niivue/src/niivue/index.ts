@@ -73,7 +73,8 @@ import {
   Scene,
   SLICE_TYPE,
   SHOW_RENDER,
-  DRAG_MODE,
+  DRAG_MODE, // DRAG_MODE_SECONDARY is the same as DRAG_MODE. DRAG_MODE may be deprecated.
+  DRAG_MODE_PRIMARY,
   COLORMAP_TYPE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
@@ -305,6 +306,8 @@ type UIData = {
   lastTwoTouchDistance: number
   multiTouchGesture: boolean
   dpr?: number
+  windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
+  windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
 }
 
 type SaveImageOptions = {
@@ -459,7 +462,9 @@ export class Niivue {
     dragEnd: [0.0, 0.0],
     dragClipPlaneStartDepthAziElev: [0, 0, 0],
     lastTwoTouchDistance: 0,
-    multiTouchGesture: false
+    multiTouchGesture: false,
+    windowX: 0,
+    windowY: 0
   }
 
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -1281,9 +1286,16 @@ export class Niivue {
   // handler for mouse left button down
   // note: no test yet
   mouseLeftButtonHandler(e: MouseEvent): void {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-    this.mouseDown(pos!.x, pos!.y)
-    this.mouseClick(pos!.x, pos!.y)
+    // need to check for control key here in case the user want to override the drag mode
+    if (e.ctrlKey || this.opts.dragModePrimary === DRAG_MODE_PRIMARY.crosshair) {
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+      this.mouseDown(pos!.x, pos!.y)
+      this.mouseClick(pos!.x, pos!.y)
+    } else if (this.opts.dragModePrimary === DRAG_MODE_PRIMARY.windowing) {
+      // save the state of the x and y mouse coordinates for the next comparison on mouse move
+      this.uiData.windowX = e.x
+      this.uiData.windowY = e.y
+    }
   }
 
   // not included in public docs
@@ -1581,6 +1593,64 @@ export class Niivue {
     this.mouseUpListener()
   }
 
+  windowingHandler(x: number, y: number, volIdx: number = 0): void {
+    // x and y are the current mouse or touch position in window coordinates
+    const wx = this.uiData.windowX
+    const wy = this.uiData.windowY
+    let mn = this.volumes[0].cal_min
+    let mx = this.volumes[0].cal_max
+    const gmn = this.volumes[0].global_min
+    const gmx = this.volumes[0].global_max
+
+    if (y < wy) {
+      // increase level if mouse moves up
+      mn += 1
+      mx += 1
+    } else if (y > wy) {
+      // decrease level if mouse moves down
+      mn -= 1
+      mx -= 1
+    }
+
+    if (x > wx) {
+      // increase window width if mouse moves right
+      mn -= 1
+      mx += 1
+    } else if (x < wx) {
+      // decrease window width if mouse moves left
+      mn += 1
+      mx -= 1
+    }
+
+    if (mx - mn < 1) {
+      // ensure window width is at least 1
+      mx = mn + 1
+    }
+
+    if (mn < gmn) {
+      // ensure min is not below global min
+      mn = gmn
+    }
+
+    if (mx > gmx) {
+      // ensure max is not above global max
+      mx = gmx
+    }
+
+    if (mn > mx) {
+      // ensure min is not above max
+      mn = mx - 1
+    }
+
+    this.volumes[volIdx].cal_min = mn
+    this.volumes[volIdx].cal_max = mx
+    this.refreshLayers(this.volumes[volIdx], 0)
+    // set the current mouse position (window space) as the new reference point
+    // for the next comparison
+    this.uiData.windowX = x
+    this.uiData.windowY = y
+  }
+
   // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
@@ -1600,8 +1670,15 @@ export class Niivue {
         return
       }
       if (this.uiData.mouseButtonLeftDown) {
-        this.mouseMove(pos.x, pos.y)
-        this.mouseClick(pos.x, pos.y)
+        const isCrosshairMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.crosshair
+        const isWindowingMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.windowing
+        const ctrlKey = e.ctrlKey
+        if (ctrlKey || isCrosshairMode) {
+          this.mouseMove(pos.x, pos.y)
+          this.mouseClick(pos.x, pos.y)
+        } else if (isWindowingMode) {
+          this.windowingHandler(e.x, e.y)
+        }
       } else if (this.uiData.mouseButtonRightDown || this.uiData.mouseButtonCenterDown) {
         this.setDragEnd(pos.x, pos.y)
       }
@@ -1709,8 +1786,15 @@ export class Niivue {
         this.drawScene()
         return
       }
-      this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
-      this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+      const isCrosshairMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.crosshair
+      const isWindowingMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.windowing
+      if (isCrosshairMode) {
+        this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+        this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+      } else if (isWindowingMode) {
+        this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY)
+        this.drawScene()
+      }
     } else {
       // Check this event for 2-touch Move/Pinch/Zoom gesture
       this.handlePinchZoom(e)
