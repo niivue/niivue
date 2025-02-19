@@ -1647,7 +1647,6 @@ export class Niivue {
     const valmin = this.volumes[volIdx].cal_min
     const valmax = this.volumes[volIdx].cal_max
     const level = (valmax - valmin) / 2 + valmin
-    console.log(valmin, level, valmax)
     this.refreshLayers(this.volumes[volIdx], 0)
     // set the current mouse position (window space) as the new reference point
     // for the next comparison
