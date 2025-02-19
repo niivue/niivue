@@ -117,6 +117,7 @@ import {
   unProject,
   unpackFloatFromVec4i
 } from './utils.js'
+import { NVNiftiData, NiftiLoaderConfig } from '../data/nvnifti-data.js'
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
@@ -11925,4 +11926,39 @@ export class Niivue {
   set gl(gl: WebGL2RenderingContext | null) {
     this._gl = gl
   }
+
+  /**
+ * Loads a NIfTI file from a URL and creates an NVNiftiData instance.
+ * @param url - The URL of the NIfTI file.
+ * @returns A Promise resolving to an NVNiftiData instance.
+ */
+async loadNiftiFromUrl(url: string): Promise<NVNiftiData> {
+  try {
+    console.log(`Fetching NIfTI file from: ${url}`)
+
+    // Configure metadata for NVNiftiData
+    const config: NiftiLoaderConfig = {
+      url,
+      name: url.split('/').pop() || 'unknown',
+      colormap: 'gray',
+      opacity: 1.0,
+      trustCalMinMax: true,
+      percentileFrac: 0.02,
+      ignoreZeroVoxels: false,
+      useQFormNotSForm: false,
+      colormapNegative: '',
+      frame4D: 0,
+      colorbarVisible: true
+    }
+
+    // Use the static create method to load the NIfTI data
+    const niftiData = await NVNiftiData.create(config)
+
+    console.log('Successfully loaded NIfTI data:', niftiData)
+    return niftiData
+  } catch (error) {
+    console.error('Error loading NIfTI file:', error)
+    throw error
+  }
+}
 }

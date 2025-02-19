@@ -40,6 +40,44 @@ export class NVVolumeData extends NVData<ArrayBuffer> {
     this.dimensions = dimensions
   }
 
+  /**
+   * Computes the 1D index for the given 3D voxel coordinates.
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @returns 1D index in the volumeData array
+   */
+  private computeIndex(x: number, y: number, z: number): number {
+    if (x < 0 || y < 0 || z < 0 || x >= this.dimensions[0] || y >= this.dimensions[1] || z >= this.dimensions[2]) {
+      throw new Error(`Voxel coordinates (${x}, ${y}, ${z}) out of bounds`)
+    }
+    return x + y * this.dimensions[0] + z * this.dimensions[0] * this.dimensions[1]
+  }
+
+  /**
+   * Retrieves the voxel value at (x, y, z).
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @returns The voxel value
+   */
+  getVoxel(x: number, y: number, z: number): number | bigint {
+    const index = this.computeIndex(x, y, z)
+    return this.volumeData[index]
+  }
+
+  /**
+   * Sets the voxel value at (x, y, z).
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @param value The value to set
+   */
+  setVoxel(x: number, y: number, z: number, value: number): void {
+    const index = this.computeIndex(x, y, z)
+    this.volumeData[index] = value
+  }
+
   static convertToTypedArray(buffer: ArrayBuffer, datatype: NVDataType): TypedArray {
     switch (datatype) {
       case NVDataType.UINT8:
