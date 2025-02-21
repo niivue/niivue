@@ -3,11 +3,11 @@ import { mat4, vec3 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { LUT } from '../colortables.js'
 import { TypedVoxelArray } from '../nvimage/index.js'
-import { ImageType, isAffineOK, NVIMAGE_TYPE } from '../nvimage/utils.js'
+import { hdrToArrayBuffer, ImageType, isAffineOK, NVIMAGE_TYPE } from '../nvimage/utils.js'
 import { NVData, DataFileType } from './nvdata.js'
 import { NVVolumeData, NVDataType } from './nvvolume-data.js'
 import { NVImage } from '../nvimage/index.js'
-import { hdrToArrayBuffer } from '../nvimage/utils.js'
+// import { hdrToArrayBuffer } from '../nvimage/utils.js'
 
 export interface NiftiLoaderConfig {
   url?: string | Uint8Array | ArrayBuffer
@@ -329,25 +329,50 @@ export class NVNiftiData extends NVVolumeData {
    */
   toNVImage(): NVImage {
     if (!this.hdr) {
-      throw new Error('HDR is not set in NVNiftiData')
+      throw new Error('HDR is not set in NVNiftiData');
     }
   
-    // 🔹 Convert header to a valid NIfTI header buffer
-    const headerBuffer = hdrToArrayBuffer(this.hdr)
-    const imageBuffer = new Uint8Array(this.volumeData.buffer) // Image data
+    const headerBuffer = hdrToArrayBuffer(this.hdr);
+    const dataType = NVNiftiData.mapNiftiToNVDataType(this.hdr.datatypeCode);
   
-    // 🔹 Concatenate header and image data to reconstruct original NIfTI file
-    const reconstructedBuffer = new Uint8Array(headerBuffer.length + imageBuffer.length)
-    reconstructedBuffer.set(headerBuffer, 0)
-    reconstructedBuffer.set(imageBuffer, headerBuffer.length)
+    // Use the 'data' property from NVData base class
+    let imgBuffer = new Uint8Array(this.data);
   
-    // 🔹 Create NVImage with NVIMAGE_TYPE.NII
+    // Get voxel size in bytes
+    const bytesPerVoxel = Math.floor(this.hdr.numBitsPerVoxel / 8);
+  
+    // Calculate aligned row size for WebGL
+    const width = this.hdr.dims[1];
+    const height = this.hdr.dims[2];
+    const depth = this.hdr.dims[3];
+  
+    const alignedRowSize = Math.ceil(width * bytesPerVoxel / 4) * 4;
+    //const alignedRowSize = width * bytesPerVoxel;
+
+    const totalExpectedSize = alignedRowSize * height * depth;
+  
+    if (imgBuffer.byteLength < totalExpectedSize) {
+      console.warn(`Padding imgBuffer from ${imgBuffer.byteLength} to ${totalExpectedSize}`);
+      const paddedBuffer = new Uint8Array(totalExpectedSize);
+      paddedBuffer.set(imgBuffer);
+      imgBuffer = paddedBuffer;
+    }
+  
+    // Reconstruct header + image buffer
+    const reconstructedBuffer = new Uint8Array(headerBuffer.byteLength + imgBuffer.byteLength);
+    reconstructedBuffer.set(headerBuffer, 0);
+    //reconstructedBuffer.set(imgBuffer, headerBuffer.byteLength);
+    reconstructedBuffer.set(imgBuffer, headerBuffer.byteLength);
+    //TODO reconstructedBuffer.set(new Uint8Array(imgBuffer.buffer, imgBuffer.byteOffset, imgBuffer.byteLength), headerBuffer.byteLength)
+    console.log(`Aligned Buffer Length: ${reconstructedBuffer.byteLength} (Expected: ${headerBuffer.byteLength + totalExpectedSize})`);
+  
+    // ✅ Create NVImage
     const nvImage = new NVImage(
-      reconstructedBuffer.buffer, // Fully reconstructed NIfTI file
+      reconstructedBuffer.buffer,
       this.name,
       this._colormap,
       this._opacity,
-      null, // No paired image data
+      null,
       this.cal_min,
       this.cal_max,
       this.trustCalMinMax,
@@ -356,25 +381,17 @@ export class NVNiftiData extends NVVolumeData {
       this.useQFormNotSForm,
       this.colormapNegative,
       this.frame4D,
-      NVIMAGE_TYPE.NII, // ✅ Ensure correct type
-      this.cal_minNeg,
-      this.cal_maxNeg,
-      this.colorbarVisible,
-      this.colormapLabel,
-      this.colormapType
-    )
+      NVIMAGE_TYPE.NII
+    );
   
-    // // 🔹 Assign additional properties
-    // nvImage.hdr = this.hdr
-    // nvImage.matRAS = this.matRAS
-    // nvImage.toRAS = this.toRAS
-    // nvImage.dimsRAS = this.dimsRAS
-    // nvImage.pixDimsRAS = this.pixDimsRAS
-    // nvImage.toRASvox = this.toRASvox
-    nvImage.calculateRAS()
+    nvImage.calculateRAS(); // Apply spatial orientation
   
-    return nvImage
+    return nvImage;
   }
+  
+  
+  
+  
 
   /**
    * Converts a 4x4 number[][] into a mat4.
