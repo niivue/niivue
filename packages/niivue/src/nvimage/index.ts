@@ -135,6 +135,7 @@ export class NVImage {
    * @param colorbarVisible - TODO
    * @param colormapLabel - TODO
    */
+
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
@@ -158,7 +159,55 @@ export class NVImage {
     colormapLabel: LUT | null = null,
     colormapType = 0
   ) {
+    this.initNVImage(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType,
+      cal_minNeg,
+      cal_maxNeg,
+      colorbarVisible,
+      colormapLabel,
+      colormapType
+    )
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  initNVImage(
+    // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    name = '',
+    colormap = 'gray',
+    opacity = 1.0,
+    _pairedImgData: ArrayBuffer | null = null,
+    cal_min = NaN,
+    cal_max = NaN,
+    trustCalMinMax = true,
+    percentileFrac = 0.02,
+    ignoreZeroVoxels = false,
+    useQFormNotSForm = false,
+    colormapNegative = '',
+    frame4D = 0,
+    imageType = NVIMAGE_TYPE.UNKNOWN,
+    cal_minNeg = NaN,
+    cal_maxNeg = NaN,
+    colorbarVisible = true,
+    colormapLabel: LUT | null = null,
+    colormapType = 0,
+    imgRaw: ArrayBuffer | null = null
+  ): void {
     this.name = name
+    this.imageType = imageType
     this.id = uuidv4()
     this._colormap = colormap
     this._opacity = opacity > 1.0 ? 1.0 : opacity // make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
@@ -178,77 +227,6 @@ export class NVImage {
     // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
       return
-    }
-    const re = /(?:\.([^.]+))?$/
-    let ext = re.exec(name)![1] || '' // TODO ! guaranteed?
-    ext = ext.toUpperCase()
-    if (ext === 'GZ') {
-      ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
-      ext = ext.toUpperCase()
-    }
-    let imgRaw: ArrayBufferLike | Uint8Array | null = null
-
-    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
-      imageType = NVIMAGE_TYPE.parse(ext)
-    }
-    this.imageType = imageType
-    switch (imageType) {
-      case NVIMAGE_TYPE.DCM_FOLDER:
-      case NVIMAGE_TYPE.DCM_MANIFEST:
-      case NVIMAGE_TYPE.DCM:
-        // TODO: use dcm2niix here...
-        // imgRaw = this.readDICOM(dataBuffer)
-        // break
-        return
-      case NVIMAGE_TYPE.FIB:
-        ;[imgRaw, this.v1] = this.readFIB(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.MIH:
-      case NVIMAGE_TYPE.MIF:
-        imgRaw = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
-        break
-      case NVIMAGE_TYPE.NHDR:
-      case NVIMAGE_TYPE.NRRD:
-        imgRaw = this.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
-        break
-      case NVIMAGE_TYPE.MHD:
-      case NVIMAGE_TYPE.MHA:
-        imgRaw = this.readMHA(dataBuffer as ArrayBuffer, pairedImgData)
-        break
-      case NVIMAGE_TYPE.MGH:
-      case NVIMAGE_TYPE.MGZ:
-        imgRaw = this.readMGH(dataBuffer as ArrayBuffer) // to do: pairedImgData
-        break
-      case NVIMAGE_TYPE.SRC:
-        imgRaw = this.readSRC(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.V:
-        imgRaw = this.readECAT(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.V16:
-        imgRaw = this.readV16(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.VMR:
-        imgRaw = this.readVMR(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.HEAD:
-        imgRaw = this.readHEAD(dataBuffer as ArrayBuffer, pairedImgData) // paired = .BRIK
-        break
-      case NVIMAGE_TYPE.NII:
-        this.hdr = nifti.readHeader(dataBuffer as ArrayBuffer)
-        if (this.hdr !== null) {
-          if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255) {
-            this.hdr.cal_max = 0.0
-          }
-          if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
-            imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer as ArrayBuffer))
-          } else {
-            imgRaw = nifti.readImage(this.hdr, dataBuffer as ArrayBuffer)
-          }
-        }
-        break
-      default:
-        throw new Error('Image type not supported')
     }
     if (this.hdr && typeof this.hdr.magic === 'number') {
       this.hdr.magic = 'n+1'
@@ -505,6 +483,121 @@ export class NVImage {
       this.hdr.cal_max = cal_max
     }
     this.calMinMax()
+  }
+
+  static async newNVImage(
+    // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    name = '',
+    colormap = 'gray',
+    opacity = 1.0,
+    pairedImgData: ArrayBuffer | null = null,
+    cal_min = NaN,
+    cal_max = NaN,
+    trustCalMinMax = true,
+    percentileFrac = 0.02,
+    ignoreZeroVoxels = false,
+    useQFormNotSForm = false,
+    colormapNegative = '',
+    frame4D = 0,
+    imageType = NVIMAGE_TYPE.UNKNOWN,
+    cal_minNeg = NaN,
+    cal_maxNeg = NaN,
+    colorbarVisible = true,
+    colormapLabel: LUT | null = null,
+    colormapType = 0
+  ): Promise<NVImage> {
+    const newImg = new NVImage()
+    const re = /(?:\.([^.]+))?$/
+    let ext = re.exec(name)![1] || '' // TODO ! guaranteed?
+    ext = ext.toUpperCase()
+    if (ext === 'GZ') {
+      ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
+      ext = ext.toUpperCase()
+    }
+    let imgRaw: ArrayBufferLike | Uint8Array | null = null
+    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+      imageType = NVIMAGE_TYPE.parse(ext)
+    }
+    newImg.imageType = imageType
+    switch (imageType) {
+      case NVIMAGE_TYPE.DCM_FOLDER:
+      case NVIMAGE_TYPE.DCM_MANIFEST:
+      case NVIMAGE_TYPE.DCM:
+        return
+      case NVIMAGE_TYPE.FIB:
+        ;[imgRaw, newImg.v1] = newImg.readFIB(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.MIH:
+      case NVIMAGE_TYPE.MIF:
+        imgRaw = newImg.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
+        break
+      case NVIMAGE_TYPE.NHDR:
+      case NVIMAGE_TYPE.NRRD:
+        imgRaw = await newImg.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
+        break
+      case NVIMAGE_TYPE.MHD:
+      case NVIMAGE_TYPE.MHA:
+        imgRaw = newImg.readMHA(dataBuffer as ArrayBuffer, pairedImgData)
+        break
+      case NVIMAGE_TYPE.MGH:
+      case NVIMAGE_TYPE.MGZ:
+        imgRaw = newImg.readMGH(dataBuffer as ArrayBuffer) // to do: pairedImgData
+        break
+      case NVIMAGE_TYPE.SRC:
+        imgRaw = newImg.readSRC(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.V:
+        imgRaw = newImg.readECAT(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.V16:
+        imgRaw = newImg.readV16(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.VMR:
+        imgRaw = newImg.readVMR(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.HEAD:
+        imgRaw = newImg.readHEAD(dataBuffer as ArrayBuffer, pairedImgData) // paired = .BRIK
+        break
+      case NVIMAGE_TYPE.NII:
+        newImg.hdr = nifti.readHeader(dataBuffer as ArrayBuffer)
+        if (newImg.hdr !== null) {
+          if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
+            newImg.hdr.cal_max = 0.0
+          }
+          if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
+            imgRaw = nifti.readImage(newImg.hdr, nifti.decompress(dataBuffer as ArrayBuffer))
+          } else {
+            imgRaw = nifti.readImage(newImg.hdr, dataBuffer as ArrayBuffer)
+          }
+        }
+        break
+      default:
+        throw new Error('Image type not supported')
+    }
+    newImg.initNVImage(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType,
+      cal_minNeg,
+      cal_maxNeg,
+      colorbarVisible,
+      colormapLabel,
+      colormapType,
+      imgRaw
+    )
+    return newImg
   }
 
   // not included in public docs
@@ -2043,7 +2136,7 @@ export class NVImage {
   // not included in public docs
   // read NRRD format image
   // http://teem.sourceforge.net/nrrd/format.html
-  readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  async readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
     // inspired by parserNRRD.js in https://github.com/xtk
     // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
     // http://www.opensource.org/licenses/mit-license.php
@@ -2331,7 +2424,7 @@ export class NVImage {
       log.warn('Missing data: NRRD header describes detached data file but only one URL provided')
     }
     if (isGz) {
-      return decompressSync(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer
+      return await NVUtilities.decompressToBuffer(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
     } else {
       return dataBuffer.slice(hdr.vox_offset)
     }
@@ -3366,8 +3459,7 @@ export class NVImage {
         name = name.slice(0, name.indexOf('?')) // remove query string if any
       }
     }
-
-    nvimage = new NVImage(
+    nvimage = await this.newNVImage(
       dataBuffer,
       name,
       colormap,

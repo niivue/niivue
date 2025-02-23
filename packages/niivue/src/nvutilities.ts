@@ -271,6 +271,11 @@ export class NVUtilities {
     return result
   }
 
+  static async decompressToBuffer(data: Uint8Array): Promise<ArrayBuffer> {
+    const decompressed = await NVUtilities.decompress(data)
+    return decompressed.buffer.slice(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength)
+  }
+
   static async readMatV4(buffer: ArrayBuffer): Promise<Record<string, TypedNumberArray>> {
     let len = buffer.byteLength
     if (len < 40) {
