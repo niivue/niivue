@@ -284,10 +284,8 @@ export class NVUtilities {
     let reader = new DataView(buffer)
     let magic = reader.getUint16(0, true)
     let _buffer = buffer
-    console.log('!!!magic', magic)
     if (magic === 35615 || magic === 8075) {
       // gzip signature 0x1F8B in little and big endian
-      console.log('!!!cpt')
       const raw = await this.decompress(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       magic = reader.getUint16(0, true)
@@ -548,9 +546,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return slc(ar, 0, ai)
   }
 
-  static async compress(data: Uint8Array): Promise<ArrayBuffer> {
-    // mimics fflate, use 'deflate' or 'gzip' if needed
-    const format = 'deflate-raw'
+  static async compress(data: Uint8Array, format: CompressionFormat = 'gzip'): Promise<ArrayBuffer> {
+    // mimics fflate, use 'deflate-raw' 'deflate' or 'gzip' if needed
+    // const format = 'deflate-raw'
     const stream = new CompressionStream(format)
     const writer = stream.writable.getWriter()
 

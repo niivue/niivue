@@ -5,12 +5,11 @@ import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
+
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
 import {
-  ANNOT,
   DefaultMeshType,
   GII,
-  MGH,
   MZ3,
   TCK,
   TRACT,
@@ -1557,7 +1556,7 @@ export class NVMesh {
     } else if (ext === 'NV') {
       obj = NVMeshLoaders.readNV(buffer)
     } else if (ext === 'OBJ') {
-      obj = NVMeshLoaders.readOBJ(buffer)
+      obj = await NVMeshLoaders.readOBJ(buffer)
     } else if (ext === 'PLY') {
       obj = NVMeshLoaders.readPLY(buffer)
     } else if (ext === 'WRL') {
@@ -1907,126 +1906,5 @@ export class NVMesh {
     // apply new properties
     nvmesh.updateMesh(gl)
     return nvmesh
-  }
-
-  // loaders
-  static async readGII(buffer: ArrayBuffer): Promise<GII> {
-    return NVMeshLoaders.readGII(buffer)
-  }
-
-  static readX3D(buffer: ArrayBuffer): X3D {
-    return NVMeshLoaders.readX3D(buffer)
-  }
-
-  static async readNII(buffer: ArrayBuffer, n_vert = 0): Promise<Float32Array | Uint8Array | Int16Array | Int32Array> {
-    return NVMeshLoaders.readNII(buffer, n_vert)
-  }
-
-  static async readNII2(buffer: ArrayBuffer, n_vert = 0): Promise<Float32Array | Uint8Array | Int16Array | Int32Array> {
-    return NVMeshLoaders.readNII2(buffer, n_vert)
-  }
-
-  static async readMGH(buffer: ArrayBuffer): Promise<MGH> {
-    return NVMeshLoaders.readMGH(buffer)
-  }
-
-  static readSTL(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readSTL(buffer)
-  }
-
-  static readTxtSTL(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readTxtSTL(buffer)
-  }
-
-  static async readSRF(buffer: ArrayBuffer): Promise<DefaultMeshType> {
-    return NVMeshLoaders.readSRF(buffer)
-  }
-
-  static readFreeSurfer(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readFreeSurfer(buffer)
-  }
-
-  static readOBJ(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readOBJ(buffer)
-  }
-
-  static readOFF(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readOFF(buffer)
-  }
-
-  static readGEO(buffer: ArrayBuffer, isFlipWinding = false): DefaultMeshType {
-    return NVMeshLoaders.readGEO(buffer, isFlipWinding)
-  }
-
-  static readICO(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readICO(buffer)
-  }
-
-  static readPLY(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readPLY(buffer)
-  }
-
-  static async readMZ3(buffer: ArrayBuffer, n_vert = 0): Promise<MZ3> {
-    return NVMeshLoaders.readMZ3(buffer, n_vert)
-  }
-
-  static readVTK(buffer: ArrayBuffer): VTK {
-    return NVMeshLoaders.readVTK(buffer)
-  }
-
-  static readWRL(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readWRL(buffer)
-  }
-
-  static readASC(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readASC(buffer)
-  }
-
-  static readNV(buffer: ArrayBuffer): DefaultMeshType {
-    return NVMeshLoaders.readNV(buffer)
-  }
-
-  static readANNOT(buffer: ArrayBuffer, n_vert: number, isReadColortables = false): ANNOT {
-    return NVMeshLoaders.readANNOT(buffer, n_vert, isReadColortables)
-  }
-
-  static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array {
-    return NVMeshLoaders.readCURV(buffer, n_vert)
-  }
-
-  static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array {
-    return NVMeshLoaders.readSTC(buffer, n_vert)
-  }
-
-  static async readSMP(buffer: ArrayBuffer, n_vert: number): Promise<Float32Array> {
-    return NVMeshLoaders.readSMP(buffer, n_vert)
-  }
-
-  static readTxtVTK(buffer: ArrayBuffer): VTK {
-    return NVMeshLoaders.readTxtVTK(buffer)
-  }
-
-  static async readTRK(buffer: ArrayBuffer): Promise<TRK> {
-    return NVMeshLoaders.readTRK(buffer)
-  }
-
-  static readTCK(buffer: ArrayBuffer): TCK {
-    return NVMeshLoaders.readTCK(buffer)
-  }
-
-  static readTSF(buffer: ArrayBuffer): Float32Array {
-    return NVMeshLoaders.readTSF(buffer)
-  }
-
-  static async readTT(buffer: ArrayBuffer): Promise<TT> {
-    return NVMeshLoaders.readTT(buffer)
-  }
-
-  static async readTRX(buffer: ArrayBuffer): Promise<TRX> {
-    return NVMeshLoaders.readTRX(buffer)
-  }
-
-  static readTRACT(buffer: ArrayBuffer): TRACT {
-    return NVMeshLoaders.readTRACT(buffer)
   }
 }

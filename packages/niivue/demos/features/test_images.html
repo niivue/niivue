@@ -16,7 +16,9 @@
     </noscript>
     <header>
       <section>
-        <label id="images"></label>
+        Formats: <label id="localimages"></label>
+        <p>
+        Modalities: <label id="webimages"></label>
       </section>
     </header>
     <main id="container">
@@ -46,6 +48,21 @@
   nv1.setSliceType(nv1.sliceTypeRender);
   nv1.setClipPlane([0.35, 270, 0]);
   //nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  let localImgs = ['FLAIR.nrrd','cactus.nii.gz', 'DoG.png', "anat_final.FT+tlrc.HEAD", "MHA.MHA", "template.mif.gz", "trix/fa.mif", "dsistudio.src.gz", "dsistudio.fib.gz","wm.mgz"];
+  for (let i = 0; i < localImgs.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = localImgs[i];
+    btn.onclick = function () {
+      let img = "../images/" + localImgs[i];
+      const volumeObj = { url: img };
+      // If the image ends with ".HEAD", add the detached image data URL
+      if (localImgs[i].endsWith(".HEAD")) {
+        volumeObj.urlImgData = img.replace(".HEAD", ".BRIK");
+      }
+      nv1.loadVolumes([ volumeObj ])
+    }
+    localimages.appendChild(btn);
+  }
   let imgs = [
     "chris_MRA",
     "chris_PD",
@@ -65,7 +82,6 @@
     "spmMotor",
     "visiblehuman",
   ];
-  let imgEl = document.getElementById("images");
   for (let i = 0; i < imgs.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = imgs[i];
@@ -77,7 +93,7 @@
       nv1.loadVolumes(volumeList1);
       nv1.updateGLVolume();
     };
-    imgEl.appendChild(btn);
+    webimages.appendChild(btn);
   }
   let cmaps = nv1.colormaps();
   let cmapEl = document.getElementById("colormaps");

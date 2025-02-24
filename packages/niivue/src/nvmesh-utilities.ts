@@ -49,13 +49,20 @@ export class NVMeshUtilities {
     return result
   }
 
-  static createMZ3(vertices: Float32Array, indices: Uint32Array, compress: boolean = false): ArrayBuffer {
+  static createMZ3(
+    vertices: Float32Array,
+    indices: Uint32Array,
+    compress: boolean = false,
+    colors: Uint8Array | null = null
+  ): ArrayBuffer {
     // generate binary MZ3 format mesh
     // n.b. small, precise and small but support is not widespread
     // n.b. result can be compressed with gzip
     // https://github.com/neurolabusc/surf-ice/tree/master/mz3
+
     const magic = 23117
-    const attr = 3
+    const isRGBA = colors instanceof Uint8Array && colors.length === (vertices.length / 3) * 4
+    const attr = isRGBA ? 7 : 3
     const nface = indices.length / 3
     const nvert = vertices.length / 3
     const nskip = 0
@@ -78,18 +85,24 @@ export class NVMeshUtilities {
     offset += indexSize
     // Write vertices
     new Float32Array(buffer, offset, vertices.length).set(vertices)
+    // Write colors
+    if (isRGBA) {
+      offset += vertexSize
+      new Uint8Array(buffer, offset, colors.length).set(colors)
+    }
     if (compress) {
-      throw new Error('Call async createCompressedMZ3() for compression')
+      throw new Error('Call async createMZ3Async() for compression')
     }
     return buffer
   }
 
-  static async createCompressedMZ3(
+  static async createMZ3Async(
     vertices: Float32Array,
     indices: Uint32Array,
-    compress: boolean = true
+    compress: boolean = false,
+    colors: Uint8Array | null = null
   ): Promise<ArrayBuffer> {
-    const buffer = this.createMZ3(vertices, indices)
+    const buffer = this.createMZ3(vertices, indices, compress, colors)
     if (compress) {
       return await this.gzip(new Uint8Array(buffer))
     }
@@ -191,7 +204,7 @@ export class NVMeshUtilities {
       if (!/\.mz3$/i.test(filename)) {
         filename += '.mz3'
       }
-      buff = await this.createCompressedMZ3(vertices, indices, compress)
+      buff = await this.createMZ3Async(vertices, indices, compress)
     }
     if (filename.length > 4) {
       this.downloadArrayBuffer(buff, filename)

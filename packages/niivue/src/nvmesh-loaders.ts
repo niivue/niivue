@@ -206,7 +206,7 @@ export class NVMeshLoaders {
       pts,
       offsetPt0
     }
-  }
+  } // readTT
 
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
@@ -253,10 +253,8 @@ export class NVMeshLoaders {
       const tag = fname.split('.')[0] // "positions.3.float16 -> "positions"
       const data = await entry.extract()
       // const data = await NVUtilities.zipInflate(buffer, entry.startsAt, entry.compressedSize, entry.uncompressedSize, entry.compressionMethod )
-      console.log(`entry ${pname}  ${fname}  ${tag} : ${data.length}`)
+      // console.log(`entry ${pname}  ${fname}  ${tag} : ${data.length}`)
       if (fname.includes('header.json')) {
-        // const dat = await entry.extract()
-        // console.log(dat)
         const jsonString = new TextDecoder().decode(data)
         header = JSON.parse(jsonString)
         continue
@@ -2283,14 +2281,18 @@ export class NVMeshLoaders {
     }
   } // readOBJMNI()
 
-  static readOBJ(buffer: ArrayBuffer): DefaultMeshType {
+  static async readOBJ(buffer: ArrayBuffer): Promise<DefaultMeshType> {
     // WaveFront OBJ format
+    const headerBytes = new Uint8Array(buffer, 0, 2)
+    if (headerBytes[0] === 0x1f && headerBytes[1] === 0x8b) {
+      // gzip signature 0x1F8B in little and big endian
+      buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
+    }
     const enc = new TextDecoder('utf-8')
     const txt = enc.decode(buffer)
     if (txt[0] === 'P') {
       return this.readOBJMNI(buffer)
     }
-
     const lines = txt.split('\n')
     const n = lines.length
     const pts = []
