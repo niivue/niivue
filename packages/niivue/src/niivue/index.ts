@@ -959,7 +959,9 @@ export class Niivue {
       })
       this.resizeObserver.observe(this.canvas.parentElement!)
     }
-    this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
+    if (this.opts.interactive) {
+      this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
+    }
     await this.init()
     this.drawScene()
     return this

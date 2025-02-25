@@ -167,6 +167,8 @@ export type NVConfigOptions = {
   renderOverlayBlend: number
   sliceMosaicString: string
   centerMosaic: boolean
+  // attach mouse click and touch screen event handlers for the canvas
+  interactive: boolean
   penSize: number
   clickToSegment: boolean
   clickToSegmentRadius: number
@@ -262,6 +264,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   sliceMosaicString: '',
   centerMosaic: false,
   penSize: 1, // in voxels, since all drawing is done using bitmap indices
+  interactive: true,
   clickToSegment: false,
   clickToSegmentRadius: 3, // in mm
   clickToSegmentBright: true,
