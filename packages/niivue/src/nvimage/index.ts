@@ -157,7 +157,7 @@ export class NVImage {
     colormapLabel: LUT | null = null,
     colormapType = 0
   ) {
-    this.initNVImage(
+    this.init(
       dataBuffer,
       name,
       colormap,
@@ -181,7 +181,7 @@ export class NVImage {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  initNVImage(
+  init(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
     name = '',
@@ -483,7 +483,7 @@ export class NVImage {
     this.calMinMax()
   }
 
-  static async newNVImage(
+  static async new(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
     name = '',
@@ -568,7 +568,7 @@ export class NVImage {
           }
           if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
             // TODO: with new NIFTI-READER-JS move to decompressSync()
-            imgRaw = nifti.readImage(newImg.hdr, nifti.decompress(dataBuffer as ArrayBuffer))
+            imgRaw = nifti.readImage(newImg.hdr, nifti.decompress(dataBuffer as ArrayBuffer) as ArrayBuffer)
           } else {
             imgRaw = nifti.readImage(newImg.hdr, dataBuffer as ArrayBuffer)
           }
@@ -577,7 +577,7 @@ export class NVImage {
       default:
         throw new Error('Image type not supported')
     }
-    newImg.initNVImage(
+    newImg.init(
       dataBuffer,
       name,
       colormap,
@@ -2663,7 +2663,7 @@ export class NVImage {
     }
     // make a deep clone
     const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, false)
-    const hdr = nifti.readHeader(hdrBytes.buffer, true)
+    const hdr = nifti.readHeader(hdrBytes.buffer as ArrayBuffer, true)
     // n.b. if nVolumes < 1, input volumes = output volumess
     if (nVolumes === 1) {
       // 3D
@@ -3460,7 +3460,7 @@ export class NVImage {
         name = name.slice(0, name.indexOf('?')) // remove query string if any
       }
     }
-    nvimage = await this.newNVImage(
+    nvimage = await this.new(
       dataBuffer,
       name,
       colormap,
@@ -3592,7 +3592,7 @@ export class NVImage {
         // @ts-expect-error check data type?
         pairedImgData = await this.readFileAsync(urlImgData)
       }
-      nvimage = await this.newNVImage(
+      nvimage = await this.new(
         dataBuffer,
         name,
         colormap,
@@ -3866,7 +3866,7 @@ export class NVImage {
     try {
       const dataBuffer = base64ToArrayBuffer(base64)
       const pairedImgData = null
-      nvimage = await this.newNVImage(
+      nvimage = await this.new(
         dataBuffer,
         name,
         colormap,
