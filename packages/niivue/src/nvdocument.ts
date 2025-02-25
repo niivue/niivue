@@ -50,6 +50,21 @@ export enum DRAG_MODE {
   roiSelection = 6
 }
 
+export enum DRAG_MODE_SECONDARY {
+  none = 0,
+  contrast = 1,
+  measurement = 2,
+  pan = 3,
+  slicer3D = 4,
+  callbackOnly = 5,
+  roiSelection = 6
+}
+
+export enum DRAG_MODE_PRIMARY {
+  crosshair = 0,
+  windowing = 1
+}
+
 export enum COLORMAP_TYPE {
   MIN_TO_MAX = 0,
   ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
@@ -110,7 +125,8 @@ export type NVConfigOptions = {
   isRadiologicalConvention: boolean
   // string to allow infinity
   meshThicknessOn2D: number | string
-  dragMode: DRAG_MODE
+  dragMode: DRAG_MODE | DRAG_MODE_SECONDARY
+  dragModePrimary: DRAG_MODE_PRIMARY
   yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
@@ -212,7 +228,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   multiplanarShowRender: SHOW_RENDER.AUTO, // auto is the same behaviour as multiplanarForceRender: false
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
-  dragMode: DRAG_MODE.contrast,
+  dragMode: DRAG_MODE_SECONDARY.contrast,
+  dragModePrimary: DRAG_MODE_PRIMARY.crosshair,
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,

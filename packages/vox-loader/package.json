@@ -1,0 +1,48 @@
+{
+  "name": "@niivue/vox-loader",
+  "private": false,
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./build/lib/loader.js"
+    }
+  },
+  "files": [
+    "src/*",
+    "build/*"
+  ],
+  "keywords": [
+    "nii",
+    "vox",
+    "loader",
+    "MagicaVoxel",
+    "niivue"
+  ],
+  "author": "NiiVue developers",
+  "license": "BSD-2-Clause",
+  "description": "A MagicaVoxel vox image loader to be used with the NiiVue useLoader method",
+  "scripts": {
+    "cli": "node ./build/vox2nii.js ./tests/testData/monu1.vox",
+    "dev": "vite",
+    "build:demo": "vite build",
+    "build": "tsup",
+    "preview": "vite preview",
+    "test": "vitest",
+    "pretty": "prettier --write \"**/*.ts\"",
+    "pub": "npm run build && npm publish --access public"
+  },
+  "dependencies": {
+    "vox-reader": "^3.0.0",
+    "nifti-reader-js": "^0.7.1"
+  },
+  "devDependencies": {
+    "@niivue/niivue": "*",
+    "tsup": "^8.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.3",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8",
+    "prettier": "*"
+  }
+}

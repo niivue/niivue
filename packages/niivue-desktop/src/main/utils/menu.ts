@@ -4,8 +4,33 @@ import { layouts } from '../../common/layouts'
 import { orientationLabelMap } from '../../common/orientationLabels'
 import { dragModeMap } from '../../common/dragMode'
 import { DEFAULT_OPTIONS } from '@niivue/niivue'
+import { store } from './appStore'
+import { getMainWindow } from '..'
 
 const isMac = process.platform === 'darwin'
+
+const getRecentFilesMenu = (win: Electron.BrowserWindow): Electron.MenuItemConstructorOptions[] => {
+  const recentFiles = store.getRecentFiles()
+  if (recentFiles.length === 0) {
+    return [{ label: 'No Recent Files', enabled: false }]
+  }
+  return recentFiles.map((file) => ({
+    label: file,
+    click: (): void => {
+      console.log('loading file', file)
+      win.webContents.send('loadRecentFile', file)
+    }
+  }))
+}
+
+// Function to refresh menu dynamically
+export const refreshMenu = (): void => {
+  const win = getMainWindow()
+  if (win) {
+    const menu = createMenu(win)
+    Menu.setApplicationMenu(menu)
+  }
+}
 
 const createDragModeSubmenu = (
   win: Electron.BrowserWindow
@@ -122,11 +147,15 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         {
           // TODO: implement recent file loading
           label: 'Open Recent',
-          role: 'recentdocuments',
           submenu: [
+            ...getRecentFilesMenu(win),
+            { type: 'separator' },
             {
-              label: 'Clear Recent',
-              role: 'clearrecentdocuments'
+              label: 'Clear Recent Files',
+              click: (): void => {
+                store.clearRecentFiles()
+                refreshMenu()
+              }
             }
           ]
         },
