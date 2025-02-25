@@ -704,6 +704,7 @@ type NVConfigOptions = {
     renderOverlayBlend: number;
     sliceMosaicString: string;
     centerMosaic: boolean;
+    interactive: boolean;
     penSize: number;
     clickToSegment: boolean;
     clickToSegmentRadius: number;

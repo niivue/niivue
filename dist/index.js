@@ -28634,6 +28634,7 @@ var DEFAULT_OPTIONS = {
   centerMosaic: false,
   penSize: 1,
   // in voxels, since all drawing is done using bitmap indices
+  interactive: true,
   clickToSegment: false,
   clickToSegmentRadius: 3,
   // in mm
@@ -34161,7 +34162,9 @@ var Niivue = class {
       });
       this.resizeObserver.observe(this.canvas.parentElement);
     }
-    this.registerInteractions();
+    if (this.opts.interactive) {
+      this.registerInteractions();
+    }
     await this.init();
     this.drawScene();
     return this;
