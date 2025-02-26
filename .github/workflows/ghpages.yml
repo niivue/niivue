@@ -10,6 +10,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
       - name: Build demos and typedoc
         run: |
           npm ci
@@ -23,7 +29,7 @@ jobs:
 
       - name: Build Docusaurus docs
         run: |
-          npm install
+          npm ci
           npm run build:niivue
           npm run build:docusaurus
           mkdir -p packages/niivue/demos/docusaurus
