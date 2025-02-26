@@ -13,5 +13,6 @@ export default defineConfig({
     '.png': 'dataurl'
   },
   dts: true,
-  metafile: true
+  metafile: true,
+  platform: 'browser'
 })

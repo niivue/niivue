@@ -1,7 +1,6 @@
 import { mat4, vec4, vec3 } from 'gl-matrix'
-import { decompressSync, unzipSync } from 'fflate/browser'
 import { log } from './logger.js'
-import { NVUtilities } from './nvutilities.js'
+import { NVUtilities, Zip } from './nvutilities.js'
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NiivueObject3D } from './niivue-object3D.js'
 import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
@@ -116,12 +115,12 @@ export class NVMeshLoaders {
 
   // https://dsi-studio.labsolver.org/doc/cli_data.html
   // https://brain.labsolver.org/hcp_trk_atlas.html
-  static readTT(buffer: ArrayBuffer): TT {
+  static async readTT(buffer: ArrayBuffer): Promise<TT> {
     // Read a Matlab V4 file, n.b. does not support modern versions
     // https://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
     let offsetPt0 = new Uint32Array(0)
     let pts = new Float32Array(0)
-    const mat = NVUtilities.readMatV4(buffer)
+    const mat = await NVUtilities.readMatV4(buffer)
     if (!('trans_to_mni' in mat)) {
       throw new Error("TT format file must have 'trans_to_mni'")
     }
@@ -207,11 +206,11 @@ export class NVMeshLoaders {
       pts,
       offsetPt0
     }
-  }
+  } // readTT
 
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
-  static readTRX(buffer: ArrayBuffer): TRX {
+  static async readTRX(buffer: ArrayBuffer): Promise<TRX> {
     // Javascript does not support float16, so we convert to float32
     // https://stackoverflow.com/questions/5678432/decompressing-half-precision-floats-in-javascript
     function decodeFloat16(binary: number): number {
@@ -238,27 +237,29 @@ export class NVMeshLoaders {
     const dpv = []
     let header = []
     let isOverflowUint64 = false
-    const decompressed = unzipSync(new Uint8Array(buffer), {
-      filter(file) {
-        return file.originalSize > 0
+    const zip = new Zip(buffer)
+    for (let i = 0; i < zip.entries.length; i++) {
+      const entry = zip.entries[i]
+      if (entry.uncompressedSize === 0) {
+        continue // e.g. folder
       }
-    })
-    const keys = Object.keys(decompressed)
-    for (let i = 0, len = keys.length; i < len; i++) {
-      const parts = keys[i].split('/')
+
+      const parts = entry.fileName.split('/')
       const fname = parts.slice(-1)[0] // my.trx/dpv/fx.float32 -> fx.float32
       if (fname.startsWith('.')) {
         continue
       }
       const pname = parts.slice(-2)[0] // my.trx/dpv/fx.float32 -> dpv
       const tag = fname.split('.')[0] // "positions.3.float16 -> "positions"
-      // todo: should tags be censored for invalid characters: https://stackoverflow.com/questions/8676011/which-characters-are-valid-invalid-in-a-json-key-name
-      const data = decompressed[keys[i]]
+      const data = await entry.extract()
+      // const data = await NVUtilities.zipInflate(buffer, entry.startsAt, entry.compressedSize, entry.uncompressedSize, entry.compressionMethod )
+      // console.log(`entry ${pname}  ${fname}  ${tag} : ${data.length}`)
       if (fname.includes('header.json')) {
         const jsonString = new TextDecoder().decode(data)
         header = JSON.parse(jsonString)
         continue
       }
+
       // next read arrays for all possible datatypes: int8/16/32/64 uint8/16/32/64 float16/32/64
       let nval = 0
       let vals: AnyNumberArray = []
@@ -508,7 +509,7 @@ export class NVMeshLoaders {
   // not included in public docs
   // read trackvis trk format streamlines
   // http://trackvis.org/docs/?subsect=fileformat
-  static readTRK(buffer: ArrayBuffer): TRK {
+  static async readTRK(buffer: ArrayBuffer): Promise<TRK> {
     // https://brain.labsolver.org/hcp_trk_atlas.html
     // https://github.com/xtk/X/tree/master/io
     // in practice, always little endian
@@ -523,7 +524,7 @@ export class NVMeshLoaders {
         // raw = new Uint8Array(raw);
         throw new Error('zstd TRK decompression is not supported')
       } else {
-        raw = decompressSync(new Uint8Array(buffer))
+        raw = await NVUtilities.decompress(new Uint8Array(buffer))
       }
       buffer = raw.buffer
       reader = new DataView(buffer)
@@ -834,7 +835,7 @@ export class NVMeshLoaders {
   } // readTxtVTK()
 
   // read mesh overlay to influence vertex colors
-  static readLayer(
+  static async readLayer(
     name: string = '',
     buffer: ArrayBuffer,
     nvmesh: NVMesh,
@@ -845,7 +846,7 @@ export class NVMeshLoaders {
     cal_min: number | null = null,
     cal_max: number | null = null,
     outlineBorder = 0
-  ): NVMeshLayer | undefined {
+  ): Promise<NVMeshLayer | undefined> {
     const layer: NVMeshLayer = {
       ...NVMeshLayerDefaults,
       colormapInvert: false,
@@ -901,7 +902,7 @@ export class NVMeshLoaders {
       return
     }
     if (ext === 'MZ3') {
-      layer.values = NVMeshLoaders.readMZ3(buffer, n_vert) as Float32Array
+      layer.values = (await NVMeshLoaders.readMZ3(buffer, n_vert)) as Float32Array
     } else if (ext === 'ANNOT') {
       if (!isReadColortables) {
         // TODO: bogus ANNOT return type
@@ -920,14 +921,14 @@ export class NVMeshLoaders {
       layer.values = NVMeshLoaders.readCURV(buffer, n_vert)
       layer.isTransparentBelowCalMin = false
     } else if (ext === 'GII') {
-      const obj = NVMeshLoaders.readGII(buffer, n_vert)
+      const obj = await NVMeshLoaders.readGII(buffer, n_vert)
       layer.values = obj.scalars // colormapLabel
       layer.colormapLabel = obj.colormapLabel
     } else if (ext === 'MGH' || ext === 'MGZ') {
       if (!isReadColortables) {
-        layer.values = NVMeshLoaders.readMGH(buffer, n_vert) as number[]
+        layer.values = (await NVMeshLoaders.readMGH(buffer, n_vert)) as number[]
       } else {
-        const obj = NVMeshLoaders.readMGH(buffer, n_vert, true)
+        const obj = await NVMeshLoaders.readMGH(buffer, n_vert, true)
         if ('scalars' in obj) {
           layer.values = obj.scalars
           layer.colormapLabel = obj.colormapLabel
@@ -937,9 +938,9 @@ export class NVMeshLoaders {
         }
       }
     } else if (ext === 'NII') {
-      layer.values = NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary) as Float32Array
+      layer.values = (await NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary)) as Float32Array
     } else if (ext === 'SMP') {
-      layer.values = NVMeshLoaders.readSMP(buffer, n_vert)
+      layer.values = await NVMeshLoaders.readSMP(buffer, n_vert)
     } else if (ext === 'STC') {
       layer.values = NVMeshLoaders.readSTC(buffer, n_vert)
     } else if (NVMeshLoaders.isCurv(buffer)) {
@@ -985,13 +986,13 @@ export class NVMeshLoaders {
 
   // read brainvoyager smp format file
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files
-  static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array {
+  static async readSMP(buffer: ArrayBuffer, n_vert: number): Promise<Float32Array> {
     const len = buffer.byteLength
     let reader = new DataView(buffer)
     let vers = reader.getUint16(0, true)
     if (vers > 5) {
       // assume gzip
-      const raw = decompressSync(new Uint8Array(buffer))
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       vers = reader.getUint16(0, true)
       buffer = raw.buffer
@@ -1597,6 +1598,51 @@ export class NVMeshLoaders {
     }
   } // readVTK()
 
+  static readWRL(buffer: ArrayBuffer): DefaultMeshType {
+    const wrlText = new TextDecoder('utf-8').decode(buffer)
+    const coordRegex = /coord\s+Coordinate\s*\{\s*point\s*\[([\s\S]*?)\]/
+    const indexRegex = /coordIndex\s*\[([\s\S]*?)\]/
+    const colorRegex = /color\s+Color\s*\{\s*color\s*\[([\s\S]*?)\]/
+    const coordMatch = coordRegex.exec(wrlText)
+    const indexMatch = indexRegex.exec(wrlText)
+    const colorMatch = colorRegex.exec(wrlText)
+
+    if (!coordMatch || !indexMatch) {
+      throw new Error('Invalid WRL file: Could not find vertices or indices.')
+    }
+    // Extract vertex positions
+    const positions = new Float32Array(
+      coordMatch[1]
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number)
+    )
+    // Extract per-vertex colors (if they exist)
+    let colors: Float32Array | null = null
+    if (colorMatch) {
+      colors = new Float32Array(
+        colorMatch[1]
+          .trim()
+          .split(/[\s,]+/)
+          .map(Number)
+      )
+      const nVert = positions.length / 3
+      if (colors.length !== nVert * 3) {
+        console.warn(`Unexpected color count: expected ${nVert * 3}, got ${colors.length}`)
+        colors = null // Ignore malformed color data
+      }
+    }
+    // Extract triangle indices (ignoring `-1` separators)
+    const indices = new Uint32Array(
+      indexMatch[1]
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number)
+        .filter((v) => v !== -1)
+    )
+    return { positions, indices, colors }
+  } // readWRL()
+
   // read brainsuite DFS format
   // http://brainsuite.org/formats/dfs/
   static readDFS(buffer: ArrayBuffer): DefaultMeshType {
@@ -1642,7 +1688,7 @@ export class NVMeshLoaders {
 
   // read surfice MZ3 format
   // https://github.com/neurolabusc/surf-ice/tree/master/mz3
-  static readMZ3(buffer: ArrayBuffer, n_vert = 0): MZ3 {
+  static async readMZ3(buffer: ArrayBuffer, n_vert = 0): Promise<MZ3> {
     // ToDo: mz3 always little endian: support big endian? endian https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
     if (buffer.byteLength < 20) {
       // 76 for raw, not sure of gzip
@@ -1652,9 +1698,10 @@ export class NVMeshLoaders {
     // get number of vertices and faces
     let magic = reader.getUint16(0, true)
     let _buffer = buffer
+
     if (magic === 35615 || magic === 8075) {
       // gzip signature 0x1F8B in little and big endian
-      const raw = decompressSync(new Uint8Array(buffer))
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       magic = reader.getUint16(0, true)
       _buffer = raw.buffer
@@ -2234,8 +2281,13 @@ export class NVMeshLoaders {
     }
   } // readOBJMNI()
 
-  static readOBJ(buffer: ArrayBuffer): DefaultMeshType {
+  static async readOBJ(buffer: ArrayBuffer): Promise<DefaultMeshType> {
     // WaveFront OBJ format
+    const headerBytes = new Uint8Array(buffer, 0, 2)
+    if (headerBytes[0] === 0x1f && headerBytes[1] === 0x8b) {
+      // gzip signature 0x1F8B in little and big endian
+      buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
+    }
     const enc = new TextDecoder('utf-8')
     const txt = enc.decode(buffer)
     if (txt[0] === 'P') {
@@ -2244,7 +2296,7 @@ export class NVMeshLoaders {
     const lines = txt.split('\n')
     const n = lines.length
     const pts = []
-    const t = []
+    const tris = []
     for (let i = 0; i < n; i++) {
       const str = lines[i]
       if (str[0] === 'v' && str[1] === ' ') {
@@ -2268,15 +2320,32 @@ export class NVMeshLoaders {
         for (let j = 0; j < new_t; j++) {
           tn = items[3 + j].split('/')
           const tcurr = parseInt(tn[0]) - 1 // current vertex
-          t.push(t0)
-          t.push(tprev)
-          t.push(tcurr)
+          tris.push(t0)
+          tris.push(tprev)
+          tris.push(tcurr)
           tprev = tcurr
         }
       }
     } // for all lines
     const positions = new Float32Array(pts)
-    const indices = new Uint32Array(t)
+    const indices = new Uint32Array(tris)
+    // next vertex indices are supposed to be from 1, not 0
+    let min = indices[0]
+    let max = indices[0]
+    for (let i = 1; i < indices.length; i++) {
+      if (indices[i] < min) {
+        min = indices[i]
+      }
+      if (indices[i] > max) {
+        max = indices[i]
+      }
+    }
+    if (max - min + 1 > positions.length / 3) {
+      throw new Error('Not a valid OBJ file')
+    }
+    for (let i = 0; i < indices.length; i++) {
+      indices[i] -= min
+    }
     return {
       positions,
       indices
@@ -2360,7 +2429,7 @@ export class NVMeshLoaders {
 
   // read brainvoyager SRF format
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
-  static readSRF(buffer: ArrayBuffer): DefaultMeshType {
+  static async readSRF(buffer: ArrayBuffer): Promise<DefaultMeshType> {
     const bytes = new Uint8Array(buffer)
     if (bytes[0] === 35 && bytes[1] === 33 && bytes[2] === 97) {
       // .srf also used for freesurfer https://brainder.org/research/brain-for-blender/
@@ -2368,7 +2437,7 @@ export class NVMeshLoaders {
     }
     if (bytes[0] === 31 && bytes[1] === 139) {
       // handle .srf.gz
-      const raw = decompressSync(new Uint8Array(buffer))
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer))
       buffer = raw.buffer
     }
     const reader = new DataView(buffer)
@@ -2550,11 +2619,11 @@ export class NVMeshLoaders {
   // read NIfTI2 format with embedded CIfTI
   // this variation very specific to connectome workbench
   // https://brainder.org/2015/04/03/the-nifti-2-file-format/
-  static readNII2(
+  static async readNII2(
     buffer: ArrayBuffer,
     n_vert = 0,
     anatomicalStructurePrimary = ''
-  ): Int32Array | Float32Array | Int16Array | Uint8Array {
+  ): Promise<Int32Array | Float32Array | Int16Array | Uint8Array> {
     let scalars: Float32Array | Int32Array | Int16Array | Uint8Array = new Float32Array()
     const len = buffer.byteLength
     let isLittleEndian = true
@@ -2770,11 +2839,11 @@ export class NVMeshLoaders {
 
   // read NIfTI1/2 as vertex colors
   // https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
-  static readNII(
+  static async readNII(
     buffer: ArrayBuffer,
     n_vert = 0,
     anatomicalStructurePrimary = ''
-  ): Float32Array | Uint8Array | Int32Array | Int16Array {
+  ): Promise<Float32Array | Uint8Array | Int32Array | Int16Array> {
     // TODO clean up number types
     let scalars: Float32Array | Int32Array | Int16Array | Uint8Array = new Float32Array()
     let isLittleEndian = true
@@ -2789,7 +2858,7 @@ export class NVMeshLoaders {
     }
     if (magic !== 348) {
       // gzip signature 0x1F8B in little and big endian
-      const raw = decompressSync(new Uint8Array(buffer))
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       buffer = raw.buffer
       magic = reader.getUint16(0, isLittleEndian)
@@ -2859,11 +2928,11 @@ export class NVMeshLoaders {
 
   // read MGH format as vertex colors (not voxel-based image)
   // https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
-  static readMGH(buffer: ArrayBuffer, n_vert = 0, isReadColortables = false): MGH {
+  static async readMGH(buffer: ArrayBuffer, n_vert = 0, isReadColortables = false): Promise<MGH> {
     let reader = new DataView(buffer)
     let raw = buffer
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      const decompressed = decompressSync(new Uint8Array(buffer))
+      const decompressed = await NVUtilities.decompress(new Uint8Array(buffer))
       raw = new ArrayBuffer(decompressed.byteLength)
       new Uint8Array(raw).set(new Uint8Array(decompressed))
       reader = new DataView(decompressed.buffer)
@@ -3288,7 +3357,7 @@ export class NVMeshLoaders {
 
   // read GIfTI format mesh
   // https://www.nitrc.org/projects/gifti/
-  static readGII(buffer: ArrayBuffer, n_vert = 0): GII {
+  static async readGII(buffer: ArrayBuffer, n_vert = 0): Promise<GII> {
     let len = buffer.byteLength
     if (len < 20) {
       throw new Error('File too small to be GII: bytes = ' + len)
@@ -3296,7 +3365,7 @@ export class NVMeshLoaders {
     let chars = new TextDecoder('ascii').decode(buffer)
     if (chars[0].charCodeAt(0) === 31) {
       // raw GIFTI saved as .gii.gz is smaller than gz GIFTI due to base64 overhead
-      const raw = decompressSync(new Uint8Array(buffer))
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer))
       buffer = raw.buffer
       chars = new TextDecoder('ascii').decode(raw.buffer)
     }
@@ -3464,7 +3533,7 @@ export class NVMeshLoaders {
           }
           if (isGzip) {
             const datZ = base64ToUint8(line.slice())
-            datBin = decompressSync(new Uint8Array(datZ))
+            datBin = await NVUtilities.decompress(new Uint8Array(datZ))
           } else {
             datBin = base64ToUint8(line.slice())
           }
@@ -3472,7 +3541,7 @@ export class NVMeshLoaders {
           // if Buffer not defined
           if (isGzip) {
             const datZ = Buffer.from(line.slice(), 'base64')
-            datBin = decompressSync(new Uint8Array(datZ))
+            datBin = await NVUtilities.decompress(new Uint8Array(datZ))
           } else {
             datBin = Buffer.from(line.slice(), 'base64')
           }

@@ -1,5 +1,4 @@
 import arrayEqual from 'array-equal'
-import { compress, decompress, decompressSync, strFromU8, strToU8 } from 'fflate/browser'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 
 // TODO: TypedNumberArray also in nvmesh-types.ts
@@ -17,13 +16,267 @@ type TypedNumberArray =
  * Namespace for utility functions
  * @ignore
  */
+
+/**
+ * Read ZIP files using asynchronous compression streams API, supports data descriptors
+ * todo: check ZIP64 support
+ * https://github.com/libyal/assorted/blob/main/documentation/ZIP%20archive%20format.asciidoc
+ * https://en.wikipedia.org/wiki/ZIP_(file_format)
+ * https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+ * https://dev.to/ndesmic/writing-a-simple-browser-zip-file-decompressor-with-compressionstreams-5che
+ */
+
+interface Entry {
+  signature: string
+  version: number
+  generalPurpose: number
+  compressionMethod: number
+  lastModifiedTime: number
+  lastModifiedDate: number
+  crc: number
+  compressedSize: number
+  uncompressedSize: number
+  fileNameLength: number
+  extraLength: number
+  fileName: string
+  extra: string
+  startsAt?: number
+  extract?: () => Promise<Uint8Array>
+}
+
+interface CentralDirectoryEntry {
+  versionCreated: number
+  versionNeeded: number
+  fileCommentLength: number
+  diskNumber: number
+  internalAttributes: number
+  externalAttributes: number
+  offset: number
+  comments: string
+  fileNameLength: number
+  extraLength: number
+}
+
+interface EndOfCentralDirectory {
+  numberOfDisks: number
+  centralDirectoryStartDisk: number
+  numberCentralDirectoryRecordsOnThisDisk: number
+  numberCentralDirectoryRecords: number
+  centralDirectorySize: number
+  centralDirectoryOffset: number
+  commentLength: number
+  comment: string
+}
+
+export class Zip {
+  #dataView: DataView
+  #index: number = 0
+  #localFiles: Entry[] = []
+  #centralDirectories: CentralDirectoryEntry[] = []
+  #endOfCentralDirectory?: EndOfCentralDirectory
+
+  constructor(arrayBuffer: ArrayBuffer) {
+    this.#dataView = new DataView(arrayBuffer)
+    this.read()
+  }
+
+  async extract(entry: Entry): Promise<Uint8Array> {
+    const buffer = new Uint8Array(this.#dataView.buffer.slice(entry.startsAt!, entry.startsAt! + entry.compressedSize))
+    if (entry.compressionMethod === 0x00) {
+      return buffer
+    } else if (entry.compressionMethod === 0x08) {
+      const stream = new DecompressionStream('deflate-raw')
+      const writer = stream.writable.getWriter()
+      writer.write(buffer).catch(console.error)
+      const closePromise = writer.close().catch(console.error)
+      const response = new Response(stream.readable)
+      const result = new Uint8Array(await response.arrayBuffer())
+      await closePromise
+      return result
+    }
+    throw new Error(`Unsupported compression method: ${entry.compressionMethod}`)
+  }
+
+  private read(): void {
+    while (!this.#endOfCentralDirectory && this.#index < this.#dataView.byteLength) {
+      const signature = this.#dataView.getUint32(this.#index, true)
+      if (signature === 0x04034b50) {
+        const entry = this.readLocalFile(this.#index)
+        entry.extract = this.extract.bind(this, entry)
+        this.#localFiles.push(entry)
+        const hasDataDescriptor = (entry.generalPurpose & 0x0008) !== 0
+        entry.startsAt = this.#index + 30 + entry.fileNameLength + entry.extraLength
+        if (entry.compressedSize === 0 && hasDataDescriptor) {
+          let scanIndex = entry.startsAt
+          while (scanIndex! + 20 <= this.#dataView.byteLength) {
+            const possibleSignature = this.#dataView.getUint32(scanIndex!, true)
+            if (possibleSignature === 0x08074b50) {
+              const nextPK = this.#dataView.getUint16(scanIndex! + 16, true) === 0x4b50
+              if (nextPK) {
+                scanIndex! += 4
+                break
+              }
+            }
+            scanIndex!++
+          }
+          entry.crc = this.#dataView.getUint32(scanIndex!, true)
+          entry.compressedSize = this.#dataView.getUint32(scanIndex! + 4, true)
+          entry.uncompressedSize = this.#dataView.getUint32(scanIndex! + 8, true)
+          this.#index = scanIndex! + 12
+        } else {
+          this.#index = entry.startsAt + entry.compressedSize
+        }
+      } else if (signature === 0x02014b50) {
+        const entry = this.readCentralDirectory(this.#index)
+        this.#centralDirectories.push(entry)
+        this.#index += 46 + entry.fileNameLength + entry.extraLength + entry.fileCommentLength
+      } else if (signature === 0x06054b50) {
+        this.#endOfCentralDirectory = this.readEndCentralDirectory(this.#index)
+        break
+      } else if (signature === 0x06064b50) {
+        this.#endOfCentralDirectory = this.readEndCentralDirectory64(this.#index)
+        break
+      } else {
+        console.error(`Unexpected ZIP signature 0x${signature.toString(16).padStart(8, '0')} at index ${this.#index}`)
+        break
+      }
+    }
+  }
+
+  private readLocalFile(offset: number): Entry {
+    let compressedSize = this.#dataView.getUint32(offset + 18, true)
+    let uncompressedSize = this.#dataView.getUint32(offset + 22, true)
+    const fileNameLength = this.#dataView.getUint16(offset + 26, true)
+    const extraLength = this.#dataView.getUint16(offset + 28, true)
+    const extraOffset = offset + 30 + fileNameLength
+    const extra = this.readString(extraOffset, extraLength)
+    if (compressedSize === 0xffffffff && uncompressedSize === 0xffffffff) {
+      let zip64Offset = extraOffset
+      let foundZip64 = false
+      while (zip64Offset < extraOffset + extraLength - 4) {
+        const fieldSignature = this.#dataView.getUint16(zip64Offset, true)
+        const fieldLength = this.#dataView.getUint16(zip64Offset + 2, true)
+        zip64Offset += 4 // Move past signature and length
+        if (fieldSignature === 0x0001) {
+          // ZIP64 Extended Information Extra Field
+          if (fieldLength >= 16) {
+            // Ensure we have enough bytes
+            uncompressedSize = Number(this.#dataView.getBigUint64(zip64Offset, true))
+            zip64Offset += 8
+            compressedSize = Number(this.#dataView.getBigUint64(zip64Offset, true))
+            foundZip64 = true
+            break
+          } else {
+            throw new Error(
+              `ZIP64 extra field found but is too small (expected at least 16 bytes, got ${fieldLength}).`
+            )
+          }
+        }
+        zip64Offset += fieldLength // Move to the next extra field
+      }
+      if (!foundZip64) {
+        throw new Error('ZIP64 format missing extra field with signature 0x0001.')
+      }
+    }
+    return {
+      signature: this.readString(offset, 4),
+      version: this.#dataView.getUint16(offset + 4, true),
+      generalPurpose: this.#dataView.getUint16(offset + 6, true),
+      compressionMethod: this.#dataView.getUint16(offset + 8, true),
+      lastModifiedTime: this.#dataView.getUint16(offset + 10, true),
+      lastModifiedDate: this.#dataView.getUint16(offset + 12, true),
+      crc: this.#dataView.getUint32(offset + 14, true),
+      compressedSize,
+      uncompressedSize,
+      fileNameLength,
+      extraLength,
+      fileName: this.readString(offset + 30, fileNameLength),
+      extra: this.readString(offset + 30 + fileNameLength, extraLength)
+    }
+  }
+
+  private readCentralDirectory(offset: number): CentralDirectoryEntry {
+    return {
+      versionCreated: this.#dataView.getUint16(offset + 4, true),
+      versionNeeded: this.#dataView.getUint16(offset + 6, true),
+      fileNameLength: this.#dataView.getUint16(offset + 28, true),
+      extraLength: this.#dataView.getUint16(offset + 30, true),
+      fileCommentLength: this.#dataView.getUint16(offset + 32, true),
+      diskNumber: this.#dataView.getUint16(offset + 34, true),
+      internalAttributes: this.#dataView.getUint16(offset + 36, true),
+      externalAttributes: this.#dataView.getUint32(offset + 38, true),
+      offset: this.#dataView.getUint32(offset + 42, true),
+      comments: this.readString(offset + 46, this.#dataView.getUint16(offset + 32, true))
+    }
+  }
+
+  private readEndCentralDirectory(offset: number): EndOfCentralDirectory {
+    const commentLength = this.#dataView.getUint16(offset + 20, true)
+    return {
+      numberOfDisks: this.#dataView.getUint16(offset + 4, true),
+      centralDirectoryStartDisk: this.#dataView.getUint16(offset + 6, true),
+      numberCentralDirectoryRecordsOnThisDisk: this.#dataView.getUint16(offset + 8, true),
+      numberCentralDirectoryRecords: this.#dataView.getUint16(offset + 10, true),
+      centralDirectorySize: this.#dataView.getUint32(offset + 12, true),
+      centralDirectoryOffset: this.#dataView.getUint32(offset + 16, true),
+      commentLength,
+      comment: this.readString(offset + 22, commentLength)
+    }
+  }
+
+  private readEndCentralDirectory64(offset: number): EndOfCentralDirectory {
+    const commentLength = Number(this.#dataView.getBigUint64(offset + 0, true))
+    return {
+      numberOfDisks: this.#dataView.getUint32(offset + 16, true),
+      centralDirectoryStartDisk: this.#dataView.getUint32(offset + 20, true),
+      numberCentralDirectoryRecordsOnThisDisk: Number(this.#dataView.getBigUint64(offset + 24, true)),
+      numberCentralDirectoryRecords: Number(this.#dataView.getBigUint64(offset + 32, true)),
+      centralDirectorySize: Number(this.#dataView.getBigUint64(offset + 40, true)),
+      centralDirectoryOffset: Number(this.#dataView.getBigUint64(offset + 48, true)),
+      commentLength,
+      comment: ''
+    }
+  }
+
+  private readString(offset: number, length: number): string {
+    return Array.from({ length }, (_, i) => String.fromCharCode(this.#dataView.getUint8(offset + i))).join('')
+  }
+
+  get entries(): Entry[] {
+    return this.#localFiles
+  }
+}
+
 export class NVUtilities {
   static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string {
     const bytes = new Uint8Array(arrayBuffer)
     return NVUtilities.uint8tob64(bytes)
   }
 
-  static readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray> {
+  static async decompress(data: Uint8Array): Promise<Uint8Array> {
+    const format =
+      data[0] === 31 && data[1] === 139 && data[2] === 8
+        ? 'gzip'
+        : data[0] === 120 && (data[1] === 1 || data[1] === 94 || data[1] === 156 || data[1] === 218)
+          ? 'deflate'
+          : 'deflate-raw'
+    const stream = new DecompressionStream(format)
+    const writer = stream.writable.getWriter()
+    writer.write(data).catch(console.error) // Do not await this
+    // Close without awaiting directly, preventing the hang issue
+    const closePromise = writer.close().catch(console.error)
+    const response = new Response(stream.readable)
+    const result = new Uint8Array(await response.arrayBuffer())
+    await closePromise // Ensure close happens eventually
+    return result
+  }
+
+  static async decompressToBuffer(data: Uint8Array): Promise<ArrayBuffer> {
+    const decompressed = await NVUtilities.decompress(data)
+    return decompressed.buffer.slice(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength)
+  }
+
+  static async readMatV4(buffer: ArrayBuffer): Promise<Record<string, TypedNumberArray>> {
     let len = buffer.byteLength
     if (len < 40) {
       throw new Error('File too small to be MAT v4: bytes = ' + buffer.byteLength)
@@ -33,7 +286,7 @@ export class NVUtilities {
     let _buffer = buffer
     if (magic === 35615 || magic === 8075) {
       // gzip signature 0x1F8B in little and big endian
-      const raw = decompressSync(new Uint8Array(buffer))
+      const raw = await this.decompress(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       magic = reader.getUint16(0, true)
       _buffer = raw.buffer
@@ -229,18 +482,89 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return NVUtilities.uint8tob64(new Uint8Array(buf))
   }
 
-  static async compressStringToArrayBuffer(input: string): Promise<ArrayBuffer> {
-    return new Promise((resolve, reject) => {
-      const uint8Array = strToU8(input)
+  /**
+   * Converts a string into a Uint8Array for use with compression/decompression methods (101arrowz/fflate: MIT License)
+   * @param str The string to encode
+   * @param latin1 Whether or not to interpret the data as Latin-1. This should
+   *               not need to be true unless decoding a binary string.
+   * @returns The string encoded in UTF-8/Latin-1 binary
+   */
 
-      compress(uint8Array, (err, compressed) => {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(compressed.buffer)
-        }
-      })
-    })
+  static strToU8(str: string, latin1?: boolean): Uint8Array {
+    if (latin1) {
+      const ar = new Uint8Array(str.length)
+      for (let i = 0; i < str.length; ++i) {
+        ar[i] = str.charCodeAt(i)
+      }
+      return ar
+    }
+    const l = str.length
+    // TODO: strToU8 and strFromU8 both define slc
+    // typed array slice - allows garbage collector to free original reference,
+    // while being more compatible than .slice
+    const slc = (v: Uint8Array, s: number, e?: number): Uint8Array => {
+      if (s == null || s < 0) {
+        s = 0
+      }
+      if (e == null || e > v.length) {
+        e = v.length
+      }
+      // can't use .constructor in case user-supplied
+      return new Uint8Array(v.subarray(s, e))
+    }
+    let ar = new Uint8Array(str.length + (str.length >> 1))
+    let ai = 0
+    const w = (v: number): void => {
+      ar[ai++] = v
+    }
+    for (let i = 0; i < l; ++i) {
+      if (ai + 5 > ar.length) {
+        const n = new Uint8Array(ai + 8 + ((l - i) << 1))
+        n.set(ar)
+        ar = n
+      }
+      let c = str.charCodeAt(i)
+      if (c < 128 || latin1) {
+        w(c)
+      } else if (c < 2048) {
+        w(192 | (c >> 6))
+        w(128 | (c & 63))
+      } else if (c > 55295 && c < 57344) {
+        c = (65536 + (c & (1023 << 10))) | (str.charCodeAt(++i) & 1023)
+        w(240 | (c >> 18))
+        w(128 | ((c >> 12) & 63))
+        w(128 | ((c >> 6) & 63))
+        w(128 | (c & 63))
+      } else {
+        c = (65536 + (c & (1023 << 10))) | (str.charCodeAt(++i) & 1023)
+        w(240 | (c >> 18))
+        w(128 | ((c >> 12) & 63))
+        w(128 | ((c >> 6) & 63))
+        w(128 | (c & 63))
+      }
+    }
+    return slc(ar, 0, ai)
+  }
+
+  static async compress(data: Uint8Array, format: CompressionFormat = 'gzip'): Promise<ArrayBuffer> {
+    // mimics fflate, use 'deflate-raw' 'deflate' or 'gzip' if needed
+    // const format = 'deflate-raw'
+    const stream = new CompressionStream(format)
+    const writer = stream.writable.getWriter()
+
+    writer.write(data).catch(console.error) // Do not await this
+    const closePromise = writer.close().catch(console.error)
+
+    const response = new Response(stream.readable)
+    const result = await response.arrayBuffer()
+
+    await closePromise // Ensure close happens eventually
+    return result
+  }
+
+  static async compressStringToArrayBuffer(input: string): Promise<ArrayBuffer> {
+    const uint8Array = this.strToU8(input)
+    return await this.compress(uint8Array)
   }
 
   static isArrayBufferCompressed(buffer: ArrayBuffer): boolean {
@@ -253,19 +577,65 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
   }
 
-  static async decompressArrayBuffer(buffer: ArrayBuffer): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const uint8Array = new Uint8Array(buffer)
-
-      decompress(uint8Array, (err, decompressed) => {
-        if (err) {
-          reject(err)
-        } else {
-          const result = strFromU8(decompressed)
-          resolve(result)
+  /**
+   * Converts a Uint8Array to a string (101arrowz/fflate: MIT License)
+   * @param dat The data to decode to string
+   * @param latin1 Whether or not to interpret the data as Latin-1. This should
+   *               not need to be true unless encoding to binary string.
+   * @returns The original UTF-8/Latin-1 string
+   */
+  static strFromU8(dat: Uint8Array, latin1?: boolean): string {
+    if (latin1) {
+      let r = ''
+      for (let i = 0; i < dat.length; i += 16384) {
+        r += String.fromCharCode.apply(null, dat.subarray(i, i + 16384))
+      }
+      return r
+    } else {
+      // typed array slice - allows garbage collector to free original reference,
+      // while being more compatible than .slice
+      const slc = (v: Uint8Array, s: number, e?: number): Uint8Array => {
+        if (s == null || s < 0) {
+          s = 0
         }
-      })
-    })
+        if (e == null || e > v.length) {
+          e = v.length
+        }
+        // can't use .constructor in case user-supplied
+        return new Uint8Array(v.subarray(s, e))
+      }
+      // decode UTF8
+      const dutf8 = (d: Uint8Array): { s: string; r: Uint8Array } => {
+        for (let r = '', i = 0; ; ) {
+          let c = d[i++]
+          const eb =
+            ((c > 127) as unknown as number) + ((c > 223) as unknown as number) + ((c > 239) as unknown as number)
+          if (i + eb > d.length) {
+            return { s: r, r: slc(d, i - 1) }
+          }
+          if (!eb) {
+            r += String.fromCharCode(c)
+          } else if (eb === 3) {
+            c = (((c & 15) << 18) | ((d[i++] & 63) << 12) | ((d[i++] & 63) << 6) | (d[i++] & 63)) - 65536
+            r += String.fromCharCode(55296 | (c >> 10), 56320 | (c & 1023))
+          } else if (eb & 1) {
+            r += String.fromCharCode(((c & 31) << 6) | (d[i++] & 63))
+          } else {
+            r += String.fromCharCode(((c & 15) << 12) | ((d[i++] & 63) << 6) | (d[i++] & 63))
+          }
+        }
+      }
+      const { s, r } = dutf8(dat)
+      if (r.length) {
+        throw new Error('Unexpected trailing bytes in UTF-8 decoding')
+      }
+      return s
+    }
+  }
+
+  static async decompressArrayBuffer(buffer: ArrayBuffer): Promise<string> {
+    const decompressed = await this.decompress(new Uint8Array(buffer))
+    return this.strFromU8(decompressed)
   }
 
   static arraysAreEqual(a: unknown[], b: unknown[]): boolean {

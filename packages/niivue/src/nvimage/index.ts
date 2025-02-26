@@ -1,7 +1,6 @@
-import * as nifti from 'nifti-reader-js'
-// import daikon from 'daikon'
+// import * as nifti from 'nifti-reader-js'
+import { NIFTI1, NIFTI2, NIFTIEXTENSION, isCompressed, decompressAsync, readImage, readHeader } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
-import { decompressSync, gzipSync } from 'fflate/browser'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
@@ -80,7 +79,7 @@ export class NVImage {
   extentsMaxOrtho?: number[]
   mm2ortho?: mat4
 
-  hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
+  hdr: NIFTI1 | NIFTI2 | null = null
   imageType?: ImageType
   img?: TypedVoxelArray
   imaginary?: Float32Array // only for complex data
@@ -135,6 +134,7 @@ export class NVImage {
    * @param colorbarVisible - TODO
    * @param colormapLabel - TODO
    */
+
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
@@ -158,7 +158,55 @@ export class NVImage {
     colormapLabel: LUT | null = null,
     colormapType = 0
   ) {
+    this.init(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType,
+      cal_minNeg,
+      cal_maxNeg,
+      colorbarVisible,
+      colormapLabel,
+      colormapType
+    )
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  init(
+    // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    name = '',
+    colormap = 'gray',
+    opacity = 1.0,
+    _pairedImgData: ArrayBuffer | null = null,
+    cal_min = NaN,
+    cal_max = NaN,
+    trustCalMinMax = true,
+    percentileFrac = 0.02,
+    ignoreZeroVoxels = false,
+    useQFormNotSForm = false,
+    colormapNegative = '',
+    frame4D = 0,
+    imageType = NVIMAGE_TYPE.UNKNOWN,
+    cal_minNeg = NaN,
+    cal_maxNeg = NaN,
+    colorbarVisible = true,
+    colormapLabel: LUT | null = null,
+    colormapType = 0,
+    imgRaw: ArrayBuffer | null = null
+  ): void {
     this.name = name
+    this.imageType = imageType
     this.id = uuidv4()
     this._colormap = colormap
     this._opacity = opacity > 1.0 ? 1.0 : opacity // make sure opacity can't be initialized greater than 1 see: #107 and #117 on github
@@ -178,77 +226,6 @@ export class NVImage {
     // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
       return
-    }
-    const re = /(?:\.([^.]+))?$/
-    let ext = re.exec(name)![1] || '' // TODO ! guaranteed?
-    ext = ext.toUpperCase()
-    if (ext === 'GZ') {
-      ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
-      ext = ext.toUpperCase()
-    }
-    let imgRaw: ArrayBufferLike | Uint8Array | null = null
-
-    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
-      imageType = NVIMAGE_TYPE.parse(ext)
-    }
-    this.imageType = imageType
-    switch (imageType) {
-      case NVIMAGE_TYPE.DCM_FOLDER:
-      case NVIMAGE_TYPE.DCM_MANIFEST:
-      case NVIMAGE_TYPE.DCM:
-        // TODO: use dcm2niix here...
-        // imgRaw = this.readDICOM(dataBuffer)
-        // break
-        return
-      case NVIMAGE_TYPE.FIB:
-        ;[imgRaw, this.v1] = this.readFIB(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.MIH:
-      case NVIMAGE_TYPE.MIF:
-        imgRaw = this.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
-        break
-      case NVIMAGE_TYPE.NHDR:
-      case NVIMAGE_TYPE.NRRD:
-        imgRaw = this.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
-        break
-      case NVIMAGE_TYPE.MHD:
-      case NVIMAGE_TYPE.MHA:
-        imgRaw = this.readMHA(dataBuffer as ArrayBuffer, pairedImgData)
-        break
-      case NVIMAGE_TYPE.MGH:
-      case NVIMAGE_TYPE.MGZ:
-        imgRaw = this.readMGH(dataBuffer as ArrayBuffer) // to do: pairedImgData
-        break
-      case NVIMAGE_TYPE.SRC:
-        imgRaw = this.readSRC(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.V:
-        imgRaw = this.readECAT(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.V16:
-        imgRaw = this.readV16(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.VMR:
-        imgRaw = this.readVMR(dataBuffer as ArrayBuffer)
-        break
-      case NVIMAGE_TYPE.HEAD:
-        imgRaw = this.readHEAD(dataBuffer as ArrayBuffer, pairedImgData) // paired = .BRIK
-        break
-      case NVIMAGE_TYPE.NII:
-        this.hdr = nifti.readHeader(dataBuffer as ArrayBuffer)
-        if (this.hdr !== null) {
-          if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255) {
-            this.hdr.cal_max = 0.0
-          }
-          if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
-            imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer as ArrayBuffer))
-          } else {
-            imgRaw = nifti.readImage(this.hdr, dataBuffer as ArrayBuffer)
-          }
-        }
-        break
-      default:
-        throw new Error('Image type not supported')
     }
     if (this.hdr && typeof this.hdr.magic === 'number') {
       this.hdr.magic = 'n+1'
@@ -505,6 +482,125 @@ export class NVImage {
       this.hdr.cal_max = cal_max
     }
     this.calMinMax()
+  }
+
+  static async new(
+    // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    name = '',
+    colormap = 'gray',
+    opacity = 1.0,
+    pairedImgData: ArrayBuffer | null = null,
+    cal_min = NaN,
+    cal_max = NaN,
+    trustCalMinMax = true,
+    percentileFrac = 0.02,
+    ignoreZeroVoxels = false,
+    useQFormNotSForm = false,
+    colormapNegative = '',
+    frame4D = 0,
+    imageType = NVIMAGE_TYPE.UNKNOWN,
+    cal_minNeg = NaN,
+    cal_maxNeg = NaN,
+    colorbarVisible = true,
+    colormapLabel: LUT | null = null,
+    colormapType = 0
+  ): Promise<NVImage> {
+    const newImg = new NVImage()
+    const re = /(?:\.([^.]+))?$/
+    let ext = re.exec(name)![1] || '' // TODO ! guaranteed?
+    ext = ext.toUpperCase()
+    if (ext === 'GZ') {
+      ext = re.exec(name.slice(0, -3))![1] // img.trk.gz -> img.trk
+      ext = ext.toUpperCase()
+    }
+    let imgRaw: ArrayBufferLike | Uint8Array | null = null
+    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+      imageType = NVIMAGE_TYPE.parse(ext)
+    }
+    newImg.imageType = imageType
+    switch (imageType) {
+      case NVIMAGE_TYPE.DCM_FOLDER:
+      case NVIMAGE_TYPE.DCM_MANIFEST:
+      case NVIMAGE_TYPE.DCM:
+        return
+      case NVIMAGE_TYPE.FIB:
+        ;[imgRaw, newImg.v1] = await newImg.readFIB(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.MIH:
+      case NVIMAGE_TYPE.MIF:
+        imgRaw = await newImg.readMIF(dataBuffer as ArrayBuffer, pairedImgData) // detached
+        break
+      case NVIMAGE_TYPE.NHDR:
+      case NVIMAGE_TYPE.NRRD:
+        imgRaw = await newImg.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
+        break
+      case NVIMAGE_TYPE.MHD:
+      case NVIMAGE_TYPE.MHA:
+        imgRaw = await newImg.readMHA(dataBuffer as ArrayBuffer, pairedImgData)
+        break
+      case NVIMAGE_TYPE.MGH:
+      case NVIMAGE_TYPE.MGZ:
+        imgRaw = await newImg.readMGH(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.SRC:
+        imgRaw = await newImg.readSRC(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.V:
+        imgRaw = newImg.readECAT(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.V16:
+        imgRaw = newImg.readV16(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.VMR:
+        imgRaw = newImg.readVMR(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.HEAD:
+        imgRaw = await newImg.readHEAD(dataBuffer as ArrayBuffer, pairedImgData) // paired = .BRIK
+        break
+      case NVIMAGE_TYPE.BMP:
+        imgRaw = await newImg.readBMP(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.NII:
+        newImg.hdr = readHeader(dataBuffer as ArrayBuffer)
+        if (newImg.hdr !== null) {
+          if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
+            newImg.hdr.cal_max = 0.0
+          }
+          if (isCompressed(dataBuffer as ArrayBuffer)) {
+            // TODO: with new NIFTI-READER-JS move to decompressSync()
+            imgRaw = readImage(newImg.hdr, (await decompressAsync(dataBuffer as ArrayBuffer)) as ArrayBuffer)
+          } else {
+            imgRaw = readImage(newImg.hdr, dataBuffer as ArrayBuffer)
+          }
+        }
+        break
+      default:
+        throw new Error('Image type not supported')
+    }
+    newImg.init(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType,
+      cal_minNeg,
+      cal_maxNeg,
+      colorbarVisible,
+      colormapLabel,
+      colormapType,
+      imgRaw
+    )
+    return newImg
   }
 
   // not included in public docs
@@ -917,7 +1013,7 @@ export class NVImage {
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
   readECAT(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1024,7 +1120,7 @@ export class NVImage {
   } // readECAT()
 
   readV16(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1049,11 +1145,58 @@ export class NVImage {
     return buffer.slice(6)
   } // readV16()
 
+  async imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData> {
+    return new Promise<ImageData>((resolve, reject): void => {
+      const blob = new Blob([buffer]) // Convert ArrayBuffer to Blob
+      const url = URL.createObjectURL(blob) // Create a Blob URL
+      const img = new Image()
+      img.crossOrigin = 'Anonymous' // Allow CORS if needed
+      img.src = url
+      img.onload = (): void => {
+        URL.revokeObjectURL(url) // Clean up the object URL
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Failed to get 2D context'))
+          return
+        }
+        ctx.drawImage(img, 0, 0)
+        resolve(ctx.getImageData(0, 0, img.width, img.height))
+      }
+      img.onerror = (err): void => {
+        URL.revokeObjectURL(url) // Ensure cleanup on error
+        reject(err)
+      }
+    })
+  }
+
+  async readBMP(buffer: ArrayBuffer): Promise<Uint8Array> {
+    const imageData = await this.imageDataFromArrayBuffer(buffer)
+    const { width, height, data } = imageData
+    data.fill(255, 0, Math.floor(data.length / 2))
+    // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
+    this.hdr = new NIFTI1()
+    const hdr = this.hdr
+    hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+    hdr.affine = [
+      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [0, 0, 0, 1]
+    ]
+    hdr.numBitsPerVoxel = 8
+    hdr.datatypeCode = NiiDataType.DT_RGBA32
+    return new Uint8Array(data)
+  }
+
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
   readVMR(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1144,8 +1287,8 @@ export class NVImage {
 
   // not included in public docs
   // read FreeSurfer MGH format image
-  readMGH(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+  async readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1153,8 +1296,9 @@ export class NVImage {
     let raw = buffer
     let reader = new DataView(raw)
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      const raw8 = decompressSync(new Uint8Array(buffer))
-      raw = raw8.buffer
+      // const raw8 = decompressSync(new Uint8Array(buffer))
+      // raw = raw8.buffer
+      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
       reader = new DataView(raw)
     }
     const version = reader.getInt32(0, false)
@@ -1247,13 +1391,15 @@ export class NVImage {
   // not included in public docs
   // read DSI-Studio FIB format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  readFIB(buffer: ArrayBuffer): [ArrayBuffer, Float32Array] {
-    this.hdr = new nifti.NIFTI1()
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async readFIB(buffer: ArrayBuffer): Promise<[ArrayBuffer, Float32Array]> {
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    const mat = NVUtilities.readMatV4(buffer)
+    const mat = await NVUtilities.readMatV4(buffer)
     if (!('dimension' in mat) || !('dti_fa' in mat)) {
       throw new Error('Not a valid DSIstudio FIB file')
     }
@@ -1315,13 +1461,15 @@ export class NVImage {
   // not included in public docs
   // read DSI-Studio SRC format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  readSRC(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async readSRC(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    const mat = NVUtilities.readMatV4(buffer)
+    const mat = await NVUtilities.readMatV4(buffer)
     if (!('dimension' in mat) || !('image0' in mat)) {
       throw new Error('Not a valid DSIstudio SRC file')
     }
@@ -1385,8 +1533,8 @@ export class NVImage {
 
   // not included in public docs
   // read AFNI head/brik format image
-  readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+  async readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims[0] = 3
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1402,7 +1550,7 @@ export class NVImage {
     const extBuffer = new Uint8Array(len)
     extBuffer.fill(0)
     extBuffer.set(new Uint8Array(dataBuffer))
-    const newExtension = new nifti.NIFTIEXTENSION(len + 8, 42, extBuffer, true)
+    const newExtension = new NIFTIEXTENSION(len + 8, 42, extBuffer, true)
     hdr.addExtension(newExtension)
     hdr.extensionCode = 42
     hdr.extensionFlag[0] = 1
@@ -1522,9 +1670,7 @@ export class NVImage {
     }
     if (pairedImgData.byteLength < nBytes) {
       // n.b. npm run dev implicitly extracts gz, npm run demo does not!
-      // assume gz compressed
-      const raw = decompressSync(new Uint8Array(pairedImgData))
-      return raw.buffer
+      return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData))
     }
     return pairedImgData.slice(0)
   }
@@ -1532,7 +1678,7 @@ export class NVImage {
   // not included in public docs
   // read ITK MHA format image
   // https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
-  readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  async readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
     const len = buffer.byteLength
     if (len < 20) {
       throw new Error('File too small to be VTK: bytes = ' + buffer.byteLength)
@@ -1556,7 +1702,7 @@ export class NVImage {
       return new TextDecoder().decode(buffer.slice(startPos, pos))
     }
     let line = readStr() // 1st line: signature
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1]
@@ -1664,12 +1810,12 @@ export class NVImage {
     hdr.vox_offset = pos
     if (isDetached && pairedImgData) {
       if (isGz) {
-        return decompressSync(new Uint8Array(pairedImgData.slice(0))).buffer
+        return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData.slice(0)))
       }
       return pairedImgData.slice(0)
     }
     if (isGz) {
-      return decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset))).buffer
+      return await NVUtilities.decompressToBuffer(new Uint8Array(buffer.slice(hdr.vox_offset)))
     }
     return buffer.slice(hdr.vox_offset)
   } // readMHA()
@@ -1677,10 +1823,10 @@ export class NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  async readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1]
@@ -1691,8 +1837,9 @@ export class NVImage {
     const bytes = new Uint8Array(buffer)
     if (bytes[0] === 31 && bytes[1] === 139) {
       log.debug('MIF with GZ decompression')
-      const raw = decompressSync(new Uint8Array(buffer))
-      buffer = raw.buffer
+      // const raw = decompressSync(new Uint8Array(buffer))
+      // buffer = raw.buffer
+      buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
       len = buffer.byteLength
     }
     let pos = 0
@@ -2036,11 +2183,11 @@ export class NVImage {
   // not included in public docs
   // read NRRD format image
   // http://teem.sourceforge.net/nrrd/format.html
-  readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer {
+  async readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
     // inspired by parserNRRD.js in https://github.com/xtk
     // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
     // http://www.opensource.org/licenses/mit-license.php
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     const len = dataBuffer.byteLength
@@ -2324,7 +2471,7 @@ export class NVImage {
       log.warn('Missing data: NRRD header describes detached data file but only one URL provided')
     }
     if (isGz) {
-      return decompressSync(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer
+      return await NVUtilities.decompressToBuffer(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
     } else {
       return dataBuffer.slice(hdr.vox_offset)
     }
@@ -2508,7 +2655,7 @@ export class NVImage {
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
 
-  hdr2RAS(nVolumes: number = 1): nifti.NIFTI1 | nifti.NIFTI2 {
+  hdr2RAS(nVolumes: number = 1): NIFTI1 | NIFTI2 {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
     }
@@ -2517,7 +2664,7 @@ export class NVImage {
     }
     // make a deep clone
     const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, false)
-    const hdr = nifti.readHeader(hdrBytes.buffer, true)
+    const hdr = readHeader(hdrBytes.buffer as ArrayBuffer, true)
     // n.b. if nVolumes < 1, input volumes = output volumess
     if (nVolumes === 1) {
       // 3D
@@ -2954,7 +3101,7 @@ export class NVImage {
 
   // not included in public docs
   // see niivue.saveImage() for wrapper of this function
-  saveToUint8Array(fnm: string, drawing8: Uint8Array | null = null): Uint8Array {
+  async saveToUint8Array(fnm: string, drawing8: Uint8Array | null = null): Promise<Uint8Array> {
     if (!this.hdr) {
       throw new Error('hdr undefined')
     }
@@ -2977,14 +3124,7 @@ export class NVImage {
     let saveData = null
     const compress = fnm.endsWith('.gz') // true if name ends with .gz
     if (compress) {
-      saveData = gzipSync(odata, {
-        // GZIP-specific: the filename to use when decompressed
-        filename: fnm,
-        // GZIP-specific: the modification time. Can be a Date, date string,
-        // or Unix timestamp
-        mtime: Date.now(),
-        level: 6 // the default
-      })
+      saveData = new Uint8Array(await NVUtilities.compress(odata, 'gzip'))
     } else {
       saveData = odata
     }
@@ -2994,10 +3134,10 @@ export class NVImage {
   // not included in public docs
   // save image as NIfTI volume
   // if fnm is empty, data is returned
-  saveToDisk(fnm: string = '', drawing8: Uint8Array | null = null): Uint8Array {
+  async saveToDisk(fnm: string = '', drawing8: Uint8Array | null = null): Promise<Uint8Array> {
     // TODO there was an unnecessary strict string check for fnm here,
     // shouldn't be necessary anymore. Thanks TS! :)
-    const saveData = this.saveToUint8Array(fnm, drawing8)
+    const saveData = await this.saveToUint8Array(fnm, drawing8)
     if (fnm === '') {
       log.debug('saveToDisk: empty file name, returning data as Uint8Array rather than triggering download')
       return saveData
@@ -3073,41 +3213,6 @@ export class NVImage {
     }
   }
 
-  static async fetchImageData(url: string): Promise<ImageData> {
-    return new Promise<ImageData>((resolve, reject): void => {
-      const img = new Image()
-      img.crossOrigin = 'Anonymous' // Allow CORS if needed
-      img.src = url
-
-      img.onload = (): void => {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')
-
-        if (!ctx) {
-          reject(new Error('Failed to get 2D context'))
-          return // Ensure function exits after reject
-        }
-
-        ctx.drawImage(img, 0, 0)
-        resolve(ctx.getImageData(0, 0, img.width, img.height))
-      }
-
-      img.onerror = (err): void => reject(err)
-    })
-  }
-
-  static async png2nii(url: string): Promise<Uint8Array> {
-    const imageData = await this.fetchImageData(url)
-    const { width, height, data } = imageData
-    const dims = [width, height, 1]
-    const pixDims = [1, 1, 1]
-    const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
-    const datatypeCode = 2304
-    return this.createNiftiArray(dims, pixDims, affine, datatypeCode, Uint8Array.from(data))
-  }
-
   /**
    * factory function to load and return a new NVImage instance from a given URL
    * @returns  NVImage instance
@@ -3146,9 +3251,6 @@ export class NVImage {
     }
     if (buffer.byteLength > 0) {
       url = buffer
-    }
-    if (typeof url === 'string' && /\.(bmp|gif|jpe?g|png)$/i.test(url)) {
-      url = (await this.png2nii(url)).buffer
     }
     if (url instanceof ArrayBuffer) {
       dataBuffer = url
@@ -3205,7 +3307,7 @@ export class NVImage {
           return null
         }
 
-        const hdr = nifti.readHeader(headerBuffer.buffer)
+        const hdr = readHeader(headerBuffer.buffer)
         if (!hdr) {
           throw new Error('Could not read NIfTI header')
         }
@@ -3359,8 +3461,7 @@ export class NVImage {
         name = name.slice(0, name.indexOf('?')) // remove query string if any
       }
     }
-
-    nvimage = new NVImage(
+    nvimage = await this.new(
       dataBuffer,
       name,
       colormap,
@@ -3469,7 +3570,7 @@ export class NVImage {
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file)
           } else {
-            const hdr = nifti.readHeader(headerBuffer)
+            const hdr = readHeader(headerBuffer)
             if (!hdr) {
               throw new Error('could not read nifti header')
             }
@@ -3492,7 +3593,7 @@ export class NVImage {
         // @ts-expect-error check data type?
         pairedImgData = await this.readFileAsync(urlImgData)
       }
-      nvimage = new NVImage(
+      nvimage = await this.new(
         dataBuffer,
         name,
         colormap,
@@ -3554,8 +3655,8 @@ export class NVImage {
     pixDims = [1, 1, 1],
     affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
     datatypeCode = 2 // NiiDataType.DT_UINT8
-  ): nifti.NIFTI1 {
-    const hdr = new nifti.NIFTI1()
+  ): NIFTI1 {
+    const hdr = new NIFTI1()
     hdr.littleEndian = true
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.dims[0] = Math.max(3, dims.length)
@@ -3733,7 +3834,7 @@ export class NVImage {
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
-  static loadFromBase64({
+  static async loadFromBase64({
     base64,
     name = '',
     colormap = 'gray',
@@ -3751,7 +3852,7 @@ export class NVImage {
     cal_maxNeg = NaN,
     colorbarVisible = true,
     colormapLabel = null
-  }: ImageFromBase64): NVImage {
+  }: ImageFromBase64): Promise<NVImage> {
     // https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
     function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)
@@ -3766,7 +3867,7 @@ export class NVImage {
     try {
       const dataBuffer = base64ToArrayBuffer(base64)
       const pairedImgData = null
-      nvimage = new NVImage(
+      nvimage = await this.new(
         dataBuffer,
         name,
         colormap,

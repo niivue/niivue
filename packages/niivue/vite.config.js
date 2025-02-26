@@ -15,7 +15,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['nifti-reader-js'],
+    // include: ['nifti-reader-js'],
     exclude: ['@niivue/dcm2niix']
   },
   plugins: [

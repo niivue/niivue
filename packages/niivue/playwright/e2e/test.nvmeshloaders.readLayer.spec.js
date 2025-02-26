@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { Niivue } from '../../dist/index.js'
+import { Niivue, NVMeshLoaders } from '../../dist/index.js'
 import { httpServerAddress } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
 test.beforeEach(async ({ page }) => {
@@ -38,7 +38,7 @@ test('nvmeshloaders readLayer', async ({ page }) => {
       throw Error(response.statusText)
     }
     const buffer = await response.arrayBuffer()
-    const meshLayer = niivue.NVMeshLoaders.readLayer(
+    const meshLayer = await NVMeshLoaders.readLayer(
       layer.url,
       buffer,
       nv.meshes[0],

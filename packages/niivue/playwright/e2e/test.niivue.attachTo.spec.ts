@@ -9,6 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test('niivue attachTo', async ({ page }) => {
   const gl = await page.evaluate(async (testOptions) => {
+    console.log('Niivue in browser ', Niivue)
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
     return nv.gl

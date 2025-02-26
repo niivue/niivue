@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -8,10 +8,7 @@
   </head>
   <body>
     <noscript>
-      <strong
-        >niivue doesn't work properly without JavaScript enabled. Please enable
-        it to continue.</strong
-      >
+      <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
 
     <!-- demo 1 -->
@@ -23,6 +20,7 @@
       import * as niivue from '../dist/index.js'
       globalThis.Niivue = niivue.Niivue
       globalThis.niivue = niivue
+      globalThis.NVMeshLoaders = niivue.NVMeshLoaders
     </script>
   </body>
 </html>

@@ -1,5 +1,4 @@
 import { vec3 } from 'gl-matrix'
-import { gzipSync } from 'fflate/browser'
 
 type Extents = {
   mxDx: number
@@ -39,13 +38,31 @@ export class NVMeshUtilities {
     return border
   }
 
-  static createMZ3(vertices: Float32Array, indices: Uint32Array, compress: boolean = false): ArrayBuffer {
+  static async gzip(data: Uint8Array): Promise<Uint8Array> {
+    const stream = new CompressionStream('gzip')
+    const writer = stream.writable.getWriter()
+    writer.write(data).catch(console.error)
+    const closePromise = writer.close().catch(console.error)
+    const response = new Response(stream.readable)
+    const result = new Uint8Array(await response.arrayBuffer())
+    await closePromise // Ensure close happens eventually
+    return result
+  }
+
+  static createMZ3(
+    vertices: Float32Array,
+    indices: Uint32Array,
+    compress: boolean = false,
+    colors: Uint8Array | null = null
+  ): ArrayBuffer {
     // generate binary MZ3 format mesh
     // n.b. small, precise and small but support is not widespread
     // n.b. result can be compressed with gzip
     // https://github.com/neurolabusc/surf-ice/tree/master/mz3
+
     const magic = 23117
-    const attr = 3
+    const isRGBA = colors instanceof Uint8Array && colors.length === (vertices.length / 3) * 4
+    const attr = isRGBA ? 7 : 3
     const nface = indices.length / 3
     const nvert = vertices.length / 3
     const nskip = 0
@@ -68,8 +85,26 @@ export class NVMeshUtilities {
     offset += indexSize
     // Write vertices
     new Float32Array(buffer, offset, vertices.length).set(vertices)
+    // Write colors
+    if (isRGBA) {
+      offset += vertexSize
+      new Uint8Array(buffer, offset, colors.length).set(colors)
+    }
     if (compress) {
-      return gzipSync(new Uint8Array(buffer))
+      throw new Error('Call async createMZ3Async() for compression')
+    }
+    return buffer
+  }
+
+  static async createMZ3Async(
+    vertices: Float32Array,
+    indices: Uint32Array,
+    compress: boolean = false,
+    colors: Uint8Array | null = null
+  ): Promise<ArrayBuffer> {
+    const buffer = this.createMZ3(vertices, indices, compress, colors)
+    if (compress) {
+      return await this.gzip(new Uint8Array(buffer))
     }
     return buffer
   }
@@ -154,12 +189,12 @@ export class NVMeshUtilities {
     }, 0)
   }
 
-  static saveMesh(
+  static async saveMesh(
     vertices: Float32Array,
     indices: Uint32Array,
     filename: string = '.mz3',
     compress: boolean = false
-  ): ArrayBuffer {
+  ): Promise<ArrayBuffer> {
     let buff = new ArrayBuffer(0)
     if (/\.obj$/i.test(filename)) {
       buff = this.createOBJ(vertices, indices)
@@ -169,7 +204,7 @@ export class NVMeshUtilities {
       if (!/\.mz3$/i.test(filename)) {
         filename += '.mz3'
       }
-      buff = this.createMZ3(vertices, indices, compress)
+      buff = await this.createMZ3Async(vertices, indices, compress)
     }
     if (filename.length > 4) {
       this.downloadArrayBuffer(buff, filename)

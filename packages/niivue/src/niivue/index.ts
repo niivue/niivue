@@ -250,6 +250,7 @@ const MESH_EXTENSIONS = [
   'TT',
   'TRX',
   'VTK',
+  'WRL',
   'X3D',
   'JCON',
   'JSON'
@@ -2336,7 +2337,7 @@ export class Niivue {
   // }
 
   // not included in public docs
-  dropListener(e: DragEvent): void {
+  async dropListener(e: DragEvent): Promise<void> {
     e.stopPropagation()
     e.preventDefault()
     // don't do anything if drag and drop has been turned off
@@ -2388,15 +2389,6 @@ export class Niivue {
           }
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name)
-            if (ext === 'PNG') {
-              ;(entry as FileSystemFileEntry).file((file) => {
-                // @ts-expect-error FIXME looks like a file gets passed instead of a string
-                this.loadBmpTexture(file).catch((e) => {
-                  throw e
-                })
-              })
-              continue
-            }
             let pairedImageData: FileSystemEntry
             // check for afni HEAD BRIK pair
             if (entry.name.lastIndexOf('HEAD') !== -1) {
@@ -2415,73 +2407,85 @@ export class Niivue {
             if (entry.name.lastIndexOf('BRIK') !== -1) {
               continue
             }
+            if (this.loaders[ext]) {
+              // check if the loader type property is a volume or mesh
+              // by using the toExt property
+              const toExt = this.loaders[ext].toExt.toUpperCase()
+              if (MESH_EXTENSIONS.includes(toExt)) {
+                log.error(`Drag and drop mesh loader needs work ${ext}`)
+              } else {
+                log.error(`Drag and drop volume loader needs work ${ext}`)
+              }
+              continue
+            }
             if (MESH_EXTENSIONS.includes(ext)) {
-              ;(entry as FileSystemFileEntry).file((file) => {
-                NVMesh.loadFromFile({
-                  file,
-                  gl: this.gl,
-                  name: file.name
-                })
-                  .then((mesh) => {
+              ;(entry as FileSystemFileEntry).file((file: File): void => {
+                ;(async (): Promise<void> => {
+                  try {
+                    const mesh = await NVMesh.loadFromFile({
+                      file,
+                      gl: this.gl,
+                      name: file.name
+                    })
                     this.addMesh(mesh)
-                  })
-                  .catch((e) => {
-                    throw e
-                  })
+                  } catch (e) {
+                    console.error('Error loading mesh:', e)
+                  }
+                })().catch((err) => console.error(err))
               })
               continue
             } else if (ext === 'NVD') {
-              ;(entry as FileSystemFileEntry).file((file) => {
-                NVDocument.loadFromFile(file)
-                  .then((nvdoc) => {
-                    this.loadDocument(nvdoc)
+              ;(entry as FileSystemFileEntry).file((file: File): void => {
+                ;(async (): Promise<void> => {
+                  try {
+                    const nvdoc = await NVDocument.loadFromFile(file)
+                    await this.loadDocument(nvdoc)
                     log.debug('loaded document')
-                  })
-                  .catch((e) => {
-                    throw e
-                  })
+                  } catch (e) {
+                    console.error(e)
+                  }
+                })().catch((err) => console.error(err))
               })
               break
             }
-            ;(entry as FileSystemFileEntry).file((file) => {
-              if (pairedImageData) {
-                // if we have paired header/img data
-                ;(pairedImageData as FileSystemFileEntry).file((imgfile) => {
-                  NVImage.loadFromFile({
-                    file,
-                    urlImgData: imgfile,
-                    limitFrames4D: this.opts.limitFrames4D
-                  })
-                    .then((volume) => {
-                      this.addVolume(volume)
+
+            ;(entry as FileSystemFileEntry).file((file: File): void => {
+              ;(async (): Promise<void> => {
+                try {
+                  if (pairedImageData) {
+                    ;(pairedImageData as FileSystemFileEntry).file((imgfile: File): void => {
+                      ;(async (): Promise<void> => {
+                        try {
+                          const volume = await NVImage.loadFromFile({
+                            file,
+                            urlImgData: imgfile,
+                            limitFrames4D: this.opts.limitFrames4D
+                          })
+                          this.addVolume(volume)
+                        } catch (e) {
+                          console.error(e)
+                        }
+                      })().catch(console.error)
                     })
-                    .catch((e) => {
-                      throw e
+                  } else {
+                    const volume = await NVImage.loadFromFile({
+                      file,
+                      urlImgData: pairedImageData,
+                      limitFrames4D: this.opts.limitFrames4D
                     })
-                })
-              } else {
-                // else, just a single file to load (not a pair)
-                NVImage.loadFromFile({
-                  file,
-                  urlImgData: pairedImageData,
-                  limitFrames4D: this.opts.limitFrames4D
-                })
-                  .then((volume) => {
                     if (e.altKey) {
                       log.debug('alt key detected: assuming this is a drawing overlay')
                       this.drawClearAllUndoBitmaps()
                       this.loadDrawing(volume)
                     } else {
                       this.addVolume(volume)
-                      // set drawing enabled to make sure
-                      // the new drawing bitmap matches the background volume dims
-                      // this.setDrawingEnabled(true)
                     }
-                  })
-                  .catch((e) => {
-                    throw e
-                  })
-              }
+                  }
+                } catch (e) {
+                  console.error(e)
+                }
+                // Explicitly return undefined (void)
+              })().catch(console.error)
             })
           } else if (entry.isDirectory) {
             // assume that directories are only use for DICOM files
@@ -2501,7 +2505,6 @@ export class Niivue {
                         limitFrames4D: this.opts.limitFrames4D
                       })
                     )
-
                     Promise.all(promises)
                       .then(async (loadedNvImages) => {
                         console.log('from dicom loader')
@@ -3125,7 +3128,7 @@ export class Niivue {
    * @example niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
    */
-  saveImage(options: SaveImageOptions = defaultSaveImageOptions): Uint8Array | boolean {
+  async saveImage(options: SaveImageOptions = defaultSaveImageOptions): Promise<boolean | Uint8Array> {
     const saveOptions: SaveImageOptions = {
       ...defaultSaveImageOptions,
       ...options
@@ -3144,7 +3147,7 @@ export class Niivue {
       const perm = this.volumes[0].permRAS!
       if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         log.debug('saving drawing')
-        const img = this.volumes[0].saveToDisk(filename, this.drawBitmap) // createEmptyDrawing
+        const img = await this.volumes[0].saveToDisk(filename, this.drawBitmap) // createEmptyDrawing
         return img
       } else {
         log.debug('saving drawing')
@@ -3942,7 +3945,7 @@ export class Niivue {
    */
   async loadDocumentFromUrl(url: string): Promise<void> {
     const document = await NVDocument.loadFromUrl(url)
-    this.loadDocument(document)
+    await this.loadDocument(document)
   }
 
   /**
@@ -3950,7 +3953,7 @@ export class Niivue {
    * @returns  Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/document.load.html | live demo usage}
    */
-  loadDocument(document: NVDocument): this {
+  async loadDocument(document: NVDocument): Promise<this> {
     this.volumes = []
     this.meshes = []
     this.document = document
@@ -3974,7 +3977,7 @@ export class Niivue {
         if ('colorMap' in imageOptions) {
           imageOptions.colormap = imageOptions.colorMap
         }
-        const image = NVImage.loadFromBase64({ base64, ...imageOptions })
+        const image = await NVImage.loadFromBase64({ base64, ...imageOptions })
         if (image) {
           if (image.colormapLabel) {
             const length = Object.keys(image.colormapLabel.lut).length
@@ -4051,11 +4054,17 @@ export class Niivue {
     this.createEmptyDrawing()
     const drawingBase64 = document.encodedDrawingBlob
     if (drawingBase64) {
-      const drawingBitmap = NVUtilities.b64toUint8(drawingBase64) // Convert base64 back to Uint8Array
+      const drawingBitmap = await NVUtilities.b64toUint8(drawingBase64) // Convert base64 back to Uint8Array
       if (drawingBitmap) {
         const dims = this.back.dims
-        if (drawingBitmap.length !== dims[1] * dims[2] * dims[3]) {
-          throw new Error('drawBitmap size does not match the texture dimensions.')
+        let expectedBytes = dims[1] * dims[2] * dims[3]
+        if (drawingBitmap.length - 352 === expectedBytes) {
+          expectedBytes += 352
+        }
+        if (drawingBitmap.length !== expectedBytes) {
+          throw new Error(
+            `drawBitmap size does not match the texture dimensions (${dims[1]}×${dims[2]}×${dims[3]}) ${expectedBytes} != ${dims[1] * dims[2] * dims[3]}.`
+          )
         }
         this.drawBitmap = drawingBitmap // Set the deserialized drawBitmap
         this.refreshDrawing()
@@ -4305,7 +4314,7 @@ export class Niivue {
       console.log(convertedArrayBuffer)
       const name = convertedArrayBuffer[0].name
       const data = convertedArrayBuffer[0].data
-      const image = NVImage.loadFromUrl({ url: data, name })
+      const image = await NVImage.loadFromUrl({ url: data, name })
       return image
     })
 
@@ -4422,9 +4431,9 @@ export class Niivue {
             throw new Error(`Failed to load url ${url}: ${error}`)
           }
         }
-        const { positions, indices } = await this.loaders[ext].loader(itemToLoad)
+        const { positions, indices, colors = null } = await this.loaders[ext].loader(itemToLoad)
         meshItem.name = `${name}.${toExt}`
-        const mz3 = NVMeshUtilities.createMZ3(positions, indices, false)
+        const mz3 = await NVMeshUtilities.createMZ3Async(positions, indices, false, colors)
         meshItem.buffer = mz3
         // return await this.loadFromArrayBuffer(mz3, meshItem.name)
       }
@@ -6138,7 +6147,8 @@ export class Niivue {
     }
     this.furthestVertexFromOrigin = 0.0
     if (numLayers > 0) {
-      this.furthestVertexFromOrigin = this.volumeObject3D!.furthestVertexFromOrigin!
+      this.furthestVertexFromOrigin = this.volumeObject3D?.furthestVertexFromOrigin ?? 0
+      // this.furthestVertexFromOrigin = this.volumeObject3D!.furthestVertexFromOrigin!
     }
     if (this.meshes) {
       for (let i = 0; i < this.meshes.length; i++) {

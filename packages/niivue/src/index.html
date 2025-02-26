@@ -73,15 +73,7 @@
       <label id="shaders">Shaders: </label>
     </footer>
     <script type="module" async>
-      import {
-        Niivue,
-        NVImage,
-        NVMesh,
-        NVMeshLoaders,
-        SHOW_RENDER,
-        DRAG_MODE,
-        DRAG_MODE_PRIMARY
-      } from './niivue/index.ts'
+      import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
       async function addVolumeFromFiles(f) {
         console.log('attempting to open ', f[0].name)
         console.log('details', f[0])
@@ -206,8 +198,7 @@
         showMeasureUnits: true,
         measureTextColor: [0, 1, 0, 1],
         measureLineColor: [1, 0, 0, 1],
-        measureTextHeight: 0.04,
-        dragModePrimary: DRAG_MODE_PRIMARY.windowing
+        measureTextHeight: 0.04
       }
       var nv1 = new Niivue(defaults)
       nv1.attachToCanvas(gl1)
@@ -241,4 +232,3 @@
     </script>
   </body>
 </html>
-

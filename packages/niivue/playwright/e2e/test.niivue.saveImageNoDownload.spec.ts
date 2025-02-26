@@ -28,7 +28,7 @@ test('save image no download trigger', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
-    const img = nv.saveImage()
+    const img = await nv.saveImage()
     return (img as Uint8Array).length
   }, TEST_OPTIONS)
   expect(imgLength).toBe(expectedImgLength)
@@ -51,7 +51,7 @@ test('save image no download trigger partial options', async ({ page }) => {
       }
     ]
     await nv.loadVolumes(volumeList)
-    const img = nv.saveImage()
+    const img = await nv.saveImage()
     return (img as Uint8Array).length
   }, TEST_OPTIONS)
   expect(imgLength).toBe(expectedImgLength)

@@ -795,11 +795,10 @@ export class NVDocument {
     const dataText = JSON.stringify(data)
     const contentType = compress ? 'application/gzip' : 'application/json'
     let content: string | ArrayBuffer
-
     if (compress) {
       content = await NVUtilities.compressStringToArrayBuffer(dataText)
     } else {
-      content = JSON.stringify(data)
+      content = dataText
     }
 
     NVUtilities.download(content, fileName, contentType)
