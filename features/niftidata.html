@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Nifti Data</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <select id="sliceType">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>A+C+S+R</option>
+      </select>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js";
+
+  var drop = document.getElementById("sliceType");
+  drop.onchange = function () {
+    let st = parseInt(document.getElementById("sliceType").value);
+    nv1.setSliceType(st);
+  };
+
+  function handleIntensityChange(data) {
+    document.getElementById("intensity").innerHTML =
+      "&nbsp;&nbsp;" + data.string;
+    console.log(data);
+  }
+
+  async function loadAndSetVolume(url, colormap, opacity, index) {
+    // Create NVNiftiData instance from the URL
+    const niftiData = await niivue.NVNiftiData.create({ url, colormap, opacity });
+
+    // Convert NVNiftiData to NVImage
+    const nvImage = niftiData.toNVImage();
+
+    // Assign to the correct index in Niivue instance volumes
+    // nv1.volumes[index] = nvImage;
+    nv1.setVolume(nvImage, index)
+    
+
+    // Refresh Niivue canvas
+    nv1.updateGLVolume();
+  }
+
+  var nv1 = new niivue.Niivue({
+    dragAndDropEnabled: true,
+    onLocationChange: handleIntensityChange,
+  });
+
+  nv1.attachTo("gl1");
+
+  // Load and assign volumes
+  await loadAndSetVolume("../images/mni152.nii.gz", "gray", 1, 0);
+  // await loadAndSetVolume("../images/hippo.nii.gz", "red", 1, 1);
+
+  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+</script>

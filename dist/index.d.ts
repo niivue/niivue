@@ -1,5 +1,5 @@
 import { mat4, vec3, vec4, vec2 } from 'gl-matrix';
-import * as nifti from 'nifti-reader-js';
+import { NIFTI1, NIFTI2 } from 'nifti-reader-js';
 import { WebSocketSubject } from 'rxjs/webSocket';
 
 type ColorMap = {
@@ -208,7 +208,8 @@ declare enum ImageType {
     HEAD = 15,
     DCM_FOLDER = 16,
     SRC = 17,
-    FIB = 18
+    FIB = 18,
+    BMP = 19
 }
 type ImageFromUrlOptions = {
     url: string;
@@ -336,7 +337,7 @@ declare class NVImage {
     extentsMinOrtho?: number[];
     extentsMaxOrtho?: number[];
     mm2ortho?: mat4;
-    hdr: nifti.NIFTI1 | nifti.NIFTI2 | null;
+    hdr: NIFTI1 | NIFTI2 | null;
     imageType?: ImageType;
     img?: TypedVoxelArray;
     imaginary?: Float32Array;
@@ -386,6 +387,8 @@ declare class NVImage {
      * @param colormapLabel - TODO
      */
     constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number);
+    init(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, _pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number, imgRaw?: ArrayBuffer | null): void;
+    static new(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number): Promise<NVImage>;
     computeObliqueAngle(mtx44: mat4): number;
     float32V1asRGBA(inImg: Float32Array): Uint8Array;
     loadImgV1(isFlipX?: boolean, isFlipY?: boolean, isFlipZ?: boolean): boolean;
@@ -394,16 +397,18 @@ declare class NVImage {
     SetPixDimFromSForm(): void;
     readECAT(buffer: ArrayBuffer): ArrayBuffer;
     readV16(buffer: ArrayBuffer): ArrayBuffer;
+    imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData>;
+    readBMP(buffer: ArrayBuffer): Promise<Uint8Array>;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
-    readMGH(buffer: ArrayBuffer): ArrayBuffer;
-    readFIB(buffer: ArrayBuffer): [ArrayBuffer, Float32Array];
-    readSRC(buffer: ArrayBuffer): ArrayBuffer;
-    readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
-    readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
-    readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
-    readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): ArrayBuffer;
+    readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer>;
+    readFIB(buffer: ArrayBuffer): Promise<[ArrayBuffer, Float32Array]>;
+    readSRC(buffer: ArrayBuffer): Promise<ArrayBuffer>;
+    readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
+    readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
+    readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
+    readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     calculateRAS(): void;
-    hdr2RAS(nVolumes?: number): nifti.NIFTI1 | nifti.NIFTI2;
+    hdr2RAS(nVolumes?: number): NIFTI1 | NIFTI2;
     img2RAS(nVolume?: number): TypedVoxelArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     mm2vox(mm: number[], frac?: boolean): Float32Array | vec3;
@@ -427,15 +432,13 @@ declare class NVImage {
     calMinMax(vol?: number, isBorder?: boolean): number[];
     intensityRaw2Scaled(raw: number): number;
     intensityScaled2Raw(scaled: number): number;
-    saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Uint8Array;
-    saveToDisk(fnm?: string, drawing8?: Uint8Array | null): Uint8Array;
+    saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Promise<Uint8Array>;
+    saveToDisk(fnm?: string, drawing8?: Uint8Array | null): Promise<Uint8Array>;
     static fetchDicomData(url: string, headers?: Record<string, string>): Promise<Array<{
         name: string;
         data: ArrayBuffer;
     }>>;
     static fetchPartial(url: string, bytesToLoad: number, headers?: Record<string, string>): Promise<Response>;
-    static fetchImageData(url: string): Promise<ImageData>;
-    static png2nii(url: string): Promise<Uint8Array>;
     /**
      * factory function to load and return a new NVImage instance from a given URL
      * @returns  NVImage instance
@@ -458,7 +461,7 @@ declare class NVImage {
      */
     static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UINT8
     img?: Uint8Array): Uint8Array;
-    static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number): nifti.NIFTI1;
+    static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number): NIFTI1;
     /**
      * read a 3D slab of voxels from a volume
      * @param voxStart - first row, column and slice (RAS order) for selection
@@ -483,7 +486,7 @@ declare class NVImage {
      * @example
      * myImage = NVImage.loadFromBase64('SomeBase64String')
      */
-    static loadFromBase64({ base64, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, imageType, cal_minNeg, cal_maxNeg, colorbarVisible, colormapLabel }: ImageFromBase64): NVImage;
+    static loadFromBase64({ base64, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, imageType, cal_minNeg, cal_maxNeg, colorbarVisible, colormapLabel }: ImageFromBase64): Promise<NVImage>;
     /**
      * make a clone of a NVImage instance and return a new NVImage
      * @returns NVImage instance
@@ -1281,7 +1284,7 @@ declare class NVMesh {
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): Promise<void>;
     setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void;
     generatePosNormClr(pts: Float32Array, tris: Uint32Array, rgba255: Uint8Array): Float32Array;
-    static readMesh(buffer: ArrayBuffer, name: string, gl: WebGL2RenderingContext, opacity?: number, rgba255?: Uint8Array, visible?: boolean): NVMesh;
+    static readMesh(buffer: ArrayBuffer, name: string, gl: WebGL2RenderingContext, opacity?: number, rgba255?: Uint8Array, visible?: boolean): Promise<NVMesh>;
     static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
     /**
      * factory function to load and return a new NVMesh instance from a given URL
@@ -1298,35 +1301,6 @@ declare class NVMesh {
      * load and return a new NVMesh instance from a base64 encoded string
      */
     loadFromBase64({ base64, gl, name, opacity, rgba255, visible, layers }?: Partial<LoadFromBase64Params>): Promise<NVMesh>;
-    static readGII(buffer: ArrayBuffer): GII;
-    static readX3D(buffer: ArrayBuffer): X3D;
-    static readNII(buffer: ArrayBuffer, n_vert?: number): Uint8Array | Float32Array | Int32Array | Int16Array;
-    static readNII2(buffer: ArrayBuffer, n_vert?: number): Uint8Array | Float32Array | Int32Array | Int16Array;
-    static readMGH(buffer: ArrayBuffer): MGH;
-    static readSTL(buffer: ArrayBuffer): DefaultMeshType;
-    static readTxtSTL(buffer: ArrayBuffer): DefaultMeshType;
-    static readSRF(buffer: ArrayBuffer): DefaultMeshType;
-    static readFreeSurfer(buffer: ArrayBuffer): DefaultMeshType;
-    static readOBJ(buffer: ArrayBuffer): DefaultMeshType;
-    static readOFF(buffer: ArrayBuffer): DefaultMeshType;
-    static readGEO(buffer: ArrayBuffer, isFlipWinding?: boolean): DefaultMeshType;
-    static readICO(buffer: ArrayBuffer): DefaultMeshType;
-    static readPLY(buffer: ArrayBuffer): DefaultMeshType;
-    static readMZ3(buffer: ArrayBuffer, n_vert?: number): MZ3;
-    static readVTK(buffer: ArrayBuffer): VTK;
-    static readASC(buffer: ArrayBuffer): DefaultMeshType;
-    static readNV(buffer: ArrayBuffer): DefaultMeshType;
-    static readANNOT(buffer: ArrayBuffer, n_vert: number, isReadColortables?: boolean): ANNOT;
-    static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
-    static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
-    static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
-    static readTxtVTK(buffer: ArrayBuffer): VTK;
-    static readTRK(buffer: ArrayBuffer): TRK;
-    static readTCK(buffer: ArrayBuffer): TCK;
-    static readTSF(buffer: ArrayBuffer): Float32Array;
-    static readTT(buffer: ArrayBuffer): TT;
-    static readTRX(buffer: ArrayBuffer): TRX;
-    static readTRACT(buffer: ArrayBuffer): TRACT;
 }
 
 /**
@@ -1537,13 +1511,11 @@ declare class NVController {
 }
 
 type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
-/**
- * Namespace for utility functions
- * @ignore
- */
 declare class NVUtilities {
     static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string;
-    static readMatV4(buffer: ArrayBuffer): Record<string, TypedNumberArray>;
+    static decompress(data: Uint8Array): Promise<Uint8Array>;
+    static decompressToBuffer(data: Uint8Array): Promise<ArrayBuffer>;
+    static readMatV4(buffer: ArrayBuffer): Promise<Record<string, TypedNumberArray>>;
     static b64toUint8(base64: string): Uint8Array;
     static uint8tob64(bytes: Uint8Array): string;
     static download(content: string | ArrayBuffer, fileName: string, contentType: string): void;
@@ -1551,8 +1523,25 @@ declare class NVUtilities {
     static blobToBase64(blob: Blob): Promise<string>;
     static decompressBase64String(base64: string): Promise<string>;
     static compressToBase64String(string: string): Promise<string>;
+    /**
+     * Converts a string into a Uint8Array for use with compression/decompression methods (101arrowz/fflate: MIT License)
+     * @param str The string to encode
+     * @param latin1 Whether or not to interpret the data as Latin-1. This should
+     *               not need to be true unless decoding a binary string.
+     * @returns The string encoded in UTF-8/Latin-1 binary
+     */
+    static strToU8(str: string, latin1?: boolean): Uint8Array;
+    static compress(data: Uint8Array, format?: CompressionFormat): Promise<ArrayBuffer>;
     static compressStringToArrayBuffer(input: string): Promise<ArrayBuffer>;
     static isArrayBufferCompressed(buffer: ArrayBuffer): boolean;
+    /**
+     * Converts a Uint8Array to a string (101arrowz/fflate: MIT License)
+     * @param dat The data to decode to string
+     * @param latin1 Whether or not to interpret the data as Latin-1. This should
+     *               not need to be true unless encoding to binary string.
+     * @returns The original UTF-8/Latin-1 string
+     */
+    static strFromU8(dat: Uint8Array, latin1?: boolean): string;
     static decompressArrayBuffer(buffer: ArrayBuffer): Promise<string>;
     static arraysAreEqual(a: unknown[], b: unknown[]): boolean;
     /**
@@ -1582,14 +1571,14 @@ declare class NVUtilities {
  */
 declare class NVMeshLoaders {
     static readTRACT(buffer: ArrayBuffer): TRACT;
-    static readTT(buffer: ArrayBuffer): TT;
-    static readTRX(buffer: ArrayBuffer): TRX;
+    static readTT(buffer: ArrayBuffer): Promise<TT>;
+    static readTRX(buffer: ArrayBuffer): Promise<TRX>;
     static readTSF(buffer: ArrayBuffer, n_vert?: number): Float32Array;
     static readTCK(buffer: ArrayBuffer): TCK;
-    static readTRK(buffer: ArrayBuffer): TRK;
+    static readTRK(buffer: ArrayBuffer): Promise<TRK>;
     static readTxtVTK(buffer: ArrayBuffer): VTK;
-    static readLayer(name: string, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): NVMeshLayer | undefined;
-    static readSMP(buffer: ArrayBuffer, n_vert: number): Float32Array;
+    static readLayer(name: string, buffer: ArrayBuffer, nvmesh: NVMesh, opacity?: number, colormap?: string, colormapNegative?: string, useNegativeCmap?: boolean, cal_min?: number | null, cal_max?: number | null, outlineBorder?: number): Promise<NVMeshLayer | undefined>;
+    static readSMP(buffer: ArrayBuffer, n_vert: number): Promise<Float32Array>;
     static readSTC(buffer: ArrayBuffer, n_vert: number): Float32Array;
     static isCurv(buffer: ArrayBuffer): boolean;
     static readCURV(buffer: ArrayBuffer, n_vert: number): Float32Array;
@@ -1597,24 +1586,25 @@ declare class NVMeshLoaders {
     static readNV(buffer: ArrayBuffer): DefaultMeshType;
     static readASC(buffer: ArrayBuffer): DefaultMeshType;
     static readVTK(buffer: ArrayBuffer): VTK;
+    static readWRL(buffer: ArrayBuffer): DefaultMeshType;
     static readDFS(buffer: ArrayBuffer): DefaultMeshType;
-    static readMZ3(buffer: ArrayBuffer, n_vert?: number): MZ3;
+    static readMZ3(buffer: ArrayBuffer, n_vert?: number): Promise<MZ3>;
     static readPLY(buffer: ArrayBuffer): DefaultMeshType;
     static readICO(buffer: ArrayBuffer): DefaultMeshType;
     static readGEO(buffer: ArrayBuffer, isFlipWinding?: boolean): DefaultMeshType;
     static readOFF(buffer: ArrayBuffer): DefaultMeshType;
     static readOBJMNI(buffer: ArrayBuffer): DefaultMeshType;
-    static readOBJ(buffer: ArrayBuffer): DefaultMeshType;
+    static readOBJ(buffer: ArrayBuffer): Promise<DefaultMeshType>;
     static readFreeSurfer(buffer: ArrayBuffer): DefaultMeshType;
-    static readSRF(buffer: ArrayBuffer): DefaultMeshType;
+    static readSRF(buffer: ArrayBuffer): Promise<DefaultMeshType>;
     static readTxtSTL(buffer: ArrayBuffer): DefaultMeshType;
     static readSTL(buffer: ArrayBuffer): DefaultMeshType;
     static decimateLayerVertices(nVertLayer: number, nVertMesh: number): number;
-    static readNII2(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Int32Array | Float32Array | Int16Array | Uint8Array;
-    static readNII(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Float32Array | Uint8Array | Int32Array | Int16Array;
-    static readMGH(buffer: ArrayBuffer, n_vert?: number, isReadColortables?: boolean): MGH;
+    static readNII2(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Promise<Int32Array | Float32Array | Int16Array | Uint8Array>;
+    static readNII(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Promise<Float32Array | Uint8Array | Int32Array | Int16Array>;
+    static readMGH(buffer: ArrayBuffer, n_vert?: number, isReadColortables?: boolean): Promise<MGH>;
     static readX3D(buffer: ArrayBuffer): X3D;
-    static readGII(buffer: ArrayBuffer, n_vert?: number): GII;
+    static readGII(buffer: ArrayBuffer, n_vert?: number): Promise<GII>;
 }
 
 type Extents = {
@@ -1627,11 +1617,13 @@ type Extents = {
  */
 declare class NVMeshUtilities {
     static getClusterBoundaryU8(u8: Uint8Array, faces: number[] | Uint32Array): boolean[];
-    static createMZ3(vertices: Float32Array, indices: Uint32Array, compress?: boolean): ArrayBuffer;
+    static gzip(data: Uint8Array): Promise<Uint8Array>;
+    static createMZ3(vertices: Float32Array, indices: Uint32Array, compress?: boolean, colors?: Uint8Array | null): ArrayBuffer;
+    static createMZ3Async(vertices: Float32Array, indices: Uint32Array, compress?: boolean, colors?: Uint8Array | null): Promise<ArrayBuffer>;
     static createOBJ(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
     static createSTL(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
     static downloadArrayBuffer(buffer: ArrayBuffer, filename: string): void;
-    static saveMesh(vertices: Float32Array, indices: Uint32Array, filename?: string, compress?: boolean): ArrayBuffer;
+    static saveMesh(vertices: Float32Array, indices: Uint32Array, filename?: string, compress?: boolean): Promise<ArrayBuffer>;
     static getClusterBoundary(rgba8: Uint8Array, faces: number[] | Uint32Array): boolean[];
     static getExtents(pts: number[] | Float32Array): Extents;
     static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
@@ -2239,7 +2231,7 @@ declare class Niivue {
     useLoader(loader: unknown, fileExt: string, toExt: string): void;
     useDicomLoader(loader: DicomLoader): void;
     getDicomLoader(): DicomLoader;
-    dropListener(e: DragEvent): void;
+    dropListener(e: DragEvent): Promise<void>;
     /**
      * insert a gap between slices of a mutliplanar view.
      * @param pixels - spacing between tiles of multiplanar view
@@ -2393,7 +2385,7 @@ declare class Niivue {
      * @example niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
      * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
      */
-    saveImage(options?: SaveImageOptions): Uint8Array | boolean;
+    saveImage(options?: SaveImageOptions): Promise<boolean | Uint8Array>;
     getMeshIndexByID(id: string | number): number;
     /**
      * change property of mesh, tractogram or connectome
@@ -2683,7 +2675,7 @@ declare class Niivue {
      * @returns  Niivue instance
      * @see {@link https://niivue.github.io/niivue/features/document.load.html | live demo usage}
      */
-    loadDocument(document: NVDocument): this;
+    loadDocument(document: NVDocument): Promise<this>;
     /**
    * generates JavaScript to load the current scene as a document
    * @param canvasId - id of canvas NiiVue will be attached to

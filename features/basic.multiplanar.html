@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -28,37 +28,35 @@
 </html>
 <!-- <script type="module" async></script> -->
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
-
-  var drop = document.getElementById("sliceType");
+  import * as niivue from '../dist/index.js'
+  var drop = document.getElementById('sliceType')
   drop.onchange = function () {
-    let st = parseInt(document.getElementById("sliceType").value);
-    nv1.setSliceType(st);
+    let st = parseInt(document.getElementById('sliceType').value)
+    nv1.setSliceType(st)
   }
   function handleIntensityChange(data) {
-    document.getElementById("intensity").innerHTML =
-      "&nbsp;&nbsp;" + data.string;
-    console.log(data);
+    document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;' + data.string
+    console.log(data)
   }
   var volumeList1 = [
-    { 
-      url: "../images/mni152.nii.gz",
-      colormap: "gray",
+    {
+      url: '../images/mni152.nii.gz',
+      colormap: 'gray',
       visible: true,
       opacity: 1
-    }, 
+    },
     {
-      url: "../images/hippo.nii.gz", 
-      colormap: "red",
+      url: '../images/hippo.nii.gz',
+      colormap: 'red',
       visible: true,
       opacity: 1
     }
-  ];
+  ]
   var nv1 = new niivue.Niivue({
     dragAndDropEnabled: true,
-    onLocationChange: handleIntensityChange,
-  });
-  nv1.attachTo("gl1");
-  await nv1.loadVolumes(volumeList1);
-  nv1.setSliceType(nv1.sliceTypeMultiplanar);
+    onLocationChange: handleIntensityChange
+  })
+  nv1.attachTo('gl1')
+  await nv1.loadVolumes(volumeList1)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
 </script>

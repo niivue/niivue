@@ -25,12 +25,13 @@
         id="meshSlider"
       />
       <button id="reverse">Reverse Faces</button>
+      <label id="meshBtns">Meshes: </label>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
     <footer>
-      <label id="shaders">Shaders: </label>
+      <label id="shaderBtns">Shaders: </label>
     </footer>
   </body>
 </html>
@@ -65,14 +66,24 @@
   ]);
   nv1.setMeshShader(nv1.meshes[0].id, "Outline");
   nv1.setClipPlane([-0.1, 270, 0]);
-  let cmaps = nv1.meshShaderNames();
-  let cmapEl = document.getElementById("shaders");
-  for (let i = 0; i < cmaps.length; i++) {
+  let shaders = nv1.meshShaderNames();
+  for (let i = 0; i < shaders.length; i++) {
     let btn = document.createElement("button");
-    btn.innerHTML = cmaps[i];
+    btn.innerHTML = shaders[i];
     btn.onclick = function () {
-      nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+      nv1.setMeshShader(nv1.meshes[0].id, shaders[i]);
     };
-    cmapEl.appendChild(btn);
+    shaderBtns.appendChild(btn);
+  }
+  let meshes = ['aal.mz3', 'ColumnMajorOrder.gii', 'mni_format.obj.gz', 'simplify_brain.obj', 'lh.pial', 'sub-test02_left_hemisphere.srf.gz', 'tract.SLF1_R.tck','colby.trk', 'colby.trx', 'TR_S_R.tt.gz', 'tract.FAT_R.vtk', 'water-color.wrl', 'MolView-sticks-color_38.x3d'];
+  for (let i = 0; i < meshes.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = meshes[i];
+    btn.onclick = function () {
+      let mesh = "../images/" + meshes[i];
+      const volumeObj = { url: mesh };
+      nv1.loadMeshes([ volumeObj ])
+    }
+    meshBtns.appendChild(btn);
   }
 </script>

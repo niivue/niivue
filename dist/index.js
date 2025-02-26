@@ -4,14 +4,11 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
-var __commonJS = (cb, mod) => function __require2() {
+var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __export = (target, all) => {
@@ -35,6 +32,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 
 // ../../node_modules/array-equal/index.js
 var require_array_equal = __commonJS({
@@ -48,5160 +49,6 @@ var require_array_equal = __commonJS({
           return false;
       return true;
     };
-  }
-});
-
-// ../../node_modules/fflate/lib/node.cjs
-var require_node = __commonJS({
-  "../../node_modules/fflate/lib/node.cjs"(exports) {
-    "use strict";
-    var Worker2;
-    var workerAdd = ";var __w=require('worker_threads');__w.parentPort.on('message',function(m){onmessage({data:m})}),postMessage=function(m,t){__w.parentPort.postMessage(m,t)},close=process.exit;self=global";
-    try {
-      Worker2 = __require("worker_threads").Worker;
-    } catch (e) {
-    }
-    var node_worker_1 = {};
-    node_worker_1["default"] = Worker2 ? function(c, _, msg, transfer, cb) {
-      var done = false;
-      var w = new Worker2(c + workerAdd, { eval: true }).on("error", function(e) {
-        return cb(e, null);
-      }).on("message", function(m) {
-        return cb(null, m);
-      }).on("exit", function(c2) {
-        if (c2 && !done)
-          cb(new Error("exited with code " + c2), null);
-      });
-      w.postMessage(msg, transfer);
-      w.terminate = function() {
-        done = true;
-        return Worker2.prototype.terminate.call(w);
-      };
-      return w;
-    } : function(_, __, ___, ____, cb) {
-      setImmediate(function() {
-        return cb(new Error("async operations unsupported - update to Node 12+ (or Node 10-11 with the --experimental-worker CLI flag)"), null);
-      });
-      var NOP = function() {
-      };
-      return {
-        terminate: NOP,
-        postMessage: NOP
-      };
-    };
-    var u82 = Uint8Array;
-    var u162 = Uint16Array;
-    var i322 = Int32Array;
-    var fleb2 = new u82([
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      1,
-      1,
-      2,
-      2,
-      2,
-      2,
-      3,
-      3,
-      3,
-      3,
-      4,
-      4,
-      4,
-      4,
-      5,
-      5,
-      5,
-      5,
-      0,
-      /* unused */
-      0,
-      0,
-      /* impossible */
-      0
-    ]);
-    var fdeb2 = new u82([
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      2,
-      2,
-      3,
-      3,
-      4,
-      4,
-      5,
-      5,
-      6,
-      6,
-      7,
-      7,
-      8,
-      8,
-      9,
-      9,
-      10,
-      10,
-      11,
-      11,
-      12,
-      12,
-      13,
-      13,
-      /* unused */
-      0,
-      0
-    ]);
-    var clim2 = new u82([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
-    var freb2 = function(eb, start) {
-      var b = new u162(31);
-      for (var i2 = 0; i2 < 31; ++i2) {
-        b[i2] = start += 1 << eb[i2 - 1];
-      }
-      var r = new i322(b[30]);
-      for (var i2 = 1; i2 < 30; ++i2) {
-        for (var j = b[i2]; j < b[i2 + 1]; ++j) {
-          r[j] = j - b[i2] << 5 | i2;
-        }
-      }
-      return { b, r };
-    };
-    var _a2 = freb2(fleb2, 2);
-    var fl2 = _a2.b;
-    var revfl2 = _a2.r;
-    fl2[28] = 258, revfl2[258] = 28;
-    var _b2 = freb2(fdeb2, 0);
-    var fd2 = _b2.b;
-    var revfd2 = _b2.r;
-    var rev2 = new u162(32768);
-    for (i = 0; i < 32768; ++i) {
-      x = (i & 43690) >> 1 | (i & 21845) << 1;
-      x = (x & 52428) >> 2 | (x & 13107) << 2;
-      x = (x & 61680) >> 4 | (x & 3855) << 4;
-      rev2[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
-    }
-    var x;
-    var i;
-    var hMap2 = function(cd, mb, r) {
-      var s = cd.length;
-      var i2 = 0;
-      var l = new u162(mb);
-      for (; i2 < s; ++i2) {
-        if (cd[i2])
-          ++l[cd[i2] - 1];
-      }
-      var le = new u162(mb);
-      for (i2 = 1; i2 < mb; ++i2) {
-        le[i2] = le[i2 - 1] + l[i2 - 1] << 1;
-      }
-      var co;
-      if (r) {
-        co = new u162(1 << mb);
-        var rvb = 15 - mb;
-        for (i2 = 0; i2 < s; ++i2) {
-          if (cd[i2]) {
-            var sv = i2 << 4 | cd[i2];
-            var r_1 = mb - cd[i2];
-            var v = le[cd[i2] - 1]++ << r_1;
-            for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
-              co[rev2[v] >> rvb] = sv;
-            }
-          }
-        }
-      } else {
-        co = new u162(s);
-        for (i2 = 0; i2 < s; ++i2) {
-          if (cd[i2]) {
-            co[i2] = rev2[le[cd[i2] - 1]++] >> 15 - cd[i2];
-          }
-        }
-      }
-      return co;
-    };
-    var flt2 = new u82(288);
-    for (i = 0; i < 144; ++i)
-      flt2[i] = 8;
-    var i;
-    for (i = 144; i < 256; ++i)
-      flt2[i] = 9;
-    var i;
-    for (i = 256; i < 280; ++i)
-      flt2[i] = 7;
-    var i;
-    for (i = 280; i < 288; ++i)
-      flt2[i] = 8;
-    var i;
-    var fdt2 = new u82(32);
-    for (i = 0; i < 32; ++i)
-      fdt2[i] = 5;
-    var i;
-    var flm2 = /* @__PURE__ */ hMap2(flt2, 9, 0);
-    var flrm2 = /* @__PURE__ */ hMap2(flt2, 9, 1);
-    var fdm2 = /* @__PURE__ */ hMap2(fdt2, 5, 0);
-    var fdrm2 = /* @__PURE__ */ hMap2(fdt2, 5, 1);
-    var max5 = function(a) {
-      var m = a[0];
-      for (var i2 = 1; i2 < a.length; ++i2) {
-        if (a[i2] > m)
-          m = a[i2];
-      }
-      return m;
-    };
-    var bits2 = function(d, p, m) {
-      var o = p / 8 | 0;
-      return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
-    };
-    var bits162 = function(d, p) {
-      var o = p / 8 | 0;
-      return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
-    };
-    var shft2 = function(p) {
-      return (p + 7) / 8 | 0;
-    };
-    var slc2 = function(v, s, e) {
-      if (s == null || s < 0)
-        s = 0;
-      if (e == null || e > v.length)
-        e = v.length;
-      return new u82(v.subarray(s, e));
-    };
-    exports.FlateErrorCode = {
-      UnexpectedEOF: 0,
-      InvalidBlockType: 1,
-      InvalidLengthLiteral: 2,
-      InvalidDistance: 3,
-      StreamFinished: 4,
-      NoStreamHandler: 5,
-      InvalidHeader: 6,
-      NoCallback: 7,
-      InvalidUTF8: 8,
-      ExtraFieldTooLong: 9,
-      InvalidDate: 10,
-      FilenameTooLong: 11,
-      StreamFinishing: 12,
-      InvalidZipData: 13,
-      UnknownCompressionMethod: 14
-    };
-    var ec2 = [
-      "unexpected EOF",
-      "invalid block type",
-      "invalid length/literal",
-      "invalid distance",
-      "stream finished",
-      "no stream handler",
-      ,
-      "no callback",
-      "invalid UTF-8 data",
-      "extra field too long",
-      "date not in range 1980-2099",
-      "filename too long",
-      "stream finishing",
-      "invalid zip data"
-      // determined by unknown compression method
-    ];
-    var err2 = function(ind, msg, nt) {
-      var e = new Error(msg || ec2[ind]);
-      e.code = ind;
-      if (Error.captureStackTrace)
-        Error.captureStackTrace(e, err2);
-      if (!nt)
-        throw e;
-      return e;
-    };
-    var inflt2 = function(dat, st, buf, dict) {
-      var sl = dat.length, dl = dict ? dict.length : 0;
-      if (!sl || st.f && !st.l)
-        return buf || new u82(0);
-      var noBuf = !buf;
-      var resize = noBuf || st.i != 2;
-      var noSt = st.i;
-      if (noBuf)
-        buf = new u82(sl * 3);
-      var cbuf = function(l2) {
-        var bl = buf.length;
-        if (l2 > bl) {
-          var nbuf = new u82(Math.max(bl * 2, l2));
-          nbuf.set(buf);
-          buf = nbuf;
-        }
-      };
-      var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
-      var tbts = sl * 8;
-      do {
-        if (!lm) {
-          final = bits2(dat, pos, 1);
-          var type = bits2(dat, pos + 1, 3);
-          pos += 3;
-          if (!type) {
-            var s = shft2(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
-            if (t > sl) {
-              if (noSt)
-                err2(0);
-              break;
-            }
-            if (resize)
-              cbuf(bt + l);
-            buf.set(dat.subarray(s, t), bt);
-            st.b = bt += l, st.p = pos = t * 8, st.f = final;
-            continue;
-          } else if (type == 1)
-            lm = flrm2, dm = fdrm2, lbt = 9, dbt = 5;
-          else if (type == 2) {
-            var hLit = bits2(dat, pos, 31) + 257, hcLen = bits2(dat, pos + 10, 15) + 4;
-            var tl = hLit + bits2(dat, pos + 5, 31) + 1;
-            pos += 14;
-            var ldt = new u82(tl);
-            var clt = new u82(19);
-            for (var i2 = 0; i2 < hcLen; ++i2) {
-              clt[clim2[i2]] = bits2(dat, pos + i2 * 3, 7);
-            }
-            pos += hcLen * 3;
-            var clb = max5(clt), clbmsk = (1 << clb) - 1;
-            var clm = hMap2(clt, clb, 1);
-            for (var i2 = 0; i2 < tl; ) {
-              var r = clm[bits2(dat, pos, clbmsk)];
-              pos += r & 15;
-              var s = r >> 4;
-              if (s < 16) {
-                ldt[i2++] = s;
-              } else {
-                var c = 0, n = 0;
-                if (s == 16)
-                  n = 3 + bits2(dat, pos, 3), pos += 2, c = ldt[i2 - 1];
-                else if (s == 17)
-                  n = 3 + bits2(dat, pos, 7), pos += 3;
-                else if (s == 18)
-                  n = 11 + bits2(dat, pos, 127), pos += 7;
-                while (n--)
-                  ldt[i2++] = c;
-              }
-            }
-            var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
-            lbt = max5(lt);
-            dbt = max5(dt);
-            lm = hMap2(lt, lbt, 1);
-            dm = hMap2(dt, dbt, 1);
-          } else
-            err2(1);
-          if (pos > tbts) {
-            if (noSt)
-              err2(0);
-            break;
-          }
-        }
-        if (resize)
-          cbuf(bt + 131072);
-        var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
-        var lpos = pos;
-        for (; ; lpos = pos) {
-          var c = lm[bits162(dat, pos) & lms], sym = c >> 4;
-          pos += c & 15;
-          if (pos > tbts) {
-            if (noSt)
-              err2(0);
-            break;
-          }
-          if (!c)
-            err2(2);
-          if (sym < 256)
-            buf[bt++] = sym;
-          else if (sym == 256) {
-            lpos = pos, lm = null;
-            break;
-          } else {
-            var add6 = sym - 254;
-            if (sym > 264) {
-              var i2 = sym - 257, b = fleb2[i2];
-              add6 = bits2(dat, pos, (1 << b) - 1) + fl2[i2];
-              pos += b;
-            }
-            var d = dm[bits162(dat, pos) & dms], dsym = d >> 4;
-            if (!d)
-              err2(3);
-            pos += d & 15;
-            var dt = fd2[dsym];
-            if (dsym > 3) {
-              var b = fdeb2[dsym];
-              dt += bits162(dat, pos) & (1 << b) - 1, pos += b;
-            }
-            if (pos > tbts) {
-              if (noSt)
-                err2(0);
-              break;
-            }
-            if (resize)
-              cbuf(bt + 131072);
-            var end = bt + add6;
-            if (bt < dt) {
-              var shift = dl - dt, dend = Math.min(dt, end);
-              if (shift + bt < 0)
-                err2(3);
-              for (; bt < dend; ++bt)
-                buf[bt] = dict[shift + bt];
-            }
-            for (; bt < end; ++bt)
-              buf[bt] = buf[bt - dt];
-          }
-        }
-        st.l = lm, st.p = lpos, st.b = bt, st.f = final;
-        if (lm)
-          final = 1, st.m = lbt, st.d = dm, st.n = dbt;
-      } while (!final);
-      return bt != buf.length && noBuf ? slc2(buf, 0, bt) : buf.subarray(0, bt);
-    };
-    var wbits2 = function(d, p, v) {
-      v <<= p & 7;
-      var o = p / 8 | 0;
-      d[o] |= v;
-      d[o + 1] |= v >> 8;
-    };
-    var wbits162 = function(d, p, v) {
-      v <<= p & 7;
-      var o = p / 8 | 0;
-      d[o] |= v;
-      d[o + 1] |= v >> 8;
-      d[o + 2] |= v >> 16;
-    };
-    var hTree2 = function(d, mb) {
-      var t = [];
-      for (var i2 = 0; i2 < d.length; ++i2) {
-        if (d[i2])
-          t.push({ s: i2, f: d[i2] });
-      }
-      var s = t.length;
-      var t2 = t.slice();
-      if (!s)
-        return { t: et2, l: 0 };
-      if (s == 1) {
-        var v = new u82(t[0].s + 1);
-        v[t[0].s] = 1;
-        return { t: v, l: 1 };
-      }
-      t.sort(function(a, b) {
-        return a.f - b.f;
-      });
-      t.push({ s: -1, f: 25001 });
-      var l = t[0], r = t[1], i0 = 0, i1 = 1, i22 = 2;
-      t[0] = { s: -1, f: l.f + r.f, l, r };
-      while (i1 != s - 1) {
-        l = t[t[i0].f < t[i22].f ? i0++ : i22++];
-        r = t[i0 != i1 && t[i0].f < t[i22].f ? i0++ : i22++];
-        t[i1++] = { s: -1, f: l.f + r.f, l, r };
-      }
-      var maxSym = t2[0].s;
-      for (var i2 = 1; i2 < s; ++i2) {
-        if (t2[i2].s > maxSym)
-          maxSym = t2[i2].s;
-      }
-      var tr = new u162(maxSym + 1);
-      var mbt = ln2(t[i1 - 1], tr, 0);
-      if (mbt > mb) {
-        var i2 = 0, dt = 0;
-        var lft = mbt - mb, cst = 1 << lft;
-        t2.sort(function(a, b) {
-          return tr[b.s] - tr[a.s] || a.f - b.f;
-        });
-        for (; i2 < s; ++i2) {
-          var i2_1 = t2[i2].s;
-          if (tr[i2_1] > mb) {
-            dt += cst - (1 << mbt - tr[i2_1]);
-            tr[i2_1] = mb;
-          } else
-            break;
-        }
-        dt >>= lft;
-        while (dt > 0) {
-          var i2_2 = t2[i2].s;
-          if (tr[i2_2] < mb)
-            dt -= 1 << mb - tr[i2_2]++ - 1;
-          else
-            ++i2;
-        }
-        for (; i2 >= 0 && dt; --i2) {
-          var i2_3 = t2[i2].s;
-          if (tr[i2_3] == mb) {
-            --tr[i2_3];
-            ++dt;
-          }
-        }
-        mbt = mb;
-      }
-      return { t: new u82(tr), l: mbt };
-    };
-    var ln2 = function(n, l, d) {
-      return n.s == -1 ? Math.max(ln2(n.l, l, d + 1), ln2(n.r, l, d + 1)) : l[n.s] = d;
-    };
-    var lc2 = function(c) {
-      var s = c.length;
-      while (s && !c[--s])
-        ;
-      var cl = new u162(++s);
-      var cli = 0, cln = c[0], cls = 1;
-      var w = function(v) {
-        cl[cli++] = v;
-      };
-      for (var i2 = 1; i2 <= s; ++i2) {
-        if (c[i2] == cln && i2 != s)
-          ++cls;
-        else {
-          if (!cln && cls > 2) {
-            for (; cls > 138; cls -= 138)
-              w(32754);
-            if (cls > 2) {
-              w(cls > 10 ? cls - 11 << 5 | 28690 : cls - 3 << 5 | 12305);
-              cls = 0;
-            }
-          } else if (cls > 3) {
-            w(cln), --cls;
-            for (; cls > 6; cls -= 6)
-              w(8304);
-            if (cls > 2)
-              w(cls - 3 << 5 | 8208), cls = 0;
-          }
-          while (cls--)
-            w(cln);
-          cls = 1;
-          cln = c[i2];
-        }
-      }
-      return { c: cl.subarray(0, cli), n: s };
-    };
-    var clen2 = function(cf, cl) {
-      var l = 0;
-      for (var i2 = 0; i2 < cl.length; ++i2)
-        l += cf[i2] * cl[i2];
-      return l;
-    };
-    var wfblk2 = function(out, pos, dat) {
-      var s = dat.length;
-      var o = shft2(pos + 2);
-      out[o] = s & 255;
-      out[o + 1] = s >> 8;
-      out[o + 2] = out[o] ^ 255;
-      out[o + 3] = out[o + 1] ^ 255;
-      for (var i2 = 0; i2 < s; ++i2)
-        out[o + i2 + 4] = dat[i2];
-      return (o + 4 + s) * 8;
-    };
-    var wblk2 = function(dat, out, final, syms, lf, df, eb, li, bs, bl, p) {
-      wbits2(out, p++, final);
-      ++lf[256];
-      var _a3 = hTree2(lf, 15), dlt = _a3.t, mlb = _a3.l;
-      var _b3 = hTree2(df, 15), ddt = _b3.t, mdb = _b3.l;
-      var _c = lc2(dlt), lclt = _c.c, nlc = _c.n;
-      var _d = lc2(ddt), lcdt = _d.c, ndc = _d.n;
-      var lcfreq = new u162(19);
-      for (var i2 = 0; i2 < lclt.length; ++i2)
-        ++lcfreq[lclt[i2] & 31];
-      for (var i2 = 0; i2 < lcdt.length; ++i2)
-        ++lcfreq[lcdt[i2] & 31];
-      var _e = hTree2(lcfreq, 7), lct = _e.t, mlcb = _e.l;
-      var nlcc = 19;
-      for (; nlcc > 4 && !lct[clim2[nlcc - 1]]; --nlcc)
-        ;
-      var flen = bl + 5 << 3;
-      var ftlen = clen2(lf, flt2) + clen2(df, fdt2) + eb;
-      var dtlen = clen2(lf, dlt) + clen2(df, ddt) + eb + 14 + 3 * nlcc + clen2(lcfreq, lct) + 2 * lcfreq[16] + 3 * lcfreq[17] + 7 * lcfreq[18];
-      if (bs >= 0 && flen <= ftlen && flen <= dtlen)
-        return wfblk2(out, p, dat.subarray(bs, bs + bl));
-      var lm, ll, dm, dl;
-      wbits2(out, p, 1 + (dtlen < ftlen)), p += 2;
-      if (dtlen < ftlen) {
-        lm = hMap2(dlt, mlb, 0), ll = dlt, dm = hMap2(ddt, mdb, 0), dl = ddt;
-        var llm = hMap2(lct, mlcb, 0);
-        wbits2(out, p, nlc - 257);
-        wbits2(out, p + 5, ndc - 1);
-        wbits2(out, p + 10, nlcc - 4);
-        p += 14;
-        for (var i2 = 0; i2 < nlcc; ++i2)
-          wbits2(out, p + 3 * i2, lct[clim2[i2]]);
-        p += 3 * nlcc;
-        var lcts = [lclt, lcdt];
-        for (var it = 0; it < 2; ++it) {
-          var clct = lcts[it];
-          for (var i2 = 0; i2 < clct.length; ++i2) {
-            var len4 = clct[i2] & 31;
-            wbits2(out, p, llm[len4]), p += lct[len4];
-            if (len4 > 15)
-              wbits2(out, p, clct[i2] >> 5 & 127), p += clct[i2] >> 12;
-          }
-        }
-      } else {
-        lm = flm2, ll = flt2, dm = fdm2, dl = fdt2;
-      }
-      for (var i2 = 0; i2 < li; ++i2) {
-        var sym = syms[i2];
-        if (sym > 255) {
-          var len4 = sym >> 18 & 31;
-          wbits162(out, p, lm[len4 + 257]), p += ll[len4 + 257];
-          if (len4 > 7)
-            wbits2(out, p, sym >> 23 & 31), p += fleb2[len4];
-          var dst = sym & 31;
-          wbits162(out, p, dm[dst]), p += dl[dst];
-          if (dst > 3)
-            wbits162(out, p, sym >> 5 & 8191), p += fdeb2[dst];
-        } else {
-          wbits162(out, p, lm[sym]), p += ll[sym];
-        }
-      }
-      wbits162(out, p, lm[256]);
-      return p + ll[256];
-    };
-    var deo2 = /* @__PURE__ */ new i322([65540, 131080, 131088, 131104, 262176, 1048704, 1048832, 2114560, 2117632]);
-    var et2 = /* @__PURE__ */ new u82(0);
-    var dflt2 = function(dat, lvl, plvl, pre, post, st) {
-      var s = st.z || dat.length;
-      var o = new u82(pre + s + 5 * (1 + Math.ceil(s / 7e3)) + post);
-      var w = o.subarray(pre, o.length - post);
-      var lst = st.l;
-      var pos = (st.r || 0) & 7;
-      if (lvl) {
-        if (pos)
-          w[0] = st.r >> 3;
-        var opt = deo2[lvl - 1];
-        var n = opt >> 13, c = opt & 8191;
-        var msk_1 = (1 << plvl) - 1;
-        var prev = st.p || new u162(32768), head = st.h || new u162(msk_1 + 1);
-        var bs1_1 = Math.ceil(plvl / 3), bs2_1 = 2 * bs1_1;
-        var hsh = function(i3) {
-          return (dat[i3] ^ dat[i3 + 1] << bs1_1 ^ dat[i3 + 2] << bs2_1) & msk_1;
-        };
-        var syms = new i322(25e3);
-        var lf = new u162(288), df = new u162(32);
-        var lc_1 = 0, eb = 0, i2 = st.i || 0, li = 0, wi = st.w || 0, bs = 0;
-        for (; i2 + 2 < s; ++i2) {
-          var hv = hsh(i2);
-          var imod = i2 & 32767, pimod = head[hv];
-          prev[imod] = pimod;
-          head[hv] = imod;
-          if (wi <= i2) {
-            var rem = s - i2;
-            if ((lc_1 > 7e3 || li > 24576) && (rem > 423 || !lst)) {
-              pos = wblk2(dat, w, 0, syms, lf, df, eb, li, bs, i2 - bs, pos);
-              li = lc_1 = eb = 0, bs = i2;
-              for (var j = 0; j < 286; ++j)
-                lf[j] = 0;
-              for (var j = 0; j < 30; ++j)
-                df[j] = 0;
-            }
-            var l = 2, d = 0, ch_1 = c, dif = imod - pimod & 32767;
-            if (rem > 2 && hv == hsh(i2 - dif)) {
-              var maxn = Math.min(n, rem) - 1;
-              var maxd = Math.min(32767, i2);
-              var ml = Math.min(258, rem);
-              while (dif <= maxd && --ch_1 && imod != pimod) {
-                if (dat[i2 + l] == dat[i2 + l - dif]) {
-                  var nl = 0;
-                  for (; nl < ml && dat[i2 + nl] == dat[i2 + nl - dif]; ++nl)
-                    ;
-                  if (nl > l) {
-                    l = nl, d = dif;
-                    if (nl > maxn)
-                      break;
-                    var mmd = Math.min(dif, nl - 2);
-                    var md = 0;
-                    for (var j = 0; j < mmd; ++j) {
-                      var ti = i2 - dif + j & 32767;
-                      var pti = prev[ti];
-                      var cd = ti - pti & 32767;
-                      if (cd > md)
-                        md = cd, pimod = ti;
-                    }
-                  }
-                }
-                imod = pimod, pimod = prev[imod];
-                dif += imod - pimod & 32767;
-              }
-            }
-            if (d) {
-              syms[li++] = 268435456 | revfl2[l] << 18 | revfd2[d];
-              var lin = revfl2[l] & 31, din = revfd2[d] & 31;
-              eb += fleb2[lin] + fdeb2[din];
-              ++lf[257 + lin];
-              ++df[din];
-              wi = i2 + l;
-              ++lc_1;
-            } else {
-              syms[li++] = dat[i2];
-              ++lf[dat[i2]];
-            }
-          }
-        }
-        for (i2 = Math.max(i2, wi); i2 < s; ++i2) {
-          syms[li++] = dat[i2];
-          ++lf[dat[i2]];
-        }
-        pos = wblk2(dat, w, lst, syms, lf, df, eb, li, bs, i2 - bs, pos);
-        if (!lst) {
-          st.r = pos & 7 | w[pos / 8 | 0] << 3;
-          pos -= 7;
-          st.h = head, st.p = prev, st.i = i2, st.w = wi;
-        }
-      } else {
-        for (var i2 = st.w || 0; i2 < s + lst; i2 += 65535) {
-          var e = i2 + 65535;
-          if (e >= s) {
-            w[pos / 8 | 0] = lst;
-            e = s;
-          }
-          pos = wfblk2(w, pos + 1, dat.subarray(i2, e));
-        }
-        st.i = s;
-      }
-      return slc2(o, 0, pre + shft2(pos) + post);
-    };
-    var crct2 = /* @__PURE__ */ function() {
-      var t = new Int32Array(256);
-      for (var i2 = 0; i2 < 256; ++i2) {
-        var c = i2, k = 9;
-        while (--k)
-          c = (c & 1 && -306674912) ^ c >>> 1;
-        t[i2] = c;
-      }
-      return t;
-    }();
-    var crc2 = function() {
-      var c = -1;
-      return {
-        p: function(d) {
-          var cr = c;
-          for (var i2 = 0; i2 < d.length; ++i2)
-            cr = crct2[cr & 255 ^ d[i2]] ^ cr >>> 8;
-          c = cr;
-        },
-        d: function() {
-          return ~c;
-        }
-      };
-    };
-    var adler = function() {
-      var a = 1, b = 0;
-      return {
-        p: function(d) {
-          var n = a, m = b;
-          var l = d.length | 0;
-          for (var i2 = 0; i2 != l; ) {
-            var e = Math.min(i2 + 2655, l);
-            for (; i2 < e; ++i2)
-              m += n += d[i2];
-            n = (n & 65535) + 15 * (n >> 16), m = (m & 65535) + 15 * (m >> 16);
-          }
-          a = n, b = m;
-        },
-        d: function() {
-          a %= 65521, b %= 65521;
-          return (a & 255) << 24 | (a & 65280) << 8 | (b & 255) << 8 | b >> 8;
-        }
-      };
-    };
-    var dopt2 = function(dat, opt, pre, post, st) {
-      if (!st) {
-        st = { l: 1 };
-        if (opt.dictionary) {
-          var dict = opt.dictionary.subarray(-32768);
-          var newDat = new u82(dict.length + dat.length);
-          newDat.set(dict);
-          newDat.set(dat, dict.length);
-          dat = newDat;
-          st.w = dict.length;
-        }
-      }
-      return dflt2(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? st.l ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 20 : 12 + opt.mem, pre, post, st);
-    };
-    var mrg2 = function(a, b) {
-      var o = {};
-      for (var k in a)
-        o[k] = a[k];
-      for (var k in b)
-        o[k] = b[k];
-      return o;
-    };
-    var wcln2 = function(fn, fnStr, td3) {
-      var dt = fn();
-      var st = fn.toString();
-      var ks = st.slice(st.indexOf("[") + 1, st.lastIndexOf("]")).replace(/\s+/g, "").split(",");
-      for (var i2 = 0; i2 < dt.length; ++i2) {
-        var v = dt[i2], k = ks[i2];
-        if (typeof v == "function") {
-          fnStr += ";" + k + "=";
-          var st_1 = v.toString();
-          if (v.prototype) {
-            if (st_1.indexOf("[native code]") != -1) {
-              var spInd = st_1.indexOf(" ", 8) + 1;
-              fnStr += st_1.slice(spInd, st_1.indexOf("(", spInd));
-            } else {
-              fnStr += st_1;
-              for (var t in v.prototype)
-                fnStr += ";" + k + ".prototype." + t + "=" + v.prototype[t].toString();
-            }
-          } else
-            fnStr += st_1;
-        } else
-          td3[k] = v;
-      }
-      return fnStr;
-    };
-    var ch3 = [];
-    var cbfs2 = function(v) {
-      var tl = [];
-      for (var k in v) {
-        if (v[k].buffer) {
-          tl.push((v[k] = new v[k].constructor(v[k])).buffer);
-        }
-      }
-      return tl;
-    };
-    var wrkr2 = function(fns, init, id, cb) {
-      if (!ch3[id]) {
-        var fnStr = "", td_1 = {}, m = fns.length - 1;
-        for (var i2 = 0; i2 < m; ++i2)
-          fnStr = wcln2(fns[i2], fnStr, td_1);
-        ch3[id] = { c: wcln2(fns[m], fnStr, td_1), e: td_1 };
-      }
-      var td3 = mrg2({}, ch3[id].e);
-      return (0, node_worker_1.default)(ch3[id].c + ";onmessage=function(e){for(var k in e.data)self[k]=e.data[k];onmessage=" + init.toString() + "}", id, td3, cbfs2(td3), cb);
-    };
-    var bInflt2 = function() {
-      return [u82, u162, i322, fleb2, fdeb2, clim2, fl2, fd2, flrm2, fdrm2, rev2, ec2, hMap2, max5, bits2, bits162, shft2, slc2, err2, inflt2, inflateSync2, pbf2, gopt2];
-    };
-    var bDflt2 = function() {
-      return [u82, u162, i322, fleb2, fdeb2, clim2, revfl2, revfd2, flm2, flt2, fdm2, fdt2, rev2, deo2, et2, hMap2, wbits2, wbits162, hTree2, ln2, lc2, clen2, wfblk2, wblk2, shft2, slc2, dflt2, dopt2, deflateSync2, pbf2];
-    };
-    var gze2 = function() {
-      return [gzh2, gzhl2, wbytes2, crc2, crct2];
-    };
-    var guze2 = function() {
-      return [gzs2, gzl2];
-    };
-    var zle = function() {
-      return [zlh, wbytes2, adler];
-    };
-    var zule2 = function() {
-      return [zls2];
-    };
-    var pbf2 = function(msg) {
-      return postMessage(msg, [msg.buffer]);
-    };
-    var gopt2 = function(o) {
-      return o && {
-        out: o.size && new u82(o.size),
-        dictionary: o.dictionary
-      };
-    };
-    var cbify2 = function(dat, opts, fns, init, id, cb) {
-      var w = wrkr2(fns, init, id, function(err3, dat2) {
-        w.terminate();
-        cb(err3, dat2);
-      });
-      w.postMessage([dat, opts], opts.consume ? [dat.buffer] : []);
-      return function() {
-        w.terminate();
-      };
-    };
-    var astrm = function(strm) {
-      strm.ondata = function(dat, final) {
-        return postMessage([dat, final], [dat.buffer]);
-      };
-      return function(ev) {
-        if (ev.data.length) {
-          strm.push(ev.data[0], ev.data[1]);
-          postMessage([ev.data[0].length]);
-        } else
-          strm.flush();
-      };
-    };
-    var astrmify = function(fns, strm, opts, init, id, flush, ext) {
-      var t;
-      var w = wrkr2(fns, init, id, function(err3, dat) {
-        if (err3)
-          w.terminate(), strm.ondata.call(strm, err3);
-        else if (!Array.isArray(dat))
-          ext(dat);
-        else if (dat.length == 1) {
-          strm.queuedSize -= dat[0];
-          if (strm.ondrain)
-            strm.ondrain(dat[0]);
-        } else {
-          if (dat[1])
-            w.terminate();
-          strm.ondata.call(strm, err3, dat[0], dat[1]);
-        }
-      });
-      w.postMessage(opts);
-      strm.queuedSize = 0;
-      strm.push = function(d, f) {
-        if (!strm.ondata)
-          err2(5);
-        if (t)
-          strm.ondata(err2(4, 0, 1), null, !!f);
-        strm.queuedSize += d.length;
-        w.postMessage([d, t = f], [d.buffer]);
-      };
-      strm.terminate = function() {
-        w.terminate();
-      };
-      if (flush) {
-        strm.flush = function() {
-          w.postMessage([]);
-        };
-      }
-    };
-    var b22 = function(d, b) {
-      return d[b] | d[b + 1] << 8;
-    };
-    var b42 = function(d, b) {
-      return (d[b] | d[b + 1] << 8 | d[b + 2] << 16 | d[b + 3] << 24) >>> 0;
-    };
-    var b82 = function(d, b) {
-      return b42(d, b) + b42(d, b + 4) * 4294967296;
-    };
-    var wbytes2 = function(d, b, v) {
-      for (; v; ++b)
-        d[b] = v, v >>>= 8;
-    };
-    var gzh2 = function(c, o) {
-      var fn = o.filename;
-      c[0] = 31, c[1] = 139, c[2] = 8, c[8] = o.level < 2 ? 4 : o.level == 9 ? 2 : 0, c[9] = 3;
-      if (o.mtime != 0)
-        wbytes2(c, 4, Math.floor(new Date(o.mtime || Date.now()) / 1e3));
-      if (fn) {
-        c[3] = 8;
-        for (var i2 = 0; i2 <= fn.length; ++i2)
-          c[i2 + 10] = fn.charCodeAt(i2);
-      }
-    };
-    var gzs2 = function(d) {
-      if (d[0] != 31 || d[1] != 139 || d[2] != 8)
-        err2(6, "invalid gzip data");
-      var flg = d[3];
-      var st = 10;
-      if (flg & 4)
-        st += (d[10] | d[11] << 8) + 2;
-      for (var zs = (flg >> 3 & 1) + (flg >> 4 & 1); zs > 0; zs -= !d[st++])
-        ;
-      return st + (flg & 2);
-    };
-    var gzl2 = function(d) {
-      var l = d.length;
-      return (d[l - 4] | d[l - 3] << 8 | d[l - 2] << 16 | d[l - 1] << 24) >>> 0;
-    };
-    var gzhl2 = function(o) {
-      return 10 + (o.filename ? o.filename.length + 1 : 0);
-    };
-    var zlh = function(c, o) {
-      var lv = o.level, fl3 = lv == 0 ? 0 : lv < 6 ? 1 : lv == 9 ? 3 : 2;
-      c[0] = 120, c[1] = fl3 << 6 | (o.dictionary && 32);
-      c[1] |= 31 - (c[0] << 8 | c[1]) % 31;
-      if (o.dictionary) {
-        var h = adler();
-        h.p(o.dictionary);
-        wbytes2(c, 2, h.d());
-      }
-    };
-    var zls2 = function(d, dict) {
-      if ((d[0] & 15) != 8 || d[0] >> 4 > 7 || (d[0] << 8 | d[1]) % 31)
-        err2(6, "invalid zlib data");
-      if ((d[1] >> 5 & 1) == +!dict)
-        err2(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
-      return (d[1] >> 3 & 4) + 2;
-    };
-    function StrmOpt(opts, cb) {
-      if (typeof opts == "function")
-        cb = opts, opts = {};
-      this.ondata = cb;
-      return opts;
-    }
-    var Deflate = /* @__PURE__ */ function() {
-      function Deflate2(opts, cb) {
-        if (typeof opts == "function")
-          cb = opts, opts = {};
-        this.ondata = cb;
-        this.o = opts || {};
-        this.s = { l: 0, i: 32768, w: 32768, z: 32768 };
-        this.b = new u82(98304);
-        if (this.o.dictionary) {
-          var dict = this.o.dictionary.subarray(-32768);
-          this.b.set(dict, 32768 - dict.length);
-          this.s.i = 32768 - dict.length;
-        }
-      }
-      Deflate2.prototype.p = function(c, f) {
-        this.ondata(dopt2(c, this.o, 0, 0, this.s), f);
-      };
-      Deflate2.prototype.push = function(chunk, final) {
-        if (!this.ondata)
-          err2(5);
-        if (this.s.l)
-          err2(4);
-        var endLen = chunk.length + this.s.z;
-        if (endLen > this.b.length) {
-          if (endLen > 2 * this.b.length - 32768) {
-            var newBuf = new u82(endLen & -32768);
-            newBuf.set(this.b.subarray(0, this.s.z));
-            this.b = newBuf;
-          }
-          var split = this.b.length - this.s.z;
-          this.b.set(chunk.subarray(0, split), this.s.z);
-          this.s.z = this.b.length;
-          this.p(this.b, false);
-          this.b.set(this.b.subarray(-32768));
-          this.b.set(chunk.subarray(split), 32768);
-          this.s.z = chunk.length - split + 32768;
-          this.s.i = 32766, this.s.w = 32768;
-        } else {
-          this.b.set(chunk, this.s.z);
-          this.s.z += chunk.length;
-        }
-        this.s.l = final & 1;
-        if (this.s.z > this.s.w + 8191 || final) {
-          this.p(this.b, final || false);
-          this.s.w = this.s.i, this.s.i -= 2;
-        }
-      };
-      Deflate2.prototype.flush = function() {
-        if (!this.ondata)
-          err2(5);
-        if (this.s.l)
-          err2(4);
-        this.p(this.b, false);
-        this.s.w = this.s.i, this.s.i -= 2;
-      };
-      return Deflate2;
-    }();
-    exports.Deflate = Deflate;
-    var AsyncDeflate = /* @__PURE__ */ function() {
-      function AsyncDeflate2(opts, cb) {
-        astrmify([
-          bDflt2,
-          function() {
-            return [astrm, Deflate];
-          }
-        ], this, StrmOpt.call(this, opts, cb), function(ev) {
-          var strm = new Deflate(ev.data);
-          onmessage = astrm(strm);
-        }, 6, 1);
-      }
-      return AsyncDeflate2;
-    }();
-    exports.AsyncDeflate = AsyncDeflate;
-    function deflate(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return cbify2(data, opts, [
-        bDflt2
-      ], function(ev) {
-        return pbf2(deflateSync2(ev.data[0], ev.data[1]));
-      }, 0, cb);
-    }
-    exports.deflate = deflate;
-    function deflateSync2(data, opts) {
-      return dopt2(data, opts || {}, 0, 0);
-    }
-    exports.deflateSync = deflateSync2;
-    var Inflate = /* @__PURE__ */ function() {
-      function Inflate2(opts, cb) {
-        if (typeof opts == "function")
-          cb = opts, opts = {};
-        this.ondata = cb;
-        var dict = opts && opts.dictionary && opts.dictionary.subarray(-32768);
-        this.s = { i: 0, b: dict ? dict.length : 0 };
-        this.o = new u82(32768);
-        this.p = new u82(0);
-        if (dict)
-          this.o.set(dict);
-      }
-      Inflate2.prototype.e = function(c) {
-        if (!this.ondata)
-          err2(5);
-        if (this.d)
-          err2(4);
-        if (!this.p.length)
-          this.p = c;
-        else if (c.length) {
-          var n = new u82(this.p.length + c.length);
-          n.set(this.p), n.set(c, this.p.length), this.p = n;
-        }
-      };
-      Inflate2.prototype.c = function(final) {
-        this.s.i = +(this.d = final || false);
-        var bts = this.s.b;
-        var dt = inflt2(this.p, this.s, this.o);
-        this.ondata(slc2(dt, bts, this.s.b), this.d);
-        this.o = slc2(dt, this.s.b - 32768), this.s.b = this.o.length;
-        this.p = slc2(this.p, this.s.p / 8 | 0), this.s.p &= 7;
-      };
-      Inflate2.prototype.push = function(chunk, final) {
-        this.e(chunk), this.c(final);
-      };
-      return Inflate2;
-    }();
-    exports.Inflate = Inflate;
-    var AsyncInflate = /* @__PURE__ */ function() {
-      function AsyncInflate2(opts, cb) {
-        astrmify([
-          bInflt2,
-          function() {
-            return [astrm, Inflate];
-          }
-        ], this, StrmOpt.call(this, opts, cb), function(ev) {
-          var strm = new Inflate(ev.data);
-          onmessage = astrm(strm);
-        }, 7, 0);
-      }
-      return AsyncInflate2;
-    }();
-    exports.AsyncInflate = AsyncInflate;
-    function inflate2(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return cbify2(data, opts, [
-        bInflt2
-      ], function(ev) {
-        return pbf2(inflateSync2(ev.data[0], gopt2(ev.data[1])));
-      }, 1, cb);
-    }
-    exports.inflate = inflate2;
-    function inflateSync2(data, opts) {
-      return inflt2(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
-    }
-    exports.inflateSync = inflateSync2;
-    var Gzip = /* @__PURE__ */ function() {
-      function Gzip2(opts, cb) {
-        this.c = crc2();
-        this.l = 0;
-        this.v = 1;
-        Deflate.call(this, opts, cb);
-      }
-      Gzip2.prototype.push = function(chunk, final) {
-        this.c.p(chunk);
-        this.l += chunk.length;
-        Deflate.prototype.push.call(this, chunk, final);
-      };
-      Gzip2.prototype.p = function(c, f) {
-        var raw = dopt2(c, this.o, this.v && gzhl2(this.o), f && 8, this.s);
-        if (this.v)
-          gzh2(raw, this.o), this.v = 0;
-        if (f)
-          wbytes2(raw, raw.length - 8, this.c.d()), wbytes2(raw, raw.length - 4, this.l);
-        this.ondata(raw, f);
-      };
-      Gzip2.prototype.flush = function() {
-        Deflate.prototype.flush.call(this);
-      };
-      return Gzip2;
-    }();
-    exports.Gzip = Gzip;
-    exports.Compress = Gzip;
-    var AsyncGzip = /* @__PURE__ */ function() {
-      function AsyncGzip2(opts, cb) {
-        astrmify([
-          bDflt2,
-          gze2,
-          function() {
-            return [astrm, Deflate, Gzip];
-          }
-        ], this, StrmOpt.call(this, opts, cb), function(ev) {
-          var strm = new Gzip(ev.data);
-          onmessage = astrm(strm);
-        }, 8, 1);
-      }
-      return AsyncGzip2;
-    }();
-    exports.AsyncGzip = AsyncGzip;
-    exports.AsyncCompress = AsyncGzip;
-    function gzip2(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return cbify2(data, opts, [
-        bDflt2,
-        gze2,
-        function() {
-          return [gzipSync2];
-        }
-      ], function(ev) {
-        return pbf2(gzipSync2(ev.data[0], ev.data[1]));
-      }, 2, cb);
-    }
-    exports.gzip = gzip2;
-    exports.compress = gzip2;
-    function gzipSync2(data, opts) {
-      if (!opts)
-        opts = {};
-      var c = crc2(), l = data.length;
-      c.p(data);
-      var d = dopt2(data, opts, gzhl2(opts), 8), s = d.length;
-      return gzh2(d, opts), wbytes2(d, s - 8, c.d()), wbytes2(d, s - 4, l), d;
-    }
-    exports.gzipSync = gzipSync2;
-    exports.compressSync = gzipSync2;
-    var Gunzip = /* @__PURE__ */ function() {
-      function Gunzip2(opts, cb) {
-        this.v = 1;
-        this.r = 0;
-        Inflate.call(this, opts, cb);
-      }
-      Gunzip2.prototype.push = function(chunk, final) {
-        Inflate.prototype.e.call(this, chunk);
-        this.r += chunk.length;
-        if (this.v) {
-          var p = this.p.subarray(this.v - 1);
-          var s = p.length > 3 ? gzs2(p) : 4;
-          if (s > p.length) {
-            if (!final)
-              return;
-          } else if (this.v > 1 && this.onmember) {
-            this.onmember(this.r - p.length);
-          }
-          this.p = p.subarray(s), this.v = 0;
-        }
-        Inflate.prototype.c.call(this, final);
-        if (this.s.f && !this.s.l && !final) {
-          this.v = shft2(this.s.p) + 9;
-          this.s = { i: 0 };
-          this.o = new u82(0);
-          this.push(new u82(0), final);
-        }
-      };
-      return Gunzip2;
-    }();
-    exports.Gunzip = Gunzip;
-    var AsyncGunzip = /* @__PURE__ */ function() {
-      function AsyncGunzip2(opts, cb) {
-        var _this = this;
-        astrmify([
-          bInflt2,
-          guze2,
-          function() {
-            return [astrm, Inflate, Gunzip];
-          }
-        ], this, StrmOpt.call(this, opts, cb), function(ev) {
-          var strm = new Gunzip(ev.data);
-          strm.onmember = function(offset) {
-            return postMessage(offset);
-          };
-          onmessage = astrm(strm);
-        }, 9, 0, function(offset) {
-          return _this.onmember && _this.onmember(offset);
-        });
-      }
-      return AsyncGunzip2;
-    }();
-    exports.AsyncGunzip = AsyncGunzip;
-    function gunzip2(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return cbify2(data, opts, [
-        bInflt2,
-        guze2,
-        function() {
-          return [gunzipSync2];
-        }
-      ], function(ev) {
-        return pbf2(gunzipSync2(ev.data[0], ev.data[1]));
-      }, 3, cb);
-    }
-    exports.gunzip = gunzip2;
-    function gunzipSync2(data, opts) {
-      var st = gzs2(data);
-      if (st + 8 > data.length)
-        err2(6, "invalid gzip data");
-      return inflt2(data.subarray(st, -8), { i: 2 }, opts && opts.out || new u82(gzl2(data)), opts && opts.dictionary);
-    }
-    exports.gunzipSync = gunzipSync2;
-    var Zlib = /* @__PURE__ */ function() {
-      function Zlib2(opts, cb) {
-        this.c = adler();
-        this.v = 1;
-        Deflate.call(this, opts, cb);
-      }
-      Zlib2.prototype.push = function(chunk, final) {
-        this.c.p(chunk);
-        Deflate.prototype.push.call(this, chunk, final);
-      };
-      Zlib2.prototype.p = function(c, f) {
-        var raw = dopt2(c, this.o, this.v && (this.o.dictionary ? 6 : 2), f && 4, this.s);
-        if (this.v)
-          zlh(raw, this.o), this.v = 0;
-        if (f)
-          wbytes2(raw, raw.length - 4, this.c.d());
-        this.ondata(raw, f);
-      };
-      Zlib2.prototype.flush = function() {
-        Deflate.prototype.flush.call(this);
-      };
-      return Zlib2;
-    }();
-    exports.Zlib = Zlib;
-    var AsyncZlib = /* @__PURE__ */ function() {
-      function AsyncZlib2(opts, cb) {
-        astrmify([
-          bDflt2,
-          zle,
-          function() {
-            return [astrm, Deflate, Zlib];
-          }
-        ], this, StrmOpt.call(this, opts, cb), function(ev) {
-          var strm = new Zlib(ev.data);
-          onmessage = astrm(strm);
-        }, 10, 1);
-      }
-      return AsyncZlib2;
-    }();
-    exports.AsyncZlib = AsyncZlib;
-    function zlib(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return cbify2(data, opts, [
-        bDflt2,
-        zle,
-        function() {
-          return [zlibSync];
-        }
-      ], function(ev) {
-        return pbf2(zlibSync(ev.data[0], ev.data[1]));
-      }, 4, cb);
-    }
-    exports.zlib = zlib;
-    function zlibSync(data, opts) {
-      if (!opts)
-        opts = {};
-      var a = adler();
-      a.p(data);
-      var d = dopt2(data, opts, opts.dictionary ? 6 : 2, 4);
-      return zlh(d, opts), wbytes2(d, d.length - 4, a.d()), d;
-    }
-    exports.zlibSync = zlibSync;
-    var Unzlib = /* @__PURE__ */ function() {
-      function Unzlib2(opts, cb) {
-        Inflate.call(this, opts, cb);
-        this.v = opts && opts.dictionary ? 2 : 1;
-      }
-      Unzlib2.prototype.push = function(chunk, final) {
-        Inflate.prototype.e.call(this, chunk);
-        if (this.v) {
-          if (this.p.length < 6 && !final)
-            return;
-          this.p = this.p.subarray(zls2(this.p, this.v - 1)), this.v = 0;
-        }
-        if (final) {
-          if (this.p.length < 4)
-            err2(6, "invalid zlib data");
-          this.p = this.p.subarray(0, -4);
-        }
-        Inflate.prototype.c.call(this, final);
-      };
-      return Unzlib2;
-    }();
-    exports.Unzlib = Unzlib;
-    var AsyncUnzlib = /* @__PURE__ */ function() {
-      function AsyncUnzlib2(opts, cb) {
-        astrmify([
-          bInflt2,
-          zule2,
-          function() {
-            return [astrm, Inflate, Unzlib];
-          }
-        ], this, StrmOpt.call(this, opts, cb), function(ev) {
-          var strm = new Unzlib(ev.data);
-          onmessage = astrm(strm);
-        }, 11, 0);
-      }
-      return AsyncUnzlib2;
-    }();
-    exports.AsyncUnzlib = AsyncUnzlib;
-    function unzlib2(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return cbify2(data, opts, [
-        bInflt2,
-        zule2,
-        function() {
-          return [unzlibSync2];
-        }
-      ], function(ev) {
-        return pbf2(unzlibSync2(ev.data[0], gopt2(ev.data[1])));
-      }, 5, cb);
-    }
-    exports.unzlib = unzlib2;
-    function unzlibSync2(data, opts) {
-      return inflt2(data.subarray(zls2(data, opts && opts.dictionary), -4), { i: 2 }, opts && opts.out, opts && opts.dictionary);
-    }
-    exports.unzlibSync = unzlibSync2;
-    var Decompress = /* @__PURE__ */ function() {
-      function Decompress2(opts, cb) {
-        this.o = StrmOpt.call(this, opts, cb) || {};
-        this.G = Gunzip;
-        this.I = Inflate;
-        this.Z = Unzlib;
-      }
-      Decompress2.prototype.i = function() {
-        var _this = this;
-        this.s.ondata = function(dat, final) {
-          _this.ondata(dat, final);
-        };
-      };
-      Decompress2.prototype.push = function(chunk, final) {
-        if (!this.ondata)
-          err2(5);
-        if (!this.s) {
-          if (this.p && this.p.length) {
-            var n = new u82(this.p.length + chunk.length);
-            n.set(this.p), n.set(chunk, this.p.length);
-          } else
-            this.p = chunk;
-          if (this.p.length > 2) {
-            this.s = this.p[0] == 31 && this.p[1] == 139 && this.p[2] == 8 ? new this.G(this.o) : (this.p[0] & 15) != 8 || this.p[0] >> 4 > 7 || (this.p[0] << 8 | this.p[1]) % 31 ? new this.I(this.o) : new this.Z(this.o);
-            this.i();
-            this.s.push(this.p, final);
-            this.p = null;
-          }
-        } else
-          this.s.push(chunk, final);
-      };
-      return Decompress2;
-    }();
-    exports.Decompress = Decompress;
-    var AsyncDecompress = /* @__PURE__ */ function() {
-      function AsyncDecompress2(opts, cb) {
-        Decompress.call(this, opts, cb);
-        this.queuedSize = 0;
-        this.G = AsyncGunzip;
-        this.I = AsyncInflate;
-        this.Z = AsyncUnzlib;
-      }
-      AsyncDecompress2.prototype.i = function() {
-        var _this = this;
-        this.s.ondata = function(err3, dat, final) {
-          _this.ondata(err3, dat, final);
-        };
-        this.s.ondrain = function(size) {
-          _this.queuedSize -= size;
-          if (_this.ondrain)
-            _this.ondrain(size);
-        };
-      };
-      AsyncDecompress2.prototype.push = function(chunk, final) {
-        this.queuedSize += chunk.length;
-        Decompress.prototype.push.call(this, chunk, final);
-      };
-      return AsyncDecompress2;
-    }();
-    exports.AsyncDecompress = AsyncDecompress;
-    function decompress3(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      return data[0] == 31 && data[1] == 139 && data[2] == 8 ? gunzip2(data, opts, cb) : (data[0] & 15) != 8 || data[0] >> 4 > 7 || (data[0] << 8 | data[1]) % 31 ? inflate2(data, opts, cb) : unzlib2(data, opts, cb);
-    }
-    exports.decompress = decompress3;
-    function decompressSync2(data, opts) {
-      return data[0] == 31 && data[1] == 139 && data[2] == 8 ? gunzipSync2(data, opts) : (data[0] & 15) != 8 || data[0] >> 4 > 7 || (data[0] << 8 | data[1]) % 31 ? inflateSync2(data, opts) : unzlibSync2(data, opts);
-    }
-    exports.decompressSync = decompressSync2;
-    var fltn = function(d, p, t, o) {
-      for (var k in d) {
-        var val = d[k], n = p + k, op = o;
-        if (Array.isArray(val))
-          op = mrg2(o, val[1]), val = val[0];
-        if (val instanceof u82)
-          t[n] = [val, op];
-        else {
-          t[n += "/"] = [new u82(0), op];
-          fltn(val, n, t, o);
-        }
-      }
-    };
-    var te2 = typeof TextEncoder != "undefined" && /* @__PURE__ */ new TextEncoder();
-    var td2 = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
-    var tds2 = 0;
-    try {
-      td2.decode(et2, { stream: true });
-      tds2 = 1;
-    } catch (e) {
-    }
-    var dutf82 = function(d) {
-      for (var r = "", i2 = 0; ; ) {
-        var c = d[i2++];
-        var eb = (c > 127) + (c > 223) + (c > 239);
-        if (i2 + eb > d.length)
-          return { s: r, r: slc2(d, i2 - 1) };
-        if (!eb)
-          r += String.fromCharCode(c);
-        else if (eb == 3) {
-          c = ((c & 15) << 18 | (d[i2++] & 63) << 12 | (d[i2++] & 63) << 6 | d[i2++] & 63) - 65536, r += String.fromCharCode(55296 | c >> 10, 56320 | c & 1023);
-        } else if (eb & 1)
-          r += String.fromCharCode((c & 31) << 6 | d[i2++] & 63);
-        else
-          r += String.fromCharCode((c & 15) << 12 | (d[i2++] & 63) << 6 | d[i2++] & 63);
-      }
-    };
-    var DecodeUTF8 = /* @__PURE__ */ function() {
-      function DecodeUTF82(cb) {
-        this.ondata = cb;
-        if (tds2)
-          this.t = new TextDecoder();
-        else
-          this.p = et2;
-      }
-      DecodeUTF82.prototype.push = function(chunk, final) {
-        if (!this.ondata)
-          err2(5);
-        final = !!final;
-        if (this.t) {
-          this.ondata(this.t.decode(chunk, { stream: true }), final);
-          if (final) {
-            if (this.t.decode().length)
-              err2(8);
-            this.t = null;
-          }
-          return;
-        }
-        if (!this.p)
-          err2(4);
-        var dat = new u82(this.p.length + chunk.length);
-        dat.set(this.p);
-        dat.set(chunk, this.p.length);
-        var _a3 = dutf82(dat), s = _a3.s, r = _a3.r;
-        if (final) {
-          if (r.length)
-            err2(8);
-          this.p = null;
-        } else
-          this.p = r;
-        this.ondata(s, final);
-      };
-      return DecodeUTF82;
-    }();
-    exports.DecodeUTF8 = DecodeUTF8;
-    var EncodeUTF8 = /* @__PURE__ */ function() {
-      function EncodeUTF82(cb) {
-        this.ondata = cb;
-      }
-      EncodeUTF82.prototype.push = function(chunk, final) {
-        if (!this.ondata)
-          err2(5);
-        if (this.d)
-          err2(4);
-        this.ondata(strToU82(chunk), this.d = final || false);
-      };
-      return EncodeUTF82;
-    }();
-    exports.EncodeUTF8 = EncodeUTF8;
-    function strToU82(str6, latin1) {
-      if (latin1) {
-        var ar_1 = new u82(str6.length);
-        for (var i2 = 0; i2 < str6.length; ++i2)
-          ar_1[i2] = str6.charCodeAt(i2);
-        return ar_1;
-      }
-      if (te2)
-        return te2.encode(str6);
-      var l = str6.length;
-      var ar = new u82(str6.length + (str6.length >> 1));
-      var ai = 0;
-      var w = function(v) {
-        ar[ai++] = v;
-      };
-      for (var i2 = 0; i2 < l; ++i2) {
-        if (ai + 5 > ar.length) {
-          var n = new u82(ai + 8 + (l - i2 << 1));
-          n.set(ar);
-          ar = n;
-        }
-        var c = str6.charCodeAt(i2);
-        if (c < 128 || latin1)
-          w(c);
-        else if (c < 2048)
-          w(192 | c >> 6), w(128 | c & 63);
-        else if (c > 55295 && c < 57344)
-          c = 65536 + (c & 1023 << 10) | str6.charCodeAt(++i2) & 1023, w(240 | c >> 18), w(128 | c >> 12 & 63), w(128 | c >> 6 & 63), w(128 | c & 63);
-        else
-          w(224 | c >> 12), w(128 | c >> 6 & 63), w(128 | c & 63);
-      }
-      return slc2(ar, 0, ai);
-    }
-    exports.strToU8 = strToU82;
-    function strFromU82(dat, latin1) {
-      if (latin1) {
-        var r = "";
-        for (var i2 = 0; i2 < dat.length; i2 += 16384)
-          r += String.fromCharCode.apply(null, dat.subarray(i2, i2 + 16384));
-        return r;
-      } else if (td2) {
-        return td2.decode(dat);
-      } else {
-        var _a3 = dutf82(dat), s = _a3.s, r = _a3.r;
-        if (r.length)
-          err2(8);
-        return s;
-      }
-    }
-    exports.strFromU8 = strFromU82;
-    var dbf = function(l) {
-      return l == 1 ? 3 : l < 6 ? 2 : l == 9 ? 1 : 0;
-    };
-    var slzh2 = function(d, b) {
-      return b + 30 + b22(d, b + 26) + b22(d, b + 28);
-    };
-    var zh2 = function(d, b, z) {
-      var fnl = b22(d, b + 28), fn = strFromU82(d.subarray(b + 46, b + 46 + fnl), !(b22(d, b + 8) & 2048)), es = b + 46 + fnl, bs = b42(d, b + 20);
-      var _a3 = z && bs == 4294967295 ? z64e2(d, es) : [bs, b42(d, b + 24), b42(d, b + 42)], sc = _a3[0], su = _a3[1], off = _a3[2];
-      return [b22(d, b + 10), sc, su, fn, es + b22(d, b + 30) + b22(d, b + 32), off];
-    };
-    var z64e2 = function(d, b) {
-      for (; b22(d, b) != 1; b += 4 + b22(d, b + 2))
-        ;
-      return [b82(d, b + 12), b82(d, b + 4), b82(d, b + 20)];
-    };
-    var exfl = function(ex) {
-      var le = 0;
-      if (ex) {
-        for (var k in ex) {
-          var l = ex[k].length;
-          if (l > 65535)
-            err2(9);
-          le += l + 4;
-        }
-      }
-      return le;
-    };
-    var wzh = function(d, b, f, fn, u, c, ce, co) {
-      var fl3 = fn.length, ex = f.extra, col = co && co.length;
-      var exl = exfl(ex);
-      wbytes2(d, b, ce != null ? 33639248 : 67324752), b += 4;
-      if (ce != null)
-        d[b++] = 20, d[b++] = f.os;
-      d[b] = 20, b += 2;
-      d[b++] = f.flag << 1 | (c < 0 && 8), d[b++] = u && 8;
-      d[b++] = f.compression & 255, d[b++] = f.compression >> 8;
-      var dt = new Date(f.mtime == null ? Date.now() : f.mtime), y = dt.getFullYear() - 1980;
-      if (y < 0 || y > 119)
-        err2(10);
-      wbytes2(d, b, y << 25 | dt.getMonth() + 1 << 21 | dt.getDate() << 16 | dt.getHours() << 11 | dt.getMinutes() << 5 | dt.getSeconds() >> 1), b += 4;
-      if (c != -1) {
-        wbytes2(d, b, f.crc);
-        wbytes2(d, b + 4, c < 0 ? -c - 2 : c);
-        wbytes2(d, b + 8, f.size);
-      }
-      wbytes2(d, b + 12, fl3);
-      wbytes2(d, b + 14, exl), b += 16;
-      if (ce != null) {
-        wbytes2(d, b, col);
-        wbytes2(d, b + 6, f.attrs);
-        wbytes2(d, b + 10, ce), b += 14;
-      }
-      d.set(fn, b);
-      b += fl3;
-      if (exl) {
-        for (var k in ex) {
-          var exf = ex[k], l = exf.length;
-          wbytes2(d, b, +k);
-          wbytes2(d, b + 2, l);
-          d.set(exf, b + 4), b += 4 + l;
-        }
-      }
-      if (col)
-        d.set(co, b), b += col;
-      return b;
-    };
-    var wzf = function(o, b, c, d, e) {
-      wbytes2(o, b, 101010256);
-      wbytes2(o, b + 8, c);
-      wbytes2(o, b + 10, c);
-      wbytes2(o, b + 12, d);
-      wbytes2(o, b + 16, e);
-    };
-    var ZipPassThrough = /* @__PURE__ */ function() {
-      function ZipPassThrough2(filename) {
-        this.filename = filename;
-        this.c = crc2();
-        this.size = 0;
-        this.compression = 0;
-      }
-      ZipPassThrough2.prototype.process = function(chunk, final) {
-        this.ondata(null, chunk, final);
-      };
-      ZipPassThrough2.prototype.push = function(chunk, final) {
-        if (!this.ondata)
-          err2(5);
-        this.c.p(chunk);
-        this.size += chunk.length;
-        if (final)
-          this.crc = this.c.d();
-        this.process(chunk, final || false);
-      };
-      return ZipPassThrough2;
-    }();
-    exports.ZipPassThrough = ZipPassThrough;
-    var ZipDeflate = /* @__PURE__ */ function() {
-      function ZipDeflate2(filename, opts) {
-        var _this = this;
-        if (!opts)
-          opts = {};
-        ZipPassThrough.call(this, filename);
-        this.d = new Deflate(opts, function(dat, final) {
-          _this.ondata(null, dat, final);
-        });
-        this.compression = 8;
-        this.flag = dbf(opts.level);
-      }
-      ZipDeflate2.prototype.process = function(chunk, final) {
-        try {
-          this.d.push(chunk, final);
-        } catch (e) {
-          this.ondata(e, null, final);
-        }
-      };
-      ZipDeflate2.prototype.push = function(chunk, final) {
-        ZipPassThrough.prototype.push.call(this, chunk, final);
-      };
-      return ZipDeflate2;
-    }();
-    exports.ZipDeflate = ZipDeflate;
-    var AsyncZipDeflate = /* @__PURE__ */ function() {
-      function AsyncZipDeflate2(filename, opts) {
-        var _this = this;
-        if (!opts)
-          opts = {};
-        ZipPassThrough.call(this, filename);
-        this.d = new AsyncDeflate(opts, function(err3, dat, final) {
-          _this.ondata(err3, dat, final);
-        });
-        this.compression = 8;
-        this.flag = dbf(opts.level);
-        this.terminate = this.d.terminate;
-      }
-      AsyncZipDeflate2.prototype.process = function(chunk, final) {
-        this.d.push(chunk, final);
-      };
-      AsyncZipDeflate2.prototype.push = function(chunk, final) {
-        ZipPassThrough.prototype.push.call(this, chunk, final);
-      };
-      return AsyncZipDeflate2;
-    }();
-    exports.AsyncZipDeflate = AsyncZipDeflate;
-    var Zip = /* @__PURE__ */ function() {
-      function Zip2(cb) {
-        this.ondata = cb;
-        this.u = [];
-        this.d = 1;
-      }
-      Zip2.prototype.add = function(file) {
-        var _this = this;
-        if (!this.ondata)
-          err2(5);
-        if (this.d & 2)
-          this.ondata(err2(4 + (this.d & 1) * 8, 0, 1), null, false);
-        else {
-          var f = strToU82(file.filename), fl_1 = f.length;
-          var com = file.comment, o = com && strToU82(com);
-          var u = fl_1 != file.filename.length || o && com.length != o.length;
-          var hl_1 = fl_1 + exfl(file.extra) + 30;
-          if (fl_1 > 65535)
-            this.ondata(err2(11, 0, 1), null, false);
-          var header = new u82(hl_1);
-          wzh(header, 0, file, f, u, -1);
-          var chks_1 = [header];
-          var pAll_1 = function() {
-            for (var _i = 0, chks_2 = chks_1; _i < chks_2.length; _i++) {
-              var chk = chks_2[_i];
-              _this.ondata(null, chk, false);
-            }
-            chks_1 = [];
-          };
-          var tr_1 = this.d;
-          this.d = 0;
-          var ind_1 = this.u.length;
-          var uf_1 = mrg2(file, {
-            f,
-            u,
-            o,
-            t: function() {
-              if (file.terminate)
-                file.terminate();
-            },
-            r: function() {
-              pAll_1();
-              if (tr_1) {
-                var nxt = _this.u[ind_1 + 1];
-                if (nxt)
-                  nxt.r();
-                else
-                  _this.d = 1;
-              }
-              tr_1 = 1;
-            }
-          });
-          var cl_1 = 0;
-          file.ondata = function(err3, dat, final) {
-            if (err3) {
-              _this.ondata(err3, dat, final);
-              _this.terminate();
-            } else {
-              cl_1 += dat.length;
-              chks_1.push(dat);
-              if (final) {
-                var dd = new u82(16);
-                wbytes2(dd, 0, 134695760);
-                wbytes2(dd, 4, file.crc);
-                wbytes2(dd, 8, cl_1);
-                wbytes2(dd, 12, file.size);
-                chks_1.push(dd);
-                uf_1.c = cl_1, uf_1.b = hl_1 + cl_1 + 16, uf_1.crc = file.crc, uf_1.size = file.size;
-                if (tr_1)
-                  uf_1.r();
-                tr_1 = 1;
-              } else if (tr_1)
-                pAll_1();
-            }
-          };
-          this.u.push(uf_1);
-        }
-      };
-      Zip2.prototype.end = function() {
-        var _this = this;
-        if (this.d & 2) {
-          this.ondata(err2(4 + (this.d & 1) * 8, 0, 1), null, true);
-          return;
-        }
-        if (this.d)
-          this.e();
-        else
-          this.u.push({
-            r: function() {
-              if (!(_this.d & 1))
-                return;
-              _this.u.splice(-1, 1);
-              _this.e();
-            },
-            t: function() {
-            }
-          });
-        this.d = 3;
-      };
-      Zip2.prototype.e = function() {
-        var bt = 0, l = 0, tl = 0;
-        for (var _i = 0, _a3 = this.u; _i < _a3.length; _i++) {
-          var f = _a3[_i];
-          tl += 46 + f.f.length + exfl(f.extra) + (f.o ? f.o.length : 0);
-        }
-        var out = new u82(tl + 22);
-        for (var _b3 = 0, _c = this.u; _b3 < _c.length; _b3++) {
-          var f = _c[_b3];
-          wzh(out, bt, f, f.f, f.u, -f.c - 2, l, f.o);
-          bt += 46 + f.f.length + exfl(f.extra) + (f.o ? f.o.length : 0), l += f.b;
-        }
-        wzf(out, bt, this.u.length, tl, l);
-        this.ondata(null, out, true);
-        this.d = 2;
-      };
-      Zip2.prototype.terminate = function() {
-        for (var _i = 0, _a3 = this.u; _i < _a3.length; _i++) {
-          var f = _a3[_i];
-          f.t();
-        }
-        this.d = 2;
-      };
-      return Zip2;
-    }();
-    exports.Zip = Zip;
-    function zip(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      var r = {};
-      fltn(data, "", r, opts);
-      var k = Object.keys(r);
-      var lft = k.length, o = 0, tot = 0;
-      var slft = lft, files = new Array(lft);
-      var term = [];
-      var tAll = function() {
-        for (var i3 = 0; i3 < term.length; ++i3)
-          term[i3]();
-      };
-      var cbd = function(a, b) {
-        mt(function() {
-          cb(a, b);
-        });
-      };
-      mt(function() {
-        cbd = cb;
-      });
-      var cbf = function() {
-        var out = new u82(tot + 22), oe = o, cdl = tot - o;
-        tot = 0;
-        for (var i3 = 0; i3 < slft; ++i3) {
-          var f = files[i3];
-          try {
-            var l = f.c.length;
-            wzh(out, tot, f, f.f, f.u, l);
-            var badd = 30 + f.f.length + exfl(f.extra);
-            var loc = tot + badd;
-            out.set(f.c, loc);
-            wzh(out, o, f, f.f, f.u, l, tot, f.m), o += 16 + badd + (f.m ? f.m.length : 0), tot = loc + l;
-          } catch (e) {
-            return cbd(e, null);
-          }
-        }
-        wzf(out, o, files.length, cdl, oe);
-        cbd(null, out);
-      };
-      if (!lft)
-        cbf();
-      var _loop_1 = function(i3) {
-        var fn = k[i3];
-        var _a3 = r[fn], file = _a3[0], p = _a3[1];
-        var c = crc2(), size = file.length;
-        c.p(file);
-        var f = strToU82(fn), s = f.length;
-        var com = p.comment, m = com && strToU82(com), ms = m && m.length;
-        var exl = exfl(p.extra);
-        var compression = p.level == 0 ? 0 : 8;
-        var cbl = function(e, d) {
-          if (e) {
-            tAll();
-            cbd(e, null);
-          } else {
-            var l = d.length;
-            files[i3] = mrg2(p, {
-              size,
-              crc: c.d(),
-              c: d,
-              f,
-              m,
-              u: s != fn.length || m && com.length != ms,
-              compression
-            });
-            o += 30 + s + exl + l;
-            tot += 76 + 2 * (s + exl) + (ms || 0) + l;
-            if (!--lft)
-              cbf();
-          }
-        };
-        if (s > 65535)
-          cbl(err2(11, 0, 1), null);
-        if (!compression)
-          cbl(null, file);
-        else if (size < 16e4) {
-          try {
-            cbl(null, deflateSync2(file, p));
-          } catch (e) {
-            cbl(e, null);
-          }
-        } else
-          term.push(deflate(file, p, cbl));
-      };
-      for (var i2 = 0; i2 < slft; ++i2) {
-        _loop_1(i2);
-      }
-      return tAll;
-    }
-    exports.zip = zip;
-    function zipSync(data, opts) {
-      if (!opts)
-        opts = {};
-      var r = {};
-      var files = [];
-      fltn(data, "", r, opts);
-      var o = 0;
-      var tot = 0;
-      for (var fn in r) {
-        var _a3 = r[fn], file = _a3[0], p = _a3[1];
-        var compression = p.level == 0 ? 0 : 8;
-        var f = strToU82(fn), s = f.length;
-        var com = p.comment, m = com && strToU82(com), ms = m && m.length;
-        var exl = exfl(p.extra);
-        if (s > 65535)
-          err2(11);
-        var d = compression ? deflateSync2(file, p) : file, l = d.length;
-        var c = crc2();
-        c.p(file);
-        files.push(mrg2(p, {
-          size: file.length,
-          crc: c.d(),
-          c: d,
-          f,
-          m,
-          u: s != fn.length || m && com.length != ms,
-          o,
-          compression
-        }));
-        o += 30 + s + exl + l;
-        tot += 76 + 2 * (s + exl) + (ms || 0) + l;
-      }
-      var out = new u82(tot + 22), oe = o, cdl = tot - o;
-      for (var i2 = 0; i2 < files.length; ++i2) {
-        var f = files[i2];
-        wzh(out, f.o, f, f.f, f.u, f.c.length);
-        var badd = 30 + f.f.length + exfl(f.extra);
-        out.set(f.c, f.o + badd);
-        wzh(out, o, f, f.f, f.u, f.c.length, f.o, f.m), o += 16 + badd + (f.m ? f.m.length : 0);
-      }
-      wzf(out, o, files.length, cdl, oe);
-      return out;
-    }
-    exports.zipSync = zipSync;
-    var UnzipPassThrough = /* @__PURE__ */ function() {
-      function UnzipPassThrough2() {
-      }
-      UnzipPassThrough2.prototype.push = function(data, final) {
-        this.ondata(null, data, final);
-      };
-      UnzipPassThrough2.compression = 0;
-      return UnzipPassThrough2;
-    }();
-    exports.UnzipPassThrough = UnzipPassThrough;
-    var UnzipInflate = /* @__PURE__ */ function() {
-      function UnzipInflate2() {
-        var _this = this;
-        this.i = new Inflate(function(dat, final) {
-          _this.ondata(null, dat, final);
-        });
-      }
-      UnzipInflate2.prototype.push = function(data, final) {
-        try {
-          this.i.push(data, final);
-        } catch (e) {
-          this.ondata(e, null, final);
-        }
-      };
-      UnzipInflate2.compression = 8;
-      return UnzipInflate2;
-    }();
-    exports.UnzipInflate = UnzipInflate;
-    var AsyncUnzipInflate = /* @__PURE__ */ function() {
-      function AsyncUnzipInflate2(_, sz) {
-        var _this = this;
-        if (sz < 32e4) {
-          this.i = new Inflate(function(dat, final) {
-            _this.ondata(null, dat, final);
-          });
-        } else {
-          this.i = new AsyncInflate(function(err3, dat, final) {
-            _this.ondata(err3, dat, final);
-          });
-          this.terminate = this.i.terminate;
-        }
-      }
-      AsyncUnzipInflate2.prototype.push = function(data, final) {
-        if (this.i.terminate)
-          data = slc2(data, 0);
-        this.i.push(data, final);
-      };
-      AsyncUnzipInflate2.compression = 8;
-      return AsyncUnzipInflate2;
-    }();
-    exports.AsyncUnzipInflate = AsyncUnzipInflate;
-    var Unzip = /* @__PURE__ */ function() {
-      function Unzip2(cb) {
-        this.onfile = cb;
-        this.k = [];
-        this.o = {
-          0: UnzipPassThrough
-        };
-        this.p = et2;
-      }
-      Unzip2.prototype.push = function(chunk, final) {
-        var _this = this;
-        if (!this.onfile)
-          err2(5);
-        if (!this.p)
-          err2(4);
-        if (this.c > 0) {
-          var len4 = Math.min(this.c, chunk.length);
-          var toAdd = chunk.subarray(0, len4);
-          this.c -= len4;
-          if (this.d)
-            this.d.push(toAdd, !this.c);
-          else
-            this.k[0].push(toAdd);
-          chunk = chunk.subarray(len4);
-          if (chunk.length)
-            return this.push(chunk, final);
-        } else {
-          var f = 0, i2 = 0, is = void 0, buf = void 0;
-          if (!this.p.length)
-            buf = chunk;
-          else if (!chunk.length)
-            buf = this.p;
-          else {
-            buf = new u82(this.p.length + chunk.length);
-            buf.set(this.p), buf.set(chunk, this.p.length);
-          }
-          var l = buf.length, oc = this.c, add6 = oc && this.d;
-          var _loop_2 = function() {
-            var _a3;
-            var sig = b42(buf, i2);
-            if (sig == 67324752) {
-              f = 1, is = i2;
-              this_1.d = null;
-              this_1.c = 0;
-              var bf = b22(buf, i2 + 6), cmp_1 = b22(buf, i2 + 8), u = bf & 2048, dd = bf & 8, fnl = b22(buf, i2 + 26), es = b22(buf, i2 + 28);
-              if (l > i2 + 30 + fnl + es) {
-                var chks_3 = [];
-                this_1.k.unshift(chks_3);
-                f = 2;
-                var sc_1 = b42(buf, i2 + 18), su_1 = b42(buf, i2 + 22);
-                var fn_1 = strFromU82(buf.subarray(i2 + 30, i2 += 30 + fnl), !u);
-                if (sc_1 == 4294967295) {
-                  _a3 = dd ? [-2] : z64e2(buf, i2), sc_1 = _a3[0], su_1 = _a3[1];
-                } else if (dd)
-                  sc_1 = -1;
-                i2 += es;
-                this_1.c = sc_1;
-                var d_1;
-                var file_1 = {
-                  name: fn_1,
-                  compression: cmp_1,
-                  start: function() {
-                    if (!file_1.ondata)
-                      err2(5);
-                    if (!sc_1)
-                      file_1.ondata(null, et2, true);
-                    else {
-                      var ctr = _this.o[cmp_1];
-                      if (!ctr)
-                        file_1.ondata(err2(14, "unknown compression type " + cmp_1, 1), null, false);
-                      d_1 = sc_1 < 0 ? new ctr(fn_1) : new ctr(fn_1, sc_1, su_1);
-                      d_1.ondata = function(err3, dat3, final2) {
-                        file_1.ondata(err3, dat3, final2);
-                      };
-                      for (var _i = 0, chks_4 = chks_3; _i < chks_4.length; _i++) {
-                        var dat2 = chks_4[_i];
-                        d_1.push(dat2, false);
-                      }
-                      if (_this.k[0] == chks_3 && _this.c)
-                        _this.d = d_1;
-                      else
-                        d_1.push(et2, true);
-                    }
-                  },
-                  terminate: function() {
-                    if (d_1 && d_1.terminate)
-                      d_1.terminate();
-                  }
-                };
-                if (sc_1 >= 0)
-                  file_1.size = sc_1, file_1.originalSize = su_1;
-                this_1.onfile(file_1);
-              }
-              return "break";
-            } else if (oc) {
-              if (sig == 134695760) {
-                is = i2 += 12 + (oc == -2 && 8), f = 3, this_1.c = 0;
-                return "break";
-              } else if (sig == 33639248) {
-                is = i2 -= 4, f = 3, this_1.c = 0;
-                return "break";
-              }
-            }
-          };
-          var this_1 = this;
-          for (; i2 < l - 4; ++i2) {
-            var state_1 = _loop_2();
-            if (state_1 === "break")
-              break;
-          }
-          this.p = et2;
-          if (oc < 0) {
-            var dat = f ? buf.subarray(0, is - 12 - (oc == -2 && 8) - (b42(buf, is - 16) == 134695760 && 4)) : buf.subarray(0, i2);
-            if (add6)
-              add6.push(dat, !!f);
-            else
-              this.k[+(f == 2)].push(dat);
-          }
-          if (f & 2)
-            return this.push(buf.subarray(i2), final);
-          this.p = buf.subarray(i2);
-        }
-        if (final) {
-          if (this.c)
-            err2(13);
-          this.p = null;
-        }
-      };
-      Unzip2.prototype.register = function(decoder) {
-        this.o[decoder.compression] = decoder;
-      };
-      return Unzip2;
-    }();
-    exports.Unzip = Unzip;
-    var mt = typeof queueMicrotask == "function" ? queueMicrotask : typeof setTimeout == "function" ? setTimeout : function(fn) {
-      fn();
-    };
-    function unzip(data, opts, cb) {
-      if (!cb)
-        cb = opts, opts = {};
-      if (typeof cb != "function")
-        err2(7);
-      var term = [];
-      var tAll = function() {
-        for (var i3 = 0; i3 < term.length; ++i3)
-          term[i3]();
-      };
-      var files = {};
-      var cbd = function(a, b) {
-        mt(function() {
-          cb(a, b);
-        });
-      };
-      mt(function() {
-        cbd = cb;
-      });
-      var e = data.length - 22;
-      for (; b42(data, e) != 101010256; --e) {
-        if (!e || data.length - e > 65558) {
-          cbd(err2(13, 0, 1), null);
-          return tAll;
-        }
-      }
-      ;
-      var lft = b22(data, e + 8);
-      if (lft) {
-        var c = lft;
-        var o = b42(data, e + 16);
-        var z = o == 4294967295 || c == 65535;
-        if (z) {
-          var ze = b42(data, e - 12);
-          z = b42(data, ze) == 101075792;
-          if (z) {
-            c = lft = b42(data, ze + 32);
-            o = b42(data, ze + 48);
-          }
-        }
-        var fltr = opts && opts.filter;
-        var _loop_3 = function(i3) {
-          var _a3 = zh2(data, o, z), c_1 = _a3[0], sc = _a3[1], su = _a3[2], fn = _a3[3], no = _a3[4], off = _a3[5], b = slzh2(data, off);
-          o = no;
-          var cbl = function(e2, d) {
-            if (e2) {
-              tAll();
-              cbd(e2, null);
-            } else {
-              if (d)
-                files[fn] = d;
-              if (!--lft)
-                cbd(null, files);
-            }
-          };
-          if (!fltr || fltr({
-            name: fn,
-            size: sc,
-            originalSize: su,
-            compression: c_1
-          })) {
-            if (!c_1)
-              cbl(null, slc2(data, b, b + sc));
-            else if (c_1 == 8) {
-              var infl = data.subarray(b, b + sc);
-              if (su < 524288 || sc > 0.8 * su) {
-                try {
-                  cbl(null, inflateSync2(infl, { out: new u82(su) }));
-                } catch (e2) {
-                  cbl(e2, null);
-                }
-              } else
-                term.push(inflate2(infl, { size: su }, cbl));
-            } else
-              cbl(err2(14, "unknown compression type " + c_1, 1), null);
-          } else
-            cbl(null, null);
-        };
-        for (var i2 = 0; i2 < c; ++i2) {
-          _loop_3(i2);
-        }
-      } else
-        cbd(null, {});
-      return tAll;
-    }
-    exports.unzip = unzip;
-    function unzipSync2(data, opts) {
-      var files = {};
-      var e = data.length - 22;
-      for (; b42(data, e) != 101010256; --e) {
-        if (!e || data.length - e > 65558)
-          err2(13);
-      }
-      ;
-      var c = b22(data, e + 8);
-      if (!c)
-        return {};
-      var o = b42(data, e + 16);
-      var z = o == 4294967295 || c == 65535;
-      if (z) {
-        var ze = b42(data, e - 12);
-        z = b42(data, ze) == 101075792;
-        if (z) {
-          c = b42(data, ze + 32);
-          o = b42(data, ze + 48);
-        }
-      }
-      var fltr = opts && opts.filter;
-      for (var i2 = 0; i2 < c; ++i2) {
-        var _a3 = zh2(data, o, z), c_2 = _a3[0], sc = _a3[1], su = _a3[2], fn = _a3[3], no = _a3[4], off = _a3[5], b = slzh2(data, off);
-        o = no;
-        if (!fltr || fltr({
-          name: fn,
-          size: sc,
-          originalSize: su,
-          compression: c_2
-        })) {
-          if (!c_2)
-            files[fn] = slc2(data, b, b + sc);
-          else if (c_2 == 8)
-            files[fn] = inflateSync2(data.subarray(b, b + sc), { out: new u82(su) });
-          else
-            err2(14, "unknown compression type " + c_2);
-        }
-      }
-      return files;
-    }
-    exports.unzipSync = unzipSync2;
-  }
-});
-
-// ../../node_modules/nifti-reader-js/dist/src/nifti-extension.js
-var require_nifti_extension = __commonJS({
-  "../../node_modules/nifti-reader-js/dist/src/nifti-extension.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.NIFTIEXTENSION = void 0;
-    var NIFTIEXTENSION2 = class {
-      constructor(esize, ecode, edata, littleEndian) {
-        __publicField(this, "esize");
-        __publicField(this, "ecode");
-        __publicField(this, "edata");
-        __publicField(this, "littleEndian");
-        if (esize % 16 != 0) {
-          throw new Error("This does not appear to be a NIFTI extension");
-        }
-        this.esize = esize;
-        this.ecode = ecode;
-        this.edata = edata;
-        this.littleEndian = littleEndian;
-      }
-      /**
-       * Returns extension as ArrayBuffer.
-       * @returns {ArrayBuffer}
-       */
-      toArrayBuffer() {
-        let byteArray = new Uint8Array(this.esize);
-        let data = new Uint8Array(this.edata);
-        byteArray.set(data, 8);
-        let view = new DataView(byteArray.buffer);
-        view.setInt32(0, this.esize, this.littleEndian);
-        view.setInt32(4, this.ecode, this.littleEndian);
-        return byteArray.buffer;
-      }
-    };
-    exports.NIFTIEXTENSION = NIFTIEXTENSION2;
-  }
-});
-
-// ../../node_modules/nifti-reader-js/dist/src/utilities.js
-var require_utilities = __commonJS({
-  "../../node_modules/nifti-reader-js/dist/src/utilities.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Utils = void 0;
-    var nifti_extension_1 = require_nifti_extension();
-    var _Utils = class _Utils {
-      /*** Static methods ***/
-      static getStringAt(data, start, end) {
-        var str6 = "", ctr, ch3;
-        for (ctr = start; ctr < end; ctr += 1) {
-          ch3 = data.getUint8(ctr);
-          if (ch3 !== 0) {
-            str6 += String.fromCharCode(ch3);
-          }
-        }
-        return str6;
-      }
-      static getIntAt(data, start, littleEndian) {
-        return data.getInt32(start, littleEndian);
-      }
-      static getFloatAt(data, start, littleEndian) {
-        return data.getFloat32(start, littleEndian);
-      }
-      static getDoubleAt(data, start, littleEndian) {
-        return data.getFloat64(start, littleEndian);
-      }
-      static getLongAt(data, start, littleEndian) {
-        var ctr, array = [], value = 0;
-        for (ctr = 0; ctr < 8; ctr += 1) {
-          array[ctr] = _Utils.getByteAt(data, start + ctr);
-        }
-        for (ctr = array.length - 1; ctr >= 0; ctr--) {
-          value = value * 256 + array[ctr];
-        }
-        return value;
-      }
-      static getExtensionsAt(data, start, littleEndian, voxOffset) {
-        let extensions = [];
-        let extensionByteIndex = start;
-        while (extensionByteIndex < voxOffset) {
-          let extensionLittleEndian = littleEndian;
-          let esize = _Utils.getIntAt(data, extensionByteIndex, littleEndian);
-          if (!esize) {
-            break;
-          }
-          if (esize + extensionByteIndex > voxOffset) {
-            extensionLittleEndian = !extensionLittleEndian;
-            esize = _Utils.getIntAt(data, extensionByteIndex, extensionLittleEndian);
-            if (esize + extensionByteIndex > voxOffset) {
-              throw new Error("This does not appear to be a valid NIFTI extension");
-            }
-          }
-          if (esize % 16 != 0) {
-            throw new Error("This does not appear to be a NIFTI extension");
-          }
-          let ecode = _Utils.getIntAt(data, extensionByteIndex + 4, extensionLittleEndian);
-          let edata = data.buffer.slice(extensionByteIndex + 8, extensionByteIndex + esize);
-          console.log("extensionByteIndex: " + (extensionByteIndex + 8) + " esize: " + esize);
-          console.log(edata);
-          let extension = new nifti_extension_1.NIFTIEXTENSION(esize, ecode, edata, extensionLittleEndian);
-          extensions.push(extension);
-          extensionByteIndex += esize;
-        }
-        return extensions;
-      }
-      static toArrayBuffer(buffer) {
-        var ab, view, i;
-        ab = new ArrayBuffer(buffer.length);
-        view = new Uint8Array(ab);
-        for (i = 0; i < buffer.length; i += 1) {
-          view[i] = buffer[i];
-        }
-        return ab;
-      }
-      static isString(obj) {
-        return typeof obj === "string" || obj instanceof String;
-      }
-      static formatNumber(num, shortFormat = void 0) {
-        let val;
-        if (_Utils.isString(num)) {
-          val = Number(num);
-        } else {
-          val = num;
-        }
-        if (shortFormat) {
-          val = val.toPrecision(5);
-        } else {
-          val = val.toPrecision(7);
-        }
-        return parseFloat(val);
-      }
-      // http://stackoverflow.com/questions/18638900/javascript-crc32
-      static makeCRCTable() {
-        let c;
-        let crcTable = [];
-        for (var n = 0; n < 256; n++) {
-          c = n;
-          for (var k = 0; k < 8; k++) {
-            c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
-          }
-          crcTable[n] = c;
-        }
-        return crcTable;
-      }
-      static crc32(dataView) {
-        if (!_Utils.crcTable) {
-          _Utils.crcTable = _Utils.makeCRCTable();
-        }
-        const crcTable = _Utils.crcTable;
-        let crc2 = 0 ^ -1;
-        for (var i = 0; i < dataView.byteLength; i++) {
-          crc2 = crc2 >>> 8 ^ crcTable[(crc2 ^ dataView.getUint8(i)) & 255];
-        }
-        return (crc2 ^ -1) >>> 0;
-      }
-    };
-    /*** Static Pseudo-constants ***/
-    __publicField(_Utils, "crcTable", null);
-    __publicField(_Utils, "GUNZIP_MAGIC_COOKIE1", 31);
-    __publicField(_Utils, "GUNZIP_MAGIC_COOKIE2", 139);
-    __publicField(_Utils, "getByteAt", function(data, start) {
-      return data.getInt8(start);
-    });
-    __publicField(_Utils, "getShortAt", function(data, start, littleEndian) {
-      return data.getInt16(start, littleEndian);
-    });
-    var Utils = _Utils;
-    exports.Utils = Utils;
-  }
-});
-
-// ../../node_modules/nifti-reader-js/dist/src/nifti1.js
-var require_nifti1 = __commonJS({
-  "../../node_modules/nifti-reader-js/dist/src/nifti1.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.NIFTI1 = void 0;
-    var utilities_1 = require_utilities();
-    var _NIFTI1 = class _NIFTI1 {
-      constructor() {
-        __publicField(this, "littleEndian", false);
-        __publicField(this, "dim_info", 0);
-        __publicField(this, "dims", []);
-        __publicField(this, "intent_p1", 0);
-        __publicField(this, "intent_p2", 0);
-        __publicField(this, "intent_p3", 0);
-        __publicField(this, "intent_code", 0);
-        __publicField(this, "datatypeCode", 0);
-        __publicField(this, "numBitsPerVoxel", 0);
-        __publicField(this, "slice_start", 0);
-        __publicField(this, "slice_end", 0);
-        __publicField(this, "slice_code", 0);
-        __publicField(this, "pixDims", []);
-        __publicField(this, "vox_offset", 0);
-        __publicField(this, "scl_slope", 1);
-        __publicField(this, "scl_inter", 0);
-        __publicField(this, "xyzt_units", 0);
-        __publicField(this, "cal_max", 0);
-        __publicField(this, "cal_min", 0);
-        __publicField(this, "slice_duration", 0);
-        __publicField(this, "toffset", 0);
-        __publicField(this, "description", "");
-        __publicField(this, "aux_file", "");
-        __publicField(this, "intent_name", "");
-        __publicField(this, "qform_code", 0);
-        __publicField(this, "sform_code", 0);
-        __publicField(this, "quatern_a", 0);
-        __publicField(this, "quatern_b", 0);
-        __publicField(this, "quatern_c", 0);
-        __publicField(this, "quatern_d", 0);
-        __publicField(this, "qoffset_x", 0);
-        __publicField(this, "qoffset_y", 0);
-        __publicField(this, "qoffset_z", 0);
-        __publicField(this, "affine", [
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 1, 0],
-          [0, 0, 0, 1]
-        ]);
-        __publicField(this, "qfac", 1);
-        __publicField(this, "quatern_R");
-        __publicField(this, "magic", "0");
-        __publicField(this, "isHDR", false);
-        __publicField(this, "extensionFlag", [0, 0, 0, 0]);
-        __publicField(this, "extensionSize", 0);
-        __publicField(this, "extensionCode", 0);
-        __publicField(this, "extensions", []);
-        /**
-         * Returns a human-readable string of datatype.
-         * @param {number} code
-         * @returns {string}
-         */
-        __publicField(this, "getDatatypeCodeString", function(code) {
-          if (code === _NIFTI1.TYPE_UINT8) {
-            return "1-Byte Unsigned Integer";
-          } else if (code === _NIFTI1.TYPE_INT16) {
-            return "2-Byte Signed Integer";
-          } else if (code === _NIFTI1.TYPE_INT32) {
-            return "4-Byte Signed Integer";
-          } else if (code === _NIFTI1.TYPE_FLOAT32) {
-            return "4-Byte Float";
-          } else if (code === _NIFTI1.TYPE_FLOAT64) {
-            return "8-Byte Float";
-          } else if (code === _NIFTI1.TYPE_RGB24) {
-            return "RGB";
-          } else if (code === _NIFTI1.TYPE_INT8) {
-            return "1-Byte Signed Integer";
-          } else if (code === _NIFTI1.TYPE_UINT16) {
-            return "2-Byte Unsigned Integer";
-          } else if (code === _NIFTI1.TYPE_UINT32) {
-            return "4-Byte Unsigned Integer";
-          } else if (code === _NIFTI1.TYPE_INT64) {
-            return "8-Byte Signed Integer";
-          } else if (code === _NIFTI1.TYPE_UINT64) {
-            return "8-Byte Unsigned Integer";
-          } else {
-            return "Unknown";
-          }
-        });
-        /**
-         * Returns a human-readable string of transform type.
-         * @param {number} code
-         * @returns {string}
-         */
-        __publicField(this, "getTransformCodeString", function(code) {
-          if (code === _NIFTI1.XFORM_SCANNER_ANAT) {
-            return "Scanner";
-          } else if (code === _NIFTI1.XFORM_ALIGNED_ANAT) {
-            return "Aligned";
-          } else if (code === _NIFTI1.XFORM_TALAIRACH) {
-            return "Talairach";
-          } else if (code === _NIFTI1.XFORM_MNI_152) {
-            return "MNI";
-          } else {
-            return "Unknown";
-          }
-        });
-        /**
-         * Returns a human-readable string of spatial and temporal units.
-         * @param {number} code
-         * @returns {string}
-         */
-        __publicField(this, "getUnitsCodeString", function(code) {
-          if (code === _NIFTI1.UNITS_METER) {
-            return "Meters";
-          } else if (code === _NIFTI1.UNITS_MM) {
-            return "Millimeters";
-          } else if (code === _NIFTI1.UNITS_MICRON) {
-            return "Microns";
-          } else if (code === _NIFTI1.UNITS_SEC) {
-            return "Seconds";
-          } else if (code === _NIFTI1.UNITS_MSEC) {
-            return "Milliseconds";
-          } else if (code === _NIFTI1.UNITS_USEC) {
-            return "Microseconds";
-          } else if (code === _NIFTI1.UNITS_HZ) {
-            return "Hz";
-          } else if (code === _NIFTI1.UNITS_PPM) {
-            return "PPM";
-          } else if (code === _NIFTI1.UNITS_RADS) {
-            return "Rads";
-          } else {
-            return "Unknown";
-          }
-        });
-        __publicField(this, "nifti_mat33_mul", function(A, B) {
-          var C = [
-            [0, 0, 0],
-            [0, 0, 0],
-            [0, 0, 0]
-          ], i, j;
-          for (i = 0; i < 3; i += 1) {
-            for (j = 0; j < 3; j += 1) {
-              C[i][j] = A[i][0] * B[0][j] + A[i][1] * B[1][j] + A[i][2] * B[2][j];
-            }
-          }
-          return C;
-        });
-        __publicField(this, "nifti_mat33_determ", function(R) {
-          var r11, r12, r13, r21, r22, r23, r31, r32, r33;
-          r11 = R[0][0];
-          r12 = R[0][1];
-          r13 = R[0][2];
-          r21 = R[1][0];
-          r22 = R[1][1];
-          r23 = R[1][2];
-          r31 = R[2][0];
-          r32 = R[2][1];
-          r33 = R[2][2];
-          return r11 * r22 * r33 - r11 * r32 * r23 - r21 * r12 * r33 + r21 * r32 * r13 + r31 * r12 * r23 - r31 * r22 * r13;
-        });
-      }
-      /*** Prototype Methods ***/
-      /**
-       * Reads the header data.
-       * @param {ArrayBuffer} data
-       */
-      readHeader(data) {
-        var rawData = new DataView(data), magicCookieVal = utilities_1.Utils.getIntAt(rawData, 0, this.littleEndian), ctr, ctrOut, ctrIn, index;
-        if (magicCookieVal !== _NIFTI1.MAGIC_COOKIE) {
-          this.littleEndian = true;
-          magicCookieVal = utilities_1.Utils.getIntAt(rawData, 0, this.littleEndian);
-        }
-        if (magicCookieVal !== _NIFTI1.MAGIC_COOKIE) {
-          throw new Error("This does not appear to be a NIFTI file!");
-        }
-        this.dim_info = utilities_1.Utils.getByteAt(rawData, 39);
-        for (ctr = 0; ctr < 8; ctr += 1) {
-          index = 40 + ctr * 2;
-          this.dims[ctr] = utilities_1.Utils.getShortAt(rawData, index, this.littleEndian);
-        }
-        this.intent_p1 = utilities_1.Utils.getFloatAt(rawData, 56, this.littleEndian);
-        this.intent_p2 = utilities_1.Utils.getFloatAt(rawData, 60, this.littleEndian);
-        this.intent_p3 = utilities_1.Utils.getFloatAt(rawData, 64, this.littleEndian);
-        this.intent_code = utilities_1.Utils.getShortAt(rawData, 68, this.littleEndian);
-        this.datatypeCode = utilities_1.Utils.getShortAt(rawData, 70, this.littleEndian);
-        this.numBitsPerVoxel = utilities_1.Utils.getShortAt(rawData, 72, this.littleEndian);
-        this.slice_start = utilities_1.Utils.getShortAt(rawData, 74, this.littleEndian);
-        for (ctr = 0; ctr < 8; ctr += 1) {
-          index = 76 + ctr * 4;
-          this.pixDims[ctr] = utilities_1.Utils.getFloatAt(rawData, index, this.littleEndian);
-        }
-        this.vox_offset = utilities_1.Utils.getFloatAt(rawData, 108, this.littleEndian);
-        this.scl_slope = utilities_1.Utils.getFloatAt(rawData, 112, this.littleEndian);
-        this.scl_inter = utilities_1.Utils.getFloatAt(rawData, 116, this.littleEndian);
-        this.slice_end = utilities_1.Utils.getShortAt(rawData, 120, this.littleEndian);
-        this.slice_code = utilities_1.Utils.getByteAt(rawData, 122);
-        this.xyzt_units = utilities_1.Utils.getByteAt(rawData, 123);
-        this.cal_max = utilities_1.Utils.getFloatAt(rawData, 124, this.littleEndian);
-        this.cal_min = utilities_1.Utils.getFloatAt(rawData, 128, this.littleEndian);
-        this.slice_duration = utilities_1.Utils.getFloatAt(rawData, 132, this.littleEndian);
-        this.toffset = utilities_1.Utils.getFloatAt(rawData, 136, this.littleEndian);
-        this.description = utilities_1.Utils.getStringAt(rawData, 148, 228);
-        this.aux_file = utilities_1.Utils.getStringAt(rawData, 228, 252);
-        this.qform_code = utilities_1.Utils.getShortAt(rawData, 252, this.littleEndian);
-        this.sform_code = utilities_1.Utils.getShortAt(rawData, 254, this.littleEndian);
-        this.quatern_b = utilities_1.Utils.getFloatAt(rawData, 256, this.littleEndian);
-        this.quatern_c = utilities_1.Utils.getFloatAt(rawData, 260, this.littleEndian);
-        this.quatern_d = utilities_1.Utils.getFloatAt(rawData, 264, this.littleEndian);
-        this.quatern_a = Math.sqrt(1 - (Math.pow(this.quatern_b, 2) + Math.pow(this.quatern_c, 2) + Math.pow(this.quatern_d, 2)));
-        this.qoffset_x = utilities_1.Utils.getFloatAt(rawData, 268, this.littleEndian);
-        this.qoffset_y = utilities_1.Utils.getFloatAt(rawData, 272, this.littleEndian);
-        this.qoffset_z = utilities_1.Utils.getFloatAt(rawData, 276, this.littleEndian);
-        if (this.qform_code < 1 && this.sform_code < 1) {
-          this.affine[0][0] = this.pixDims[1];
-          this.affine[1][1] = this.pixDims[2];
-          this.affine[2][2] = this.pixDims[3];
-        }
-        if (this.qform_code > 0 && this.sform_code < this.qform_code) {
-          const a = this.quatern_a;
-          const b = this.quatern_b;
-          const c = this.quatern_c;
-          const d = this.quatern_d;
-          this.qfac = this.pixDims[0] === 0 ? 1 : this.pixDims[0];
-          this.quatern_R = [
-            [
-              a * a + b * b - c * c - d * d,
-              2 * b * c - 2 * a * d,
-              2 * b * d + 2 * a * c
-            ],
-            [
-              2 * b * c + 2 * a * d,
-              a * a + c * c - b * b - d * d,
-              2 * c * d - 2 * a * b
-            ],
-            [
-              2 * b * d - 2 * a * c,
-              2 * c * d + 2 * a * b,
-              a * a + d * d - c * c - b * b
-            ]
-          ];
-          for (ctrOut = 0; ctrOut < 3; ctrOut += 1) {
-            for (ctrIn = 0; ctrIn < 3; ctrIn += 1) {
-              this.affine[ctrOut][ctrIn] = this.quatern_R[ctrOut][ctrIn] * this.pixDims[ctrIn + 1];
-              if (ctrIn === 2) {
-                this.affine[ctrOut][ctrIn] *= this.qfac;
-              }
-            }
-          }
-          this.affine[0][3] = this.qoffset_x;
-          this.affine[1][3] = this.qoffset_y;
-          this.affine[2][3] = this.qoffset_z;
-        } else if (this.sform_code > 0) {
-          for (ctrOut = 0; ctrOut < 3; ctrOut += 1) {
-            for (ctrIn = 0; ctrIn < 4; ctrIn += 1) {
-              index = 280 + (ctrOut * 4 + ctrIn) * 4;
-              this.affine[ctrOut][ctrIn] = utilities_1.Utils.getFloatAt(rawData, index, this.littleEndian);
-            }
-          }
-        }
-        this.affine[3][0] = 0;
-        this.affine[3][1] = 0;
-        this.affine[3][2] = 0;
-        this.affine[3][3] = 1;
-        this.intent_name = utilities_1.Utils.getStringAt(rawData, 328, 344);
-        this.magic = utilities_1.Utils.getStringAt(rawData, 344, 348);
-        this.isHDR = this.magic === String.fromCharCode.apply(null, _NIFTI1.MAGIC_NUMBER2);
-        if (rawData.byteLength > _NIFTI1.MAGIC_COOKIE) {
-          this.extensionFlag[0] = utilities_1.Utils.getByteAt(rawData, 348);
-          this.extensionFlag[1] = utilities_1.Utils.getByteAt(rawData, 348 + 1);
-          this.extensionFlag[2] = utilities_1.Utils.getByteAt(rawData, 348 + 2);
-          this.extensionFlag[3] = utilities_1.Utils.getByteAt(rawData, 348 + 3);
-          let isExtensionCapable = true;
-          if (!this.isHDR && this.vox_offset <= 352)
-            isExtensionCapable = false;
-          if (rawData.byteLength <= 352 + 16)
-            isExtensionCapable = false;
-          if (isExtensionCapable && this.extensionFlag[0]) {
-            this.extensions = utilities_1.Utils.getExtensionsAt(rawData, this.getExtensionLocation(), this.littleEndian, this.vox_offset);
-            this.extensionSize = this.extensions[0].esize;
-            this.extensionCode = this.extensions[0].ecode;
-          }
-        }
-      }
-      /**
-       * Returns a formatted string of header fields.
-       * @returns {string}
-       */
-      toFormattedString() {
-        var fmt = utilities_1.Utils.formatNumber, string = "";
-        string += "Dim Info = " + this.dim_info + "\n";
-        string += "Image Dimensions (1-8): " + this.dims[0] + ", " + this.dims[1] + ", " + this.dims[2] + ", " + this.dims[3] + ", " + this.dims[4] + ", " + this.dims[5] + ", " + this.dims[6] + ", " + this.dims[7] + "\n";
-        string += "Intent Parameters (1-3): " + this.intent_p1 + ", " + this.intent_p2 + ", " + this.intent_p3 + "\n";
-        string += "Intent Code = " + this.intent_code + "\n";
-        string += "Datatype = " + this.datatypeCode + " (" + this.getDatatypeCodeString(this.datatypeCode) + ")\n";
-        string += "Bits Per Voxel = " + this.numBitsPerVoxel + "\n";
-        string += "Slice Start = " + this.slice_start + "\n";
-        string += "Voxel Dimensions (1-8): " + fmt(this.pixDims[0]) + ", " + fmt(this.pixDims[1]) + ", " + fmt(this.pixDims[2]) + ", " + fmt(this.pixDims[3]) + ", " + fmt(this.pixDims[4]) + ", " + fmt(this.pixDims[5]) + ", " + fmt(this.pixDims[6]) + ", " + fmt(this.pixDims[7]) + "\n";
-        string += "Image Offset = " + this.vox_offset + "\n";
-        string += "Data Scale:  Slope = " + fmt(this.scl_slope) + "  Intercept = " + fmt(this.scl_inter) + "\n";
-        string += "Slice End = " + this.slice_end + "\n";
-        string += "Slice Code = " + this.slice_code + "\n";
-        string += "Units Code = " + this.xyzt_units + " (" + this.getUnitsCodeString(_NIFTI1.SPATIAL_UNITS_MASK & this.xyzt_units) + ", " + this.getUnitsCodeString(_NIFTI1.TEMPORAL_UNITS_MASK & this.xyzt_units) + ")\n";
-        string += "Display Range:  Max = " + fmt(this.cal_max) + "  Min = " + fmt(this.cal_min) + "\n";
-        string += "Slice Duration = " + this.slice_duration + "\n";
-        string += "Time Axis Shift = " + this.toffset + "\n";
-        string += 'Description: "' + this.description + '"\n';
-        string += 'Auxiliary File: "' + this.aux_file + '"\n';
-        string += "Q-Form Code = " + this.qform_code + " (" + this.getTransformCodeString(this.qform_code) + ")\n";
-        string += "S-Form Code = " + this.sform_code + " (" + this.getTransformCodeString(this.sform_code) + ")\n";
-        string += "Quaternion Parameters:  b = " + fmt(this.quatern_b) + "  c = " + fmt(this.quatern_c) + "  d = " + fmt(this.quatern_d) + "\n";
-        string += "Quaternion Offsets:  x = " + this.qoffset_x + "  y = " + this.qoffset_y + "  z = " + this.qoffset_z + "\n";
-        string += "S-Form Parameters X: " + fmt(this.affine[0][0]) + ", " + fmt(this.affine[0][1]) + ", " + fmt(this.affine[0][2]) + ", " + fmt(this.affine[0][3]) + "\n";
-        string += "S-Form Parameters Y: " + fmt(this.affine[1][0]) + ", " + fmt(this.affine[1][1]) + ", " + fmt(this.affine[1][2]) + ", " + fmt(this.affine[1][3]) + "\n";
-        string += "S-Form Parameters Z: " + fmt(this.affine[2][0]) + ", " + fmt(this.affine[2][1]) + ", " + fmt(this.affine[2][2]) + ", " + fmt(this.affine[2][3]) + "\n";
-        string += 'Intent Name: "' + this.intent_name + '"\n';
-        if (this.extensionFlag[0]) {
-          string += "Extension: Size = " + this.extensionSize + "  Code = " + this.extensionCode + "\n";
-        }
-        return string;
-      }
-      /**
-       * Returns the qform matrix.
-       * @returns {Array.<Array.<number>>}
-       */
-      getQformMat() {
-        return this.convertNiftiQFormToNiftiSForm(this.quatern_b, this.quatern_c, this.quatern_d, this.qoffset_x, this.qoffset_y, this.qoffset_z, this.pixDims[1], this.pixDims[2], this.pixDims[3], this.pixDims[0]);
-      }
-      /**
-       * Converts qform to an affine.  (See http://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
-       * @param {number} qb
-       * @param {number} qc
-       * @param {number} qd
-       * @param {number} qx
-       * @param {number} qy
-       * @param {number} qz
-       * @param {number} dx
-       * @param {number} dy
-       * @param {number} dz
-       * @param {number} qfac
-       * @returns {Array.<Array.<number>>}
-       */
-      convertNiftiQFormToNiftiSForm(qb, qc, qd, qx, qy, qz, dx, dy, dz, qfac) {
-        var R = [
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
-        ], a, b = qb, c = qc, d = qd, xd, yd, zd;
-        R[3][0] = R[3][1] = R[3][2] = 0;
-        R[3][3] = 1;
-        a = 1 - (b * b + c * c + d * d);
-        if (a < 1e-7) {
-          a = 1 / Math.sqrt(b * b + c * c + d * d);
-          b *= a;
-          c *= a;
-          d *= a;
-          a = 0;
-        } else {
-          a = Math.sqrt(a);
-        }
-        xd = dx > 0 ? dx : 1;
-        yd = dy > 0 ? dy : 1;
-        zd = dz > 0 ? dz : 1;
-        if (qfac < 0) {
-          zd = -zd;
-        }
-        R[0][0] = (a * a + b * b - c * c - d * d) * xd;
-        R[0][1] = 2 * (b * c - a * d) * yd;
-        R[0][2] = 2 * (b * d + a * c) * zd;
-        R[1][0] = 2 * (b * c + a * d) * xd;
-        R[1][1] = (a * a + c * c - b * b - d * d) * yd;
-        R[1][2] = 2 * (c * d - a * b) * zd;
-        R[2][0] = 2 * (b * d - a * c) * xd;
-        R[2][1] = 2 * (c * d + a * b) * yd;
-        R[2][2] = (a * a + d * d - c * c - b * b) * zd;
-        R[0][3] = qx;
-        R[1][3] = qy;
-        R[2][3] = qz;
-        return R;
-      }
-      /**
-       * Converts sform to an orientation string (e.g., XYZ+--).  (See http://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
-       * @param {Array.<Array.<number>>} R
-       * @returns {string}
-       */
-      convertNiftiSFormToNEMA(R) {
-        var xi, xj, xk, yi, yj, yk, zi, zj, zk, val, detQ, detP, i, j, k, p, q, r, ibest, jbest, kbest, pbest, qbest, rbest, M, vbest, Q, P, iChar, jChar, kChar, iSense, jSense, kSense;
-        k = 0;
-        Q = [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0]
-        ];
-        P = [
-          [0, 0, 0],
-          [0, 0, 0],
-          [0, 0, 0]
-        ];
-        xi = R[0][0];
-        xj = R[0][1];
-        xk = R[0][2];
-        yi = R[1][0];
-        yj = R[1][1];
-        yk = R[1][2];
-        zi = R[2][0];
-        zj = R[2][1];
-        zk = R[2][2];
-        val = Math.sqrt(xi * xi + yi * yi + zi * zi);
-        if (val === 0) {
-          return null;
-        }
-        xi /= val;
-        yi /= val;
-        zi /= val;
-        val = Math.sqrt(xj * xj + yj * yj + zj * zj);
-        if (val === 0) {
-          return null;
-        }
-        xj /= val;
-        yj /= val;
-        zj /= val;
-        val = xi * xj + yi * yj + zi * zj;
-        if (Math.abs(val) > 1e-4) {
-          xj -= val * xi;
-          yj -= val * yi;
-          zj -= val * zi;
-          val = Math.sqrt(xj * xj + yj * yj + zj * zj);
-          if (val === 0) {
-            return null;
-          }
-          xj /= val;
-          yj /= val;
-          zj /= val;
-        }
-        val = Math.sqrt(xk * xk + yk * yk + zk * zk);
-        if (val === 0) {
-          xk = yi * zj - zi * yj;
-          yk = zi * xj - zj * xi;
-          zk = xi * yj - yi * xj;
-        } else {
-          xk /= val;
-          yk /= val;
-          zk /= val;
-        }
-        val = xi * xk + yi * yk + zi * zk;
-        if (Math.abs(val) > 1e-4) {
-          xk -= val * xi;
-          yk -= val * yi;
-          zk -= val * zi;
-          val = Math.sqrt(xk * xk + yk * yk + zk * zk);
-          if (val === 0) {
-            return null;
-          }
-          xk /= val;
-          yk /= val;
-          zk /= val;
-        }
-        val = xj * xk + yj * yk + zj * zk;
-        if (Math.abs(val) > 1e-4) {
-          xk -= val * xj;
-          yk -= val * yj;
-          zk -= val * zj;
-          val = Math.sqrt(xk * xk + yk * yk + zk * zk);
-          if (val === 0) {
-            return null;
-          }
-          xk /= val;
-          yk /= val;
-          zk /= val;
-        }
-        Q[0][0] = xi;
-        Q[0][1] = xj;
-        Q[0][2] = xk;
-        Q[1][0] = yi;
-        Q[1][1] = yj;
-        Q[1][2] = yk;
-        Q[2][0] = zi;
-        Q[2][1] = zj;
-        Q[2][2] = zk;
-        detQ = this.nifti_mat33_determ(Q);
-        if (detQ === 0) {
-          return null;
-        }
-        vbest = -666;
-        ibest = pbest = qbest = rbest = 1;
-        jbest = 2;
-        kbest = 3;
-        for (i = 1; i <= 3; i += 1) {
-          for (j = 1; j <= 3; j += 1) {
-            if (i !== j) {
-              for (k = 1; k <= 3; k += 1) {
-                if (!(i === k || j === k)) {
-                  P[0][0] = P[0][1] = P[0][2] = P[1][0] = P[1][1] = P[1][2] = P[2][0] = P[2][1] = P[2][2] = 0;
-                  for (p = -1; p <= 1; p += 2) {
-                    for (q = -1; q <= 1; q += 2) {
-                      for (r = -1; r <= 1; r += 2) {
-                        P[0][i - 1] = p;
-                        P[1][j - 1] = q;
-                        P[2][k - 1] = r;
-                        detP = this.nifti_mat33_determ(P);
-                        if (detP * detQ > 0) {
-                          M = this.nifti_mat33_mul(P, Q);
-                          val = M[0][0] + M[1][1] + M[2][2];
-                          if (val > vbest) {
-                            vbest = val;
-                            ibest = i;
-                            jbest = j;
-                            kbest = k;
-                            pbest = p;
-                            qbest = q;
-                            rbest = r;
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        iChar = jChar = kChar = iSense = jSense = kSense = "";
-        switch (ibest * pbest) {
-          case 1:
-            iChar = "X";
-            iSense = "+";
-            break;
-          case -1:
-            iChar = "X";
-            iSense = "-";
-            break;
-          case 2:
-            iChar = "Y";
-            iSense = "+";
-            break;
-          case -2:
-            iChar = "Y";
-            iSense = "-";
-            break;
-          case 3:
-            iChar = "Z";
-            iSense = "+";
-            break;
-          case -3:
-            iChar = "Z";
-            iSense = "-";
-            break;
-        }
-        switch (jbest * qbest) {
-          case 1:
-            jChar = "X";
-            jSense = "+";
-            break;
-          case -1:
-            jChar = "X";
-            jSense = "-";
-            break;
-          case 2:
-            jChar = "Y";
-            jSense = "+";
-            break;
-          case -2:
-            jChar = "Y";
-            jSense = "-";
-            break;
-          case 3:
-            jChar = "Z";
-            jSense = "+";
-            break;
-          case -3:
-            jChar = "Z";
-            jSense = "-";
-            break;
-        }
-        switch (kbest * rbest) {
-          case 1:
-            kChar = "X";
-            kSense = "+";
-            break;
-          case -1:
-            kChar = "X";
-            kSense = "-";
-            break;
-          case 2:
-            kChar = "Y";
-            kSense = "+";
-            break;
-          case -2:
-            kChar = "Y";
-            kSense = "-";
-            break;
-          case 3:
-            kChar = "Z";
-            kSense = "+";
-            break;
-          case -3:
-            kChar = "Z";
-            kSense = "-";
-            break;
-        }
-        return iChar + jChar + kChar + iSense + jSense + kSense;
-      }
-      /**
-       * Returns the byte index of the extension.
-       * @returns {number}
-       */
-      getExtensionLocation() {
-        return _NIFTI1.MAGIC_COOKIE + 4;
-      }
-      /**
-       * Returns the extension size.
-       * @param {DataView} data
-       * @returns {number}
-       */
-      getExtensionSize(data) {
-        return utilities_1.Utils.getIntAt(data, this.getExtensionLocation(), this.littleEndian);
-      }
-      /**
-       * Returns the extension code.
-       * @param {DataView} data
-       * @returns {number}
-       */
-      getExtensionCode(data) {
-        return utilities_1.Utils.getIntAt(data, this.getExtensionLocation() + 4, this.littleEndian);
-      }
-      /**
-       * Adds an extension
-       * @param {NIFTIEXTENSION} extension
-       * @param {number} index
-       */
-      addExtension(extension, index = -1) {
-        if (index == -1) {
-          this.extensions.push(extension);
-        } else {
-          this.extensions.splice(index, 0, extension);
-        }
-        this.vox_offset += extension.esize;
-      }
-      /**
-       * Removes an extension
-       * @param {number} index
-       */
-      removeExtension(index) {
-        let extension = this.extensions[index];
-        if (extension) {
-          this.vox_offset -= extension.esize;
-        }
-        this.extensions.splice(index, 1);
-      }
-      /**
-       * Returns header as ArrayBuffer.
-       * @param {boolean} includeExtensions - should extension bytes be included
-       * @returns {ArrayBuffer}
-       */
-      toArrayBuffer(includeExtensions = false) {
-        const SHORT_SIZE = 2;
-        const FLOAT32_SIZE = 4;
-        let byteSize = 348 + 4;
-        if (includeExtensions) {
-          for (let extension of this.extensions) {
-            byteSize += extension.esize;
-          }
-        }
-        let byteArray = new Uint8Array(byteSize);
-        let view = new DataView(byteArray.buffer);
-        view.setInt32(0, 348, this.littleEndian);
-        view.setUint8(39, this.dim_info);
-        for (let i = 0; i < 8; i++) {
-          view.setUint16(40 + SHORT_SIZE * i, this.dims[i], this.littleEndian);
-        }
-        view.setFloat32(56, this.intent_p1, this.littleEndian);
-        view.setFloat32(60, this.intent_p2, this.littleEndian);
-        view.setFloat32(64, this.intent_p3, this.littleEndian);
-        view.setInt16(68, this.intent_code, this.littleEndian);
-        view.setInt16(70, this.datatypeCode, this.littleEndian);
-        view.setInt16(72, this.numBitsPerVoxel, this.littleEndian);
-        view.setInt16(74, this.slice_start, this.littleEndian);
-        for (let i = 0; i < 8; i++) {
-          view.setFloat32(76 + FLOAT32_SIZE * i, this.pixDims[i], this.littleEndian);
-        }
-        view.setFloat32(108, this.vox_offset, this.littleEndian);
-        view.setFloat32(112, this.scl_slope, this.littleEndian);
-        view.setFloat32(116, this.scl_inter, this.littleEndian);
-        view.setInt16(120, this.slice_end, this.littleEndian);
-        view.setUint8(122, this.slice_code);
-        view.setUint8(123, this.xyzt_units);
-        view.setFloat32(124, this.cal_max, this.littleEndian);
-        view.setFloat32(128, this.cal_min, this.littleEndian);
-        view.setFloat32(132, this.slice_duration, this.littleEndian);
-        view.setFloat32(136, this.toffset, this.littleEndian);
-        byteArray.set(Buffer.from(this.description), 148);
-        byteArray.set(Buffer.from(this.aux_file), 228);
-        view.setInt16(252, this.qform_code, this.littleEndian);
-        view.setInt16(254, this.sform_code, this.littleEndian);
-        view.setFloat32(256, this.quatern_b, this.littleEndian);
-        view.setFloat32(260, this.quatern_c, this.littleEndian);
-        view.setFloat32(264, this.quatern_d, this.littleEndian);
-        view.setFloat32(268, this.qoffset_x, this.littleEndian);
-        view.setFloat32(272, this.qoffset_y, this.littleEndian);
-        view.setFloat32(276, this.qoffset_z, this.littleEndian);
-        const flattened = this.affine.flat();
-        for (let i = 0; i < 12; i++) {
-          view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], this.littleEndian);
-        }
-        byteArray.set(Buffer.from(this.intent_name), 328);
-        byteArray.set(Buffer.from(this.magic), 344);
-        if (includeExtensions) {
-          byteArray.set(Uint8Array.from([1, 0, 0, 0]), 348);
-          let extensionByteIndex = this.getExtensionLocation();
-          for (const extension of this.extensions) {
-            view.setInt32(extensionByteIndex, extension.esize, extension.littleEndian);
-            view.setInt32(extensionByteIndex + 4, extension.ecode, extension.littleEndian);
-            byteArray.set(new Uint8Array(extension.edata), extensionByteIndex + 8);
-            extensionByteIndex += extension.esize;
-          }
-        } else {
-          byteArray.set(new Uint8Array(4).fill(0), 348);
-        }
-        return byteArray.buffer;
-      }
-    };
-    /*** Static Pseudo-constants ***/
-    // datatype codes
-    __publicField(_NIFTI1, "TYPE_NONE", 0);
-    __publicField(_NIFTI1, "TYPE_BINARY", 1);
-    __publicField(_NIFTI1, "TYPE_UINT8", 2);
-    __publicField(_NIFTI1, "TYPE_INT16", 4);
-    __publicField(_NIFTI1, "TYPE_INT32", 8);
-    __publicField(_NIFTI1, "TYPE_FLOAT32", 16);
-    __publicField(_NIFTI1, "TYPE_COMPLEX64", 32);
-    __publicField(_NIFTI1, "TYPE_FLOAT64", 64);
-    __publicField(_NIFTI1, "TYPE_RGB24", 128);
-    __publicField(_NIFTI1, "TYPE_INT8", 256);
-    __publicField(_NIFTI1, "TYPE_UINT16", 512);
-    __publicField(_NIFTI1, "TYPE_UINT32", 768);
-    __publicField(_NIFTI1, "TYPE_INT64", 1024);
-    __publicField(_NIFTI1, "TYPE_UINT64", 1280);
-    __publicField(_NIFTI1, "TYPE_FLOAT128", 1536);
-    __publicField(_NIFTI1, "TYPE_COMPLEX128", 1792);
-    __publicField(_NIFTI1, "TYPE_COMPLEX256", 2048);
-    // transform codes
-    __publicField(_NIFTI1, "XFORM_UNKNOWN", 0);
-    __publicField(_NIFTI1, "XFORM_SCANNER_ANAT", 1);
-    __publicField(_NIFTI1, "XFORM_ALIGNED_ANAT", 2);
-    __publicField(_NIFTI1, "XFORM_TALAIRACH", 3);
-    __publicField(_NIFTI1, "XFORM_MNI_152", 4);
-    // unit codes
-    __publicField(_NIFTI1, "SPATIAL_UNITS_MASK", 7);
-    __publicField(_NIFTI1, "TEMPORAL_UNITS_MASK", 56);
-    __publicField(_NIFTI1, "UNITS_UNKNOWN", 0);
-    __publicField(_NIFTI1, "UNITS_METER", 1);
-    __publicField(_NIFTI1, "UNITS_MM", 2);
-    __publicField(_NIFTI1, "UNITS_MICRON", 3);
-    __publicField(_NIFTI1, "UNITS_SEC", 8);
-    __publicField(_NIFTI1, "UNITS_MSEC", 16);
-    __publicField(_NIFTI1, "UNITS_USEC", 24);
-    __publicField(_NIFTI1, "UNITS_HZ", 32);
-    __publicField(_NIFTI1, "UNITS_PPM", 40);
-    __publicField(_NIFTI1, "UNITS_RADS", 48);
-    // nifti1 codes
-    __publicField(_NIFTI1, "MAGIC_COOKIE", 348);
-    __publicField(_NIFTI1, "STANDARD_HEADER_SIZE", 348);
-    __publicField(_NIFTI1, "MAGIC_NUMBER_LOCATION", 344);
-    __publicField(_NIFTI1, "MAGIC_NUMBER", [110, 43, 49]);
-    // n+1 (.nii)
-    __publicField(_NIFTI1, "MAGIC_NUMBER2", [110, 105, 49]);
-    // ni1 (.hdr/.img)
-    __publicField(_NIFTI1, "EXTENSION_HEADER_SIZE", 8);
-    var NIFTI12 = _NIFTI1;
-    exports.NIFTI1 = NIFTI12;
-  }
-});
-
-// ../../node_modules/nifti-reader-js/dist/src/nifti2.js
-var require_nifti2 = __commonJS({
-  "../../node_modules/nifti-reader-js/dist/src/nifti2.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.NIFTI2 = void 0;
-    var nifti1_1 = require_nifti1();
-    var utilities_1 = require_utilities();
-    var _NIFTI2 = class _NIFTI2 {
-      constructor() {
-        __publicField(this, "littleEndian", false);
-        __publicField(this, "dim_info", 0);
-        __publicField(this, "dims", []);
-        __publicField(this, "intent_p1", 0);
-        __publicField(this, "intent_p2", 0);
-        __publicField(this, "intent_p3", 0);
-        __publicField(this, "intent_code", 0);
-        __publicField(this, "datatypeCode", 0);
-        __publicField(this, "numBitsPerVoxel", 0);
-        __publicField(this, "slice_start", 0);
-        __publicField(this, "slice_end", 0);
-        __publicField(this, "slice_code", 0);
-        __publicField(this, "pixDims", []);
-        __publicField(this, "vox_offset", 0);
-        __publicField(this, "scl_slope", 1);
-        __publicField(this, "scl_inter", 0);
-        __publicField(this, "xyzt_units", 0);
-        __publicField(this, "cal_max", 0);
-        __publicField(this, "cal_min", 0);
-        __publicField(this, "slice_duration", 0);
-        __publicField(this, "toffset", 0);
-        __publicField(this, "description", "");
-        __publicField(this, "aux_file", "");
-        __publicField(this, "intent_name", "");
-        __publicField(this, "qform_code", 0);
-        __publicField(this, "sform_code", 0);
-        __publicField(this, "quatern_b", 0);
-        __publicField(this, "quatern_c", 0);
-        __publicField(this, "quatern_d", 0);
-        __publicField(this, "qoffset_x", 0);
-        __publicField(this, "qoffset_y", 0);
-        __publicField(this, "qoffset_z", 0);
-        __publicField(this, "affine", [
-          [1, 0, 0, 0],
-          [0, 1, 0, 0],
-          [0, 0, 1, 0],
-          [0, 0, 0, 1]
-        ]);
-        __publicField(this, "magic", "0");
-        __publicField(this, "extensionFlag", [0, 0, 0, 0]);
-        __publicField(this, "extensions", []);
-        __publicField(this, "extensionSize", 0);
-        __publicField(this, "extensionCode", 0);
-        /**
-         * Returns the byte index of the extension.
-         * @returns {number}
-         */
-        __publicField(this, "getExtensionLocation", function() {
-          return _NIFTI2.MAGIC_COOKIE + 4;
-        });
-        /**
-         * Returns the extension size.
-         * @param {DataView} data
-         * @returns {number}
-         */
-        __publicField(this, "getExtensionSize", nifti1_1.NIFTI1.prototype.getExtensionSize);
-        /**
-         * Returns the extension code.
-         * @param {DataView} data
-         * @returns {number}
-         */
-        __publicField(this, "getExtensionCode", nifti1_1.NIFTI1.prototype.getExtensionCode);
-        /**
-         * Adds an extension
-         * @param {NIFTIEXTENSION} extension
-         * @param {number} index
-         */
-        __publicField(this, "addExtension", nifti1_1.NIFTI1.prototype.addExtension);
-        /**
-         * Removes an extension
-         * @param {number} index
-         */
-        __publicField(this, "removeExtension", nifti1_1.NIFTI1.prototype.removeExtension);
-        /**
-         * Returns a human-readable string of datatype.
-         * @param {number} code
-         * @returns {string}
-         */
-        __publicField(this, "getDatatypeCodeString", nifti1_1.NIFTI1.prototype.getDatatypeCodeString);
-        /**
-         * Returns a human-readable string of transform type.
-         * @param {number} code
-         * @returns {string}
-         */
-        __publicField(this, "getTransformCodeString", nifti1_1.NIFTI1.prototype.getTransformCodeString);
-        /**
-         * Returns a human-readable string of spatial and temporal units.
-         * @param {number} code
-         * @returns {string}
-         */
-        __publicField(this, "getUnitsCodeString", nifti1_1.NIFTI1.prototype.getUnitsCodeString);
-        /**
-         * Returns the qform matrix.
-         * @returns {Array.<Array.<number>>}
-         */
-        __publicField(this, "getQformMat", nifti1_1.NIFTI1.prototype.getQformMat);
-        /**
-         * Converts qform to an affine.  (See http://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
-         * @param {number} qb
-         * @param {number} qc
-         * @param {number} qd
-         * @param {number} qx
-         * @param {number} qy
-         * @param {number} qz
-         * @param {number} dx
-         * @param {number} dy
-         * @param {number} dz
-         * @param {number} qfac
-         * @returns {Array.<Array.<number>>}
-         */
-        __publicField(this, "convertNiftiQFormToNiftiSForm", nifti1_1.NIFTI1.prototype.convertNiftiQFormToNiftiSForm);
-        /**
-         * Converts sform to an orientation string (e.g., XYZ+--).  (See http://nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
-         * @param {Array.<Array.<number>>} R
-         * @returns {string}
-         */
-        __publicField(this, "convertNiftiSFormToNEMA", nifti1_1.NIFTI1.prototype.convertNiftiSFormToNEMA);
-        __publicField(this, "nifti_mat33_mul", nifti1_1.NIFTI1.prototype.nifti_mat33_mul);
-        __publicField(this, "nifti_mat33_determ", nifti1_1.NIFTI1.prototype.nifti_mat33_determ);
-      }
-      // ni2\0
-      /*** Prototype Methods ***/
-      /**
-       * Reads the header data.
-       * @param {ArrayBuffer} data
-       */
-      readHeader(data) {
-        var rawData = new DataView(data), magicCookieVal = utilities_1.Utils.getIntAt(rawData, 0, this.littleEndian), ctr, ctrOut, ctrIn, index, array;
-        if (magicCookieVal !== _NIFTI2.MAGIC_COOKIE) {
-          this.littleEndian = true;
-          magicCookieVal = utilities_1.Utils.getIntAt(rawData, 0, this.littleEndian);
-        }
-        if (magicCookieVal !== _NIFTI2.MAGIC_COOKIE) {
-          throw new Error("This does not appear to be a NIFTI file!");
-        }
-        this.magic = utilities_1.Utils.getStringAt(rawData, 4, 12);
-        this.datatypeCode = utilities_1.Utils.getShortAt(rawData, 12, this.littleEndian);
-        this.numBitsPerVoxel = utilities_1.Utils.getShortAt(rawData, 14, this.littleEndian);
-        for (ctr = 0; ctr < 8; ctr += 1) {
-          index = 16 + ctr * 8;
-          this.dims[ctr] = utilities_1.Utils.getLongAt(rawData, index, this.littleEndian);
-        }
-        this.intent_p1 = utilities_1.Utils.getDoubleAt(rawData, 80, this.littleEndian);
-        this.intent_p2 = utilities_1.Utils.getDoubleAt(rawData, 88, this.littleEndian);
-        this.intent_p3 = utilities_1.Utils.getDoubleAt(rawData, 96, this.littleEndian);
-        for (ctr = 0; ctr < 8; ctr += 1) {
-          index = 104 + ctr * 8;
-          this.pixDims[ctr] = utilities_1.Utils.getDoubleAt(rawData, index, this.littleEndian);
-        }
-        this.vox_offset = utilities_1.Utils.getLongAt(rawData, 168, this.littleEndian);
-        this.scl_slope = utilities_1.Utils.getDoubleAt(rawData, 176, this.littleEndian);
-        this.scl_inter = utilities_1.Utils.getDoubleAt(rawData, 184, this.littleEndian);
-        this.cal_max = utilities_1.Utils.getDoubleAt(rawData, 192, this.littleEndian);
-        this.cal_min = utilities_1.Utils.getDoubleAt(rawData, 200, this.littleEndian);
-        this.slice_duration = utilities_1.Utils.getDoubleAt(rawData, 208, this.littleEndian);
-        this.toffset = utilities_1.Utils.getDoubleAt(rawData, 216, this.littleEndian);
-        this.slice_start = utilities_1.Utils.getLongAt(rawData, 224, this.littleEndian);
-        this.slice_end = utilities_1.Utils.getLongAt(rawData, 232, this.littleEndian);
-        this.description = utilities_1.Utils.getStringAt(rawData, 240, 240 + 80);
-        this.aux_file = utilities_1.Utils.getStringAt(rawData, 320, 320 + 24);
-        this.qform_code = utilities_1.Utils.getIntAt(rawData, 344, this.littleEndian);
-        this.sform_code = utilities_1.Utils.getIntAt(rawData, 348, this.littleEndian);
-        this.quatern_b = utilities_1.Utils.getDoubleAt(rawData, 352, this.littleEndian);
-        this.quatern_c = utilities_1.Utils.getDoubleAt(rawData, 360, this.littleEndian);
-        this.quatern_d = utilities_1.Utils.getDoubleAt(rawData, 368, this.littleEndian);
-        this.qoffset_x = utilities_1.Utils.getDoubleAt(rawData, 376, this.littleEndian);
-        this.qoffset_y = utilities_1.Utils.getDoubleAt(rawData, 384, this.littleEndian);
-        this.qoffset_z = utilities_1.Utils.getDoubleAt(rawData, 392, this.littleEndian);
-        for (ctrOut = 0; ctrOut < 3; ctrOut += 1) {
-          for (ctrIn = 0; ctrIn < 4; ctrIn += 1) {
-            index = 400 + (ctrOut * 4 + ctrIn) * 8;
-            this.affine[ctrOut][ctrIn] = utilities_1.Utils.getDoubleAt(rawData, index, this.littleEndian);
-          }
-        }
-        this.affine[3][0] = 0;
-        this.affine[3][1] = 0;
-        this.affine[3][2] = 0;
-        this.affine[3][3] = 1;
-        this.slice_code = utilities_1.Utils.getIntAt(rawData, 496, this.littleEndian);
-        this.xyzt_units = utilities_1.Utils.getIntAt(rawData, 500, this.littleEndian);
-        this.intent_code = utilities_1.Utils.getIntAt(rawData, 504, this.littleEndian);
-        this.intent_name = utilities_1.Utils.getStringAt(rawData, 508, 508 + 16);
-        this.dim_info = utilities_1.Utils.getByteAt(rawData, 524);
-        if (rawData.byteLength > _NIFTI2.MAGIC_COOKIE) {
-          this.extensionFlag[0] = utilities_1.Utils.getByteAt(rawData, 540);
-          this.extensionFlag[1] = utilities_1.Utils.getByteAt(rawData, 540 + 1);
-          this.extensionFlag[2] = utilities_1.Utils.getByteAt(rawData, 540 + 2);
-          this.extensionFlag[3] = utilities_1.Utils.getByteAt(rawData, 540 + 3);
-          if (this.extensionFlag[0]) {
-            this.extensions = utilities_1.Utils.getExtensionsAt(rawData, this.getExtensionLocation(), this.littleEndian, this.vox_offset);
-            this.extensionSize = this.extensions[0].esize;
-            this.extensionCode = this.extensions[0].ecode;
-          }
-        }
-      }
-      /**
-       * Returns a formatted string of header fields.
-       * @returns {string}
-       */
-      toFormattedString() {
-        var fmt = utilities_1.Utils.formatNumber, string = "";
-        string += "Datatype = " + +this.datatypeCode + " (" + this.getDatatypeCodeString(this.datatypeCode) + ")\n";
-        string += "Bits Per Voxel =  = " + this.numBitsPerVoxel + "\n";
-        string += "Image Dimensions (1-8): " + this.dims[0] + ", " + this.dims[1] + ", " + this.dims[2] + ", " + this.dims[3] + ", " + this.dims[4] + ", " + this.dims[5] + ", " + this.dims[6] + ", " + this.dims[7] + "\n";
-        string += "Intent Parameters (1-3): " + this.intent_p1 + ", " + this.intent_p2 + ", " + this.intent_p3 + "\n";
-        string += "Voxel Dimensions (1-8): " + fmt(this.pixDims[0]) + ", " + fmt(this.pixDims[1]) + ", " + fmt(this.pixDims[2]) + ", " + fmt(this.pixDims[3]) + ", " + fmt(this.pixDims[4]) + ", " + fmt(this.pixDims[5]) + ", " + fmt(this.pixDims[6]) + ", " + fmt(this.pixDims[7]) + "\n";
-        string += "Image Offset = " + this.vox_offset + "\n";
-        string += "Data Scale:  Slope = " + fmt(this.scl_slope) + "  Intercept = " + fmt(this.scl_inter) + "\n";
-        string += "Display Range:  Max = " + fmt(this.cal_max) + "  Min = " + fmt(this.cal_min) + "\n";
-        string += "Slice Duration = " + this.slice_duration + "\n";
-        string += "Time Axis Shift = " + this.toffset + "\n";
-        string += "Slice Start = " + this.slice_start + "\n";
-        string += "Slice End = " + this.slice_end + "\n";
-        string += 'Description: "' + this.description + '"\n';
-        string += 'Auxiliary File: "' + this.aux_file + '"\n';
-        string += "Q-Form Code = " + this.qform_code + " (" + this.getTransformCodeString(this.qform_code) + ")\n";
-        string += "S-Form Code = " + this.sform_code + " (" + this.getTransformCodeString(this.sform_code) + ")\n";
-        string += "Quaternion Parameters:  b = " + fmt(this.quatern_b) + "  c = " + fmt(this.quatern_c) + "  d = " + fmt(this.quatern_d) + "\n";
-        string += "Quaternion Offsets:  x = " + this.qoffset_x + "  y = " + this.qoffset_y + "  z = " + this.qoffset_z + "\n";
-        string += "S-Form Parameters X: " + fmt(this.affine[0][0]) + ", " + fmt(this.affine[0][1]) + ", " + fmt(this.affine[0][2]) + ", " + fmt(this.affine[0][3]) + "\n";
-        string += "S-Form Parameters Y: " + fmt(this.affine[1][0]) + ", " + fmt(this.affine[1][1]) + ", " + fmt(this.affine[1][2]) + ", " + fmt(this.affine[1][3]) + "\n";
-        string += "S-Form Parameters Z: " + fmt(this.affine[2][0]) + ", " + fmt(this.affine[2][1]) + ", " + fmt(this.affine[2][2]) + ", " + fmt(this.affine[2][3]) + "\n";
-        string += "Slice Code = " + this.slice_code + "\n";
-        string += "Units Code = " + this.xyzt_units + " (" + this.getUnitsCodeString(nifti1_1.NIFTI1.SPATIAL_UNITS_MASK & this.xyzt_units) + ", " + this.getUnitsCodeString(nifti1_1.NIFTI1.TEMPORAL_UNITS_MASK & this.xyzt_units) + ")\n";
-        string += "Intent Code = " + this.intent_code + "\n";
-        string += 'Intent Name: "' + this.intent_name + '"\n';
-        string += "Dim Info = " + this.dim_info + "\n";
-        return string;
-      }
-      /**
-       * Returns header as ArrayBuffer.
-       * @param {boolean} includeExtensions - should extension bytes be included
-       * @returns {ArrayBuffer}
-       */
-      toArrayBuffer(includeExtensions = false) {
-        const INT64_SIZE = 8;
-        const DOUBLE_SIZE = 8;
-        let byteSize = 540 + 4;
-        if (includeExtensions) {
-          for (let extension of this.extensions) {
-            byteSize += extension.esize;
-          }
-        }
-        let byteArray = new Uint8Array(byteSize);
-        let view = new DataView(byteArray.buffer);
-        view.setInt32(0, 540, this.littleEndian);
-        byteArray.set(Buffer.from(this.magic), 4);
-        view.setInt16(12, this.datatypeCode, this.littleEndian);
-        view.setInt16(14, this.numBitsPerVoxel, this.littleEndian);
-        for (let i = 0; i < 8; i++) {
-          view.setBigInt64(16 + INT64_SIZE * i, BigInt(this.dims[i]), this.littleEndian);
-        }
-        view.setFloat64(80, this.intent_p1, this.littleEndian);
-        view.setFloat64(88, this.intent_p2, this.littleEndian);
-        view.setFloat64(96, this.intent_p3, this.littleEndian);
-        for (let i = 0; i < 8; i++) {
-          view.setFloat64(104 + DOUBLE_SIZE * i, this.pixDims[i], this.littleEndian);
-        }
-        view.setBigInt64(168, BigInt(this.vox_offset), this.littleEndian);
-        view.setFloat64(176, this.scl_slope, this.littleEndian);
-        view.setFloat64(184, this.scl_inter, this.littleEndian);
-        view.setFloat64(192, this.cal_max, this.littleEndian);
-        view.setFloat64(200, this.cal_min, this.littleEndian);
-        view.setFloat64(208, this.slice_duration, this.littleEndian);
-        view.setFloat64(216, this.toffset, this.littleEndian);
-        view.setBigInt64(224, BigInt(this.slice_start), this.littleEndian);
-        view.setBigInt64(232, BigInt(this.slice_end), this.littleEndian);
-        byteArray.set(Buffer.from(this.description), 240);
-        byteArray.set(Buffer.from(this.aux_file), 320);
-        view.setInt32(344, this.qform_code, this.littleEndian);
-        view.setInt32(348, this.sform_code, this.littleEndian);
-        view.setFloat64(352, this.quatern_b, this.littleEndian);
-        view.setFloat64(360, this.quatern_c, this.littleEndian);
-        view.setFloat64(368, this.quatern_d, this.littleEndian);
-        view.setFloat64(376, this.qoffset_x, this.littleEndian);
-        view.setFloat64(384, this.qoffset_y, this.littleEndian);
-        view.setFloat64(392, this.qoffset_z, this.littleEndian);
-        const flattened = this.affine.flat();
-        for (let i = 0; i < 12; i++) {
-          view.setFloat64(400 + DOUBLE_SIZE * i, flattened[i], this.littleEndian);
-        }
-        view.setInt32(496, this.slice_code, this.littleEndian);
-        view.setInt32(500, this.xyzt_units, this.littleEndian);
-        view.setInt32(504, this.intent_code, this.littleEndian);
-        byteArray.set(Buffer.from(this.intent_name), 508);
-        view.setUint8(524, this.dim_info);
-        if (includeExtensions) {
-          byteArray.set(Uint8Array.from([1, 0, 0, 0]), 540);
-          let extensionByteIndex = this.getExtensionLocation();
-          for (const extension of this.extensions) {
-            view.setInt32(extensionByteIndex, extension.esize, extension.littleEndian);
-            view.setInt32(extensionByteIndex + 4, extension.ecode, extension.littleEndian);
-            byteArray.set(new Uint8Array(extension.edata), extensionByteIndex + 8);
-            extensionByteIndex += extension.esize;
-          }
-        } else {
-          byteArray.set(new Uint8Array(4).fill(0), 540);
-        }
-        return byteArray.buffer;
-      }
-    };
-    /*** Static Pseudo-constants ***/
-    __publicField(_NIFTI2, "MAGIC_COOKIE", 540);
-    __publicField(_NIFTI2, "MAGIC_NUMBER_LOCATION", 4);
-    __publicField(_NIFTI2, "MAGIC_NUMBER", [
-      110,
-      43,
-      50,
-      0,
-      13,
-      10,
-      26,
-      10
-    ]);
-    // n+2\0
-    __publicField(_NIFTI2, "MAGIC_NUMBER2", [
-      110,
-      105,
-      50,
-      0,
-      13,
-      10,
-      26,
-      10
-    ]);
-    var NIFTI2 = _NIFTI2;
-    exports.NIFTI2 = NIFTI2;
-  }
-});
-
-// ../../node_modules/nifti-reader-js/dist/src/nifti.js
-var require_nifti = __commonJS({
-  "../../node_modules/nifti-reader-js/dist/src/nifti.js"(exports) {
-    "use strict";
-    var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    } : function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    });
-    var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    } : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports && exports.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
-      var result = {};
-      if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-      }
-      __setModuleDefault(result, mod);
-      return result;
-    };
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.readExtensionData = exports.readExtension = exports.readImage = exports.hasExtension = exports.readHeader = exports.decompress = exports.isCompressed = exports.isNIFTI = exports.isNIFTI2 = exports.isNIFTI1 = exports.NIFTIEXTENSION = exports.Utils = exports.NIFTI2 = exports.NIFTI1 = void 0;
-    var fflate = __importStar(require_node());
-    var nifti1_1 = require_nifti1();
-    var nifti2_1 = require_nifti2();
-    var utilities_1 = require_utilities();
-    var nifti1_2 = require_nifti1();
-    Object.defineProperty(exports, "NIFTI1", { enumerable: true, get: function() {
-      return nifti1_2.NIFTI1;
-    } });
-    var nifti2_2 = require_nifti2();
-    Object.defineProperty(exports, "NIFTI2", { enumerable: true, get: function() {
-      return nifti2_2.NIFTI2;
-    } });
-    var utilities_2 = require_utilities();
-    Object.defineProperty(exports, "Utils", { enumerable: true, get: function() {
-      return utilities_2.Utils;
-    } });
-    var nifti_extension_1 = require_nifti_extension();
-    Object.defineProperty(exports, "NIFTIEXTENSION", { enumerable: true, get: function() {
-      return nifti_extension_1.NIFTIEXTENSION;
-    } });
-    function isNIFTI1(data, isHdrImgPairOK = false) {
-      var buf, mag1, mag2, mag3;
-      if (data.byteLength < nifti1_1.NIFTI1.STANDARD_HEADER_SIZE) {
-        return false;
-      }
-      buf = new DataView(data);
-      if (buf)
-        mag1 = buf.getUint8(nifti1_1.NIFTI1.MAGIC_NUMBER_LOCATION);
-      mag2 = buf.getUint8(nifti1_1.NIFTI1.MAGIC_NUMBER_LOCATION + 1);
-      mag3 = buf.getUint8(nifti1_1.NIFTI1.MAGIC_NUMBER_LOCATION + 2);
-      if (isHdrImgPairOK && mag1 === nifti1_1.NIFTI1.MAGIC_NUMBER2[0] && mag2 === nifti1_1.NIFTI1.MAGIC_NUMBER2[1] && mag3 === nifti1_1.NIFTI1.MAGIC_NUMBER2[2])
-        return true;
-      return !!(mag1 === nifti1_1.NIFTI1.MAGIC_NUMBER[0] && mag2 === nifti1_1.NIFTI1.MAGIC_NUMBER[1] && mag3 === nifti1_1.NIFTI1.MAGIC_NUMBER[2]);
-    }
-    exports.isNIFTI1 = isNIFTI1;
-    function isNIFTI2(data, isHdrImgPairOK = false) {
-      var buf, mag1, mag2, mag3;
-      if (data.byteLength < nifti1_1.NIFTI1.STANDARD_HEADER_SIZE) {
-        return false;
-      }
-      buf = new DataView(data);
-      mag1 = buf.getUint8(nifti2_1.NIFTI2.MAGIC_NUMBER_LOCATION);
-      mag2 = buf.getUint8(nifti2_1.NIFTI2.MAGIC_NUMBER_LOCATION + 1);
-      mag3 = buf.getUint8(nifti2_1.NIFTI2.MAGIC_NUMBER_LOCATION + 2);
-      if (isHdrImgPairOK && mag1 === nifti2_1.NIFTI2.MAGIC_NUMBER2[0] && mag2 === nifti2_1.NIFTI2.MAGIC_NUMBER2[1] && mag3 === nifti2_1.NIFTI2.MAGIC_NUMBER2[2])
-        return true;
-      return !!(mag1 === nifti2_1.NIFTI2.MAGIC_NUMBER[0] && mag2 === nifti2_1.NIFTI2.MAGIC_NUMBER[1] && mag3 === nifti2_1.NIFTI2.MAGIC_NUMBER[2]);
-    }
-    exports.isNIFTI2 = isNIFTI2;
-    function isNIFTI(data, isHdrImgPairOK = false) {
-      return isNIFTI1(data, isHdrImgPairOK) || isNIFTI2(data, isHdrImgPairOK);
-    }
-    exports.isNIFTI = isNIFTI;
-    function isCompressed2(data) {
-      var buf, magicCookie1, magicCookie2;
-      if (data) {
-        buf = new DataView(data);
-        magicCookie1 = buf.getUint8(0);
-        magicCookie2 = buf.getUint8(1);
-        if (magicCookie1 === utilities_1.Utils.GUNZIP_MAGIC_COOKIE1) {
-          return true;
-        }
-        if (magicCookie2 === utilities_1.Utils.GUNZIP_MAGIC_COOKIE2) {
-          return true;
-        }
-      }
-      return false;
-    }
-    exports.isCompressed = isCompressed2;
-    function decompress3(data) {
-      return fflate.decompressSync(new Uint8Array(data)).buffer;
-    }
-    exports.decompress = decompress3;
-    function readHeader2(data, isHdrImgPairOK = false) {
-      var header = null;
-      if (isCompressed2(data)) {
-        data = decompress3(data);
-      }
-      if (isNIFTI1(data, isHdrImgPairOK)) {
-        header = new nifti1_1.NIFTI1();
-      } else if (isNIFTI2(data, isHdrImgPairOK)) {
-        header = new nifti2_1.NIFTI2();
-      }
-      if (header) {
-        header.readHeader(data);
-      } else {
-        console.error("That file does not appear to be NIFTI!");
-      }
-      return header;
-    }
-    exports.readHeader = readHeader2;
-    function hasExtension(header) {
-      return header.extensionFlag[0] != 0;
-    }
-    exports.hasExtension = hasExtension;
-    function readImage2(header, data) {
-      var imageOffset = header.vox_offset, timeDim = 1, statDim = 1;
-      if (header.dims[4]) {
-        timeDim = header.dims[4];
-      }
-      if (header.dims[5]) {
-        statDim = header.dims[5];
-      }
-      var imageSize = header.dims[1] * header.dims[2] * header.dims[3] * timeDim * statDim * (header.numBitsPerVoxel / 8);
-      return data.slice(imageOffset, imageOffset + imageSize);
-    }
-    exports.readImage = readImage2;
-    function readExtension(header, data) {
-      var loc = header.getExtensionLocation(), size = header.extensionSize;
-      return data.slice(loc, loc + size);
-    }
-    exports.readExtension = readExtension;
-    function readExtensionData(header, data) {
-      var loc = header.getExtensionLocation(), size = header.extensionSize;
-      return data.slice(loc + 8, loc + size);
-    }
-    exports.readExtensionData = readExtensionData;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/isFunction.js
-var require_isFunction = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/isFunction.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.isFunction = void 0;
-    function isFunction(value) {
-      return typeof value === "function";
-    }
-    exports.isFunction = isFunction;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/createErrorClass.js
-var require_createErrorClass = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/createErrorClass.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createErrorClass = void 0;
-    function createErrorClass(createImpl) {
-      var _super = function(instance) {
-        Error.call(instance);
-        instance.stack = new Error().stack;
-      };
-      var ctorFunc = createImpl(_super);
-      ctorFunc.prototype = Object.create(Error.prototype);
-      ctorFunc.prototype.constructor = ctorFunc;
-      return ctorFunc;
-    }
-    exports.createErrorClass = createErrorClass;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/UnsubscriptionError.js
-var require_UnsubscriptionError = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/UnsubscriptionError.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.UnsubscriptionError = void 0;
-    var createErrorClass_1 = require_createErrorClass();
-    exports.UnsubscriptionError = createErrorClass_1.createErrorClass(function(_super) {
-      return function UnsubscriptionErrorImpl(errors) {
-        _super(this);
-        this.message = errors ? errors.length + " errors occurred during unsubscription:\n" + errors.map(function(err2, i) {
-          return i + 1 + ") " + err2.toString();
-        }).join("\n  ") : "";
-        this.name = "UnsubscriptionError";
-        this.errors = errors;
-      };
-    });
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/arrRemove.js
-var require_arrRemove = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/arrRemove.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.arrRemove = void 0;
-    function arrRemove(arr, item) {
-      if (arr) {
-        var index = arr.indexOf(item);
-        0 <= index && arr.splice(index, 1);
-      }
-    }
-    exports.arrRemove = arrRemove;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/Subscription.js
-var require_Subscription = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/Subscription.js"(exports) {
-    "use strict";
-    var __values = exports && exports.__values || function(o) {
-      var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-      if (m) return m.call(o);
-      if (o && typeof o.length === "number") return {
-        next: function() {
-          if (o && i >= o.length) o = void 0;
-          return { value: o && o[i++], done: !o };
-        }
-      };
-      throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-    };
-    var __read = exports && exports.__read || function(o, n) {
-      var m = typeof Symbol === "function" && o[Symbol.iterator];
-      if (!m) return o;
-      var i = m.call(o), r, ar = [], e;
-      try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-      } catch (error) {
-        e = { error };
-      } finally {
-        try {
-          if (r && !r.done && (m = i["return"])) m.call(i);
-        } finally {
-          if (e) throw e.error;
-        }
-      }
-      return ar;
-    };
-    var __spreadArray = exports && exports.__spreadArray || function(to, from) {
-      for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-      return to;
-    };
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.isSubscription = exports.EMPTY_SUBSCRIPTION = exports.Subscription = void 0;
-    var isFunction_1 = require_isFunction();
-    var UnsubscriptionError_1 = require_UnsubscriptionError();
-    var arrRemove_1 = require_arrRemove();
-    var Subscription = function() {
-      function Subscription2(initialTeardown) {
-        this.initialTeardown = initialTeardown;
-        this.closed = false;
-        this._parentage = null;
-        this._finalizers = null;
-      }
-      Subscription2.prototype.unsubscribe = function() {
-        var e_1, _a2, e_2, _b2;
-        var errors;
-        if (!this.closed) {
-          this.closed = true;
-          var _parentage = this._parentage;
-          if (_parentage) {
-            this._parentage = null;
-            if (Array.isArray(_parentage)) {
-              try {
-                for (var _parentage_1 = __values(_parentage), _parentage_1_1 = _parentage_1.next(); !_parentage_1_1.done; _parentage_1_1 = _parentage_1.next()) {
-                  var parent_1 = _parentage_1_1.value;
-                  parent_1.remove(this);
-                }
-              } catch (e_1_1) {
-                e_1 = { error: e_1_1 };
-              } finally {
-                try {
-                  if (_parentage_1_1 && !_parentage_1_1.done && (_a2 = _parentage_1.return)) _a2.call(_parentage_1);
-                } finally {
-                  if (e_1) throw e_1.error;
-                }
-              }
-            } else {
-              _parentage.remove(this);
-            }
-          }
-          var initialFinalizer = this.initialTeardown;
-          if (isFunction_1.isFunction(initialFinalizer)) {
-            try {
-              initialFinalizer();
-            } catch (e) {
-              errors = e instanceof UnsubscriptionError_1.UnsubscriptionError ? e.errors : [e];
-            }
-          }
-          var _finalizers = this._finalizers;
-          if (_finalizers) {
-            this._finalizers = null;
-            try {
-              for (var _finalizers_1 = __values(_finalizers), _finalizers_1_1 = _finalizers_1.next(); !_finalizers_1_1.done; _finalizers_1_1 = _finalizers_1.next()) {
-                var finalizer = _finalizers_1_1.value;
-                try {
-                  execFinalizer(finalizer);
-                } catch (err2) {
-                  errors = errors !== null && errors !== void 0 ? errors : [];
-                  if (err2 instanceof UnsubscriptionError_1.UnsubscriptionError) {
-                    errors = __spreadArray(__spreadArray([], __read(errors)), __read(err2.errors));
-                  } else {
-                    errors.push(err2);
-                  }
-                }
-              }
-            } catch (e_2_1) {
-              e_2 = { error: e_2_1 };
-            } finally {
-              try {
-                if (_finalizers_1_1 && !_finalizers_1_1.done && (_b2 = _finalizers_1.return)) _b2.call(_finalizers_1);
-              } finally {
-                if (e_2) throw e_2.error;
-              }
-            }
-          }
-          if (errors) {
-            throw new UnsubscriptionError_1.UnsubscriptionError(errors);
-          }
-        }
-      };
-      Subscription2.prototype.add = function(teardown) {
-        var _a2;
-        if (teardown && teardown !== this) {
-          if (this.closed) {
-            execFinalizer(teardown);
-          } else {
-            if (teardown instanceof Subscription2) {
-              if (teardown.closed || teardown._hasParent(this)) {
-                return;
-              }
-              teardown._addParent(this);
-            }
-            (this._finalizers = (_a2 = this._finalizers) !== null && _a2 !== void 0 ? _a2 : []).push(teardown);
-          }
-        }
-      };
-      Subscription2.prototype._hasParent = function(parent) {
-        var _parentage = this._parentage;
-        return _parentage === parent || Array.isArray(_parentage) && _parentage.includes(parent);
-      };
-      Subscription2.prototype._addParent = function(parent) {
-        var _parentage = this._parentage;
-        this._parentage = Array.isArray(_parentage) ? (_parentage.push(parent), _parentage) : _parentage ? [_parentage, parent] : parent;
-      };
-      Subscription2.prototype._removeParent = function(parent) {
-        var _parentage = this._parentage;
-        if (_parentage === parent) {
-          this._parentage = null;
-        } else if (Array.isArray(_parentage)) {
-          arrRemove_1.arrRemove(_parentage, parent);
-        }
-      };
-      Subscription2.prototype.remove = function(teardown) {
-        var _finalizers = this._finalizers;
-        _finalizers && arrRemove_1.arrRemove(_finalizers, teardown);
-        if (teardown instanceof Subscription2) {
-          teardown._removeParent(this);
-        }
-      };
-      Subscription2.EMPTY = function() {
-        var empty = new Subscription2();
-        empty.closed = true;
-        return empty;
-      }();
-      return Subscription2;
-    }();
-    exports.Subscription = Subscription;
-    exports.EMPTY_SUBSCRIPTION = Subscription.EMPTY;
-    function isSubscription(value) {
-      return value instanceof Subscription || value && "closed" in value && isFunction_1.isFunction(value.remove) && isFunction_1.isFunction(value.add) && isFunction_1.isFunction(value.unsubscribe);
-    }
-    exports.isSubscription = isSubscription;
-    function execFinalizer(finalizer) {
-      if (isFunction_1.isFunction(finalizer)) {
-        finalizer();
-      } else {
-        finalizer.unsubscribe();
-      }
-    }
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/config.js
-var require_config = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/config.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.config = void 0;
-    exports.config = {
-      onUnhandledError: null,
-      onStoppedNotification: null,
-      Promise: void 0,
-      useDeprecatedSynchronousErrorHandling: false,
-      useDeprecatedNextContext: false
-    };
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/scheduler/timeoutProvider.js
-var require_timeoutProvider = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/scheduler/timeoutProvider.js"(exports) {
-    "use strict";
-    var __read = exports && exports.__read || function(o, n) {
-      var m = typeof Symbol === "function" && o[Symbol.iterator];
-      if (!m) return o;
-      var i = m.call(o), r, ar = [], e;
-      try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-      } catch (error) {
-        e = { error };
-      } finally {
-        try {
-          if (r && !r.done && (m = i["return"])) m.call(i);
-        } finally {
-          if (e) throw e.error;
-        }
-      }
-      return ar;
-    };
-    var __spreadArray = exports && exports.__spreadArray || function(to, from) {
-      for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-      return to;
-    };
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.timeoutProvider = void 0;
-    exports.timeoutProvider = {
-      setTimeout: function(handler, timeout) {
-        var args = [];
-        for (var _i = 2; _i < arguments.length; _i++) {
-          args[_i - 2] = arguments[_i];
-        }
-        var delegate = exports.timeoutProvider.delegate;
-        if (delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) {
-          return delegate.setTimeout.apply(delegate, __spreadArray([handler, timeout], __read(args)));
-        }
-        return setTimeout.apply(void 0, __spreadArray([handler, timeout], __read(args)));
-      },
-      clearTimeout: function(handle) {
-        var delegate = exports.timeoutProvider.delegate;
-        return ((delegate === null || delegate === void 0 ? void 0 : delegate.clearTimeout) || clearTimeout)(handle);
-      },
-      delegate: void 0
-    };
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/reportUnhandledError.js
-var require_reportUnhandledError = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/reportUnhandledError.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.reportUnhandledError = void 0;
-    var config_1 = require_config();
-    var timeoutProvider_1 = require_timeoutProvider();
-    function reportUnhandledError(err2) {
-      timeoutProvider_1.timeoutProvider.setTimeout(function() {
-        var onUnhandledError = config_1.config.onUnhandledError;
-        if (onUnhandledError) {
-          onUnhandledError(err2);
-        } else {
-          throw err2;
-        }
-      });
-    }
-    exports.reportUnhandledError = reportUnhandledError;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/noop.js
-var require_noop = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/noop.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.noop = void 0;
-    function noop() {
-    }
-    exports.noop = noop;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/NotificationFactories.js
-var require_NotificationFactories = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/NotificationFactories.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.createNotification = exports.nextNotification = exports.errorNotification = exports.COMPLETE_NOTIFICATION = void 0;
-    exports.COMPLETE_NOTIFICATION = function() {
-      return createNotification("C", void 0, void 0);
-    }();
-    function errorNotification(error) {
-      return createNotification("E", void 0, error);
-    }
-    exports.errorNotification = errorNotification;
-    function nextNotification(value) {
-      return createNotification("N", value, void 0);
-    }
-    exports.nextNotification = nextNotification;
-    function createNotification(kind, value, error) {
-      return {
-        kind,
-        value,
-        error
-      };
-    }
-    exports.createNotification = createNotification;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/errorContext.js
-var require_errorContext = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/errorContext.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.captureError = exports.errorContext = void 0;
-    var config_1 = require_config();
-    var context = null;
-    function errorContext(cb) {
-      if (config_1.config.useDeprecatedSynchronousErrorHandling) {
-        var isRoot = !context;
-        if (isRoot) {
-          context = { errorThrown: false, error: null };
-        }
-        cb();
-        if (isRoot) {
-          var _a2 = context, errorThrown = _a2.errorThrown, error = _a2.error;
-          context = null;
-          if (errorThrown) {
-            throw error;
-          }
-        }
-      } else {
-        cb();
-      }
-    }
-    exports.errorContext = errorContext;
-    function captureError(err2) {
-      if (config_1.config.useDeprecatedSynchronousErrorHandling && context) {
-        context.errorThrown = true;
-        context.error = err2;
-      }
-    }
-    exports.captureError = captureError;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/Subscriber.js
-var require_Subscriber = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/Subscriber.js"(exports) {
-    "use strict";
-    var __extends = exports && exports.__extends || /* @__PURE__ */ function() {
-      var extendStatics = function(d, b) {
-        extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b3) {
-          d2.__proto__ = b3;
-        } || function(d2, b3) {
-          for (var p in b3) if (Object.prototype.hasOwnProperty.call(b3, p)) d2[p] = b3[p];
-        };
-        return extendStatics(d, b);
-      };
-      return function(d, b) {
-        if (typeof b !== "function" && b !== null)
-          throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() {
-          this.constructor = d;
-        }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-      };
-    }();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.EMPTY_OBSERVER = exports.SafeSubscriber = exports.Subscriber = void 0;
-    var isFunction_1 = require_isFunction();
-    var Subscription_1 = require_Subscription();
-    var config_1 = require_config();
-    var reportUnhandledError_1 = require_reportUnhandledError();
-    var noop_1 = require_noop();
-    var NotificationFactories_1 = require_NotificationFactories();
-    var timeoutProvider_1 = require_timeoutProvider();
-    var errorContext_1 = require_errorContext();
-    var Subscriber = function(_super) {
-      __extends(Subscriber2, _super);
-      function Subscriber2(destination) {
-        var _this = _super.call(this) || this;
-        _this.isStopped = false;
-        if (destination) {
-          _this.destination = destination;
-          if (Subscription_1.isSubscription(destination)) {
-            destination.add(_this);
-          }
-        } else {
-          _this.destination = exports.EMPTY_OBSERVER;
-        }
-        return _this;
-      }
-      Subscriber2.create = function(next, error, complete) {
-        return new SafeSubscriber(next, error, complete);
-      };
-      Subscriber2.prototype.next = function(value) {
-        if (this.isStopped) {
-          handleStoppedNotification(NotificationFactories_1.nextNotification(value), this);
-        } else {
-          this._next(value);
-        }
-      };
-      Subscriber2.prototype.error = function(err2) {
-        if (this.isStopped) {
-          handleStoppedNotification(NotificationFactories_1.errorNotification(err2), this);
-        } else {
-          this.isStopped = true;
-          this._error(err2);
-        }
-      };
-      Subscriber2.prototype.complete = function() {
-        if (this.isStopped) {
-          handleStoppedNotification(NotificationFactories_1.COMPLETE_NOTIFICATION, this);
-        } else {
-          this.isStopped = true;
-          this._complete();
-        }
-      };
-      Subscriber2.prototype.unsubscribe = function() {
-        if (!this.closed) {
-          this.isStopped = true;
-          _super.prototype.unsubscribe.call(this);
-          this.destination = null;
-        }
-      };
-      Subscriber2.prototype._next = function(value) {
-        this.destination.next(value);
-      };
-      Subscriber2.prototype._error = function(err2) {
-        try {
-          this.destination.error(err2);
-        } finally {
-          this.unsubscribe();
-        }
-      };
-      Subscriber2.prototype._complete = function() {
-        try {
-          this.destination.complete();
-        } finally {
-          this.unsubscribe();
-        }
-      };
-      return Subscriber2;
-    }(Subscription_1.Subscription);
-    exports.Subscriber = Subscriber;
-    var _bind = Function.prototype.bind;
-    function bind(fn, thisArg) {
-      return _bind.call(fn, thisArg);
-    }
-    var ConsumerObserver = function() {
-      function ConsumerObserver2(partialObserver) {
-        this.partialObserver = partialObserver;
-      }
-      ConsumerObserver2.prototype.next = function(value) {
-        var partialObserver = this.partialObserver;
-        if (partialObserver.next) {
-          try {
-            partialObserver.next(value);
-          } catch (error) {
-            handleUnhandledError(error);
-          }
-        }
-      };
-      ConsumerObserver2.prototype.error = function(err2) {
-        var partialObserver = this.partialObserver;
-        if (partialObserver.error) {
-          try {
-            partialObserver.error(err2);
-          } catch (error) {
-            handleUnhandledError(error);
-          }
-        } else {
-          handleUnhandledError(err2);
-        }
-      };
-      ConsumerObserver2.prototype.complete = function() {
-        var partialObserver = this.partialObserver;
-        if (partialObserver.complete) {
-          try {
-            partialObserver.complete();
-          } catch (error) {
-            handleUnhandledError(error);
-          }
-        }
-      };
-      return ConsumerObserver2;
-    }();
-    var SafeSubscriber = function(_super) {
-      __extends(SafeSubscriber2, _super);
-      function SafeSubscriber2(observerOrNext, error, complete) {
-        var _this = _super.call(this) || this;
-        var partialObserver;
-        if (isFunction_1.isFunction(observerOrNext) || !observerOrNext) {
-          partialObserver = {
-            next: observerOrNext !== null && observerOrNext !== void 0 ? observerOrNext : void 0,
-            error: error !== null && error !== void 0 ? error : void 0,
-            complete: complete !== null && complete !== void 0 ? complete : void 0
-          };
-        } else {
-          var context_1;
-          if (_this && config_1.config.useDeprecatedNextContext) {
-            context_1 = Object.create(observerOrNext);
-            context_1.unsubscribe = function() {
-              return _this.unsubscribe();
-            };
-            partialObserver = {
-              next: observerOrNext.next && bind(observerOrNext.next, context_1),
-              error: observerOrNext.error && bind(observerOrNext.error, context_1),
-              complete: observerOrNext.complete && bind(observerOrNext.complete, context_1)
-            };
-          } else {
-            partialObserver = observerOrNext;
-          }
-        }
-        _this.destination = new ConsumerObserver(partialObserver);
-        return _this;
-      }
-      return SafeSubscriber2;
-    }(Subscriber);
-    exports.SafeSubscriber = SafeSubscriber;
-    function handleUnhandledError(error) {
-      if (config_1.config.useDeprecatedSynchronousErrorHandling) {
-        errorContext_1.captureError(error);
-      } else {
-        reportUnhandledError_1.reportUnhandledError(error);
-      }
-    }
-    function defaultErrorHandler(err2) {
-      throw err2;
-    }
-    function handleStoppedNotification(notification, subscriber) {
-      var onStoppedNotification = config_1.config.onStoppedNotification;
-      onStoppedNotification && timeoutProvider_1.timeoutProvider.setTimeout(function() {
-        return onStoppedNotification(notification, subscriber);
-      });
-    }
-    exports.EMPTY_OBSERVER = {
-      closed: true,
-      next: noop_1.noop,
-      error: defaultErrorHandler,
-      complete: noop_1.noop
-    };
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/symbol/observable.js
-var require_observable = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/symbol/observable.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.observable = void 0;
-    exports.observable = function() {
-      return typeof Symbol === "function" && Symbol.observable || "@@observable";
-    }();
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/identity.js
-var require_identity = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/identity.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.identity = void 0;
-    function identity3(x) {
-      return x;
-    }
-    exports.identity = identity3;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/pipe.js
-var require_pipe = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/pipe.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.pipeFromArray = exports.pipe = void 0;
-    var identity_1 = require_identity();
-    function pipe() {
-      var fns = [];
-      for (var _i = 0; _i < arguments.length; _i++) {
-        fns[_i] = arguments[_i];
-      }
-      return pipeFromArray(fns);
-    }
-    exports.pipe = pipe;
-    function pipeFromArray(fns) {
-      if (fns.length === 0) {
-        return identity_1.identity;
-      }
-      if (fns.length === 1) {
-        return fns[0];
-      }
-      return function piped(input) {
-        return fns.reduce(function(prev, fn) {
-          return fn(prev);
-        }, input);
-      };
-    }
-    exports.pipeFromArray = pipeFromArray;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/Observable.js
-var require_Observable = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/Observable.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.Observable = void 0;
-    var Subscriber_1 = require_Subscriber();
-    var Subscription_1 = require_Subscription();
-    var observable_1 = require_observable();
-    var pipe_1 = require_pipe();
-    var config_1 = require_config();
-    var isFunction_1 = require_isFunction();
-    var errorContext_1 = require_errorContext();
-    var Observable = function() {
-      function Observable2(subscribe) {
-        if (subscribe) {
-          this._subscribe = subscribe;
-        }
-      }
-      Observable2.prototype.lift = function(operator) {
-        var observable = new Observable2();
-        observable.source = this;
-        observable.operator = operator;
-        return observable;
-      };
-      Observable2.prototype.subscribe = function(observerOrNext, error, complete) {
-        var _this = this;
-        var subscriber = isSubscriber(observerOrNext) ? observerOrNext : new Subscriber_1.SafeSubscriber(observerOrNext, error, complete);
-        errorContext_1.errorContext(function() {
-          var _a2 = _this, operator = _a2.operator, source = _a2.source;
-          subscriber.add(operator ? operator.call(subscriber, source) : source ? _this._subscribe(subscriber) : _this._trySubscribe(subscriber));
-        });
-        return subscriber;
-      };
-      Observable2.prototype._trySubscribe = function(sink) {
-        try {
-          return this._subscribe(sink);
-        } catch (err2) {
-          sink.error(err2);
-        }
-      };
-      Observable2.prototype.forEach = function(next, promiseCtor) {
-        var _this = this;
-        promiseCtor = getPromiseCtor(promiseCtor);
-        return new promiseCtor(function(resolve, reject) {
-          var subscriber = new Subscriber_1.SafeSubscriber({
-            next: function(value) {
-              try {
-                next(value);
-              } catch (err2) {
-                reject(err2);
-                subscriber.unsubscribe();
-              }
-            },
-            error: reject,
-            complete: resolve
-          });
-          _this.subscribe(subscriber);
-        });
-      };
-      Observable2.prototype._subscribe = function(subscriber) {
-        var _a2;
-        return (_a2 = this.source) === null || _a2 === void 0 ? void 0 : _a2.subscribe(subscriber);
-      };
-      Observable2.prototype[observable_1.observable] = function() {
-        return this;
-      };
-      Observable2.prototype.pipe = function() {
-        var operations = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-          operations[_i] = arguments[_i];
-        }
-        return pipe_1.pipeFromArray(operations)(this);
-      };
-      Observable2.prototype.toPromise = function(promiseCtor) {
-        var _this = this;
-        promiseCtor = getPromiseCtor(promiseCtor);
-        return new promiseCtor(function(resolve, reject) {
-          var value;
-          _this.subscribe(function(x) {
-            return value = x;
-          }, function(err2) {
-            return reject(err2);
-          }, function() {
-            return resolve(value);
-          });
-        });
-      };
-      Observable2.create = function(subscribe) {
-        return new Observable2(subscribe);
-      };
-      return Observable2;
-    }();
-    exports.Observable = Observable;
-    function getPromiseCtor(promiseCtor) {
-      var _a2;
-      return (_a2 = promiseCtor !== null && promiseCtor !== void 0 ? promiseCtor : config_1.config.Promise) !== null && _a2 !== void 0 ? _a2 : Promise;
-    }
-    function isObserver(value) {
-      return value && isFunction_1.isFunction(value.next) && isFunction_1.isFunction(value.error) && isFunction_1.isFunction(value.complete);
-    }
-    function isSubscriber(value) {
-      return value && value instanceof Subscriber_1.Subscriber || isObserver(value) && Subscription_1.isSubscription(value);
-    }
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/util/ObjectUnsubscribedError.js
-var require_ObjectUnsubscribedError = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/util/ObjectUnsubscribedError.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ObjectUnsubscribedError = void 0;
-    var createErrorClass_1 = require_createErrorClass();
-    exports.ObjectUnsubscribedError = createErrorClass_1.createErrorClass(function(_super) {
-      return function ObjectUnsubscribedErrorImpl() {
-        _super(this);
-        this.name = "ObjectUnsubscribedError";
-        this.message = "object unsubscribed";
-      };
-    });
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/Subject.js
-var require_Subject = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/Subject.js"(exports) {
-    "use strict";
-    var __extends = exports && exports.__extends || /* @__PURE__ */ function() {
-      var extendStatics = function(d, b) {
-        extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b3) {
-          d2.__proto__ = b3;
-        } || function(d2, b3) {
-          for (var p in b3) if (Object.prototype.hasOwnProperty.call(b3, p)) d2[p] = b3[p];
-        };
-        return extendStatics(d, b);
-      };
-      return function(d, b) {
-        if (typeof b !== "function" && b !== null)
-          throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() {
-          this.constructor = d;
-        }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-      };
-    }();
-    var __values = exports && exports.__values || function(o) {
-      var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-      if (m) return m.call(o);
-      if (o && typeof o.length === "number") return {
-        next: function() {
-          if (o && i >= o.length) o = void 0;
-          return { value: o && o[i++], done: !o };
-        }
-      };
-      throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-    };
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.AnonymousSubject = exports.Subject = void 0;
-    var Observable_1 = require_Observable();
-    var Subscription_1 = require_Subscription();
-    var ObjectUnsubscribedError_1 = require_ObjectUnsubscribedError();
-    var arrRemove_1 = require_arrRemove();
-    var errorContext_1 = require_errorContext();
-    var Subject = function(_super) {
-      __extends(Subject2, _super);
-      function Subject2() {
-        var _this = _super.call(this) || this;
-        _this.closed = false;
-        _this.currentObservers = null;
-        _this.observers = [];
-        _this.isStopped = false;
-        _this.hasError = false;
-        _this.thrownError = null;
-        return _this;
-      }
-      Subject2.prototype.lift = function(operator) {
-        var subject = new AnonymousSubject(this, this);
-        subject.operator = operator;
-        return subject;
-      };
-      Subject2.prototype._throwIfClosed = function() {
-        if (this.closed) {
-          throw new ObjectUnsubscribedError_1.ObjectUnsubscribedError();
-        }
-      };
-      Subject2.prototype.next = function(value) {
-        var _this = this;
-        errorContext_1.errorContext(function() {
-          var e_1, _a2;
-          _this._throwIfClosed();
-          if (!_this.isStopped) {
-            if (!_this.currentObservers) {
-              _this.currentObservers = Array.from(_this.observers);
-            }
-            try {
-              for (var _b2 = __values(_this.currentObservers), _c = _b2.next(); !_c.done; _c = _b2.next()) {
-                var observer = _c.value;
-                observer.next(value);
-              }
-            } catch (e_1_1) {
-              e_1 = { error: e_1_1 };
-            } finally {
-              try {
-                if (_c && !_c.done && (_a2 = _b2.return)) _a2.call(_b2);
-              } finally {
-                if (e_1) throw e_1.error;
-              }
-            }
-          }
-        });
-      };
-      Subject2.prototype.error = function(err2) {
-        var _this = this;
-        errorContext_1.errorContext(function() {
-          _this._throwIfClosed();
-          if (!_this.isStopped) {
-            _this.hasError = _this.isStopped = true;
-            _this.thrownError = err2;
-            var observers = _this.observers;
-            while (observers.length) {
-              observers.shift().error(err2);
-            }
-          }
-        });
-      };
-      Subject2.prototype.complete = function() {
-        var _this = this;
-        errorContext_1.errorContext(function() {
-          _this._throwIfClosed();
-          if (!_this.isStopped) {
-            _this.isStopped = true;
-            var observers = _this.observers;
-            while (observers.length) {
-              observers.shift().complete();
-            }
-          }
-        });
-      };
-      Subject2.prototype.unsubscribe = function() {
-        this.isStopped = this.closed = true;
-        this.observers = this.currentObservers = null;
-      };
-      Object.defineProperty(Subject2.prototype, "observed", {
-        get: function() {
-          var _a2;
-          return ((_a2 = this.observers) === null || _a2 === void 0 ? void 0 : _a2.length) > 0;
-        },
-        enumerable: false,
-        configurable: true
-      });
-      Subject2.prototype._trySubscribe = function(subscriber) {
-        this._throwIfClosed();
-        return _super.prototype._trySubscribe.call(this, subscriber);
-      };
-      Subject2.prototype._subscribe = function(subscriber) {
-        this._throwIfClosed();
-        this._checkFinalizedStatuses(subscriber);
-        return this._innerSubscribe(subscriber);
-      };
-      Subject2.prototype._innerSubscribe = function(subscriber) {
-        var _this = this;
-        var _a2 = this, hasError = _a2.hasError, isStopped = _a2.isStopped, observers = _a2.observers;
-        if (hasError || isStopped) {
-          return Subscription_1.EMPTY_SUBSCRIPTION;
-        }
-        this.currentObservers = null;
-        observers.push(subscriber);
-        return new Subscription_1.Subscription(function() {
-          _this.currentObservers = null;
-          arrRemove_1.arrRemove(observers, subscriber);
-        });
-      };
-      Subject2.prototype._checkFinalizedStatuses = function(subscriber) {
-        var _a2 = this, hasError = _a2.hasError, thrownError = _a2.thrownError, isStopped = _a2.isStopped;
-        if (hasError) {
-          subscriber.error(thrownError);
-        } else if (isStopped) {
-          subscriber.complete();
-        }
-      };
-      Subject2.prototype.asObservable = function() {
-        var observable = new Observable_1.Observable();
-        observable.source = this;
-        return observable;
-      };
-      Subject2.create = function(destination, source) {
-        return new AnonymousSubject(destination, source);
-      };
-      return Subject2;
-    }(Observable_1.Observable);
-    exports.Subject = Subject;
-    var AnonymousSubject = function(_super) {
-      __extends(AnonymousSubject2, _super);
-      function AnonymousSubject2(destination, source) {
-        var _this = _super.call(this) || this;
-        _this.destination = destination;
-        _this.source = source;
-        return _this;
-      }
-      AnonymousSubject2.prototype.next = function(value) {
-        var _a2, _b2;
-        (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.next) === null || _b2 === void 0 ? void 0 : _b2.call(_a2, value);
-      };
-      AnonymousSubject2.prototype.error = function(err2) {
-        var _a2, _b2;
-        (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.error) === null || _b2 === void 0 ? void 0 : _b2.call(_a2, err2);
-      };
-      AnonymousSubject2.prototype.complete = function() {
-        var _a2, _b2;
-        (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.complete) === null || _b2 === void 0 ? void 0 : _b2.call(_a2);
-      };
-      AnonymousSubject2.prototype._subscribe = function(subscriber) {
-        var _a2, _b2;
-        return (_b2 = (_a2 = this.source) === null || _a2 === void 0 ? void 0 : _a2.subscribe(subscriber)) !== null && _b2 !== void 0 ? _b2 : Subscription_1.EMPTY_SUBSCRIPTION;
-      };
-      return AnonymousSubject2;
-    }(Subject);
-    exports.AnonymousSubject = AnonymousSubject;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/scheduler/dateTimestampProvider.js
-var require_dateTimestampProvider = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/scheduler/dateTimestampProvider.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.dateTimestampProvider = void 0;
-    exports.dateTimestampProvider = {
-      now: function() {
-        return (exports.dateTimestampProvider.delegate || Date).now();
-      },
-      delegate: void 0
-    };
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/ReplaySubject.js
-var require_ReplaySubject = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/ReplaySubject.js"(exports) {
-    "use strict";
-    var __extends = exports && exports.__extends || /* @__PURE__ */ function() {
-      var extendStatics = function(d, b) {
-        extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b3) {
-          d2.__proto__ = b3;
-        } || function(d2, b3) {
-          for (var p in b3) if (Object.prototype.hasOwnProperty.call(b3, p)) d2[p] = b3[p];
-        };
-        return extendStatics(d, b);
-      };
-      return function(d, b) {
-        if (typeof b !== "function" && b !== null)
-          throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() {
-          this.constructor = d;
-        }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-      };
-    }();
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.ReplaySubject = void 0;
-    var Subject_1 = require_Subject();
-    var dateTimestampProvider_1 = require_dateTimestampProvider();
-    var ReplaySubject = function(_super) {
-      __extends(ReplaySubject2, _super);
-      function ReplaySubject2(_bufferSize, _windowTime, _timestampProvider) {
-        if (_bufferSize === void 0) {
-          _bufferSize = Infinity;
-        }
-        if (_windowTime === void 0) {
-          _windowTime = Infinity;
-        }
-        if (_timestampProvider === void 0) {
-          _timestampProvider = dateTimestampProvider_1.dateTimestampProvider;
-        }
-        var _this = _super.call(this) || this;
-        _this._bufferSize = _bufferSize;
-        _this._windowTime = _windowTime;
-        _this._timestampProvider = _timestampProvider;
-        _this._buffer = [];
-        _this._infiniteTimeWindow = true;
-        _this._infiniteTimeWindow = _windowTime === Infinity;
-        _this._bufferSize = Math.max(1, _bufferSize);
-        _this._windowTime = Math.max(1, _windowTime);
-        return _this;
-      }
-      ReplaySubject2.prototype.next = function(value) {
-        var _a2 = this, isStopped = _a2.isStopped, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow, _timestampProvider = _a2._timestampProvider, _windowTime = _a2._windowTime;
-        if (!isStopped) {
-          _buffer.push(value);
-          !_infiniteTimeWindow && _buffer.push(_timestampProvider.now() + _windowTime);
-        }
-        this._trimBuffer();
-        _super.prototype.next.call(this, value);
-      };
-      ReplaySubject2.prototype._subscribe = function(subscriber) {
-        this._throwIfClosed();
-        this._trimBuffer();
-        var subscription = this._innerSubscribe(subscriber);
-        var _a2 = this, _infiniteTimeWindow = _a2._infiniteTimeWindow, _buffer = _a2._buffer;
-        var copy6 = _buffer.slice();
-        for (var i = 0; i < copy6.length && !subscriber.closed; i += _infiniteTimeWindow ? 1 : 2) {
-          subscriber.next(copy6[i]);
-        }
-        this._checkFinalizedStatuses(subscriber);
-        return subscription;
-      };
-      ReplaySubject2.prototype._trimBuffer = function() {
-        var _a2 = this, _bufferSize = _a2._bufferSize, _timestampProvider = _a2._timestampProvider, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow;
-        var adjustedBufferSize = (_infiniteTimeWindow ? 1 : 2) * _bufferSize;
-        _bufferSize < Infinity && adjustedBufferSize < _buffer.length && _buffer.splice(0, _buffer.length - adjustedBufferSize);
-        if (!_infiniteTimeWindow) {
-          var now = _timestampProvider.now();
-          var last = 0;
-          for (var i = 1; i < _buffer.length && _buffer[i] <= now; i += 2) {
-            last = i;
-          }
-          last && _buffer.splice(0, last + 1);
-        }
-      };
-      return ReplaySubject2;
-    }(Subject_1.Subject);
-    exports.ReplaySubject = ReplaySubject;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/observable/dom/WebSocketSubject.js
-var require_WebSocketSubject = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/observable/dom/WebSocketSubject.js"(exports) {
-    "use strict";
-    var __extends = exports && exports.__extends || /* @__PURE__ */ function() {
-      var extendStatics = function(d, b) {
-        extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b3) {
-          d2.__proto__ = b3;
-        } || function(d2, b3) {
-          for (var p in b3) if (Object.prototype.hasOwnProperty.call(b3, p)) d2[p] = b3[p];
-        };
-        return extendStatics(d, b);
-      };
-      return function(d, b) {
-        if (typeof b !== "function" && b !== null)
-          throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() {
-          this.constructor = d;
-        }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-      };
-    }();
-    var __assign = exports && exports.__assign || function() {
-      __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-          s = arguments[i];
-          for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-            t[p] = s[p];
-        }
-        return t;
-      };
-      return __assign.apply(this, arguments);
-    };
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.WebSocketSubject = void 0;
-    var Subject_1 = require_Subject();
-    var Subscriber_1 = require_Subscriber();
-    var Observable_1 = require_Observable();
-    var Subscription_1 = require_Subscription();
-    var ReplaySubject_1 = require_ReplaySubject();
-    var DEFAULT_WEBSOCKET_CONFIG = {
-      url: "",
-      deserializer: function(e) {
-        return JSON.parse(e.data);
-      },
-      serializer: function(value) {
-        return JSON.stringify(value);
-      }
-    };
-    var WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }";
-    var WebSocketSubject2 = function(_super) {
-      __extends(WebSocketSubject3, _super);
-      function WebSocketSubject3(urlConfigOrSource, destination) {
-        var _this = _super.call(this) || this;
-        _this._socket = null;
-        if (urlConfigOrSource instanceof Observable_1.Observable) {
-          _this.destination = destination;
-          _this.source = urlConfigOrSource;
-        } else {
-          var config = _this._config = __assign({}, DEFAULT_WEBSOCKET_CONFIG);
-          _this._output = new Subject_1.Subject();
-          if (typeof urlConfigOrSource === "string") {
-            config.url = urlConfigOrSource;
-          } else {
-            for (var key in urlConfigOrSource) {
-              if (urlConfigOrSource.hasOwnProperty(key)) {
-                config[key] = urlConfigOrSource[key];
-              }
-            }
-          }
-          if (!config.WebSocketCtor && WebSocket) {
-            config.WebSocketCtor = WebSocket;
-          } else if (!config.WebSocketCtor) {
-            throw new Error("no WebSocket constructor can be found");
-          }
-          _this.destination = new ReplaySubject_1.ReplaySubject();
-        }
-        return _this;
-      }
-      WebSocketSubject3.prototype.lift = function(operator) {
-        var sock = new WebSocketSubject3(this._config, this.destination);
-        sock.operator = operator;
-        sock.source = this;
-        return sock;
-      };
-      WebSocketSubject3.prototype._resetState = function() {
-        this._socket = null;
-        if (!this.source) {
-          this.destination = new ReplaySubject_1.ReplaySubject();
-        }
-        this._output = new Subject_1.Subject();
-      };
-      WebSocketSubject3.prototype.multiplex = function(subMsg, unsubMsg, messageFilter) {
-        var self2 = this;
-        return new Observable_1.Observable(function(observer) {
-          try {
-            self2.next(subMsg());
-          } catch (err2) {
-            observer.error(err2);
-          }
-          var subscription = self2.subscribe({
-            next: function(x) {
-              try {
-                if (messageFilter(x)) {
-                  observer.next(x);
-                }
-              } catch (err2) {
-                observer.error(err2);
-              }
-            },
-            error: function(err2) {
-              return observer.error(err2);
-            },
-            complete: function() {
-              return observer.complete();
-            }
-          });
-          return function() {
-            try {
-              self2.next(unsubMsg());
-            } catch (err2) {
-              observer.error(err2);
-            }
-            subscription.unsubscribe();
-          };
-        });
-      };
-      WebSocketSubject3.prototype._connectSocket = function() {
-        var _this = this;
-        var _a2 = this._config, WebSocketCtor = _a2.WebSocketCtor, protocol = _a2.protocol, url = _a2.url, binaryType = _a2.binaryType;
-        var observer = this._output;
-        var socket = null;
-        try {
-          socket = protocol ? new WebSocketCtor(url, protocol) : new WebSocketCtor(url);
-          this._socket = socket;
-          if (binaryType) {
-            this._socket.binaryType = binaryType;
-          }
-        } catch (e) {
-          observer.error(e);
-          return;
-        }
-        var subscription = new Subscription_1.Subscription(function() {
-          _this._socket = null;
-          if (socket && socket.readyState === 1) {
-            socket.close();
-          }
-        });
-        socket.onopen = function(evt) {
-          var _socket = _this._socket;
-          if (!_socket) {
-            socket.close();
-            _this._resetState();
-            return;
-          }
-          var openObserver = _this._config.openObserver;
-          if (openObserver) {
-            openObserver.next(evt);
-          }
-          var queue = _this.destination;
-          _this.destination = Subscriber_1.Subscriber.create(function(x) {
-            if (socket.readyState === 1) {
-              try {
-                var serializer2 = _this._config.serializer;
-                socket.send(serializer2(x));
-              } catch (e) {
-                _this.destination.error(e);
-              }
-            }
-          }, function(err2) {
-            var closingObserver = _this._config.closingObserver;
-            if (closingObserver) {
-              closingObserver.next(void 0);
-            }
-            if (err2 && err2.code) {
-              socket.close(err2.code, err2.reason);
-            } else {
-              observer.error(new TypeError(WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT));
-            }
-            _this._resetState();
-          }, function() {
-            var closingObserver = _this._config.closingObserver;
-            if (closingObserver) {
-              closingObserver.next(void 0);
-            }
-            socket.close();
-            _this._resetState();
-          });
-          if (queue && queue instanceof ReplaySubject_1.ReplaySubject) {
-            subscription.add(queue.subscribe(_this.destination));
-          }
-        };
-        socket.onerror = function(e) {
-          _this._resetState();
-          observer.error(e);
-        };
-        socket.onclose = function(e) {
-          if (socket === _this._socket) {
-            _this._resetState();
-          }
-          var closeObserver = _this._config.closeObserver;
-          if (closeObserver) {
-            closeObserver.next(e);
-          }
-          if (e.wasClean) {
-            observer.complete();
-          } else {
-            observer.error(e);
-          }
-        };
-        socket.onmessage = function(e) {
-          try {
-            var deserializer2 = _this._config.deserializer;
-            observer.next(deserializer2(e));
-          } catch (err2) {
-            observer.error(err2);
-          }
-        };
-      };
-      WebSocketSubject3.prototype._subscribe = function(subscriber) {
-        var _this = this;
-        var source = this.source;
-        if (source) {
-          return source.subscribe(subscriber);
-        }
-        if (!this._socket) {
-          this._connectSocket();
-        }
-        this._output.subscribe(subscriber);
-        subscriber.add(function() {
-          var _socket = _this._socket;
-          if (_this._output.observers.length === 0) {
-            if (_socket && (_socket.readyState === 1 || _socket.readyState === 0)) {
-              _socket.close();
-            }
-            _this._resetState();
-          }
-        });
-        return subscriber;
-      };
-      WebSocketSubject3.prototype.unsubscribe = function() {
-        var _socket = this._socket;
-        if (_socket && (_socket.readyState === 1 || _socket.readyState === 0)) {
-          _socket.close();
-        }
-        this._resetState();
-        _super.prototype.unsubscribe.call(this);
-      };
-      return WebSocketSubject3;
-    }(Subject_1.AnonymousSubject);
-    exports.WebSocketSubject = WebSocketSubject2;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/internal/observable/dom/webSocket.js
-var require_webSocket = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/internal/observable/dom/webSocket.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.webSocket = void 0;
-    var WebSocketSubject_1 = require_WebSocketSubject();
-    function webSocket2(urlConfigOrSource) {
-      return new WebSocketSubject_1.WebSocketSubject(urlConfigOrSource);
-    }
-    exports.webSocket = webSocket2;
-  }
-});
-
-// ../../node_modules/rxjs/dist/cjs/webSocket/index.js
-var require_webSocket2 = __commonJS({
-  "../../node_modules/rxjs/dist/cjs/webSocket/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.WebSocketSubject = exports.webSocket = void 0;
-    var webSocket_1 = require_webSocket();
-    Object.defineProperty(exports, "webSocket", { enumerable: true, get: function() {
-      return webSocket_1.webSocket;
-    } });
-    var WebSocketSubject_1 = require_WebSocketSubject();
-    Object.defineProperty(exports, "WebSocketSubject", { enumerable: true, get: function() {
-      return WebSocketSubject_1.WebSocketSubject;
-    } });
   }
 });
 
@@ -5644,8 +491,8 @@ function exactEquals(a, b) {
 }
 function equals(a, b) {
   var a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3], a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7], a8 = a[8];
-  var b0 = b[0], b1 = b[1], b22 = b[2], b3 = b[3], b42 = b[4], b5 = b[5], b6 = b[6], b7 = b[7], b82 = b[8];
-  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b22) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b22)) && Math.abs(a3 - b3) <= EPSILON * Math.max(1, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b42) <= EPSILON * Math.max(1, Math.abs(a4), Math.abs(b42)) && Math.abs(a5 - b5) <= EPSILON * Math.max(1, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= EPSILON * Math.max(1, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= EPSILON * Math.max(1, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b82) <= EPSILON * Math.max(1, Math.abs(a8), Math.abs(b82));
+  var b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3], b4 = b[4], b5 = b[5], b6 = b[6], b7 = b[7], b8 = b[8];
+  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= EPSILON * Math.max(1, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b4) <= EPSILON * Math.max(1, Math.abs(a4), Math.abs(b4)) && Math.abs(a5 - b5) <= EPSILON * Math.max(1, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= EPSILON * Math.max(1, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= EPSILON * Math.max(1, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b8) <= EPSILON * Math.max(1, Math.abs(a8), Math.abs(b8));
 }
 var mul = multiply;
 var sub = subtract;
@@ -5948,35 +795,35 @@ function multiply2(out, a, b) {
   var a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
   var a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
   var a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
-  var b0 = b[0], b1 = b[1], b22 = b[2], b3 = b[3];
-  out[0] = b0 * a00 + b1 * a10 + b22 * a20 + b3 * a30;
-  out[1] = b0 * a01 + b1 * a11 + b22 * a21 + b3 * a31;
-  out[2] = b0 * a02 + b1 * a12 + b22 * a22 + b3 * a32;
-  out[3] = b0 * a03 + b1 * a13 + b22 * a23 + b3 * a33;
+  var b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+  out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
   b0 = b[4];
   b1 = b[5];
-  b22 = b[6];
+  b2 = b[6];
   b3 = b[7];
-  out[4] = b0 * a00 + b1 * a10 + b22 * a20 + b3 * a30;
-  out[5] = b0 * a01 + b1 * a11 + b22 * a21 + b3 * a31;
-  out[6] = b0 * a02 + b1 * a12 + b22 * a22 + b3 * a32;
-  out[7] = b0 * a03 + b1 * a13 + b22 * a23 + b3 * a33;
+  out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
   b0 = b[8];
   b1 = b[9];
-  b22 = b[10];
+  b2 = b[10];
   b3 = b[11];
-  out[8] = b0 * a00 + b1 * a10 + b22 * a20 + b3 * a30;
-  out[9] = b0 * a01 + b1 * a11 + b22 * a21 + b3 * a31;
-  out[10] = b0 * a02 + b1 * a12 + b22 * a22 + b3 * a32;
-  out[11] = b0 * a03 + b1 * a13 + b22 * a23 + b3 * a33;
+  out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
   b0 = b[12];
   b1 = b[13];
-  b22 = b[14];
+  b2 = b[14];
   b3 = b[15];
-  out[12] = b0 * a00 + b1 * a10 + b22 * a20 + b3 * a30;
-  out[13] = b0 * a01 + b1 * a11 + b22 * a21 + b3 * a31;
-  out[14] = b0 * a02 + b1 * a12 + b22 * a22 + b3 * a32;
-  out[15] = b0 * a03 + b1 * a13 + b22 * a23 + b3 * a33;
+  out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
   return out;
 }
 function translate2(out, a, v) {
@@ -6893,11 +1740,11 @@ function equals2(a, b) {
   var a4 = a[4], a5 = a[5], a6 = a[6], a7 = a[7];
   var a8 = a[8], a9 = a[9], a10 = a[10], a11 = a[11];
   var a12 = a[12], a13 = a[13], a14 = a[14], a15 = a[15];
-  var b0 = b[0], b1 = b[1], b22 = b[2], b3 = b[3];
-  var b42 = b[4], b5 = b[5], b6 = b[6], b7 = b[7];
-  var b82 = b[8], b9 = b[9], b10 = b[10], b11 = b[11];
+  var b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+  var b4 = b[4], b5 = b[5], b6 = b[6], b7 = b[7];
+  var b8 = b[8], b9 = b[9], b10 = b[10], b11 = b[11];
   var b12 = b[12], b13 = b[13], b14 = b[14], b15 = b[15];
-  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b22) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b22)) && Math.abs(a3 - b3) <= EPSILON * Math.max(1, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b42) <= EPSILON * Math.max(1, Math.abs(a4), Math.abs(b42)) && Math.abs(a5 - b5) <= EPSILON * Math.max(1, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= EPSILON * Math.max(1, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= EPSILON * Math.max(1, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b82) <= EPSILON * Math.max(1, Math.abs(a8), Math.abs(b82)) && Math.abs(a9 - b9) <= EPSILON * Math.max(1, Math.abs(a9), Math.abs(b9)) && Math.abs(a10 - b10) <= EPSILON * Math.max(1, Math.abs(a10), Math.abs(b10)) && Math.abs(a11 - b11) <= EPSILON * Math.max(1, Math.abs(a11), Math.abs(b11)) && Math.abs(a12 - b12) <= EPSILON * Math.max(1, Math.abs(a12), Math.abs(b12)) && Math.abs(a13 - b13) <= EPSILON * Math.max(1, Math.abs(a13), Math.abs(b13)) && Math.abs(a14 - b14) <= EPSILON * Math.max(1, Math.abs(a14), Math.abs(b14)) && Math.abs(a15 - b15) <= EPSILON * Math.max(1, Math.abs(a15), Math.abs(b15));
+  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= EPSILON * Math.max(1, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b4) <= EPSILON * Math.max(1, Math.abs(a4), Math.abs(b4)) && Math.abs(a5 - b5) <= EPSILON * Math.max(1, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= EPSILON * Math.max(1, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= EPSILON * Math.max(1, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b8) <= EPSILON * Math.max(1, Math.abs(a8), Math.abs(b8)) && Math.abs(a9 - b9) <= EPSILON * Math.max(1, Math.abs(a9), Math.abs(b9)) && Math.abs(a10 - b10) <= EPSILON * Math.max(1, Math.abs(a10), Math.abs(b10)) && Math.abs(a11 - b11) <= EPSILON * Math.max(1, Math.abs(a11), Math.abs(b11)) && Math.abs(a12 - b12) <= EPSILON * Math.max(1, Math.abs(a12), Math.abs(b12)) && Math.abs(a13 - b13) <= EPSILON * Math.max(1, Math.abs(a13), Math.abs(b13)) && Math.abs(a14 - b14) <= EPSILON * Math.max(1, Math.abs(a14), Math.abs(b14)) && Math.abs(a15 - b15) <= EPSILON * Math.max(1, Math.abs(a15), Math.abs(b15));
 }
 var mul2 = multiply2;
 var sub2 = subtract2;
@@ -7248,8 +2095,8 @@ function exactEquals3(a, b) {
 }
 function equals3(a, b) {
   var a0 = a[0], a1 = a[1], a2 = a[2];
-  var b0 = b[0], b1 = b[1], b22 = b[2];
-  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b22) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b22));
+  var b0 = b[0], b1 = b[1], b2 = b[2];
+  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b2));
 }
 var sub3 = subtract3;
 var mul3 = multiply3;
@@ -7588,8 +2435,8 @@ function exactEquals4(a, b) {
 }
 function equals4(a, b) {
   var a0 = a[0], a1 = a[1], a2 = a[2], a3 = a[3];
-  var b0 = b[0], b1 = b[1], b22 = b[2], b3 = b[3];
-  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b22) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b22)) && Math.abs(a3 - b3) <= EPSILON * Math.max(1, Math.abs(a3), Math.abs(b3));
+  var b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+  return Math.abs(a0 - b0) <= EPSILON * Math.max(1, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= EPSILON * Math.max(1, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= EPSILON * Math.max(1, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= EPSILON * Math.max(1, Math.abs(a3), Math.abs(b3));
 }
 var sub4 = subtract4;
 var mul4 = multiply4;
@@ -19314,1070 +14161,6 @@ var ColorTables = class {
 };
 var cmapper = new ColorTables();
 
-// ../../node_modules/fflate/esm/browser.js
-var ch2 = {};
-var wk = function(c, id, msg, transfer, cb) {
-  var w = new Worker(ch2[id] || (ch2[id] = URL.createObjectURL(new Blob([
-    c + ';addEventListener("error",function(e){e=e.error;postMessage({$e$:[e.message,e.code,e.stack]})})'
-  ], { type: "text/javascript" }))));
-  w.onmessage = function(e) {
-    var d = e.data, ed = d.$e$;
-    if (ed) {
-      var err2 = new Error(ed[0]);
-      err2["code"] = ed[1];
-      err2.stack = ed[2];
-      cb(err2, null);
-    } else
-      cb(null, d);
-  };
-  w.postMessage(msg, transfer);
-  return w;
-};
-var u8 = Uint8Array;
-var u16 = Uint16Array;
-var i32 = Int32Array;
-var fleb = new u8([
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  1,
-  1,
-  1,
-  1,
-  2,
-  2,
-  2,
-  2,
-  3,
-  3,
-  3,
-  3,
-  4,
-  4,
-  4,
-  4,
-  5,
-  5,
-  5,
-  5,
-  0,
-  /* unused */
-  0,
-  0,
-  /* impossible */
-  0
-]);
-var fdeb = new u8([
-  0,
-  0,
-  0,
-  0,
-  1,
-  1,
-  2,
-  2,
-  3,
-  3,
-  4,
-  4,
-  5,
-  5,
-  6,
-  6,
-  7,
-  7,
-  8,
-  8,
-  9,
-  9,
-  10,
-  10,
-  11,
-  11,
-  12,
-  12,
-  13,
-  13,
-  /* unused */
-  0,
-  0
-]);
-var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
-var freb = function(eb, start) {
-  var b = new u16(31);
-  for (var i = 0; i < 31; ++i) {
-    b[i] = start += 1 << eb[i - 1];
-  }
-  var r = new i32(b[30]);
-  for (var i = 1; i < 30; ++i) {
-    for (var j = b[i]; j < b[i + 1]; ++j) {
-      r[j] = j - b[i] << 5 | i;
-    }
-  }
-  return { b, r };
-};
-var _a = freb(fleb, 2);
-var fl = _a.b;
-var revfl = _a.r;
-fl[28] = 258, revfl[258] = 28;
-var _b = freb(fdeb, 0);
-var fd = _b.b;
-var revfd = _b.r;
-var rev = new u16(32768);
-for (i = 0; i < 32768; ++i) {
-  x = (i & 43690) >> 1 | (i & 21845) << 1;
-  x = (x & 52428) >> 2 | (x & 13107) << 2;
-  x = (x & 61680) >> 4 | (x & 3855) << 4;
-  rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
-}
-var x;
-var i;
-var hMap = function(cd, mb, r) {
-  var s = cd.length;
-  var i = 0;
-  var l = new u16(mb);
-  for (; i < s; ++i) {
-    if (cd[i])
-      ++l[cd[i] - 1];
-  }
-  var le = new u16(mb);
-  for (i = 1; i < mb; ++i) {
-    le[i] = le[i - 1] + l[i - 1] << 1;
-  }
-  var co;
-  if (r) {
-    co = new u16(1 << mb);
-    var rvb = 15 - mb;
-    for (i = 0; i < s; ++i) {
-      if (cd[i]) {
-        var sv = i << 4 | cd[i];
-        var r_1 = mb - cd[i];
-        var v = le[cd[i] - 1]++ << r_1;
-        for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
-          co[rev[v] >> rvb] = sv;
-        }
-      }
-    }
-  } else {
-    co = new u16(s);
-    for (i = 0; i < s; ++i) {
-      if (cd[i]) {
-        co[i] = rev[le[cd[i] - 1]++] >> 15 - cd[i];
-      }
-    }
-  }
-  return co;
-};
-var flt = new u8(288);
-for (i = 0; i < 144; ++i)
-  flt[i] = 8;
-var i;
-for (i = 144; i < 256; ++i)
-  flt[i] = 9;
-var i;
-for (i = 256; i < 280; ++i)
-  flt[i] = 7;
-var i;
-for (i = 280; i < 288; ++i)
-  flt[i] = 8;
-var i;
-var fdt = new u8(32);
-for (i = 0; i < 32; ++i)
-  fdt[i] = 5;
-var i;
-var flm = /* @__PURE__ */ hMap(flt, 9, 0);
-var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
-var fdm = /* @__PURE__ */ hMap(fdt, 5, 0);
-var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
-var max4 = function(a) {
-  var m = a[0];
-  for (var i = 1; i < a.length; ++i) {
-    if (a[i] > m)
-      m = a[i];
-  }
-  return m;
-};
-var bits = function(d, p, m) {
-  var o = p / 8 | 0;
-  return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
-};
-var bits16 = function(d, p) {
-  var o = p / 8 | 0;
-  return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
-};
-var shft = function(p) {
-  return (p + 7) / 8 | 0;
-};
-var slc = function(v, s, e) {
-  if (s == null || s < 0)
-    s = 0;
-  if (e == null || e > v.length)
-    e = v.length;
-  return new u8(v.subarray(s, e));
-};
-var ec = [
-  "unexpected EOF",
-  "invalid block type",
-  "invalid length/literal",
-  "invalid distance",
-  "stream finished",
-  "no stream handler",
-  ,
-  "no callback",
-  "invalid UTF-8 data",
-  "extra field too long",
-  "date not in range 1980-2099",
-  "filename too long",
-  "stream finishing",
-  "invalid zip data"
-  // determined by unknown compression method
-];
-var err = function(ind, msg, nt) {
-  var e = new Error(msg || ec[ind]);
-  e.code = ind;
-  if (Error.captureStackTrace)
-    Error.captureStackTrace(e, err);
-  if (!nt)
-    throw e;
-  return e;
-};
-var inflt = function(dat, st, buf, dict) {
-  var sl = dat.length, dl = dict ? dict.length : 0;
-  if (!sl || st.f && !st.l)
-    return buf || new u8(0);
-  var noBuf = !buf;
-  var resize = noBuf || st.i != 2;
-  var noSt = st.i;
-  if (noBuf)
-    buf = new u8(sl * 3);
-  var cbuf = function(l2) {
-    var bl = buf.length;
-    if (l2 > bl) {
-      var nbuf = new u8(Math.max(bl * 2, l2));
-      nbuf.set(buf);
-      buf = nbuf;
-    }
-  };
-  var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
-  var tbts = sl * 8;
-  do {
-    if (!lm) {
-      final = bits(dat, pos, 1);
-      var type = bits(dat, pos + 1, 3);
-      pos += 3;
-      if (!type) {
-        var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
-        if (t > sl) {
-          if (noSt)
-            err(0);
-          break;
-        }
-        if (resize)
-          cbuf(bt + l);
-        buf.set(dat.subarray(s, t), bt);
-        st.b = bt += l, st.p = pos = t * 8, st.f = final;
-        continue;
-      } else if (type == 1)
-        lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
-      else if (type == 2) {
-        var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
-        var tl = hLit + bits(dat, pos + 5, 31) + 1;
-        pos += 14;
-        var ldt = new u8(tl);
-        var clt = new u8(19);
-        for (var i = 0; i < hcLen; ++i) {
-          clt[clim[i]] = bits(dat, pos + i * 3, 7);
-        }
-        pos += hcLen * 3;
-        var clb = max4(clt), clbmsk = (1 << clb) - 1;
-        var clm = hMap(clt, clb, 1);
-        for (var i = 0; i < tl; ) {
-          var r = clm[bits(dat, pos, clbmsk)];
-          pos += r & 15;
-          var s = r >> 4;
-          if (s < 16) {
-            ldt[i++] = s;
-          } else {
-            var c = 0, n = 0;
-            if (s == 16)
-              n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i - 1];
-            else if (s == 17)
-              n = 3 + bits(dat, pos, 7), pos += 3;
-            else if (s == 18)
-              n = 11 + bits(dat, pos, 127), pos += 7;
-            while (n--)
-              ldt[i++] = c;
-          }
-        }
-        var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
-        lbt = max4(lt);
-        dbt = max4(dt);
-        lm = hMap(lt, lbt, 1);
-        dm = hMap(dt, dbt, 1);
-      } else
-        err(1);
-      if (pos > tbts) {
-        if (noSt)
-          err(0);
-        break;
-      }
-    }
-    if (resize)
-      cbuf(bt + 131072);
-    var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
-    var lpos = pos;
-    for (; ; lpos = pos) {
-      var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
-      pos += c & 15;
-      if (pos > tbts) {
-        if (noSt)
-          err(0);
-        break;
-      }
-      if (!c)
-        err(2);
-      if (sym < 256)
-        buf[bt++] = sym;
-      else if (sym == 256) {
-        lpos = pos, lm = null;
-        break;
-      } else {
-        var add6 = sym - 254;
-        if (sym > 264) {
-          var i = sym - 257, b = fleb[i];
-          add6 = bits(dat, pos, (1 << b) - 1) + fl[i];
-          pos += b;
-        }
-        var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
-        if (!d)
-          err(3);
-        pos += d & 15;
-        var dt = fd[dsym];
-        if (dsym > 3) {
-          var b = fdeb[dsym];
-          dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
-        }
-        if (pos > tbts) {
-          if (noSt)
-            err(0);
-          break;
-        }
-        if (resize)
-          cbuf(bt + 131072);
-        var end = bt + add6;
-        if (bt < dt) {
-          var shift = dl - dt, dend = Math.min(dt, end);
-          if (shift + bt < 0)
-            err(3);
-          for (; bt < dend; ++bt)
-            buf[bt] = dict[shift + bt];
-        }
-        for (; bt < end; ++bt)
-          buf[bt] = buf[bt - dt];
-      }
-    }
-    st.l = lm, st.p = lpos, st.b = bt, st.f = final;
-    if (lm)
-      final = 1, st.m = lbt, st.d = dm, st.n = dbt;
-  } while (!final);
-  return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
-};
-var wbits = function(d, p, v) {
-  v <<= p & 7;
-  var o = p / 8 | 0;
-  d[o] |= v;
-  d[o + 1] |= v >> 8;
-};
-var wbits16 = function(d, p, v) {
-  v <<= p & 7;
-  var o = p / 8 | 0;
-  d[o] |= v;
-  d[o + 1] |= v >> 8;
-  d[o + 2] |= v >> 16;
-};
-var hTree = function(d, mb) {
-  var t = [];
-  for (var i = 0; i < d.length; ++i) {
-    if (d[i])
-      t.push({ s: i, f: d[i] });
-  }
-  var s = t.length;
-  var t2 = t.slice();
-  if (!s)
-    return { t: et, l: 0 };
-  if (s == 1) {
-    var v = new u8(t[0].s + 1);
-    v[t[0].s] = 1;
-    return { t: v, l: 1 };
-  }
-  t.sort(function(a, b) {
-    return a.f - b.f;
-  });
-  t.push({ s: -1, f: 25001 });
-  var l = t[0], r = t[1], i0 = 0, i1 = 1, i2 = 2;
-  t[0] = { s: -1, f: l.f + r.f, l, r };
-  while (i1 != s - 1) {
-    l = t[t[i0].f < t[i2].f ? i0++ : i2++];
-    r = t[i0 != i1 && t[i0].f < t[i2].f ? i0++ : i2++];
-    t[i1++] = { s: -1, f: l.f + r.f, l, r };
-  }
-  var maxSym = t2[0].s;
-  for (var i = 1; i < s; ++i) {
-    if (t2[i].s > maxSym)
-      maxSym = t2[i].s;
-  }
-  var tr = new u16(maxSym + 1);
-  var mbt = ln(t[i1 - 1], tr, 0);
-  if (mbt > mb) {
-    var i = 0, dt = 0;
-    var lft = mbt - mb, cst = 1 << lft;
-    t2.sort(function(a, b) {
-      return tr[b.s] - tr[a.s] || a.f - b.f;
-    });
-    for (; i < s; ++i) {
-      var i2_1 = t2[i].s;
-      if (tr[i2_1] > mb) {
-        dt += cst - (1 << mbt - tr[i2_1]);
-        tr[i2_1] = mb;
-      } else
-        break;
-    }
-    dt >>= lft;
-    while (dt > 0) {
-      var i2_2 = t2[i].s;
-      if (tr[i2_2] < mb)
-        dt -= 1 << mb - tr[i2_2]++ - 1;
-      else
-        ++i;
-    }
-    for (; i >= 0 && dt; --i) {
-      var i2_3 = t2[i].s;
-      if (tr[i2_3] == mb) {
-        --tr[i2_3];
-        ++dt;
-      }
-    }
-    mbt = mb;
-  }
-  return { t: new u8(tr), l: mbt };
-};
-var ln = function(n, l, d) {
-  return n.s == -1 ? Math.max(ln(n.l, l, d + 1), ln(n.r, l, d + 1)) : l[n.s] = d;
-};
-var lc = function(c) {
-  var s = c.length;
-  while (s && !c[--s])
-    ;
-  var cl = new u16(++s);
-  var cli = 0, cln = c[0], cls = 1;
-  var w = function(v) {
-    cl[cli++] = v;
-  };
-  for (var i = 1; i <= s; ++i) {
-    if (c[i] == cln && i != s)
-      ++cls;
-    else {
-      if (!cln && cls > 2) {
-        for (; cls > 138; cls -= 138)
-          w(32754);
-        if (cls > 2) {
-          w(cls > 10 ? cls - 11 << 5 | 28690 : cls - 3 << 5 | 12305);
-          cls = 0;
-        }
-      } else if (cls > 3) {
-        w(cln), --cls;
-        for (; cls > 6; cls -= 6)
-          w(8304);
-        if (cls > 2)
-          w(cls - 3 << 5 | 8208), cls = 0;
-      }
-      while (cls--)
-        w(cln);
-      cls = 1;
-      cln = c[i];
-    }
-  }
-  return { c: cl.subarray(0, cli), n: s };
-};
-var clen = function(cf, cl) {
-  var l = 0;
-  for (var i = 0; i < cl.length; ++i)
-    l += cf[i] * cl[i];
-  return l;
-};
-var wfblk = function(out, pos, dat) {
-  var s = dat.length;
-  var o = shft(pos + 2);
-  out[o] = s & 255;
-  out[o + 1] = s >> 8;
-  out[o + 2] = out[o] ^ 255;
-  out[o + 3] = out[o + 1] ^ 255;
-  for (var i = 0; i < s; ++i)
-    out[o + i + 4] = dat[i];
-  return (o + 4 + s) * 8;
-};
-var wblk = function(dat, out, final, syms, lf, df, eb, li, bs, bl, p) {
-  wbits(out, p++, final);
-  ++lf[256];
-  var _a2 = hTree(lf, 15), dlt = _a2.t, mlb = _a2.l;
-  var _b2 = hTree(df, 15), ddt = _b2.t, mdb = _b2.l;
-  var _c = lc(dlt), lclt = _c.c, nlc = _c.n;
-  var _d = lc(ddt), lcdt = _d.c, ndc = _d.n;
-  var lcfreq = new u16(19);
-  for (var i = 0; i < lclt.length; ++i)
-    ++lcfreq[lclt[i] & 31];
-  for (var i = 0; i < lcdt.length; ++i)
-    ++lcfreq[lcdt[i] & 31];
-  var _e = hTree(lcfreq, 7), lct = _e.t, mlcb = _e.l;
-  var nlcc = 19;
-  for (; nlcc > 4 && !lct[clim[nlcc - 1]]; --nlcc)
-    ;
-  var flen = bl + 5 << 3;
-  var ftlen = clen(lf, flt) + clen(df, fdt) + eb;
-  var dtlen = clen(lf, dlt) + clen(df, ddt) + eb + 14 + 3 * nlcc + clen(lcfreq, lct) + 2 * lcfreq[16] + 3 * lcfreq[17] + 7 * lcfreq[18];
-  if (bs >= 0 && flen <= ftlen && flen <= dtlen)
-    return wfblk(out, p, dat.subarray(bs, bs + bl));
-  var lm, ll, dm, dl;
-  wbits(out, p, 1 + (dtlen < ftlen)), p += 2;
-  if (dtlen < ftlen) {
-    lm = hMap(dlt, mlb, 0), ll = dlt, dm = hMap(ddt, mdb, 0), dl = ddt;
-    var llm = hMap(lct, mlcb, 0);
-    wbits(out, p, nlc - 257);
-    wbits(out, p + 5, ndc - 1);
-    wbits(out, p + 10, nlcc - 4);
-    p += 14;
-    for (var i = 0; i < nlcc; ++i)
-      wbits(out, p + 3 * i, lct[clim[i]]);
-    p += 3 * nlcc;
-    var lcts = [lclt, lcdt];
-    for (var it = 0; it < 2; ++it) {
-      var clct = lcts[it];
-      for (var i = 0; i < clct.length; ++i) {
-        var len4 = clct[i] & 31;
-        wbits(out, p, llm[len4]), p += lct[len4];
-        if (len4 > 15)
-          wbits(out, p, clct[i] >> 5 & 127), p += clct[i] >> 12;
-      }
-    }
-  } else {
-    lm = flm, ll = flt, dm = fdm, dl = fdt;
-  }
-  for (var i = 0; i < li; ++i) {
-    var sym = syms[i];
-    if (sym > 255) {
-      var len4 = sym >> 18 & 31;
-      wbits16(out, p, lm[len4 + 257]), p += ll[len4 + 257];
-      if (len4 > 7)
-        wbits(out, p, sym >> 23 & 31), p += fleb[len4];
-      var dst = sym & 31;
-      wbits16(out, p, dm[dst]), p += dl[dst];
-      if (dst > 3)
-        wbits16(out, p, sym >> 5 & 8191), p += fdeb[dst];
-    } else {
-      wbits16(out, p, lm[sym]), p += ll[sym];
-    }
-  }
-  wbits16(out, p, lm[256]);
-  return p + ll[256];
-};
-var deo = /* @__PURE__ */ new i32([65540, 131080, 131088, 131104, 262176, 1048704, 1048832, 2114560, 2117632]);
-var et = /* @__PURE__ */ new u8(0);
-var dflt = function(dat, lvl, plvl, pre, post, st) {
-  var s = st.z || dat.length;
-  var o = new u8(pre + s + 5 * (1 + Math.ceil(s / 7e3)) + post);
-  var w = o.subarray(pre, o.length - post);
-  var lst = st.l;
-  var pos = (st.r || 0) & 7;
-  if (lvl) {
-    if (pos)
-      w[0] = st.r >> 3;
-    var opt = deo[lvl - 1];
-    var n = opt >> 13, c = opt & 8191;
-    var msk_1 = (1 << plvl) - 1;
-    var prev = st.p || new u16(32768), head = st.h || new u16(msk_1 + 1);
-    var bs1_1 = Math.ceil(plvl / 3), bs2_1 = 2 * bs1_1;
-    var hsh = function(i2) {
-      return (dat[i2] ^ dat[i2 + 1] << bs1_1 ^ dat[i2 + 2] << bs2_1) & msk_1;
-    };
-    var syms = new i32(25e3);
-    var lf = new u16(288), df = new u16(32);
-    var lc_1 = 0, eb = 0, i = st.i || 0, li = 0, wi = st.w || 0, bs = 0;
-    for (; i + 2 < s; ++i) {
-      var hv = hsh(i);
-      var imod = i & 32767, pimod = head[hv];
-      prev[imod] = pimod;
-      head[hv] = imod;
-      if (wi <= i) {
-        var rem = s - i;
-        if ((lc_1 > 7e3 || li > 24576) && (rem > 423 || !lst)) {
-          pos = wblk(dat, w, 0, syms, lf, df, eb, li, bs, i - bs, pos);
-          li = lc_1 = eb = 0, bs = i;
-          for (var j = 0; j < 286; ++j)
-            lf[j] = 0;
-          for (var j = 0; j < 30; ++j)
-            df[j] = 0;
-        }
-        var l = 2, d = 0, ch_1 = c, dif = imod - pimod & 32767;
-        if (rem > 2 && hv == hsh(i - dif)) {
-          var maxn = Math.min(n, rem) - 1;
-          var maxd = Math.min(32767, i);
-          var ml = Math.min(258, rem);
-          while (dif <= maxd && --ch_1 && imod != pimod) {
-            if (dat[i + l] == dat[i + l - dif]) {
-              var nl = 0;
-              for (; nl < ml && dat[i + nl] == dat[i + nl - dif]; ++nl)
-                ;
-              if (nl > l) {
-                l = nl, d = dif;
-                if (nl > maxn)
-                  break;
-                var mmd = Math.min(dif, nl - 2);
-                var md = 0;
-                for (var j = 0; j < mmd; ++j) {
-                  var ti = i - dif + j & 32767;
-                  var pti = prev[ti];
-                  var cd = ti - pti & 32767;
-                  if (cd > md)
-                    md = cd, pimod = ti;
-                }
-              }
-            }
-            imod = pimod, pimod = prev[imod];
-            dif += imod - pimod & 32767;
-          }
-        }
-        if (d) {
-          syms[li++] = 268435456 | revfl[l] << 18 | revfd[d];
-          var lin = revfl[l] & 31, din = revfd[d] & 31;
-          eb += fleb[lin] + fdeb[din];
-          ++lf[257 + lin];
-          ++df[din];
-          wi = i + l;
-          ++lc_1;
-        } else {
-          syms[li++] = dat[i];
-          ++lf[dat[i]];
-        }
-      }
-    }
-    for (i = Math.max(i, wi); i < s; ++i) {
-      syms[li++] = dat[i];
-      ++lf[dat[i]];
-    }
-    pos = wblk(dat, w, lst, syms, lf, df, eb, li, bs, i - bs, pos);
-    if (!lst) {
-      st.r = pos & 7 | w[pos / 8 | 0] << 3;
-      pos -= 7;
-      st.h = head, st.p = prev, st.i = i, st.w = wi;
-    }
-  } else {
-    for (var i = st.w || 0; i < s + lst; i += 65535) {
-      var e = i + 65535;
-      if (e >= s) {
-        w[pos / 8 | 0] = lst;
-        e = s;
-      }
-      pos = wfblk(w, pos + 1, dat.subarray(i, e));
-    }
-    st.i = s;
-  }
-  return slc(o, 0, pre + shft(pos) + post);
-};
-var crct = /* @__PURE__ */ function() {
-  var t = new Int32Array(256);
-  for (var i = 0; i < 256; ++i) {
-    var c = i, k = 9;
-    while (--k)
-      c = (c & 1 && -306674912) ^ c >>> 1;
-    t[i] = c;
-  }
-  return t;
-}();
-var crc = function() {
-  var c = -1;
-  return {
-    p: function(d) {
-      var cr = c;
-      for (var i = 0; i < d.length; ++i)
-        cr = crct[cr & 255 ^ d[i]] ^ cr >>> 8;
-      c = cr;
-    },
-    d: function() {
-      return ~c;
-    }
-  };
-};
-var dopt = function(dat, opt, pre, post, st) {
-  if (!st) {
-    st = { l: 1 };
-    if (opt.dictionary) {
-      var dict = opt.dictionary.subarray(-32768);
-      var newDat = new u8(dict.length + dat.length);
-      newDat.set(dict);
-      newDat.set(dat, dict.length);
-      dat = newDat;
-      st.w = dict.length;
-    }
-  }
-  return dflt(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? st.l ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 20 : 12 + opt.mem, pre, post, st);
-};
-var mrg = function(a, b) {
-  var o = {};
-  for (var k in a)
-    o[k] = a[k];
-  for (var k in b)
-    o[k] = b[k];
-  return o;
-};
-var wcln = function(fn, fnStr, td2) {
-  var dt = fn();
-  var st = fn.toString();
-  var ks = st.slice(st.indexOf("[") + 1, st.lastIndexOf("]")).replace(/\s+/g, "").split(",");
-  for (var i = 0; i < dt.length; ++i) {
-    var v = dt[i], k = ks[i];
-    if (typeof v == "function") {
-      fnStr += ";" + k + "=";
-      var st_1 = v.toString();
-      if (v.prototype) {
-        if (st_1.indexOf("[native code]") != -1) {
-          var spInd = st_1.indexOf(" ", 8) + 1;
-          fnStr += st_1.slice(spInd, st_1.indexOf("(", spInd));
-        } else {
-          fnStr += st_1;
-          for (var t in v.prototype)
-            fnStr += ";" + k + ".prototype." + t + "=" + v.prototype[t].toString();
-        }
-      } else
-        fnStr += st_1;
-    } else
-      td2[k] = v;
-  }
-  return fnStr;
-};
-var ch = [];
-var cbfs = function(v) {
-  var tl = [];
-  for (var k in v) {
-    if (v[k].buffer) {
-      tl.push((v[k] = new v[k].constructor(v[k])).buffer);
-    }
-  }
-  return tl;
-};
-var wrkr = function(fns, init, id, cb) {
-  if (!ch[id]) {
-    var fnStr = "", td_1 = {}, m = fns.length - 1;
-    for (var i = 0; i < m; ++i)
-      fnStr = wcln(fns[i], fnStr, td_1);
-    ch[id] = { c: wcln(fns[m], fnStr, td_1), e: td_1 };
-  }
-  var td2 = mrg({}, ch[id].e);
-  return wk(ch[id].c + ";onmessage=function(e){for(var k in e.data)self[k]=e.data[k];onmessage=" + init.toString() + "}", id, td2, cbfs(td2), cb);
-};
-var bInflt = function() {
-  return [u8, u16, i32, fleb, fdeb, clim, fl, fd, flrm, fdrm, rev, ec, hMap, max4, bits, bits16, shft, slc, err, inflt, inflateSync, pbf, gopt];
-};
-var bDflt = function() {
-  return [u8, u16, i32, fleb, fdeb, clim, revfl, revfd, flm, flt, fdm, fdt, rev, deo, et, hMap, wbits, wbits16, hTree, ln, lc, clen, wfblk, wblk, shft, slc, dflt, dopt, deflateSync, pbf];
-};
-var gze = function() {
-  return [gzh, gzhl, wbytes, crc, crct];
-};
-var guze = function() {
-  return [gzs, gzl];
-};
-var zule = function() {
-  return [zls];
-};
-var pbf = function(msg) {
-  return postMessage(msg, [msg.buffer]);
-};
-var gopt = function(o) {
-  return o && {
-    out: o.size && new u8(o.size),
-    dictionary: o.dictionary
-  };
-};
-var cbify = function(dat, opts, fns, init, id, cb) {
-  var w = wrkr(fns, init, id, function(err2, dat2) {
-    w.terminate();
-    cb(err2, dat2);
-  });
-  w.postMessage([dat, opts], opts.consume ? [dat.buffer] : []);
-  return function() {
-    w.terminate();
-  };
-};
-var b2 = function(d, b) {
-  return d[b] | d[b + 1] << 8;
-};
-var b4 = function(d, b) {
-  return (d[b] | d[b + 1] << 8 | d[b + 2] << 16 | d[b + 3] << 24) >>> 0;
-};
-var b8 = function(d, b) {
-  return b4(d, b) + b4(d, b + 4) * 4294967296;
-};
-var wbytes = function(d, b, v) {
-  for (; v; ++b)
-    d[b] = v, v >>>= 8;
-};
-var gzh = function(c, o) {
-  var fn = o.filename;
-  c[0] = 31, c[1] = 139, c[2] = 8, c[8] = o.level < 2 ? 4 : o.level == 9 ? 2 : 0, c[9] = 3;
-  if (o.mtime != 0)
-    wbytes(c, 4, Math.floor(new Date(o.mtime || Date.now()) / 1e3));
-  if (fn) {
-    c[3] = 8;
-    for (var i = 0; i <= fn.length; ++i)
-      c[i + 10] = fn.charCodeAt(i);
-  }
-};
-var gzs = function(d) {
-  if (d[0] != 31 || d[1] != 139 || d[2] != 8)
-    err(6, "invalid gzip data");
-  var flg = d[3];
-  var st = 10;
-  if (flg & 4)
-    st += (d[10] | d[11] << 8) + 2;
-  for (var zs = (flg >> 3 & 1) + (flg >> 4 & 1); zs > 0; zs -= !d[st++])
-    ;
-  return st + (flg & 2);
-};
-var gzl = function(d) {
-  var l = d.length;
-  return (d[l - 4] | d[l - 3] << 8 | d[l - 2] << 16 | d[l - 1] << 24) >>> 0;
-};
-var gzhl = function(o) {
-  return 10 + (o.filename ? o.filename.length + 1 : 0);
-};
-var zls = function(d, dict) {
-  if ((d[0] & 15) != 8 || d[0] >> 4 > 7 || (d[0] << 8 | d[1]) % 31)
-    err(6, "invalid zlib data");
-  if ((d[1] >> 5 & 1) == +!dict)
-    err(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
-  return (d[1] >> 3 & 4) + 2;
-};
-function deflateSync(data, opts) {
-  return dopt(data, opts || {}, 0, 0);
-}
-function inflate(data, opts, cb) {
-  if (!cb)
-    cb = opts, opts = {};
-  if (typeof cb != "function")
-    err(7);
-  return cbify(data, opts, [
-    bInflt
-  ], function(ev) {
-    return pbf(inflateSync(ev.data[0], gopt(ev.data[1])));
-  }, 1, cb);
-}
-function inflateSync(data, opts) {
-  return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
-}
-function gzip(data, opts, cb) {
-  if (!cb)
-    cb = opts, opts = {};
-  if (typeof cb != "function")
-    err(7);
-  return cbify(data, opts, [
-    bDflt,
-    gze,
-    function() {
-      return [gzipSync];
-    }
-  ], function(ev) {
-    return pbf(gzipSync(ev.data[0], ev.data[1]));
-  }, 2, cb);
-}
-function gzipSync(data, opts) {
-  if (!opts)
-    opts = {};
-  var c = crc(), l = data.length;
-  c.p(data);
-  var d = dopt(data, opts, gzhl(opts), 8), s = d.length;
-  return gzh(d, opts), wbytes(d, s - 8, c.d()), wbytes(d, s - 4, l), d;
-}
-function gunzip(data, opts, cb) {
-  if (!cb)
-    cb = opts, opts = {};
-  if (typeof cb != "function")
-    err(7);
-  return cbify(data, opts, [
-    bInflt,
-    guze,
-    function() {
-      return [gunzipSync];
-    }
-  ], function(ev) {
-    return pbf(gunzipSync(ev.data[0], ev.data[1]));
-  }, 3, cb);
-}
-function gunzipSync(data, opts) {
-  var st = gzs(data);
-  if (st + 8 > data.length)
-    err(6, "invalid gzip data");
-  return inflt(data.subarray(st, -8), { i: 2 }, opts && opts.out || new u8(gzl(data)), opts && opts.dictionary);
-}
-function unzlib(data, opts, cb) {
-  if (!cb)
-    cb = opts, opts = {};
-  if (typeof cb != "function")
-    err(7);
-  return cbify(data, opts, [
-    bInflt,
-    zule,
-    function() {
-      return [unzlibSync];
-    }
-  ], function(ev) {
-    return pbf(unzlibSync(ev.data[0], gopt(ev.data[1])));
-  }, 5, cb);
-}
-function unzlibSync(data, opts) {
-  return inflt(data.subarray(zls(data, opts && opts.dictionary), -4), { i: 2 }, opts && opts.out, opts && opts.dictionary);
-}
-function decompress(data, opts, cb) {
-  if (!cb)
-    cb = opts, opts = {};
-  if (typeof cb != "function")
-    err(7);
-  return data[0] == 31 && data[1] == 139 && data[2] == 8 ? gunzip(data, opts, cb) : (data[0] & 15) != 8 || data[0] >> 4 > 7 || (data[0] << 8 | data[1]) % 31 ? inflate(data, opts, cb) : unzlib(data, opts, cb);
-}
-function decompressSync(data, opts) {
-  return data[0] == 31 && data[1] == 139 && data[2] == 8 ? gunzipSync(data, opts) : (data[0] & 15) != 8 || data[0] >> 4 > 7 || (data[0] << 8 | data[1]) % 31 ? inflateSync(data, opts) : unzlibSync(data, opts);
-}
-var te = typeof TextEncoder != "undefined" && /* @__PURE__ */ new TextEncoder();
-var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
-var tds = 0;
-try {
-  td.decode(et, { stream: true });
-  tds = 1;
-} catch (e) {
-}
-var dutf8 = function(d) {
-  for (var r = "", i = 0; ; ) {
-    var c = d[i++];
-    var eb = (c > 127) + (c > 223) + (c > 239);
-    if (i + eb > d.length)
-      return { s: r, r: slc(d, i - 1) };
-    if (!eb)
-      r += String.fromCharCode(c);
-    else if (eb == 3) {
-      c = ((c & 15) << 18 | (d[i++] & 63) << 12 | (d[i++] & 63) << 6 | d[i++] & 63) - 65536, r += String.fromCharCode(55296 | c >> 10, 56320 | c & 1023);
-    } else if (eb & 1)
-      r += String.fromCharCode((c & 31) << 6 | d[i++] & 63);
-    else
-      r += String.fromCharCode((c & 15) << 12 | (d[i++] & 63) << 6 | d[i++] & 63);
-  }
-};
-function strToU8(str6, latin1) {
-  if (latin1) {
-    var ar_1 = new u8(str6.length);
-    for (var i = 0; i < str6.length; ++i)
-      ar_1[i] = str6.charCodeAt(i);
-    return ar_1;
-  }
-  if (te)
-    return te.encode(str6);
-  var l = str6.length;
-  var ar = new u8(str6.length + (str6.length >> 1));
-  var ai = 0;
-  var w = function(v) {
-    ar[ai++] = v;
-  };
-  for (var i = 0; i < l; ++i) {
-    if (ai + 5 > ar.length) {
-      var n = new u8(ai + 8 + (l - i << 1));
-      n.set(ar);
-      ar = n;
-    }
-    var c = str6.charCodeAt(i);
-    if (c < 128 || latin1)
-      w(c);
-    else if (c < 2048)
-      w(192 | c >> 6), w(128 | c & 63);
-    else if (c > 55295 && c < 57344)
-      c = 65536 + (c & 1023 << 10) | str6.charCodeAt(++i) & 1023, w(240 | c >> 18), w(128 | c >> 12 & 63), w(128 | c >> 6 & 63), w(128 | c & 63);
-    else
-      w(224 | c >> 12), w(128 | c >> 6 & 63), w(128 | c & 63);
-  }
-  return slc(ar, 0, ai);
-}
-function strFromU8(dat, latin1) {
-  if (latin1) {
-    var r = "";
-    for (var i = 0; i < dat.length; i += 16384)
-      r += String.fromCharCode.apply(null, dat.subarray(i, i + 16384));
-    return r;
-  } else if (td) {
-    return td.decode(dat);
-  } else {
-    var _a2 = dutf8(dat), s = _a2.s, r = _a2.r;
-    if (r.length)
-      err(8);
-    return s;
-  }
-}
-var slzh = function(d, b) {
-  return b + 30 + b2(d, b + 26) + b2(d, b + 28);
-};
-var zh = function(d, b, z) {
-  var fnl = b2(d, b + 28), fn = strFromU8(d.subarray(b + 46, b + 46 + fnl), !(b2(d, b + 8) & 2048)), es = b + 46 + fnl, bs = b4(d, b + 20);
-  var _a2 = z && bs == 4294967295 ? z64e(d, es) : [bs, b4(d, b + 24), b4(d, b + 42)], sc = _a2[0], su = _a2[1], off = _a2[2];
-  return [b2(d, b + 10), sc, su, fn, es + b2(d, b + 30) + b2(d, b + 32), off];
-};
-var z64e = function(d, b) {
-  for (; b2(d, b) != 1; b += 4 + b2(d, b + 2))
-    ;
-  return [b8(d, b + 12), b8(d, b + 4), b8(d, b + 20)];
-};
-function unzipSync(data, opts) {
-  var files = {};
-  var e = data.length - 22;
-  for (; b4(data, e) != 101010256; --e) {
-    if (!e || data.length - e > 65558)
-      err(13);
-  }
-  ;
-  var c = b2(data, e + 8);
-  if (!c)
-    return {};
-  var o = b4(data, e + 16);
-  var z = o == 4294967295 || c == 65535;
-  if (z) {
-    var ze = b4(data, e - 12);
-    z = b4(data, ze) == 101075792;
-    if (z) {
-      c = b4(data, ze + 32);
-      o = b4(data, ze + 48);
-    }
-  }
-  var fltr = opts && opts.filter;
-  for (var i = 0; i < c; ++i) {
-    var _a2 = zh(data, o, z), c_2 = _a2[0], sc = _a2[1], su = _a2[2], fn = _a2[3], no = _a2[4], off = _a2[5], b = slzh(data, off);
-    o = no;
-    if (!fltr || fltr({
-      name: fn,
-      size: sc,
-      originalSize: su,
-      compression: c_2
-    })) {
-      if (!c_2)
-        files[fn] = slc(data, b, b + sc);
-      else if (c_2 == 8)
-        files[fn] = inflateSync(data.subarray(b, b + sc), { out: new u8(su) });
-      else
-        err(14, "unknown compression type " + c_2);
-    }
-  }
-  return files;
-}
-
 // src/nvmesh-utilities.ts
 var NVMeshUtilities = class {
   static getClusterBoundaryU8(u82, faces) {
@@ -20404,9 +14187,20 @@ var NVMeshUtilities = class {
     }
     return border;
   }
-  static createMZ3(vertices, indices, compress = false) {
+  static async gzip(data) {
+    const stream = new CompressionStream("gzip");
+    const writer = stream.writable.getWriter();
+    writer.write(data).catch(console.error);
+    const closePromise = writer.close().catch(console.error);
+    const response = new Response(stream.readable);
+    const result = new Uint8Array(await response.arrayBuffer());
+    await closePromise;
+    return result;
+  }
+  static createMZ3(vertices, indices, compress = false, colors = null) {
     const magic = 23117;
-    const attr = 3;
+    const isRGBA = colors instanceof Uint8Array && colors.length === vertices.length / 3 * 4;
+    const attr = isRGBA ? 7 : 3;
     const nface = indices.length / 3;
     const nvert = vertices.length / 3;
     const nskip = 0;
@@ -20425,8 +14219,19 @@ var NVMeshUtilities = class {
     new Uint32Array(buffer, offset, indices.length).set(indices);
     offset += indexSize;
     new Float32Array(buffer, offset, vertices.length).set(vertices);
+    if (isRGBA) {
+      offset += vertexSize;
+      new Uint8Array(buffer, offset, colors.length).set(colors);
+    }
     if (compress) {
-      return gzipSync(new Uint8Array(buffer));
+      throw new Error("Call async createMZ3Async() for compression");
+    }
+    return buffer;
+  }
+  static async createMZ3Async(vertices, indices, compress = false, colors = null) {
+    const buffer = this.createMZ3(vertices, indices, compress, colors);
+    if (compress) {
+      return await this.gzip(new Uint8Array(buffer));
     }
     return buffer;
   }
@@ -20493,7 +14298,7 @@ var NVMeshUtilities = class {
       URL.revokeObjectURL(url);
     }, 0);
   }
-  static saveMesh(vertices, indices, filename = ".mz3", compress = false) {
+  static async saveMesh(vertices, indices, filename = ".mz3", compress = false) {
     let buff = new ArrayBuffer(0);
     if (/\.obj$/i.test(filename)) {
       buff = this.createOBJ(vertices, indices);
@@ -20503,7 +14308,7 @@ var NVMeshUtilities = class {
       if (!/\.mz3$/i.test(filename)) {
         filename += ".mz3";
       }
-      buff = this.createMZ3(vertices, indices, compress);
+      buff = await this.createMZ3Async(vertices, indices, compress);
     }
     if (filename.length > 4) {
       this.downloadArrayBuffer(buff, filename);
@@ -20611,12 +14416,200 @@ var NVMeshUtilities = class {
 
 // src/nvutilities.ts
 var import_array_equal = __toESM(require_array_equal(), 1);
+var _dataView, _index, _localFiles, _centralDirectories, _endOfCentralDirectory;
+var Zip = class {
+  constructor(arrayBuffer) {
+    __privateAdd(this, _dataView);
+    __privateAdd(this, _index, 0);
+    __privateAdd(this, _localFiles, []);
+    __privateAdd(this, _centralDirectories, []);
+    __privateAdd(this, _endOfCentralDirectory);
+    __privateSet(this, _dataView, new DataView(arrayBuffer));
+    this.read();
+  }
+  async extract(entry) {
+    const buffer = new Uint8Array(__privateGet(this, _dataView).buffer.slice(entry.startsAt, entry.startsAt + entry.compressedSize));
+    if (entry.compressionMethod === 0) {
+      return buffer;
+    } else if (entry.compressionMethod === 8) {
+      const stream = new DecompressionStream("deflate-raw");
+      const writer = stream.writable.getWriter();
+      writer.write(buffer).catch(console.error);
+      const closePromise = writer.close().catch(console.error);
+      const response = new Response(stream.readable);
+      const result = new Uint8Array(await response.arrayBuffer());
+      await closePromise;
+      return result;
+    }
+    throw new Error(`Unsupported compression method: ${entry.compressionMethod}`);
+  }
+  read() {
+    while (!__privateGet(this, _endOfCentralDirectory) && __privateGet(this, _index) < __privateGet(this, _dataView).byteLength) {
+      const signature = __privateGet(this, _dataView).getUint32(__privateGet(this, _index), true);
+      if (signature === 67324752) {
+        const entry = this.readLocalFile(__privateGet(this, _index));
+        entry.extract = this.extract.bind(this, entry);
+        __privateGet(this, _localFiles).push(entry);
+        const hasDataDescriptor = (entry.generalPurpose & 8) !== 0;
+        entry.startsAt = __privateGet(this, _index) + 30 + entry.fileNameLength + entry.extraLength;
+        if (entry.compressedSize === 0 && hasDataDescriptor) {
+          let scanIndex = entry.startsAt;
+          while (scanIndex + 20 <= __privateGet(this, _dataView).byteLength) {
+            const possibleSignature = __privateGet(this, _dataView).getUint32(scanIndex, true);
+            if (possibleSignature === 134695760) {
+              const nextPK = __privateGet(this, _dataView).getUint16(scanIndex + 16, true) === 19280;
+              if (nextPK) {
+                scanIndex += 4;
+                break;
+              }
+            }
+            scanIndex++;
+          }
+          entry.crc = __privateGet(this, _dataView).getUint32(scanIndex, true);
+          entry.compressedSize = __privateGet(this, _dataView).getUint32(scanIndex + 4, true);
+          entry.uncompressedSize = __privateGet(this, _dataView).getUint32(scanIndex + 8, true);
+          __privateSet(this, _index, scanIndex + 12);
+        } else {
+          __privateSet(this, _index, entry.startsAt + entry.compressedSize);
+        }
+      } else if (signature === 33639248) {
+        const entry = this.readCentralDirectory(__privateGet(this, _index));
+        __privateGet(this, _centralDirectories).push(entry);
+        __privateSet(this, _index, __privateGet(this, _index) + (46 + entry.fileNameLength + entry.extraLength + entry.fileCommentLength));
+      } else if (signature === 101010256) {
+        __privateSet(this, _endOfCentralDirectory, this.readEndCentralDirectory(__privateGet(this, _index)));
+        break;
+      } else if (signature === 101075792) {
+        __privateSet(this, _endOfCentralDirectory, this.readEndCentralDirectory64(__privateGet(this, _index)));
+        break;
+      } else {
+        console.error(`Unexpected ZIP signature 0x${signature.toString(16).padStart(8, "0")} at index ${__privateGet(this, _index)}`);
+        break;
+      }
+    }
+  }
+  readLocalFile(offset) {
+    let compressedSize = __privateGet(this, _dataView).getUint32(offset + 18, true);
+    let uncompressedSize = __privateGet(this, _dataView).getUint32(offset + 22, true);
+    const fileNameLength = __privateGet(this, _dataView).getUint16(offset + 26, true);
+    const extraLength = __privateGet(this, _dataView).getUint16(offset + 28, true);
+    const extraOffset = offset + 30 + fileNameLength;
+    const extra = this.readString(extraOffset, extraLength);
+    if (compressedSize === 4294967295 && uncompressedSize === 4294967295) {
+      let zip64Offset = extraOffset;
+      let foundZip64 = false;
+      while (zip64Offset < extraOffset + extraLength - 4) {
+        const fieldSignature = __privateGet(this, _dataView).getUint16(zip64Offset, true);
+        const fieldLength = __privateGet(this, _dataView).getUint16(zip64Offset + 2, true);
+        zip64Offset += 4;
+        if (fieldSignature === 1) {
+          if (fieldLength >= 16) {
+            uncompressedSize = Number(__privateGet(this, _dataView).getBigUint64(zip64Offset, true));
+            zip64Offset += 8;
+            compressedSize = Number(__privateGet(this, _dataView).getBigUint64(zip64Offset, true));
+            foundZip64 = true;
+            break;
+          } else {
+            throw new Error(
+              `ZIP64 extra field found but is too small (expected at least 16 bytes, got ${fieldLength}).`
+            );
+          }
+        }
+        zip64Offset += fieldLength;
+      }
+      if (!foundZip64) {
+        throw new Error("ZIP64 format missing extra field with signature 0x0001.");
+      }
+    }
+    return {
+      signature: this.readString(offset, 4),
+      version: __privateGet(this, _dataView).getUint16(offset + 4, true),
+      generalPurpose: __privateGet(this, _dataView).getUint16(offset + 6, true),
+      compressionMethod: __privateGet(this, _dataView).getUint16(offset + 8, true),
+      lastModifiedTime: __privateGet(this, _dataView).getUint16(offset + 10, true),
+      lastModifiedDate: __privateGet(this, _dataView).getUint16(offset + 12, true),
+      crc: __privateGet(this, _dataView).getUint32(offset + 14, true),
+      compressedSize,
+      uncompressedSize,
+      fileNameLength,
+      extraLength,
+      fileName: this.readString(offset + 30, fileNameLength),
+      extra: this.readString(offset + 30 + fileNameLength, extraLength)
+    };
+  }
+  readCentralDirectory(offset) {
+    return {
+      versionCreated: __privateGet(this, _dataView).getUint16(offset + 4, true),
+      versionNeeded: __privateGet(this, _dataView).getUint16(offset + 6, true),
+      fileNameLength: __privateGet(this, _dataView).getUint16(offset + 28, true),
+      extraLength: __privateGet(this, _dataView).getUint16(offset + 30, true),
+      fileCommentLength: __privateGet(this, _dataView).getUint16(offset + 32, true),
+      diskNumber: __privateGet(this, _dataView).getUint16(offset + 34, true),
+      internalAttributes: __privateGet(this, _dataView).getUint16(offset + 36, true),
+      externalAttributes: __privateGet(this, _dataView).getUint32(offset + 38, true),
+      offset: __privateGet(this, _dataView).getUint32(offset + 42, true),
+      comments: this.readString(offset + 46, __privateGet(this, _dataView).getUint16(offset + 32, true))
+    };
+  }
+  readEndCentralDirectory(offset) {
+    const commentLength = __privateGet(this, _dataView).getUint16(offset + 20, true);
+    return {
+      numberOfDisks: __privateGet(this, _dataView).getUint16(offset + 4, true),
+      centralDirectoryStartDisk: __privateGet(this, _dataView).getUint16(offset + 6, true),
+      numberCentralDirectoryRecordsOnThisDisk: __privateGet(this, _dataView).getUint16(offset + 8, true),
+      numberCentralDirectoryRecords: __privateGet(this, _dataView).getUint16(offset + 10, true),
+      centralDirectorySize: __privateGet(this, _dataView).getUint32(offset + 12, true),
+      centralDirectoryOffset: __privateGet(this, _dataView).getUint32(offset + 16, true),
+      commentLength,
+      comment: this.readString(offset + 22, commentLength)
+    };
+  }
+  readEndCentralDirectory64(offset) {
+    const commentLength = Number(__privateGet(this, _dataView).getBigUint64(offset + 0, true));
+    return {
+      numberOfDisks: __privateGet(this, _dataView).getUint32(offset + 16, true),
+      centralDirectoryStartDisk: __privateGet(this, _dataView).getUint32(offset + 20, true),
+      numberCentralDirectoryRecordsOnThisDisk: Number(__privateGet(this, _dataView).getBigUint64(offset + 24, true)),
+      numberCentralDirectoryRecords: Number(__privateGet(this, _dataView).getBigUint64(offset + 32, true)),
+      centralDirectorySize: Number(__privateGet(this, _dataView).getBigUint64(offset + 40, true)),
+      centralDirectoryOffset: Number(__privateGet(this, _dataView).getBigUint64(offset + 48, true)),
+      commentLength,
+      comment: ""
+    };
+  }
+  readString(offset, length4) {
+    return Array.from({ length: length4 }, (_, i) => String.fromCharCode(__privateGet(this, _dataView).getUint8(offset + i))).join("");
+  }
+  get entries() {
+    return __privateGet(this, _localFiles);
+  }
+};
+_dataView = new WeakMap();
+_index = new WeakMap();
+_localFiles = new WeakMap();
+_centralDirectories = new WeakMap();
+_endOfCentralDirectory = new WeakMap();
 var NVUtilities = class _NVUtilities {
   static arrayBufferToBase64(arrayBuffer) {
     const bytes = new Uint8Array(arrayBuffer);
     return _NVUtilities.uint8tob64(bytes);
   }
-  static readMatV4(buffer) {
+  static async decompress(data) {
+    const format = data[0] === 31 && data[1] === 139 && data[2] === 8 ? "gzip" : data[0] === 120 && (data[1] === 1 || data[1] === 94 || data[1] === 156 || data[1] === 218) ? "deflate" : "deflate-raw";
+    const stream = new DecompressionStream(format);
+    const writer = stream.writable.getWriter();
+    writer.write(data).catch(console.error);
+    const closePromise = writer.close().catch(console.error);
+    const response = new Response(stream.readable);
+    const result = new Uint8Array(await response.arrayBuffer());
+    await closePromise;
+    return result;
+  }
+  static async decompressToBuffer(data) {
+    const decompressed = await _NVUtilities.decompress(data);
+    return decompressed.buffer.slice(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
+  }
+  static async readMatV4(buffer) {
     let len4 = buffer.byteLength;
     if (len4 < 40) {
       throw new Error("File too small to be MAT v4: bytes = " + buffer.byteLength);
@@ -20625,7 +14618,7 @@ var NVUtilities = class _NVUtilities {
     let magic = reader.getUint16(0, true);
     let _buffer = buffer;
     if (magic === 35615 || magic === 8075) {
-      const raw = decompressSync(new Uint8Array(buffer));
+      const raw = await this.decompress(new Uint8Array(buffer));
       reader = new DataView(raw.buffer);
       magic = reader.getUint16(0, true);
       _buffer = raw.buffer;
@@ -20784,17 +14777,77 @@ var NVUtilities = class _NVUtilities {
     const buf = await _NVUtilities.compressStringToArrayBuffer(string);
     return _NVUtilities.uint8tob64(new Uint8Array(buf));
   }
+  /**
+   * Converts a string into a Uint8Array for use with compression/decompression methods (101arrowz/fflate: MIT License)
+   * @param str The string to encode
+   * @param latin1 Whether or not to interpret the data as Latin-1. This should
+   *               not need to be true unless decoding a binary string.
+   * @returns The string encoded in UTF-8/Latin-1 binary
+   */
+  static strToU8(str6, latin1) {
+    if (latin1) {
+      const ar2 = new Uint8Array(str6.length);
+      for (let i = 0; i < str6.length; ++i) {
+        ar2[i] = str6.charCodeAt(i);
+      }
+      return ar2;
+    }
+    const l = str6.length;
+    const slc2 = (v, s, e) => {
+      if (s == null || s < 0) {
+        s = 0;
+      }
+      if (e == null || e > v.length) {
+        e = v.length;
+      }
+      return new Uint8Array(v.subarray(s, e));
+    };
+    let ar = new Uint8Array(str6.length + (str6.length >> 1));
+    let ai = 0;
+    const w = (v) => {
+      ar[ai++] = v;
+    };
+    for (let i = 0; i < l; ++i) {
+      if (ai + 5 > ar.length) {
+        const n = new Uint8Array(ai + 8 + (l - i << 1));
+        n.set(ar);
+        ar = n;
+      }
+      let c = str6.charCodeAt(i);
+      if (c < 128 || latin1) {
+        w(c);
+      } else if (c < 2048) {
+        w(192 | c >> 6);
+        w(128 | c & 63);
+      } else if (c > 55295 && c < 57344) {
+        c = 65536 + (c & 1023 << 10) | str6.charCodeAt(++i) & 1023;
+        w(240 | c >> 18);
+        w(128 | c >> 12 & 63);
+        w(128 | c >> 6 & 63);
+        w(128 | c & 63);
+      } else {
+        c = 65536 + (c & 1023 << 10) | str6.charCodeAt(++i) & 1023;
+        w(240 | c >> 18);
+        w(128 | c >> 12 & 63);
+        w(128 | c >> 6 & 63);
+        w(128 | c & 63);
+      }
+    }
+    return slc2(ar, 0, ai);
+  }
+  static async compress(data, format = "gzip") {
+    const stream = new CompressionStream(format);
+    const writer = stream.writable.getWriter();
+    writer.write(data).catch(console.error);
+    const closePromise = writer.close().catch(console.error);
+    const response = new Response(stream.readable);
+    const result = await response.arrayBuffer();
+    await closePromise;
+    return result;
+  }
   static async compressStringToArrayBuffer(input) {
-    return new Promise((resolve, reject) => {
-      const uint8Array = strToU8(input);
-      gzip(uint8Array, (err2, compressed) => {
-        if (err2) {
-          reject(err2);
-        } else {
-          resolve(compressed.buffer);
-        }
-      });
-    });
+    const uint8Array = this.strToU8(input);
+    return await this.compress(uint8Array);
   }
   static isArrayBufferCompressed(buffer) {
     if (buffer && buffer.byteLength) {
@@ -20805,18 +14858,59 @@ var NVUtilities = class _NVUtilities {
       return false;
     }
   }
-  static async decompressArrayBuffer(buffer) {
-    return new Promise((resolve, reject) => {
-      const uint8Array = new Uint8Array(buffer);
-      decompress(uint8Array, (err2, decompressed) => {
-        if (err2) {
-          reject(err2);
-        } else {
-          const result = strFromU8(decompressed);
-          resolve(result);
+  /**
+   * Converts a Uint8Array to a string (101arrowz/fflate: MIT License)
+   * @param dat The data to decode to string
+   * @param latin1 Whether or not to interpret the data as Latin-1. This should
+   *               not need to be true unless encoding to binary string.
+   * @returns The original UTF-8/Latin-1 string
+   */
+  static strFromU8(dat, latin1) {
+    if (latin1) {
+      let r = "";
+      for (let i = 0; i < dat.length; i += 16384) {
+        r += String.fromCharCode.apply(null, dat.subarray(i, i + 16384));
+      }
+      return r;
+    } else {
+      const slc2 = (v, s2, e) => {
+        if (s2 == null || s2 < 0) {
+          s2 = 0;
         }
-      });
-    });
+        if (e == null || e > v.length) {
+          e = v.length;
+        }
+        return new Uint8Array(v.subarray(s2, e));
+      };
+      const dutf8 = (d) => {
+        for (let r2 = "", i = 0; ; ) {
+          let c = d[i++];
+          const eb = (c > 127) + (c > 223) + (c > 239);
+          if (i + eb > d.length) {
+            return { s: r2, r: slc2(d, i - 1) };
+          }
+          if (!eb) {
+            r2 += String.fromCharCode(c);
+          } else if (eb === 3) {
+            c = ((c & 15) << 18 | (d[i++] & 63) << 12 | (d[i++] & 63) << 6 | d[i++] & 63) - 65536;
+            r2 += String.fromCharCode(55296 | c >> 10, 56320 | c & 1023);
+          } else if (eb & 1) {
+            r2 += String.fromCharCode((c & 31) << 6 | d[i++] & 63);
+          } else {
+            r2 += String.fromCharCode((c & 15) << 12 | (d[i++] & 63) << 6 | d[i++] & 63);
+          }
+        }
+      };
+      const { s, r } = dutf8(dat);
+      if (r.length) {
+        throw new Error("Unexpected trailing bytes in UTF-8 decoding");
+      }
+      return s;
+    }
+  }
+  static async decompressArrayBuffer(buffer) {
+    const decompressed = await this.decompress(new Uint8Array(buffer));
+    return this.strFromU8(decompressed);
   }
   static arraysAreEqual(a, b) {
     return (0, import_array_equal.default)(a, b);
@@ -20946,10 +15040,10 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readTRACT()
   // https://dsi-studio.labsolver.org/doc/cli_data.html
   // https://brain.labsolver.org/hcp_trk_atlas.html
-  static readTT(buffer) {
+  static async readTT(buffer) {
     let offsetPt0 = new Uint32Array(0);
     let pts = new Float32Array(0);
-    const mat = NVUtilities.readMatV4(buffer);
+    const mat = await NVUtilities.readMatV4(buffer);
     if (!("trans_to_mni" in mat)) {
       throw new Error("TT format file must have 'trans_to_mni'");
     }
@@ -21033,9 +15127,10 @@ var NVMeshLoaders = class _NVMeshLoaders {
       offsetPt0
     };
   }
+  // readTT
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
-  static readTRX(buffer) {
+  static async readTRX(buffer) {
     function decodeFloat16(binary) {
       "use strict";
       const exponent = (binary & 31744) >> 10;
@@ -21051,21 +15146,20 @@ var NVMeshLoaders = class _NVMeshLoaders {
     const dpv = [];
     let header = [];
     let isOverflowUint64 = false;
-    const decompressed = unzipSync(new Uint8Array(buffer), {
-      filter(file) {
-        return file.originalSize > 0;
+    const zip = new Zip(buffer);
+    for (let i = 0; i < zip.entries.length; i++) {
+      const entry = zip.entries[i];
+      if (entry.uncompressedSize === 0) {
+        continue;
       }
-    });
-    const keys2 = Object.keys(decompressed);
-    for (let i = 0, len4 = keys2.length; i < len4; i++) {
-      const parts = keys2[i].split("/");
+      const parts = entry.fileName.split("/");
       const fname = parts.slice(-1)[0];
       if (fname.startsWith(".")) {
         continue;
       }
       const pname = parts.slice(-2)[0];
       const tag = fname.split(".")[0];
-      const data = decompressed[keys2[i]];
+      const data = await entry.extract();
       if (fname.includes("header.json")) {
         const jsonString = new TextDecoder().decode(data);
         header = JSON.parse(jsonString);
@@ -21298,7 +15392,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // not included in public docs
   // read trackvis trk format streamlines
   // http://trackvis.org/docs/?subsect=fileformat
-  static readTRK(buffer) {
+  static async readTRK(buffer) {
     let reader = new DataView(buffer);
     let magic = reader.getUint32(0, true);
     if (magic !== 1128354388) {
@@ -21306,7 +15400,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       if (magic === 4247762216) {
         throw new Error("zstd TRK decompression is not supported");
       } else {
-        raw = decompressSync(new Uint8Array(buffer));
+        raw = await NVUtilities.decompress(new Uint8Array(buffer));
       }
       buffer = raw.buffer;
       reader = new DataView(buffer);
@@ -21603,7 +15697,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
   }
   // readTxtVTK()
   // read mesh overlay to influence vertex colors
-  static readLayer(name = "", buffer, nvmesh, opacity = 0.5, colormap = "warm", colormapNegative = "winter", useNegativeCmap = false, cal_min = null, cal_max = null, outlineBorder = 0) {
+  static async readLayer(name = "", buffer, nvmesh, opacity = 0.5, colormap = "warm", colormapNegative = "winter", useNegativeCmap = false, cal_min = null, cal_max = null, outlineBorder = 0) {
     const layer = {
       ...NVMeshLayerDefaults,
       colormapInvert: false,
@@ -21657,7 +15751,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       return;
     }
     if (ext === "MZ3") {
-      layer.values = _NVMeshLoaders.readMZ3(buffer, n_vert);
+      layer.values = await _NVMeshLoaders.readMZ3(buffer, n_vert);
     } else if (ext === "ANNOT") {
       if (!isReadColortables) {
         layer.values = _NVMeshLoaders.readANNOT(buffer, n_vert);
@@ -21674,14 +15768,14 @@ var NVMeshLoaders = class _NVMeshLoaders {
       layer.values = _NVMeshLoaders.readCURV(buffer, n_vert);
       layer.isTransparentBelowCalMin = false;
     } else if (ext === "GII") {
-      const obj = _NVMeshLoaders.readGII(buffer, n_vert);
+      const obj = await _NVMeshLoaders.readGII(buffer, n_vert);
       layer.values = obj.scalars;
       layer.colormapLabel = obj.colormapLabel;
     } else if (ext === "MGH" || ext === "MGZ") {
       if (!isReadColortables) {
-        layer.values = _NVMeshLoaders.readMGH(buffer, n_vert);
+        layer.values = await _NVMeshLoaders.readMGH(buffer, n_vert);
       } else {
-        const obj = _NVMeshLoaders.readMGH(buffer, n_vert, true);
+        const obj = await _NVMeshLoaders.readMGH(buffer, n_vert, true);
         if ("scalars" in obj) {
           layer.values = obj.scalars;
           layer.colormapLabel = obj.colormapLabel;
@@ -21690,9 +15784,9 @@ var NVMeshLoaders = class _NVMeshLoaders {
         }
       }
     } else if (ext === "NII") {
-      layer.values = _NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary);
+      layer.values = await _NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary);
     } else if (ext === "SMP") {
-      layer.values = _NVMeshLoaders.readSMP(buffer, n_vert);
+      layer.values = await _NVMeshLoaders.readSMP(buffer, n_vert);
     } else if (ext === "STC") {
       layer.values = _NVMeshLoaders.readSTC(buffer, n_vert);
     } else if (_NVMeshLoaders.isCurv(buffer)) {
@@ -21736,12 +15830,12 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readLayer()
   // read brainvoyager smp format file
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/40-the-format-of-smp-files
-  static readSMP(buffer, n_vert) {
+  static async readSMP(buffer, n_vert) {
     const len4 = buffer.byteLength;
     let reader = new DataView(buffer);
     let vers = reader.getUint16(0, true);
     if (vers > 5) {
-      const raw = decompressSync(new Uint8Array(buffer));
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer));
       reader = new DataView(raw.buffer);
       vers = reader.getUint16(0, true);
       buffer = raw.buffer;
@@ -22318,6 +16412,37 @@ var NVMeshLoaders = class _NVMeshLoaders {
     };
   }
   // readVTK()
+  static readWRL(buffer) {
+    const wrlText = new TextDecoder("utf-8").decode(buffer);
+    const coordRegex = /coord\s+Coordinate\s*\{\s*point\s*\[([\s\S]*?)\]/;
+    const indexRegex = /coordIndex\s*\[([\s\S]*?)\]/;
+    const colorRegex = /color\s+Color\s*\{\s*color\s*\[([\s\S]*?)\]/;
+    const coordMatch = coordRegex.exec(wrlText);
+    const indexMatch = indexRegex.exec(wrlText);
+    const colorMatch = colorRegex.exec(wrlText);
+    if (!coordMatch || !indexMatch) {
+      throw new Error("Invalid WRL file: Could not find vertices or indices.");
+    }
+    const positions = new Float32Array(
+      coordMatch[1].trim().split(/[\s,]+/).map(Number)
+    );
+    let colors = null;
+    if (colorMatch) {
+      colors = new Float32Array(
+        colorMatch[1].trim().split(/[\s,]+/).map(Number)
+      );
+      const nVert = positions.length / 3;
+      if (colors.length !== nVert * 3) {
+        console.warn(`Unexpected color count: expected ${nVert * 3}, got ${colors.length}`);
+        colors = null;
+      }
+    }
+    const indices = new Uint32Array(
+      indexMatch[1].trim().split(/[\s,]+/).map(Number).filter((v) => v !== -1)
+    );
+    return { positions, indices, colors };
+  }
+  // readWRL()
   // read brainsuite DFS format
   // http://brainsuite.org/formats/dfs/
   static readDFS(buffer) {
@@ -22352,7 +16477,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
   }
   // read surfice MZ3 format
   // https://github.com/neurolabusc/surf-ice/tree/master/mz3
-  static readMZ3(buffer, n_vert = 0) {
+  static async readMZ3(buffer, n_vert = 0) {
     if (buffer.byteLength < 20) {
       throw new Error("File too small to be mz3: bytes = " + buffer.byteLength);
     }
@@ -22360,7 +16485,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     let magic = reader.getUint16(0, true);
     let _buffer = buffer;
     if (magic === 35615 || magic === 8075) {
-      const raw = decompressSync(new Uint8Array(buffer));
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer));
       reader = new DataView(raw.buffer);
       magic = reader.getUint16(0, true);
       _buffer = raw.buffer;
@@ -22897,7 +17022,11 @@ var NVMeshLoaders = class _NVMeshLoaders {
     };
   }
   // readOBJMNI()
-  static readOBJ(buffer) {
+  static async readOBJ(buffer) {
+    const headerBytes = new Uint8Array(buffer, 0, 2);
+    if (headerBytes[0] === 31 && headerBytes[1] === 139) {
+      buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
+    }
     const enc = new TextDecoder("utf-8");
     const txt = enc.decode(buffer);
     if (txt[0] === "P") {
@@ -22906,7 +17035,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     const lines = txt.split("\n");
     const n = lines.length;
     const pts = [];
-    const t = [];
+    const tris = [];
     for (let i = 0; i < n; i++) {
       const str6 = lines[i];
       if (str6[0] === "v" && str6[1] === " ") {
@@ -22928,15 +17057,31 @@ var NVMeshLoaders = class _NVMeshLoaders {
         for (let j = 0; j < new_t; j++) {
           tn = items[3 + j].split("/");
           const tcurr = parseInt(tn[0]) - 1;
-          t.push(t0);
-          t.push(tprev);
-          t.push(tcurr);
+          tris.push(t0);
+          tris.push(tprev);
+          tris.push(tcurr);
           tprev = tcurr;
         }
       }
     }
     const positions = new Float32Array(pts);
-    const indices = new Uint32Array(t);
+    const indices = new Uint32Array(tris);
+    let min4 = indices[0];
+    let max5 = indices[0];
+    for (let i = 1; i < indices.length; i++) {
+      if (indices[i] < min4) {
+        min4 = indices[i];
+      }
+      if (indices[i] > max5) {
+        max5 = indices[i];
+      }
+    }
+    if (max5 - min4 + 1 > positions.length / 3) {
+      throw new Error("Not a valid OBJ file");
+    }
+    for (let i = 0; i < indices.length; i++) {
+      indices[i] -= min4;
+    }
     return {
       positions,
       indices
@@ -23017,13 +17162,13 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readFreeSurfer()
   // read brainvoyager SRF format
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/344-users-guide-2-3-the-format-of-srf-files
-  static readSRF(buffer) {
+  static async readSRF(buffer) {
     const bytes = new Uint8Array(buffer);
     if (bytes[0] === 35 && bytes[1] === 33 && bytes[2] === 97) {
       return _NVMeshLoaders.readASC(buffer);
     }
     if (bytes[0] === 31 && bytes[1] === 139) {
-      const raw = decompressSync(new Uint8Array(buffer));
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer));
       buffer = raw.buffer;
     }
     const reader = new DataView(buffer);
@@ -23191,7 +17336,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // read NIfTI2 format with embedded CIfTI
   // this variation very specific to connectome workbench
   // https://brainder.org/2015/04/03/the-nifti-2-file-format/
-  static readNII2(buffer, n_vert = 0, anatomicalStructurePrimary = "") {
+  static async readNII2(buffer, n_vert = 0, anatomicalStructurePrimary = "") {
     let scalars = new Float32Array();
     const len4 = buffer.byteLength;
     let isLittleEndian = true;
@@ -23386,7 +17531,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readNII2()
   // read NIfTI1/2 as vertex colors
   // https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
-  static readNII(buffer, n_vert = 0, anatomicalStructurePrimary = "") {
+  static async readNII(buffer, n_vert = 0, anatomicalStructurePrimary = "") {
     let scalars = new Float32Array();
     let isLittleEndian = true;
     let reader = new DataView(buffer);
@@ -23399,7 +17544,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       magic = reader.getUint16(0, isLittleEndian);
     }
     if (magic !== 348) {
-      const raw = decompressSync(new Uint8Array(buffer));
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer));
       reader = new DataView(raw.buffer);
       buffer = raw.buffer;
       magic = reader.getUint16(0, isLittleEndian);
@@ -23467,11 +17612,11 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readNII();
   // read MGH format as vertex colors (not voxel-based image)
   // https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/MghFormat
-  static readMGH(buffer, n_vert = 0, isReadColortables = false) {
+  static async readMGH(buffer, n_vert = 0, isReadColortables = false) {
     let reader = new DataView(buffer);
     let raw = buffer;
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      const decompressed = decompressSync(new Uint8Array(buffer));
+      const decompressed = await NVUtilities.decompress(new Uint8Array(buffer));
       raw = new ArrayBuffer(decompressed.byteLength);
       new Uint8Array(raw).set(new Uint8Array(decompressed));
       reader = new DataView(decompressed.buffer);
@@ -23854,14 +17999,14 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readX3D()
   // read GIfTI format mesh
   // https://www.nitrc.org/projects/gifti/
-  static readGII(buffer, n_vert = 0) {
+  static async readGII(buffer, n_vert = 0) {
     let len4 = buffer.byteLength;
     if (len4 < 20) {
       throw new Error("File too small to be GII: bytes = " + len4);
     }
     let chars = new TextDecoder("ascii").decode(buffer);
     if (chars[0].charCodeAt(0) === 31) {
-      const raw = decompressSync(new Uint8Array(buffer));
+      const raw = await NVUtilities.decompress(new Uint8Array(buffer));
       buffer = raw.buffer;
       chars = new TextDecoder("ascii").decode(raw.buffer);
     }
@@ -24010,14 +18155,14 @@ var NVMeshLoaders = class _NVMeshLoaders {
           };
           if (isGzip) {
             const datZ = base64ToUint8(line.slice());
-            datBin = decompressSync(new Uint8Array(datZ));
+            datBin = await NVUtilities.decompress(new Uint8Array(datZ));
           } else {
             datBin = base64ToUint8(line.slice());
           }
         } else {
           if (isGzip) {
             const datZ = Buffer.from(line.slice(), "base64");
-            datBin = decompressSync(new Uint8Array(datZ));
+            datBin = await NVUtilities.decompress(new Uint8Array(datZ));
           } else {
             datBin = Buffer.from(line.slice(), "base64");
           }
@@ -24368,8 +18513,1716 @@ var serialize = (value, { json, lossy } = {}) => {
   return serializer(!(json || lossy), !!json, /* @__PURE__ */ new Map(), _)(value), _;
 };
 
-// src/nvimage/index.ts
-var nifti = __toESM(require_nifti(), 1);
+// ../../node_modules/fflate/esm/browser.js
+var u8 = Uint8Array;
+var u16 = Uint16Array;
+var i32 = Int32Array;
+var fleb = new u8([
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  1,
+  1,
+  2,
+  2,
+  2,
+  2,
+  3,
+  3,
+  3,
+  3,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  5,
+  0,
+  /* unused */
+  0,
+  0,
+  /* impossible */
+  0
+]);
+var fdeb = new u8([
+  0,
+  0,
+  0,
+  0,
+  1,
+  1,
+  2,
+  2,
+  3,
+  3,
+  4,
+  4,
+  5,
+  5,
+  6,
+  6,
+  7,
+  7,
+  8,
+  8,
+  9,
+  9,
+  10,
+  10,
+  11,
+  11,
+  12,
+  12,
+  13,
+  13,
+  /* unused */
+  0,
+  0
+]);
+var clim = new u8([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+var freb = function(eb, start) {
+  var b = new u16(31);
+  for (var i = 0; i < 31; ++i) {
+    b[i] = start += 1 << eb[i - 1];
+  }
+  var r = new i32(b[30]);
+  for (var i = 1; i < 30; ++i) {
+    for (var j = b[i]; j < b[i + 1]; ++j) {
+      r[j] = j - b[i] << 5 | i;
+    }
+  }
+  return { b, r };
+};
+var _a = freb(fleb, 2);
+var fl = _a.b;
+var revfl = _a.r;
+fl[28] = 258, revfl[258] = 28;
+var _b = freb(fdeb, 0);
+var fd = _b.b;
+var revfd = _b.r;
+var rev = new u16(32768);
+for (i = 0; i < 32768; ++i) {
+  x = (i & 43690) >> 1 | (i & 21845) << 1;
+  x = (x & 52428) >> 2 | (x & 13107) << 2;
+  x = (x & 61680) >> 4 | (x & 3855) << 4;
+  rev[i] = ((x & 65280) >> 8 | (x & 255) << 8) >> 1;
+}
+var x;
+var i;
+var hMap = function(cd, mb, r) {
+  var s = cd.length;
+  var i = 0;
+  var l = new u16(mb);
+  for (; i < s; ++i) {
+    if (cd[i])
+      ++l[cd[i] - 1];
+  }
+  var le = new u16(mb);
+  for (i = 1; i < mb; ++i) {
+    le[i] = le[i - 1] + l[i - 1] << 1;
+  }
+  var co;
+  if (r) {
+    co = new u16(1 << mb);
+    var rvb = 15 - mb;
+    for (i = 0; i < s; ++i) {
+      if (cd[i]) {
+        var sv = i << 4 | cd[i];
+        var r_1 = mb - cd[i];
+        var v = le[cd[i] - 1]++ << r_1;
+        for (var m = v | (1 << r_1) - 1; v <= m; ++v) {
+          co[rev[v] >> rvb] = sv;
+        }
+      }
+    }
+  } else {
+    co = new u16(s);
+    for (i = 0; i < s; ++i) {
+      if (cd[i]) {
+        co[i] = rev[le[cd[i] - 1]++] >> 15 - cd[i];
+      }
+    }
+  }
+  return co;
+};
+var flt = new u8(288);
+for (i = 0; i < 144; ++i)
+  flt[i] = 8;
+var i;
+for (i = 144; i < 256; ++i)
+  flt[i] = 9;
+var i;
+for (i = 256; i < 280; ++i)
+  flt[i] = 7;
+var i;
+for (i = 280; i < 288; ++i)
+  flt[i] = 8;
+var i;
+var fdt = new u8(32);
+for (i = 0; i < 32; ++i)
+  fdt[i] = 5;
+var i;
+var flrm = /* @__PURE__ */ hMap(flt, 9, 1);
+var fdrm = /* @__PURE__ */ hMap(fdt, 5, 1);
+var max4 = function(a) {
+  var m = a[0];
+  for (var i = 1; i < a.length; ++i) {
+    if (a[i] > m)
+      m = a[i];
+  }
+  return m;
+};
+var bits = function(d, p, m) {
+  var o = p / 8 | 0;
+  return (d[o] | d[o + 1] << 8) >> (p & 7) & m;
+};
+var bits16 = function(d, p) {
+  var o = p / 8 | 0;
+  return (d[o] | d[o + 1] << 8 | d[o + 2] << 16) >> (p & 7);
+};
+var shft = function(p) {
+  return (p + 7) / 8 | 0;
+};
+var slc = function(v, s, e) {
+  if (s == null || s < 0)
+    s = 0;
+  if (e == null || e > v.length)
+    e = v.length;
+  return new u8(v.subarray(s, e));
+};
+var ec = [
+  "unexpected EOF",
+  "invalid block type",
+  "invalid length/literal",
+  "invalid distance",
+  "stream finished",
+  "no stream handler",
+  ,
+  "no callback",
+  "invalid UTF-8 data",
+  "extra field too long",
+  "date not in range 1980-2099",
+  "filename too long",
+  "stream finishing",
+  "invalid zip data"
+  // determined by unknown compression method
+];
+var err = function(ind, msg, nt) {
+  var e = new Error(msg || ec[ind]);
+  e.code = ind;
+  if (Error.captureStackTrace)
+    Error.captureStackTrace(e, err);
+  if (!nt)
+    throw e;
+  return e;
+};
+var inflt = function(dat, st, buf, dict) {
+  var sl = dat.length, dl = dict ? dict.length : 0;
+  if (!sl || st.f && !st.l)
+    return buf || new u8(0);
+  var noBuf = !buf;
+  var resize = noBuf || st.i != 2;
+  var noSt = st.i;
+  if (noBuf)
+    buf = new u8(sl * 3);
+  var cbuf = function(l2) {
+    var bl = buf.length;
+    if (l2 > bl) {
+      var nbuf = new u8(Math.max(bl * 2, l2));
+      nbuf.set(buf);
+      buf = nbuf;
+    }
+  };
+  var final = st.f || 0, pos = st.p || 0, bt = st.b || 0, lm = st.l, dm = st.d, lbt = st.m, dbt = st.n;
+  var tbts = sl * 8;
+  do {
+    if (!lm) {
+      final = bits(dat, pos, 1);
+      var type = bits(dat, pos + 1, 3);
+      pos += 3;
+      if (!type) {
+        var s = shft(pos) + 4, l = dat[s - 4] | dat[s - 3] << 8, t = s + l;
+        if (t > sl) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (resize)
+          cbuf(bt + l);
+        buf.set(dat.subarray(s, t), bt);
+        st.b = bt += l, st.p = pos = t * 8, st.f = final;
+        continue;
+      } else if (type == 1)
+        lm = flrm, dm = fdrm, lbt = 9, dbt = 5;
+      else if (type == 2) {
+        var hLit = bits(dat, pos, 31) + 257, hcLen = bits(dat, pos + 10, 15) + 4;
+        var tl = hLit + bits(dat, pos + 5, 31) + 1;
+        pos += 14;
+        var ldt = new u8(tl);
+        var clt = new u8(19);
+        for (var i = 0; i < hcLen; ++i) {
+          clt[clim[i]] = bits(dat, pos + i * 3, 7);
+        }
+        pos += hcLen * 3;
+        var clb = max4(clt), clbmsk = (1 << clb) - 1;
+        var clm = hMap(clt, clb, 1);
+        for (var i = 0; i < tl; ) {
+          var r = clm[bits(dat, pos, clbmsk)];
+          pos += r & 15;
+          var s = r >> 4;
+          if (s < 16) {
+            ldt[i++] = s;
+          } else {
+            var c = 0, n = 0;
+            if (s == 16)
+              n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i - 1];
+            else if (s == 17)
+              n = 3 + bits(dat, pos, 7), pos += 3;
+            else if (s == 18)
+              n = 11 + bits(dat, pos, 127), pos += 7;
+            while (n--)
+              ldt[i++] = c;
+          }
+        }
+        var lt = ldt.subarray(0, hLit), dt = ldt.subarray(hLit);
+        lbt = max4(lt);
+        dbt = max4(dt);
+        lm = hMap(lt, lbt, 1);
+        dm = hMap(dt, dbt, 1);
+      } else
+        err(1);
+      if (pos > tbts) {
+        if (noSt)
+          err(0);
+        break;
+      }
+    }
+    if (resize)
+      cbuf(bt + 131072);
+    var lms = (1 << lbt) - 1, dms = (1 << dbt) - 1;
+    var lpos = pos;
+    for (; ; lpos = pos) {
+      var c = lm[bits16(dat, pos) & lms], sym = c >> 4;
+      pos += c & 15;
+      if (pos > tbts) {
+        if (noSt)
+          err(0);
+        break;
+      }
+      if (!c)
+        err(2);
+      if (sym < 256)
+        buf[bt++] = sym;
+      else if (sym == 256) {
+        lpos = pos, lm = null;
+        break;
+      } else {
+        var add6 = sym - 254;
+        if (sym > 264) {
+          var i = sym - 257, b = fleb[i];
+          add6 = bits(dat, pos, (1 << b) - 1) + fl[i];
+          pos += b;
+        }
+        var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
+        if (!d)
+          err(3);
+        pos += d & 15;
+        var dt = fd[dsym];
+        if (dsym > 3) {
+          var b = fdeb[dsym];
+          dt += bits16(dat, pos) & (1 << b) - 1, pos += b;
+        }
+        if (pos > tbts) {
+          if (noSt)
+            err(0);
+          break;
+        }
+        if (resize)
+          cbuf(bt + 131072);
+        var end = bt + add6;
+        if (bt < dt) {
+          var shift = dl - dt, dend = Math.min(dt, end);
+          if (shift + bt < 0)
+            err(3);
+          for (; bt < dend; ++bt)
+            buf[bt] = dict[shift + bt];
+        }
+        for (; bt < end; ++bt)
+          buf[bt] = buf[bt - dt];
+      }
+    }
+    st.l = lm, st.p = lpos, st.b = bt, st.f = final;
+    if (lm)
+      final = 1, st.m = lbt, st.d = dm, st.n = dbt;
+  } while (!final);
+  return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt);
+};
+var et = /* @__PURE__ */ new u8(0);
+var gzs = function(d) {
+  if (d[0] != 31 || d[1] != 139 || d[2] != 8)
+    err(6, "invalid gzip data");
+  var flg = d[3];
+  var st = 10;
+  if (flg & 4)
+    st += (d[10] | d[11] << 8) + 2;
+  for (var zs = (flg >> 3 & 1) + (flg >> 4 & 1); zs > 0; zs -= !d[st++])
+    ;
+  return st + (flg & 2);
+};
+var gzl = function(d) {
+  var l = d.length;
+  return (d[l - 4] | d[l - 3] << 8 | d[l - 2] << 16 | d[l - 1] << 24) >>> 0;
+};
+var zls = function(d, dict) {
+  if ((d[0] & 15) != 8 || d[0] >> 4 > 7 || (d[0] << 8 | d[1]) % 31)
+    err(6, "invalid zlib data");
+  if ((d[1] >> 5 & 1) == +!dict)
+    err(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
+  return (d[1] >> 3 & 4) + 2;
+};
+function inflateSync(data, opts) {
+  return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
+}
+function gunzipSync(data, opts) {
+  var st = gzs(data);
+  if (st + 8 > data.length)
+    err(6, "invalid gzip data");
+  return inflt(data.subarray(st, -8), { i: 2 }, opts && opts.out || new u8(gzl(data)), opts && opts.dictionary);
+}
+function unzlibSync(data, opts) {
+  return inflt(data.subarray(zls(data, opts && opts.dictionary), -4), { i: 2 }, opts && opts.out, opts && opts.dictionary);
+}
+function decompressSync(data, opts) {
+  return data[0] == 31 && data[1] == 139 && data[2] == 8 ? gunzipSync(data, opts) : (data[0] & 15) != 8 || data[0] >> 4 > 7 || (data[0] << 8 | data[1]) % 31 ? inflateSync(data, opts) : unzlibSync(data, opts);
+}
+var td = typeof TextDecoder != "undefined" && /* @__PURE__ */ new TextDecoder();
+var tds = 0;
+try {
+  td.decode(et, { stream: true });
+  tds = 1;
+} catch (e) {
+}
+
+// ../../node_modules/nifti-reader-js/dist/nifti-extension.js
+var NIFTIEXTENSION = class {
+  constructor(esize, ecode, edata, littleEndian) {
+    __publicField(this, "esize");
+    __publicField(this, "ecode");
+    __publicField(this, "edata");
+    __publicField(this, "littleEndian");
+    if (esize % 16 != 0) {
+      throw new Error("This does not appear to be a NIFTI extension");
+    }
+    this.esize = esize;
+    this.ecode = ecode;
+    this.edata = edata;
+    this.littleEndian = littleEndian;
+  }
+  /**
+   * Returns extension as ArrayBuffer.
+   * @returns {ArrayBuffer}
+   */
+  toArrayBuffer() {
+    let byteArray = new Uint8Array(this.esize);
+    let data = new Uint8Array(this.edata);
+    byteArray.set(data, 8);
+    let view = new DataView(byteArray.buffer);
+    view.setInt32(0, this.esize, this.littleEndian);
+    view.setInt32(4, this.ecode, this.littleEndian);
+    return byteArray.buffer;
+  }
+};
+
+// ../../node_modules/nifti-reader-js/dist/utilities.js
+var _Utils = class _Utils {
+  /*** Static methods ***/
+  static getStringAt(data, start, end) {
+    var str6 = "", ctr, ch;
+    for (ctr = start; ctr < end; ctr += 1) {
+      ch = data.getUint8(ctr);
+      if (ch !== 0) {
+        str6 += String.fromCharCode(ch);
+      }
+    }
+    return str6;
+  }
+  static getIntAt(data, start, littleEndian) {
+    return data.getInt32(start, littleEndian);
+  }
+  static getFloatAt(data, start, littleEndian) {
+    return data.getFloat32(start, littleEndian);
+  }
+  static getDoubleAt(data, start, littleEndian) {
+    return data.getFloat64(start, littleEndian);
+  }
+  static getInt64At(dataView, index, littleEndian) {
+    const low = dataView.getUint32(index, littleEndian);
+    const high = dataView.getInt32(index + 4, littleEndian);
+    let result;
+    if (littleEndian) {
+      result = high * 2 ** 32 + low;
+    } else {
+      result = low * 2 ** 32 + high;
+    }
+    if (high < 0) {
+      result += -1 * 2 ** 32 * 2 ** 32;
+    }
+    return result;
+  }
+  static getUint64At(dataView, index, littleEndian) {
+    const low = dataView.getUint32(index + (littleEndian ? 0 : 4), littleEndian);
+    const high = dataView.getUint32(index + (littleEndian ? 4 : 0), littleEndian);
+    return littleEndian ? high * 2 ** 32 + low : low * 2 ** 32 + high;
+  }
+  static getExtensionsAt(data, start, littleEndian, voxOffset) {
+    let extensions = [];
+    let extensionByteIndex = start;
+    while (extensionByteIndex < voxOffset) {
+      let extensionLittleEndian = littleEndian;
+      let esize = _Utils.getIntAt(data, extensionByteIndex, littleEndian);
+      if (!esize) {
+        break;
+      }
+      if (esize + extensionByteIndex > voxOffset) {
+        extensionLittleEndian = !extensionLittleEndian;
+        esize = _Utils.getIntAt(data, extensionByteIndex, extensionLittleEndian);
+        if (esize + extensionByteIndex > voxOffset) {
+          throw new Error("This does not appear to be a valid NIFTI extension");
+        }
+      }
+      if (esize % 16 != 0) {
+        throw new Error("This does not appear to be a NIFTI extension");
+      }
+      let ecode = _Utils.getIntAt(data, extensionByteIndex + 4, extensionLittleEndian);
+      let edata = data.buffer.slice(extensionByteIndex + 8, extensionByteIndex + esize);
+      let extension = new NIFTIEXTENSION(esize, ecode, edata, extensionLittleEndian);
+      extensions.push(extension);
+      extensionByteIndex += esize;
+    }
+    return extensions;
+  }
+  static toArrayBuffer(buffer) {
+    var ab, view, i;
+    ab = new ArrayBuffer(buffer.length);
+    view = new Uint8Array(ab);
+    for (i = 0; i < buffer.length; i += 1) {
+      view[i] = buffer[i];
+    }
+    return ab;
+  }
+  static isString(obj) {
+    return typeof obj === "string" || obj instanceof String;
+  }
+  static formatNumber(num, shortFormat = void 0) {
+    let val;
+    if (_Utils.isString(num)) {
+      val = Number(num);
+    } else {
+      val = num;
+    }
+    if (shortFormat) {
+      val = val.toPrecision(5);
+    } else {
+      val = val.toPrecision(7);
+    }
+    return parseFloat(val);
+  }
+  // http://stackoverflow.com/questions/18638900/javascript-crc32
+  static makeCRCTable() {
+    let c;
+    let crcTable = [];
+    for (var n = 0; n < 256; n++) {
+      c = n;
+      for (var k = 0; k < 8; k++) {
+        c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+      }
+      crcTable[n] = c;
+    }
+    return crcTable;
+  }
+  static crc32(dataView) {
+    if (!_Utils.crcTable) {
+      _Utils.crcTable = _Utils.makeCRCTable();
+    }
+    const crcTable = _Utils.crcTable;
+    let crc = 0 ^ -1;
+    for (var i = 0; i < dataView.byteLength; i++) {
+      crc = crc >>> 8 ^ crcTable[(crc ^ dataView.getUint8(i)) & 255];
+    }
+    return (crc ^ -1) >>> 0;
+  }
+};
+/*** Static Pseudo-constants ***/
+__publicField(_Utils, "crcTable", null);
+__publicField(_Utils, "GUNZIP_MAGIC_COOKIE1", 31);
+__publicField(_Utils, "GUNZIP_MAGIC_COOKIE2", 139);
+__publicField(_Utils, "getByteAt", function(data, start) {
+  return data.getUint8(start);
+});
+__publicField(_Utils, "getShortAt", function(data, start, littleEndian) {
+  return data.getInt16(start, littleEndian);
+});
+var Utils = _Utils;
+
+// ../../node_modules/nifti-reader-js/dist/nifti1.js
+var _NIFTI1 = class _NIFTI1 {
+  constructor() {
+    __publicField(this, "littleEndian", false);
+    __publicField(this, "dim_info", 0);
+    __publicField(this, "dims", []);
+    __publicField(this, "intent_p1", 0);
+    __publicField(this, "intent_p2", 0);
+    __publicField(this, "intent_p3", 0);
+    __publicField(this, "intent_code", 0);
+    __publicField(this, "datatypeCode", 0);
+    __publicField(this, "numBitsPerVoxel", 0);
+    __publicField(this, "slice_start", 0);
+    __publicField(this, "slice_end", 0);
+    __publicField(this, "slice_code", 0);
+    __publicField(this, "pixDims", []);
+    __publicField(this, "vox_offset", 0);
+    __publicField(this, "scl_slope", 1);
+    __publicField(this, "scl_inter", 0);
+    __publicField(this, "xyzt_units", 0);
+    __publicField(this, "cal_max", 0);
+    __publicField(this, "cal_min", 0);
+    __publicField(this, "slice_duration", 0);
+    __publicField(this, "toffset", 0);
+    __publicField(this, "description", "");
+    __publicField(this, "aux_file", "");
+    __publicField(this, "intent_name", "");
+    __publicField(this, "qform_code", 0);
+    __publicField(this, "sform_code", 0);
+    __publicField(this, "quatern_a", 0);
+    __publicField(this, "quatern_b", 0);
+    __publicField(this, "quatern_c", 0);
+    __publicField(this, "quatern_d", 0);
+    __publicField(this, "qoffset_x", 0);
+    __publicField(this, "qoffset_y", 0);
+    __publicField(this, "qoffset_z", 0);
+    __publicField(this, "affine", [
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ]);
+    __publicField(this, "qfac", 1);
+    __publicField(this, "quatern_R");
+    __publicField(this, "magic", "0");
+    __publicField(this, "isHDR", false);
+    __publicField(this, "extensionFlag", [0, 0, 0, 0]);
+    __publicField(this, "extensionSize", 0);
+    __publicField(this, "extensionCode", 0);
+    __publicField(this, "extensions", []);
+    /**
+     * Returns a human-readable string of datatype.
+     * @param {number} code
+     * @returns {string}
+     */
+    __publicField(this, "getDatatypeCodeString", function(code) {
+      if (code === _NIFTI1.TYPE_UINT8) {
+        return "1-Byte Unsigned Integer";
+      } else if (code === _NIFTI1.TYPE_INT16) {
+        return "2-Byte Signed Integer";
+      } else if (code === _NIFTI1.TYPE_INT32) {
+        return "4-Byte Signed Integer";
+      } else if (code === _NIFTI1.TYPE_FLOAT32) {
+        return "4-Byte Float";
+      } else if (code === _NIFTI1.TYPE_FLOAT64) {
+        return "8-Byte Float";
+      } else if (code === _NIFTI1.TYPE_RGB24) {
+        return "RGB";
+      } else if (code === _NIFTI1.TYPE_INT8) {
+        return "1-Byte Signed Integer";
+      } else if (code === _NIFTI1.TYPE_UINT16) {
+        return "2-Byte Unsigned Integer";
+      } else if (code === _NIFTI1.TYPE_UINT32) {
+        return "4-Byte Unsigned Integer";
+      } else if (code === _NIFTI1.TYPE_INT64) {
+        return "8-Byte Signed Integer";
+      } else if (code === _NIFTI1.TYPE_UINT64) {
+        return "8-Byte Unsigned Integer";
+      } else {
+        return "Unknown";
+      }
+    });
+    /**
+     * Returns a human-readable string of transform type.
+     * @param {number} code
+     * @returns {string}
+     */
+    __publicField(this, "getTransformCodeString", function(code) {
+      if (code === _NIFTI1.XFORM_SCANNER_ANAT) {
+        return "Scanner";
+      } else if (code === _NIFTI1.XFORM_ALIGNED_ANAT) {
+        return "Aligned";
+      } else if (code === _NIFTI1.XFORM_TALAIRACH) {
+        return "Talairach";
+      } else if (code === _NIFTI1.XFORM_MNI_152) {
+        return "MNI";
+      } else {
+        return "Unknown";
+      }
+    });
+    /**
+     * Returns a human-readable string of spatial and temporal units.
+     * @param {number} code
+     * @returns {string}
+     */
+    __publicField(this, "getUnitsCodeString", function(code) {
+      if (code === _NIFTI1.UNITS_METER) {
+        return "Meters";
+      } else if (code === _NIFTI1.UNITS_MM) {
+        return "Millimeters";
+      } else if (code === _NIFTI1.UNITS_MICRON) {
+        return "Microns";
+      } else if (code === _NIFTI1.UNITS_SEC) {
+        return "Seconds";
+      } else if (code === _NIFTI1.UNITS_MSEC) {
+        return "Milliseconds";
+      } else if (code === _NIFTI1.UNITS_USEC) {
+        return "Microseconds";
+      } else if (code === _NIFTI1.UNITS_HZ) {
+        return "Hz";
+      } else if (code === _NIFTI1.UNITS_PPM) {
+        return "PPM";
+      } else if (code === _NIFTI1.UNITS_RADS) {
+        return "Rads";
+      } else {
+        return "Unknown";
+      }
+    });
+    __publicField(this, "nifti_mat33_mul", function(A, B) {
+      var C = [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0]
+      ], i, j;
+      for (i = 0; i < 3; i += 1) {
+        for (j = 0; j < 3; j += 1) {
+          C[i][j] = A[i][0] * B[0][j] + A[i][1] * B[1][j] + A[i][2] * B[2][j];
+        }
+      }
+      return C;
+    });
+    __publicField(this, "nifti_mat33_determ", function(R) {
+      var r11, r12, r13, r21, r22, r23, r31, r32, r33;
+      r11 = R[0][0];
+      r12 = R[0][1];
+      r13 = R[0][2];
+      r21 = R[1][0];
+      r22 = R[1][1];
+      r23 = R[1][2];
+      r31 = R[2][0];
+      r32 = R[2][1];
+      r33 = R[2][2];
+      return r11 * r22 * r33 - r11 * r32 * r23 - r21 * r12 * r33 + r21 * r32 * r13 + r31 * r12 * r23 - r31 * r22 * r13;
+    });
+  }
+  /*** Prototype Methods ***/
+  /**
+   * Reads the header data.
+   * @param {ArrayBuffer} data
+   */
+  readHeader(data) {
+    var rawData = new DataView(data), magicCookieVal = Utils.getIntAt(rawData, 0, this.littleEndian), ctr, ctrOut, ctrIn, index;
+    if (magicCookieVal !== _NIFTI1.MAGIC_COOKIE) {
+      this.littleEndian = true;
+      magicCookieVal = Utils.getIntAt(rawData, 0, this.littleEndian);
+    }
+    if (magicCookieVal !== _NIFTI1.MAGIC_COOKIE) {
+      throw new Error("This does not appear to be a NIFTI file!");
+    }
+    this.dim_info = Utils.getByteAt(rawData, 39);
+    for (ctr = 0; ctr < 8; ctr += 1) {
+      index = 40 + ctr * 2;
+      this.dims[ctr] = Utils.getShortAt(rawData, index, this.littleEndian);
+    }
+    this.intent_p1 = Utils.getFloatAt(rawData, 56, this.littleEndian);
+    this.intent_p2 = Utils.getFloatAt(rawData, 60, this.littleEndian);
+    this.intent_p3 = Utils.getFloatAt(rawData, 64, this.littleEndian);
+    this.intent_code = Utils.getShortAt(rawData, 68, this.littleEndian);
+    this.datatypeCode = Utils.getShortAt(rawData, 70, this.littleEndian);
+    this.numBitsPerVoxel = Utils.getShortAt(rawData, 72, this.littleEndian);
+    this.slice_start = Utils.getShortAt(rawData, 74, this.littleEndian);
+    for (ctr = 0; ctr < 8; ctr += 1) {
+      index = 76 + ctr * 4;
+      this.pixDims[ctr] = Utils.getFloatAt(rawData, index, this.littleEndian);
+    }
+    this.vox_offset = Utils.getFloatAt(rawData, 108, this.littleEndian);
+    this.scl_slope = Utils.getFloatAt(rawData, 112, this.littleEndian);
+    this.scl_inter = Utils.getFloatAt(rawData, 116, this.littleEndian);
+    this.slice_end = Utils.getShortAt(rawData, 120, this.littleEndian);
+    this.slice_code = Utils.getByteAt(rawData, 122);
+    this.xyzt_units = Utils.getByteAt(rawData, 123);
+    this.cal_max = Utils.getFloatAt(rawData, 124, this.littleEndian);
+    this.cal_min = Utils.getFloatAt(rawData, 128, this.littleEndian);
+    this.slice_duration = Utils.getFloatAt(rawData, 132, this.littleEndian);
+    this.toffset = Utils.getFloatAt(rawData, 136, this.littleEndian);
+    this.description = Utils.getStringAt(rawData, 148, 228);
+    this.aux_file = Utils.getStringAt(rawData, 228, 252);
+    this.qform_code = Utils.getShortAt(rawData, 252, this.littleEndian);
+    this.sform_code = Utils.getShortAt(rawData, 254, this.littleEndian);
+    this.quatern_b = Utils.getFloatAt(rawData, 256, this.littleEndian);
+    this.quatern_c = Utils.getFloatAt(rawData, 260, this.littleEndian);
+    this.quatern_d = Utils.getFloatAt(rawData, 264, this.littleEndian);
+    this.quatern_a = Math.sqrt(1 - (Math.pow(this.quatern_b, 2) + Math.pow(this.quatern_c, 2) + Math.pow(this.quatern_d, 2)));
+    this.qoffset_x = Utils.getFloatAt(rawData, 268, this.littleEndian);
+    this.qoffset_y = Utils.getFloatAt(rawData, 272, this.littleEndian);
+    this.qoffset_z = Utils.getFloatAt(rawData, 276, this.littleEndian);
+    if (this.qform_code < 1 && this.sform_code < 1) {
+      this.affine[0][0] = this.pixDims[1];
+      this.affine[1][1] = this.pixDims[2];
+      this.affine[2][2] = this.pixDims[3];
+    }
+    if (this.qform_code > 0 && this.sform_code < this.qform_code) {
+      const a = this.quatern_a;
+      const b = this.quatern_b;
+      const c = this.quatern_c;
+      const d = this.quatern_d;
+      this.qfac = this.pixDims[0] === 0 ? 1 : this.pixDims[0];
+      this.quatern_R = [
+        [a * a + b * b - c * c - d * d, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c],
+        [2 * b * c + 2 * a * d, a * a + c * c - b * b - d * d, 2 * c * d - 2 * a * b],
+        [2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a * a + d * d - c * c - b * b]
+      ];
+      for (ctrOut = 0; ctrOut < 3; ctrOut += 1) {
+        for (ctrIn = 0; ctrIn < 3; ctrIn += 1) {
+          this.affine[ctrOut][ctrIn] = this.quatern_R[ctrOut][ctrIn] * this.pixDims[ctrIn + 1];
+          if (ctrIn === 2) {
+            this.affine[ctrOut][ctrIn] *= this.qfac;
+          }
+        }
+      }
+      this.affine[0][3] = this.qoffset_x;
+      this.affine[1][3] = this.qoffset_y;
+      this.affine[2][3] = this.qoffset_z;
+    } else if (this.sform_code > 0) {
+      for (ctrOut = 0; ctrOut < 3; ctrOut += 1) {
+        for (ctrIn = 0; ctrIn < 4; ctrIn += 1) {
+          index = 280 + (ctrOut * 4 + ctrIn) * 4;
+          this.affine[ctrOut][ctrIn] = Utils.getFloatAt(rawData, index, this.littleEndian);
+        }
+      }
+    }
+    this.affine[3][0] = 0;
+    this.affine[3][1] = 0;
+    this.affine[3][2] = 0;
+    this.affine[3][3] = 1;
+    this.intent_name = Utils.getStringAt(rawData, 328, 344);
+    this.magic = Utils.getStringAt(rawData, 344, 348);
+    this.isHDR = this.magic === String.fromCharCode.apply(null, _NIFTI1.MAGIC_NUMBER2);
+    if (rawData.byteLength > _NIFTI1.MAGIC_COOKIE) {
+      this.extensionFlag[0] = Utils.getByteAt(rawData, 348);
+      this.extensionFlag[1] = Utils.getByteAt(rawData, 348 + 1);
+      this.extensionFlag[2] = Utils.getByteAt(rawData, 348 + 2);
+      this.extensionFlag[3] = Utils.getByteAt(rawData, 348 + 3);
+      let isExtensionCapable = true;
+      if (!this.isHDR && this.vox_offset <= 352)
+        isExtensionCapable = false;
+      if (rawData.byteLength <= 352 + 16)
+        isExtensionCapable = false;
+      if (isExtensionCapable && this.extensionFlag[0]) {
+        this.extensions = Utils.getExtensionsAt(rawData, this.getExtensionLocation(), this.littleEndian, this.vox_offset);
+        this.extensionSize = this.extensions[0].esize;
+        this.extensionCode = this.extensions[0].ecode;
+      }
+    }
+  }
+  /**
+   * Returns a formatted string of header fields.
+   * @returns {string}
+   */
+  toFormattedString() {
+    var fmt = Utils.formatNumber, string = "";
+    string += "Dim Info = " + this.dim_info + "\n";
+    string += "Image Dimensions (1-8): " + this.dims[0] + ", " + this.dims[1] + ", " + this.dims[2] + ", " + this.dims[3] + ", " + this.dims[4] + ", " + this.dims[5] + ", " + this.dims[6] + ", " + this.dims[7] + "\n";
+    string += "Intent Parameters (1-3): " + this.intent_p1 + ", " + this.intent_p2 + ", " + this.intent_p3 + "\n";
+    string += "Intent Code = " + this.intent_code + "\n";
+    string += "Datatype = " + this.datatypeCode + " (" + this.getDatatypeCodeString(this.datatypeCode) + ")\n";
+    string += "Bits Per Voxel = " + this.numBitsPerVoxel + "\n";
+    string += "Slice Start = " + this.slice_start + "\n";
+    string += "Voxel Dimensions (1-8): " + fmt(this.pixDims[0]) + ", " + fmt(this.pixDims[1]) + ", " + fmt(this.pixDims[2]) + ", " + fmt(this.pixDims[3]) + ", " + fmt(this.pixDims[4]) + ", " + fmt(this.pixDims[5]) + ", " + fmt(this.pixDims[6]) + ", " + fmt(this.pixDims[7]) + "\n";
+    string += "Image Offset = " + this.vox_offset + "\n";
+    string += "Data Scale:  Slope = " + fmt(this.scl_slope) + "  Intercept = " + fmt(this.scl_inter) + "\n";
+    string += "Slice End = " + this.slice_end + "\n";
+    string += "Slice Code = " + this.slice_code + "\n";
+    string += "Units Code = " + this.xyzt_units + " (" + this.getUnitsCodeString(_NIFTI1.SPATIAL_UNITS_MASK & this.xyzt_units) + ", " + this.getUnitsCodeString(_NIFTI1.TEMPORAL_UNITS_MASK & this.xyzt_units) + ")\n";
+    string += "Display Range:  Max = " + fmt(this.cal_max) + "  Min = " + fmt(this.cal_min) + "\n";
+    string += "Slice Duration = " + this.slice_duration + "\n";
+    string += "Time Axis Shift = " + this.toffset + "\n";
+    string += 'Description: "' + this.description + '"\n';
+    string += 'Auxiliary File: "' + this.aux_file + '"\n';
+    string += "Q-Form Code = " + this.qform_code + " (" + this.getTransformCodeString(this.qform_code) + ")\n";
+    string += "S-Form Code = " + this.sform_code + " (" + this.getTransformCodeString(this.sform_code) + ")\n";
+    string += "Quaternion Parameters:  b = " + fmt(this.quatern_b) + "  c = " + fmt(this.quatern_c) + "  d = " + fmt(this.quatern_d) + "\n";
+    string += "Quaternion Offsets:  x = " + this.qoffset_x + "  y = " + this.qoffset_y + "  z = " + this.qoffset_z + "\n";
+    string += "S-Form Parameters X: " + fmt(this.affine[0][0]) + ", " + fmt(this.affine[0][1]) + ", " + fmt(this.affine[0][2]) + ", " + fmt(this.affine[0][3]) + "\n";
+    string += "S-Form Parameters Y: " + fmt(this.affine[1][0]) + ", " + fmt(this.affine[1][1]) + ", " + fmt(this.affine[1][2]) + ", " + fmt(this.affine[1][3]) + "\n";
+    string += "S-Form Parameters Z: " + fmt(this.affine[2][0]) + ", " + fmt(this.affine[2][1]) + ", " + fmt(this.affine[2][2]) + ", " + fmt(this.affine[2][3]) + "\n";
+    string += 'Intent Name: "' + this.intent_name + '"\n';
+    if (this.extensionFlag[0]) {
+      string += "Extension: Size = " + this.extensionSize + "  Code = " + this.extensionCode + "\n";
+    }
+    return string;
+  }
+  /**
+   * Returns the qform matrix.
+   * @returns {Array.<Array.<number>>}
+   */
+  getQformMat() {
+    return this.convertNiftiQFormToNiftiSForm(this.quatern_b, this.quatern_c, this.quatern_d, this.qoffset_x, this.qoffset_y, this.qoffset_z, this.pixDims[1], this.pixDims[2], this.pixDims[3], this.pixDims[0]);
+  }
+  /**
+   * Converts qform to an affine.  (See http://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
+   * @param {number} qb
+   * @param {number} qc
+   * @param {number} qd
+   * @param {number} qx
+   * @param {number} qy
+   * @param {number} qz
+   * @param {number} dx
+   * @param {number} dy
+   * @param {number} dz
+   * @param {number} qfac
+   * @returns {Array.<Array.<number>>}
+   */
+  convertNiftiQFormToNiftiSForm(qb, qc, qd, qx, qy, qz, dx, dy, dz, qfac) {
+    var R = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ], a, b = qb, c = qc, d = qd, xd, yd, zd;
+    R[3][0] = R[3][1] = R[3][2] = 0;
+    R[3][3] = 1;
+    a = 1 - (b * b + c * c + d * d);
+    if (a < 1e-7) {
+      a = 1 / Math.sqrt(b * b + c * c + d * d);
+      b *= a;
+      c *= a;
+      d *= a;
+      a = 0;
+    } else {
+      a = Math.sqrt(a);
+    }
+    xd = dx > 0 ? dx : 1;
+    yd = dy > 0 ? dy : 1;
+    zd = dz > 0 ? dz : 1;
+    if (qfac < 0) {
+      zd = -zd;
+    }
+    R[0][0] = (a * a + b * b - c * c - d * d) * xd;
+    R[0][1] = 2 * (b * c - a * d) * yd;
+    R[0][2] = 2 * (b * d + a * c) * zd;
+    R[1][0] = 2 * (b * c + a * d) * xd;
+    R[1][1] = (a * a + c * c - b * b - d * d) * yd;
+    R[1][2] = 2 * (c * d - a * b) * zd;
+    R[2][0] = 2 * (b * d - a * c) * xd;
+    R[2][1] = 2 * (c * d + a * b) * yd;
+    R[2][2] = (a * a + d * d - c * c - b * b) * zd;
+    R[0][3] = qx;
+    R[1][3] = qy;
+    R[2][3] = qz;
+    return R;
+  }
+  /**
+   * Converts sform to an orientation string (e.g., XYZ+--).  (See http://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
+   * @param {Array.<Array.<number>>} R
+   * @returns {string}
+   */
+  convertNiftiSFormToNEMA(R) {
+    var xi, xj, xk, yi, yj, yk, zi, zj, zk, val, detQ, detP, i, j, k, p, q, r, ibest, jbest, kbest, pbest, qbest, rbest, M, vbest, Q, P, iChar, jChar, kChar, iSense, jSense, kSense;
+    k = 0;
+    Q = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ];
+    P = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ];
+    xi = R[0][0];
+    xj = R[0][1];
+    xk = R[0][2];
+    yi = R[1][0];
+    yj = R[1][1];
+    yk = R[1][2];
+    zi = R[2][0];
+    zj = R[2][1];
+    zk = R[2][2];
+    val = Math.sqrt(xi * xi + yi * yi + zi * zi);
+    if (val === 0) {
+      return null;
+    }
+    xi /= val;
+    yi /= val;
+    zi /= val;
+    val = Math.sqrt(xj * xj + yj * yj + zj * zj);
+    if (val === 0) {
+      return null;
+    }
+    xj /= val;
+    yj /= val;
+    zj /= val;
+    val = xi * xj + yi * yj + zi * zj;
+    if (Math.abs(val) > 1e-4) {
+      xj -= val * xi;
+      yj -= val * yi;
+      zj -= val * zi;
+      val = Math.sqrt(xj * xj + yj * yj + zj * zj);
+      if (val === 0) {
+        return null;
+      }
+      xj /= val;
+      yj /= val;
+      zj /= val;
+    }
+    val = Math.sqrt(xk * xk + yk * yk + zk * zk);
+    if (val === 0) {
+      xk = yi * zj - zi * yj;
+      yk = zi * xj - zj * xi;
+      zk = xi * yj - yi * xj;
+    } else {
+      xk /= val;
+      yk /= val;
+      zk /= val;
+    }
+    val = xi * xk + yi * yk + zi * zk;
+    if (Math.abs(val) > 1e-4) {
+      xk -= val * xi;
+      yk -= val * yi;
+      zk -= val * zi;
+      val = Math.sqrt(xk * xk + yk * yk + zk * zk);
+      if (val === 0) {
+        return null;
+      }
+      xk /= val;
+      yk /= val;
+      zk /= val;
+    }
+    val = xj * xk + yj * yk + zj * zk;
+    if (Math.abs(val) > 1e-4) {
+      xk -= val * xj;
+      yk -= val * yj;
+      zk -= val * zj;
+      val = Math.sqrt(xk * xk + yk * yk + zk * zk);
+      if (val === 0) {
+        return null;
+      }
+      xk /= val;
+      yk /= val;
+      zk /= val;
+    }
+    Q[0][0] = xi;
+    Q[0][1] = xj;
+    Q[0][2] = xk;
+    Q[1][0] = yi;
+    Q[1][1] = yj;
+    Q[1][2] = yk;
+    Q[2][0] = zi;
+    Q[2][1] = zj;
+    Q[2][2] = zk;
+    detQ = this.nifti_mat33_determ(Q);
+    if (detQ === 0) {
+      return null;
+    }
+    vbest = -666;
+    ibest = pbest = qbest = rbest = 1;
+    jbest = 2;
+    kbest = 3;
+    for (i = 1; i <= 3; i += 1) {
+      for (j = 1; j <= 3; j += 1) {
+        if (i !== j) {
+          for (k = 1; k <= 3; k += 1) {
+            if (!(i === k || j === k)) {
+              P[0][0] = P[0][1] = P[0][2] = P[1][0] = P[1][1] = P[1][2] = P[2][0] = P[2][1] = P[2][2] = 0;
+              for (p = -1; p <= 1; p += 2) {
+                for (q = -1; q <= 1; q += 2) {
+                  for (r = -1; r <= 1; r += 2) {
+                    P[0][i - 1] = p;
+                    P[1][j - 1] = q;
+                    P[2][k - 1] = r;
+                    detP = this.nifti_mat33_determ(P);
+                    if (detP * detQ > 0) {
+                      M = this.nifti_mat33_mul(P, Q);
+                      val = M[0][0] + M[1][1] + M[2][2];
+                      if (val > vbest) {
+                        vbest = val;
+                        ibest = i;
+                        jbest = j;
+                        kbest = k;
+                        pbest = p;
+                        qbest = q;
+                        rbest = r;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    iChar = jChar = kChar = iSense = jSense = kSense = "";
+    switch (ibest * pbest) {
+      case 1:
+        iChar = "X";
+        iSense = "+";
+        break;
+      case -1:
+        iChar = "X";
+        iSense = "-";
+        break;
+      case 2:
+        iChar = "Y";
+        iSense = "+";
+        break;
+      case -2:
+        iChar = "Y";
+        iSense = "-";
+        break;
+      case 3:
+        iChar = "Z";
+        iSense = "+";
+        break;
+      case -3:
+        iChar = "Z";
+        iSense = "-";
+        break;
+    }
+    switch (jbest * qbest) {
+      case 1:
+        jChar = "X";
+        jSense = "+";
+        break;
+      case -1:
+        jChar = "X";
+        jSense = "-";
+        break;
+      case 2:
+        jChar = "Y";
+        jSense = "+";
+        break;
+      case -2:
+        jChar = "Y";
+        jSense = "-";
+        break;
+      case 3:
+        jChar = "Z";
+        jSense = "+";
+        break;
+      case -3:
+        jChar = "Z";
+        jSense = "-";
+        break;
+    }
+    switch (kbest * rbest) {
+      case 1:
+        kChar = "X";
+        kSense = "+";
+        break;
+      case -1:
+        kChar = "X";
+        kSense = "-";
+        break;
+      case 2:
+        kChar = "Y";
+        kSense = "+";
+        break;
+      case -2:
+        kChar = "Y";
+        kSense = "-";
+        break;
+      case 3:
+        kChar = "Z";
+        kSense = "+";
+        break;
+      case -3:
+        kChar = "Z";
+        kSense = "-";
+        break;
+    }
+    return iChar + jChar + kChar + iSense + jSense + kSense;
+  }
+  /**
+   * Returns the byte index of the extension.
+   * @returns {number}
+   */
+  getExtensionLocation() {
+    return _NIFTI1.MAGIC_COOKIE + 4;
+  }
+  /**
+   * Returns the extension size.
+   * @param {DataView} data
+   * @returns {number}
+   */
+  getExtensionSize(data) {
+    return Utils.getIntAt(data, this.getExtensionLocation(), this.littleEndian);
+  }
+  /**
+   * Returns the extension code.
+   * @param {DataView} data
+   * @returns {number}
+   */
+  getExtensionCode(data) {
+    return Utils.getIntAt(data, this.getExtensionLocation() + 4, this.littleEndian);
+  }
+  /**
+   * Adds an extension
+   * @param {NIFTIEXTENSION} extension
+   * @param {number} index
+   */
+  addExtension(extension, index = -1) {
+    if (index == -1) {
+      this.extensions.push(extension);
+    } else {
+      this.extensions.splice(index, 0, extension);
+    }
+    this.vox_offset += extension.esize;
+  }
+  /**
+   * Removes an extension
+   * @param {number} index
+   */
+  removeExtension(index) {
+    let extension = this.extensions[index];
+    if (extension) {
+      this.vox_offset -= extension.esize;
+    }
+    this.extensions.splice(index, 1);
+  }
+  /**
+   * Returns header as ArrayBuffer.
+   * @param {boolean} includeExtensions - should extension bytes be included
+   * @returns {ArrayBuffer}
+   */
+  toArrayBuffer(includeExtensions = false) {
+    const SHORT_SIZE = 2;
+    const FLOAT32_SIZE = 4;
+    let byteSize = 348 + 4;
+    if (includeExtensions) {
+      for (let extension of this.extensions) {
+        byteSize += extension.esize;
+      }
+    }
+    let byteArray = new Uint8Array(byteSize);
+    let view = new DataView(byteArray.buffer);
+    view.setInt32(0, 348, this.littleEndian);
+    view.setUint8(39, this.dim_info);
+    for (let i = 0; i < 8; i++) {
+      view.setUint16(40 + SHORT_SIZE * i, this.dims[i], this.littleEndian);
+    }
+    view.setFloat32(56, this.intent_p1, this.littleEndian);
+    view.setFloat32(60, this.intent_p2, this.littleEndian);
+    view.setFloat32(64, this.intent_p3, this.littleEndian);
+    view.setInt16(68, this.intent_code, this.littleEndian);
+    view.setInt16(70, this.datatypeCode, this.littleEndian);
+    view.setInt16(72, this.numBitsPerVoxel, this.littleEndian);
+    view.setInt16(74, this.slice_start, this.littleEndian);
+    for (let i = 0; i < 8; i++) {
+      view.setFloat32(76 + FLOAT32_SIZE * i, this.pixDims[i], this.littleEndian);
+    }
+    view.setFloat32(108, this.vox_offset, this.littleEndian);
+    view.setFloat32(112, this.scl_slope, this.littleEndian);
+    view.setFloat32(116, this.scl_inter, this.littleEndian);
+    view.setInt16(120, this.slice_end, this.littleEndian);
+    view.setUint8(122, this.slice_code);
+    view.setUint8(123, this.xyzt_units);
+    view.setFloat32(124, this.cal_max, this.littleEndian);
+    view.setFloat32(128, this.cal_min, this.littleEndian);
+    view.setFloat32(132, this.slice_duration, this.littleEndian);
+    view.setFloat32(136, this.toffset, this.littleEndian);
+    byteArray.set(new TextEncoder().encode(this.description), 148);
+    byteArray.set(new TextEncoder().encode(this.aux_file), 228);
+    view.setInt16(252, this.qform_code, this.littleEndian);
+    view.setInt16(254, this.sform_code, this.littleEndian);
+    view.setFloat32(256, this.quatern_b, this.littleEndian);
+    view.setFloat32(260, this.quatern_c, this.littleEndian);
+    view.setFloat32(264, this.quatern_d, this.littleEndian);
+    view.setFloat32(268, this.qoffset_x, this.littleEndian);
+    view.setFloat32(272, this.qoffset_y, this.littleEndian);
+    view.setFloat32(276, this.qoffset_z, this.littleEndian);
+    const flattened = this.affine.flat();
+    for (let i = 0; i < 12; i++) {
+      view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], this.littleEndian);
+    }
+    byteArray.set(new TextEncoder().encode(this.intent_name), 328);
+    byteArray.set(new TextEncoder().encode(this.magic), 344);
+    if (includeExtensions) {
+      byteArray.set(Uint8Array.from([1, 0, 0, 0]), 348);
+      let extensionByteIndex = this.getExtensionLocation();
+      for (const extension of this.extensions) {
+        view.setInt32(extensionByteIndex, extension.esize, extension.littleEndian);
+        view.setInt32(extensionByteIndex + 4, extension.ecode, extension.littleEndian);
+        byteArray.set(new Uint8Array(extension.edata), extensionByteIndex + 8);
+        extensionByteIndex += extension.esize;
+      }
+    } else {
+      byteArray.set(new Uint8Array(4).fill(0), 348);
+    }
+    return byteArray.buffer;
+  }
+};
+/*** Static Pseudo-constants ***/
+// datatype codes
+__publicField(_NIFTI1, "TYPE_NONE", 0);
+__publicField(_NIFTI1, "TYPE_BINARY", 1);
+__publicField(_NIFTI1, "TYPE_UINT8", 2);
+__publicField(_NIFTI1, "TYPE_INT16", 4);
+__publicField(_NIFTI1, "TYPE_INT32", 8);
+__publicField(_NIFTI1, "TYPE_FLOAT32", 16);
+__publicField(_NIFTI1, "TYPE_COMPLEX64", 32);
+__publicField(_NIFTI1, "TYPE_FLOAT64", 64);
+__publicField(_NIFTI1, "TYPE_RGB24", 128);
+__publicField(_NIFTI1, "TYPE_INT8", 256);
+__publicField(_NIFTI1, "TYPE_UINT16", 512);
+__publicField(_NIFTI1, "TYPE_UINT32", 768);
+__publicField(_NIFTI1, "TYPE_INT64", 1024);
+__publicField(_NIFTI1, "TYPE_UINT64", 1280);
+__publicField(_NIFTI1, "TYPE_FLOAT128", 1536);
+__publicField(_NIFTI1, "TYPE_COMPLEX128", 1792);
+__publicField(_NIFTI1, "TYPE_COMPLEX256", 2048);
+// transform codes
+__publicField(_NIFTI1, "XFORM_UNKNOWN", 0);
+__publicField(_NIFTI1, "XFORM_SCANNER_ANAT", 1);
+__publicField(_NIFTI1, "XFORM_ALIGNED_ANAT", 2);
+__publicField(_NIFTI1, "XFORM_TALAIRACH", 3);
+__publicField(_NIFTI1, "XFORM_MNI_152", 4);
+// unit codes
+__publicField(_NIFTI1, "SPATIAL_UNITS_MASK", 7);
+__publicField(_NIFTI1, "TEMPORAL_UNITS_MASK", 56);
+__publicField(_NIFTI1, "UNITS_UNKNOWN", 0);
+__publicField(_NIFTI1, "UNITS_METER", 1);
+__publicField(_NIFTI1, "UNITS_MM", 2);
+__publicField(_NIFTI1, "UNITS_MICRON", 3);
+__publicField(_NIFTI1, "UNITS_SEC", 8);
+__publicField(_NIFTI1, "UNITS_MSEC", 16);
+__publicField(_NIFTI1, "UNITS_USEC", 24);
+__publicField(_NIFTI1, "UNITS_HZ", 32);
+__publicField(_NIFTI1, "UNITS_PPM", 40);
+__publicField(_NIFTI1, "UNITS_RADS", 48);
+// nifti1 codes
+__publicField(_NIFTI1, "MAGIC_COOKIE", 348);
+__publicField(_NIFTI1, "STANDARD_HEADER_SIZE", 348);
+__publicField(_NIFTI1, "MAGIC_NUMBER_LOCATION", 344);
+__publicField(_NIFTI1, "MAGIC_NUMBER", [110, 43, 49]);
+// n+1 (.nii)
+__publicField(_NIFTI1, "MAGIC_NUMBER2", [110, 105, 49]);
+// ni1 (.hdr/.img)
+__publicField(_NIFTI1, "EXTENSION_HEADER_SIZE", 8);
+var NIFTI1 = _NIFTI1;
+
+// ../../node_modules/nifti-reader-js/dist/nifti2.js
+var _NIFTI2 = class _NIFTI2 {
+  constructor() {
+    __publicField(this, "littleEndian", false);
+    __publicField(this, "dim_info", 0);
+    __publicField(this, "dims", []);
+    __publicField(this, "intent_p1", 0);
+    __publicField(this, "intent_p2", 0);
+    __publicField(this, "intent_p3", 0);
+    __publicField(this, "intent_code", 0);
+    __publicField(this, "datatypeCode", 0);
+    __publicField(this, "numBitsPerVoxel", 0);
+    __publicField(this, "slice_start", 0);
+    __publicField(this, "slice_end", 0);
+    __publicField(this, "slice_code", 0);
+    __publicField(this, "pixDims", []);
+    __publicField(this, "vox_offset", 0);
+    __publicField(this, "scl_slope", 1);
+    __publicField(this, "scl_inter", 0);
+    __publicField(this, "xyzt_units", 0);
+    __publicField(this, "cal_max", 0);
+    __publicField(this, "cal_min", 0);
+    __publicField(this, "slice_duration", 0);
+    __publicField(this, "toffset", 0);
+    __publicField(this, "description", "");
+    __publicField(this, "aux_file", "");
+    __publicField(this, "intent_name", "");
+    __publicField(this, "qform_code", 0);
+    __publicField(this, "sform_code", 0);
+    __publicField(this, "quatern_b", 0);
+    __publicField(this, "quatern_c", 0);
+    __publicField(this, "quatern_d", 0);
+    __publicField(this, "qoffset_x", 0);
+    __publicField(this, "qoffset_y", 0);
+    __publicField(this, "qoffset_z", 0);
+    __publicField(this, "affine", [
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ]);
+    __publicField(this, "magic", "0");
+    __publicField(this, "extensionFlag", [0, 0, 0, 0]);
+    __publicField(this, "extensions", []);
+    __publicField(this, "extensionSize", 0);
+    __publicField(this, "extensionCode", 0);
+    /**
+     * Returns the byte index of the extension.
+     * @returns {number}
+     */
+    __publicField(this, "getExtensionLocation", function() {
+      return _NIFTI2.MAGIC_COOKIE + 4;
+    });
+    /**
+     * Returns the extension size.
+     * @param {DataView} data
+     * @returns {number}
+     */
+    __publicField(this, "getExtensionSize", NIFTI1.prototype.getExtensionSize);
+    /**
+     * Returns the extension code.
+     * @param {DataView} data
+     * @returns {number}
+     */
+    __publicField(this, "getExtensionCode", NIFTI1.prototype.getExtensionCode);
+    /**
+     * Adds an extension
+     * @param {NIFTIEXTENSION} extension
+     * @param {number} index
+     */
+    __publicField(this, "addExtension", NIFTI1.prototype.addExtension);
+    /**
+     * Removes an extension
+     * @param {number} index
+     */
+    __publicField(this, "removeExtension", NIFTI1.prototype.removeExtension);
+    /**
+     * Returns a human-readable string of datatype.
+     * @param {number} code
+     * @returns {string}
+     */
+    __publicField(this, "getDatatypeCodeString", NIFTI1.prototype.getDatatypeCodeString);
+    /**
+     * Returns a human-readable string of transform type.
+     * @param {number} code
+     * @returns {string}
+     */
+    __publicField(this, "getTransformCodeString", NIFTI1.prototype.getTransformCodeString);
+    /**
+     * Returns a human-readable string of spatial and temporal units.
+     * @param {number} code
+     * @returns {string}
+     */
+    __publicField(this, "getUnitsCodeString", NIFTI1.prototype.getUnitsCodeString);
+    /**
+     * Returns the qform matrix.
+     * @returns {Array.<Array.<number>>}
+     */
+    __publicField(this, "getQformMat", NIFTI1.prototype.getQformMat);
+    /**
+     * Converts qform to an affine.  (See http://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
+     * @param {number} qb
+     * @param {number} qc
+     * @param {number} qd
+     * @param {number} qx
+     * @param {number} qy
+     * @param {number} qz
+     * @param {number} dx
+     * @param {number} dy
+     * @param {number} dz
+     * @param {number} qfac
+     * @returns {Array.<Array.<number>>}
+     */
+    __publicField(this, "convertNiftiQFormToNiftiSForm", NIFTI1.prototype.convertNiftiQFormToNiftiSForm);
+    /**
+     * Converts sform to an orientation string (e.g., XYZ+--).  (See http://nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.c)
+     * @param {Array.<Array.<number>>} R
+     * @returns {string}
+     */
+    __publicField(this, "convertNiftiSFormToNEMA", NIFTI1.prototype.convertNiftiSFormToNEMA);
+    __publicField(this, "nifti_mat33_mul", NIFTI1.prototype.nifti_mat33_mul);
+    __publicField(this, "nifti_mat33_determ", NIFTI1.prototype.nifti_mat33_determ);
+  }
+  // ni2\0
+  /*** Prototype Methods ***/
+  /**
+   * Reads the header data.
+   * @param {ArrayBuffer} data
+   */
+  readHeader(data) {
+    var rawData = new DataView(data), magicCookieVal = Utils.getIntAt(rawData, 0, this.littleEndian), ctr, ctrOut, ctrIn, index, array;
+    if (magicCookieVal !== _NIFTI2.MAGIC_COOKIE) {
+      this.littleEndian = true;
+      magicCookieVal = Utils.getIntAt(rawData, 0, this.littleEndian);
+    }
+    if (magicCookieVal !== _NIFTI2.MAGIC_COOKIE) {
+      throw new Error("This does not appear to be a NIFTI file!");
+    }
+    this.magic = Utils.getStringAt(rawData, 4, 12);
+    this.datatypeCode = Utils.getShortAt(rawData, 12, this.littleEndian);
+    this.numBitsPerVoxel = Utils.getShortAt(rawData, 14, this.littleEndian);
+    for (ctr = 0; ctr < 8; ctr += 1) {
+      index = 16 + ctr * 8;
+      this.dims[ctr] = Utils.getInt64At(rawData, index, this.littleEndian);
+    }
+    this.intent_p1 = Utils.getDoubleAt(rawData, 80, this.littleEndian);
+    this.intent_p2 = Utils.getDoubleAt(rawData, 88, this.littleEndian);
+    this.intent_p3 = Utils.getDoubleAt(rawData, 96, this.littleEndian);
+    for (ctr = 0; ctr < 8; ctr += 1) {
+      index = 104 + ctr * 8;
+      this.pixDims[ctr] = Utils.getDoubleAt(rawData, index, this.littleEndian);
+    }
+    this.vox_offset = Utils.getInt64At(rawData, 168, this.littleEndian);
+    this.scl_slope = Utils.getDoubleAt(rawData, 176, this.littleEndian);
+    this.scl_inter = Utils.getDoubleAt(rawData, 184, this.littleEndian);
+    this.cal_max = Utils.getDoubleAt(rawData, 192, this.littleEndian);
+    this.cal_min = Utils.getDoubleAt(rawData, 200, this.littleEndian);
+    this.slice_duration = Utils.getDoubleAt(rawData, 208, this.littleEndian);
+    this.toffset = Utils.getDoubleAt(rawData, 216, this.littleEndian);
+    this.slice_start = Utils.getInt64At(rawData, 224, this.littleEndian);
+    this.slice_end = Utils.getInt64At(rawData, 232, this.littleEndian);
+    this.description = Utils.getStringAt(rawData, 240, 240 + 80);
+    this.aux_file = Utils.getStringAt(rawData, 320, 320 + 24);
+    this.qform_code = Utils.getIntAt(rawData, 344, this.littleEndian);
+    this.sform_code = Utils.getIntAt(rawData, 348, this.littleEndian);
+    this.quatern_b = Utils.getDoubleAt(rawData, 352, this.littleEndian);
+    this.quatern_c = Utils.getDoubleAt(rawData, 360, this.littleEndian);
+    this.quatern_d = Utils.getDoubleAt(rawData, 368, this.littleEndian);
+    this.qoffset_x = Utils.getDoubleAt(rawData, 376, this.littleEndian);
+    this.qoffset_y = Utils.getDoubleAt(rawData, 384, this.littleEndian);
+    this.qoffset_z = Utils.getDoubleAt(rawData, 392, this.littleEndian);
+    for (ctrOut = 0; ctrOut < 3; ctrOut += 1) {
+      for (ctrIn = 0; ctrIn < 4; ctrIn += 1) {
+        index = 400 + (ctrOut * 4 + ctrIn) * 8;
+        this.affine[ctrOut][ctrIn] = Utils.getDoubleAt(rawData, index, this.littleEndian);
+      }
+    }
+    this.affine[3][0] = 0;
+    this.affine[3][1] = 0;
+    this.affine[3][2] = 0;
+    this.affine[3][3] = 1;
+    this.slice_code = Utils.getIntAt(rawData, 496, this.littleEndian);
+    this.xyzt_units = Utils.getIntAt(rawData, 500, this.littleEndian);
+    this.intent_code = Utils.getIntAt(rawData, 504, this.littleEndian);
+    this.intent_name = Utils.getStringAt(rawData, 508, 508 + 16);
+    this.dim_info = Utils.getByteAt(rawData, 524);
+    if (rawData.byteLength > _NIFTI2.MAGIC_COOKIE) {
+      this.extensionFlag[0] = Utils.getByteAt(rawData, 540);
+      this.extensionFlag[1] = Utils.getByteAt(rawData, 540 + 1);
+      this.extensionFlag[2] = Utils.getByteAt(rawData, 540 + 2);
+      this.extensionFlag[3] = Utils.getByteAt(rawData, 540 + 3);
+      if (this.extensionFlag[0]) {
+        this.extensions = Utils.getExtensionsAt(rawData, this.getExtensionLocation(), this.littleEndian, this.vox_offset);
+        this.extensionSize = this.extensions[0].esize;
+        this.extensionCode = this.extensions[0].ecode;
+      }
+    }
+  }
+  /**
+   * Returns a formatted string of header fields.
+   * @returns {string}
+   */
+  toFormattedString() {
+    var fmt = Utils.formatNumber, string = "";
+    string += "Datatype = " + +this.datatypeCode + " (" + this.getDatatypeCodeString(this.datatypeCode) + ")\n";
+    string += "Bits Per Voxel =  = " + this.numBitsPerVoxel + "\n";
+    string += "Image Dimensions (1-8): " + this.dims[0] + ", " + this.dims[1] + ", " + this.dims[2] + ", " + this.dims[3] + ", " + this.dims[4] + ", " + this.dims[5] + ", " + this.dims[6] + ", " + this.dims[7] + "\n";
+    string += "Intent Parameters (1-3): " + this.intent_p1 + ", " + this.intent_p2 + ", " + this.intent_p3 + "\n";
+    string += "Voxel Dimensions (1-8): " + fmt(this.pixDims[0]) + ", " + fmt(this.pixDims[1]) + ", " + fmt(this.pixDims[2]) + ", " + fmt(this.pixDims[3]) + ", " + fmt(this.pixDims[4]) + ", " + fmt(this.pixDims[5]) + ", " + fmt(this.pixDims[6]) + ", " + fmt(this.pixDims[7]) + "\n";
+    string += "Image Offset = " + this.vox_offset + "\n";
+    string += "Data Scale:  Slope = " + fmt(this.scl_slope) + "  Intercept = " + fmt(this.scl_inter) + "\n";
+    string += "Display Range:  Max = " + fmt(this.cal_max) + "  Min = " + fmt(this.cal_min) + "\n";
+    string += "Slice Duration = " + this.slice_duration + "\n";
+    string += "Time Axis Shift = " + this.toffset + "\n";
+    string += "Slice Start = " + this.slice_start + "\n";
+    string += "Slice End = " + this.slice_end + "\n";
+    string += 'Description: "' + this.description + '"\n';
+    string += 'Auxiliary File: "' + this.aux_file + '"\n';
+    string += "Q-Form Code = " + this.qform_code + " (" + this.getTransformCodeString(this.qform_code) + ")\n";
+    string += "S-Form Code = " + this.sform_code + " (" + this.getTransformCodeString(this.sform_code) + ")\n";
+    string += "Quaternion Parameters:  b = " + fmt(this.quatern_b) + "  c = " + fmt(this.quatern_c) + "  d = " + fmt(this.quatern_d) + "\n";
+    string += "Quaternion Offsets:  x = " + this.qoffset_x + "  y = " + this.qoffset_y + "  z = " + this.qoffset_z + "\n";
+    string += "S-Form Parameters X: " + fmt(this.affine[0][0]) + ", " + fmt(this.affine[0][1]) + ", " + fmt(this.affine[0][2]) + ", " + fmt(this.affine[0][3]) + "\n";
+    string += "S-Form Parameters Y: " + fmt(this.affine[1][0]) + ", " + fmt(this.affine[1][1]) + ", " + fmt(this.affine[1][2]) + ", " + fmt(this.affine[1][3]) + "\n";
+    string += "S-Form Parameters Z: " + fmt(this.affine[2][0]) + ", " + fmt(this.affine[2][1]) + ", " + fmt(this.affine[2][2]) + ", " + fmt(this.affine[2][3]) + "\n";
+    string += "Slice Code = " + this.slice_code + "\n";
+    string += "Units Code = " + this.xyzt_units + " (" + this.getUnitsCodeString(NIFTI1.SPATIAL_UNITS_MASK & this.xyzt_units) + ", " + this.getUnitsCodeString(NIFTI1.TEMPORAL_UNITS_MASK & this.xyzt_units) + ")\n";
+    string += "Intent Code = " + this.intent_code + "\n";
+    string += 'Intent Name: "' + this.intent_name + '"\n';
+    string += "Dim Info = " + this.dim_info + "\n";
+    return string;
+  }
+  /**
+   * Returns header as ArrayBuffer.
+   * @param {boolean} includeExtensions - should extension bytes be included
+   * @returns {ArrayBuffer}
+   */
+  toArrayBuffer(includeExtensions = false) {
+    const INT64_SIZE = 8;
+    const DOUBLE_SIZE = 8;
+    let byteSize = 540 + 4;
+    if (includeExtensions) {
+      for (let extension of this.extensions) {
+        byteSize += extension.esize;
+      }
+    }
+    let byteArray = new Uint8Array(byteSize);
+    let view = new DataView(byteArray.buffer);
+    view.setInt32(0, 540, this.littleEndian);
+    byteArray.set(new TextEncoder().encode(this.magic), 4);
+    view.setInt16(12, this.datatypeCode, this.littleEndian);
+    view.setInt16(14, this.numBitsPerVoxel, this.littleEndian);
+    for (let i = 0; i < 8; i++) {
+      view.setBigInt64(16 + INT64_SIZE * i, BigInt(this.dims[i]), this.littleEndian);
+    }
+    view.setFloat64(80, this.intent_p1, this.littleEndian);
+    view.setFloat64(88, this.intent_p2, this.littleEndian);
+    view.setFloat64(96, this.intent_p3, this.littleEndian);
+    for (let i = 0; i < 8; i++) {
+      view.setFloat64(104 + DOUBLE_SIZE * i, this.pixDims[i], this.littleEndian);
+    }
+    view.setBigInt64(168, BigInt(this.vox_offset), this.littleEndian);
+    view.setFloat64(176, this.scl_slope, this.littleEndian);
+    view.setFloat64(184, this.scl_inter, this.littleEndian);
+    view.setFloat64(192, this.cal_max, this.littleEndian);
+    view.setFloat64(200, this.cal_min, this.littleEndian);
+    view.setFloat64(208, this.slice_duration, this.littleEndian);
+    view.setFloat64(216, this.toffset, this.littleEndian);
+    view.setBigInt64(224, BigInt(this.slice_start), this.littleEndian);
+    view.setBigInt64(232, BigInt(this.slice_end), this.littleEndian);
+    byteArray.set(new TextEncoder().encode(this.description), 240);
+    byteArray.set(new TextEncoder().encode(this.aux_file), 320);
+    view.setInt32(344, this.qform_code, this.littleEndian);
+    view.setInt32(348, this.sform_code, this.littleEndian);
+    view.setFloat64(352, this.quatern_b, this.littleEndian);
+    view.setFloat64(360, this.quatern_c, this.littleEndian);
+    view.setFloat64(368, this.quatern_d, this.littleEndian);
+    view.setFloat64(376, this.qoffset_x, this.littleEndian);
+    view.setFloat64(384, this.qoffset_y, this.littleEndian);
+    view.setFloat64(392, this.qoffset_z, this.littleEndian);
+    const flattened = this.affine.flat();
+    for (let i = 0; i < 12; i++) {
+      view.setFloat64(400 + DOUBLE_SIZE * i, flattened[i], this.littleEndian);
+    }
+    view.setInt32(496, this.slice_code, this.littleEndian);
+    view.setInt32(500, this.xyzt_units, this.littleEndian);
+    view.setInt32(504, this.intent_code, this.littleEndian);
+    byteArray.set(new TextEncoder().encode(this.intent_name), 508);
+    view.setUint8(524, this.dim_info);
+    if (includeExtensions) {
+      byteArray.set(Uint8Array.from([1, 0, 0, 0]), 540);
+      let extensionByteIndex = this.getExtensionLocation();
+      for (const extension of this.extensions) {
+        view.setInt32(extensionByteIndex, extension.esize, extension.littleEndian);
+        view.setInt32(extensionByteIndex + 4, extension.ecode, extension.littleEndian);
+        byteArray.set(new Uint8Array(extension.edata), extensionByteIndex + 8);
+        extensionByteIndex += extension.esize;
+      }
+    } else {
+      byteArray.set(new Uint8Array(4).fill(0), 540);
+    }
+    return byteArray.buffer;
+  }
+};
+/*** Static Pseudo-constants ***/
+__publicField(_NIFTI2, "MAGIC_COOKIE", 540);
+__publicField(_NIFTI2, "MAGIC_NUMBER_LOCATION", 4);
+__publicField(_NIFTI2, "MAGIC_NUMBER", [110, 43, 50, 0, 13, 10, 26, 10]);
+// n+2\0
+__publicField(_NIFTI2, "MAGIC_NUMBER2", [110, 105, 50, 0, 13, 10, 26, 10]);
+var NIFTI2 = _NIFTI2;
+
+// ../../node_modules/nifti-reader-js/dist/nifti.js
+function isNIFTI1(data, isHdrImgPairOK = false) {
+  var buf, mag1, mag2, mag3;
+  if (data.byteLength < NIFTI1.STANDARD_HEADER_SIZE) {
+    return false;
+  }
+  buf = new DataView(data);
+  if (buf)
+    mag1 = buf.getUint8(NIFTI1.MAGIC_NUMBER_LOCATION);
+  mag2 = buf.getUint8(NIFTI1.MAGIC_NUMBER_LOCATION + 1);
+  mag3 = buf.getUint8(NIFTI1.MAGIC_NUMBER_LOCATION + 2);
+  if (isHdrImgPairOK && mag1 === NIFTI1.MAGIC_NUMBER2[0] && mag2 === NIFTI1.MAGIC_NUMBER2[1] && mag3 === NIFTI1.MAGIC_NUMBER2[2])
+    return true;
+  return !!(mag1 === NIFTI1.MAGIC_NUMBER[0] && mag2 === NIFTI1.MAGIC_NUMBER[1] && mag3 === NIFTI1.MAGIC_NUMBER[2]);
+}
+function isNIFTI2(data, isHdrImgPairOK = false) {
+  var buf, mag1, mag2, mag3;
+  if (data.byteLength < NIFTI1.STANDARD_HEADER_SIZE) {
+    return false;
+  }
+  buf = new DataView(data);
+  mag1 = buf.getUint8(NIFTI2.MAGIC_NUMBER_LOCATION);
+  mag2 = buf.getUint8(NIFTI2.MAGIC_NUMBER_LOCATION + 1);
+  mag3 = buf.getUint8(NIFTI2.MAGIC_NUMBER_LOCATION + 2);
+  if (isHdrImgPairOK && mag1 === NIFTI2.MAGIC_NUMBER2[0] && mag2 === NIFTI2.MAGIC_NUMBER2[1] && mag3 === NIFTI2.MAGIC_NUMBER2[2])
+    return true;
+  return !!(mag1 === NIFTI2.MAGIC_NUMBER[0] && mag2 === NIFTI2.MAGIC_NUMBER[1] && mag3 === NIFTI2.MAGIC_NUMBER[2]);
+}
+function isCompressed(data) {
+  var buf, magicCookie1, magicCookie2;
+  if (data) {
+    buf = new DataView(data);
+    magicCookie1 = buf.getUint8(0);
+    magicCookie2 = buf.getUint8(1);
+    if (magicCookie1 === Utils.GUNZIP_MAGIC_COOKIE1) {
+      return true;
+    }
+    if (magicCookie2 === Utils.GUNZIP_MAGIC_COOKIE2) {
+      return true;
+    }
+  }
+  return false;
+}
+function decompress(data) {
+  return decompressSync(new Uint8Array(data)).buffer;
+}
+async function decompressAsync(data) {
+  const uint8Data = new Uint8Array(data);
+  const format = uint8Data[0] === 31 && uint8Data[1] === 139 && uint8Data[2] === 8 ? "gzip" : uint8Data[0] === 120 && (uint8Data[1] === 1 || uint8Data[1] === 94 || uint8Data[1] === 156 || uint8Data[1] === 218) ? "deflate" : "deflate-raw";
+  const stream = new DecompressionStream(format);
+  const writer = stream.writable.getWriter();
+  writer.write(uint8Data).catch(console.error);
+  const closePromise = writer.close().catch(console.error);
+  const response = new Response(stream.readable);
+  const result = await response.arrayBuffer();
+  await closePromise;
+  return result;
+}
+function readHeader(data, isHdrImgPairOK = false) {
+  let header = null;
+  if (isCompressed(data)) {
+    data = decompress(data);
+  }
+  if (isNIFTI1(data, isHdrImgPairOK)) {
+    header = new NIFTI1();
+  } else if (isNIFTI2(data, isHdrImgPairOK)) {
+    header = new NIFTI2();
+  }
+  if (header) {
+    header.readHeader(data);
+  } else {
+    throw new Error("That file does not appear to be NIFTI!");
+  }
+  return header;
+}
+function readImage(header, data) {
+  var imageOffset = header.vox_offset, timeDim = 1, statDim = 1;
+  if (header.dims[4]) {
+    timeDim = header.dims[4];
+  }
+  if (header.dims[5]) {
+    statDim = header.dims[5];
+  }
+  var imageSize = header.dims[1] * header.dims[2] * header.dims[3] * timeDim * statDim * (header.numBitsPerVoxel / 8);
+  return data.slice(imageOffset, imageOffset + imageSize);
+}
 
 // src/nvimage/utils.ts
 var isPlatformLittleEndian = () => {
@@ -24397,6 +20250,7 @@ var ImageType = /* @__PURE__ */ ((ImageType3) => {
   ImageType3[ImageType3["DCM_FOLDER"] = 16] = "DCM_FOLDER";
   ImageType3[ImageType3["SRC"] = 17] = "SRC";
   ImageType3[ImageType3["FIB"] = 18] = "FIB";
+  ImageType3[ImageType3["BMP"] = 19] = "BMP";
   return ImageType3;
 })(ImageType || {});
 var NVIMAGE_TYPE = Object.freeze({
@@ -24455,6 +20309,13 @@ var NVIMAGE_TYPE = Object.freeze({
         break;
       case "HEAD":
         imageType = 15 /* HEAD */;
+        break;
+      case "PNG":
+      case "BMP":
+      case "GIF":
+      case "JPG":
+      case "JPEG":
+        imageType = 19 /* BMP */;
         break;
     }
     return imageType;
@@ -24798,7 +20659,32 @@ var NVImage = class _NVImage {
     __publicField(this, "urlImgData");
     __publicField(this, "isManifest");
     __publicField(this, "limitFrames4D");
+    this.init(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType,
+      cal_minNeg,
+      cal_maxNeg,
+      colorbarVisible,
+      colormapLabel,
+      colormapType
+    );
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  init(dataBuffer = null, name = "", colormap = "gray", opacity = 1, _pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0, imgRaw = null) {
     this.name = name;
+    this.imageType = imageType;
     this.id = v4();
     this._colormap = colormap;
     this._opacity = opacity > 1 ? 1 : opacity;
@@ -24815,74 +20701,6 @@ var NVImage = class _NVImage {
     this.useQFormNotSForm = useQFormNotSForm;
     if (!dataBuffer) {
       return;
-    }
-    const re = /(?:\.([^.]+))?$/;
-    let ext = re.exec(name)[1] || "";
-    ext = ext.toUpperCase();
-    if (ext === "GZ") {
-      ext = re.exec(name.slice(0, -3))[1];
-      ext = ext.toUpperCase();
-    }
-    let imgRaw = null;
-    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
-      imageType = NVIMAGE_TYPE.parse(ext);
-    }
-    this.imageType = imageType;
-    switch (imageType) {
-      case NVIMAGE_TYPE.DCM_FOLDER:
-      case NVIMAGE_TYPE.DCM_MANIFEST:
-      case NVIMAGE_TYPE.DCM:
-        return;
-      case NVIMAGE_TYPE.FIB:
-        ;
-        [imgRaw, this.v1] = this.readFIB(dataBuffer);
-        break;
-      case NVIMAGE_TYPE.MIH:
-      case NVIMAGE_TYPE.MIF:
-        imgRaw = this.readMIF(dataBuffer, pairedImgData);
-        break;
-      case NVIMAGE_TYPE.NHDR:
-      case NVIMAGE_TYPE.NRRD:
-        imgRaw = this.readNRRD(dataBuffer, pairedImgData);
-        break;
-      case NVIMAGE_TYPE.MHD:
-      case NVIMAGE_TYPE.MHA:
-        imgRaw = this.readMHA(dataBuffer, pairedImgData);
-        break;
-      case NVIMAGE_TYPE.MGH:
-      case NVIMAGE_TYPE.MGZ:
-        imgRaw = this.readMGH(dataBuffer);
-        break;
-      case NVIMAGE_TYPE.SRC:
-        imgRaw = this.readSRC(dataBuffer);
-        break;
-      case NVIMAGE_TYPE.V:
-        imgRaw = this.readECAT(dataBuffer);
-        break;
-      case NVIMAGE_TYPE.V16:
-        imgRaw = this.readV16(dataBuffer);
-        break;
-      case NVIMAGE_TYPE.VMR:
-        imgRaw = this.readVMR(dataBuffer);
-        break;
-      case NVIMAGE_TYPE.HEAD:
-        imgRaw = this.readHEAD(dataBuffer, pairedImgData);
-        break;
-      case NVIMAGE_TYPE.NII:
-        this.hdr = nifti.readHeader(dataBuffer);
-        if (this.hdr !== null) {
-          if (this.hdr.cal_min === 0 && this.hdr.cal_max === 255) {
-            this.hdr.cal_max = 0;
-          }
-          if (nifti.isCompressed(dataBuffer)) {
-            imgRaw = nifti.readImage(this.hdr, nifti.decompress(dataBuffer));
-          } else {
-            imgRaw = nifti.readImage(this.hdr, dataBuffer);
-          }
-        }
-        break;
-      default:
-        throw new Error("Image type not supported");
     }
     if (this.hdr && typeof this.hdr.magic === "number") {
       this.hdr.magic = "n+1";
@@ -25113,6 +20931,103 @@ var NVImage = class _NVImage {
       this.hdr.cal_max = cal_max;
     }
     this.calMinMax();
+  }
+  static async new(dataBuffer = null, name = "", colormap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0) {
+    const newImg = new _NVImage();
+    const re = /(?:\.([^.]+))?$/;
+    let ext = re.exec(name)[1] || "";
+    ext = ext.toUpperCase();
+    if (ext === "GZ") {
+      ext = re.exec(name.slice(0, -3))[1];
+      ext = ext.toUpperCase();
+    }
+    let imgRaw = null;
+    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+      imageType = NVIMAGE_TYPE.parse(ext);
+    }
+    newImg.imageType = imageType;
+    switch (imageType) {
+      case NVIMAGE_TYPE.DCM_FOLDER:
+      case NVIMAGE_TYPE.DCM_MANIFEST:
+      case NVIMAGE_TYPE.DCM:
+        return;
+      case NVIMAGE_TYPE.FIB:
+        ;
+        [imgRaw, newImg.v1] = await newImg.readFIB(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.MIH:
+      case NVIMAGE_TYPE.MIF:
+        imgRaw = await newImg.readMIF(dataBuffer, pairedImgData);
+        break;
+      case NVIMAGE_TYPE.NHDR:
+      case NVIMAGE_TYPE.NRRD:
+        imgRaw = await newImg.readNRRD(dataBuffer, pairedImgData);
+        break;
+      case NVIMAGE_TYPE.MHD:
+      case NVIMAGE_TYPE.MHA:
+        imgRaw = await newImg.readMHA(dataBuffer, pairedImgData);
+        break;
+      case NVIMAGE_TYPE.MGH:
+      case NVIMAGE_TYPE.MGZ:
+        imgRaw = await newImg.readMGH(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.SRC:
+        imgRaw = await newImg.readSRC(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.V:
+        imgRaw = newImg.readECAT(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.V16:
+        imgRaw = newImg.readV16(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.VMR:
+        imgRaw = newImg.readVMR(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.HEAD:
+        imgRaw = await newImg.readHEAD(dataBuffer, pairedImgData);
+        break;
+      case NVIMAGE_TYPE.BMP:
+        imgRaw = await newImg.readBMP(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.NII:
+        newImg.hdr = readHeader(dataBuffer);
+        if (newImg.hdr !== null) {
+          if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
+            newImg.hdr.cal_max = 0;
+          }
+          if (isCompressed(dataBuffer)) {
+            imgRaw = readImage(newImg.hdr, await decompressAsync(dataBuffer));
+          } else {
+            imgRaw = readImage(newImg.hdr, dataBuffer);
+          }
+        }
+        break;
+      default:
+        throw new Error("Image type not supported");
+    }
+    newImg.init(
+      dataBuffer,
+      name,
+      colormap,
+      opacity,
+      pairedImgData,
+      cal_min,
+      cal_max,
+      trustCalMinMax,
+      percentileFrac,
+      ignoreZeroVoxels,
+      useQFormNotSForm,
+      colormapNegative,
+      frame4D,
+      imageType,
+      cal_minNeg,
+      cal_maxNeg,
+      colorbarVisible,
+      colormapLabel,
+      colormapType,
+      imgRaw
+    );
+    return newImg;
   }
   // not included in public docs
   // detect difference between voxel grid and world space
@@ -25507,7 +21422,7 @@ var NVImage = class _NVImage {
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
   readECAT(buffer) {
-    this.hdr = new nifti.NIFTI1();
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
@@ -25607,7 +21522,7 @@ var NVImage = class _NVImage {
   }
   // readECAT()
   readV16(buffer) {
-    this.hdr = new nifti.NIFTI1();
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
@@ -25632,11 +21547,55 @@ var NVImage = class _NVImage {
     return buffer.slice(6);
   }
   // readV16()
+  async imageDataFromArrayBuffer(buffer) {
+    return new Promise((resolve, reject) => {
+      const blob = new Blob([buffer]);
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = url;
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get 2D context"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        resolve(ctx.getImageData(0, 0, img.width, img.height));
+      };
+      img.onerror = (err2) => {
+        URL.revokeObjectURL(url);
+        reject(err2);
+      };
+    });
+  }
+  async readBMP(buffer) {
+    const imageData = await this.imageDataFromArrayBuffer(buffer);
+    const { width, height, data } = imageData;
+    data.fill(255, 0, Math.floor(data.length / 2));
+    this.hdr = new NIFTI1();
+    const hdr = this.hdr;
+    hdr.dims = [3, width, height, 1, 0, 0, 0, 0];
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+    hdr.affine = [
+      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [0, 0, 0, 1]
+    ];
+    hdr.numBitsPerVoxel = 8;
+    hdr.datatypeCode = 2304 /* DT_RGBA32 */;
+    return new Uint8Array(data);
+  }
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
   readVMR(buffer) {
-    this.hdr = new nifti.NIFTI1();
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
@@ -25691,8 +21650,8 @@ var NVImage = class _NVImage {
   // readVMR()
   // not included in public docs
   // read FreeSurfer MGH format image
-  readMGH(buffer) {
-    this.hdr = new nifti.NIFTI1();
+  async readMGH(buffer) {
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.littleEndian = false;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
@@ -25700,8 +21659,7 @@ var NVImage = class _NVImage {
     let raw = buffer;
     let reader = new DataView(raw);
     if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      const raw8 = decompressSync(new Uint8Array(buffer));
-      raw = raw8.buffer;
+      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
       reader = new DataView(raw);
     }
     const version2 = reader.getInt32(0, false);
@@ -25792,13 +21750,14 @@ var NVImage = class _NVImage {
   // not included in public docs
   // read DSI-Studio FIB format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  readFIB(buffer) {
-    this.hdr = new nifti.NIFTI1();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async readFIB(buffer) {
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.littleEndian = false;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const mat = NVUtilities.readMatV4(buffer);
+    const mat = await NVUtilities.readMatV4(buffer);
     if (!("dimension" in mat) || !("dti_fa" in mat)) {
       throw new Error("Not a valid DSIstudio FIB file");
     }
@@ -25857,13 +21816,14 @@ var NVImage = class _NVImage {
   // not included in public docs
   // read DSI-Studio SRC format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  readSRC(buffer) {
-    this.hdr = new nifti.NIFTI1();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async readSRC(buffer) {
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.littleEndian = false;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const mat = NVUtilities.readMatV4(buffer);
+    const mat = await NVUtilities.readMatV4(buffer);
     if (!("dimension" in mat) || !("image0" in mat)) {
       throw new Error("Not a valid DSIstudio SRC file");
     }
@@ -25927,8 +21887,8 @@ var NVImage = class _NVImage {
   // readSRC()
   // not included in public docs
   // read AFNI head/brik format image
-  readHEAD(dataBuffer, pairedImgData) {
-    this.hdr = new nifti.NIFTI1();
+  async readHEAD(dataBuffer, pairedImgData) {
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.dims[0] = 3;
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
@@ -25943,7 +21903,7 @@ var NVImage = class _NVImage {
     const extBuffer = new Uint8Array(len4);
     extBuffer.fill(0);
     extBuffer.set(new Uint8Array(dataBuffer));
-    const newExtension = new nifti.NIFTIEXTENSION(len4 + 8, 42, extBuffer, true);
+    const newExtension = new NIFTIEXTENSION(len4 + 8, 42, extBuffer, true);
     hdr.addExtension(newExtension);
     hdr.extensionCode = 42;
     hdr.extensionFlag[0] = 1;
@@ -26059,15 +22019,14 @@ var NVImage = class _NVImage {
       throw new Error("pairedImgData not set");
     }
     if (pairedImgData.byteLength < nBytes) {
-      const raw = decompressSync(new Uint8Array(pairedImgData));
-      return raw.buffer;
+      return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData));
     }
     return pairedImgData.slice(0);
   }
   // not included in public docs
   // read ITK MHA format image
   // https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
-  readMHA(buffer, pairedImgData) {
+  async readMHA(buffer, pairedImgData) {
     const len4 = buffer.byteLength;
     if (len4 < 20) {
       throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
@@ -26091,7 +22050,7 @@ var NVImage = class _NVImage {
       return new TextDecoder().decode(buffer.slice(startPos, pos));
     }
     let line = readStr();
-    this.hdr = new nifti.NIFTI1();
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
     hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
@@ -26198,12 +22157,12 @@ var NVImage = class _NVImage {
     hdr.vox_offset = pos;
     if (isDetached && pairedImgData) {
       if (isGz) {
-        return decompressSync(new Uint8Array(pairedImgData.slice(0))).buffer;
+        return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData.slice(0)));
       }
       return pairedImgData.slice(0);
     }
     if (isGz) {
-      return decompressSync(new Uint8Array(buffer.slice(hdr.vox_offset))).buffer;
+      return await NVUtilities.decompressToBuffer(new Uint8Array(buffer.slice(hdr.vox_offset)));
     }
     return buffer.slice(hdr.vox_offset);
   }
@@ -26211,8 +22170,8 @@ var NVImage = class _NVImage {
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
-  readMIF(buffer, pairedImgData) {
-    this.hdr = new nifti.NIFTI1();
+  async readMIF(buffer, pairedImgData) {
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
     hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
@@ -26223,8 +22182,7 @@ var NVImage = class _NVImage {
     const bytes = new Uint8Array(buffer);
     if (bytes[0] === 31 && bytes[1] === 139) {
       log.debug("MIF with GZ decompression");
-      const raw = decompressSync(new Uint8Array(buffer));
-      buffer = raw.buffer;
+      buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
       len4 = buffer.byteLength;
     }
     let pos = 0;
@@ -26507,8 +22465,8 @@ var NVImage = class _NVImage {
   // not included in public docs
   // read NRRD format image
   // http://teem.sourceforge.net/nrrd/format.html
-  readNRRD(dataBuffer, pairedImgData) {
-    this.hdr = new nifti.NIFTI1();
+  async readNRRD(dataBuffer, pairedImgData) {
+    this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
     const len4 = dataBuffer.byteLength;
@@ -26778,7 +22736,7 @@ var NVImage = class _NVImage {
       log.warn("Missing data: NRRD header describes detached data file but only one URL provided");
     }
     if (isGz) {
-      return decompressSync(new Uint8Array(dataBuffer.slice(hdr.vox_offset))).buffer;
+      return await NVUtilities.decompressToBuffer(new Uint8Array(dataBuffer.slice(hdr.vox_offset)));
     } else {
       return dataBuffer.slice(hdr.vox_offset);
     }
@@ -26954,7 +22912,7 @@ var NVImage = class _NVImage {
       throw new Error("hdr undefined");
     }
     const hdrBytes = hdrToArrayBuffer({ ...this.hdr, vox_offset: 352 }, false);
-    const hdr = nifti.readHeader(hdrBytes.buffer, true);
+    const hdr = readHeader(hdrBytes.buffer, true);
     if (nVolumes === 1) {
       hdr.dims[0] = 3;
       hdr.dims[4] = 1;
@@ -27353,7 +23311,7 @@ var NVImage = class _NVImage {
   }
   // not included in public docs
   // see niivue.saveImage() for wrapper of this function
-  saveToUint8Array(fnm, drawing8 = null) {
+  async saveToUint8Array(fnm, drawing8 = null) {
     if (!this.hdr) {
       throw new Error("hdr undefined");
     }
@@ -27374,15 +23332,7 @@ var NVImage = class _NVImage {
     let saveData = null;
     const compress = fnm.endsWith(".gz");
     if (compress) {
-      saveData = gzipSync(odata, {
-        // GZIP-specific: the filename to use when decompressed
-        filename: fnm,
-        // GZIP-specific: the modification time. Can be a Date, date string,
-        // or Unix timestamp
-        mtime: Date.now(),
-        level: 6
-        // the default
-      });
+      saveData = new Uint8Array(await NVUtilities.compress(odata, "gzip"));
     } else {
       saveData = odata;
     }
@@ -27391,8 +23341,8 @@ var NVImage = class _NVImage {
   // not included in public docs
   // save image as NIfTI volume
   // if fnm is empty, data is returned
-  saveToDisk(fnm = "", drawing8 = null) {
-    const saveData = this.saveToUint8Array(fnm, drawing8);
+  async saveToDisk(fnm = "", drawing8 = null) {
+    const saveData = await this.saveToUint8Array(fnm, drawing8);
     if (fnm === "") {
       log.debug("saveToDisk: empty file name, returning data as Uint8Array rather than triggering download");
       return saveData;
@@ -27458,35 +23408,6 @@ var NVImage = class _NVImage {
       return response;
     }
   }
-  static async fetchImageData(url) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.src = url;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Failed to get 2D context"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0);
-        resolve(ctx.getImageData(0, 0, img.width, img.height));
-      };
-      img.onerror = (err2) => reject(err2);
-    });
-  }
-  static async png2nii(url) {
-    const imageData = await this.fetchImageData(url);
-    const { width, height, data } = imageData;
-    const dims = [width, height, 1];
-    const pixDims = [1, 1, 1];
-    const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1];
-    const datatypeCode = 2304;
-    return this.createNiftiArray(dims, pixDims, affine, datatypeCode, Uint8Array.from(data));
-  }
   /**
    * factory function to load and return a new NVImage instance from a given URL
    * @returns  NVImage instance
@@ -27522,9 +23443,6 @@ var NVImage = class _NVImage {
     }
     if (buffer.byteLength > 0) {
       url = buffer;
-    }
-    if (typeof url === "string" && /\.(bmp|gif|jpe?g|png)$/i.test(url)) {
-      url = (await this.png2nii(url)).buffer;
     }
     if (url instanceof ArrayBuffer) {
       dataBuffer = url;
@@ -27567,7 +23485,7 @@ var NVImage = class _NVImage {
           reader.releaseLock();
           return null;
         }
-        const hdr = nifti.readHeader(headerBuffer.buffer);
+        const hdr = readHeader(headerBuffer.buffer);
         if (!hdr) {
           throw new Error("Could not read NIfTI header");
         }
@@ -27693,7 +23611,7 @@ var NVImage = class _NVImage {
         name = name.slice(0, name.indexOf("?"));
       }
     }
-    nvimage = new _NVImage(
+    nvimage = await this.new(
       dataBuffer,
       name,
       colormap,
@@ -27791,7 +23709,7 @@ var NVImage = class _NVImage {
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file);
           } else {
-            const hdr = nifti.readHeader(headerBuffer);
+            const hdr = readHeader(headerBuffer);
             if (!hdr) {
               throw new Error("could not read nifti header");
             }
@@ -27811,7 +23729,7 @@ var NVImage = class _NVImage {
       if (urlImgData) {
         pairedImgData = await this.readFileAsync(urlImgData);
       }
-      nvimage = new _NVImage(
+      nvimage = await this.new(
         dataBuffer,
         name,
         colormap,
@@ -27860,7 +23778,7 @@ var NVImage = class _NVImage {
   }
   // createNiftiFile()
   static createNiftiHeader(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2) {
-    const hdr = new nifti.NIFTI1();
+    const hdr = new NIFTI1();
     hdr.littleEndian = true;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.dims[0] = Math.max(3, dims.length);
@@ -28030,7 +23948,7 @@ var NVImage = class _NVImage {
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
-  static loadFromBase64({
+  static async loadFromBase64({
     base64,
     name = "",
     colormap = "gray",
@@ -28062,7 +23980,7 @@ var NVImage = class _NVImage {
     try {
       const dataBuffer = base64ToArrayBuffer(base64);
       const pairedImgData = null;
-      nvimage = new _NVImage(
+      nvimage = await this.new(
         dataBuffer,
         name,
         colormap,
@@ -29046,7 +24964,7 @@ var NVDocument = class _NVDocument {
     if (compress) {
       content = await NVUtilities.compressStringToArrayBuffer(dataText);
     } else {
-      content = JSON.stringify(data);
+      content = dataText;
     }
     NVUtilities.download(content, fileName, contentType);
   }
@@ -30315,7 +26233,7 @@ var NVMesh3 = class _NVMesh {
     return f32;
   }
   // wrapper to read meshes, tractograms and connectomes regardless of format
-  static readMesh(buffer, name, gl, opacity = 1, rgba255 = new Uint8Array([255, 255, 255, 255]), visible = true) {
+  static async readMesh(buffer, name, gl, opacity = 1, rgba255 = new Uint8Array([255, 255, 255, 255]), visible = true) {
     let tris = new Uint32Array([]);
     let pts = new Float32Array([]);
     let anatomicalStructurePrimary = "";
@@ -30340,11 +26258,11 @@ var NVMesh3 = class _NVMesh {
       } else if (ext === "TRACT") {
         obj = NVMeshLoaders.readTRACT(buffer);
       } else if (ext === "TT") {
-        obj = NVMeshLoaders.readTT(buffer);
+        obj = await NVMeshLoaders.readTT(buffer);
       } else if (ext === "TRX") {
-        obj = NVMeshLoaders.readTRX(buffer);
+        obj = await NVMeshLoaders.readTRX(buffer);
       } else {
-        obj = NVMeshLoaders.readTRK(buffer);
+        obj = await NVMeshLoaders.readTRK(buffer);
       }
       if (typeof obj === "undefined") {
         const pts2 = new Float32Array([0, 0, 0, 0, 0, 0]);
@@ -30371,9 +26289,9 @@ var NVMesh3 = class _NVMesh {
       );
     }
     if (ext === "GII") {
-      obj = NVMeshLoaders.readGII(buffer);
+      obj = await NVMeshLoaders.readGII(buffer);
     } else if (ext === "MZ3") {
-      obj = NVMeshLoaders.readMZ3(buffer);
+      obj = await NVMeshLoaders.readMZ3(buffer);
       if (obj instanceof Float32Array || obj.positions === null) {
         log.warn("MZ3 does not have positions (statistical overlay?)");
       }
@@ -30392,9 +26310,11 @@ var NVMesh3 = class _NVMesh {
     } else if (ext === "NV") {
       obj = NVMeshLoaders.readNV(buffer);
     } else if (ext === "OBJ") {
-      obj = NVMeshLoaders.readOBJ(buffer);
+      obj = await NVMeshLoaders.readOBJ(buffer);
     } else if (ext === "PLY") {
       obj = NVMeshLoaders.readPLY(buffer);
+    } else if (ext === "WRL") {
+      obj = NVMeshLoaders.readWRL(buffer);
     } else if (ext === "X3D") {
       obj = NVMeshLoaders.readX3D(buffer);
     } else if (ext === "FIB" || ext === "VTK") {
@@ -30416,7 +26336,7 @@ var NVMesh3 = class _NVMesh {
         );
       }
     } else if (ext === "SRF") {
-      obj = NVMeshLoaders.readSRF(buffer);
+      obj = await NVMeshLoaders.readSRF(buffer);
     } else if (ext === "STL") {
       obj = NVMeshLoaders.readSTL(buffer);
     } else {
@@ -30482,7 +26402,7 @@ var NVMesh3 = class _NVMesh {
       anatomicalStructurePrimary
     );
     if ("scalars" in obj && obj.scalars.length > 0) {
-      const newLayer = NVMeshLoaders.readLayer(name, buffer, nvm, opacity, "gray");
+      const newLayer = await NVMeshLoaders.readLayer(name, buffer, nvm, opacity, "gray");
       if (typeof newLayer === "undefined") {
         log.warn("readLayer() failed to convert scalars");
       } else {
@@ -30493,7 +26413,7 @@ var NVMesh3 = class _NVMesh {
     return nvm;
   }
   static async loadLayer(layer, nvmesh) {
-    let buffer;
+    let buffer = new Uint8Array().buffer;
     function base64ToArrayBuffer(base64) {
       const binary_string = window.atob(base64);
       const len4 = binary_string.length;
@@ -30558,7 +26478,7 @@ var NVMesh3 = class _NVMesh {
     if ("cal_max" in layer) {
       cal_max = layer.cal_max;
     }
-    const newLayer = NVMeshLoaders.readLayer(
+    const newLayer = await NVMeshLoaders.readLayer(
       layerName,
       buffer,
       nvmesh,
@@ -30658,7 +26578,7 @@ var NVMesh3 = class _NVMesh {
       throw new Error("rendering context must be set");
     }
     const buffer = await _NVMesh.readFileAsync(file);
-    const nvmesh = _NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible);
+    const nvmesh = await _NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible);
     if (!layers || layers.length < 1) {
       return nvmesh;
     }
@@ -30705,94 +26625,6 @@ var NVMesh3 = class _NVMesh {
     }
     nvmesh.updateMesh(gl);
     return nvmesh;
-  }
-  // loaders
-  static readGII(buffer) {
-    return NVMeshLoaders.readGII(buffer);
-  }
-  static readX3D(buffer) {
-    return NVMeshLoaders.readX3D(buffer);
-  }
-  static readNII(buffer, n_vert = 0) {
-    return NVMeshLoaders.readNII(buffer, n_vert);
-  }
-  static readNII2(buffer, n_vert = 0) {
-    return NVMeshLoaders.readNII2(buffer, n_vert);
-  }
-  static readMGH(buffer) {
-    return NVMeshLoaders.readMGH(buffer);
-  }
-  static readSTL(buffer) {
-    return NVMeshLoaders.readSTL(buffer);
-  }
-  static readTxtSTL(buffer) {
-    return NVMeshLoaders.readTxtSTL(buffer);
-  }
-  static readSRF(buffer) {
-    return NVMeshLoaders.readSRF(buffer);
-  }
-  static readFreeSurfer(buffer) {
-    return NVMeshLoaders.readFreeSurfer(buffer);
-  }
-  static readOBJ(buffer) {
-    return NVMeshLoaders.readOBJ(buffer);
-  }
-  static readOFF(buffer) {
-    return NVMeshLoaders.readOFF(buffer);
-  }
-  static readGEO(buffer, isFlipWinding = false) {
-    return NVMeshLoaders.readGEO(buffer, isFlipWinding);
-  }
-  static readICO(buffer) {
-    return NVMeshLoaders.readICO(buffer);
-  }
-  static readPLY(buffer) {
-    return NVMeshLoaders.readPLY(buffer);
-  }
-  static readMZ3(buffer, n_vert = 0) {
-    return NVMeshLoaders.readMZ3(buffer, n_vert);
-  }
-  static readVTK(buffer) {
-    return NVMeshLoaders.readVTK(buffer);
-  }
-  static readASC(buffer) {
-    return NVMeshLoaders.readASC(buffer);
-  }
-  static readNV(buffer) {
-    return NVMeshLoaders.readNV(buffer);
-  }
-  static readANNOT(buffer, n_vert, isReadColortables = false) {
-    return NVMeshLoaders.readANNOT(buffer, n_vert, isReadColortables);
-  }
-  static readCURV(buffer, n_vert) {
-    return NVMeshLoaders.readCURV(buffer, n_vert);
-  }
-  static readSTC(buffer, n_vert) {
-    return NVMeshLoaders.readSTC(buffer, n_vert);
-  }
-  static readSMP(buffer, n_vert) {
-    return NVMeshLoaders.readSMP(buffer, n_vert);
-  }
-  static readTxtVTK(buffer) {
-    return NVMeshLoaders.readTxtVTK(buffer);
-  }
-  static readTRK(buffer) {
-    return NVMeshLoaders.readTRK(buffer);
-  }
-  static readTCK(buffer) {
-    return NVMeshLoaders.readTCK(buffer);
-  }
-  static readTSF(buffer) {
-    return NVMeshLoaders.readTSF(buffer);
-  }
-  static readTT(buffer) {
-    return NVMeshLoaders.readTT(buffer);
-  }
-  static readTRX(buffer) {
-    return NVMeshLoaders.readTRX(buffer);
-  }
-  static readTRACT(buffer) {
-    return NVMeshLoaders.readTRACT(buffer);
   }
 };
 
@@ -32996,8 +28828,1065 @@ function intensityRaw2Scaled(hdr, raw) {
   return raw * hdr.scl_slope + hdr.scl_inter;
 }
 
+// ../../node_modules/tslib/tslib.es6.mjs
+var extendStatics = function(d, b) {
+  extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
+    d2.__proto__ = b2;
+  } || function(d2, b2) {
+    for (var p in b2) if (Object.prototype.hasOwnProperty.call(b2, p)) d2[p] = b2[p];
+  };
+  return extendStatics(d, b);
+};
+function __extends(d, b) {
+  if (typeof b !== "function" && b !== null)
+    throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+  extendStatics(d, b);
+  function __() {
+    this.constructor = d;
+  }
+  d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+}
+var __assign = function() {
+  __assign = Object.assign || function __assign2(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+      s = arguments[i];
+      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+    }
+    return t;
+  };
+  return __assign.apply(this, arguments);
+};
+function __values(o) {
+  var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+  if (m) return m.call(o);
+  if (o && typeof o.length === "number") return {
+    next: function() {
+      if (o && i >= o.length) o = void 0;
+      return { value: o && o[i++], done: !o };
+    }
+  };
+  throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+}
+function __read(o, n) {
+  var m = typeof Symbol === "function" && o[Symbol.iterator];
+  if (!m) return o;
+  var i = m.call(o), r, ar = [], e;
+  try {
+    while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+  } catch (error) {
+    e = { error };
+  } finally {
+    try {
+      if (r && !r.done && (m = i["return"])) m.call(i);
+    } finally {
+      if (e) throw e.error;
+    }
+  }
+  return ar;
+}
+function __spreadArray(to, from, pack) {
+  if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+    if (ar || !(i in from)) {
+      if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+      ar[i] = from[i];
+    }
+  }
+  return to.concat(ar || Array.prototype.slice.call(from));
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/isFunction.js
+function isFunction(value) {
+  return typeof value === "function";
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/createErrorClass.js
+function createErrorClass(createImpl) {
+  var _super = function(instance) {
+    Error.call(instance);
+    instance.stack = new Error().stack;
+  };
+  var ctorFunc = createImpl(_super);
+  ctorFunc.prototype = Object.create(Error.prototype);
+  ctorFunc.prototype.constructor = ctorFunc;
+  return ctorFunc;
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/UnsubscriptionError.js
+var UnsubscriptionError = createErrorClass(function(_super) {
+  return function UnsubscriptionErrorImpl(errors) {
+    _super(this);
+    this.message = errors ? errors.length + " errors occurred during unsubscription:\n" + errors.map(function(err2, i) {
+      return i + 1 + ") " + err2.toString();
+    }).join("\n  ") : "";
+    this.name = "UnsubscriptionError";
+    this.errors = errors;
+  };
+});
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/arrRemove.js
+function arrRemove(arr, item) {
+  if (arr) {
+    var index = arr.indexOf(item);
+    0 <= index && arr.splice(index, 1);
+  }
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/Subscription.js
+var Subscription = function() {
+  function Subscription2(initialTeardown) {
+    this.initialTeardown = initialTeardown;
+    this.closed = false;
+    this._parentage = null;
+    this._finalizers = null;
+  }
+  Subscription2.prototype.unsubscribe = function() {
+    var e_1, _a2, e_2, _b2;
+    var errors;
+    if (!this.closed) {
+      this.closed = true;
+      var _parentage = this._parentage;
+      if (_parentage) {
+        this._parentage = null;
+        if (Array.isArray(_parentage)) {
+          try {
+            for (var _parentage_1 = __values(_parentage), _parentage_1_1 = _parentage_1.next(); !_parentage_1_1.done; _parentage_1_1 = _parentage_1.next()) {
+              var parent_1 = _parentage_1_1.value;
+              parent_1.remove(this);
+            }
+          } catch (e_1_1) {
+            e_1 = { error: e_1_1 };
+          } finally {
+            try {
+              if (_parentage_1_1 && !_parentage_1_1.done && (_a2 = _parentage_1.return)) _a2.call(_parentage_1);
+            } finally {
+              if (e_1) throw e_1.error;
+            }
+          }
+        } else {
+          _parentage.remove(this);
+        }
+      }
+      var initialFinalizer = this.initialTeardown;
+      if (isFunction(initialFinalizer)) {
+        try {
+          initialFinalizer();
+        } catch (e) {
+          errors = e instanceof UnsubscriptionError ? e.errors : [e];
+        }
+      }
+      var _finalizers = this._finalizers;
+      if (_finalizers) {
+        this._finalizers = null;
+        try {
+          for (var _finalizers_1 = __values(_finalizers), _finalizers_1_1 = _finalizers_1.next(); !_finalizers_1_1.done; _finalizers_1_1 = _finalizers_1.next()) {
+            var finalizer = _finalizers_1_1.value;
+            try {
+              execFinalizer(finalizer);
+            } catch (err2) {
+              errors = errors !== null && errors !== void 0 ? errors : [];
+              if (err2 instanceof UnsubscriptionError) {
+                errors = __spreadArray(__spreadArray([], __read(errors)), __read(err2.errors));
+              } else {
+                errors.push(err2);
+              }
+            }
+          }
+        } catch (e_2_1) {
+          e_2 = { error: e_2_1 };
+        } finally {
+          try {
+            if (_finalizers_1_1 && !_finalizers_1_1.done && (_b2 = _finalizers_1.return)) _b2.call(_finalizers_1);
+          } finally {
+            if (e_2) throw e_2.error;
+          }
+        }
+      }
+      if (errors) {
+        throw new UnsubscriptionError(errors);
+      }
+    }
+  };
+  Subscription2.prototype.add = function(teardown) {
+    var _a2;
+    if (teardown && teardown !== this) {
+      if (this.closed) {
+        execFinalizer(teardown);
+      } else {
+        if (teardown instanceof Subscription2) {
+          if (teardown.closed || teardown._hasParent(this)) {
+            return;
+          }
+          teardown._addParent(this);
+        }
+        (this._finalizers = (_a2 = this._finalizers) !== null && _a2 !== void 0 ? _a2 : []).push(teardown);
+      }
+    }
+  };
+  Subscription2.prototype._hasParent = function(parent) {
+    var _parentage = this._parentage;
+    return _parentage === parent || Array.isArray(_parentage) && _parentage.includes(parent);
+  };
+  Subscription2.prototype._addParent = function(parent) {
+    var _parentage = this._parentage;
+    this._parentage = Array.isArray(_parentage) ? (_parentage.push(parent), _parentage) : _parentage ? [_parentage, parent] : parent;
+  };
+  Subscription2.prototype._removeParent = function(parent) {
+    var _parentage = this._parentage;
+    if (_parentage === parent) {
+      this._parentage = null;
+    } else if (Array.isArray(_parentage)) {
+      arrRemove(_parentage, parent);
+    }
+  };
+  Subscription2.prototype.remove = function(teardown) {
+    var _finalizers = this._finalizers;
+    _finalizers && arrRemove(_finalizers, teardown);
+    if (teardown instanceof Subscription2) {
+      teardown._removeParent(this);
+    }
+  };
+  Subscription2.EMPTY = function() {
+    var empty = new Subscription2();
+    empty.closed = true;
+    return empty;
+  }();
+  return Subscription2;
+}();
+var EMPTY_SUBSCRIPTION = Subscription.EMPTY;
+function isSubscription(value) {
+  return value instanceof Subscription || value && "closed" in value && isFunction(value.remove) && isFunction(value.add) && isFunction(value.unsubscribe);
+}
+function execFinalizer(finalizer) {
+  if (isFunction(finalizer)) {
+    finalizer();
+  } else {
+    finalizer.unsubscribe();
+  }
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/config.js
+var config = {
+  onUnhandledError: null,
+  onStoppedNotification: null,
+  Promise: void 0,
+  useDeprecatedSynchronousErrorHandling: false,
+  useDeprecatedNextContext: false
+};
+
+// ../../node_modules/rxjs/dist/esm5/internal/scheduler/timeoutProvider.js
+var timeoutProvider = {
+  setTimeout: function(handler, timeout) {
+    var args = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+      args[_i - 2] = arguments[_i];
+    }
+    var delegate = timeoutProvider.delegate;
+    if (delegate === null || delegate === void 0 ? void 0 : delegate.setTimeout) {
+      return delegate.setTimeout.apply(delegate, __spreadArray([handler, timeout], __read(args)));
+    }
+    return setTimeout.apply(void 0, __spreadArray([handler, timeout], __read(args)));
+  },
+  clearTimeout: function(handle) {
+    var delegate = timeoutProvider.delegate;
+    return ((delegate === null || delegate === void 0 ? void 0 : delegate.clearTimeout) || clearTimeout)(handle);
+  },
+  delegate: void 0
+};
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/reportUnhandledError.js
+function reportUnhandledError(err2) {
+  timeoutProvider.setTimeout(function() {
+    var onUnhandledError = config.onUnhandledError;
+    if (onUnhandledError) {
+      onUnhandledError(err2);
+    } else {
+      throw err2;
+    }
+  });
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/noop.js
+function noop() {
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/NotificationFactories.js
+var COMPLETE_NOTIFICATION = function() {
+  return createNotification("C", void 0, void 0);
+}();
+function errorNotification(error) {
+  return createNotification("E", void 0, error);
+}
+function nextNotification(value) {
+  return createNotification("N", value, void 0);
+}
+function createNotification(kind, value, error) {
+  return {
+    kind,
+    value,
+    error
+  };
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/errorContext.js
+var context = null;
+function errorContext(cb) {
+  if (config.useDeprecatedSynchronousErrorHandling) {
+    var isRoot = !context;
+    if (isRoot) {
+      context = { errorThrown: false, error: null };
+    }
+    cb();
+    if (isRoot) {
+      var _a2 = context, errorThrown = _a2.errorThrown, error = _a2.error;
+      context = null;
+      if (errorThrown) {
+        throw error;
+      }
+    }
+  } else {
+    cb();
+  }
+}
+function captureError(err2) {
+  if (config.useDeprecatedSynchronousErrorHandling && context) {
+    context.errorThrown = true;
+    context.error = err2;
+  }
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/Subscriber.js
+var Subscriber = function(_super) {
+  __extends(Subscriber2, _super);
+  function Subscriber2(destination) {
+    var _this = _super.call(this) || this;
+    _this.isStopped = false;
+    if (destination) {
+      _this.destination = destination;
+      if (isSubscription(destination)) {
+        destination.add(_this);
+      }
+    } else {
+      _this.destination = EMPTY_OBSERVER;
+    }
+    return _this;
+  }
+  Subscriber2.create = function(next, error, complete) {
+    return new SafeSubscriber(next, error, complete);
+  };
+  Subscriber2.prototype.next = function(value) {
+    if (this.isStopped) {
+      handleStoppedNotification(nextNotification(value), this);
+    } else {
+      this._next(value);
+    }
+  };
+  Subscriber2.prototype.error = function(err2) {
+    if (this.isStopped) {
+      handleStoppedNotification(errorNotification(err2), this);
+    } else {
+      this.isStopped = true;
+      this._error(err2);
+    }
+  };
+  Subscriber2.prototype.complete = function() {
+    if (this.isStopped) {
+      handleStoppedNotification(COMPLETE_NOTIFICATION, this);
+    } else {
+      this.isStopped = true;
+      this._complete();
+    }
+  };
+  Subscriber2.prototype.unsubscribe = function() {
+    if (!this.closed) {
+      this.isStopped = true;
+      _super.prototype.unsubscribe.call(this);
+      this.destination = null;
+    }
+  };
+  Subscriber2.prototype._next = function(value) {
+    this.destination.next(value);
+  };
+  Subscriber2.prototype._error = function(err2) {
+    try {
+      this.destination.error(err2);
+    } finally {
+      this.unsubscribe();
+    }
+  };
+  Subscriber2.prototype._complete = function() {
+    try {
+      this.destination.complete();
+    } finally {
+      this.unsubscribe();
+    }
+  };
+  return Subscriber2;
+}(Subscription);
+var _bind = Function.prototype.bind;
+function bind(fn, thisArg) {
+  return _bind.call(fn, thisArg);
+}
+var ConsumerObserver = function() {
+  function ConsumerObserver2(partialObserver) {
+    this.partialObserver = partialObserver;
+  }
+  ConsumerObserver2.prototype.next = function(value) {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.next) {
+      try {
+        partialObserver.next(value);
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    }
+  };
+  ConsumerObserver2.prototype.error = function(err2) {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.error) {
+      try {
+        partialObserver.error(err2);
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    } else {
+      handleUnhandledError(err2);
+    }
+  };
+  ConsumerObserver2.prototype.complete = function() {
+    var partialObserver = this.partialObserver;
+    if (partialObserver.complete) {
+      try {
+        partialObserver.complete();
+      } catch (error) {
+        handleUnhandledError(error);
+      }
+    }
+  };
+  return ConsumerObserver2;
+}();
+var SafeSubscriber = function(_super) {
+  __extends(SafeSubscriber2, _super);
+  function SafeSubscriber2(observerOrNext, error, complete) {
+    var _this = _super.call(this) || this;
+    var partialObserver;
+    if (isFunction(observerOrNext) || !observerOrNext) {
+      partialObserver = {
+        next: observerOrNext !== null && observerOrNext !== void 0 ? observerOrNext : void 0,
+        error: error !== null && error !== void 0 ? error : void 0,
+        complete: complete !== null && complete !== void 0 ? complete : void 0
+      };
+    } else {
+      var context_1;
+      if (_this && config.useDeprecatedNextContext) {
+        context_1 = Object.create(observerOrNext);
+        context_1.unsubscribe = function() {
+          return _this.unsubscribe();
+        };
+        partialObserver = {
+          next: observerOrNext.next && bind(observerOrNext.next, context_1),
+          error: observerOrNext.error && bind(observerOrNext.error, context_1),
+          complete: observerOrNext.complete && bind(observerOrNext.complete, context_1)
+        };
+      } else {
+        partialObserver = observerOrNext;
+      }
+    }
+    _this.destination = new ConsumerObserver(partialObserver);
+    return _this;
+  }
+  return SafeSubscriber2;
+}(Subscriber);
+function handleUnhandledError(error) {
+  if (config.useDeprecatedSynchronousErrorHandling) {
+    captureError(error);
+  } else {
+    reportUnhandledError(error);
+  }
+}
+function defaultErrorHandler(err2) {
+  throw err2;
+}
+function handleStoppedNotification(notification, subscriber) {
+  var onStoppedNotification = config.onStoppedNotification;
+  onStoppedNotification && timeoutProvider.setTimeout(function() {
+    return onStoppedNotification(notification, subscriber);
+  });
+}
+var EMPTY_OBSERVER = {
+  closed: true,
+  next: noop,
+  error: defaultErrorHandler,
+  complete: noop
+};
+
+// ../../node_modules/rxjs/dist/esm5/internal/symbol/observable.js
+var observable = function() {
+  return typeof Symbol === "function" && Symbol.observable || "@@observable";
+}();
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/identity.js
+function identity3(x) {
+  return x;
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/pipe.js
+function pipeFromArray(fns) {
+  if (fns.length === 0) {
+    return identity3;
+  }
+  if (fns.length === 1) {
+    return fns[0];
+  }
+  return function piped(input) {
+    return fns.reduce(function(prev, fn) {
+      return fn(prev);
+    }, input);
+  };
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/Observable.js
+var Observable = function() {
+  function Observable2(subscribe) {
+    if (subscribe) {
+      this._subscribe = subscribe;
+    }
+  }
+  Observable2.prototype.lift = function(operator) {
+    var observable2 = new Observable2();
+    observable2.source = this;
+    observable2.operator = operator;
+    return observable2;
+  };
+  Observable2.prototype.subscribe = function(observerOrNext, error, complete) {
+    var _this = this;
+    var subscriber = isSubscriber(observerOrNext) ? observerOrNext : new SafeSubscriber(observerOrNext, error, complete);
+    errorContext(function() {
+      var _a2 = _this, operator = _a2.operator, source = _a2.source;
+      subscriber.add(operator ? operator.call(subscriber, source) : source ? _this._subscribe(subscriber) : _this._trySubscribe(subscriber));
+    });
+    return subscriber;
+  };
+  Observable2.prototype._trySubscribe = function(sink) {
+    try {
+      return this._subscribe(sink);
+    } catch (err2) {
+      sink.error(err2);
+    }
+  };
+  Observable2.prototype.forEach = function(next, promiseCtor) {
+    var _this = this;
+    promiseCtor = getPromiseCtor(promiseCtor);
+    return new promiseCtor(function(resolve, reject) {
+      var subscriber = new SafeSubscriber({
+        next: function(value) {
+          try {
+            next(value);
+          } catch (err2) {
+            reject(err2);
+            subscriber.unsubscribe();
+          }
+        },
+        error: reject,
+        complete: resolve
+      });
+      _this.subscribe(subscriber);
+    });
+  };
+  Observable2.prototype._subscribe = function(subscriber) {
+    var _a2;
+    return (_a2 = this.source) === null || _a2 === void 0 ? void 0 : _a2.subscribe(subscriber);
+  };
+  Observable2.prototype[observable] = function() {
+    return this;
+  };
+  Observable2.prototype.pipe = function() {
+    var operations = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+      operations[_i] = arguments[_i];
+    }
+    return pipeFromArray(operations)(this);
+  };
+  Observable2.prototype.toPromise = function(promiseCtor) {
+    var _this = this;
+    promiseCtor = getPromiseCtor(promiseCtor);
+    return new promiseCtor(function(resolve, reject) {
+      var value;
+      _this.subscribe(function(x) {
+        return value = x;
+      }, function(err2) {
+        return reject(err2);
+      }, function() {
+        return resolve(value);
+      });
+    });
+  };
+  Observable2.create = function(subscribe) {
+    return new Observable2(subscribe);
+  };
+  return Observable2;
+}();
+function getPromiseCtor(promiseCtor) {
+  var _a2;
+  return (_a2 = promiseCtor !== null && promiseCtor !== void 0 ? promiseCtor : config.Promise) !== null && _a2 !== void 0 ? _a2 : Promise;
+}
+function isObserver(value) {
+  return value && isFunction(value.next) && isFunction(value.error) && isFunction(value.complete);
+}
+function isSubscriber(value) {
+  return value && value instanceof Subscriber || isObserver(value) && isSubscription(value);
+}
+
+// ../../node_modules/rxjs/dist/esm5/internal/util/ObjectUnsubscribedError.js
+var ObjectUnsubscribedError = createErrorClass(function(_super) {
+  return function ObjectUnsubscribedErrorImpl() {
+    _super(this);
+    this.name = "ObjectUnsubscribedError";
+    this.message = "object unsubscribed";
+  };
+});
+
+// ../../node_modules/rxjs/dist/esm5/internal/Subject.js
+var Subject = function(_super) {
+  __extends(Subject2, _super);
+  function Subject2() {
+    var _this = _super.call(this) || this;
+    _this.closed = false;
+    _this.currentObservers = null;
+    _this.observers = [];
+    _this.isStopped = false;
+    _this.hasError = false;
+    _this.thrownError = null;
+    return _this;
+  }
+  Subject2.prototype.lift = function(operator) {
+    var subject = new AnonymousSubject(this, this);
+    subject.operator = operator;
+    return subject;
+  };
+  Subject2.prototype._throwIfClosed = function() {
+    if (this.closed) {
+      throw new ObjectUnsubscribedError();
+    }
+  };
+  Subject2.prototype.next = function(value) {
+    var _this = this;
+    errorContext(function() {
+      var e_1, _a2;
+      _this._throwIfClosed();
+      if (!_this.isStopped) {
+        if (!_this.currentObservers) {
+          _this.currentObservers = Array.from(_this.observers);
+        }
+        try {
+          for (var _b2 = __values(_this.currentObservers), _c = _b2.next(); !_c.done; _c = _b2.next()) {
+            var observer = _c.value;
+            observer.next(value);
+          }
+        } catch (e_1_1) {
+          e_1 = { error: e_1_1 };
+        } finally {
+          try {
+            if (_c && !_c.done && (_a2 = _b2.return)) _a2.call(_b2);
+          } finally {
+            if (e_1) throw e_1.error;
+          }
+        }
+      }
+    });
+  };
+  Subject2.prototype.error = function(err2) {
+    var _this = this;
+    errorContext(function() {
+      _this._throwIfClosed();
+      if (!_this.isStopped) {
+        _this.hasError = _this.isStopped = true;
+        _this.thrownError = err2;
+        var observers = _this.observers;
+        while (observers.length) {
+          observers.shift().error(err2);
+        }
+      }
+    });
+  };
+  Subject2.prototype.complete = function() {
+    var _this = this;
+    errorContext(function() {
+      _this._throwIfClosed();
+      if (!_this.isStopped) {
+        _this.isStopped = true;
+        var observers = _this.observers;
+        while (observers.length) {
+          observers.shift().complete();
+        }
+      }
+    });
+  };
+  Subject2.prototype.unsubscribe = function() {
+    this.isStopped = this.closed = true;
+    this.observers = this.currentObservers = null;
+  };
+  Object.defineProperty(Subject2.prototype, "observed", {
+    get: function() {
+      var _a2;
+      return ((_a2 = this.observers) === null || _a2 === void 0 ? void 0 : _a2.length) > 0;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  Subject2.prototype._trySubscribe = function(subscriber) {
+    this._throwIfClosed();
+    return _super.prototype._trySubscribe.call(this, subscriber);
+  };
+  Subject2.prototype._subscribe = function(subscriber) {
+    this._throwIfClosed();
+    this._checkFinalizedStatuses(subscriber);
+    return this._innerSubscribe(subscriber);
+  };
+  Subject2.prototype._innerSubscribe = function(subscriber) {
+    var _this = this;
+    var _a2 = this, hasError = _a2.hasError, isStopped = _a2.isStopped, observers = _a2.observers;
+    if (hasError || isStopped) {
+      return EMPTY_SUBSCRIPTION;
+    }
+    this.currentObservers = null;
+    observers.push(subscriber);
+    return new Subscription(function() {
+      _this.currentObservers = null;
+      arrRemove(observers, subscriber);
+    });
+  };
+  Subject2.prototype._checkFinalizedStatuses = function(subscriber) {
+    var _a2 = this, hasError = _a2.hasError, thrownError = _a2.thrownError, isStopped = _a2.isStopped;
+    if (hasError) {
+      subscriber.error(thrownError);
+    } else if (isStopped) {
+      subscriber.complete();
+    }
+  };
+  Subject2.prototype.asObservable = function() {
+    var observable2 = new Observable();
+    observable2.source = this;
+    return observable2;
+  };
+  Subject2.create = function(destination, source) {
+    return new AnonymousSubject(destination, source);
+  };
+  return Subject2;
+}(Observable);
+var AnonymousSubject = function(_super) {
+  __extends(AnonymousSubject2, _super);
+  function AnonymousSubject2(destination, source) {
+    var _this = _super.call(this) || this;
+    _this.destination = destination;
+    _this.source = source;
+    return _this;
+  }
+  AnonymousSubject2.prototype.next = function(value) {
+    var _a2, _b2;
+    (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.next) === null || _b2 === void 0 ? void 0 : _b2.call(_a2, value);
+  };
+  AnonymousSubject2.prototype.error = function(err2) {
+    var _a2, _b2;
+    (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.error) === null || _b2 === void 0 ? void 0 : _b2.call(_a2, err2);
+  };
+  AnonymousSubject2.prototype.complete = function() {
+    var _a2, _b2;
+    (_b2 = (_a2 = this.destination) === null || _a2 === void 0 ? void 0 : _a2.complete) === null || _b2 === void 0 ? void 0 : _b2.call(_a2);
+  };
+  AnonymousSubject2.prototype._subscribe = function(subscriber) {
+    var _a2, _b2;
+    return (_b2 = (_a2 = this.source) === null || _a2 === void 0 ? void 0 : _a2.subscribe(subscriber)) !== null && _b2 !== void 0 ? _b2 : EMPTY_SUBSCRIPTION;
+  };
+  return AnonymousSubject2;
+}(Subject);
+
+// ../../node_modules/rxjs/dist/esm5/internal/scheduler/dateTimestampProvider.js
+var dateTimestampProvider = {
+  now: function() {
+    return (dateTimestampProvider.delegate || Date).now();
+  },
+  delegate: void 0
+};
+
+// ../../node_modules/rxjs/dist/esm5/internal/ReplaySubject.js
+var ReplaySubject = function(_super) {
+  __extends(ReplaySubject2, _super);
+  function ReplaySubject2(_bufferSize, _windowTime, _timestampProvider) {
+    if (_bufferSize === void 0) {
+      _bufferSize = Infinity;
+    }
+    if (_windowTime === void 0) {
+      _windowTime = Infinity;
+    }
+    if (_timestampProvider === void 0) {
+      _timestampProvider = dateTimestampProvider;
+    }
+    var _this = _super.call(this) || this;
+    _this._bufferSize = _bufferSize;
+    _this._windowTime = _windowTime;
+    _this._timestampProvider = _timestampProvider;
+    _this._buffer = [];
+    _this._infiniteTimeWindow = true;
+    _this._infiniteTimeWindow = _windowTime === Infinity;
+    _this._bufferSize = Math.max(1, _bufferSize);
+    _this._windowTime = Math.max(1, _windowTime);
+    return _this;
+  }
+  ReplaySubject2.prototype.next = function(value) {
+    var _a2 = this, isStopped = _a2.isStopped, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow, _timestampProvider = _a2._timestampProvider, _windowTime = _a2._windowTime;
+    if (!isStopped) {
+      _buffer.push(value);
+      !_infiniteTimeWindow && _buffer.push(_timestampProvider.now() + _windowTime);
+    }
+    this._trimBuffer();
+    _super.prototype.next.call(this, value);
+  };
+  ReplaySubject2.prototype._subscribe = function(subscriber) {
+    this._throwIfClosed();
+    this._trimBuffer();
+    var subscription = this._innerSubscribe(subscriber);
+    var _a2 = this, _infiniteTimeWindow = _a2._infiniteTimeWindow, _buffer = _a2._buffer;
+    var copy6 = _buffer.slice();
+    for (var i = 0; i < copy6.length && !subscriber.closed; i += _infiniteTimeWindow ? 1 : 2) {
+      subscriber.next(copy6[i]);
+    }
+    this._checkFinalizedStatuses(subscriber);
+    return subscription;
+  };
+  ReplaySubject2.prototype._trimBuffer = function() {
+    var _a2 = this, _bufferSize = _a2._bufferSize, _timestampProvider = _a2._timestampProvider, _buffer = _a2._buffer, _infiniteTimeWindow = _a2._infiniteTimeWindow;
+    var adjustedBufferSize = (_infiniteTimeWindow ? 1 : 2) * _bufferSize;
+    _bufferSize < Infinity && adjustedBufferSize < _buffer.length && _buffer.splice(0, _buffer.length - adjustedBufferSize);
+    if (!_infiniteTimeWindow) {
+      var now = _timestampProvider.now();
+      var last = 0;
+      for (var i = 1; i < _buffer.length && _buffer[i] <= now; i += 2) {
+        last = i;
+      }
+      last && _buffer.splice(0, last + 1);
+    }
+  };
+  return ReplaySubject2;
+}(Subject);
+
+// ../../node_modules/rxjs/dist/esm5/internal/observable/dom/WebSocketSubject.js
+var DEFAULT_WEBSOCKET_CONFIG = {
+  url: "",
+  deserializer: function(e) {
+    return JSON.parse(e.data);
+  },
+  serializer: function(value) {
+    return JSON.stringify(value);
+  }
+};
+var WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }";
+var WebSocketSubject = function(_super) {
+  __extends(WebSocketSubject3, _super);
+  function WebSocketSubject3(urlConfigOrSource, destination) {
+    var _this = _super.call(this) || this;
+    _this._socket = null;
+    if (urlConfigOrSource instanceof Observable) {
+      _this.destination = destination;
+      _this.source = urlConfigOrSource;
+    } else {
+      var config2 = _this._config = __assign({}, DEFAULT_WEBSOCKET_CONFIG);
+      _this._output = new Subject();
+      if (typeof urlConfigOrSource === "string") {
+        config2.url = urlConfigOrSource;
+      } else {
+        for (var key in urlConfigOrSource) {
+          if (urlConfigOrSource.hasOwnProperty(key)) {
+            config2[key] = urlConfigOrSource[key];
+          }
+        }
+      }
+      if (!config2.WebSocketCtor && WebSocket) {
+        config2.WebSocketCtor = WebSocket;
+      } else if (!config2.WebSocketCtor) {
+        throw new Error("no WebSocket constructor can be found");
+      }
+      _this.destination = new ReplaySubject();
+    }
+    return _this;
+  }
+  WebSocketSubject3.prototype.lift = function(operator) {
+    var sock = new WebSocketSubject3(this._config, this.destination);
+    sock.operator = operator;
+    sock.source = this;
+    return sock;
+  };
+  WebSocketSubject3.prototype._resetState = function() {
+    this._socket = null;
+    if (!this.source) {
+      this.destination = new ReplaySubject();
+    }
+    this._output = new Subject();
+  };
+  WebSocketSubject3.prototype.multiplex = function(subMsg, unsubMsg, messageFilter) {
+    var self2 = this;
+    return new Observable(function(observer) {
+      try {
+        self2.next(subMsg());
+      } catch (err2) {
+        observer.error(err2);
+      }
+      var subscription = self2.subscribe({
+        next: function(x) {
+          try {
+            if (messageFilter(x)) {
+              observer.next(x);
+            }
+          } catch (err2) {
+            observer.error(err2);
+          }
+        },
+        error: function(err2) {
+          return observer.error(err2);
+        },
+        complete: function() {
+          return observer.complete();
+        }
+      });
+      return function() {
+        try {
+          self2.next(unsubMsg());
+        } catch (err2) {
+          observer.error(err2);
+        }
+        subscription.unsubscribe();
+      };
+    });
+  };
+  WebSocketSubject3.prototype._connectSocket = function() {
+    var _this = this;
+    var _a2 = this._config, WebSocketCtor = _a2.WebSocketCtor, protocol = _a2.protocol, url = _a2.url, binaryType = _a2.binaryType;
+    var observer = this._output;
+    var socket = null;
+    try {
+      socket = protocol ? new WebSocketCtor(url, protocol) : new WebSocketCtor(url);
+      this._socket = socket;
+      if (binaryType) {
+        this._socket.binaryType = binaryType;
+      }
+    } catch (e) {
+      observer.error(e);
+      return;
+    }
+    var subscription = new Subscription(function() {
+      _this._socket = null;
+      if (socket && socket.readyState === 1) {
+        socket.close();
+      }
+    });
+    socket.onopen = function(evt) {
+      var _socket = _this._socket;
+      if (!_socket) {
+        socket.close();
+        _this._resetState();
+        return;
+      }
+      var openObserver = _this._config.openObserver;
+      if (openObserver) {
+        openObserver.next(evt);
+      }
+      var queue = _this.destination;
+      _this.destination = Subscriber.create(function(x) {
+        if (socket.readyState === 1) {
+          try {
+            var serializer2 = _this._config.serializer;
+            socket.send(serializer2(x));
+          } catch (e) {
+            _this.destination.error(e);
+          }
+        }
+      }, function(err2) {
+        var closingObserver = _this._config.closingObserver;
+        if (closingObserver) {
+          closingObserver.next(void 0);
+        }
+        if (err2 && err2.code) {
+          socket.close(err2.code, err2.reason);
+        } else {
+          observer.error(new TypeError(WEBSOCKETSUBJECT_INVALID_ERROR_OBJECT));
+        }
+        _this._resetState();
+      }, function() {
+        var closingObserver = _this._config.closingObserver;
+        if (closingObserver) {
+          closingObserver.next(void 0);
+        }
+        socket.close();
+        _this._resetState();
+      });
+      if (queue && queue instanceof ReplaySubject) {
+        subscription.add(queue.subscribe(_this.destination));
+      }
+    };
+    socket.onerror = function(e) {
+      _this._resetState();
+      observer.error(e);
+    };
+    socket.onclose = function(e) {
+      if (socket === _this._socket) {
+        _this._resetState();
+      }
+      var closeObserver = _this._config.closeObserver;
+      if (closeObserver) {
+        closeObserver.next(e);
+      }
+      if (e.wasClean) {
+        observer.complete();
+      } else {
+        observer.error(e);
+      }
+    };
+    socket.onmessage = function(e) {
+      try {
+        var deserializer2 = _this._config.deserializer;
+        observer.next(deserializer2(e));
+      } catch (err2) {
+        observer.error(err2);
+      }
+    };
+  };
+  WebSocketSubject3.prototype._subscribe = function(subscriber) {
+    var _this = this;
+    var source = this.source;
+    if (source) {
+      return source.subscribe(subscriber);
+    }
+    if (!this._socket) {
+      this._connectSocket();
+    }
+    this._output.subscribe(subscriber);
+    subscriber.add(function() {
+      var _socket = _this._socket;
+      if (_this._output.observers.length === 0) {
+        if (_socket && (_socket.readyState === 1 || _socket.readyState === 0)) {
+          _socket.close();
+        }
+        _this._resetState();
+      }
+    });
+    return subscriber;
+  };
+  WebSocketSubject3.prototype.unsubscribe = function() {
+    var _socket = this._socket;
+    if (_socket && (_socket.readyState === 1 || _socket.readyState === 0)) {
+      _socket.close();
+    }
+    this._resetState();
+    _super.prototype.unsubscribe.call(this);
+  };
+  return WebSocketSubject3;
+}(AnonymousSubject);
+
+// ../../node_modules/rxjs/dist/esm5/internal/observable/dom/webSocket.js
+function webSocket(urlConfigOrSource) {
+  return new WebSocketSubject(urlConfigOrSource);
+}
+
 // src/session-bus.ts
-var import_webSocket = __toESM(require_webSocket2(), 1);
 var SessionUser = class {
   constructor(displayName, userId, userKey, userProperties) {
     __publicField(this, "id");
@@ -33084,7 +29973,7 @@ var SessionBus = class {
     const url = new URL(serverURL);
     url.pathname = "websockets";
     url.search = "?session=" + sessionName;
-    this.serverConnection$ = (0, import_webSocket.webSocket)(url.href);
+    this.serverConnection$ = webSocket(url.href);
     log.debug(url.href);
   }
   // Internal function called after a connection with the server has been made
@@ -33160,7 +30049,7 @@ var NVController = class {
     __publicField(this, "user");
     __publicField(this, "sessionBus");
     // events for external consumers
-    __publicField(this, "onFrameChange", (_volume, _index) => {
+    __publicField(this, "onFrameChange", (_volume, _index2) => {
     });
     this.niivue = niivue;
     this.mediaUrlMap = /* @__PURE__ */ new Map();
@@ -33523,6 +30412,7 @@ var MESH_EXTENSIONS = [
   "TT",
   "TRX",
   "VTK",
+  "WRL",
   "X3D",
   "JCON",
   "JSON"
@@ -34588,7 +31478,7 @@ var Niivue = class {
   // handler for mouse button up (all buttons)
   // note: no test yet
   mouseUpListener() {
-    function isFunction(test) {
+    function isFunction2(test) {
       return Object.prototype.toString.call(test).indexOf("Function") > -1;
     }
     const uiData = {
@@ -34618,7 +31508,7 @@ var Niivue = class {
     this.drawAddUndoBitmap();
     this.drawPenLocation = [NaN, NaN, NaN];
     this.drawPenAxCorSag = -1;
-    if (isFunction(this.onMouseUp)) {
+    if (isFunction2(this.onMouseUp)) {
       this.onMouseUp(uiData);
     }
     if (this.uiData.isDragging) {
@@ -35336,7 +32226,7 @@ var Niivue = class {
   //   }
   // }
   // not included in public docs
-  dropListener(e) {
+  async dropListener(e) {
     e.stopPropagation();
     e.preventDefault();
     if (!this.opts.dragAndDropEnabled) {
@@ -35385,15 +32275,6 @@ var Niivue = class {
           }
           if (entry.isFile) {
             const ext = this.getFileExt(entry.name);
-            if (ext === "PNG") {
-              ;
-              entry.file((file) => {
-                this.loadBmpTexture(file).catch((e2) => {
-                  throw e2;
-                });
-              });
-              continue;
-            }
             let pairedImageData;
             if (entry.name.lastIndexOf("HEAD") !== -1) {
               for (const pairedItem of Array.from(items)) {
@@ -35411,64 +32292,89 @@ var Niivue = class {
             if (entry.name.lastIndexOf("BRIK") !== -1) {
               continue;
             }
+            if (this.loaders[ext]) {
+              const toExt = this.loaders[ext].toExt.toUpperCase();
+              if (MESH_EXTENSIONS.includes(toExt)) {
+                log.error(`Drag and drop mesh loader needs work ${ext}`);
+              } else {
+                log.error(`Drag and drop volume loader needs work ${ext}`);
+              }
+              continue;
+            }
             if (MESH_EXTENSIONS.includes(ext)) {
               ;
               entry.file((file) => {
-                NVMesh3.loadFromFile({
-                  file,
-                  gl: this.gl,
-                  name: file.name
-                }).then((mesh) => {
-                  this.addMesh(mesh);
-                }).catch((e2) => {
-                  throw e2;
-                });
+                ;
+                (async () => {
+                  try {
+                    const mesh = await NVMesh3.loadFromFile({
+                      file,
+                      gl: this.gl,
+                      name: file.name
+                    });
+                    this.addMesh(mesh);
+                  } catch (e2) {
+                    console.error("Error loading mesh:", e2);
+                  }
+                })().catch((err2) => console.error(err2));
               });
               continue;
             } else if (ext === "NVD") {
               ;
               entry.file((file) => {
-                NVDocument.loadFromFile(file).then((nvdoc) => {
-                  this.loadDocument(nvdoc);
-                  log.debug("loaded document");
-                }).catch((e2) => {
-                  throw e2;
-                });
+                ;
+                (async () => {
+                  try {
+                    const nvdoc = await NVDocument.loadFromFile(file);
+                    await this.loadDocument(nvdoc);
+                    log.debug("loaded document");
+                  } catch (e2) {
+                    console.error(e2);
+                  }
+                })().catch((err2) => console.error(err2));
               });
               break;
             }
             ;
             entry.file((file) => {
-              if (pairedImageData) {
-                ;
-                pairedImageData.file((imgfile) => {
-                  NVImage.loadFromFile({
-                    file,
-                    urlImgData: imgfile,
-                    limitFrames4D: this.opts.limitFrames4D
-                  }).then((volume) => {
-                    this.addVolume(volume);
-                  }).catch((e2) => {
-                    throw e2;
-                  });
-                });
-              } else {
-                NVImage.loadFromFile({
-                  file,
-                  urlImgData: pairedImageData,
-                  limitFrames4D: this.opts.limitFrames4D
-                }).then((volume) => {
-                  if (e.altKey) {
-                    log.debug("alt key detected: assuming this is a drawing overlay");
-                    this.drawClearAllUndoBitmaps();
-                    this.loadDrawing(volume);
+              ;
+              (async () => {
+                try {
+                  if (pairedImageData) {
+                    ;
+                    pairedImageData.file((imgfile) => {
+                      ;
+                      (async () => {
+                        try {
+                          const volume = await NVImage.loadFromFile({
+                            file,
+                            urlImgData: imgfile,
+                            limitFrames4D: this.opts.limitFrames4D
+                          });
+                          this.addVolume(volume);
+                        } catch (e2) {
+                          console.error(e2);
+                        }
+                      })().catch(console.error);
+                    });
                   } else {
-                    this.addVolume(volume);
+                    const volume = await NVImage.loadFromFile({
+                      file,
+                      urlImgData: pairedImageData,
+                      limitFrames4D: this.opts.limitFrames4D
+                    });
+                    if (e.altKey) {
+                      log.debug("alt key detected: assuming this is a drawing overlay");
+                      this.drawClearAllUndoBitmaps();
+                      this.loadDrawing(volume);
+                    } else {
+                      this.addVolume(volume);
+                    }
                   }
-                }).catch((e2) => {
-                  throw e2;
-                });
-              }
+                } catch (e2) {
+                  console.error(e2);
+                }
+              })().catch(console.error);
             });
           } else if (entry.isDirectory) {
             this.traverseFileTree(entry, "", files).then((files2) => {
@@ -36047,7 +32953,7 @@ var Niivue = class {
    * @example niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
    */
-  saveImage(options = defaultSaveImageOptions) {
+  async saveImage(options = defaultSaveImageOptions) {
     const saveOptions = {
       ...defaultSaveImageOptions,
       ...options
@@ -36066,7 +32972,7 @@ var Niivue = class {
       const perm = this.volumes[0].permRAS;
       if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         log.debug("saving drawing");
-        const img2 = this.volumes[0].saveToDisk(filename, this.drawBitmap);
+        const img2 = await this.volumes[0].saveToDisk(filename, this.drawBitmap);
         return img2;
       } else {
         log.debug("saving drawing");
@@ -36788,14 +33694,14 @@ var Niivue = class {
    */
   async loadDocumentFromUrl(url) {
     const document2 = await NVDocument.loadFromUrl(url);
-    this.loadDocument(document2);
+    await this.loadDocument(document2);
   }
   /**
    * Loads an NVDocument
    * @returns  Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/document.load.html | live demo usage}
    */
-  loadDocument(document2) {
+  async loadDocument(document2) {
     this.volumes = [];
     this.meshes = [];
     this.document = document2;
@@ -36815,7 +33721,7 @@ var Niivue = class {
         if ("colorMap" in imageOptions) {
           imageOptions.colormap = imageOptions.colorMap;
         }
-        const image = NVImage.loadFromBase64({ base64, ...imageOptions });
+        const image = await NVImage.loadFromBase64({ base64, ...imageOptions });
         if (image) {
           if (image.colormapLabel) {
             const length4 = Object.keys(image.colormapLabel.lut).length;
@@ -36876,11 +33782,17 @@ var Niivue = class {
     this.createEmptyDrawing();
     const drawingBase64 = document2.encodedDrawingBlob;
     if (drawingBase64) {
-      const drawingBitmap = NVUtilities.b64toUint8(drawingBase64);
+      const drawingBitmap = await NVUtilities.b64toUint8(drawingBase64);
       if (drawingBitmap) {
         const dims = this.back.dims;
-        if (drawingBitmap.length !== dims[1] * dims[2] * dims[3]) {
-          throw new Error("drawBitmap size does not match the texture dimensions.");
+        let expectedBytes = dims[1] * dims[2] * dims[3];
+        if (drawingBitmap.length - 352 === expectedBytes) {
+          expectedBytes += 352;
+        }
+        if (drawingBitmap.length !== expectedBytes) {
+          throw new Error(
+            `drawBitmap size does not match the texture dimensions (${dims[1]}\xD7${dims[2]}\xD7${dims[3]}) ${expectedBytes} != ${dims[1] * dims[2] * dims[3]}.`
+          );
         }
         this.drawBitmap = drawingBitmap;
         this.refreshDrawing();
@@ -36898,7 +33810,7 @@ var Niivue = class {
   * @example
   * const javascript = this.generateLoadDocumentJavaScript("gl1");
   * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-         ${javascript}</script></body></html>`;
+         ${javascript}<\/script></body></html>`;
   */
   async generateLoadDocumentJavaScript(canvasId, esm) {
     const json = this.json();
@@ -36935,7 +33847,7 @@ var Niivue = class {
    * @returns HTML with javascript of the current scene
    * @example
    * const template = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-   *       %%javascript%%</script></body></html>`;
+   *       %%javascript%%<\/script></body></html>`;
    * nv1.generateHTML("page.html", esm);
    */
   async generateHTML(canvasId = "gl1", esm) {
@@ -37006,7 +33918,7 @@ var Niivue = class {
               // assign our event handler
               var button = document.getElementById("save");
               button.onclick = saveAsHtml;
-            </script>
+            <\/script>
           </body>
         </html>`;
     return html;
@@ -37109,7 +34021,7 @@ var Niivue = class {
       console.log(convertedArrayBuffer);
       const name = convertedArrayBuffer[0].name;
       const data = convertedArrayBuffer[0].data;
-      const image = NVImage.loadFromUrl({ url: data, name });
+      const image = await NVImage.loadFromUrl({ url: data, name });
       return image;
     });
     const nvImages = await Promise.all(promises);
@@ -37187,9 +34099,9 @@ var Niivue = class {
             throw new Error(`Failed to load url ${url}: ${error}`);
           }
         }
-        const { positions, indices } = await this.loaders[ext].loader(itemToLoad);
+        const { positions, indices, colors = null } = await this.loaders[ext].loader(itemToLoad);
         meshItem.name = `${name}.${toExt}`;
-        const mz3 = NVMeshUtilities.createMZ3(positions, indices, false);
+        const mz3 = await NVMeshUtilities.createMZ3Async(positions, indices, false, colors);
         meshItem.buffer = mz3;
       }
       if (ext === "JCON" || ext === "JSON") {
@@ -38654,7 +35566,7 @@ var Niivue = class {
     }
     this.furthestVertexFromOrigin = 0;
     if (numLayers > 0) {
-      this.furthestVertexFromOrigin = this.volumeObject3D.furthestVertexFromOrigin;
+      this.furthestVertexFromOrigin = this.volumeObject3D?.furthestVertexFromOrigin ?? 0;
     }
     if (this.meshes) {
       for (let i = 0; i < this.meshes.length; i++) {
