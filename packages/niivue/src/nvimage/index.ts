@@ -1,4 +1,5 @@
-import * as nifti from 'nifti-reader-js'
+// import * as nifti from 'nifti-reader-js'
+import { NIFTI1, NIFTI2, NIFTIEXTENSION, isCompressed, decompressAsync, readImage, readHeader } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
@@ -78,7 +79,7 @@ export class NVImage {
   extentsMaxOrtho?: number[]
   mm2ortho?: mat4
 
-  hdr: nifti.NIFTI1 | nifti.NIFTI2 | null = null
+  hdr: NIFTI1 | NIFTI2 | null = null
   imageType?: ImageType
   img?: TypedVoxelArray
   imaginary?: Float32Array // only for complex data
@@ -561,16 +562,16 @@ export class NVImage {
         imgRaw = await newImg.readBMP(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.NII:
-        newImg.hdr = nifti.readHeader(dataBuffer as ArrayBuffer)
+        newImg.hdr = readHeader(dataBuffer as ArrayBuffer)
         if (newImg.hdr !== null) {
           if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
             newImg.hdr.cal_max = 0.0
           }
-          if (nifti.isCompressed(dataBuffer as ArrayBuffer)) {
+          if (isCompressed(dataBuffer as ArrayBuffer)) {
             // TODO: with new NIFTI-READER-JS move to decompressSync()
-            imgRaw = nifti.readImage(newImg.hdr, nifti.decompress(dataBuffer as ArrayBuffer) as ArrayBuffer)
+            imgRaw = readImage(newImg.hdr, (await decompressAsync(dataBuffer as ArrayBuffer)) as ArrayBuffer)
           } else {
-            imgRaw = nifti.readImage(newImg.hdr, dataBuffer as ArrayBuffer)
+            imgRaw = readImage(newImg.hdr, dataBuffer as ArrayBuffer)
           }
         }
         break
@@ -1012,7 +1013,7 @@ export class NVImage {
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
   readECAT(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1119,7 +1120,7 @@ export class NVImage {
   } // readECAT()
 
   readV16(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1176,7 +1177,7 @@ export class NVImage {
     const { width, height, data } = imageData
     data.fill(255, 0, Math.floor(data.length / 2))
     // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1195,7 +1196,7 @@ export class NVImage {
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
   readVMR(buffer: ArrayBuffer): ArrayBuffer {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1287,7 +1288,7 @@ export class NVImage {
   // not included in public docs
   // read FreeSurfer MGH format image
   async readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer> {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1393,7 +1394,7 @@ export class NVImage {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async readFIB(buffer: ArrayBuffer): Promise<[ArrayBuffer, Float32Array]> {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1463,7 +1464,7 @@ export class NVImage {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async readSRC(buffer: ArrayBuffer): Promise<ArrayBuffer> {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
@@ -1533,7 +1534,7 @@ export class NVImage {
   // not included in public docs
   // read AFNI head/brik format image
   async readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims[0] = 3
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
@@ -1549,7 +1550,7 @@ export class NVImage {
     const extBuffer = new Uint8Array(len)
     extBuffer.fill(0)
     extBuffer.set(new Uint8Array(dataBuffer))
-    const newExtension = new nifti.NIFTIEXTENSION(len + 8, 42, extBuffer, true)
+    const newExtension = new NIFTIEXTENSION(len + 8, 42, extBuffer, true)
     hdr.addExtension(newExtension)
     hdr.extensionCode = 42
     hdr.extensionFlag[0] = 1
@@ -1701,7 +1702,7 @@ export class NVImage {
       return new TextDecoder().decode(buffer.slice(startPos, pos))
     }
     let line = readStr() // 1st line: signature
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1]
@@ -1825,7 +1826,7 @@ export class NVImage {
   async readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
     // MIF files typically 3D (e.g. anatomical), 4D (fMRI, DWI). 5D rarely seen
     // This read currently supports up to 5D. To create test: "mrcat -axis 4 a4d.mif b4d.mif out5d.mif"
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1]
@@ -2186,7 +2187,7 @@ export class NVImage {
     // inspired by parserNRRD.js in https://github.com/xtk
     // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
     // http://www.opensource.org/licenses/mit-license.php
-    this.hdr = new nifti.NIFTI1()
+    this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     const len = dataBuffer.byteLength
@@ -2654,7 +2655,7 @@ export class NVImage {
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
 
-  hdr2RAS(nVolumes: number = 1): nifti.NIFTI1 | nifti.NIFTI2 {
+  hdr2RAS(nVolumes: number = 1): NIFTI1 | NIFTI2 {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
     }
@@ -2663,7 +2664,7 @@ export class NVImage {
     }
     // make a deep clone
     const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, false)
-    const hdr = nifti.readHeader(hdrBytes.buffer as ArrayBuffer, true)
+    const hdr = readHeader(hdrBytes.buffer as ArrayBuffer, true)
     // n.b. if nVolumes < 1, input volumes = output volumess
     if (nVolumes === 1) {
       // 3D
@@ -3306,7 +3307,7 @@ export class NVImage {
           return null
         }
 
-        const hdr = nifti.readHeader(headerBuffer.buffer)
+        const hdr = readHeader(headerBuffer.buffer)
         if (!hdr) {
           throw new Error('Could not read NIfTI header')
         }
@@ -3569,7 +3570,7 @@ export class NVImage {
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file)
           } else {
-            const hdr = nifti.readHeader(headerBuffer)
+            const hdr = readHeader(headerBuffer)
             if (!hdr) {
               throw new Error('could not read nifti header')
             }
@@ -3654,8 +3655,8 @@ export class NVImage {
     pixDims = [1, 1, 1],
     affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
     datatypeCode = 2 // NiiDataType.DT_UINT8
-  ): nifti.NIFTI1 {
-    const hdr = new nifti.NIFTI1()
+  ): NIFTI1 {
+    const hdr = new NIFTI1()
     hdr.littleEndian = true
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.dims[0] = Math.max(3, dims.length)

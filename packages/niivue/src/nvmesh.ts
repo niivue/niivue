@@ -1656,7 +1656,7 @@ export class NVMesh {
   }
 
   static async loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void> {
-    let buffer
+    let buffer = new Uint8Array().buffer
 
     function base64ToArrayBuffer(base64: string): ArrayBuffer {
       const binary_string = window.atob(base64)

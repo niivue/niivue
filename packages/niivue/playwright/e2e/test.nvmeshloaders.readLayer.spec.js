@@ -38,7 +38,7 @@ test('nvmeshloaders readLayer', async ({ page }) => {
       throw Error(response.statusText)
     }
     const buffer = await response.arrayBuffer()
-    const meshLayer = NVMeshLoaders.readLayer(
+    const meshLayer = await NVMeshLoaders.readLayer(
       layer.url,
       buffer,
       nv.meshes[0],

@@ -15,5 +15,6 @@ export default defineConfig({
   // TODO: remove this once testing setup doesn't rely on one single JS file
   noExternal: [/(.*)/],
   dts: true,
-  metafile: true
+  metafile: true,
+  platform: 'browser'
 })
