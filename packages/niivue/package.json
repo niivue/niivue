@@ -66,8 +66,7 @@
     "@ungap/structured-clone": "^1.2.0",
     "array-equal": "^1.0.2",
     "gl-matrix": "^3.4.3",
-    "nifti-reader-js": "^0.8.0",
-    "rxjs": "^7.8.1"
+    "nifti-reader-js": "^0.8.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.2",
