@@ -15,7 +15,17 @@
       >
     </noscript>
     <header>
-      <label for="timelineCheck">Timeline</label>
+      <label for="interpCheck">Smooth</label>
+      <input type="checkbox" id="interpCheck" checked />
+      <label for="dpiSelect">Resolution</label>
+      <select id="dpiSelect">
+        <option value="1" selected>Enable High DPI (best)</option>
+        <option value="0">Disable High DPI</option>
+        <option value="0.7">DPR = 0.7</option>
+        <option value="0.5">DPR = 0.5</option>
+        <option value="0.3">DPR = 0.3 (worst)</option>
+      </select>
+      <label for="timelineCheck">&nbsp; Timeline</label>
       <input type="checkbox" id="timelineCheck" unchecked />
       <label for="padSlider">Padding</label>
       <input
@@ -56,6 +66,19 @@
 </html>
 <script type="module" async>
   import * as niivue from "../dist/index.js"
+  interpCheck.onchange = function () {
+    nv1.setInterpolation(!this.checked)
+  }
+  dpiSelect.onchange = function () {
+    let dpr = Number(this.value)
+    if (dpr === 0) {
+      nv1.setHighResolutionCapable(false, 0)
+    } else if (dpr === 1) {
+      nv1.setHighResolutionCapable(true, 0)
+    } else {
+      nv1.setHighResolutionCapable(true, dpr)
+    }
+  }
   padSlider.oninput = function () {
     nv1.setMultiplanarPadPixels(this.value)
   }

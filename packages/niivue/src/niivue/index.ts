@@ -1152,6 +1152,9 @@ export class Niivue {
         this.opts.isHighResolutionCapable = false
       }
       this.uiData.dpr = 1
+      if (this.opts.forceDevicePixelRatio > 0) {
+        this.uiData.dpr = this.opts.forceDevicePixelRatio
+      }
       this.drawScene()
       return
     }
@@ -1167,6 +1170,9 @@ export class Niivue {
     } else {
       this.uiData.dpr = 1
     }
+    if (this.opts.forceDevicePixelRatio > 0) {
+      this.uiData.dpr = this.opts.forceDevicePixelRatio
+    }
     if ('width' in this.canvas.parentElement!) {
       this.canvas.width = (this.canvas.parentElement.width as number) * this.uiData.dpr
       // @ts-expect-error not sure why height is not defined for HTMLElement
@@ -1175,6 +1181,7 @@ export class Niivue {
       this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr
       this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr
     }
+    log.debug(`canvas width ${this.canvas.width} height ${this.canvas.height} dpr ${this.uiData.dpr}`)
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     this.drawScene()
   }
@@ -2674,10 +2681,11 @@ export class Niivue {
   /**
    * Force WebGL canvas to use high resolution display, regardless of browser defaults.
    * @param isHighResolutionCapable - allow high-DPI display
+   * @param forceDevicePixelRatio - use non-native scaling ratio
    * @example niivue.setHighResolutionCapable(true);
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
    */
-  setHighResolutionCapable(isHighResolutionCapable: boolean): void {
+  setHighResolutionCapable(isHighResolutionCapable: boolean, forceDevicePixelRatio: number = 0): void {
     this.opts.isHighResolutionCapable = isHighResolutionCapable
     if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
       log.warn('isHighResolutionCapable requires isResizeCanvas')
@@ -2686,6 +2694,7 @@ export class Niivue {
     if (!this.opts.isHighResolutionCapable) {
       this.uiData.dpr = 1
     }
+    this.opts.forceDevicePixelRatio = forceDevicePixelRatio
     this.resizeListener() // test isHighResolutionCapable
     this.drawScene()
   }
