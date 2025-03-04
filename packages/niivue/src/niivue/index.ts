@@ -362,7 +362,6 @@ export class Niivue {
   volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
   gradientTexture: WebGLTexture | null = null // 3D texture for volume rendering lighting
   gradientTextureAmount = 0.0
-  renderGradientValues = false // Render gradient values otherwise used for rendering the volume
   drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -3873,44 +3872,34 @@ export class Niivue {
 
   /**
    * set proportion of volume rendering influenced by selected matcap.
-   * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
+   * @param gradientAmount - amount of matcap (NaN or 0..1), default 0 (matte, surface normal does not influence color). NaN renders the gradients.
    * @example
    * niivue.setVolumeRenderIllumination(0.6);
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
+   * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
    */
   async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
     this.renderShader = this.renderVolumeShader
-    if (gradientAmount > 0.0) {
-      if (this.renderGradientValues) {
-        this.renderShader = this.renderGradientValuesShader
-      } else {
-        this.renderShader = this.renderGradientShader
-      }
-    }
-    if (gradientAmount < 0.0) {
+    if (Number.isNaN(gradientAmount)) {
+      this.renderShader = this.renderGradientValuesShader
+    } else if (gradientAmount > 0.0) {
+      this.renderShader = this.renderGradientShader
+    } else if (gradientAmount < 0.0) {
       this.renderShader = this.renderSliceShader
     }
     this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
-    this.gradientTextureAmount = gradientAmount
+    if (Number.isNaN(gradientAmount)) {
+      this.gradientTextureAmount = 1.0
+    } else {
+      this.gradientTextureAmount = gradientAmount
+    }
     if (this.volumes.length < 1) {
       return
     } // issue1158
     this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
-  }
-
-  /**
-   * set whether to render the gradient values used by the volume renderer
-   * @param renderGradientValues - render gradient values instead of intensity, default false
-   * @example
-   * niivue.setRenderGradientValues(true);
-   * @see {@link https://niivue.github.io/niivue/features/gradient.html | live demo usage}
-   */
-  async setRenderGradientValues(renderGradientValues: boolean): Promise<void> {
-    this.renderGradientValues = renderGradientValues
-    return this.setVolumeRenderIllumination(this.gradientTextureAmount)
   }
 
   // not included in public docs.
