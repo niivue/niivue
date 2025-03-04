@@ -119,7 +119,7 @@
       NVMesh,
       NVMeshLoaders,
       SHOW_RENDER
-    } from "../dist/niivue/index.js";
+    } from "../../dist/index.js";
   function handleIntensityChange(data) {
     document.getElementById("intensity").innerHTML = data.string
   }
@@ -134,8 +134,8 @@
   }
   const volumeList1 = [
     {
-      url: "../demos/images/shear.nii.gz",
-      // url: "../demos/images/otsu.nii.gz",
+      url: "../images/shear.nii.gz",
+      // url: "../images/otsu.nii.gz",
       colormap: "gray",
       opacity: 1,
       visible: true,
@@ -226,7 +226,7 @@
   matCaps.onchange = function () {
     const matCapName = document.getElementById("matCaps").value
     renderers.forEach((nv) => {
-      nv.loadMatCapTexture("../demos/matcaps/" + matCapName + ".jpg")
+      nv.loadMatCapTexture("../matcaps/" + matCapName + ".jpg")
     })
   }
 
