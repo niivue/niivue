@@ -6142,10 +6142,7 @@ export class Niivue {
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
-    const tempTex3D =
-      this.opts.gradientOrder === 2
-        ? this.rgba16Tex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
-        : this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
+    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
     const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
 
