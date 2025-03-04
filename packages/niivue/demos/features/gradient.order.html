@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Gradients</title>
+    <title>Gradient Order</title>
     <style>
       html {
         height: auto;
@@ -63,6 +63,15 @@
       <section>
         <label id="images"></label>
       </section>
+      <label for="matCaps">Choose a MatCap:</label>
+      <select id="matCaps">
+        <option value="Shiny">Shiny</option>
+        <option value="Cortex">Cortex</option>
+        <option value="Cream">Cream</option>
+        <option value="Fuzzy">Fuzzy</option>
+        <option value="Peach">Peach</option>
+        <option value="Plastic" selected>Plastic</option>
+      </select>
     </header>
     <main id="container">
       <div class='page-wrapper'>
@@ -99,27 +108,41 @@
         <option value="640" selected>512</option>
         <option value="768">768</option>
       </select>
-
-      <label id="colormaps"></label>
+      <footer id="intensity">&nbsp;</footer>
     </footer>
   </body>
 </html>
 <script type="module">
-  import * as niivue from "../dist/index.js";
-
-  const backColor = [0.7, 0.7, 0.9, 1];
-  const clipPlane = [0.35, 270, 0];
-  const illumination = 0.8;
-  
+    import {
+      Niivue,
+      NVImage,
+      NVMesh,
+      NVMeshLoaders,
+      SHOW_RENDER
+    } from "./niivue/index.ts";
+  function handleIntensityChange(data) {
+    document.getElementById("intensity").innerHTML = data.string
+  }
+  const clipPlane = [0.35, 290, 0];
+  const illumination = 1.0;
+  let defaults = {
+    backColor: [0.5, 0.5, 1, 1],
+    show3Dcrosshair: true,
+    loglevel: 'debug',
+    isRuler: true,
+    onLocationChange: handleIntensityChange,
+  }
   const volumeList1 = [
     {
-      url: "../images/mni152.nii.gz",
+      url: "../demos/images/shear.nii.gz",
+      // url: "../demos/images/otsu.nii.gz",
       colormap: "gray",
       opacity: 1,
       visible: true,
     },
   ];
-  const nv1 = new niivue.Niivue({ backColor });
+  // Upper-left, render, gradient order 1
+  const nv1 = new Niivue(defaults);
   nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
   nv1.opts.isColorbar = true;
@@ -127,34 +150,43 @@
   nv1.setClipPlane(clipPlane);
   nv1.setVolumeRenderIllumination(illumination);
 
-  const nv2 = new niivue.Niivue({ backColor });
+  // Upper-left, render, gradient order 2
+  const nv2 = new Niivue(defaults);
   nv2.attachTo("gl2");
   nv2.loadVolumes(volumeList1);
   nv2.opts.isColorbar = true;
+  nv2.opts.gradientOrder = 2;
   nv2.setSliceType(nv2.sliceTypeRender);
   nv2.setClipPlane(clipPlane);
   nv2.setVolumeRenderIllumination(illumination);
 
-  const nv3 = new niivue.Niivue({ backColor });
+  // Lower-left, gradients, gradient order 1
+  const nv3 = new Niivue(defaults);
   nv3.attachTo("gl3");
   nv3.loadVolumes(volumeList1);
   nv3.opts.isColorbar = true;
   nv3.setSliceType(nv3.sliceTypeRender);
   nv3.setClipPlane(clipPlane);
   nv3.setVolumeRenderIllumination(illumination);
+  nv3.setRenderGradientValues(true);
 
-  const nv4 = new niivue.Niivue({ backColor });
+  // Lower-right, gradients, gradient order 2
+  const nv4 = new Niivue(defaults);
   nv4.attachTo("gl4");
   nv4.loadVolumes(volumeList1);
   nv4.opts.isColorbar = true;
+  nv4.opts.gradientOrder = 2;
   nv4.setSliceType(nv4.sliceTypeRender);
   nv4.setClipPlane(clipPlane);
   nv4.setVolumeRenderIllumination(illumination);
+  nv4.setRenderGradientValues(true);
 
-  nv1.broadcastTo([nv2, nv3, nv4], { "3d": true });
-  nv2.broadcastTo([nv1, nv3, nv4], { "3d": true });
-  nv3.broadcastTo([nv1, nv2, nv4], { "3d": true });
-  nv4.broadcastTo([nv1, nv2, nv3], { "3d": true });
+  const renderers = [nv1, nv2, nv3, nv4]
+
+  nv1.broadcastTo([nv2, nv3, nv4], { "3d": true, clipPlane: true });
+  nv2.broadcastTo([nv1, nv3, nv4], { "3d": true, clipPlane: true });
+  nv3.broadcastTo([nv1, nv2, nv4], { "3d": true, clipPlane: true });
+  nv4.broadcastTo([nv1, nv2, nv3], { "3d": true, clipPlane: true });
 
   let imgs = [
     "chris_MRA",
@@ -184,7 +216,8 @@
       let img = root + imgs[i] + ".nii.gz";
       console.log("Loading: " + img);
       volumeList1[0].url = img;
-      [nv1, nv2, nv3, nv4].forEach((nv) => {
+      renderers.forEach((nv) => {
+        nv.removeVolume(nv.volumes[0]);
         nv.loadVolumes(volumeList1);
         nv.updateGLVolume();
       });
@@ -192,14 +225,20 @@
     imgEl.appendChild(btn);
   }
 
+  matCaps.onchange = function () {
+    const matCapName = document.getElementById("matCaps").value
+    renderers.forEach((nv) => {
+      nv.loadMatCapTexture("../demos/matcaps/" + matCapName + ".jpg")
+    })
+  }
+
   canvasHeight.onchange = function () {
     gl1.height = this.value;
     gl2.height = this.value;
     gl3.height = this.value;
     gl4.height = this.value;
-    nv1.resizeListener();
-    nv2.resizeListener();
-    nv3.resizeListener();
-    nv4.resizeListener();
+    renderers.forEach((nv) => {
+      nv.resizeListener();
+    })
   }
 </script>
