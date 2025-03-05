@@ -1,5 +1,6 @@
 // import * as nifti from 'nifti-reader-js'
 import { NIFTI1, NIFTI2, NIFTIEXTENSION, isCompressed, decompressAsync, readImage, readHeader } from 'nifti-reader-js'
+import * as zarr from 'zarrita'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
@@ -504,7 +505,8 @@ export class NVImage {
     cal_maxNeg = NaN,
     colorbarVisible = true,
     colormapLabel: LUT | null = null,
-    colormapType = 0
+    colormapType = 0,
+    zarrData = null
   ): Promise<NVImage> {
     const newImg = new NVImage()
     const re = /(?:\.([^.]+))?$/
@@ -560,6 +562,9 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.BMP:
         imgRaw = await newImg.readBMP(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.ZARR:
+        imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
         break
       case NVIMAGE_TYPE.NII:
         newImg.hdr = readHeader(dataBuffer as ArrayBuffer)
@@ -1190,6 +1195,26 @@ export class NVImage {
     hdr.numBitsPerVoxel = 8
     hdr.datatypeCode = NiiDataType.DT_RGBA32
     return new Uint8Array(data)
+  }
+
+  async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
+    const { width, height, data } = zarrData
+    // data.fill(255, 0, Math.floor(data.length / 2))
+    // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
+    this.hdr = new NIFTI1()
+    const hdr = this.hdr
+    hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+    hdr.affine = [
+      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [0, 0, 0, 1]
+    ]
+    hdr.numBitsPerVoxel = 8
+    hdr.datatypeCode = NiiDataType.DT_RGBA32
+    return new Uint8Array(data)
+    // return data
   }
 
   // not included in public docs
@@ -3244,6 +3269,7 @@ export class NVImage {
 
     let nvimage = null
     let dataBuffer = null
+    let zarrData: null | unknown = null
 
     // Handle input buffer types
     if (url instanceof Uint8Array) {
@@ -3352,6 +3378,42 @@ export class NVImage {
         dataBuffer = null
       }
     }
+    const re = /(?:\.([^.]+))?$/
+    let ext = ''
+    // if zarr
+    ext = re.exec(url)[1]
+    // try url and name attributes to test for .zarr
+    if (ext === 'zarr' || re.exec(name)[1] === 'zarr') {
+      const store = new zarr.FetchStore(url)
+      const arr = await zarr.open(store, { kind: 'array' })
+      console.log(arr)
+      // uncomment to get just a single chunk
+      // const view = await arr.getChunk([0, 0, 0])
+
+      // or get an entire image channel (red in this case since the index is zero)
+      const view = await zarr.get(arr, [null, null, 0])
+
+      dataBuffer = view.data
+      const [width, height] = view.shape
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      const img = ctx.createImageData(width, height)
+      for (let i = 0; i < dataBuffer.length; i++) {
+        const pixelStart = i * 4
+        img.data[pixelStart] = dataBuffer[i] // Red
+        img.data[pixelStart + 1] = dataBuffer[i] // Green
+        img.data[pixelStart + 2] = dataBuffer[i] // Blue
+        img.data[pixelStart + 3] = 255 // Alpha (fully opaque)
+      }
+      ctx.putImageData(img, 0, 0)
+      zarrData = {
+        data: ctx.getImageData(0, 0, width, height).data,
+        width,
+        height
+      }
+    }
 
     // Handle non-limited cases
     if (!dataBuffer) {
@@ -3392,8 +3454,6 @@ export class NVImage {
     }
 
     // Resolve paired image URL if necessary
-    const re = /(?:\.([^.]+))?$/
-    let ext = ''
     if (name === '') {
       ext = re.exec(url)![1]
     } else {
@@ -3475,7 +3535,13 @@ export class NVImage {
       useQFormNotSForm,
       colormapNegative,
       frame4D,
-      imageType
+      imageType,
+      NaN,
+      NaN,
+      true,
+      null,
+      0,
+      zarrData
     )
     nvimage.url = url
     nvimage.colorbarVisible = colorbarVisible

@@ -133,7 +133,13 @@
         let st = parseInt(document.getElementById('sliceType').value)
         nv1.setSliceType(st)
       }
-      var volumeList1 = [{ url: '../demos/images/mni152.nii.gz' }]
+      // var volumeList1 = [{ url: 'http://localhost:5173/zarr.zarr' }]
+      var volumeList1 = [
+        {
+          url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
+          name: 'example.zarr'
+        }
+      ]
 
       // with roiSelect, show the stats from the ROI in a temporary div
       const onDragRelease = (data) => {
@@ -209,13 +215,13 @@
       nv1.opts.yoke3Dto2DZoom = true
       await nv1.loadVolumes(volumeList1)
       var layerList = [{ url: '../demos/images/mni152.SLF1_R.tsf' }]
-      await nv1.loadMeshes([{ url: '../demos/images/tract.SLF1_R.tck', layers: layerList }])
-      nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', 'DPV0')
-      nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', 0)
-      nv1.setMeshProperty(nv1.meshes[0].id, 'fiberRadius', 0.5)
-      nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [0, 255, 255, 255]) //color for fixed
-      nv1.setMeshShader(nv1.meshes[0].id, 'diffuse')
-      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
+      // await nv1.loadMeshes([{ url: '../demos/images/tract.SLF1_R.tck', layers: layerList }])
+      // nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', 'DPV0')
+      // nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', 0)
+      // nv1.setMeshProperty(nv1.meshes[0].id, 'fiberRadius', 0.5)
+      // nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [0, 255, 255, 255]) //color for fixed
+      // nv1.setMeshShader(nv1.meshes[0].id, 'diffuse')
+      // console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
       nv1.setSelectionBoxColor([0, 1, 0, 0.5])
       nv1.setClipPlane([0.2, 0, 120])
       let cmaps = nv1.meshShaderNames()
