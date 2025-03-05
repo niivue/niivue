@@ -467,6 +467,7 @@ uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
+uniform float gradientOpacity;
 in vec3 vColor;
 out vec4 fColor;
 `
@@ -478,6 +479,7 @@ export const fragRenderGradientShader =
 	float startPos = samplePos.a;
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
+	float gradientOpacityModulation = 1.0;
 	//vec4 prevGrad = vec4(0.0);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
@@ -497,6 +499,9 @@ export const fragRenderGradientShader =
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			if (gradientOpacity > 0.0)
+				gradientOpacityModulation = pow(grad.a, gradientOpacity*8.0);
+			colorSample.a *= gradientOpacityModulation;
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 			if ( colAcc.a > earlyTermination )
@@ -1891,6 +1896,12 @@ void main(void) {
  FragColor = 0.0357*blurred;
 }`
 
+// -18.988706873717717 = log2(1/(255**2*8)) // 8 is chosen for contrast
+// 1.922337562475971e-06 = 1/(255**2*8)
+const kGradientMagnitude = `
+  gradientSample.a = log2(gradientSample.r*gradientSample.r + gradientSample.g*gradientSample.g + gradientSample.b*gradientSample.b + 1.922337562475971e-06) + 18.988706873717717;
+`
+
 export const sobelFirstOrderFragShader = `#version 300 es
 #line 323
 precision highp int;
@@ -1917,7 +1928,9 @@ void main(void) {
   gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
   gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
   gradientSample.b = TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
-  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+${kGradientMagnitude}
+	// 0.04242020977371934 = 1/(log2(3*8) - log2(1/(255**2*8))) // 3*8 -> max for 1st order gradient
+	gradientSample.a *= 0.04242020977371934;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb = (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
@@ -1958,7 +1971,8 @@ void main(void) {
   gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
   gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
   gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
-  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+${kGradientMagnitude}
+	gradientSample.a *= 0.0325;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
