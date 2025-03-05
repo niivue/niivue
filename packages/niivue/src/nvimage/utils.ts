@@ -68,7 +68,8 @@ export enum ImageType {
   DCM_FOLDER = 16,
   SRC = 17,
   FIB = 18,
-  BMP = 19
+  BMP = 19,
+  ZARR = 20
 }
 
 export const NVIMAGE_TYPE = Object.freeze({
@@ -134,6 +135,9 @@ export const NVIMAGE_TYPE = Object.freeze({
       case 'JPG':
       case 'JPEG':
         imageType = ImageType.BMP
+        break
+      case 'ZARR':
+        imageType = ImageType.ZARR
         break
     }
     return imageType
