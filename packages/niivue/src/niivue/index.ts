@@ -119,7 +119,6 @@ import {
   unpackFloatFromVec4i
 } from './utils.js'
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
-export { NVController } from '../nvcontroller.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
 export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
