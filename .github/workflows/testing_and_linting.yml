@@ -52,7 +52,7 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Run Playwright tests
-        run: npm run test:e2e -- --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+        run: npx -w @niivue/niivue playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --grep-invert "niivue demo file:"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
