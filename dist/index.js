@@ -15751,7 +15751,11 @@ var NVMeshLoaders = class _NVMeshLoaders {
       return;
     }
     if (ext === "MZ3") {
-      layer.values = await _NVMeshLoaders.readMZ3(buffer, n_vert);
+      const obj = await _NVMeshLoaders.readMZ3(buffer, n_vert);
+      layer.values = obj.scalars;
+      if ("colormapLabel" in obj) {
+        layer.colormapLabel = obj.colormapLabel;
+      }
     } else if (ext === "ANNOT") {
       if (!isReadColortables) {
         layer.values = _NVMeshLoaders.readANNOT(buffer, n_vert);
@@ -16565,7 +16569,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       }
     }
     let scalars = new Float32Array();
-    if (!isRGBA && isSCALAR && NSCALAR > 0) {
+    if ((!isRGBA || n_vert > 0) && isSCALAR && NSCALAR > 0) {
       if (isDOUBLE) {
         const flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert);
         scalars = Float32Array.from(flt64);
@@ -16574,8 +16578,36 @@ var NVMeshLoaders = class _NVMeshLoaders {
       }
       filepos += bytesPerScalar * NSCALAR * nvert;
     }
+    if (n_vert > 0 && isRGBA && isSCALAR) {
+      let mx = scalars[0];
+      for (let i = 0; i < nvert; i++) {
+        mx = Math.max(mx, scalars[i]);
+      }
+      const Labels = { R: [], G: [], B: [], A: [], I: [], labels: [] };
+      for (let i = 0; i <= mx; i++) {
+        for (let v = 0; v < nvert; v++) {
+          if (i === scalars[v]) {
+            const v3 = v * 3;
+            Labels.I.push(i);
+            Labels.R.push(colors[v3] * 255);
+            Labels.G.push(colors[v3 + 1] * 255);
+            Labels.B.push(colors[v3 + 2] * 255);
+            Labels.A.push(255);
+            Labels.labels.push(`${i}`);
+            break;
+          }
+        }
+      }
+      const colormapLabel = cmapper.makeLabelLut(Labels);
+      return {
+        scalars,
+        colormapLabel
+      };
+    }
     if (n_vert > 0) {
-      return scalars;
+      return {
+        scalars
+      };
     }
     return {
       positions,
@@ -20195,6 +20227,73 @@ async function decompressAsync(data) {
   await closePromise;
   return result;
 }
+async function decompressHeaderAsync(data, minOutputBytes = Infinity) {
+  const detectFormat = (data2) => {
+    if (data2[0] === 31 && data2[1] === 139 && data2[2] === 8)
+      return "gzip";
+    if (data2[0] === 120 && [1, 94, 156, 218].includes(data2[1]))
+      return "deflate";
+    return "deflate-raw";
+  };
+  const uint8Data = new Uint8Array(data);
+  const format = detectFormat(uint8Data);
+  const stream = new DecompressionStream(format);
+  const limitStream = new TransformStream({
+    transform(chunk, controller) {
+      controller.enqueue(chunk);
+    },
+    flush(controller) {
+      controller.terminate();
+    }
+  });
+  const { readable, writable } = stream;
+  const writer = writable.getWriter();
+  const limitedReader = readable.pipeThrough(limitStream).getReader();
+  writer.write(uint8Data).catch((err2) => {
+    if (!(err2 instanceof Error && err2.name === "AbortError")) {
+      console.error("Error during write:", err2);
+    }
+  });
+  const chunks = [];
+  let totalBytes = 0;
+  try {
+    while (totalBytes < minOutputBytes) {
+      const { done, value } = await limitedReader.read();
+      if (done)
+        break;
+      const remainingSpace = minOutputBytes - totalBytes;
+      const chunk = value.subarray(0, Math.min(value.length, remainingSpace));
+      chunks.push(chunk);
+      totalBytes += chunk.length;
+      if (totalBytes >= minOutputBytes) {
+        await Promise.all([
+          limitedReader.cancel().catch(() => {
+          }),
+          writer.abort().catch(() => {
+          })
+        ]);
+        break;
+      }
+    }
+  } catch (err2) {
+    if (!(err2 instanceof Error && err2.name === "AbortError")) {
+      console.error("Error during decompression:", err2);
+    }
+  } finally {
+    await Promise.allSettled([
+      limitedReader.cancel().catch(() => {
+      }),
+      writer.close().catch(() => {
+      })
+    ]);
+  }
+  return chunks.length === 1 ? chunks[0].buffer : chunks.reduce((acc, chunk) => {
+    const combined = new Uint8Array(acc.byteLength + chunk.byteLength);
+    combined.set(new Uint8Array(acc), 0);
+    combined.set(chunk, acc.byteLength);
+    return combined.buffer;
+  }, new ArrayBuffer(0));
+}
 function readHeader(data, isHdrImgPairOK = false) {
   let header = null;
   if (isCompressed(data)) {
@@ -20210,6 +20309,43 @@ function readHeader(data, isHdrImgPairOK = false) {
   } else {
     throw new Error("That file does not appear to be NIFTI!");
   }
+  return header;
+}
+async function readHeaderAsync(data, isHdrImgPairOK = false) {
+  if (!isCompressed(data)) {
+    return readHeader(data, isHdrImgPairOK);
+  }
+  let header = null;
+  let dat = await decompressHeaderAsync(data, 540);
+  let isLitteEndian = true;
+  let isVers1 = true;
+  var rawData = new DataView(dat);
+  const sigLittle = rawData.getInt32(0, true);
+  const sigBig = rawData.getInt32(0, false);
+  if (sigLittle === 348) {
+  } else if (sigBig === 348) {
+    isLitteEndian = false;
+  } else if (sigLittle === 540) {
+    isVers1 = false;
+  } else if (sigBig === 540) {
+    isVers1 = false;
+    isLitteEndian = false;
+  } else {
+    throw new Error("That file does not appear to be NIFTI!");
+  }
+  let vox_offset = Math.round(rawData.getFloat32(108, isLitteEndian));
+  if (NIFTI2) {
+    vox_offset = Utils.getUint64At(rawData, 168, isLitteEndian);
+  }
+  if (vox_offset > dat.byteLength) {
+    dat = await decompressHeaderAsync(data, vox_offset);
+  }
+  if (isVers1) {
+    header = new NIFTI1();
+  } else {
+    header = new NIFTI2();
+  }
+  header.readHeader(dat);
   return header;
 }
 function readImage(header, data) {
@@ -20990,7 +21126,10 @@ var NVImage = class _NVImage {
         imgRaw = await newImg.readBMP(dataBuffer);
         break;
       case NVIMAGE_TYPE.NII:
-        newImg.hdr = readHeader(dataBuffer);
+        if (isCompressed(dataBuffer)) {
+          dataBuffer = await decompressAsync(dataBuffer);
+        }
+        newImg.hdr = await readHeaderAsync(dataBuffer);
         if (newImg.hdr !== null) {
           if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
             newImg.hdr.cal_max = 0;
@@ -22904,7 +23043,7 @@ var NVImage = class _NVImage {
   }
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
-  hdr2RAS(nVolumes = 1) {
+  async hdr2RAS(nVolumes = 1) {
     if (!this.permRAS) {
       throw new Error("permRAS undefined");
     }
@@ -22912,7 +23051,7 @@ var NVImage = class _NVImage {
       throw new Error("hdr undefined");
     }
     const hdrBytes = hdrToArrayBuffer({ ...this.hdr, vox_offset: 352 }, false);
-    const hdr = readHeader(hdrBytes.buffer, true);
+    const hdr = await readHeaderAsync(hdrBytes.buffer, true);
     if (nVolumes === 1) {
       hdr.dims[0] = 3;
       hdr.dims[4] = 1;
@@ -23485,7 +23624,7 @@ var NVImage = class _NVImage {
           reader.releaseLock();
           return null;
         }
-        const hdr = readHeader(headerBuffer.buffer);
+        const hdr = await readHeaderAsync(headerBuffer.buffer);
         if (!hdr) {
           throw new Error("Could not read NIfTI header");
         }
@@ -23709,7 +23848,7 @@ var NVImage = class _NVImage {
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file);
           } else {
-            const hdr = readHeader(headerBuffer);
+            const hdr = await readHeaderAsync(headerBuffer);
             if (!hdr) {
               throw new Error("could not read nifti header");
             }
@@ -26292,7 +26431,7 @@ var NVMesh3 = class _NVMesh {
       obj = await NVMeshLoaders.readGII(buffer);
     } else if (ext === "MZ3") {
       obj = await NVMeshLoaders.readMZ3(buffer);
-      if (obj instanceof Float32Array || obj.positions === null) {
+      if (!("positions" in obj)) {
         log.warn("MZ3 does not have positions (statistical overlay?)");
       }
     } else if (ext === "ASC") {
@@ -26348,7 +26487,7 @@ var NVMesh3 = class _NVMesh {
     if (obj instanceof Float32Array) {
       throw new Error("fatal: unknown mesh type loaded");
     }
-    if (!obj.positions) {
+    if (!("positions" in obj)) {
       throw new Error("positions not loaded");
     }
     if (!obj.indices) {

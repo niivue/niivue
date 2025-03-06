@@ -408,7 +408,7 @@ declare class NVImage {
     readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     calculateRAS(): void;
-    hdr2RAS(nVolumes?: number): NIFTI1 | NIFTI2;
+    hdr2RAS(nVolumes?: number): Promise<NIFTI1 | NIFTI2>;
     img2RAS(nVolume?: number): TypedVoxelArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     mm2vox(mm: number[], frac?: boolean): Float32Array | vec3;
@@ -1093,11 +1093,16 @@ type ANNOT = Uint32Array | {
     scalars: Float32Array;
     colormapLabel: LUT;
 };
-type MZ3 = Float32Array | {
+type MZ3 = {
     positions: Float32Array | null;
     indices: Uint32Array | null;
     scalars: Float32Array;
     colors: Float32Array | null;
+} | {
+    scalars: Float32Array;
+    colormapLabel: LUT;
+} | {
+    scalars: Float32Array;
 };
 type GII = {
     scalars: Float32Array;
