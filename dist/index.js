@@ -2752,7 +2752,7 @@ var forEach3 = function() {
 }();
 
 // package.json
-var version = "0.50.0";
+var version = "0.51.0";
 
 // src/logger.ts
 var _Log = class _Log {
@@ -18414,6 +18414,12 @@ var deserializer = ($, _) => {
         return as(BigInt(value), index);
       case "BigInt":
         return as(Object(BigInt(value)), index);
+      case "ArrayBuffer":
+        return as(new Uint8Array(value).buffer, value);
+      case "DataView": {
+        const { buffer } = new Uint8Array(value);
+        return as(new DataView(buffer), value);
+      }
     }
     return as(new env[type](value), index);
   };
@@ -18443,6 +18449,8 @@ var typeOf = (value) => {
       return [MAP, EMPTY];
     case "Set":
       return [SET, EMPTY];
+    case "DataView":
+      return [ARRAY, asString];
   }
   if (asString.includes("Array"))
     return [ARRAY, asString];
@@ -18481,8 +18489,15 @@ var serializer = (strict, json, $, _) => {
         return as([TYPE, entry], value);
       }
       case ARRAY: {
-        if (type)
-          return as([type, [...value]], value);
+        if (type) {
+          let spread = value;
+          if (type === "DataView") {
+            spread = new Uint8Array(value.buffer);
+          } else if (type === "ArrayBuffer") {
+            spread = new Uint8Array(value);
+          }
+          return as([type, [...spread]], value);
+        }
         const arr = [];
         const index = as([TYPE, arr], value);
         for (const entry of value)
