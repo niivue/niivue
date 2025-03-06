@@ -1,5 +1,14 @@
 // import * as nifti from 'nifti-reader-js'
-import { NIFTI1, NIFTI2, NIFTIEXTENSION, isCompressed, decompressAsync, readImage, readHeader } from 'nifti-reader-js'
+import {
+  NIFTI1,
+  NIFTI2,
+  NIFTIEXTENSION,
+  isCompressed,
+  decompressAsync,
+  readImage,
+  readHeaderAsync,
+  readHeader
+} from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
@@ -562,13 +571,13 @@ export class NVImage {
         imgRaw = await newImg.readBMP(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.NII:
-        newImg.hdr = readHeader(dataBuffer as ArrayBuffer)
+        newImg.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer)
+        console.log(newImg.hdr)
         if (newImg.hdr !== null) {
           if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
             newImg.hdr.cal_max = 0.0
           }
           if (isCompressed(dataBuffer as ArrayBuffer)) {
-            // TODO: with new NIFTI-READER-JS move to decompressSync()
             imgRaw = readImage(newImg.hdr, (await decompressAsync(dataBuffer as ArrayBuffer)) as ArrayBuffer)
           } else {
             imgRaw = readImage(newImg.hdr, dataBuffer as ArrayBuffer)
@@ -2655,7 +2664,7 @@ export class NVImage {
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
 
-  hdr2RAS(nVolumes: number = 1): NIFTI1 | NIFTI2 {
+  async hdr2RAS(nVolumes: number = 1): Promise<NIFTI1 | NIFTI2> {
     if (!this.permRAS) {
       throw new Error('permRAS undefined')
     }
@@ -2664,7 +2673,7 @@ export class NVImage {
     }
     // make a deep clone
     const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, false)
-    const hdr = readHeader(hdrBytes.buffer as ArrayBuffer, true)
+    const hdr = await readHeaderAsync(hdrBytes.buffer as ArrayBuffer, true)
     // n.b. if nVolumes < 1, input volumes = output volumess
     if (nVolumes === 1) {
       // 3D
@@ -3307,7 +3316,7 @@ export class NVImage {
           return null
         }
 
-        const hdr = readHeader(headerBuffer.buffer)
+        const hdr = await readHeaderAsync(headerBuffer.buffer)
         if (!hdr) {
           throw new Error('Could not read NIfTI header')
         }
@@ -3570,7 +3579,7 @@ export class NVImage {
           if (!isNifti1) {
             dataBuffer = await this.readFileAsync(file)
           } else {
-            const hdr = readHeader(headerBuffer)
+            const hdr = await readHeaderAsync(headerBuffer)
             if (!hdr) {
               throw new Error('could not read nifti header')
             }
