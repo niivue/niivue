@@ -1845,7 +1845,6 @@ declare class Niivue {
     mediaUrlMap: Map<NVImage | NVMesh, string>;
     initialized: boolean;
     currentDrawUndoBitmap: number;
-    loadingText: string;
     /**
      * @param options  - options object to set modifiable Niivue properties
      */

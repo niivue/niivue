@@ -24668,7 +24668,7 @@ var DEFAULT_OPTIONS = {
   isV1SliceShader: false,
   isHighResolutionCapable: true,
   logLevel: "info",
-  loadingText: "waiting for images...",
+  loadingText: "loading ...",
   isForceMouseClickToVoxelCenters: false,
   dragAndDropEnabled: true,
   drawingEnabled: false,
@@ -29489,7 +29489,6 @@ var Niivue = class {
     __publicField(this, "mediaUrlMap", /* @__PURE__ */ new Map());
     __publicField(this, "initialized", false);
     __publicField(this, "currentDrawUndoBitmap");
-    __publicField(this, "loadingText");
     for (const name in options) {
       if (typeof options[name] === "function") {
         this[name] = options[name];
@@ -29509,7 +29508,6 @@ var Niivue = class {
     if (this.opts.thumbnail.length > 0) {
       this.thumbnailVisible = true;
     }
-    this.loadingText = this.opts.loadingText;
     log.setLogLevel(this.opts.logLevel);
   }
   get scene() {
@@ -32627,7 +32625,6 @@ var Niivue = class {
    * @see {@link https://niivue.github.io/niivue/features/mask.html | live demo usage}
    */
   async loadVolumes(volumeList) {
-    this.loadingText = "loading...";
     this.drawScene();
     if (this.thumbnailVisible) {
       this.deferredVolumes = volumeList;
@@ -32718,7 +32715,6 @@ var Niivue = class {
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
   async loadMeshes(meshList) {
-    this.loadingText = "loading...";
     this.drawScene();
     if (this.thumbnailVisible) {
       this.deferredMeshes = meshList;
@@ -32805,7 +32801,6 @@ var Niivue = class {
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   loadConnectome(json) {
-    this.loadingText = "loading...";
     this.drawScene();
     this.meshes = [];
     this.gl.clearColor(0, 0, 0, 1);
@@ -33827,7 +33822,7 @@ var Niivue = class {
     this.fontShader.use(this.gl);
     await this.loadDefaultFont();
     await this.loadDefaultMatCap();
-    this.drawLoadingText(this.loadingText);
+    this.drawLoadingText(this.opts.loadingText);
   }
   // not included in public docs
   meshShaderNameToNumber(meshShaderName = "Phong") {
@@ -36616,6 +36611,9 @@ var Niivue = class {
   }
   // not included in public docs
   drawLoadingText(text) {
+    if (!text) {
+      return;
+    }
     if (!this.canvas) {
       throw new Error("canvas undefined");
     }
@@ -38840,7 +38838,7 @@ var Niivue = class {
         }
         return;
       }
-      this.drawLoadingText(this.loadingText);
+      this.drawLoadingText(this.opts.loadingText);
       return;
     }
     if (this.back === null) {
