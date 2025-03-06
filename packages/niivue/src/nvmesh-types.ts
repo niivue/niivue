@@ -76,12 +76,18 @@ export type ANNOT =
     }
 
 export type MZ3 =
-  | Float32Array
   | {
       positions: Float32Array | null
       indices: Uint32Array | null
       scalars: Float32Array
       colors: Float32Array | null
+    }
+  | {
+      scalars: Float32Array
+      colormapLabel: LUT
+    }
+  | {
+      scalars: Float32Array
     }
 
 export type GII = {

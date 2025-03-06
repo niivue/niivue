@@ -1538,7 +1538,7 @@ export class NVMesh {
       obj = await NVMeshLoaders.readGII(buffer)
     } else if (ext === 'MZ3') {
       obj = await NVMeshLoaders.readMZ3(buffer)
-      if (obj instanceof Float32Array || obj.positions === null) {
+      if (!('positions' in obj)) {
         log.warn('MZ3 does not have positions (statistical overlay?)')
       }
     } else if (ext === 'ASC') {
@@ -1593,7 +1593,7 @@ export class NVMesh {
       throw new Error('fatal: unknown mesh type loaded')
     }
 
-    if (!obj.positions) {
+    if (!('positions' in obj)) {
       throw new Error('positions not loaded')
     }
     if (!obj.indices) {
