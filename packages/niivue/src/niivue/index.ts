@@ -4389,7 +4389,7 @@ export class Niivue {
   }
 
   /**
-   * Add mesh and notify subscribers   
+   * Add mesh and notify subscribers
    */
   async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
     const ext = this.getFileExt(meshOptions.url)
@@ -4410,7 +4410,7 @@ export class Niivue {
   }
 
   /**
-   * Add mesh and notify subscribers   
+   * Add mesh and notify subscribers
    */
   async addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]> {
     const promises = meshOptions.map(async (meshItem) => {
