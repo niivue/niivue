@@ -242,7 +242,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isV1SliceShader: false,
   isHighResolutionCapable: true,
   logLevel: 'info',
-  loadingText: 'waiting for images...',
+  loadingText: 'loading ...',
   isForceMouseClickToVoxelCenters: false,
   dragAndDropEnabled: true,
   drawingEnabled: false,

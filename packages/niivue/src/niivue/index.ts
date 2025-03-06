@@ -798,7 +798,6 @@ export class Niivue {
   mediaUrlMap: Map<NVImage | NVMesh, string> = new Map()
   initialized = false
   currentDrawUndoBitmap: number
-  loadingText: string
 
   /**
    * @param options  - options object to set modifiable Niivue properties
@@ -831,7 +830,6 @@ export class Niivue {
       this.thumbnailVisible = true
     }
 
-    this.loadingText = this.opts.loadingText
     log.setLogLevel(this.opts.logLevel)
   }
 
@@ -4337,9 +4335,7 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/mask.html | live demo usage}
    */
   async loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<this> {
-    this.loadingText = 'loading...'
     this.drawScene()
-    // this.loadingText = this.opts.loadingText
 
     if (this.thumbnailVisible) {
       // defer volume loading until user clicks on canvas with thumbnail image
@@ -4467,7 +4463,6 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
   async loadMeshes(meshList: LoadFromUrlParams[]): Promise<this> {
-    this.loadingText = 'loading...'
     this.drawScene()
 
     if (this.thumbnailVisible) {
@@ -4574,7 +4569,6 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   loadConnectome(json: Connectome | LegacyConnectome): this {
-    this.loadingText = 'loading...'
     this.drawScene()
     this.meshes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
@@ -5768,7 +5762,7 @@ export class Niivue {
 
     await this.loadDefaultFont()
     await this.loadDefaultMatCap()
-    this.drawLoadingText(this.loadingText)
+    this.drawLoadingText(this.opts.loadingText)
   }
 
   // not included in public docs
@@ -9007,6 +9001,9 @@ export class Niivue {
 
   // not included in public docs
   drawLoadingText(text: string): void {
+    if (!text) {
+      return
+    }
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
@@ -11608,7 +11605,7 @@ export class Niivue {
         }
         return
       }
-      this.drawLoadingText(this.loadingText)
+      this.drawLoadingText(this.opts.loadingText)
       return
     }
     if (this.back === null) {
