@@ -6,8 +6,7 @@ import {
   isCompressed,
   decompressAsync,
   readImage,
-  readHeaderAsync,
-  readHeader
+  readHeaderAsync
 } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'

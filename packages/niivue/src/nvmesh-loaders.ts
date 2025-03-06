@@ -902,7 +902,11 @@ export class NVMeshLoaders {
       return
     }
     if (ext === 'MZ3') {
-      layer.values = (await NVMeshLoaders.readMZ3(buffer, n_vert)) as Float32Array
+      const obj = await NVMeshLoaders.readMZ3(buffer, n_vert)
+      layer.values = obj.scalars
+      if ('colormapLabel' in obj) {
+        layer.colormapLabel = obj.colormapLabel
+      }
     } else if (ext === 'ANNOT') {
       if (!isReadColortables) {
         // TODO: bogus ANNOT return type
@@ -1719,6 +1723,7 @@ export class NVMeshLoaders {
     const isVert = (attr & 2) !== 0
     const isRGBA = (attr & 4) !== 0
     let isSCALAR = (attr & 8) !== 0
+
     const isDOUBLE = (attr & 16) !== 0
     // var isAOMap = attr & 32;
     if (attr > 63) {
@@ -1785,7 +1790,7 @@ export class NVMeshLoaders {
       } // for i
     } // if isRGBA
     let scalars = new Float32Array()
-    if (!isRGBA && isSCALAR && NSCALAR > 0) {
+    if ((!isRGBA || n_vert > 0) && isSCALAR && NSCALAR > 0) {
       if (isDOUBLE) {
         const flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert)
         scalars = Float32Array.from(flt64)
@@ -1794,8 +1799,36 @@ export class NVMeshLoaders {
       }
       filepos += bytesPerScalar * NSCALAR * nvert
     }
+    if (n_vert > 0 && isRGBA && isSCALAR) {
+      let mx = scalars[0]
+      for (let i = 0; i < nvert; i++) {
+        mx = Math.max(mx, scalars[i])
+      }
+      const Labels: ColorMap = { R: [], G: [], B: [], A: [], I: [], labels: [] }
+      for (let i = 0; i <= mx; i++) {
+        for (let v = 0; v < nvert; v++) {
+          if (i === scalars[v]) {
+            const v3 = v * 3
+            Labels.I.push(i)
+            Labels.R.push(colors[v3] * 255)
+            Labels.G.push(colors[v3 + 1] * 255)
+            Labels.B.push(colors[v3 + 2] * 255)
+            Labels.A.push(255)
+            Labels.labels!.push(`${i}`)
+            break
+          }
+        }
+      } // for num_entries_to_read
+      const colormapLabel = cmapper.makeLabelLut(Labels)
+      return {
+        scalars,
+        colormapLabel
+      }
+    }
     if (n_vert > 0) {
-      return scalars
+      return {
+        scalars
+      }
     }
     return {
       positions,
