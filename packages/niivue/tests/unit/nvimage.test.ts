@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { expect, test } from 'vitest'
 import { NVImage } from '../../src/niivue/index.js' // note the js extension
 import { readFileSync } from 'node:fs'
@@ -32,4 +33,3 @@ test('nvimage clone has unique ID', async () => {
   const clone = image.clone()
   expect(clone.id).not.toBe(image.id)
 })
-

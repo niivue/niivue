@@ -6,3 +6,4 @@ niivue.umd.js
 tests
 playwright/tests-out
 playwright/e2e/*.js
+ts-build
