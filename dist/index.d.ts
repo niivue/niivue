@@ -726,6 +726,7 @@ type NVConfigOptions = {
     measureLineColor: number[];
     measureTextHeight: number;
     isAlphaClipDark: boolean;
+    gradientOrder: number;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -1575,6 +1576,7 @@ declare class Niivue {
     line3DShader?: Shader;
     passThroughShader?: Shader;
     renderGradientShader?: Shader;
+    renderGradientValuesShader?: Shader;
     renderSliceShader?: Shader;
     renderVolumeShader?: Shader;
     pickingMeshShader?: Shader;
@@ -1598,7 +1600,9 @@ declare class Niivue {
     orientShaderRGBU: Shader | null;
     surfaceShader: Shader | null;
     blurShader: Shader | null;
-    sobelShader: Shader | null;
+    sobelBlurShader: Shader | null;
+    sobelFirstOrderShader: Shader | null;
+    sobelSecondOrderShader: Shader | null;
     genericVAO: WebGLVertexArrayObject | null;
     unusedVAO: any;
     crosshairs3D: NiivueObject3D | null;
@@ -2444,10 +2448,11 @@ declare class Niivue {
     setClipVolume(low: number[], high: number[]): void;
     /**
      * set proportion of volume rendering influenced by selected matcap.
-     * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
+     * @param gradientAmount - amount of matcap (NaN or 0..1), default 0 (matte, surface normal does not influence color). NaN renders the gradients.
      * @example
      * niivue.setVolumeRenderIllumination(0.6);
      * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
+     * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
      */
     setVolumeRenderIllumination(gradientAmount?: number): Promise<void>;
     overlayRGBA(volume: NVImage): Uint8ClampedArray;
@@ -2620,6 +2625,7 @@ declare class Niivue {
     refreshDrawing(isForceRedraw?: boolean, useClickToSegmentBitmap?: boolean): void;
     r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
     rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
     requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
     loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null>;
     loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>;

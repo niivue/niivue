@@ -3295,7 +3295,7 @@ out vec4 fColor;
 		}
 	}
 ` + kRenderTail;
-var fragRenderGradientShader = `#version 300 es
+var kFragRenderGradientDecl = `#version 300 es
 #line 215
 precision highp int;
 precision highp float;
@@ -3322,7 +3322,8 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 in vec3 vColor;
 out vec4 fColor;
-` + kRenderFunc + kRenderInit + `
+`;
+var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderInit + `
 	float startPos = samplePos.a;
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
@@ -3341,6 +3342,28 @@ out vec4 fColor;
 			mc = mix(vec4(1.0), mc, gradientAmount);
 			if (samplePos.a > clipClose)
 				colorSample.rgb *= mc.rgb;
+			if (firstHit.a > lenNoClip)
+				firstHit = samplePos;
+			backNearest = min(backNearest, samplePos.a);
+			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			colorSample.rgb *= colorSample.a;
+			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+			if ( colAcc.a > earlyTermination )
+				break;
+		}
+		samplePos += deltaDir; //advance ray position
+	}
+` + kRenderTail;
+var fragRenderGradientValuesShader = kFragRenderGradientDecl + kRenderFunc + kRenderInit + `
+	float startPos = samplePos.a;
+	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
+	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
+	//vec4 prevGrad = vec4(0.0);
+	while (samplePos.a <= len) {
+		vec4 colorSample = texture(volume, samplePos.xyz);
+		if (colorSample.a >= 0.0) {
+			vec4 grad = texture(gradient, samplePos.xyz);
+			colorSample.rgb = abs(normalize(grad.rgb*2.0 - 1.0));
 			if (firstHit.a > lenNoClip)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
@@ -4585,7 +4608,58 @@ void main(void) {
  samp += texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
  FragColor = samp*0.125;
 }`;
-var sobelFragShader = `#version 300 es
+var sobelBlurFragShader = `#version 300 es
+#line 298
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float dX;
+uniform float dY;
+uniform float dZ;
+uniform highp sampler3D intensityVol;
+void main(void) {
+ vec3 vx = vec3(TexCoord.xy, coordZ);
+ vec4 XYZ = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
+ vec4 OYZ = texture(intensityVol,vx+vec3(0.0,+dY,+dZ));
+ vec4 xYZ = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
+ vec4 XOZ = texture(intensityVol,vx+vec3(+dX,0.0,+dZ));
+ vec4 OOZ = texture(intensityVol,vx+vec3(0.0,0.0,+dZ));
+ vec4 xOZ = texture(intensityVol,vx+vec3(-dX,0.0,+dZ));
+ vec4 XyZ = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
+ vec4 OyZ = texture(intensityVol,vx+vec3(0.0,-dY,+dZ));
+ vec4 xyZ = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
+
+ vec4 XYO = texture(intensityVol,vx+vec3(+dX,+dY,0.0));
+ vec4 OYO = texture(intensityVol,vx+vec3(0.0,+dY,0.0));
+ vec4 xYO = texture(intensityVol,vx+vec3(-dX,+dY,0.0));
+ vec4 XOO = texture(intensityVol,vx+vec3(+dX,0.0,0.0));
+ vec4 OOO = texture(intensityVol,vx+vec3(0.0,0.0,0.0));
+ vec4 xOO = texture(intensityVol,vx+vec3(-dX,0.0,0.0));
+ vec4 XyO = texture(intensityVol,vx+vec3(+dX,-dY,0.0));
+ vec4 OyO = texture(intensityVol,vx+vec3(0.0,-dY,0.0));
+ vec4 xyO = texture(intensityVol,vx+vec3(-dX,-dY,0.0));
+
+ vec4 XYz = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
+ vec4 OYz = texture(intensityVol,vx+vec3(0.0,+dY,-dZ));
+ vec4 xYz = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
+ vec4 XOz = texture(intensityVol,vx+vec3(+dX,0.0,-dZ));
+ vec4 OOz = texture(intensityVol,vx+vec3(0.0,0.0,-dZ));
+ vec4 xOz = texture(intensityVol,vx+vec3(-dX,0.0,-dZ));
+ vec4 Xyz = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
+ vec4 Oyz = texture(intensityVol,vx+vec3(0.0,-dY,-dZ));
+ vec4 xyz = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
+
+ vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
+ blurred.r = 2.0*(xOz.r +xOZ.r +xyO.r +xYO.r +xOO.r +XOz.r +XOZ.r +XyO.r +XYO.r +XOO.r) +xyz.r +xyZ.r +xYz.r +xYZ.r +Xyz.r +XyZ.r +XYz.r +XYZ.r;
+ blurred.g = 2.0*(Oyz.r +OyZ.r +xyO.r +XyO.r +OyO.r +OYz.r +OYZ.r +xYO.r +XYO.r +OYO.r) +xyz.r +Xyz.r +xyZ.r +XyZ.r +xYz.r +XYz.r +xYZ.r +XYZ.r;
+ blurred.b = 2.0*(Oyz.r +OYz.r +xOz.r +XOz.r +OOz.r +OyZ.r +OYZ.r +xOZ.r +XOZ.r +OOZ.r) +xyz.r +Xyz.r +xYz.r +XYz.r +xyZ.r +XyZ.r +XyZ.r +XYZ.r;
+ blurred.a = 0.32*(abs(blurred.r)+abs(blurred.g)+abs(blurred.b));
+ // 0.0357 = 1/28 to account for weights, rescale to 2**16,
+ FragColor = 0.0357*blurred;
+}`;
+var sobelFirstOrderFragShader = `#version 300 es
 #line 323
 precision highp int;
 precision highp float;
@@ -4608,9 +4682,49 @@ void main(void) {
   float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
   float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r =   BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
-  gradientSample.g =  TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
-  gradientSample.b =  TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
+  gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
+  gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
+  gradientSample.b = TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
+  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+  gradientSample.rgb = normalize(gradientSample.rgb);
+  gradientSample.rgb = (gradientSample.rgb * 0.5)+0.5;
+  FragColor = gradientSample;
+}`;
+var sobelSecondOrderFragShader = `#version 300 es
+#line 323
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float dX;
+uniform float dY;
+uniform float dZ;
+uniform float dX2;
+uniform float dY2;
+uniform float dZ2;
+uniform highp sampler3D intensityVol;
+void main(void) {
+  vec3 vx = vec3(TexCoord.xy, coordZ);
+  //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
+  vec4 TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
+  vec4 TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
+  vec4 TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
+  vec4 TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
+  vec4 BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
+  vec4 BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
+  vec4 BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
+  vec4 BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
+  vec4 T = texture(intensityVol,vx+vec3(+dX2,0.0,0.0));
+  vec4 A = texture(intensityVol,vx+vec3(0.0,+dY2,0.0));
+  vec4 R = texture(intensityVol,vx+vec3(0.0,0.0,+dZ2));
+  vec4 B = texture(intensityVol,vx+vec3(-dX2,0.0,0.0));
+  vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
+  vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
+  vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
+  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
+  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
+  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
   gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
@@ -24738,7 +24852,8 @@ var DEFAULT_OPTIONS = {
   measureLineColor: [1, 0, 0, 1],
   // red
   measureTextHeight: 0.03,
-  isAlphaClipDark: false
+  isAlphaClipDark: false,
+  gradientOrder: 1
 };
 var INITIAL_SCENE_DATA = {
   gamma: 1,
@@ -29072,7 +29187,7 @@ var Niivue = class {
     __publicField(this, "volumeTexture", null);
     // the GPU memory storage of the volume
     __publicField(this, "gradientTexture", null);
-    // 3D texture for volume rnedering lighting
+    // 3D texture for volume rendering lighting
     __publicField(this, "gradientTextureAmount", 0);
     __publicField(this, "drawTexture", null);
     // the GPU memory storage of the drawing
@@ -29111,6 +29226,7 @@ var Niivue = class {
     __publicField(this, "line3DShader");
     __publicField(this, "passThroughShader");
     __publicField(this, "renderGradientShader");
+    __publicField(this, "renderGradientValuesShader");
     __publicField(this, "renderSliceShader");
     __publicField(this, "renderVolumeShader");
     __publicField(this, "pickingMeshShader");
@@ -29136,7 +29252,9 @@ var Niivue = class {
     __publicField(this, "orientShaderRGBU", null);
     __publicField(this, "surfaceShader", null);
     __publicField(this, "blurShader", null);
-    __publicField(this, "sobelShader", null);
+    __publicField(this, "sobelBlurShader", null);
+    __publicField(this, "sobelFirstOrderShader", null);
+    __publicField(this, "sobelSecondOrderShader", null);
     __publicField(this, "genericVAO", null);
     // used for 2D slices, 2D lines, 2D Fonts
     __publicField(this, "unusedVAO", null);
@@ -32217,23 +32335,29 @@ var Niivue = class {
   }
   /**
    * set proportion of volume rendering influenced by selected matcap.
-   * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
+   * @param gradientAmount - amount of matcap (NaN or 0..1), default 0 (matte, surface normal does not influence color). NaN renders the gradients.
    * @example
    * niivue.setVolumeRenderIllumination(0.6);
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
+   * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
    */
   async setVolumeRenderIllumination(gradientAmount = 0) {
     this.renderShader = this.renderVolumeShader;
-    if (gradientAmount > 0) {
+    if (Number.isNaN(gradientAmount)) {
+      this.renderShader = this.renderGradientValuesShader;
+    } else if (gradientAmount > 0) {
       this.renderShader = this.renderGradientShader;
-    }
-    if (gradientAmount < 0) {
+    } else if (gradientAmount < 0) {
       this.renderShader = this.renderSliceShader;
     }
     this.initRenderShader(this.renderShader, gradientAmount);
     this.renderShader.use(this.gl);
     this.setClipPlaneColor(this.opts.clipPlaneColor);
-    this.gradientTextureAmount = gradientAmount;
+    if (Number.isNaN(gradientAmount)) {
+      this.gradientTextureAmount = 1;
+    } else {
+      this.gradientTextureAmount = gradientAmount;
+    }
     if (this.volumes.length < 1) {
       return;
     }
@@ -33684,6 +33808,41 @@ var Niivue = class {
     return texID;
   }
   // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) uint16 texture on GPU
+  rgba16Tex(texID, activeID, dims, isInit = false) {
+    if (texID) {
+      this.gl.deleteTexture(texID);
+    }
+    texID = this.gl.createTexture();
+    this.gl.activeTexture(activeID);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2);
+    this.gl.pixelStorei(this.gl.PACK_ALIGNMENT, 2);
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA16UI, dims[1], dims[2], dims[3]);
+    if (isInit) {
+      const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4);
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RGBA_INTEGER,
+        this.gl.UNSIGNED_SHORT,
+        img16
+      );
+    }
+    return texID;
+  }
+  // not included in public docs
   // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
   requestCORSIfNotSameOrigin(img, url) {
     if (new URL(url, window.location.href).origin !== window.location.origin) {
@@ -34037,12 +34196,18 @@ var Niivue = class {
     this.initRenderShader(this.renderGradientShader, 0.3);
     gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5);
     gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6);
+    this.renderGradientValuesShader = new Shader(gl, vertRenderShader, fragRenderGradientValuesShader);
+    this.initRenderShader(this.renderGradientValuesShader);
+    gl.uniform1i(this.renderGradientValuesShader.uniforms.matCap, 5);
+    gl.uniform1i(this.renderGradientValuesShader.uniforms.gradient, 6);
     this.renderShader = this.renderVolumeShader;
     this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader);
     this.colorbarShader.use(gl);
     gl.uniform1i(this.colorbarShader.uniforms.colormap, 1);
     this.blurShader = new Shader(gl, blurVertShader, blurFragShader);
-    this.sobelShader = new Shader(gl, blurVertShader, sobelFragShader);
+    this.sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader);
+    this.sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader);
+    this.sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader);
     this.growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader);
     this.passThroughShader = new Shader(gl, vertPassThroughShader, fragPassThroughShader);
     this.orientShaderAtlasU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas));
@@ -34095,8 +34260,8 @@ var Niivue = class {
     gl.disable(gl.CULL_FACE);
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2]);
     gl.disable(gl.BLEND);
-    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims);
-    const blurShader = this.blurShader;
+    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true);
+    const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader : this.blurShader;
     blurShader.use(gl);
     gl.activeTexture(TEXTURE0_BACK_VOL);
     gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture);
@@ -34110,10 +34275,14 @@ var Niivue = class {
       const coordZ = 1 / hdr.dims[3] * (i + 0.5);
       gl.uniform1f(blurShader.uniforms.coordZ, coordZ);
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i);
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        log.error("framebuffer status: ", status);
+      }
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3);
     }
-    const sobelShader = this.sobelShader;
+    const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader : this.sobelFirstOrderShader;
     sobelShader.use(gl);
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP);
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D);
@@ -34122,9 +34291,13 @@ var Niivue = class {
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1]);
     gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2]);
     gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3]);
+    if (this.opts.gradientOrder === 2) {
+      gl.uniform1f(sobelShader.uniforms.dX2, 2 * sobelRadius / hdr.dims[1]);
+      gl.uniform1f(sobelShader.uniforms.dY2, 2 * sobelRadius / hdr.dims[2]);
+      gl.uniform1f(sobelShader.uniforms.dZ2, 2 * sobelRadius / hdr.dims[3]);
+    }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5);
     gl.bindVertexArray(vao2);
-    gl.activeTexture(TEXTURE0_BACK_VOL);
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture);
     }
@@ -34133,6 +34306,10 @@ var Niivue = class {
       const coordZ = 1 / hdr.dims[3] * (i + 0.5);
       gl.uniform1f(sobelShader.uniforms.coordZ, coordZ);
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i);
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        log.error("framebuffer status: ", status);
+      }
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3);
     }
