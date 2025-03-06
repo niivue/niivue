@@ -570,8 +570,10 @@ export class NVImage {
         imgRaw = await newImg.readBMP(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.NII:
+        if (isCompressed(dataBuffer as ArrayBuffer)) {
+          dataBuffer = await decompressAsync(dataBuffer as ArrayBuffer)
+        }
         newImg.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer)
-        console.log(newImg.hdr)
         if (newImg.hdr !== null) {
           if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
             newImg.hdr.cal_max = 0.0

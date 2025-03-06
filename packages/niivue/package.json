@@ -29,7 +29,7 @@
     "test-playwright": "npx playwright test --grep-invert \"niivue demo file:\"",
     "test-demos": "npx playwright test playwright/e2e/test.demos.spec.ts",
     "docs": "typedoc",
-    "test:unit": "vitest --run --coverage --inspect-brk --pool threads --poolOptions.threads.singleThread",
+    "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",
     "lint": "eslint .",
