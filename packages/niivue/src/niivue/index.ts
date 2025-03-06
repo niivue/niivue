@@ -16,6 +16,7 @@ import {
   vertRenderShader,
   fragRenderShader,
   fragRenderGradientShader,
+  fragRenderGradientValuesShader,
   fragRenderSliceShader,
   vertColorbarShader,
   fragColorbarShader,
@@ -58,7 +59,9 @@ import {
   fragVolumePickingShader,
   blurVertShader,
   blurFragShader,
-  sobelFragShader
+  sobelBlurFragShader,
+  sobelFirstOrderFragShader,
+  sobelSecondOrderFragShader
 } from '../shader-srcs.js'
 import { orientCube } from '../orientCube.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
@@ -356,7 +359,7 @@ export class Niivue {
   colormapTexture: WebGLTexture | null = null // the GPU memory storage of the colormap
   colormapLists: ColormapListEntry[] = [] // one entry per colorbar: min, max, tic
   volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
-  gradientTexture: WebGLTexture | null = null // 3D texture for volume rnedering lighting
+  gradientTexture: WebGLTexture | null = null // 3D texture for volume rendering lighting
   gradientTextureAmount = 0.0
   drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
@@ -384,6 +387,7 @@ export class Niivue {
   line3DShader?: Shader
   passThroughShader?: Shader
   renderGradientShader?: Shader
+  renderGradientValuesShader?: Shader
   renderSliceShader?: Shader
   renderVolumeShader?: Shader
   pickingMeshShader?: Shader
@@ -407,7 +411,9 @@ export class Niivue {
   orientShaderRGBU: Shader | null = null
   surfaceShader: Shader | null = null
   blurShader: Shader | null = null
-  sobelShader: Shader | null = null
+  sobelBlurShader: Shader | null = null
+  sobelFirstOrderShader: Shader | null = null
+  sobelSecondOrderShader: Shader | null = null
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
   crosshairs3D: NiivueObject3D | null = null
@@ -3863,23 +3869,29 @@ export class Niivue {
 
   /**
    * set proportion of volume rendering influenced by selected matcap.
-   * @param gradientAmount - amount of matcap (0..1), default 0 (matte, surface normal does not influence color)
+   * @param gradientAmount - amount of matcap (NaN or 0..1), default 0 (matte, surface normal does not influence color). NaN renders the gradients.
    * @example
    * niivue.setVolumeRenderIllumination(0.6);
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
+   * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
    */
   async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
     this.renderShader = this.renderVolumeShader
-    if (gradientAmount > 0.0) {
+    if (Number.isNaN(gradientAmount)) {
+      this.renderShader = this.renderGradientValuesShader
+    } else if (gradientAmount > 0.0) {
       this.renderShader = this.renderGradientShader
-    }
-    if (gradientAmount < 0.0) {
+    } else if (gradientAmount < 0.0) {
       this.renderShader = this.renderSliceShader
     }
     this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
-    this.gradientTextureAmount = gradientAmount
+    if (Number.isNaN(gradientAmount)) {
+      this.gradientTextureAmount = 1.0
+    } else {
+      this.gradientTextureAmount = gradientAmount
+    }
     if (this.volumes.length < 1) {
       return
     } // issue1158
@@ -5589,6 +5601,43 @@ export class Niivue {
   }
 
   // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) uint16 texture on GPU
+  rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
+    // Not: cannot be gl.LINEAR for integer textures
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2)
+    this.gl.pixelStorei(this.gl.PACK_ALIGNMENT, 2)
+    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA16UI, dims[1], dims[2], dims[3]) // output background dimensions
+    if (isInit) {
+      const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4)
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RGBA_INTEGER,
+        this.gl.UNSIGNED_SHORT,
+        img16
+      )
+    }
+    return texID
+  }
+
+  // not included in public docs
   // remove cross origin if not from same domain. From https://webglfundamentals.org/webgl/lessons/webgl-cors-permission.html
   requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
     if (new URL(url, window.location.href).origin !== window.location.origin) {
@@ -5999,13 +6048,19 @@ export class Niivue {
     this.initRenderShader(this.renderGradientShader, 0.3)
     gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5)
     gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6)
+    this.renderGradientValuesShader = new Shader(gl, vertRenderShader, fragRenderGradientValuesShader)
+    this.initRenderShader(this.renderGradientValuesShader)
+    gl.uniform1i(this.renderGradientValuesShader.uniforms.matCap, 5)
+    gl.uniform1i(this.renderGradientValuesShader.uniforms.gradient, 6)
     this.renderShader = this.renderVolumeShader
     // colorbar shader
     this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
     this.colorbarShader.use(gl)
     gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
     this.blurShader = new Shader(gl, blurVertShader, blurFragShader)
-    this.sobelShader = new Shader(gl, blurVertShader, sobelFragShader)
+    this.sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader)
+    this.sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader)
+    this.sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader)
 
     this.growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader)
 
@@ -6069,8 +6124,8 @@ export class Niivue {
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
-    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims)
-    const blurShader = this.blurShader!
+    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
+    const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
 
     gl.activeTexture(TEXTURE0_BACK_VOL)
@@ -6085,10 +6140,15 @@ export class Niivue {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i)
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        log.error('framebuffer status: ', status)
+      }
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
-    const sobelShader = this.sobelShader!
+
+    const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
@@ -6097,9 +6157,13 @@ export class Niivue {
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
     gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2])
     gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3])
+    if (this.opts.gradientOrder === 2) {
+      gl.uniform1f(sobelShader.uniforms.dX2, (2.0 * sobelRadius) / hdr.dims[1])
+      gl.uniform1f(sobelShader.uniforms.dY2, (2.0 * sobelRadius) / hdr.dims[2])
+      gl.uniform1f(sobelShader.uniforms.dZ2, (2.0 * sobelRadius) / hdr.dims[3])
+    }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
     gl.bindVertexArray(vao2)
-    gl.activeTexture(TEXTURE0_BACK_VOL)
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture)
     }
@@ -6108,9 +6172,14 @@ export class Niivue {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(sobelShader.uniforms.coordZ, coordZ)
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i)
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        log.error('framebuffer status: ', status)
+      }
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
+
     gl.deleteFramebuffer(fb)
     gl.deleteTexture(tempTex3D)
     gl.deleteBuffer(vbo2)
