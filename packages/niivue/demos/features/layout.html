@@ -25,6 +25,14 @@
         <option value="0.5">DPR = 0.5</option>
         <option value="0.3">DPR = 0.3 (worst)</option>
       </select>
+      <label for="renderMode">Volume Render Mode</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0" selected>matte</option>
+        <option value="0.3">low</option>
+        <option value="0.6">medium</option>
+        <option value="1.0">high</option>
+      </select>
       <label for="timelineCheck">&nbsp; Timeline</label>
       <input type="checkbox" id="timelineCheck" unchecked />
       <label for="padSlider">Padding</label>
@@ -92,6 +100,9 @@
   }
   layoutSelect.onchange = function () {
     nv1.setMultiplanarLayout(Number(this.value))
+  }
+  renderMode.onchange = function () {
+    nv1.setVolumeRenderIllumination(this.value)
   }
   renderingSelect.onchange = function () {
     nv1.opts.multiplanarShowRender =  Number(this.value)
