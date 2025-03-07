@@ -361,6 +361,7 @@ export class Niivue {
   volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
   gradientTexture: WebGLTexture | null = null // 3D texture for volume rendering lighting
   gradientTextureAmount = 0.0
+  renderGradientValues = false
   drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -3876,10 +3877,11 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
    */
   async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
+    this.renderGradientValues = Number.isNaN(gradientAmount)
     this.renderShader = this.renderVolumeShader
-    if (Number.isNaN(gradientAmount)) {
+    if (this.renderGradientValues) {
       this.renderShader = this.renderGradientValuesShader
-    } else if (gradientAmount > 0.0) {
+    } else if (gradientAmount > 0.0 || this.opts.gradientOpacity > 0.0) {
       this.renderShader = this.renderGradientShader
     } else if (gradientAmount < 0.0) {
       this.renderShader = this.renderSliceShader
@@ -3896,6 +3898,27 @@ export class Niivue {
       return
     } // issue1158
     this.refreshLayers(this.volumes[0], 0)
+    this.drawScene()
+  }
+
+  /**
+   * set volume rendering opacity influence of the gradient magnitude
+   * @param gradientOpacity - amount of gradient magnitude influence on opacity (0..1), default 0 (no-influence)
+   * @example
+   * niivue.setGradientOpacity(0.6);
+   * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
+   */
+  async setGradientOpacity(gradientOpacity = 0.0): Promise<void> {
+    this.opts.gradientOpacity = gradientOpacity
+    if (this.renderGradientValues) {
+      this.renderShader = this.renderGradientValuesShader
+    } else if (this.gradientTextureAmount > 0.0 || gradientOpacity > 0.0) {
+      this.renderShader = this.renderGradientShader
+    } else if (this.gradientTextureAmount < 0.0) {
+      this.renderShader = this.renderSliceShader
+    }
+    this.initRenderShader(this.renderShader!, this.gradientTextureAmount)
+    this.renderShader!.use(this.gl)
     this.drawScene()
   }
 
@@ -5926,6 +5949,15 @@ export class Niivue {
     this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
+    const gradientOpacityLut = new Float32Array(256)
+    for (let i = 0; i < 256; i++) {
+      if (this.opts.gradientOpacity === 0.0) {
+        gradientOpacityLut[i] = 1.0
+      } else {
+        gradientOpacityLut[i] = Math.pow(i / 255.0, this.opts.gradientOpacity * 8.0)
+      }
+    }
+    this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, 'gradientOpacity'), gradientOpacityLut)
   }
 
   // not included in public docs
