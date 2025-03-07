@@ -467,7 +467,7 @@ uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
-uniform float gradientOpacity;
+uniform float gradientOpacity[256];
 in vec3 vColor;
 out vec4 fColor;
 `
@@ -479,7 +479,6 @@ export const fragRenderGradientShader =
 	float startPos = samplePos.a;
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
-	float gradientOpacityModulation = 1.0;
 	//vec4 prevGrad = vec4(0.0);
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
@@ -499,9 +498,8 @@ export const fragRenderGradientShader =
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-			if (gradientOpacity > 0.0)
-				gradientOpacityModulation = pow(grad.a, gradientOpacity*8.0);
-			colorSample.a *= gradientOpacityModulation;
+			int gradIdx = int(grad.a * 255.0);
+			colorSample.a *= gradientOpacity[gradIdx];
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 			if ( colAcc.a > earlyTermination )

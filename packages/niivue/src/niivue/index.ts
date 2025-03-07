@@ -5949,7 +5949,15 @@ export class Niivue {
     this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
-    this.gl.uniform1f(shader.uniforms.gradientOpacity, this.opts.gradientOpacity)
+    const gradientOpacityLut = new Float32Array(256)
+    for (let i = 0; i < 256; i++) {
+      if (this.opts.gradientOpacity === 0.0) {
+        gradientOpacityLut[i] = 1.0
+      } else {
+        gradientOpacityLut[i] = Math.pow(i / 255.0, this.opts.gradientOpacity * 8.0)
+      }
+    }
+    this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, 'gradientOpacity'), gradientOpacityLut)
   }
 
   // not included in public docs
