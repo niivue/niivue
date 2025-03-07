@@ -42,7 +42,7 @@ test('loadFromFile loads a valid document', async () => {
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
     isSliceMM: false,
-    isHighResolutionCapable: true,
+    forceDevicePixelRatio: 0,
     logging: false,
     loadingText: 'waiting for images...',
     dragAndDropEnabled: true,
