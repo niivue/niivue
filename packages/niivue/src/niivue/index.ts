@@ -7851,6 +7851,7 @@ export class Niivue {
     if (volume.nTotalFrame4D! <= volume.nFrame4D!) {
       return
     }
+    volume.nTotalFrame4D = volume.nFrame4D
     // only load image data: do not change other settings like contrast
     // check if volume has the property fileObject
     let v

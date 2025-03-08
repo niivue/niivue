@@ -10,6 +10,7 @@ import {
 } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
+import { Inflate } from 'pako'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { log } from '../logger.js'
@@ -3209,18 +3210,204 @@ export class NVImage {
     return dataBuffer
   }
 
-  static async fetchPartial(url: string, bytesToLoad: number, headers: Record<string, string> = {}): Promise<Response> {
-    try {
-      const response = await fetch(url, {
-        headers: { range: `bytes=0-'${bytesToLoad}`, stream: 'true', ...headers }
-      })
-      return response
-    } catch (error) {
-      log.error(error)
-      log.error('fetchPartial failed, trying again without range header')
-      const response = await fetch(url, { headers })
-      return response
+  static async readFirstNBytes(stream: ReadableStream<Uint8Array>, maxBytes: number): Promise<Uint8Array> {
+    const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader()
+    const chunks: Uint8Array[] = []
+    let bytesRead = 0
+
+    while (bytesRead < maxBytes) {
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+
+      if (value) {
+        const needed = maxBytes - bytesRead
+        if (value.length > needed) {
+          chunks.push(value.slice(0, needed))
+          bytesRead += needed
+          break
+        } else {
+          chunks.push(value)
+          bytesRead += value.length
+        }
+      }
     }
+    await reader.cancel()
+    // Combine chunks into a single Uint8Array
+    const result = new Uint8Array(bytesRead)
+    let offset = 0
+    for (const chunk of chunks) {
+      result.set(chunk, offset)
+      offset += chunk.length
+    }
+    return result
+  }
+
+  static async readFirstDecompressedBytes(stream: ReadableStream<Uint8Array>, minBytes: number): Promise<Uint8Array> {
+    const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader()
+    const inflater = new Inflate({ to: 'uint8array' }) // Ensure output is Uint8Array
+
+    const decompressedChunks: Uint8Array[] = []
+    let totalDecompressed = 0
+    let doneReading = false
+
+    let resolveFn: (value: Uint8Array) => void
+    let rejectFn: (reason?: any) => void
+
+    const promise = new Promise<Uint8Array>((resolve, reject): undefined => {
+      resolveFn = resolve
+      rejectFn = reject
+      return undefined
+    })
+
+    function finalize(): void {
+      // Combine chunks into a single Uint8Array
+      const result = new Uint8Array(totalDecompressed)
+      let offset = 0
+      for (const chunk of decompressedChunks) {
+        result.set(chunk, offset)
+        offset += chunk.length
+      }
+      resolveFn(result)
+    }
+
+    inflater.onData = (chunk: Uint8Array): void => {
+      decompressedChunks.push(chunk)
+      totalDecompressed += chunk.length
+      if (totalDecompressed >= minBytes) {
+        doneReading = true
+        reader.cancel().catch(() => {})
+        inflater.push(new Uint8Array(), true) // End decompression
+        finalize()
+      }
+    }
+    ;(async (): Promise<void> => {
+      try {
+        while (!doneReading) {
+          // Uses flag instead of checking unmodified variable
+          const { done, value } = await reader.read()
+          if (done) {
+            doneReading = true
+            finalize()
+            return
+          }
+          inflater.push(value, false) // Push data into Pako
+        }
+      } catch (err) {
+        rejectFn(err)
+      }
+    })().catch(() => {})
+
+    return promise
+  }
+  // if (!isNaN(limitFrames4D))
+
+  static async loadInitialVolumes(url = '', headers = {}, limitFrames4D = NaN): Promise<ArrayBuffer | null> {
+    if (isNaN(limitFrames4D)) {
+      return null
+    }
+    let dataBuffer = null
+    try {
+      const response = await fetch(url, { headers, cache: 'force-cache' })
+      if (!response.ok) {
+        throw new Error(response.statusText)
+      }
+      if (!response.body) {
+        throw new Error('No readable stream available')
+      }
+      const reader = response.body.getReader()
+      const { value, done } = await reader.read()
+      if (done || !value || value.length < 2) {
+        throw new Error('Not enough data to determine compression')
+      }
+      const isGz = value[0] === 0x1f && value[1] === 0x8b
+      let headerBuffer: Uint8Array = new Uint8Array(0)
+      const headerChunks = [value] // Store the first chunk already read
+      if (isGz) {
+        const response = await fetch(url, { headers, cache: 'force-cache' })
+        headerBuffer = await this.readFirstDecompressedBytes(response.body, 540)
+      } else {
+        let bytesRead = value.length
+        while (bytesRead < 540) {
+          const { value, done } = await reader.read()
+          if (done) {
+            break
+          }
+          headerChunks.push(value)
+          bytesRead += value.length
+        }
+        // Flatten `chunks` into a single Uint8Array
+        headerBuffer = new Uint8Array(Math.min(bytesRead, 540))
+        let offset = 0
+        for (const chunk of headerChunks) {
+          const sliceSize = Math.min(chunk.length, 540 - offset)
+          headerBuffer.set(chunk.subarray(0, sliceSize), offset)
+          offset += sliceSize
+          if (offset >= 540) {
+            break
+          }
+        }
+      }
+      // Check if valid NIfTI
+      const isNifti1 =
+        (headerBuffer[0] === 92 && headerBuffer[1] === 1) || (headerBuffer[1] === 92 && headerBuffer[0] === 1)
+      if (!isNifti1) {
+        reader.releaseLock()
+        return null
+      }
+      const hdr = await readHeaderAsync(headerBuffer.buffer)
+      if (!hdr) {
+        throw new Error('Could not read NIfTI header')
+      }
+      // Calculate required data size
+      const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
+      const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
+      const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
+      const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1)
+      const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel
+      // Continue reading required data
+      if (isGz && volsToLoad === nFrame4D) {
+        // read entire file: compression streams is faster than Pako
+        reader.releaseLock()
+      } else if (isGz) {
+        // partial read requires Pako
+        log.info(`reading ${volsToLoad} of ${nFrame4D} gzipped volumes`)
+        reader.releaseLock()
+        const response = await fetch(url, { headers, cache: 'force-cache' })
+        const dataBytes = await this.readFirstDecompressedBytes(response.body, bytesToLoad)
+        dataBuffer = dataBytes.buffer.slice(0, bytesToLoad)
+      } else {
+        log.info(`reading ${volsToLoad} of ${nFrame4D} volumes`)
+        const chunks = [...headerChunks]
+        let totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+        while (totalSize < bytesToLoad) {
+          const { done, value } = await reader.read()
+          if (done) {
+            break
+          }
+          chunks.push(value)
+          totalSize += value.length
+        }
+        reader.releaseLock()
+        // Combine chunks into final buffer
+        dataBuffer = new ArrayBuffer(bytesToLoad)
+        const dataView = new Uint8Array(dataBuffer)
+        let offset = 0
+        for (const chunk of chunks) {
+          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset)
+          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset)
+          offset += bytesToCopy
+          if (offset >= bytesToLoad) {
+            break
+          }
+        }
+      } // isGzip
+    } catch (error) {
+      console.error('Error loading limited frames:', error)
+      dataBuffer = null
+    }
+    return dataBuffer
   }
 
   /**
@@ -3271,98 +3458,9 @@ export class NVImage {
         url = bytes[0] === 31 && bytes[1] === 139 ? 'array.nii.gz' : 'array.nii'
       }
     }
-
-    // Handle limited frame loading for NIfTI
-    if (!isNaN(limitFrames4D)) {
-      try {
-        const response = await fetch(url, { headers })
-        if (!response.ok) {
-          throw new Error(response.statusText)
-        }
-        if (!response.body) {
-          throw new Error('No readable stream available')
-        }
-
-        // Handle potential compression automatically
-        const stream = await uncompressStream(response.body)
-
-        // Read header data (first 352 bytes minimum)
-        const reader = stream.getReader()
-        const headerChunks: Uint8Array[] = []
-        let headerBytes = 0
-
-        while (headerBytes < 352) {
-          const { done, value } = await reader.read()
-          if (done) {
-            break
-          }
-          headerChunks.push(value)
-          headerBytes += value.length
-        }
-
-        // Combine header chunks
-        const headerBuffer = new Uint8Array(headerBytes)
-        let offset = 0
-        for (const chunk of headerChunks) {
-          headerBuffer.set(chunk, offset)
-          offset += chunk.length
-        }
-
-        // Check if valid NIfTI
-        const isNifti1 =
-          (headerBuffer[0] === 92 && headerBuffer[1] === 1) || (headerBuffer[1] === 92 && headerBuffer[0] === 1)
-
-        if (!isNifti1) {
-          reader.releaseLock()
-          return null
-        }
-
-        const hdr = await readHeaderAsync(headerBuffer.buffer)
-        if (!hdr) {
-          throw new Error('Could not read NIfTI header')
-        }
-
-        // Calculate required data size
-        const nBytesPerVoxel = hdr.numBitsPerVoxel / 8
-        const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
-        const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1)
-
-        const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1)
-        const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel
-
-        // Continue reading required data
-        const chunks = [...headerChunks]
-        let totalSize = headerBytes
-
-        while (totalSize < bytesToLoad) {
-          const { done, value } = await reader.read()
-          if (done) {
-            break
-          }
-          chunks.push(value)
-          totalSize += value.length
-        }
-
-        reader.releaseLock()
-
-        // Combine chunks into final buffer
-        dataBuffer = new ArrayBuffer(bytesToLoad)
-        const dataView = new Uint8Array(dataBuffer)
-        offset = 0
-        for (const chunk of chunks) {
-          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset)
-          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset)
-          offset += bytesToCopy
-          if (offset >= bytesToLoad) {
-            break
-          }
-        }
-      } catch (error) {
-        console.error('Error loading limited frames:', error)
-        dataBuffer = null
-      }
+    if (!dataBuffer) {
+      dataBuffer = await this.loadInitialVolumes(url, headers, limitFrames4D)
     }
-
     // Handle non-limited cases
     if (!dataBuffer) {
       if (isManifest) {
@@ -3373,11 +3471,9 @@ export class NVImage {
         if (!response.ok) {
           throw Error(response.statusText)
         }
-
         if (!response.body) {
           throw new Error('No readable stream available')
         }
-
         const stream = await uncompressStream(response.body)
         const chunks: Uint8Array[] = []
         const reader = stream.getReader()
@@ -3389,7 +3485,6 @@ export class NVImage {
           }
           chunks.push(value)
         }
-
         const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
         dataBuffer = new ArrayBuffer(totalLength)
         const dataView = new Uint8Array(dataBuffer)
@@ -3400,7 +3495,6 @@ export class NVImage {
         }
       }
     }
-
     // Resolve paired image URL if necessary
     const re = /(?:\.([^.]+))?$/
     let ext = ''
