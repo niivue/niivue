@@ -3301,11 +3301,14 @@ export class NVImage {
 
     return promise
   }
-  // if (!isNaN(limitFrames4D))
 
-  static async loadInitialVolumes(url = '', headers = {}, limitFrames4D = NaN): Promise<ArrayBuffer | null> {
+  static async loadInitialVolumes(url = '', limitFrames4D = NaN): Promise<ArrayBuffer | null> {
     if (isNaN(limitFrames4D)) {
       return null
+    }
+    const headers: HeadersInit = {
+      'Accept-Encoding': 'identity', // Request GZip compression
+      Accept: 'application/octet-stream' // Expect binary data
     }
     let dataBuffer = null
     try {
@@ -3325,6 +3328,7 @@ export class NVImage {
       let headerBuffer: Uint8Array = new Uint8Array(0)
       const headerChunks = [value] // Store the first chunk already read
       if (isGz) {
+        await reader.cancel() // Stop streaming and release the lock
         const response = await fetch(url, { headers, cache: 'force-cache' })
         headerBuffer = await this.readFirstDecompressedBytes(response.body, 540)
       } else {
@@ -3459,7 +3463,7 @@ export class NVImage {
       }
     }
     if (!dataBuffer) {
-      dataBuffer = await this.loadInitialVolumes(url, headers, limitFrames4D)
+      dataBuffer = await this.loadInitialVolumes(url, limitFrames4D)
     }
     // Handle non-limited cases
     if (!dataBuffer) {
