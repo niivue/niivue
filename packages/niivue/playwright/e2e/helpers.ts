@@ -7,7 +7,7 @@ export const httpServerAddressFlexbox = 'http://localhost:8888/tests/flexbox.htm
 export const httpServerAddressDemos = 'http://localhost:8888/demos/features/'
 export const testOptions = {
   isAntiAlias: false,
-  isHighResolutionCapable: false
+  forceDevicePixelRatio: -1
 }
 
 export const seconds = (n) => 1000 * n

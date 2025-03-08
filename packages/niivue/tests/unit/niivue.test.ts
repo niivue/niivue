@@ -73,11 +73,11 @@ test('meshThicknessOn2D set by setMeshThicknessOn2D is tracked in document', () 
 
 test('isHighResolutionCapable set by setHighResolutionCapable is tracked in document', () => {
   const nv = new Niivue()
-  nv.setHighResolutionCapable(false)
-  nv.setHighResolutionCapable(true)
-  expect(nv.document.opts.isHighResolutionCapable).toBe(true)
-  nv.setHighResolutionCapable(false)
-  expect(nv.document.opts.isHighResolutionCapable).toBe(false)
+  nv.setHighResolutionCapable(-1)
+  nv.setHighResolutionCapable(0)
+  expect(nv.document.opts.forceDevicePixelRatio).toBe(0)
+  nv.setHighResolutionCapable(-1)
+  expect(nv.document.opts.forceDevicePixelRatio).toBe(-1)
 })
 
 test('isRadiologicalConvention set by setRadiologicalConvention is tracked in document', () => {

@@ -159,7 +159,7 @@
       statSlider.oninput()
       threshSlider.oninput()
       atlasCheck.onclick()
-      dpiCheck.checked = nv1.opts.isHighResolutionCapable
+      dpiCheck.checked = nv1.opts.forceDevicePixelRatio === 0
       statCheck.onclick()
       xrayCheck.onclick()
       nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false)
