@@ -3302,13 +3302,9 @@ export class NVImage {
     return promise
   }
 
-  static async loadInitialVolumes(url = '', limitFrames4D = NaN): Promise<ArrayBuffer | null> {
+  static async loadInitialVolumes(url = '', headers = '', limitFrames4D = NaN): Promise<ArrayBuffer | null> {
     if (isNaN(limitFrames4D)) {
       return null
-    }
-    const headers: HeadersInit = {
-      'Accept-Encoding': 'identity', // Request GZip compression
-      Accept: 'application/octet-stream' // Expect binary data
     }
     let dataBuffer = null
     try {
@@ -3442,7 +3438,6 @@ export class NVImage {
     if (url === '') {
       throw Error('url must not be empty')
     }
-
     let nvimage = null
     let dataBuffer = null
 
@@ -3463,7 +3458,7 @@ export class NVImage {
       }
     }
     if (!dataBuffer) {
-      dataBuffer = await this.loadInitialVolumes(url, limitFrames4D)
+      dataBuffer = await this.loadInitialVolumes(url, headers, limitFrames4D)
     }
     // Handle non-limited cases
     if (!dataBuffer) {
