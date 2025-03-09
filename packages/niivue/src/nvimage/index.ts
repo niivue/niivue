@@ -3484,7 +3484,7 @@ export class NVImage {
     }
     // DICOM assigned for unknown extensions: therefore test signature to see if mystery file is NIfTI
     const isTestNIfTI = imageType === NVIMAGE_TYPE.DCM || NVIMAGE_TYPE.NII
-    if (!dataBuffer || isTestNIfTI) {
+    if (!dataBuffer && isTestNIfTI) {
       dataBuffer = await this.loadInitialVolumes(url, headers, limitFrames4D)
     }
     // Handle non-limited cases
