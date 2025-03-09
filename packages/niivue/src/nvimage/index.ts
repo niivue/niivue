@@ -10,7 +10,6 @@ import {
 } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
-// import { Inflate } from 'pako'
 import { Gunzip } from 'fflate'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
@@ -3275,99 +3274,6 @@ export class NVImage {
 
     return promise
   }
-
-  /*
-  static async readFirstNBytes(stream: ReadableStream<Uint8Array>, maxBytes: number): Promise<Uint8Array> {
-    const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader()
-    const chunks: Uint8Array[] = []
-    let bytesRead = 0
-
-    while (bytesRead < maxBytes) {
-      const { done, value } = await reader.read()
-      if (done) {
-        break
-      }
-
-      if (value) {
-        const needed = maxBytes - bytesRead
-        if (value.length > needed) {
-          chunks.push(value.slice(0, needed))
-          bytesRead += needed
-          break
-        } else {
-          chunks.push(value)
-          bytesRead += value.length
-        }
-      }
-    }
-    await reader.cancel()
-    // Combine chunks into a single Uint8Array
-    const result = new Uint8Array(bytesRead)
-    let offset = 0
-    for (const chunk of chunks) {
-      result.set(chunk, offset)
-      offset += chunk.length
-    }
-    return result
-  }
-  
-    static async readFirstDecompressedBytesPako(stream: ReadableStream<Uint8Array>, minBytes: number): Promise<Uint8Array> {
-    const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader()
-    const inflater = new Inflate({ to: 'uint8array' }) // Ensure output is Uint8Array
-
-    const decompressedChunks: Uint8Array[] = []
-    let totalDecompressed = 0
-    let doneReading = false
-
-    let resolveFn: (value: Uint8Array) => void
-    let rejectFn: (reason?: any) => void
-
-    const promise = new Promise<Uint8Array>((resolve, reject): undefined => {
-      resolveFn = resolve
-      rejectFn = reject
-      return undefined
-    })
-
-    function finalize(): void {
-      // Combine chunks into a single Uint8Array
-      const result = new Uint8Array(totalDecompressed)
-      let offset = 0
-      for (const chunk of decompressedChunks) {
-        result.set(chunk, offset)
-        offset += chunk.length
-      }
-      resolveFn(result)
-    }
-
-    inflater.onData = (chunk: Uint8Array): void => {
-      decompressedChunks.push(chunk)
-      totalDecompressed += chunk.length
-      if (totalDecompressed >= minBytes) {
-        doneReading = true
-        reader.cancel().catch(() => {})
-        inflater.push(new Uint8Array(), true) // End decompression
-        finalize()
-      }
-    }
-    ;(async (): Promise<void> => {
-      try {
-        while (!doneReading) {
-          // Uses flag instead of checking unmodified variable
-          const { done, value } = await reader.read()
-          if (done) {
-            doneReading = true
-            finalize()
-            return
-          }
-          inflater.push(value, false) // Push data into Pako
-        }
-      } catch (err) {
-        rejectFn(err)
-      }
-    })().catch(() => {})
-
-    return promise
-  } */
 
   static extractFilenameFromUrl(url: string): string | null {
     const params = new URL(url).searchParams
