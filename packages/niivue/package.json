@@ -67,7 +67,7 @@
     "array-equal": "^1.0.2",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.8.0",
-    "pako": "^2.1.0"
+    "fflate": "^0.8.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.2",

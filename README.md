@@ -40,9 +40,11 @@ The command `npm run demo` will minify the project and locally host all of the [
 - [Center for the Study of Aphasia Recovery (C-STAR)](https://cstar.sc.edu/) (University of South Carolina)
 - [Digital Brain Bank](https://elifesciences.org/articles/73153) for navigating MRI datasets
 - FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
+- [fideus](https://fideus.io/) has developed the [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/) plugins.
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
+- [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 - [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images

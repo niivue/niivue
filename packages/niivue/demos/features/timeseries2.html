@@ -17,16 +17,30 @@
   </head>
   <body>
     <header>
-      <label for="normCheck">normalize graph</label>
+      <label for="modalitySelect">Modality</label>
+      <select id="modalitySelect">
+        <option selected>ASL</option>
+        <option>DWI</option>
+        <option>fMRI</option>
+      </select>
+      &nbsp;&nbsp;<label for="viewSelect">View</label>
+      <select id="viewSelect">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>A+C+S+R</option>
+      </select>
+      &nbsp;&nbsp;<label for="normCheck">Normalize graph</label>
       <input type="checkbox" id="normCheck" unchecked />
-      <label for="minmaxCheck">per-volume graph range</label>
+      &nbsp;&nbsp;<label for="minmaxCheck">Per-volume graph range</label>
       <input type="checkbox" id="minmaxCheck" unchecked />
-      <label for="frameCheck">per-volume contrast</label>
+      &nbsp;&nbsp;<label for="frameCheck">per-volume contrast</label>
       <input type="checkbox" id="frameCheck" unchecked />
-      <button id="prevVolume">back</button>
-      <button id="nextVolume">forward</button>
-      &nbsp;<button id="animate">animate</button>
-      &nbsp;<button id="about">about</button>
+      &nbsp;&nbsp;<button id="prevVolume">Back</button>
+      &nbsp;&nbsp;<button id="nextVolume">Forward</button>
+      &nbsp;&nbsp;<button id="animate">Animate</button>
+      &nbsp;&nbsp;<button id="about">About</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -36,12 +50,6 @@
 </html>
 <script type="module">
   import * as niivue from "../dist/index.js"
-  var volumeList1 = [
-    {
-      url: "../images/mpld_asl.nii.gz",
-      limitFrames4D: 5
-    },
-  ]
   var nv1 = new niivue.Niivue({
     onLocationChange: handleLocationChange,
     onFrameChange: handleFrameChange
@@ -53,7 +61,28 @@
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
   nv1.graph.normalizeValues = false
   nv1.graph.opacity = 1.0
-  nv1.loadVolumes(volumeList1)
+  modalitySelect.onchange = async function () {
+    var volumeList1 = [
+      {
+        url: "",
+        limitFrames4D: 5
+      },
+    ]
+    let img = "../images/mpld_asl.nii.gz"
+    const modality =  this.options[this.selectedIndex].text
+    if (modality === "DWI") {
+      img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/dwi/sub-M2309_ses-960_acq-epb0p2_dir-AP_run-15_dwi.nii.gz"
+    }
+    if (modality === "fMRI") {
+      img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/func/sub-M2309_ses-960_task-naming40_acq-epfid2_dir-AP_run-2_bold.nii.gz"
+    }
+    volumeList1[0].url = img
+    nv1.loadVolumes(volumeList1)
+  }
+  modalitySelect.onchange()
+  viewSelect.onchange = function () {
+    nv1.setSliceType(parseInt(this.value))
+  }
   normCheck.onchange = function () {
     nv1.graph.normalizeValues = this.checked
     nv1.updateGLVolume()
@@ -84,7 +113,6 @@
     const minmax = volume.calMinMax(index)
     nv1.updateGLVolume()
     const str = `frame ${index} intensity ${volume.cal_min.toFixed(2)}..${volume.cal_max.toFixed(2)}`
-    console.log(str)
   }
   function handleLocationChange(data) {
     document.getElementById("location").innerHTML =
