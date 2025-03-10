@@ -727,6 +727,7 @@ type NVConfigOptions = {
     measureTextHeight: number;
     isAlphaClipDark: boolean;
     gradientOrder: number;
+    gradientOpacity: number;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -1550,6 +1551,7 @@ declare class Niivue {
     volumeTexture: WebGLTexture | null;
     gradientTexture: WebGLTexture | null;
     gradientTextureAmount: number;
+    renderGradientValues: boolean;
     drawTexture: WebGLTexture | null;
     drawUndoBitmaps: Uint8Array[];
     drawLut: LUT;
@@ -2455,6 +2457,14 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
      */
     setVolumeRenderIllumination(gradientAmount?: number): Promise<void>;
+    /**
+     * set volume rendering opacity influence of the gradient magnitude
+     * @param gradientOpacity - amount of gradient magnitude influence on opacity (0..1), default 0 (no-influence)
+     * @example
+     * niivue.setGradientOpacity(0.6);
+     * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
+     */
+    setGradientOpacity(gradientOpacity?: number): Promise<void>;
     overlayRGBA(volume: NVImage): Uint8ClampedArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     /**

@@ -3320,6 +3320,7 @@ uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
+uniform float gradientOpacity[256];
 in vec3 vColor;
 out vec4 fColor;
 `;
@@ -3346,6 +3347,8 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+			int gradIdx = int(grad.a * 255.0);
+			colorSample.a *= gradientOpacity[gradIdx];
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 			if ( colAcc.a > earlyTermination )
@@ -4659,6 +4662,9 @@ void main(void) {
  // 0.0357 = 1/28 to account for weights, rescale to 2**16,
  FragColor = 0.0357*blurred;
 }`;
+var kGradientMagnitude = `
+  gradientSample.a = log2(gradientSample.r*gradientSample.r + gradientSample.g*gradientSample.g + gradientSample.b*gradientSample.b + 1.922337562475971e-06) + 18.988706873717717;
+`;
 var sobelFirstOrderFragShader = `#version 300 es
 #line 323
 precision highp int;
@@ -4685,7 +4691,9 @@ void main(void) {
   gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
   gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
   gradientSample.b = TAL+TPL+BAL+BPL -TAR-TPR-BAR-BPR;
-  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+${kGradientMagnitude}
+	// 0.04242020977371934 = 1/(log2(3*8) - log2(1/(255**2*8))) // 3*8 -> max for 1st order gradient
+	gradientSample.a *= 0.04242020977371934;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb = (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
@@ -4725,7 +4733,8 @@ void main(void) {
   gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
   gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
   gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
-  gradientSample.a = (abs(gradientSample.r)+abs(gradientSample.g)+abs(gradientSample.b))*0.29;
+${kGradientMagnitude}
+	gradientSample.a *= 0.0325;
   gradientSample.rgb = normalize(gradientSample.rgb);
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
@@ -24853,7 +24862,8 @@ var DEFAULT_OPTIONS = {
   // red
   measureTextHeight: 0.03,
   isAlphaClipDark: false,
-  gradientOrder: 1
+  gradientOrder: 1,
+  gradientOpacity: 0
 };
 var INITIAL_SCENE_DATA = {
   gamma: 1,
@@ -29189,6 +29199,7 @@ var Niivue = class {
     __publicField(this, "gradientTexture", null);
     // 3D texture for volume rendering lighting
     __publicField(this, "gradientTextureAmount", 0);
+    __publicField(this, "renderGradientValues", false);
     __publicField(this, "drawTexture", null);
     // the GPU memory storage of the drawing
     __publicField(this, "drawUndoBitmaps", []);
@@ -32342,10 +32353,11 @@ var Niivue = class {
    * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
    */
   async setVolumeRenderIllumination(gradientAmount = 0) {
+    this.renderGradientValues = Number.isNaN(gradientAmount);
     this.renderShader = this.renderVolumeShader;
-    if (Number.isNaN(gradientAmount)) {
+    if (this.renderGradientValues) {
       this.renderShader = this.renderGradientValuesShader;
-    } else if (gradientAmount > 0) {
+    } else if (gradientAmount > 0 || this.opts.gradientOpacity > 0) {
       this.renderShader = this.renderGradientShader;
     } else if (gradientAmount < 0) {
       this.renderShader = this.renderSliceShader;
@@ -32362,6 +32374,26 @@ var Niivue = class {
       return;
     }
     this.refreshLayers(this.volumes[0], 0);
+    this.drawScene();
+  }
+  /**
+   * set volume rendering opacity influence of the gradient magnitude
+   * @param gradientOpacity - amount of gradient magnitude influence on opacity (0..1), default 0 (no-influence)
+   * @example
+   * niivue.setGradientOpacity(0.6);
+   * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
+   */
+  async setGradientOpacity(gradientOpacity = 0) {
+    this.opts.gradientOpacity = gradientOpacity;
+    if (this.renderGradientValues) {
+      this.renderShader = this.renderGradientValuesShader;
+    } else if (this.gradientTextureAmount > 0 || gradientOpacity > 0) {
+      this.renderShader = this.renderGradientShader;
+    } else if (this.gradientTextureAmount < 0) {
+      this.renderShader = this.renderSliceShader;
+    }
+    this.initRenderShader(this.renderShader, this.gradientTextureAmount);
+    this.renderShader.use(this.gl);
     this.drawScene();
   }
   // not included in public docs.
@@ -34094,6 +34126,15 @@ var Niivue = class {
     this.gl.uniform1i(shader.uniforms.drawing, 7);
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1]);
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
+    const gradientOpacityLut = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      if (this.opts.gradientOpacity === 0) {
+        gradientOpacityLut[i] = 1;
+      } else {
+        gradientOpacityLut[i] = Math.pow(i / 255, this.opts.gradientOpacity * 8);
+      }
+    }
+    this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, "gradientOpacity"), gradientOpacityLut);
   }
   // not included in public docs
   async init() {

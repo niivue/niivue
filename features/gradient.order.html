@@ -57,9 +57,12 @@
       <strong>niivue doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
     <header>
+      <button id="openBtn">Choose an image with a dialog</button>
       <section>
         <label id="images"></label>
       </section>
+      <label for="gradientOpacity">Gradient Opacity</label>
+      <input type="range" min="0" max="10" value="5" class="slider" id="gradientOpacity">
       <label for="matCaps">Choose a MatCap:</label>
       <select id="matCaps">
         <option value="Shiny">Shiny</option>
@@ -121,6 +124,7 @@
     show3Dcrosshair: true,
     loglevel: 'debug',
     isRuler: true,
+    gradientOpacity: gradientOpacity.value * 0.1,
     onLocationChange: handleIntensityChange
   }
   const volumeList1 = [
@@ -218,6 +222,32 @@
     const matCapName = document.getElementById('matCaps').value
     renderers.forEach((nv) => {
       nv.loadMatCapTexture('../matcaps/' + matCapName + '.jpg')
+    })
+  }
+
+  async function addVolumeFromFiles(f) {
+    console.log('attempting to open ', f[0].name)
+    console.log('details', f[0])
+    renderers.forEach((nv) => {
+      nv.removeVolume(nv.volumes[0])
+      nv.loadFromFile(f[0])
+    })
+    // nv1.loadFromFile(f[0])
+  }
+  openBtn.onclick = function () {
+    let input = document.createElement('input')
+    input.style.display = 'none'
+    input.type = 'file'
+    document.body.appendChild(input)
+    input.onchange = function (event) {
+      addVolumeFromFiles(event.target.files)
+    }
+    input.click()
+  }
+
+  gradientOpacity.oninput = function () {
+    renderers.forEach((nv) => {
+      nv.setGradientOpacity(this.value * 0.1)
     })
   }
 
