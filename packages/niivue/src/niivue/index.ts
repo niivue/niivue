@@ -3486,7 +3486,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.removeMesh(this.meshes[3])
-   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
+   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   removeMesh(mesh: NVMesh): void {
     mesh.unloadMesh(this.gl)
@@ -4413,7 +4413,6 @@ export class Niivue {
 
   /**
    * Add mesh and notify subscribers
-   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
    */
   async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
     const ext = this.getFileExt(meshOptions.url)
@@ -4435,7 +4434,6 @@ export class Niivue {
 
   /**
    * Add mesh and notify subscribers
-   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
    */
   async addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]> {
     const promises = meshOptions.map(async (meshItem) => {
