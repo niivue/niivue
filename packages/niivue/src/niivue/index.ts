@@ -119,7 +119,8 @@ import {
   swizzleVec3,
   tickSpacing,
   unProject,
-  unpackFloatFromVec4i
+  unpackFloatFromVec4i,
+  readFileAsDataURL
 } from './utils.js'
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
@@ -2386,7 +2387,7 @@ export class Niivue {
         }
         this.closeDrawing()
         for (const item of Array.from(items)) {
-          const entry = item.webkitGetAsEntry()
+          const entry = item.webkitGetAsEntry() as FileSystemFileEntry
           log.debug(entry)
           if (!entry) {
             throw new Error('could not get entry from file')
@@ -2412,14 +2413,13 @@ export class Niivue {
               continue
             }
             if (this.loaders[ext]) {
-              // check if the loader type property is a volume or mesh
-              // by using the toExt property
-              const toExt = this.loaders[ext].toExt.toUpperCase()
-              if (MESH_EXTENSIONS.includes(toExt)) {
-                log.error(`Drag and drop mesh loader needs work ${ext}`)
-              } else {
-                log.error(`Drag and drop volume loader needs work ${ext}`)
-              }
+              const dataUrl = await readFileAsDataURL(entry)
+              await this.loadImages([
+                {
+                  url: dataUrl,
+                  name: `${entry.name}`
+                }
+              ])
               continue
             }
             if (MESH_EXTENSIONS.includes(ext)) {
@@ -4285,7 +4285,8 @@ export class Niivue {
     const meshes = []
     for (const image of images) {
       if ('url' in image) {
-        const ext = this.getFileExt(image.url)
+        // prefer name over url
+        const ext = this.getFileExt(image.name ? image.name : image.url)
         // check this.loaders to see if a user has register
         // a custom loader for this file extension
         if (this.loaders[ext]) {
