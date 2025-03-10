@@ -28864,6 +28864,32 @@ var NVConnectome = class _NVConnectome extends NVMesh3 {
 };
 
 // src/niivue/utils.ts
+function readFileAsDataURL(input) {
+  return new Promise((resolve, reject) => {
+    let filePromise;
+    if (input instanceof File) {
+      filePromise = Promise.resolve(input);
+    } else {
+      filePromise = new Promise((resolve2, reject2) => {
+        input.file(resolve2, reject2);
+      });
+    }
+    filePromise.then((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+        } else {
+          reject(new Error("Expected a string from FileReader.result"));
+        }
+      };
+      reader.onerror = () => {
+        reject(reader.error ?? new Error("Unknown FileReader error"));
+      };
+      reader.readAsDataURL(file);
+    }).catch((err2) => reject(err2));
+  });
+}
 function img2ras16(volume) {
   const dims = volume.hdr.dims;
   const perm = volume.permRAS;
@@ -31020,12 +31046,13 @@ var Niivue = class {
               continue;
             }
             if (this.loaders[ext]) {
-              const toExt = this.loaders[ext].toExt.toUpperCase();
-              if (MESH_EXTENSIONS.includes(toExt)) {
-                log.error(`Drag and drop mesh loader needs work ${ext}`);
-              } else {
-                log.error(`Drag and drop volume loader needs work ${ext}`);
-              }
+              const dataUrl = await readFileAsDataURL(entry);
+              await this.loadImages([
+                {
+                  url: dataUrl,
+                  name: `${entry.name}`
+                }
+              ]);
               continue;
             }
             if (MESH_EXTENSIONS.includes(ext)) {
@@ -32723,7 +32750,7 @@ var Niivue = class {
     const meshes = [];
     for (const image of images) {
       if ("url" in image) {
-        const ext = this.getFileExt(image.url);
+        const ext = this.getFileExt(image.name ? image.name : image.url);
         if (this.loaders[ext]) {
           const toExt = this.loaders[ext].toExt.toUpperCase();
           if (MESH_EXTENSIONS.includes(toExt)) {
