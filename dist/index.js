@@ -32007,7 +32007,7 @@ var Niivue = class {
    * @example
    * niivue = new Niivue()
    * niivue.removeMesh(this.meshes[3])
-   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
+   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   removeMesh(mesh) {
     mesh.unloadMesh(this.gl);
@@ -32809,7 +32809,6 @@ var Niivue = class {
   }
   /**
    * Add mesh and notify subscribers
-   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
    */
   async addMeshFromUrl(meshOptions) {
     const ext = this.getFileExt(meshOptions.url);
@@ -32830,7 +32829,6 @@ var Niivue = class {
   }
   /**
    * Add mesh and notify subscribers
-   * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
    */
   async addMeshesFromUrl(meshOptions) {
     const promises = meshOptions.map(async (meshItem) => {

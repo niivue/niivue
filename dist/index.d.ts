@@ -2286,7 +2286,7 @@ declare class Niivue {
      * @example
      * niivue = new Niivue()
      * niivue.removeMesh(this.meshes[3])
-     * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
+     * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
      */
     removeMesh(mesh: NVMesh): void;
     /**
@@ -2542,12 +2542,10 @@ declare class Niivue {
     loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<this>;
     /**
      * Add mesh and notify subscribers
-     * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
      */
     addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh>;
     /**
      * Add mesh and notify subscribers
-     * @see {@link https://niivue.github.io/niivue/features/multiuser.meshes.html | live demo usage}
      */
     addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]>;
     /**
