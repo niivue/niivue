@@ -16,6 +16,7 @@
       <label for="formatSelect">Format</label>
       <select id="formatSelect">
         <option selected>JPEG</option>
+        <option>Huge</option>
         <option>ZARR</option>
       </select>
       <label for="dragSelect">Drag</label>
@@ -38,16 +39,17 @@
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
       formatSelect.onchange = async function () {
         const idx = this.selectedIndex
-        var volumeLists = [[
-          {
+        var volumeLists = [
+          [{
             url: './kodim23.jpg',
-          }
-        ],[
-          {
+          }],
+          [{
+            url: './retina.jpg',
+          }],
+          [{
             url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
             name: 'example.zarr'
-          }
-        ],
+          }],
         ]
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
       }
@@ -122,7 +124,7 @@
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
-        dragMode: DRAG_MODE.measurement,
+        dragMode: DRAG_MODE.pan,
         // onDragRelease: onDragRelease,
         onLocationChange: onLocationChange,
         measureTextJustify: 'start',
@@ -136,6 +138,10 @@
       nv1.setSliceType(0)
       nv1.opts.multiplanarShowRender = SHOW_RENDER.NEVER
       formatSelect.onchange()
+      const max2DTextureSize =  nv1.gl.getParameter(nv1.gl.MAX_TEXTURE_SIZE)
+      console.log('Max 2D Texture Size:', max2DTextureSize)
+      const max3DTextureSize =  nv1.gl.getParameter(nv1.gl.MAX_3D_TEXTURE_SIZE)
+      console.log('Max 3D Texture Size:', max3DTextureSize)
     </script>
   </body>
 </html>

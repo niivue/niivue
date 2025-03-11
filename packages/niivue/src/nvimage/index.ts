@@ -1196,7 +1196,9 @@ export class NVImage {
   }
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
-    const { width, height, data } = zarrData
+    const { width, height, data } = (zarrData ?? {}) as any
+
+
     // data.fill(255, 0, Math.floor(data.length / 2))
     // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
     this.hdr = new NIFTI1()

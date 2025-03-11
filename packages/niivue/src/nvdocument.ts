@@ -137,6 +137,7 @@ export type NVConfigOptions = {
   isSliceMM: boolean
   // V1 image overlays can show vectors as per-pixel lines
   isV1SliceShader: boolean
+  is2DSliceShader: boolean
   isHighResolutionCapable: boolean
   logLevel: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent'
   loadingText: string
@@ -240,6 +241,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   sagittalNoseLeft: false,
   isSliceMM: false,
   isV1SliceShader: false,
+  is2DSliceShader: false,
   isHighResolutionCapable: true,
   logLevel: 'info',
   loadingText: 'waiting for images...',
