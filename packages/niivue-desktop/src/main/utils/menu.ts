@@ -1,4 +1,4 @@
-import { app, Menu, dialog } from 'electron'
+import { app, Menu, dialog, systemPreferences } from 'electron'
 import { sliceTypeMap } from '../../common/sliceTypes.js'
 import { layouts } from '../../common/layouts.js'
 import { orientationLabelMap } from '../../common/orientationLabels.js'
@@ -638,7 +638,6 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
 
   const menu = Menu.buildFromTemplate(template as Electron.MenuItemConstructorOptions[])
   if (isMac) {
-    const { systemPreferences } = require('electron')
     systemPreferences.setUserDefault('NSDisabledDictationMenuItem', 'boolean', true)
     systemPreferences.setUserDefault('NSDisabledCharacterPaletteMenuItem', 'boolean', true)
   }
