@@ -1,11 +1,12 @@
 import { app, Menu, dialog } from 'electron'
-import { sliceTypeMap } from '../../common/sliceTypes'
-import { layouts } from '../../common/layouts'
-import { orientationLabelMap } from '../../common/orientationLabels'
-import { dragModeMap } from '../../common/dragMode'
+import { sliceTypeMap } from '../../common/sliceTypes.js'
+import { layouts } from '../../common/layouts.js'
+import { orientationLabelMap } from '../../common/orientationLabels.js'
+import { dragModeMap } from '../../common/dragMode.js'
 import { DEFAULT_OPTIONS } from '@niivue/niivue'
-import { store } from './appStore'
-import { getMainWindow } from '..'
+import { store } from './appStore.js'
+import { getMainWindow } from '../index.js'
+import fs from 'fs' // ✅ Works in ES Module mode
 
 const isMac = process.platform === 'darwin'
 
@@ -265,7 +266,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
                   if (!result.canceled && result.filePath) {
                     const base64 = image.toDataURL().replace(/^data:image\/png;base64,/, '')
                     const buffer = Buffer.from(base64, 'base64')
-                    require('fs').writeFile(result.filePath, buffer, (err) => {
+                    fs.writeFile(result.filePath, buffer, (err) => {
                       if (err) {
                         console.error(err)
                       }

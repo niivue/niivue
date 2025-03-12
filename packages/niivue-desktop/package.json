@@ -8,6 +8,7 @@
   "workspaces": [
     "../packages/*"
   ],
+  "type": "module",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
