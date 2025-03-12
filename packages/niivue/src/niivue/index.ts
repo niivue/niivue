@@ -6,6 +6,7 @@ import {
   vertOrientCubeShader,
   fragOrientCubeShader,
   vertSliceMMShader,
+  fragSlice2DShader,
   fragSliceMMShader,
   fragSliceV1Shader,
   vertRectShader,
@@ -375,6 +376,7 @@ export class Niivue {
   overlayTexture: WebGLTexture | null = null
   overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
+  slice2DShader?: Shader
   sliceV1Shader?: Shader
   orientCubeShader?: Shader
   orientCubeShaderVAO: WebGLVertexArrayObject | null = null
@@ -5562,6 +5564,59 @@ export class Niivue {
 
   // not included in public docs
   // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
+  rgbaTex2D(
+    texID: WebGLTexture | null,
+    activeID: number,
+    dims: number[],
+    data: Uint8Array | null = null,
+    isFlipVertical: boolean = true
+  ): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texID)
+
+    // Set texture parameters
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
+
+    // Allocate storage for the 2D texture
+    this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, dims[1], dims[2])
+    if (data) {
+      let drawData = data
+      const width = dims[1]
+      const height = dims[2]
+      if (isFlipVertical) {
+        drawData = new Uint8Array(data.length)
+        const rowSize = width * 4 // RGBA has 4 bytes per pixel
+        for (let y = 0; y < height; y++) {
+          const srcStart = y * rowSize
+          const destStart = (height - 1 - y) * rowSize
+          drawData.set(data.subarray(srcStart, srcStart + rowSize), destStart)
+        }
+      }
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0, // Level
+        0,
+        0, // xOffset, yOffset
+        width,
+        height, // Width, Height
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        drawData
+      )
+    }
+    return texID
+  }
+
+  // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
   rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
     if (texID) {
       this.gl.deleteTexture(texID)
@@ -5950,7 +6005,14 @@ export class Niivue {
     gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
     gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
     gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7)
-    // slice shader
+    // slice 2D shader
+    this.slice2DShader = new Shader(gl, vertSliceMMShader, fragSlice2DShader)
+    this.slice2DShader.use(gl)
+    gl.uniform1i(this.slice2DShader.uniforms.volume, 0)
+    gl.uniform1i(this.slice2DShader.uniforms.colormap, 1)
+    gl.uniform1i(this.slice2DShader.uniforms.overlay, 2)
+    gl.uniform1i(this.slice2DShader.uniforms.drawing, 7)
+    gl.uniform1f(this.slice2DShader.uniforms.drawOpacity, this.drawOpacity)
     // slice mm shader
     this.sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader)
     this.sliceMMShader.use(gl)
@@ -6438,22 +6500,27 @@ export class Niivue {
     if (layer === 0) {
       this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl)
       mat4.invert(mtx, mtx)
-
       this.back.matRAS = overlayItem.matRAS
       this.back.dims = overlayItem.dimsRAS
       this.back.pixDims = overlayItem.pixDimsRAS
-      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!) // this.back.dims)
-
       const { volScale, vox } = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
-
       this.volScale = volScale
       this.vox = vox
       this.volumeObject3D.scale = volScale
-
+      const kMax3D = 2048
+      const isAboveMax3D = hdr.dims[1] > kMax3D || hdr.dims[2] > kMax3D
+      if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
+        console.log('Large image requires Texture2D')
+        // high res 2D image
+        this.opts.is2DSliceShader = true
+        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array)
+        return
+      }
+      this.opts.is2DSliceShader = false
+      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!) // this.back.dims)
       if (!this.renderShader) {
         throw new Error('renderShader undefined')
       }
-
       this.renderShader.use(this.gl)
       this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
       this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
@@ -6956,6 +7023,9 @@ export class Niivue {
     this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
     this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     let shader = this.sliceMMShader
+    if (this.opts.is2DSliceShader) {
+      shader = this.slice2DShader
+    }
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader
     }
@@ -9136,6 +9206,10 @@ export class Niivue {
     } else {
       this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
     }
+    //if (this.opts.is2DSliceShader) {
+    // n.b. we set interpolation for BOTH 2D and 3D textures
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
     this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
   }
@@ -9519,6 +9593,9 @@ export class Niivue {
     gl.disable(gl.CULL_FACE) // show front and back faces
 
     let shader = this.sliceMMShader
+    if (this.opts.is2DSliceShader) {
+      shader = this.slice2DShader
+    }
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader
     }

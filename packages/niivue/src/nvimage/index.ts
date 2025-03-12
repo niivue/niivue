@@ -1177,28 +1177,28 @@ export class NVImage {
     })
   }
 
-  async readBMP(buffer: ArrayBuffer): Promise<Uint8Array> {
+  async readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer> {
     const imageData = await this.imageDataFromArrayBuffer(buffer)
     const { width, height, data } = imageData
-    data.fill(255, 0, Math.floor(data.length / 2))
-    // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
     this.hdr = new NIFTI1()
     const hdr = this.hdr
     hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     hdr.affine = [
-      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ]
     hdr.numBitsPerVoxel = 8
     hdr.datatypeCode = NiiDataType.DT_RGBA32
-    return new Uint8Array(data)
+    return data.buffer
   }
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
-    const { width, height, data } = zarrData
+    const { width, height, data } = (zarrData ?? {}) as any
+
+
     // data.fill(255, 0, Math.floor(data.length / 2))
     // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
     this.hdr = new NIFTI1()
@@ -1206,9 +1206,9 @@ export class NVImage {
     hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     hdr.affine = [
-      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ]
     hdr.numBitsPerVoxel = 8

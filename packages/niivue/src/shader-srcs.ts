@@ -526,7 +526,6 @@ void main(void) {
 
 export const kFragSliceHead =
   `#version 300 es
-#line 411
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
@@ -666,6 +665,32 @@ export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
 	if (a == 0.0) return;
 	color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
 	color.a = a;
+}`
+
+export const fragSlice2DShader =
+  `#version 300 es
+#line 411
+precision highp int;
+precision highp float;
+uniform highp sampler2D volume, overlay;
+uniform int backgroundMasksOverlays;
+uniform float overlayOutlineWidth;
+uniform float overlayAlphaShader;
+uniform int axCorSag;
+uniform float overlays;
+uniform float opacity;
+uniform float drawOpacity;
+uniform bool isAlphaClipDark;
+uniform highp sampler3D drawing;
+uniform highp sampler2D colormap;
+in vec3 texPos;
+out vec4 color;` +
+  kDrawFunc +
+  `void main() {
+	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
+	vec4 background = texture(volume, texPos.xy);
+	color = vec4(background.rgb, opacity);
+	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
 }`
 
 export const fragSliceMMShader = kFragSliceHead + kFragSliceTail
