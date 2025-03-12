@@ -1,14 +1,14 @@
 import { assert, expect, test } from 'vitest'
 import { NVDocument, DocumentData } from '../../src/niivue/index.js' // note the js extension
-import * as nvd from '../images/document/niivue.mesh-old-colorMap.json';
-import { readFileSync } from 'fs';
+import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
+import { readFileSync } from 'fs'
 
 test('loadFromFile loads a valid document', async () => {
   // Load the JSON document as a Blob
-  const data = readFileSync('tests/images/document/niivue.mesh.nvd');
-  const blob = new Blob([data], { type: 'application/json' });
+  const data = readFileSync('tests/images/document/niivue.mesh.nvd')
+  const blob = new Blob([data], { type: 'application/json' })
 
-  const document = await NVDocument.loadFromFile(blob);
+  const document = await NVDocument.loadFromFile(blob)
 
   const expectedData = {
     textHeight: 0.06,
@@ -42,7 +42,6 @@ test('loadFromFile loads a valid document', async () => {
     isCornerOrientationText: false,
     sagittalNoseLeft: false,
     isSliceMM: false,
-    forceDevicePixelRatio: 0,
     logging: false,
     loadingText: 'waiting for images...',
     dragAndDropEnabled: true,
@@ -51,22 +50,24 @@ test('loadFromFile loads a valid document', async () => {
     isFilledPen: false,
     thumbnail: '',
     maxDrawUndoBitmaps: 8,
-    sliceType: 4
-  };
+    sliceType: 4,
+    isHighResolutionCapable: true
+  }
 
-  expect(document).toBeDefined();
-  expect(document.data).toBeDefined();
-  expect(document.data.opts).toBeDefined();
-  expect(document.data.opts).toEqual(expectedData);
-});
+  expect(document).toBeDefined()
+  expect(document.data).toBeDefined()
+  expect(document.data.opts).toBeDefined()
+  expect(document.data.opts).toEqual(expectedData)
+})
 
 test('nvdocument convert colorMap and colorMapNegative to colormap and colormapNegative', () => {
   const doc = NVDocument.loadFromJSON(nvd as DocumentData)
   assert(doc.meshDataObjects)
-  const colorMapIsInLayer = "colorMap" in doc.meshDataObjects[0].layers[0]
-  const colorMapNegativeIsInLayer = "colorMapNegative" in doc.meshDataObjects[0].layers[0]
-  expect(doc.meshDataObjects[0].layers[0].colormap).toEqual("warm")
-  expect(doc.meshDataObjects[0].layers[0].colormapNegative).toEqual("winter")
+  const colorMapIsInLayer = 'colorMap' in doc.meshDataObjects[0].layers[0]
+  const colorMapNegativeIsInLayer = 'colorMapNegative' in doc.meshDataObjects[0].layers[0]
+  expect(doc.meshDataObjects[0].layers[0].colormap).toEqual('warm')
+  expect(doc.meshDataObjects[0].layers[0].colormapNegative).toEqual('winter')
   expect(colorMapIsInLayer).toBe(false)
   expect(colorMapNegativeIsInLayer).toBe(false)
 })
+
