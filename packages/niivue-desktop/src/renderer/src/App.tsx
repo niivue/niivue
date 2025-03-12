@@ -109,7 +109,7 @@ function App(): JSX.Element {
     initNiimath()
     const loadImages = async (): Promise<void> => {
       const volBase64 = await electron.ipcRenderer.invoke('loadStandard', 'mni152.nii.gz')
-      const vol = NVImage.loadFromBase64({
+      const vol = await NVImage.loadFromBase64({
         base64: volBase64,
         name: 'mni152.nii.gz'
       })
