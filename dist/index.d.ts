@@ -397,7 +397,7 @@ declare class NVImage {
     readECAT(buffer: ArrayBuffer): ArrayBuffer;
     readV16(buffer: ArrayBuffer): ArrayBuffer;
     imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData>;
-    readBMP(buffer: ArrayBuffer): Promise<Uint8Array>;
+    readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
     readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readFIB(buffer: ArrayBuffer): Promise<[ArrayBuffer, Float32Array]>;
@@ -437,7 +437,10 @@ declare class NVImage {
         name: string;
         data: ArrayBuffer;
     }>>;
-    static fetchPartial(url: string, bytesToLoad: number, headers?: Record<string, string>): Promise<Response>;
+    static readFirstDecompressedBytes(stream: ReadableStream<Uint8Array>, minBytes: number): Promise<Uint8Array>;
+    static extractFilenameFromUrl(url: string): string | null;
+    static loadInitialVolumesGz(url?: string, headers?: {}, limitFrames4D?: number): Promise<ArrayBuffer | null>;
+    static loadInitialVolumes(url?: string, headers?: {}, limitFrames4D?: number): Promise<ArrayBuffer | null>;
     /**
      * factory function to load and return a new NVImage instance from a given URL
      * @returns  NVImage instance
@@ -682,7 +685,7 @@ type NVConfigOptions = {
     sagittalNoseLeft: boolean;
     isSliceMM: boolean;
     isV1SliceShader: boolean;
-    isHighResolutionCapable: boolean;
+    forceDevicePixelRatio: number;
     logLevel: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'silent';
     loadingText: string;
     isForceMouseClickToVoxelCenters: boolean;
@@ -2113,11 +2116,11 @@ declare class Niivue {
     getRadiologicalConvention(): boolean;
     /**
      * Force WebGL canvas to use high resolution display, regardless of browser defaults.
-     * @param isHighResolutionCapable - allow high-DPI display
+     * @param forceDevicePixelRatio - -1: block high DPI; 0= allow high DPI: >0 use specified pixel ratio
      * @example niivue.setHighResolutionCapable(true);
      * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
      */
-    setHighResolutionCapable(isHighResolutionCapable: boolean): void;
+    setHighResolutionCapable(forceDevicePixelRatio: number | boolean): void;
     /**
      * add a new volume to the canvas
      * @param volume - the new volume to add to the canvas

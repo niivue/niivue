@@ -19059,9 +19059,76 @@ var zls = function(d, dict) {
     err(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
   return (d[1] >> 3 & 4) + 2;
 };
+var Inflate = /* @__PURE__ */ function() {
+  function Inflate2(opts, cb) {
+    if (typeof opts == "function")
+      cb = opts, opts = {};
+    this.ondata = cb;
+    var dict = opts && opts.dictionary && opts.dictionary.subarray(-32768);
+    this.s = { i: 0, b: dict ? dict.length : 0 };
+    this.o = new u8(32768);
+    this.p = new u8(0);
+    if (dict)
+      this.o.set(dict);
+  }
+  Inflate2.prototype.e = function(c) {
+    if (!this.ondata)
+      err(5);
+    if (this.d)
+      err(4);
+    if (!this.p.length)
+      this.p = c;
+    else if (c.length) {
+      var n = new u8(this.p.length + c.length);
+      n.set(this.p), n.set(c, this.p.length), this.p = n;
+    }
+  };
+  Inflate2.prototype.c = function(final) {
+    this.s.i = +(this.d = final || false);
+    var bts = this.s.b;
+    var dt = inflt(this.p, this.s, this.o);
+    this.ondata(slc(dt, bts, this.s.b), this.d);
+    this.o = slc(dt, this.s.b - 32768), this.s.b = this.o.length;
+    this.p = slc(this.p, this.s.p / 8 | 0), this.s.p &= 7;
+  };
+  Inflate2.prototype.push = function(chunk, final) {
+    this.e(chunk), this.c(final);
+  };
+  return Inflate2;
+}();
 function inflateSync(data, opts) {
   return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
 }
+var Gunzip = /* @__PURE__ */ function() {
+  function Gunzip2(opts, cb) {
+    this.v = 1;
+    this.r = 0;
+    Inflate.call(this, opts, cb);
+  }
+  Gunzip2.prototype.push = function(chunk, final) {
+    Inflate.prototype.e.call(this, chunk);
+    this.r += chunk.length;
+    if (this.v) {
+      var p = this.p.subarray(this.v - 1);
+      var s = p.length > 3 ? gzs(p) : 4;
+      if (s > p.length) {
+        if (!final)
+          return;
+      } else if (this.v > 1 && this.onmember) {
+        this.onmember(this.r - p.length);
+      }
+      this.p = p.subarray(s), this.v = 0;
+    }
+    Inflate.prototype.c.call(this, final);
+    if (this.s.f && !this.s.l && !final) {
+      this.v = shft(this.s.p) + 9;
+      this.s = { i: 0 };
+      this.o = new u8(0);
+      this.push(new u8(0), final);
+    }
+  };
+  return Gunzip2;
+}();
 function gunzipSync(data, opts) {
   var st = gzs(data);
   if (st + 8 > data.length)
@@ -21219,6 +21286,13 @@ var NVImage = class _NVImage {
     if (imageType === NVIMAGE_TYPE.UNKNOWN) {
       imageType = NVIMAGE_TYPE.parse(ext);
     }
+    if (dataBuffer instanceof ArrayBuffer && dataBuffer.byteLength >= 2 && imageType === NVIMAGE_TYPE.DCM) {
+      const u8s = new Uint8Array(dataBuffer);
+      const isNifti1 = u8s[0] === 92 && u8s[1] === 1 || u8s[1] === 92 && u8s[0] === 1;
+      if (isNifti1) {
+        imageType = NVIMAGE_TYPE.NII;
+      }
+    }
     newImg.imageType = imageType;
     switch (imageType) {
       case NVIMAGE_TYPE.DCM_FOLDER:
@@ -21853,20 +21927,19 @@ var NVImage = class _NVImage {
   async readBMP(buffer) {
     const imageData = await this.imageDataFromArrayBuffer(buffer);
     const { width, height, data } = imageData;
-    data.fill(255, 0, Math.floor(data.length / 2));
     this.hdr = new NIFTI1();
     const hdr = this.hdr;
     hdr.dims = [3, width, height, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
     hdr.affine = [
-      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ];
     hdr.numBitsPerVoxel = 8;
     hdr.datatypeCode = 2304 /* DT_RGBA32 */;
-    return new Uint8Array(data);
+    return data.buffer;
   }
   // not included in public docs
   // read brainvoyager format VMR image
@@ -23672,18 +23745,173 @@ var NVImage = class _NVImage {
     }
     return dataBuffer;
   }
-  static async fetchPartial(url, bytesToLoad, headers = {}) {
-    try {
-      const response = await fetch(url, {
-        headers: { range: `bytes=0-'${bytesToLoad}`, stream: "true", ...headers }
-      });
-      return response;
-    } catch (error) {
-      log.error(error);
-      log.error("fetchPartial failed, trying again without range header");
-      const response = await fetch(url, { headers });
-      return response;
+  static async readFirstDecompressedBytes(stream, minBytes) {
+    const reader = stream.getReader();
+    const gunzip = new Gunzip();
+    const decompressedChunks = [];
+    let totalDecompressed = 0;
+    let doneReading = false;
+    let resolveFn;
+    let rejectFn;
+    const promise = new Promise((resolve, reject) => {
+      resolveFn = resolve;
+      rejectFn = reject;
+      return void 0;
+    });
+    function finalize() {
+      const result = new Uint8Array(totalDecompressed);
+      let offset = 0;
+      for (const chunk of decompressedChunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+      }
+      resolveFn(result);
     }
+    gunzip.ondata = (chunk) => {
+      decompressedChunks.push(chunk);
+      totalDecompressed += chunk.length;
+      if (totalDecompressed >= minBytes) {
+        doneReading = true;
+        reader.cancel().catch(() => {
+        });
+        finalize();
+      }
+    };
+    (async () => {
+      try {
+        while (!doneReading) {
+          const { done, value } = await reader.read();
+          if (done) {
+            doneReading = true;
+            gunzip.push(new Uint8Array(), true);
+            return;
+          }
+          gunzip.push(value, false);
+        }
+      } catch (err2) {
+        rejectFn(err2);
+      }
+    })().catch(() => {
+    });
+    return promise;
+  }
+  static extractFilenameFromUrl(url) {
+    const params = new URL(url).searchParams;
+    const contentDisposition = params.get("response-content-disposition");
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/);
+      if (match) {
+        return decodeURIComponent(match[1]);
+      }
+    }
+    return url.split("/").pop().split("?")[0];
+  }
+  static async loadInitialVolumesGz(url = "", headers = {}, limitFrames4D = NaN) {
+    if (isNaN(limitFrames4D)) {
+      return null;
+    }
+    const response = await fetch(url, { headers, cache: "force-cache" });
+    let hdrBytes = 352;
+    let hdrU8s = await this.readFirstDecompressedBytes(response.body, hdrBytes);
+    const hdrView = new DataView(hdrU8s.buffer, hdrU8s.byteOffset, hdrU8s.byteLength);
+    const u162 = hdrView.getUint16(0, true);
+    const isNIfTI1 = u162 === 348;
+    const isNIfTI1be = u162 === 23553;
+    if (!isNIfTI1 && !isNIfTI1be) {
+      return null;
+    }
+    if (hdrU8s.length > 111) {
+      hdrBytes = hdrView.getFloat32(108, isNIfTI1);
+    }
+    if (hdrBytes > hdrU8s.length) {
+      hdrU8s = await this.readFirstDecompressedBytes(response.body, hdrBytes);
+    }
+    const isNifti1 = hdrU8s[0] === 92 && hdrU8s[1] === 1 || hdrU8s[1] === 92 && hdrU8s[0] === 1;
+    if (!isNifti1) {
+      return null;
+    }
+    const hdr = await readHeaderAsync(hdrU8s.buffer);
+    if (!hdr) {
+      throw new Error("Could not read NIfTI header");
+    }
+    const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+    const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+    const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+    const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+    const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+    if (volsToLoad === nFrame4D) {
+      return null;
+    }
+    const responseImg = await fetch(url, { headers, cache: "force-cache" });
+    const dataBytes = await this.readFirstDecompressedBytes(responseImg.body, bytesToLoad);
+    return dataBytes.buffer.slice(0, bytesToLoad);
+  }
+  static async loadInitialVolumes(url = "", headers = {}, limitFrames4D = NaN) {
+    if (isNaN(limitFrames4D)) {
+      return null;
+    }
+    const response = await fetch(url, { headers, cache: "force-cache" });
+    const reader = response.body.getReader();
+    const { value, done } = await reader.read();
+    let hdrU8s = value;
+    if (done || !hdrU8s || hdrU8s.length < 2) {
+      throw new Error("Not enough data to determine compression");
+    }
+    const hdrView = new DataView(hdrU8s.buffer, hdrU8s.byteOffset, hdrU8s.byteLength);
+    const u162 = hdrView.getUint16(0, true);
+    const isGz = u162 === 35615;
+    if (isGz) {
+      await reader.cancel();
+      return this.loadInitialVolumesGz(url, headers, limitFrames4D);
+    }
+    const isNIfTI1 = u162 === 348;
+    const isNIfTI1be = u162 === 23553;
+    if (!isNIfTI1 && !isNIfTI1be) {
+      await reader.cancel();
+      return null;
+    }
+    let hdrBytes = 352;
+    if (hdrU8s.length > 111) {
+      hdrBytes = hdrView.getFloat32(108, isNIfTI1);
+    }
+    while (hdrU8s.length < hdrBytes) {
+      let concatU8s = function(arr1, arr2) {
+        const result = new Uint8Array(arr1.length + arr2.length);
+        result.set(arr1, 0);
+        result.set(arr2, arr1.length);
+        return result;
+      };
+      const { value: value2, done: done2 } = await reader.read();
+      if (done2 || !value2) {
+        break;
+      }
+      hdrU8s = concatU8s(hdrU8s, value2);
+    }
+    const hdr = await readHeaderAsync(hdrU8s.buffer);
+    if (!hdr) {
+      throw new Error("Could not read NIfTI header");
+    }
+    const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+    const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+    const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+    const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+    const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+    const imgU8s = new Uint8Array(bytesToLoad);
+    const hdrCopyLength = Math.min(hdrU8s.length, bytesToLoad);
+    imgU8s.set(hdrU8s.subarray(0, hdrCopyLength), 0);
+    let bytesRead = hdrCopyLength;
+    while (bytesRead < bytesToLoad) {
+      const { value: value2, done: done2 } = await reader.read();
+      if (done2 || !value2) {
+        await reader.cancel();
+        return null;
+      }
+      const remaining = Math.min(value2.length, bytesToLoad - bytesRead);
+      imgU8s.set(value2.subarray(0, remaining), bytesRead);
+      bytesRead += remaining;
+    }
+    await reader.cancel();
+    return imgU8s.buffer;
   }
   /**
    * factory function to load and return a new NVImage instance from a given URL
@@ -23730,73 +23958,35 @@ var NVImage = class _NVImage {
         url = bytes[0] === 31 && bytes[1] === 139 ? "array.nii.gz" : "array.nii";
       }
     }
-    if (!isNaN(limitFrames4D)) {
-      try {
-        const response = await fetch(url, { headers });
-        if (!response.ok) {
-          throw new Error(response.statusText);
-        }
-        if (!response.body) {
-          throw new Error("No readable stream available");
-        }
-        const stream = await uncompressStream(response.body);
-        const reader = stream.getReader();
-        const headerChunks = [];
-        let headerBytes = 0;
-        while (headerBytes < 352) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          headerChunks.push(value);
-          headerBytes += value.length;
-        }
-        const headerBuffer = new Uint8Array(headerBytes);
-        let offset = 0;
-        for (const chunk of headerChunks) {
-          headerBuffer.set(chunk, offset);
-          offset += chunk.length;
-        }
-        const isNifti1 = headerBuffer[0] === 92 && headerBuffer[1] === 1 || headerBuffer[1] === 92 && headerBuffer[0] === 1;
-        if (!isNifti1) {
-          reader.releaseLock();
-          return null;
-        }
-        const hdr = await readHeaderAsync(headerBuffer.buffer);
-        if (!hdr) {
-          throw new Error("Could not read NIfTI header");
-        }
-        const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-        const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-        const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-        const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
-        const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
-        const chunks = [...headerChunks];
-        let totalSize = headerBytes;
-        while (totalSize < bytesToLoad) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          chunks.push(value);
-          totalSize += value.length;
-        }
-        reader.releaseLock();
-        dataBuffer = new ArrayBuffer(bytesToLoad);
-        const dataView = new Uint8Array(dataBuffer);
-        offset = 0;
-        for (const chunk of chunks) {
-          const bytesToCopy = Math.min(chunk.length, bytesToLoad - offset);
-          dataView.set(new Uint8Array(chunk.buffer, 0, bytesToCopy), offset);
-          offset += bytesToCopy;
-          if (offset >= bytesToLoad) {
-            break;
+    function getPrimaryExtension(filename) {
+      const match = filename.match(/\.([^.]+)(?:\.gz|\.bz2|\.xz)?$/);
+      return match ? match[1] : "";
+    }
+    let ext = "";
+    if (name === "") {
+      ext = getPrimaryExtension(url);
+    } else {
+      ext = getPrimaryExtension(name);
+    }
+    if (imageType === NVIMAGE_TYPE.UNKNOWN) {
+      imageType = NVIMAGE_TYPE.parse(ext);
+    }
+    if (imageType === NVIMAGE_TYPE.UNKNOWN && typeof url === "string") {
+      const response = await fetch(url, {});
+      if (response.redirected) {
+        const rname = this.extractFilenameFromUrl(response.url);
+        if (rname && rname.length > 0) {
+          if (name === "") {
+            name = rname;
+            ext = getPrimaryExtension(name);
+            imageType = NVIMAGE_TYPE.parse(ext);
           }
         }
-      } catch (error) {
-        console.error("Error loading limited frames:", error);
-        dataBuffer = null;
       }
+    }
+    const isTestNIfTI = imageType === NVIMAGE_TYPE.DCM || NVIMAGE_TYPE.NII;
+    if (!dataBuffer && isTestNIfTI) {
+      dataBuffer = await this.loadInitialVolumes(url, headers, limitFrames4D);
     }
     if (!dataBuffer) {
       if (isManifest) {
@@ -23829,13 +24019,6 @@ var NVImage = class _NVImage {
           offset += chunk.length;
         }
       }
-    }
-    const re = /(?:\.([^.]+))?$/;
-    let ext = "";
-    if (name === "") {
-      ext = re.exec(url)[1];
-    } else {
-      ext = re.exec(name)[1];
     }
     if (ext.toUpperCase() === "HEAD") {
       if (urlImgData === "") {
@@ -24804,7 +24987,7 @@ var DEFAULT_OPTIONS = {
   sagittalNoseLeft: false,
   isSliceMM: false,
   isV1SliceShader: false,
-  isHighResolutionCapable: true,
+  forceDevicePixelRatio: 0,
   logLevel: "info",
   loadingText: "loading ...",
   isForceMouseClickToVoxelCenters: false,
@@ -29666,10 +29849,12 @@ var Niivue = class {
         this.opts[name] = DEFAULT_OPTIONS[name] === void 0 ? DEFAULT_OPTIONS[name] : options[name];
       }
     }
-    if (this.opts.isHighResolutionCapable) {
+    if (this.opts.forceDevicePixelRatio === 0) {
       this.uiData.dpr = window.devicePixelRatio || 1;
-    } else {
+    } else if (this.opts.forceDevicePixelRatio < 0) {
       this.uiData.dpr = 1;
+    } else {
+      this.uiData.dpr = this.opts.forceDevicePixelRatio;
     }
     this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps;
     if (this.opts.drawingEnabled) {
@@ -29961,23 +30146,23 @@ var Niivue = class {
       return;
     }
     if (!this.opts.isResizeCanvas) {
-      if (this.opts.isHighResolutionCapable) {
-        log.warn("isHighResolutionCapable requires isResizeCanvas");
-        this.opts.isHighResolutionCapable = false;
+      if (this.opts.forceDevicePixelRatio >= 0) {
+        log.warn("this.opts.forceDevicePixelRatio requires isResizeCanvas");
       }
-      this.uiData.dpr = 1;
       this.drawScene();
       return;
     }
     this.canvas.style.width = "100%";
     this.canvas.style.height = "100%";
     this.canvas.style.display = "block";
-    if (this.opts.isHighResolutionCapable) {
+    if (this.opts.forceDevicePixelRatio === 0) {
       this.uiData.dpr = window.devicePixelRatio || 1;
-      log.debug("devicePixelRatio: " + this.uiData.dpr);
-    } else {
+    } else if (this.opts.forceDevicePixelRatio < 0) {
       this.uiData.dpr = 1;
+    } else {
+      this.uiData.dpr = this.opts.forceDevicePixelRatio;
     }
+    log.debug("devicePixelRatio: " + this.uiData.dpr);
     if ("width" in this.canvas.parentElement) {
       this.canvas.width = this.canvas.parentElement.width * this.uiData.dpr;
       this.canvas.height = this.canvas.parentElement.height * this.uiData.dpr;
@@ -31293,19 +31478,15 @@ var Niivue = class {
   }
   /**
    * Force WebGL canvas to use high resolution display, regardless of browser defaults.
-   * @param isHighResolutionCapable - allow high-DPI display
+   * @param forceDevicePixelRatio - -1: block high DPI; 0= allow high DPI: >0 use specified pixel ratio
    * @example niivue.setHighResolutionCapable(true);
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
    */
-  setHighResolutionCapable(isHighResolutionCapable) {
-    this.opts.isHighResolutionCapable = isHighResolutionCapable;
-    if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
-      log.warn("isHighResolutionCapable requires isResizeCanvas");
-      this.opts.isHighResolutionCapable = false;
+  setHighResolutionCapable(forceDevicePixelRatio) {
+    if (typeof forceDevicePixelRatio === "boolean") {
+      forceDevicePixelRatio = forceDevicePixelRatio ? 0 : -1;
     }
-    if (!this.opts.isHighResolutionCapable) {
-      this.uiData.dpr = 1;
-    }
+    this.opts.forceDevicePixelRatio = forceDevicePixelRatio;
     this.resizeListener();
     this.drawScene();
   }
@@ -35827,6 +36008,7 @@ var Niivue = class {
     if (volume.nTotalFrame4D <= volume.nFrame4D) {
       return;
     }
+    volume.nTotalFrame4D = volume.nFrame4D;
     let v;
     if (volume.fileObject) {
       v = await NVImage.loadFromFile({ file: volume.fileObject });
