@@ -5,7 +5,7 @@ import { readFileSync } from 'fs'
 
 test('loadFromFile loads a valid document', async () => {
   // Load the JSON document as a Blob
-  const data = readFileSync('tests/images/document/niivue.mesh.nvd')
+  const data = readFileSync('tests/images/document/niivue.mesh-pre-0.52.0.nvd')
   const blob = new Blob([data], { type: 'application/json' })
 
   const document = await NVDocument.loadFromFile(blob)
