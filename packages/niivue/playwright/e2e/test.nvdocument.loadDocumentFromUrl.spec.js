@@ -11,7 +11,7 @@ test('nvdocument loadFromUrl load preview', async ({ page }) => {
     const documentUrls = [
       './images/document/niivue.basic.nvd',
       './images/document/niivue.drawing.nvd',
-      './images/document/niivue.mesh.nvd'
+      './images/document/niivue.mesh-pre-0.52.0.nvd'
     ]
     for (const documentUrl of documentUrls) {
       const doc = await niivue.NVDocument.loadFromUrl(documentUrl)

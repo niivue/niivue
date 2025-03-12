@@ -820,11 +820,12 @@ export class Niivue {
         this.opts[name] = DEFAULT_OPTIONS[name] === undefined ? DEFAULT_OPTIONS[name] : options[name]
       }
     }
-
-    if (this.opts.isHighResolutionCapable) {
+    if (this.opts.forceDevicePixelRatio === 0) {
       this.uiData.dpr = window.devicePixelRatio || 1
-    } else {
+    } else if (this.opts.forceDevicePixelRatio < 0) {
       this.uiData.dpr = 1
+    } else {
+      this.uiData.dpr = this.opts.forceDevicePixelRatio
     }
 
     // now that opts have been parsed, set the current undo to max undo
@@ -1152,11 +1153,9 @@ export class Niivue {
       return
     }
     if (!this.opts.isResizeCanvas) {
-      if (this.opts.isHighResolutionCapable) {
-        log.warn('isHighResolutionCapable requires isResizeCanvas')
-        this.opts.isHighResolutionCapable = false
+      if (this.opts.forceDevicePixelRatio >= 0) {
+        log.warn('this.opts.forceDevicePixelRatio requires isResizeCanvas')
       }
-      this.uiData.dpr = 1
       this.drawScene()
       return
     }
@@ -1166,12 +1165,14 @@ export class Niivue {
 
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     // https://www.khronos.org/webgl/wiki/HandlingHighDPI
-    if (this.opts.isHighResolutionCapable) {
+    if (this.opts.forceDevicePixelRatio === 0) {
       this.uiData.dpr = window.devicePixelRatio || 1
-      log.debug('devicePixelRatio: ' + this.uiData.dpr)
-    } else {
+    } else if (this.opts.forceDevicePixelRatio < 0) {
       this.uiData.dpr = 1
+    } else {
+      this.uiData.dpr = this.opts.forceDevicePixelRatio
     }
+    log.debug('devicePixelRatio: ' + this.uiData.dpr)
     if ('width' in this.canvas.parentElement!) {
       this.canvas.width = (this.canvas.parentElement.width as number) * this.uiData.dpr
       // @ts-expect-error not sure why height is not defined for HTMLElement
@@ -2677,20 +2678,16 @@ export class Niivue {
 
   /**
    * Force WebGL canvas to use high resolution display, regardless of browser defaults.
-   * @param isHighResolutionCapable - allow high-DPI display
+   * @param forceDevicePixelRatio - -1: block high DPI; 0= allow high DPI: >0 use specified pixel ratio
    * @example niivue.setHighResolutionCapable(true);
    * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
    */
-  setHighResolutionCapable(isHighResolutionCapable: boolean): void {
-    this.opts.isHighResolutionCapable = isHighResolutionCapable
-    if (isHighResolutionCapable && !this.opts.isResizeCanvas) {
-      log.warn('isHighResolutionCapable requires isResizeCanvas')
-      this.opts.isHighResolutionCapable = false
+  setHighResolutionCapable(forceDevicePixelRatio: number | boolean): void {
+    if (typeof forceDevicePixelRatio === 'boolean') {
+      forceDevicePixelRatio = forceDevicePixelRatio ? 0 : -1
     }
-    if (!this.opts.isHighResolutionCapable) {
-      this.uiData.dpr = 1
-    }
-    this.resizeListener() // test isHighResolutionCapable
+    this.opts.forceDevicePixelRatio = forceDevicePixelRatio
+    this.resizeListener()
     this.drawScene()
   }
 
@@ -7885,6 +7882,7 @@ export class Niivue {
     if (volume.nTotalFrame4D! <= volume.nFrame4D!) {
       return
     }
+    volume.nTotalFrame4D = volume.nFrame4D
     // only load image data: do not change other settings like contrast
     // check if volume has the property fileObject
     let v

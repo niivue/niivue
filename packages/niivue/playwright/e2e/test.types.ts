@@ -1,6 +1,6 @@
 export interface NiivueTestOptions {
   isAntiAlias: boolean
-  isHighResolutionCapable: boolean
+  forceDevicePixelRatio: number
   thumbnail?: string
 }
 
@@ -12,5 +12,5 @@ export type NiivueTestOptionsFilePath = NiivueTestOptions & FilePath
 
 export const TEST_OPTIONS: NiivueTestOptions = {
   isAntiAlias: false,
-  isHighResolutionCapable: false
+  forceDevicePixelRatio: 0
 }
