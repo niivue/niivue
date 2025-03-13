@@ -18,6 +18,7 @@
         <option selected>JPEG</option>
         <option>Huge</option>
         <option>ZARR</option>
+        <option>NPZ</option>
       </select>
       <label for="dragSelect">Drag</label>
       <select id="dragSelect">
@@ -49,6 +50,9 @@
           [{
             url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
             name: 'example.zarr'
+          }],
+          [{
+            url: './c001_A_segmentation4.npz',
           }],
         ]
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
