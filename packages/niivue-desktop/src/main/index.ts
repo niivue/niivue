@@ -1,9 +1,9 @@
 import { app, shell, BrowserWindow, Menu } from 'electron'
 import { join } from 'path'
-import { registerIpcHandlers } from './utils/ipcHandlers'
+import { registerIpcHandlers } from './utils/ipcHandlers.js'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { createMenu } from './utils/menu'
+import { createMenu } from './utils/menu.js'
 
 let mainWindow: BrowserWindow | null = null // Global variable to store the window instance
 
@@ -15,7 +15,7 @@ function createWindow(): void {
     show: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: false,
       nodeIntegration: true

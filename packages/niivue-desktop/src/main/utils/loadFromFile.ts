@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises'
-import { store } from './appStore'
-import { refreshMenu } from './menu' // Import refreshMenu
+import { store } from './appStore.js'
+import { refreshMenu } from './menu.js' // Import refreshMenu
 
 // read a file and return it as a base64 string
 export const readFromFile = async (_: unknown, path: string): Promise<string> => {

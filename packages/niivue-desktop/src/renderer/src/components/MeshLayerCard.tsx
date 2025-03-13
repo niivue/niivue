@@ -4,15 +4,16 @@ import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '../App'
+import { NVMeshLayer } from '@renderer/types/MeshLayer'
 
 interface MeshImageCardProps {
-  image: unknown // TODO: export NVMeshLayer type from Niivue
+  image: NVMeshLayer // TODO: export NVMeshLayer type from Niivue
   idx: number
   parentMesh: NVMesh
 }
 
 export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): JSX.Element {
-  const [displayName, setDisplayName] = useState<string>(image.name)
+  const [displayName, setDisplayName] = useState<string>(image.name!)
   const [visible, setVisible] = useState<boolean>(true)
   const [colormaps, setColormaps] = useState<string[]>([])
   const [colormap, setColormap] = useState<string>('warm')
@@ -22,7 +23,8 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): J
   useEffect(() => {
     // make sure the layer is visible by default
     // TODO: fix the first argument type error in Niivue
-    nv.setMeshLayerProperty(parentMesh.id, idx, 'opacity', 1)
+    const index = nv.meshes.indexOf(parentMesh)
+    nv.setMeshLayerProperty(index, idx, 'opacity', 1)
   }, [])
 
   useEffect(() => {
@@ -38,8 +40,9 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): J
     setVisible(newVisibility)
     const opacity = newVisibility ? 1 : 0
     // request animation frame removes the lag between react state rerenders and niivue updates
+    const index = nv.meshes.indexOf(parentMesh)
     requestAnimationFrame(() => {
-      nv.setMeshLayerProperty(parentMesh.id, idx, 'opacity', opacity)
+      nv.setMeshLayerProperty(index, idx, 'opacity', opacity)
     })
   }
 

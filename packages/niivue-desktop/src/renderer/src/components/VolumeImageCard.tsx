@@ -21,12 +21,17 @@ interface VolumeImageCardProps {
   onMoveVolumeDown: (volume: NVImage) => void
 }
 
-export function VolumeImageCard({ image, onRemoveVolume, onMoveVolumeUp, onMoveVolumeDown }: VolumeImageCardProps): JSX.Element {
+export function VolumeImageCard({
+  image,
+  onRemoveVolume,
+  onMoveVolumeUp,
+  onMoveVolumeDown
+}: VolumeImageCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [colormap, setColormap] = useState<string>(
     typeof image.colormap === 'string' ? image.colormap : 'gray'
   )
-  const [intensity, setIntensity] = useState<number[]>([image.cal_min, image.cal_max])
+  const [intensity, setIntensity] = useState<number[]>([image.cal_min!, image.cal_max!])
   const [opacity, setOpacity] = useState<number>(1.0)
   const [colormaps, setColormaps] = useState<string[]>([])
   const [visible, setVisible] = useState<boolean>(true)
@@ -186,7 +191,7 @@ export function VolumeImageCard({ image, onRemoveVolume, onMoveVolumeUp, onMoveV
                 <Slider
                   size="1"
                   color="gray"
-                  defaultValue={[image.cal_min, image.cal_max]}
+                  defaultValue={[image.cal_min!, image.cal_max!]}
                   min={image.global_min}
                   max={image.global_max}
                   step={intensity[1] > 10 ? 1 : 0.1}

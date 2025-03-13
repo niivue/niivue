@@ -3,7 +3,7 @@ import volumeMni152 from '../../../resources/images/standard/mni152.nii.gz?asset
 import meshaal from '../../../resources/images/standard/aal.mz3?asset'
 import ICBM152LH from '../../../resources/images/standard/ICBM152.lh.mz3?asset'
 import ICBM152LHMotor from '../../../resources/images/standard/ICBM152.lh.motor.mz3?asset'
-import { store } from './appStore'
+import { store } from './appStore.js'
 
 // read a known standard file and return it as a base64 string
 export const readStandardFile = async (path: string): Promise<string> => {
