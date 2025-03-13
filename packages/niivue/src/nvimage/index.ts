@@ -1209,7 +1209,6 @@ export class NVImage {
     hdr.datatypeCode = NiiDataType.DT_RGBA32
     return data.buffer
   }
-
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
