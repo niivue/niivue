@@ -9206,7 +9206,7 @@ export class Niivue {
     } else {
       this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
     }
-    //if (this.opts.is2DSliceShader) {
+    // if (this.opts.is2DSliceShader) {
     // n.b. we set interpolation for BOTH 2D and 3D textures
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)

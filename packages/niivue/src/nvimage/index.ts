@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
 import { NiivueObject3D } from '../niivue-object3D.js'
 import { log } from '../logger.js'
-import { NVUtilities } from '../nvutilities.js'
+import { NVUtilities, Zip } from '../nvutilities.js'
 import {
   ImageFromBase64,
   ImageFromFileOptions,
@@ -565,6 +565,12 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.ZARR:
         imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
+        break
+      case NVIMAGE_TYPE.NPY:
+        imgRaw = await newImg.readNPY(dataBuffer as ArrayBuffer)
+        break
+      case NVIMAGE_TYPE.NPZ:
+        imgRaw = await newImg.readNPZ(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.NII:
         newImg.hdr = readHeader(dataBuffer as ArrayBuffer)
@@ -1177,6 +1183,112 @@ export class NVImage {
     })
   }
 
+  async readNPY(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+    // Helper function to determine byte size per element
+    function getTypeSize(dtype: string): number {
+      const typeMap: Record<string, number> = {
+        '|b1': 1, // Boolean
+        '<i1': 1, // Int8
+        '<u1': 1, // UInt8
+        '<i2': 2, // Int16
+        '<u2': 2, // UInt16
+        '<i4': 4, // Int32
+        '<u4': 4, // UInt32
+        '<f4': 4, // Float32
+        '<f8': 8 // Float64
+      }
+      return typeMap[dtype] ?? 1
+    }
+
+    // Helper function to determine NIfTI datatype code
+    function getDataTypeCode(dtype: string): number {
+      const typeMap: Record<string, number> = {
+        '|b1': 2, // DT_BINARY
+        '<i1': 256, // DT_INT8
+        '<u1': 2, // DT_UINT8
+        '<i2': 4, // DT_INT16
+        '<u2': 512, // DT_UINT16
+        '<i4': 8, // DT_INT32
+        '<u4': 768, // DT_UINT32
+        '<f4': 16, // DT_FLOAT32
+        '<f8': 64 // DT_FLOAT64
+      }
+      return typeMap[dtype] ?? 16 // Default to FLOAT32
+    }
+
+    const dv = new DataView(buffer)
+    // Verify magic number
+    const magicBytes = [dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3), dv.getUint8(4), dv.getUint8(5)]
+
+    // Expected magic number: [0x93, 0x4E, 0x55, 0x4D, 0x50, 0x59] ('\x93NUMPY')
+    const expectedMagic = [0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59]
+
+    if (!magicBytes.every((byte, i) => byte === expectedMagic[i])) {
+      throw new Error('Not a valid NPY file: Magic number mismatch')
+    }
+
+    // Extract version and header length
+    const _version = dv.getUint8(6)
+    const _minorVersion = dv.getUint8(7)
+    const headerLen = dv.getUint16(8, true) // Little-endian
+    // Decode header as ASCII string
+    const headerText = new TextDecoder('utf-8').decode(buffer.slice(10, 10 + headerLen))
+
+    // Extract shape from header
+    const shapeMatch = headerText.match(/'shape': \((.*?)\)/)
+    if (!shapeMatch) {
+      throw new Error('Invalid NPY header: Shape not found')
+    }
+    const shape = shapeMatch[1]
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s !== '')
+      .map(Number)
+
+    // Determine data type (assumes '|b1' (bool), '<f4' (float32), etc.)
+    const dtypeMatch = headerText.match(/'descr': '([^']+)'/)
+    if (!dtypeMatch) {
+      throw new Error('Invalid NPY header: Data type not found')
+    }
+    const dtype = dtypeMatch[1]
+    // Compute number of elements
+    const numElements = shape.reduce((a, b) => a * b, 1)
+    // Extract data start position
+    const dataStart = 10 + headerLen
+    // Read data as an ArrayBuffer
+    const dataBuffer = buffer.slice(dataStart, dataStart + numElements * getTypeSize(dtype))
+    // Interpret as 2D/3D data
+    const width = shape.length > 0 ? shape[shape.length - 1] : 1
+    const height = shape.length > 1 ? shape[shape.length - 2] : 1
+    const slices = shape.length > 2 ? shape[shape.length - 3] : 1
+    // Create NIFTI header
+    this.hdr = new NIFTI1()
+    const hdr = this.hdr
+    hdr.dims = [3, width, height, slices, 0, 0, 0, 0]
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+    hdr.affine = [
+      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [0, 0, 0, 1]
+    ]
+    hdr.numBitsPerVoxel = getTypeSize(dtype) * 8
+    hdr.datatypeCode = getDataTypeCode(dtype)
+    return dataBuffer
+  }
+
+  async readNPZ(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+    // todo: a single NPZ file can contain multiple NPY images
+    const zip = new Zip(buffer)
+    for (let i = 0; i < zip.entries.length; i++) {
+      const entry = zip.entries[i]
+      if (entry.fileName.toLowerCase().endsWith('.npy')) {
+        const data = await entry.extract()
+        return await this.readNPY(data.buffer)
+      }
+    }
+  }
+
   async readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer> {
     const imageData = await this.imageDataFromArrayBuffer(buffer)
     const { width, height, data } = imageData
@@ -1197,7 +1309,6 @@ export class NVImage {
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
     const { width, height, data } = (zarrData ?? {}) as any
-
 
     // data.fill(255, 0, Math.floor(data.length / 2))
     // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
@@ -1424,11 +1535,11 @@ export class NVImage {
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    const mat = await NVUtilities.readMatV4(buffer)
+    const mat = await NVUtilities.readMatV4(buffer, true)
     if (!('dimension' in mat) || !('dti_fa' in mat)) {
       throw new Error('Not a valid DSIstudio FIB file')
     }
-    const hasV1 = 'index0' in mat && 'index1' in mat && 'index2' in mat
+    const hasV1 = 'index0' in mat && 'index1' in mat && 'index2' in mat && 'odf_vertices' in mat
     // const hasV1 = false
     hdr.numBitsPerVoxel = 32
     hdr.datatypeCode = NiiDataType.DT_FLOAT32
@@ -1472,14 +1583,36 @@ export class NVImage {
       buff8v1.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D)
       buff8v1.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D)
     }
-    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
-    // read FA
-    const arrFA = Float32Array.from(mat.dti_fa)
-    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength)
-    buff8.set(imgFA, 0)
     if ('report' in mat) {
       hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)))
     }
+    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
+    const arrFA = Float32Array.from(mat.dti_fa)
+    if ('mask' in mat) {
+      console.log(mat)
+      let slope = 1
+      if ('dti_fa_slope' in mat) {
+        slope = mat.dti_fa_slope[0]
+      }
+      let inter = 1
+      if ('dti_fa_inter' in mat) {
+        inter = mat.dti_fa_inter[0]
+      }
+      const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+      const mask = mat.mask
+      const f32 = new Float32Array(nvox)
+      let j = 0
+      for (let i = 0; i < nvox; i++) {
+        if (mask[i] !== 0) {
+          f32[i] = arrFA[j] * slope + inter
+          j++
+        }
+      }
+      return [f32.buffer, new Float32Array(buff8v1.buffer)]
+    }
+    // read FA
+    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength)
+    buff8.set(imgFA, 0)
     return [buff8.buffer, new Float32Array(buff8v1.buffer)]
   } // readFIB()
 
@@ -1495,6 +1628,7 @@ export class NVImage {
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
     const mat = await NVUtilities.readMatV4(buffer)
+    console.log(mat)
     if (!('dimension' in mat) || !('image0' in mat)) {
       throw new Error('Not a valid DSIstudio SRC file')
     }
