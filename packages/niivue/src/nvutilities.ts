@@ -276,7 +276,10 @@ export class NVUtilities {
     return decompressed.buffer.slice(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength)
   }
 
-  static async readMatV4(buffer: ArrayBuffer): Promise<Record<string, TypedNumberArray>> {
+  static async readMatV4(
+    buffer: ArrayBuffer,
+    isReplaceDots: boolean = false
+  ): Promise<Record<string, TypedNumberArray>> {
     let len = buffer.byteLength
     if (len < 40) {
       throw new Error('File too small to be MAT v4: bytes = ' + buffer.byteLength)
@@ -333,7 +336,12 @@ export class NVUtilities {
         throw new Error('mrows * ncols must be greater than one')
       }
       const byteArray = new Uint8Array(bytes.subarray(pos, pos + namlen))
-      const tagName = textDecoder.decode(byteArray).trim().replaceAll('\x00', '')
+      let tagName = textDecoder.decode(byteArray).trim().replaceAll('\x00', '')
+      // n.b. DSI studio have array mat.dti_fa[] and mat.dti_fa.slope
+      if (isReplaceDots) {
+        // kludge for invalid DSIstudio FZ files
+        tagName = tagName.replaceAll('.', '_')
+      }
       const tagDataType = getTensDigit(mtype)
       // 0 double-precision (64-bit) floating-point numbers
       // 1 single-precision (32-bit) floating-point numbers

@@ -19,6 +19,7 @@
         <option>Huge</option>
         <option>ZARR</option>
         <option>NPZ</option>
+        <option>DANDI</option>
       </select>
       <label for="dragSelect">Drag</label>
       <select id="dragSelect">
@@ -28,7 +29,8 @@
         <option>Pan</option>
       </select>
       <label for="smoothCheck">Smooth</label>
-      <input type="checkbox" id="smoothCheck" Smooth />
+      <input type="checkbox" checked=true id="smoothCheck" Smooth />
+      <button id="aboutBtn">About</button>
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
@@ -37,6 +39,18 @@
     </main>
     <footer id="statusText">&nbsp;</footer>
     <script type="module" async>
+
+      async function listRepoReleaseAssets(user) {
+        const repos = await (await fetch(`https://api.github.com/users/${user}/repos`)).json();
+        for (const { name } of repos) {
+          const releases = await (await fetch(`https://api.github.com/repos/${user}/${name}/releases`)).json();
+          releases.forEach((r) => 
+            r.assets.forEach((a) =>
+              console.log(`Repo: ${name} | Release: ${r.tag_name} | Asset: ${a.name} | URL: ${a.browser_download_url}`)
+            )
+          );
+        }
+      }
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
       formatSelect.onchange = async function () {
         const idx = this.selectedIndex
@@ -54,8 +68,21 @@
           [{
             url: './c001_A_segmentation4.npz',
           }],
+          [{
+            url: './sub-370_sample-0002_TEM.png',
+          }],
+          [{
+             url: './HCD1464653.qsdr.fz',
+          }],
+          [{
+            url: './6001240.zarr',
+            name: 'local.zarr'
+          }],
         ]
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
+      }
+      aboutBtn.onclick = async function () {
+        listRepoReleaseAssets('data-hcp');
       }
       dragSelect.onchange = function () {
         const drag = this.options[this.selectedIndex].text
