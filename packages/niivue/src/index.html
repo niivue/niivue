@@ -15,11 +15,13 @@
     <header>
       <label for="formatSelect">Format</label>
       <select id="formatSelect">
-        <option selected>JPEG</option>
+        <option>JPEG</option>
         <option>Huge</option>
         <option>ZARR</option>
         <option>NPZ</option>
-        <option>DANDI</option>
+        <option selected>DANDI</option>
+        <option>FS</option>
+        <option>Local ZARR</option>
       </select>
       <label for="dragSelect">Drag</label>
       <select id="dragSelect">
@@ -75,8 +77,13 @@
              url: './HCD1464653.qsdr.fz',
           }],
           [{
-            url: './6001240.zarr',
-            name: 'local.zarr'
+            //url: './6001240.zarr',
+            //url:  "http://localhost:5173/6001240.zarr",
+             //url: 'http://localhost:5173/6001240.zarr',
+          url: './8bit.nii.gz',
+          //url: './bert_wmparc.mgh',
+            //name: 'local.zarr'
+            colormap: 'actc',
           }],
         ]
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
