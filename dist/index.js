@@ -38847,7 +38847,9 @@ var Niivue = class {
       h = this.gl.canvas.width / this.bmpTextureWH;
       w = this.gl.canvas.width;
     }
-    this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, 0, 0, w, h);
+    const left = (this.gl.canvas.width - w) / 2;
+    const top = (this.gl.canvas.height - h) / 2;
+    this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, w, h);
     this.gl.bindVertexArray(this.genericVAO);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     this.gl.bindVertexArray(this.unusedVAO);
