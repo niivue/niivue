@@ -33,7 +33,7 @@ let volumeList = [
   { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
 ];
 const nv = new Niivue();
-nv.attachTo("gl"); // attach to canvas with id="gl"
+await nv.attachTo("gl"); // attach to canvas with id="gl"
 nv.loadVolumes(volumeList);
 ```
 
@@ -46,7 +46,7 @@ let meshList = [
   { url: "https://niivue.github.io/niivue/images/BrainMesh_ICBM152.lh.mz3"},
 ];
 const nv = new Niivue();
-nv.attachTo("gl"); // attach to canvas with id="gl"
+await nv.attachTo("gl"); // attach to canvas with id="gl"
 nv.loadMeshes(meshList);
 ```
 
@@ -62,7 +62,7 @@ let volumeList = [
   },
 ];
 const nv = new Niivue();
-nv.attachTo("gl"); // attach to canvas with id="gl"
+await nv.attachTo("gl"); // attach to canvas with id="gl"
 nv.loadVolumes(volumeList);
 ```
 
@@ -82,7 +82,7 @@ nv.loadVolumes(volumeList);
     },
   ]
   const nv = new Niivue();
-  nv.attachTo("gl"); // attach to canvas with id="gl"
+  await nv.attachTo("gl"); // attach to canvas with id="gl"
   nv.loadVolumes(volumeList);
   ```
 
@@ -102,7 +102,7 @@ nv.loadVolumes(volumeList);
     { url: "https://niivue.github.io/niivue/images/BrainMesh_ICBM152.lh.mz3"},
   ]
   const nv = new Niivue();
-  nv.attachTo("gl"); // attach to canvas with id="gl"
+  await nv.attachTo("gl"); // attach to canvas with id="gl"
   nv.setSliceMM(true) // world space coordinates to be used by all images when loading volumes and meshes together
   nv.loadVolumes(volumeList); // async
   nv.loadMeshes(meshList); // async
@@ -127,7 +127,7 @@ nv.loadVolumes(volumeList);
       crosshairWidth: 4, // make crosshair thicker
       // for more options see: https://niivue.github.io/niivue/devdocs/global.html#NiivueOptions
     });
-    nv.attachTo("gl"); // attach to canvas with id="gl"
+    await nv.attachTo("gl"); // attach to canvas with id="gl"
     nv.loadVolumes(volumeList); // async
   ```
 
@@ -170,7 +170,7 @@ While NiiVue can be wrapped with frameworks (VueJS, React, Angular), you can als
       { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
     ];
     var nv = new niivue.Niivue({ isResizeCanvas: false });
-    nv.attachTo("gl");
+    await nv.attachTo("gl");
     nv.loadVolumes(volumeList);
   </script>
 </html>
@@ -196,7 +196,7 @@ Note that the code above will load the latest current stable release of NiiVue. 
       { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
     ];
     var nv = new Niivue({ isResizeCanvas: false });
-    nv.attachTo("gl");
+    await nv.attachTo("gl");
     nv.loadVolumes(volumeList);
   </script>
 </html>
@@ -230,7 +230,7 @@ export default {
 
   mounted() {
 
-    nv.attachTo('gl')
+    await nv.attachTo('gl')
     nv.loadVolumes(this.volumeList)
   }
 }

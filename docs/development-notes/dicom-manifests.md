@@ -19,7 +19,7 @@ var volumeList1 = [
 ];
 var nv1 = new Niivue();
 nv1.setRadiologicalConvention(false);
-nv1.attachTo("gl1");
+await nv1.attachTo("gl1");
 nv1.loadVolumes(volumeList1);
 nv1.setSliceType(nv1.sliceTypeMultiplanar);
 ```

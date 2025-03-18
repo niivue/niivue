@@ -16,7 +16,7 @@ test('nvmeshloaders readLayer', async ({ page }) => {
       backColor: [1, 1, 1, 1],
       meshXRay: 0.3
     })
-    nv.attachTo('gl')
+    await nv.attachTo('gl')
     nv.opts.isColorbar = true
 
     await nv.loadMeshes([

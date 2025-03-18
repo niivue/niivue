@@ -127,7 +127,7 @@
   ];
   
   var nv1 = new niivue.Niivue({ show3Dcrosshair: true, isColorbar: true });
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
   nv1.opts.meshXRay = 0.2;

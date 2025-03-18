@@ -92,7 +92,7 @@
       nv1.setCrosshairWidth(0.1);
       //v1 aided if all views show voxel centers
       nv1.opts.isForceMouseClickToVoxelCenters = true;
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       //V1 lines REQUIRES nearest neighbor interpolation
       nv1.setInterpolation(true);
       await nv1.loadVolumes(volumeList1);

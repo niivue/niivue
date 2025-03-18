@@ -91,7 +91,7 @@
     };
     cmapEl.appendChild(btn);
   }
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   nv1.opts.isColorbar = true;
   await nv1.loadMeshes([
     { url: "../images/BrainMesh_ICBM152.lh.mz3", layers: meshLHLayersList1 },

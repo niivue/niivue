@@ -47,7 +47,7 @@
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.opts.dragMode = nv1.dragModes.pan
       nv1.opts.yoke3Dto2DZoom = true
-      nv1.attachTo("gl1")
+      await nv1.attachTo("gl1")
       await nv1.loadVolumes(volumeList1)
       await nv1.volumes[1].setColormapLabelFromUrl("../images/inia19-NeuroMaps.json")
       nv1.updateGLVolume()

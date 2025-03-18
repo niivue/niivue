@@ -77,7 +77,7 @@
       };
       var nv1 = new niivue.Niivue(defaults);
       nv1.setRadiologicalConvention(false);
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       var volumeList1 = [
         {
           url: "../images/mni152.nii.gz",

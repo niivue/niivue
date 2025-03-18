@@ -91,7 +91,7 @@
         onLocationChange: handleLocationChange,
       });
       nv1.setRadiologicalConvention(false);
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.setSliceMM(false);
       nv1.opts.isColorbar = true;

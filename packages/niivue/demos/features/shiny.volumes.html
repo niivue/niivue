@@ -105,7 +105,7 @@
         onLocationChange: handleLocationChange,
       }
       var nv1 = new niivue.Niivue(defaults)
-      nv1.attachTo("gl1")
+      await nv1.attachTo("gl1")
       nv1.setSliceType(nv1.sliceTypeRender)
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.setVolumeRenderIllumination(1.0)

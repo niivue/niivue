@@ -915,7 +915,7 @@ export class Niivue {
    * @param id - the id of an html canvas element
    * @param isAntiAlias - determines if anti-aliasing is requested (if not specified, AA usage depends on hardware)
    * @example niivue = new Niivue().attachTo('gl')
-   * @example niivue.attachTo('gl')
+   * @example await niivue.attachTo('gl')
    * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html | live demo usage}
    */
   async attachTo(id: string, isAntiAlias = null): Promise<this> {
@@ -929,7 +929,7 @@ export class Niivue {
    * @param canvas - the canvas element reference
    * @example
    * niivue = new Niivue()
-   * niivue.attachToCanvas(document.getElementById(id))
+   * await niivue.attachToCanvas(document.getElementById(id))
    */
   async attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean | null = null): Promise<this> {
     this.canvas = canvas
@@ -4132,7 +4132,7 @@ export class Niivue {
         }
 
         var nv1 = new Niivue();
-        nv1.attachTo("${canvasId}");
+        await nv1.attachTo("${canvasId}");
         var base64 = "${base64}";
         NVUtilities.decompressBase64String(base64).then((jsonText) => {
           var json = JSON.parse(jsonText); // string -> JSON

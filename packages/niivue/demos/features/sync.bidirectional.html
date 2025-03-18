@@ -171,7 +171,7 @@
         sliceType: 3,
         multiplanarShowRender: niivue.SHOW_RENDER.ALWAYS
       });
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       var volumeList1 = [{ url: "../images/pcasl.nii.gz" }];
       await nv1.loadVolumes(volumeList1);
       var nv2 = new niivue.Niivue({
@@ -182,7 +182,7 @@
         sliceType: 3,
         multiplanarShowRender: niivue.SHOW_RENDER.ALWAYS
       });
-      nv2.attachTo("gl2");
+      await nv2.attachTo("gl2");
       var nv3 = new niivue.Niivue({
         show3Dcrosshair: true,
         onLocationChange: handleIntensityChange3,
@@ -191,7 +191,7 @@
         sliceType: 3,
         multiplanarShowRender: niivue.SHOW_RENDER.ALWAYS
       });
-      nv3.attachTo("gl3");
+      await nv3.attachTo("gl3");
       var volumeList2 = [{ url: "../images/mni152.nii.gz" }];
       var volumeList3 = [{ url: "../images/mni152.nii.gz" }];
       await nv2.loadVolumes(volumeList2);

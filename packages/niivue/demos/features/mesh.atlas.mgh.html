@@ -53,7 +53,7 @@
     backColor: [0.4, 0.4, 0.4, 1],
   });
   nv1.setSliceType(nv1.sliceTypeRender);
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   //you can convert between GIfTI and FreeSurfer annot files:
   // mris_convert  --annot lh.Yeo2011_7Networks_N1000.annot lh.pial ./lh.Yeo2011.gii
   var meshLayersList1 = [
