@@ -201,7 +201,7 @@
         measureTextHeight: 0.04
       }
       var nv1 = new Niivue(defaults)
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       // multiplanarShowRender is the preferred option now,
       // but multiplanarForceRender is still available for backwards compatibility
       // previous use was: nv1.opts.multiplanarForceRender = true;

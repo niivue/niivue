@@ -54,7 +54,7 @@
         nv1.setVolumeRenderIllumination(this.value);
       };
       var nv1 = new niivue.Niivue(defaults)
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       nv1.opts.dragMode = nv1.dragModes.pan
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.opts.yoke3Dto2DZoom = true

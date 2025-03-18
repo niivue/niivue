@@ -36,7 +36,7 @@ const NiiVue = ({ imageUrl }) => {
       },
     ];
     const nv = new Niivue();
-    nv.attachToCanvas(canvas.current);
+    await nv.attachToCanvas(canvas.current);
     nv.loadVolumes(volumeList);
   }, [imageUrl]);
 
@@ -78,10 +78,10 @@ export default function NiivueCanvas({ images, nvOpts }) {
   const canvasRef = React.useRef(null);
   const niivue = React.useRef(null);
   // intialise niivue instance on first mount
-  React.useEffect(() => {
+  React.useEffect(async () => {
     niivue.current = new Niivue({logLevel: 'debug', ...nvOpts});
-    niivue.current.attachToCanvas(canvasRef.current);
-    niivue.current.loadVolumes(images);
+    await niivue.current.attachToCanvas(canvasRef.current);
+    await niivue.current.loadVolumes(images);
   }, []);
 
   return (

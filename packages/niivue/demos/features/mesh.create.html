@@ -131,7 +131,7 @@
     }
   }
   var nv1 = new niivue.Niivue({show3Dcrosshair: true})
-  nv1.attachToCanvas(gl1)
+  await nv1.attachToCanvas(gl1)
   const mesh = createTrefoilKnot()
   const meshBuffer = niivue.NVMeshUtilities.createMZ3(mesh.pts, mesh.tris,  false)
   await nv1.loadFromArrayBuffer(meshBuffer, 'trefoil.mz3')

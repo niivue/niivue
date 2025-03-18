@@ -261,7 +261,7 @@ const NiiVue = ({ imageUrl }) => {
       },
     ];
     const nv = new Niivue();
-    nv.attachToCanvas(canvas.current);
+    await nv.attachToCanvas(canvas.current);
     nv.loadVolumes(volumeList);
   }, [imageUrl]);
 

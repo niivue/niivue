@@ -98,7 +98,7 @@
         onLocationChange: handleIntensityChange,
       }
       var nv1 = new Niivue(defaults)
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       nv1.loadVolumes(volumeList1);
       nv1.setSliceType(nv1.sliceTypeRender);
       nv1.setClipPlane(clipPlane);
