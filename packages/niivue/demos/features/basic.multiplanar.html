@@ -56,7 +56,7 @@
     dragAndDropEnabled: true,
     onLocationChange: handleIntensityChange
   })
-  nv1.attachTo('gl1')
+  await nv1.attachTo('gl1')
   await nv1.loadVolumes(volumeList1)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
 </script>

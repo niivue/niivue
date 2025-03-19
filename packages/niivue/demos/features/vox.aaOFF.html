@@ -55,7 +55,7 @@
     show3Dcrosshair: true,
     onLocationChange: handleIntensityChange,
   });
-  nv1.attachTo("gl1", false);
+  await nv1.attachTo("gl1", false);
   nv1.opts.isColorbar = true;
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
   await nv1.loadVolumes(volumeList1);

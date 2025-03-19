@@ -54,7 +54,7 @@
     onLocationChange: handleLocationChange,
     onFrameChange: handleFrameChange
   })
-  nv1.attachTo("gl1")
+  await nv1.attachTo("gl1")
   nv1.setRadiologicalConvention(false)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
   nv1.graph.autoSizeMultiplanar = true

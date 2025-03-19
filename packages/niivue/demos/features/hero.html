@@ -254,7 +254,7 @@
       }
       nv1.opts.tileMargin = 40
       //nv1.opts.multiplanarPadPixels = 40
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       await nv1.loadVolumes(volumeList1)
       nv1.opts.textHeight = 0.02
       equalCheck.onchange()

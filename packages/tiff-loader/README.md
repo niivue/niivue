@@ -20,7 +20,7 @@ import { Niivue } from '@niivue/niivue'
 import { tiff2nii } from '@niivue/tiff-loader'
 
 const nv = new Niivue()
-nv.attachToCanvas(document.getElementById('niivue-canvas'))
+await nv.attachToCanvas(document.getElementById('niivue-canvas'))
 // supply loader function, fromExt, and toExt (without dots)
 nv.useLoader(tiff2nii, 'tif', 'nii')
 nv.useLoader(tiff2nii, 'tiff', 'nii')

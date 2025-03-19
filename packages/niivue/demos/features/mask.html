@@ -35,7 +35,7 @@
         },
       ];
       var nv1 = new niivue.Niivue({ show3Dcrosshair: true });
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.loadVolumes(volumeList1);
       nv1.setSliceType(nv1.sliceTypeRender);
       nv1.setClipPlane([0.15, 270, 0]);

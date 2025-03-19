@@ -94,7 +94,7 @@
   });
   nv1.opts.isOrientCube = true;
   nv1.setSliceType(nv1.sliceTypeRender);
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   await nv1.loadVolumes(volumeList1);
   await nv1.loadMeshes([
     { url: "../images/tract.FAT_R.vtk", rgba255: [180, 180, 0, 255] },

@@ -247,7 +247,7 @@ dialog {
       }
       let imgRaw
       var nv1 = new niivue.Niivue(defaults)
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       nv1.onImageLoaded = (volume) => {
         imgRaw = nv1.volumes[0].img.slice()
       }

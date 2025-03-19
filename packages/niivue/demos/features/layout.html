@@ -115,7 +115,7 @@
     backColor: [0.64, 0.76, 0.68, 1],
   }
   var nv1 = new niivue.Niivue(opts)
-  nv1.attachTo("gl1")
+  await nv1.attachTo("gl1")
   nv1.setMultiplanarPadPixels(5)
   nv1.graph.opacity = 1.0
   await nv1.loadVolumes(volumeList1)

@@ -38,6 +38,6 @@
   var nv1 = new niivue.Niivue({
     onLocationChange: handleIntensityChange,
   });
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
 </script>

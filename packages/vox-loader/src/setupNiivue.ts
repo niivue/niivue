@@ -3,7 +3,7 @@ import { vox2nii } from './lib/loader.js'
 
 export async function setupNiivue(element: HTMLCanvasElement) {
   const nv = new Niivue()
-  nv.attachToCanvas(element)
+  await nv.attachToCanvas(element)
   // supply loader function, fromExt, and toExt (without dots)
   nv.useLoader(vox2nii, 'vox', 'nii')
   await nv.loadImages([

@@ -11,7 +11,7 @@ import { Niivue } from '@niivue/niivue'
 import { vox2nii } from '@niivue/vox-loader'
 
 const nv = new Niivue()
-nv.attachToCanvas(document.getElementById('niivue-canvas'))
+await nv.attachToCanvas(document.getElementById('niivue-canvas'))
 // supply loader function, fromExt, and toExt (without dots)
 nv.useLoader(vox2nii, 'vox', 'nii')
 await nv.loadImages([

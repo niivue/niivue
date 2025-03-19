@@ -122,7 +122,7 @@
         onLocationChange: handleIntensityChange,
         backColor: [1, 1, 1, 1],
       })
-      nv1.attachTo("gl1")
+      await nv1.attachTo("gl1")
       nv1.setHighResolutionCapable(false)
       nv1.opts.isOrientCube = true
       var volumeList1 = [{ url: "../images/mni152.nii.gz" }]
@@ -139,7 +139,7 @@
         onLocationChange: handleIntensityChange2,
         backColor: [1, 1, 1, 1],
       })
-      nv2.attachTo("gl2")
+      await nv2.attachTo("gl2")
       nv2.setHighResolutionCapable(true)
       await nv2.loadVolumes(volumeList1)
       await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])

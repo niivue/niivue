@@ -91,7 +91,7 @@
   });
   nv1.opts.isColorbar = true;
   nv1.setSliceType(nv1.sliceTypeRender);
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   await nv1.loadVolumes(volumeList1);
   await nv1.loadMeshes([{ url: "../images/dpsv.trx", rgba255: [0, 142, 0, 255]}]);
   nv1.setMeshProperty(nv1.meshes[0].id, "colormap", "blue"); //colormap for DPV and DPS

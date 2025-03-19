@@ -11,7 +11,7 @@ test('niivue broadcastTo', async ({ page }) => {
   await page.evaluate(async (testOptions) => {
     const nv1 = new Niivue(testOptions)
     await nv1.attachTo('gl1')
-    nv1.attachTo('gl1')
+    await nv1.attachTo('gl1')
     const nv2 = new Niivue(testOptions)
     await nv2.attachTo('gl2')
     const volumeList = [
@@ -38,7 +38,7 @@ test('niivue broadcastTo can be turned off', async ({ page }) => {
     const panTestOptions = { ...testOptions, dragMode: 3 }
     const nv1 = new Niivue(panTestOptions)
     await nv1.attachTo('gl1')
-    nv1.attachTo('gl1')
+    await nv1.attachTo('gl1')
     const nv2 = new Niivue(panTestOptions)
     await nv2.attachTo('gl2')
     const volumeList = [

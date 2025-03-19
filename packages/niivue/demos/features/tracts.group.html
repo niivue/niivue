@@ -112,7 +112,7 @@
     backColor: [0.7, 0.7, 0.7, 1],
   });
   nv1.setSliceType(nv1.sliceTypeRender);
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   await nv1.loadVolumes(volumeList1);
   await nv1.loadMeshes([{ url: "../images/sub-01_ses-01_dwi_space-RASMM_model-probCSD_algo-AFQ_tractography.trx", rgba255: [0, 142, 0, 255]}]);
   nv1.setClipPlane([-0.1, 180, 0]);

@@ -151,7 +151,7 @@ void main() {
     backColor: [0.9, 0.9, 1, 1],
   })
   nv1.setSliceType(nv1.sliceTypeRender)
-  nv1.attachTo("gl1")
+  await nv1.attachTo("gl1")
   var meshLayersList1 = [
     {
       url: "../images/lh.curv",

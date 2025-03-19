@@ -55,7 +55,7 @@
         },
       ];
       var nv1 = new niivue.Niivue((opts = { trustCalMinMax: false }));
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.loadVolumes(volumeList1);
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
     </script>

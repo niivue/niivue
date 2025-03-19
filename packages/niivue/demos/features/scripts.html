@@ -51,7 +51,7 @@ nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.
         backColor: [1, 0.5, 1, 1],
       });
       nv1.setSliceType(nv1.sliceTypeRender);
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.loadVolumes(volumeList1);
       nv1.loadMeshes([
         {
