@@ -216,7 +216,7 @@
       };
       var nv1 = new niivue.Niivue(defaults);
       nv1.setRadiologicalConvention(false);
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.setSliceType(nv1.sliceTypeMultiplanar);
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
       nv1.graph.opacity = 1.0;

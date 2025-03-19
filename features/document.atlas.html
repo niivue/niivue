@@ -75,7 +75,7 @@
 
     clear.onclick = async function () {      
       nv1 = new Niivue(defaults);
-      nv1.attachToCanvas(gl1);
+      await nv1.attachToCanvas(gl1);
       nv1.opts.dragMode = nv1.dragModes.pan;
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
       nv1.opts.yoke3Dto2DZoom = true;
@@ -132,7 +132,7 @@
     }
 
     var nv1 = new Niivue(defaults);
-    nv1.attachToCanvas(gl1);
+    await nv1.attachToCanvas(gl1);
     nv1.opts.dragMode = nv1.dragModes.pan;
     nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
     nv1.opts.yoke3Dto2DZoom = true;

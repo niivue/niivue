@@ -43,6 +43,6 @@
   var nv1 = new niivue.Niivue({
     isResizeCanvas: false,
   });
-  nv1.attachTo("gl");
+  await nv1.attachTo("gl");
   await nv1.loadVolumes(volumeList1);
 </script>

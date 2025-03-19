@@ -124,7 +124,7 @@
       const url = "../images/hippo.nii.gz";
       var isHippoShowing = false;
       var nv1 = new niivue.Niivue();
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
 
       var buttons = document.getElementsByClassName("viewBtn");
       for (let i = 0; i < buttons.length; i++)

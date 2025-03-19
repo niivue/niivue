@@ -63,7 +63,7 @@
         document.getElementById("location").innerHTML = 'Clicked: '+data.string
       }
       var nv1 = new niivue.Niivue({show3Dcrosshair: true, backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange })
-      nv1.attachTo("gl1")
+      await nv1.attachTo("gl1")
       nv1.setInterpolation(true)
       nv1.opts.crosshairGap = 12
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS

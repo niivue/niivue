@@ -135,7 +135,7 @@
         backColor: [0.5, 0.5, 0.6, 1],
         onLocationChange: handleIntensityChange,
       });
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.setClipPlane([-0.12, 180, 40]);
       nv1.setRenderAzimuthElevation(230,15)
       nv1.setSliceType(nv1.sliceTypeMultiplanar);

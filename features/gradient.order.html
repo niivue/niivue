@@ -138,7 +138,7 @@
   ]
   // Upper-left, render, gradient order 1
   const nv1 = new Niivue(defaults)
-  nv1.attachTo('gl1')
+  await nv1.attachTo('gl1')
   nv1.loadVolumes(volumeList1)
   nv1.opts.isColorbar = true
   nv1.setSliceType(nv1.sliceTypeRender)
@@ -147,7 +147,7 @@
 
   // Upper-left, render, gradient order 2
   const nv2 = new Niivue(defaults)
-  nv2.attachTo('gl2')
+  await nv2.attachTo('gl2')
   nv2.loadVolumes(volumeList1)
   nv2.opts.isColorbar = true
   nv2.opts.gradientOrder = 2
@@ -157,7 +157,7 @@
 
   // Lower-left, gradients, gradient order 1
   const nv3 = new Niivue(defaults)
-  nv3.attachTo('gl3')
+  await nv3.attachTo('gl3')
   nv3.loadVolumes(volumeList1)
   nv3.opts.isColorbar = true
   nv3.setSliceType(nv3.sliceTypeRender)
@@ -166,7 +166,7 @@
 
   // Lower-right, gradients, gradient order 2
   const nv4 = new Niivue(defaults)
-  nv4.attachTo('gl4')
+  await nv4.attachTo('gl4')
   nv4.loadVolumes(volumeList1)
   nv4.opts.isColorbar = true
   nv4.opts.gradientOrder = 2

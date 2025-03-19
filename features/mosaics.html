@@ -38,7 +38,7 @@
         },
       ];
       var nv1 = new niivue.Niivue();
-      nv1.attachTo("gl1");
+      await nv1.attachTo("gl1");
       nv1.loadVolumes(volumeList1);
       var txt = document.getElementById("str");
       nv1.setSliceType(nv1.sliceTypeAxial);

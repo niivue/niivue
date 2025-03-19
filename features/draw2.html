@@ -163,7 +163,7 @@
   });
   nv1.setRadiologicalConvention(false);
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   await nv1.loadVolumes(volumeList1);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   await nv1.loadDrawingFromUrl("../images/lesion.nii.gz");

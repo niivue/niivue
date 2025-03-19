@@ -77,7 +77,7 @@
       }
       var nv1 = new niivue.Niivue(defaults)
       nv1.setInterpolation(true)
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       await nv1.loadVolumes(volumeList1)
       await binaryCheck.onchange()
     </script>

@@ -185,7 +185,7 @@
   });
   nv1.opts.isColorbar = false;
   nv1.setRadiologicalConvention(false);
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   nv1.setRenderAzimuthElevation(120, 10);
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.setSliceMM(true);

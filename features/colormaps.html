@@ -95,7 +95,7 @@ let cmap = {&#10; R: [0, 255, 0],&#10; G: [0, 0, 255],&#10; B: [0, 0, 0],&#10; A
     },
   ];
   var nv1 = new niivue.Niivue({backColor: [0.3, 0.3, 0.3, 1]});
-  nv1.attachTo("gl1");
+  await nv1.attachTo("gl1");
   nv1.loadVolumes(volumeList1);
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
   nv1.opts.isColorbar = true;

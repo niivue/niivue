@@ -112,7 +112,7 @@
         logLevel: 'info',
       }
       var nv1 = new niivue.Niivue(defaults)
-      nv1.attachToCanvas(gl1)
+      await nv1.attachToCanvas(gl1)
       await nv1.loadVolumes([{ url: "../images/fslmean.nii.gz"}])
     </script>
   </body>
