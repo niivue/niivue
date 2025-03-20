@@ -588,7 +588,6 @@ export class NVImage {
       case NVIMAGE_TYPE.ZARR:
         // imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
         throw new Error('Image type ZARR not (yet) supported')
-        break
       case NVIMAGE_TYPE.NII:
         if (isCompressed(dataBuffer as ArrayBuffer)) {
           dataBuffer = await decompressAsync(dataBuffer as ArrayBuffer)
