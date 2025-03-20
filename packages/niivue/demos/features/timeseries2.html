@@ -22,6 +22,9 @@
         <option selected>ASL</option>
         <option>DWI</option>
         <option>fMRI</option>
+        <option>FLAIR</option>
+        <option>T1</option>
+        <option>T2</option>
       </select>
       &nbsp;&nbsp;<label for="viewSelect">View</label>
       <select id="viewSelect">
@@ -31,16 +34,25 @@
         <option value="4">Render</option>
         <option value="3" selected>A+C+S+R</option>
       </select>
-      &nbsp;&nbsp;<label for="normCheck">Normalize graph</label>
-      <input type="checkbox" id="normCheck" unchecked />
-      &nbsp;&nbsp;<label for="minmaxCheck">Per-volume graph range</label>
-      <input type="checkbox" id="minmaxCheck" unchecked />
-      &nbsp;&nbsp;<label for="frameCheck">per-volume contrast</label>
-      <input type="checkbox" id="frameCheck" unchecked />
-      &nbsp;&nbsp;<button id="prevVolume">Back</button>
-      &nbsp;&nbsp;<button id="nextVolume">Forward</button>
-      &nbsp;&nbsp;<button id="animate">Animate</button>
-      &nbsp;&nbsp;<button id="about">About</button>
+      <label for="dragSelect">Drag</label>
+      <select id="dragSelect">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="none">none</option>
+      </select>
+      <div id="controls4D">
+        &nbsp;&nbsp;<label for="normCheck">Normalize graph</label>
+        <input type="checkbox" id="normCheck" unchecked />
+        &nbsp;&nbsp;<label for="minmaxCheck">Per-volume graph range</label>
+        <input type="checkbox" id="minmaxCheck" unchecked />
+        &nbsp;&nbsp;<label for="frameCheck">per-volume contrast</label>
+        <input type="checkbox" id="frameCheck" unchecked />
+        &nbsp;&nbsp;<button id="prevVolume">Back</button>
+        &nbsp;&nbsp;<button id="nextVolume">Forward</button>
+        &nbsp;&nbsp;<button id="animate">Animate</button>
+        &nbsp;&nbsp;<button id="about">About</button>
+      </div>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -76,10 +88,42 @@
     if (modality === "fMRI") {
       img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/func/sub-M2309_ses-960_task-naming40_acq-epfid2_dir-AP_run-2_bold.nii.gz"
     }
+    if (modality === "FLAIR") {
+      img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/anat/sub-M2309_ses-960_acq-spcir2p2_run-5_FLAIR.nii.gz"
+    }
+    if (modality === "T1") {
+      img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/anat/sub-M2309_ses-960_acq-tfl3p2_run-3_T1w.nii.gz"
+    }
+    if (modality === "T2") {
+      img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/anat/sub-M2309_ses-960_acq-spc3p2_run-4_T2w.nii.gz"
+    }
     volumeList1[0].url = img
     nv1.loadVolumes(volumeList1)
   }
   modalitySelect.onchange()
+  nv1.onImageLoaded = (volume) => {
+    if (nv1.volumes[0].hdr.dims[4] > 1) {
+      controls4D.style.display = 'block'
+    } else {
+      controls4D.style.display = 'none'
+    }
+  }
+  dragSelect.onchange = function () {
+    switch (this.value) {
+      case "none":
+        nv1.opts.dragMode = nv1.dragModes.none
+        break
+      case "contrast":
+        nv1.opts.dragMode = nv1.dragModes.contrast
+        break
+      case "measurement":
+        nv1.opts.dragMode = nv1.dragModes.measurement
+        break
+      case "pan":
+        nv1.opts.dragMode = nv1.dragModes.pan
+        break
+    }
+  }
   viewSelect.onchange = function () {
     nv1.setSliceType(parseInt(this.value))
   }
