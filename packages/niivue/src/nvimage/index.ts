@@ -1207,6 +1207,21 @@ export class NVImage {
     ]
     hdr.numBitsPerVoxel = 8
     hdr.datatypeCode = NiiDataType.DT_RGBA32
+    let isGrayscale = true
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] !== data[i + 1] || data[i] !== data[i + 2]) {
+        isGrayscale = false
+        break
+      }
+    }
+    if (isGrayscale) {
+      hdr.datatypeCode = NiiDataType.DT_UINT8
+      const grayscaleData = new Uint8Array(width * height)
+      for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+        grayscaleData[j] = data[i]
+      }
+      return grayscaleData.buffer
+    }
     return data.buffer
   }
 

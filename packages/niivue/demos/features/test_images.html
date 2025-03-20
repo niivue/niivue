@@ -81,13 +81,17 @@
     "spm152",
     "spmMotor",
     "visiblehuman",
+    "rgb_bmp.jpg",
+    "gray_bmp.png"
   ];
   for (let i = 0; i < imgs.length; i++) {
     let btn = document.createElement("button");
     btn.innerHTML = imgs[i];
     btn.onclick = function () {
       let root = "https://niivue.github.io/niivue-demo-images/";
-      let img = root + imgs[i] + ".nii.gz";
+      let img = root + imgs[i]
+      if (!img.endsWith('.png') && !img.endsWith('.jpg'))
+        img += ".nii.gz";
       console.log("Loading: " + img);
       volumeList1[0].url = img;
       nv1.loadVolumes(volumeList1);
