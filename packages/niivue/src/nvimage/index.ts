@@ -1548,11 +1548,11 @@ export class NVImage {
     hdr.littleEndian = false // MGH always big ending
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    const mat = await NVUtilities.readMatV4(buffer)
+    const mat = await NVUtilities.readMatV4(buffer, true)
     if (!('dimension' in mat) || !('dti_fa' in mat)) {
       throw new Error('Not a valid DSIstudio FIB file')
     }
-    const hasV1 = 'index0' in mat && 'index1' in mat && 'index2' in mat
+    const hasV1 = 'index0' in mat && 'index1' in mat && 'index2' in mat && 'odf_vertices' in mat
     // const hasV1 = false
     hdr.numBitsPerVoxel = 32
     hdr.datatypeCode = NiiDataType.DT_FLOAT32
@@ -1596,14 +1596,36 @@ export class NVImage {
       buff8v1.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D)
       buff8v1.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D)
     }
-    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
-    // read FA
-    const arrFA = Float32Array.from(mat.dti_fa)
-    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength)
-    buff8.set(imgFA, 0)
     if ('report' in mat) {
       hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)))
     }
+    const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
+    const arrFA = Float32Array.from(mat.dti_fa)
+    if ('mask' in mat) {
+      console.log(mat)
+      let slope = 1
+      if ('dti_fa_slope' in mat) {
+        slope = mat.dti_fa_slope[0]
+      }
+      let inter = 1
+      if ('dti_fa_inter' in mat) {
+        inter = mat.dti_fa_inter[0]
+      }
+      const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
+      const mask = mat.mask
+      const f32 = new Float32Array(nvox)
+      let j = 0
+      for (let i = 0; i < nvox; i++) {
+        if (mask[i] !== 0) {
+          f32[i] = arrFA[j] * slope + inter
+          j++
+        }
+      }
+      return [f32.buffer, new Float32Array(buff8v1.buffer)]
+    }
+    // read FA
+    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength)
+    buff8.set(imgFA, 0)
     return [buff8.buffer, new Float32Array(buff8v1.buffer)]
   } // readFIB()
 

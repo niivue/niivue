@@ -86,6 +86,9 @@ export const NVIMAGE_TYPE = Object.freeze({
       case 'TXT':
         imageType = ImageType.DCM_MANIFEST
         break
+      case 'FZ':
+      case 'GQI':
+      case 'QSDR':
       case 'FIB':
         imageType = ImageType.FIB
         break

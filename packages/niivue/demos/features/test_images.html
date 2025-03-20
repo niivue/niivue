@@ -82,7 +82,8 @@
     "spmMotor",
     "visiblehuman",
     "rgb_bmp.jpg",
-    "gray_bmp.png"
+    "gray_bmp.png",
+    "HCD1464653.qsdr.fz"
   ];
   for (let i = 0; i < imgs.length; i++) {
     let btn = document.createElement("button");
@@ -90,7 +91,7 @@
     btn.onclick = function () {
       let root = "https://niivue.github.io/niivue-demo-images/";
       let img = root + imgs[i]
-      if (!img.endsWith('.png') && !img.endsWith('.jpg'))
+      if (!img.endsWith('.png') && !img.endsWith('.jpg') && !img.endsWith('fz'))
         img += ".nii.gz";
       console.log("Loading: " + img);
       volumeList1[0].url = img;
