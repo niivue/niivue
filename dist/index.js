@@ -14732,7 +14732,7 @@ var NVUtilities = class _NVUtilities {
     const decompressed = await _NVUtilities.decompress(data);
     return decompressed.buffer.slice(decompressed.byteOffset, decompressed.byteOffset + decompressed.byteLength);
   }
-  static async readMatV4(buffer) {
+  static async readMatV4(buffer, isReplaceDots = false) {
     let len4 = buffer.byteLength;
     if (len4 < 40) {
       throw new Error("File too small to be MAT v4: bytes = " + buffer.byteLength);
@@ -14788,7 +14788,10 @@ var NVUtilities = class _NVUtilities {
         throw new Error("mrows * ncols must be greater than one");
       }
       const byteArray = new Uint8Array(bytes.subarray(pos, pos + namlen));
-      const tagName = textDecoder.decode(byteArray).trim().replaceAll("\0", "");
+      let tagName = textDecoder.decode(byteArray).trim().replaceAll("\0", "");
+      if (isReplaceDots) {
+        tagName = tagName.replaceAll(".", "_");
+      }
       const tagDataType = getTensDigit(mtype);
       let tagBytesPerItem = 8;
       if (tagDataType >= 1 && tagDataType <= 2) {
@@ -20592,6 +20595,9 @@ var ImageType = /* @__PURE__ */ ((ImageType3) => {
   ImageType3[ImageType3["SRC"] = 17] = "SRC";
   ImageType3[ImageType3["FIB"] = 18] = "FIB";
   ImageType3[ImageType3["BMP"] = 19] = "BMP";
+  ImageType3[ImageType3["ZARR"] = 20] = "ZARR";
+  ImageType3[ImageType3["NPY"] = 21] = "NPY";
+  ImageType3[ImageType3["NPZ"] = 22] = "NPZ";
   return ImageType3;
 })(ImageType || {});
 var NVIMAGE_TYPE = Object.freeze({
@@ -20606,6 +20612,9 @@ var NVIMAGE_TYPE = Object.freeze({
       case "TXT":
         imageType = 3 /* DCM_MANIFEST */;
         break;
+      case "FZ":
+      case "GQI":
+      case "QSDR":
       case "FIB":
         imageType = 18 /* FIB */;
         break;
@@ -20636,6 +20645,12 @@ var NVIMAGE_TYPE = Object.freeze({
       case "MGZ":
         imageType = 11 /* MGZ */;
         break;
+      case "NPY":
+        imageType = 21 /* NPY */;
+        break;
+      case "NPZ":
+        imageType = 22 /* NPZ */;
+        break;
       case "SRC":
         imageType = 17 /* SRC */;
         break;
@@ -20657,6 +20672,9 @@ var NVIMAGE_TYPE = Object.freeze({
       case "JPG":
       case "JPEG":
         imageType = 19 /* BMP */;
+        break;
+      case "ZARR":
+        imageType = 20 /* ZARR */;
         break;
     }
     return imageType;
@@ -21337,6 +21355,14 @@ var NVImage = class _NVImage {
       case NVIMAGE_TYPE.BMP:
         imgRaw = await newImg.readBMP(dataBuffer);
         break;
+      case NVIMAGE_TYPE.NPY:
+        imgRaw = await newImg.readNPY(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.NPZ:
+        imgRaw = await newImg.readNPZ(dataBuffer);
+        break;
+      case NVIMAGE_TYPE.ZARR:
+        throw new Error("Image type ZARR not (yet) supported");
       case NVIMAGE_TYPE.NII:
         if (isCompressed(dataBuffer)) {
           dataBuffer = await decompressAsync(dataBuffer);
@@ -21898,6 +21924,103 @@ var NVImage = class _NVImage {
     return buffer.slice(6);
   }
   // readV16()
+  async readNPY(buffer) {
+    function getTypeSize(dtype2) {
+      const typeMap = {
+        "|b1": 1,
+        // Boolean
+        "<i1": 1,
+        // Int8
+        "<u1": 1,
+        // UInt8
+        "<i2": 2,
+        // Int16
+        "<u2": 2,
+        // UInt16
+        "<i4": 4,
+        // Int32
+        "<u4": 4,
+        // UInt32
+        "<f4": 4,
+        // Float32
+        "<f8": 8
+        // Float64
+      };
+      return typeMap[dtype2] ?? 1;
+    }
+    function getDataTypeCode(dtype2) {
+      const typeMap = {
+        "|b1": 2,
+        // DT_BINARY
+        "<i1": 256,
+        // DT_INT8
+        "<u1": 2,
+        // DT_UINT8
+        "<i2": 4,
+        // DT_INT16
+        "<u2": 512,
+        // DT_UINT16
+        "<i4": 8,
+        // DT_INT32
+        "<u4": 768,
+        // DT_UINT32
+        "<f4": 16,
+        // DT_FLOAT32
+        "<f8": 64
+        // DT_FLOAT64
+      };
+      return typeMap[dtype2] ?? 16;
+    }
+    const dv = new DataView(buffer);
+    const magicBytes = [dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3), dv.getUint8(4), dv.getUint8(5)];
+    const expectedMagic = [147, 78, 85, 77, 80, 89];
+    if (!magicBytes.every((byte, i) => byte === expectedMagic[i])) {
+      throw new Error("Not a valid NPY file: Magic number mismatch");
+    }
+    const _version = dv.getUint8(6);
+    const _minorVersion = dv.getUint8(7);
+    const headerLen = dv.getUint16(8, true);
+    const headerText = new TextDecoder("utf-8").decode(buffer.slice(10, 10 + headerLen));
+    const shapeMatch = headerText.match(/'shape': \((.*?)\)/);
+    if (!shapeMatch) {
+      throw new Error("Invalid NPY header: Shape not found");
+    }
+    const shape = shapeMatch[1].split(",").map((s) => s.trim()).filter((s) => s !== "").map(Number);
+    const dtypeMatch = headerText.match(/'descr': '([^']+)'/);
+    if (!dtypeMatch) {
+      throw new Error("Invalid NPY header: Data type not found");
+    }
+    const dtype = dtypeMatch[1];
+    const numElements = shape.reduce((a, b) => a * b, 1);
+    const dataStart = 10 + headerLen;
+    const dataBuffer = buffer.slice(dataStart, dataStart + numElements * getTypeSize(dtype));
+    const width = shape.length > 0 ? shape[shape.length - 1] : 1;
+    const height = shape.length > 1 ? shape[shape.length - 2] : 1;
+    const slices = shape.length > 2 ? shape[shape.length - 3] : 1;
+    this.hdr = new NIFTI1();
+    const hdr = this.hdr;
+    hdr.dims = [3, width, height, slices, 0, 0, 0, 0];
+    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+    hdr.affine = [
+      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [0, 0, 0, 1]
+    ];
+    hdr.numBitsPerVoxel = getTypeSize(dtype) * 8;
+    hdr.datatypeCode = getDataTypeCode(dtype);
+    return dataBuffer;
+  }
+  async readNPZ(buffer) {
+    const zip = new Zip(buffer);
+    for (let i = 0; i < zip.entries.length; i++) {
+      const entry = zip.entries[i];
+      if (entry.fileName.toLowerCase().endsWith(".npy")) {
+        const data = await entry.extract();
+        return await this.readNPY(data.buffer);
+      }
+    }
+  }
   async imageDataFromArrayBuffer(buffer) {
     return new Promise((resolve, reject) => {
       const blob = new Blob([buffer]);
@@ -21939,6 +22062,21 @@ var NVImage = class _NVImage {
     ];
     hdr.numBitsPerVoxel = 8;
     hdr.datatypeCode = 2304 /* DT_RGBA32 */;
+    let isGrayscale = true;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] !== data[i + 1] || data[i] !== data[i + 2]) {
+        isGrayscale = false;
+        break;
+      }
+    }
+    if (isGrayscale) {
+      hdr.datatypeCode = 2 /* DT_UINT8 */;
+      const grayscaleData = new Uint8Array(width * height);
+      for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+        grayscaleData[j] = data[i];
+      }
+      return grayscaleData.buffer;
+    }
     return data.buffer;
   }
   // not included in public docs
@@ -22107,11 +22245,11 @@ var NVImage = class _NVImage {
     hdr.littleEndian = false;
     hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const mat = await NVUtilities.readMatV4(buffer);
+    const mat = await NVUtilities.readMatV4(buffer, true);
     if (!("dimension" in mat) || !("dti_fa" in mat)) {
       throw new Error("Not a valid DSIstudio FIB file");
     }
-    const hasV1 = "index0" in mat && "index1" in mat && "index2" in mat;
+    const hasV1 = "index0" in mat && "index1" in mat && "index2" in mat && "odf_vertices" in mat;
     hdr.numBitsPerVoxel = 32;
     hdr.datatypeCode = 16 /* DT_FLOAT32 */;
     hdr.dims[1] = mat.dimension[0];
@@ -22153,13 +22291,35 @@ var NVImage = class _NVImage {
       buff8v1.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D);
       buff8v1.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D);
     }
-    const buff8 = new Uint8Array(new ArrayBuffer(nBytes));
-    const arrFA = Float32Array.from(mat.dti_fa);
-    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength);
-    buff8.set(imgFA, 0);
     if ("report" in mat) {
       hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)));
     }
+    const buff8 = new Uint8Array(new ArrayBuffer(nBytes));
+    const arrFA = Float32Array.from(mat.dti_fa);
+    if ("mask" in mat) {
+      console.log(mat);
+      let slope = 1;
+      if ("dti_fa_slope" in mat) {
+        slope = mat.dti_fa_slope[0];
+      }
+      let inter = 1;
+      if ("dti_fa_inter" in mat) {
+        inter = mat.dti_fa_inter[0];
+      }
+      const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+      const mask = mat.mask;
+      const f32 = new Float32Array(nvox);
+      let j = 0;
+      for (let i = 0; i < nvox; i++) {
+        if (mask[i] !== 0) {
+          f32[i] = arrFA[j] * slope + inter;
+          j++;
+        }
+      }
+      return [f32.buffer, new Float32Array(buff8v1.buffer)];
+    }
+    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength);
+    buff8.set(imgFA, 0);
     return [buff8.buffer, new Float32Array(buff8v1.buffer)];
   }
   // readFIB()

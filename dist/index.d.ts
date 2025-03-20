@@ -208,7 +208,10 @@ declare enum ImageType {
     DCM_FOLDER = 16,
     SRC = 17,
     FIB = 18,
-    BMP = 19
+    BMP = 19,
+    ZARR = 20,
+    NPY = 21,
+    NPZ = 22
 }
 type ImageFromUrlOptions = {
     url: string;
@@ -396,6 +399,8 @@ declare class NVImage {
     SetPixDimFromSForm(): void;
     readECAT(buffer: ArrayBuffer): ArrayBuffer;
     readV16(buffer: ArrayBuffer): ArrayBuffer;
+    readNPY(buffer: ArrayBuffer): Promise<ArrayBuffer>;
+    readNPZ(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData>;
     readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
@@ -1317,7 +1322,7 @@ declare class NVUtilities {
     static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string;
     static decompress(data: Uint8Array): Promise<Uint8Array>;
     static decompressToBuffer(data: Uint8Array): Promise<ArrayBuffer>;
-    static readMatV4(buffer: ArrayBuffer): Promise<Record<string, TypedNumberArray>>;
+    static readMatV4(buffer: ArrayBuffer, isReplaceDots?: boolean): Promise<Record<string, TypedNumberArray>>;
     static b64toUint8(base64: string): Uint8Array;
     static uint8tob64(bytes: Uint8Array): string;
     static download(content: string | ArrayBuffer, fileName: string, contentType: string): void;
