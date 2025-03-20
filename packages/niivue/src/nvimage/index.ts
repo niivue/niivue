@@ -1304,43 +1304,67 @@ export class NVImage {
     ]
     hdr.numBitsPerVoxel = 8
     hdr.datatypeCode = NiiDataType.DT_RGBA32
-    let isGrayscale = true;
+    let isGrayscale = true
     for (let i = 0; i < data.length; i += 4) {
       if (data[i] !== data[i + 1] || data[i] !== data[i + 2]) {
-        isGrayscale = false;
-        break;
+        isGrayscale = false
+        break
       }
     }
     if (isGrayscale) {
       hdr.datatypeCode = NiiDataType.DT_UINT8
-      const grayscaleData = new Uint8Array(width * height);
+      const grayscaleData = new Uint8Array(width * height)
       for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-          grayscaleData[j] = data[i]
+        grayscaleData[j] = data[i]
       }
       return grayscaleData.buffer
     }
     return data.buffer
   }
 
-  async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
-    const { width, height, data } = (zarrData ?? {}) as any
+  // async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
+  //   const { width, height, data } = (zarrData ?? {}) as any
+  //
+  //   // data.fill(255, 0, Math.floor(data.length / 2))
+  //   // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
+  //   this.hdr = new NIFTI1()
+  //   const hdr = this.hdr
+  //   hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
+  //   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+  //   hdr.affine = [
+  //     [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+  //     [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+  //     [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+  //     [0, 0, 0, 1]
+  //   ]
+  //   hdr.numBitsPerVoxel = 8
+  //   hdr.datatypeCode = NiiDataType.DT_RGBA32
+  //   return new Uint8Array(data)
+  //   // return data
+  // }
 
-    // data.fill(255, 0, Math.floor(data.length / 2))
-    // const affine = [1, 0, 0, width * -0.5, 0, -1, 0, height * 0.5, 0, 0, 1, -0.5, 0, 0, 0, 1]
+  async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
+    const { width, height, depth = 1, data } = (zarrData ?? {}) as any
+    console.log('readZARR', width, height, depth, data)
+
     this.hdr = new NIFTI1()
     const hdr = this.hdr
-    hdr.dims = [3, width, height, 1, 0, 0, 0, 0]
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
+
+    hdr.dims = [4, width, height, depth, 1, 1, 1, 1]
+
+    hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0]
+
     hdr.affine = [
       [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
       [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
       [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ]
-    hdr.numBitsPerVoxel = 8
-    hdr.datatypeCode = NiiDataType.DT_RGBA32
+
+    hdr.numBitsPerVoxel = 24
+    hdr.datatypeCode = NiiDataType.DT_RGB24
+
     return new Uint8Array(data)
-    // return data
   }
 
   // not included in public docs
@@ -3533,35 +3557,28 @@ export class NVImage {
     ext = re.exec(url)[1]
     // try url and name attributes to test for .zarr
     if (ext === 'zarr' || re.exec(name)[1] === 'zarr') {
-      const store = new zarr.FetchStore(url)
-      const arr = await zarr.open(store, { kind: 'array' })
+      const root = zarr.root(new zarr.FetchStore(url))
+      const arr = await zarr.open(root.resolve('scale0/image'), { kind: 'array' })
       console.log(arr)
-      // uncomment to get just a single chunk
-      // const view = await arr.getChunk([0, 0, 0])
-
-      // or get an entire image channel (red in this case since the index is zero)
-      const view = await zarr.get(arr, [null, null, 0])
-
+      const z = 1000
+      const nslices = 2 // > 1 slice not rendering correctly at the moment
+      const cRange = null
+      const zRange = zarr.slice(z, z + nslices)
+      const yRange = null
+      const xRange = null
+      // const view = await zarr.get(arr, [cRange, xRange, yRange, zRange])
+      const view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
+      console.log('view', view)
       dataBuffer = view.data
-      const [width, height] = view.shape
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-      const img = ctx.createImageData(width, height)
-      for (let i = 0; i < dataBuffer.length; i++) {
-        const pixelStart = i * 4
-        img.data[pixelStart] = dataBuffer[i] // Red
-        img.data[pixelStart + 1] = dataBuffer[i] // Green
-        img.data[pixelStart + 2] = dataBuffer[i] // Blue
-        img.data[pixelStart + 3] = 255 // Alpha (fully opaque)
-      }
-      ctx.putImageData(img, 0, 0)
+      // const [cDim, height, width, zDim] = view.shape
+      const [height, width, zDim, cDim] = view.shape
       zarrData = {
-        data: ctx.getImageData(0, 0, width, height).data,
+        data: dataBuffer,
         width,
-        height
+        height,
+        depth: zDim
       }
+      console.log(zarrData)
     }
 
     // Handle non-limited cases

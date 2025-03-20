@@ -17,9 +17,9 @@
       <select id="formatSelect">
         <option>JPEG</option>
         <option>Huge</option>
-        <option>ZARR</option>
+        <option selected>ZARR</option>
         <option>NPZ</option>
-        <option selected>DANDI</option>
+        <option>DANDI</option>
         <option>FS</option>
         <option>Local ZARR</option>
       </select>
@@ -31,7 +31,7 @@
         <option>Pan</option>
       </select>
       <label for="smoothCheck">Smooth</label>
-      <input type="checkbox" checked=true id="smoothCheck" Smooth />
+      <input type="checkbox" checked="true" id="smoothCheck" Smooth />
       <button id="aboutBtn">About</button>
     </header>
     <main id="canvas-container">
@@ -41,71 +41,85 @@
     </main>
     <footer id="statusText">&nbsp;</footer>
     <script type="module" async>
-
       async function listRepoReleaseAssets(user) {
-        const repos = await (await fetch(`https://api.github.com/users/${user}/repos`)).json();
+        const repos = await (await fetch(`https://api.github.com/users/${user}/repos`)).json()
         for (const { name } of repos) {
-          const releases = await (await fetch(`https://api.github.com/repos/${user}/${name}/releases`)).json();
-          releases.forEach((r) => 
+          const releases = await (await fetch(`https://api.github.com/repos/${user}/${name}/releases`)).json()
+          releases.forEach((r) =>
             r.assets.forEach((a) =>
               console.log(`Repo: ${name} | Release: ${r.tag_name} | Asset: ${a.name} | URL: ${a.browser_download_url}`)
             )
-          );
+          )
         }
       }
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
       formatSelect.onchange = async function () {
         const idx = this.selectedIndex
         var volumeLists = [
-          [{
-            url: './kodim23.jpg',
-          }],
-          [{
-            url: './retina.jpg',
-          }],
-          [{
-            url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
-            name: 'example.zarr'
-          }],
-          [{
-            url: './c001_A_segmentation4.npz',
-          }],
-          [{
-            url: './sub-370_sample-0002_TEM.png',
-          }],
-          [{
-             url: './HCD1464653.qsdr.fz',
-          }],
-          [{
-            //url: './6001240.zarr',
-            //url:  "http://localhost:5173/6001240.zarr",
-             //url: 'http://localhost:5173/6001240.zarr',
-          url: './8bit.nii.gz',
-          //url: './bert_wmparc.mgh',
-            //name: 'local.zarr'
-            colormap: 'actc',
-          }],
+          [
+            {
+              url: './kodim23.jpg'
+            }
+          ],
+          [
+            {
+              url: './retina.jpg'
+            }
+          ],
+          [
+            {
+              url: 'http://localhost:5173/rgb.ome.zarr',
+              // url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
+              name: 'example.zarr'
+            }
+          ],
+          [
+            {
+              url: './c001_A_segmentation4.npz'
+            }
+          ],
+          [
+            {
+              url: './sub-370_sample-0002_TEM.png'
+            }
+          ],
+          [
+            {
+              url: './HCD1464653.qsdr.fz'
+            }
+          ],
+          [
+            {
+              //url: './6001240.zarr',
+              //url:  "http://localhost:5173/6001240.zarr",
+              //url: 'http://localhost:5173/6001240.zarr',
+              url: './8bit.nii.gz',
+              //url: './bert_wmparc.mgh',
+              //name: 'local.zarr'
+              colormap: 'actc'
+            }
+          ]
         ]
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
       }
       aboutBtn.onclick = async function () {
-        listRepoReleaseAssets('data-hcp');
+        listRepoReleaseAssets('data-hcp')
       }
       dragSelect.onchange = function () {
         const drag = this.options[this.selectedIndex].text
         console.log(drag)
-        if (drag === "None") {
-          nv1.opts.dragMode = nv1.dragModes.none;
-        } else if (drag === "Contrast") {
-          nv1.opts.dragMode = nv1.dragModes.contrast;
-        } else if (drag === "Measurement") {
-          nv1.opts.dragMode = nv1.dragModes.measurement;
-        } else if (drag === "Pan") {
-          nv1.opts.dragMode = nv1.dragModes.pan;
+        if (drag === 'None') {
+          nv1.opts.dragMode = nv1.dragModes.none
+        } else if (drag === 'Contrast') {
+          nv1.opts.dragMode = nv1.dragModes.contrast
+        } else if (drag === 'Measurement') {
+          nv1.opts.dragMode = nv1.dragModes.measurement
+        } else if (drag === 'Pan') {
+          nv1.opts.dragMode = nv1.dragModes.pan
         }
       }
       smoothCheck.onchange = function () {
-        nv1.setInterpolation(!this.checked);
+        nv1.setInterpolation(!this.checked)
       }
       // with roiSelect, show the stats from the ROI in a temporary div
       const onDragRelease = (data) => {
@@ -158,7 +172,7 @@
         statusText.innerHTML = '&nbsp;&nbsp;' + data.string
       }
       let defaults = {
-        backColor: [0, 0.2, 0.4, 1],
+        backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
@@ -169,16 +183,16 @@
         showMeasureUnits: true,
         measureTextColor: [0, 1, 0, 1],
         measureLineColor: [1, 0, 0, 1],
-        measureTextHeight: 0.04,
+        measureTextHeight: 0.04
       }
       var nv1 = new Niivue(defaults)
       nv1.attachToCanvas(gl1)
-      nv1.setSliceType(0)
+      nv1.setSliceType(3)
       nv1.opts.multiplanarShowRender = SHOW_RENDER.NEVER
       formatSelect.onchange()
-      const max2DTextureSize =  nv1.gl.getParameter(nv1.gl.MAX_TEXTURE_SIZE)
+      const max2DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_TEXTURE_SIZE)
       console.log('Max 2D Texture Size:', max2DTextureSize)
-      const max3DTextureSize =  nv1.gl.getParameter(nv1.gl.MAX_3D_TEXTURE_SIZE)
+      const max3DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_3D_TEXTURE_SIZE)
       console.log('Max 3D Texture Size:', max3DTextureSize)
     </script>
   </body>
