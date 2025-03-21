@@ -1345,13 +1345,14 @@ export class NVImage {
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
     const { width, height, depth = 1, data } = (zarrData ?? {}) as any
-    console.log('readZARR', width, height, depth, data)
-
+    //console.log('readZARR', width, height, depth, data)
+    const expectedLength = width *  height * depth * 3
+    if (expectedLength !== data.length) {
+      throw new Error(`Expected RGB ${width}×${height}×${depth}×3 =  ${expectedLength}, but ZARR length ${data.length}`)
+    }
     this.hdr = new NIFTI1()
     const hdr = this.hdr
-
-    hdr.dims = [4, width, height, depth, 1, 1, 1, 1]
-
+    hdr.dims = [3, width, height, depth, 1, 1, 1, 1]
     hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0]
 
     hdr.affine = [
@@ -1360,11 +1361,28 @@ export class NVImage {
       [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ]
-
     hdr.numBitsPerVoxel = 24
     hdr.datatypeCode = NiiDataType.DT_RGB24
-
-    return new Uint8Array(data)
+    function zxy2xyz(data, X, Y, Z) {
+      const voxelCount = X * Y
+      const rgb = new Uint8Array(voxelCount * Z * 3)
+      let offsets = new Array(Z)
+      for (let s = 0; s < Z; s++) {
+        offsets[s] = voxelCount * 3 * s
+      }
+      let srcIndex = 0
+      let dstIndex = 0
+      for (let v = 0; v < voxelCount; v++) {
+        for (let s = 0; s < Z; s++) {
+          rgb[offsets[s] + dstIndex] = data[srcIndex++] // R
+          rgb[offsets[s] + dstIndex + 1] = data[srcIndex++] // G
+          rgb[offsets[s] + dstIndex + 2] = data[srcIndex++] // B
+        }
+        dstIndex += 3
+      }
+      return rgb
+    }
+    return zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3])
   }
 
   // not included in public docs

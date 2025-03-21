@@ -21,14 +21,14 @@
         <option>NPZ</option>
         <option>DANDI</option>
         <option>FS</option>
-        <option>Local ZARR</option>
+        <option>Grayscale bitmap</option>
       </select>
       <label for="dragSelect">Drag</label>
       <select id="dragSelect">
         <option>None</option>
         <option>Contrast</option>
-        <option selected>Measurement</option>
-        <option>Pan</option>
+        <option>Measurement</option>
+        <option selected>Pan</option>
       </select>
       <label for="smoothCheck">Smooth</label>
       <input type="checkbox" checked="true" id="smoothCheck" Smooth />
@@ -41,17 +41,6 @@
     </main>
     <footer id="statusText">&nbsp;</footer>
     <script type="module" async>
-      async function listRepoReleaseAssets(user) {
-        const repos = await (await fetch(`https://api.github.com/users/${user}/repos`)).json()
-        for (const { name } of repos) {
-          const releases = await (await fetch(`https://api.github.com/repos/${user}/${name}/releases`)).json()
-          releases.forEach((r) =>
-            r.assets.forEach((a) =>
-              console.log(`Repo: ${name} | Release: ${r.tag_name} | Asset: ${a.name} | URL: ${a.browser_download_url}`)
-            )
-          )
-        }
-      }
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
       formatSelect.onchange = async function () {
         const idx = this.selectedIndex
@@ -80,22 +69,17 @@
           ],
           [
             {
-              url: './sub-370_sample-0002_TEM.png'
+              url: 'https://niivue.github.io/niivue-demo-images/sub-370_sample-0002_TEM.png'
             }
           ],
           [
             {
-              url: './HCD1464653.qsdr.fz'
+              url: 'https://niivue.github.io/niivue-demo-images/HCD1464653.qsdr.fz'
             }
           ],
           [
             {
-              //url: './6001240.zarr',
-              //url:  "http://localhost:5173/6001240.zarr",
-              //url: 'http://localhost:5173/6001240.zarr',
-              url: './8bit.nii.gz',
-              //url: './bert_wmparc.mgh',
-              //name: 'local.zarr'
+              url: 'https://niivue.github.io/niivue-demo-images/gray_bmp.png',
               colormap: 'actc'
             }
           ]
@@ -103,7 +87,7 @@
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
       }
       aboutBtn.onclick = async function () {
-        listRepoReleaseAssets('data-hcp')
+        alert(nv1.volumes[0].hdr.toFormattedString());
       }
       dragSelect.onchange = function () {
         const drag = this.options[this.selectedIndex].text
