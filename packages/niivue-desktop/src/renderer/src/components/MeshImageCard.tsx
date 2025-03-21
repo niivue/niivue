@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
-import { NVMesh } from '@niivue/niivue'
+import { NVMesh, NVMeshLayerDefaults } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
 import { AppContext } from '../App'
 import { MeshLayerCard } from './MeshLayerCard'
@@ -34,7 +34,11 @@ export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.
         colormap: 'warm',
         base64: layerBase64
       }
-      await NVMesh.loadLayer(layer, image)
+      const layerOptions = {
+        ...NVMeshLayerDefaults,
+        ...layer
+      }
+      await NVMesh.loadLayer(layerOptions, image)
       // patch for missing url and name properties in the NVMeshLayer once it is added to the mesh object.
       // TODO: fix this in Niivue
       image.layers[image.layers.length - 1].url = path

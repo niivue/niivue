@@ -47,7 +47,7 @@ export const ZoomSlider = (): JSX.Element => {
           if (checked === true) {
             setYoke2d3d(true)
             nv.opts.yoke3Dto2DZoom = true
-            nv.volScaleMultiplier = zoom
+            nv.volScaleMultiplier = zoom[0]
           }
           if (checked === false) {
             setYoke2d3d(false)

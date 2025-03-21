@@ -30,7 +30,7 @@ export const registerLoadRecentFileHandler = ({
       setMeshes((prev) => [...prev, mesh])
     } else {
       // Assume it's a volume
-      const vol = NVImage.loadFromBase64({
+      const vol = await NVImage.loadFromBase64({
         base64,
         name: filePath
       })
