@@ -1,4 +1,4 @@
-import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { glMatrix, mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import { version } from '../../package.json'
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
@@ -1703,7 +1703,23 @@ export class Niivue {
       const x = pos.x * this.uiData.dpr!
       const y = pos.y * this.uiData.dpr!
       this.mousePos = [x, y]
-      this.drawScene()
+      for (let i = 0; i < this.screenSlices.length; i++) {
+        const axCorSag = this.screenSlices[i].axCorSag
+        if (this.opts.drawingEnabled) {
+          // const pt = this.frac2vox(hoverPos) as [number, number, number]
+          // if click-to-segment enabled
+          if (this.opts.clickToSegment) {
+            this.clickToSegmentXY = [x, y]
+            this.clickToSegmentIsGrowing = true
+            this.doClickToSegment({
+              x,
+              y,
+              axCorSag: this.tileIndex(x, y)
+            })
+          }
+          // this.drawScene()
+        }
+      }
     }
   }
 
@@ -1963,6 +1979,23 @@ export class Niivue {
       return
     }
     const rect = this.canvas!.getBoundingClientRect()
+    if (this.opts.clickToSegment) {
+      if (e.deltaY < 0) {
+        this.opts.clickToSegmentPercent -= 0.001
+        this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0)
+      } else if (e.deltaY > 0) {
+        this.opts.clickToSegmentPercent += 0.001
+        this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1)
+      }
+      this.clickToSegmentIsGrowing = true
+      this.doClickToSegment({
+        x: this.clickToSegmentXY[0],
+        y: this.clickToSegmentXY[1],
+        axCorSag: this.tileIndex(this.clickToSegmentXY[0], this.clickToSegmentXY[1])
+      })
+
+      return
+    }
     if (e.deltaY < 0) {
       this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top)
     } else {
@@ -4804,7 +4837,10 @@ export class Niivue {
 
   // not included in public docs
   // set color of single voxel in drawing
-  drawPt(x: number, y: number, z: number, penValue: number): void {
+  drawPt(x: number, y: number, z: number, penValue: number, drawBitmap: Uint8Array | null = null): void {
+    if (drawBitmap === null) {
+      drawBitmap = this.drawBitmap
+    }
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
@@ -4814,7 +4850,7 @@ export class Niivue {
     x = Math.min(Math.max(x, 0), dx - 1)
     y = Math.min(Math.max(y, 0), dy - 1)
     z = Math.min(Math.max(z, 0), dz - 1)
-    this.drawBitmap![x + y * dx + z * dx * dy] = penValue
+    drawBitmap![x + y * dx + z * dx * dy] = penValue
     // get tile index for voxel
     const isAx = this.drawPenAxCorSag === 0
     const isCor = this.drawPenAxCorSag === 1
@@ -4829,11 +4865,11 @@ export class Niivue {
       for (let i = -halfPenSize; i <= halfPenSize; i++) {
         for (let j = -halfPenSize; j <= halfPenSize; j++) {
           if (isAx) {
-            this.drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
+            drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
           } else if (isCor) {
-            this.drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
+            drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
           } else if (isSag) {
-            this.drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
+            drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
           }
         }
       }
@@ -5163,7 +5199,8 @@ export class Niivue {
     neighbors = 6,
     // option for only flood filling within max distance from seed voxel
     maxDistanceMM = Number.POSITIVE_INFINITY,
-    is2D = false
+    is2D = false,
+    drawBitmap: Uint8Array | null = null
   ): void {
     if (!this.drawBitmap) {
       throw new Error('drawBitmap undefined')
@@ -5186,7 +5223,9 @@ export class Niivue {
     const nxy = nx * dims[1]
     const nxyz = nxy * dims[2]
     let img = this.drawBitmap.slice()
-    let drawBitmap = this.drawBitmap
+    if (drawBitmap === null) {
+      drawBitmap = this.drawBitmap
+    }
     // use the growing bitmap if the clickToSegmentIsGrowing flag is set.
     // this allows previewing the flood fill, and the results are copied
     // to the drawBitmap when the user releases the mouse button.
@@ -8215,6 +8254,89 @@ export class Niivue {
     return sum
   }
 
+  doClickToSegment(options: { x: number; y: number; axCorSag: number }): void {
+    const { axCorSag } = options
+    const texFrac = this.screenXY2TextureFrac(this.clickToSegmentXY[0], this.clickToSegmentXY[1], axCorSag, false)
+    const pt = this.frac2vox(texFrac) as [number, number, number]
+    const threshold = this.opts.clickToSegmentPercent
+    let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
+    // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
+    // in a bright or dark region based on the intensity of the clicked voxel,
+    // and where it falls in the range of cal_min and cal_max.
+    // !important! If this option is true, then it will ignore the boolean value of
+    // clickToSegmentBright supplied by the user
+    if (this.opts.clickToSegmentAutoIntensity) {
+      if (threshold !== 0) {
+        if (voxelIntensity === 0) {
+          voxelIntensity = 0.01
+        }
+        this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
+        this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
+      }
+      // if voxel intensity is greater than the midpoint of cal_min and cal_max,
+      // then flood fill in a bright region
+      if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
+        this.opts.clickToSegmentBright = true
+      } else {
+        // else flood fill in a dark region
+        this.opts.clickToSegmentBright = false
+      }
+    }
+    // set brightOrDark now, if clickToSegmentAutoBrightOrDark is false,
+    // then brightOrDark will be set to the value of clickToSegmentBright supplied by the user
+    const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+    this.drawPenAxCorSag = axCorSag
+    if (this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
+      // get voxel penSize for the current slice, but what if pixDims are not isotropic?
+      // we will use the smallest pixDim for the current slice
+      const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[1]]
+      const minPixDim = Math.min(...pixDims)
+      this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+    } else if (this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
+      const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[2]]
+      const minPixDim = Math.min(...pixDims)
+      this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+    } else if (this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
+      const pixDims = [this.back.pixDimsRAS[1], this.back.pixDimsRAS[2]]
+      const minPixDim = Math.min(...pixDims)
+      this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
+    }
+    // draw the point at the cursor using the penSize to set the
+    // seed for the flood fill
+    this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
+    // this.clickToSegmentIsGrowing = true
+    this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
+
+    // do flood fill
+    this.drawFloodFill(
+      [pt[0], pt[1], pt[2]],
+      0,
+      brightOrDark,
+      this.opts.clickToSegmentIntensityMin,
+      this.opts.clickToSegmentIntensityMax,
+      this.opts.floodFillNeighbors,
+      this.opts.clickToSegmentMaxDistanceMM,
+      this.opts.clickToSegmentIs2D
+    )
+
+    // draw the scene so we see the changes
+    this.drawScene()
+    this.createOnLocationChange(axCorSag)
+    if (this.clickToSegmentIsGrowing) {
+      // don't get descriptive stats if the user
+      // is still growing the segmented region
+      this.drawPt(pt[0], pt[1], pt[2], 0)
+      return
+    }
+    // get the volume of the segmented region if the user is not growing the region
+    const info = this.getDescriptives({
+      layer: 0,
+      masks: [],
+      drawingIsMask: true
+    })
+    this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
+  }
+
   // not included in public docs
   // handle mouse click event on canvas
   mouseClick(x: number, y: number, posChange = 0, isDelta = true): void {
@@ -8278,7 +8400,7 @@ export class Niivue {
       if (axCorSag > SLICE_TYPE.SAGITTAL) {
         continue
       }
-      let texFrac = this.screenXY2TextureFrac(x, y, i, false)
+      const texFrac = this.screenXY2TextureFrac(x, y, i, false)
       if (texFrac[0] < 0) {
         continue
       } // click not on slice i
@@ -8309,100 +8431,15 @@ export class Niivue {
       }
       if (this.opts.drawingEnabled) {
         // drawing done in voxels
-        let pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
+        const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
         // if click-to-segment enabled
         if (this.opts.clickToSegment) {
-          texFrac = this.screenXY2TextureFrac(this.clickToSegmentXY[0], this.clickToSegmentXY[1], i, false)
-          pt = this.frac2vox(texFrac) as [number, number, number]
-          let diff = 0
-          let threshold = this.opts.clickToSegmentPercent + diff
-          if (this.uiData.mousedown) {
-            // get percent difference between current x, y, and clickToSegmentXY
-            const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width
-            const yDiff = (this.clickToSegmentXY[1] - y) / this.gl.canvas.height
-            diff = Math.max(Math.abs(xDiff), Math.abs(yDiff))
-            threshold = this.opts.clickToSegmentPercent + diff
-          }
-          // get voxel value of pt
-          let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
-          // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
-          // in a bright or dark region based on the intensity of the clicked voxel,
-          // and where it falls in the range of cal_min and cal_max.
-          // !important! If this option is true, then it will ignore the boolean value of
-          // clickToSegmentBright supplied by the user
-          if (this.opts.clickToSegmentAutoIntensity) {
-            if (threshold !== 0) {
-              if (voxelIntensity === 0) {
-                voxelIntensity = 0.01
-              }
-              this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
-              this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
-            }
-            // if voxel intensity is greater than the midpoint of cal_min and cal_max,
-            // then flood fill in a bright region
-            if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
-              this.opts.clickToSegmentBright = true
-            } else {
-              // else flood fill in a dark region
-              this.opts.clickToSegmentBright = false
-            }
-          }
-          // set brightOrDark now, if clickToSegmentAutoBrightOrDark is false,
-          // then brightOrDark will be set to the value of clickToSegmentBright supplied by the user
-          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-          this.drawPenAxCorSag = axCorSag
-          if (this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
-            // get voxel penSize for the current slice, but what if pixDims are not isotropic?
-            // we will use the smallest pixDim for the current slice
-            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[1]]
-            const minPixDim = Math.min(...pixDims)
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
-          } else if (this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
-            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[2]]
-            const minPixDim = Math.min(...pixDims)
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
-          } else if (this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
-            const pixDims = [this.back.pixDimsRAS[1], this.back.pixDimsRAS[2]]
-            const minPixDim = Math.min(...pixDims)
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
-          }
-          // draw the point at the cursor using the penSize to set the
-          // seed for the flood fill
-          this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
-
-          if (diff !== 0) {
-            this.clickToSegmentIsGrowing = true
-            this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
-          } else {
-            this.clickToSegmentIsGrowing = false
-          }
-
-          // do flood fill
-          this.drawFloodFill(
-            [pt[0], pt[1], pt[2]],
-            0,
-            brightOrDark,
-            this.opts.clickToSegmentIntensityMin,
-            this.opts.clickToSegmentIntensityMax,
-            this.opts.floodFillNeighbors,
-            this.opts.clickToSegmentMaxDistanceMM,
-            this.opts.clickToSegmentIs2D
-          )
-          // draw the scene so we see the changes
-          this.drawScene()
-          this.createOnLocationChange(axCorSag)
-          if (this.clickToSegmentIsGrowing) {
-            // don't get descriptive stats if the user
-            // is still growing the segmented region
-            return
-          }
-          // get the volume of the segmented region if the user is not growing the region
-          const info = this.getDescriptives({
-            layer: 0,
-            masks: [],
-            drawingIsMask: true
+          this.clickToSegmentIsGrowing = false
+          this.doClickToSegment({
+            x,
+            y,
+            axCorSag
           })
-          this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
           return
         }
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
@@ -12046,33 +12083,34 @@ export class Niivue {
     }
 
     // draw circle at mouse position if clickToSegment is enabled
-    if (this.opts.clickToSegment) {
-      const x = this.mousePos[0]
-      const y = this.mousePos[1]
-      // check if hovering over the 3D render tile
-      if (this.inRenderTile(x, y) >= 0) {
-        // exit early since we do not want to draw the cursor here!
-        return
-      }
-      // determine the tile the mouse is hovering in
-      const tileIdx = this.tileIndex(x, y)
-      // if a valid tile index, draw the circle
-      if (tileIdx > -1) {
-        // get fov in mm for this plane presented in the tile
-        const fovMM = this.screenSlices[tileIdx].fovMM
-        // get the left, top, width, height of the tile in pixels
-        const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
-        // calculate the pixel to mm scale so we can draw the circle
-        // in pixels (so it is highres) but with the radius specified in mm
-        const pixPerMM = ltwh[2] / fovMM[0]
-        // get the crosshair color, but replace the alpha because we want it to be transparent
-        // no matter what. We want to see the image data underneath the circle.
-        const color = this.opts.crosshairColor
-        const segmentCursorColor = [color[0], color[1], color[2], 0.4]
-        const radius = this.opts.clickToSegmentRadius * pixPerMM
-        this.drawCircle([x - radius, y - radius, radius * 2, radius * 2], segmentCursorColor, 1)
-      }
-    }
+    // xxxxxxxxx
+    // if (this.opts.clickToSegment) {
+    //   const x = this.mousePos[0]
+    //   const y = this.mousePos[1]
+    //   // check if hovering over the 3D render tile
+    //   if (this.inRenderTile(x, y) >= 0) {
+    //     // exit early since we do not want to draw the cursor here!
+    //     return
+    //   }
+    //   // determine the tile the mouse is hovering in
+    //   const tileIdx = this.tileIndex(x, y)
+    //   // if a valid tile index, draw the circle
+    //   if (tileIdx > -1) {
+    //     // get fov in mm for this plane presented in the tile
+    //     const fovMM = this.screenSlices[tileIdx].fovMM
+    //     // get the left, top, width, height of the tile in pixels
+    //     const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+    //     // calculate the pixel to mm scale so we can draw the circle
+    //     // in pixels (so it is highres) but with the radius specified in mm
+    //     const pixPerMM = ltwh[2] / fovMM[0]
+    //     // get the crosshair color, but replace the alpha because we want it to be transparent
+    //     // no matter what. We want to see the image data underneath the circle.
+    //     const color = this.opts.crosshairColor
+    //     const segmentCursorColor = [color[0], color[1], color[2], 0.4]
+    //     const radius = this.opts.clickToSegmentRadius * pixPerMM
+    //     this.drawCircle([x - radius, y - radius, radius * 2, radius * 2], segmentCursorColor, 1)
+    //   }
+    // }
 
     const pos = this.frac2mm([this.scene.crosshairPos[0], this.scene.crosshairPos[1], this.scene.crosshairPos[2]])
 
