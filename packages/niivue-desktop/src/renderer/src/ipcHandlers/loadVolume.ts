@@ -17,7 +17,7 @@ export const registerLoadVolumeHandler = ({ setVolumes }: HandlerProps): void =>
       throw new Error('File is not a volume')
     } else {
       // assume it's a volume if it's not a mesh. NVImage will try to parse the volume if the file type is supported
-      const vol = NVImage.loadFromBase64({
+      const vol = await NVImage.loadFromBase64({
         base64,
         name: path
       })
