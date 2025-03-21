@@ -1345,8 +1345,8 @@ export class NVImage {
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
     const { width, height, depth = 1, data } = (zarrData ?? {}) as any
-    //console.log('readZARR', width, height, depth, data)
-    const expectedLength = width *  height * depth * 3
+    // console.log('readZARR', width, height, depth, data)
+    const expectedLength = width * height * depth * 3
     if (expectedLength !== data.length) {
       throw new Error(`Expected RGB ${width}×${height}×${depth}×3 =  ${expectedLength}, but ZARR length ${data.length}`)
     }
@@ -1366,7 +1366,7 @@ export class NVImage {
     function zxy2xyz(data, X, Y, Z) {
       const voxelCount = X * Y
       const rgb = new Uint8Array(voxelCount * Z * 3)
-      let offsets = new Array(Z)
+      const offsets = new Array(Z)
       for (let s = 0; s < Z; s++) {
         offsets[s] = voxelCount * 3 * s
       }
@@ -3578,8 +3578,8 @@ export class NVImage {
       const root = zarr.root(new zarr.FetchStore(url))
       const arr = await zarr.open(root.resolve('scale0/image'), { kind: 'array' })
       console.log(arr)
-      const z = 1000
-      const nslices = 2 // > 1 slice not rendering correctly at the moment
+      const z = 0
+      const nslices = 400 // > 1 slice not rendering correctly at the moment
       const cRange = null
       const zRange = zarr.slice(z, z + nslices)
       const yRange = null
