@@ -308,6 +308,7 @@ type UIData = {
   lastTwoTouchDistance: number
   multiTouchGesture: boolean
   dpr?: number
+  max3D?: number
   windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
   windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
 }
@@ -937,7 +938,7 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
-
+    this.uiData.max3D = this.gl.getParameter(this.gl.MAX_3D_TEXTURE_SIZE)
     log.info('NIIVUE VERSION ', version)
 
     // set parent background container to black (default empty canvas color)
@@ -6507,14 +6508,37 @@ export class Niivue {
       this.volScale = volScale
       this.vox = vox
       this.volumeObject3D.scale = volScale
-      const kMax3D = 2048
-      const isAboveMax3D = hdr.dims[1] > kMax3D || hdr.dims[2] > kMax3D
+      const isAboveMax3D = hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D
       if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
-        console.log('Large image requires Texture2D')
+        log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
         // high res 2D image
         this.opts.is2DSliceShader = true
         outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array)
         return
+      }
+      if (isAboveMax3D && hdr.dims[3] < 2) {
+        log.info(`Large scalar image (>${this.uiData.max3D}) requires Texture2D`)
+        const nPix = hdr.dims[1] *  hdr.dims[2]
+        const img2D = new Uint8Array( nPix * 4)
+        const img2D_U32 = new Uint32Array(img2D.buffer)
+        const opacity = Math.floor(overlayItem.opacity * 255)
+        const scale = (255 * hdr.scl_slope) / (overlayItem.cal_max - overlayItem.cal_min);
+        const intercept = 255 * (hdr.scl_inter - overlayItem.cal_min) / (overlayItem.cal_max - overlayItem.cal_min);
+        const cmap = new Uint8Array(this.colormap(overlayItem.colormap))
+        const cmap_U32 = new Uint32Array(cmap.buffer)
+        let j = -1;
+        for (let i = 0; i < nPix; i ++) {
+          const v = (img[i] * scale) + intercept
+          const v255 = Math.round(Math.min(255, Math.max(0, v))) // Clamp to 0..255
+          img2D_U32[i] = cmap_U32[v255]
+          img2D[j+= 4] = opacity
+        }
+        this.opts.is2DSliceShader = true
+        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img2D as Uint8Array, false)
+        return
+      }
+      if (isAboveMax3D) {
+        log.warn(`dimensions exceed 3D limits ${hdr.dims}`)
       }
       this.opts.is2DSliceShader = false
       outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!) // this.back.dims)
@@ -9206,7 +9230,7 @@ export class Niivue {
     } else {
       this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
     }
-    //if (this.opts.is2DSliceShader) {
+    // if (this.opts.is2DSliceShader) {
     // n.b. we set interpolation for BOTH 2D and 3D textures
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)

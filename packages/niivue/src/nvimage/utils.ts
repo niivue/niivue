@@ -69,7 +69,9 @@ export enum ImageType {
   SRC = 17,
   FIB = 18,
   BMP = 19,
-  ZARR = 20
+  ZARR = 20,
+  NPY = 21,
+  NPZ = 22
 }
 
 export const NVIMAGE_TYPE = Object.freeze({
@@ -84,6 +86,9 @@ export const NVIMAGE_TYPE = Object.freeze({
       case 'TXT':
         imageType = ImageType.DCM_MANIFEST
         break
+      case 'FZ':
+      case 'GQI':
+      case 'QSDR':
       case 'FIB':
         imageType = ImageType.FIB
         break
@@ -138,6 +143,12 @@ export const NVIMAGE_TYPE = Object.freeze({
         break
       case 'ZARR':
         imageType = ImageType.ZARR
+        break
+      case 'NPY':
+        imageType = ImageType.NPY
+        break
+      case 'NPZ':
+        imageType = ImageType.NPZ
         break
     }
     return imageType
