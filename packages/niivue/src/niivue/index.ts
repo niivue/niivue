@@ -6518,23 +6518,29 @@ export class Niivue {
       }
       if (isAboveMax3D && hdr.dims[3] < 2) {
         log.info(`Large scalar image (>${this.uiData.max3D}) requires Texture2D`)
-        const nPix = hdr.dims[1] *  hdr.dims[2]
-        const img2D = new Uint8Array( nPix * 4)
+        const nPix = hdr.dims[1] * hdr.dims[2]
+        const img2D = new Uint8Array(nPix * 4)
         const img2D_U32 = new Uint32Array(img2D.buffer)
         const opacity = Math.floor(overlayItem.opacity * 255)
-        const scale = (255 * hdr.scl_slope) / (overlayItem.cal_max - overlayItem.cal_min);
-        const intercept = 255 * (hdr.scl_inter - overlayItem.cal_min) / (overlayItem.cal_max - overlayItem.cal_min);
+        const scale = (255 * hdr.scl_slope) / (overlayItem.cal_max - overlayItem.cal_min)
+        const intercept = (255 * (hdr.scl_inter - overlayItem.cal_min)) / (overlayItem.cal_max - overlayItem.cal_min)
         const cmap = new Uint8Array(this.colormap(overlayItem.colormap))
         const cmap_U32 = new Uint32Array(cmap.buffer)
-        let j = -1;
-        for (let i = 0; i < nPix; i ++) {
-          const v = (img[i] * scale) + intercept
+        let j = -1
+        for (let i = 0; i < nPix; i++) {
+          const v = img[i] * scale + intercept
           const v255 = Math.round(Math.min(255, Math.max(0, v))) // Clamp to 0..255
           img2D_U32[i] = cmap_U32[v255]
-          img2D[j+= 4] = opacity
+          img2D[(j += 4)] = opacity
         }
         this.opts.is2DSliceShader = true
-        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img2D as Uint8Array, false)
+        outTexture = this.rgbaTex2D(
+          this.volumeTexture,
+          TEXTURE0_BACK_VOL,
+          overlayItem.dimsRAS!,
+          img2D as Uint8Array,
+          false
+        )
         return
       }
       if (isAboveMax3D) {
