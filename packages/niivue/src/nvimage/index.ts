@@ -1344,9 +1344,18 @@ export class NVImage {
   // }
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
-    const { width, height, depth = 1, data } = (zarrData ?? {}) as any
+    let { width, height, depth = 1, data } = (zarrData ?? {}) as any
     // console.log('readZARR', width, height, depth, data)
-    const expectedLength = width * height * depth * 3
+    let expectedLength = width * height * depth * 3
+    let isRGB = expectedLength === data.length
+    if (!isRGB) {
+      expectedLength = width * height * depth
+      if (depth === 3) {
+        // see https://zarrita.dev/get-started.html R,G,B channels returns as depth!
+        isRGB = true
+        depth = 1
+      }
+    }
     if (expectedLength !== data.length) {
       throw new Error(`Expected RGB ${width}×${height}×${depth}×3 =  ${expectedLength}, but ZARR length ${data.length}`)
     }
@@ -1361,9 +1370,14 @@ export class NVImage {
       [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ]
+    if (!isRGB) {
+      hdr.numBitsPerVoxel = 8
+      hdr.datatypeCode = NiiDataType.DT_UINT8
+      return data
+    }
     hdr.numBitsPerVoxel = 24
     hdr.datatypeCode = NiiDataType.DT_RGB24
-    function zxy2xyz(data, X, Y, Z) {
+    function zxy2xyz(data, X, Y, Z): Uint8Array {
       const voxelCount = X * Y
       const rgb = new Uint8Array(voxelCount * Z * 3)
       const offsets = new Array(Z)
@@ -3575,28 +3589,40 @@ export class NVImage {
     ext = re.exec(url)[1]
     // try url and name attributes to test for .zarr
     if (ext === 'zarr' || re.exec(name)[1] === 'zarr') {
-      const root = zarr.root(new zarr.FetchStore(url))
-      const arr = await zarr.open(root.resolve('scale0/image'), { kind: 'array' })
-      console.log(arr)
-      const z = 0
-      const nslices = 400 // > 1 slice not rendering correctly at the moment
-      const cRange = null
-      const zRange = zarr.slice(z, z + nslices)
-      const yRange = null
-      const xRange = null
-      // const view = await zarr.get(arr, [cRange, xRange, yRange, zRange])
-      const view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
-      console.log('view', view)
+      const store = new zarr.FetchStore(url)
+      const root = zarr.root(store)
+      let arr
+      try {
+        // Try multiscale structure first
+        arr = await zarr.open(root.resolve('scale0/image'), { kind: 'array' })
+      } catch (e) {
+        console.warn('scale0/image not found, falling back to root:', e)
+        arr = await zarr.open(root, { kind: 'array' })
+      }
+      let view
+      if (arr.shape.length === 4) {
+        const xRange = null
+        const yRange = null
+        const nZ = arr.shape[2]
+        const nZload = 80
+        const zLo = Math.max(Math.floor(nZ * 0.5 - nZload * 0.5), 0)
+        const zHi = Math.min(zLo + nZload, nZ - 1)
+        const zRange = zarr.slice(zLo, zHi)
+        const cRange = null
+        view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
+      } else {
+        view = await zarr.get(arr, [null, null, null])
+      }
       dataBuffer = view.data
-      // const [cDim, height, width, zDim] = view.shape
       const [height, width, zDim, cDim] = view.shape
       zarrData = {
         data: dataBuffer,
         width,
         height,
-        depth: zDim
+        depth: zDim,
+        channels: cDim
       }
-      console.log(zarrData)
+      // console.log(zarrData)
     }
 
     // Handle non-limited cases

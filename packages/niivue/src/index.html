@@ -22,6 +22,7 @@
         <option>DANDI</option>
         <option>FS</option>
         <option>Grayscale bitmap</option>
+        <option>Online ZARR</option>
       </select>
       <label for="dragSelect">Drag</label>
       <select id="dragSelect">
@@ -58,7 +59,6 @@
           [
             {
               url: 'http://localhost:5173/rgb.ome.zarr',
-              // url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
               name: 'example.zarr'
             }
           ],
@@ -81,6 +81,13 @@
             {
               url: 'https://niivue.github.io/niivue-demo-images/gray_bmp.png',
               colormap: 'actc'
+            }
+          ],
+          [
+            {
+              url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
+              //url: 'https://minio-dev.openmicroscopy.org/idr/v0.3/idr0062-blin-nuclearsegmentation/6001240.zarr',
+              name: 'example.zarr'
             }
           ]
         ]
@@ -156,7 +163,7 @@
         statusText.innerHTML = '&nbsp;&nbsp;' + data.string
       }
       let defaults = {
-        backColor: [0, 0, 0, 1],
+        backColor: [0, 0.2, 0.3, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
@@ -171,8 +178,8 @@
       }
       var nv1 = new Niivue(defaults)
       nv1.attachToCanvas(gl1)
-      nv1.setSliceType(3)
-      nv1.opts.multiplanarShowRender = SHOW_RENDER.NEVER
+      nv1.setSliceType(0)
+      //nv1.opts.multiplanarShowRender = SHOW_RENDER.NEVER
       formatSelect.onchange()
       const max2DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_TEXTURE_SIZE)
       console.log('Max 2D Texture Size:', max2DTextureSize)
