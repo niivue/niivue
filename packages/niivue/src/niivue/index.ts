@@ -1476,6 +1476,8 @@ export class Niivue {
     this.uiData.mouseButtonLeftDown = false
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
+      // add the bitmap after the clickToSegment update
+      this.drawAddUndoBitmap()
     } else if (this.drawPenAxCorSag >= 0) {
       if (this.opts.clickToSegment) {
         // copy clickToSegment bitmap to drawBitmap.
@@ -1486,9 +1488,9 @@ export class Niivue {
           this.updateBitmapFromClickToSegment()
         }
       }
+      // add the bitmap after the clickToSegment update
+      this.drawAddUndoBitmap()
     }
-    // add the bitmap after the clickToSegment update
-    this.drawAddUndoBitmap()
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     if (isFunction(this.onMouseUp)) {
