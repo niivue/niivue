@@ -681,7 +681,7 @@ uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
 uniform bool isAlphaClipDark;
-uniform highp sampler3D drawing;
+uniform highp sampler2D drawing;
 uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;` +
@@ -691,6 +691,11 @@ out vec4 color;` +
 	vec4 background = texture(volume, texPos.xy);
 	color = vec4(background.rgb, opacity);
 	if ((isAlphaClipDark) && (background.a == 0.0)) color.a = 0.0; //FSLeyes clipping range
+	vec4 dcolor = drawColor(texture(drawing, texPos.xy).r, drawOpacity);
+	if (dcolor.a > 0.0) {
+		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
+		color.a = max(drawOpacity, color.a);
+	}
 }`
 
 export const fragSliceMMShader = kFragSliceHead + kFragSliceTail

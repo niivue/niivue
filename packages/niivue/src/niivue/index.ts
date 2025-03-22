@@ -2820,7 +2820,11 @@ export class Niivue {
     const perm = drawingBitmap.permRAS!
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
-    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims!, true)
+    if (this.opts.is2DSliceShader) {
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    } else {
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims!, true)
+    }
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -4608,7 +4612,11 @@ export class Niivue {
     this.clickToSegmentGrowingBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
-    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    if (this.opts.is2DSliceShader) {
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    } else {
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    }
     this.refreshDrawing(false)
   }
 
@@ -5509,23 +5517,70 @@ export class Niivue {
       log.warn('Drawing bitmap must match the background image')
     }
     this.gl.activeTexture(TEXTURE7_DRAW)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
-    this.gl.texSubImage3D(
-      this.gl.TEXTURE_3D,
-      0,
-      0,
-      0,
-      0,
-      dims[1],
-      dims[2],
-      dims[3],
-      this.gl.RED,
-      this.gl.UNSIGNED_BYTE,
-      useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
-    )
+    if (this.opts.is2DSliceShader) {
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0, // Level
+        0,
+        0, // xOffset, yOffset
+        dims[1],
+        dims[2], // Width, Height
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+      )
+    } else {
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+      )
+    }
     if (isForceRedraw) {
       this.drawScene()
     }
+  }
+
+  // not included in public docs
+  // Create 3D 1-component (red) uint8 texture on GPU using dims[1] and dims[2]
+  r8Tex2D(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texID)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
+    this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.R8, dims[1], dims[2])
+    if (isInit) {
+      const img8 = new Uint8Array(dims[1] * dims[2])
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0, // Level
+        0,
+        0, // xOffset, yOffset
+        dims[1],
+        dims[2], // Width, Height
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        img8
+      )
+    }
+    return texID
   }
 
   // not included in public docs
@@ -7074,7 +7129,11 @@ export class Niivue {
     }
     this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.activeTexture(TEXTURE7_DRAW)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+    if (this.opts.is2DSliceShader) {
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
+    } else {
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+    }
     this.updateInterpolation(layer)
     //
     // this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!

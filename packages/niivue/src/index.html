@@ -17,12 +17,14 @@
       <select id="formatSelect">
         <option>JPEG</option>
         <option>Huge</option>
-        <option selected>ZARR</option>
+        <option  selected>Histology</option>
+        <option>ZARR</option>
         <option>NPZ</option>
         <option>DANDI</option>
         <option>FS</option>
         <option>Grayscale bitmap</option>
         <option>Online ZARR</option>
+        <option>Online vizarr</option>
       </select>
       <label for="dragSelect">Drag</label>
       <select id="dragSelect">
@@ -32,7 +34,34 @@
         <option selected>Pan</option>
       </select>
       <label for="smoothCheck">Smooth</label>
-      <input type="checkbox" checked="true" id="smoothCheck" Smooth />
+      <input type="checkbox" checked="true" id="smoothCheck" />
+        <button id="prevBtn">Previous Slice</button>
+        <button id="nextBtn">Next Slice</button>
+      &nbsp;&nbsp;&nbsp;
+      <select id="drawSelect">
+        <option value="-1">Off</option>
+        <option value="0">Erase</option>
+        <option value="1" selected>Red</option>
+        <option value="2">Green</option>
+        <option value="3">Blue</option>
+        <option value="8">Filled Erase</option>
+        <option value="9">Filled Red</option>
+        <option value="10">Filled Green</option>
+        <option value="11">Filled Blue</option>
+        <option value="12">Erase Selected Cluster</option>
+      </select>
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="80"
+        class="slider"
+        id="opacitySlider"
+      />
+      <button id="undoBtn">Undo</button>
+      <button id="saveBtn">Save</button>
+      &nbsp;&nbsp;&nbsp;
       <button id="aboutBtn">About</button>
     </header>
     <main id="canvas-container">
@@ -43,6 +72,17 @@
     <footer id="statusText">&nbsp;</footer>
     <script type="module" async>
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
+      drawSelect.onchange = async function () {
+        const mode = parseInt(this.value);
+        nv1.setDrawingEnabled(mode >= 0);
+        if (mode >= 0) nv1.setPenValue(mode & 7, mode > 7);
+        if (mode === 12)
+          //erase selected cluster
+          nv1.setPenValue(-0);
+      }
+      opacitySlider.onchange = async function () {
+        nv1.setDrawOpacity(this.value * 0.01)
+      }
       formatSelect.onchange = async function () {
         const idx = this.selectedIndex
         var volumeLists = [
@@ -54,6 +94,11 @@
           [
             {
               url: './retina.jpg'
+            }
+          ],
+          [
+            {
+              url: './histology.nii.gz'
             }
           ],
           [
@@ -86,7 +131,14 @@
           [
             {
               url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
-              //url: 'https://minio-dev.openmicroscopy.org/idr/v0.3/idr0062-blin-nuclearsegmentation/6001240.zarr',
+              name: 'example.zarr'
+            }
+          ],
+          [
+            {
+              // https://hms-dbmi.github.io/vizarr/?source=https://minio-dev.openmicroscopy.org/idr/v0.3/idr0062-blin-nuclearsegmentation/6001240.zarr&viewState={%22target%22:[148.82158305779987,128.923106260876],%22zoom%22:2.3938329406834296}
+              
+              url: 'https://minio-dev.openmicroscopy.org/idr/v0.3/idr0062-blin-nuclearsegmentation/6001240.zarr',
               name: 'example.zarr'
             }
           ]
@@ -94,7 +146,20 @@
         await nv1.loadVolumes(volumeLists[this.selectedIndex])
       }
       aboutBtn.onclick = async function () {
-        alert(nv1.volumes[0].hdr.toFormattedString())
+        alert(nv1.volumes[0].hdr.toFormattedString());
+        // await nv1.loadDrawingFromUrl("./retina_draw.nii.gz");
+      }
+      undoBtn.onclick = async function () {
+        nv1.drawUndo()
+      }
+      saveBtn.onclick = async function () {
+        nv1.saveImage({ filename: 'test.nii', isSaveDrawing: true})
+      }
+      prevBtn.onclick = async function () {
+         nv1.moveCrosshairInVox(0, 0, -1)
+      }
+      nextBtn.onclick = async function () {
+         nv1.moveCrosshairInVox(0, 0, 1)
       }
       dragSelect.onchange = function () {
         const drag = this.options[this.selectedIndex].text
@@ -112,54 +177,7 @@
       smoothCheck.onchange = function () {
         nv1.setInterpolation(!this.checked)
       }
-      // with roiSelect, show the stats from the ROI in a temporary div
-      const onDragRelease = (data) => {
-        // if there is a div with the id dragReleaseDiv, remove it
-        const divToRemove = document.getElementById('dragReleaseDiv')
-        if (divToRemove) {
-          divToRemove.remove()
-        }
-        console.log('drag release', data)
-        let obj = nv1.getDescriptives({
-          layer: 0,
-          startVox: data.voxStart,
-          endVox: data.voxEnd,
-          roiIsMask: true
-        })
-        console.log(obj)
-        // get dpr
-        const dpr = window.devicePixelRatio
-        // get mouse x,y. Divide by dpr to get the correct position
-        const x = nv1.uiData.dragEnd[0] / dpr
-        const y = nv1.uiData.dragEnd[1] / dpr
-        console.log(x, y)
-        const pad = 1
-        const div = document.createElement('div')
-        // set id for removal on the next pass
-        div.id = 'dragReleaseDiv'
-        div.style.color = 'red'
-        div.style.position = 'absolute'
-        div.style.backgroundColor = 'black'
-        div.style.opacity = 0.8
-        div.style.padding = '5px'
-        // set z-index to be well above the canvas
-        div.style.zIndex = 1000
-        div.innerHTML = `Mean: ${obj.mean}<br>Area: ${obj.area}<br>Stdev: ${obj.stdev}`
-        // set position to be at the mouse x,y relative to the canvas
-        div.style.left = x + pad + 'px'
-        div.style.top = y + pad + 'px'
-        // get the canvas element reference from niivue
-        const canvas = nv1.gl.canvas
-        // niivue should always be in a container, so get the parent of the canvas
-        const parentDiv = canvas.parentElement
-        parentDiv.appendChild(div)
-      }
       const onLocationChange = (data) => {
-        // remove the stats div if it exists when the user clicks away
-        const divToRemove = document.getElementById('dragReleaseDiv')
-        if (divToRemove) {
-          divToRemove.remove()
-        }
         statusText.innerHTML = '&nbsp;&nbsp;' + data.string
       }
       let defaults = {
@@ -170,7 +188,6 @@
         dragMode: DRAG_MODE.pan,
         // onDragRelease: onDragRelease,
         onLocationChange: onLocationChange,
-        measureTextJustify: 'start',
         showMeasureUnits: true,
         measureTextColor: [0, 1, 0, 1],
         measureLineColor: [1, 0, 0, 1],
@@ -178,9 +195,23 @@
       }
       var nv1 = new Niivue(defaults)
       nv1.attachToCanvas(gl1)
-      nv1.setSliceType(0)
+      
       //nv1.opts.multiplanarShowRender = SHOW_RENDER.NEVER
-      formatSelect.onchange()
+      nv1.onImageLoaded = (volume) => {
+        nv1.closeDrawing()
+        drawSelect.onchange()
+        opacitySlider.onchange()
+        if (nv1.volumes[0].hdr.dims[3] > 1) {
+          prevBtn.style.display = 'inline-block'
+          nextBtn.style.display = 'inline-block'
+          nv1.setSliceType(nv1.sliceTypeMultiplanar)
+        } else {
+          prevBtn.style.display = 'none'
+          nextBtn.style.display = 'none'
+          nv1.setSliceType(nv1.sliceTypeAxial)
+        }
+      }
+      await formatSelect.onchange()
       const max2DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_TEXTURE_SIZE)
       console.log('Max 2D Texture Size:', max2DTextureSize)
       const max3DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_3D_TEXTURE_SIZE)
