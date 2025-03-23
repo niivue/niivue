@@ -308,6 +308,7 @@ type UIData = {
   lastTwoTouchDistance: number
   multiTouchGesture: boolean
   dpr?: number
+  max2D?: number
   max3D?: number
   windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
   windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
@@ -938,9 +939,10 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
+    this.uiData.max2D = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE)
     this.uiData.max3D = this.gl.getParameter(this.gl.MAX_3D_TEXTURE_SIZE)
     log.info('NIIVUE VERSION ', version)
-
+    log.debug(`Max texture size 2D: ${this.uiData.max2D} 3D: ${this.uiData.max3D}`)
     // set parent background container to black (default empty canvas color)
     // avoids white cube around image in 3D render mode
     this.canvas!.parentElement!.style.backgroundColor = 'black'
@@ -6565,7 +6567,11 @@ export class Niivue {
       this.volScale = volScale
       this.vox = vox
       this.volumeObject3D.scale = volScale
-      const isAboveMax3D = hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D
+      const isAboveMax2D = hdr.dims[1] > this.uiData.max2D || hdr.dims[2] > this.uiData.max2D
+      if (isAboveMax2D) {
+        log.error(`Image dimensions exceed maximum texture size of hardware.`)
+      }
+      const isAboveMax3D = hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D || hdr.dims[3] > this.uiData.max3D
       if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
         log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
         // high res 2D image
@@ -6573,9 +6579,12 @@ export class Niivue {
         outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array)
         return
       }
-      if (isAboveMax3D && hdr.dims[3] < 2) {
-        log.info(`Large scalar image (>${this.uiData.max3D}) requires Texture2D`)
+      if (isAboveMax3D) {
+        log.info(`Large scalar image (>${this.uiData.max3D}) requires Texture2D (${hdr.dims[1]}×${hdr.dims[2]}×${hdr.dims[3]})`)
         const nPix = hdr.dims[1] * hdr.dims[2]
+        const vox = this.frac2vox(this.scene.crosshairPos)
+        const z = Math.min(Math.max(vox[2], 0), hdr.dims[3]-1)
+        const zOffset = z * nPix
         const img2D = new Uint8Array(nPix * 4)
         const img2D_U32 = new Uint32Array(img2D.buffer)
         const opacity = Math.floor(overlayItem.opacity * 255)
@@ -6585,7 +6594,7 @@ export class Niivue {
         const cmap_U32 = new Uint32Array(cmap.buffer)
         let j = -1
         for (let i = 0; i < nPix; i++) {
-          const v = img[i] * scale + intercept
+          const v = img[i+zOffset] * scale + intercept
           const v255 = Math.round(Math.min(255, Math.max(0, v))) // Clamp to 0..255
           img2D_U32[i] = cmap_U32[v255]
           img2D[(j += 4)] = opacity
@@ -9299,10 +9308,13 @@ export class Niivue {
     }
     // if (this.opts.is2DSliceShader) {
     // n.b. we set interpolation for BOTH 2D and 3D textures
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
+    if (this.opts.is2DSliceShader) {
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)
+    } else {
+      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
+      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
+    }
   }
 
   // not included in public docs
@@ -11168,6 +11180,7 @@ export class Niivue {
    */
   moveCrosshairInVox(x: number, y: number, z: number): void {
     const vox = this.frac2vox(this.scene.crosshairPos)
+    const vox2 = vox[2]
     vox[0] += x
     vox[1] += y
     vox[2] += z
@@ -11176,6 +11189,9 @@ export class Niivue {
     vox[2] = clamp(vox[2], 0, this.volumes[0].dimsRAS![3] - 1)
     this.scene.crosshairPos = this.vox2frac(vox)
     this.createOnLocationChange()
+    if (this.opts.is2DSliceShader && vox2 !== vox[2]) {
+      this.updateGLVolume()
+    }
     this.drawScene()
   }
 

@@ -15,9 +15,9 @@
     <header>
       <label for="formatSelect">Format</label>
       <select id="formatSelect">
-        <option>JPEG</option>
-        <option>Huge</option>
-        <option  selected>Histology</option>
+        <option>Juelich histology MNI</option>
+        <option  selected>Huge</option>
+        <option> Histology</option>
         <option>ZARR</option>
         <option>NPZ</option>
         <option>DANDI</option>
@@ -88,7 +88,7 @@
         var volumeLists = [
           [
             {
-              url: './kodim23.jpg'
+              url: './mni100u8.nii.gz'
             }
           ],
           [
@@ -178,15 +178,14 @@
         nv1.setInterpolation(!this.checked)
       }
       const onLocationChange = (data) => {
-        statusText.innerHTML = '&nbsp;&nbsp;' + data.string
+        statusText.innerHTML = '&nbsp;&nbsp;' + data.string + ` slice: ${data.vox[2]+1}/${nv1.back.dims[3]}`
       }
       let defaults = {
         backColor: [0, 0.2, 0.3, 1],
         show3Dcrosshair: true,
-        loglevel: 'debug',
+        //logLevel: 'debug',
         isRuler: true,
         dragMode: DRAG_MODE.pan,
-        // onDragRelease: onDragRelease,
         onLocationChange: onLocationChange,
         showMeasureUnits: true,
         measureTextColor: [0, 1, 0, 1],
@@ -195,8 +194,6 @@
       }
       var nv1 = new Niivue(defaults)
       nv1.attachToCanvas(gl1)
-      
-      //nv1.opts.multiplanarShowRender = SHOW_RENDER.NEVER
       nv1.onImageLoaded = (volume) => {
         nv1.closeDrawing()
         drawSelect.onchange()
@@ -204,7 +201,11 @@
         if (nv1.volumes[0].hdr.dims[3] > 1) {
           prevBtn.style.display = 'inline-block'
           nextBtn.style.display = 'inline-block'
-          nv1.setSliceType(nv1.sliceTypeMultiplanar)
+          if (nv1.opts.is2DSliceShader) {
+            nv1.setSliceType(nv1.sliceTypeAxial)
+          } else {
+            nv1.setSliceType(nv1.sliceTypeMultiplanar)
+          }
         } else {
           prevBtn.style.display = 'none'
           nextBtn.style.display = 'none'
@@ -212,10 +213,6 @@
         }
       }
       await formatSelect.onchange()
-      const max2DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_TEXTURE_SIZE)
-      console.log('Max 2D Texture Size:', max2DTextureSize)
-      const max3DTextureSize = nv1.gl.getParameter(nv1.gl.MAX_3D_TEXTURE_SIZE)
-      console.log('Max 3D Texture Size:', max3DTextureSize)
     </script>
   </body>
 </html>
