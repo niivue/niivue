@@ -6571,7 +6571,8 @@ export class Niivue {
       if (isAboveMax2D) {
         log.error(`Image dimensions exceed maximum texture size of hardware.`)
       }
-      const isAboveMax3D = hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D || hdr.dims[3] > this.uiData.max3D
+      const isAboveMax3D =
+        hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D || hdr.dims[3] > this.uiData.max3D
       if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
         log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
         // high res 2D image
@@ -6580,10 +6581,12 @@ export class Niivue {
         return
       }
       if (isAboveMax3D) {
-        log.info(`Large scalar image (>${this.uiData.max3D}) requires Texture2D (${hdr.dims[1]}×${hdr.dims[2]}×${hdr.dims[3]})`)
+        log.info(
+          `Large scalar image (>${this.uiData.max3D}) requires Texture2D (${hdr.dims[1]}×${hdr.dims[2]}×${hdr.dims[3]})`
+        )
         const nPix = hdr.dims[1] * hdr.dims[2]
         const vox = this.frac2vox(this.scene.crosshairPos)
-        const z = Math.min(Math.max(vox[2], 0), hdr.dims[3]-1)
+        const z = Math.min(Math.max(vox[2], 0), hdr.dims[3] - 1)
         const zOffset = z * nPix
         const img2D = new Uint8Array(nPix * 4)
         const img2D_U32 = new Uint32Array(img2D.buffer)
@@ -6594,7 +6597,7 @@ export class Niivue {
         const cmap_U32 = new Uint32Array(cmap.buffer)
         let j = -1
         for (let i = 0; i < nPix; i++) {
-          const v = img[i+zOffset] * scale + intercept
+          const v = img[i + zOffset] * scale + intercept
           const v255 = Math.round(Math.min(255, Math.max(0, v))) // Clamp to 0..255
           img2D_U32[i] = cmap_U32[v255]
           img2D[(j += 4)] = opacity
