@@ -5536,6 +5536,12 @@ export class Niivue {
     }
     this.gl.activeTexture(TEXTURE7_DRAW)
     if (this.opts.is2DSliceShader) {
+      const vox = this.frac2vox(this.scene.crosshairPos)
+      const z = Math.min(Math.max(vox[2], 0), dims[3] - 1)
+      const sliceBytes = dims[1] * dims[2]
+      const zOffset = z * sliceBytes
+      log.debug(`refresh huge 2D drawing x×y×z ${dims[1]}×${dims[2]}×${dims[3]} slice ${zOffset}`)
+      const sliceData = this.drawBitmap.subarray(zOffset, zOffset + sliceBytes)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
       this.gl.texSubImage2D(
         this.gl.TEXTURE_2D,
@@ -5546,8 +5552,9 @@ export class Niivue {
         dims[2], // Width, Height
         this.gl.RED,
         this.gl.UNSIGNED_BYTE,
-        useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+        useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : sliceData
       )
+      // TODO: this.clickToSegmentGrowingBitmap may need to be changed for huge bitmaps
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
       this.gl.texSubImage3D(
@@ -11205,6 +11212,7 @@ export class Niivue {
     this.createOnLocationChange()
     if (this.opts.is2DSliceShader && vox2 !== vox[2]) {
       this.updateGLVolume()
+      this.refreshDrawing(false)
     }
     this.drawScene()
   }
