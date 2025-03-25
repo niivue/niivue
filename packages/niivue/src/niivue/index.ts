@@ -5315,11 +5315,10 @@ export class Niivue {
   drawPenFilled(): void {
     const nPts = this.drawPenFillPts.length
     if (nPts < 2) {
-      // can not fill single line
       this.drawPenFillPts = []
       return
     }
-    // do fill in 2D, based on axial (0), coronal (1) or sagittal drawing (2
+    // do fill in 2D, based on axial (0), coronal (1) or sagittal drawing (2)
     const axCorSag = this.drawPenAxCorSag
     // axial is x(0)*y(1) horizontal*vertical
     let h = 0
@@ -5328,19 +5327,17 @@ export class Niivue {
       v = 2
     } // coronal is x(0)*z(0)
     if (axCorSag === 2) {
-      // sagittal is y(1)*z(2)
       h = 1
       v = 2
-    }
+    } // sagittal is y(1)*z(2)
 
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
-
-    const dims2D = [this.back.dims[h + 1], this.back.dims[v + 1]] // +1: dims indexed from 0!
-    // create bitmap of horizontal*vertical voxels:
+    const dims2D = [this.back.dims[h + 1], this.back.dims[v + 1]]
     const img2D = new Uint8Array(dims2D[0] * dims2D[1])
     let pen = 1 // do not use this.opts.penValue, as "erase" is zero
+
     function drawLine2D(ptA: number[], ptB: number[]): void {
       const dx = Math.abs(ptA[0] - ptB[0])
       const dy = Math.abs(ptA[1] - ptB[1])
@@ -5359,7 +5356,6 @@ export class Niivue {
       const x2 = ptB[0]
       const y2 = ptB[1]
       if (dx >= dy) {
-        // Driving axis is X-axis"
         let p1 = 2 * dy - dx
         while (x1 !== x2) {
           x1 += xs
@@ -5371,7 +5367,6 @@ export class Niivue {
           img2D[x1 + y1 * dims2D[0]] = pen
         }
       } else {
-        // Driving axis is Y-axis"
         let p1 = 2 * dx - dy
         while (y1 !== y2) {
           y1 += ys
@@ -5384,77 +5379,95 @@ export class Niivue {
         }
       }
     }
-    const startPt = [this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]]
+    function constrainXY(xy: number[]): number[] {
+      const x = Math.min(Math.max(xy[0], 0), dims2D[0] - 1)
+      const y = Math.min(Math.max(xy[1], 0), dims2D[1] - 1)
+      return [x, y]
+    }
+    const startPt = constrainXY([this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]])
+    let minPt = [...startPt]
+    let maxPt = [...startPt]
     let prevPt = startPt
+
     for (let i = 1; i < nPts; i++) {
-      const pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]]
+      let pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]]
+      pt = constrainXY(pt)
+      minPt = [Math.min(pt[0], minPt[0]), Math.min(pt[1], minPt[1])]
+      maxPt = [Math.max(pt[0], maxPt[0]), Math.max(pt[1], maxPt[1])]
       drawLine2D(prevPt, pt)
       prevPt = pt
     }
-    drawLine2D(startPt, prevPt) // close drawing
-    // flood fill
+    drawLine2D(startPt, prevPt)
+    const start = Date.now()
+    const pad = 1
+    minPt[0] = Math.max(0, minPt[0] - pad)
+    minPt[1] = Math.max(0, minPt[1] - pad)
+    maxPt[0] = Math.min(dims2D[0] - 1, maxPt[0] + pad)
+    maxPt[1] = Math.min(dims2D[1] - 1, maxPt[1] + pad)
+    for (let y = 0; y < dims2D[1]; y++) {
+      for (let x = 0; x < dims2D[0]; x++) {
+        if (x >= minPt[0] && x < maxPt[0] && y >= minPt[1] && y <= maxPt[1]) {
+          continue
+        }
+        const pxl = x + y * dims2D[0]
+        if (img2D[pxl] !== 0) {
+          continue
+        }
+        img2D[pxl] = 2
+      }
+    }
+
     const seeds: number[][] = []
     function setSeed(pt: number[]): void {
-      if (pt[0] < 0 || pt[1] < 0 || pt[0] >= dims2D[0] || pt[1] >= dims2D[1]) {
+      if (pt[0] < minPt[0] || pt[1] < minPt[1] || pt[0] > maxPt[0] || pt[1] > maxPt[1]) {
         return
       }
       const pxl = pt[0] + pt[1] * dims2D[0]
       if (img2D[pxl] !== 0) {
         return
-      } // not blank
+      }
       seeds.push(pt)
       img2D[pxl] = 2
     }
-    // https://en.wikipedia.org/wiki/Flood_fill
-    // first seed all edges
-    // bottom row
-    for (let i = 0; i < dims2D[0]; i++) {
-      setSeed([i, 0])
+    for (let x = minPt[0]; x <= maxPt[0]; x++) {
+      setSeed([x, minPt[1]])
+      setSeed([x, maxPt[1]])
     }
-    // top row
-    for (let i = 0; i < dims2D[0]; i++) {
-      setSeed([i, dims2D[1] - 1])
+    for (let y = minPt[1] + 1; y <= maxPt[1] - 1; y++) {
+      setSeed([minPt[0], y])
+      setSeed([maxPt[0], y])
     }
-    // left column
-    for (let i = 0; i < dims2D[1]; i++) {
-      setSeed([0, i])
-    }
-    // right columns
-    for (let i = 0; i < dims2D[1]; i++) {
-      setSeed([dims2D[0] - 1, i])
-    }
-    // now retire first in first out
     while (seeds.length > 0) {
-      // always remove one seed, plant 0..4 new ones
       const seed = seeds.shift()!
       setSeed([seed[0] - 1, seed[1]])
       setSeed([seed[0] + 1, seed[1]])
       setSeed([seed[0], seed[1] - 1])
       setSeed([seed[0], seed[1] + 1])
     }
-    // all voxels with value of zero have no path to edges
-    // insert surviving pixels from 2D bitmap into 3D bitmap
+
     pen = this.opts.penValue
     const slice = this.drawPenFillPts[0][3 - (h + v)]
+    log.info(
+      `FloodFill ${Date.now() - start}ms image ${dims2D[0]}x${dims2D[1]} drawing ${maxPt[0] - minPt[0] + 1}x${maxPt[1] - minPt[1] + 1}`
+    )
 
     if (!this.drawBitmap) {
       throw new Error('drawBitmap undefined')
     }
 
     if (axCorSag === 0) {
-      // axial
       const offset = slice * dims2D[0] * dims2D[1]
       for (let i = 0; i < dims2D[0] * dims2D[1]; i++) {
         if (img2D[i] !== 2) {
           this.drawBitmap[i + offset] = pen
         }
+        // if (img2D[i] === 1) this.drawBitmap[i + offset] = pen
       }
     } else {
-      let xStride = 1 // coronal: horizontal LR pixels contiguous
-      const yStride = this.back.dims[1] * this.back.dims[2] // coronal: vertical is slice
-      let zOffset = slice * this.back.dims[1] // coronal: slice is number of columns
+      let xStride = 1
+      const yStride = this.back.dims[1] * this.back.dims[2]
+      let zOffset = slice * this.back.dims[1]
       if (axCorSag === 2) {
-        // sagittal
         xStride = this.back.dims[1]
         zOffset = slice
       }
@@ -5468,7 +5481,7 @@ export class Niivue {
         }
       }
     }
-    // this.drawUndoBitmaps[this.currentDrawUndoBitmap]
+
     if (!this.drawFillOverwrites && this.drawUndoBitmaps[this.currentDrawUndoBitmap].length > 0) {
       const nv = this.drawBitmap.length
       const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], nv)
@@ -5479,6 +5492,7 @@ export class Niivue {
         this.drawBitmap[i] = bmp[i]
       }
     }
+
     this.drawPenFillPts = []
     this.drawAddUndoBitmap()
     this.refreshDrawing(false)
@@ -5522,6 +5536,12 @@ export class Niivue {
     }
     this.gl.activeTexture(TEXTURE7_DRAW)
     if (this.opts.is2DSliceShader) {
+      const vox = this.frac2vox(this.scene.crosshairPos)
+      const z = Math.min(Math.max(vox[2], 0), dims[3] - 1)
+      const sliceBytes = dims[1] * dims[2]
+      const zOffset = z * sliceBytes
+      log.debug(`refresh huge 2D drawing x×y×z ${dims[1]}×${dims[2]}×${dims[3]} slice ${zOffset}`)
+      const sliceData = this.drawBitmap.subarray(zOffset, zOffset + sliceBytes)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
       this.gl.texSubImage2D(
         this.gl.TEXTURE_2D,
@@ -5532,8 +5552,9 @@ export class Niivue {
         dims[2], // Width, Height
         this.gl.RED,
         this.gl.UNSIGNED_BYTE,
-        useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+        useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : sliceData
       )
+      // TODO: this.clickToSegmentGrowingBitmap may need to be changed for huge bitmaps
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
       this.gl.texSubImage3D(
@@ -6367,9 +6388,6 @@ export class Niivue {
     } else if (masks.length < 1 && roiIsMask) {
       // fill mask with zeros
       mask.fill(0)
-      console.log('startVox', startVox)
-      console.log('endVox', endVox)
-
       // identify the constant dimension (the plane where the ellipse is drawn)
       let constantDim = -1
       if (startVox[0] === endVox[0]) {
@@ -11194,6 +11212,7 @@ export class Niivue {
     this.createOnLocationChange()
     if (this.opts.is2DSliceShader && vox2 !== vox[2]) {
       this.updateGLVolume()
+      this.refreshDrawing(false)
     }
     this.drawScene()
   }
