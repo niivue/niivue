@@ -10,3 +10,4 @@ export interface ParsedVolumeData {
 
 export * as Mgh from './mgh.js'
 export * as Nii from './nii.js'
+export * as Nrrd from './nrrd.js'
