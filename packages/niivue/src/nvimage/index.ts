@@ -137,7 +137,7 @@ export class NVImage {
 
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -184,7 +184,7 @@ export class NVImage {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   init(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -203,7 +203,7 @@ export class NVImage {
     colorbarVisible = true,
     colormapLabel: LUT | null = null,
     colormapType = 0,
-    imgRaw: ArrayBuffer | null = null
+    imgRaw: ArrayBuffer | ArrayBufferLike | null = null
   ): void {
     this.name = name
     this.imageType = imageType
@@ -265,7 +265,7 @@ export class NVImage {
       this.hdr.datatypeCode === NiiDataType.DT_FLOAT32
     ) {
       // change data from float32 to rgba32
-      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw))
+      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw)).buffer as ArrayBuffer
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
       log.error('pixDims not plausible', this.hdr)
@@ -486,7 +486,7 @@ export class NVImage {
 
   static async new(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -1132,7 +1132,7 @@ export class NVImage {
     ]
     hdr.numBitsPerVoxel = 32
     hdr.datatypeCode = NiiDataType.DT_FLOAT32
-    return rawImg
+    return rawImg.buffer as ArrayBuffer
   } // readECAT()
 
   readV16(buffer: ArrayBuffer): ArrayBuffer {
@@ -1206,8 +1206,8 @@ export class NVImage {
     }
 
     // Extract version and header length
-    const _version = dv.getUint8(6)
-    const _minorVersion = dv.getUint8(7)
+    // const _version = dv.getUint8(6)
+    // const _minorVersion = dv.getUint8(7)
     const headerLen = dv.getUint16(8, true) // Little-endian
     // Decode header as ASCII string
     const headerText = new TextDecoder('utf-8').decode(buffer.slice(10, 10 + headerLen))
@@ -1262,7 +1262,7 @@ export class NVImage {
       const entry = zip.entries[i]
       if (entry.fileName.toLowerCase().endsWith('.npy')) {
         const data = await entry.extract()
-        return await this.readNPY(data.buffer)
+        return await this.readNPY(data.buffer as ArrayBuffer)
       }
     }
   }
@@ -1324,7 +1324,7 @@ export class NVImage {
       }
       return grayscaleData.buffer
     }
-    return data.buffer
+    return data.buffer as ArrayBuffer
   }
 
   // not included in public docs
@@ -1601,9 +1601,8 @@ export class NVImage {
     const mod = (dataBuffer.byteLength + 8) % 16
     const len = dataBuffer.byteLength + (16 - mod)
     log.debug(dataBuffer.byteLength, 'len', len)
-    const extBuffer = new Uint8Array(len)
-    extBuffer.fill(0)
-    extBuffer.set(new Uint8Array(dataBuffer))
+    const extBuffer = new ArrayBuffer(len)
+    new Uint8Array(extBuffer).set(new Uint8Array(dataBuffer))
     const newExtension = new NIFTIEXTENSION(len + 8, 42, extBuffer, true)
     hdr.addExtension(newExtension)
     hdr.extensionCode = 42
@@ -2231,7 +2230,7 @@ export class NVImage {
       }
     }
     return [outVs, v1s] */
-    return outVs
+    return outVs.buffer as ArrayBuffer
   } // readMIF()
 
   // not included in public docs
@@ -3020,7 +3019,7 @@ export class NVImage {
     if (!isNifti1) {
       return null
     }
-    const hdr = await readHeaderAsync(hdrU8s.buffer)
+    const hdr = await readHeaderAsync(hdrU8s.buffer as ArrayBuffer)
     if (!hdr) {
       throw new Error('Could not read NIfTI header')
     }
@@ -3036,7 +3035,7 @@ export class NVImage {
     }
     const responseImg = await fetch(url, { headers, cache: 'force-cache' })
     const dataBytes = await this.readFirstDecompressedBytes(responseImg.body, bytesToLoad)
-    return dataBytes.buffer.slice(0, bytesToLoad)
+    return dataBytes.buffer.slice(0, bytesToLoad) as ArrayBuffer
   }
 
   static async loadInitialVolumes(url = '', headers = {}, limitFrames4D = NaN): Promise<ArrayBuffer | null> {
@@ -3082,7 +3081,7 @@ export class NVImage {
       hdrU8s = concatU8s(hdrU8s, value)
     }
     // end of edge cases
-    const hdr = await readHeaderAsync(hdrU8s.buffer)
+    const hdr = await readHeaderAsync(hdrU8s.buffer as ArrayBuffer)
     if (!hdr) {
       throw new Error('Could not read NIfTI header')
     }
