@@ -1,9 +1,9 @@
 import { NIFTI1 } from 'nifti-reader-js'
 import { mat4, vec4, vec3 } from 'gl-matrix'
-import { log } from '../../logger.js' // Adjust path as needed
-import { NVUtilities } from '../../nvutilities.js' // Adjust path as needed
-import type { NVImage } from '../index.js' // Import NVImage type - Adjust path if needed
-import { NiiDataType } from '../utils.js' // imageType enum needed if used
+import { log } from '../../logger.js'
+import { NVUtilities } from '../../nvutilities.js'
+import type { NVImage } from '../index.js'
+import { NiiDataType } from '../utils.js'
 
 /**
  * Reads FreeSurfer MGH/MGZ format image, modifying the provided NVImage header

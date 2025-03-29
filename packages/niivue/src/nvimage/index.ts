@@ -1,12 +1,4 @@
-import {
-  NIFTI1,
-  NIFTI2,
-  NIFTIEXTENSION,
-  isCompressed,
-  decompressAsync,
-  readImage,
-  readHeaderAsync
-} from 'nifti-reader-js'
+import { NIFTI1, NIFTI2, NIFTIEXTENSION, readHeaderAsync } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Gunzip } from 'fflate'
@@ -560,7 +552,7 @@ export class NVImage {
       case NVIMAGE_TYPE.MGZ:
         imgRaw = await ImageReaders.Mgh.readMgh(newImg, dataBuffer as ArrayBuffer)
         if (imgRaw === null) {
-          throw new Error(`Failed to parse MGH/MGZ file ${name}: Reader returned null.`)
+          throw new Error(`Failed to parse MGH/MGZ file ${name}`)
         }
         break
       case NVIMAGE_TYPE.SRC:
@@ -591,19 +583,9 @@ export class NVImage {
         // imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
         throw new Error('Image type ZARR not (yet) supported')
       case NVIMAGE_TYPE.NII:
-        if (isCompressed(dataBuffer as ArrayBuffer)) {
-          dataBuffer = await decompressAsync(dataBuffer as ArrayBuffer)
-        }
-        newImg.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer)
-        if (newImg.hdr !== null) {
-          if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
-            newImg.hdr.cal_max = 0.0
-          }
-          if (isCompressed(dataBuffer as ArrayBuffer)) {
-            imgRaw = readImage(newImg.hdr, (await decompressAsync(dataBuffer as ArrayBuffer)) as ArrayBuffer)
-          } else {
-            imgRaw = readImage(newImg.hdr, dataBuffer as ArrayBuffer)
-          }
+        imgRaw = await ImageReaders.Nii.readNifti(newImg, dataBuffer as ArrayBuffer)
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse NIfTI file ${name}.`)
         }
         break
       default:
