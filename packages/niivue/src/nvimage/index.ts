@@ -1,4 +1,3 @@
-// import * as nifti from 'nifti-reader-js'
 import {
   NIFTI1,
   NIFTI2,
@@ -12,7 +11,6 @@ import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Gunzip } from 'fflate'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
 import { log } from '../logger.js'
 import { NVUtilities, Zip } from '../nvutilities.js'
 import {
@@ -25,18 +23,16 @@ import {
   NiiDataType,
   NiiIntentCode,
   NVImageFromUrlOptions,
-  getExtents,
   hdrToArrayBuffer,
   isAffineOK,
   isPlatformLittleEndian,
   uncompressStream
 } from './utils.js'
-
 import * as ImageWriter from './ImageWriter.js'
 import * as VolumeUtils from './VolumeUtils.js'
+import * as ImageReaders from './ImageReaders/index.js'
 
 export * from './utils.js'
-
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
 
 /**
@@ -562,7 +558,10 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
-        imgRaw = await newImg.readMGH(dataBuffer as ArrayBuffer)
+        imgRaw = await ImageReaders.Mgh.readMgh(newImg, dataBuffer as ArrayBuffer)
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse MGH/MGZ file ${name}: Reader returned null.`)
+        }
         break
       case NVIMAGE_TYPE.SRC:
         imgRaw = await newImg.readSRC(dataBuffer as ArrayBuffer)
@@ -1435,109 +1434,6 @@ export class NVImage {
     hdr.datatypeCode = NiiDataType.DT_UINT8
     return buffer.slice(8, 8 + nBytes)
   } // readVMR()
-
-  // not included in public docs
-  // read FreeSurfer MGH format image
-  async readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer> {
-    this.hdr = new NIFTI1()
-    const hdr = this.hdr
-    hdr.littleEndian = false // MGH always big ending
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    let raw = buffer
-    let reader = new DataView(raw)
-    if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      // const raw8 = decompressSync(new Uint8Array(buffer))
-      // raw = raw8.buffer
-      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
-      reader = new DataView(raw)
-    }
-    const version = reader.getInt32(0, false)
-    const width = reader.getInt32(4, false)
-    const height = reader.getInt32(8, false)
-    const depth = reader.getInt32(12, false)
-    const nframes = reader.getInt32(16, false)
-    const mtype = reader.getInt32(20, false)
-    // let dof = reader.getInt32(24, false);
-    // let goodRASFlag = reader.getInt16(28, false);
-    const spacingX = reader.getFloat32(30, false)
-    const spacingY = reader.getFloat32(34, false)
-    const spacingZ = reader.getFloat32(38, false)
-    const xr = reader.getFloat32(42, false)
-    const xa = reader.getFloat32(46, false)
-    const xs = reader.getFloat32(50, false)
-    const yr = reader.getFloat32(54, false)
-    const ya = reader.getFloat32(58, false)
-    const ys = reader.getFloat32(62, false)
-    const zr = reader.getFloat32(66, false)
-    const za = reader.getFloat32(70, false)
-    const zs = reader.getFloat32(74, false)
-    const cr = reader.getFloat32(78, false)
-    const ca = reader.getFloat32(82, false)
-    const cs = reader.getFloat32(86, false)
-    if (version !== 1 || mtype < 0 || mtype > 4) {
-      log.warn('Not a valid MGH file')
-    }
-    if (mtype === 0) {
-      hdr.numBitsPerVoxel = 8
-      hdr.datatypeCode = NiiDataType.DT_UINT8
-    } else if (mtype === 4) {
-      hdr.numBitsPerVoxel = 16
-      hdr.datatypeCode = NiiDataType.DT_INT16
-    } else if (mtype === 1) {
-      hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = NiiDataType.DT_INT32
-    } else if (mtype === 3) {
-      hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = NiiDataType.DT_FLOAT32
-    }
-    hdr.dims[1] = width
-    hdr.dims[2] = height
-    hdr.dims[3] = depth
-    hdr.dims[4] = nframes
-    if (nframes > 1) {
-      hdr.dims[0] = 4
-    }
-    hdr.pixDims[1] = spacingX
-    hdr.pixDims[2] = spacingY
-    hdr.pixDims[3] = spacingZ
-    hdr.vox_offset = 284
-    hdr.sform_code = 1
-    const rot44 = mat4.fromValues(
-      xr * hdr.pixDims[1],
-      yr * hdr.pixDims[2],
-      zr * hdr.pixDims[3],
-      0,
-      xa * hdr.pixDims[1],
-      ya * hdr.pixDims[2],
-      za * hdr.pixDims[3],
-      0,
-      xs * hdr.pixDims[1],
-      ys * hdr.pixDims[2],
-      zs * hdr.pixDims[3],
-      0,
-      0,
-      0,
-      0,
-      1
-    )
-    const Pcrs = [hdr.dims[1] / 2.0, hdr.dims[2] / 2.0, hdr.dims[3] / 2.0, 1]
-    const PxyzOffset = [0, 0, 0, 0]
-    for (let i = 0; i < 3; i++) {
-      PxyzOffset[i] = 0
-      for (let j = 0; j < 3; j++) {
-        PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j]
-      }
-    }
-    hdr.affine = [
-      [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
-      [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
-      [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
-      [0, 0, 0, 1]
-    ]
-    const nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4] * (hdr.numBitsPerVoxel / 8)
-    return raw.slice(hdr.vox_offset, hdr.vox_offset + nBytes)
-  } // readMGH()
 
   // not included in public docs
   // read DSI-Studio FIB format image

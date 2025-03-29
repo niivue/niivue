@@ -1,4 +1,3 @@
-import { vec4 } from 'gl-matrix'
 import { log } from '../logger.js'
 import { NiiDataType } from './utils.js'
 import type { NVImage, TypedVoxelArray } from './index.js'
@@ -159,39 +158,28 @@ export function getVolumeData(
     return defaultResult
   }
 
-  // Determine output data type
-  let outputDT = nvImage.hdr.datatypeCode
-  let outputArrayConstructor: new (length: number) => TypedVoxelArray = nvImage.img.constructor as new (
+  let OutputArrayConstructor: new (length: number) => TypedVoxelArray = nvImage.img.constructor as new (
     length: number
   ) => TypedVoxelArray // Default to same as input
 
   if (dataType === 'uint8') {
-    outputDT = NiiDataType.DT_UINT8
-    outputArrayConstructor = Uint8Array
+    OutputArrayConstructor = Uint8Array
   } else if (dataType === 'int16') {
-    // Added int16 for completeness
-    outputDT = NiiDataType.DT_INT16
-    outputArrayConstructor = Int16Array
+    OutputArrayConstructor = Int16Array
   } else if (dataType === 'uint16') {
-    // Added uint16
-    outputDT = NiiDataType.DT_UINT16
-    outputArrayConstructor = Uint16Array
+    OutputArrayConstructor = Uint16Array
   } else if (dataType === 'float32' || dataType === 'scaled' || dataType === 'normalized' || dataType === 'windowed') {
-    outputDT = NiiDataType.DT_FLOAT32
-    outputArrayConstructor = Float32Array
+    OutputArrayConstructor = Float32Array
   } else if (dataType === 'float64') {
-    // Added float64
-    outputDT = NiiDataType.DT_FLOAT64
-    outputArrayConstructor = Float64Array
+    OutputArrayConstructor = Float64Array
   } else if (dataType !== 'same') {
     log.warn(`getVolumeData: Unsupported dataType '${dataType}'. Using 'same'.`)
-    // Keep original type
   }
 
   // Create the output array
   let outputImg: TypedVoxelArray
   try {
-    outputImg = new outputArrayConstructor(slabNVox)
+    outputImg = new OutputArrayConstructor(slabNVox)
   } catch (e) {
     log.error(`getVolumeData: Failed to create output array for dataType '${dataType}'.`, e)
     return defaultResult
