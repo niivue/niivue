@@ -33,6 +33,7 @@ import {
 } from './utils.js'
 
 import * as ImageWriter from './ImageWriter.js'
+import * as VolumeUtils from './VolumeUtils.js'
 
 export * from './utils.js'
 
@@ -3874,7 +3875,6 @@ export class NVImage {
     datatypeCode = NiiDataType.DT_UINT8,
     img: TypedVoxelArray | Uint8Array = new Uint8Array()
   ): Uint8Array {
-    // **** UPDATED DELEGATION ****
     return ImageWriter.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
   }
 
@@ -3888,7 +3888,6 @@ export class NVImage {
     affine: number[] = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
     datatypeCode = NiiDataType.DT_UINT8
   ): NIFTI1 {
-    // **** UPDATED DELEGATION ****
     return ImageWriter.createNiftiHeader(dims, pixDims, affine, datatypeCode)
   }
 
@@ -3901,81 +3900,21 @@ export class NVImage {
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
 
-  getVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], dataType = 'same'): [TypedVoxelArray, number[]] {
-    let img: TypedVoxelArray = new Uint8Array()
-    if (Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
-      return [img, [0, 0, 0]]
-    }
-    const dims = this.dimsRAS!.slice(1, 4)
-    for (let i = 0; i < 3; i++) {
-      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
-      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
-      if (voxEnd[i] < voxStart[i]) {
-        const tmp = voxEnd[i]
-        voxEnd[i] = voxStart[i]
-        voxStart[i] = tmp
-      }
-    }
-    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
-    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
-    let dt = this.hdr!.datatypeCode
-    if (dataType === 'uint8') {
-      dt = NiiDataType.DT_UINT8
-    } else if (
-      dataType === 'float32' ||
-      dataType === 'scaled' ||
-      dataType === 'normalized' ||
-      dataType === 'windowed'
-    ) {
-      dt = NiiDataType.DT_FLOAT32
-    }
-    if (dt === NiiDataType.DT_UINT8) {
-      img = new Uint8Array(slabNVox)
-    } else if (dt === NiiDataType.DT_INT16) {
-      img = new Int16Array(slabNVox)
-    } else if (dt === NiiDataType.DT_UINT16) {
-      img = new Uint16Array(slabNVox)
-    } else if (dt === NiiDataType.DT_FLOAT32) {
-      img = new Float32Array(slabNVox)
-    } else if (dt === NiiDataType.DT_FLOAT64) {
-      img = new Float64Array(slabNVox)
-    } else {
-      log.error('getVolumeData unsupported datatype')
-      return [img, [0, 0, 0]]
-    }
-    const outStep = this.img2RASstep!
-    const outStart = this.img2RASstart!
-    let i = 0
-    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
-      const zi = outStart[2] + z * outStep[2]
-      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
-        const yizi = zi + outStart[1] + y * outStep[1]
-        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          const xi = outStart[0] + x * outStep[0]
-          img[i++] = this.img![xi + yizi]
-        }
-      }
-    }
-    if (dataType === 'scaled' || dataType === 'normalized' || dataType === 'windowed') {
-      for (let i = 0; i < img.length; i++) {
-        img[i] = img[i] * this.hdr.scl_slope + this.hdr.scl_inter
-      }
-    }
-    if (dataType === 'normalized' || dataType === 'windowed') {
-      let mn = this.cal_min
-      let mx = this.cal_max
-      if (dataType === 'normalized') {
-        mn = this.global_min
-        mx = this.global_max
-      }
-      const scale = 1 / (mx - mn)
-      for (let i = 0; i < img.length; i++) {
-        img[i] = (img[i] - mn) * scale
-        img[i] = Math.max(Math.min(img[i], 1), 0)
-      }
-    }
-    return [img, slabDims]
-  } // getVolumeData()
+  /**
+   * read a 3D slab of voxels from a volume, specified in RAS coordinates.
+   * Delegates to VolumeUtils.getVolumeData.
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
+   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
+   */
+  getVolumeData(
+    voxStart: number[] = [-1, 0, 0],
+    voxEnd: number[] = [0, 0, 0],
+    dataType = 'same'
+  ): [TypedVoxelArray, number[]] {
+    return VolumeUtils.getVolumeData(this, voxStart, voxEnd, dataType)
+  }
 
   /**
    * write a 3D slab of voxels from a volume
@@ -3985,41 +3924,21 @@ export class NVImage {
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
 
-  setVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], img: TypedVoxelArray = new Uint8Array()): void {
-    if (img.length < 1 || Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
-      return
-    }
-    const dims = this.dimsRAS!.slice(1, 4)
-    for (let i = 0; i < 3; i++) {
-      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
-      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
-      if (voxEnd[i] < voxStart[i]) {
-        const tmp = voxEnd[i]
-        voxEnd[i] = voxStart[i]
-        voxStart[i] = tmp
-      }
-    }
-    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
-    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
-    if (img.length < slabNVox) {
-      log.error('setVolumeData image does not have enough voxels')
-      return
-    }
-    const outStep = this.img2RASstep!
-    const outStart = this.img2RASstart!
-    let i = 0
-    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
-      const zi = outStart[2] + z * outStep[2]
-      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
-        const yizi = zi + outStart[1] + y * outStep[1]
-        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          const xi = outStart[0] + x * outStep[0]
-          // imgRAS[j] = this.img[xi + yi + zi]
-          this.img![xi + yizi] = img[i++]
-        }
-      }
-    }
-  } // setVolumeData()
+  /**
+   * write a 3D slab of voxels from a volume, specified in RAS coordinates.
+   * Delegates to VolumeUtils.setVolumeData.
+   * Input slabData is assumed to be in the correct raw data type for the target image.
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param img - array of voxel values to insert (RAS order, raw data type)
+   */
+  setVolumeData(
+    voxStart: number[] = [-1, 0, 0],
+    voxEnd: number[] = [0, 0, 0],
+    img: TypedVoxelArray = new Uint8Array()
+  ): void {
+    VolumeUtils.setVolumeData(this, voxStart, voxEnd, img)
+  }
 
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
@@ -4185,46 +4104,19 @@ export class NVImage {
     return zeroClone
   }
 
-  // not included in public docs
-  // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
+  /**
+   * Returns voxel intensity at specific native coordinates.
+   * Delegates to VolumeUtils.getValue.
+   * @param x - Native X coordinate (0-indexed)
+   * @param y - Native Y coordinate (0-indexed)
+   * @param z - Native Z coordinate (0-indexed)
+   * @param frame4D - 4D frame index (0-indexed)
+   * @param isReadImaginary - Flag to read from imaginary data array
+   * @returns Scaled voxel intensity
+   */
   getValue(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    if (!this.img) {
-      throw new Error('img undefined')
-    }
-
-    const nx = this.hdr.dims[1]
-    const ny = this.hdr.dims[2]
-    const nz = this.hdr.dims[3]
-    const perm = this.permRAS!.slice()
-    if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-      const pos = vec4.fromValues(x, y, z, 1)
-      vec4.transformMat4(pos, pos, this.toRASvox!)
-      x = pos[0]
-      y = pos[1]
-      z = pos[2]
-    } // image is already in RAS
-    let vx = x + y * nx + z * nx * ny
-
-    if (this.hdr.datatypeCode === NiiDataType.DT_RGBA32) {
-      vx *= 4
-      // convert rgb to luminance
-      return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07)
-    }
-    if (this.hdr.datatypeCode === NiiDataType.DT_RGB24) {
-      vx *= 3
-      // convert rgb to luminance
-      return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07)
-    }
-    const vol = frame4D * nx * ny * nz
-    let i = this.img[vx + vol]
-    if (isReadImaginary) {
-      i = this.imaginary![vx + vol]
-    }
-
-    return this.hdr.scl_slope * i + this.hdr.scl_inter
+    // **** DELEGATE TO VolumeUtils ****
+    return VolumeUtils.getValue(this, x, y, z, frame4D, isReadImaginary)
   }
 
   /**
