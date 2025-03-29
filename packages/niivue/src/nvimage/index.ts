@@ -32,6 +32,8 @@ import {
   uncompressStream
 } from './utils.js'
 
+import * as ImageWriter from './ImageWriter.js'
+
 export * from './utils.js'
 
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
@@ -3269,62 +3271,31 @@ export class NVImage {
     return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope
   }
 
-  // not included in public docs
-  // see niivue.saveImage() for wrapper of this function
+  /**
+   * Converts NVImage to NIfTI compliant byte array, potentially compressed.
+   * Delegates to ImageWriter.saveToUint8Array.
+   * @param fnm - Filename (determines if compression is needed via .gz suffix)
+   * @param drawing8 - Optional Uint8Array drawing overlay
+   * @returns Promise<Uint8Array>
+   */
   async saveToUint8Array(fnm: string, drawing8: Uint8Array | null = null): Promise<Uint8Array> {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    if (!this.img) {
-      throw new Error('img undefined')
-    }
-
-    const isDrawing8 = drawing8 !== null
-    const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8)
-    const opad = new Uint8Array(4)
-    let img8 = new Uint8Array(this.img.buffer)
-    if (isDrawing8) {
-      img8 = new Uint8Array(drawing8.buffer)
-    }
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-
-    odata.set(img8, hdrBytes.length + opad.length)
-    let saveData = null
-    const compress = fnm.endsWith('.gz') // true if name ends with .gz
-    if (compress) {
-      saveData = new Uint8Array(await NVUtilities.compress(odata, 'gzip'))
-    } else {
-      saveData = odata
-    }
-    return saveData
+    // Delegate to the writer module, passing the instance 'this'
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.saveToUint8Array(this, fnm, drawing8)
   }
 
-  // not included in public docs
-  // save image as NIfTI volume
-  // if fnm is empty, data is returned
+  /**
+   * save image as NIfTI volume and trigger download.
+   * Delegates to ImageWriter.saveToDisk.
+   * @param fnm - Filename for download. If empty, returns data without download.
+   * @param drawing8 - Optional Uint8Array drawing overlay
+   * @returns Promise<Uint8Array>
+   */
   async saveToDisk(fnm: string = '', drawing8: Uint8Array | null = null): Promise<Uint8Array> {
-    // TODO there was an unnecessary strict string check for fnm here,
-    // shouldn't be necessary anymore. Thanks TS! :)
-    const saveData = await this.saveToUint8Array(fnm, drawing8)
-    if (fnm === '') {
-      log.debug('saveToDisk: empty file name, returning data as Uint8Array rather than triggering download')
-      return saveData
-    }
-    const blob = new Blob([saveData.buffer], {
-      type: 'application/octet-stream'
-    })
-    const blobUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', blobUrl)
-    link.setAttribute('download', fnm)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    return saveData
-  } // saveToDisk()
+    // Delegate to the writer module, passing the instance 'this'
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.saveToDisk(this, fnm, drawing8)
+  }
 
   static async fetchDicomData(
     url: string,
@@ -3893,80 +3864,33 @@ export class NVImage {
   }
 
   /**
-   * factory function to load and return a new NVImage instance from a base64 encoded string
-   *
-   * @returns NVImage instance
-   * @example
-   * myImage = NVImage.loadFromBase64('SomeBase64String')
+   * Creates a Uint8Array representing a NIFTI file (header + optional image data).
+   * Delegates to ImageWriter.createNiftiArray.
    */
   static createNiftiArray(
-    dims = [256, 256, 256],
-    pixDims = [1, 1, 1],
-    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
-    datatypeCode = 2, // DT_UINT8
-    img = new Uint8Array()
+    dims: number[] = [256, 256, 256],
+    pixDims: number[] = [1, 1, 1],
+    affine: number[] = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = NiiDataType.DT_UINT8,
+    img: TypedVoxelArray | Uint8Array = new Uint8Array()
   ): Uint8Array {
-    const hdr = this.createNiftiHeader(dims, pixDims, affine, datatypeCode)
-    const hdrBytes = hdrToArrayBuffer(hdr, false)
-    if (img.length < 1) {
-      return hdrBytes
-    }
-    const opad = new Uint8Array(4)
-    const img8 = new Uint8Array(img.buffer)
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-    odata.set(img8, hdrBytes.length + opad.length)
-    return odata
-  } // createNiftiFile()
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
+  }
 
+  /**
+   * Creates a NIFTI1 header object with basic properties.
+   * Delegates to ImageWriter.createNiftiHeader.
+   */
   static createNiftiHeader(
-    dims = [256, 256, 256],
-    pixDims = [1, 1, 1],
-    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
-    datatypeCode = 2 // NiiDataType.DT_UINT8
+    dims: number[] = [256, 256, 256],
+    pixDims: number[] = [1, 1, 1],
+    affine: number[] = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = NiiDataType.DT_UINT8
   ): NIFTI1 {
-    const hdr = new NIFTI1()
-    hdr.littleEndian = true
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.dims[0] = Math.max(3, dims.length)
-    for (let i = 0; i < dims.length; i++) {
-      hdr.dims[i + 1] = dims[i]
-    }
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    for (let i = 0; i < dims.length; i++) {
-      hdr.pixDims[i + 1] = pixDims[i]
-    }
-    if (affine.length === 16) {
-      let k = 0
-      for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          hdr.affine[i][j] = affine[k]
-          k++
-        }
-      }
-    }
-    let bpv = 8
-    if (datatypeCode === 256 || datatypeCode === 2) {
-      bpv = 8
-    } else if (datatypeCode === 512 || datatypeCode === 4) {
-      bpv = 16
-    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8 || datatypeCode === 2304) {
-      bpv = 32
-    } else if (datatypeCode === 64) {
-      bpv = 64
-    } else {
-      log.warn('Unsupported NIfTI datatypeCode: ' + datatypeCode)
-    }
-    hdr.datatypeCode = datatypeCode
-    hdr.numBitsPerVoxel = bpv
-    hdr.scl_inter = 0
-    hdr.scl_slope = 0
-    hdr.sform_code = 2
-    hdr.magic = 'n+1'
-    hdr.vox_offset = 352
-    return hdr
-  } // loadFromHeader
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.createNiftiHeader(dims, pixDims, affine, datatypeCode)
+  }
 
   /**
    * read a 3D slab of voxels from a volume
@@ -4462,91 +4386,16 @@ export class NVImage {
   }
 
   /**
-   * Converts NVImage to NIfTI compliant byte array
+   * Converts NVImage to NIfTI compliant byte array.
+   * Handles potential re-orientation of drawing data.
+   * Delegates to ImageWriter.toUint8Array.
+   * @param drawingBytes - Optional Uint8Array drawing overlay
+   * @returns Uint8Array
    */
   toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
-    const isDrawing = drawingBytes !== null
-    const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, isDrawing)
-
-    let drawingBytesToBeConverted = drawingBytes
-    if (isDrawing) {
-      const perm = this.permRAS as number[]
-      if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-        const dims = this.hdr!.dims // reverse to original
-        // reverse RAS to native space, layout is mrtrix MIF format
-        // for details see NVImage.readMIF()
-        const layout = [0, 0, 0]
-        for (let i = 0; i < 3; i++) {
-          for (let j = 0; j < 3; j++) {
-            if (Math.abs(perm[i]) - 1 !== j) {
-              continue
-            }
-            layout[j] = i * Math.sign(perm[i])
-          }
-        }
-        let stride = 1
-        const instride = [1, 1, 1]
-        const inflip = [false, false, false]
-        for (let i = 0; i < layout.length; i++) {
-          for (let j = 0; j < layout.length; j++) {
-            const a = Math.abs(layout[j])
-            if (a !== i) {
-              continue
-            }
-            instride[j] = stride
-            // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-            if (layout[j] < 0 || Object.is(layout[j], -0)) {
-              inflip[j] = true
-            }
-            stride *= dims[j + 1]
-          }
-        }
-        let xlut = NVUtilities.range(0, dims[1] - 1, 1)
-        if (inflip[0]) {
-          xlut = NVUtilities.range(dims[1] - 1, 0, -1)
-        }
-        for (let i = 0; i < dims[1]; i++) {
-          xlut[i] *= instride[0]
-        }
-        let ylut = NVUtilities.range(0, dims[2] - 1, 1)
-        if (inflip[1]) {
-          ylut = NVUtilities.range(dims[2] - 1, 0, -1)
-        }
-        for (let i = 0; i < dims[2]; i++) {
-          ylut[i] *= instride[1]
-        }
-        let zlut = NVUtilities.range(0, dims[3] - 1, 1)
-        if (inflip[2]) {
-          zlut = NVUtilities.range(dims[3] - 1, 0, -1)
-        }
-        for (let i = 0; i < dims[3]; i++) {
-          zlut[i] *= instride[2]
-        }
-        // convert data
-
-        const inVs = new Uint8Array(drawingBytes)
-        const outVs = new Uint8Array(dims[1] * dims[2] * dims[3])
-        let j = 0
-        for (let z = 0; z < dims[3]; z++) {
-          for (let y = 0; y < dims[2]; y++) {
-            for (let x = 0; x < dims[1]; x++) {
-              outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]]
-              j++
-            } // for x
-          } // for y
-        } // for z
-        drawingBytesToBeConverted = outVs
-        log.debug('drawing bytes')
-        log.debug(drawingBytesToBeConverted)
-      }
-    }
-    const img8 = isDrawing ? (drawingBytesToBeConverted as Uint8Array) : new Uint8Array(this.img!.buffer)
-    const opad = new Uint8Array(4)
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-    odata.set(img8, hdrBytes.length + opad.length)
-    return odata
+    // Delegate to the writer module, passing the instance 'this'
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.toUint8Array(this, drawingBytes)
   }
 
   // not included in public docs
