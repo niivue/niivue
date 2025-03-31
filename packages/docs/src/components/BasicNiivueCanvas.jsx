@@ -14,7 +14,7 @@ export const BasicNiivueCanvas = ({ images, nvOpts }) => {
   // canvas ref
   const canvasRef = React.useRef(null);
   const niivue = React.useRef(null);
-  // intialise niivue instance on first mount
+  // initialise niivue instance on first mount
   React.useEffect(() => {
     niivue.current = new Niivue({logLevel: 'debug', ...nvOpts});
     niivue.current.attachToCanvas(canvasRef.current);
