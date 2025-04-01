@@ -3873,15 +3873,18 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
    * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
    */
-  async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
+  async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {  
     this.renderGradientValues = Number.isNaN(gradientAmount)
     this.renderShader = this.renderVolumeShader
-    if (this.renderGradientValues) {
+    if (this.renderGradientValues) {      
       this.renderShader = this.renderGradientValuesShader
-    } else if (gradientAmount > 0.0 || this.opts.gradientOpacity > 0.0) {
-      this.renderShader = this.renderGradientShader
-    } else if (gradientAmount < 0.0) {
-      this.renderShader = this.renderSliceShader
+    } else {
+        this.opts.gradientAmount = gradientAmount
+      if (gradientAmount > 0.0 || this.opts.gradientOpacity > 0.0) {
+        this.renderShader = this.renderGradientShader
+      } else if (gradientAmount < 0.0) {
+        this.renderShader = this.renderSliceShader
+      }
     }
     this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl)
@@ -4099,6 +4102,10 @@ export class Niivue {
         this.refreshDrawing()
       }
     }
+
+    await this.setGradientOpacity(this.opts.gradientOpacity)
+    await this.setVolumeRenderIllumination(this.opts.gradientAmount)
+    
 
     this.updateGLVolume()
     this.drawScene()
