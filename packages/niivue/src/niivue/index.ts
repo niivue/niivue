@@ -1963,11 +1963,14 @@ export class Niivue {
       return
     }
     const rect = this.canvas!.getBoundingClientRect()
-    if (e.deltaY < 0) {
-      this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top)
-    } else {
-      this.sliceScroll2D(0.01, e.clientX - rect.left, e.clientY - rect.top)
+    let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01
+
+    // Check if invertScrollDirection is enabled
+    if (this.opts.invertScrollDirection) {
+      scrollAmount = -scrollAmount
     }
+
+    this.sliceScroll2D(scrollAmount, e.clientX - rect.left, e.clientY - rect.top)
   }
 
   // not included in public docs
@@ -2002,7 +2005,13 @@ export class Niivue {
     //  drag and drop support
     this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), false)
     this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), false)
-    this.canvas.addEventListener('drop', this.dropListener.bind(this), false)
+    this.canvas.addEventListener(
+      'drop',
+      (event) => {
+        this.dropListener(event).catch(console.error)
+      },
+      false
+    )
 
     // add keyup
     this.canvas.setAttribute('tabindex', '0')
@@ -3252,7 +3261,7 @@ export class Niivue {
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
-  setMeshProperty(id: number, key: keyof NVMesh, val: number): void {
+  setMeshProperty(id: number, key: keyof NVMesh, val: number | string | boolean): void {
     const idx = this.getMeshIndexByID(id)
     if (idx < 0) {
       log.warn('setMeshProperty() id not loaded', id)

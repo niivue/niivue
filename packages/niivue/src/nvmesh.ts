@@ -1415,14 +1415,17 @@ export class NVMesh {
 
   // adjust mesh attributes. invoked by niivue.setMeshProperty(()
   // TODO this method is too generic
-  setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void {
+  setProperty(key: keyof this, val: number | string | boolean, gl: WebGL2RenderingContext): void {
     if (!(key in this)) {
-      log.warn('mesh does not have property ', key, this)
+      console.warn('Mesh does not have property:', key, this)
       return
     }
-    // @ts-expect-error TODO generic access
-    this[key] = val
-    this.updateMesh(gl) // apply the new properties...
+    if (typeof val !== 'number' && typeof val !== 'string' && typeof val !== 'boolean') {
+      console.warn('Invalid value type. Expected number, string, or boolean but received:', typeof val)
+      return
+    }
+    ;(this as any)[key] = val // TypeScript safety workaround
+    this.updateMesh(gl) // Apply the new properties
   }
 
   // Each streamline vertex has color, normal and position attributes

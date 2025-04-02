@@ -192,6 +192,7 @@ export type NVConfigOptions = {
   isAlphaClipDark: boolean
   gradientOrder: number
   gradientOpacity: number
+  invertScrollDirection: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -290,7 +291,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   measureTextHeight: 0.03,
   isAlphaClipDark: false,
   gradientOrder: 1,
-  gradientOpacity: 0.0
+  gradientOpacity: 0.0,
+  invertScrollDirection: false
 }
 
 type SceneData = {
