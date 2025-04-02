@@ -3919,7 +3919,7 @@ export class Niivue {
     }
     this.initRenderShader(this.renderShader!, this.gradientTextureAmount)
     this.renderShader!.use(this.gl)
-    if(this.gradientTextureAmount > 0.0) {
+    if (this.gradientTextureAmount > 0.0) {
       this.refreshLayers(this.volumes[0], 0)
     }
     this.drawScene()
