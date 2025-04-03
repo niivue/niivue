@@ -869,6 +869,33 @@ export class Niivue {
       this.canvasObserver = null
     }
 
+    // Remove all interaction event listeners
+    if (this.canvas && this.opts.interactive) {
+      // Mouse events
+      this.canvas.removeEventListener('mousedown', this.mouseDownListener.bind(this))
+      this.canvas.removeEventListener('mouseup', this.mouseUpListener.bind(this))
+      this.canvas.removeEventListener('mousemove', this.mouseMoveListener.bind(this))
+
+      // Touch events
+      this.canvas.removeEventListener('touchstart', this.touchStartListener.bind(this))
+      this.canvas.removeEventListener('touchend', this.touchEndListener.bind(this))
+      this.canvas.removeEventListener('touchmove', this.touchMoveListener.bind(this))
+
+      // Other events
+      this.canvas.removeEventListener('wheel', this.wheelListener.bind(this))
+      this.canvas.removeEventListener('contextmenu', this.mouseContextMenuListener.bind(this))
+      this.canvas.removeEventListener('dblclick', this.resetBriCon.bind(this))
+
+      // Drag and drop
+      this.canvas.removeEventListener('dragenter', this.dragEnterListener.bind(this))
+      this.canvas.removeEventListener('dragover', this.dragOverListener.bind(this))
+      this.canvas.removeEventListener('drop', this.dropListener.bind(this))
+
+      // Keyboard events
+      this.canvas.removeEventListener('keyup', this.keyUpListener.bind(this))
+      this.canvas.removeEventListener('keydown', this.keyDownListener.bind(this))
+    }
+
     // Todo: other cleanup tasks could be added here
   }
 
@@ -2020,6 +2047,7 @@ export class Niivue {
   // not included in public docs
   // setup interactions with the canvas. Mouse clicks and touches
   // note: no test yet
+  // note: any event listeners registered here should also be removed in `cleanup()`
   registerInteractions(): void {
     if (!this.canvas) {
       throw new Error('canvas undefined')
@@ -2325,9 +2353,9 @@ export class Niivue {
   registers an external file loader for niivue to use when reading files.
 
   the loader must return an array buffer of the file contents for niivue
-  to parse and the extension of the file so niivue can infer the file type to load. 
+  to parse and the extension of the file so niivue can infer the file type to load.
 
-  example: 
+  example:
 
   const myCustomLoader = (File) => {
     // ... do parsing here ...
