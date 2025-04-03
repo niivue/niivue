@@ -431,6 +431,8 @@ export class Niivue {
   extentsMax?: vec3
   // ResizeObserver
   private resizeObserver: ResizeObserver | null = null
+  private resizeEventListener: (() => void) | null = null
+  private canvasObserver: MutationObserver | null = null
   // syncOpts: Record<string, unknown> = {}
   syncOpts: SyncOpts = {
     '3d': false, // legacy option
@@ -842,6 +844,34 @@ export class Niivue {
     log.setLogLevel(this.opts.logLevel)
   }
 
+  /**
+   * Clean up event listeners and observers
+   * Call this when the Niivue instance is no longer needed.
+   * This will be called when the canvas is detached from the DOM
+   * @example niivue.cleanup();
+   */
+  cleanup(): void {
+    // Clean up resize listener
+    if (this.resizeEventListener) {
+      window.removeEventListener('resize', this.resizeEventListener)
+      this.resizeEventListener = null
+    }
+
+    // Clean up resize observer
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
+
+    // Clean up canvas observer
+    if (this.canvasObserver) {
+      this.canvasObserver.disconnect()
+      this.canvasObserver = null
+    }
+
+    // Todo: other cleanup tasks could be added here
+  }
+
   get volumes(): NVImage[] {
     return this.document.volumes
   }
@@ -954,17 +984,34 @@ export class Niivue {
       this.canvas.style.display = 'block'
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
-      window.addEventListener('resize', () => {
+      // Store a reference to the bound event handler function
+      this.resizeEventListener = (): void => {
         requestAnimationFrame(() => {
           this.resizeListener()
         })
-      })
+      }
+      window.addEventListener('resize', this.resizeEventListener)
       this.resizeObserver = new ResizeObserver(() => {
         requestAnimationFrame(() => {
           this.resizeListener()
         })
       })
       this.resizeObserver.observe(this.canvas.parentElement!)
+
+      // Setup a MutationObserver to detect when canvas is removed from DOM
+      this.canvasObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (
+            mutation.type === 'childList' &&
+            mutation.removedNodes.length > 0 &&
+            Array.from(mutation.removedNodes).includes(this.canvas)
+          ) {
+            this.cleanup()
+            break
+          }
+        }
+      })
+      this.canvasObserver.observe(this.canvas.parentElement!, { childList: true })
     }
     if (this.opts.interactive) {
       this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
