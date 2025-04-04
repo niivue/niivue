@@ -1627,6 +1627,8 @@ declare class Niivue {
     extentsMin?: vec3;
     extentsMax?: vec3;
     private resizeObserver;
+    private resizeEventListener;
+    private canvasObserver;
     syncOpts: SyncOpts;
     readyForSync: boolean;
     uiData: UIData;
@@ -1863,6 +1865,13 @@ declare class Niivue {
      * @param options  - options object to set modifiable Niivue properties
      */
     constructor(options?: Partial<NVConfigOptions>);
+    /**
+     * Clean up event listeners and observers
+     * Call this when the Niivue instance is no longer needed.
+     * This will be called when the canvas is detached from the DOM
+     * @example niivue.cleanup();
+     */
+    cleanup(): void;
     get volumes(): NVImage[];
     set volumes(volumes: NVImage[]);
     get meshes(): NVMesh[];

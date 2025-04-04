@@ -29655,6 +29655,8 @@ var Niivue = class {
     __publicField(this, "extentsMax");
     // ResizeObserver
     __publicField(this, "resizeObserver", null);
+    __publicField(this, "resizeEventListener", null);
+    __publicField(this, "canvasObserver", null);
     // syncOpts: Record<string, unknown> = {}
     __publicField(this, "syncOpts", {
       "3d": false,
@@ -30043,6 +30045,42 @@ var Niivue = class {
   set isAlphaClipDark(newVal) {
     this.document.opts.isAlphaClipDark = newVal;
   }
+  /**
+   * Clean up event listeners and observers
+   * Call this when the Niivue instance is no longer needed.
+   * This will be called when the canvas is detached from the DOM
+   * @example niivue.cleanup();
+   */
+  cleanup() {
+    if (this.resizeEventListener) {
+      window.removeEventListener("resize", this.resizeEventListener);
+      this.resizeEventListener = null;
+    }
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (this.canvasObserver) {
+      this.canvasObserver.disconnect();
+      this.canvasObserver = null;
+    }
+    if (this.canvas && this.opts.interactive) {
+      this.canvas.removeEventListener("mousedown", this.mouseDownListener.bind(this));
+      this.canvas.removeEventListener("mouseup", this.mouseUpListener.bind(this));
+      this.canvas.removeEventListener("mousemove", this.mouseMoveListener.bind(this));
+      this.canvas.removeEventListener("touchstart", this.touchStartListener.bind(this));
+      this.canvas.removeEventListener("touchend", this.touchEndListener.bind(this));
+      this.canvas.removeEventListener("touchmove", this.touchMoveListener.bind(this));
+      this.canvas.removeEventListener("wheel", this.wheelListener.bind(this));
+      this.canvas.removeEventListener("contextmenu", this.mouseContextMenuListener.bind(this));
+      this.canvas.removeEventListener("dblclick", this.resetBriCon.bind(this));
+      this.canvas.removeEventListener("dragenter", this.dragEnterListener.bind(this));
+      this.canvas.removeEventListener("dragover", this.dragOverListener.bind(this));
+      this.canvas.removeEventListener("drop", this.dropListener.bind(this));
+      this.canvas.removeEventListener("keyup", this.keyUpListener.bind(this));
+      this.canvas.removeEventListener("keydown", this.keyDownListener.bind(this));
+    }
+  }
   get volumes() {
     return this.document.volumes;
   }
@@ -30138,17 +30176,27 @@ var Niivue = class {
       this.canvas.style.display = "block";
       this.canvas.width = this.canvas.offsetWidth;
       this.canvas.height = this.canvas.offsetHeight;
-      window.addEventListener("resize", () => {
+      this.resizeEventListener = () => {
         requestAnimationFrame(() => {
           this.resizeListener();
         });
-      });
+      };
+      window.addEventListener("resize", this.resizeEventListener);
       this.resizeObserver = new ResizeObserver(() => {
         requestAnimationFrame(() => {
           this.resizeListener();
         });
       });
       this.resizeObserver.observe(this.canvas.parentElement);
+      this.canvasObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "childList" && mutation.removedNodes.length > 0 && Array.from(mutation.removedNodes).includes(this.canvas)) {
+            this.cleanup();
+            break;
+          }
+        }
+      });
+      this.canvasObserver.observe(this.canvas.parentElement, { childList: true });
     }
     if (this.opts.interactive) {
       this.registerInteractions();
@@ -31095,6 +31143,7 @@ var Niivue = class {
   // not included in public docs
   // setup interactions with the canvas. Mouse clicks and touches
   // note: no test yet
+  // note: any event listeners registered here should also be removed in `cleanup()`
   registerInteractions() {
     if (!this.canvas) {
       throw new Error("canvas undefined");
@@ -31347,9 +31396,9 @@ var Niivue = class {
     registers an external file loader for niivue to use when reading files.
   
     the loader must return an array buffer of the file contents for niivue
-    to parse and the extension of the file so niivue can infer the file type to load. 
+    to parse and the extension of the file so niivue can infer the file type to load.
   
-    example: 
+    example:
   
     const myCustomLoader = (File) => {
       // ... do parsing here ...
