@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <button id="openBtn">Choose an image or mesh with a dialog</button>
+      <label for="layoutSelect">Layout</label>
+      <select id="layoutSelect">
+        <option value="0" selected>Auto</option>
+        <option value="1">Column</option>
+        <option value="2">Grid</option>
+        <option value="3">Row</option>
+      </select>
+      <label for="renderingSelect">MultiplanarRendering</label>
+      <select id="renderingSelect">
+        <option value="0">Never</option>
+        <option value="1">Always</option>
+        <option value="2" selected>Auto</option>
+      </select>
+      <select id="sliceType">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>Multiplanar</option>
+      </select>
+      <label for="equalCheck">EqualSize</label>
+      <input type="checkbox" id="equalCheck" checked />
+      <label for="cornerCheck">CornerText</label>
+      <input type="checkbox" id="cornerCheck" unchecked />
+      <!-- undo button for drawing -->
+      <button id="undoBtn">Undo</button>
+      <!-- draw toggle button -->
+      <button id="drawBtn">Draw</button>
+      <!-- grow button -->
+      <button id="growBtn">Grow</button>
+      <!-- pen color button cycler -->
+      <button id="penColorBtn">Pen color</button>
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+
+    <script type="module" async>
+      import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
+      async function addVolumeFromFiles(f) {
+        console.log('attempting to open ', f[0].name)
+        console.log('details', f[0])
+        nv1.loadFromFile(f[0])
+      }
+      openBtn.onclick = function () {
+        let input = document.createElement('input')
+        input.style.display = 'none'
+        input.type = 'file'
+        document.body.appendChild(input)
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files)
+        }
+        input.click()
+      }
+
+      // pen colors can be 1, 2, 3, 4
+      let penColor = 1
+
+      layoutSelect.onchange = function () {
+        nv1.setMultiplanarLayout(Number(this.value))
+      }
+      renderingSelect.onchange = function () {
+        nv1.opts.multiplanarShowRender = Number(this.value)
+        nv1.drawScene()
+      }
+      equalCheck.onchange = function () {
+        nv1.opts.multiplanarEqualSize = this.checked
+        nv1.drawScene()
+      }
+      cornerCheck.onchange = function () {
+        //nv1.opts.isCornerOrientationText = this.checked\
+        nv1.setCornerOrientationText(this.checked)
+      }
+      sliceType.onchange = function () {
+        let st = parseInt(document.getElementById('sliceType').value)
+        nv1.setSliceType(st)
+      }
+      undoBtn.onclick = function () {
+        nv1.drawUndo()
+      }
+      drawBtn.onclick = function () {
+        nv1.setDrawingEnabled(!nv1.opts.drawingEnabled)
+        if (nv1.opts.drawingEnabled) {
+          nv1.drawOpacity = 0.4
+          nv1.opts.clickToSegment = true
+          nv1.setPenValue(penColor, false) // red and filled
+          // hide the crosshair
+          nv1.opts.crosshairWidth = 0
+          // hide the mouse cursor
+          // nv1.canvas.style.cursor = 'none'
+        } else {
+          nv1.opts.clickToSegment = false
+          // show the crosshair
+          nv1.opts.crosshairWidth = 1
+          // show the mouse cursor
+          nv1.canvas.style.cursor = 'default'
+        }
+      }
+      growBtn.onclick = function () {
+        nv1.drawingBinaryDilationWithSeed(nv1.frac2vox(nv1.scene.crosshairPos))
+      }
+      penColorBtn.onclick = function () {
+        penColor = (penColor % 4) + 1
+        nv1.setPenValue(penColor, false)
+      }
+
+      const onDragRelease = (data) => {
+        // if there is a div with the id dragReleaseDiv, remove it
+        const divToRemove = document.getElementById('dragReleaseDiv')
+        if (divToRemove) {
+          divToRemove.remove()
+        }
+
+        console.log('drag release', data)
+        let obj = nv1.getDescriptives({
+          layer: 0,
+          startVox: data.voxStart,
+          endVox: data.voxEnd,
+          roiIsMask: true
+        })
+        console.log(obj)
+        // get dpr
+        const dpr = window.devicePixelRatio
+        // get mouse x,y. Divide by dpr to get the correct position
+        const x = nv1.uiData.dragEnd[0] / dpr
+        const y = nv1.uiData.dragEnd[1] / dpr
+        console.log(x, y)
+        const pad = 5
+        const div = document.createElement('div')
+        // set id for removal on the next pass
+        div.id = 'dragReleaseDiv'
+        div.style.color = 'red'
+        div.style.position = 'absolute'
+        div.style.backgroundColor = 'black'
+        div.style.opacity = 0.8
+        div.style.padding = '5px'
+        // set z-index to be well above the canvas
+        div.style.zIndex = 1000
+        div.innerHTML = `Mean: ${obj.mean}<br>Area: ${obj.area}<br>Stdev: ${obj.stdev}`
+        // set position to be at the mouse x,y relative to the canvas
+        div.style.left = x + pad + 'px'
+        div.style.top = y + pad + 'px'
+        // get the canvas element reference from niivue
+        const canvas = nv1.gl.canvas
+        // niivue should always be in a container, so get the parent of the canvas
+        const parentDiv = canvas.parentElement
+        parentDiv.appendChild(div)
+      }
+
+      const onLocationChange = (data) => {
+        // remove the stats div if it exists when the user clicks away
+        const divToRemove = document.getElementById('dragReleaseDiv')
+        if (divToRemove) {
+          divToRemove.remove()
+        }
+        // console.log(data.string)
+      }
+
+      var volumeList1 = [{ url: '../demos/images/FLAIR.nii.gz' }]
+      let clicks = 0
+      const defaultPercent = 0.2
+      let defaults = {
+        backColor: [0, 0, 0, 1],
+        show3Dcrosshair: true,
+        loglevel: 'debug',
+        isRuler: true,
+        clickToSegmentRadius: 3, // in mm
+        clickToSegmentPercent: defaultPercent,
+        clickToSegmentAutoIntensity: true,
+        clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY,
+        clickToSegmentIntensityMax: NaN,
+        clickToSegmentIntensityMin: NaN,
+        clickToSegmentIs2D: true,
+        floodFillNeighbors: 6,
+        penSize: 3, // in voxels, but overridden by clickToSegmentRadius
+        maxDrawUndoBitmaps: 100, // large number for undo
+        onDragRelease: onDragRelease,
+        onLocationChange: onLocationChange,
+        selectionBoxColor: [1, 0, 0, 0.5],
+        dragMode: DRAG_MODE.roiSelection,
+        selectionBoxIsOutline: true,
+        scrollRequiresFocus: false
+      }
+      var nv1 = new Niivue(defaults)
+      nv1.attachToCanvas(gl1)
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
+      nv1.setSliceType(SLICE_TYPE.multiplanar)
+      nv1.setInterpolation(false)
+      await nv1.loadVolumes(volumeList1)
+      equalCheck.onchange()
+
+      // store mouse position
+      const mouse = { x: 0, y: 0 }
+
+      // when the user presses "t" toggle the overlay opacity between 0 and 1
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 't') {
+          if (nv1.volumes.length < 2) {
+            return
+          }
+          const currentOpacity = nv1.volumes[1].opacity
+          nv1.setOpacity(1, currentOpacity === 0 ? 0.5 : 0)
+        }
+      })
+    </script>
+  </body>
+</html>

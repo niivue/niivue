@@ -280,7 +280,7 @@ export class NVImage {
     if (useQFormNotSForm || !affineOK || this.hdr.qform_code > this.hdr.sform_code) {
       log.debug('spatial transform based on QForm')
       // https://github.com/rii-mango/NIFTI-Reader-JS/blob/6908287bf99eb3bc4795c1591d3e80129da1e2f6/src/nifti1.js#L238
-      // Define a, b, c, d for coding covenience
+      // Define a, b, c, d for coding convenience
       const b = this.hdr.quatern_b
       const c = this.hdr.quatern_c
       const d = this.hdr.quatern_d
@@ -1685,7 +1685,7 @@ export class NVImage {
           hdr.affine = [
             [-items[0], -items[1], -items[2], -items[3]],
             [-items[4], -items[5], -items[6], -items[7]],
-            // TODO don't re-use items for numeric values
+            // TODO don't reuse items for numeric values
             [items[8] as number, items[9] as number, items[10] as number, items[11] as number],
             [0, 0, 0, 1]
           ]

@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  // disable strict mode due to doube rendering annoyance with niivue
+  // disable strict mode due to double rendering annoyance with niivue
   // <React.StrictMode>
   // <App />
   <Theme>

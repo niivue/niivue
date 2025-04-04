@@ -432,6 +432,8 @@ export class Niivue {
   extentsMax?: vec3
   // ResizeObserver
   private resizeObserver: ResizeObserver | null = null
+  private resizeEventListener: (() => void) | null = null
+  private canvasObserver: MutationObserver | null = null
   // syncOpts: Record<string, unknown> = {}
   syncOpts: SyncOpts = {
     '3d': false, // legacy option
@@ -843,6 +845,61 @@ export class Niivue {
     log.setLogLevel(this.opts.logLevel)
   }
 
+  /**
+   * Clean up event listeners and observers
+   * Call this when the Niivue instance is no longer needed.
+   * This will be called when the canvas is detached from the DOM
+   * @example niivue.cleanup();
+   */
+  cleanup(): void {
+    // Clean up resize listener
+    if (this.resizeEventListener) {
+      window.removeEventListener('resize', this.resizeEventListener)
+      this.resizeEventListener = null
+    }
+
+    // Clean up resize observer
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
+
+    // Clean up canvas observer
+    if (this.canvasObserver) {
+      this.canvasObserver.disconnect()
+      this.canvasObserver = null
+    }
+
+    // Remove all interaction event listeners
+    if (this.canvas && this.opts.interactive) {
+      // Mouse events
+      this.canvas.removeEventListener('mousedown', this.mouseDownListener.bind(this))
+      this.canvas.removeEventListener('mouseup', this.mouseUpListener.bind(this))
+      this.canvas.removeEventListener('mousemove', this.mouseMoveListener.bind(this))
+
+      // Touch events
+      this.canvas.removeEventListener('touchstart', this.touchStartListener.bind(this))
+      this.canvas.removeEventListener('touchend', this.touchEndListener.bind(this))
+      this.canvas.removeEventListener('touchmove', this.touchMoveListener.bind(this))
+
+      // Other events
+      this.canvas.removeEventListener('wheel', this.wheelListener.bind(this))
+      this.canvas.removeEventListener('contextmenu', this.mouseContextMenuListener.bind(this))
+      this.canvas.removeEventListener('dblclick', this.resetBriCon.bind(this))
+
+      // Drag and drop
+      this.canvas.removeEventListener('dragenter', this.dragEnterListener.bind(this))
+      this.canvas.removeEventListener('dragover', this.dragOverListener.bind(this))
+      this.canvas.removeEventListener('drop', this.dropListener.bind(this))
+
+      // Keyboard events
+      this.canvas.removeEventListener('keyup', this.keyUpListener.bind(this))
+      this.canvas.removeEventListener('keydown', this.keyDownListener.bind(this))
+    }
+
+    // Todo: other cleanup tasks could be added here
+  }
+
   get volumes(): NVImage[] {
     return this.document.volumes
   }
@@ -955,17 +1012,34 @@ export class Niivue {
       this.canvas.style.display = 'block'
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
-      window.addEventListener('resize', () => {
+      // Store a reference to the bound event handler function
+      this.resizeEventListener = (): void => {
         requestAnimationFrame(() => {
           this.resizeListener()
         })
-      })
+      }
+      window.addEventListener('resize', this.resizeEventListener)
       this.resizeObserver = new ResizeObserver(() => {
         requestAnimationFrame(() => {
           this.resizeListener()
         })
       })
       this.resizeObserver.observe(this.canvas.parentElement!)
+
+      // Setup a MutationObserver to detect when canvas is removed from DOM
+      this.canvasObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (
+            mutation.type === 'childList' &&
+            mutation.removedNodes.length > 0 &&
+            Array.from(mutation.removedNodes).includes(this.canvas)
+          ) {
+            this.cleanup()
+            break
+          }
+        }
+      })
+      this.canvasObserver.observe(this.canvas.parentElement!, { childList: true })
     }
     if (this.opts.interactive) {
       this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
@@ -1480,19 +1554,7 @@ export class Niivue {
     this.uiData.mouseButtonLeftDown = false
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
-    } else if (this.drawPenAxCorSag >= 0) {
-      if (this.opts.clickToSegment) {
-        // copy clickToSegment bitmap to drawBitmap.
-        // determine which bitmap has more non-zero values, indicating it is more recent
-        const sumBitmap = this.sumBitmap(this.drawBitmap)
-        const sumSeg = this.sumBitmap(this.clickToSegmentGrowingBitmap)
-        if (sumSeg > sumBitmap) {
-          this.updateBitmapFromClickToSegment()
-        }
-      }
     }
-    // add the bitmap after the clickToSegment update
-    this.drawAddUndoBitmap()
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     if (isFunction(this.onMouseUp)) {
@@ -1662,6 +1724,37 @@ export class Niivue {
   }
 
   // not included in public docs
+  // handler for mouse leaving the canvas
+  mouseLeaveListener(): void {
+    // If clickToSegment preview was active, deactivate and refresh drawing
+    if (this.clickToSegmentIsGrowing) {
+      log.debug('Mouse left canvas, stopping clickToSegment preview.')
+      this.clickToSegmentIsGrowing = false
+      // Refresh the GPU texture using the main drawBitmap to hide preview
+      this.refreshDrawing(true, false)
+    }
+
+    // Reset pen state if drawing was in progress
+    if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
+      log.debug('Mouse left canvas during drawing, resetting pen state.')
+      this.drawPenLocation = [NaN, NaN, NaN]
+      this.drawPenAxCorSag = -1
+      this.drawPenFillPts = []
+    }
+
+    // Reset drag state if mouse leaves during drag
+    if (this.uiData.isDragging) {
+      log.debug('Mouse left canvas during drag, resetting drag state.')
+      this.uiData.isDragging = false
+      this.uiData.mouseButtonLeftDown = false
+      this.uiData.mouseButtonCenterDown = false
+      this.uiData.mouseButtonRightDown = false
+      this.uiData.mousedown = false
+      this.drawScene()
+    }
+  }
+
+  // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
   mouseMoveListener(e: MouseEvent): void {
@@ -1696,15 +1789,35 @@ export class Niivue {
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
     } else if (!this.uiData.mousedown && this.opts.clickToSegment) {
+      // Handle clickToSegment preview OUTSIDE the mousedown block
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-      // ignore if mouse moves outside of tile of initial click
+      // ignore if mouse moves outside canvas
       if (!pos) {
         return
       }
       const x = pos.x * this.uiData.dpr!
       const y = pos.y * this.uiData.dpr!
       this.mousePos = [x, y]
-      this.drawScene()
+
+      // Find the tile under the cursor
+      const tileIdx = this.tileIndex(x, y)
+
+      // If over a valid tile and drawing is enabled, perform preview
+      if (tileIdx >= 0 && this.opts.drawingEnabled) {
+        // Get the actual orientation type for the specific tile
+        const axCorSag = this.screenSlices[tileIdx].axCorSag
+        // Ensure it's a 2D slice view
+        if (axCorSag <= SLICE_TYPE.SAGITTAL) {
+          this.clickToSegmentXY = [x, y]
+          this.clickToSegmentIsGrowing = true // Indicate preview mode
+          // Pass the TILE INDEX to doClickToSegment
+          this.doClickToSegment({
+            x, // Screen X
+            y, // Screen Y
+            tileIndex: tileIdx
+          })
+        }
+      }
     }
   }
 
@@ -1957,13 +2070,80 @@ export class Niivue {
       this.drawScene() // drawScene uses isDragging to determine if the selection box or ROI should be drawn
       this.uiData.isDragging = false // reset is dragging
       const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
-      this.generateMouseUpCallback(
-        this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
-        this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
-      )
+      // Ensure tileIdx is valid before proceeding
+      if (tileIdx >= 0) {
+        this.generateMouseUpCallback(
+          this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
+          this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
+        )
+      } else {
+        log.warn('Could not generate drag release callback for ROI selection: Invalid tile index.')
+      }
       return
     }
     const rect = this.canvas!.getBoundingClientRect()
+
+    // Handle clickToSegment scroll motion to set the threshold percentage
+    if (this.opts.clickToSegment) {
+      // Adjust the threshold percentage
+      if (e.deltaY < 0) {
+        this.opts.clickToSegmentPercent -= 0.01 // Decrease threshold sensitivity
+        this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0)
+      } else if (e.deltaY > 0) {
+        this.opts.clickToSegmentPercent += 0.01 // Increase threshold sensitivity
+        this.opts.clickToSegmentPercent = Math.min(
+          this.opts.clickToSegmentPercent,
+          1 // Max percentage
+        )
+      }
+
+      // Get current mouse position (where the preview should be updated)
+      const x = this.clickToSegmentXY[0]
+      const y = this.clickToSegmentXY[1]
+
+      // Find the tile index under the current mouse position
+      const tileIdx = this.tileIndex(x, y)
+
+      // If the mouse is over a valid tile, re-trigger the preview calculation
+      if (tileIdx >= 0) {
+        // Ensure it's a valid 2D slice tile before triggering
+        if (this.screenSlices[tileIdx].axCorSag <= SLICE_TYPE.SAGITTAL) {
+          log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`)
+          this.clickToSegmentIsGrowing = true // Ensure we are in preview mode
+          this.doClickToSegment({
+            x, // Pass current screen coordinates
+            y,
+            tileIndex: tileIdx
+          })
+        }
+      }
+      return
+    }
+
+    // Handle standard slice scrolling or zooming if not clickToSegment
+    // Get x/y relative to canvas for inRenderTile check
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    if (this.opts.dragMode === DRAG_MODE.pan && this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1) {
+      // Zooming logic when panning is enabled and not over render tile
+      let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (e.deltaY < 0 ? 0.01 : -0.01))
+      zoom = Math.round(zoom * 10) / 10
+      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+      if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = zoom
+      }
+      this.scene.pan2Dxyzmm[3] = zoom
+      const mm = this.frac2mm(this.scene.crosshairPos)
+      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
+      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
+      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
+      this.drawScene()
+      this.canvas!.focus() // Required after change for issue706
+      this.sync()
+      return
+    }
+
+    // Default action: scroll slices
     if (e.deltaY < 0) {
       this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top)
     } else {
@@ -1974,6 +2154,7 @@ export class Niivue {
   // not included in public docs
   // setup interactions with the canvas. Mouse clicks and touches
   // note: no test yet
+  // note: any event listeners registered here should also be removed in `cleanup()`
   registerInteractions(): void {
     if (!this.canvas) {
       throw new Error('canvas undefined')
@@ -1984,6 +2165,8 @@ export class Niivue {
     this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this))
     // add mouse move
     this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this))
+    // add mouse leave listener
+    this.canvas.addEventListener('mouseleave', this.mouseLeaveListener.bind(this))
 
     // add touchstart
     this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this))
@@ -2279,9 +2462,9 @@ export class Niivue {
   registers an external file loader for niivue to use when reading files.
 
   the loader must return an array buffer of the file contents for niivue
-  to parse and the extension of the file so niivue can infer the file type to load. 
+  to parse and the extension of the file so niivue can infer the file type to load.
 
-  example: 
+  example:
 
   const myCustomLoader = (File) => {
     // ... do parsing here ...
@@ -3599,7 +3782,7 @@ export class Niivue {
    * xyz = niivue.sph2cartDeg(42, 42)
    */
   sph2cartDeg(azimuth: number, elevation: number): number[] {
-    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesion
+    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesian
     // see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
     // reverse with cart2sph
     const Phi = -elevation * (Math.PI / 180)
@@ -3694,8 +3877,19 @@ export class Niivue {
       if (!this.drawBitmap) {
         this.createEmptyDrawing()
       }
+    } else {
+      // Clean up clickToSegment state when drawing is disabled
+      if (this.clickToSegmentIsGrowing) {
+        this.clickToSegmentIsGrowing = false
+        // Refresh the GPU texture using the main drawBitmap
+        this.refreshDrawing(true, false)
+      }
+      // Reset pen state
+      this.drawPenLocation = [NaN, NaN, NaN]
+      this.drawPenAxCorSag = -1
+      this.drawPenFillPts = []
     }
-    this.drawScene()
+    this.drawScene() // Redraw needed in both cases
   }
 
   /**
@@ -4805,7 +4999,10 @@ export class Niivue {
 
   // not included in public docs
   // set color of single voxel in drawing
-  drawPt(x: number, y: number, z: number, penValue: number): void {
+  drawPt(x: number, y: number, z: number, penValue: number, drawBitmap: Uint8Array | null = null): void {
+    if (drawBitmap === null) {
+      drawBitmap = this.drawBitmap
+    }
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
@@ -4815,7 +5012,7 @@ export class Niivue {
     x = Math.min(Math.max(x, 0), dx - 1)
     y = Math.min(Math.max(y, 0), dy - 1)
     z = Math.min(Math.max(z, 0), dz - 1)
-    this.drawBitmap![x + y * dx + z * dx * dy] = penValue
+    drawBitmap![x + y * dx + z * dx * dy] = penValue
     // get tile index for voxel
     const isAx = this.drawPenAxCorSag === 0
     const isCor = this.drawPenAxCorSag === 1
@@ -4830,11 +5027,11 @@ export class Niivue {
       for (let i = -halfPenSize; i <= halfPenSize; i++) {
         for (let j = -halfPenSize; j <= halfPenSize; j++) {
           if (isAx) {
-            this.drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
+            drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
           } else if (isCor) {
-            this.drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
+            drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
           } else if (isSag) {
-            this.drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
+            drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
           }
         }
       }
@@ -5158,48 +5355,68 @@ export class Niivue {
   drawFloodFill(
     seedXYZ: number[],
     newColor = 0,
-    growSelectedCluster = 0, // if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
+    growSelectedCluster = 0,
     forceMin = NaN,
     forceMax = NaN,
     neighbors = 6,
-    // option for only flood filling within max distance from seed voxel
     maxDistanceMM = Number.POSITIVE_INFINITY,
-    is2D = false
+    is2D = false,
+    targetBitmap: Uint8Array | null = null,
+    isGrowClusterTool = false // Flag to distinguish from ClickToSegment and cluster growing
   ): void {
     if (!this.drawBitmap) {
-      throw new Error('drawBitmap undefined')
+      log.warn('drawFloodFill called without an initialized drawBitmap.')
+      this.createEmptyDrawing()
+      if (!this.drawBitmap) {
+        log.error('Failed to create drawing bitmap.')
+        return
+      }
+    }
+    if (this.clickToSegmentIsGrowing && !this.clickToSegmentGrowingBitmap) {
+      log.warn('drawFloodFill called in preview mode without initialized clickToSegmentGrowingBitmap.')
+      if (this.drawBitmap) {
+        this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
+      } else {
+        log.error('Cannot initialize growing bitmap as drawBitmap is null.')
+        return
+      }
+      if (!this.clickToSegmentGrowingBitmap) {
+        log.error('Failed to create growing bitmap.')
+        return
+      }
+    }
+    if (targetBitmap === null) {
+      targetBitmap = this.drawBitmap
+    }
+    if (!targetBitmap) {
+      log.error('drawFloodFill targetBitmap is null.')
+      return
     }
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
-    // 3D "paint bucket" fill:
-    // set all voxels connected to seed point to newColor
-    // https://en.wikipedia.org/wiki/Flood_fill
+
     newColor = Math.abs(newColor)
-    const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]] // +1: dims indexed from 0!
+    const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
     if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) {
       return
     }
     if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2]) {
       return
     }
+
     const nx = dims[0]
     const nxy = nx * dims[1]
     const nxyz = nxy * dims[2]
-    let img = this.drawBitmap.slice()
-    let drawBitmap = this.drawBitmap
-    // use the growing bitmap if the clickToSegmentIsGrowing flag is set.
-    // this allows previewing the flood fill, and the results are copied
-    // to the drawBitmap when the user releases the mouse button.
-    if (this.clickToSegmentIsGrowing) {
-      img = this.clickToSegmentGrowingBitmap.slice()
-      drawBitmap = this.clickToSegmentGrowingBitmap
-    }
 
-    if (img.length !== nxy * dims[2]) {
+    const originalBitmap = this.clickToSegmentIsGrowing ? this.drawBitmap : targetBitmap
+    if (!originalBitmap) {
+      log.error('Could not determine original bitmap state.')
       return
     }
-    // mask2D: axial slices constrained in Z, coronal in Y and sagittal in X
+
+    const img = new Uint8Array(nxyz).fill(0)
+
     let constrainXYZ = -1
     if (is2D && this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
       constrainXYZ = 2
@@ -5209,23 +5426,19 @@ export class Niivue {
       constrainXYZ = 0
     }
     function vx2xyz(vx: number): number[] {
-      // provided address in 1D array, return XYZ coordinate
-      const Z = Math.floor(vx / nxy) // slice
-      const Y = Math.floor((vx - Z * nxy) / nx) // column
+      const Z = Math.floor(vx / nxy)
+      const Y = Math.floor((vx - Z * nxy) / nx)
       const X = Math.floor(vx % nx)
       return [X, Y, Z]
     }
     function xyz2vx(pt: number[]): number {
-      // provided an XYZ 3D point, provide address in 1D array
       return pt[0] + pt[1] * nx + pt[2] * nxy
     }
     const vx2mm = (xyz: number[]): vec3 => {
       return this.vox2mm(xyz, this.back.matRAS)
     }
-    // store seed vox as mm coordinates
     const seedMM = vx2mm(seedXYZ)
     const maxDistanceMM2 = maxDistanceMM ** 2
-    // function to check if new point to be checked is less than maxDistanceMM
     function isWithinDistance(vx: number): boolean {
       const xzyVox = vx2xyz(vx)
       if (constrainXYZ >= 0 && xzyVox[constrainXYZ] !== seedXYZ[constrainXYZ]) {
@@ -5235,87 +5448,158 @@ export class Niivue {
       const dist2 = (xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2
       return dist2 <= maxDistanceMM2
     }
+
     const seedVx = xyz2vx(seedXYZ)
-    const seedColor = img[seedVx]
-    if (seedColor === newColor) {
-      if (growSelectedCluster !== 0) {
-        log.debug('drawFloodFill selected voxel is not part of a drawing')
-      } else {
-        log.debug('drawFloodFill selected voxel is already desired color')
+    const originalSeedColor = originalBitmap[seedVx] // Color from original state
+
+    if (isGrowClusterTool && originalSeedColor === 0) {
+      log.debug('Grow/Erase Cluster tool requires starting on a masked voxel.')
+      if (this.clickToSegmentIsGrowing && this.clickToSegmentGrowingBitmap && this.drawBitmap) {
+        this.clickToSegmentGrowingBitmap.set(this.drawBitmap)
+        this.refreshDrawing(true, true)
       }
       return
     }
-    for (let i = 1; i < nxyz; i++) {
-      img[i] = 0
-      if (drawBitmap[i] === seedColor) {
-        // check if voxel index i is within maxDistanceMM from seed voxel
-        if (!isWithinDistance(i)) {
-          // move to next voxel if not within distance,
-          // no need to check voxel intensity for cluster assignment
-          continue
-        }
-        img[i] = 1
+    if (growSelectedCluster === 0 && originalSeedColor === newColor && !isGrowClusterTool && newColor !== 0) {
+      log.debug('drawFloodFill selected voxel is already desired color')
+      if (!this.clickToSegmentIsGrowing) {
+        return
       }
     }
-    this.drawFloodFillCore(img, seedVx, neighbors)
-    // 8. (Optional) work out intensity of selected cluster
-    if (growSelectedCluster !== 0) {
+
+    let baseIntensity = NaN
+
+    if (
+      isGrowClusterTool &&
+      (growSelectedCluster === Number.POSITIVE_INFINITY || growSelectedCluster === Number.NEGATIVE_INFINITY)
+    ) {
+      const tempImgForIdentification = originalBitmap.slice()
+      for (let i = 0; i < nxyz; i++) {
+        tempImgForIdentification[i] = tempImgForIdentification[i] === originalSeedColor && isWithinDistance(i) ? 1 : 0
+      }
+      if (tempImgForIdentification[seedVx] !== 1) {
+        log.error('Seed voxel could not be marked for cluster ID.')
+        return
+      }
+      this.drawFloodFillCore(tempImgForIdentification, seedVx, neighbors) // Marks cluster as 2
+
       const backImg = this.volumes[0].img2RAS()
-      let mx = backImg[seedVx]
-      let mn = mx
-      if (isFinite(forceMax) && isFinite(forceMin)) {
-        mx = forceMax
-        mn = forceMin
-      } else {
-        for (let i = 1; i < nxyz; i++) {
-          if (img[i] === 2) {
-            mx = Math.max(mx, backImg[i])
-            mn = Math.min(mn, backImg[i])
-          }
-        }
-        if (growSelectedCluster === Number.POSITIVE_INFINITY) {
-          mx = growSelectedCluster
-        }
-        if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
-          mn = growSelectedCluster
+      let clusterSum = 0
+      let clusterCount = 0
+      for (let i = 0; i < nxyz; i++) {
+        if (tempImgForIdentification[i] === 2) {
+          clusterSum += backImg[i]
+          clusterCount++
         }
       }
-      log.debug('Intensity range of selected cluster :', mn, mx)
-      // second pass:
-      for (let i = 1; i < nxyz; i++) {
-        img[i] = 0
-        if (backImg[i] >= mn && backImg[i] <= mx) {
-          // check if voxel index i is within maxDistanceMM from seed voxel
-          if (!isWithinDistance(i)) {
-            // move to next voxel if not within distance,
-            // no need to check voxel intensity for cluster assignment
-            continue
-          }
+      baseIntensity = clusterCount > 0 ? clusterSum / clusterCount : backImg[seedVx] // Use mean
+      log.debug(`Grow Cluster using mean intensity: ${baseIntensity.toFixed(2)} from ${clusterCount} voxels.`)
+
+      let fillMin = -Infinity
+      let fillMax = Infinity
+      if (growSelectedCluster === Number.POSITIVE_INFINITY) {
+        fillMin = baseIntensity
+      }
+      if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
+        fillMax = baseIntensity
+      }
+
+      for (let i = 0; i < nxyz; i++) {
+        if (tempImgForIdentification[i] === 2) {
           img[i] = 1
+        } else if (originalBitmap[i] === 0) {
+          const intensity = backImg[i]
+          if (intensity >= fillMin && intensity <= fillMax && isWithinDistance(i)) {
+            img[i] = 1
+          }
         }
       }
-      this.drawFloodFillCore(img, seedVx, neighbors)
-      newColor = seedColor
-    }
-    // 8. Return
-    for (let i = 1; i < nxyz; i++) {
-      if (img[i] === 2) {
-        // if part of cluster
-        drawBitmap[i] = newColor
-      }
-    }
-    if (!this.clickToSegmentIsGrowing) {
-      this.drawBitmap = drawBitmap.slice()
-      if (!this.opts.clickToSegment) {
-        // only update the undo array if clickToSegment is not enabled.
-        // This avoids adding the same drawing twice, since the mouse up
-        // event will also add the drawing to the undo array.
-        this.drawAddUndoBitmap()
-      }
-      this.refreshDrawing(true, this.clickToSegmentIsGrowing)
+      newColor = originalSeedColor
     } else {
-      this.clickToSegmentGrowingBitmap = drawBitmap
-      this.refreshDrawing(true, this.clickToSegmentIsGrowing)
+      if (growSelectedCluster === 0) {
+        if (isGrowClusterTool && newColor === 0) {
+          log.debug(`Erase Cluster: Identifying cluster with color ${originalSeedColor}`)
+          for (let i = 0; i < nxyz; i++) {
+            img[i] = originalBitmap[i] === originalSeedColor && isWithinDistance(i) ? 1 : 0
+          }
+        } else {
+          for (let i = 0; i < nxyz; i++) {
+            if (originalBitmap[i] === originalSeedColor && isWithinDistance(i)) {
+              if (originalSeedColor !== 0) {
+                img[i] = 1
+              }
+            }
+          }
+        }
+      } else {
+        const backImg = this.volumes[0].img2RAS()
+        baseIntensity = backImg[seedVx] // ClickToSegment uses single seed intensity
+        let fillMin = -Infinity
+        let fillMax = Infinity
+        if (isFinite(forceMin) && isFinite(forceMax)) {
+          fillMin = forceMin
+          fillMax = forceMax
+        } else if (growSelectedCluster === Number.POSITIVE_INFINITY) {
+          fillMin = baseIntensity
+        } else if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
+          fillMax = baseIntensity
+        }
+
+        for (let i = 0; i < nxyz; i++) {
+          const intensity = backImg[i]
+          if (intensity >= fillMin && intensity <= fillMax && isWithinDistance(i)) {
+            img[i] = 1
+          }
+        }
+        newColor = originalBitmap[seedVx]
+        if (newColor === 0) {
+          newColor = this.opts.penValue
+          if (newColor < 1 || !isFinite(newColor)) {
+            newColor = 1
+          }
+        }
+      }
+    }
+
+    if (img[seedVx] !== 1) {
+      let isSeedValidOriginal = false
+      if (isGrowClusterTool && growSelectedCluster !== 0) {
+        if (originalSeedColor !== 0) {
+          isSeedValidOriginal = true
+        }
+      } else {
+        if (originalSeedColor !== 0 || newColor === 0) {
+          isSeedValidOriginal = true
+        }
+      }
+
+      if (isSeedValidOriginal && isWithinDistance(seedVx)) {
+        img[seedVx] = 1
+        log.debug('Forcing seed voxel to 1 in working buffer.')
+      } else {
+        log.debug("Seed voxel not marked as candidate '1' and not valid originally.")
+        if (this.clickToSegmentIsGrowing && this.clickToSegmentGrowingBitmap && this.drawBitmap) {
+          this.clickToSegmentGrowingBitmap.set(this.drawBitmap) // Reset preview
+        }
+        return
+      }
+    }
+
+    this.drawFloodFillCore(img, seedVx, neighbors) // Marks reachable '1's as '2'
+
+    for (let i = 0; i < nxyz; i++) {
+      if (img[i] === 2) {
+        targetBitmap[i] = newColor // Apply final color
+      } else if (this.clickToSegmentIsGrowing && targetBitmap === this.clickToSegmentGrowingBitmap) {
+        targetBitmap[i] = originalBitmap[i]
+      }
+    }
+
+    if (!this.clickToSegmentIsGrowing) {
+      this.drawAddUndoBitmap()
+      this.refreshDrawing(true, false) // Refresh GPU from main bitmap
+    } else {
+      this.refreshDrawing(true, true) // Refresh GPU from preview bitmap
     }
   }
 
@@ -5514,37 +5798,81 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
    */
   refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false): void {
+    // Only use the growing bitmap if drawing AND clickToSegment are enabled.
+    if (useClickToSegmentBitmap && (!this.opts.drawingEnabled || !this.opts.clickToSegment)) {
+      log.debug('refreshDrawing: Conditions not met for clickToSegment bitmap, using drawBitmap.')
+      useClickToSegmentBitmap = false // Fallback to the main drawing bitmap
+    }
+    // Ensure the selected bitmap actually exists, otherwise use a blank default or the other one if possible.
+    const selectedBitmap = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+    if (!selectedBitmap && !useClickToSegmentBitmap && this.clickToSegmentGrowingBitmap) {
+      log.warn('refreshDrawing: drawBitmap is null, but clickToSegmentGrowingBitmap exists. Check state.')
+    } else if (!selectedBitmap && useClickToSegmentBitmap && this.drawBitmap) {
+      log.warn('refreshDrawing: clickToSegmentGrowingBitmap is null, falling back to drawBitmap.')
+      useClickToSegmentBitmap = false // Use the main bitmap if growing one is missing
+    } else if (!selectedBitmap) {
+      log.warn('refreshDrawing: Both bitmaps are null. Uploading empty data.')
+    }
+    // Determine the bitmap data source
+    const bitmapDataSource = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+
     if (!this.back?.dims) {
-      throw new Error('back.dims undefined')
+      // If back isn't ready, we can't determine dimensions. Exit early.
+      log.warn('refreshDrawing: back.dims undefined, cannot refresh drawing texture yet.')
+      return
     }
-    if (!this.drawBitmap) {
-      throw new Error('drawBitmap undefined')
-    }
+
+    // Dimensions check
     const dims = this.back.dims.slice()
-    // let dims = this.volumes[0].hdr.dims.slice();
     const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
-    if (this.drawBitmap.length === 8) {
+
+    // Check if the determined bitmapDataSource exists
+    if (!bitmapDataSource) {
+      log.warn(
+        `refreshDrawing: Bitmap data source (${useClickToSegmentBitmap ? 'growing' : 'main'}) is null. Cannot update texture.`
+      )
+      if (isForceRedraw) {
+        this.drawScene()
+      } // might just be an empty drawing
+      return
+    }
+
+    // Check length consistency if bitmapDataSource is not null
+    if (bitmapDataSource.length === 8) {
+      // Special case for initial 2x2x2 texture
       dims[1] = 2
       dims[2] = 2
       dims[3] = 2
-    } else if (vx !== this.drawBitmap.length) {
-      log.warn('Drawing bitmap must match the background image')
+    } else if (vx !== bitmapDataSource.length) {
+      log.warn(`Drawing bitmap length (${bitmapDataSource.length}) must match the background image (${vx})`)
     }
+
+    // Proceed with texture update using bitmapDataSource
     this.gl.activeTexture(TEXTURE7_DRAW)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
-    this.gl.texSubImage3D(
-      this.gl.TEXTURE_3D,
-      0,
-      0,
-      0,
-      0,
-      dims[1],
-      dims[2],
-      dims[3],
-      this.gl.RED,
-      this.gl.UNSIGNED_BYTE,
-      useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
-    )
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture) // Ensure drawTexture exists
+    if (!this.drawTexture) {
+      log.error('refreshDrawing: drawTexture (GPU texture) is null.')
+      return
+    }
+    try {
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        bitmapDataSource // Use the determined source
+      )
+    } catch (error) {
+      log.error('Error during texSubImage3D in refreshDrawing:', error)
+      log.error('Dimensions:', dims, 'Bitmap length:', bitmapDataSource?.length)
+    }
+
     if (isForceRedraw) {
       this.drawScene()
     }
@@ -6419,7 +6747,7 @@ export class Niivue {
       const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1]
       const areaEllipse = Math.PI * radiusX_mm * radiusY_mm
       area = areaEllipse
-      // for debuging: show mask -- loop over drawing and set drawing to 1 if mask is 1
+      // for debugging: show mask -- loop over drawing and set drawing to 1 if mask is 1
       // this.setDrawingEnabled(true)
       // this.drawOpacity = 0.3
       // for (let i = 0; i < nv; i++) {
@@ -8216,21 +8544,122 @@ export class Niivue {
     return sum
   }
 
+  doClickToSegment(options: { x: number; y: number; tileIndex: number }): void {
+    const { tileIndex } = options
+
+    // Ensure tileIndex is valid before accessing screenSlices
+    if (tileIndex < 0 || tileIndex >= this.screenSlices.length) {
+      log.warn(`Invalid tileIndex ${tileIndex} received in doClickToSegment.`)
+      return
+    }
+
+    const axCorSag = this.screenSlices[tileIndex].axCorSag
+    if (axCorSag > SLICE_TYPE.SAGITTAL) {
+      log.warn('ClickToSegment attempted on non-2D slice tile.')
+      return
+    }
+
+    const texFrac = this.screenXY2TextureFrac(
+      this.clickToSegmentXY[0], // Use the stored click location
+      this.clickToSegmentXY[1],
+      tileIndex,
+      false
+    )
+    // Handle case where click is outside the valid area of the tile texture
+    if (texFrac[0] < 0) {
+      log.debug('Click location outside valid texture fraction for the tile.')
+      return
+    }
+
+    const pt = this.frac2vox(texFrac) as [number, number, number]
+    const threshold = this.opts.clickToSegmentPercent
+    let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
+
+    // Auto intensity logic
+    if (this.opts.clickToSegmentAutoIntensity) {
+      if (threshold !== 0) {
+        if (voxelIntensity === 0) {
+          voxelIntensity = 0.01
+        }
+        this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
+        this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
+      }
+      if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
+        this.opts.clickToSegmentBright = true
+      } else {
+        this.opts.clickToSegmentBright = false
+      }
+    }
+    const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+
+    this.drawPenAxCorSag = axCorSag
+
+    // Determine which bitmap to pass to drawFloodFill
+    const targetBitmap = this.clickToSegmentIsGrowing ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+
+    // Ensure targetBitmap is valid before proceeding
+    if (!targetBitmap) {
+      log.error('Target bitmap for flood fill is null.')
+      if (!this.clickToSegmentIsGrowing) {
+        this.createEmptyDrawing()
+        if (!this.drawBitmap) {
+          return
+        }
+      } else {
+        if (!this.drawBitmap) {
+          this.createEmptyDrawing()
+        }
+        if (!this.drawBitmap) {
+          return
+        }
+        this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
+      }
+      log.warn('Initialized missing bitmap in doClickToSegment.')
+    }
+
+    this.drawFloodFill(
+      [pt[0], pt[1], pt[2]],
+      this.opts.penValue,
+      brightOrDark,
+      this.opts.clickToSegmentIntensityMin,
+      this.opts.clickToSegmentIntensityMax,
+      this.opts.floodFillNeighbors,
+      this.opts.clickToSegmentMaxDistanceMM,
+      this.opts.clickToSegmentIs2D,
+      targetBitmap
+    )
+
+    if (!this.clickToSegmentIsGrowing) {
+      log.debug('Applying clickToSegment mask to drawBitmap.')
+      if (this.drawBitmap) {
+        this.refreshDrawing(false, false) // Update GPU from this.drawBitmap, don't force redraw yet
+        this.drawScene() // Now trigger the full scene redraw including the updated drawing layer
+      } else {
+        log.error('Cannot refresh drawing after click-to-segment apply, drawBitmap is null.')
+      }
+
+      // Calculate descriptives only after applying the final mask
+      if (this.drawBitmap) {
+        const info = this.getDescriptives({
+          layer: 0,
+          masks: [],
+          drawingIsMask: true // Use the final this.drawBitmap
+        })
+        this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
+      }
+    }
+    // should probably happen regardless of growing state
+    this.createOnLocationChange(axCorSag)
+  }
+
   // not included in public docs
   // handle mouse click event on canvas
   mouseClick(x: number, y: number, posChange = 0, isDelta = true): void {
     x *= this.uiData.dpr!
     y *= this.uiData.dpr!
-    // var posNow;
-    // var posFuture;
     this.canvas!.focus()
     if (this.thumbnailVisible) {
-      // we will simply hide the thmubnail
-      // use deleteThumbnail() to close the thumbnail and free resources
-      // this.gl.deleteTexture(this.bmpTexture);
-      // this.bmpTexture = null;
       this.thumbnailVisible = false
-      // the thumbnail is now released, do something profound: actually load the images
       Promise.all([this.loadVolumes(this.deferredVolumes), this.loadMeshes(this.deferredMeshes)]).catch((e) => {
         throw e
       })
@@ -8247,12 +8676,10 @@ export class Niivue {
 
       if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
         const vol = Math.round(pos[0] * (this.volumes[0].nFrame4D! - 1))
-        // this.graph.selectedColumn = vol;
         this.setFrame4D(this.volumes[0].id, vol)
         return
       }
       if (pos[0] > 0.5 && pos[1] > 1.0) {
-        // load full 4D series if user clicks on lower right of plot tile
         this.loadDeferred4DVolumes(this.volumes[0].id).catch((e) => {
           throw e
         })
@@ -8261,200 +8688,138 @@ export class Niivue {
     }
     if (this.inRenderTile(x, y) >= 0) {
       this.sliceScroll3D(posChange)
-      this.drawScene() // TODO: twice?
+      this.drawScene()
       return
     }
     if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) {
       return
     }
-    // mouse click X,Y in screen coordinates, origin at top left
-    // webGL clip space L,R,T,B = [-1, 1, 1, 1]
-    // n.b. webGL Y polarity reversed
-    // https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html
+
     for (let i = 0; i < this.screenSlices.length; i++) {
       const axCorSag = this.screenSlices[i].axCorSag
+
       if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag) {
         continue
-      } // if mouse is drawing on axial slice, ignore any entry to coronal slice
-      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+      }
+      if (axCorSag > SLICE_TYPE.SAGITTAL && !this.opts.clickToSegment && posChange === 0) {
         continue
       }
-      let texFrac = this.screenXY2TextureFrac(x, y, i, false)
-      if (texFrac[0] < 0) {
+
+      const texFrac = this.screenXY2TextureFrac(x, y, i, true)
+
+      if (texFrac[0] < 0.0) {
         continue
-      } // click not on slice i
-      // if (true) {
-      // user clicked on slice i
-      if (!isDelta) {
-        this.scene.crosshairPos[2 - axCorSag] = posChange
-        this.drawScene()
-        return
       }
-      // scrolling... not mouse
-      if (posChange !== 0) {
-        let posNeg = 1
-        if (posChange < 0) {
-          posNeg = -1
+
+      if (posChange !== 0 || !isDelta) {
+        if (!isDelta) {
+          if (axCorSag <= SLICE_TYPE.SAGITTAL) {
+            this.scene.crosshairPos[2 - axCorSag] = posChange
+            this.drawScene()
+            this.createOnLocationChange(axCorSag)
+          }
+          return
         }
+
+        const posNeg = posChange < 0 ? -1 : 1
         const xyz = [0, 0, 0]
-        xyz[2 - axCorSag] = posNeg
-        this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2])
-        this.drawScene()
-        this.createOnLocationChange(axCorSag)
+
+        if (axCorSag <= SLICE_TYPE.SAGITTAL) {
+          xyz[2 - axCorSag] = posNeg
+          this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2])
+        }
         return
       }
+
       if (this.opts.isForceMouseClickToVoxelCenters) {
         this.scene.crosshairPos = vec3.clone(this.vox2frac(this.frac2vox(texFrac)))
       } else {
         this.scene.crosshairPos = vec3.clone(texFrac)
       }
+
       if (this.opts.drawingEnabled) {
-        // drawing done in voxels
-        let pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
-        // if click-to-segment enabled
-        if (this.opts.clickToSegment) {
-          texFrac = this.screenXY2TextureFrac(this.clickToSegmentXY[0], this.clickToSegmentXY[1], i, false)
-          pt = this.frac2vox(texFrac) as [number, number, number]
-          let diff = 0
-          let threshold = this.opts.clickToSegmentPercent + diff
-          if (this.uiData.mousedown) {
-            // get percent difference between current x, y, and clickToSegmentXY
-            const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width
-            const yDiff = (this.clickToSegmentXY[1] - y) / this.gl.canvas.height
-            diff = Math.max(Math.abs(xDiff), Math.abs(yDiff))
-            threshold = this.opts.clickToSegmentPercent + diff
-          }
-          // get voxel value of pt
-          let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
-          // if clickToSegmentAutoIntensity, then calculate if we need to flood fill
-          // in a bright or dark region based on the intensity of the clicked voxel,
-          // and where it falls in the range of cal_min and cal_max.
-          // !important! If this option is true, then it will ignore the boolean value of
-          // clickToSegmentBright supplied by the user
-          if (this.opts.clickToSegmentAutoIntensity) {
-            if (threshold !== 0) {
-              if (voxelIntensity === 0) {
-                voxelIntensity = 0.01
-              }
-              this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
-              this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
-            }
-            // if voxel intensity is greater than the midpoint of cal_min and cal_max,
-            // then flood fill in a bright region
-            if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
-              this.opts.clickToSegmentBright = true
-            } else {
-              // else flood fill in a dark region
-              this.opts.clickToSegmentBright = false
-            }
-          }
-          // set brightOrDark now, if clickToSegmentAutoBrightOrDark is false,
-          // then brightOrDark will be set to the value of clickToSegmentBright supplied by the user
-          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-          this.drawPenAxCorSag = axCorSag
-          if (this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
-            // get voxel penSize for the current slice, but what if pixDims are not isotropic?
-            // we will use the smallest pixDim for the current slice
-            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[1]]
-            const minPixDim = Math.min(...pixDims)
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
-          } else if (this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
-            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[2]]
-            const minPixDim = Math.min(...pixDims)
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
-          } else if (this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
-            const pixDims = [this.back.pixDimsRAS[1], this.back.pixDimsRAS[2]]
-            const minPixDim = Math.min(...pixDims)
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim)
-          }
-          // draw the point at the cursor using the penSize to set the
-          // seed for the flood fill
-          this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue)
+        const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
 
-          if (diff !== 0) {
-            this.clickToSegmentIsGrowing = true
-            this.clickToSegmentGrowingBitmap = this.drawBitmap.slice()
+        // These penValues take precedence over the general clickToSegment mode
+        if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
+          // Includes +/-Infinity, NaN, and -0
+          let growMode = 0
+          let floodFillNewColor = Math.abs(this.opts.penValue)
+          const isGrowTool = true
+          if (Object.is(this.opts.penValue, -0)) {
+            // Erase Cluster specifically
+            growMode = 0
+            floodFillNewColor = 0
+            log.debug('Erase Cluster selected')
           } else {
-            this.clickToSegmentIsGrowing = false
+            growMode = this.opts.penValue
+            log.debug('Intensity Grow selected', growMode)
           }
 
-          // do flood fill
           this.drawFloodFill(
-            [pt[0], pt[1], pt[2]],
-            0,
-            brightOrDark,
-            this.opts.clickToSegmentIntensityMin,
-            this.opts.clickToSegmentIntensityMax,
+            pt,
+            floodFillNewColor,
+            growMode,
+            NaN,
+            NaN,
             this.opts.floodFillNeighbors,
-            this.opts.clickToSegmentMaxDistanceMM,
-            this.opts.clickToSegmentIs2D
+            Number.POSITIVE_INFINITY,
+            false,
+            this.drawBitmap,
+            isGrowTool
           )
-          // draw the scene so we see the changes
           this.drawScene()
           this.createOnLocationChange(axCorSag)
-          if (this.clickToSegmentIsGrowing) {
-            // don't get descriptive stats if the user
-            // is still growing the segmented region
-            return
+          return
+        } else if (this.opts.clickToSegment) {
+          if (axCorSag <= SLICE_TYPE.SAGITTAL) {
+            // Only on 2D slices
+            this.clickToSegmentIsGrowing = false
+            this.doClickToSegment({
+              x: this.clickToSegmentXY[0],
+              y: this.clickToSegmentXY[1],
+              tileIndex: i
+            })
           }
-          // get the volume of the segmented region if the user is not growing the region
-          const info = this.getDescriptives({
-            layer: 0,
-            masks: [],
-            drawingIsMask: true
-          })
-          this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
+          // Note: doClickToSegment handles refresh and redraw for the apply case.
+          // We still need createOnLocationChange below, but return here.
+          this.createOnLocationChange(axCorSag)
           return
         }
-        if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
-          if (!isFinite(this.opts.penValue)) {
-            // NaN = grow based on cluster intensity , Number.POSITIVE_INFINITY  = grow based on cluster intensity or brighter , Number.NEGATIVE_INFINITY = grow based on cluster intensity or darker
-            this.drawFloodFill(pt, 0, this.opts.penValue, NaN, NaN, this.opts.floodFillNeighbors)
+
+        // Standard Pen Drawing (if not flood fill and not clickToSegment)
+        else {
+          if (isNaN(this.drawPenLocation[0])) {
+            this.drawPenAxCorSag = axCorSag
+            this.drawPenFillPts = []
+            this.drawPt(...pt, this.opts.penValue)
           } else {
-            this.drawFloodFill(
-              pt,
-              Math.abs(this.opts.penValue),
-              this.opts.penValue,
-              NaN,
-              NaN,
-              this.opts.floodFillNeighbors
-            )
+            if (
+              pt[0] === this.drawPenLocation[0] &&
+              pt[1] === this.drawPenLocation[1] &&
+              pt[2] === this.drawPenLocation[2]
+            ) {
+              // No drawing needed, but still redraw scene and update location
+              this.drawScene()
+              this.createOnLocationChange(axCorSag)
+              return
+            }
+            this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
           }
-          return
-        }
-        if (isNaN(this.drawPenLocation[0])) {
-          this.drawPenAxCorSag = axCorSag
-          this.drawPenFillPts = []
-          this.drawPt(...pt, this.opts.penValue)
-        } else {
-          if (
-            pt[0] === this.drawPenLocation[0] &&
-            pt[1] === this.drawPenLocation[1] &&
-            pt[2] === this.drawPenLocation[2]
-          ) {
-            return
+          this.drawPenLocation = pt
+          if (this.opts.isFilledPen) {
+            this.drawPenFillPts.push(pt)
           }
-          this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
+          this.refreshDrawing(false, false) // Update GPU texture
         }
-        this.drawPenLocation = pt
-        if (this.opts.isFilledPen) {
-          this.drawPenFillPts.push(pt)
-        }
-        this.refreshDrawing(false)
-      }
+      } // end if(drawingEnabled)
+
+      // Redraw scene & update location (happens after drawing or if drawing is disabled but click was valid)
       this.drawScene()
       this.createOnLocationChange(axCorSag)
-      return
-      // } else {
-      //   //if click in slice i
-      //   // if x and y are null, likely due to a slider widget sending the posChange (no mouse info in that case)
-      //   if (x === null && y === null) {
-      //     this.scene.crosshairPos[2 - axCorSag] = posChange;
-      //     this.drawScene();
-      //     return;
-      //   }
-      // }
-    }
+      return // Click handled for this slice 'i'
+    } // End loop through screenSlices
+    // If loop finishes without finding a slice, the click was outside all valid slices
   }
 
   // not included in public docs
@@ -12047,33 +12412,34 @@ export class Niivue {
     }
 
     // draw circle at mouse position if clickToSegment is enabled
-    if (this.opts.clickToSegment) {
-      const x = this.mousePos[0]
-      const y = this.mousePos[1]
-      // check if hovering over the 3D render tile
-      if (this.inRenderTile(x, y) >= 0) {
-        // exit early since we do not want to draw the cursor here!
-        return
-      }
-      // determine the tile the mouse is hovering in
-      const tileIdx = this.tileIndex(x, y)
-      // if a valid tile index, draw the circle
-      if (tileIdx > -1) {
-        // get fov in mm for this plane presented in the tile
-        const fovMM = this.screenSlices[tileIdx].fovMM
-        // get the left, top, width, height of the tile in pixels
-        const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
-        // calculate the pixel to mm scale so we can draw the circle
-        // in pixels (so it is highres) but with the radius specified in mm
-        const pixPerMM = ltwh[2] / fovMM[0]
-        // get the crosshair color, but replace the alpha because we want it to be transparent
-        // no matter what. We want to see the image data underneath the circle.
-        const color = this.opts.crosshairColor
-        const segmentCursorColor = [color[0], color[1], color[2], 0.4]
-        const radius = this.opts.clickToSegmentRadius * pixPerMM
-        this.drawCircle([x - radius, y - radius, radius * 2, radius * 2], segmentCursorColor, 1)
-      }
-    }
+    // xxxxxxxxx
+    // if (this.opts.clickToSegment) {
+    //   const x = this.mousePos[0]
+    //   const y = this.mousePos[1]
+    //   // check if hovering over the 3D render tile
+    //   if (this.inRenderTile(x, y) >= 0) {
+    //     // exit early since we do not want to draw the cursor here!
+    //     return
+    //   }
+    //   // determine the tile the mouse is hovering in
+    //   const tileIdx = this.tileIndex(x, y)
+    //   // if a valid tile index, draw the circle
+    //   if (tileIdx > -1) {
+    //     // get fov in mm for this plane presented in the tile
+    //     const fovMM = this.screenSlices[tileIdx].fovMM
+    //     // get the left, top, width, height of the tile in pixels
+    //     const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+    //     // calculate the pixel to mm scale so we can draw the circle
+    //     // in pixels (so it is highres) but with the radius specified in mm
+    //     const pixPerMM = ltwh[2] / fovMM[0]
+    //     // get the crosshair color, but replace the alpha because we want it to be transparent
+    //     // no matter what. We want to see the image data underneath the circle.
+    //     const color = this.opts.crosshairColor
+    //     const segmentCursorColor = [color[0], color[1], color[2], 0.4]
+    //     const radius = this.opts.clickToSegmentRadius * pixPerMM
+    //     this.drawCircle([x - radius, y - radius, radius * 2, radius * 2], segmentCursorColor, 1)
+    //   }
+    // }
 
     const pos = this.frac2mm([this.scene.crosshairPos[0], this.scene.crosshairPos[1], this.scene.crosshairPos[2]])
 
