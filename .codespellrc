@@ -1,0 +1,7 @@
+[codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = .git*,*.svg,package-lock.json,*.css,*.gii,.codespellrc,images,assets
+check-hidden = true
+# ignore-regex = 
+# unfortunate choices for variable names etc
+ignore-words-list = inout,struc,pixelx,actualy,te,softwares,fwe,mater

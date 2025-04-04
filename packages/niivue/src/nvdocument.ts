@@ -155,7 +155,7 @@ export type NVConfigOptions = {
   isAntiAlias: boolean | null
   isAdditiveBlend: boolean
   // TODO all following fields were previously not included in the typedef
-  // Allow canvas width ahd height to resize (false for fixed size)
+  // Allow canvas width and height to resize (false for fixed size)
   isResizeCanvas: boolean
   meshXRay: number
   limitFrames4D: number
