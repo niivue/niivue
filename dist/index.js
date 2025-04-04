@@ -2752,7 +2752,7 @@ var forEach3 = function() {
 }();
 
 // package.json
-var version = "0.51.0";
+var version = "0.52.0";
 
 // src/logger.ts
 var _Log = class _Log {
@@ -20914,6 +20914,876 @@ async function uncompressStream(stream) {
   return uncompressedStream;
 }
 
+// src/nvimage/ImageWriter.ts
+function createNiftiHeader(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */) {
+  const hdr = new NIFTI1();
+  hdr.littleEndian = true;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.dims[0] = Math.max(3, dims.length);
+  for (let i = 0; i < dims.length; i++) {
+    hdr.dims[i + 1] = dims[i];
+  }
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  for (let i = 0; i < dims.length; i++) {
+    hdr.pixDims[i + 1] = pixDims[i];
+  }
+  if (affine.length === 16) {
+    let k = 0;
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        hdr.affine[i][j] = affine[k];
+        k++;
+      }
+    }
+  }
+  let bpv = 8;
+  if (datatypeCode === 256 /* DT_INT8 */ || datatypeCode === 2 /* DT_UINT8 */) {
+    bpv = 8;
+  } else if (datatypeCode === 512 /* DT_UINT16 */ || datatypeCode === 4 /* DT_INT16 */) {
+    bpv = 16;
+  } else if (datatypeCode === 16 /* DT_FLOAT32 */ || datatypeCode === 768 /* DT_UINT32 */ || datatypeCode === 8 /* DT_INT32 */ || datatypeCode === 2304 /* DT_RGBA32 */) {
+    bpv = 32;
+  } else if (datatypeCode === 64 /* DT_FLOAT64 */) {
+    bpv = 64;
+  } else {
+    log.warn("Unsupported NIfTI datatypeCode for header creation: " + datatypeCode);
+  }
+  hdr.datatypeCode = datatypeCode;
+  hdr.numBitsPerVoxel = bpv;
+  hdr.scl_inter = 0;
+  hdr.scl_slope = 1;
+  hdr.sform_code = 2;
+  hdr.magic = "n+1";
+  hdr.vox_offset = 352;
+  return hdr;
+}
+function createNiftiArray(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */, img = new Uint8Array()) {
+  const hdr = createNiftiHeader(dims, pixDims, affine, datatypeCode);
+  const hdrBytes = hdrToArrayBuffer(hdr, false);
+  hdr.vox_offset = Math.max(352, hdrBytes.length);
+  const finalHdrBytes = hdrToArrayBuffer(hdr, false);
+  if (img.length < 1) {
+    return finalHdrBytes;
+  }
+  const paddingSize = Math.max(0, hdr.vox_offset - finalHdrBytes.length);
+  const padding = new Uint8Array(paddingSize);
+  const imgBytes = new Uint8Array(img.buffer, img.byteOffset, img.byteLength);
+  const totalLength = hdr.vox_offset + imgBytes.length;
+  const outputData = new Uint8Array(totalLength);
+  outputData.set(finalHdrBytes, 0);
+  outputData.set(padding, finalHdrBytes.length);
+  outputData.set(imgBytes, hdr.vox_offset);
+  return outputData;
+}
+function toUint8Array(nvImage, drawingBytes = null) {
+  if (!nvImage.hdr) {
+    throw new Error("NVImage header is not defined for toUint8Array");
+  }
+  if (!nvImage.img && drawingBytes === null) {
+    throw new Error("NVImage image data is not defined for toUint8Array");
+  }
+  const isDrawing = drawingBytes !== null;
+  const hdrCopy = JSON.parse(JSON.stringify(nvImage.hdr));
+  hdrCopy.vox_offset = Math.max(352, hdrCopy.vox_offset);
+  if (isDrawing) {
+    hdrCopy.datatypeCode = 2 /* DT_UINT8 */;
+    hdrCopy.numBitsPerVoxel = 8;
+    hdrCopy.scl_slope = 1;
+    hdrCopy.scl_inter = 0;
+  }
+  const hdrBytes = hdrToArrayBuffer(hdrCopy, isDrawing);
+  let imageBytesToSave;
+  if (isDrawing) {
+    const drawingBytesCurrent = drawingBytes;
+    const perm = nvImage.permRAS;
+    if (perm && (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3)) {
+      log.debug("Reorienting drawing bytes back to native space for saving...");
+      const dims = nvImage.hdr.dims;
+      const nVox = dims[1] * dims[2] * dims[3];
+      const nVoxRAS = nvImage.dimsRAS ? nvImage.dimsRAS[1] * nvImage.dimsRAS[2] * nvImage.dimsRAS[3] : nVox;
+      if (drawingBytesCurrent.length !== nVoxRAS) {
+        console.warn(
+          `Drawing length (${drawingBytesCurrent.length}) does not match expected RAS voxel count (${nVoxRAS}). Cannot reorient drawing reliably.`
+        );
+        imageBytesToSave = drawingBytesCurrent;
+      } else if (!nvImage.img2RASstep || !nvImage.img2RASstart || !nvImage.dimsRAS) {
+        console.warn(
+          `Missing RAS transformation info (img2RASstep, img2RASstart, dimsRAS). Cannot reorient drawing reliably.`
+        );
+        imageBytesToSave = drawingBytesCurrent;
+      } else {
+        const step = nvImage.img2RASstep;
+        const start = nvImage.img2RASstart;
+        const dimsRAS = nvImage.dimsRAS;
+        const nativeData = new Uint8Array(nVox);
+        nativeData.fill(0);
+        const inputDrawingRAS = drawingBytesCurrent;
+        let rasIndex = 0;
+        for (let rz = 0; rz < dimsRAS[3]; rz++) {
+          const zi = start[2] + rz * step[2];
+          for (let ry = 0; ry < dimsRAS[2]; ry++) {
+            const yi = start[1] + ry * step[1];
+            for (let rx = 0; rx < dimsRAS[1]; rx++) {
+              const xi = start[0] + rx * step[0];
+              const nativeIndex = xi + yi + zi;
+              if (nativeIndex >= 0 && nativeIndex < nVox) {
+                nativeData[nativeIndex] = inputDrawingRAS[rasIndex];
+              } else if (rasIndex < inputDrawingRAS.length) {
+                console.warn(
+                  `Calculated native index ${nativeIndex} is out of bounds [0..${nVox - 1}] during drawing reorientation.`
+                );
+              }
+              rasIndex++;
+            }
+          }
+        }
+        imageBytesToSave = nativeData;
+      }
+    } else {
+      imageBytesToSave = drawingBytesCurrent;
+    }
+  } else {
+    if (!nvImage.img) {
+      throw new Error("NVImage image data is null when trying to save non-drawing.");
+    }
+    imageBytesToSave = new Uint8Array(nvImage.img.buffer, nvImage.img.byteOffset, nvImage.img.byteLength);
+  }
+  const headerSize = hdrBytes.length;
+  const paddingSize = Math.max(0, hdrCopy.vox_offset - headerSize);
+  const padding = new Uint8Array(paddingSize);
+  const totalLength = hdrCopy.vox_offset + imageBytesToSave.length;
+  const outputData = new Uint8Array(totalLength);
+  outputData.set(hdrBytes, 0);
+  outputData.set(padding, headerSize);
+  outputData.set(imageBytesToSave, hdrCopy.vox_offset);
+  return outputData;
+}
+async function saveToUint8Array(nvImage, fnm, drawing8 = null) {
+  const odata = toUint8Array(nvImage, drawing8);
+  const compress = fnm.toLowerCase().endsWith(".gz");
+  if (compress) {
+    try {
+      const compressedData = await NVUtilities.compress(odata, "gzip");
+      return new Uint8Array(compressedData);
+    } catch (error) {
+      log.error("Compression failed:", error);
+      log.warn("Returning uncompressed data due to compression error.");
+      return odata;
+    }
+  } else {
+    return odata;
+  }
+}
+async function saveToDisk(nvImage, fnm = "", drawing8 = null) {
+  const saveData = await saveToUint8Array(nvImage, fnm, drawing8);
+  if (!fnm) {
+    log.debug("saveToDisk: empty file name, returning data as Uint8Array rather than triggering download");
+    return saveData;
+  }
+  try {
+    const blob = new Blob([saveData.buffer], {
+      type: "application/octet-stream"
+      // Standard type for binary download
+    });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", blobUrl);
+    link.setAttribute("download", fnm);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+  } catch (e) {
+    log.error("Failed to trigger download:", e);
+  }
+  return saveData;
+}
+
+// src/nvimage/VolumeUtils.ts
+function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
+  if (!nvImage.hdr) {
+    throw new Error("getValue: NVImage header is not defined.");
+  }
+  if (!isReadImaginary && !nvImage.img) {
+    throw new Error("getValue: NVImage image data is not defined.");
+  }
+  if (isReadImaginary && !nvImage.imaginary) {
+    log.warn("getValue: Attempted to read imaginary data, but none exists.");
+    return 0;
+  }
+  const nx = nvImage.hdr.dims[1];
+  const ny = nvImage.hdr.dims[2];
+  const nz = nvImage.hdr.dims[3];
+  x = Math.max(0, Math.min(Math.round(x), nx - 1));
+  y = Math.max(0, Math.min(Math.round(y), ny - 1));
+  z = Math.max(0, Math.min(Math.round(z), nz - 1));
+  frame4D = Math.max(0, frame4D);
+  let vx = x + y * nx + z * nx * ny;
+  if (nvImage.hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
+    if (!nvImage.img) {
+      return 0;
+    }
+    vx *= 4;
+    if (vx + 2 >= nvImage.img.length) {
+      log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`);
+      return 0;
+    }
+    const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722;
+    return Math.round(lum);
+  }
+  if (nvImage.hdr.datatypeCode === 128 /* DT_RGB24 */) {
+    if (!nvImage.img) {
+      return 0;
+    }
+    vx *= 3;
+    if (vx + 2 >= nvImage.img.length) {
+      log.warn(`getValue: Calculated index ${vx} out of bounds for RGB data.`);
+      return 0;
+    }
+    const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722;
+    return Math.round(lum);
+  }
+  const nVox3D = nx * ny * nz;
+  const volOffset = frame4D * nVox3D;
+  const finalVxIndex = vx + volOffset;
+  const dataArray = isReadImaginary ? nvImage.imaginary : nvImage.img;
+  if (finalVxIndex < 0 || finalVxIndex >= dataArray.length) {
+    return 0;
+  }
+  const rawValue = dataArray[finalVxIndex];
+  const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
+  const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
+  return slope * rawValue + inter;
+}
+function getVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], dataType = "same") {
+  const defaultResult = [new Uint8Array(), [0, 0, 0]];
+  if (!nvImage.hdr || !nvImage.img || !nvImage.dimsRAS || !nvImage.img2RASstep || !nvImage.img2RASstart) {
+    log.error("getVolumeData: Missing required NVImage properties (hdr, img, dimsRAS, img2RASstep/start).");
+    return defaultResult;
+  }
+  voxStartRAS = voxStartRAS.slice(0, 3);
+  voxEndRAS = voxEndRAS.slice(0, 3);
+  if (Math.min(...voxStartRAS) < 0 || Math.min(...voxEndRAS) < 0) {
+    log.warn("getVolumeData: Invalid start or end coordinates provided.");
+    return defaultResult;
+  }
+  const dimsRAS = nvImage.dimsRAS.slice(1, 4);
+  for (let i = 0; i < 3; i++) {
+    voxStartRAS[i] = Math.max(0, Math.min(Math.round(voxStartRAS[i]), dimsRAS[i] - 1));
+    voxEndRAS[i] = Math.max(0, Math.min(Math.round(voxEndRAS[i]), dimsRAS[i] - 1));
+    if (voxEndRAS[i] < voxStartRAS[i]) {
+      const tmp = voxEndRAS[i];
+      voxEndRAS[i] = voxStartRAS[i];
+      voxStartRAS[i] = tmp;
+    }
+  }
+  const slabDims = [
+    voxEndRAS[0] - voxStartRAS[0] + 1,
+    voxEndRAS[1] - voxStartRAS[1] + 1,
+    voxEndRAS[2] - voxStartRAS[2] + 1
+  ];
+  const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
+  if (slabNVox <= 0) {
+    log.warn("getVolumeData: Calculated slab size is zero or negative.");
+    return defaultResult;
+  }
+  let OutputArrayConstructor = nvImage.img.constructor;
+  if (dataType === "uint8") {
+    OutputArrayConstructor = Uint8Array;
+  } else if (dataType === "int16") {
+    OutputArrayConstructor = Int16Array;
+  } else if (dataType === "uint16") {
+    OutputArrayConstructor = Uint16Array;
+  } else if (dataType === "float32" || dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
+    OutputArrayConstructor = Float32Array;
+  } else if (dataType === "float64") {
+    OutputArrayConstructor = Float64Array;
+  } else if (dataType !== "same") {
+    log.warn(`getVolumeData: Unsupported dataType '${dataType}'. Using 'same'.`);
+  }
+  let outputImg;
+  try {
+    outputImg = new OutputArrayConstructor(slabNVox);
+  } catch (e) {
+    log.error(`getVolumeData: Failed to create output array for dataType '${dataType}'.`, e);
+    return defaultResult;
+  }
+  const step = nvImage.img2RASstep;
+  const start = nvImage.img2RASstart;
+  const sourceImg = nvImage.img;
+  let outputIndex = 0;
+  for (let rz = voxStartRAS[2]; rz <= voxEndRAS[2]; rz++) {
+    const zi = start[2] + rz * step[2];
+    for (let ry = voxStartRAS[1]; ry <= voxEndRAS[1]; ry++) {
+      const yi = start[1] + ry * step[1];
+      for (let rx = voxStartRAS[0]; rx <= voxEndRAS[0]; rx++) {
+        const xi = start[0] + rx * step[0];
+        const nativeIndex = xi + yi + zi;
+        let value = 0;
+        if (nativeIndex >= 0 && nativeIndex < sourceImg.length) {
+          value = sourceImg[nativeIndex];
+        } else {
+        }
+        outputImg[outputIndex++] = value;
+      }
+    }
+  }
+  const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
+  const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
+  if (dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
+    if (!(outputImg instanceof Float32Array)) {
+      log.warn(`getVolumeData: Converting output to Float32 for scaling type '${dataType}'.`);
+      outputImg = Float32Array.from(outputImg);
+    }
+    for (let i = 0; i < outputImg.length; i++) {
+      outputImg[i] = outputImg[i] * slope + inter;
+    }
+  }
+  if (dataType === "normalized" || dataType === "windowed") {
+    let minVal = nvImage.cal_min;
+    let maxVal = nvImage.cal_max;
+    if (dataType === "normalized") {
+      minVal = nvImage.global_min;
+      maxVal = nvImage.global_max;
+    }
+    const range = maxVal - minVal;
+    const scale6 = range === 0 ? 0 : 1 / range;
+    for (let i = 0; i < outputImg.length; i++) {
+      outputImg[i] = (outputImg[i] - minVal) * scale6;
+      outputImg[i] = Math.max(0, Math.min(outputImg[i], 1));
+    }
+  }
+  return [outputImg, slabDims];
+}
+function setVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], slabData = new Uint8Array()) {
+  if (!nvImage.hdr || !nvImage.img || !nvImage.dimsRAS || !nvImage.img2RASstep || !nvImage.img2RASstart) {
+    log.error("setVolumeData: Missing required NVImage properties (hdr, img, dimsRAS, img2RASstep/start).");
+    return;
+  }
+  if (slabData.length < 1) {
+    log.warn("setVolumeData: Input slabData is empty.");
+    return;
+  }
+  voxStartRAS = voxStartRAS.slice(0, 3);
+  voxEndRAS = voxEndRAS.slice(0, 3);
+  if (Math.min(...voxStartRAS) < 0 || Math.min(...voxEndRAS) < 0) {
+    log.warn("setVolumeData: Invalid start or end coordinates provided.");
+    return;
+  }
+  const dimsRAS = nvImage.dimsRAS.slice(1, 4);
+  for (let i = 0; i < 3; i++) {
+    voxStartRAS[i] = Math.max(0, Math.min(Math.round(voxStartRAS[i]), dimsRAS[i] - 1));
+    voxEndRAS[i] = Math.max(0, Math.min(Math.round(voxEndRAS[i]), dimsRAS[i] - 1));
+    if (voxEndRAS[i] < voxStartRAS[i]) {
+      const tmp = voxEndRAS[i];
+      voxEndRAS[i] = voxStartRAS[i];
+      voxStartRAS[i] = tmp;
+    }
+  }
+  const slabDims = [
+    voxEndRAS[0] - voxStartRAS[0] + 1,
+    voxEndRAS[1] - voxStartRAS[1] + 1,
+    voxEndRAS[2] - voxStartRAS[2] + 1
+  ];
+  const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
+  if (slabNVox <= 0) {
+    log.warn("setVolumeData: Calculated slab size is zero or negative.");
+    return;
+  }
+  if (slabData.length < slabNVox) {
+    log.error(
+      `setVolumeData: Input slabData length (${slabData.length}) is less than the calculated slab size (${slabNVox}).`
+    );
+    return;
+  }
+  const step = nvImage.img2RASstep;
+  const start = nvImage.img2RASstart;
+  const targetImg = nvImage.img;
+  let sourceIndex = 0;
+  for (let rz = voxStartRAS[2]; rz <= voxEndRAS[2]; rz++) {
+    const zi = start[2] + rz * step[2];
+    for (let ry = voxStartRAS[1]; ry <= voxEndRAS[1]; ry++) {
+      const yi = start[1] + ry * step[1];
+      for (let rx = voxStartRAS[0]; rx <= voxEndRAS[0]; rx++) {
+        const xi = start[0] + rx * step[0];
+        const nativeIndex = xi + yi + zi;
+        if (nativeIndex >= 0 && nativeIndex < targetImg.length) {
+          targetImg[nativeIndex] = slabData[sourceIndex];
+        } else {
+        }
+        sourceIndex++;
+      }
+    }
+  }
+}
+
+// src/nvimage/ImageReaders/mgh.ts
+var mgh_exports = {};
+__export(mgh_exports, {
+  readMgh: () => readMgh
+});
+async function readMgh(nvImage, buffer) {
+  if (!nvImage.hdr) {
+    log.warn("readMgh called before nvImage.hdr was initialized. Creating default.");
+    nvImage.hdr = new NIFTI1();
+  }
+  const hdr = nvImage.hdr;
+  hdr.littleEndian = false;
+  let raw = buffer;
+  let reader = new DataView(raw);
+  if (raw.byteLength >= 2 && reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
+    try {
+      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
+      reader = new DataView(raw);
+    } catch (err2) {
+      log.error("Failed to decompress MGZ file.", err2);
+      return null;
+    }
+  }
+  if (raw.byteLength < 284) {
+    log.error("File too small to be a valid MGH/MGZ header.");
+    return null;
+  }
+  const version2 = reader.getInt32(0, false);
+  const width = reader.getInt32(4, false);
+  const height = reader.getInt32(8, false);
+  const depth = reader.getInt32(12, false);
+  const nframes = reader.getInt32(16, false);
+  const mtype = reader.getInt32(20, false);
+  const spacingX = reader.getFloat32(30, false);
+  const spacingY = reader.getFloat32(34, false);
+  const spacingZ = reader.getFloat32(38, false);
+  const xr = reader.getFloat32(42, false);
+  const xa = reader.getFloat32(46, false);
+  const xs = reader.getFloat32(50, false);
+  const yr = reader.getFloat32(54, false);
+  const ya = reader.getFloat32(58, false);
+  const ys = reader.getFloat32(62, false);
+  const zr = reader.getFloat32(66, false);
+  const za = reader.getFloat32(70, false);
+  const zs = reader.getFloat32(74, false);
+  const cr = reader.getFloat32(78, false);
+  const ca = reader.getFloat32(82, false);
+  const cs = reader.getFloat32(86, false);
+  if (version2 !== 1) {
+    log.warn(`Unexpected MGH version: ${version2}.`);
+  }
+  if (width <= 0 || height <= 0 || depth <= 0) {
+    log.error(`Invalid MGH dimensions: ${width}x${height}x${depth}`);
+    return null;
+  }
+  switch (mtype) {
+    case 0:
+      hdr.numBitsPerVoxel = 8;
+      hdr.datatypeCode = 2 /* DT_UINT8 */;
+      break;
+    case 4:
+      hdr.numBitsPerVoxel = 16;
+      hdr.datatypeCode = 4 /* DT_INT16 */;
+      break;
+    case 1:
+      hdr.numBitsPerVoxel = 32;
+      hdr.datatypeCode = 8 /* DT_INT32 */;
+      break;
+    case 3:
+      hdr.numBitsPerVoxel = 32;
+      hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+      break;
+    default:
+      log.error(`Unsupported MGH data type: ${mtype}`);
+      return null;
+  }
+  hdr.dims[1] = width;
+  hdr.dims[2] = height;
+  hdr.dims[3] = depth;
+  hdr.dims[4] = Math.max(1, nframes);
+  hdr.dims[0] = hdr.dims[4] > 1 ? 4 : 3;
+  hdr.pixDims[1] = Math.abs(spacingX);
+  hdr.pixDims[2] = Math.abs(spacingY);
+  hdr.pixDims[3] = Math.abs(spacingZ);
+  hdr.pixDims[4] = 0;
+  hdr.sform_code = 1;
+  hdr.qform_code = 0;
+  const rot44 = mat4_exports.fromValues(
+    xr * hdr.pixDims[1],
+    yr * hdr.pixDims[2],
+    zr * hdr.pixDims[3],
+    0,
+    xa * hdr.pixDims[1],
+    ya * hdr.pixDims[2],
+    za * hdr.pixDims[3],
+    0,
+    xs * hdr.pixDims[1],
+    ys * hdr.pixDims[2],
+    zs * hdr.pixDims[3],
+    0,
+    0,
+    0,
+    0,
+    1
+  );
+  const PcrsVec = vec4_exports.fromValues(hdr.dims[1] / 2, hdr.dims[2] / 2, hdr.dims[3] / 2, 1);
+  const PxyzOffsetVec = vec4_exports.create();
+  vec4_exports.transformMat4(PxyzOffsetVec, PcrsVec, rot44);
+  const translation = vec3_exports.fromValues(cr - PxyzOffsetVec[0], ca - PxyzOffsetVec[1], cs - PxyzOffsetVec[2]);
+  hdr.affine = [
+    [rot44[0], rot44[1], rot44[2], translation[0]],
+    [rot44[4], rot44[5], rot44[6], translation[1]],
+    [rot44[8], rot44[9], rot44[10], translation[2]],
+    [0, 0, 0, 1]
+  ];
+  hdr.vox_offset = 284;
+  hdr.magic = "n+1";
+  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+  const nVoxels = width * height * depth * hdr.dims[4];
+  const expectedBytes = nVoxels * nBytesPerVoxel;
+  const remainingBytes = raw.byteLength - hdr.vox_offset;
+  if (remainingBytes < expectedBytes) {
+    log.error(`MGH image data size mismatch: expected ${expectedBytes}, found ${remainingBytes}`);
+    return null;
+  } else if (remainingBytes > expectedBytes) {
+    log.warn(`MGH file has extra ${remainingBytes - expectedBytes} bytes after image data. Truncating.`);
+  }
+  const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes);
+  return imgRaw;
+}
+
+// src/nvimage/ImageReaders/nii.ts
+var nii_exports = {};
+__export(nii_exports, {
+  readNifti: () => readNifti
+});
+async function readNifti(nvImage, buffer) {
+  let dataBuffer = buffer;
+  let imgRaw = null;
+  try {
+    if (isCompressed(dataBuffer)) {
+      log.debug(`Decompressing NIfTI file: ${nvImage.name}`);
+      dataBuffer = await decompressAsync(dataBuffer);
+      log.debug(`Decompression complete for: ${nvImage.name}`);
+    }
+    if (!dataBuffer || dataBuffer.byteLength === 0) {
+      throw new Error("Buffer became invalid after decompression attempt.");
+    }
+    nvImage.hdr = await readHeaderAsync(dataBuffer);
+    if (nvImage.hdr === null) {
+      throw new Error(`Failed to read NIfTI header: ${nvImage.name}`);
+    }
+    if (nvImage.hdr.cal_min === 0 && nvImage.hdr.cal_max === 255 && nvImage.hdr.datatypeCode !== 2 /* DT_UINT8 */) {
+      log.debug(`Resetting suspicious cal_min/max (0/255) for non-uint8 NIfTI: ${nvImage.name}`);
+      nvImage.hdr.cal_min = 0;
+      nvImage.hdr.cal_max = 0;
+    }
+    imgRaw = readImage(nvImage.hdr, dataBuffer);
+    if (imgRaw === null) {
+      throw new Error(`nifti-reader-js readImage returned null for ${nvImage.name}`);
+    }
+    return imgRaw;
+  } catch (err2) {
+    log.error(`Error processing NIfTI file ${nvImage.name}:`, err2);
+    nvImage.hdr = null;
+    return null;
+  }
+}
+
+// src/nvimage/ImageReaders/nrrd.ts
+var nrrd_exports = {};
+__export(nrrd_exports, {
+  readNrrd: () => readNrrd
+});
+async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
+  if (!nvImage.hdr) {
+    log.warn("readNrrd called before nvImage.hdr was initialized. Creating default.");
+    nvImage.hdr = new NIFTI1();
+  }
+  const hdr = nvImage.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const len4 = dataBuffer.byteLength;
+  let txt = null;
+  const bytes = new Uint8Array(dataBuffer);
+  for (let i = 1; i < len4; i++) {
+    if (bytes[i - 1] === 10 && bytes[i] === 10) {
+      const v = dataBuffer.slice(0, i - 1);
+      txt = new TextDecoder().decode(v);
+      hdr.vox_offset = i + 1;
+      break;
+    }
+  }
+  if (txt === null) {
+    log.error("readNrrd: could not extract txt");
+    return null;
+  }
+  const lines = txt.split("\n");
+  if (!lines[0].startsWith("NRRD")) {
+    log.error("Invalid NRRD image (magic signature missing)");
+    return null;
+  }
+  const n = lines.length;
+  let isGz = false;
+  let isMicron = false;
+  let isDetached = false;
+  const mat33 = mat3_exports.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  const offset = vec3_exports.fromValues(0, 0, 0);
+  let rot33 = mat3_exports.create();
+  for (let i = 1; i < n; i++) {
+    let str6 = lines[i];
+    if (str6.length === 0 || str6[0] === "#") {
+      if (str6.startsWith("#")) {
+        continue;
+      }
+      if (str6.trim().length === 0) {
+        continue;
+      }
+    }
+    str6 = str6.toLowerCase();
+    const items = str6.split(":");
+    if (items.length < 2) {
+      continue;
+    }
+    const key = items[0].trim();
+    let value = items[1].trim();
+    value = value.replaceAll(")", " ");
+    value = value.replaceAll("(", " ");
+    value = value.trim();
+    switch (key) {
+      case "data file":
+        isDetached = true;
+        break;
+      case "encoding":
+        if (value.includes("raw")) {
+          isGz = false;
+        } else if (value.includes("gz")) {
+          isGz = true;
+        } else {
+          log.error("Unsupported NRRD encoding");
+          return null;
+        }
+        break;
+      case "type":
+        switch (value) {
+          case "uchar":
+          case "unsigned char":
+          case "uint8":
+          case "uint8_t":
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = 2 /* DT_UINT8 */;
+            break;
+          case "signed char":
+          case "int8":
+          case "int8_t":
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = 256 /* DT_INT8 */;
+            break;
+          case "short":
+          case "short int":
+          case "signed short":
+          case "signed short int":
+          case "int16":
+          case "int16_t":
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = 4 /* DT_INT16 */;
+            break;
+          case "ushort":
+          case "unsigned short":
+          case "unsigned short int":
+          case "uint16":
+          case "uint16_t":
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = 512 /* DT_UINT16 */;
+            break;
+          case "int":
+          case "signed int":
+          case "int32":
+          case "int32_t":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 8 /* DT_INT32 */;
+            break;
+          case "uint":
+          case "unsigned int":
+          case "uint32":
+          case "uint32_t":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 768 /* DT_UINT32 */;
+            break;
+          case "float":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+            break;
+          case "double":
+            hdr.numBitsPerVoxel = 64;
+            hdr.datatypeCode = 64 /* DT_FLOAT64 */;
+            break;
+          default:
+            log.error("Unsupported NRRD data type: " + value);
+            return null;
+        }
+        break;
+      case "spacings":
+        {
+          const values = value.split(/[ ,]+/);
+          for (let d = 0; d < values.length; d++) {
+            hdr.pixDims[d + 1] = parseFloat(values[d]);
+          }
+        }
+        break;
+      case "sizes":
+        {
+          const dims = value.split(/[ ,]+/);
+          hdr.dims[0] = dims.length;
+          for (let d = 0; d < dims.length; d++) {
+            hdr.dims[d + 1] = parseInt(dims[d]);
+          }
+        }
+        break;
+      case "endian":
+        if (value.includes("little")) {
+          hdr.littleEndian = true;
+        } else if (value.includes("big")) {
+          hdr.littleEndian = false;
+        }
+        break;
+      case "space directions":
+        {
+          const vs = value.split(/[ ,]+/);
+          if (vs.length === 9) {
+            for (let d = 0; d < 9; d++) {
+              mat33[d] = parseFloat(vs[d]);
+            }
+          }
+        }
+        break;
+      case "space origin":
+        {
+          const ts = value.split(/[ ,]+/);
+          if (ts.length === 3) {
+            offset[0] = parseFloat(ts[0]);
+            offset[1] = parseFloat(ts[1]);
+            offset[2] = parseFloat(ts[2]);
+          }
+        }
+        break;
+      case "space units":
+        if (value.includes("microns")) {
+          isMicron = true;
+        }
+        break;
+      case "space":
+        if (value.includes("right-anterior-superior") || value.includes("ras")) {
+          rot33 = mat3_exports.fromValues(1, 0, 0, 0, 1, 0, 0, 0, 1);
+        } else if (value.includes("left-anterior-superior") || value.includes("las")) {
+          rot33 = mat3_exports.fromValues(-1, 0, 0, 0, 1, 0, 0, 0, 1);
+        } else if (value.includes("left-posterior-superior") || value.includes("lps")) {
+          rot33 = mat3_exports.fromValues(-1, 0, 0, 0, -1, 0, 0, 0, 1);
+        } else {
+          log.warn("Unsupported NRRD space value:", value);
+        }
+        break;
+      default:
+        log.warn("Unknown:", key);
+        break;
+    }
+  }
+  if (!isNaN(mat33[0])) {
+    hdr.sform_code = 2;
+    if (isMicron) {
+      mat4_exports.multiplyScalar(mat33, mat33, 1e-3);
+      offset[0] *= 1e-3;
+      offset[1] *= 1e-3;
+      offset[2] *= 1e-3;
+    }
+    if (rot33[0] < 0) {
+      offset[0] = -offset[0];
+    }
+    if (rot33[4] < 0) {
+      offset[1] = -offset[1];
+    }
+    if (rot33[8] < 0) {
+      offset[2] = -offset[2];
+    }
+    mat3_exports.multiply(mat33, rot33, mat33);
+    const mat = mat4_exports.fromValues(
+      mat33[0],
+      mat33[3],
+      mat33[6],
+      offset[0],
+      mat33[1],
+      mat33[4],
+      mat33[7],
+      offset[1],
+      mat33[2],
+      mat33[5],
+      mat33[8],
+      offset[2],
+      0,
+      0,
+      0,
+      1
+    );
+    if (!nvImage.vox2mm) {
+      return null;
+    }
+    const mm000 = nvImage.vox2mm([0, 0, 0], mat);
+    const mm100 = nvImage.vox2mm([1, 0, 0], mat);
+    vec3_exports.subtract(mm100, mm100, mm000);
+    const mm010 = nvImage.vox2mm([0, 1, 0], mat);
+    vec3_exports.subtract(mm010, mm010, mm000);
+    const mm001 = nvImage.vox2mm([0, 0, 1], mat);
+    vec3_exports.subtract(mm001, mm001, mm000);
+    hdr.pixDims[1] = vec3_exports.length(mm100);
+    hdr.pixDims[2] = vec3_exports.length(mm010);
+    hdr.pixDims[3] = vec3_exports.length(mm001);
+    hdr.affine = [
+      [mat[0], mat[1], mat[2], mat[3]],
+      [mat[4], mat[5], mat[6], mat[7]],
+      [mat[8], mat[9], mat[10], mat[11]],
+      [0, 0, 0, 1]
+    ];
+  }
+  let imgRaw = null;
+  const sourceBuffer = isDetached ? pairedImgData : dataBuffer;
+  const sourceOffset = isDetached ? 0 : hdr.vox_offset;
+  if (isDetached && !sourceBuffer) {
+    log.warn("Missing data: NRRD header describes detached data file but only one URL provided");
+    return null;
+  }
+  if (!sourceBuffer || sourceOffset >= sourceBuffer.byteLength) {
+    log.error(`NRRD data offset (${sourceOffset}) invalid for buffer length (${sourceBuffer?.byteLength ?? 0})`);
+    return null;
+  }
+  let dataSection = sourceBuffer.slice(sourceOffset);
+  if (isGz) {
+    try {
+      log.debug("Decompressing NRRD data...");
+      dataSection = await NVUtilities.decompressToBuffer(new Uint8Array(dataSection));
+      log.debug("Decompression complete.");
+    } catch (err2) {
+      log.error("Failed to decompress NRRD data.", err2);
+      return null;
+    }
+  }
+  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+  const nVoxels = hdr.dims.slice(1, hdr.dims[0] + 1).reduce((acc, dim) => acc * Math.max(1, dim), 1);
+  const expectedBytes = nVoxels * nBytesPerVoxel;
+  if (dataSection.byteLength < expectedBytes) {
+    log.error(`NRRD image data size mismatch: expected ${expectedBytes}, found ${dataSection.byteLength}`);
+    return null;
+  } else if (dataSection.byteLength > expectedBytes) {
+    log.warn(`NRRD has extra ${dataSection.byteLength - expectedBytes} bytes after expected image data. Truncating.`);
+    dataSection = dataSection.slice(0, expectedBytes);
+  }
+  imgRaw = dataSection;
+  if (!hdr.datatypeCode) {
+    log.error("NRRD parsing failed to set datatypeCode.");
+    return null;
+  }
+  if (!hdr.numBitsPerVoxel) {
+    log.error("NRRD parsing failed to set numBitsPerVoxel.");
+    return null;
+  }
+  return imgRaw;
+}
+
 // src/nvimage/index.ts
 var NVImage = class _NVImage {
   /**
@@ -21089,7 +21959,7 @@ var NVImage = class _NVImage {
       this.nFrame4D = nVol4D;
     }
     if ((this.hdr.intent_code === 1007 /* NIFTI_INTENT_VECTOR */ || this.hdr.intent_code === 2003 /* NIFTI_INTENT_RGB_VECTOR */) && this.nFrame4D === 3 && this.hdr.datatypeCode === 16 /* DT_FLOAT32 */) {
-      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw));
+      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw)).buffer;
     }
     if (this.hdr.pixDims[1] === 0 || this.hdr.pixDims[2] === 0 || this.hdr.pixDims[3] === 0) {
       log.error("pixDims not plausible", this.hdr);
@@ -21327,7 +22197,10 @@ var NVImage = class _NVImage {
         break;
       case NVIMAGE_TYPE.NHDR:
       case NVIMAGE_TYPE.NRRD:
-        imgRaw = await newImg.readNRRD(dataBuffer, pairedImgData);
+        imgRaw = await nrrd_exports.readNrrd(newImg, dataBuffer);
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse NHDR/NRRD file ${name}`);
+        }
         break;
       case NVIMAGE_TYPE.MHD:
       case NVIMAGE_TYPE.MHA:
@@ -21335,7 +22208,10 @@ var NVImage = class _NVImage {
         break;
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
-        imgRaw = await newImg.readMGH(dataBuffer);
+        imgRaw = await mgh_exports.readMgh(newImg, dataBuffer);
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse MGH/MGZ file ${name}`);
+        }
         break;
       case NVIMAGE_TYPE.SRC:
         imgRaw = await newImg.readSRC(dataBuffer);
@@ -21364,19 +22240,9 @@ var NVImage = class _NVImage {
       case NVIMAGE_TYPE.ZARR:
         throw new Error("Image type ZARR not (yet) supported");
       case NVIMAGE_TYPE.NII:
-        if (isCompressed(dataBuffer)) {
-          dataBuffer = await decompressAsync(dataBuffer);
-        }
-        newImg.hdr = await readHeaderAsync(dataBuffer);
-        if (newImg.hdr !== null) {
-          if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
-            newImg.hdr.cal_max = 0;
-          }
-          if (isCompressed(dataBuffer)) {
-            imgRaw = readImage(newImg.hdr, await decompressAsync(dataBuffer));
-          } else {
-            imgRaw = readImage(newImg.hdr, dataBuffer);
-          }
+        imgRaw = await nii_exports.readNifti(newImg, dataBuffer);
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse NIfTI file ${name}.`);
         }
         break;
       default:
@@ -21895,7 +22761,7 @@ var NVImage = class _NVImage {
     ];
     hdr.numBitsPerVoxel = 32;
     hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-    return rawImg;
+    return rawImg.buffer;
   }
   // readECAT()
   readV16(buffer) {
@@ -21977,8 +22843,6 @@ var NVImage = class _NVImage {
     if (!magicBytes.every((byte, i) => byte === expectedMagic[i])) {
       throw new Error("Not a valid NPY file: Magic number mismatch");
     }
-    const _version = dv.getUint8(6);
-    const _minorVersion = dv.getUint8(7);
     const headerLen = dv.getUint16(8, true);
     const headerText = new TextDecoder("utf-8").decode(buffer.slice(10, 10 + headerLen));
     const shapeMatch = headerText.match(/'shape': \((.*?)\)/);
@@ -22136,105 +23000,6 @@ var NVImage = class _NVImage {
     return buffer.slice(8, 8 + nBytes);
   }
   // readVMR()
-  // not included in public docs
-  // read FreeSurfer MGH format image
-  async readMGH(buffer) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.littleEndian = false;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    let raw = buffer;
-    let reader = new DataView(raw);
-    if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
-      reader = new DataView(raw);
-    }
-    const version2 = reader.getInt32(0, false);
-    const width = reader.getInt32(4, false);
-    const height = reader.getInt32(8, false);
-    const depth = reader.getInt32(12, false);
-    const nframes = reader.getInt32(16, false);
-    const mtype = reader.getInt32(20, false);
-    const spacingX = reader.getFloat32(30, false);
-    const spacingY = reader.getFloat32(34, false);
-    const spacingZ = reader.getFloat32(38, false);
-    const xr = reader.getFloat32(42, false);
-    const xa = reader.getFloat32(46, false);
-    const xs = reader.getFloat32(50, false);
-    const yr = reader.getFloat32(54, false);
-    const ya = reader.getFloat32(58, false);
-    const ys = reader.getFloat32(62, false);
-    const zr = reader.getFloat32(66, false);
-    const za = reader.getFloat32(70, false);
-    const zs = reader.getFloat32(74, false);
-    const cr = reader.getFloat32(78, false);
-    const ca = reader.getFloat32(82, false);
-    const cs = reader.getFloat32(86, false);
-    if (version2 !== 1 || mtype < 0 || mtype > 4) {
-      log.warn("Not a valid MGH file");
-    }
-    if (mtype === 0) {
-      hdr.numBitsPerVoxel = 8;
-      hdr.datatypeCode = 2 /* DT_UINT8 */;
-    } else if (mtype === 4) {
-      hdr.numBitsPerVoxel = 16;
-      hdr.datatypeCode = 4 /* DT_INT16 */;
-    } else if (mtype === 1) {
-      hdr.numBitsPerVoxel = 32;
-      hdr.datatypeCode = 8 /* DT_INT32 */;
-    } else if (mtype === 3) {
-      hdr.numBitsPerVoxel = 32;
-      hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-    }
-    hdr.dims[1] = width;
-    hdr.dims[2] = height;
-    hdr.dims[3] = depth;
-    hdr.dims[4] = nframes;
-    if (nframes > 1) {
-      hdr.dims[0] = 4;
-    }
-    hdr.pixDims[1] = spacingX;
-    hdr.pixDims[2] = spacingY;
-    hdr.pixDims[3] = spacingZ;
-    hdr.vox_offset = 284;
-    hdr.sform_code = 1;
-    const rot44 = mat4_exports.fromValues(
-      xr * hdr.pixDims[1],
-      yr * hdr.pixDims[2],
-      zr * hdr.pixDims[3],
-      0,
-      xa * hdr.pixDims[1],
-      ya * hdr.pixDims[2],
-      za * hdr.pixDims[3],
-      0,
-      xs * hdr.pixDims[1],
-      ys * hdr.pixDims[2],
-      zs * hdr.pixDims[3],
-      0,
-      0,
-      0,
-      0,
-      1
-    );
-    const Pcrs = [hdr.dims[1] / 2, hdr.dims[2] / 2, hdr.dims[3] / 2, 1];
-    const PxyzOffset = [0, 0, 0, 0];
-    for (let i = 0; i < 3; i++) {
-      PxyzOffset[i] = 0;
-      for (let j = 0; j < 3; j++) {
-        PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j];
-      }
-    }
-    hdr.affine = [
-      [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
-      [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
-      [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
-      [0, 0, 0, 1]
-    ];
-    const nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4] * (hdr.numBitsPerVoxel / 8);
-    return raw.slice(hdr.vox_offset, hdr.vox_offset + nBytes);
-  }
-  // readMGH()
   // not included in public docs
   // read DSI-Studio FIB format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
@@ -22410,9 +23175,8 @@ var NVImage = class _NVImage {
     const mod = (dataBuffer.byteLength + 8) % 16;
     const len4 = dataBuffer.byteLength + (16 - mod);
     log.debug(dataBuffer.byteLength, "len", len4);
-    const extBuffer = new Uint8Array(len4);
-    extBuffer.fill(0);
-    extBuffer.set(new Uint8Array(dataBuffer));
+    const extBuffer = new ArrayBuffer(len4);
+    new Uint8Array(extBuffer).set(new Uint8Array(dataBuffer));
     const newExtension = new NIFTIEXTENSION(len4 + 8, 42, extBuffer, true);
     hdr.addExtension(newExtension);
     hdr.extensionCode = 42;
@@ -22969,289 +23733,9 @@ var NVImage = class _NVImage {
         }
       }
     }
-    return outVs;
+    return outVs.buffer;
   }
   // readMIF()
-  // not included in public docs
-  // read NRRD format image
-  // http://teem.sourceforge.net/nrrd/format.html
-  async readNRRD(dataBuffer, pairedImgData) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const len4 = dataBuffer.byteLength;
-    let txt = null;
-    const bytes = new Uint8Array(dataBuffer);
-    for (let i = 1; i < len4; i++) {
-      if (bytes[i - 1] === 10 && bytes[i] === 10) {
-        const v = dataBuffer.slice(0, i - 1);
-        txt = new TextDecoder().decode(v);
-        hdr.vox_offset = i + 1;
-        break;
-      }
-    }
-    if (txt === null) {
-      throw new Error("could not extract txt");
-    }
-    const lines = txt.split("\n");
-    if (!lines[0].startsWith("NRRD")) {
-      alert("Invalid NRRD image");
-    }
-    const n = lines.length;
-    let isGz = false;
-    let isMicron = false;
-    let isDetached = false;
-    const mat33 = mat3_exports.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
-    const offset = vec3_exports.fromValues(0, 0, 0);
-    let rot33 = mat3_exports.create();
-    for (let i = 1; i < n; i++) {
-      let str6 = lines[i];
-      if (str6[0] === "#") {
-        continue;
-      }
-      str6 = str6.toLowerCase();
-      const items = str6.split(":");
-      if (items.length < 2) {
-        continue;
-      }
-      const key = items[0].trim();
-      let value = items[1].trim();
-      value = value.replaceAll(")", " ");
-      value = value.replaceAll("(", " ");
-      value = value.trim();
-      switch (key) {
-        case "data file":
-          isDetached = true;
-          break;
-        case "encoding":
-          if (value.includes("raw")) {
-            isGz = false;
-          } else if (value.includes("gz")) {
-            isGz = true;
-          } else {
-            alert("Unsupported NRRD encoding");
-          }
-          break;
-        case "type":
-          switch (value) {
-            case "uchar":
-            case "unsigned char":
-            case "uint8":
-            case "uint8_t":
-              hdr.numBitsPerVoxel = 8;
-              hdr.datatypeCode = 2 /* DT_UINT8 */;
-              break;
-            case "signed char":
-            case "int8":
-            case "int8_t":
-              hdr.numBitsPerVoxel = 8;
-              hdr.datatypeCode = 256 /* DT_INT8 */;
-              break;
-            case "short":
-            case "short int":
-            case "signed short":
-            case "signed short int":
-            case "int16":
-            case "int16_t":
-              hdr.numBitsPerVoxel = 16;
-              hdr.datatypeCode = 4 /* DT_INT16 */;
-              break;
-            case "ushort":
-            case "unsigned short":
-            case "unsigned short int":
-            case "uint16":
-            case "uint16_t":
-              hdr.numBitsPerVoxel = 16;
-              hdr.datatypeCode = 512 /* DT_UINT16 */;
-              break;
-            case "int":
-            case "signed int":
-            case "int32":
-            case "int32_t":
-              hdr.numBitsPerVoxel = 32;
-              hdr.datatypeCode = 8 /* DT_INT32 */;
-              break;
-            case "uint":
-            case "unsigned int":
-            case "uint32":
-            case "uint32_t":
-              hdr.numBitsPerVoxel = 32;
-              hdr.datatypeCode = 768 /* DT_UINT32 */;
-              break;
-            case "float":
-              hdr.numBitsPerVoxel = 32;
-              hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-              break;
-            case "double":
-              hdr.numBitsPerVoxel = 64;
-              hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-              break;
-            default:
-              throw new Error("Unsupported NRRD data type: " + value);
-          }
-          break;
-        case "spacings":
-          {
-            const values = value.split(/[ ,]+/);
-            for (let d = 0; d < values.length; d++) {
-              hdr.pixDims[d + 1] = parseFloat(values[d]);
-            }
-          }
-          break;
-        case "sizes":
-          {
-            const dims = value.split(/[ ,]+/);
-            hdr.dims[0] = dims.length;
-            for (let d = 0; d < dims.length; d++) {
-              hdr.dims[d + 1] = parseInt(dims[d]);
-            }
-          }
-          break;
-        case "endian":
-          if (value.includes("little")) {
-            hdr.littleEndian = true;
-          } else if (value.includes("big")) {
-            hdr.littleEndian = false;
-          }
-          break;
-        case "space directions":
-          {
-            const vs = value.split(/[ ,]+/);
-            if (vs.length !== 9) {
-              break;
-            }
-            for (let d = 0; d < 9; d++) {
-              mat33[d] = parseFloat(vs[d]);
-            }
-          }
-          break;
-        case "space origin":
-          {
-            const ts = value.split(/[ ,]+/);
-            if (ts.length !== 3) {
-              break;
-            }
-            offset[0] = parseFloat(ts[0]);
-            offset[1] = parseFloat(ts[1]);
-            offset[2] = parseFloat(ts[2]);
-          }
-          break;
-        case "space units":
-          if (value.includes("microns")) {
-            isMicron = true;
-          }
-          break;
-        case "space":
-          if (value.includes("right-anterior-superior") || value.includes("ras")) {
-            rot33 = mat3_exports.fromValues(
-              1,
-              0,
-              0,
-              0,
-              1,
-              0,
-              0,
-              0,
-              1
-            );
-          } else if (value.includes("left-anterior-superior") || value.includes("las")) {
-            rot33 = mat3_exports.fromValues(
-              -1,
-              0,
-              0,
-              0,
-              1,
-              0,
-              0,
-              0,
-              1
-            );
-          } else if (value.includes("left-posterior-superior") || value.includes("lps")) {
-            rot33 = mat3_exports.fromValues(
-              -1,
-              0,
-              0,
-              0,
-              -1,
-              0,
-              0,
-              0,
-              1
-            );
-          } else {
-            log.warn("Unsupported NRRD space value:", value);
-          }
-          break;
-        default:
-          log.warn("Unknown:", key);
-      }
-    }
-    if (!isNaN(mat33[0])) {
-      this.hdr.sform_code = 2;
-      if (isMicron) {
-        mat4_exports.multiplyScalar(mat33, mat33, 1e-3);
-        offset[0] *= 1e-3;
-        offset[1] *= 1e-3;
-        offset[2] *= 1e-3;
-      }
-      if (rot33[0] < 0) {
-        offset[0] = -offset[0];
-      }
-      if (rot33[4] < 0) {
-        offset[1] = -offset[1];
-      }
-      if (rot33[8] < 0) {
-        offset[2] = -offset[2];
-      }
-      mat3_exports.multiply(mat33, rot33, mat33);
-      const mat = mat4_exports.fromValues(
-        mat33[0],
-        mat33[3],
-        mat33[6],
-        offset[0],
-        mat33[1],
-        mat33[4],
-        mat33[7],
-        offset[1],
-        mat33[2],
-        mat33[5],
-        mat33[8],
-        offset[2],
-        0,
-        0,
-        0,
-        1
-      );
-      const mm000 = this.vox2mm([0, 0, 0], mat);
-      const mm100 = this.vox2mm([1, 0, 0], mat);
-      vec3_exports.subtract(mm100, mm100, mm000);
-      const mm010 = this.vox2mm([0, 1, 0], mat);
-      vec3_exports.subtract(mm010, mm010, mm000);
-      const mm001 = this.vox2mm([0, 0, 1], mat);
-      vec3_exports.subtract(mm001, mm001, mm000);
-      hdr.pixDims[1] = vec3_exports.length(mm100);
-      hdr.pixDims[2] = vec3_exports.length(mm010);
-      hdr.pixDims[3] = vec3_exports.length(mm001);
-      hdr.affine = [
-        [mat[0], mat[1], mat[2], mat[3]],
-        [mat[4], mat[5], mat[6], mat[7]],
-        [mat[8], mat[9], mat[10], mat[11]],
-        [0, 0, 0, 1]
-      ];
-    }
-    if (isDetached && pairedImgData) {
-      return pairedImgData.slice(0);
-    }
-    if (isDetached) {
-      log.warn("Missing data: NRRD header describes detached data file but only one URL provided");
-    }
-    if (isGz) {
-      return await NVUtilities.decompressToBuffer(new Uint8Array(dataBuffer.slice(hdr.vox_offset)));
-    } else {
-      return dataBuffer.slice(hdr.vox_offset);
-    }
-  }
-  // readNRRD()
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   calculateRAS() {
@@ -23819,58 +24303,26 @@ var NVImage = class _NVImage {
     }
     return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope;
   }
-  // not included in public docs
-  // see niivue.saveImage() for wrapper of this function
+  /**
+   * Converts NVImage to NIfTI compliant byte array, potentially compressed.
+   * Delegates to ImageWriter.saveToUint8Array.
+   * @param fnm - Filename (determines if compression is needed via .gz suffix)
+   * @param drawing8 - Optional Uint8Array drawing overlay
+   * @returns Promise<Uint8Array>
+   */
   async saveToUint8Array(fnm, drawing8 = null) {
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    if (!this.img) {
-      throw new Error("img undefined");
-    }
-    const isDrawing8 = drawing8 !== null;
-    const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8);
-    const opad = new Uint8Array(4);
-    let img8 = new Uint8Array(this.img.buffer);
-    if (isDrawing8) {
-      img8 = new Uint8Array(drawing8.buffer);
-    }
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
-    odata.set(hdrBytes);
-    odata.set(opad, hdrBytes.length);
-    odata.set(img8, hdrBytes.length + opad.length);
-    let saveData = null;
-    const compress = fnm.endsWith(".gz");
-    if (compress) {
-      saveData = new Uint8Array(await NVUtilities.compress(odata, "gzip"));
-    } else {
-      saveData = odata;
-    }
-    return saveData;
+    return saveToUint8Array(this, fnm, drawing8);
   }
-  // not included in public docs
-  // save image as NIfTI volume
-  // if fnm is empty, data is returned
+  /**
+   * save image as NIfTI volume and trigger download.
+   * Delegates to ImageWriter.saveToDisk.
+   * @param fnm - Filename for download. If empty, returns data without download.
+   * @param drawing8 - Optional Uint8Array drawing overlay
+   * @returns Promise<Uint8Array>
+   */
   async saveToDisk(fnm = "", drawing8 = null) {
-    const saveData = await this.saveToUint8Array(fnm, drawing8);
-    if (fnm === "") {
-      log.debug("saveToDisk: empty file name, returning data as Uint8Array rather than triggering download");
-      return saveData;
-    }
-    const blob = new Blob([saveData.buffer], {
-      type: "application/octet-stream"
-    });
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", blobUrl);
-    link.setAttribute("download", fnm);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    return saveData;
+    return saveToDisk(this, fnm, drawing8);
   }
-  // saveToDisk()
   static async fetchDicomData(url, headers = {}) {
     if (url === "") {
       throw Error("url must not be empty");
@@ -24376,70 +24828,19 @@ var NVImage = class _NVImage {
     return nvimage;
   }
   /**
-   * factory function to load and return a new NVImage instance from a base64 encoded string
-   *
-   * @returns NVImage instance
-   * @example
-   * myImage = NVImage.loadFromBase64('SomeBase64String')
+   * Creates a Uint8Array representing a NIFTI file (header + optional image data).
+   * Delegates to ImageWriter.createNiftiArray.
    */
-  static createNiftiArray(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2, img = new Uint8Array()) {
-    const hdr = this.createNiftiHeader(dims, pixDims, affine, datatypeCode);
-    const hdrBytes = hdrToArrayBuffer(hdr, false);
-    if (img.length < 1) {
-      return hdrBytes;
-    }
-    const opad = new Uint8Array(4);
-    const img8 = new Uint8Array(img.buffer);
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
-    odata.set(hdrBytes);
-    odata.set(opad, hdrBytes.length);
-    odata.set(img8, hdrBytes.length + opad.length);
-    return odata;
+  static createNiftiArray(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */, img = new Uint8Array()) {
+    return createNiftiArray(dims, pixDims, affine, datatypeCode, img);
   }
-  // createNiftiFile()
-  static createNiftiHeader(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2) {
-    const hdr = new NIFTI1();
-    hdr.littleEndian = true;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.dims[0] = Math.max(3, dims.length);
-    for (let i = 0; i < dims.length; i++) {
-      hdr.dims[i + 1] = dims[i];
-    }
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    for (let i = 0; i < dims.length; i++) {
-      hdr.pixDims[i + 1] = pixDims[i];
-    }
-    if (affine.length === 16) {
-      let k = 0;
-      for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          hdr.affine[i][j] = affine[k];
-          k++;
-        }
-      }
-    }
-    let bpv = 8;
-    if (datatypeCode === 256 || datatypeCode === 2) {
-      bpv = 8;
-    } else if (datatypeCode === 512 || datatypeCode === 4) {
-      bpv = 16;
-    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8 || datatypeCode === 2304) {
-      bpv = 32;
-    } else if (datatypeCode === 64) {
-      bpv = 64;
-    } else {
-      log.warn("Unsupported NIfTI datatypeCode: " + datatypeCode);
-    }
-    hdr.datatypeCode = datatypeCode;
-    hdr.numBitsPerVoxel = bpv;
-    hdr.scl_inter = 0;
-    hdr.scl_slope = 0;
-    hdr.sform_code = 2;
-    hdr.magic = "n+1";
-    hdr.vox_offset = 352;
-    return hdr;
+  /**
+   * Creates a NIFTI1 header object with basic properties.
+   * Delegates to ImageWriter.createNiftiHeader.
+   */
+  static createNiftiHeader(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */) {
+    return createNiftiHeader(dims, pixDims, affine, datatypeCode);
   }
-  // loadFromHeader
   /**
    * read a 3D slab of voxels from a volume
    * @param voxStart - first row, column and slice (RAS order) for selection
@@ -24448,77 +24849,17 @@ var NVImage = class _NVImage {
    * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
+  /**
+   * read a 3D slab of voxels from a volume, specified in RAS coordinates.
+   * Delegates to VolumeUtils.getVolumeData.
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
+   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
+   */
   getVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], dataType = "same") {
-    let img = new Uint8Array();
-    if (Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
-      return [img, [0, 0, 0]];
-    }
-    const dims = this.dimsRAS.slice(1, 4);
-    for (let i2 = 0; i2 < 3; i2++) {
-      voxStart[i2] = Math.min(voxStart[i2], dims[i2] - 1);
-      voxEnd[i2] = Math.min(voxEnd[i2], dims[i2] - 1);
-      if (voxEnd[i2] < voxStart[i2]) {
-        const tmp = voxEnd[i2];
-        voxEnd[i2] = voxStart[i2];
-        voxStart[i2] = tmp;
-      }
-    }
-    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1];
-    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
-    let dt = this.hdr.datatypeCode;
-    if (dataType === "uint8") {
-      dt = 2 /* DT_UINT8 */;
-    } else if (dataType === "float32" || dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
-      dt = 16 /* DT_FLOAT32 */;
-    }
-    if (dt === 2 /* DT_UINT8 */) {
-      img = new Uint8Array(slabNVox);
-    } else if (dt === 4 /* DT_INT16 */) {
-      img = new Int16Array(slabNVox);
-    } else if (dt === 512 /* DT_UINT16 */) {
-      img = new Uint16Array(slabNVox);
-    } else if (dt === 16 /* DT_FLOAT32 */) {
-      img = new Float32Array(slabNVox);
-    } else if (dt === 64 /* DT_FLOAT64 */) {
-      img = new Float64Array(slabNVox);
-    } else {
-      log.error("getVolumeData unsupported datatype");
-      return [img, [0, 0, 0]];
-    }
-    const outStep = this.img2RASstep;
-    const outStart = this.img2RASstart;
-    let i = 0;
-    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
-      const zi = outStart[2] + z * outStep[2];
-      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
-        const yizi = zi + outStart[1] + y * outStep[1];
-        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          const xi = outStart[0] + x * outStep[0];
-          img[i++] = this.img[xi + yizi];
-        }
-      }
-    }
-    if (dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
-      for (let i2 = 0; i2 < img.length; i2++) {
-        img[i2] = img[i2] * this.hdr.scl_slope + this.hdr.scl_inter;
-      }
-    }
-    if (dataType === "normalized" || dataType === "windowed") {
-      let mn = this.cal_min;
-      let mx = this.cal_max;
-      if (dataType === "normalized") {
-        mn = this.global_min;
-        mx = this.global_max;
-      }
-      const scale6 = 1 / (mx - mn);
-      for (let i2 = 0; i2 < img.length; i2++) {
-        img[i2] = (img[i2] - mn) * scale6;
-        img[i2] = Math.max(Math.min(img[i2], 1), 0);
-      }
-    }
-    return [img, slabDims];
+    return getVolumeData(this, voxStart, voxEnd, dataType);
   }
-  // getVolumeData()
   /**
    * write a 3D slab of voxels from a volume
    * @param voxStart - first row, column and slice (RAS order) for selection
@@ -24526,41 +24867,17 @@ var NVImage = class _NVImage {
    * @param img - array of voxel values to insert (RAS order)
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
+  /**
+   * write a 3D slab of voxels from a volume, specified in RAS coordinates.
+   * Delegates to VolumeUtils.setVolumeData.
+   * Input slabData is assumed to be in the correct raw data type for the target image.
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param img - array of voxel values to insert (RAS order, raw data type)
+   */
   setVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], img = new Uint8Array()) {
-    if (img.length < 1 || Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
-      return;
-    }
-    const dims = this.dimsRAS.slice(1, 4);
-    for (let i2 = 0; i2 < 3; i2++) {
-      voxStart[i2] = Math.min(voxStart[i2], dims[i2] - 1);
-      voxEnd[i2] = Math.min(voxEnd[i2], dims[i2] - 1);
-      if (voxEnd[i2] < voxStart[i2]) {
-        const tmp = voxEnd[i2];
-        voxEnd[i2] = voxStart[i2];
-        voxStart[i2] = tmp;
-      }
-    }
-    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1];
-    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
-    if (img.length < slabNVox) {
-      log.error("setVolumeData image does not have enough voxels");
-      return;
-    }
-    const outStep = this.img2RASstep;
-    const outStart = this.img2RASstart;
-    let i = 0;
-    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
-      const zi = outStart[2] + z * outStep[2];
-      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
-        const yizi = zi + outStart[1] + y * outStep[1];
-        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          const xi = outStart[0] + x * outStep[0];
-          this.img[xi + yizi] = img[i++];
-        }
-      }
-    }
+    setVolumeData(this, voxStart, voxEnd, img);
   }
-  // setVolumeData()
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
    *
@@ -24711,155 +25028,18 @@ var NVImage = class _NVImage {
     }
     return zeroClone;
   }
-  // not included in public docs
-  // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
-  getValue(x, y, z, frame4D = 0, isReadImaginary = false) {
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    if (!this.img) {
-      throw new Error("img undefined");
-    }
-    const nx = this.hdr.dims[1];
-    const ny = this.hdr.dims[2];
-    const nz = this.hdr.dims[3];
-    const perm = this.permRAS.slice();
-    if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-      const pos = vec4_exports.fromValues(x, y, z, 1);
-      vec4_exports.transformMat4(pos, pos, this.toRASvox);
-      x = pos[0];
-      y = pos[1];
-      z = pos[2];
-    }
-    let vx = x + y * nx + z * nx * ny;
-    if (this.hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
-      vx *= 4;
-      return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
-    }
-    if (this.hdr.datatypeCode === 128 /* DT_RGB24 */) {
-      vx *= 3;
-      return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07);
-    }
-    const vol = frame4D * nx * ny * nz;
-    let i = this.img[vx + vol];
-    if (isReadImaginary) {
-      i = this.imaginary[vx + vol];
-    }
-    return this.hdr.scl_slope * i + this.hdr.scl_inter;
-  }
   /**
-   * @param id - id of 3D Object (is this the base volume or an overlay?)
-   * @param gl - WebGL rendering context
-   * @returns new 3D object in model space
+   * Returns voxel intensity at specific native coordinates.
+   * Delegates to VolumeUtils.getValue.
+   * @param x - Native X coordinate (0-indexed)
+   * @param y - Native Y coordinate (0-indexed)
+   * @param z - Native Z coordinate (0-indexed)
+   * @param frame4D - 4D frame index (0-indexed)
+   * @param isReadImaginary - Flag to read from imaginary data array
+   * @returns Scaled voxel intensity
    */
-  toNiivueObject3D(id, gl) {
-    const dimsRAS = this.dimsRAS;
-    const matRAS = this.matRAS;
-    const pixDimsRAS = this.pixDimsRAS;
-    const L = -0.5;
-    const P = -0.5;
-    const I = -0.5;
-    const R = dimsRAS[1] - 1 + 0.5;
-    const A = dimsRAS[2] - 1 + 0.5;
-    const S = dimsRAS[3] - 1 + 0.5;
-    const LPI = this.vox2mm([L, P, I], matRAS);
-    const LAI = this.vox2mm([L, A, I], matRAS);
-    const LPS = this.vox2mm([L, P, S], matRAS);
-    const LAS = this.vox2mm([L, A, S], matRAS);
-    const RPI = this.vox2mm([R, P, I], matRAS);
-    const RAI = this.vox2mm([R, A, I], matRAS);
-    const RPS = this.vox2mm([R, P, S], matRAS);
-    const RAS = this.vox2mm([R, A, S], matRAS);
-    const posTex = [
-      // spatial position (XYZ), texture coordinates UVW
-      // Superior face
-      ...LPS,
-      ...[0, 0, 1],
-      ...RPS,
-      ...[1, 0, 1],
-      ...RAS,
-      ...[1, 1, 1],
-      ...LAS,
-      ...[0, 1, 1],
-      // Inferior face
-      ...LPI,
-      ...[0, 0, 0],
-      ...LAI,
-      ...[0, 1, 0],
-      ...RAI,
-      ...[1, 1, 0],
-      ...RPI,
-      ...[1, 0, 0]
-    ];
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    const indices = [
-      // six faces of cube: each has 2 triangles (6 indices)
-      0,
-      3,
-      2,
-      2,
-      1,
-      0,
-      // Top
-      4,
-      7,
-      6,
-      6,
-      5,
-      4,
-      // Bottom
-      5,
-      6,
-      2,
-      2,
-      3,
-      5,
-      // Front
-      4,
-      0,
-      1,
-      1,
-      7,
-      4,
-      // Back
-      7,
-      1,
-      2,
-      2,
-      6,
-      7,
-      // Right
-      4,
-      5,
-      3,
-      3,
-      0,
-      4
-      // Left
-    ];
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-    const posTexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW);
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
-    gl.bindVertexArray(null);
-    const obj3D = new NiivueObject3D(id, posTexBuffer, gl.TRIANGLES, indices.length, indexBuffer, vao);
-    const extents = getExtents([...LPS, ...RPS, ...RAS, ...LAS, ...LPI, ...LAI, ...RAI, ...RPI]);
-    obj3D.extentsMin = extents.min.slice();
-    obj3D.extentsMax = extents.max.slice();
-    obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
-    obj3D.originNegate = vec3_exports.clone(extents.origin);
-    vec3_exports.negate(obj3D.originNegate, obj3D.originNegate);
-    obj3D.fieldOfViewDeObliqueMM = [dimsRAS[1] * pixDimsRAS[1], dimsRAS[2] * pixDimsRAS[2], dimsRAS[3] * pixDimsRAS[3]];
-    return obj3D;
+  getValue(x, y, z, frame4D = 0, isReadImaginary = false) {
+    return getValue(this, x, y, z, frame4D, isReadImaginary);
   }
   /**
    * Update options for image
@@ -24903,85 +25083,14 @@ var NVImage = class _NVImage {
     return options;
   }
   /**
-   * Converts NVImage to NIfTI compliant byte array
+   * Converts NVImage to NIfTI compliant byte array.
+   * Handles potential re-orientation of drawing data.
+   * Delegates to ImageWriter.toUint8Array.
+   * @param drawingBytes - Optional Uint8Array drawing overlay
+   * @returns Uint8Array
    */
   toUint8Array(drawingBytes = null) {
-    const isDrawing = drawingBytes !== null;
-    const hdrBytes = hdrToArrayBuffer({ ...this.hdr, vox_offset: 352 }, isDrawing);
-    let drawingBytesToBeConverted = drawingBytes;
-    if (isDrawing) {
-      const perm = this.permRAS;
-      if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-        const dims = this.hdr.dims;
-        const layout = [0, 0, 0];
-        for (let i = 0; i < 3; i++) {
-          for (let j2 = 0; j2 < 3; j2++) {
-            if (Math.abs(perm[i]) - 1 !== j2) {
-              continue;
-            }
-            layout[j2] = i * Math.sign(perm[i]);
-          }
-        }
-        let stride = 1;
-        const instride = [1, 1, 1];
-        const inflip = [false, false, false];
-        for (let i = 0; i < layout.length; i++) {
-          for (let j2 = 0; j2 < layout.length; j2++) {
-            const a = Math.abs(layout[j2]);
-            if (a !== i) {
-              continue;
-            }
-            instride[j2] = stride;
-            if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
-              inflip[j2] = true;
-            }
-            stride *= dims[j2 + 1];
-          }
-        }
-        let xlut = NVUtilities.range(0, dims[1] - 1, 1);
-        if (inflip[0]) {
-          xlut = NVUtilities.range(dims[1] - 1, 0, -1);
-        }
-        for (let i = 0; i < dims[1]; i++) {
-          xlut[i] *= instride[0];
-        }
-        let ylut = NVUtilities.range(0, dims[2] - 1, 1);
-        if (inflip[1]) {
-          ylut = NVUtilities.range(dims[2] - 1, 0, -1);
-        }
-        for (let i = 0; i < dims[2]; i++) {
-          ylut[i] *= instride[1];
-        }
-        let zlut = NVUtilities.range(0, dims[3] - 1, 1);
-        if (inflip[2]) {
-          zlut = NVUtilities.range(dims[3] - 1, 0, -1);
-        }
-        for (let i = 0; i < dims[3]; i++) {
-          zlut[i] *= instride[2];
-        }
-        const inVs = new Uint8Array(drawingBytes);
-        const outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
-        let j = 0;
-        for (let z = 0; z < dims[3]; z++) {
-          for (let y = 0; y < dims[2]; y++) {
-            for (let x = 0; x < dims[1]; x++) {
-              outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
-              j++;
-            }
-          }
-        }
-        drawingBytesToBeConverted = outVs;
-        log.debug("drawing bytes");
-        log.debug(drawingBytesToBeConverted);
-      }
-    }
-    const img8 = isDrawing ? drawingBytesToBeConverted : new Uint8Array(this.img.buffer);
-    const opad = new Uint8Array(4);
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length);
-    odata.set(hdrBytes);
-    odata.set(opad, hdrBytes.length);
-    odata.set(img8, hdrBytes.length + opad.length);
-    return odata;
+    return toUint8Array(this, drawingBytes);
   }
   // not included in public docs
   convertVox2Frac(vox) {
@@ -29205,6 +29314,138 @@ var NVConnectome = class _NVConnectome extends NVMesh3 {
     return new _NVConnectome(gl, json);
   }
 };
+
+// src/nvimage/RenderingUtils.ts
+function toNiivueObject3D(nvImage, id, gl) {
+  if (!nvImage.dimsRAS || !nvImage.matRAS || !nvImage.pixDimsRAS || !nvImage.vox2mm) {
+    throw new Error("Cannot create NiivueObject3D: Missing required RAS properties or vox2mm access on NVImage.");
+  }
+  const dimsRAS = nvImage.dimsRAS;
+  const matRAS = nvImage.matRAS;
+  const pixDimsRAS = nvImage.pixDimsRAS;
+  const L = -0.5;
+  const P = -0.5;
+  const I = -0.5;
+  const R = dimsRAS[1] - 1 + 0.5;
+  const A = dimsRAS[2] - 1 + 0.5;
+  const S = dimsRAS[3] - 1 + 0.5;
+  const vox2mmFn = nvImage.vox2mm;
+  const LPI = vox2mmFn.call(nvImage, [L, P, I], matRAS);
+  const LAI = vox2mmFn.call(nvImage, [L, A, I], matRAS);
+  const LPS = vox2mmFn.call(nvImage, [L, P, S], matRAS);
+  const LAS = vox2mmFn.call(nvImage, [L, A, S], matRAS);
+  const RPI = vox2mmFn.call(nvImage, [R, P, I], matRAS);
+  const RAI = vox2mmFn.call(nvImage, [R, A, I], matRAS);
+  const RPS = vox2mmFn.call(nvImage, [R, P, S], matRAS);
+  const RAS = vox2mmFn.call(nvImage, [R, A, S], matRAS);
+  const posTex = [
+    // Superior face vertices (Indices 0-3)
+    ...LPS,
+    ...[0, 0, 1],
+    // 0
+    ...RPS,
+    ...[1, 0, 1],
+    // 1
+    ...RAS,
+    ...[1, 1, 1],
+    // 2
+    ...LAS,
+    ...[0, 1, 1],
+    // 3
+    // Inferior face vertices (Indices 4-7)
+    ...LPI,
+    ...[0, 0, 0],
+    // 4
+    ...LAI,
+    ...[0, 1, 0],
+    // 5
+    ...RAI,
+    ...[1, 1, 0],
+    // 6
+    ...RPI,
+    ...[1, 0, 0]
+    // 7
+  ];
+  const indexBuffer = gl.createBuffer();
+  if (!indexBuffer) {
+    throw new Error("Failed to create GL index buffer");
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  const indices = [
+    0,
+    3,
+    2,
+    2,
+    1,
+    0,
+    // Top
+    4,
+    7,
+    6,
+    6,
+    5,
+    4,
+    // Bottom
+    5,
+    6,
+    2,
+    2,
+    3,
+    5,
+    // Front -> Corresponds to LAI(5), RAI(6), RAS(2) / RAS(2), LAS(3), LAI(5)
+    4,
+    0,
+    1,
+    1,
+    7,
+    4,
+    // Back -> Corresponds to LPI(4), LPS(0), RPS(1) / RPS(1), RPI(7), LPI(4)
+    7,
+    1,
+    2,
+    2,
+    6,
+    7,
+    // Right -> Corresponds to RPI(7), RPS(1), RAS(2) / RAS(2), RAI(6), RPI(7)
+    4,
+    5,
+    3,
+    3,
+    0,
+    4
+    // Left -> Corresponds to LPI(4), LAI(5), LAS(3) / LAS(3), LPS(0), LPI(4)
+  ];
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  const posTexBuffer = gl.createBuffer();
+  if (!posTexBuffer) {
+    throw new Error("Failed to create GL vertex buffer");
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW);
+  const vao = gl.createVertexArray();
+  if (!vao) {
+    throw new Error("Failed to create GL VAO");
+  }
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  const stride = 24;
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 12);
+  gl.bindVertexArray(null);
+  const obj3D = new NiivueObject3D(id, posTexBuffer, gl.TRIANGLES, indices.length, indexBuffer, vao);
+  const allCorners = [...LPS, ...RPS, ...RAS, ...LAS, ...LPI, ...LAI, ...RAI, ...RPI];
+  const extents = getExtents(allCorners);
+  obj3D.extentsMin = extents.min.slice();
+  obj3D.extentsMax = extents.max.slice();
+  obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
+  obj3D.originNegate = vec3_exports.clone(extents.origin);
+  vec3_exports.negate(obj3D.originNegate, obj3D.originNegate);
+  obj3D.fieldOfViewDeObliqueMM = [dimsRAS[1] * pixDimsRAS[1], dimsRAS[2] * pixDimsRAS[2], dimsRAS[3] * pixDimsRAS[3]];
+  return obj3D;
+}
 
 // src/niivue/utils.ts
 function readFileAsDataURL(input) {
@@ -35235,7 +35476,7 @@ var Niivue = class {
     }
     let mtx = mat4_exports.clone(overlayItem.toRAS);
     if (layer === 0) {
-      this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl);
+      this.volumeObject3D = toNiivueObject3D(overlayItem, this.VOLUME_ID, this.gl);
       mat4_exports.invert(mtx, mtx);
       this.back.matRAS = overlayItem.matRAS;
       this.back.dims = overlayItem.dimsRAS;

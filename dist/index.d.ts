@@ -388,9 +388,9 @@ declare class NVImage {
      * @param colorbarVisible - TODO
      * @param colormapLabel - TODO
      */
-    constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number);
-    init(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, _pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number, imgRaw?: ArrayBuffer | null): void;
-    static new(dataBuffer?: ArrayBuffer | ArrayBuffer[] | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number): Promise<NVImage>;
+    constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number);
+    init(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, _pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number, imgRaw?: ArrayBuffer | ArrayBufferLike | null): void;
+    static new(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number): Promise<NVImage>;
     computeObliqueAngle(mtx44: mat4): number;
     float32V1asRGBA(inImg: Float32Array): Uint8Array;
     loadImgV1(isFlipX?: boolean, isFlipY?: boolean, isFlipZ?: boolean): boolean;
@@ -404,13 +404,11 @@ declare class NVImage {
     imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData>;
     readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
-    readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readFIB(buffer: ArrayBuffer): Promise<[ArrayBuffer, Float32Array]>;
     readSRC(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readHEAD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
-    readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     calculateRAS(): void;
     hdr2RAS(nVolumes?: number): Promise<NIFTI1 | NIFTI2>;
     img2RAS(nVolume?: number): TypedVoxelArray;
@@ -436,7 +434,21 @@ declare class NVImage {
     calMinMax(vol?: number, isBorder?: boolean): number[];
     intensityRaw2Scaled(raw: number): number;
     intensityScaled2Raw(scaled: number): number;
+    /**
+     * Converts NVImage to NIfTI compliant byte array, potentially compressed.
+     * Delegates to ImageWriter.saveToUint8Array.
+     * @param fnm - Filename (determines if compression is needed via .gz suffix)
+     * @param drawing8 - Optional Uint8Array drawing overlay
+     * @returns Promise<Uint8Array>
+     */
     saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Promise<Uint8Array>;
+    /**
+     * save image as NIfTI volume and trigger download.
+     * Delegates to ImageWriter.saveToDisk.
+     * @param fnm - Filename for download. If empty, returns data without download.
+     * @param drawing8 - Optional Uint8Array drawing overlay
+     * @returns Promise<Uint8Array>
+     */
     saveToDisk(fnm?: string, drawing8?: Uint8Array | null): Promise<Uint8Array>;
     static fetchDicomData(url: string, headers?: Record<string, string>): Promise<Array<{
         name: string;
@@ -460,15 +472,15 @@ declare class NVImage {
     static loadFromFile({ file, // file can be an array of file objects or a single file object
     name, colormap, opacity, urlImgData, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, limitFrames4D, imageType }: ImageFromFileOptions): Promise<NVImage>;
     /**
-     * factory function to load and return a new NVImage instance from a base64 encoded string
-     *
-     * @returns NVImage instance
-     * @example
-     * myImage = NVImage.loadFromBase64('SomeBase64String')
+     * Creates a Uint8Array representing a NIFTI file (header + optional image data).
+     * Delegates to ImageWriter.createNiftiArray.
      */
-    static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number, // DT_UINT8
-    img?: Uint8Array): Uint8Array;
-    static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: number): NIFTI1;
+    static createNiftiArray(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: NiiDataType, img?: TypedVoxelArray | Uint8Array): Uint8Array;
+    /**
+     * Creates a NIFTI1 header object with basic properties.
+     * Delegates to ImageWriter.createNiftiHeader.
+     */
+    static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: NiiDataType): NIFTI1;
     /**
      * read a 3D slab of voxels from a volume
      * @param voxStart - first row, column and slice (RAS order) for selection
@@ -477,6 +489,14 @@ declare class NVImage {
      * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
      * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
      */
+    /**
+     * read a 3D slab of voxels from a volume, specified in RAS coordinates.
+     * Delegates to VolumeUtils.getVolumeData.
+     * @param voxStart - first row, column and slice (RAS order) for selection
+     * @param voxEnd - final row, column and slice (RAS order) for selection
+     * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
+     * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
+     */
     getVolumeData(voxStart?: number[], voxEnd?: number[], dataType?: string): [TypedVoxelArray, number[]];
     /**
      * write a 3D slab of voxels from a volume
@@ -484,6 +504,14 @@ declare class NVImage {
      * @param voxEnd - final row, column and slice (RAS order) for selection
      * @param img - array of voxel values to insert (RAS order)
      * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+     */
+    /**
+     * write a 3D slab of voxels from a volume, specified in RAS coordinates.
+     * Delegates to VolumeUtils.setVolumeData.
+     * Input slabData is assumed to be in the correct raw data type for the target image.
+     * @param voxStart - first row, column and slice (RAS order) for selection
+     * @param voxEnd - final row, column and slice (RAS order) for selection
+     * @param img - array of voxel values to insert (RAS order, raw data type)
      */
     setVolumeData(voxStart?: number[], voxEnd?: number[], img?: TypedVoxelArray): void;
     /**
@@ -523,20 +551,28 @@ declare class NVImage {
      * newZeroImage = NVImage.zerosLike(myImage)
      */
     static zerosLike(nvImage: NVImage, dataType?: string): NVImage;
-    getValue(x: number, y: number, z: number, frame4D?: number, isReadImaginary?: boolean): number;
     /**
-     * @param id - id of 3D Object (is this the base volume or an overlay?)
-     * @param gl - WebGL rendering context
-     * @returns new 3D object in model space
+     * Returns voxel intensity at specific native coordinates.
+     * Delegates to VolumeUtils.getValue.
+     * @param x - Native X coordinate (0-indexed)
+     * @param y - Native Y coordinate (0-indexed)
+     * @param z - Native Z coordinate (0-indexed)
+     * @param frame4D - 4D frame index (0-indexed)
+     * @param isReadImaginary - Flag to read from imaginary data array
+     * @returns Scaled voxel intensity
      */
-    toNiivueObject3D(id: number, gl: WebGL2RenderingContext): NiivueObject3D;
+    getValue(x: number, y: number, z: number, frame4D?: number, isReadImaginary?: boolean): number;
     /**
      * Update options for image
      */
     applyOptionsUpdate(options: ImageFromUrlOptions): void;
     getImageOptions(): ImageFromUrlOptions;
     /**
-     * Converts NVImage to NIfTI compliant byte array
+     * Converts NVImage to NIfTI compliant byte array.
+     * Handles potential re-orientation of drawing data.
+     * Delegates to ImageWriter.toUint8Array.
+     * @param drawingBytes - Optional Uint8Array drawing overlay
+     * @returns Uint8Array
      */
     toUint8Array(drawingBytes?: Uint8Array | null): Uint8Array;
     convertVox2Frac(vox: vec3): vec3;
