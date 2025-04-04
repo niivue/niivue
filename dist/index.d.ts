@@ -772,6 +772,7 @@ type NVConfigOptions = {
     isAlphaClipDark: boolean;
     gradientOrder: number;
     gradientOpacity: number;
+    invertScrollDirection: boolean;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -1332,7 +1333,7 @@ declare class NVMesh {
     decimateFaces(n: number, ntarget: number): void;
     decimateHierarchicalMesh(gl: WebGL2RenderingContext, order?: number): boolean;
     setLayerProperty(id: number, key: keyof NVMeshLayer, val: number | string | boolean, gl: WebGL2RenderingContext): Promise<void>;
-    setProperty(key: keyof this, val: unknown, gl: WebGL2RenderingContext): void;
+    setProperty(key: keyof this, val: number | string | boolean, gl: WebGL2RenderingContext): void;
     generatePosNormClr(pts: Float32Array, tris: Uint32Array, rgba255: Uint8Array): Float32Array;
     static readMesh(buffer: ArrayBuffer, name: string, gl: WebGL2RenderingContext, opacity?: number, rgba255?: Uint8Array, visible?: boolean): Promise<NVMesh>;
     static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
@@ -2251,7 +2252,7 @@ declare class Niivue {
      * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
      * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
      */
-    setMeshProperty(id: number, key: keyof NVMesh, val: number): void;
+    setMeshProperty(id: number, key: keyof NVMesh, val: number | string | boolean): void;
     /**
      * returns the index of the mesh vertex that is closest to the provided coordinates
      * @param id - identity of mesh to change

@@ -25315,7 +25315,8 @@ var DEFAULT_OPTIONS = {
   measureTextHeight: 0.03,
   isAlphaClipDark: false,
   gradientOrder: 1,
-  gradientOpacity: 0
+  gradientOpacity: 0,
+  invertScrollDirection: false
 };
 var INITIAL_SCENE_DATA = {
   gamma: 1,
@@ -26912,9 +26913,14 @@ var NVMesh3 = class _NVMesh {
   // TODO this method is too generic
   setProperty(key, val, gl) {
     if (!(key in this)) {
-      log.warn("mesh does not have property ", key, this);
+      console.warn("Mesh does not have property:", key, this);
       return;
     }
+    if (typeof val !== "number" && typeof val !== "string" && typeof val !== "boolean") {
+      console.warn("Invalid value type. Expected number, string, or boolean but received:", typeof val);
+      return;
+    }
+    ;
     this[key] = val;
     this.updateMesh(gl);
   }
@@ -31326,40 +31332,34 @@ var Niivue = class {
       }
       return;
     }
-    const rect = this.canvas.getBoundingClientRect();
+    let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01;
+    if (this.opts.invertScrollDirection) {
+      scrollAmount = -scrollAmount;
+    }
     if (this.opts.clickToSegment) {
-      if (e.deltaY < 0) {
+      if (scrollAmount < 0) {
         this.opts.clickToSegmentPercent -= 0.01;
         this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0);
-      } else if (e.deltaY > 0) {
+      } else {
         this.opts.clickToSegmentPercent += 0.01;
-        this.opts.clickToSegmentPercent = Math.min(
-          this.opts.clickToSegmentPercent,
-          1
-          // Max percentage
-        );
+        this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1);
       }
       const x2 = this.clickToSegmentXY[0];
       const y2 = this.clickToSegmentXY[1];
       const tileIdx = this.tileIndex(x2, y2);
-      if (tileIdx >= 0) {
-        if (this.screenSlices[tileIdx].axCorSag <= 2 /* SAGITTAL */) {
-          log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`);
-          this.clickToSegmentIsGrowing = true;
-          this.doClickToSegment({
-            x: x2,
-            // Pass current screen coordinates
-            y: y2,
-            tileIndex: tileIdx
-          });
-        }
+      if (tileIdx >= 0 && this.screenSlices[tileIdx].axCorSag <= 2 /* SAGITTAL */) {
+        log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`);
+        this.clickToSegmentIsGrowing = true;
+        this.doClickToSegment({ x: x2, y: y2, tileIndex: tileIdx });
       }
       return;
     }
+    const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     if (this.opts.dragMode === 3 /* pan */ && this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1) {
-      let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * (e.deltaY < 0 ? 0.01 : -0.01));
+      const zoomDirection = scrollAmount < 0 ? 1 : -1;
+      let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * (0.01 * zoomDirection));
       zoom = Math.round(zoom * 10) / 10;
       const zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
       if (this.opts.yoke3Dto2DZoom) {
@@ -31375,11 +31375,7 @@ var Niivue = class {
       this.sync();
       return;
     }
-    if (e.deltaY < 0) {
-      this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top);
-    } else {
-      this.sliceScroll2D(0.01, e.clientX - rect.left, e.clientY - rect.top);
-    }
+    this.sliceScroll2D(scrollAmount, x, y);
   }
   // not included in public docs
   // setup interactions with the canvas. Mouse clicks and touches
@@ -31401,7 +31397,13 @@ var Niivue = class {
     this.canvas.addEventListener("dblclick", this.resetBriCon.bind(this));
     this.canvas.addEventListener("dragenter", this.dragEnterListener.bind(this), false);
     this.canvas.addEventListener("dragover", this.dragOverListener.bind(this), false);
-    this.canvas.addEventListener("drop", this.dropListener.bind(this), false);
+    this.canvas.addEventListener(
+      "drop",
+      (event) => {
+        this.dropListener(event).catch(console.error);
+      },
+      false
+    );
     this.canvas.setAttribute("tabindex", "0");
     this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
     this.canvas.addEventListener("keydown", this.keyDownListener.bind(this), false);
