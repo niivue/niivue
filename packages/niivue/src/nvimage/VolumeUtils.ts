@@ -231,34 +231,21 @@ export function getVolumeData(
   }
 
   if (dataType === 'normalized' || dataType === 'windowed') {
-    let minVal = nvImage.cal_min ?? 0 // Use calculated cal_min/max
-    let maxVal = nvImage.cal_max ?? 1 // Default to 0..1 if not set
+    let minVal = nvImage.cal_min
+    let maxVal = nvImage.cal_max
 
     if (dataType === 'normalized') {
-      minVal = nvImage.global_min ?? minVal // Use global min/max if available
-      maxVal = nvImage.global_max ?? maxVal
+      minVal = nvImage.global_min
+      maxVal = nvImage.global_max
     }
 
     const range = maxVal - minVal
-    const scale = range === 0 ? 0 : 1 / range // Avoid division by zero
+    const scale = range === 0 ? 0 : 1 / range
 
     for (let i = 0; i < outputImg.length; i++) {
-      // Ensure calculation is done on scaled value if not already done
-      if (dataType === 'scaled') {
-        // Already scaled
-        outputImg[i] = (outputImg[i] - minVal) * scale
-      } else {
-        // Need to scale first if raw uint8 etc.
-        const scaledVal = outputImg[i] * slope + inter
-        outputImg[i] = (scaledVal - minVal) * scale
-      }
-      // Clamp to [0, 1] range
+      outputImg[i] = (outputImg[i] - minVal) * scale
       outputImg[i] = Math.max(0, Math.min(outputImg[i], 1))
     }
-  } else if (dataType !== 'scaled' && dataType !== 'same') {
-    // If a specific type like 'uint8' was requested, values might exceed range.
-    // Clamping or specific conversion might be needed here depending on requirements.
-    // For now, no explicit clamping for basic type conversions like 'uint8'.
   }
 
   return [outputImg, slabDims]
