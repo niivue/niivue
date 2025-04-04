@@ -2035,19 +2035,18 @@ export class Niivue {
   // handler for scroll wheel events (slice scrolling)
   // note: no test yet
   wheelListener(e: WheelEvent): void {
-    // scroll 2D slices
     e.preventDefault()
     e.stopPropagation()
-    // if thumbnailVisible this do not activate a canvas interaction when scrolling
+
+    // If a thumbnail is visible, do not process mouse wheel events for the main canvas
     if (this.thumbnailVisible) {
       return
     }
-    // check that the user has actually created an ROI already.
+
+    // ROI Selection logic
     const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
     const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0)
     const validDrag = dragStartSum > 0 && dragEndSum > 0
-    // if dragMode is roiSelection, grow or shrink the selection box
-    // by scrolling the mouse wheel. Grows by 1 pixel per scroll
     if (this.opts.dragMode === DRAG_MODE.roiSelection && validDrag) {
       const delta = e.deltaY > 0 ? 1 : -1
       // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
@@ -2065,12 +2064,14 @@ export class Niivue {
         this.uiData.dragStart[1] += delta
         this.uiData.dragEnd[1] -= delta
       }
-      // draw the scene
-      this.uiData.isDragging = true // set is dragging so the selection box is drawn for this drawScene call
-      this.drawScene() // drawScene uses isDragging to determine if the selection box or ROI should be drawn
-      this.uiData.isDragging = false // reset is dragging
+
+      // Redraw to show the updated selection box
+      this.uiData.isDragging = true
+      this.drawScene()
+      this.uiData.isDragging = false
+
+      // Generate the callback for the final selection rectangle
       const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
-      // Ensure tileIdx is valid before proceeding
       if (tileIdx >= 0) {
         this.generateMouseUpCallback(
           this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
@@ -2081,74 +2082,69 @@ export class Niivue {
       }
       return
     }
-    const rect = this.canvas!.getBoundingClientRect()
 
-    // Handle clickToSegment scroll motion to set the threshold percentage
+    // Compute scrollAmount, respecting invertScrollDirection
+    let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01
+    if (this.opts.invertScrollDirection) {
+      scrollAmount = -scrollAmount
+    }
+
+    // If clickToSegment mode is active, change threshold instead of scrolling slices
     if (this.opts.clickToSegment) {
-      // Adjust the threshold percentage
-      if (e.deltaY < 0) {
-        this.opts.clickToSegmentPercent -= 0.01 // Decrease threshold sensitivity
+      // Adjust clickToSegmentPercent by 0.01 in the direction of scrollAmount
+      if (scrollAmount < 0) {
+        this.opts.clickToSegmentPercent -= 0.01
         this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0)
-      } else if (e.deltaY > 0) {
-        this.opts.clickToSegmentPercent += 0.01 // Increase threshold sensitivity
-        this.opts.clickToSegmentPercent = Math.min(
-          this.opts.clickToSegmentPercent,
-          1 // Max percentage
-        )
+      } else {
+        this.opts.clickToSegmentPercent += 0.01
+        this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1)
       }
 
-      // Get current mouse position (where the preview should be updated)
+      // Get the mouse position
       const x = this.clickToSegmentXY[0]
       const y = this.clickToSegmentXY[1]
-
-      // Find the tile index under the current mouse position
       const tileIdx = this.tileIndex(x, y)
 
-      // If the mouse is over a valid tile, re-trigger the preview calculation
-      if (tileIdx >= 0) {
-        // Ensure it's a valid 2D slice tile before triggering
-        if (this.screenSlices[tileIdx].axCorSag <= SLICE_TYPE.SAGITTAL) {
-          log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`)
-          this.clickToSegmentIsGrowing = true // Ensure we are in preview mode
-          this.doClickToSegment({
-            x, // Pass current screen coordinates
-            y,
-            tileIndex: tileIdx
-          })
-        }
+      // If in a valid tile, re-run the clickToSegment preview
+      if (tileIdx >= 0 && this.screenSlices[tileIdx].axCorSag <= SLICE_TYPE.SAGITTAL) {
+        log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`)
+        this.clickToSegmentIsGrowing = true // remain in preview mode
+        this.doClickToSegment({ x, y, tileIndex: tileIdx })
       }
       return
     }
 
-    // Handle standard slice scrolling or zooming if not clickToSegment
-    // Get x/y relative to canvas for inRenderTile check
+    // Otherwise, handle pan/zoom if the mouse is outside the active render tile
+    const rect = this.canvas!.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
+
     if (this.opts.dragMode === DRAG_MODE.pan && this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1) {
-      // Zooming logic when panning is enabled and not over render tile
-      let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (e.deltaY < 0 ? 0.01 : -0.01))
+      // Zoom
+      const zoomDirection = scrollAmount < 0 ? 1 : -1
+      let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (0.01 * zoomDirection))
       zoom = Math.round(zoom * 10) / 10
       const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+
       if (this.opts.yoke3Dto2DZoom) {
         this.scene.volScaleMultiplier = zoom
       }
       this.scene.pan2Dxyzmm[3] = zoom
+
+      // Shift the 2D scene center so the crosshair stays in place
       const mm = this.frac2mm(this.scene.crosshairPos)
       this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
       this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
       this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
+
       this.drawScene()
-      this.canvas!.focus() // Required after change for issue706
+      this.canvas!.focus()
       this.sync()
       return
     }
 
-    // Default action: scroll slices
-    if (e.deltaY < 0) {
-      this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top)
-    } else {
-      this.sliceScroll2D(0.01, e.clientX - rect.left, e.clientY - rect.top)
-    }
+    // Default action: scroll slices using our unified scrollAmount
+    this.sliceScroll2D(scrollAmount, x, y)
   }
 
   // not included in public docs
@@ -2186,7 +2182,13 @@ export class Niivue {
     //  drag and drop support
     this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), false)
     this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), false)
-    this.canvas.addEventListener('drop', this.dropListener.bind(this), false)
+    this.canvas.addEventListener(
+      'drop',
+      (event) => {
+        this.dropListener(event).catch(console.error)
+      },
+      false
+    )
 
     // add keyup
     this.canvas.setAttribute('tabindex', '0')
@@ -3436,7 +3438,7 @@ export class Niivue {
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
-  setMeshProperty(id: number, key: keyof NVMesh, val: number): void {
+  setMeshProperty(id: number, key: keyof NVMesh, val: number | string | boolean): void {
     const idx = this.getMeshIndexByID(id)
     if (idx < 0) {
       log.warn('setMeshProperty() id not loaded', id)
