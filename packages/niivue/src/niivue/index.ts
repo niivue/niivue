@@ -3781,7 +3781,7 @@ export class Niivue {
    * xyz = niivue.sph2cartDeg(42, 42)
    */
   sph2cartDeg(azimuth: number, elevation: number): number[] {
-    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesion
+    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesian
     // see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
     // reverse with cart2sph
     const Phi = -elevation * (Math.PI / 180)
@@ -6746,7 +6746,7 @@ export class Niivue {
       const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1]
       const areaEllipse = Math.PI * radiusX_mm * radiusY_mm
       area = areaEllipse
-      // for debuging: show mask -- loop over drawing and set drawing to 1 if mask is 1
+      // for debugging: show mask -- loop over drawing and set drawing to 1 if mask is 1
       // this.setDrawingEnabled(true)
       // this.drawOpacity = 0.3
       // for (let i = 0; i < nv; i++) {

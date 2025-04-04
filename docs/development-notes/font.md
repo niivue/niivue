@@ -22,7 +22,7 @@ Atlas image file saved.
 Glyph layout and metadata written into JSON file.
 ```
 
-The typeface or character set can be changed by modifiying the commands. NiiVue will read the JSON format created by msdf-atlas-gen (version 1.1), so to change the typeface used by NiiVue, simply replace the `fnt.json` and `fnt.png` files in `public` folder.
+The typeface or character set can be changed by modifying the commands. NiiVue will read the JSON format created by msdf-atlas-gen (version 1.1), so to change the typeface used by NiiVue, simply replace the `fnt.json` and `fnt.png` files in `public` folder.
 
 ## Usage
 
