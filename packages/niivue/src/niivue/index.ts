@@ -2035,122 +2035,117 @@ export class Niivue {
   // handler for scroll wheel events (slice scrolling)
   // note: no test yet
   wheelListener(e: WheelEvent): void {
-  e.preventDefault();
-  e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
 
-  // If a thumbnail is visible, do not process mouse wheel events for the main canvas
-  if (this.thumbnailVisible) {
-    return;
+    // If a thumbnail is visible, do not process mouse wheel events for the main canvas
+    if (this.thumbnailVisible) {
+      return
+    }
+
+    // ROI Selection logic
+    const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
+    const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0)
+    const validDrag = dragStartSum > 0 && dragEndSum > 0
+    if (this.opts.dragMode === DRAG_MODE.roiSelection && validDrag) {
+      const delta = e.deltaY > 0 ? 1 : -1
+      // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
+      if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
+        this.uiData.dragStart[0] -= delta
+        this.uiData.dragEnd[0] += delta
+      } else {
+        this.uiData.dragStart[0] += delta
+        this.uiData.dragEnd[0] -= delta
+      }
+      if (this.uiData.dragStart[1] < this.uiData.dragEnd[1]) {
+        this.uiData.dragStart[1] -= delta
+        this.uiData.dragEnd[1] += delta
+      } else {
+        this.uiData.dragStart[1] += delta
+        this.uiData.dragEnd[1] -= delta
+      }
+
+      // Redraw to show the updated selection box
+      this.uiData.isDragging = true
+      this.drawScene()
+      this.uiData.isDragging = false
+
+      // Generate the callback for the final selection rectangle
+      const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
+      if (tileIdx >= 0) {
+        this.generateMouseUpCallback(
+          this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
+          this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
+        )
+      } else {
+        log.warn('Could not generate drag release callback for ROI selection: Invalid tile index.')
+      }
+      return
+    }
+
+    // Compute scrollAmount, respecting invertScrollDirection
+    let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01
+    if (this.opts.invertScrollDirection) {
+      scrollAmount = -scrollAmount
+    }
+
+    // If clickToSegment mode is active, change threshold instead of scrolling slices
+    if (this.opts.clickToSegment) {
+      // Adjust clickToSegmentPercent by 0.01 in the direction of scrollAmount
+      if (scrollAmount < 0) {
+        this.opts.clickToSegmentPercent -= 0.01
+        this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0)
+      } else {
+        this.opts.clickToSegmentPercent += 0.01
+        this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1)
+      }
+
+      // Get the mouse position
+      const x = this.clickToSegmentXY[0]
+      const y = this.clickToSegmentXY[1]
+      const tileIdx = this.tileIndex(x, y)
+
+      // If in a valid tile, re-run the clickToSegment preview
+      if (tileIdx >= 0 && this.screenSlices[tileIdx].axCorSag <= SLICE_TYPE.SAGITTAL) {
+        log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`)
+        this.clickToSegmentIsGrowing = true // remain in preview mode
+        this.doClickToSegment({ x, y, tileIndex: tileIdx })
+      }
+      return
+    }
+
+    // Otherwise, handle pan/zoom if the mouse is outside the active render tile
+    const rect = this.canvas!.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    if (this.opts.dragMode === DRAG_MODE.pan && this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1) {
+      // Zoom
+      const zoomDirection = scrollAmount < 0 ? 1 : -1
+      let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (0.01 * zoomDirection))
+      zoom = Math.round(zoom * 10) / 10
+      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+
+      if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = zoom
+      }
+      this.scene.pan2Dxyzmm[3] = zoom
+
+      // Shift the 2D scene center so the crosshair stays in place
+      const mm = this.frac2mm(this.scene.crosshairPos)
+      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
+      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
+      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
+
+      this.drawScene()
+      this.canvas!.focus()
+      this.sync()
+      return
+    }
+
+    // Default action: scroll slices using our unified scrollAmount
+    this.sliceScroll2D(scrollAmount, x, y)
   }
-
-  // ROI Selection logic
-  const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0);
-  const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0);
-  const validDrag = dragStartSum > 0 && dragEndSum > 0;
-  if (this.opts.dragMode === DRAG_MODE.roiSelection && validDrag) {
-    const delta = e.deltaY > 0 ? 1 : -1;
-    // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
-    if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
-      this.uiData.dragStart[0] -= delta;
-      this.uiData.dragEnd[0] += delta;
-    } else {
-      this.uiData.dragStart[0] += delta;
-      this.uiData.dragEnd[0] -= delta;
-    }
-    if (this.uiData.dragStart[1] < this.uiData.dragEnd[1]) {
-      this.uiData.dragStart[1] -= delta;
-      this.uiData.dragEnd[1] += delta;
-    } else {
-      this.uiData.dragStart[1] += delta;
-      this.uiData.dragEnd[1] -= delta;
-    }
-
-    // Redraw to show the updated selection box
-    this.uiData.isDragging = true;
-    this.drawScene();
-    this.uiData.isDragging = false;
-
-    // Generate the callback for the final selection rectangle
-    const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1]);
-    if (tileIdx >= 0) {
-      this.generateMouseUpCallback(
-        this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
-        this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
-      );
-    } else {
-      log.warn('Could not generate drag release callback for ROI selection: Invalid tile index.');
-    }
-    return;
-  }
-
-  // Compute scrollAmount, respecting invertScrollDirection
-  let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01;
-  if (this.opts.invertScrollDirection) {
-    scrollAmount = -scrollAmount;
-  }
-
-  // If clickToSegment mode is active, change threshold instead of scrolling slices
-  if (this.opts.clickToSegment) {
-    // Adjust clickToSegmentPercent by 0.01 in the direction of scrollAmount
-    if (scrollAmount < 0) {
-      this.opts.clickToSegmentPercent -= 0.01;
-      this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0);
-    } else {
-      this.opts.clickToSegmentPercent += 0.01;
-      this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1);
-    }
-
-    // Get the mouse position
-    const x = this.clickToSegmentXY[0];
-    const y = this.clickToSegmentXY[1];
-    const tileIdx = this.tileIndex(x, y);
-
-    // If in a valid tile, re-run the clickToSegment preview
-    if (tileIdx >= 0 && this.screenSlices[tileIdx].axCorSag <= SLICE_TYPE.SAGITTAL) {
-      log.debug(
-        `Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`
-      );
-      this.clickToSegmentIsGrowing = true; // remain in preview mode
-      this.doClickToSegment({ x, y, tileIndex: tileIdx });
-    }
-    return;
-  }
-
-  // Otherwise, handle pan/zoom if the mouse is outside the active render tile
-  const rect = this.canvas!.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  if (
-    this.opts.dragMode === DRAG_MODE.pan &&
-    this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1
-  ) {
-    // Zoom
-    const zoomDirection = scrollAmount < 0 ? 1 : -1;
-    let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (0.01 * zoomDirection));
-    zoom = Math.round(zoom * 10) / 10;
-    const zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
-
-    if (this.opts.yoke3Dto2DZoom) {
-      this.scene.volScaleMultiplier = zoom;
-    }
-    this.scene.pan2Dxyzmm[3] = zoom;
-
-    // Shift the 2D scene center so the crosshair stays in place
-    const mm = this.frac2mm(this.scene.crosshairPos);
-    this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
-    this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
-    this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
-
-    this.drawScene();
-    this.canvas!.focus();
-    this.sync();
-    return;
-  }
-
-  // Default action: scroll slices using our unified scrollAmount
-  this.sliceScroll2D(scrollAmount, x, y);
-}
 
   // not included in public docs
   // setup interactions with the canvas. Mouse clicks and touches
