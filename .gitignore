@@ -49,5 +49,5 @@ playwright/e2e/*.js
 playwright-report
 test-results
 ts-build
-
+packages/niivue/public/
 *.zarr

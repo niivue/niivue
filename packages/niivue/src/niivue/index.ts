@@ -107,6 +107,7 @@ import {
   NiiVueLocationValue,
   SyncOpts
 } from '../types.js'
+import { toNiivueObject3D } from '../nvimage/RenderingUtils.js'
 import {
   clamp,
   decodeRLE,
@@ -6854,7 +6855,7 @@ export class Niivue {
     } // force crosshairs3D redraw
     let mtx = mat4.clone(overlayItem.toRAS!)
     if (layer === 0) {
-      this.volumeObject3D = overlayItem.toNiivueObject3D(this.VOLUME_ID, this.gl)
+      this.volumeObject3D = toNiivueObject3D(overlayItem, this.VOLUME_ID, this.gl)
       mat4.invert(mtx, mtx)
 
       this.back.matRAS = overlayItem.matRAS
