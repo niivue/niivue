@@ -1990,6 +1990,7 @@ declare class Niivue {
     touchStartListener(e: TouchEvent): void;
     touchEndListener(e: TouchEvent): void;
     windowingHandler(x: number, y: number, volIdx?: number): void;
+    mouseLeaveListener(): void;
     mouseMoveListener(e: MouseEvent): void;
     resetBriCon(msg?: TouchEvent | MouseEvent | null): void;
     setDragStart(x: number, y: number): void;
@@ -2612,7 +2613,7 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
      */
     drawGrowCut(): void;
-    drawPt(x: number, y: number, z: number, penValue: number): void;
+    drawPt(x: number, y: number, z: number, penValue: number, drawBitmap?: Uint8Array | null): void;
     drawPenLine(ptA: number[], ptB: number[], penValue: number): void;
     /**
      * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
@@ -2623,8 +2624,7 @@ declare class Niivue {
     drawingBinaryDilationWithSeed(seedXYZ: number[], // seed voxel x,y,z
     neighbors?: 6 | 18 | 26): void;
     drawFloodFillCore(img: Uint8Array, seedVx: number, neighbors?: number): void;
-    drawFloodFill(seedXYZ: number[], newColor?: number, growSelectedCluster?: number, // if non-zero, growth based on background intensity POSITIVE_INFINITY for selected or bright, NEGATIVE_INFINITY for selected or darker
-    forceMin?: number, forceMax?: number, neighbors?: number, maxDistanceMM?: number, is2D?: boolean): void;
+    drawFloodFill(seedXYZ: number[], newColor?: number, growSelectedCluster?: number, forceMin?: number, forceMax?: number, neighbors?: number, maxDistanceMM?: number, is2D?: boolean, targetBitmap?: Uint8Array | null, isGrowClusterTool?: boolean): void;
     drawPenFilled(): void;
     /**
      * close drawing: make sure you have saved any changes before calling this!
@@ -2900,6 +2900,11 @@ declare class Niivue {
     inGraphTile(x: number, y: number): boolean;
     updateBitmapFromClickToSegment(): void;
     sumBitmap(img: Uint8Array): number;
+    doClickToSegment(options: {
+        x: number;
+        y: number;
+        tileIndex: number;
+    }): void;
     mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): void;
     drawRuler(): void;
     drawRuler10cm(startXYendXY: number[], rulerColor: number[], rulerWidth?: number): void;

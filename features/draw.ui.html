@@ -1,18 +1,133 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="niivue.css" />
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #808080; /* Restored light gray background */
+        color: black; /* Restored black text */
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Prevent body scrollbars */
+      }
+
+      header {
+        display: flex;
+        justify-content: flex-start; /* Align items to the start */
+        padding: 5px;
+        background-color: #a0a0a0; /* Restored lighter gray header */
+        flex-wrap: wrap; /* Allow wrapping if needed */
+        flex-shrink: 0; /* Prevent header shrinking */
+        z-index: 10; /* Keep header above canvas */
+      }
+
+      /* Dropdown Button */
+      .dropbtn {
+        background-color: #a0a0a0; /* Match header */
+        color: black; /* Match body text */
+        padding: 6px 12px; /* Smaller padding */
+        font-size: 14px; /* Smaller font */
+        border: none;
+        cursor: pointer;
+      }
+
+      /* Dropdown button on hover & focus */
+      .dropbtn:hover,
+      .dropbtn:focus {
+        background-color: #b0b0b0; /* Lighter gray */
+      }
+
+      /* The container <div> - needed to position the dropdown content */
+      .dropdown {
+        position: relative;
+        display: inline-block;
+        margin-right: 5px; /* Space between dropdowns */
+      }
+
+      /* Dropdown Content (Hidden by Default) */
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+        max-height: calc(100vh - 60px); /* Limit height, adjust 60px based on header/footer */
+        overflow-y: auto; /* Add scroll if content overflows */
+      }
+
+      /* Links inside the dropdown */
+      .dropdown-content a {
+        color: black;
+        padding: 8px 12px; /* Smaller padding */
+        text-decoration: none;
+        display: block;
+        font-size: 13px; /* Smaller font */
+      }
+
+      /* Change color of dropdown links on hover */
+      .dropdown-content a:hover {
+        background-color: #ddd;
+      }
+
+      /* Show the dropdown menu (use JS to add this class to the .dropdown-content container when the user clicks on the dropdown button) */
+      .dropdown:hover .dropdown-content {
+        display: block;
+      }
+
+      .dropdown-item-checked:before {
+        content: '\2713\0020'; /* check mark */
+        font-weight: bold;
+      }
+      .divider {
+        border-top: 1px solid #bbb;
+        margin-top: 4px;
+        padding-top: 4px;
+      }
+
+      main#container {
+        display: flex; /* Use flexbox for the main container */
+        flex-grow: 1; /* Allow main to grow and fill available space */
+        position: relative; /* Needed for absolute positioning of canvas */
+        background-color: black;
+        min-height: 0; /* Prevent flex item from overflowing */
+      }
+
+      canvas {
+        position: absolute; /* Position canvas within the flex container */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block; /* Remove extra space below canvas */
+        cursor: crosshair;
+      }
+      canvas:focus {
+        outline: 0px;
+      }
+
+      footer {
+        background-color: #a0a0a0; /* Match header */
+        color: black; /* Match body */
+        font-size: 12px;
+        padding: 2px 5px;
+        flex-shrink: 0; /* Prevent footer shrinking */
+        overflow: hidden; /* Prevent content overflow */
+        white-space: nowrap; /* Prevent wrapping */
+        text-overflow: ellipsis; /* Add ellipsis if text overflows */
+      }
+    </style>
     <title>Drawing User Interface</title>
   </head>
   <body>
     <header>
       <div class="dropdown">
-        <button class="dropbtn">
-          File
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">File</button>
         <div class="dropdown-content">
           <a class="viewBtn" id="SaveDraw" accesskey="s">Save Drawing ^S</a>
           <a class="viewBtn" id="CloseDraw">Close Drawing</a>
@@ -22,40 +137,26 @@
         </div>
       </div>
       <div class="dropdown">
-        <button class="dropbtn">
-          Edit
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">Edit</button>
         <div class="dropdown-content">
           <a class="viewBtn" id="Undo" accesskey="z">Undo Draw ^Z</a>
         </div>
       </div>
       <div class="dropdown">
-        <button class="dropbtn" data-toggle="dropdown">
-          View
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">View</button>
         <div class="dropdown-content">
           <a href="#" class="viewBtn" id="|Axial">Axial</a>
           <a class="viewBtn" id="|Sagittal">Sagittal</a>
           <a class="viewBtn" id="|Coronal">Coronal</a>
           <a class="viewBtn" id="|Render">Render</a>
-          <a class="viewBtn dropdown-item-checked" id="|MultiPlanar">A+C+S</a>
+          <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
           <a class="viewBtn" id="|MultiPlanarRender">A+C+S+R</a>
-          <a class="viewBtn divider dropdown-item-checked" id="Colorbar"
-            >Colorbar</a
-          >
+          <a class="viewBtn divider" id="Colorbar">Colorbar</a>
           <a class="viewBtn" id="Radiological">Radiological</a>
-          <a class="viewBtn dropdown-item-checked" id="Crosshair"
-            >Render Crosshair</a
-          >
+          <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
           <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
-          <a class="viewBtn dropdown-item-checked" id="WorldSpace"
-            >World Space</a
-          >
-          <a class="viewBtn dropdown-item-checked" id="Interpolate"
-            >Smooth Interpolation</a
-          >
+          <a class="viewBtn dropdown-item-checked" id="WorldSpace">World Space</a>
+          <a class="viewBtn dropdown-item-checked" id="Interpolate">Smooth Interpolation</a>
           <a class="viewBtn" id="RemoveHaze">Remove Haze</a>
           <a class="viewBtn divider" id="Left">Left</a>
           <a class="viewBtn" id="Right">Right</a>
@@ -66,76 +167,43 @@
         </div>
       </div>
       <div class="dropdown">
-        <button class="dropbtn">
-          Color
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">Color</button>
         <div class="dropdown-content">
           <a class="viewBtn dropdown-item-checked" id="!Gray">Gray</a>
           <a class="viewBtn" id="!Plasma">Plasma</a>
           <a class="viewBtn" id="!Viridis">Viridis</a>
           <a class="viewBtn" id="!Inferno">Inferno</a>
-          <a class="viewBtn divider dropdown-item-checked" id="BackColor"
-            >Dark Background</a
-          >
+          <a class="viewBtn divider" id="BackColor">Light Background</a>
         </div>
       </div>
       <div class="dropdown">
-        <button class="dropbtn">
-          Draw
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">Draw</button>
         <div class="dropdown-content">
-          <a class="viewBtn dropdown-item-checked" id="@Off" accesskey="0"
-            >Off ^0</a
-          >
+          <a class="viewBtn dropdown-item-checked" id="@Off" accesskey="0">Off ^0</a>
           <a class="viewBtn" id="@Red" accesskey="1">Red ^1</a>
           <a class="viewBtn" id="@Green" accesskey="2">Green ^2</a>
           <a class="viewBtn" id="@Blue" accesskey="3">Blue ^3</a>
           <a class="viewBtn" id="@Yellow" accesskey="4">Yellow ^4</a>
           <a class="viewBtn" id="@Cyan" accesskey="5">Cyan ^5</a>
           <a class="viewBtn" id="@Purple" accesskey="6">Purple ^6</a>
-          <a class="viewBtn" id="@Erase" accesskey="4">Erase ^7</a>
-          <a class="viewBtn" id="@Cluster" accesskey="5">Erase Cluster ^8</a>
-          <a class="viewBtn" id="@GrowCluster">Grow Cluster</a>
+          <a class="viewBtn" id="@Erase" accesskey="7">Erase ^7</a>
+          <a class="viewBtn" id="@Cluster" accesskey="8">Erase Cluster ^8</a>
           <a class="viewBtn" id="@GrowClusterDark">Grow Cluster Dark</a>
           <a class="viewBtn" id="@GrowClusterBright">Grow Cluster Bright</a>
-          <a class="viewBtn" id="@ClickToSegmentBright">Click To Segment Bright</a>
-          <a class="viewBtn" id="@ClickToSegmentDark">Click To Segment Dark</a>
-          <a
-            class="viewBtn divider dropdown-item-checked"
-            id="{$itksnap"
-            >ITK Palette</a
-          >
+          <a class="viewBtn" id="@ClickToSegmentAuto">Click To Segment (Auto)</a>
+          <a class="viewBtn dropdown-item-checked" id="ClickToSegment2D">Click To Segment 2D</a>
+          <a class="viewBtn divider dropdown-item-checked" id="{$itksnap">ITK Palette</a>
           <a class="viewBtn" id="{$slicer3d">Slicer3D Palette</a>
           <a class="viewBtn" id="{$Custom">Custom Palette</a>
-          <a
-            class="viewBtn divider dropdown-item-checked"
-            id="DrawFilled"
-            accesskey="f"
-            >Fill Outline ^F</a
-          >
-          <a
-            class="viewBtn dropdown-item-checked"
-            id="DrawOverwrite"
-            accesskey="o"
-            >Pen Overwrites Existing ^O</a
-          >
-          <a
-            class="viewBtn dropdown-item-checked"
-            id="Translucent"
-            accesskey="t"
-            >Translucent ^T</a
-          >
+          <a class="viewBtn divider dropdown-item-checked" id="DrawFilled" accesskey="f">Fill Outline ^F</a>
+          <a class="viewBtn dropdown-item-checked" id="DrawOverwrite" accesskey="o">Pen Overwrites Existing ^O</a>
+          <a class="viewBtn dropdown-item-checked" id="Translucent" accesskey="t">Translucent ^T</a>
           <a class="viewBtn" id="Growcut">Grow Cut</a>
           <a class="viewBtn" id="DrawOtsu">Otsu</a>
         </div>
       </div>
       <div class="dropdown">
-        <button class="dropbtn">
-          Drag
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">Drag</button>
         <div class="dropdown-content">
           <a class="viewBtn dropdown-item-checked" id="^contrast">Contrast</a>
           <a class="viewBtn" id="^measurement">Measurement</a>
@@ -144,10 +212,7 @@
         </div>
       </div>
       <div class="dropdown">
-        <button class="dropbtn">
-          Script
-          <i class="fa fa-caret-down"></i>
-        </button>
+        <button class="dropbtn">Script</button>
         <div class="dropdown-content">
           <a class="viewBtn dropdown-item-checked" id="_FLAIR">FLAIR</a>
           <a class="viewBtn" id="_mni152">mni152</a>
@@ -161,273 +226,477 @@
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
-    <footer id="intensity">&nbsp;</footer>
+    <footer id="intensity"> </footer>
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
-  
-  const isTouchDevice =
-    "ontouchstart" in window ||
-    navigator.maxTouchPoints > 0 ||
-    navigator.msMaxTouchPoints > 0;
-  var isFilled = true;
+  import * as niivue from '../dist/index.js'
+
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0
+  var isFilled = true
   function handleIntensityChange(data) {
-    document.getElementById("intensity").innerHTML =
-      "&nbsp;&nbsp;" + data.string;
+    document.getElementById('intensity').innerHTML = '  ' + data.string
   }
   var nv1 = new niivue.Niivue({
     dragAndDropEnabled: true,
     backColor: [0, 0, 0, 1],
+    textHeight: 0.03, // Smaller text
     show3Dcrosshair: true,
     onLocationChange: handleIntensityChange,
-  });
-  nv1.opts.isColorbar = false;
-  nv1.setRadiologicalConvention(false);
-  await nv1.attachTo("gl1");
-  nv1.setClipPlane([0.3, 270, 0]);
-  nv1.setRenderAzimuthElevation(120, 10);
-  nv1.setSliceType(nv1.sliceTypeMultiplanar);
-  nv1.setSliceMM(true);
-  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
-  nv1.graph.autoSizeMultiplanar = true;
-  nv1.graph.opacity = 1.0;
-  nv1.drawOpacity = 0.5;
-  nv1.opts.isColorbar = false;
-  var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
-  await nv1.loadVolumes(volumeList1);
-  // await nv1.loadDrawingFromUrl("../images/lesion.nii.gz");
+    logLevel: 'debug',
+    clickToSegmentIs2D: true // Default to 2D
+  })
+  nv1.opts.isColorbar = false // Default colorbar off
+  nv1.opts.legendTextColor = [0, 0, 0, 1] // Black legend text
+  nv1.opts.fontColor = [0, 0, 0, 1] // Black font color
+  nv1.opts.crosshairColor = [0, 0, 1, 1] // Blue crosshair
+  nv1.setRadiologicalConvention(false)
+  await nv1.attachTo('gl1')
+  nv1.setClipPlane([0.3, 270, 0])
+  nv1.setRenderAzimuthElevation(120, 10)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar) // Start with multiplanar
+  nv1.setSliceMM(true)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
+  nv1.graph.autoSizeMultiplanar = true
+  nv1.graph.opacity = 1.0
+  nv1.drawOpacity = 0.5
+  var volumeList1 = [{ url: '../images/FLAIR.nii.gz' }]
+  await nv1.loadVolumes(volumeList1)
+
+  function updateCheckmark(id, isChecked) {
+    const element = document.getElementById(id)
+    if (element) {
+      if (isChecked) {
+        element.classList.add('dropdown-item-checked')
+      } else {
+        element.classList.remove('dropdown-item-checked')
+      }
+    }
+  }
+
+  function setInitialCheckmarks() {
+    updateCheckmark('Colorbar', nv1.opts.isColorbar)
+    updateCheckmark('Radiological', nv1.opts.isRadiologicalConvention)
+    updateCheckmark('Crosshair', nv1.opts.show3Dcrosshair)
+    updateCheckmark('WorldSpace', nv1.opts.isSliceMM)
+    updateCheckmark('Interpolate', !nv1.opts.isNearestInterpolation) // Interpolation is !Nearest
+    updateCheckmark('BackColor', nv1.opts.backColor[0] > 0.5)
+    document.getElementById('BackColor').textContent =
+      nv1.opts.backColor[0] > 0.5 ? 'Dark Background' : 'Light Background'
+    updateCheckmark('@Off', !nv1.opts.drawingEnabled) // Checked if drawing is OFF
+    updateCheckmark('DrawFilled', isFilled)
+    updateCheckmark('DrawOverwrite', nv1.drawFillOverwrites)
+    updateCheckmark('Translucent', nv1.drawOpacity < 1.0)
+    updateCheckmark('ClickToSegment2D', nv1.opts.clickToSegmentIs2D) // Set initial state for 2D/3D toggle
+
+    if (nv1.opts.sliceType === nv1.sliceTypeAxial) toggleGroup('|Axial')
+    else if (nv1.opts.sliceType === nv1.sliceTypeCoronal) toggleGroup('|Coronal')
+    else if (nv1.opts.sliceType === nv1.sliceTypeSagittal) toggleGroup('|Sagittal')
+    else if (nv1.opts.sliceType === nv1.sliceTypeRender) toggleGroup('|Render')
+    else if (nv1.opts.multiplanarShowRender === niivue.SHOW_RENDER.ALWAYS) toggleGroup('|MultiPlanarRender')
+    else toggleGroup('|MultiPlanar') // Default for multiplanar without render
+
+    if (nv1.volumes.length > 0) {
+      toggleGroup('!' + nv1.volumes[0].colormap)
+    } else {
+      toggleGroup('!Gray') // Default
+    }
+
+    if (!nv1.opts.drawingEnabled) {
+      toggleGroup('@Off')
+    } else if (nv1.opts.clickToSegment) {
+      toggleGroup('@ClickToSegmentAuto')
+    } else {
+      switch (nv1.opts.penValue) {
+        case 0:
+          toggleGroup('@Erase')
+          break
+        case 1:
+          toggleGroup('@Red')
+          break
+        case 2:
+          toggleGroup('@Green')
+          break
+        case 3:
+          toggleGroup('@Blue')
+          break
+        case 4:
+          toggleGroup('@Yellow')
+          break
+        case 5:
+          toggleGroup('@Cyan')
+          break
+        case 6:
+          toggleGroup('@Purple')
+          break
+        case -0:
+          toggleGroup('@Cluster')
+          break
+        default:
+          if (isNaN(nv1.opts.penValue)) toggleGroup('@GrowCluster')
+          else if (nv1.opts.penValue === Number.POSITIVE_INFINITY) toggleGroup('@GrowClusterBright')
+          else if (nv1.opts.penValue === Number.NEGATIVE_INFINITY) toggleGroup('@GrowClusterDark')
+          else toggleGroup('@Off') // Fallback
+      }
+    }
+
+    switch (nv1.opts.dragMode) {
+      case nv1.dragModes.contrast:
+        toggleGroup('^contrast')
+        break
+      case nv1.dragModes.measurement:
+        toggleGroup('^measurement')
+        break
+      case nv1.dragModes.pan:
+        toggleGroup('^pan')
+        break
+      case nv1.dragModes.none:
+        toggleGroup('^none')
+        break
+      default:
+        toggleGroup('^contrast') // Default
+    }
+
+    toggleGroup('_FLAIR') // Assuming FLAIR is the default loaded one
+
+    toggleGroup('{$itksnap')
+  }
+
+  setInitialCheckmarks()
+
   function toggleGroup(id) {
-    let buttons = document.getElementsByClassName("viewBtn");
-    let char0 = id.charAt(0);
+    let buttons = document.getElementsByClassName('viewBtn')
+    let char0 = id.charAt(0)
     for (let i = 0; i < buttons.length; i++) {
-      if (buttons[i].id.charAt(0) !== char0) continue;
-      buttons[i].classList.remove("dropdown-item-checked");
-      if (buttons[i].id === id)
-        buttons[i].classList.add("dropdown-item-checked");
+      if (buttons[i].classList.contains('divider')) continue
+      if (!buttons[i].id || buttons[i].id.length === 0 || buttons[i].id.charAt(0) !== char0) continue
+      buttons[i].classList.remove('dropdown-item-checked')
     }
+    let button = document.getElementById(id)
+    if (button) button.classList.add('dropdown-item-checked')
   } // toggleGroup()
+
   async function onButtonClick(event) {
-    if (isTouchDevice) {
-      console.log("Touch device: click menu to close menu");
-      /*var el = this.parentNode
-        el.style.display = "none"
-        setTimeout(function() { //close menu
-          //el.style.removeProperty("display")
-          //el.style.display = "block"
-        }, 500)*/
+    const id = event.target.id
+    const buttonElement = event.target // Keep reference to the clicked element
+
+    let handled = false
+
+    switch (id) {
+      // File Menu
+      case 'SaveDraw':
+        nv1.saveImage({ filename: 'draw.nii', isSaveDrawing: true })
+        handled = true
+        break
+      case 'CloseDraw':
+        nv1.closeDrawing()
+        toggleGroup('@Off')
+        handled = true
+        break
+      case 'SaveBitmap':
+        nv1.saveScene('ScreenShot.png')
+        handled = true
+        break
+      case 'ShowHeader':
+        if (nv1.volumes.length > 0) {
+          alert(nv1.volumes[0].hdr.toFormattedString())
+        } else {
+          alert('No volume loaded.')
+        }
+        handled = true
+        break
+
+      // Edit Menu
+      case 'Undo':
+        nv1.drawUndo()
+        handled = true
+        break
+
+      // View Menu
+      case 'Colorbar':
+        nv1.opts.isColorbar = !nv1.opts.isColorbar
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
+      case 'Radiological':
+        nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
+      case 'Crosshair':
+        nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
+      case 'ClipPlane':
+        if (nv1.scene.clipPlaneDepthAziElev[0] > 1.8) nv1.setClipPlane([0.3, 270, 0])
+        else nv1.setClipPlane([2, 270, 0])
+        handled = true
+        break
+      case 'WorldSpace':
+        nv1.setSliceMM(!nv1.opts.isSliceMM)
+        buttonElement.classList.toggle('dropdown-item-checked')
+        handled = true
+        break
+      case 'Interpolate':
+        nv1.setInterpolation(!nv1.opts.isNearestInterpolation)
+        buttonElement.classList.toggle('dropdown-item-checked')
+        handled = true
+        break
+      case 'RemoveHaze':
+        {
+          let level = parseInt(prompt('Remove Haze (1..5)', '5'))
+          if (!isNaN(level)) nv1.removeHaze(level)
+        }
+        handled = true
+        break
+      case 'Left':
+        nv1.moveCrosshairInVox(-1, 0, 0)
+        handled = true
+        break
+      case 'Right':
+        nv1.moveCrosshairInVox(1, 0, 0)
+        handled = true
+        break
+      case 'Posterior':
+        nv1.moveCrosshairInVox(0, -1, 0)
+        handled = true
+        break
+      case 'Anterior':
+        nv1.moveCrosshairInVox(0, 1, 0)
+        handled = true
+        break
+      case 'Inferior':
+        nv1.moveCrosshairInVox(0, 0, -1)
+        handled = true
+        break
+      case 'Superior':
+        nv1.moveCrosshairInVox(0, 0, 1)
+        handled = true
+        break
+
+      // Color Menu
+      case 'BackColor':
+        if (nv1.opts.backColor[0] > 0.5) {
+          // Currently Light
+          nv1.opts.backColor = [0, 0, 0, 1] // Set to Dark
+          nv1.opts.legendTextColor = [1, 1, 1, 1]
+          nv1.opts.fontColor = [1, 1, 1, 1]
+          nv1.opts.crosshairColor = [0, 0, 1, 1] // Blue on dark
+          buttonElement.textContent = 'Light Background'
+        } else {
+          // Currently Dark
+          nv1.opts.backColor = [0.8, 0.8, 0.8, 1] // Set to Light
+          nv1.opts.legendTextColor = [0, 0, 0, 1]
+          nv1.opts.fontColor = [0, 0, 0, 1]
+          nv1.opts.crosshairColor = [0, 0, 1, 1] // Blue on light
+          buttonElement.textContent = 'Dark Background'
+        }
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
+
+      // Draw Menu
+      case 'Translucent':
+        if (nv1.drawOpacity > 0.75) nv1.drawOpacity = 0.5
+        else nv1.drawOpacity = 1.0
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
+      case 'Growcut':
+        nv1.drawGrowCut()
+        handled = true
+        break
+      case 'DrawOtsu':
+        {
+          let levels = parseInt(prompt('Segmentation classes (2..4)', '3'))
+          if (!isNaN(levels)) nv1.drawOtsu(levels)
+        }
+        handled = true
+        break
+      case 'DrawFilled':
+        isFilled = !isFilled
+        nv1.setPenValue(nv1.opts.penValue, isFilled)
+        buttonElement.classList.toggle('dropdown-item-checked')
+        handled = true
+        break
+      case 'DrawOverwrite':
+        nv1.drawFillOverwrites = !nv1.drawFillOverwrites
+        buttonElement.classList.toggle('dropdown-item-checked')
+        handled = true
+        break
+      case 'ClickToSegment2D': // New Toggle
+        nv1.opts.clickToSegmentIs2D = !nv1.opts.clickToSegmentIs2D
+        buttonElement.classList.toggle('dropdown-item-checked')
+        console.log('ClickToSegment 2D set to:', nv1.opts.clickToSegmentIs2D)
+        handled = true
+        break
+
+      default:
+        break // Let prefix handlers try
     }
-    if (event.target.id === "SaveDraw") {
-      nv1.saveImage({ filename: 'draw.nii', isSaveDrawing: true})
-      return;
-    }
-    if (event.target.id === "CloseDraw") {
-      nv1.closeDrawing();
-      return;
-    }
-    if (event.target.id === "SaveBitmap") {
-      nv1.saveScene("ScreenShot.png");
-      return;
-    }
-    if (event.target.id === "ShowHeader") {
-      alert(nv1.volumes[0].hdr.toFormattedString());
-      return;
-    }
-    if (event.target.id === "Colorbar") {
-      nv1.opts.isColorbar = !nv1.opts.isColorbar;
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      nv1.drawScene();
-      return;
-    }
-    if (event.target.id === "Radiological") {
-      nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention;
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      nv1.drawScene();
-      return;
-    }
-    if (event.target.id === "Crosshair") {
-      nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair;
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      nv1.drawScene();
-    }
-    if (event.target.id === "ClipPlane") {
-      if (nv1.scene.clipPlaneDepthAziElev[0] > 1)
-        nv1.setClipPlane([0.3, 270, 0]);
-      else nv1.setClipPlane([2, 270, 0]);
-      nv1.drawScene();
-      return;
-    }
-    if (event.target.id.charAt(0) === "!") {
-      // set color scheme
-      nv1.volumes[0].colormap = event.target.id.substr(1);
-      nv1.updateGLVolume();
-      toggleGroup(event.target.id);
-      return;
-    }
-    if (event.target.id.charAt(0) === "{") {
-      // change color labels https://github.com/niivue/niivue/issues/575
-      if (event.target.id === "{$Custom") {
-        let cmap = {
+
+    if (!handled) {
+      if (id.startsWith('!')) {
+        // Colormap
+        if (nv1.volumes.length > 0) {
+          nv1.volumes[0].colormap = id.substring(1)
+          nv1.updateGLVolume() // Updates textures and redraws
+          toggleGroup(id)
+        }
+      } else if (id.startsWith('{')) {
+        // Draw Colormap Palette
+        if (id === '{$Custom') {
+          let cmap = {
             R: [0, 255, 22, 127],
             G: [0, 20, 192, 187],
             B: [0, 152, 80, 255],
             A: [0, 255, 255, 255],
-            labels: ["", "pink","lime","sky"],
-        };
-        nv1.setDrawColormap(cmap)
-      } else
-        nv1.setDrawColormap(event.target.id.substr(1));
-      toggleGroup(event.target.id);
-      return;
-    }
-    if (event.target.id === "Undo") {
-      nv1.drawUndo();
-    }
-    if (event.target.id.charAt(0) === "@") {
-      // turn off click to segment in case it was previously enabled
-      nv1.opts.clickToSegment = false
-      if (event.target.id === "@Off") nv1.setDrawingEnabled(false);
-      else nv1.setDrawingEnabled(true);
-      if (event.target.id === "@Erase") nv1.setPenValue(0, isFilled);
-      if (event.target.id === "@Red") nv1.setPenValue(1, isFilled);
-      if (event.target.id === "@Green") nv1.setPenValue(2, isFilled);
-      if (event.target.id === "@Blue") nv1.setPenValue(3, isFilled);
-      if (event.target.id === "@Yellow") nv1.setPenValue(4, isFilled);
-      if (event.target.id === "@Cyan") nv1.setPenValue(5, isFilled);
-      if (event.target.id === "@Purple") nv1.setPenValue(6, isFilled);
-      if (event.target.id === "@Cluster") nv1.setPenValue(-0, isFilled);
-      if (event.target.id === "@GrowCluster") nv1.setPenValue(NaN, isFilled);
-      if (event.target.id === "@GrowClusterBright")
-        nv1.setPenValue(Number.POSITIVE_INFINITY, isFilled);
-      if (event.target.id === "@GrowClusterDark")
-        nv1.setPenValue(Number.NEGATIVE_INFINITY, isFilled);
-      // click to segment bright
-      if (event.target.id === "@ClickToSegmentBright") {
-        // if current penValue is less than 1 and greater than 6, set penValue to 1 (red)
-        if (nv1.opts.penValue < 1 || nv1.opts.penValue > 6) nv1.setPenValue(1, isFilled);
-        nv1.opts.clickToSegment = true
-        nv1.opts.clickToSegmentBright = true // use true for bright
-      } 
-      // click to segment dark
-      if (event.target.id === "@ClickToSegmentDark") {
-        nv1.setPenValue(1, isFilled);
-        nv1.opts.clickToSegment = true
-        nv1.opts.clickToSegmentBright = false // use false for dark
+            labels: ['', 'pink', 'lime', 'sky']
+          }
+          nv1.setDrawColormap(cmap)
+        } else {
+          nv1.setDrawColormap(id.substring(1)) // Use name like "$itksnap"
+        }
+        toggleGroup(id)
+        nv1.updateGLVolume() // Redraw needed after palette change
+      } else if (id.startsWith('@')) {
+        // Deactivate clickToSegment unless it's the selected tool
+        nv1.opts.clickToSegment = false
+        nv1.opts.clickToSegmentAutoIntensity = false // Default off
+
+        let penValue = nv1.opts.penValue // Keep current pen if just changing tool mode
+        let isDrawingEnabled = true
+
+        switch (id) {
+          case '@Off':
+            isDrawingEnabled = false
+            break
+          case '@Erase':
+            penValue = 0
+            break
+          case '@Red':
+            penValue = 1
+            break
+          case '@Green':
+            penValue = 2
+            break
+          case '@Blue':
+            penValue = 3
+            break
+          case '@Yellow':
+            penValue = 4
+            break
+          case '@Cyan':
+            penValue = 5
+            break
+          case '@Purple':
+            penValue = 6
+            break
+          case '@Cluster':
+            penValue = -0
+            break
+          case '@GrowCluster':
+            penValue = NaN
+            break
+          case '@GrowClusterBright':
+            penValue = Number.POSITIVE_INFINITY
+            break
+          case '@GrowClusterDark':
+            penValue = Number.NEGATIVE_INFINITY
+            break
+          case '@ClickToSegmentAuto':
+            if (nv1.opts.penValue < 1 || nv1.opts.penValue > 6 || !isFinite(nv1.opts.penValue)) {
+              penValue = 1 // Default to Red
+              nv1.setPenValue(penValue, isFilled)
+            } else {
+              penValue = nv1.opts.penValue
+            }
+            nv1.opts.clickToSegment = true
+            nv1.opts.clickToSegmentAutoIntensity = true
+            isDrawingEnabled = true
+            break
+          default:
+            console.warn('Unknown draw command:', id)
+            isDrawingEnabled = nv1.opts.drawingEnabled
+            break
+        }
+
+        nv1.setDrawingEnabled(isDrawingEnabled)
+        if (id !== '@Off' && id !== '@ClickToSegmentAuto') {
+          nv1.setPenValue(penValue, isFilled)
+        }
+        toggleGroup(id)
+      } else if (id.startsWith('|')) {
+        switch (id) {
+          case '|Axial':
+            nv1.setSliceType(nv1.sliceTypeAxial)
+            break
+          case '|Coronal':
+            nv1.setSliceType(nv1.sliceTypeCoronal)
+            break
+          case '|Sagittal':
+            nv1.setSliceType(nv1.sliceTypeSagittal)
+            break
+          case '|Render':
+            nv1.setSliceType(nv1.sliceTypeRender)
+            break
+          case '|MultiPlanar':
+            nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
+            nv1.setSliceType(nv1.sliceTypeMultiplanar)
+            break
+          case '|MultiPlanarRender':
+            nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+            nv1.setSliceType(nv1.sliceTypeMultiplanar)
+            break
+        }
+        toggleGroup(id)
+      } else if (id.startsWith('^')) {
+        let s = id.substring(1)
+        switch (s) {
+          case 'none':
+            nv1.opts.dragMode = nv1.dragModes.none
+            break
+          case 'contrast':
+            nv1.opts.dragMode = nv1.dragModes.contrast
+            break
+          case 'measurement':
+            nv1.opts.dragMode = nv1.dragModes.measurement
+            break
+          case 'pan':
+            nv1.opts.dragMode = nv1.dragModes.pan
+            break
+        }
+        toggleGroup(id)
+      } else if (id.startsWith('_')) {
+        nv1.meshes = [] //close open meshes
+        let root = '../images/' // Adjust path if needed
+        let s = id.substring(1)
+        if (s === 'mesh') {
+          volumeList1[0].url = root + 'mni152.nii.gz'
+          await nv1.loadVolumes(volumeList1)
+          nv1.loadMeshes([
+            { url: root + 'BrainMesh_ICBM152.lh.mz3', rgba255: [200, 162, 255, 255] },
+            { url: root + 'dpsv.trx', rgba255: [255, 255, 255, 255] }
+          ])
+        } else {
+          let img = root + s + '.nii.gz'
+          console.log('Loading ' + img)
+          volumeList1[0].url = img
+          await nv1.loadVolumes(volumeList1)
+        }
+        toggleGroup(id)
       }
-      toggleGroup(event.target.id);
-    } //Draw Color
-    if (event.target.id === "Growcut") nv1.drawGrowCut();
-    if (event.target.id === "Translucent") {
-      if (nv1.drawOpacity > 0.75) nv1.drawOpacity = 0.5;
-      else nv1.drawOpacity = 1.0;
-      nv1.drawScene();
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      return;
-    }
-    if (event.target.id === "DrawOtsu") {
-      let levels = parseInt(prompt("Segmentation classes (2..4)", "3"));
-      nv1.drawOtsu(levels);
-    }
-    if (event.target.id === "RemoveHaze") {
-      let level = parseInt(prompt("Remove Haze (1..5)", "5"));
-      nv1.removeHaze(level);
-    }
-    if (event.target.id === "DrawFilled") {
-      isFilled = !isFilled;
-      nv1.setPenValue(nv1.opts.penValue, isFilled);
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      return;
-    }
-    if (event.target.id === "DrawOverwrite") {
-      nv1.drawFillOverwrites = !nv1.drawFillOverwrites;
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      return;
-    }
-    if (event.target.id.charAt(0) === "|") {
-      //sliceType
-      if (event.target.id === "|Axial") nv1.setSliceType(nv1.sliceTypeAxial);
-      if (event.target.id === "|Coronal")
-        nv1.setSliceType(nv1.sliceTypeCoronal);
-      if (event.target.id === "|Sagittal")
-        nv1.setSliceType(nv1.sliceTypeSagittal);
-      if (event.target.id === "|Render") nv1.setSliceType(nv1.sliceTypeRender);
-      if (event.target.id === "|MultiPlanar") {
-        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
-        nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      }
-      if (event.target.id === "|MultiPlanarRender") {
-        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
-        nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      }
-      toggleGroup(event.target.id);
-    } //sliceType
-    if (event.target.id === "WorldSpace") {
-      nv1.setSliceMM(!nv1.opts.isSliceMM);
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      return;
-    }
-    if (event.target.id === "Interpolate") {
-      nv1.setInterpolation(!nv1.opts.isNearestInterpolation);
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      return;
-    }
-    if (event.target.id === "Left") nv1.moveCrosshairInVox(-1, 0, 0);
-    if (event.target.id === "Right") nv1.moveCrosshairInVox(1, 0, 0);
-    if (event.target.id === "Posterior") nv1.moveCrosshairInVox(0, -1, 0);
-    if (event.target.id === "Anterior") nv1.moveCrosshairInVox(0, 1, 0);
-    if (event.target.id === "Inferior") nv1.moveCrosshairInVox(0, 0, -1);
-    if (event.target.id === "Superior") nv1.moveCrosshairInVox(0, 0, 1);
-    if (event.target.id === "BackColor") {
-      if (nv1.opts.backColor[0] < 0.5) nv1.opts.backColor = [1, 1, 1, 1];
-      else nv1.opts.backColor = [0, 0, 0, 1];
-      nv1.drawScene();
-      event.srcElement.classList.toggle("dropdown-item-checked");
-      return;
-    }
-    if (event.target.id.charAt(0) === "^") {
-      //drag mode
-      let s = event.target.id.substr(1);
-      switch (s) {
-        case "none":
-          nv1.opts.dragMode = nv1.dragModes.none;
-          break;
-        case "contrast":
-          nv1.opts.dragMode = nv1.dragModes.contrast;
-          break;
-        case "measurement":
-          nv1.opts.dragMode = nv1.dragModes.measurement;
-          break;
-        case "pan":
-          nv1.opts.dragMode = nv1.dragModes.pan;
-          break;
-      }
-      toggleGroup(event.target.id);
-    } //drag mode
-    if (event.target.id === "_mesh") {
-      volumeList1[0].url = "../images/mni152.nii.gz";
-      await nv1.loadVolumes(volumeList1);
-      nv1.loadMeshes([
-        {
-          url: "../images/BrainMesh_ICBM152.lh.mz3",
-          rgba255: [200, 162, 255, 255],
-        },
-        { url: "../images/dpsv.trx", rgba255: [255, 255, 255, 255] },
-      ]);
-      toggleGroup(event.target.id);
-    } else if (event.target.id.charAt(0) === "_") {
-      //example image
-      nv1.meshes = []; //close open meshes
-      let root = "../images/";
-      let s = event.target.id.substr(1);
-      let img = root + s + ".nii.gz";
-      console.log("Loading " + img);
-      volumeList1[0].url = img;
-      nv1.loadVolumes(volumeList1);
-      toggleGroup(event.target.id);
-      nv1.updateGLVolume();
-    } //example image
+    } // end !handled block
   } // onButtonClick()
-  var buttons = document.getElementsByClassName("viewBtn");
-  for (let i = 0; i < buttons.length; i++)
-    buttons[i].addEventListener("click", onButtonClick, false);
+
+  var buttons = document.getElementsByClassName('viewBtn')
+  for (let i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', onButtonClick)
+  }
 </script>

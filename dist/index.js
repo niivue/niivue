@@ -30594,16 +30594,7 @@ var Niivue = class {
     this.uiData.mouseButtonLeftDown = false;
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled();
-    } else if (this.drawPenAxCorSag >= 0) {
-      if (this.opts.clickToSegment) {
-        const sumBitmap = this.sumBitmap(this.drawBitmap);
-        const sumSeg = this.sumBitmap(this.clickToSegmentGrowingBitmap);
-        if (sumSeg > sumBitmap) {
-          this.updateBitmapFromClickToSegment();
-        }
-      }
     }
-    this.drawAddUndoBitmap();
     this.drawPenLocation = [NaN, NaN, NaN];
     this.drawPenAxCorSag = -1;
     if (isFunction(this.onMouseUp)) {
@@ -30741,6 +30732,30 @@ var Niivue = class {
     this.uiData.windowY = y;
   }
   // not included in public docs
+  // handler for mouse leaving the canvas
+  mouseLeaveListener() {
+    if (this.clickToSegmentIsGrowing) {
+      log.debug("Mouse left canvas, stopping clickToSegment preview.");
+      this.clickToSegmentIsGrowing = false;
+      this.refreshDrawing(true, false);
+    }
+    if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
+      log.debug("Mouse left canvas during drawing, resetting pen state.");
+      this.drawPenLocation = [NaN, NaN, NaN];
+      this.drawPenAxCorSag = -1;
+      this.drawPenFillPts = [];
+    }
+    if (this.uiData.isDragging) {
+      log.debug("Mouse left canvas during drag, resetting drag state.");
+      this.uiData.isDragging = false;
+      this.uiData.mouseButtonLeftDown = false;
+      this.uiData.mouseButtonCenterDown = false;
+      this.uiData.mouseButtonRightDown = false;
+      this.uiData.mousedown = false;
+      this.drawScene();
+    }
+  }
+  // not included in public docs
   // handler for mouse move over canvas
   // note: no test yet
   mouseMoveListener(e) {
@@ -30779,7 +30794,21 @@ var Niivue = class {
       const x = pos.x * this.uiData.dpr;
       const y = pos.y * this.uiData.dpr;
       this.mousePos = [x, y];
-      this.drawScene();
+      const tileIdx = this.tileIndex(x, y);
+      if (tileIdx >= 0 && this.opts.drawingEnabled) {
+        const axCorSag = this.screenSlices[tileIdx].axCorSag;
+        if (axCorSag <= 2 /* SAGITTAL */) {
+          this.clickToSegmentXY = [x, y];
+          this.clickToSegmentIsGrowing = true;
+          this.doClickToSegment({
+            x,
+            // Screen X
+            y,
+            // Screen Y
+            tileIndex: tileIdx
+          });
+        }
+      }
     }
   }
   // not included in public docs
@@ -30998,13 +31027,65 @@ var Niivue = class {
       this.drawScene();
       this.uiData.isDragging = false;
       const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1]);
-      this.generateMouseUpCallback(
-        this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
-        this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
-      );
+      if (tileIdx >= 0) {
+        this.generateMouseUpCallback(
+          this.screenXY2TextureFrac(this.uiData.dragStart[0], this.uiData.dragStart[1], tileIdx),
+          this.screenXY2TextureFrac(this.uiData.dragEnd[0], this.uiData.dragEnd[1], tileIdx)
+        );
+      } else {
+        log.warn("Could not generate drag release callback for ROI selection: Invalid tile index.");
+      }
       return;
     }
     const rect = this.canvas.getBoundingClientRect();
+    if (this.opts.clickToSegment) {
+      if (e.deltaY < 0) {
+        this.opts.clickToSegmentPercent -= 0.01;
+        this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0);
+      } else if (e.deltaY > 0) {
+        this.opts.clickToSegmentPercent += 0.01;
+        this.opts.clickToSegmentPercent = Math.min(
+          this.opts.clickToSegmentPercent,
+          1
+          // Max percentage
+        );
+      }
+      const x2 = this.clickToSegmentXY[0];
+      const y2 = this.clickToSegmentXY[1];
+      const tileIdx = this.tileIndex(x2, y2);
+      if (tileIdx >= 0) {
+        if (this.screenSlices[tileIdx].axCorSag <= 2 /* SAGITTAL */) {
+          log.debug(`Adjusting clickToSegment threshold: ${this.opts.clickToSegmentPercent.toFixed(3)}`);
+          this.clickToSegmentIsGrowing = true;
+          this.doClickToSegment({
+            x: x2,
+            // Pass current screen coordinates
+            y: y2,
+            tileIndex: tileIdx
+          });
+        }
+      }
+      return;
+    }
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (this.opts.dragMode === 3 /* pan */ && this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1) {
+      let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * (e.deltaY < 0 ? 0.01 : -0.01));
+      zoom = Math.round(zoom * 10) / 10;
+      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
+      if (this.opts.yoke3Dto2DZoom) {
+        this.scene.volScaleMultiplier = zoom;
+      }
+      this.scene.pan2Dxyzmm[3] = zoom;
+      const mm = this.frac2mm(this.scene.crosshairPos);
+      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
+      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
+      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
+      this.drawScene();
+      this.canvas.focus();
+      this.sync();
+      return;
+    }
     if (e.deltaY < 0) {
       this.sliceScroll2D(-0.01, e.clientX - rect.left, e.clientY - rect.top);
     } else {
@@ -31021,6 +31102,7 @@ var Niivue = class {
     this.canvas.addEventListener("mousedown", this.mouseDownListener.bind(this));
     this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this));
     this.canvas.addEventListener("mousemove", this.mouseMoveListener.bind(this));
+    this.canvas.addEventListener("mouseleave", this.mouseLeaveListener.bind(this));
     this.canvas.addEventListener("touchstart", this.touchStartListener.bind(this));
     this.canvas.addEventListener("touchend", this.touchEndListener.bind(this));
     this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this));
@@ -32559,6 +32641,14 @@ var Niivue = class {
       if (!this.drawBitmap) {
         this.createEmptyDrawing();
       }
+    } else {
+      if (this.clickToSegmentIsGrowing) {
+        this.clickToSegmentIsGrowing = false;
+        this.refreshDrawing(true, false);
+      }
+      this.drawPenLocation = [NaN, NaN, NaN];
+      this.drawPenAxCorSag = -1;
+      this.drawPenFillPts = [];
     }
     this.drawScene();
   }
@@ -33525,7 +33615,10 @@ var Niivue = class {
   }
   // not included in public docs
   // set color of single voxel in drawing
-  drawPt(x, y, z, penValue) {
+  drawPt(x, y, z, penValue, drawBitmap = null) {
+    if (drawBitmap === null) {
+      drawBitmap = this.drawBitmap;
+    }
     if (!this.back?.dims) {
       throw new Error("back.dims not set");
     }
@@ -33535,7 +33628,7 @@ var Niivue = class {
     x = Math.min(Math.max(x, 0), dx - 1);
     y = Math.min(Math.max(y, 0), dy - 1);
     z = Math.min(Math.max(z, 0), dz - 1);
-    this.drawBitmap[x + y * dx + z * dx * dy] = penValue;
+    drawBitmap[x + y * dx + z * dx * dy] = penValue;
     const isAx = this.drawPenAxCorSag === 0;
     const isCor = this.drawPenAxCorSag === 1;
     const isSag = this.drawPenAxCorSag === 2;
@@ -33544,11 +33637,11 @@ var Niivue = class {
       for (let i = -halfPenSize; i <= halfPenSize; i++) {
         for (let j = -halfPenSize; j <= halfPenSize; j++) {
           if (isAx) {
-            this.drawBitmap[x + i + (y + j) * dx + z * dx * dy] = penValue;
+            drawBitmap[x + i + (y + j) * dx + z * dx * dy] = penValue;
           } else if (isCor) {
-            this.drawBitmap[x + i + y * dx + (z + j) * dx * dy] = penValue;
+            drawBitmap[x + i + y * dx + (z + j) * dx * dy] = penValue;
           } else if (isSag) {
-            this.drawBitmap[x + (y + j) * dx + (z + i) * dx * dy] = penValue;
+            drawBitmap[x + (y + j) * dx + (z + i) * dx * dy] = penValue;
           }
         }
       }
@@ -33807,9 +33900,34 @@ var Niivue = class {
   }
   // not included in public docs
   // set all connected voxels in drawing to new color
-  drawFloodFill(seedXYZ, newColor = 0, growSelectedCluster = 0, forceMin = NaN, forceMax = NaN, neighbors = 6, maxDistanceMM = Number.POSITIVE_INFINITY, is2D = false) {
+  drawFloodFill(seedXYZ, newColor = 0, growSelectedCluster = 0, forceMin = NaN, forceMax = NaN, neighbors = 6, maxDistanceMM = Number.POSITIVE_INFINITY, is2D = false, targetBitmap = null, isGrowClusterTool = false) {
     if (!this.drawBitmap) {
-      throw new Error("drawBitmap undefined");
+      log.warn("drawFloodFill called without an initialized drawBitmap.");
+      this.createEmptyDrawing();
+      if (!this.drawBitmap) {
+        log.error("Failed to create drawing bitmap.");
+        return;
+      }
+    }
+    if (this.clickToSegmentIsGrowing && !this.clickToSegmentGrowingBitmap) {
+      log.warn("drawFloodFill called in preview mode without initialized clickToSegmentGrowingBitmap.");
+      if (this.drawBitmap) {
+        this.clickToSegmentGrowingBitmap = this.drawBitmap.slice();
+      } else {
+        log.error("Cannot initialize growing bitmap as drawBitmap is null.");
+        return;
+      }
+      if (!this.clickToSegmentGrowingBitmap) {
+        log.error("Failed to create growing bitmap.");
+        return;
+      }
+    }
+    if (targetBitmap === null) {
+      targetBitmap = this.drawBitmap;
+    }
+    if (!targetBitmap) {
+      log.error("drawFloodFill targetBitmap is null.");
+      return;
     }
     if (!this.back?.dims) {
       throw new Error("back.dims undefined");
@@ -33825,15 +33943,12 @@ var Niivue = class {
     const nx = dims[0];
     const nxy = nx * dims[1];
     const nxyz = nxy * dims[2];
-    let img = this.drawBitmap.slice();
-    let drawBitmap = this.drawBitmap;
-    if (this.clickToSegmentIsGrowing) {
-      img = this.clickToSegmentGrowingBitmap.slice();
-      drawBitmap = this.clickToSegmentGrowingBitmap;
-    }
-    if (img.length !== nxy * dims[2]) {
+    const originalBitmap = this.clickToSegmentIsGrowing ? this.drawBitmap : targetBitmap;
+    if (!originalBitmap) {
+      log.error("Could not determine original bitmap state.");
       return;
     }
+    const img = new Uint8Array(nxyz).fill(0);
     let constrainXYZ = -1;
     if (is2D && this.drawPenAxCorSag === 0 /* AXIAL */) {
       constrainXYZ = 2;
@@ -33866,73 +33981,141 @@ var Niivue = class {
       return dist22 <= maxDistanceMM2;
     }
     const seedVx = xyz2vx(seedXYZ);
-    const seedColor = img[seedVx];
-    if (seedColor === newColor) {
-      if (growSelectedCluster !== 0) {
-        log.debug("drawFloodFill selected voxel is not part of a drawing");
-      } else {
-        log.debug("drawFloodFill selected voxel is already desired color");
+    const originalSeedColor = originalBitmap[seedVx];
+    if (isGrowClusterTool && originalSeedColor === 0) {
+      log.debug("Grow/Erase Cluster tool requires starting on a masked voxel.");
+      if (this.clickToSegmentIsGrowing && this.clickToSegmentGrowingBitmap && this.drawBitmap) {
+        this.clickToSegmentGrowingBitmap.set(this.drawBitmap);
+        this.refreshDrawing(true, true);
       }
       return;
     }
-    for (let i = 1; i < nxyz; i++) {
-      img[i] = 0;
-      if (drawBitmap[i] === seedColor) {
-        if (!isWithinDistance(i)) {
-          continue;
+    if (growSelectedCluster === 0 && originalSeedColor === newColor && !isGrowClusterTool && newColor !== 0) {
+      log.debug("drawFloodFill selected voxel is already desired color");
+      if (!this.clickToSegmentIsGrowing) {
+        return;
+      }
+    }
+    let baseIntensity = NaN;
+    if (isGrowClusterTool && (growSelectedCluster === Number.POSITIVE_INFINITY || growSelectedCluster === Number.NEGATIVE_INFINITY)) {
+      const tempImgForIdentification = originalBitmap.slice();
+      for (let i = 0; i < nxyz; i++) {
+        tempImgForIdentification[i] = tempImgForIdentification[i] === originalSeedColor && isWithinDistance(i) ? 1 : 0;
+      }
+      if (tempImgForIdentification[seedVx] !== 1) {
+        log.error("Seed voxel could not be marked for cluster ID.");
+        return;
+      }
+      this.drawFloodFillCore(tempImgForIdentification, seedVx, neighbors);
+      const backImg = this.volumes[0].img2RAS();
+      let clusterSum = 0;
+      let clusterCount = 0;
+      for (let i = 0; i < nxyz; i++) {
+        if (tempImgForIdentification[i] === 2) {
+          clusterSum += backImg[i];
+          clusterCount++;
         }
-        img[i] = 1;
+      }
+      baseIntensity = clusterCount > 0 ? clusterSum / clusterCount : backImg[seedVx];
+      log.debug(`Grow Cluster using mean intensity: ${baseIntensity.toFixed(2)} from ${clusterCount} voxels.`);
+      let fillMin = -Infinity;
+      let fillMax = Infinity;
+      if (growSelectedCluster === Number.POSITIVE_INFINITY) {
+        fillMin = baseIntensity;
+      }
+      if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
+        fillMax = baseIntensity;
+      }
+      for (let i = 0; i < nxyz; i++) {
+        if (tempImgForIdentification[i] === 2) {
+          img[i] = 1;
+        } else if (originalBitmap[i] === 0) {
+          const intensity = backImg[i];
+          if (intensity >= fillMin && intensity <= fillMax && isWithinDistance(i)) {
+            img[i] = 1;
+          }
+        }
+      }
+      newColor = originalSeedColor;
+    } else {
+      if (growSelectedCluster === 0) {
+        if (isGrowClusterTool && newColor === 0) {
+          log.debug(`Erase Cluster: Identifying cluster with color ${originalSeedColor}`);
+          for (let i = 0; i < nxyz; i++) {
+            img[i] = originalBitmap[i] === originalSeedColor && isWithinDistance(i) ? 1 : 0;
+          }
+        } else {
+          for (let i = 0; i < nxyz; i++) {
+            if (originalBitmap[i] === originalSeedColor && isWithinDistance(i)) {
+              if (originalSeedColor !== 0) {
+                img[i] = 1;
+              }
+            }
+          }
+        }
+      } else {
+        const backImg = this.volumes[0].img2RAS();
+        baseIntensity = backImg[seedVx];
+        let fillMin = -Infinity;
+        let fillMax = Infinity;
+        if (isFinite(forceMin) && isFinite(forceMax)) {
+          fillMin = forceMin;
+          fillMax = forceMax;
+        } else if (growSelectedCluster === Number.POSITIVE_INFINITY) {
+          fillMin = baseIntensity;
+        } else if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
+          fillMax = baseIntensity;
+        }
+        for (let i = 0; i < nxyz; i++) {
+          const intensity = backImg[i];
+          if (intensity >= fillMin && intensity <= fillMax && isWithinDistance(i)) {
+            img[i] = 1;
+          }
+        }
+        newColor = originalBitmap[seedVx];
+        if (newColor === 0) {
+          newColor = this.opts.penValue;
+          if (newColor < 1 || !isFinite(newColor)) {
+            newColor = 1;
+          }
+        }
+      }
+    }
+    if (img[seedVx] !== 1) {
+      let isSeedValidOriginal = false;
+      if (isGrowClusterTool && growSelectedCluster !== 0) {
+        if (originalSeedColor !== 0) {
+          isSeedValidOriginal = true;
+        }
+      } else {
+        if (originalSeedColor !== 0 || newColor === 0) {
+          isSeedValidOriginal = true;
+        }
+      }
+      if (isSeedValidOriginal && isWithinDistance(seedVx)) {
+        img[seedVx] = 1;
+        log.debug("Forcing seed voxel to 1 in working buffer.");
+      } else {
+        log.debug("Seed voxel not marked as candidate '1' and not valid originally.");
+        if (this.clickToSegmentIsGrowing && this.clickToSegmentGrowingBitmap && this.drawBitmap) {
+          this.clickToSegmentGrowingBitmap.set(this.drawBitmap);
+        }
+        return;
       }
     }
     this.drawFloodFillCore(img, seedVx, neighbors);
-    if (growSelectedCluster !== 0) {
-      const backImg = this.volumes[0].img2RAS();
-      let mx = backImg[seedVx];
-      let mn = mx;
-      if (isFinite(forceMax) && isFinite(forceMin)) {
-        mx = forceMax;
-        mn = forceMin;
-      } else {
-        for (let i = 1; i < nxyz; i++) {
-          if (img[i] === 2) {
-            mx = Math.max(mx, backImg[i]);
-            mn = Math.min(mn, backImg[i]);
-          }
-        }
-        if (growSelectedCluster === Number.POSITIVE_INFINITY) {
-          mx = growSelectedCluster;
-        }
-        if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
-          mn = growSelectedCluster;
-        }
-      }
-      log.debug("Intensity range of selected cluster :", mn, mx);
-      for (let i = 1; i < nxyz; i++) {
-        img[i] = 0;
-        if (backImg[i] >= mn && backImg[i] <= mx) {
-          if (!isWithinDistance(i)) {
-            continue;
-          }
-          img[i] = 1;
-        }
-      }
-      this.drawFloodFillCore(img, seedVx, neighbors);
-      newColor = seedColor;
-    }
-    for (let i = 1; i < nxyz; i++) {
+    for (let i = 0; i < nxyz; i++) {
       if (img[i] === 2) {
-        drawBitmap[i] = newColor;
+        targetBitmap[i] = newColor;
+      } else if (this.clickToSegmentIsGrowing && targetBitmap === this.clickToSegmentGrowingBitmap) {
+        targetBitmap[i] = originalBitmap[i];
       }
     }
     if (!this.clickToSegmentIsGrowing) {
-      this.drawBitmap = drawBitmap.slice();
-      if (!this.opts.clickToSegment) {
-        this.drawAddUndoBitmap();
-      }
-      this.refreshDrawing(true, this.clickToSegmentIsGrowing);
+      this.drawAddUndoBitmap();
+      this.refreshDrawing(true, false);
     } else {
-      this.clickToSegmentGrowingBitmap = drawBitmap;
-      this.refreshDrawing(true, this.clickToSegmentIsGrowing);
+      this.refreshDrawing(true, true);
     }
   }
   // not included in public docs
@@ -34103,36 +34286,67 @@ var Niivue = class {
    * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
    */
   refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false) {
-    if (!this.back?.dims) {
-      throw new Error("back.dims undefined");
+    if (useClickToSegmentBitmap && (!this.opts.drawingEnabled || !this.opts.clickToSegment)) {
+      log.debug("refreshDrawing: Conditions not met for clickToSegment bitmap, using drawBitmap.");
+      useClickToSegmentBitmap = false;
     }
-    if (!this.drawBitmap) {
-      throw new Error("drawBitmap undefined");
+    const selectedBitmap = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap;
+    if (!selectedBitmap && !useClickToSegmentBitmap && this.clickToSegmentGrowingBitmap) {
+      log.warn("refreshDrawing: drawBitmap is null, but clickToSegmentGrowingBitmap exists. Check state.");
+    } else if (!selectedBitmap && useClickToSegmentBitmap && this.drawBitmap) {
+      log.warn("refreshDrawing: clickToSegmentGrowingBitmap is null, falling back to drawBitmap.");
+      useClickToSegmentBitmap = false;
+    } else if (!selectedBitmap) {
+      log.warn("refreshDrawing: Both bitmaps are null. Uploading empty data.");
+    }
+    const bitmapDataSource = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap;
+    if (!this.back?.dims) {
+      log.warn("refreshDrawing: back.dims undefined, cannot refresh drawing texture yet.");
+      return;
     }
     const dims = this.back.dims.slice();
     const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-    if (this.drawBitmap.length === 8) {
+    if (!bitmapDataSource) {
+      log.warn(
+        `refreshDrawing: Bitmap data source (${useClickToSegmentBitmap ? "growing" : "main"}) is null. Cannot update texture.`
+      );
+      if (isForceRedraw) {
+        this.drawScene();
+      }
+      return;
+    }
+    if (bitmapDataSource.length === 8) {
       dims[1] = 2;
       dims[2] = 2;
       dims[3] = 2;
-    } else if (vx !== this.drawBitmap.length) {
-      log.warn("Drawing bitmap must match the background image");
+    } else if (vx !== bitmapDataSource.length) {
+      log.warn(`Drawing bitmap length (${bitmapDataSource.length}) must match the background image (${vx})`);
     }
     this.gl.activeTexture(TEXTURE7_DRAW);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
-    this.gl.texSubImage3D(
-      this.gl.TEXTURE_3D,
-      0,
-      0,
-      0,
-      0,
-      dims[1],
-      dims[2],
-      dims[3],
-      this.gl.RED,
-      this.gl.UNSIGNED_BYTE,
-      useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
-    );
+    if (!this.drawTexture) {
+      log.error("refreshDrawing: drawTexture (GPU texture) is null.");
+      return;
+    }
+    try {
+      this.gl.texSubImage3D(
+        this.gl.TEXTURE_3D,
+        0,
+        0,
+        0,
+        0,
+        dims[1],
+        dims[2],
+        dims[3],
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        bitmapDataSource
+        // Use the determined source
+      );
+    } catch (error) {
+      log.error("Error during texSubImage3D in refreshDrawing:", error);
+      log.error("Dimensions:", dims, "Bitmap length:", bitmapDataSource?.length);
+    }
     if (isForceRedraw) {
       this.drawScene();
     }
@@ -36468,6 +36682,97 @@ var Niivue = class {
     }
     return sum;
   }
+  doClickToSegment(options) {
+    const { tileIndex } = options;
+    if (tileIndex < 0 || tileIndex >= this.screenSlices.length) {
+      log.warn(`Invalid tileIndex ${tileIndex} received in doClickToSegment.`);
+      return;
+    }
+    const axCorSag = this.screenSlices[tileIndex].axCorSag;
+    if (axCorSag > 2 /* SAGITTAL */) {
+      log.warn("ClickToSegment attempted on non-2D slice tile.");
+      return;
+    }
+    const texFrac = this.screenXY2TextureFrac(
+      this.clickToSegmentXY[0],
+      // Use the stored click location
+      this.clickToSegmentXY[1],
+      tileIndex,
+      false
+    );
+    if (texFrac[0] < 0) {
+      log.debug("Click location outside valid texture fraction for the tile.");
+      return;
+    }
+    const pt = this.frac2vox(texFrac);
+    const threshold = this.opts.clickToSegmentPercent;
+    let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2]);
+    if (this.opts.clickToSegmentAutoIntensity) {
+      if (threshold !== 0) {
+        if (voxelIntensity === 0) {
+          voxelIntensity = 0.01;
+        }
+        this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold);
+        this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold);
+      }
+      if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
+        this.opts.clickToSegmentBright = true;
+      } else {
+        this.opts.clickToSegmentBright = false;
+      }
+    }
+    const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+    this.drawPenAxCorSag = axCorSag;
+    const targetBitmap = this.clickToSegmentIsGrowing ? this.clickToSegmentGrowingBitmap : this.drawBitmap;
+    if (!targetBitmap) {
+      log.error("Target bitmap for flood fill is null.");
+      if (!this.clickToSegmentIsGrowing) {
+        this.createEmptyDrawing();
+        if (!this.drawBitmap) {
+          return;
+        }
+      } else {
+        if (!this.drawBitmap) {
+          this.createEmptyDrawing();
+        }
+        if (!this.drawBitmap) {
+          return;
+        }
+        this.clickToSegmentGrowingBitmap = this.drawBitmap.slice();
+      }
+      log.warn("Initialized missing bitmap in doClickToSegment.");
+    }
+    this.drawFloodFill(
+      [pt[0], pt[1], pt[2]],
+      this.opts.penValue,
+      brightOrDark,
+      this.opts.clickToSegmentIntensityMin,
+      this.opts.clickToSegmentIntensityMax,
+      this.opts.floodFillNeighbors,
+      this.opts.clickToSegmentMaxDistanceMM,
+      this.opts.clickToSegmentIs2D,
+      targetBitmap
+    );
+    if (!this.clickToSegmentIsGrowing) {
+      log.debug("Applying clickToSegment mask to drawBitmap.");
+      if (this.drawBitmap) {
+        this.refreshDrawing(false, false);
+        this.drawScene();
+      } else {
+        log.error("Cannot refresh drawing after click-to-segment apply, drawBitmap is null.");
+      }
+      if (this.drawBitmap) {
+        const info = this.getDescriptives({
+          layer: 0,
+          masks: [],
+          drawingIsMask: true
+          // Use the final this.drawBitmap
+        });
+        this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 });
+      }
+    }
+    this.createOnLocationChange(axCorSag);
+  }
   // not included in public docs
   // handle mouse click event on canvas
   mouseClick(x, y, posChange = 0, isDelta = true) {
@@ -36514,28 +36819,28 @@ var Niivue = class {
       if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag) {
         continue;
       }
-      if (axCorSag > 2 /* SAGITTAL */) {
+      if (axCorSag > 2 /* SAGITTAL */ && !this.opts.clickToSegment && posChange === 0) {
         continue;
       }
-      let texFrac = this.screenXY2TextureFrac(x, y, i, false);
+      const texFrac = this.screenXY2TextureFrac(x, y, i, true);
       if (texFrac[0] < 0) {
         continue;
       }
-      if (!isDelta) {
-        this.scene.crosshairPos[2 - axCorSag] = posChange;
-        this.drawScene();
-        return;
-      }
-      if (posChange !== 0) {
-        let posNeg = 1;
-        if (posChange < 0) {
-          posNeg = -1;
+      if (posChange !== 0 || !isDelta) {
+        if (!isDelta) {
+          if (axCorSag <= 2 /* SAGITTAL */) {
+            this.scene.crosshairPos[2 - axCorSag] = posChange;
+            this.drawScene();
+            this.createOnLocationChange(axCorSag);
+          }
+          return;
         }
+        const posNeg = posChange < 0 ? -1 : 1;
         const xyz = [0, 0, 0];
-        xyz[2 - axCorSag] = posNeg;
-        this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
-        this.drawScene();
-        this.createOnLocationChange(axCorSag);
+        if (axCorSag <= 2 /* SAGITTAL */) {
+          xyz[2 - axCorSag] = posNeg;
+          this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
+        }
         return;
       }
       if (this.opts.isForceMouseClickToVoxelCenters) {
@@ -36544,108 +36849,64 @@ var Niivue = class {
         this.scene.crosshairPos = vec3_exports.clone(texFrac);
       }
       if (this.opts.drawingEnabled) {
-        let pt = this.frac2vox(this.scene.crosshairPos);
-        if (this.opts.clickToSegment) {
-          texFrac = this.screenXY2TextureFrac(this.clickToSegmentXY[0], this.clickToSegmentXY[1], i, false);
-          pt = this.frac2vox(texFrac);
-          let diff = 0;
-          let threshold = this.opts.clickToSegmentPercent + diff;
-          if (this.uiData.mousedown) {
-            const xDiff = (this.clickToSegmentXY[0] - x) / this.gl.canvas.width;
-            const yDiff = (this.clickToSegmentXY[1] - y) / this.gl.canvas.height;
-            diff = Math.max(Math.abs(xDiff), Math.abs(yDiff));
-            threshold = this.opts.clickToSegmentPercent + diff;
-          }
-          let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2]);
-          if (this.opts.clickToSegmentAutoIntensity) {
-            if (threshold !== 0) {
-              if (voxelIntensity === 0) {
-                voxelIntensity = 0.01;
-              }
-              this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold);
-              this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold);
-            }
-            if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
-              this.opts.clickToSegmentBright = true;
-            } else {
-              this.opts.clickToSegmentBright = false;
-            }
-          }
-          const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
-          this.drawPenAxCorSag = axCorSag;
-          if (this.drawPenAxCorSag === 0 /* AXIAL */) {
-            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[1]];
-            const minPixDim = Math.min(...pixDims);
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim);
-          } else if (this.drawPenAxCorSag === 1 /* CORONAL */) {
-            const pixDims = [this.back.pixDimsRAS[0], this.back.pixDimsRAS[2]];
-            const minPixDim = Math.min(...pixDims);
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim);
-          } else if (this.drawPenAxCorSag === 2 /* SAGITTAL */) {
-            const pixDims = [this.back.pixDimsRAS[1], this.back.pixDimsRAS[2]];
-            const minPixDim = Math.min(...pixDims);
-            this.opts.penSize = Math.ceil(this.opts.clickToSegmentRadius / minPixDim);
-          }
-          this.drawPt(pt[0], pt[1], pt[2], this.opts.penValue);
-          if (diff !== 0) {
-            this.clickToSegmentIsGrowing = true;
-            this.clickToSegmentGrowingBitmap = this.drawBitmap.slice();
+        const pt = this.frac2vox(this.scene.crosshairPos);
+        if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
+          let growMode = 0;
+          let floodFillNewColor = Math.abs(this.opts.penValue);
+          const isGrowTool = true;
+          if (Object.is(this.opts.penValue, -0)) {
+            growMode = 0;
+            floodFillNewColor = 0;
+            log.debug("Erase Cluster selected");
           } else {
-            this.clickToSegmentIsGrowing = false;
+            growMode = this.opts.penValue;
+            log.debug("Intensity Grow selected", growMode);
           }
           this.drawFloodFill(
-            [pt[0], pt[1], pt[2]],
-            0,
-            brightOrDark,
-            this.opts.clickToSegmentIntensityMin,
-            this.opts.clickToSegmentIntensityMax,
+            pt,
+            floodFillNewColor,
+            growMode,
+            NaN,
+            NaN,
             this.opts.floodFillNeighbors,
-            this.opts.clickToSegmentMaxDistanceMM,
-            this.opts.clickToSegmentIs2D
+            Number.POSITIVE_INFINITY,
+            false,
+            this.drawBitmap,
+            isGrowTool
           );
           this.drawScene();
           this.createOnLocationChange(axCorSag);
-          if (this.clickToSegmentIsGrowing) {
-            return;
-          }
-          const info = this.getDescriptives({
-            layer: 0,
-            masks: [],
-            drawingIsMask: true
-          });
-          this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 });
           return;
-        }
-        if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
-          if (!isFinite(this.opts.penValue)) {
-            this.drawFloodFill(pt, 0, this.opts.penValue, NaN, NaN, this.opts.floodFillNeighbors);
-          } else {
-            this.drawFloodFill(
-              pt,
-              Math.abs(this.opts.penValue),
-              this.opts.penValue,
-              NaN,
-              NaN,
-              this.opts.floodFillNeighbors
-            );
+        } else if (this.opts.clickToSegment) {
+          if (axCorSag <= 2 /* SAGITTAL */) {
+            this.clickToSegmentIsGrowing = false;
+            this.doClickToSegment({
+              x: this.clickToSegmentXY[0],
+              y: this.clickToSegmentXY[1],
+              tileIndex: i
+            });
           }
+          this.createOnLocationChange(axCorSag);
           return;
-        }
-        if (isNaN(this.drawPenLocation[0])) {
-          this.drawPenAxCorSag = axCorSag;
-          this.drawPenFillPts = [];
-          this.drawPt(...pt, this.opts.penValue);
         } else {
-          if (pt[0] === this.drawPenLocation[0] && pt[1] === this.drawPenLocation[1] && pt[2] === this.drawPenLocation[2]) {
-            return;
+          if (isNaN(this.drawPenLocation[0])) {
+            this.drawPenAxCorSag = axCorSag;
+            this.drawPenFillPts = [];
+            this.drawPt(...pt, this.opts.penValue);
+          } else {
+            if (pt[0] === this.drawPenLocation[0] && pt[1] === this.drawPenLocation[1] && pt[2] === this.drawPenLocation[2]) {
+              this.drawScene();
+              this.createOnLocationChange(axCorSag);
+              return;
+            }
+            this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue);
           }
-          this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue);
+          this.drawPenLocation = pt;
+          if (this.opts.isFilledPen) {
+            this.drawPenFillPts.push(pt);
+          }
+          this.refreshDrawing(false, false);
         }
-        this.drawPenLocation = pt;
-        if (this.opts.isFilledPen) {
-          this.drawPenFillPts.push(pt);
-        }
-        this.refreshDrawing(false);
       }
       this.drawScene();
       this.createOnLocationChange(axCorSag);
@@ -39704,23 +39965,6 @@ var Niivue = class {
         height
       ]);
       return;
-    }
-    if (this.opts.clickToSegment) {
-      const x = this.mousePos[0];
-      const y = this.mousePos[1];
-      if (this.inRenderTile(x, y) >= 0) {
-        return;
-      }
-      const tileIdx = this.tileIndex(x, y);
-      if (tileIdx > -1) {
-        const fovMM = this.screenSlices[tileIdx].fovMM;
-        const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight;
-        const pixPerMM = ltwh[2] / fovMM[0];
-        const color = this.opts.crosshairColor;
-        const segmentCursorColor = [color[0], color[1], color[2], 0.4];
-        const radius = this.opts.clickToSegmentRadius * pixPerMM;
-        this.drawCircle([x - radius, y - radius, radius * 2, radius * 2], segmentCursorColor, 1);
-      }
     }
     const pos = this.frac2mm([this.scene.crosshairPos[0], this.scene.crosshairPos[1], this.scene.crosshairPos[2]]);
     posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
