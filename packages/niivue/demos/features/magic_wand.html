@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #808080;
+        color: black;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      header {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 5px;
+        background-color: #a0a0a0;
+        flex-wrap: wrap;
+        flex-shrink: 0;
+        z-index: 10;
+      }
+      .dropbtn {
+        background-color: #a0a0a0;
+        color: black;
+        padding: 6px 12px;
+        font-size: 14px;
+        border: solid 1px #808080;
+        cursor: pointer;
+      }
+      .dropbtn:hover,
+      .dropbtn:focus {
+        background-color: #b0b0b0;
+      }
+      .dropdown {
+        position: relative;
+        display: inline-block;
+        margin-right: 5px;
+      }
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
+      }
+      .dropdown-content a {
+        color: black;
+        padding: 8px 12px;
+        text-decoration: none;
+        display: block;
+        font-size: 13px;
+      }
+      .dropdown-content a:hover {
+        background-color: #ddd;
+      }
+      .dropdown:hover .dropdown-content {
+        display: block;
+      }
+      .dropdown-item-checked:before {
+        content: '\2713\0020';
+        font-weight: bold;
+      }
+      main#container {
+        display: flex;
+        flex-grow: 1;
+        position: relative;
+        background-color: black;
+        min-height: 0;
+      }
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: crosshair;
+      }
+      canvas:focus {
+        outline: 0;
+      }
+      footer {
+        background-color: #a0a0a0;
+        color: black;
+        font-size: 12px;
+        padding: 2px 5px;
+        flex-shrink: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+    </style>
+    <title>magic wand demo</title>
+  </head>
+  <body>
+    <header>
+      <div class="dropdown">
+        <button class="dropbtn">View</button>
+        <div class="dropdown-content">
+          <a href="#" class="viewBtn" id="|Axial">Axial</a>
+          <a class="viewBtn" id="|Sagittal">Sagittal</a>
+          <a class="viewBtn" id="|Coronal">Coronal</a>
+          <a class="viewBtn" id="|Render">Render</a>
+          <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
+          <a class="viewBtn" id="|MultiPlanarRender">A+C+S+R</a>
+        </div>
+      </div>
+      <div>Use up/down arrows to change axial slice</div>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity"> </footer>
+    <script type="module" async>
+      import * as niivue from '../dist/index.js'
+      function handleIntensityChange(data) {
+        document.getElementById('intensity').innerHTML = ' ' + data.string
+      }
+      let nv1 = new niivue.Niivue({
+        onLocationChange: handleIntensityChange,
+        clickToSegmentIs2D: true,
+        clickToSegment: true,
+        clickToSegmentAutoIntensity: true,
+        dragAndDropEnabled: true,
+        logLevel: 'info'
+      })
+      await nv1.attachTo('gl1')
+      let volumeList = [{ url: '../images/FLAIR.nii.gz' }]
+      await nv1.loadVolumes(volumeList)
+      nv1.setDrawingEnabled(true)
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.drawOpacity = 0.5
+      function toggleGroup(id) {
+        let btns = document.getElementsByClassName('viewBtn')
+        let c = id.charAt(0)
+        for (let i = 0; i < btns.length; i++) {
+          if (!btns[i].id || btns[i].id.length === 0 || btns[i].id.charAt(0) !== c) continue
+          btns[i].classList.remove('dropdown-item-checked')
+        }
+        let b = document.getElementById(id)
+        if (b) b.classList.add('dropdown-item-checked')
+      }
+      function onButtonClick(e) {
+        let id = e.target.id
+        if (id.startsWith('|')) {
+          switch (id) {
+            case '|Axial':
+              nv1.setSliceType(nv1.sliceTypeAxial)
+              break
+            case '|Sagittal':
+              nv1.setSliceType(nv1.sliceTypeSagittal)
+              break
+            case '|Coronal':
+              nv1.setSliceType(nv1.sliceTypeCoronal)
+              break
+            case '|Render':
+              nv1.setSliceType(nv1.sliceTypeRender)
+              break
+            case '|MultiPlanar':
+              nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
+              nv1.setSliceType(nv1.sliceTypeMultiplanar)
+              break
+            case '|MultiPlanarRender':
+              nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+              nv1.setSliceType(nv1.sliceTypeMultiplanar)
+              break
+          }
+          toggleGroup(id)
+        }
+      }
+      let btns = document.getElementsByClassName('viewBtn')
+      for (let i = 0; i < btns.length; i++) {
+        btns[i].addEventListener('click', onButtonClick)
+      }
+      toggleGroup('|Axial')
+      // map up and down arrow keys to moveCrosshairInVox
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+          nv1.moveCrosshairInVox(0, 0, 1)
+        } else if (e.key === 'ArrowDown') {
+          nv1.moveCrosshairInVox(0, 0, -1)
+        }
+      })
+    </script>
+  </body>
+</html>
