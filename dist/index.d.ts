@@ -961,7 +961,7 @@ type Point = {
     };
 };
 /**
- * Representes the vertices of a connectome
+ * Represents the vertices of a connectome
  * @ignore
  */
 type NVConnectomeNode = {
