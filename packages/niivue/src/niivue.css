@@ -1,105 +1,141 @@
-html {
-  height: auto;
-  min-height: 100%;
-  margin: 0;
-}
+
 body {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  min-height: 100%;
-  width: 100%;
-  position: absolute;
-  font-family: system-ui, Arial, Helvetica, sans-serif;
-  user-select: none; /* Standard syntax */
-  color: white;
-  background: #404040;
-}
-header {
-  margin: 10px;
-}
-main {
-  flex: 1;
-  background: #000000;
-  position: relative;
-}
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1e1e1e; /* Dark theme background */
+    color: #ffffff;
+  }
+  
+  header {
+    background-color: #2d3748;
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  button {
+    background-color: #4299e1;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #3182ce;
+  }
+  
+  label {
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+  
+  input[type="range"] {
+    width: 100%;
+    max-width: 150px;
+    height: 8px;
+    background: #4b5563;
+    outline: none;
+    border-radius: 4px;
+    appearance: none;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #3b82f6;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  
+  select {
+    background-color: #2d3748;
+    color: white;
+    border: 1px solid #4b5563;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+  
+  main {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  
+  #canvas-container {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 160px); 
+  }
+  
+  canvas {
+    background-color: #1a202c; 
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    height: 100%; 
+  }
+  
+  footer {
+    background-color: #2d3748;
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  footer label {
+    font-size: 0.8rem;
+    color: #a0aec0;
+  }
+
+
 footer {
-  margin: 10px;
+  background-color: #2d3748;
+  padding: 1rem;
+  text-align: center;
 }
-canvas {
-  position: absolute;
-  cursor: crosshair;
+
+#shaders {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #a0aec0;
+  margin-bottom: 0.5rem;
+  display: block;
 }
-canvas:focus {
-  outline: 0px;
-}
-div {
-  display: table-row;
-}
-.dropdown {
-  float: left;
-  overflow: hidden;
-}
-.dropdown .dropbtn {
-  font-size: 16px;
+
+#shaders button {
+  background-color: #4299e1; 
+  color: white;
   border: none;
-  outline: none;
-  color: white;
-  padding: 12px 12px;
-  background-color: #404040;
-  font-family: inherit;
-  margin: 0;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-size: 0.8rem;
 }
-.dropdown:hover .dropbtn {
-  background-color: #9a9;
+
+#shaders button:hover {
+  background-color: #3182ce; 
+  transform: scale(1.05); 
 }
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: #303030;
-  min-width: 160px;
-  border-radius: 5px;
-  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-  z-index: 1;
+
+#shaders button:active {
+  background-color: #2b6cb0; 
+  transform: scale(0.95); 
 }
-.dropdown-content a {
-  float: none;
-  color: white;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  text-align: left;
-  line-height: 6px;
-}
-.dropdown-content a:hover {
-  background-color: #aba;
-}
-.dropdown:hover .dropdown-content {
-  display: block;
-}
-.dropdown-item-checked::before {
-  position: absolute;
-  left: 0.2rem;
-  content: "\2022"; /* or '✓' */
-  font-weight: 600;
-}
-.divider {
-  border-top: 1px solid grey;
-}
-.vertical-divider {
-  border-left: 1px solid grey;
-  height: 40px;
-}
-.help-text {
-  margin: auto;
-  max-width: 150px;
-  padding: 0 10px;
-}
-.slidecontainer {
-  padding: 10px 10px;
-  white-space: normal;
-  word-break: break-word;
+
+
+#shaders {
   display: flex;
-  align-items: center;
-  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem; 
 }
