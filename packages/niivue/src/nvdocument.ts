@@ -192,6 +192,7 @@ export type NVConfigOptions = {
   isAlphaClipDark: boolean
   gradientOrder: number
   gradientOpacity: number
+  gradientAmount: number
   invertScrollDirection: boolean
 }
 
@@ -292,6 +293,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isAlphaClipDark: false,
   gradientOrder: 1,
   gradientOpacity: 0.0,
+  gradientAmount: 0.0,
   invertScrollDirection: false
 }
 
