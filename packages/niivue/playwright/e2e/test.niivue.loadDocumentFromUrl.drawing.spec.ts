@@ -7,13 +7,13 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test('niivue loadDocumentFromUrl compound document gzipped', async ({ page }) => {
-  const nvols = await page.evaluate(async (testOptions) => {
+test('niivue loadDocumentFromUrl nifti volume drawing', async ({ page }) => {
+  const isDrawingPresent = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
-    await nv.loadDocumentFromUrl('./images/document/atlas.gzipped.nvd')
-    return nv.volumes.length
+    await nv.loadDocumentFromUrl('./images/document/niivue.drawing.nvd')
+    return nv.drawBitmap != null
   }, TEST_OPTIONS)
-  expect(nvols).toBe(2)
+  expect(isDrawingPresent).toBe(true)
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })
