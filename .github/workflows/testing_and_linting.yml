@@ -49,12 +49,27 @@ jobs:
         run: npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-      - name: Run Playwright tests
+      - name: Debug system info (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "Free memory:"
+          free -h || true
+          echo "Disk space:"
+          df -h || true
+  
+      - name: Run Playwright tests (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
+          npm run test:e2e
+  
+      - name: Run Playwright tests (Non-Linux)
+        if: matrix.os != 'ubuntu-latest'
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 30
   build-demos-dry-run:
