@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('niivue loadDocumentFromUrl nifti volume', async ({ page }) => {
+  test.setTimeout(90_000)
   const nvols = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')

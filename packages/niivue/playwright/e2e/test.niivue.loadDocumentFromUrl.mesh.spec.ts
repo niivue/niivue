@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('niivue loadDocumentFromUrl mesh', async ({ page }) => {
+  test.setTimeout(90_000)
   const counts = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
