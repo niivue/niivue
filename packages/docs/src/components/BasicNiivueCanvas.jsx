@@ -2,7 +2,7 @@ import React from "react";
 import { Niivue } from "@niivue/niivue";
 
 export const BasicNiivueCanvas = ({ images, nvOpts }) => {
-  // get the origin url and prepend it to the url propery of the images
+  // get the origin url and prepend it to the url property of the images
   const origin = window.location.origin;
   // needed due to the way docusaurus serves static files with github orgs pages.
   // Only needed if serving files from static/niivue folder, but using images from
@@ -14,7 +14,7 @@ export const BasicNiivueCanvas = ({ images, nvOpts }) => {
   // canvas ref
   const canvasRef = React.useRef(null);
   const niivue = React.useRef(null);
-  // intialise niivue instance on first mount
+  // initialise niivue instance on first mount
   React.useEffect(() => {
     niivue.current = new Niivue({logLevel: 'debug', ...nvOpts});
     niivue.current.attachToCanvas(canvasRef.current);

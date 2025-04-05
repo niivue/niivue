@@ -155,7 +155,7 @@ export type NVConfigOptions = {
   isAntiAlias: boolean | null
   isAdditiveBlend: boolean
   // TODO all following fields were previously not included in the typedef
-  // Allow canvas width ahd height to resize (false for fixed size)
+  // Allow canvas width and height to resize (false for fixed size)
   isResizeCanvas: boolean
   meshXRay: number
   limitFrames4D: number
@@ -193,6 +193,7 @@ export type NVConfigOptions = {
   gradientOrder: number
   gradientOpacity: number
   gradientAmount: number
+  invertScrollDirection: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -293,6 +294,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   gradientOrder: 1,
   gradientOpacity: 0.0,
   gradientAmount: 0.0
+  invertScrollDirection: false
 }
 
 type SceneData = {

@@ -1,18 +1,8 @@
-// import * as nifti from 'nifti-reader-js'
-import {
-  NIFTI1,
-  NIFTI2,
-  NIFTIEXTENSION,
-  isCompressed,
-  decompressAsync,
-  readImage,
-  readHeaderAsync
-} from 'nifti-reader-js'
+import { NIFTI1, NIFTI2, NIFTIEXTENSION, readHeaderAsync } from 'nifti-reader-js'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Gunzip } from 'fflate'
 import { ColorMap, LUT, cmapper } from '../colortables.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
 import { log } from '../logger.js'
 import { NVUtilities, Zip } from '../nvutilities.js'
 import {
@@ -25,15 +15,16 @@ import {
   NiiDataType,
   NiiIntentCode,
   NVImageFromUrlOptions,
-  getExtents,
   hdrToArrayBuffer,
   isAffineOK,
   isPlatformLittleEndian,
   uncompressStream
 } from './utils.js'
+import * as ImageWriter from './ImageWriter.js'
+import * as VolumeUtils from './VolumeUtils.js'
+import * as ImageReaders from './ImageReaders/index.js'
 
 export * from './utils.js'
-
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
 
 /**
@@ -146,7 +137,7 @@ export class NVImage {
 
   constructor(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -193,7 +184,7 @@ export class NVImage {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   init(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -212,7 +203,7 @@ export class NVImage {
     colorbarVisible = true,
     colormapLabel: LUT | null = null,
     colormapType = 0,
-    imgRaw: ArrayBuffer | null = null
+    imgRaw: ArrayBuffer | ArrayBufferLike | null = null
   ): void {
     this.name = name
     this.imageType = imageType
@@ -274,7 +265,7 @@ export class NVImage {
       this.hdr.datatypeCode === NiiDataType.DT_FLOAT32
     ) {
       // change data from float32 to rgba32
-      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw))
+      imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw)).buffer as ArrayBuffer
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
     if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
       log.error('pixDims not plausible', this.hdr)
@@ -289,7 +280,7 @@ export class NVImage {
     if (useQFormNotSForm || !affineOK || this.hdr.qform_code > this.hdr.sform_code) {
       log.debug('spatial transform based on QForm')
       // https://github.com/rii-mango/NIFTI-Reader-JS/blob/6908287bf99eb3bc4795c1591d3e80129da1e2f6/src/nifti1.js#L238
-      // Define a, b, c, d for coding covenience
+      // Define a, b, c, d for coding convenience
       const b = this.hdr.quatern_b
       const c = this.hdr.quatern_c
       const d = this.hdr.quatern_d
@@ -495,7 +486,7 @@ export class NVImage {
 
   static async new(
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
-    dataBuffer: ArrayBuffer | ArrayBuffer[] | null = null,
+    dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
     colormap = 'gray',
     opacity = 1.0,
@@ -551,7 +542,10 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.NHDR:
       case NVIMAGE_TYPE.NRRD:
-        imgRaw = await newImg.readNRRD(dataBuffer as ArrayBuffer, pairedImgData) // detached
+        imgRaw = await ImageReaders.Nrrd.readNrrd(newImg, dataBuffer as ArrayBuffer)
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse NHDR/NRRD file ${name}`)
+        }
         break
       case NVIMAGE_TYPE.MHD:
       case NVIMAGE_TYPE.MHA:
@@ -559,7 +553,10 @@ export class NVImage {
         break
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
-        imgRaw = await newImg.readMGH(dataBuffer as ArrayBuffer)
+        imgRaw = await ImageReaders.Mgh.readMgh(newImg, dataBuffer as ArrayBuffer)
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse MGH/MGZ file ${name}`)
+        }
         break
       case NVIMAGE_TYPE.SRC:
         imgRaw = await newImg.readSRC(dataBuffer as ArrayBuffer)
@@ -589,19 +586,9 @@ export class NVImage {
         // imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
         throw new Error('Image type ZARR not (yet) supported')
       case NVIMAGE_TYPE.NII:
-        if (isCompressed(dataBuffer as ArrayBuffer)) {
-          dataBuffer = await decompressAsync(dataBuffer as ArrayBuffer)
-        }
-        newImg.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer)
-        if (newImg.hdr !== null) {
-          if (newImg.hdr.cal_min === 0 && newImg.hdr.cal_max === 255) {
-            newImg.hdr.cal_max = 0.0
-          }
-          if (isCompressed(dataBuffer as ArrayBuffer)) {
-            imgRaw = readImage(newImg.hdr, (await decompressAsync(dataBuffer as ArrayBuffer)) as ArrayBuffer)
-          } else {
-            imgRaw = readImage(newImg.hdr, dataBuffer as ArrayBuffer)
-          }
+        imgRaw = await ImageReaders.Nii.readNifti(newImg, dataBuffer as ArrayBuffer)
+        if (imgRaw === null) {
+          throw new Error(`Failed to parse NIfTI file ${name}.`)
         }
         break
       default:
@@ -1145,7 +1132,7 @@ export class NVImage {
     ]
     hdr.numBitsPerVoxel = 32
     hdr.datatypeCode = NiiDataType.DT_FLOAT32
-    return rawImg
+    return rawImg.buffer as ArrayBuffer
   } // readECAT()
 
   readV16(buffer: ArrayBuffer): ArrayBuffer {
@@ -1219,8 +1206,8 @@ export class NVImage {
     }
 
     // Extract version and header length
-    const _version = dv.getUint8(6)
-    const _minorVersion = dv.getUint8(7)
+    // const _version = dv.getUint8(6)
+    // const _minorVersion = dv.getUint8(7)
     const headerLen = dv.getUint16(8, true) // Little-endian
     // Decode header as ASCII string
     const headerText = new TextDecoder('utf-8').decode(buffer.slice(10, 10 + headerLen))
@@ -1275,7 +1262,7 @@ export class NVImage {
       const entry = zip.entries[i]
       if (entry.fileName.toLowerCase().endsWith('.npy')) {
         const data = await entry.extract()
-        return await this.readNPY(data.buffer)
+        return await this.readNPY(data.buffer as ArrayBuffer)
       }
     }
   }
@@ -1337,7 +1324,7 @@ export class NVImage {
       }
       return grayscaleData.buffer
     }
-    return data.buffer
+    return data.buffer as ArrayBuffer
   }
 
   // not included in public docs
@@ -1432,109 +1419,6 @@ export class NVImage {
     hdr.datatypeCode = NiiDataType.DT_UINT8
     return buffer.slice(8, 8 + nBytes)
   } // readVMR()
-
-  // not included in public docs
-  // read FreeSurfer MGH format image
-  async readMGH(buffer: ArrayBuffer): Promise<ArrayBuffer> {
-    this.hdr = new NIFTI1()
-    const hdr = this.hdr
-    hdr.littleEndian = false // MGH always big ending
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    let raw = buffer
-    let reader = new DataView(raw)
-    if (reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-      // const raw8 = decompressSync(new Uint8Array(buffer))
-      // raw = raw8.buffer
-      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
-      reader = new DataView(raw)
-    }
-    const version = reader.getInt32(0, false)
-    const width = reader.getInt32(4, false)
-    const height = reader.getInt32(8, false)
-    const depth = reader.getInt32(12, false)
-    const nframes = reader.getInt32(16, false)
-    const mtype = reader.getInt32(20, false)
-    // let dof = reader.getInt32(24, false);
-    // let goodRASFlag = reader.getInt16(28, false);
-    const spacingX = reader.getFloat32(30, false)
-    const spacingY = reader.getFloat32(34, false)
-    const spacingZ = reader.getFloat32(38, false)
-    const xr = reader.getFloat32(42, false)
-    const xa = reader.getFloat32(46, false)
-    const xs = reader.getFloat32(50, false)
-    const yr = reader.getFloat32(54, false)
-    const ya = reader.getFloat32(58, false)
-    const ys = reader.getFloat32(62, false)
-    const zr = reader.getFloat32(66, false)
-    const za = reader.getFloat32(70, false)
-    const zs = reader.getFloat32(74, false)
-    const cr = reader.getFloat32(78, false)
-    const ca = reader.getFloat32(82, false)
-    const cs = reader.getFloat32(86, false)
-    if (version !== 1 || mtype < 0 || mtype > 4) {
-      log.warn('Not a valid MGH file')
-    }
-    if (mtype === 0) {
-      hdr.numBitsPerVoxel = 8
-      hdr.datatypeCode = NiiDataType.DT_UINT8
-    } else if (mtype === 4) {
-      hdr.numBitsPerVoxel = 16
-      hdr.datatypeCode = NiiDataType.DT_INT16
-    } else if (mtype === 1) {
-      hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = NiiDataType.DT_INT32
-    } else if (mtype === 3) {
-      hdr.numBitsPerVoxel = 32
-      hdr.datatypeCode = NiiDataType.DT_FLOAT32
-    }
-    hdr.dims[1] = width
-    hdr.dims[2] = height
-    hdr.dims[3] = depth
-    hdr.dims[4] = nframes
-    if (nframes > 1) {
-      hdr.dims[0] = 4
-    }
-    hdr.pixDims[1] = spacingX
-    hdr.pixDims[2] = spacingY
-    hdr.pixDims[3] = spacingZ
-    hdr.vox_offset = 284
-    hdr.sform_code = 1
-    const rot44 = mat4.fromValues(
-      xr * hdr.pixDims[1],
-      yr * hdr.pixDims[2],
-      zr * hdr.pixDims[3],
-      0,
-      xa * hdr.pixDims[1],
-      ya * hdr.pixDims[2],
-      za * hdr.pixDims[3],
-      0,
-      xs * hdr.pixDims[1],
-      ys * hdr.pixDims[2],
-      zs * hdr.pixDims[3],
-      0,
-      0,
-      0,
-      0,
-      1
-    )
-    const Pcrs = [hdr.dims[1] / 2.0, hdr.dims[2] / 2.0, hdr.dims[3] / 2.0, 1]
-    const PxyzOffset = [0, 0, 0, 0]
-    for (let i = 0; i < 3; i++) {
-      PxyzOffset[i] = 0
-      for (let j = 0; j < 3; j++) {
-        PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j]
-      }
-    }
-    hdr.affine = [
-      [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
-      [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
-      [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
-      [0, 0, 0, 1]
-    ]
-    const nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4] * (hdr.numBitsPerVoxel / 8)
-    return raw.slice(hdr.vox_offset, hdr.vox_offset + nBytes)
-  } // readMGH()
 
   // not included in public docs
   // read DSI-Studio FIB format image
@@ -1717,9 +1601,8 @@ export class NVImage {
     const mod = (dataBuffer.byteLength + 8) % 16
     const len = dataBuffer.byteLength + (16 - mod)
     log.debug(dataBuffer.byteLength, 'len', len)
-    const extBuffer = new Uint8Array(len)
-    extBuffer.fill(0)
-    extBuffer.set(new Uint8Array(dataBuffer))
+    const extBuffer = new ArrayBuffer(len)
+    new Uint8Array(extBuffer).set(new Uint8Array(dataBuffer))
     const newExtension = new NIFTIEXTENSION(len + 8, 42, extBuffer, true)
     hdr.addExtension(newExtension)
     hdr.extensionCode = 42
@@ -1802,7 +1685,7 @@ export class NVImage {
           hdr.affine = [
             [-items[0], -items[1], -items[2], -items[3]],
             [-items[4], -items[5], -items[6], -items[7]],
-            // TODO don't re-use items for numeric values
+            // TODO don't reuse items for numeric values
             [items[8] as number, items[9] as number, items[10] as number, items[11] as number],
             [0, 0, 0, 1]
           ]
@@ -2347,305 +2230,8 @@ export class NVImage {
       }
     }
     return [outVs, v1s] */
-    return outVs
+    return outVs.buffer as ArrayBuffer
   } // readMIF()
-
-  // not included in public docs
-  // read NRRD format image
-  // http://teem.sourceforge.net/nrrd/format.html
-  async readNRRD(dataBuffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer> {
-    // inspired by parserNRRD.js in https://github.com/xtk
-    // Copyright (c) 2012 The X Toolkit Developers <dev@goXTK.com>
-    // http://www.opensource.org/licenses/mit-license.php
-    this.hdr = new NIFTI1()
-    const hdr = this.hdr
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    const len = dataBuffer.byteLength
-    // extract initial text header
-    let txt = null
-    const bytes = new Uint8Array(dataBuffer)
-    for (let i = 1; i < len; i++) {
-      if (bytes[i - 1] === 10 && bytes[i] === 10) {
-        const v = dataBuffer.slice(0, i - 1)
-        txt = new TextDecoder().decode(v)
-        hdr.vox_offset = i + 1
-        break
-      }
-    }
-
-    if (txt === null) {
-      throw new Error('could not extract txt')
-    }
-
-    const lines = txt.split('\n')
-    if (!lines[0].startsWith('NRRD')) {
-      alert('Invalid NRRD image')
-    }
-    const n = lines.length
-    let isGz = false
-    let isMicron = false
-    let isDetached = false
-    const mat33 = mat3.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1)
-    const offset = vec3.fromValues(0, 0, 0)
-    let rot33 = mat3.create()
-    for (let i = 1; i < n; i++) {
-      let str = lines[i]
-      if (str[0] === '#') {
-        continue
-      } // comment
-      str = str.toLowerCase()
-      const items = str.split(':')
-      if (items.length < 2) {
-        continue
-      }
-      const key = items[0].trim()
-      let value = items[1].trim()
-      value = value.replaceAll(')', ' ')
-      value = value.replaceAll('(', ' ')
-      value = value.trim()
-      switch (key) {
-        case 'data file':
-          isDetached = true
-          break
-        case 'encoding':
-          if (value.includes('raw')) {
-            isGz = false
-          } else if (value.includes('gz')) {
-            isGz = true
-          } else {
-            alert('Unsupported NRRD encoding')
-          }
-          break
-        case 'type':
-          switch (value) {
-            case 'uchar':
-            case 'unsigned char':
-            case 'uint8':
-            case 'uint8_t':
-              hdr.numBitsPerVoxel = 8
-              hdr.datatypeCode = NiiDataType.DT_UINT8
-              break
-            case 'signed char':
-            case 'int8':
-            case 'int8_t':
-              hdr.numBitsPerVoxel = 8
-              hdr.datatypeCode = NiiDataType.DT_INT8
-              break
-            case 'short':
-            case 'short int':
-            case 'signed short':
-            case 'signed short int':
-            case 'int16':
-            case 'int16_t':
-              hdr.numBitsPerVoxel = 16
-              hdr.datatypeCode = NiiDataType.DT_INT16
-              break
-            case 'ushort':
-            case 'unsigned short':
-            case 'unsigned short int':
-            case 'uint16':
-            case 'uint16_t':
-              hdr.numBitsPerVoxel = 16
-              hdr.datatypeCode = NiiDataType.DT_UINT16
-              break
-            case 'int':
-            case 'signed int':
-            case 'int32':
-            case 'int32_t':
-              hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = NiiDataType.DT_INT32
-              break
-            case 'uint':
-            case 'unsigned int':
-            case 'uint32':
-            case 'uint32_t':
-              hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = NiiDataType.DT_UINT32
-              break
-            case 'float':
-              hdr.numBitsPerVoxel = 32
-              hdr.datatypeCode = NiiDataType.DT_FLOAT32
-              break
-            case 'double':
-              hdr.numBitsPerVoxel = 64
-              hdr.datatypeCode = NiiDataType.DT_FLOAT64
-              break
-            default:
-              throw new Error('Unsupported NRRD data type: ' + value)
-          }
-          break
-        case 'spacings':
-          {
-            const values = value.split(/[ ,]+/)
-            for (let d = 0; d < values.length; d++) {
-              hdr.pixDims[d + 1] = parseFloat(values[d])
-            }
-          }
-          break
-        case 'sizes':
-          {
-            const dims = value.split(/[ ,]+/)
-            hdr.dims[0] = dims.length
-            for (let d = 0; d < dims.length; d++) {
-              hdr.dims[d + 1] = parseInt(dims[d])
-            }
-          }
-          break
-        case 'endian':
-          if (value.includes('little')) {
-            hdr.littleEndian = true
-          } else if (value.includes('big')) {
-            hdr.littleEndian = false
-          }
-          break
-        case 'space directions':
-          {
-            const vs = value.split(/[ ,]+/)
-            if (vs.length !== 9) {
-              break
-            }
-            for (let d = 0; d < 9; d++) {
-              mat33[d] = parseFloat(vs[d])
-            }
-          }
-          break
-        case 'space origin':
-          {
-            const ts = value.split(/[ ,]+/)
-            if (ts.length !== 3) {
-              break
-            }
-            offset[0] = parseFloat(ts[0])
-            offset[1] = parseFloat(ts[1])
-            offset[2] = parseFloat(ts[2])
-          }
-          break
-        case 'space units':
-          if (value.includes('microns')) {
-            isMicron = true
-          }
-          break
-        case 'space':
-          if (value.includes('right-anterior-superior') || value.includes('ras')) {
-            rot33 = mat3.fromValues(
-              1,
-              0,
-              0,
-
-              0,
-              1,
-              0,
-
-              0,
-              0,
-              1
-            )
-          } else if (value.includes('left-anterior-superior') || value.includes('las')) {
-            rot33 = mat3.fromValues(
-              -1,
-              0,
-              0,
-
-              0,
-              1,
-              0,
-
-              0,
-              0,
-              1
-            )
-          } else if (value.includes('left-posterior-superior') || value.includes('lps')) {
-            rot33 = mat3.fromValues(
-              -1,
-              0,
-              0,
-
-              0,
-              -1,
-              0,
-
-              0,
-              0,
-              1
-            )
-          } else {
-            log.warn('Unsupported NRRD space value:', value)
-          }
-          break
-        default:
-          log.warn('Unknown:', key)
-      } // read line
-    } // read all lines
-    if (!isNaN(mat33[0])) {
-      // if spatial transform provided
-      this.hdr.sform_code = 2
-      if (isMicron) {
-        // convert micron to mm
-        // @ts-expect-error FIXME: converting mat3 to mat4
-        mat4.multiplyScalar(mat33, mat33, 0.001)
-        offset[0] *= 0.001
-        offset[1] *= 0.001
-        offset[2] *= 0.001
-      }
-      if (rot33[0] < 0) {
-        offset[0] = -offset[0]
-      } // origin L<->R
-      if (rot33[4] < 0) {
-        offset[1] = -offset[1]
-      } // origin A<->P
-      if (rot33[8] < 0) {
-        offset[2] = -offset[2]
-      } // origin S<->I
-      mat3.multiply(mat33, rot33, mat33)
-      const mat = mat4.fromValues(
-        mat33[0],
-        mat33[3],
-        mat33[6],
-        offset[0],
-        mat33[1],
-        mat33[4],
-        mat33[7],
-        offset[1],
-        mat33[2],
-        mat33[5],
-        mat33[8],
-        offset[2],
-        0,
-        0,
-        0,
-        1
-      )
-      const mm000 = this.vox2mm([0, 0, 0], mat)
-      const mm100 = this.vox2mm([1, 0, 0], mat)
-      vec3.subtract(mm100, mm100, mm000)
-      const mm010 = this.vox2mm([0, 1, 0], mat)
-      vec3.subtract(mm010, mm010, mm000)
-      const mm001 = this.vox2mm([0, 0, 1], mat)
-      vec3.subtract(mm001, mm001, mm000)
-      hdr.pixDims[1] = vec3.length(mm100)
-      hdr.pixDims[2] = vec3.length(mm010)
-      hdr.pixDims[3] = vec3.length(mm001)
-      hdr.affine = [
-        [mat[0], mat[1], mat[2], mat[3]],
-        [mat[4], mat[5], mat[6], mat[7]],
-        [mat[8], mat[9], mat[10], mat[11]],
-        [0, 0, 0, 1]
-      ]
-    }
-
-    if (isDetached && pairedImgData) {
-      // ??? .gz files automatically decompressed?
-      return pairedImgData.slice(0)
-    }
-    if (isDetached) {
-      log.warn('Missing data: NRRD header describes detached data file but only one URL provided')
-    }
-    if (isGz) {
-      return await NVUtilities.decompressToBuffer(new Uint8Array(dataBuffer.slice(hdr.vox_offset)))
-    } else {
-      return dataBuffer.slice(hdr.vox_offset)
-    }
-  } // readNRRD()
 
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
@@ -3269,62 +2855,31 @@ export class NVImage {
     return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope
   }
 
-  // not included in public docs
-  // see niivue.saveImage() for wrapper of this function
+  /**
+   * Converts NVImage to NIfTI compliant byte array, potentially compressed.
+   * Delegates to ImageWriter.saveToUint8Array.
+   * @param fnm - Filename (determines if compression is needed via .gz suffix)
+   * @param drawing8 - Optional Uint8Array drawing overlay
+   * @returns Promise<Uint8Array>
+   */
   async saveToUint8Array(fnm: string, drawing8: Uint8Array | null = null): Promise<Uint8Array> {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    if (!this.img) {
-      throw new Error('img undefined')
-    }
-
-    const isDrawing8 = drawing8 !== null
-    const hdrBytes = hdrToArrayBuffer(this.hdr, isDrawing8)
-    const opad = new Uint8Array(4)
-    let img8 = new Uint8Array(this.img.buffer)
-    if (isDrawing8) {
-      img8 = new Uint8Array(drawing8.buffer)
-    }
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-
-    odata.set(img8, hdrBytes.length + opad.length)
-    let saveData = null
-    const compress = fnm.endsWith('.gz') // true if name ends with .gz
-    if (compress) {
-      saveData = new Uint8Array(await NVUtilities.compress(odata, 'gzip'))
-    } else {
-      saveData = odata
-    }
-    return saveData
+    // Delegate to the writer module, passing the instance 'this'
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.saveToUint8Array(this, fnm, drawing8)
   }
 
-  // not included in public docs
-  // save image as NIfTI volume
-  // if fnm is empty, data is returned
+  /**
+   * save image as NIfTI volume and trigger download.
+   * Delegates to ImageWriter.saveToDisk.
+   * @param fnm - Filename for download. If empty, returns data without download.
+   * @param drawing8 - Optional Uint8Array drawing overlay
+   * @returns Promise<Uint8Array>
+   */
   async saveToDisk(fnm: string = '', drawing8: Uint8Array | null = null): Promise<Uint8Array> {
-    // TODO there was an unnecessary strict string check for fnm here,
-    // shouldn't be necessary anymore. Thanks TS! :)
-    const saveData = await this.saveToUint8Array(fnm, drawing8)
-    if (fnm === '') {
-      log.debug('saveToDisk: empty file name, returning data as Uint8Array rather than triggering download')
-      return saveData
-    }
-    const blob = new Blob([saveData.buffer], {
-      type: 'application/octet-stream'
-    })
-    const blobUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', blobUrl)
-    link.setAttribute('download', fnm)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    return saveData
-  } // saveToDisk()
+    // Delegate to the writer module, passing the instance 'this'
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.saveToDisk(this, fnm, drawing8)
+  }
 
   static async fetchDicomData(
     url: string,
@@ -3464,7 +3019,7 @@ export class NVImage {
     if (!isNifti1) {
       return null
     }
-    const hdr = await readHeaderAsync(hdrU8s.buffer)
+    const hdr = await readHeaderAsync(hdrU8s.buffer as ArrayBuffer)
     if (!hdr) {
       throw new Error('Could not read NIfTI header')
     }
@@ -3480,7 +3035,7 @@ export class NVImage {
     }
     const responseImg = await fetch(url, { headers, cache: 'force-cache' })
     const dataBytes = await this.readFirstDecompressedBytes(responseImg.body, bytesToLoad)
-    return dataBytes.buffer.slice(0, bytesToLoad)
+    return dataBytes.buffer.slice(0, bytesToLoad) as ArrayBuffer
   }
 
   static async loadInitialVolumes(url = '', headers = {}, limitFrames4D = NaN): Promise<ArrayBuffer | null> {
@@ -3526,7 +3081,7 @@ export class NVImage {
       hdrU8s = concatU8s(hdrU8s, value)
     }
     // end of edge cases
-    const hdr = await readHeaderAsync(hdrU8s.buffer)
+    const hdr = await readHeaderAsync(hdrU8s.buffer as ArrayBuffer)
     if (!hdr) {
       throw new Error('Could not read NIfTI header')
     }
@@ -3893,80 +3448,31 @@ export class NVImage {
   }
 
   /**
-   * factory function to load and return a new NVImage instance from a base64 encoded string
-   *
-   * @returns NVImage instance
-   * @example
-   * myImage = NVImage.loadFromBase64('SomeBase64String')
+   * Creates a Uint8Array representing a NIFTI file (header + optional image data).
+   * Delegates to ImageWriter.createNiftiArray.
    */
   static createNiftiArray(
-    dims = [256, 256, 256],
-    pixDims = [1, 1, 1],
-    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
-    datatypeCode = 2, // DT_UINT8
-    img = new Uint8Array()
+    dims: number[] = [256, 256, 256],
+    pixDims: number[] = [1, 1, 1],
+    affine: number[] = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = NiiDataType.DT_UINT8,
+    img: TypedVoxelArray | Uint8Array = new Uint8Array()
   ): Uint8Array {
-    const hdr = this.createNiftiHeader(dims, pixDims, affine, datatypeCode)
-    const hdrBytes = hdrToArrayBuffer(hdr, false)
-    if (img.length < 1) {
-      return hdrBytes
-    }
-    const opad = new Uint8Array(4)
-    const img8 = new Uint8Array(img.buffer)
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-    odata.set(img8, hdrBytes.length + opad.length)
-    return odata
-  } // createNiftiFile()
+    return ImageWriter.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
+  }
 
+  /**
+   * Creates a NIFTI1 header object with basic properties.
+   * Delegates to ImageWriter.createNiftiHeader.
+   */
   static createNiftiHeader(
-    dims = [256, 256, 256],
-    pixDims = [1, 1, 1],
-    affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
-    datatypeCode = 2 // NiiDataType.DT_UINT8
+    dims: number[] = [256, 256, 256],
+    pixDims: number[] = [1, 1, 1],
+    affine: number[] = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1],
+    datatypeCode = NiiDataType.DT_UINT8
   ): NIFTI1 {
-    const hdr = new NIFTI1()
-    hdr.littleEndian = true
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0]
-    hdr.dims[0] = Math.max(3, dims.length)
-    for (let i = 0; i < dims.length; i++) {
-      hdr.dims[i + 1] = dims[i]
-    }
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-    for (let i = 0; i < dims.length; i++) {
-      hdr.pixDims[i + 1] = pixDims[i]
-    }
-    if (affine.length === 16) {
-      let k = 0
-      for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          hdr.affine[i][j] = affine[k]
-          k++
-        }
-      }
-    }
-    let bpv = 8
-    if (datatypeCode === 256 || datatypeCode === 2) {
-      bpv = 8
-    } else if (datatypeCode === 512 || datatypeCode === 4) {
-      bpv = 16
-    } else if (datatypeCode === 16 || datatypeCode === 768 || datatypeCode === 8 || datatypeCode === 2304) {
-      bpv = 32
-    } else if (datatypeCode === 64) {
-      bpv = 64
-    } else {
-      log.warn('Unsupported NIfTI datatypeCode: ' + datatypeCode)
-    }
-    hdr.datatypeCode = datatypeCode
-    hdr.numBitsPerVoxel = bpv
-    hdr.scl_inter = 0
-    hdr.scl_slope = 0
-    hdr.sform_code = 2
-    hdr.magic = 'n+1'
-    hdr.vox_offset = 352
-    return hdr
-  } // loadFromHeader
+    return ImageWriter.createNiftiHeader(dims, pixDims, affine, datatypeCode)
+  }
 
   /**
    * read a 3D slab of voxels from a volume
@@ -3977,81 +3483,21 @@ export class NVImage {
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
 
-  getVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], dataType = 'same'): [TypedVoxelArray, number[]] {
-    let img: TypedVoxelArray = new Uint8Array()
-    if (Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
-      return [img, [0, 0, 0]]
-    }
-    const dims = this.dimsRAS!.slice(1, 4)
-    for (let i = 0; i < 3; i++) {
-      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
-      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
-      if (voxEnd[i] < voxStart[i]) {
-        const tmp = voxEnd[i]
-        voxEnd[i] = voxStart[i]
-        voxStart[i] = tmp
-      }
-    }
-    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
-    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
-    let dt = this.hdr!.datatypeCode
-    if (dataType === 'uint8') {
-      dt = NiiDataType.DT_UINT8
-    } else if (
-      dataType === 'float32' ||
-      dataType === 'scaled' ||
-      dataType === 'normalized' ||
-      dataType === 'windowed'
-    ) {
-      dt = NiiDataType.DT_FLOAT32
-    }
-    if (dt === NiiDataType.DT_UINT8) {
-      img = new Uint8Array(slabNVox)
-    } else if (dt === NiiDataType.DT_INT16) {
-      img = new Int16Array(slabNVox)
-    } else if (dt === NiiDataType.DT_UINT16) {
-      img = new Uint16Array(slabNVox)
-    } else if (dt === NiiDataType.DT_FLOAT32) {
-      img = new Float32Array(slabNVox)
-    } else if (dt === NiiDataType.DT_FLOAT64) {
-      img = new Float64Array(slabNVox)
-    } else {
-      log.error('getVolumeData unsupported datatype')
-      return [img, [0, 0, 0]]
-    }
-    const outStep = this.img2RASstep!
-    const outStart = this.img2RASstart!
-    let i = 0
-    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
-      const zi = outStart[2] + z * outStep[2]
-      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
-        const yizi = zi + outStart[1] + y * outStep[1]
-        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          const xi = outStart[0] + x * outStep[0]
-          img[i++] = this.img![xi + yizi]
-        }
-      }
-    }
-    if (dataType === 'scaled' || dataType === 'normalized' || dataType === 'windowed') {
-      for (let i = 0; i < img.length; i++) {
-        img[i] = img[i] * this.hdr.scl_slope + this.hdr.scl_inter
-      }
-    }
-    if (dataType === 'normalized' || dataType === 'windowed') {
-      let mn = this.cal_min
-      let mx = this.cal_max
-      if (dataType === 'normalized') {
-        mn = this.global_min
-        mx = this.global_max
-      }
-      const scale = 1 / (mx - mn)
-      for (let i = 0; i < img.length; i++) {
-        img[i] = (img[i] - mn) * scale
-        img[i] = Math.max(Math.min(img[i], 1), 0)
-      }
-    }
-    return [img, slabDims]
-  } // getVolumeData()
+  /**
+   * read a 3D slab of voxels from a volume, specified in RAS coordinates.
+   * Delegates to VolumeUtils.getVolumeData.
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
+   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
+   */
+  getVolumeData(
+    voxStart: number[] = [-1, 0, 0],
+    voxEnd: number[] = [0, 0, 0],
+    dataType = 'same'
+  ): [TypedVoxelArray, number[]] {
+    return VolumeUtils.getVolumeData(this, voxStart, voxEnd, dataType)
+  }
 
   /**
    * write a 3D slab of voxels from a volume
@@ -4061,41 +3507,21 @@ export class NVImage {
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
 
-  setVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], img: TypedVoxelArray = new Uint8Array()): void {
-    if (img.length < 1 || Math.min(...voxStart) < 0 || Math.min(...voxEnd) < 0) {
-      return
-    }
-    const dims = this.dimsRAS!.slice(1, 4)
-    for (let i = 0; i < 3; i++) {
-      voxStart[i] = Math.min(voxStart[i], dims[i] - 1)
-      voxEnd[i] = Math.min(voxEnd[i], dims[i] - 1)
-      if (voxEnd[i] < voxStart[i]) {
-        const tmp = voxEnd[i]
-        voxEnd[i] = voxStart[i]
-        voxStart[i] = tmp
-      }
-    }
-    const slabDims = [voxEnd[0] - voxStart[0] + 1, voxEnd[1] - voxStart[1] + 1, voxEnd[2] - voxStart[2] + 1]
-    const slabNVox = slabDims[0] * slabDims[1] * slabDims[2]
-    if (img.length < slabNVox) {
-      log.error('setVolumeData image does not have enough voxels')
-      return
-    }
-    const outStep = this.img2RASstep!
-    const outStart = this.img2RASstart!
-    let i = 0
-    for (let z = voxStart[2]; z <= voxEnd[2]; z++) {
-      const zi = outStart[2] + z * outStep[2]
-      for (let y = voxStart[1]; y <= voxEnd[1]; y++) {
-        const yizi = zi + outStart[1] + y * outStep[1]
-        for (let x = voxStart[0]; x <= voxEnd[0]; x++) {
-          const xi = outStart[0] + x * outStep[0]
-          // imgRAS[j] = this.img[xi + yi + zi]
-          this.img![xi + yizi] = img[i++]
-        }
-      }
-    }
-  } // setVolumeData()
+  /**
+   * write a 3D slab of voxels from a volume, specified in RAS coordinates.
+   * Delegates to VolumeUtils.setVolumeData.
+   * Input slabData is assumed to be in the correct raw data type for the target image.
+   * @param voxStart - first row, column and slice (RAS order) for selection
+   * @param voxEnd - final row, column and slice (RAS order) for selection
+   * @param img - array of voxel values to insert (RAS order, raw data type)
+   */
+  setVolumeData(
+    voxStart: number[] = [-1, 0, 0],
+    voxEnd: number[] = [0, 0, 0],
+    img: TypedVoxelArray = new Uint8Array()
+  ): void {
+    VolumeUtils.setVolumeData(this, voxStart, voxEnd, img)
+  }
 
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
@@ -4261,174 +3687,19 @@ export class NVImage {
     return zeroClone
   }
 
-  // not included in public docs
-  // return voxel intensity at specific coordinates (xyz are zero indexed column row, slice)
-  getValue(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    if (!this.img) {
-      throw new Error('img undefined')
-    }
-
-    const nx = this.hdr.dims[1]
-    const ny = this.hdr.dims[2]
-    const nz = this.hdr.dims[3]
-    const perm = this.permRAS!.slice()
-    if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-      const pos = vec4.fromValues(x, y, z, 1)
-      vec4.transformMat4(pos, pos, this.toRASvox!)
-      x = pos[0]
-      y = pos[1]
-      z = pos[2]
-    } // image is already in RAS
-    let vx = x + y * nx + z * nx * ny
-
-    if (this.hdr.datatypeCode === NiiDataType.DT_RGBA32) {
-      vx *= 4
-      // convert rgb to luminance
-      return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07)
-    }
-    if (this.hdr.datatypeCode === NiiDataType.DT_RGB24) {
-      vx *= 3
-      // convert rgb to luminance
-      return Math.round(this.img[vx] * 0.21 + this.img[vx + 1] * 0.72 + this.img[vx + 2] * 0.07)
-    }
-    const vol = frame4D * nx * ny * nz
-    let i = this.img[vx + vol]
-    if (isReadImaginary) {
-      i = this.imaginary![vx + vol]
-    }
-
-    return this.hdr.scl_slope * i + this.hdr.scl_inter
-  }
-
   /**
-   * @param id - id of 3D Object (is this the base volume or an overlay?)
-   * @param gl - WebGL rendering context
-   * @returns new 3D object in model space
+   * Returns voxel intensity at specific native coordinates.
+   * Delegates to VolumeUtils.getValue.
+   * @param x - Native X coordinate (0-indexed)
+   * @param y - Native Y coordinate (0-indexed)
+   * @param z - Native Z coordinate (0-indexed)
+   * @param frame4D - 4D frame index (0-indexed)
+   * @param isReadImaginary - Flag to read from imaginary data array
+   * @returns Scaled voxel intensity
    */
-  toNiivueObject3D(id: number, gl: WebGL2RenderingContext): NiivueObject3D {
-    // TODO somehow enforce that these fields are set
-    const dimsRAS = this.dimsRAS as number[]
-    const matRAS = this.matRAS as mat4
-    const pixDimsRAS = this.pixDimsRAS as number[]
-    // cube has 8 vertices: left/right, posterior/anterior, inferior/superior
-    // n.b. voxel coordinates are from VOXEL centers
-    // add/subtract 0.5 to get full image field of view
-    const L = -0.5
-    const P = -0.5
-    const I = -0.5
-    const R = dimsRAS[1] - 1 + 0.5
-    const A = dimsRAS[2] - 1 + 0.5
-    const S = dimsRAS[3] - 1 + 0.5
-
-    const LPI = this.vox2mm([L, P, I], matRAS)
-    const LAI = this.vox2mm([L, A, I], matRAS)
-    const LPS = this.vox2mm([L, P, S], matRAS)
-    const LAS = this.vox2mm([L, A, S], matRAS)
-    const RPI = this.vox2mm([R, P, I], matRAS)
-    const RAI = this.vox2mm([R, A, I], matRAS)
-    const RPS = this.vox2mm([R, P, S], matRAS)
-    const RAS = this.vox2mm([R, A, S], matRAS)
-    const posTex = [
-      // spatial position (XYZ), texture coordinates UVW
-      // Superior face
-      ...LPS,
-      ...[0.0, 0.0, 1.0],
-      ...RPS,
-      ...[1.0, 0.0, 1.0],
-      ...RAS,
-      ...[1.0, 1.0, 1.0],
-      ...LAS,
-      ...[0.0, 1.0, 1.0],
-
-      // Inferior face
-      ...LPI,
-      ...[0.0, 0.0, 0.0],
-      ...LAI,
-      ...[0.0, 1.0, 0.0],
-      ...RAI,
-      ...[1.0, 1.0, 0.0],
-      ...RPI,
-      ...[1.0, 0.0, 0.0]
-    ]
-
-    const indexBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
-
-    // This array defines each face as two triangles, using the
-    // indices into the vertex array to specify each triangle's
-    // position.
-
-    const indices = [
-      // six faces of cube: each has 2 triangles (6 indices)
-      0,
-      3,
-      2,
-      2,
-      1,
-      0, // Top
-      4,
-      7,
-      6,
-      6,
-      5,
-      4, // Bottom
-      5,
-      6,
-      2,
-      2,
-      3,
-      5, // Front
-      4,
-      0,
-      1,
-      1,
-      7,
-      4, // Back
-      7,
-      1,
-      2,
-      2,
-      6,
-      7, // Right
-      4,
-      5,
-      3,
-      3,
-      0,
-      4 // Left
-    ]
-    // Now send the element array to GL
-
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
-
-    const posTexBuffer = gl.createBuffer()!
-    gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW)
-
-    const vao = gl.createVertexArray()
-    gl.bindVertexArray(vao)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer)
-    // vertex spatial position: 3 floats X,Y,Z
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
-    // UVW texCoord: (also three floats)
-    gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
-    gl.bindVertexArray(null)
-
-    const obj3D = new NiivueObject3D(id, posTexBuffer, gl.TRIANGLES, indices.length, indexBuffer, vao)
-    const extents = getExtents([...LPS, ...RPS, ...RAS, ...LAS, ...LPI, ...LAI, ...RAI, ...RPI])
-    obj3D.extentsMin = extents.min.slice()
-    obj3D.extentsMax = extents.max.slice()
-    obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin
-    obj3D.originNegate = vec3.clone(extents.origin)
-    vec3.negate(obj3D.originNegate, obj3D.originNegate)
-    obj3D.fieldOfViewDeObliqueMM = [dimsRAS[1] * pixDimsRAS[1], dimsRAS[2] * pixDimsRAS[2], dimsRAS[3] * pixDimsRAS[3]]
-    return obj3D
+  getValue(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number {
+    // **** DELEGATE TO VolumeUtils ****
+    return VolumeUtils.getValue(this, x, y, z, frame4D, isReadImaginary)
   }
 
   /**
@@ -4462,91 +3733,16 @@ export class NVImage {
   }
 
   /**
-   * Converts NVImage to NIfTI compliant byte array
+   * Converts NVImage to NIfTI compliant byte array.
+   * Handles potential re-orientation of drawing data.
+   * Delegates to ImageWriter.toUint8Array.
+   * @param drawingBytes - Optional Uint8Array drawing overlay
+   * @returns Uint8Array
    */
   toUint8Array(drawingBytes: Uint8Array | null = null): Uint8Array {
-    const isDrawing = drawingBytes !== null
-    const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, isDrawing)
-
-    let drawingBytesToBeConverted = drawingBytes
-    if (isDrawing) {
-      const perm = this.permRAS as number[]
-      if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-        const dims = this.hdr!.dims // reverse to original
-        // reverse RAS to native space, layout is mrtrix MIF format
-        // for details see NVImage.readMIF()
-        const layout = [0, 0, 0]
-        for (let i = 0; i < 3; i++) {
-          for (let j = 0; j < 3; j++) {
-            if (Math.abs(perm[i]) - 1 !== j) {
-              continue
-            }
-            layout[j] = i * Math.sign(perm[i])
-          }
-        }
-        let stride = 1
-        const instride = [1, 1, 1]
-        const inflip = [false, false, false]
-        for (let i = 0; i < layout.length; i++) {
-          for (let j = 0; j < layout.length; j++) {
-            const a = Math.abs(layout[j])
-            if (a !== i) {
-              continue
-            }
-            instride[j] = stride
-            // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-            if (layout[j] < 0 || Object.is(layout[j], -0)) {
-              inflip[j] = true
-            }
-            stride *= dims[j + 1]
-          }
-        }
-        let xlut = NVUtilities.range(0, dims[1] - 1, 1)
-        if (inflip[0]) {
-          xlut = NVUtilities.range(dims[1] - 1, 0, -1)
-        }
-        for (let i = 0; i < dims[1]; i++) {
-          xlut[i] *= instride[0]
-        }
-        let ylut = NVUtilities.range(0, dims[2] - 1, 1)
-        if (inflip[1]) {
-          ylut = NVUtilities.range(dims[2] - 1, 0, -1)
-        }
-        for (let i = 0; i < dims[2]; i++) {
-          ylut[i] *= instride[1]
-        }
-        let zlut = NVUtilities.range(0, dims[3] - 1, 1)
-        if (inflip[2]) {
-          zlut = NVUtilities.range(dims[3] - 1, 0, -1)
-        }
-        for (let i = 0; i < dims[3]; i++) {
-          zlut[i] *= instride[2]
-        }
-        // convert data
-
-        const inVs = new Uint8Array(drawingBytes)
-        const outVs = new Uint8Array(dims[1] * dims[2] * dims[3])
-        let j = 0
-        for (let z = 0; z < dims[3]; z++) {
-          for (let y = 0; y < dims[2]; y++) {
-            for (let x = 0; x < dims[1]; x++) {
-              outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]]
-              j++
-            } // for x
-          } // for y
-        } // for z
-        drawingBytesToBeConverted = outVs
-        log.debug('drawing bytes')
-        log.debug(drawingBytesToBeConverted)
-      }
-    }
-    const img8 = isDrawing ? (drawingBytesToBeConverted as Uint8Array) : new Uint8Array(this.img!.buffer)
-    const opad = new Uint8Array(4)
-    const odata = new Uint8Array(hdrBytes.length + opad.length + img8.length)
-    odata.set(hdrBytes)
-    odata.set(opad, hdrBytes.length)
-    odata.set(img8, hdrBytes.length + opad.length)
-    return odata
+    // Delegate to the writer module, passing the instance 'this'
+    // **** UPDATED DELEGATION ****
+    return ImageWriter.toUint8Array(this, drawingBytes)
   }
 
   // not included in public docs

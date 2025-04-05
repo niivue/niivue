@@ -7,7 +7,7 @@ const electron = window.electron
 
 export const registerSliceTypeHandler = (nv: Niivue): void => {
   electron.ipcRenderer.on('setSliceType', (_, sliceTypeName: string) => {
-    // get sliceType object from the name propery
+    // get sliceType object from the name property
     const sliceType = Object.values(sliceTypeMap).find(
       (sliceTypeValue) => sliceTypeValue.name === sliceTypeName
     )

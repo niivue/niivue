@@ -1,6 +1,6 @@
 # DICOM Manifest
 
-Unlike enhanced DICOM, classic DICOM stores a single 2D image per file. Therefore, 3D volumetric data is stored in mulitple files. A DICOM manifest is a text file that contains a list of relative URLs of DICOM files. When a manifest file is specified in the image options using the isManifest property Niivue will use the URL as a relative URL to download DICOM files.
+Unlike enhanced DICOM, classic DICOM stores a single 2D image per file. Therefore, 3D volumetric data is stored in multiple files. A DICOM manifest is a text file that contains a list of relative URLs of DICOM files. When a manifest file is specified in the image options using the isManifest property Niivue will use the URL as a relative URL to download DICOM files.
 
 If no file name is specified in the URL, Niivue will append niivue-manifest.txt. A custom file can be used, but it must have a .txt extension.
 
