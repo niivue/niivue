@@ -1083,7 +1083,7 @@ void main(void) {
 	//https://stackoverflow.com/questions/5879403/opengl-texture-coordinates-in-pixel-space
 	float nlayer = float(textureSize(colormap, 0).y);
 	//each volume has two color maps:
-	// (layer*2) = negative and (layer * 2) + 1 = postive
+	// (layer*2) = negative and (layer * 2) + 1 = positive
 	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(txl, y)).rgba;
 	//negative colors

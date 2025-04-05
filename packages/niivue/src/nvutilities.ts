@@ -671,7 +671,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    * xyz = NVUtilities.sph2cartDeg(42, 42)
    */
   static sph2cartDeg(azimuth: number, elevation: number): number[] {
-    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesion
+    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesian
     // see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
     // reverse with cart2sph
     const Phi = -elevation * (Math.PI / 180)
