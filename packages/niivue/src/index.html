@@ -5,8 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>NiiVue</title>
-    <link rel="stylesheet" href="niivue.css" />
-    
+      <link rel="stylesheet" href="niivue.css" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
   <body>
@@ -15,64 +14,119 @@
     </noscript>
     <header>
       <button id="openBtn">Choose an image or mesh with a dialog</button>
-      <label for="fiberRadius">Radius</label>
-      <input type="range" min="0" max="20" value="5" class="slider" id="fiberRadius" />
-      <label for="fiberDitherSlider">Dither</label>
-      <input type="range" min="0" max="10" value="0" class="slider" id="fiberDitherSlider" />
-      <label for="fiberColor">Fiber color</label>
-      <select id="fiberColor">
-        <option value="Global">Global direction</option>
-        <option value="Local">Local direction</option>
-        <option value="Fixed">Fixed</option>
-        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
-      </select>
-      <label for="fiberColormap">Colormap</label>
-      <select id="fiberColormap">
-        <option value="actc">ACTC</option>
-        <option value="inferno" selected>Inferno</option>
-        <option value="plasma">Plasma</option>
-        <option value="warm">Warm</option>
-        <option value="winter">Winter</option>
-      </select>
-      <label for="fiberCalMin">Color Minimum</label>
-      <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
-      <label for="layoutSelect">Layout</label>
-      <select id="layoutSelect">
-        <option value="0" selected>Auto</option>
-        <option value="1">Column</option>
-        <option value="2">Grid</option>
-        <option value="3">Row</option>
-      </select>
-      <label for="renderingSelect">MultiplanarRendering</label>
-      <select id="renderingSelect">
-        <option value="0">Never</option>
-        <option value="1">Always</option>
-        <option value="2" selected>Auto</option>
-      </select>
-      <select id="sliceType">
-        <option value="0">Axial</option>
-        <option value="1">Coronal</option>
-        <option value="2">Sagittal</option>
-        <option value="4">Render</option>
-        <option value="3" selected>Multiplanar</option>
-      </select>
-      <label for="equalCheck">EqualSize</label>
-      <input type="checkbox" id="equalCheck" checked />
-      <label for="cornerCheck">CornerText</label>
-      <input type="checkbox" id="cornerCheck" unchecked />
-      <label for="marginCheck">TileMargin</label>
-      <input type="checkbox" id="marginCheck" unchecked />
-      <label for="heroSlider">Hero Image</label>
-      <input type="range" min="0" max="9" value="0" class="slider" id="heroSlider" />
+      
+      <div class="control-group">
+        <label for="fiberRadius">Radius</label>
+        <input type="range" min="0" max="20" value="5" class="slider" id="fiberRadius" />
+      </div>
+      
+      <div class="control-group">
+        <label for="fiberDitherSlider">Dither</label>
+        <input type="range" min="0" max="10" value="0" class="slider" id="fiberDitherSlider" />
+      </div>
+      
+      <div class="control-group">
+        <label for="fiberColor">Fiber color</label>
+        <select id="fiberColor">
+          <option value="Global">Global direction</option>
+          <option value="Local">Local direction</option>
+          <option value="Fixed">Fixed</option>
+          <option value="DPV0" selected>First Per Vertex Type (if available)</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label for="fiberColormap">Colormap</label>
+        <select id="fiberColormap">
+          <option value="actc">ACTC</option>
+          <option value="inferno" selected>Inferno</option>
+          <option value="plasma">Plasma</option>
+          <option value="warm">Warm</option>
+          <option value="winter">Winter</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label for="fiberCalMin">Color Minimum</label>
+        <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
+      </div>
+      
+      <div class="control-group">
+        <label for="layoutSelect">Layout</label>
+        <select id="layoutSelect">
+          <option value="0" selected>Auto</option>
+          <option value="1">Column</option>
+          <option value="2">Grid</option>
+          <option value="3">Row</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label for="renderingSelect">MultiplanarRendering</label>
+        <select id="renderingSelect">
+          <option value="0">Never</option>
+          <option value="1">Always</option>
+          <option value="2" selected>Auto</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label for="sliceType">Slice Type</label>
+        <select id="sliceType">
+          <option value="0">Axial</option>
+          <option value="1">Coronal</option>
+          <option value="2">Sagittal</option>
+          <option value="4">Render</option>
+          <option value="3" selected>Multiplanar</option>
+        </select>
+      </div>
+      
+      <div class="control-group inline">
+        <label for="equalCheck">Equal Size</label>
+        <input type="checkbox" id="equalCheck" checked />
+      </div>
+      
+      <div class="control-group inline">
+        <label for="cornerCheck">Corner Text</label>
+        <input type="checkbox" id="cornerCheck" />
+      </div>
+      
+      <div class="control-group inline">
+        <label for="marginCheck">Tile Margin</label>
+        <input type="checkbox" id="marginCheck" />
+      </div>
+      
+      <div class="control-group">
+        <label for="heroSlider">Hero Image</label>
+        <input type="range" min="0" max="9" value="0" class="slider" id="heroSlider" />
+      </div>
+      
+      <!-- Added new color control for the user's visibility -->
+      <div class="control-group">
+        <label for="backgroundColorSelect">Background Color</label>
+        <select id="backgroundColorSelect">
+          <option value="blue" selected>Blue (Default)</option>
+          <option value="black">Black</option>
+          <option value="gray">Gray</option>
+          <option value="white">White</option>
+          <option value="red">Red</option>
+          <option value="green">Green</option>
+        </select>
+      </div>
     </header>
+    
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
         <canvas id="gl1"></canvas>
       </div>
     </main>
+    
     <footer>
-      <label id="shaders">Shaders: </label>
+      <div id="shaders-container">
+        <label id="shaders">Shaders: </label>
+      </div>
     </footer>
+    
     <script type="module" async>
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
       async function addVolumeFromFiles(f) {
@@ -105,7 +159,7 @@
         nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
       }
       fiberCalMin.oninput = function () {
-        nv1.meshes[0].dpv[0].cal_min = this.value * 1 //*1 converts string to number
+        nv1.meshes[0].dpv[0].cal_min = this.value * 1 
         nv1.setMeshProperty(nv1.meshes[0].id, 'colormap', fiberColormap.value)
       }
       layoutSelect.onchange = function () {
@@ -124,7 +178,7 @@
         nv1.drawScene()
       }
       cornerCheck.onchange = function () {
-        //nv1.opts.isCornerOrientationText = this.checked\
+        
         nv1.setCornerOrientationText(this.checked)
       }
       heroSlider.oninput = function () {
@@ -134,11 +188,41 @@
         let st = parseInt(document.getElementById('sliceType').value)
         nv1.setSliceType(st)
       }
+      
+      // Add handler for background color selector for bg
+      backgroundColorSelect.onchange = function() {
+        let color;
+        switch(this.value) {
+          case 'blue':
+            color = [0, 0.2, 0.4, 1]; // Original blue
+            break;
+          case 'black':
+            color = [0, 0, 0, 1];
+            break;
+          case 'gray':
+            color = [0.2, 0.2, 0.2, 1];
+            break;
+          case 'white':
+            color = [1, 1, 1, 1];
+            break;
+          case 'red':
+            color = [0.5, 0, 0, 1];
+            break;
+          case 'green':
+            color = [0, 0.5, 0, 1];
+            break;
+          default:
+            color = [0, 0.2, 0.4, 1]; // Default blue
+        }
+        nv1.opts.backColor = color;
+        nv1.drawScene();
+      }
+      
       var volumeList1 = [{ url: '../demos/images/mni152.nii.gz' }]
 
-      // with roiSelect, show the stats from the ROI in a temporary div
+      
       const onDragRelease = (data) => {
-        // if there is a div with the id dragReleaseDiv, remove it
+        
         const divToRemove = document.getElementById('dragReleaseDiv')
         if (divToRemove) {
           divToRemove.remove()
@@ -152,48 +236,48 @@
           roiIsMask: true
         })
         console.log(obj)
-        // get dpr
+        
         const dpr = window.devicePixelRatio
-        // get mouse x,y. Divide by dpr to get the correct position
+        
         const x = nv1.uiData.dragEnd[0] / dpr
         const y = nv1.uiData.dragEnd[1] / dpr
         console.log(x, y)
         const pad = 1
         const div = document.createElement('div')
-        // set id for removal on the next pass
+        
         div.id = 'dragReleaseDiv'
         div.style.color = 'red'
         div.style.position = 'absolute'
         div.style.backgroundColor = 'black'
         div.style.opacity = 0.8
         div.style.padding = '5px'
-        // set z-index to be well above the canvas
+        
         div.style.zIndex = 1000
         div.innerHTML = `Mean: ${obj.mean}<br>Area: ${obj.area}<br>Stdev: ${obj.stdev}`
-        // set position to be at the mouse x,y relative to the canvas
+        
         div.style.left = x + pad + 'px'
         div.style.top = y + pad + 'px'
-        // get the canvas element reference from niivue
+       
         const canvas = nv1.gl.canvas
-        // niivue should always be in a container, so get the parent of the canvas
+        
         const parentDiv = canvas.parentElement
         parentDiv.appendChild(div)
       }
 
       const onLocationChange = (data) => {
-        // remove the stats div if it exists when the user clicks away
+       
         const divToRemove = document.getElementById('dragReleaseDiv')
         if (divToRemove) {
           divToRemove.remove()
         }
       }
       let defaults = {
-        backColor: [0, 0.2, 0.4, 1],
+        backColor: [0, 0.2, 0.4, 1], 
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
         dragMode: DRAG_MODE.measurement,
-        // onDragRelease: onDragRelease,
+       onDragRelease: onDragRelease,
         onLocationChange: onLocationChange,
         measureTextJustify: 'start',
         showMeasureUnits: true,
@@ -203,9 +287,7 @@
       }
       var nv1 = new Niivue(defaults)
       await nv1.attachToCanvas(gl1)
-      // multiplanarShowRender is the preferred option now,
-      // but multiplanarForceRender is still available for backwards compatibility
-      // previous use was: nv1.opts.multiplanarForceRender = true;
+     
       nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
       nv1.opts.yoke3Dto2DZoom = true
       await nv1.loadVolumes(volumeList1)
@@ -214,7 +296,7 @@
       nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', 'DPV0')
       nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', 0)
       nv1.setMeshProperty(nv1.meshes[0].id, 'fiberRadius', 0.5)
-      nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [0, 255, 255, 255]) //color for fixed
+      nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [0, 255, 255, 255]) 
       nv1.setMeshShader(nv1.meshes[0].id, 'diffuse')
       console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
       nv1.setSelectionBoxColor([0, 1, 0, 0.5])
