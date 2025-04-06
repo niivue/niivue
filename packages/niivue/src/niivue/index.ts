@@ -3438,7 +3438,11 @@ export class Niivue {
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
-  setMeshProperty(id: number, key: keyof NVMesh, val: number | string | boolean): void {
+  setMeshProperty(
+    id: number,
+    key: keyof NVMesh,
+    val: number | string | boolean | Uint8Array | number[] | ColorMap | LegacyConnectome | Float32Array
+  ): void {
     const idx = this.getMeshIndexByID(id)
     if (idx < 0) {
       log.warn('setMeshProperty() id not loaded', id)
