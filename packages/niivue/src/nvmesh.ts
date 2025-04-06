@@ -1415,7 +1415,11 @@ export class NVMesh {
 
   // adjust mesh attributes. invoked by niivue.setMeshProperty(()
   // TODO this method is too generic
-  setProperty(key: keyof this, val: number | string | boolean, gl: WebGL2RenderingContext): void {
+  setProperty(
+    key: keyof this,
+    val: number | string | boolean | Uint8Array | number[] | ColorMap | LegacyConnectome | Float32Array,
+    gl: WebGL2RenderingContext
+  ): void {
     if (!(key in this)) {
       console.warn('Mesh does not have property:', key, this)
       return
