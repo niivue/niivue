@@ -9270,22 +9270,20 @@ export class Niivue {
     txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
 
     const fullHt = 3 * txtHt
-    
+
     // Calculate width as a percentage of canvas width
     // If colorbarWidth is not set (0) or invalid, use full width
-    const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 
-      ? this.opts.colorbarWidth 
-      : 1.0
-    
+    const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1.0
+
     const width = widthPercentage * this.gl.canvas.width
-    
+
     const leftTopWidthHeight = [
       (this.gl.canvas.width - width) / 2, // Center the colorbar horizontally
-      this.gl.canvas.height - fullHt, 
-      width, 
+      this.gl.canvas.height - fullHt,
+      width,
       fullHt
     ]
-    
+
     this.colorbarHeight = leftTopWidthHeight[3] + 1
     return leftTopWidthHeight
   }
@@ -9320,7 +9318,7 @@ export class Niivue {
     this.colorbarHeight = leftTopWidthHeight[3] + 1
     const barLTWH = [leftTopWidthHeight[0] + margin, leftTopWidthHeight[1], leftTopWidthHeight[2] - 2 * margin, barHt]
     const rimLTWH = [barLTWH[0] - 1, barLTWH[1] - 1, barLTWH[2] + 2, barLTWH[3] + 2]
-    
+
     // Only draw the border if showColorbarBorder is true
     if (this.opts.showColorbarBorder) {
       this.drawRect(rimLTWH, this.opts.crosshairColor)
