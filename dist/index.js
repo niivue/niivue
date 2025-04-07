@@ -25210,6 +25210,10 @@ var COLORMAP_TYPE = /* @__PURE__ */ ((COLORMAP_TYPE2) => {
 var DEFAULT_OPTIONS = {
   textHeight: 0.06,
   colorbarHeight: 0.05,
+  colorbarWidth: -1,
+  // automatic (full width)
+  showColorbarBorder: true,
+  // show border around the colorbar
   crosshairWidth: 1,
   crosshairWidthUnit: "voxels",
   crosshairGap: 0,
@@ -37592,7 +37596,15 @@ var Niivue = class {
     let txtHt = Math.max(this.opts.textHeight, 0.01);
     txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
     const fullHt = 3 * txtHt;
-    const leftTopWidthHeight = [0, this.gl.canvas.height - fullHt, this.gl.canvas.width, fullHt];
+    const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1;
+    const width = widthPercentage * this.gl.canvas.width;
+    const leftTopWidthHeight = [
+      (this.gl.canvas.width - width) / 2,
+      // Center the colorbar horizontally
+      this.gl.canvas.height - fullHt,
+      width,
+      fullHt
+    ];
     this.colorbarHeight = leftTopWidthHeight[3] + 1;
     return leftTopWidthHeight;
   }
@@ -37618,7 +37630,9 @@ var Niivue = class {
     this.colorbarHeight = leftTopWidthHeight[3] + 1;
     const barLTWH = [leftTopWidthHeight[0] + margin, leftTopWidthHeight[1], leftTopWidthHeight[2] - 2 * margin, barHt];
     const rimLTWH = [barLTWH[0] - 1, barLTWH[1] - 1, barLTWH[2] + 2, barLTWH[3] + 2];
-    this.drawRect(rimLTWH, this.opts.crosshairColor);
+    if (this.opts.showColorbarBorder) {
+      this.drawRect(rimLTWH, this.opts.crosshairColor);
+    }
     if (!this.colorbarShader) {
       throw new Error("colorbarShader undefined");
     }

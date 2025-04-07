@@ -683,6 +683,8 @@ declare enum COLORMAP_TYPE {
 type NVConfigOptions = {
     textHeight: number;
     colorbarHeight: number;
+    colorbarWidth: number;
+    showColorbarBorder: boolean;
     crosshairWidth: number;
     crosshairWidthUnit: 'voxels' | 'mm' | 'percent';
     crosshairGap: number;
