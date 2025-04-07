@@ -84,6 +84,9 @@ export type NVConfigOptions = {
   textHeight: number
   // 0 for no colorbars, fraction of Nifti j dimension
   colorbarHeight: number
+  // -1 for automatic (full width), positive number for custom width in pixels
+  colorbarWidth: number
+  showColorbarBorder: boolean // show border around the colorbar
   // 0 for no crosshairs
   crosshairWidth: number
   crosshairWidthUnit: 'voxels' | 'mm' | 'percent'
@@ -198,6 +201,8 @@ export type NVConfigOptions = {
 export const DEFAULT_OPTIONS: NVConfigOptions = {
   textHeight: 0.06,
   colorbarHeight: 0.05,
+  colorbarWidth: -1, // automatic (full width)
+  showColorbarBorder: true, // show border around the colorbar
   crosshairWidth: 1,
   crosshairWidthUnit: 'voxels',
   crosshairGap: 0,
