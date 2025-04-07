@@ -2758,6 +2758,16 @@ export class Niivue {
   }
 
   /**
+   * determine if orientation text appears in 2D slice view.
+   * @param isOrientationTextVisible - controls position of text
+   * @example niivue.setIsOrientationTextVisible(false)
+   */
+  setIsOrientationTextVisible(isOrientationTextVisible: boolean): void {
+    this.opts.isOrientationTextVisible = isOrientationTextVisible
+    this.drawScene()
+  }
+
+  /**
    * determine proportion of screen real estate devoted to rendering in multiplanar view.
    * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
    * @example niivue.setHeroImage(0.5)
@@ -10080,7 +10090,7 @@ export class Niivue {
       // no crossbars for mosaic view
       this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
     }
-    if (isStretchToScreen) {
+    if (isStretchToScreen && this.opts.isOrientationTextVisible) {
       // issue1065
       this.drawSliceOrientationText(leftTopWidthHeight, axCorSag)
     }
@@ -10122,7 +10132,7 @@ export class Niivue {
     if (customMM === Infinity || customMM === -Infinity || axCorSag === SLICE_TYPE.RENDER) {
       return
     }
-    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0) {
+    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0 && this.opts.isOrientationTextVisible) {
       // issue1065
       this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
     }
