@@ -4079,10 +4079,13 @@ export class Niivue {
     this.renderShader = this.renderVolumeShader
     if (this.renderGradientValues) {
       this.renderShader = this.renderGradientValuesShader
-    } else if (gradientAmount > 0.0 || this.opts.gradientOpacity > 0.0) {
-      this.renderShader = this.renderGradientShader
-    } else if (gradientAmount < 0.0) {
-      this.renderShader = this.renderSliceShader
+    } else {
+      this.opts.gradientAmount = gradientAmount
+      if (gradientAmount > 0.0 || this.opts.gradientOpacity > 0.0) {
+        this.renderShader = this.renderGradientShader
+      } else if (gradientAmount < 0.0) {
+        this.renderShader = this.renderSliceShader
+      }
     }
     this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl)
@@ -4117,6 +4120,9 @@ export class Niivue {
     }
     this.initRenderShader(this.renderShader!, this.gradientTextureAmount)
     this.renderShader!.use(this.gl)
+    if (this.gradientTextureAmount > 0.0) {
+      this.refreshLayers(this.volumes[0], 0)
+    }
     this.drawScene()
   }
 
@@ -4300,6 +4306,9 @@ export class Niivue {
         this.refreshDrawing()
       }
     }
+
+    await this.setGradientOpacity(this.opts.gradientOpacity)
+    await this.setVolumeRenderIllumination(this.opts.gradientAmount)
 
     this.updateGLVolume()
     this.drawScene()
