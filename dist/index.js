@@ -25320,6 +25320,7 @@ var DEFAULT_OPTIONS = {
   isAlphaClipDark: false,
   gradientOrder: 1,
   gradientOpacity: 0,
+  gradientAmount: 0,
   invertScrollDirection: false
 };
 var INITIAL_SCENE_DATA = {
@@ -33111,10 +33112,13 @@ var Niivue = class {
     this.renderShader = this.renderVolumeShader;
     if (this.renderGradientValues) {
       this.renderShader = this.renderGradientValuesShader;
-    } else if (gradientAmount > 0 || this.opts.gradientOpacity > 0) {
-      this.renderShader = this.renderGradientShader;
-    } else if (gradientAmount < 0) {
-      this.renderShader = this.renderSliceShader;
+    } else {
+      this.opts.gradientAmount = gradientAmount;
+      if (gradientAmount > 0 || this.opts.gradientOpacity > 0) {
+        this.renderShader = this.renderGradientShader;
+      } else if (gradientAmount < 0) {
+        this.renderShader = this.renderSliceShader;
+      }
     }
     this.initRenderShader(this.renderShader, gradientAmount);
     this.renderShader.use(this.gl);
@@ -33148,6 +33152,9 @@ var Niivue = class {
     }
     this.initRenderShader(this.renderShader, this.gradientTextureAmount);
     this.renderShader.use(this.gl);
+    if (this.gradientTextureAmount > 0) {
+      this.refreshLayers(this.volumes[0], 0);
+    }
     this.drawScene();
   }
   // not included in public docs.
@@ -33306,6 +33313,8 @@ var Niivue = class {
         this.refreshDrawing();
       }
     }
+    await this.setGradientOpacity(this.opts.gradientOpacity);
+    await this.setVolumeRenderIllumination(this.opts.gradientAmount);
     this.updateGLVolume();
     this.drawScene();
     this.onDocumentLoaded(document2);

@@ -774,6 +774,7 @@ type NVConfigOptions = {
     isAlphaClipDark: boolean;
     gradientOrder: number;
     gradientOpacity: number;
+    gradientAmount: number;
     invertScrollDirection: boolean;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
