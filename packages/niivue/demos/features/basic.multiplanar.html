@@ -19,6 +19,7 @@
         <option value="4">Render</option>
         <option value="3" selected>A+C+S+R</option>
       </select>
+      <button id="toggleOrientation">Hide Orientation Text</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -59,4 +60,12 @@
   await nv1.attachTo('gl1')
   await nv1.loadVolumes(volumeList1)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  let orientationVisible = true
+  nv1.setIsOrientationTextVisible(orientationVisible)
+  const toggleBtn = document.getElementById('toggleOrientation')
+  toggleBtn.addEventListener('click', () => {
+    orientationVisible = !orientationVisible
+    nv1.setIsOrientationTextVisible(orientationVisible)
+    toggleBtn.textContent = orientationVisible ? 'Hide Orientation Text' : 'Show Orientation Text'
+  })
 </script>
