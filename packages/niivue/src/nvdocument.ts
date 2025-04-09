@@ -133,6 +133,7 @@ export type NVConfigOptions = {
   yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
+  isOrientationTextVisible: boolean
   heroImageFraction: number
   heroSliceType: SLICE_TYPE
   // sagittal slices can have Y+ going left or right
@@ -244,6 +245,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
+  isOrientationTextVisible: true,
   heroImageFraction: 0,
   heroSliceType: SLICE_TYPE.RENDER,
   sagittalNoseLeft: false,
