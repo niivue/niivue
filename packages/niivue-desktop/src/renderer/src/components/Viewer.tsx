@@ -34,7 +34,7 @@ export function Viewer(): JSX.Element {
       // register dragover and drop events
       canvasRef.current.addEventListener('dragover', handleDragOver)
       canvasRef.current.addEventListener('drop', handleDrop)
-      await nv.attachToCanvas(canvasRef.current)
+      nv.attachToCanvas(canvasRef.current)
     }
   }, [])
 
