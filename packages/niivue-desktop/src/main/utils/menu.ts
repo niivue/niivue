@@ -274,8 +274,9 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         },
         {
           label: 'Save Document',
-          click: (): void => {
-            
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            win.webContents.send('saveCompressedDocument')
           }
         },
         // Save screenshot
