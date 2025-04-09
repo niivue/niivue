@@ -272,6 +272,12 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             }
           ]
         },
+        {
+          label: 'Save Document',
+          click: (): void => {
+            
+          }
+        },
         // Save screenshot
         {
           label: 'Save Screenshot',
