@@ -25255,6 +25255,7 @@ var DEFAULT_OPTIONS = {
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
+  isOrientationTextVisible: true,
   heroImageFraction: 0,
   heroSliceType: 4 /* RENDER */,
   sagittalNoseLeft: false,
@@ -31922,6 +31923,15 @@ var Niivue = class {
     this.updateGLVolume();
   }
   /**
+   * determine if orientation text appears in 2D slice view.
+   * @param isOrientationTextVisible - controls position of text
+   * @example niivue.setIsOrientationTextVisible(false)
+   */
+  setIsOrientationTextVisible(isOrientationTextVisible) {
+    this.opts.isOrientationTextVisible = isOrientationTextVisible;
+    this.drawScene();
+  }
+  /**
    * determine proportion of screen real estate devoted to rendering in multiplanar view.
    * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
    * @example niivue.setHeroImage(0.5)
@@ -38302,7 +38312,7 @@ var Niivue = class {
     if (isNaN(customMM)) {
       this.drawCrosshairs3D(false, 0.15, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM);
     }
-    if (isStretchToScreen) {
+    if (isStretchToScreen && this.opts.isOrientationTextVisible) {
       this.drawSliceOrientationText(leftTopWidthHeight, axCorSag);
     }
     this.readyForSync = true;
@@ -38336,7 +38346,7 @@ var Niivue = class {
     if (customMM === Infinity || customMM === -Infinity || axCorSag === 4 /* RENDER */) {
       return;
     }
-    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0) {
+    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0 && this.opts.isOrientationTextVisible) {
       this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop);
     }
   }

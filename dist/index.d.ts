@@ -723,6 +723,7 @@ type NVConfigOptions = {
     yoke3Dto2DZoom: boolean;
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
+    isOrientationTextVisible: boolean;
     heroImageFraction: number;
     heroSliceType: SLICE_TYPE;
     sagittalNoseLeft: boolean;
@@ -2113,6 +2114,12 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/worldspace2.html | live demo usage}
      */
     setCornerOrientationText(isCornerOrientationText: boolean): void;
+    /**
+     * determine if orientation text appears in 2D slice view.
+     * @param isOrientationTextVisible - controls position of text
+     * @example niivue.setIsOrientationTextVisible(false)
+     */
+    setIsOrientationTextVisible(isOrientationTextVisible: boolean): void;
     /**
      * determine proportion of screen real estate devoted to rendering in multiplanar view.
      * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
