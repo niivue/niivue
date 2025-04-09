@@ -167,6 +167,22 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             }
           ]
         },
+        // Open Document
+        {
+          label: 'Open Document',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Open Document',
+                properties: ['openFile']
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  win.webContents.send('loadDocument', result.filePaths[0])
+                }
+              })
+          }
+        },
         // Open Volume Image
         {
           label: 'Open Volume Image',
@@ -255,6 +271,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               }
             }
           ]
+        },
+        {
+          label: 'Save Document',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            win.webContents.send('saveCompressedDocument')
+          }
         },
         // Save screenshot
         {
