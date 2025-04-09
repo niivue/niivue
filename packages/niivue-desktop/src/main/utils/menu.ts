@@ -128,6 +128,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             label: app.name,
             submenu: [
               { role: 'about' },
+              {
+                label: 'Preferences...',
+                accelerator: 'CmdOrCtrl+,',
+                click: (): void => {
+                  win.webContents.send('openPreferencesDialog')
+                }
+              },
               { type: 'separator' },
               { role: 'services' },
               { type: 'separator' },
@@ -323,6 +330,20 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
     {
       label: 'Edit',
       submenu: [
+        {
+          label: 'Preferences...',
+          accelerator: 'CmdOrCtrl+,',
+          click: (): void => {
+            console.log('Sending openPreferencesDialog')
+            win.webContents.send('openPreferencesDialog')
+          }
+        },
+        {
+          label: 'Reset Preferences',
+          click: (): void => {
+            win.webContents.send('resetPreferencesConfirm')
+          }
+        },
         {
           label: 'Drag mode (right click)',
           submenu: [...createDragModeSubmenu(win)]

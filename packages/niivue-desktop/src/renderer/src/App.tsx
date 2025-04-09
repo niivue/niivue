@@ -18,10 +18,12 @@ import {
   register3DCrosshairHandler,
   registerDragModeHandler,
   registerMultiplanarEqualSizeHandler,
-  registerOrientationLabelsInMarginHandler
+  registerOrientationLabelsInMarginHandler,
+  registerResetPreferencesHandler
 } from './ipcHandlers/menuHandlers'
 import { registerLoadMeshHandler } from './ipcHandlers/loadMesh'
 import { registerLoadVolumeHandler } from './ipcHandlers/loadVolume'
+import { PreferencesDialog } from './components/PreferencesDialog'
 const electron = window.electron
 
 // disable niivue drag and drop handler in favor of our custom electron solution
@@ -101,46 +103,63 @@ function App(): JSX.Element {
   }
 
   useEffect(() => {
-    if (!nv._gl) return
-    const initNiimath = async (): Promise<void> => {
+    const initApp = async (): Promise<void> => {
+      const prefs = await electron.ipcRenderer.invoke('getPreferences')
+  
+      if (prefs) {
+        console.log('Loaded preferences:', prefs)
+        console.log('options', nv.opts)        
+        Object.entries(prefs).forEach(([key, value]) => {          
+          if (key in nv.opts) {
+            // @ts-ignore
+            nv.opts[key] = value
+          }
+        })
+      }
+  
+      if (!nv._gl) return
       const niimath = niimathRef.current
       await niimath.init()
+  
+      // // const volBase64 = await electron.ipcRenderer.invoke('loadStandard', 'mni152.nii.gz')
+      // // const vol = await NVImage.loadFromBase64({
+      // //   base64: volBase64,
+      // //   name: 'mni152.nii.gz'
+      // // })
+      // // const meshBase64ICBM = await electron.ipcRenderer.invoke('loadStandard', 'ICBM152.lh.mz3')
+      // // const arrayBufferICBM = Uint8Array.from(atob(meshBase64ICBM), (c) => c.charCodeAt(0)).buffer
+      // // const meshICBM = await NVMesh.loadFromFile({
+      // //   file: new File([arrayBufferICBM], 'ICBM152.lh.mz3'),
+      // //   gl: nv.gl,
+      // //   name: 'ICBM152.lh.mz3'
+      // // })
+  
+      // setVolumes([vol])
+      // setMeshes([meshICBM])
+  
+      // now register handlers
+      registerLoadStandardHandler({ nv, setVolumes, setMeshes })
+      registerLoadRecentFileHandler({ nv, setVolumes, setMeshes })
+      registerSliceTypeHandler(nv)
+      registerLayoutHandler(nv)
+      registerCrosshairHandler(nv)
+      registerOrientationLabelsPositionHandler(nv)
+      registerOrientationLabelsHeightHandler(nv)
+      registerOrientationCubeHandler(nv)
+      registerColorbarHandler(nv)
+      registerRulerHander(nv)
+      register3DCrosshairHandler(nv)
+      registerDragModeHandler(nv)
+      registerMultiplanarEqualSizeHandler(nv)
+      registerOrientationLabelsInMarginHandler(nv)
+      registerLoadMeshHandler({ nv, setMeshes })
+      registerLoadVolumeHandler({ setVolumes })
+      registerResetPreferencesHandler()
+  
+      nv.drawScene() // draw after loading prefs
     }
-    initNiimath()
-    const loadImages = async (): Promise<void> => {
-      const volBase64 = await electron.ipcRenderer.invoke('loadStandard', 'mni152.nii.gz')
-      const vol = await NVImage.loadFromBase64({
-        base64: volBase64,
-        name: 'mni152.nii.gz'
-      })
-      const meshBase64ICBM = await electron.ipcRenderer.invoke('loadStandard', 'ICBM152.lh.mz3')
-      const arrayBufferICBM = Uint8Array.from(atob(meshBase64ICBM), (c) => c.charCodeAt(0)).buffer
-
-      const meshICBM = await NVMesh.loadFromFile({
-        file: new File([arrayBufferICBM], 'ICBM152.lh.mz3'),
-        gl: nv.gl,
-        name: 'ICBM152.lh.mz3'
-      })
-      setVolumes([vol])
-      setMeshes([meshICBM])
-    }
-    loadImages() // loads the default images. Useful for development (one volume and one mesh)
-    registerLoadStandardHandler({ nv, setVolumes, setMeshes })
-    registerLoadRecentFileHandler({ nv, setVolumes, setMeshes })
-    registerSliceTypeHandler(nv)
-    registerLayoutHandler(nv)
-    registerCrosshairHandler(nv)
-    registerOrientationLabelsPositionHandler(nv)
-    registerOrientationLabelsHeightHandler(nv)
-    registerOrientationCubeHandler(nv)
-    registerColorbarHandler(nv)
-    registerRulerHander(nv)
-    register3DCrosshairHandler(nv)
-    registerDragModeHandler(nv)
-    registerMultiplanarEqualSizeHandler(nv)
-    registerOrientationLabelsInMarginHandler(nv)
-    registerLoadMeshHandler({ nv, setMeshes })
-    registerLoadVolumeHandler({ setVolumes })
+  
+    initApp()
   }, [])
 
   return (
@@ -166,6 +185,7 @@ function App(): JSX.Element {
         />
         <Viewer />
       </div>
+      <PreferencesDialog />
     </AppContext.Provider>
   )
 }

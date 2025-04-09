@@ -113,3 +113,20 @@ export const registerColorbarHandler = (nv: Niivue): void => {
     nv.updateGLVolume()
   })
 }
+
+export const registerPreferencesDialogHandler = (setOpen: (v: boolean) => void): void => {
+  window.electron.ipcRenderer.on('openPreferencesDialog', () => {
+    console.log('[Renderer] Received openPreferencesDialog')
+    setOpen(true)
+  })
+}
+
+export const registerResetPreferencesHandler = () => {
+  window.electron.ipcRenderer.on('resetPreferencesConfirm', async () => {
+    const confirmed = window.confirm('Are you sure you want to reset all preferences?')
+    if (confirmed) {
+      await window.electron.ipcRenderer.invoke('resetPreferences')
+      window.location.reload() // or reinitialize your app logic
+    }
+  })
+}
