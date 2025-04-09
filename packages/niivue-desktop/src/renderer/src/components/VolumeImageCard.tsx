@@ -36,6 +36,8 @@ export function VolumeImageCard({
   const [colormaps, setColormaps] = useState<string[]>([])
   const [visible, setVisible] = useState<boolean>(true)
   const [isOpacityDisabled, setIsOpacityDisabled] = useState(false)
+  const [currentFrame, setCurrentFrame] = useState<number>(image.frame4D)
+
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
 
@@ -110,14 +112,40 @@ export function VolumeImageCard({
     })
   }
 
+  const handlePrevFrame = (): void => {
+    let frame = nv.getFrame4D(image.id)
+    frame = Math.max(0, frame - 1)
+    nv.setFrame4D(image.id, frame)
+    setCurrentFrame(frame)
+  }
+  
+  const handleNextFrame = (): void => {
+    const maxFrame = image.nFrame4D! - 1
+    let frame = nv.getFrame4D(image.id)
+    frame = Math.min(maxFrame, frame + 1)
+    nv.setFrame4D(image.id, frame)
+    setCurrentFrame(frame)
+  }
+
   return (
     <Card className="flex flex-col p-2 my-1 gap-2 bg-white">
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
           <ContextMenu.Trigger>
-            <Text title={image.name} size="2" weight="bold" className="mr-auto">
-              {displayName}
-            </Text>
+          <Text title={image.name} size="2" weight="bold" className="mr-auto">
+            {displayName}
+            {image.nFrame4D! > 1 && (
+              <span className="ml-1 text-sm text-gray-500">
+                ({currentFrame + 1} / {image.nFrame4D})
+              </span>              
+            )}
+            {image.nFrame4D! > 1 && (
+            <div className="flex items-center gap-1">
+              <Button onClick={handlePrevFrame} variant="ghost" color="gray" size="1">◀</Button>
+              <Button onClick={handleNextFrame} variant="ghost" color="gray" size="1">▶</Button>
+            </div>
+          )}
+          </Text>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
             <ContextMenu.Item
