@@ -23,6 +23,8 @@ import {
 } from './ipcHandlers/menuHandlers'
 import { registerLoadMeshHandler } from './ipcHandlers/loadMesh'
 import { registerLoadVolumeHandler } from './ipcHandlers/loadVolume'
+import { registerLoadDocumentHandler } from './ipcHandlers/loadDocument'
+
 import { PreferencesDialog } from './components/PreferencesDialog'
 const electron = window.electron
 
@@ -154,6 +156,7 @@ function App(): JSX.Element {
       registerOrientationLabelsInMarginHandler(nv)
       registerLoadMeshHandler({ nv, setMeshes })
       registerLoadVolumeHandler({ setVolumes })
+      registerLoadDocumentHandler({nv, setVolumes, setMeshes})
       registerResetPreferencesHandler()
   
       nv.drawScene() // draw after loading prefs
