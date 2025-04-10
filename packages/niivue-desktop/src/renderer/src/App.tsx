@@ -1,7 +1,7 @@
 import { Sidebar } from './components/Sidebar'
 import { Viewer } from './components/Viewer'
 import React, { createContext, useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
+import { NVImage, NVMesh, SLICE_TYPE, Niivue, SHOW_RENDER } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 import { registerLoadStandardHandler } from './ipcHandlers/loadStandard'
@@ -31,10 +31,10 @@ const electron = window.electron
 
 // disable niivue drag and drop handler in favor of our custom electron solution
 const nv = new Niivue({
-  loadingText: '',
+  // loadingText: '',
   dragAndDropEnabled: false,
-  multiplanarEqualSize: true,
-  tileMargin: -1
+  // multiplanarEqualSize: true,
+  // tileMargin: -1
 })
 
 type AppCtx = {
@@ -119,7 +119,9 @@ function App(): JSX.Element {
           }
         })
       }
-  
+      nv.setSliceType(nv.sliceTypeMultiplanar)
+      // nv.graph.autoSizeMultiplanar = true
+      // nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
       if (!nv._gl) return
       const niimath = niimathRef.current
       await niimath.init()

@@ -7,6 +7,7 @@ export const VolumeTab = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
   const [graphVisible, setGraphVisible] = useState(false)
+  const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
 
   useEffect(() => {
     if (nv) {
@@ -46,8 +47,23 @@ export const VolumeTab = (): JSX.Element => {
               <Switch
                 checked={graphVisible}
                 onCheckedChange={toggleGraphVisibility}
-              />
+              />              
             </Flex>
+            {nv.graph.opacity > 0 && (
+    <Flex align="center" gap="2" ml="4" mb="4">
+      <Text size="2" weight="bold" className="mr-auto">
+        Normalize Graph
+      </Text>
+      <Switch
+        checked={normalizeGraph}
+        onCheckedChange={(checked) => {
+          setNormalizeGraph(checked)
+          nv.graph.normalizeValues = checked
+          nv.updateGLVolume()
+        }}
+      />
+    </Flex>
+  )}
           </Accordion.Content>
         </Accordion.Item>
       </Accordion.Root>
