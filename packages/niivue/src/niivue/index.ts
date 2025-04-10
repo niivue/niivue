@@ -519,6 +519,12 @@ export class Niivue {
     isRangeCalMinMax: false
   }
 
+  customLayout: Array<{
+    sliceType: SLICE_TYPE
+    position: [number, number, number, number] // left, top, width, height
+    sliceMM?: number
+  }> = []
+
   meshShaders: Array<{ Name: string; Frag: string; shader?: Shader }> = [
     {
       Name: 'Phong',
@@ -2776,6 +2782,63 @@ export class Niivue {
   setHeroImage(fraction: number): void {
     this.opts.heroImageFraction = fraction
     this.drawScene()
+  }
+
+  /**
+   * Set a custom slice layout. This overrides the built-in layouts.
+   * @param layout - Array of layout specifications for each slice view
+   * @example
+   * niivue.setCustomLayout([
+   *     // Left 50% - Sag
+   *     {sliceType: 2, position: [0, 0, 0.5, 1.0]},
+   *     // Top right - Cor
+   *     {sliceType: 1, position: [0.5, 0, 0.5, 0.5]},
+   *     // Bottom right - Ax
+   *     {sliceType: 0, position: [0.5, 0.5, 0.5, 0.5]}
+   *   ])
+   *
+   * produces:
+   * +----------------+----------------+
+   * |                |                |
+   * |                |     coronal    |
+   * |                |                |
+   * |                |                |
+   * |   sagittal     +----------------+
+   * |                |                |
+   * |                |     axial      |
+   * |                |                |
+   * |                |                |
+   * +----------------+----------------+
+   */
+  setCustomLayout(
+    layout: Array<{
+      sliceType: SLICE_TYPE
+      position: [number, number, number, number] // left, top, width, height
+      sliceMM?: number
+    }>
+  ): void {
+    this.customLayout = layout
+    this.drawScene()
+  }
+
+  /**
+   * Clear custom layout and rely on built-in layouts
+   */
+  clearCustomLayout(): void {
+    this.customLayout = null
+    this.drawScene()
+  }
+
+  /**
+   * Get the current custom layout if set
+   * @returns The current custom layout or null if using built-in layouts
+   */
+  getCustomLayout(): Array<{
+    sliceType: SLICE_TYPE
+    position: [number, number, number, number]
+    sliceMM?: number
+  }> | null {
+    return this.customLayout
   }
 
   /**
@@ -12089,6 +12152,50 @@ export class Niivue {
     this.opts.textHeight = labelSize
   }
 
+  calculateWidthHeight(
+    sliceType: number,
+    volScale: number[],
+    containerWidth: number,
+    containerHeight: number
+  ): [number, number] {
+    let xScale, yScale
+
+    switch (sliceType) {
+      case SLICE_TYPE.AXIAL:
+        xScale = volScale[0]
+        yScale = volScale[1]
+        break
+      case SLICE_TYPE.CORONAL:
+        xScale = volScale[0]
+        yScale = volScale[2]
+        break
+      case SLICE_TYPE.SAGITTAL:
+        xScale = volScale[1]
+        yScale = volScale[2]
+        break
+      default:
+        return [containerWidth, containerHeight]
+    }
+
+    // Calculate scale factor to fit within container while preserving aspect ratio
+    const aspectRatio = xScale / yScale
+    const containerAspect = containerWidth / containerHeight
+
+    let actualWidth, actualHeight
+
+    if (aspectRatio > containerAspect) {
+      // width-constrained
+      actualWidth = containerWidth
+      actualHeight = containerWidth / aspectRatio
+    } else {
+      // height-constrained
+      actualHeight = containerHeight
+      actualWidth = containerHeight * aspectRatio
+    }
+
+    return [actualWidth, actualHeight]
+  }
+
   // not included in public docs
   drawSceneCore(): string | void {
     if (!this.initialized) {
@@ -12115,9 +12222,6 @@ export class Niivue {
         return
       }
       this.drawLoadingText(this.opts.loadingText)
-      return
-    }
-    if (this.back === null) {
       return
     }
     if (
@@ -12169,7 +12273,54 @@ export class Niivue {
       let isHeroImage = false
       this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
       this.screenSlices = [] // empty array
-      if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
+      // Check if we have a custom layout to use
+      if (this.customLayout && this.customLayout.length > 0) {
+        this.screenSlices = [] // empty array
+        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+
+        // Get volume scale information, as done in multiplanar section
+        const { volScale } = this.sliceScale()
+
+        // Process each view in the custom layout
+        for (const view of this.customLayout) {
+          const { sliceType, position, sliceMM } = view
+
+          // Convert relative positions (0-1) to absolute pixels if needed
+          const leftTopWidthHeight = position.slice() as [number, number, number, number]
+
+          // If positions are relative (between 0-1), convert to absolute pixels
+          if (position[0] >= 0 && position[0] <= 1 && position[2] <= 1) {
+            leftTopWidthHeight[0] = position[0] * this.gl.canvas.width
+            leftTopWidthHeight[2] = position[2] * this.gl.canvas.width
+          }
+
+          if (position[1] >= 0 && position[1] <= 1 && position[3] <= 1) {
+            leftTopWidthHeight[1] = position[1] * this.gl.canvas.height
+            leftTopWidthHeight[3] = position[3] * this.gl.canvas.height
+          }
+
+          // Draw the appropriate view type
+          if (sliceType === SLICE_TYPE.RENDER) {
+            this.draw3D(leftTopWidthHeight)
+          } else if (
+            sliceType === SLICE_TYPE.AXIAL ||
+            sliceType === SLICE_TYPE.CORONAL ||
+            sliceType === SLICE_TYPE.SAGITTAL
+          ) {
+            // Calculate actual dimensions for preserving aspect ratio
+            const actualDimensions = this.calculateWidthHeight(
+              sliceType,
+              volScale,
+              leftTopWidthHeight[2],
+              leftTopWidthHeight[3]
+            )
+
+            this.draw2D(leftTopWidthHeight, sliceType, sliceMM ?? NaN, actualDimensions)
+          }
+        }
+      }
+      // If no custom layout, check for other known layouts
+      else if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
         this.draw2D([0, 0, 0, 0], 0)
       } else if (this.opts.sliceType === SLICE_TYPE.CORONAL) {
         this.draw2D([0, 0, 0, 0], 1)
