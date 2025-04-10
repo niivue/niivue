@@ -104,8 +104,9 @@ function App(): JSX.Element {
       setVolumes([...nv.volumes])
     }
   }
+  
 
-  useEffect(() => {
+  useEffect(() => {    
     const initApp = async (): Promise<void> => {
       const prefs = await electron.ipcRenderer.invoke('getPreferences')
   
@@ -167,6 +168,25 @@ function App(): JSX.Element {
     }
   
     initApp()
+  }, [])
+
+  useEffect(() => {
+    const handleClearScene = () => {
+      nv.volumes = []
+      nv.meshes = []
+      nv.mediaUrlMap.clear()
+      nv.createEmptyDrawing()
+      nv.drawScene()
+      setVolumes([])
+      setMeshes([])
+      setSelectedImage(null)
+    }
+
+    electron.ipcRenderer.on('clear-scene', handleClearScene)
+
+    return () => {
+      electron.ipcRenderer.removeAllListeners('clear-scene')
+    }
   }, [])
 
   return (
