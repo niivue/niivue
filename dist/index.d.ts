@@ -1702,6 +1702,11 @@ declare class Niivue {
     VOLUME_ID: number;
     DISTANCE_FROM_CAMERA: number;
     graph: Graph;
+    customLayout: Array<{
+        sliceType: SLICE_TYPE;
+        position: [number, number, number, number];
+        sliceMM?: number;
+    }>;
     meshShaders: Array<{
         Name: string;
         Frag: string;
@@ -2127,6 +2132,50 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/layout.html | live demo usage}
      */
     setHeroImage(fraction: number): void;
+    /**
+     * Set a custom slice layout. This overrides the built-in layouts.
+     * @param layout - Array of layout specifications for each slice view
+     * @example
+     * niivue.setCustomLayout([
+     *     // Left 50% - Sag
+     *     {sliceType: 2, position: [0, 0, 0.5, 1.0]},
+     *     // Top right - Cor
+     *     {sliceType: 1, position: [0.5, 0, 0.5, 0.5]},
+     *     // Bottom right - Ax
+     *     {sliceType: 0, position: [0.5, 0.5, 0.5, 0.5]}
+     *   ])
+     *
+     * produces:
+     * +----------------+----------------+
+     * |                |                |
+     * |                |     coronal    |
+     * |                |                |
+     * |                |                |
+     * |   sagittal     +----------------+
+     * |                |                |
+     * |                |     axial      |
+     * |                |                |
+     * |                |                |
+     * +----------------+----------------+
+     */
+    setCustomLayout(layout: Array<{
+        sliceType: SLICE_TYPE;
+        position: [number, number, number, number];
+        sliceMM?: number;
+    }>): void;
+    /**
+     * Clear custom layout and rely on built-in layouts
+     */
+    clearCustomLayout(): void;
+    /**
+     * Get the current custom layout if set
+     * @returns The current custom layout or null if using built-in layouts
+     */
+    getCustomLayout(): Array<{
+        sliceType: SLICE_TYPE;
+        position: [number, number, number, number];
+        sliceMM?: number;
+    }> | null;
     /**
      * control whether 2D slices use radiological or neurological convention.
      * @param isRadiologicalConvention - new display convention
@@ -3069,6 +3118,7 @@ declare class Niivue {
      * @see {@link https://niivue.github.io/niivue/features/mosaics.html | live demo usage}
      */
     drawMosaic(mosaicStr: string): void;
+    calculateWidthHeight(sliceType: number, volScale: number[], containerWidth: number, containerHeight: number): [number, number];
     drawSceneCore(): string | void;
     drawScene(): string | void;
     get gl(): WebGL2RenderingContext;

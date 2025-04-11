@@ -29987,6 +29987,7 @@ var Niivue = class {
       normalizeValues: false,
       isRangeCalMinMax: false
     });
+    __publicField(this, "customLayout", []);
     __publicField(this, "meshShaders", [
       {
         Name: "Phong",
@@ -31940,6 +31941,65 @@ var Niivue = class {
   setHeroImage(fraction) {
     this.opts.heroImageFraction = fraction;
     this.drawScene();
+  }
+  /**
+   * Set a custom slice layout. This overrides the built-in layouts.
+   * @param layout - Array of layout specifications for each slice view
+   * @example
+   * niivue.setCustomLayout([
+   *     // Left 50% - Sag
+   *     {sliceType: 2, position: [0, 0, 0.5, 1.0]},
+   *     // Top right - Cor
+   *     {sliceType: 1, position: [0.5, 0, 0.5, 0.5]},
+   *     // Bottom right - Ax
+   *     {sliceType: 0, position: [0.5, 0.5, 0.5, 0.5]}
+   *   ])
+   *
+   * produces:
+   * +----------------+----------------+
+   * |                |                |
+   * |                |     coronal    |
+   * |                |                |
+   * |                |                |
+   * |   sagittal     +----------------+
+   * |                |                |
+   * |                |     axial      |
+   * |                |                |
+   * |                |                |
+   * +----------------+----------------+
+   */
+  setCustomLayout(layout) {
+    for (let i = 0; i < layout.length; i++) {
+      const [left1, top1, width1, height1] = layout[i].position;
+      const right1 = left1 + width1;
+      const bottom1 = top1 + height1;
+      for (let j = i + 1; j < layout.length; j++) {
+        const [left2, top2, width2, height2] = layout[j].position;
+        const right2 = left2 + width2;
+        const bottom2 = top2 + height2;
+        const horizontallyOverlaps = left1 < right2 && right1 > left2;
+        const verticallyOverlaps = top1 < bottom2 && bottom1 > top2;
+        if (horizontallyOverlaps && verticallyOverlaps) {
+          throw new Error(`Custom layout is invalid. Tile ${i} overlaps with tile ${j}.`);
+        }
+      }
+    }
+    this.customLayout = layout;
+    this.drawScene();
+  }
+  /**
+   * Clear custom layout and rely on built-in layouts
+   */
+  clearCustomLayout() {
+    this.customLayout = null;
+    this.drawScene();
+  }
+  /**
+   * Get the current custom layout if set
+   * @returns The current custom layout or null if using built-in layouts
+   */
+  getCustomLayout() {
+    return this.customLayout;
   }
   /**
    * control whether 2D slices use radiological or neurological convention.
@@ -40004,6 +40064,36 @@ var Niivue = class {
     }
     this.opts.textHeight = labelSize;
   }
+  calculateWidthHeight(sliceType, volScale, containerWidth, containerHeight) {
+    let xScale, yScale;
+    switch (sliceType) {
+      case 0 /* AXIAL */:
+        xScale = volScale[0];
+        yScale = volScale[1];
+        break;
+      case 1 /* CORONAL */:
+        xScale = volScale[0];
+        yScale = volScale[2];
+        break;
+      case 2 /* SAGITTAL */:
+        xScale = volScale[1];
+        yScale = volScale[2];
+        break;
+      default:
+        return [containerWidth, containerHeight];
+    }
+    const aspectRatio = xScale / yScale;
+    const containerAspect = containerWidth / containerHeight;
+    let actualWidth, actualHeight;
+    if (aspectRatio > containerAspect) {
+      actualWidth = containerWidth;
+      actualHeight = containerWidth / aspectRatio;
+    } else {
+      actualHeight = containerHeight;
+      actualWidth = containerHeight * aspectRatio;
+    }
+    return [actualWidth, actualHeight];
+  }
   // not included in public docs
   drawSceneCore() {
     if (!this.initialized) {
@@ -40027,9 +40117,6 @@ var Niivue = class {
         return;
       }
       this.drawLoadingText(this.opts.loadingText);
-      return;
-    }
-    if (this.back === null) {
       return;
     }
     if (this.uiData.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8 && this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
@@ -40067,7 +40154,43 @@ var Niivue = class {
       let isHeroImage = false;
       this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
       this.screenSlices = [];
-      if (this.opts.sliceType === 0 /* AXIAL */) {
+      if (this.customLayout && this.customLayout.length > 0) {
+        this.screenSlices = [];
+        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+        const { volScale } = this.sliceScale();
+        const canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()];
+        for (const view of this.customLayout) {
+          const { sliceType, position, sliceMM } = view;
+          const leftTopWidthHeight = position.slice();
+          if (position[0] >= 0 && position[0] <= 1 && position[2] <= 1) {
+            leftTopWidthHeight[0] = position[0] * canvasWH[0];
+            leftTopWidthHeight[2] = position[2] * canvasWH[0];
+          }
+          if (position[1] >= 0 && position[1] <= 1 && position[3] <= 1) {
+            leftTopWidthHeight[1] = position[1] * canvasWH[1];
+            leftTopWidthHeight[3] = position[3] * canvasWH[1];
+          }
+          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > canvasWH[0]) {
+            log.warn("adjusting slice width because it would have been clipped");
+            leftTopWidthHeight[2] = canvasWH[0] - leftTopWidthHeight[0];
+          }
+          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > canvasWH[1]) {
+            log.warn("adjusting slice height because it would have been clipped");
+            leftTopWidthHeight[3] = canvasWH[1] - leftTopWidthHeight[1];
+          }
+          if (sliceType === 4 /* RENDER */) {
+            this.draw3D(leftTopWidthHeight);
+          } else if (sliceType === 0 /* AXIAL */ || sliceType === 1 /* CORONAL */ || sliceType === 2 /* SAGITTAL */) {
+            const actualDimensions = this.calculateWidthHeight(
+              sliceType,
+              volScale,
+              leftTopWidthHeight[2],
+              leftTopWidthHeight[3]
+            );
+            this.draw2D(leftTopWidthHeight, sliceType, sliceMM ?? NaN, actualDimensions);
+          }
+        }
+      } else if (this.opts.sliceType === 0 /* AXIAL */) {
         this.draw2D([0, 0, 0, 0], 0);
       } else if (this.opts.sliceType === 1 /* CORONAL */) {
         this.draw2D([0, 0, 0, 0], 1);
