@@ -51,6 +51,15 @@ export function VolumeImageCard({
     // }
   }, [nv])
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      const frame = image.frame4D
+      setCurrentFrame(prev => (prev !== frame ? frame : prev))
+    }, 100)
+  
+    return () => clearInterval(id)
+  }, [image])
+
   const handleColormapChange = (value: string): void => {
     const id = image.id
     setColormap(value)
@@ -132,20 +141,22 @@ export function VolumeImageCard({
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
           <ContextMenu.Trigger>
-          <Text title={image.name} size="2" weight="bold" className="mr-auto">
-            {displayName}
+          <div className="flex items-center gap-2">
+            <Text title={image.name} size="2" weight="bold" className="mr-auto">
+              {displayName}
+            </Text>
             {image.nFrame4D! > 1 && (
-              <span className="ml-1 text-sm text-gray-500">
-                ({currentFrame + 1} / {image.nFrame4D})
-              </span>              
+              <Text size="1" color="gray">
+                Frame {currentFrame + 1} / {image.nFrame4D}
+              </Text>
             )}
             {image.nFrame4D! > 1 && (
-            <div className="flex items-center gap-1">
-              <Button onClick={handlePrevFrame} variant="ghost" color="gray" size="1">◀</Button>
-              <Button onClick={handleNextFrame} variant="ghost" color="gray" size="1">▶</Button>
-            </div>
-          )}
-          </Text>
+              <div className="flex items-center gap-1">
+                <Button onClick={handlePrevFrame} variant="ghost" color="gray" size="1">◀</Button>
+                <Button onClick={handleNextFrame} variant="ghost" color="gray" size="1">▶</Button>
+              </div>
+            )}
+          </div>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
             <ContextMenu.Item

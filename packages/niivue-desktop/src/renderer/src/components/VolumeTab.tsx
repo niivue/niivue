@@ -2,10 +2,10 @@ import { useContext, useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
 import { AppContext } from '../App'
-import { loadFMRIEvents } from '@renderer/types/events'
+import { loadFMRIEvents, fmriEvents, getColorForTrialType } from '@renderer/types/events'
 
 const electron = window.electron
-
+const trialTypes = Array.from(new Set(fmriEvents.map(ev => ev.trial_type)))
 
 export const VolumeTab = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -89,6 +89,26 @@ export const VolumeTab = (): JSX.Element => {
                   </Button>
                 </Flex>
               </>
+            )}
+            {nv.graph.opacity > 0 && trialTypes.length > 0 && (
+              <Flex direction="column" gap="1" ml="4" mt="2">
+                <Text size="2" weight="bold">Event Legend</Text>
+                {trialTypes.map((type) => {
+                  const [r, g, b, a] = getColorForTrialType(type)
+                  const colorStyle = {
+                    width: '12px',
+                    height: '12px',
+                    backgroundColor: `rgba(${r * 255}, ${g * 255}, ${b * 255}, ${a})`,
+                    borderRadius: '2px'
+                  }
+                  return (
+                    <Flex key={type} align="center" gap="2">
+                      <div style={colorStyle} />
+                      <Text size="1">{type}</Text>
+                    </Flex>
+                  )
+                })}
+              </Flex>
             )}
           </Accordion.Content>
         </Accordion.Item>
