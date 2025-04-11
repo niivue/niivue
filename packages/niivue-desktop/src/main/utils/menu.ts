@@ -323,6 +323,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
                 }
               })
           }
+        },
+        {
+          label: 'Clear Scene',
+          accelerator: 'CmdOrCtrl+Shift+X',
+          click: () => {
+            win.webContents.send('clear-scene')
+          }
         }
       ]
     },

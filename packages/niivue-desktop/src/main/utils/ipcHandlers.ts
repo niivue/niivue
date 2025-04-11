@@ -2,7 +2,7 @@ import { loadFromFileHandler } from './loadFromFile.js'
 import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
 import { saveCompressedNVDHandler } from './saveFile.js'
-import { ipcMain } from 'electron'
+import { dialog, ipcMain } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
 
@@ -25,5 +25,15 @@ export const registerIpcHandlers = (): void => {
 
   ipcMain.handle('resetPreferences', () => {
     store.resetPreferences()
+  })
+
+  ipcMain.handle('dialog:openFile', async (_event, options) => {
+    const { title = 'Open File', filters = [], properties = ['openFile'] } = options || {}
+    const result = await dialog.showOpenDialog({
+      title,
+      properties,
+      filters
+    })
+    return result.filePaths
   })
 }

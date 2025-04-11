@@ -36,6 +36,8 @@ export function VolumeImageCard({
   const [colormaps, setColormaps] = useState<string[]>([])
   const [visible, setVisible] = useState<boolean>(true)
   const [isOpacityDisabled, setIsOpacityDisabled] = useState(false)
+  const [currentFrame, setCurrentFrame] = useState<number>(image.frame4D)
+
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
 
@@ -48,6 +50,15 @@ export function VolumeImageCard({
     setColormaps(nv.colormaps())
     // }
   }, [nv])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const frame = image.frame4D
+      setCurrentFrame(prev => (prev !== frame ? frame : prev))
+    }, 100)
+  
+    return () => clearInterval(id)
+  }, [image])
 
   const handleColormapChange = (value: string): void => {
     const id = image.id
@@ -110,14 +121,42 @@ export function VolumeImageCard({
     })
   }
 
+  const handlePrevFrame = (): void => {
+    let frame = nv.getFrame4D(image.id)
+    frame = Math.max(0, frame - 1)
+    nv.setFrame4D(image.id, frame)
+    setCurrentFrame(frame)
+  }
+  
+  const handleNextFrame = (): void => {
+    const maxFrame = image.nFrame4D! - 1
+    let frame = nv.getFrame4D(image.id)
+    frame = Math.min(maxFrame, frame + 1)
+    nv.setFrame4D(image.id, frame)
+    setCurrentFrame(frame)
+  }
+
   return (
     <Card className="flex flex-col p-2 my-1 gap-2 bg-white">
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
           <ContextMenu.Trigger>
+          <div className="flex items-center gap-2">
             <Text title={image.name} size="2" weight="bold" className="mr-auto">
               {displayName}
             </Text>
+            {image.nFrame4D! > 1 && (
+              <Text size="1" color="gray">
+                Frame {currentFrame + 1} / {image.nFrame4D}
+              </Text>
+            )}
+            {image.nFrame4D! > 1 && (
+              <div className="flex items-center gap-1">
+                <Button onClick={handlePrevFrame} variant="ghost" color="gray" size="1">◀</Button>
+                <Button onClick={handleNextFrame} variant="ghost" color="gray" size="1">▶</Button>
+              </div>
+            )}
+          </div>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
             <ContextMenu.Item

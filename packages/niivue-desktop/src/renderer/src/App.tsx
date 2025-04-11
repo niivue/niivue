@@ -1,7 +1,7 @@
 import { Sidebar } from './components/Sidebar'
 import { Viewer } from './components/Viewer'
 import React, { createContext, useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
+import { NVImage, NVMesh, SLICE_TYPE, Niivue, SHOW_RENDER } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 import { registerLoadStandardHandler } from './ipcHandlers/loadStandard'
@@ -25,16 +25,16 @@ import { registerLoadMeshHandler } from './ipcHandlers/loadMesh'
 import { registerLoadVolumeHandler } from './ipcHandlers/loadVolume'
 import { registerLoadDocumentHandler } from './ipcHandlers/loadDocument'
 import { registerSaveCompressedDocumentHandler } from './ipcHandlers/saveDocument'
-
+import { fmriEvents, getColorForTrialType } from './types/events'
 import { PreferencesDialog } from './components/PreferencesDialog'
 const electron = window.electron
 
 // disable niivue drag and drop handler in favor of our custom electron solution
 const nv = new Niivue({
-  loadingText: '',
+  // loadingText: '',
   dragAndDropEnabled: false,
-  multiplanarEqualSize: true,
-  tileMargin: -1
+  // multiplanarEqualSize: true,
+  // tileMargin: -1
 })
 
 type AppCtx = {
@@ -52,6 +52,33 @@ type AppCtx = {
 
 // setup context provider for the app
 export const AppContext = createContext<AppCtx>(null as unknown as AppCtx)
+
+function overrideDrawGraph(nv: any) {
+  const originalDrawGraph = nv.drawGraph.bind(nv)
+
+  nv.drawGraph = () => {
+    originalDrawGraph()
+
+    if (!nv.graph.plotLTWH || !fmriEvents.length) return
+
+    const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
+    const numFrames = nv.graph.lines?.[0]?.length || 0
+    if (numFrames === 0) return
+
+    const hdr = nv.volumes[0]?.hdr
+    const TR = hdr?.pixDims?.[4] ?? 1
+    const scaleW = plotW / numFrames
+
+    for (const ev of fmriEvents) {
+      const startFrame = ev.onset / TR
+      const endFrame = (ev.onset + ev.duration) / TR
+      const x0 = plotX + startFrame * scaleW
+      const x1 = plotX + endFrame * scaleW
+      const color = getColorForTrialType(ev.trial_type)
+      nv.drawRect([x0, plotY, x1 - x0, plotH], color)
+    }
+  }
+}
 
 function App(): JSX.Element {
   const [volumes, setVolumes] = useState<NVImage[]>([])
@@ -104,8 +131,9 @@ function App(): JSX.Element {
       setVolumes([...nv.volumes])
     }
   }
+  
 
-  useEffect(() => {
+  useEffect(() => {    
     const initApp = async (): Promise<void> => {
       const prefs = await electron.ipcRenderer.invoke('getPreferences')
   
@@ -119,8 +147,13 @@ function App(): JSX.Element {
           }
         })
       }
-  
+      nv.setSliceType(nv.sliceTypeMultiplanar)
+      // nv.graph.autoSizeMultiplanar = true
+      // nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
       if (!nv._gl) return
+
+      // override the default graph drawing function
+      overrideDrawGraph(nv)
       const niimath = niimathRef.current
       await niimath.init()
   
@@ -165,6 +198,25 @@ function App(): JSX.Element {
     }
   
     initApp()
+  }, [])
+
+  useEffect(() => {
+    const handleClearScene = () => {
+      nv.volumes = []
+      nv.meshes = []
+      nv.mediaUrlMap.clear()
+      nv.createEmptyDrawing()
+      nv.drawScene()
+      setVolumes([])
+      setMeshes([])
+      setSelectedImage(null)
+    }
+
+    electron.ipcRenderer.on('clear-scene', handleClearScene)
+
+    return () => {
+      electron.ipcRenderer.removeAllListeners('clear-scene')
+    }
   }, [])
 
   return (
