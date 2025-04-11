@@ -1,7 +1,11 @@
 import { useContext, useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import { ScrollArea, Text, Flex, Switch } from '@radix-ui/themes'
+import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
 import { AppContext } from '../App'
+import { loadFMRIEvents } from '@renderer/types/events'
+
+const electron = window.electron
+
 
 export const VolumeTab = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -21,6 +25,19 @@ export const VolumeTab = (): JSX.Element => {
     nv.graph.opacity = visible ? 1.0 : 0.0
     nv.drawScene()
     setGraphVisible(visible)
+  }
+
+  const loadFMRIEventsFromFile = async () => {
+    const paths = await electron.ipcRenderer.invoke('dialog:openFile', {
+      title: 'Load fMRI Events',
+      filters: [{ name: 'TSV Files', extensions: ['tsv'] }]
+    })
+    if (!paths || paths.length === 0) return
+
+    const path = paths[0]
+    const base64 = await electron.ipcRenderer.invoke('loadFromFile', path)
+    const decodedText = atob(base64)
+    loadFMRIEvents(decodedText, nvRef.current)
   }
 
   if (!nv || nv.getMaxVols() <= 0) return <></>
@@ -47,23 +64,32 @@ export const VolumeTab = (): JSX.Element => {
               <Switch
                 checked={graphVisible}
                 onCheckedChange={toggleGraphVisibility}
-              />              
+              />
             </Flex>
+
             {nv.graph.opacity > 0 && (
-    <Flex align="center" gap="2" ml="4" mb="4">
-      <Text size="2" weight="bold" className="mr-auto">
-        Normalize Graph
-      </Text>
-      <Switch
-        checked={normalizeGraph}
-        onCheckedChange={(checked) => {
-          setNormalizeGraph(checked)
-          nv.graph.normalizeValues = checked
-          nv.updateGLVolume()
-        }}
-      />
-    </Flex>
-  )}
+              <>
+                <Flex align="center" gap="2" ml="4" mb="4">
+                  <Text size="2" weight="bold" className="mr-auto">
+                    Normalize Graph
+                  </Text>
+                  <Switch
+                    checked={normalizeGraph}
+                    onCheckedChange={(checked) => {
+                      setNormalizeGraph(checked)
+                      nv.graph.normalizeValues = checked
+                      nv.updateGLVolume()
+                    }}
+                  />
+                </Flex>
+
+                <Flex justify="start" ml="4" mt="2">
+                  <Button size="2" onClick={loadFMRIEventsFromFile}>
+                    Load fMRI Events (.tsv)
+                  </Button>
+                </Flex>
+              </>
+            )}
           </Accordion.Content>
         </Accordion.Item>
       </Accordion.Root>
