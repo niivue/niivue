@@ -2817,6 +2817,27 @@ export class Niivue {
       sliceMM?: number
     }>
   ): void {
+    // check for overlapping tiles
+    for (let i = 0; i < layout.length; i++) {
+      const [left1, top1, width1, height1] = layout[i].position
+      const right1 = left1 + width1
+      const bottom1 = top1 + height1
+
+      // compare with subsequent tiles
+      for (let j = i + 1; j < layout.length; j++) {
+        const [left2, top2, width2, height2] = layout[j].position
+        const right2 = left2 + width2
+        const bottom2 = top2 + height2
+
+        // test if tile rectangles intersect both horizontally and vertically
+        const horizontallyOverlaps = left1 < right2 && right1 > left2
+        const verticallyOverlaps = top1 < bottom2 && bottom1 > top2
+        if (horizontallyOverlaps && verticallyOverlaps) {
+          throw new Error(`Custom layout is invalid. Tile ${i} overlaps with tile ${j}.`)
+        }
+      }
+    }
+
     this.customLayout = layout
     this.drawScene()
   }
@@ -12280,7 +12301,7 @@ export class Niivue {
 
         // Get volume scale information, as done in multiplanar section
         const { volScale } = this.sliceScale()
-
+        const canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
         // Process each view in the custom layout
         for (const view of this.customLayout) {
           const { sliceType, position, sliceMM } = view
@@ -12290,13 +12311,23 @@ export class Niivue {
 
           // If positions are relative (between 0-1), convert to absolute pixels
           if (position[0] >= 0 && position[0] <= 1 && position[2] <= 1) {
-            leftTopWidthHeight[0] = position[0] * this.gl.canvas.width
-            leftTopWidthHeight[2] = position[2] * this.gl.canvas.width
+            leftTopWidthHeight[0] = position[0] * canvasWH[0]
+            leftTopWidthHeight[2] = position[2] * canvasWH[0]
           }
 
           if (position[1] >= 0 && position[1] <= 1 && position[3] <= 1) {
-            leftTopWidthHeight[1] = position[1] * this.gl.canvas.height
-            leftTopWidthHeight[3] = position[3] * this.gl.canvas.height
+            leftTopWidthHeight[1] = position[1] * canvasWH[1]
+            leftTopWidthHeight[3] = position[3] * canvasWH[1]
+          }
+
+          // check if the slice will be clipped because it was requested to extend past the canvas bounds
+          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > canvasWH[0]) {
+            log.warn('adjusting slice width because it would have been clipped')
+            leftTopWidthHeight[2] = canvasWH[0] - leftTopWidthHeight[0]
+          }
+          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > canvasWH[1]) {
+            log.warn('adjusting slice height because it would have been clipped')
+            leftTopWidthHeight[3] = canvasWH[1] - leftTopWidthHeight[1]
           }
 
           // Draw the appropriate view type

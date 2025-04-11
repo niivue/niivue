@@ -188,7 +188,7 @@
       }
       let defaults = {
         // backColor: [0, 0.2, 0.4, 1],
-        backColor: [0,0,0,1],
+        backColor: [0, 0, 0, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
@@ -199,7 +199,8 @@
         showMeasureUnits: true,
         measureTextColor: [0, 1, 0, 1],
         measureLineColor: [1, 0, 0, 1],
-        measureTextHeight: 0.04
+        measureTextHeight: 0.04,
+        isColorbar: true
       }
       var nv1 = new Niivue(defaults)
       await nv1.attachToCanvas(gl1)
@@ -219,39 +220,39 @@
       console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
       nv1.setSelectionBoxColor([0, 1, 0, 0.5])
       nv1.setClipPlane([0.2, 0, 120])
-      
+
       // Layout format: {sliceType: SLICE_TYPE, position: [left, top, width, height]}
       // Units are relative (0-1) to canvas size
       const customLayout = [
         // Left 50% - Sag
-        {sliceType: SLICE_TYPE.SAGITTAL, position: [0, 0, 0.5, 1.0]},
+        { sliceType: SLICE_TYPE.SAGITTAL, position: [0, 0, 0.5, 1.0] },
         // Top right - Cor
-        {sliceType: SLICE_TYPE.CORONAL, position: [0.5, 0, 0.5, 0.5]},
+        { sliceType: SLICE_TYPE.CORONAL, position: [0.5, 0, 0.5, 0.5] },
         // Bottom right - Ax
-        {sliceType: SLICE_TYPE.AXIAL, position: [0.5, 0.5, 0.5, 0.5]}
-      ];
-      
+        { sliceType: SLICE_TYPE.AXIAL, position: [0.5, 0.5, 0.5, 0.5] }
+      ]
+
       // Apply the custom layout
-      nv1.setCustomLayout(customLayout);
-      
+      nv1.setCustomLayout(customLayout)
+
       // toggle button for custom layout
-      const layoutToggle = document.createElement('button');
-      layoutToggle.innerHTML = 'Toggle Custom Layout';
-      layoutToggle.style.margin = '0 5px';
-      let isCustomLayout = true;
-      layoutToggle.onclick = function() {
+      const layoutToggle = document.createElement('button')
+      layoutToggle.innerHTML = 'Toggle Custom Layout'
+      layoutToggle.style.margin = '0 5px'
+      let isCustomLayout = true
+      layoutToggle.onclick = function () {
         if (isCustomLayout) {
-          nv1.clearCustomLayout();
-          nv1.setSliceType(3); // Set back to multiplanar
-          this.innerHTML = 'Use Custom Layout';
+          nv1.clearCustomLayout()
+          nv1.setSliceType(3) // Set back to multiplanar
+          this.innerHTML = 'Use Custom Layout'
         } else {
-          nv1.setCustomLayout(customLayout);
-          this.innerHTML = 'Use Standard Layout';
+          nv1.setCustomLayout(customLayout)
+          this.innerHTML = 'Use Standard Layout'
         }
-        isCustomLayout = !isCustomLayout;
-      };
-      document.getElementById('shaders').parentNode.insertBefore(layoutToggle, document.getElementById('shaders'));
-      
+        isCustomLayout = !isCustomLayout
+      }
+      document.getElementById('shaders').parentNode.insertBefore(layoutToggle, document.getElementById('shaders'))
+
       let cmaps = nv1.meshShaderNames()
       let cmapEl = document.getElementById('shaders')
       for (let i = 0; i < cmaps.length; i++) {
