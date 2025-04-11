@@ -22,7 +22,7 @@ export class AppStore {
   addRecentFile(filePath: string): void {
     let recentFiles = this.getRecentFiles()
     recentFiles = [filePath, ...recentFiles.filter((f) => f !== filePath)].slice(0, 10)
-    // this.store.set('recentFiles', recentFiles)
+    this.store.set('recentFiles', recentFiles)
     console.log(recentFiles)
     app.addRecentDocument(filePath)
   }
