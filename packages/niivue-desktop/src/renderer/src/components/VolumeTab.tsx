@@ -5,13 +5,16 @@ import { AppContext } from '../App'
 import { loadFMRIEvents, fmriEvents, getColorForTrialType } from '@renderer/types/events'
 
 const electron = window.electron
-const trialTypes = Array.from(new Set(fmriEvents.map(ev => ev.trial_type)))
+
 
 export const VolumeTab = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
   const [graphVisible, setGraphVisible] = useState(false)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
+  const [eventVersion, setEventVersion] = useState(0) // forces re-render when events change
+
+  const trialTypes = Array.from(new Set(fmriEvents.map(ev => ev.trial_type)))
 
   useEffect(() => {
     if (nv) {
@@ -38,6 +41,7 @@ export const VolumeTab = (): JSX.Element => {
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', path)
     const decodedText = atob(base64)
     loadFMRIEvents(decodedText, nvRef.current)
+    setEventVersion(v => v + 1) // trigger re-render so trialTypes updates
   }
 
   if (!nv || nv.getMaxVols() <= 0) return <></>
