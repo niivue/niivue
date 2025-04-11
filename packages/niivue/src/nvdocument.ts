@@ -84,6 +84,9 @@ export type NVConfigOptions = {
   textHeight: number
   // 0 for no colorbars, fraction of Nifti j dimension
   colorbarHeight: number
+  // -1 for automatic (full width), positive number for custom width in pixels
+  colorbarWidth: number
+  showColorbarBorder: boolean // show border around the colorbar
   // 0 for no crosshairs
   crosshairWidth: number
   crosshairWidthUnit: 'voxels' | 'mm' | 'percent'
@@ -130,6 +133,7 @@ export type NVConfigOptions = {
   yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
+  isOrientationTextVisible: boolean
   heroImageFraction: number
   heroSliceType: SLICE_TYPE
   // sagittal slices can have Y+ going left or right
@@ -192,12 +196,15 @@ export type NVConfigOptions = {
   isAlphaClipDark: boolean
   gradientOrder: number
   gradientOpacity: number
+  gradientAmount: number
   invertScrollDirection: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
   textHeight: 0.06,
   colorbarHeight: 0.05,
+  colorbarWidth: -1, // automatic (full width)
+  showColorbarBorder: true, // show border around the colorbar
   crosshairWidth: 1,
   crosshairWidthUnit: 'voxels',
   crosshairGap: 0,
@@ -238,6 +245,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
+  isOrientationTextVisible: true,
   heroImageFraction: 0,
   heroSliceType: SLICE_TYPE.RENDER,
   sagittalNoseLeft: false,
@@ -292,6 +300,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isAlphaClipDark: false,
   gradientOrder: 1,
   gradientOpacity: 0.0,
+  gradientAmount: 0.0,
   invertScrollDirection: false
 }
 
