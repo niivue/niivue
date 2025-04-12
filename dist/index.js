@@ -2752,7 +2752,7 @@ var forEach3 = function() {
 }();
 
 // package.json
-var version = "0.55.0";
+var version = "0.56.0";
 
 // src/logger.ts
 var _Log = class _Log {
