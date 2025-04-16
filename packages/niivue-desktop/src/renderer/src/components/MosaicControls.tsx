@@ -7,7 +7,7 @@ import { Button, TextField } from '@radix-ui/themes'
  * shiftToken:
  * Extracts the leading numeric part from a token and adds delta,
  * preserving any trailing characters.
- * E.g., "20;" shifted by 5 becomes "25;".
+ * For example, "20;" shifted by 5 becomes "25;".
  */
 function shiftToken(token: string, delta: number): string {
   const match = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
@@ -22,54 +22,51 @@ function shiftToken(token: string, delta: number): string {
 /**
  * updateMosaicForSelectedOrientation:
  *
- * This function parses the mosaic string token by token while tracking the current orientation.
- * For every numeric token encountered while the current orientation matches the user-selected one,
- * shift it by delta—except when the token immediately follows an "R" token that is directly followed by an "X" token.
- *
- * In that case, "R" and "X" are pushed unchanged and the subsequent numeric token is skipped (left as is).
+ * Parses the mosaic string token by token while tracking the current orientation.
+ * For every token that begins with a number, if the current orientation equals the
+ * user-selected orientation, its numeric part is shifted by delta—unless it immediately
+ * follows an "R" token followed by an "X" token (in which case that number is skipped).
  */
 function updateMosaicForSelectedOrientation(
   mosaicStr: string,
   selected: string,
   delta: number
 ): string {
-  // Split the mosaic string into tokens by whitespace.
   const tokens = mosaicStr.trim().split(/\s+/)
   let currentOrientation: string | null = null
   const newTokens: string[] = []
   let i = 0
   while (i < tokens.length) {
     let rawToken = tokens[i]
-    // Check for trailing semicolon and remove it temporarily.
+    // Save and remove any trailing semicolon.
     let token = rawToken
     let trailing = ""
     if (token.endsWith(";")) {
       trailing = ";"
       token = token.slice(0, -1)
     }
-    // If token is exactly an orientation letter, update the current orientation.
+    // If token exactly matches an orientation letter, set currentOrientation.
     if (/^(A|C|S)$/.test(token)) {
       currentOrientation = token
       newTokens.push(token + trailing)
       i++
       continue
     }
-    // Check if token is exactly "R" and if next token is "X".
+    // If token is exactly "R" and the next token is exactly "X",
+    // then push them unchanged and skip the following numeric token.
     if (token === "R" && i + 1 < tokens.length && tokens[i + 1] === "X") {
-      // Push "R" and "X" as is.
       newTokens.push("R")
       newTokens.push("X")
       i += 2
-      // If there is a next token (assumed to be numeric) then skip updating it.
       if (i < tokens.length) {
+        // Push the next token without modification.
         let nextRaw = tokens[i]
-        let nextToken = nextRaw
         let nextTrailing = ""
-        if (nextToken.endsWith(";")) {
+        if (nextRaw.endsWith(";")) {
           nextTrailing = ";"
-          nextToken = nextToken.slice(0, -1)
+          nextRaw = nextRaw.slice(0, -1)
         }
-        newTokens.push(nextToken + nextTrailing)
+        newTokens.push(nextRaw + nextTrailing)
         i++
       }
       continue
@@ -85,7 +82,7 @@ function updateMosaicForSelectedOrientation(
       i++
       continue
     }
-    // Otherwise, push the token unchanged.
+    // Otherwise, push token unchanged.
     newTokens.push(token + trailing)
     i++
   }
@@ -96,32 +93,31 @@ export function MosaicControls() {
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current as Niivue
 
-  // Initialize the mosaic string from the Niivue instance (or use a default)
+  // If no mosaic slice string is defined in the Niivue instance, use an empty string.
   const initialMosaicStr =
     nv.opts.sliceMosaicString && nv.opts.sliceMosaicString.trim() !== ''
       ? nv.opts.sliceMosaicString
-      : 'A -10 0 20; C -10 0; S -10 0 20'
+      : ''
+
   const [mosaicStr, setMosaicStr] = useState<string>(initialMosaicStr)
-  
-  // Let the user select which orientation's slices (groups) should be updated.
   const [selectedOrientation, setSelectedOrientation] = useState<'A' | 'C' | 'S'>('A')
 
-  // Update Niivue whenever the mosaic string changes.
+  // Only update Niivue if mosaicStr is non-empty.
   useEffect(() => {
-    if (!nv) return
+    if (!nv || mosaicStr.trim() === '') return
     nv.setSliceMosaicString(mosaicStr)
     nv.drawScene()
   }, [nv, mosaicStr])
 
-  // Handler for manual input changes.
+  // Manual input handler.
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMosaicStr(e.target.value)
   }
 
-  // Mouse wheel handler: increment or decrement based on scroll direction.
+  // Mouse wheel handler updates the mosaic string based on the selected orientation.
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault()
-    const step = 5 // Adjust as desired
+    const step = 5
     const newMosaic = updateMosaicForSelectedOrientation(
       mosaicStr,
       selectedOrientation,
@@ -147,6 +143,11 @@ export function MosaicControls() {
     setSelectedOrientation(e.target.value as 'A' | 'C' | 'S')
   }
 
+  // If no mosaic string is defined, we avoid rendering the controls.
+  if (initialMosaicStr.trim() === '') {
+    return <p>Mosaic view is not enabled.</p>
+  }
+
   return (
     <div
       style={{
@@ -167,7 +168,7 @@ export function MosaicControls() {
       />
       <div style={{ marginBottom: '0.5rem' }}>
         <label style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>
-          Orientation:
+          Scroll Axis:
         </label>
         <select value={selectedOrientation} onChange={handleOrientationChange}>
           <option value="A">Axial (A)</option>
@@ -184,8 +185,8 @@ export function MosaicControls() {
         </Button>
       </div>
       <p style={{ fontStyle: 'italic', color: '#666' }}>
-        Tip: The mouse wheel (or buttons) will update all numeric slice positions for the selected orientation—
-        except when a number follows an "R X" pair, which is left unchanged.
+        Tip: The mouse wheel (or buttons) will update all numeric slice positions for the selected orientation,
+        except when the number immediately follows an "R X" pair.
       </p>
     </div>
   )
