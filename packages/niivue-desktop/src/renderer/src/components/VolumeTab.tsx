@@ -11,24 +11,27 @@ export const VolumeTab = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current
 
-  // Compute if we have a time series from the first volume.
-  // Adjust this logic as needed for your volume data.
+  // Determine if we have a time series – adjust logic as needed.
   const hasTimeSeries =
-    nv.volumes && nv.volumes.length > 0 && nv.volumes[0].nFrame4D && nv.volumes[0].nFrame4D > 1
+    nv.volumes &&
+    nv.volumes.length > 0 &&
+    nv.volumes[0].nFrame4D &&
+    nv.volumes[0].nFrame4D > 1
 
-  // State for graph settings
-  const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
+  // Graph settings state.
+  const [graphVisible, setGraphVisible] = useState(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
 
-  // State for forcing re-render when events change.
+  // Dummy state to force re-render when fMRI events change.
   const [eventVersion, setEventVersion] = useState(0)
 
-  // --- Mosaic String State ---
-  const initialMosaicStr =
+  // --- Mosaic State ---
+  // We'll poll nv.opts.sliceMosaicString to detect if mosaic view is active.
+  const [mosaicStr, setMosaicStr] = useState<string>(
     nv.opts.sliceMosaicString && nv.opts.sliceMosaicString.trim() !== ''
       ? nv.opts.sliceMosaicString
-      : "A -16 0 16 32 44 60 76"
-  const [mosaicStr, setMosaicStr] = useState<string>(initialMosaicStr)
+      : ""
+  )
   // --- End Mosaic State ---
 
   const trialTypes = Array.from(new Set(fmriEvents.map(ev => ev.trial_type)))
@@ -39,6 +42,18 @@ export const VolumeTab = (): JSX.Element => {
       nv.graph.autoSizeMultiplanar = true
     }
   }, [nv])
+
+  // Poll for changes in the mosaic slice string every second.
+  useEffect(() => {
+    if (!nv) return
+    const interval = setInterval(() => {
+      const currentMosaic = nv.opts.sliceMosaicString ? nv.opts.sliceMosaicString.trim() : ""
+      if (currentMosaic !== mosaicStr.trim()) {
+        setMosaicStr(currentMosaic)
+      }
+    }, 1000) // Check every second; adjust as needed.
+    return () => clearInterval(interval)
+  }, [nv, mosaicStr])
 
   const toggleGraphVisibility = (visible: boolean) => {
     if (!nv) return
@@ -58,23 +73,22 @@ export const VolumeTab = (): JSX.Element => {
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', path)
     const decodedText = atob(base64)
     loadFMRIEvents(decodedText, nvRef.current)
-    setEventVersion(v => v + 1) // trigger re-render so trialTypes updates
+    setEventVersion(v => v + 1) // Trigger re-render so trialTypes update
   }
 
-  // Update Niivue when mosaic string changes.
+  // Update Niivue when mosaicStr changes.
   useEffect(() => {
-    if (nv) {
+    if (nv && mosaicStr.trim() !== "") {
       nv.setSliceMosaicString(mosaicStr)
       nv.drawScene()
     }
   }, [nv, mosaicStr])
 
-  // Handler for changes in mosaic input.
+  // Handler for mosaic string manual changes.
   const handleMosaicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMosaicStr(e.target.value)
   }
 
-  // Graph Settings and Event Legend items are rendered only if a time series is present.
   return (
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>
       <Accordion.Root type="multiple" className="w-full">
@@ -93,6 +107,7 @@ export const VolumeTab = (): JSX.Element => {
                 <Text size="2" weight="bold" className="mr-auto">Show Graph</Text>
                 <Switch checked={graphVisible} onCheckedChange={toggleGraphVisibility} />
               </Flex>
+
               {nv.graph.opacity > 0 && (
                 <>
                   <Flex align="center" gap="2" ml="4" mb="4">
@@ -137,8 +152,8 @@ export const VolumeTab = (): JSX.Element => {
           </Accordion.Item>
         )}
 
-        {/* Mosaic Settings: only render if a mosaic slice string is set */}
-        {(nv.opts.sliceMosaicString && nv.opts.sliceMosaicString.trim() !== '') && (
+        {/* Only render Mosaic Settings if mosaicStr is non-empty (i.e., mosaic view is enabled) */}
+        {mosaicStr.trim() !== '' && (
           <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
             <Accordion.Header>
               <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
@@ -156,9 +171,9 @@ export const VolumeTab = (): JSX.Element => {
                 className="w-full"
               />
               <p className="text-xs italic text-gray-500 mt-2">
-                Edit the mosaic string to change the mosaic view. For example: <br />
-                "A -10 0 20" or include tokens (e.g., "A R X -10 R X 0 ...").
+                Edit the mosaic string to change the mosaic view.
               </p>
+              {/* Render the MosaicControls sub-component which includes scrolling controls */}
               <MosaicControls />
             </Accordion.Content>
           </Accordion.Item>
