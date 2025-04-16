@@ -6,8 +6,8 @@ import { Button, TextField } from '@radix-ui/themes'
 /**
  * shiftToken:
  * Extracts the leading numeric part from a token and adds delta,
- * preserving any trailing characters.
- * E.g., "20;" shifted by 5 becomes "25;".
+ * preserving any trailing characters (e.g., punctuation).
+ * For example, "20;" shifted by 5 becomes "25;".
  */
 function shiftToken(token: string, delta: number): string {
   const match = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
@@ -21,60 +21,56 @@ function shiftToken(token: string, delta: number): string {
 
 /**
  * updateMosaicForSelectedOrientation:
- *
- * This function parses the mosaic string token by token while tracking the current orientation.
- * For every numeric token encountered while the current orientation matches the user-selected one,
- * shift it by delta—except when the token immediately follows an "R" token that is directly followed by an "X" token.
- *
- * In that case, "R" and "X" are pushed unchanged and the subsequent numeric token is skipped (left as is).
+ * Parses the mosaic string token by token while tracking the current orientation.
+ * For every token that begins with a number, if the current orientation equals the
+ * user-selected orientation, shift the numeric part by delta. However, if the token
+ * is preceded immediately by an "R" token followed by an "X" token, then skip updating that number.
  */
 function updateMosaicForSelectedOrientation(
   mosaicStr: string,
   selected: string,
   delta: number
 ): string {
-  // Split the mosaic string into tokens by whitespace.
   const tokens = mosaicStr.trim().split(/\s+/)
   let currentOrientation: string | null = null
   const newTokens: string[] = []
   let i = 0
   while (i < tokens.length) {
     let rawToken = tokens[i]
-    // Check for trailing semicolon and remove it temporarily.
+    // Remove and record trailing semicolon.
     let token = rawToken
     let trailing = ""
     if (token.endsWith(";")) {
       trailing = ";"
       token = token.slice(0, -1)
     }
-    // If token is exactly an orientation letter, update the current orientation.
+    // If the token is an orientation token, update currentOrientation.
     if (/^(A|C|S)$/.test(token)) {
       currentOrientation = token
       newTokens.push(token + trailing)
       i++
       continue
     }
-    // Check if token is exactly "R" and if next token is "X".
+    // If token is exactly "R" and the next token is exactly "X",
+    // then push both "R" and "X" and skip the following number.
     if (token === "R" && i + 1 < tokens.length && tokens[i + 1] === "X") {
-      // Push "R" and "X" as is.
       newTokens.push("R")
       newTokens.push("X")
       i += 2
-      // If there is a next token (assumed to be numeric) then skip updating it.
       if (i < tokens.length) {
         let nextRaw = tokens[i]
-        let nextToken = nextRaw
         let nextTrailing = ""
-        if (nextToken.endsWith(";")) {
+        if (nextRaw.endsWith(";")) {
           nextTrailing = ";"
-          nextToken = nextToken.slice(0, -1)
+          nextRaw = nextRaw.slice(0, -1)
         }
-        newTokens.push(nextToken + nextTrailing)
+        // Push the next token unchanged.
+        newTokens.push(nextRaw + nextTrailing)
         i++
       }
       continue
     }
-    // If token starts with a number...
+    // Check if token starts with a number.
     const match = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
     if (match) {
       if (currentOrientation === selected) {
@@ -85,7 +81,6 @@ function updateMosaicForSelectedOrientation(
       i++
       continue
     }
-    // Otherwise, push the token unchanged.
     newTokens.push(token + trailing)
     i++
   }
@@ -96,32 +91,45 @@ export function MosaicControls() {
   const { nvRef } = useContext(AppContext)
   const nv = nvRef.current as Niivue
 
-  // Initialize the mosaic string from the Niivue instance (or use a default)
-  const initialMosaicStr =
+  // Use the existing mosaic string from the Niivue instance if defined,
+  // or use a default.
+  const [mosaicStr, setMosaicStr] = useState<string>(
     nv.opts.sliceMosaicString && nv.opts.sliceMosaicString.trim() !== ''
       ? nv.opts.sliceMosaicString
       : 'A -10 0 20; C -10 0; S -10 0 20'
-  const [mosaicStr, setMosaicStr] = useState<string>(initialMosaicStr)
-  
-  // Let the user select which orientation's slices (groups) should be updated.
+  )
+
+  // Let the user select which orientation's groups to update.
   const [selectedOrientation, setSelectedOrientation] = useState<'A' | 'C' | 'S'>('A')
 
-  // Update Niivue whenever the mosaic string changes.
+  // Periodically check for changes in nv.opts.sliceMosaicString.
+  useEffect(() => {
+    if (!nv) return
+    const interval = setInterval(() => {
+      const current = nv.opts.sliceMosaicString
+      if (current && current.trim() !== mosaicStr.trim()) {
+        setMosaicStr(current)
+      }
+    }, 1000) // Check every second (adjust as needed)
+    return () => clearInterval(interval)
+  }, [nv, mosaicStr])
+
+  // Update Niivue whenever the mosaicStr state changes.
   useEffect(() => {
     if (!nv) return
     nv.setSliceMosaicString(mosaicStr)
     nv.drawScene()
   }, [nv, mosaicStr])
 
-  // Handler for manual input changes.
+  // Handler for manual mosaic string input.
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMosaicStr(e.target.value)
   }
 
-  // Mouse wheel handler: increment or decrement based on scroll direction.
+  // Mouse wheel handler: update numeric tokens for groups with the selected orientation.
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault()
-    const step = 5 // Adjust as desired
+    const step = 5 // Delta in mm (adjust as needed)
     const newMosaic = updateMosaicForSelectedOrientation(
       mosaicStr,
       selectedOrientation,
@@ -132,14 +140,10 @@ export function MosaicControls() {
 
   // Button handlers.
   const handleScrollUp = () => {
-    setMosaicStr(prev =>
-      updateMosaicForSelectedOrientation(prev, selectedOrientation, 5)
-    )
+    setMosaicStr(prev => updateMosaicForSelectedOrientation(prev, selectedOrientation, 5))
   }
   const handleScrollDown = () => {
-    setMosaicStr(prev =>
-      updateMosaicForSelectedOrientation(prev, selectedOrientation, -5)
-    )
+    setMosaicStr(prev => updateMosaicForSelectedOrientation(prev, selectedOrientation, -5))
   }
 
   // Orientation selection handler.
@@ -166,9 +170,7 @@ export function MosaicControls() {
         style={{ width: '100%', marginBottom: '0.5rem' }}
       />
       <div style={{ marginBottom: '0.5rem' }}>
-        <label style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>
-          Orientation:
-        </label>
+        <label style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>Orientation:</label>
         <select value={selectedOrientation} onChange={handleOrientationChange}>
           <option value="A">Axial (A)</option>
           <option value="C">Coronal (C)</option>
@@ -184,8 +186,8 @@ export function MosaicControls() {
         </Button>
       </div>
       <p style={{ fontStyle: 'italic', color: '#666' }}>
-        Tip: The mouse wheel (or buttons) will update all numeric slice positions for the selected orientation—
-        except when a number follows an "R X" pair, which is left unchanged.
+        Tip: The mouse wheel (or buttons) updates all numeric slice positions for the selected
+        orientation except when a number immediately follows an "R X" pair.
       </p>
     </div>
   )

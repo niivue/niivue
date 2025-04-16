@@ -8,7 +8,7 @@ export const SceneTabs = (): JSX.Element => {
     <Tabs.Root defaultValue="general">
       <Tabs.List>
         <Tabs.Trigger value="general">
-          <Text size="1">General</Text>
+          <Text size="1">Controls</Text>
         </Tabs.Trigger>
         <Tabs.Trigger value="volume">
           <Text size="1">Volume</Text>
