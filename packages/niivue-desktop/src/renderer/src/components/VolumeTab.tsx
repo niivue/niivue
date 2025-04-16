@@ -3,9 +3,9 @@ import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
 import { AppContext } from '../App'
 import { loadFMRIEvents, fmriEvents, getColorForTrialType } from '@renderer/types/events'
+import { MosaicControls } from './MosaicControls'  // import your existing mosaic control
 
 const electron = window.electron
-
 
 export const VolumeTab = (): JSX.Element => {
   const { nvRef } = useContext(AppContext)
@@ -52,9 +52,7 @@ export const VolumeTab = (): JSX.Element => {
         <Accordion.Item value="graph-settings" className="border-b border-gray-200">
           <Accordion.Header>
             <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
-              <Text size="2" weight="bold">
-                Graph Settings
-              </Text>
+              <Text size="2" weight="bold">Graph Settings</Text>
               <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
                 ▼
               </span>
@@ -62,21 +60,14 @@ export const VolumeTab = (): JSX.Element => {
           </Accordion.Header>
           <Accordion.Content className="px-4 py-2">
             <Flex align="center" gap="2" mb="4">
-              <Text size="2" weight="bold" className="mr-auto">
-                Show Graph
-              </Text>
-              <Switch
-                checked={graphVisible}
-                onCheckedChange={toggleGraphVisibility}
-              />
+              <Text size="2" weight="bold" className="mr-auto">Show Graph</Text>
+              <Switch checked={graphVisible} onCheckedChange={toggleGraphVisibility} />
             </Flex>
 
             {nv.graph.opacity > 0 && (
               <>
                 <Flex align="center" gap="2" ml="4" mb="4">
-                  <Text size="2" weight="bold" className="mr-auto">
-                    Normalize Graph
-                  </Text>
+                  <Text size="2" weight="bold" className="mr-auto">Normalize Graph</Text>
                   <Switch
                     checked={normalizeGraph}
                     onCheckedChange={(checked) => {
@@ -86,7 +77,6 @@ export const VolumeTab = (): JSX.Element => {
                     }}
                   />
                 </Flex>
-
                 <Flex justify="start" ml="4" mt="2">
                   <Button size="2" onClick={loadFMRIEventsFromFile}>
                     Load fMRI Events (.tsv)
@@ -94,6 +84,7 @@ export const VolumeTab = (): JSX.Element => {
                 </Flex>
               </>
             )}
+
             {nv.graph.opacity > 0 && trialTypes.length > 0 && (
               <Flex direction="column" gap="1" ml="4" mt="2">
                 <Text size="2" weight="bold">Event Legend</Text>
@@ -116,6 +107,23 @@ export const VolumeTab = (): JSX.Element => {
             )}
           </Accordion.Content>
         </Accordion.Item>
+
+        {/* Show Mosaic Settings only if mosaic view is active */}
+        {nv.opts.sliceMosaicString && nv.opts.sliceMosaicString.trim() !== '' && (
+          <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
+            <Accordion.Header>
+              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+                <Text size="2" weight="bold">Mosaic Settings</Text>
+                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                  ▼
+                </span>
+              </Accordion.Trigger>
+            </Accordion.Header>
+            <Accordion.Content className="px-4 py-2">
+              <MosaicControls />
+            </Accordion.Content>
+          </Accordion.Item>
+        )}
       </Accordion.Root>
     </ScrollArea>
   )
