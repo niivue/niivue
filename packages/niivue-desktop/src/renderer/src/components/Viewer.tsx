@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState, useContext } from 'react'
 import { AppContext } from '../App'
 import { loadDroppedFiles } from '../utils/dragAndDrop'
-import { MosaicControls } from './MosaicControls'
 
 export function Viewer(): JSX.Element {
   const { volumes, meshes, setVolumes, setMeshes, nvRef } = useContext(AppContext)
   const nv = nvRef.current
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [isMosaic, setIsMosaic] = useState<boolean>(false)
 
   // Drag & drop handlers.
   const handleDragOver = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
@@ -58,22 +56,7 @@ export function Viewer(): JSX.Element {
       }
     }
   }, [meshes])
-
-  // Determine mosaic mode by checking if the mosaic string option is non-empty.
-  useEffect(() => {
-    if (!nv) return
-
-    const checkMosaic = () => {
-      if (nv.opts.sliceMosaicString && nv.opts.sliceMosaicString.trim() !== '') {
-        setIsMosaic(true)
-      } else {
-        setIsMosaic(false)
-      }
-    }
-    checkMosaic()
-    const mosaicInterval = setInterval(checkMosaic, 1000)
-    return () => clearInterval(mosaicInterval)
-  }, [nv])
+  
 
   return (
     <div className="flex flex-col bg-black basis-2/3 h-full grow relative">
@@ -89,13 +72,7 @@ export function Viewer(): JSX.Element {
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         ></canvas>
-      </div>
-      {/* Render the mosaic controls overlay if mosaic mode is active */}
-      {isMosaic && (
-        <div className="absolute bottom-4 left-4">
-          <MosaicControls />
-        </div>
-      )}
+      </div>     
     </div>
   )
 }
