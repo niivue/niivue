@@ -467,6 +467,7 @@ uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
+uniform float silhouettePower;
 uniform float gradientOpacity[256];
 in vec3 vColor;
 out vec4 fColor;
@@ -480,6 +481,7 @@ export const fragRenderGradientShader =
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
 	//vec4 prevGrad = vec4(0.0);
+	float silhouetteThreshold = 1.0 - silhouettePower;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
@@ -500,6 +502,13 @@ export const fragRenderGradientShader =
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			int gradIdx = int(grad.a * 255.0);
 			colorSample.a *= gradientOpacity[gradIdx];
+			float lightNormDot = dot(grad.rgb, rayDir);
+ 			colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
+ 			float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
+ 			// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
+ 			// Cull voxels that are too aligned with the view direction
+ 			if (viewAlign > silhouetteThreshold)
+ 				colorSample.a = 0.0;
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 			if ( colAcc.a > earlyTermination )
