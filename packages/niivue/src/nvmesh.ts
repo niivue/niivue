@@ -5,6 +5,7 @@ import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
 import { ColorMap, LUT, cmapper } from './colortables.js'
 import { NVMeshUtilities } from './nvmesh-utilities.js'
 import { NVMeshLoaders } from './nvmesh-loaders.js'
+import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from './nvlabel.js'
 
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
 import {
@@ -58,6 +59,7 @@ export type NVMeshLayer = {
   base64?: string
   // TODO referenced in niivue/refreshColormaps
   colorbarVisible?: boolean
+  labels?: NVLabel3D[]
 }
 
 export const NVMeshLayerDefaults = {
@@ -1143,6 +1145,33 @@ export class NVMesh {
           const colormapLabel = layer.colormapLabel as LUT
           const lut = colormapLabel.lut
           const nLabel = Math.floor(lut.length / 4)
+          layer.labels = []
+          if (nLabel === layer.colormapLabel.labels.length) {
+            // label?: NVLabel3D
+            for (let j = 0; j < nLabel; j++) {
+              const rgba = Array.from(lut.slice(j * 4, j * 4 + 4)).map((v) => v / 255)
+              const labelName = layer.colormapLabel.labels[j]
+              if (
+                rgba[3] === 0 ||
+                !labelName || // handles empty string, null, undefined
+                labelName.startsWith('_')
+              ) {
+                continue
+              }
+              const label = new NVLabel3D(labelName, {
+                textColor: rgba,
+                bulletScale: 1,
+                bulletColor: rgba,
+                lineWidth: 0,
+                lineColor: rgba,
+                textScale: 1.0,
+                textAlignment: LabelTextAlignment.LEFT,
+                lineTerminator: LabelLineTerminator.NONE
+              })
+              layer.labels.push(label)
+              log.debug('label for mesh layer:', label)
+            } // generate labels
+          } // labels
           const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1)
           const frameOffset = nvtx * frame
           const rgba8 = new Uint8Array(nvtx * 4)
