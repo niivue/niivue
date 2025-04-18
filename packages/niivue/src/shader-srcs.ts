@@ -1396,6 +1396,24 @@ void main() {
 	color.a = opacity;
 }`
 
+// Flat shader with edge outline inspired by ggseg
+export const fragMeshRimShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+	const float thresh = 0.4;
+	// light position is camera location ('headlight')
+	const vec3 l = vec3(0.0, 0.0, -1.0);
+	vec3 n = normalize(vN);
+	float lightNormDot = max(dot(n, l), 0.0);
+	vec3 d = step(thresh, lightNormDot) * vClr.rgb;
+	color = vec4(d, opacity);
+}`
+
 // Phong headlight shader for edge enhancement, opposite of fresnel rim lighting
 export const fragMeshEdgeShader = `#version 300 es
 precision highp int;

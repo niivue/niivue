@@ -43,6 +43,7 @@ import {
   fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshEdgeShader,
+  fragMeshRimShader,
   fragMeshShaderCrevice,
   fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
@@ -573,6 +574,10 @@ export class Niivue {
     {
       Name: 'Matcap',
       Frag: fragMeshMatcapShader
+    },
+    {
+      Name: 'Rim',
+      Frag: fragMeshRimShader
     }
   ]
 
