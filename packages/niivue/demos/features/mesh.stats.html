@@ -65,6 +65,8 @@
       <input type="checkbox" id="negativeCheck" checked />
       <label for="divergeCheck">Diverging Colors</label>
       <input type="checkbox" id="divergeCheck" unchecked />
+      <label for="darkCheck">Dark</label>
+      <input type="checkbox" id="darkCheck" checked />
       <select id="colormapTypeDrop">
         <option selected>restrict colorbar to range</option>
         <option>colorbar from 0,transparent subthreshold</option>
@@ -100,6 +102,13 @@
   shaderDrop.onchange = function () {
     const shaderName = this.value
     nv1.setMeshShader(nv1.meshes[0].id, shaderName)
+  }
+  darkCheck.onchange = function () {
+    let v = 1
+    if (this.checked)
+        v = 0
+    nv1.opts.backColor = [v, v, v]
+    nv1.drawScene()
   }
   divergeCheck.onchange = function () {
     if (!this.checked) {
