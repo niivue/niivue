@@ -79,6 +79,9 @@
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
+    <footer>
+      <label id="shaderBtns">Shaders: </label>
+    </footer>
   </body>
 </html>
 <script type="module" async>
@@ -123,6 +126,15 @@
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
   })
+  let shaders = nv1.meshShaderNames();
+  for (let i = 0; i < shaders.length; i++) {
+    let btn = document.createElement("button");
+    btn.innerHTML = shaders[i];
+    btn.onclick = function () {
+      nv1.setMeshShader(nv1.meshes[0].id, shaders[i]);
+    };
+    shaderBtns.appendChild(btn);
+  }
   nv1.setSliceType(nv1.sliceTypeRender)
   await nv1.attachTo("gl1")
   nv1.opts.isColorbar = true

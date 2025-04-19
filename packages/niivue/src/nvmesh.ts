@@ -59,7 +59,9 @@ export type NVMeshLayer = {
   base64?: string
   // TODO referenced in niivue/refreshColormaps
   colorbarVisible?: boolean
+  showLegend?: boolean
   labels?: NVLabel3D[]
+  atlasValues?: AnyNumberArray
 }
 
 export const NVMeshLayerDefaults = {
@@ -73,7 +75,9 @@ export const NVMeshLayerDefaults = {
   cal_minNeg: 0,
   cal_maxNeg: 0,
   colormapType: COLORMAP_TYPE.MIN_TO_MAX,
-  values: new Array<number>()
+  values: new Array<number>(),
+  useNegativeCmap: false,
+  showLegend: true
 }
 
 export class NVMeshFromUrlOptions {
@@ -998,6 +1002,70 @@ export class NVMesh {
     }
   }
 
+  // apply color lookup table to convert scalar array to RGBA array
+  scalars2RGBA(
+    rgba: Uint8ClampedArray,
+    layer: NVMeshLayer,
+    scalars: AnyNumberArray,
+    isNegativeCmap: boolean = false
+  ): Uint8ClampedArray {
+    const nValues = scalars.length
+    if (4 * nValues !== rgba.length) {
+      log.error(`colormap2RGBA incorrectly specified`)
+      return rgba
+    }
+    const opa255 = Math.round(layer.opacity * 255)
+    let mn = layer.cal_min
+    let mx = layer.cal_max
+    let lut = cmapper.colormap(layer.colormap as string, this.colormapInvert)
+    let flip = 1
+    if (isNegativeCmap) {
+      if (!layer.useNegativeCmap) {
+        return rgba
+      }
+      flip = -1
+      lut = cmapper.colormap(layer.colormapNegative, layer.colormapInvert)
+      mn = layer.cal_min
+      mx = layer.cal_max
+      if (isFinite(layer.cal_minNeg) && isFinite(layer.cal_minNeg)) {
+        mn = -layer.cal_minNeg
+        mx = -layer.cal_maxNeg
+      }
+    }
+    let mnCal = mn
+    if (!layer.isTransparentBelowCalMin) {
+      mnCal = Number.NEGATIVE_INFINITY
+    }
+    const isTranslucentBelowMin = layer.colormapType === COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN
+
+    if (layer.colormapType !== COLORMAP_TYPE.MIN_TO_MAX) {
+      mn = Math.min(mn, 0.0)
+    }
+    const scale255 = 255.0 / (mx - mn)
+    for (let j = 0; j < nValues; j++) {
+      let v = scalars[j] * flip
+      let opa = opa255
+      if (v < mnCal) {
+        if (v > 0 && isTranslucentBelowMin) {
+          opa = Math.round(layer.opacity * 255 * Math.pow(v / mnCal, 2.0))
+        } else {
+          continue
+        }
+      }
+      v = (v - mn) * scale255
+      if (v < 0 && layer.isTransparentBelowCalMin) {
+        continue
+      }
+      v = Math.min(255, Math.max(0, Math.round(v))) * 4
+      const idx = j * 4
+      rgba[idx + 0] = lut[v + 0]
+      rgba[idx + 1] = lut[v + 1]
+      rgba[idx + 2] = lut[v + 2]
+      rgba[idx + 3] = opa
+    }
+    return rgba
+  }
+
   blendColormap(
     u8: Uint8Array,
     additiveRGBA: Uint8Array,
@@ -1143,11 +1211,26 @@ export class NVMesh {
         }
         if (layer.colormapLabel && (layer.colormapLabel as LUT).lut) {
           const colormapLabel = layer.colormapLabel as LUT
-          const lut = colormapLabel.lut
+          let lut = colormapLabel.lut
+          const opa255 = Math.round(layer.opacity * 255)
+          for (let j = 3; j < lut.length; j += 4) {
+            if (lut[j] !== 0) {
+              lut[j] = opa255
+            }
+          }
           const nLabel = Math.floor(lut.length / 4)
-          layer.labels = []
-          if (nLabel === layer.colormapLabel.labels.length) {
-            // label?: NVLabel3D
+          if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
+            lut.fill(0) // make all transparent
+            lut = this.scalars2RGBA(lut, layer, layer.atlasValues)
+            if (layer.useNegativeCmap) {
+              lut = this.scalars2RGBA(lut, layer, layer.atlasValues, true)
+            }
+          } else if (layer.atlasValues) {
+            log.warn(`Expected ${nLabel} atlasValues but got ${layer.atlasValues.length} for mesh layer`)
+          }
+          // create labels for legend
+          if (layer.showLegend && nLabel === layer.colormapLabel.labels.length) {
+            layer.labels = []
             for (let j = 0; j < nLabel; j++) {
               const rgba = Array.from(lut.slice(j * 4, j * 4 + 4)).map((v) => v / 255)
               const labelName = layer.colormapLabel.labels[j]
@@ -1158,6 +1241,7 @@ export class NVMesh {
               ) {
                 continue
               }
+              rgba[3] = 1
               const label = new NVLabel3D(labelName, {
                 textColor: rgba,
                 bulletScale: 1,
@@ -1170,18 +1254,21 @@ export class NVMesh {
               })
               layer.labels.push(label)
               log.debug('label for mesh layer:', label)
-            } // generate labels
-          } // labels
+            } // for each label
+          } else {
+            delete layer.labels
+          }
           const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1)
           const frameOffset = nvtx * frame
           const rgba8 = new Uint8Array(nvtx * 4)
           let k = 0
-          for (let j = 0; j < layer.values.length; j++) {
+          for (let j = 0; j < nvtx; j++) {
             // eslint-disable-next-line
             let idx = 4 * Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1)
             rgba8[k + 0] = lut[idx + 0]
             rgba8[k + 1] = lut[idx + 1]
             rgba8[k + 2] = lut[idx + 2]
+            rgba8[k + 3] = lut[idx + 3]
             k += 4
           }
           let opaque = new Array(nvtx).fill(false)
@@ -1189,12 +1276,12 @@ export class NVMesh {
             opaque = NVMeshUtilities.getClusterBoundary(rgba8, this.tris)
           }
           k = 0
-          for (let j = 0; j < layer.values.length; j++) {
+          for (let j = 0; j < nvtx; j++) {
             let vtx = j * 28 + 24 // posNormClr is 28 bytes stride, RGBA color at offset 24,
             if (this.f32PerVertex !== 7) {
               vtx = j * 20 + 16
             }
-            let opa = opacity
+            let opa = rgba8[k + 3] / 255
             if (opaque[j]) {
               opa = layer.outlineBorder
               if (layer.outlineBorder < 0) {
