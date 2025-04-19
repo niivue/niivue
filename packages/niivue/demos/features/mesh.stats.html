@@ -15,16 +15,6 @@
       >
     </noscript>
     <header>
-      <label for="shaderDrop">Shader</label>
-      <select id="shaderDrop">
-        <option value="Edge">Edge</option>
-        <option value="Flat">Flat</option>
-        <option value="Matcap" selected>Matcap</option>
-        <option value="Matte">Matte</option>
-        <option value="Outline">Outline</option>
-        <option value="Phong">Phong</option>
-        <option value="Toon">Toon</option>
-      </select>
       <label for="curveSlider">Curvature</label>
       <input
         type="range"
@@ -104,10 +94,6 @@
     let mx = mn + (document.getElementById("rangeSlider").value * 0.1)
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_min", mn)
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_max", mx)
-  }
-  shaderDrop.onchange = function () {
-    const shaderName = this.value
-    nv1.setMeshShader(nv1.meshes[0].id, shaderName)
   }
   colorDrop.onchange = function () {
     const index = this.selectedIndex
