@@ -77,6 +77,12 @@
         <option value="1" >opaque outline</option>
         <option value="-1">black outline</option>
       </select>
+      <select id="colorDrop">
+        <option selected>white</option>
+        <option>red</option>
+        <option>green</option>
+        <option>blue</option>
+      </select>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -102,6 +108,23 @@
   shaderDrop.onchange = function () {
     const shaderName = this.value
     nv1.setMeshShader(nv1.meshes[0].id, shaderName)
+  }
+  colorDrop.onchange = function () {
+    const index = this.selectedIndex
+    let rgb = [255, 255, 255]
+    if (index === 1) {
+      rgb = [255, 32, 32]
+    } else if (index === 2) {
+      rgb = [0, 222, 32]
+    } else if (index === 3) {
+      rgb = [92, 128, 255]
+    }
+    nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [
+      rgb[0],
+      rgb[1],
+      rgb[2],
+      255,
+    ])
   }
   darkCheck.onchange = function () {
     let v = 1

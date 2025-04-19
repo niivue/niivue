@@ -1540,8 +1540,8 @@ export class NVMesh {
       console.warn('Mesh does not have property:', key, this)
       return
     }
-    if (typeof val !== 'number' && typeof val !== 'string' && typeof val !== 'boolean') {
-      console.warn('Invalid value type. Expected number, string, or boolean but received:', typeof val)
+    if (typeof val !== 'number' && typeof val !== 'string' && typeof val !== 'boolean' && !Array.isArray(val)) {
+      console.warn('Invalid value type. Expected number, numbers, string, or boolean but received:', typeof val)
       return
     }
     ;(this as any)[key] = val // TypeScript safety workaround
