@@ -24,8 +24,10 @@
         class="slider"
         id="meshSlider"
       />
-      <button id="reverse">Reverse Faces</button>
-      <label id="meshBtns">Meshes: </label>
+      <button id="reverseBtn">Reverse Faces</button>
+      &nbsp; <label for="visibleCheck">Visible</label>
+      <input type="checkbox" id="visibleCheck" checked />
+       &nbsp; <label id="meshBtns">Meshes: </label>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -36,54 +38,56 @@
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
-  
-  var slider = document.getElementById("meshSlider");
-  slider.oninput = function () {
+  import * as niivue from "../dist/index.js"
+  meshSlider.oninput = function () {
     nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [
       this.value,
       164,
       164,
       255,
-    ]);
-  };
-  document.getElementById("reverse").addEventListener("click", doReverse);
-  function doReverse() {
-    nv1.reverseFaces(nv1.meshes[0].id);
+    ])
+  }
+  visibleCheck.onchange = function () {
+    nv1.meshes[0].visible = this.checked
+    nv1.drawScene()
+  }
+  reverseBtn.onclick = function () {
+    nv1.reverseFaces(nv1.meshes[0].id)
   }
   var nv1 = new niivue.Niivue({
     show3Dcrosshair: true,
     backColor: [0.9, 0.9, 1, 1],
-  });
-  nv1.setSliceType(nv1.sliceTypeRender);
-  await nv1.attachTo("gl1");
+  })
+  nv1.setSliceType(nv1.sliceTypeRender)
+  await nv1.attachTo("gl1")
   await nv1.loadMeshes([
     {
       url: "../images/BrainMesh_ICBM152.lh.mz3",
       rgba255: [222, 164, 164, 255],
     },
     { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
-  ]);
-  nv1.setMeshShader(nv1.meshes[0].id, "Outline");
-  nv1.setClipPlane([-0.1, 270, 0]);
-  let shaders = nv1.meshShaderNames();
+  ])
+  nv1.setMeshShader(nv1.meshes[0].id, "Outline")
+  nv1.setClipPlane([-0.1, 270, 0])
+  let shaders = nv1.meshShaderNames()
   for (let i = 0; i < shaders.length; i++) {
-    let btn = document.createElement("button");
-    btn.innerHTML = shaders[i];
-    btn.onclick = function () {
-      nv1.setMeshShader(nv1.meshes[0].id, shaders[i]);
-    };
-    shaderBtns.appendChild(btn);
+    let btn = document.createElement("button")
+    btn.innerHTML = shaders[i]
+    btn.onclick = function (event) {
+      const index = (event.shiftKey || event.altKey) ? 1 : 0
+      nv1.setMeshShader(nv1.meshes[index].id, shaders[i])
+    }
+    shaderBtns.appendChild(btn)
   }
-  let meshes = ['aal.mz3', 'ColumnMajorOrder.gii', 'mni_format.obj.gz', 'simplify_brain.obj', 'lh.pial', 'sub-test02_left_hemisphere.srf.gz', 'tract.SLF1_R.tck','colby.trk', 'colby.trx', 'TR_S_R.tt.gz', 'tract.FAT_R.vtk', 'water-color.wrl', 'MolView-sticks-color_38.x3d'];
+  let meshes = ['aal.mz3', 'ColumnMajorOrder.gii', 'mni_format.obj.gz', 'simplify_brain.obj', 'lh.pial', 'sub-test02_left_hemisphere.srf.gz', 'tract.SLF1_R.tck','colby.trk', 'colby.trx', 'TR_S_R.tt.gz', 'tract.FAT_R.vtk', 'water-color.wrl', 'MolView-sticks-color_38.x3d']
   for (let i = 0; i < meshes.length; i++) {
-    let btn = document.createElement("button");
-    btn.innerHTML = meshes[i];
+    let btn = document.createElement("button")
+    btn.innerHTML = meshes[i]
     btn.onclick = function () {
-      let mesh = "../images/" + meshes[i];
-      const volumeObj = { url: mesh };
+      let mesh = "../images/" + meshes[i]
+      const volumeObj = { url: mesh }
       nv1.loadMeshes([ volumeObj ])
     }
-    meshBtns.appendChild(btn);
+    meshBtns.appendChild(btn)
   }
 </script>

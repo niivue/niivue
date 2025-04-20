@@ -1418,7 +1418,9 @@ void main() {
 	// light position is camera location ('headlight')
 	const vec3 l = vec3(0.0, 0.0, -1.0);
 	vec3 n = normalize(vN);
-	float lightNormDot = max(dot(n, l), 0.0);
+	// use abs() for two-sided lighting, max() for one sided
+	float lightNormDot = abs(dot(n, l));
+	// float lightNormDot = max(dot(n, l), 0.0);
 	vec3 d = step(thresh, lightNormDot) * vClr.rgb;
 	color = vec4(d, opacity);
 }`
