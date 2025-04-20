@@ -83,10 +83,11 @@
   for (let i = 0; i < meshes.length; i++) {
     let btn = document.createElement("button")
     btn.innerHTML = meshes[i]
-    btn.onclick = function () {
+    btn.onclick = async function () {
       let mesh = "../images/" + meshes[i]
       const volumeObj = { url: mesh }
-      nv1.loadMeshes([ volumeObj ])
+      await nv1.loadMeshes([ volumeObj ])
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5)
     }
     meshBtns.appendChild(btn)
   }
