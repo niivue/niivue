@@ -25,9 +25,16 @@
         id="meshSlider"
       />
       <button id="reverseBtn">Reverse Faces</button>
-      &nbsp; <label for="visibleCheck">Visible</label>
-      <input type="checkbox" id="visibleCheck" checked />
-       &nbsp; <label id="meshBtns">Meshes: </label>
+      <label for="alphaSelect">Alpha</label>
+      <select id="alphaSelect">
+        <option>Transparent</option>
+        <option>Translucent</option>
+        <option selected>Opaque</option>
+      </select>&nbsp;
+      <label for="crossCheck">Crosshairs</label>
+      <input type="checkbox" id="crossCheck" checked />
+      <p>
+      <label id="meshBtns">Meshes: </label>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -40,15 +47,29 @@
 <script type="module" async>
   import * as niivue from "../dist/index.js"
   meshSlider.oninput = function () {
-    nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [
+    const midx = nv1.meshes.length - 1
+    nv1.setMeshProperty(nv1.meshes[midx].id, "rgba255", [
       this.value,
       164,
       164,
       255,
     ])
   }
-  visibleCheck.onchange = function () {
-    nv1.meshes[0].visible = this.checked
+  alphaSelect.onchange = function () {
+    const index = this.selectedIndex
+    const midx = nv1.meshes.length - 1
+    nv1.meshes[midx].visible = index > 0
+    if (index === 1) {
+      nv1.meshes[midx].opacity = 0.2
+    } else if (index === 2) {
+      nv1.meshes[midx].opacity = 1
+    } else {
+      nv1.meshes[midx].opacity = 0
+    }
+    nv1.drawScene()
+  }
+  crossCheck.onchange = function () {
+    nv1.opts.show3Dcrosshair = this.checked
     nv1.drawScene()
   }
   reverseBtn.onclick = function () {
@@ -61,22 +82,35 @@
   nv1.setSliceType(nv1.sliceTypeRender)
   await nv1.attachTo("gl1")
   await nv1.loadMeshes([
+    { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
     {
       url: "../images/BrainMesh_ICBM152.lh.mz3",
       rgba255: [222, 164, 164, 255],
     },
-    { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
   ])
-  nv1.setMeshShader(nv1.meshes[0].id, "Outline")
+  nv1.setMeshShader(nv1.meshes[1].id, "Outline")
   nv1.setClipPlane([-0.1, 270, 0])
   let shaders = nv1.meshShaderNames()
   for (let i = 0; i < shaders.length; i++) {
     let btn = document.createElement("button")
     btn.innerHTML = shaders[i]
-    btn.onclick = function (event) {
-      const index = (event.shiftKey || event.altKey) ? 1 : 0
-      nv1.setMeshShader(nv1.meshes[index].id, shaders[i])
-    }
+    let clickTimer = null
+    const clickDelay = 250 // ms — adjust to taste
+    btn.addEventListener('click', function (event) {
+      if (clickTimer) return // second click waiting for dblclick
+      clickTimer = setTimeout(() => {
+        // Execute single-click behavior only if no dblclick occurs
+        const midx = nv1.meshes.length - 1
+        nv1.setMeshShader(nv1.meshes[midx].id, shaders[i])
+        clickTimer = null
+      }, clickDelay)
+    })
+    btn.addEventListener('dblclick', function () {
+      clearTimeout(clickTimer) // prevent single-click behavior
+      clickTimer = null
+      // Execute double-click behavior
+      nv1.setMeshShader(nv1.meshes[0].id, shaders[i])
+    })
     shaderBtns.appendChild(btn)
   }
   let meshes = ['aal.mz3', 'ColumnMajorOrder.gii', 'mni_format.obj.gz', 'simplify_brain.obj', 'lh.pial', 'sub-test02_left_hemisphere.srf.gz', 'tract.SLF1_R.tck','colby.trk', 'colby.trx', 'TR_S_R.tt.gz', 'tract.FAT_R.vtk', 'water-color.wrl', 'MolView-sticks-color_38.x3d']

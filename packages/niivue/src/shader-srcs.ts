@@ -503,6 +503,7 @@ export const fragRenderGradientShader =
 			int gradIdx = int(grad.a * 255.0);
 			colorSample.a *= gradientOpacity[gradIdx];
 			float lightNormDot = dot(grad.rgb, rayDir);
+			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
  			colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
  			float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
  			// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
@@ -1415,13 +1416,16 @@ in vec3 vN;
 out vec4 color;
 void main() {
 	const float thresh = 0.4;
-	// light position is camera location ('headlight')
-	const vec3 l = vec3(0.0, 0.0, -1.0);
+	const vec3 viewDir = vec3(0.0, 0.0, -1.0);
 	vec3 n = normalize(vN);
 	// use abs() for two-sided lighting, max() for one sided
-	float lightNormDot = abs(dot(n, l));
-	// float lightNormDot = max(dot(n, l), 0.0);
-	vec3 d = step(thresh, lightNormDot) * vClr.rgb;
+	float cosTheta = abs(dot(n, viewDir));
+	// float cosTheta = max(dot(n, viewDir), 0.0);
+	// optional fresnel equation - adjust exponent
+	// cosTheta = 1.0 - pow(1.0 - cosTheta, 2.0);
+	// use step for binary edges, smoothstep for feathered edges
+	// vec3 d = step(thresh, cosTheta) * vClr.rgb;
+	vec3 d = smoothstep(thresh - 0.05, thresh + 0.05, cosTheta) * vClr.rgb;
 	color = vec4(d, opacity);
 }`
 

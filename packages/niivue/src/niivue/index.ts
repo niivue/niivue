@@ -11386,7 +11386,6 @@ export class Niivue {
     gl.depthFunc(gl.GREATER)
     gl.disable(gl.CULL_FACE)
     if (isDepthTest) {
-      gl.disable(gl.BLEND)
       gl.depthFunc(gl.GREATER)
     } else {
       gl.enable(gl.BLEND)
@@ -11403,8 +11402,27 @@ export class Niivue {
     // this.meshShaderIndex
     let hasFibers = false
     for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false) {
+      if (this.meshes[i].visible === false || this.meshes[i].opacity <= 0.0) {
         continue
+      }
+      let meshAlpha = alpha
+      //gl.depthMask(false)
+      if (isDepthTest) {
+        meshAlpha = this.meshes[i].opacity
+        gl.depthFunc(gl.GREATER)
+        gl.depthMask(true)
+        if (meshAlpha < 1.0) {
+          // crude Z-fighting artifacts
+          gl.depthMask(false) // Prevent this object from writing to the depth buffer
+          gl.enable(gl.DEPTH_TEST)
+          //gl.disable(gl.DEPTH_TEST)
+          gl.enable(gl.BLEND)
+          gl.cullFace(gl.BACK)
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        } else {
+          gl.enable(gl.DEPTH_TEST)
+          gl.disable(gl.BLEND)
+        }
       }
       shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader!
       if (this.uiData.mouseDepthPicker) {
@@ -11417,7 +11435,7 @@ export class Niivue {
       // gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
       // gl.uniform1f(shader.uniforms["opacity"], alpha);
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
-      gl.uniform1f(shader.uniforms.opacity, alpha)
+      gl.uniform1f(shader.uniforms.opacity, meshAlpha)
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
@@ -11435,6 +11453,7 @@ export class Niivue {
       gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
+    gl.depthMask(true)
     // draw fibers
     if (!hasFibers) {
       gl.enable(gl.BLEND)
