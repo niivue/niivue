@@ -48,6 +48,8 @@
       <input type="checkbox" id="check1" unchecked />
       <label for="check2">Statistical outline</label>
       <input type="checkbox" id="check2" unchecked />
+      <label for="crossCheck">Crosshairs</label>
+      <input type="checkbox" id="crossCheck" checked />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -117,6 +119,10 @@ void main() {
       "opacity",
       this.value / 255.0
     )
+  }
+  crossCheck.onchange = function () {
+    nv1.opts.show3Dcrosshair = this.checked
+    nv1.drawScene()
   }
   check1.onchange = function () {
     nv1.setMeshLayerProperty(
