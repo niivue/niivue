@@ -11406,7 +11406,7 @@ export class Niivue {
         continue
       }
       let meshAlpha = alpha
-      //gl.depthMask(false)
+      // gl.depthMask(false)
       if (isDepthTest) {
         meshAlpha = this.meshes[i].opacity
         gl.depthFunc(gl.GREATER)
@@ -11415,7 +11415,7 @@ export class Niivue {
           // crude Z-fighting artifacts
           gl.depthMask(false) // Prevent this object from writing to the depth buffer
           gl.enable(gl.DEPTH_TEST)
-          //gl.disable(gl.DEPTH_TEST)
+          // gl.disable(gl.DEPTH_TEST)
           gl.enable(gl.BLEND)
           gl.cullFace(gl.BACK)
           gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)

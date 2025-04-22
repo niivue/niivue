@@ -1213,10 +1213,11 @@ export class NVMesh {
           const colormapLabel = layer.colormapLabel as LUT
           let lut = colormapLabel.lut
           const opa255 = Math.round(layer.opacity * 255)
-          for (let j = 3; j < lut.length; j += 4) {
-            if (lut[j] !== 0) {
-              lut[j] = opa255
-            }
+          if (lut[3] > 0) {
+            lut[3] = opa255
+          }
+          for (let j = 7; j < lut.length; j += 4) {
+            lut[j] = opa255
           }
           const nLabel = Math.floor(lut.length / 4)
           if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
