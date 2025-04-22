@@ -361,6 +361,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       label: 'Edit',
       submenu: [
         {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: (): void => {
+            win.webContents.paste()
+          }
+        },
+        {
           label: 'Preferences...',
           accelerator: 'CmdOrCtrl+,',
           click: (): void => {
