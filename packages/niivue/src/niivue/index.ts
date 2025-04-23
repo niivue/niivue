@@ -425,6 +425,7 @@ export class Niivue {
   private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
   private fontMetrics?: typeof defaultFontMetrics
   private fontMets: FontMetrics | null = null
+  private labelTextHeight = 1 // internal scaling to ensure legend fits
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
@@ -9334,12 +9335,12 @@ export class Niivue {
       labels.length === 1
         ? labels[0]
         : labels.reduce((a, b) => {
-            const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-            const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+            const aSize = this.labelTextHeight * this.gl.canvas.height * a.style.textScale
+            const bSize = this.labelTextHeight * this.gl.canvas.height * b.style.textScale
             const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
             return taller
           })
-    const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale
+    const size = this.labelTextHeight * this.gl.canvas.height * tallestLabel.style.textScale
     bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
     bulletMargin += size
     return bulletMargin
@@ -9351,17 +9352,17 @@ export class Niivue {
       return 0
     }
     const scale = 1.0 // we may want to make this adjustable in the future
-    const horizontalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+    const horizontalMargin = this.labelTextHeight * this.gl.canvas.height * scale
     let width = 0
 
     const longestLabel = labels.reduce((a, b) => {
-      const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-      const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+      const aSize = this.labelTextHeight * this.gl.canvas.height * a.style.textScale
+      const bSize = this.labelTextHeight * this.gl.canvas.height * b.style.textScale
       const longer = this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b
       return longer
     })
 
-    const longestTextSize = this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale
+    const longestTextSize = this.labelTextHeight * this.gl.canvas.height * longestLabel.style.textScale
     const longestTextLength = this.textWidth(longestTextSize, longestLabel.text)
 
     const bulletMargin = this.getBulletMarginWidth()
@@ -9379,10 +9380,9 @@ export class Niivue {
   getLegendPanelHeight(): number {
     const labels = this.getConnectomeLabels()
     let height = 0
-    const scale = 1.0 // we may want to make this adjustable in the future
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+    const verticalMargin = this.labelTextHeight * this.gl.canvas.height
     for (const label of labels) {
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.labelTextHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
       height += textHeight
     }
@@ -10993,8 +10993,8 @@ export class Niivue {
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
     const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+    const size = this.labelTextHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const verticalMargin = this.labelTextHeight * this.gl.canvas.height * scale
 
     // get all non-connectome labels
     for (const label of this.document.labels) {
@@ -11002,7 +11002,7 @@ export class Niivue {
         continue
       }
 
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.labelTextHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
       const textWidth = this.textWidth(labelSize, label.text)
 
@@ -11078,7 +11078,7 @@ export class Niivue {
 
     const labels = this.getConnectomeLabels()
     for (const label of labels) {
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.labelTextHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
       if (screenPoint[1] >= top && screenPoint[1] <= top + textHeight + size / 2) {
         return label
@@ -11125,7 +11125,7 @@ export class Niivue {
     const top = pos[1]
 
     // const scale = label.style.textScale;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    const size = this.labelTextHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
 
     const textHeight = this.textHeight(label.style.textScale, text) * size
 
@@ -11158,8 +11158,8 @@ export class Niivue {
         textLeft += bulletMargin
       }
     }
-
-    this.drawText([textLeft, top], text, label.style.textScale, label.style.textColor)
+    const scale = (this.labelTextHeight / this.opts.textHeight) * label.style.textScale
+    this.drawText([textLeft, top], text, scale, label.style.textColor)
   }
 
   // not included in public docs
@@ -11176,12 +11176,16 @@ export class Niivue {
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
-
-    const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-
+    this.labelTextHeight = this.opts.textHeight
+    let panelHeight = this.getLegendPanelHeight()
+    if (panelHeight > this.canvas.height) {
+      // legend too big for screen
+      this.labelTextHeight *= (this.canvas.height - 10) / panelHeight
+      panelHeight = this.getLegendPanelHeight()
+    }
+    const size = this.labelTextHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width)
     const bulletMargin = this.getBulletMarginWidth()
-    const panelHeight = this.getLegendPanelHeight()
+
     const panelWidth = this.getLegendPanelWidth()
     const left = gl.canvas.width - panelWidth
     let top = (this.canvas.height - panelHeight) / 2
@@ -11197,7 +11201,7 @@ export class Niivue {
     for (const label of labels) {
       this.draw3DLabel(label, [left, top], mvpMatrix, leftTopWidthHeight, bulletMargin, panelWidth, secondPass)
 
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.labelTextHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
 
       top += textHeight // Math.max(textHeight, bulletHeight);
