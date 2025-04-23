@@ -5,6 +5,9 @@ import { saveCompressedNVDHandler } from './saveFile.js'
 import { dialog, ipcMain } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
+import { viewState, refreshMenu } from './menu.js'
+import { sliceTypeMap } from '../../common/sliceTypes.js'
+import { layouts } from '../../common/layouts.js'
 
 export const registerIpcHandlers = (): void => {
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
@@ -35,5 +38,20 @@ export const registerIpcHandlers = (): void => {
       filters
     })
     return result.filePaths
+  })
+
+  ipcMain.on('renderer:layout-changed', (_evt, newLayout: string) => {
+    if (layouts[newLayout]) {
+      viewState.layout = newLayout
+      refreshMenu()
+    }
+  })
+
+  // And when it changes the sliceType…
+  ipcMain.on('renderer:sliceType-changed', (_evt, newSliceType: string) => {
+    if (sliceTypeMap[newSliceType]) {
+      viewState.sliceType = newSliceType
+      refreshMenu()
+    }
   })
 }

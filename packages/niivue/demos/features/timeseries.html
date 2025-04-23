@@ -5,33 +5,75 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>time series demo</title>
-    <link rel="stylesheet" href="niivue.css" />
+    <!-- <link rel="stylesheet" href="niivue.css" /> -->
     <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: system-ui, Arial, Helvetica, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        height: 100vh;
+      }
+
+      #sidebar {
+        width: 200px;
+        background-color: #202020;
+        color: white;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+
+      #container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 10px;
+        background: #444;
+        color: white;
+      }
+
+      #gl1 {
+        flex: 1;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      footer {
+        background: #ccc;
+        padding: 5px;
+      }
+
       .unstyled-button {
-        border: none
-        padding: 0
-        background: #202020
-        color: white
+        border: none;
+        padding: 0;
+        background: #202020;
+        color: white;
       }
     </style>
   </head>
   <body>
-    <header>
-      <button class="unstyled-button">Normalize Graph</button>
-      <input
-        type="checkbox"
-        id="check1"
-        value="true"
-      />
-      <button id="prevVolume">back</button>
-      <button id="nextVolume">forward</button>
-      &nbsp;<button id="animate">animate</button>
-      &nbsp;<button id="thumbnail">toggle thumbnail</button>
-    </header>
-    <main id="container">
-      <canvas id="gl1"></canvas>
-    </main>
-    <footer id="location">Click on image to hide thumbnail</footer>
+    <div id="app">
+      <div id="sidebar">
+        <h3>Sidebar</h3>
+        <p>Menu</p>
+      </div>
+      <div id="container">
+        <canvas id="gl1"></canvas>
+      </div>
+    </div>
   </body>
 </html>
 <script type="module">
@@ -49,7 +91,7 @@
   ]
   var nv1 = new niivue.Niivue({
     onLocationChange: handleLocationChange,
-    thumbnail: "../images/pcasl.png",
+    // thumbnail: "../images/pcasl.png",
   })
   await nv1.attachTo("gl1")
   nv1.setRadiologicalConvention(false)
