@@ -23,7 +23,7 @@ export const VolumeTab = (): JSX.Element => {
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
 
   // Color bar toggle state
-  const [showColorMaps, setShowColorMaps] = useState<boolean>(!!nv.opts.showColorbar)
+  const [showColorMaps, setShowColorMaps] = useState<boolean>(!!nv.opts.isColorbar)
 
   // Mosaic state
   const [mosaicStr, setMosaicStr] = useState<string>(
