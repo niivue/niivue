@@ -21,7 +21,7 @@ export const registerSliceTypeHandler = (nv: Niivue): void => {
       return
     }
     // issue1134: unset mosaic string for non-mosaic views
-    nv.setSliceMosaicString('')
+    nv.setSliceMosaicString('')    
     nv.setSliceType(sliceType.sliceType)
   })
 }

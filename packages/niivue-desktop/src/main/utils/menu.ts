@@ -68,6 +68,7 @@ const createSliceTypeSubmenu = (
   win: Electron.BrowserWindow
 ): Electron.MenuItemConstructorOptions[] => {
   return Object.keys(sliceTypeMap).map((sliceKey) => {
+    console.log(sliceKey)
     return {
       label: sliceKey,
       id: sliceKey,

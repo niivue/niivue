@@ -1,6 +1,6 @@
 import { sliceTypeMap } from '../../../common/sliceTypes'
 import { layouts } from '../../../common/layouts.js'
-import type { Niivue, SLICE_TYPE } from '@niivue/niivue'
+import { SHOW_RENDER, type Niivue, type SLICE_TYPE } from '@niivue/niivue'
 
 /**
  * Registers monkey-patches on the Niivue instance to emit IPC events
@@ -34,13 +34,21 @@ function patchMultiplanarLayout(nv: Niivue) {
  */
 function patchSliceType(nv: Niivue) {
   const orig = nv.setSliceType.bind(nv)
+
   nv.setSliceType = (st: SLICE_TYPE) => {
     const result = orig(st)
+
     const sliceKey = Object.keys(sliceTypeMap)
       .find((key) => sliceTypeMap[key].sliceType === st)
+
     if (sliceKey) {
-      window.electron.ipcRenderer.send('renderer:sliceType-changed', sliceKey)
+      const isRenderShown = nv.opts.multiplanarShowRender === SHOW_RENDER.ALWAYS
+      
+      let sliceName = (isRenderShown && sliceKey === 'Multiplanar' ) ? 'Multiplanar + 3D render' : sliceKey
+      window.electron.ipcRenderer.send('renderer:sliceType-changed', sliceName)
+      console.log('slice name', sliceName)
     }
+
     return result
   }
 }
