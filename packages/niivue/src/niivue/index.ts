@@ -9867,6 +9867,15 @@ export class Niivue {
   // determine height/width of image in millimeters
   screenFieldOfViewMM(axCorSag = 0, forceSliceMM = false): vec3 {
     // extent of volume/mesh (in millimeters) in screen space
+    if (this.volumes.length < 1) {
+      let mnMM = vec3.fromValues(this.extentsMin[0], this.extentsMin[1], this.extentsMin[2])
+      let mxMM = vec3.fromValues(this.extentsMax[0], this.extentsMax[1], this.extentsMax[2])
+      mnMM = this.swizzleVec3MM(mnMM, axCorSag)
+      mxMM = this.swizzleVec3MM(mxMM, axCorSag)
+      const fovMM = vec3.create()
+      vec3.subtract(fovMM, mxMM, mnMM)
+      return fovMM
+    }
     if (!forceSliceMM && !this.opts.isSliceMM) {
       // return voxel space
       return this.screenFieldOfViewVox(axCorSag)
@@ -9901,6 +9910,16 @@ export class Niivue {
 
   // not included in public docs
   screenFieldOfViewExtendedMM(axCorSag = 0): MM {
+    if (this.volumes.length < 1) {
+      let mnMM = vec3.fromValues(this.extentsMin[0], this.extentsMin[1], this.extentsMin[2])
+      let mxMM = vec3.fromValues(this.extentsMax[0], this.extentsMax[1], this.extentsMax[2])
+      const rotation = mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
+      mnMM = this.swizzleVec3MM(mnMM, axCorSag)
+      mxMM = this.swizzleVec3MM(mxMM, axCorSag)
+      const fovMM = vec3.create()
+      vec3.subtract(fovMM, mxMM, mnMM)
+      return { mnMM, mxMM, rotation, fovMM }
+    }
     if (!this.volumeObject3D) {
       throw new Error('volumeObject3D undefined')
     }
@@ -10007,11 +10026,15 @@ export class Niivue {
   // not included in public docs
   // draw 2D tile
   draw2DMain(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN): void {
-    let frac2mmTexture = this.volumes[0].frac2mm!.slice()
+    let frac2mmTexture = new Float32Array([0, 0, 0])
+    if (this.volumes.length > 0) {
+      // polo
+      frac2mmTexture = new Float32Array(this.volumes[0].frac2mm!.slice())
+    }
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
     let mesh2ortho = mat4.create()
-    if (!this.opts.isSliceMM) {
-      frac2mmTexture = this.volumes[0].frac2mmOrtho!.slice()
+    if (!this.opts.isSliceMM && this.volumes.length > 0) {
+      frac2mmTexture = new Float32Array(this.volumes[0].frac2mmOrtho!.slice())
       mesh2ortho = mat4.clone(this.volumes[0].mm2ortho!)
       screen = this.screenFieldOfViewExtendedVox(axCorSag)
     }
@@ -10118,6 +10141,9 @@ export class Niivue {
       tile.AxyzMxy = this.xyMM2xyzMM(axCorSag, sliceFrac)
       tile.leftTopMM = obj.leftTopMM
       tile.fovMM = obj.fovMM
+      return
+    }
+    if (this.volumes.length < 1) {
       return
     }
     gl.enable(gl.DEPTH_TEST)
@@ -12080,10 +12106,6 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/mosaics.html | live demo usage}
    */
   drawMosaic(mosaicStr: string): void {
-    if (this.volumes.length === 0) {
-      log.debug('Unable to draw mosaic until voxel-based image is loaded')
-      return
-    }
     this.screenSlices = []
     // render always in world space
     const fovRenderMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL, true)
@@ -12184,6 +12206,7 @@ export class Niivue {
           // 2nd pass draw
           const ltwh = [marginLeft + scale * left, marginTop + scale * top, scale * w, scale * h]
           this.opts.textHeight = isLabel ? labelSize : 0
+
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity
             if (Object.is(sliceMM, -0)) {
@@ -12280,6 +12303,10 @@ export class Niivue {
     let posString = ''
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
       if (this.meshes.length > 0) {
+        if (this.sliceMosaicString.length > 0) {
+          this.drawMosaic(this.sliceMosaicString)
+          return
+        }
         this.screenSlices = [] // empty array
         // this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
         this.draw3D() // meshes loaded but no volume
