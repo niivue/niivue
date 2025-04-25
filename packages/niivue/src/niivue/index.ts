@@ -10028,7 +10028,6 @@ export class Niivue {
   draw2DMain(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN): void {
     let frac2mmTexture = new Float32Array([0, 0, 0])
     if (this.volumes.length > 0) {
-      // polo
       frac2mmTexture = new Float32Array(this.volumes[0].frac2mm!.slice())
     }
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
@@ -10143,53 +10142,51 @@ export class Niivue {
       tile.fovMM = obj.fovMM
       return
     }
-    if (this.volumes.length < 1) {
-      return
-    }
     gl.enable(gl.DEPTH_TEST)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // draw the slice
     gl.disable(gl.BLEND)
     gl.depthFunc(gl.GREATER)
     gl.disable(gl.CULL_FACE) // show front and back faces
-
-    let shader = this.sliceMMShader
-    if (this.opts.isV1SliceShader) {
-      shader = this.sliceV1Shader
+    if (this.volumes.length > 0) {
+      let shader = this.sliceMMShader
+      if (this.opts.isV1SliceShader) {
+        shader = this.sliceV1Shader
+      }
+      if (!shader) {
+        throw new Error('slice Shader undefined')
+      }
+      shader.use(this.gl)
+      gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
+      gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
+      gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
+      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+      gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
+      gl.enable(gl.BLEND)
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity)
+      gl.uniform1i(shader.uniforms.axCorSag, axCorSag)
+      gl.uniform1f(shader.uniforms.slice, sliceFrac)
+      gl.uniformMatrix4fv(
+        shader.uniforms.frac2mm,
+        false,
+        frac2mmTexture // this.volumes[0].frac2mm
+      )
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
+      gl.bindVertexArray(this.genericVAO) // set vertex attributes
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+      gl.bindVertexArray(this.unusedVAO) // set vertex attributes
+      // record screenSlices to detect mouse click positions
+      this.screenSlices.push({
+        leftTopWidthHeight,
+        axCorSag,
+        sliceFrac,
+        AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
+        leftTopMM: obj.leftTopMM,
+        screen2frac: [],
+        fovMM: obj.fovMM
+      })
     }
-    if (!shader) {
-      throw new Error('slice Shader undefined')
-    }
-    shader.use(this.gl)
-    gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
-    gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
-    gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
-    gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity)
-    gl.uniform1i(shader.uniforms.axCorSag, axCorSag)
-    gl.uniform1f(shader.uniforms.slice, sliceFrac)
-    gl.uniformMatrix4fv(
-      shader.uniforms.frac2mm,
-      false,
-      frac2mmTexture // this.volumes[0].frac2mm
-    )
-    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
-    gl.bindVertexArray(this.genericVAO) // set vertex attributes
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    gl.bindVertexArray(this.unusedVAO) // set vertex attributes
-    // record screenSlices to detect mouse click positions
-    this.screenSlices.push({
-      leftTopWidthHeight,
-      axCorSag,
-      sliceFrac,
-      AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
-      leftTopMM: obj.leftTopMM,
-      screen2frac: [],
-      fovMM: obj.fovMM
-    })
     if (isNaN(customMM)) {
       // draw crosshairs
       this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
