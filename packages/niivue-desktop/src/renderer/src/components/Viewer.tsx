@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useContext } from 'react'
 import { AppContext } from '../App'
 import { loadDroppedFiles } from '../utils/dragAndDrop'
+import { registerViewSync } from '@renderer/utils/viewSync'
 
 export function Viewer(): JSX.Element {
   const { volumes, meshes, setVolumes, setMeshes, nvRef } = useContext(AppContext)
@@ -32,6 +33,8 @@ export function Viewer(): JSX.Element {
       canvasRef.current.addEventListener('dragover', handleDragOver)
       canvasRef.current.addEventListener('drop', handleDrop)
       nv.attachToCanvas(canvasRef.current)
+      // install all patches to auto-emit IPC on layout/slice changes
+      registerViewSync(nv)
     }
   }, [])
 
@@ -60,19 +63,22 @@ export function Viewer(): JSX.Element {
 
   return (
     <div className="flex flex-col bg-black basis-2/3 h-full grow relative">
-      {/* Toolbar: (can be expanded for more controls) */}
-      <div className="flex flex-row h-12 bg-black"></div>
-      {/* Canvas container: account for the toolbar height */}
-      <div className="w-full h-[calc(100%-48px)]">
+      <div className="flex flex-row h-12 bg-black" />
+      <div
+        className="w-full h-[calc(100%-48px)]"
+       
+      >
         <canvas
-          className="outline-none"
+          id="gl1"
+          className="w-full h-full block outline-none"
           ref={canvasRef}
-          width={800}
-          height={600}
+          // width={800}
+          // height={600}
+          tabIndex={0}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-        ></canvas>
-      </div>     
+        />
+      </div>
     </div>
   )
 }

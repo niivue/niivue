@@ -23,7 +23,7 @@ export const VolumeTab = (): JSX.Element => {
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
 
   // Color bar toggle state
-  const [showColorMaps, setShowColorMaps] = useState<boolean>(!!nv.opts.showColorbar)
+  const [showColorMaps, setShowColorMaps] = useState<boolean>(!!nv.opts.isColorbar)
 
   // Mosaic state
   const [mosaicStr, setMosaicStr] = useState<string>(
@@ -146,12 +146,6 @@ export const VolumeTab = (): JSX.Element => {
               </Accordion.Trigger>
             </Accordion.Header>
             <Accordion.Content className="px-4 py-2">
-              <TextField.Root
-                type="text"
-                value={mosaicStr}
-                onChange={e => setMosaicStr(e.target.value)}
-                className="w-full"
-              />
               <p className="text-xs italic text-gray-500 mt-2">
                 Edit the mosaic string to change the mosaic view.
               </p>

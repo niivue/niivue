@@ -8,6 +8,15 @@ import { store } from './appStore.js'
 import { getMainWindow } from '../index.js'
 import fs from 'fs' // ✅ Works in ES Module mode
 
+export const viewState = {
+  layout:    /** default */     'Auto',
+  sliceType: /** default */     'Multiplanar',
+  dragMode:  DEFAULT_OPTIONS.dragMode,
+  crosshair: true,
+  crosshair3D: DEFAULT_OPTIONS.show3Dcrosshair,
+  // …etc for any other checkbox/radios you sync…
+}
+
 const isMac = process.platform === 'darwin'
 
 const getRecentFilesMenu = (win: Electron.BrowserWindow): Electron.MenuItemConstructorOptions[] => {
@@ -58,17 +67,19 @@ const createDragModeSubmenu = (
 const createSliceTypeSubmenu = (
   win: Electron.BrowserWindow
 ): Electron.MenuItemConstructorOptions[] => {
-  return Object.keys(sliceTypeMap).map((sliceType) => {
+  return Object.keys(sliceTypeMap).map((sliceKey) => {
+    console.log(sliceKey)
     return {
-      label: sliceType,
-      id: sliceType,
+      label: sliceKey,
+      id: sliceKey,
       type: 'radio',
-      checked: sliceType === 'Multiplanar', // default to this slice type
+      //checked: sliceType === 'Multiplanar', // default to this slice type
+      checked: sliceKey === viewState.sliceType,
       click: (): void => {
         // get the slice type value from the sliceTypeMap object
-        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(sliceType)
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(sliceKey)
         const state = menuItem ? menuItem.checked : false
-        win.webContents.send('setSliceType', state ? sliceTypeMap[sliceType].name : 'multiplanar')
+        win.webContents.send('setSliceType', state ? sliceTypeMap[sliceKey].name : 'multiplanar')
       }
     }
   })
@@ -77,17 +88,17 @@ const createSliceTypeSubmenu = (
 const createLayoutSubmenu = (
   win: Electron.BrowserWindow
 ): Electron.MenuItemConstructorOptions[] => {
-  return Object.keys(layouts).map((layout) => {
+  return Object.keys(layouts).map((layoutKey) => {
     return {
-      label: layout,
-      id: layout,
+      label: layoutKey,
+      id: layoutKey,
       type: 'radio',
-      checked: layout === 'Auto', // default to this layout
+      checked: layoutKey === viewState.layout,
       click: (): void => {
         // get the layout value from the layouts object
-        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layout)
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layoutKey)
         const state = menuItem ? menuItem.checked : false
-        win.webContents.send('setLayout', state ? layout : 'Auto')
+        win.webContents.send('setLayout', state ? layoutKey : 'Auto')
       }
     }
   })
