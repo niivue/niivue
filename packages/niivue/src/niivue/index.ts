@@ -175,6 +175,7 @@ type Graph = {
   lineColor?: number[]
   textColor?: number[]
   lineThickness?: number
+  gridLineThickness?: number
   lineAlpha?: number
   lines?: number[][]
   selectedColumn?: number
@@ -10504,8 +10505,13 @@ export class Niivue {
       graph.backColor = [0.95, 0.95, 0.95, graph.opacity]
       graph.lineColor = [0, 0, 0, 1]
     }
+    const gridLineAlpha = 0.2
+    const selectedLineAlpha = 0.3
+    graph.lineColor[3] = gridLineAlpha
     graph.textColor = graph.lineColor.slice()
-    graph.lineThickness = 4
+    graph.textColor[3] = 1
+    graph.lineThickness = 3
+    graph.gridLineThickness = 1
     graph.lineAlpha = 1
     graph.lines = []
     const vols = []
@@ -10547,13 +10553,13 @@ export class Niivue {
       }
     }
     graph.lineRGB = [
-      [1, 0, 0],
+      [0.8, 0, 0],
       [0, 0.7, 0],
-      [0, 0, 1],
-      [1, 1, 0],
-      [1, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1],
+      [0, 0, 0.9],
+      [0.7, 0.7, 0],
+      [0.8, 0, 0.8],
+      [0, 0.7, 0.7],
+      [0.6, 0.6, 0.6],
       [0, 0, 0]
     ]
     // find min, max, range for all lines
@@ -10572,7 +10578,6 @@ export class Niivue {
       mn = volMn
       mx = volMx
     }
-
     if (graph.normalizeValues && mx > mn) {
       const range = mx - mn
       for (let j = 0; j < graph.lines.length; j++) {
@@ -10598,12 +10603,14 @@ export class Niivue {
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
     const minWH = Math.min(graph.LTWH[2], graph.LTWH[3])
-    // n.b. dpr encodes retina displays
-    const fntScale = 0.07 * (minWH / (this.fontMets!.size * this.uiData.dpr!))
-    let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale
-    if (fntSize < 16) {
+    const baseSize = 16
+    const baseWH = 480
+    const exponent = 0.5 // square root scaling
+    let fntSize = baseSize * Math.pow(minWH / baseWH, exponent)
+    if (fntSize < 12) {
       fntSize = 0
     }
+    const fntScale = fntSize / (this.opts.textHeight * this.gl.canvas.height)
     let maxTextWid = 0
     let lineH = ticMin
     // determine widest label in vertical axis
@@ -10624,7 +10631,7 @@ export class Niivue {
       graph.LTWH[0] + margin * frameWid + maxTextWid,
       graph.LTWH[1] + margin * frameHt,
       graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
-      graph.LTWH[3] - fntSize - 2 * margin * frameHt
+      graph.LTWH[3] - fntSize - 2.5 * margin * frameHt
     ]
     this.graph.LTWH = graph.LTWH
     this.graph.plotLTWH = plotLTWH
@@ -10637,20 +10644,20 @@ export class Niivue {
     // draw thin horizontal lines
     lineH = ticMin + 0.5 * spacing
     const thinColor = graph.lineColor.slice()
-    thinColor[3] = 0.25 * graph.lineColor[3]
+    thinColor[3] = 0.5 * graph.lineColor[3]
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH
-      this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], 0.5 * graph.lineThickness, thinColor)
+      this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.gridLineThickness, thinColor)
       lineH += spacing
     }
     lineH = ticMin
     // draw thick horizontal lines
-    const halfThick = 0.5 * graph.lineThickness
+    const halfThick = 0.5 * graph.gridLineThickness
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH
       this.drawLine(
-        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.lineThickness, y],
-        graph.lineThickness,
+        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.gridLineThickness, y],
+        graph.gridLineThickness,
         graph.lineColor
       )
       const str = lineH.toFixed(digits)
@@ -10667,7 +10674,7 @@ export class Niivue {
     }
     for (let i = 0; i < graph.lines[0].length; i += stride) {
       const x = i * scaleW + plotLTWH[0]
-      let thick = graph.lineThickness
+      let thick = graph.gridLineThickness
       if (i % 2 === 1) {
         thick *= 0.5
         this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], thick, thinColor)
@@ -10704,11 +10711,20 @@ export class Niivue {
     if (graph.selectedColumn! >= 0 && graph.selectedColumn! < graph.lines[0].length) {
       const x = graph.selectedColumn! * scaleW + plotLTWH[0]
       this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], graph.lineThickness, [
-        graph.lineRGB[3][0],
-        graph.lineRGB[3][1],
-        graph.lineRGB[3][2],
-        1
+        graph.lineRGB[0][0],
+        graph.lineRGB[0][1],
+        graph.lineRGB[0][2],
+        selectedLineAlpha
       ])
+    }
+    // add label 'Volume' below graph if there is spece in the plot
+    if (fntSize > 0 && graph.LTWH[1] + graph.LTWH[3] > plotLTWH[1] + plotLTWH[3] + fntSize * 2.4) {
+      this.drawTextBelow(
+        [plotLTWH[0] + 0.5 * plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 1.2],
+        'Volume',
+        fntScale,
+        graph.textColor
+      )
     }
     if (this.detectPartialllyLoaded4D()) {
       this.drawTextBelow(

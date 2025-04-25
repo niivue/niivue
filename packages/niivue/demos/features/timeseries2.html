@@ -41,6 +41,8 @@
         <option value="pan">pan/zoom</option>
         <option value="none">none</option>
       </select>
+      <label for="darkCheck">Dark</label>
+      <input type="checkbox" id="darkCheck" checked />
       <div id="controls4D">
         &nbsp;&nbsp;<label for="normCheck">Normalize graph</label>
         <input type="checkbox" id="normCheck" unchecked />
@@ -66,6 +68,13 @@
     onLocationChange: handleLocationChange,
     onFrameChange: handleFrameChange
   })
+  darkCheck.onchange = function () {
+    let v = 1
+    if (this.checked)
+        v = 0
+    nv1.opts.backColor = [v, v, v, 1]
+    nv1.drawScene()
+  }
   await nv1.attachTo("gl1")
   nv1.setRadiologicalConvention(false)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
