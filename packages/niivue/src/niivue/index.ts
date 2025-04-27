@@ -11193,14 +11193,14 @@ export class Niivue {
         textLeft += bulletMargin
       }
     }
-    const scale =  label.style.textScale
+    const scale = label.style.textScale
     this.drawText([textLeft, top], text, scale, label.style.textColor)
   }
 
   // not included in public docs
   draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass = false): void {
     const labels = this.getConnectomeLabels()
-    
+
     if (!this.opts.showLegend || labels.length === 0) {
       return
     }
@@ -11211,7 +11211,7 @@ export class Niivue {
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
-    let panelHeight = this.getLegendPanelHeight()
+    const panelHeight = this.getLegendPanelHeight()
     if (panelHeight > this.canvas.height) {
       // legend too big for screen issue 1279
       log.warn('Legend may overflow screen size')
