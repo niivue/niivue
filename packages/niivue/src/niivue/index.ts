@@ -43,6 +43,7 @@ import {
   fragMeshMatcapShader,
   fragMeshOutlineShader,
   fragMeshEdgeShader,
+  fragMeshRimShader,
   fragMeshShaderCrevice,
   fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
@@ -174,6 +175,7 @@ type Graph = {
   lineColor?: number[]
   textColor?: number[]
   lineThickness?: number
+  gridLineThickness?: number
   lineAlpha?: number
   lines?: number[][]
   selectedColumn?: number
@@ -573,6 +575,10 @@ export class Niivue {
     {
       Name: 'Matcap',
       Frag: fragMeshMatcapShader
+    },
+    {
+      Name: 'Rim',
+      Frag: fragMeshRimShader
     }
   ]
 
@@ -4199,12 +4205,14 @@ export class Niivue {
   /**
    * set volume rendering opacity influence of the gradient magnitude
    * @param gradientOpacity - amount of gradient magnitude influence on opacity (0..1), default 0 (no-influence)
+   * @param renderSilhouette - make core transparent to enhance rims (0..1), default 0 (no-influence)
    * @example
    * niivue.setGradientOpacity(0.6);
    * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
    */
-  async setGradientOpacity(gradientOpacity = 0.0): Promise<void> {
+  async setGradientOpacity(gradientOpacity = 0.0, renderSilhouette = 0.0): Promise<void> {
     this.opts.gradientOpacity = gradientOpacity
+    this.opts.renderSilhouette = renderSilhouette
     if (this.renderGradientValues) {
       this.renderShader = this.renderGradientValuesShader
     } else if (this.gradientTextureAmount > 0.0 || gradientOpacity > 0.0) {
@@ -6383,6 +6391,7 @@ export class Niivue {
     this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
+    this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette)
     const gradientOpacityLut = new Float32Array(256)
     for (let i = 0; i < 256; i++) {
       if (this.opts.gradientOpacity === 0.0) {
@@ -9284,15 +9293,27 @@ export class Niivue {
     const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
     const meshLabels = meshNodes.map((n) => n.label)
     // filter our undefined labels
+
     const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
     // get all of our non-anchored labels
     const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === LabelAnchorPoint.NONE)
     // get the unique set of unanchored labels
+    // console.log(definedMeshLabels)
     const nonAnchoredLabelSet = new Set(definedMeshLabels)
     for (const label of nonAnchoredLabels) {
       nonAnchoredLabelSet.add(label)
     }
-
+    // now add mesh atlases
+    const meshes = this.meshes.filter((m) => m.type === MeshType.MESH)
+    for (let i = 0; i < meshes.length; i++) {
+      for (let j = 0; j < meshes[i].layers.length; j++) {
+        if (meshes[i].layers[j].labels) {
+          for (let k = 0; k < meshes[i].layers[j].labels.length; k++) {
+            nonAnchoredLabelSet.add(meshes[i].layers[j].labels[k])
+          }
+        }
+      }
+    }
     return Array.from(nonAnchoredLabelSet)
   }
 
@@ -9356,8 +9377,7 @@ export class Niivue {
   getLegendPanelHeight(): number {
     const labels = this.getConnectomeLabels()
     let height = 0
-    const scale = 1.0 // we may want to make this adjustable in the future
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+    const verticalMargin = this.opts.textHeight * this.gl.canvas.height
     for (const label of labels) {
       const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
       const textHeight = this.textHeight(labelSize, label.text)
@@ -9844,6 +9864,15 @@ export class Niivue {
   // determine height/width of image in millimeters
   screenFieldOfViewMM(axCorSag = 0, forceSliceMM = false): vec3 {
     // extent of volume/mesh (in millimeters) in screen space
+    if (this.volumes.length < 1) {
+      let mnMM = vec3.fromValues(this.extentsMin[0], this.extentsMin[1], this.extentsMin[2])
+      let mxMM = vec3.fromValues(this.extentsMax[0], this.extentsMax[1], this.extentsMax[2])
+      mnMM = this.swizzleVec3MM(mnMM, axCorSag)
+      mxMM = this.swizzleVec3MM(mxMM, axCorSag)
+      const fovMM = vec3.create()
+      vec3.subtract(fovMM, mxMM, mnMM)
+      return fovMM
+    }
     if (!forceSliceMM && !this.opts.isSliceMM) {
       // return voxel space
       return this.screenFieldOfViewVox(axCorSag)
@@ -9878,6 +9907,16 @@ export class Niivue {
 
   // not included in public docs
   screenFieldOfViewExtendedMM(axCorSag = 0): MM {
+    if (this.volumes.length < 1) {
+      let mnMM = vec3.fromValues(this.extentsMin[0], this.extentsMin[1], this.extentsMin[2])
+      let mxMM = vec3.fromValues(this.extentsMax[0], this.extentsMax[1], this.extentsMax[2])
+      const rotation = mat4.create() // identity matrix: 2D axial screenXYZ = nifti [i,j,k]
+      mnMM = this.swizzleVec3MM(mnMM, axCorSag)
+      mxMM = this.swizzleVec3MM(mxMM, axCorSag)
+      const fovMM = vec3.create()
+      vec3.subtract(fovMM, mxMM, mnMM)
+      return { mnMM, mxMM, rotation, fovMM }
+    }
     if (!this.volumeObject3D) {
       throw new Error('volumeObject3D undefined')
     }
@@ -9984,11 +10023,14 @@ export class Niivue {
   // not included in public docs
   // draw 2D tile
   draw2DMain(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM = NaN): void {
-    let frac2mmTexture = this.volumes[0].frac2mm!.slice()
+    let frac2mmTexture = new Float32Array([0, 0, 0])
+    if (this.volumes.length > 0) {
+      frac2mmTexture = new Float32Array(this.volumes[0].frac2mm!.slice())
+    }
     let screen = this.screenFieldOfViewExtendedMM(axCorSag)
     let mesh2ortho = mat4.create()
-    if (!this.opts.isSliceMM) {
-      frac2mmTexture = this.volumes[0].frac2mmOrtho!.slice()
+    if (!this.opts.isSliceMM && this.volumes.length > 0) {
+      frac2mmTexture = new Float32Array(this.volumes[0].frac2mmOrtho!.slice())
       mesh2ortho = mat4.clone(this.volumes[0].mm2ortho!)
       screen = this.screenFieldOfViewExtendedVox(axCorSag)
     }
@@ -10103,44 +10145,45 @@ export class Niivue {
     gl.disable(gl.BLEND)
     gl.depthFunc(gl.GREATER)
     gl.disable(gl.CULL_FACE) // show front and back faces
-
-    let shader = this.sliceMMShader
-    if (this.opts.isV1SliceShader) {
-      shader = this.sliceV1Shader
+    if (this.volumes.length > 0) {
+      let shader = this.sliceMMShader
+      if (this.opts.isV1SliceShader) {
+        shader = this.sliceV1Shader
+      }
+      if (!shader) {
+        throw new Error('slice Shader undefined')
+      }
+      shader.use(this.gl)
+      gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
+      gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
+      gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
+      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+      gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
+      gl.enable(gl.BLEND)
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity)
+      gl.uniform1i(shader.uniforms.axCorSag, axCorSag)
+      gl.uniform1f(shader.uniforms.slice, sliceFrac)
+      gl.uniformMatrix4fv(
+        shader.uniforms.frac2mm,
+        false,
+        frac2mmTexture // this.volumes[0].frac2mm
+      )
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
+      gl.bindVertexArray(this.genericVAO) // set vertex attributes
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+      gl.bindVertexArray(this.unusedVAO) // set vertex attributes
+      // record screenSlices to detect mouse click positions
+      this.screenSlices.push({
+        leftTopWidthHeight,
+        axCorSag,
+        sliceFrac,
+        AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
+        leftTopMM: obj.leftTopMM,
+        screen2frac: [],
+        fovMM: obj.fovMM
+      })
     }
-    if (!shader) {
-      throw new Error('slice Shader undefined')
-    }
-    shader.use(this.gl)
-    gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth)
-    gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader)
-    gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
-    gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity)
-    gl.uniform1i(shader.uniforms.axCorSag, axCorSag)
-    gl.uniform1f(shader.uniforms.slice, sliceFrac)
-    gl.uniformMatrix4fv(
-      shader.uniforms.frac2mm,
-      false,
-      frac2mmTexture // this.volumes[0].frac2mm
-    )
-    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice())
-    gl.bindVertexArray(this.genericVAO) // set vertex attributes
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    gl.bindVertexArray(this.unusedVAO) // set vertex attributes
-    // record screenSlices to detect mouse click positions
-    this.screenSlices.push({
-      leftTopWidthHeight,
-      axCorSag,
-      sliceFrac,
-      AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
-      leftTopMM: obj.leftTopMM,
-      screen2frac: [],
-      fovMM: obj.fovMM
-    })
     if (isNaN(customMM)) {
       // draw crosshairs
       this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
@@ -10458,8 +10501,13 @@ export class Niivue {
       graph.backColor = [0.95, 0.95, 0.95, graph.opacity]
       graph.lineColor = [0, 0, 0, 1]
     }
+    const gridLineAlpha = 0.2
+    const selectedLineAlpha = 0.3
+    graph.lineColor[3] = gridLineAlpha
     graph.textColor = graph.lineColor.slice()
-    graph.lineThickness = 4
+    graph.textColor[3] = 1
+    graph.lineThickness = 3
+    graph.gridLineThickness = 1
     graph.lineAlpha = 1
     graph.lines = []
     const vols = []
@@ -10501,13 +10549,13 @@ export class Niivue {
       }
     }
     graph.lineRGB = [
-      [1, 0, 0],
+      [0.8, 0, 0],
       [0, 0.7, 0],
-      [0, 0, 1],
-      [1, 1, 0],
-      [1, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1],
+      [0, 0, 0.9],
+      [0.7, 0.7, 0],
+      [0.8, 0, 0.8],
+      [0, 0.7, 0.7],
+      [0.6, 0.6, 0.6],
       [0, 0, 0]
     ]
     // find min, max, range for all lines
@@ -10526,7 +10574,6 @@ export class Niivue {
       mn = volMn
       mx = volMx
     }
-
     if (graph.normalizeValues && mx > mn) {
       const range = mx - mn
       for (let j = 0; j < graph.lines.length; j++) {
@@ -10552,12 +10599,14 @@ export class Niivue {
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
     const minWH = Math.min(graph.LTWH[2], graph.LTWH[3])
-    // n.b. dpr encodes retina displays
-    const fntScale = 0.07 * (minWH / (this.fontMets!.size * this.uiData.dpr!))
-    let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale
-    if (fntSize < 16) {
+    const baseSize = 16
+    const baseWH = 480
+    const exponent = 0.5 // square root scaling
+    let fntSize = baseSize * Math.pow(minWH / baseWH, exponent)
+    if (fntSize < 12) {
       fntSize = 0
     }
+    const fntScale = fntSize / (this.opts.textHeight * this.gl.canvas.height)
     let maxTextWid = 0
     let lineH = ticMin
     // determine widest label in vertical axis
@@ -10578,7 +10627,7 @@ export class Niivue {
       graph.LTWH[0] + margin * frameWid + maxTextWid,
       graph.LTWH[1] + margin * frameHt,
       graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
-      graph.LTWH[3] - fntSize - 2 * margin * frameHt
+      graph.LTWH[3] - fntSize - 2.5 * margin * frameHt
     ]
     this.graph.LTWH = graph.LTWH
     this.graph.plotLTWH = plotLTWH
@@ -10591,20 +10640,20 @@ export class Niivue {
     // draw thin horizontal lines
     lineH = ticMin + 0.5 * spacing
     const thinColor = graph.lineColor.slice()
-    thinColor[3] = 0.25 * graph.lineColor[3]
+    thinColor[3] = 0.5 * graph.lineColor[3]
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH
-      this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], 0.5 * graph.lineThickness, thinColor)
+      this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.gridLineThickness, thinColor)
       lineH += spacing
     }
     lineH = ticMin
     // draw thick horizontal lines
-    const halfThick = 0.5 * graph.lineThickness
+    const halfThick = 0.5 * graph.gridLineThickness
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH
       this.drawLine(
-        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.lineThickness, y],
-        graph.lineThickness,
+        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.gridLineThickness, y],
+        graph.gridLineThickness,
         graph.lineColor
       )
       const str = lineH.toFixed(digits)
@@ -10621,7 +10670,7 @@ export class Niivue {
     }
     for (let i = 0; i < graph.lines[0].length; i += stride) {
       const x = i * scaleW + plotLTWH[0]
-      let thick = graph.lineThickness
+      let thick = graph.gridLineThickness
       if (i % 2 === 1) {
         thick *= 0.5
         this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], thick, thinColor)
@@ -10658,11 +10707,20 @@ export class Niivue {
     if (graph.selectedColumn! >= 0 && graph.selectedColumn! < graph.lines[0].length) {
       const x = graph.selectedColumn! * scaleW + plotLTWH[0]
       this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], graph.lineThickness, [
-        graph.lineRGB[3][0],
-        graph.lineRGB[3][1],
-        graph.lineRGB[3][2],
-        1
+        graph.lineRGB[0][0],
+        graph.lineRGB[0][1],
+        graph.lineRGB[0][2],
+        selectedLineAlpha
       ])
+    }
+    // add label 'Volume' below graph if there is space in the plot
+    if (fntSize > 0 && graph.LTWH[1] + graph.LTWH[3] > plotLTWH[1] + plotLTWH[3] + fntSize * 2.4) {
+      this.drawTextBelow(
+        [plotLTWH[0] + 0.5 * plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 1.2],
+        'Volume',
+        fntScale,
+        graph.textColor
+      )
     }
     if (this.detectPartialllyLoaded4D()) {
       this.drawTextBelow(
@@ -11135,13 +11193,14 @@ export class Niivue {
         textLeft += bulletMargin
       }
     }
-
-    this.drawText([textLeft, top], text, label.style.textScale, label.style.textColor)
+    const scale = label.style.textScale
+    this.drawText([textLeft, top], text, scale, label.style.textColor)
   }
 
   // not included in public docs
   draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass = false): void {
     const labels = this.getConnectomeLabels()
+
     if (!this.opts.showLegend || labels.length === 0) {
       return
     }
@@ -11149,16 +11208,17 @@ export class Niivue {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
-
-    const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-
-    const bulletMargin = this.getBulletMarginWidth()
     const panelHeight = this.getLegendPanelHeight()
+    if (panelHeight > this.canvas.height) {
+      // legend too big for screen issue 1279
+      log.warn('Legend may overflow screen size')
+    }
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width)
+    const bulletMargin = this.getBulletMarginWidth()
+
     const panelWidth = this.getLegendPanelWidth()
     const left = gl.canvas.width - panelWidth
     let top = (this.canvas.height - panelHeight) / 2
@@ -11363,7 +11423,6 @@ export class Niivue {
     gl.depthFunc(gl.GREATER)
     gl.disable(gl.CULL_FACE)
     if (isDepthTest) {
-      gl.disable(gl.BLEND)
       gl.depthFunc(gl.GREATER)
     } else {
       gl.enable(gl.BLEND)
@@ -11380,8 +11439,27 @@ export class Niivue {
     // this.meshShaderIndex
     let hasFibers = false
     for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false) {
+      if (this.meshes[i].visible === false || this.meshes[i].opacity <= 0.0) {
         continue
+      }
+      let meshAlpha = alpha
+      // gl.depthMask(false)
+      if (isDepthTest) {
+        meshAlpha = this.meshes[i].opacity
+        gl.depthFunc(gl.GREATER)
+        gl.depthMask(true)
+        if (meshAlpha < 1.0) {
+          // crude Z-fighting artifacts
+          gl.depthMask(false) // Prevent this object from writing to the depth buffer
+          gl.enable(gl.DEPTH_TEST)
+          // gl.disable(gl.DEPTH_TEST)
+          gl.enable(gl.BLEND)
+          gl.cullFace(gl.BACK)
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+        } else {
+          gl.enable(gl.DEPTH_TEST)
+          gl.disable(gl.BLEND)
+        }
       }
       shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader!
       if (this.uiData.mouseDepthPicker) {
@@ -11394,7 +11472,7 @@ export class Niivue {
       // gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
       // gl.uniform1f(shader.uniforms["opacity"], alpha);
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
-      gl.uniform1f(shader.uniforms.opacity, alpha)
+      gl.uniform1f(shader.uniforms.opacity, meshAlpha)
       if (this.meshes[i].indexCount! < 3) {
         continue
       }
@@ -11412,6 +11490,7 @@ export class Niivue {
       gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
+    gl.depthMask(true)
     // draw fibers
     if (!hasFibers) {
       gl.enable(gl.BLEND)
@@ -12034,10 +12113,6 @@ export class Niivue {
    * @see {@link https://niivue.github.io/niivue/features/mosaics.html | live demo usage}
    */
   drawMosaic(mosaicStr: string): void {
-    if (this.volumes.length === 0) {
-      log.debug('Unable to draw mosaic until voxel-based image is loaded')
-      return
-    }
     this.screenSlices = []
     // render always in world space
     const fovRenderMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL, true)
@@ -12138,6 +12213,7 @@ export class Niivue {
           // 2nd pass draw
           const ltwh = [marginLeft + scale * left, marginTop + scale * top, scale * w, scale * h]
           this.opts.textHeight = isLabel ? labelSize : 0
+
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity
             if (Object.is(sliceMM, -0)) {
@@ -12234,6 +12310,10 @@ export class Niivue {
     let posString = ''
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
       if (this.meshes.length > 0) {
+        if (this.sliceMosaicString.length > 0) {
+          this.drawMosaic(this.sliceMosaicString)
+          return
+        }
         this.screenSlices = [] // empty array
         // this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
         this.draw3D() // meshes loaded but no volume

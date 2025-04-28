@@ -37,9 +37,11 @@ The command `npm run demo` will minify the project and locally host all of the [
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
+- [neurosift](https://github.com/flatironinstitute/neurosift) provides NWB visualization and DANDI exploration
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
-- [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
+- [NiiVueReader](https://github.com/BrunoDG/NiiVueReader) by Bruno Dias demonstrates a full stack deployment. 
 - [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
+- [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 - [QuantCo](https://www.quantco.com/) is using NiiVue in medical imaging workflows
 - [FSL Clinical](https://fslclinical.com/) is using NiiVue in brain imaging reports
 - [brain2print](https://brain2print.org/) (from the NiiVue team) uses NiiVue for showing both volume data and converted meshes
