@@ -3320,6 +3320,7 @@ uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
+uniform float silhouettePower;
 uniform float gradientOpacity[256];
 in vec3 vColor;
 out vec4 fColor;
@@ -3329,6 +3330,7 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
 	//vec4 prevGrad = vec4(0.0);
+	float silhouetteThreshold = 1.0 - silhouettePower;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
@@ -3349,6 +3351,14 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			int gradIdx = int(grad.a * 255.0);
 			colorSample.a *= gradientOpacity[gradIdx];
+			float lightNormDot = dot(grad.rgb, rayDir);
+			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
+ 			colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
+ 			float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
+ 			// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
+ 			// Cull voxels that are too aligned with the view direction
+ 			if (viewAlign > silhouetteThreshold)
+ 				colorSample.a = 0.0;
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 			if ( colAcc.a > earlyTermination )
@@ -4190,6 +4200,27 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
+}`;
+var fragMeshRimShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+	const float thresh = 0.4;
+	const vec3 viewDir = vec3(0.0, 0.0, -1.0);
+	vec3 n = normalize(vN);
+	// use abs() for two-sided lighting, max() for one sided
+	float cosTheta = abs(dot(n, viewDir));
+	// float cosTheta = max(dot(n, viewDir), 0.0);
+	// optional fresnel equation - adjust exponent
+	// cosTheta = 1.0 - pow(1.0 - cosTheta, 2.0);
+	// use step for binary edges, smoothstep for feathered edges
+	// vec3 d = step(thresh, cosTheta) * vClr.rgb;
+	vec3 d = smoothstep(thresh - 0.05, thresh + 0.05, cosTheta) * vClr.rgb;
+	color = vec4(d, opacity);
 }`;
 var fragMeshEdgeShader = `#version 300 es
 precision highp int;
@@ -18475,6 +18506,83 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readGII()
 };
 
+// src/nvlabel.ts
+var LabelTextAlignment = /* @__PURE__ */ ((LabelTextAlignment2) => {
+  LabelTextAlignment2["LEFT"] = "left";
+  LabelTextAlignment2["RIGHT"] = "right";
+  LabelTextAlignment2["CENTER"] = "center";
+  return LabelTextAlignment2;
+})(LabelTextAlignment || {});
+var LabelLineTerminator = /* @__PURE__ */ ((LabelLineTerminator2) => {
+  LabelLineTerminator2["NONE"] = "none";
+  LabelLineTerminator2["CIRCLE"] = "circle";
+  LabelLineTerminator2["RING"] = "ring";
+  return LabelLineTerminator2;
+})(LabelLineTerminator || {});
+var LabelAnchorPoint = /* @__PURE__ */ ((LabelAnchorPoint2) => {
+  LabelAnchorPoint2[LabelAnchorPoint2["NONE"] = 0 /* NONE */] = "NONE";
+  LabelAnchorPoint2[LabelAnchorPoint2["TOPLEFT"] = 9] = "TOPLEFT";
+  LabelAnchorPoint2[LabelAnchorPoint2["TOPCENTER"] = 10] = "TOPCENTER";
+  LabelAnchorPoint2[LabelAnchorPoint2["TOPRIGHT"] = 12] = "TOPRIGHT";
+  LabelAnchorPoint2[LabelAnchorPoint2["MIDDLELEFT"] = 17] = "MIDDLELEFT";
+  LabelAnchorPoint2[LabelAnchorPoint2["MIDDLECENTER"] = 18] = "MIDDLECENTER";
+  LabelAnchorPoint2[LabelAnchorPoint2["MIDDLERIGHT"] = 20] = "MIDDLERIGHT";
+  LabelAnchorPoint2[LabelAnchorPoint2["BOTTOMLEFT"] = 33] = "BOTTOMLEFT";
+  LabelAnchorPoint2[LabelAnchorPoint2["BOTTOMCENTER"] = 34] = "BOTTOMCENTER";
+  LabelAnchorPoint2[LabelAnchorPoint2["BOTTOMRIGHT"] = 36] = "BOTTOMRIGHT";
+  return LabelAnchorPoint2;
+})(LabelAnchorPoint || {});
+var NVLabel3DStyle = class {
+  /**
+   * @param textColor - Color of text
+   * @param textScale - Text Size (0.0..1.0)
+   * @param lineWidth - Line width
+   * @param lineColor - Line color
+   * @param bulletScale - Bullet size respective of text
+   * @param bulletColor - Bullet color
+   * @param backgroundColor - Background color of label
+   */
+  constructor(textColor = [1, 1, 1, 1], textScale = 1, textAlignment = "left" /* LEFT */, lineWidth = 0, lineColor = [0, 0, 0], lineTerminator = "none" /* NONE */, bulletScale, bulletColor, backgroundColor) {
+    __publicField(this, "textColor");
+    __publicField(this, "textScale");
+    __publicField(this, "textAlignment");
+    __publicField(this, "lineWidth");
+    __publicField(this, "lineColor");
+    __publicField(this, "lineTerminator");
+    __publicField(this, "bulletScale");
+    __publicField(this, "bulletColor");
+    __publicField(this, "backgroundColor");
+    this.textColor = textColor;
+    this.textScale = textScale;
+    this.textAlignment = textAlignment;
+    this.lineWidth = lineWidth;
+    this.lineColor = lineColor;
+    this.lineTerminator = lineTerminator;
+    this.bulletScale = bulletScale;
+    this.bulletColor = bulletColor;
+    this.backgroundColor = backgroundColor;
+  }
+};
+var NVLabel3D = class {
+  /**
+   * @param text - The text of the label
+   * @param style - The style of the label
+   * @param points - An array of points label for label lines
+   */
+  constructor(text, style, points, anchor, onClick) {
+    __publicField(this, "text");
+    __publicField(this, "style");
+    __publicField(this, "points");
+    __publicField(this, "anchor");
+    __publicField(this, "onClick");
+    this.text = text;
+    this.style = style;
+    this.points = points;
+    this.anchor = anchor || 0 /* NONE */;
+    this.onClick = onClick;
+  }
+};
+
 // ../../node_modules/@ungap/structured-clone/esm/types.js
 var VOID = -1;
 var PRIMITIVE = 0;
@@ -25321,6 +25429,7 @@ var DEFAULT_OPTIONS = {
   isAlphaClipDark: false,
   gradientOrder: 1,
   gradientOpacity: 0,
+  renderSilhouette: 0,
   gradientAmount: 0,
   invertScrollDirection: false
 };
@@ -25790,7 +25899,9 @@ var NVMeshLayerDefaults = {
   cal_minNeg: 0,
   cal_maxNeg: 0,
   colormapType: 0 /* MIN_TO_MAX */,
-  values: new Array()
+  values: new Array(),
+  useNegativeCmap: false,
+  showLegend: true
 };
 var NVMeshFromUrlOptions = class {
   constructor(url = "", gl = null, name = "", opacity = 1, rgba255 = new Uint8Array([255, 255, 255, 255]), visible = true, layers = [], colorbarVisible = true) {
@@ -26542,6 +26653,63 @@ var NVMesh3 = class _NVMesh {
       }
     }
   }
+  // apply color lookup table to convert scalar array to RGBA array
+  scalars2RGBA(rgba, layer, scalars, isNegativeCmap = false) {
+    const nValues = scalars.length;
+    if (4 * nValues !== rgba.length) {
+      log.error(`colormap2RGBA incorrectly specified`);
+      return rgba;
+    }
+    const opa255 = Math.round(layer.opacity * 255);
+    let mn = layer.cal_min;
+    let mx = layer.cal_max;
+    let lut = cmapper.colormap(layer.colormap, this.colormapInvert);
+    let flip = 1;
+    if (isNegativeCmap) {
+      if (!layer.useNegativeCmap) {
+        return rgba;
+      }
+      flip = -1;
+      lut = cmapper.colormap(layer.colormapNegative, layer.colormapInvert);
+      mn = layer.cal_min;
+      mx = layer.cal_max;
+      if (isFinite(layer.cal_minNeg) && isFinite(layer.cal_minNeg)) {
+        mn = -layer.cal_minNeg;
+        mx = -layer.cal_maxNeg;
+      }
+    }
+    let mnCal = mn;
+    if (!layer.isTransparentBelowCalMin) {
+      mnCal = Number.NEGATIVE_INFINITY;
+    }
+    const isTranslucentBelowMin = layer.colormapType === 2 /* ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN */;
+    if (layer.colormapType !== 0 /* MIN_TO_MAX */) {
+      mn = Math.min(mn, 0);
+    }
+    const scale255 = 255 / (mx - mn);
+    for (let j = 0; j < nValues; j++) {
+      let v = scalars[j] * flip;
+      let opa = opa255;
+      if (v < mnCal) {
+        if (v > 0 && isTranslucentBelowMin) {
+          opa = Math.round(layer.opacity * 255 * Math.pow(v / mnCal, 2));
+        } else {
+          continue;
+        }
+      }
+      v = (v - mn) * scale255;
+      if (v < 0 && layer.isTransparentBelowCalMin) {
+        continue;
+      }
+      v = Math.min(255, Math.max(0, Math.round(v))) * 4;
+      const idx = j * 4;
+      rgba[idx + 0] = lut[v + 0];
+      rgba[idx + 1] = lut[v + 1];
+      rgba[idx + 2] = lut[v + 2];
+      rgba[idx + 3] = opa;
+    }
+    return rgba;
+  }
   blendColormap(u82, additiveRGBA, layer, mn, mx, lut, invert3 = false) {
     const nvtx = this.pts.length / 3;
     const opacity = Math.min(layer.opacity, 1);
@@ -26668,17 +26836,60 @@ var NVMesh3 = class _NVMesh {
         }
         if (layer.colormapLabel && layer.colormapLabel.lut) {
           const colormapLabel = layer.colormapLabel;
-          const lut2 = colormapLabel.lut;
+          let lut2 = colormapLabel.lut;
+          const opa255 = Math.round(layer.opacity * 255);
+          if (lut2[3] > 0) {
+            lut2[3] = opa255;
+          }
+          for (let j = 7; j < lut2.length; j += 4) {
+            lut2[j] = opa255;
+          }
           const nLabel = Math.floor(lut2.length / 4);
+          if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
+            lut2.fill(0);
+            lut2 = this.scalars2RGBA(lut2, layer, layer.atlasValues);
+            if (layer.useNegativeCmap) {
+              lut2 = this.scalars2RGBA(lut2, layer, layer.atlasValues, true);
+            }
+          } else if (layer.atlasValues) {
+            log.warn(`Expected ${nLabel} atlasValues but got ${layer.atlasValues.length} for mesh layer`);
+          }
+          if (layer.showLegend && nLabel === layer.colormapLabel.labels.length) {
+            layer.labels = [];
+            for (let j = 0; j < nLabel; j++) {
+              const rgba = Array.from(lut2.slice(j * 4, j * 4 + 4)).map((v) => v / 255);
+              const labelName = layer.colormapLabel.labels[j];
+              if (rgba[3] === 0 || !labelName || // handles empty string, null, undefined
+              labelName.startsWith("_")) {
+                continue;
+              }
+              rgba[3] = 1;
+              const label = new NVLabel3D(labelName, {
+                textColor: rgba,
+                bulletScale: 1,
+                bulletColor: rgba,
+                lineWidth: 0,
+                lineColor: rgba,
+                textScale: 1,
+                textAlignment: "left" /* LEFT */,
+                lineTerminator: "none" /* NONE */
+              });
+              layer.labels.push(label);
+              log.debug("label for mesh layer:", label);
+            }
+          } else {
+            delete layer.labels;
+          }
           const frame = Math.min(Math.max(layer.frame4D, 0), layer.nFrame4D - 1);
           const frameOffset = nvtx * frame;
           const rgba8 = new Uint8Array(nvtx * 4);
           let k = 0;
-          for (let j = 0; j < layer.values.length; j++) {
+          for (let j = 0; j < nvtx; j++) {
             let idx = 4 * Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1);
             rgba8[k + 0] = lut2[idx + 0];
             rgba8[k + 1] = lut2[idx + 1];
             rgba8[k + 2] = lut2[idx + 2];
+            rgba8[k + 3] = lut2[idx + 3];
             k += 4;
           }
           let opaque = new Array(nvtx).fill(false);
@@ -26686,12 +26897,12 @@ var NVMesh3 = class _NVMesh {
             opaque = NVMeshUtilities.getClusterBoundary(rgba8, this.tris);
           }
           k = 0;
-          for (let j = 0; j < layer.values.length; j++) {
+          for (let j = 0; j < nvtx; j++) {
             let vtx = j * 28 + 24;
             if (this.f32PerVertex !== 7) {
               vtx = j * 20 + 16;
             }
-            let opa = opacity;
+            let opa = rgba8[k + 3] / 255;
             if (opaque[j]) {
               opa = layer.outlineBorder;
               if (layer.outlineBorder < 0) {
@@ -26920,10 +27131,6 @@ var NVMesh3 = class _NVMesh {
   setProperty(key, val, gl) {
     if (!(key in this)) {
       console.warn("Mesh does not have property:", key, this);
-      return;
-    }
-    if (typeof val !== "number" && typeof val !== "string" && typeof val !== "boolean") {
-      console.warn("Invalid value type. Expected number, string, or boolean but received:", typeof val);
       return;
     }
     ;
@@ -28875,83 +29082,6 @@ var Roboto_Regular_default2 = {
   kerning: []
 };
 
-// src/nvlabel.ts
-var LabelTextAlignment = /* @__PURE__ */ ((LabelTextAlignment2) => {
-  LabelTextAlignment2["LEFT"] = "left";
-  LabelTextAlignment2["RIGHT"] = "right";
-  LabelTextAlignment2["CENTER"] = "center";
-  return LabelTextAlignment2;
-})(LabelTextAlignment || {});
-var LabelLineTerminator = /* @__PURE__ */ ((LabelLineTerminator2) => {
-  LabelLineTerminator2["NONE"] = "none";
-  LabelLineTerminator2["CIRCLE"] = "circle";
-  LabelLineTerminator2["RING"] = "ring";
-  return LabelLineTerminator2;
-})(LabelLineTerminator || {});
-var LabelAnchorPoint = /* @__PURE__ */ ((LabelAnchorPoint2) => {
-  LabelAnchorPoint2[LabelAnchorPoint2["NONE"] = 0 /* NONE */] = "NONE";
-  LabelAnchorPoint2[LabelAnchorPoint2["TOPLEFT"] = 9] = "TOPLEFT";
-  LabelAnchorPoint2[LabelAnchorPoint2["TOPCENTER"] = 10] = "TOPCENTER";
-  LabelAnchorPoint2[LabelAnchorPoint2["TOPRIGHT"] = 12] = "TOPRIGHT";
-  LabelAnchorPoint2[LabelAnchorPoint2["MIDDLELEFT"] = 17] = "MIDDLELEFT";
-  LabelAnchorPoint2[LabelAnchorPoint2["MIDDLECENTER"] = 18] = "MIDDLECENTER";
-  LabelAnchorPoint2[LabelAnchorPoint2["MIDDLERIGHT"] = 20] = "MIDDLERIGHT";
-  LabelAnchorPoint2[LabelAnchorPoint2["BOTTOMLEFT"] = 33] = "BOTTOMLEFT";
-  LabelAnchorPoint2[LabelAnchorPoint2["BOTTOMCENTER"] = 34] = "BOTTOMCENTER";
-  LabelAnchorPoint2[LabelAnchorPoint2["BOTTOMRIGHT"] = 36] = "BOTTOMRIGHT";
-  return LabelAnchorPoint2;
-})(LabelAnchorPoint || {});
-var NVLabel3DStyle = class {
-  /**
-   * @param textColor - Color of text
-   * @param textScale - Text Size (0.0..1.0)
-   * @param lineWidth - Line width
-   * @param lineColor - Line color
-   * @param bulletScale - Bullet size respective of text
-   * @param bulletColor - Bullet color
-   * @param backgroundColor - Background color of label
-   */
-  constructor(textColor = [1, 1, 1, 1], textScale = 1, textAlignment = "left" /* LEFT */, lineWidth = 0, lineColor = [0, 0, 0], lineTerminator = "none" /* NONE */, bulletScale, bulletColor, backgroundColor) {
-    __publicField(this, "textColor");
-    __publicField(this, "textScale");
-    __publicField(this, "textAlignment");
-    __publicField(this, "lineWidth");
-    __publicField(this, "lineColor");
-    __publicField(this, "lineTerminator");
-    __publicField(this, "bulletScale");
-    __publicField(this, "bulletColor");
-    __publicField(this, "backgroundColor");
-    this.textColor = textColor;
-    this.textScale = textScale;
-    this.textAlignment = textAlignment;
-    this.lineWidth = lineWidth;
-    this.lineColor = lineColor;
-    this.lineTerminator = lineTerminator;
-    this.bulletScale = bulletScale;
-    this.bulletColor = bulletColor;
-    this.backgroundColor = backgroundColor;
-  }
-};
-var NVLabel3D = class {
-  /**
-   * @param text - The text of the label
-   * @param style - The style of the label
-   * @param points - An array of points label for label lines
-   */
-  constructor(text, style, points, anchor, onClick) {
-    __publicField(this, "text");
-    __publicField(this, "style");
-    __publicField(this, "points");
-    __publicField(this, "anchor");
-    __publicField(this, "onClick");
-    this.text = text;
-    this.style = style;
-    this.points = points;
-    this.anchor = anchor || 0 /* NONE */;
-    this.onClick = onClick;
-  }
-};
-
 // src/nvconnectome.ts
 var defaultOptions = {
   name: "untitled connectome",
@@ -30036,6 +30166,10 @@ var Niivue = class {
       {
         Name: "Matcap",
         Frag: fragMeshMatcapShader
+      },
+      {
+        Name: "Rim",
+        Frag: fragMeshRimShader
       }
     ]);
     // TODO just let users use DRAG_MODE instead
@@ -33207,12 +33341,14 @@ var Niivue = class {
   /**
    * set volume rendering opacity influence of the gradient magnitude
    * @param gradientOpacity - amount of gradient magnitude influence on opacity (0..1), default 0 (no-influence)
+   * @param renderSilhouette - make core transparent to enhance rims (0..1), default 0 (no-influence)
    * @example
    * niivue.setGradientOpacity(0.6);
    * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
    */
-  async setGradientOpacity(gradientOpacity = 0) {
+  async setGradientOpacity(gradientOpacity = 0, renderSilhouette = 0) {
     this.opts.gradientOpacity = gradientOpacity;
+    this.opts.renderSilhouette = renderSilhouette;
     if (this.renderGradientValues) {
       this.renderShader = this.renderGradientValuesShader;
     } else if (this.gradientTextureAmount > 0 || gradientOpacity > 0) {
@@ -35081,6 +35217,7 @@ var Niivue = class {
     this.gl.uniform1i(shader.uniforms.drawing, 7);
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1]);
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
+    this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette);
     const gradientOpacityLut = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
       if (this.opts.gradientOpacity === 0) {
@@ -37608,6 +37745,16 @@ var Niivue = class {
     for (const label of nonAnchoredLabels) {
       nonAnchoredLabelSet.add(label);
     }
+    const meshes = this.meshes.filter((m) => m.type === "mesh" /* MESH */);
+    for (let i = 0; i < meshes.length; i++) {
+      for (let j = 0; j < meshes[i].layers.length; j++) {
+        if (meshes[i].layers[j].labels) {
+          for (let k = 0; k < meshes[i].layers[j].labels.length; k++) {
+            nonAnchoredLabelSet.add(meshes[i].layers[j].labels[k]);
+          }
+        }
+      }
+    }
     return Array.from(nonAnchoredLabelSet);
   }
   getBulletMarginWidth() {
@@ -37657,8 +37804,7 @@ var Niivue = class {
   getLegendPanelHeight() {
     const labels = this.getConnectomeLabels();
     let height = 0;
-    const scale6 = 1;
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale6;
+    const verticalMargin = this.opts.textHeight * this.gl.canvas.height;
     for (const label of labels) {
       const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
       const textHeight = this.textHeight(labelSize, label.text);
@@ -38073,6 +38219,15 @@ var Niivue = class {
   // not included in public docs
   // determine height/width of image in millimeters
   screenFieldOfViewMM(axCorSag = 0, forceSliceMM = false) {
+    if (this.volumes.length < 1) {
+      let mnMM2 = vec3_exports.fromValues(this.extentsMin[0], this.extentsMin[1], this.extentsMin[2]);
+      let mxMM2 = vec3_exports.fromValues(this.extentsMax[0], this.extentsMax[1], this.extentsMax[2]);
+      mnMM2 = this.swizzleVec3MM(mnMM2, axCorSag);
+      mxMM2 = this.swizzleVec3MM(mxMM2, axCorSag);
+      const fovMM2 = vec3_exports.create();
+      vec3_exports.subtract(fovMM2, mxMM2, mnMM2);
+      return fovMM2;
+    }
     if (!forceSliceMM && !this.opts.isSliceMM) {
       return this.screenFieldOfViewVox(axCorSag);
     }
@@ -38101,6 +38256,16 @@ var Niivue = class {
   }
   // not included in public docs
   screenFieldOfViewExtendedMM(axCorSag = 0) {
+    if (this.volumes.length < 1) {
+      let mnMM2 = vec3_exports.fromValues(this.extentsMin[0], this.extentsMin[1], this.extentsMin[2]);
+      let mxMM2 = vec3_exports.fromValues(this.extentsMax[0], this.extentsMax[1], this.extentsMax[2]);
+      const rotation2 = mat4_exports.create();
+      mnMM2 = this.swizzleVec3MM(mnMM2, axCorSag);
+      mxMM2 = this.swizzleVec3MM(mxMM2, axCorSag);
+      const fovMM2 = vec3_exports.create();
+      vec3_exports.subtract(fovMM2, mxMM2, mnMM2);
+      return { mnMM: mnMM2, mxMM: mxMM2, rotation: rotation2, fovMM: fovMM2 };
+    }
     if (!this.volumeObject3D) {
       throw new Error("volumeObject3D undefined");
     }
@@ -38195,11 +38360,14 @@ var Niivue = class {
   // not included in public docs
   // draw 2D tile
   draw2DMain(leftTopWidthHeight, axCorSag, customMM = NaN) {
-    let frac2mmTexture = this.volumes[0].frac2mm.slice();
+    let frac2mmTexture = new Float32Array([0, 0, 0]);
+    if (this.volumes.length > 0) {
+      frac2mmTexture = new Float32Array(this.volumes[0].frac2mm.slice());
+    }
     let screen = this.screenFieldOfViewExtendedMM(axCorSag);
     let mesh2ortho = mat4_exports.create();
-    if (!this.opts.isSliceMM) {
-      frac2mmTexture = this.volumes[0].frac2mmOrtho.slice();
+    if (!this.opts.isSliceMM && this.volumes.length > 0) {
+      frac2mmTexture = new Float32Array(this.volumes[0].frac2mmOrtho.slice());
       mesh2ortho = mat4_exports.clone(this.volumes[0].mm2ortho);
       screen = this.screenFieldOfViewExtendedVox(axCorSag);
     }
@@ -38305,43 +38473,45 @@ var Niivue = class {
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.GREATER);
     gl.disable(gl.CULL_FACE);
-    let shader = this.sliceMMShader;
-    if (this.opts.isV1SliceShader) {
-      shader = this.sliceV1Shader;
+    if (this.volumes.length > 0) {
+      let shader = this.sliceMMShader;
+      if (this.opts.isV1SliceShader) {
+        shader = this.sliceV1Shader;
+      }
+      if (!shader) {
+        throw new Error("slice Shader undefined");
+      }
+      shader.use(this.gl);
+      gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth);
+      gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader);
+      gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0);
+      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays);
+      gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity);
+      gl.uniform1i(shader.uniforms.axCorSag, axCorSag);
+      gl.uniform1f(shader.uniforms.slice, sliceFrac);
+      gl.uniformMatrix4fv(
+        shader.uniforms.frac2mm,
+        false,
+        frac2mmTexture
+        // this.volumes[0].frac2mm
+      );
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice());
+      gl.bindVertexArray(this.genericVAO);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.bindVertexArray(this.unusedVAO);
+      this.screenSlices.push({
+        leftTopWidthHeight,
+        axCorSag,
+        sliceFrac,
+        AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
+        leftTopMM: obj.leftTopMM,
+        screen2frac: [],
+        fovMM: obj.fovMM
+      });
     }
-    if (!shader) {
-      throw new Error("slice Shader undefined");
-    }
-    shader.use(this.gl);
-    gl.uniform1f(shader.uniforms.overlayOutlineWidth, this.overlayOutlineWidth);
-    gl.uniform1f(shader.uniforms.overlayAlphaShader, this.overlayAlphaShader);
-    gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0);
-    gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays);
-    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity);
-    gl.uniform1i(shader.uniforms.axCorSag, axCorSag);
-    gl.uniform1f(shader.uniforms.slice, sliceFrac);
-    gl.uniformMatrix4fv(
-      shader.uniforms.frac2mm,
-      false,
-      frac2mmTexture
-      // this.volumes[0].frac2mm
-    );
-    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, obj.modelViewProjectionMatrix.slice());
-    gl.bindVertexArray(this.genericVAO);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    gl.bindVertexArray(this.unusedVAO);
-    this.screenSlices.push({
-      leftTopWidthHeight,
-      axCorSag,
-      sliceFrac,
-      AxyzMxy: this.xyMM2xyzMM(axCorSag, sliceFrac),
-      leftTopMM: obj.leftTopMM,
-      screen2frac: [],
-      fovMM: obj.fovMM
-    });
     if (isNaN(customMM)) {
       this.drawCrosshairs3D(true, 1, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM);
     }
@@ -38614,8 +38784,13 @@ var Niivue = class {
       graph.backColor = [0.95, 0.95, 0.95, graph.opacity];
       graph.lineColor = [0, 0, 0, 1];
     }
+    const gridLineAlpha = 0.2;
+    const selectedLineAlpha = 0.3;
+    graph.lineColor[3] = gridLineAlpha;
     graph.textColor = graph.lineColor.slice();
-    graph.lineThickness = 4;
+    graph.textColor[3] = 1;
+    graph.lineThickness = 3;
+    graph.gridLineThickness = 1;
     graph.lineAlpha = 1;
     graph.lines = [];
     const vols = [];
@@ -38657,13 +38832,13 @@ var Niivue = class {
       }
     }
     graph.lineRGB = [
-      [1, 0, 0],
+      [0.8, 0, 0],
       [0, 0.7, 0],
-      [0, 0, 1],
-      [1, 1, 0],
-      [1, 0, 1],
-      [0, 1, 1],
-      [1, 1, 1],
+      [0, 0, 0.9],
+      [0.7, 0.7, 0],
+      [0.8, 0, 0.8],
+      [0, 0.7, 0.7],
+      [0.6, 0.6, 0.6],
       [0, 0, 0]
     ];
     let mn = graph.lines[0][0];
@@ -38704,11 +38879,14 @@ var Niivue = class {
       return x.toFixed(6).replace(/\.?0*$/, "");
     }
     const minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
-    const fntScale = 0.07 * (minWH / (this.fontMets.size * this.uiData.dpr));
-    let fntSize = this.opts.textHeight * this.gl.canvas.height * fntScale;
-    if (fntSize < 16) {
+    const baseSize = 16;
+    const baseWH = 480;
+    const exponent = 0.5;
+    let fntSize = baseSize * Math.pow(minWH / baseWH, exponent);
+    if (fntSize < 12) {
       fntSize = 0;
     }
+    const fntScale = fntSize / (this.opts.textHeight * this.gl.canvas.height);
     let maxTextWid = 0;
     let lineH = ticMin;
     if (fntSize > 0) {
@@ -38726,7 +38904,7 @@ var Niivue = class {
       graph.LTWH[0] + margin * frameWid + maxTextWid,
       graph.LTWH[1] + margin * frameHt,
       graph.LTWH[2] - maxTextWid - 2 * margin * frameWid,
-      graph.LTWH[3] - fntSize - 2 * margin * frameHt
+      graph.LTWH[3] - fntSize - 2.5 * margin * frameHt
     ];
     this.graph.LTWH = graph.LTWH;
     this.graph.plotLTWH = plotLTWH;
@@ -38737,19 +38915,19 @@ var Niivue = class {
     const plotBottom = plotLTWH[1] + plotLTWH[3];
     lineH = ticMin + 0.5 * spacing;
     const thinColor = graph.lineColor.slice();
-    thinColor[3] = 0.25 * graph.lineColor[3];
+    thinColor[3] = 0.5 * graph.lineColor[3];
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH;
-      this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], 0.5 * graph.lineThickness, thinColor);
+      this.drawLine([plotLTWH[0], y, plotLTWH[0] + plotLTWH[2], y], graph.gridLineThickness, thinColor);
       lineH += spacing;
     }
     lineH = ticMin;
-    const halfThick = 0.5 * graph.lineThickness;
+    const halfThick = 0.5 * graph.gridLineThickness;
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH;
       this.drawLine(
-        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.lineThickness, y],
-        graph.lineThickness,
+        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.gridLineThickness, y],
+        graph.gridLineThickness,
         graph.lineColor
       );
       const str6 = lineH.toFixed(digits);
@@ -38764,7 +38942,7 @@ var Niivue = class {
     }
     for (let i = 0; i < graph.lines[0].length; i += stride) {
       const x = i * scaleW + plotLTWH[0];
-      let thick = graph.lineThickness;
+      let thick = graph.gridLineThickness;
       if (i % 2 === 1) {
         thick *= 0.5;
         this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], thick, thinColor);
@@ -38798,11 +38976,19 @@ var Niivue = class {
     if (graph.selectedColumn >= 0 && graph.selectedColumn < graph.lines[0].length) {
       const x = graph.selectedColumn * scaleW + plotLTWH[0];
       this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], graph.lineThickness, [
-        graph.lineRGB[3][0],
-        graph.lineRGB[3][1],
-        graph.lineRGB[3][2],
-        1
+        graph.lineRGB[0][0],
+        graph.lineRGB[0][1],
+        graph.lineRGB[0][2],
+        selectedLineAlpha
       ]);
+    }
+    if (fntSize > 0 && graph.LTWH[1] + graph.LTWH[3] > plotLTWH[1] + plotLTWH[3] + fntSize * 2.4) {
+      this.drawTextBelow(
+        [plotLTWH[0] + 0.5 * plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 1.2],
+        "Volume",
+        fntScale,
+        graph.textColor
+      );
     }
     if (this.detectPartialllyLoaded4D()) {
       this.drawTextBelow(
@@ -39178,7 +39364,8 @@ var Niivue = class {
         textLeft += bulletMargin;
       }
     }
-    this.drawText([textLeft, top], text, label.style.textScale, label.style.textColor);
+    const scale6 = label.style.textScale;
+    this.drawText([textLeft, top], text, scale6, label.style.textColor);
   }
   // not included in public docs
   draw3DLabels(mvpMatrix, leftTopWidthHeight, secondPass = false) {
@@ -39192,10 +39379,12 @@ var Niivue = class {
     const gl = this.gl;
     gl.disable(gl.CULL_FACE);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    const scale6 = 1;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale6;
-    const bulletMargin = this.getBulletMarginWidth();
     const panelHeight = this.getLegendPanelHeight();
+    if (panelHeight > this.canvas.height) {
+      log.warn("Legend may overflow screen size");
+    }
+    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width);
+    const bulletMargin = this.getBulletMarginWidth();
     const panelWidth = this.getLegendPanelWidth();
     const left = gl.canvas.width - panelWidth;
     let top = (this.canvas.height - panelHeight) / 2;
@@ -39362,7 +39551,6 @@ var Niivue = class {
     gl.depthFunc(gl.GREATER);
     gl.disable(gl.CULL_FACE);
     if (isDepthTest) {
-      gl.disable(gl.BLEND);
       gl.depthFunc(gl.GREATER);
     } else {
       gl.enable(gl.BLEND);
@@ -39373,8 +39561,24 @@ var Niivue = class {
     let shader = this.meshShaders[0].shader;
     let hasFibers = false;
     for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false) {
+      if (this.meshes[i].visible === false || this.meshes[i].opacity <= 0) {
         continue;
+      }
+      let meshAlpha = alpha;
+      if (isDepthTest) {
+        meshAlpha = this.meshes[i].opacity;
+        gl.depthFunc(gl.GREATER);
+        gl.depthMask(true);
+        if (meshAlpha < 1) {
+          gl.depthMask(false);
+          gl.enable(gl.DEPTH_TEST);
+          gl.enable(gl.BLEND);
+          gl.cullFace(gl.BACK);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        } else {
+          gl.enable(gl.DEPTH_TEST);
+          gl.disable(gl.BLEND);
+        }
       }
       shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader;
       if (this.uiData.mouseDepthPicker) {
@@ -39383,7 +39587,7 @@ var Niivue = class {
       shader.use(this.gl);
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
-      gl.uniform1f(shader.uniforms.opacity, alpha);
+      gl.uniform1f(shader.uniforms.opacity, meshAlpha);
       if (this.meshes[i].indexCount < 3) {
         continue;
       }
@@ -39399,6 +39603,7 @@ var Niivue = class {
       gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
       gl.bindVertexArray(this.unusedVAO);
     }
+    gl.depthMask(true);
     if (!hasFibers) {
       gl.enable(gl.BLEND);
       gl.depthFunc(gl.ALWAYS);
@@ -39938,10 +40143,6 @@ var Niivue = class {
    * @see {@link https://niivue.github.io/niivue/features/mosaics.html | live demo usage}
    */
   drawMosaic(mosaicStr) {
-    if (this.volumes.length === 0) {
-      log.debug("Unable to draw mosaic until voxel-based image is loaded");
-      return;
-    }
     this.screenSlices = [];
     const fovRenderMM = this.screenFieldOfViewMM(0 /* AXIAL */, true);
     const fovSliceMM = this.screenFieldOfViewMM(0 /* AXIAL */);
@@ -40109,6 +40310,10 @@ var Niivue = class {
     let posString = "";
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
       if (this.meshes.length > 0) {
+        if (this.sliceMosaicString.length > 0) {
+          this.drawMosaic(this.sliceMosaicString);
+          return;
+        }
         this.screenSlices = [];
         this.draw3D();
         if (this.opts.isColorbar) {

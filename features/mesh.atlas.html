@@ -44,22 +44,38 @@
         class="slider"
         id="meshSlider2"
       />
-      <label for="check1">Atlas outline</label>
-      <input type="checkbox" id="check1" unchecked />
-      <label for="check2">Statistical outline</label>
+      <label for="atlasOutlineDrop">Atlas outline</label>
+      <select id="atlasOutlineDrop">
+        <option value="0" selected>None</option>
+        <option value="1" >Opaque</option>
+        <option value="-1">Black</option>
+      </select>
+      <label for="statsOutlineDrop">Statistical outline</label>
+      <select id="statsOutlineDrop">
+        <option value="0" selected>None</option>
+        <option value="1" >Opaque</option>
+        <option value="-1">Black</option>
+      </select>
       <input type="checkbox" id="check2" unchecked />
+      <label for="crossCheck">Crosshairs</label>
+      <input type="checkbox" id="crossCheck" checked />
+      &nbsp;
+      <button id="leftBtn">Left</button>
+      <button id="rightBtn">Right</button>
+      <button id="postBtn">Posterior</button>
+      <button id="antBtn">Anertior</button>
+      <button id="infBtn">Inferior</button>
+      <button id="supBtn">Superior</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
     <footer>
       <p id="shaders">Shaders:<button id="gridBtn">Custom: Grid</button></p>
-      <p>custom shader:</p>
+      <button id="customShaderBtn">Use custom shader:</button>
       <textarea id="customText" name="customText" rows="4" cols="50">
 #version 300 es&#10;precision highp int;&#10;precision highp float;&#10;uniform float opacity;&#10;in vec4 vClr;&#10;in vec3 vN, vL, vV;&#10;out vec4 color;&#10;void main() {&#10; vec3 r = vec3(0.0, 0.0, 1.0); //rayDir: for orthographic projections moving in Z direction (no need for normal matrix)&#10; float ambient = 0.35;&#10; float diffuse = 0.5;&#10; vec3 n = normalize(vN);&#10; vec3 l = normalize(vec3(0.0, 10.0, -5.0));&#10; float lightNormDot = dot(n, l);&#10; vec3 a = vClr.rgb * ambient;&#10; vec3 d = max(lightNormDot, 0.0) * vClr.rgb * diffuse;&#10; color = vec4(a + d, opacity);&#10;}</textarea
       >
-      <br />
-      <button id="customShaderBtn">Use custom shader</button>
     </footer>
   </body>
 </html>
@@ -96,6 +112,24 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`
+  leftBtn.onclick = async function () {
+    nv1.setRenderAzimuthElevation(90, 0)
+  }
+  rightBtn.onclick = async function () {
+    nv1.setRenderAzimuthElevation(270, 0)
+  }
+  postBtn.onclick = async function () {
+    nv1.setRenderAzimuthElevation(0, 0)
+  }
+  antBtn.onclick = async function () {
+    nv1.setRenderAzimuthElevation(180, 0)
+  }
+  infBtn.onclick = async function () {
+    nv1.setRenderAzimuthElevation(180, -90)
+  }
+  supBtn.onclick = async function () {
+    nv1.setRenderAzimuthElevation(0, 90)
+  }
   decimateSelect.onchange = async function () {
     nv1.decimateHierarchicalMesh(nv1.meshes[0].id, decimateSelect.selectedIndex)
     for (let i = decimateSelect.options.length - 1; i > decimateSelect.selectedIndex; i--) {
@@ -118,21 +152,15 @@ void main() {
       this.value / 255.0
     )
   }
-  check1.onchange = function () {
-    nv1.setMeshLayerProperty(
-      nv1.meshes[0].id,
-      1,
-      "outlineBorder",
-      this.checked
-    )
+  crossCheck.onchange = function () {
+    nv1.opts.show3Dcrosshair = this.checked
+    nv1.drawScene()
   }
-  check2.onchange = function () {
-    nv1.setMeshLayerProperty(
-      nv1.meshes[0].id,
-      2,
-      "outlineBorder",
-      this.checked
-    )
+  atlasOutlineDrop.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "outlineBorder", parseInt(this.value)) 
+  }
+  statsOutlineDrop.onchange = function () {
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "outlineBorder", parseInt(this.value)) 
   }
   customShaderBtn.onclick = function () {
     let idx = nv1.setCustomMeshShader(
@@ -152,6 +180,7 @@ void main() {
   })
   nv1.setSliceType(nv1.sliceTypeRender)
   await nv1.attachTo("gl1")
+  nv1.opts.showLegend = false
   var meshLayersList1 = [
     {
       url: "../images/lh.curv",

@@ -775,6 +775,7 @@ type NVConfigOptions = {
     isAlphaClipDark: boolean;
     gradientOrder: number;
     gradientOpacity: number;
+    renderSilhouette: number;
     gradientAmount: number;
     invertScrollDirection: boolean;
 };
@@ -1204,6 +1205,9 @@ type NVMeshLayer = {
     colormapType?: number;
     base64?: string;
     colorbarVisible?: boolean;
+    showLegend?: boolean;
+    labels?: NVLabel3D[];
+    atlasValues?: AnyNumberArray;
 };
 declare const NVMeshLayerDefaults: {
     colormap: string;
@@ -1217,6 +1221,8 @@ declare const NVMeshLayerDefaults: {
     cal_maxNeg: number;
     colormapType: COLORMAP_TYPE;
     values: number[];
+    useNegativeCmap: boolean;
+    showLegend: boolean;
 };
 declare class NVMeshFromUrlOptions {
     url: string;
@@ -1330,6 +1336,7 @@ declare class NVMesh {
     updateFibers(gl: WebGL2RenderingContext): void;
     indexNearestXYZmm(Xmm: number, Ymm: number, Zmm: number): number[];
     unloadMesh(gl: WebGL2RenderingContext): void;
+    scalars2RGBA(rgba: Uint8ClampedArray, layer: NVMeshLayer, scalars: AnyNumberArray, isNegativeCmap?: boolean): Uint8ClampedArray;
     blendColormap(u8: Uint8Array, additiveRGBA: Uint8Array, layer: NVMeshLayer, mn: number, mx: number, lut: Uint8ClampedArray, invert?: boolean): void;
     updateMesh(gl: WebGL2RenderingContext): void;
     reverseFaces(gl: WebGL2RenderingContext): void;
@@ -1498,6 +1505,7 @@ type Graph = {
     lineColor?: number[];
     textColor?: number[];
     lineThickness?: number;
+    gridLineThickness?: number;
     lineAlpha?: number;
     lines?: number[][];
     selectedColumn?: number;
@@ -2574,11 +2582,12 @@ declare class Niivue {
     /**
      * set volume rendering opacity influence of the gradient magnitude
      * @param gradientOpacity - amount of gradient magnitude influence on opacity (0..1), default 0 (no-influence)
+     * @param renderSilhouette - make core transparent to enhance rims (0..1), default 0 (no-influence)
      * @example
      * niivue.setGradientOpacity(0.6);
      * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
      */
-    setGradientOpacity(gradientOpacity?: number): Promise<void>;
+    setGradientOpacity(gradientOpacity?: number, renderSilhouette?: number): Promise<void>;
     overlayRGBA(volume: NVImage): Uint8ClampedArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     /**

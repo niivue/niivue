@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>SUIT Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >niivue doesn't work properly without JavaScript enabled. Please enable
+        it to continue.</strong
+      >
+    </noscript>
+    <header>
+     <label for="curveSlider">Curvature transparency</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="255"
+        class="slider"
+        id="curveSlider"
+      />
+     &nbsp;
+     <label for="atlasSlider">Atlas transparency</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="13"
+        class="slider"
+        id="atlasSlider"
+      />
+      <select id="borderDrop">
+        <option value="-1">Dark border</option>
+        <option value="1">Transparent border</option>
+        <option value="0" selected>No border</option>
+        <option value="100">Opaque border</option>
+      </select>
+     &nbsp;
+     <label for="statsSlider">Stats transparency</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="192"
+        class="slider"
+        id="statsSlider"
+      />
+      <select id="colormapTypeDrop">
+        <option selected>restrict colorbar to range</option>
+        <option>colorbar from 0,transparent subthreshold</option>
+      </select>
+      <label for="darkCheck">Dark</label>
+      <input type="checkbox" id="darkCheck" unchecked />
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+<footer>
+  <textarea id="customText" name="customText" rows="12" style="width: 100%; box-sizing: border-box;"></textarea>
+  <button id="statsBtn">Update statistics</button>
+</footer>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  aboutBtn.onclick = function () {
+    const url = "https://www.diedrichsenlab.org/imaging/suit.htm"
+    window.open(url, "_blank")
+  }
+  darkCheck.onchange = function () {
+    let v = 1
+    if (this.checked)
+        v = 0
+    nv1.opts.backColor = [v, v, v, 1]
+    nv1.drawScene()
+  }
+  borderDrop.onchange = function () {
+    const borderValue = parseInt(this.value) / 100
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "outlineBorder",
+      borderValue
+    )
+  }
+  colormapTypeDrop.onchange = function () {
+     nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "colormapType", this.selectedIndex) 
+  }
+  curveSlider.oninput = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      0,
+      "opacity",
+      this.value / 255.0
+    )
+  }
+  atlasSlider.oninput = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      1,
+      "opacity",
+      this.value / 255.0
+    )
+  }
+  statsSlider.oninput = function () {
+    nv1.setMeshLayerProperty(
+      nv1.meshes[0].id,
+      2,
+      "opacity",
+      this.value / 255.0
+    )
+  }
+  statsBtn.onclick = function () {
+    const str = customText.value
+    const lines = str.split('\n')
+    const layer = nv1.meshes[0].layers[2]
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || !trimmed.includes('=')) continue
+  
+      const [key, rawValue] = trimmed.split('=').map(s => s.trim())
+  
+      let value
+      try {
+        value = eval(rawValue)
+      } catch {
+        value = rawValue
+      }
+      layer[key] = value
+    }
+    // call setMeshLayerProperty() to force refresh
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "frame4D", 0)
+  }
+  /*function handleLocationChange(data) {
+    document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;' + data.string
+    console.log(data)
+  }*/
+  var nv1 = new niivue.Niivue({
+    // show3Dcrosshair: true,
+    // onLocationChange: handleLocationChange
+  })
+  var meshLayersList1 = [
+    {
+      url: "../images/SUIT.shape.gii", opacity: 1.0, colormap: "gray", cal_min: -1.5, cal_max:1,
+    },
+    {
+      url: "../images/Lobules.label.gii", opacity: 0.05
+    },
+    {
+      url: "../images/Lobules.label.gii", opacity: 0.75, useNegativeCmap: true
+    },
+  ]
+  nv1.setSliceType(nv1.sliceTypeRender)
+  await nv1.attachTo("gl1")
+  await nv1.loadMeshes([
+    {url: "../images/FLAT.surf.gii", layers: meshLayersList1 },
+  ])
+  nv1.opts.isColorbar = true
+  nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        1,
+        "showLegend",
+        false
+      );
+  nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        0,
+        "isTransparentBelowCalMin",
+        false
+      );
+  const nLabel = nv1.meshes[0].layers[1].colormapLabel.labels.length
+  const atlasValues = new Float32Array(nLabel)
+  atlasValues[5] = 3
+  atlasValues[11] = 6
+  atlasValues[13] = -4
+  atlasValues[1] = 2
+  const text = `cal_min = 2.3\ncal_max = 5\ncolormap = 'warm'\ncolormapNegative = 'winter'\natlasValues = [${Array.from(atlasValues).join(', ')}]\n//[${Array.from(nv1.meshes[0].layers[1].colormapLabel.labels).join(', ')}]\n`
+  customText.value = text
+  nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        2,
+        "isTransparentBelowCalMin",
+        true
+      );
+  nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        0,
+        "colorbarVisible",
+        false
+      )
+  nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        1,
+        "colorbarVisible",
+        false
+      )
+  nv1.setMeshShader(nv1.meshes[0].id, "Rim")
+  nv1.setRenderAzimuthElevation(0, 90)
+  statsBtn.onclick()
+  darkCheck.onchange()
+</script>
