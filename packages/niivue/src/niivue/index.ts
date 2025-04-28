@@ -10713,7 +10713,7 @@ export class Niivue {
         selectedLineAlpha
       ])
     }
-    // add label 'Volume' below graph if there is spece in the plot
+    // add label 'Volume' below graph if there is space in the plot
     if (fntSize > 0 && graph.LTWH[1] + graph.LTWH[3] > plotLTWH[1] + plotLTWH[3] + fntSize * 2.4) {
       this.drawTextBelow(
         [plotLTWH[0] + 0.5 * plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 1.2],
