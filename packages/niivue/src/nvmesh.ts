@@ -1010,8 +1010,8 @@ export class NVMesh {
     isNegativeCmap: boolean = false
   ): Uint8ClampedArray {
     const nValues = scalars.length
-    if (4 * nValues !== rgba.length) {
-      log.error(`colormap2RGBA incorrectly specified`)
+    if (4 * nValues < rgba.length) {
+      log.error(`colormap2RGBA incorrectly specified ${nValues}*4 != ${rgba.length}`)
       return rgba
     }
     const opa255 = Math.round(layer.opacity * 255)
@@ -1044,6 +1044,9 @@ export class NVMesh {
     const scale255 = 255.0 / (mx - mn)
     for (let j = 0; j < nValues; j++) {
       let v = scalars[j] * flip
+      if (isNaN(v)) {
+        continue
+      }
       let opa = opa255
       if (v < mnCal) {
         if (v > 0 && isTranslucentBelowMin) {
@@ -1190,7 +1193,7 @@ export class NVMesh {
     // let posNormClrEmission = posNormClr.slice();
     const maxAdditiveBlend = 0
     const additiveRGBA = new Uint8Array(nvtx * 4) // emission
-
+    let tris = this.tris
     if (this.layers && this.layers.length > 0) {
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i]
@@ -1211,6 +1214,10 @@ export class NVMesh {
         }
         if (layer.colormapLabel && (layer.colormapLabel as LUT).lut) {
           const colormapLabel = layer.colormapLabel as LUT
+          let minv = 0
+          if (layer.colormapLabel.min) {
+            minv = layer.colormapLabel.min
+          }
           let lut = colormapLabel.lut
           const opa255 = Math.round(layer.opacity * 255)
           if (lut[3] > 0) {
@@ -1221,10 +1228,63 @@ export class NVMesh {
           }
           const nLabel = Math.floor(lut.length / 4)
           if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
+            const atlasValues = layer.atlasValues
+            let hasNaN = false
+            let onlyNaN = true
+            for (let j = 0; j < nLabel; j++) {
+              if (isNaN(atlasValues[j])) {
+                hasNaN = true
+              } else {
+                onlyNaN = false
+              }
+            }
+            if (onlyNaN) {
+              log.debug(`invisible mesh: all atlasValues are NaN.`)
+              return
+            }
+            if (hasNaN) {
+              log.debug(`some vertices have NaN atlasValues (mesh will be decimated).`)
+              // First: identify all vertices mapped to NaN
+              const nanVtxs = new Array(nvtx).fill(false)
+              for (let j = 0; j < nvtx; j++) {
+                const v = Math.round(layer.values[j]) - minv
+                if (isNaN(atlasValues[v])) {
+                  nanVtxs[j] = true
+                }
+              }
+
+              // next: find all triangle indices that have NaN vertices
+              const nanIdxs = new Array(tris.length).fill(false)
+              for (let j = 0; j < tris.length; j++) {
+                if (nanVtxs[tris[j]]) {
+                  nanIdxs[j] = true
+                }
+              }
+              // each triangle has 3 indices
+              const trisIn = this.tris
+              let nTriOK = 0
+              for (let j = 0; j < trisIn.length; j += 3) {
+                if (!nanIdxs[j] && !nanIdxs[j + 1] && !nanIdxs[j + 2]) {
+                  nTriOK++
+                }
+              }
+              if (nTriOK === 0) {
+                log.debug(`invisible mesh: all triangles of a vertex with a NaN atlasValue.`)
+              }
+              tris = new Uint32Array(nTriOK * 3)
+              let k = 0
+              for (let j = 0; j < trisIn.length; j += 3) {
+                if (!nanIdxs[j] && !nanIdxs[j + 1] && !nanIdxs[j + 2]) {
+                  tris[k++] = trisIn[j]
+                  tris[k++] = trisIn[j + 1]
+                  tris[k++] = trisIn[j + 2]
+                }
+              }
+            }
             lut.fill(0) // make all transparent
-            lut = this.scalars2RGBA(lut, layer, layer.atlasValues)
+            lut = this.scalars2RGBA(lut, layer, atlasValues)
             if (layer.useNegativeCmap) {
-              lut = this.scalars2RGBA(lut, layer, layer.atlasValues, true)
+              lut = this.scalars2RGBA(lut, layer, atlasValues, true)
             }
           } else if (layer.atlasValues) {
             log.warn(`Expected ${nLabel} atlasValues but got ${layer.atlasValues.length} for mesh layer`)
@@ -1265,7 +1325,8 @@ export class NVMesh {
           let k = 0
           for (let j = 0; j < nvtx; j++) {
             // eslint-disable-next-line
-            let idx = 4 * Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1)
+            const v = layer.values[j + frameOffset] - minv
+            const idx = 4 * Math.min(Math.max(v, 0), nLabel - 1)
             rgba8[k + 0] = lut[idx + 0]
             rgba8[k + 1] = lut[idx + 1]
             rgba8[k + 2] = lut[idx + 2]
@@ -1375,12 +1436,12 @@ export class NVMesh {
     } // isAdditiveBlend
     // generate webGL buffers and vao
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(this.tris), gl.STATIC_DRAW)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(tris), gl.STATIC_DRAW)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
     // issue1129
     // gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW)
     gl.bufferData(gl.ARRAY_BUFFER, u8, gl.STATIC_DRAW)
-    this.indexCount = this.tris.length
+    this.indexCount = tris.length
     this.vertexCount = this.pts.length
   } // updateMesh()
 

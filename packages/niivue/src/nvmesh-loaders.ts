@@ -1693,23 +1693,19 @@ export class NVMeshLoaders {
   // read surfice MZ3 format
   // https://github.com/neurolabusc/surf-ice/tree/master/mz3
   static async readMZ3(buffer: ArrayBuffer, n_vert = 0): Promise<MZ3> {
-    // ToDo: mz3 always little endian: support big endian? endian https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array
     if (buffer.byteLength < 20) {
-      // 76 for raw, not sure of gzip
       throw new Error('File too small to be mz3: bytes = ' + buffer.byteLength)
     }
     let reader = new DataView(buffer)
-    // get number of vertices and faces
-    let magic = reader.getUint16(0, true)
     let _buffer = buffer
 
+    // Check for gzip
+    let magic = reader.getUint16(0, true)
     if (magic === 35615 || magic === 8075) {
-      // gzip signature 0x1F8B in little and big endian
       const raw = await NVUtilities.decompress(new Uint8Array(buffer))
       reader = new DataView(raw.buffer)
       magic = reader.getUint16(0, true)
       _buffer = raw.buffer
-      // throw new Error( 'Gzip MZ3 file' );
     }
     const attr = reader.getUint16(2, true)
     const nface = reader.getUint32(4, true)
@@ -1723,27 +1719,28 @@ export class NVMeshLoaders {
     const isVert = (attr & 2) !== 0
     const isRGBA = (attr & 4) !== 0
     let isSCALAR = (attr & 8) !== 0
-
     const isDOUBLE = (attr & 16) !== 0
-    // var isAOMap = attr & 32;
-    if (attr > 63) {
+    const isAOMAP = (attr & 32) !== 0
+    const isLOOKUP = (attr & 64) !== 0
+    utiltiesLogger.debug(
+      `isFace=${isFace} isVert=${isVert} isRGBA=${isRGBA} isSCALAR=${isSCALAR} isDOUBLE=${isDOUBLE} isAOMAP=${isAOMAP} isLOOKUP=${isLOOKUP}`
+    )
+    if (attr > 127) {
       throw new Error('Unsupported future version of MZ3 file')
     }
+
     let bytesPerScalar = 4
     if (isDOUBLE) {
       bytesPerScalar = 8
     }
+
     let NSCALAR = 0
     if (n_vert > 0 && !isFace && nface < 1 && !isRGBA) {
       isSCALAR = true
     }
     if (isSCALAR) {
-      let nv = n_vert
-      if (n_vert === 0) {
-        nv = nvert
-      }
-      const FSizeWoScalars =
-        16 + nskip + (isFace ? 1 : 0) * nface * 12 + (isVert ? 1 : 0) * nv * 12 + (isRGBA ? 1 : 0) * nv * 4
+      const nv = n_vert || nvert
+      const FSizeWoScalars = 16 + nskip + (isFace ? nface * 12 : 0) + (isVert ? nv * 12 : 0) + (isRGBA ? nv * 4 : 0)
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar)
       if (nvert !== n_vert && scalarFloats % n_vert === 0) {
         log.warn('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT')
@@ -1755,49 +1752,69 @@ export class NVMeshLoaders {
         isSCALAR = false
       }
     }
+
     if (nvert < 3 && n_vert < 3) {
       throw new Error('Not a mesh MZ3 file (maybe scalar)')
     }
     if (n_vert > 0 && n_vert !== nvert) {
       log.warn('Layer has ' + nvert + 'vertices, but background mesh has ' + n_vert)
     }
+
     let filepos = 16 + nskip
-    let indices = null
+    const view = new DataView(_buffer)
+
+    let indices: Uint32Array | null = null
     if (isFace) {
-      indices = new Uint32Array(_buffer, filepos, nface * 3)
-      filepos += nface * 3 * 4
+      indices = new Uint32Array(nface * 3)
+      for (let i = 0; i < nface * 3; i++) {
+        indices[i] = view.getUint32(filepos, true)
+        filepos += 4
+      }
     }
-    let positions = null
+
+    let positions: Float32Array | null = null
     if (isVert) {
-      positions = new Float32Array(_buffer, filepos, nvert * 3)
-      filepos += nvert * 3 * 4
+      positions = new Float32Array(nvert * 3)
+      for (let i = 0; i < nvert * 3; i++) {
+        positions[i] = view.getFloat32(filepos, true)
+        filepos += 4
+      }
     }
-    let colors = null
+    let colors: Float32Array | null = null
     if (isRGBA) {
       colors = new Float32Array(nvert * 3)
-      const rgba8 = new Uint8Array(_buffer, filepos, nvert * 4)
-      filepos += nvert * 4
-      let k3 = 0
-      let k4 = 0
       for (let i = 0; i < nvert; i++) {
         for (let j = 0; j < 3; j++) {
-          // for RGBA
-          colors[k3] = rgba8[k4] / 255
-          k3++
-          k4++
+          colors[i * 3 + j] = view.getUint8(filepos++) / 255
         }
-        k4++ // skip Alpha
-      } // for i
-    } // if isRGBA
+        filepos++ // skip Alpha
+      }
+    }
     let scalars = new Float32Array()
-    if ((!isRGBA || n_vert > 0) && isSCALAR && NSCALAR > 0) {
+    if (isSCALAR && NSCALAR > 0) {
       if (isDOUBLE) {
-        const flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert)
+        const flt64 = new Float64Array(NSCALAR * nvert)
+        for (let i = 0; i < NSCALAR * nvert; i++) {
+          flt64[i] = view.getFloat64(filepos, true)
+          filepos += 8
+        }
         scalars = Float32Array.from(flt64)
       } else {
-        scalars = new Float32Array(_buffer, filepos, NSCALAR * nvert)
+        scalars = new Float32Array(NSCALAR * nvert)
+        for (let i = 0; i < NSCALAR * nvert; i++) {
+          scalars[i] = view.getFloat32(filepos, true)
+          filepos += 4
+        }
       }
-      filepos += bytesPerScalar * NSCALAR * nvert
+    }
+    if (n_vert > 0 && isLOOKUP && isSCALAR) {
+      // Read NSKIP bytes after 16-byte header
+      const decoder = new TextDecoder('utf-8')
+      const jsonBytes = new Uint8Array(_buffer, 16, nskip)
+      const jsonText = decoder.decode(jsonBytes)
+      const colormap = JSON.parse(jsonText)
+      const colormapLabel = cmapper.makeLabelLut(colormap)
+      return { scalars, colormapLabel }
     }
     if (n_vert > 0 && isRGBA && isSCALAR) {
       let mx = scalars[0]
@@ -1810,33 +1827,23 @@ export class NVMeshLoaders {
           if (i === scalars[v]) {
             const v3 = v * 3
             Labels.I.push(i)
-            Labels.R.push(colors[v3] * 255)
-            Labels.G.push(colors[v3 + 1] * 255)
-            Labels.B.push(colors[v3 + 2] * 255)
+            Labels.R.push(colors![v3] * 255)
+            Labels.G.push(colors![v3 + 1] * 255)
+            Labels.B.push(colors![v3 + 2] * 255)
             Labels.A.push(255)
             Labels.labels!.push(`${i}`)
             break
           }
         }
-      } // for num_entries_to_read
-      const colormapLabel = cmapper.makeLabelLut(Labels)
-      return {
-        scalars,
-        colormapLabel
       }
+      const colormapLabel = cmapper.makeLabelLut(Labels)
+      return { scalars, colormapLabel }
     }
     if (n_vert > 0) {
-      return {
-        scalars
-      }
+      return { scalars }
     }
-    return {
-      positions,
-      indices,
-      scalars,
-      colors
-    }
-  } // readMZ3()
+    return { positions, indices, scalars, colors }
+  }
 
   // read PLY format
   // https://en.wikipedia.org/wiki/PLY_(file_format)

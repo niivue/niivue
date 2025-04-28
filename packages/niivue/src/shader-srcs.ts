@@ -1429,6 +1429,30 @@ void main() {
 	color = vec4(d, opacity);
 }`
 
+/* export const fragMeshRimShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+	const float thresh = 0.2;
+	const vec3 viewDir = vec3(0.0, 0.0, -1.0);
+	vec3 n = normalize(vN);
+	// use abs() for two-sided lighting, max() for one sided
+	float cosTheta = abs(dot(n, viewDir));
+	// float cosTheta = max(dot(n, viewDir), 0.0);
+	// optional fresnel equation - adjust exponent
+	// cosTheta = 1.0 - pow(1.0 - cosTheta, 2.0);
+	// use step for binary edges, smoothstep for feathered edges
+	// vec3 d = step(thresh, cosTheta) * vClr.rgb;
+	if (cosTheta > (thresh)) {
+		discard;
+	}
+	color = vec4(0.0, 0.0, 0.0, opacity);
+}` */
+
 // Phong headlight shader for edge enhancement, opposite of fresnel rim lighting
 export const fragMeshEdgeShader = `#version 300 es
 precision highp int;

@@ -11214,7 +11214,7 @@ export class Niivue {
     const panelHeight = this.getLegendPanelHeight()
     if (panelHeight > this.canvas.height) {
       // legend too big for screen issue 1279
-      log.warn('Legend may overflow screen size')
+      log.debug('Legend may overflow screen size')
     }
     const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width)
     const bulletMargin = this.getBulletMarginWidth()
@@ -12238,12 +12238,16 @@ export class Niivue {
       if (mxRowWid <= 0 || top <= 0) {
         break
       }
-      const scaleW = this.gl.canvas.width / mxRowWid
-      const scaleH = this.effectiveCanvasHeight() / top
+
+      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin) / mxRowWid
+      const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top
       scale = Math.min(scaleW, scaleH)
       if (this.opts.centerMosaic) {
         marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale))
         marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale))
+      } else {
+        marginLeft = this.opts.tileMargin
+        marginTop = this.opts.tileMargin
       }
     }
     this.opts.textHeight = labelSize
@@ -12311,7 +12315,13 @@ export class Niivue {
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
       if (this.meshes.length > 0) {
         if (this.sliceMosaicString.length > 0) {
+          if (this.opts.isColorbar) {
+            this.reserveColorbarPanel()
+          }
           this.drawMosaic(this.sliceMosaicString)
+          if (this.opts.isColorbar) {
+            this.drawColorbar()
+          }
           return
         }
         this.screenSlices = [] // empty array
