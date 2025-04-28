@@ -24664,7 +24664,7 @@ var NVImage = class _NVImage {
     let nvimage = null;
     let dataBuffer = null;
     if (url instanceof Uint8Array) {
-      url = url.buffer;
+      url = url.slice().buffer;
     }
     if (buffer.byteLength > 0) {
       url = buffer;
