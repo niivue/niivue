@@ -21,8 +21,10 @@
       <textarea id="customText" name="customText" rows="12" style="width: 100%; box-sizing: border-box;"></textarea>
       <button id="statsBtn">Update statistics</button>
       <button id="saveBtn">Save Bitmap</button>
-      <label for="mosaicCheck">&nbsp;&nbsp;Mosaic</label>
+      &nbsp;<label for="mosaicCheck">Mosaic</label>
       <input type="checkbox" id="mosaicCheck" checked />
+      &nbsp;<label for="alphaCheck">Translucent</label>
+      <input type="checkbox" id="alphaCheck" unchecked />
       <label id="statusLabel">&nbsp;&nbsp;</label>
     </footer>
     <script type="module" async>
@@ -55,6 +57,15 @@
           nv1.setSliceMosaicString('')
         }
       }
+      alphaCheck.onchange = function () {
+        if (this.checked) {
+          nv1.meshes[1].opacity = 0.2
+          nv1.setMeshShader(nv1.meshes[1].id, 'Rim')
+        } else {
+          nv1.meshes[1].opacity = 1
+          nv1.setMeshShader(nv1.meshes[1].id, 'Silhouette')
+        }
+      }
       const handleLocationChange = (data) => {
         statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
       }
@@ -68,11 +79,9 @@
       nv1.opts.tileMargin = 10
       await nv1.loadMeshes([
         {url: "../images/atl-Anatom_space-MNI.mz3"},
-        {url: "../images/mni152_2009.mz3"},
+        {url: "../images/mni152_2009.mz3", rgba255: [255, 255, 255, 255]},
       ])
       nv1.setMeshShader(nv1.meshes[0].id, 'Rim')
-      nv1.setMeshShader(nv1.meshes[1].id, 'Rim')
-      nv1.meshes[1].opacity = 0.2
       nv1.setMeshLayerProperty(
         nv1.meshes[0].id,
         0,
@@ -98,6 +107,7 @@
       customText.value = text
       statsBtn.onclick()
       mosaicCheck.onchange()
+      alphaCheck.onchange()
     </script>
   </body>
 </html>

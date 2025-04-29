@@ -44,6 +44,7 @@ import {
   fragMeshOutlineShader,
   fragMeshEdgeShader,
   fragMeshRimShader,
+  fragMeshContourShader,
   fragMeshShaderCrevice,
   fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
@@ -579,6 +580,10 @@ export class Niivue {
     {
       Name: 'Rim',
       Frag: fragMeshRimShader
+    },
+    {
+      Name: 'Silhouette',
+      Frag: fragMeshContourShader
     }
   ]
 
