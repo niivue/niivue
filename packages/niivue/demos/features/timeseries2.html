@@ -41,6 +41,8 @@
         <option value="pan">pan/zoom</option>
         <option value="none">none</option>
       </select>
+      <label for="darkCheck">Dark</label>
+      <input type="checkbox" id="darkCheck" checked />
       <div id="controls4D">
         &nbsp;&nbsp;<label for="normCheck">Normalize graph</label>
         <input type="checkbox" id="normCheck" unchecked />
@@ -66,6 +68,13 @@
     onLocationChange: handleLocationChange,
     onFrameChange: handleFrameChange
   })
+  darkCheck.onchange = function () {
+    let v = 1
+    if (this.checked)
+        v = 0
+    nv1.opts.backColor = [v, v, v, 1]
+    nv1.drawScene()
+  }
   await nv1.attachTo("gl1")
   nv1.setRadiologicalConvention(false)
   nv1.setSliceType(nv1.sliceTypeMultiplanar)
@@ -73,14 +82,15 @@
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
   nv1.graph.normalizeValues = false
   nv1.graph.opacity = 1.0
-  modalitySelect.onchange = async function () {
+  nv1.opts.textHeight = 0.03
+  modalitySelect.onchange = async function (url) {
     var volumeList1 = [
       {
         url: "",
         limitFrames4D: 5
       },
     ]
-    let img = "../images/mpld_asl.nii.gz"
+    let img = url ? url : "../images/mpld_asl.nii.gz"
     const modality =  this.options[this.selectedIndex].text
     if (modality === "DWI") {
       img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/dwi/sub-M2309_ses-960_acq-epb0p2_dir-AP_run-15_dwi.nii.gz"
@@ -98,9 +108,12 @@
       img = "https://s3.amazonaws.com/openneuro.org/ds004884/sub-M2309/ses-960/anat/sub-M2309_ses-960_acq-spc3p2_run-4_T2w.nii.gz"
     }
     volumeList1[0].url = img
-    nv1.loadVolumes(volumeList1)
+    nv1.loadImages(volumeList1)
   }
-  modalitySelect.onchange()
+  let query = window.location.search;
+  const params = new URLSearchParams(query);
+  let url = params.get("url");
+  modalitySelect.onchange(url)
   nv1.onImageLoaded = (volume) => {
     if (nv1.volumes[0].hdr.dims[4] > 1) {
       controls4D.style.display = 'block'

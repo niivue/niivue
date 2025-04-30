@@ -467,6 +467,7 @@ uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
+uniform float silhouettePower;
 uniform float gradientOpacity[256];
 in vec3 vColor;
 out vec4 fColor;
@@ -480,6 +481,7 @@ export const fragRenderGradientShader =
 	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
 	//vec4 prevGrad = vec4(0.0);
+	float silhouetteThreshold = 1.0 - silhouettePower;
 	while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
@@ -500,6 +502,14 @@ export const fragRenderGradientShader =
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			int gradIdx = int(grad.a * 255.0);
 			colorSample.a *= gradientOpacity[gradIdx];
+			float lightNormDot = dot(grad.rgb, rayDir);
+			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
+ 			colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
+ 			float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
+ 			// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
+ 			// Cull voxels that are too aligned with the view direction
+ 			if (viewAlign > silhouetteThreshold)
+ 				colorSample.a = 0.0;
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
 			if ( colAcc.a > earlyTermination )
@@ -1394,6 +1404,29 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color.rgb = a + d + s;
 	color.a = opacity;
+}`
+
+// Flat shader with edge outline inspired by ggseg
+export const fragMeshRimShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+	const float thresh = 0.4;
+	const vec3 viewDir = vec3(0.0, 0.0, -1.0);
+	vec3 n = normalize(vN);
+	// use abs() for two-sided lighting, max() for one sided
+	float cosTheta = abs(dot(n, viewDir));
+	// float cosTheta = max(dot(n, viewDir), 0.0);
+	// optional fresnel equation - adjust exponent
+	// cosTheta = 1.0 - pow(1.0 - cosTheta, 2.0);
+	// use step for binary edges, smoothstep for feathered edges
+	// vec3 d = step(thresh, cosTheta) * vClr.rgb;
+	vec3 d = smoothstep(thresh - 0.05, thresh + 0.05, cosTheta) * vClr.rgb;
+	color = vec4(d, opacity);
 }`
 
 // Phong headlight shader for edge enhancement, opposite of fresnel rim lighting

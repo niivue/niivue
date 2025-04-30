@@ -5,29 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Gradient Opacity</title>
-    <style>
-      html {
-        height: auto;
-        min-height: 100%;
-        margin: 0;
-      }
-      body {
-        margin: 0;
-        min-height: 100%;
-        width: 100%;
-        position: absolute;
-        font-family: system-ui, Arial, Helvetica, sans-serif;
-        user-select: none; /* Standard syntax */
-        color: white;
-        background: #202020;
-      }
-      header {
-        margin: 10px;
-      }
-      footer {
-        margin: 5px;
-      }
-     </style>
+    <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>
@@ -40,6 +18,8 @@
       </section>
       <label for="gradientOpacity">Gradient Opacity</label>
       <input type="range" min="0" max="10" value="7" class="slider" id="gradientOpacity">
+      <label for="silhouetteEnhancement">Silhouette Enhancement</label>
+      <input type="range" min="0" max="19" value="0" class="slider" id="silhouetteEnhancement">
       <label for="gradientOrder">Gradient Order</label>
       <select id="gradientOrder">
         <option value="1">1</option>
@@ -53,8 +33,7 @@
         <canvas id="gl1" height="1024"></canvas>
       </div>
     </main>
-    <footer>
-    </footer>
+    <footer id="intensity">&nbsp;</footer>
     <script type="module" async>
       import { Niivue, NVImage, SHOW_RENDER, DRAG_MODE } from '../dist/index.js'
       async function addVolumeFromFiles(f) {
@@ -74,7 +53,10 @@
         input.click()
       }
       gradientOpacity.oninput = function () {
-        nv1.setGradientOpacity(this.value * 0.1)
+        nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
+      }
+      silhouetteEnhancement.oninput = function () {
+        nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
       }
       illumination.oninput = function () {
         nv1.setVolumeRenderIllumination(this.value * 0.1)
@@ -88,7 +70,7 @@
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML = data.string
       }
-      const clipPlane = [0.35, 290, 0];
+      const clipPlane = [0.35, 290, 0]
       const defaults = {
         backColor: [0.5, 0.5, 1, 1],
         show3Dcrosshair: true,
@@ -99,11 +81,11 @@
       }
       var nv1 = new Niivue(defaults)
       await nv1.attachToCanvas(gl1)
-      nv1.loadVolumes(volumeList1);
-      nv1.setSliceType(nv1.sliceTypeRender);
-      nv1.setClipPlane(clipPlane);
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setClipPlane(clipPlane)
       nv1.opts.gradientOrder = 2
-      nv1.setVolumeRenderIllumination(0.7);
+      nv1.setVolumeRenderIllumination(0.7)
 
       let imgs = [
         "chris_MRA",
@@ -123,21 +105,21 @@
         "spm152",
         "spmMotor",
         "visiblehuman",
-      ];
-      let imgEl = document.getElementById("images");
+      ]
+      let imgEl = document.getElementById("images")
       for (let i = 0; i < imgs.length; i++) {
-        let btn = document.createElement("button");
-        btn.innerHTML = imgs[i];
+        let btn = document.createElement("button")
+        btn.innerHTML = imgs[i]
         btn.onclick = function () {
-          let root = "https://niivue.github.io/niivue-demo-images/";
-          let img = root + imgs[i] + ".nii.gz";
-          console.log("Loading: " + img);
-          volumeList1[0].url = img;
-          nv1.removeVolume(nv1.volumes[0]);
-          nv1.loadVolumes(volumeList1);
-          nv1.updateGLVolume();
-        };
-        imgEl.appendChild(btn);
+          let root = "https://niivue.github.io/niivue-demo-images/"
+          let img = root + imgs[i] + ".nii.gz"
+          console.log("Loading: " + img)
+          volumeList1[0].url = img
+          nv1.removeVolume(nv1.volumes[0])
+          nv1.loadVolumes(volumeList1)
+          nv1.updateGLVolume()
+        }
+        imgEl.appendChild(btn)
       }
     </script>
   </body>
