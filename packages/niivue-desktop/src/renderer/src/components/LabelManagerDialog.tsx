@@ -4,6 +4,9 @@ import { AppContext } from '../App'
 import { Button, Flex, Select } from '@radix-ui/themes'
 import { LabelTextAlignment, NVLabel3D, NVLabel3DStyle, LabelLineTerminator } from '@niivue/niivue'
 
+import { Theme } from '@radix-ui/themes'
+import { Cross2Icon } from '@radix-ui/react-icons'
+
 export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: (v: boolean) => void }) => {
   const { nvRef } = useContext(AppContext)
     const [selectedLabel, setSelectedLabel] = useState<string>('')
@@ -14,6 +17,7 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
   const [alignment, setAlignment] = useState('CENTER')
   const [lineWidth, setLineWidth] = useState('1')
   const [lineColor, setLineColor] = useState('#ffffff')
+  const [lineTerminator, setLineTerminator] = useState<LabelLineTerminator>(LabelLineTerminator.NONE)
 
   const refreshLabels = () => {
     const nv = nvRef.current
@@ -34,6 +38,7 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
         ? `#${label.style.lineColor.slice(0, 3).map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')}`
         : '#ffffff'
     )
+    setLineTerminator(label.style?.lineTerminator || 'NONE')
     setAlignment(
       Object.keys(LabelTextAlignment).find(
         k => LabelTextAlignment[k as keyof typeof LabelTextAlignment] === label.style?.textAlignment
@@ -54,24 +59,19 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
 
   const updateLabel = () => {
     const nv = nvRef.current
-    nv.document.labels = nv.document.labels.filter(l => l.text !== selectedLabel)
-
-    const rgb = lineColor.match(/#(..)(..)(..)/)?.slice(1).map(c => parseInt(c, 16) / 255) || [1, 1, 1]
-
+    nv.opts.showLegend = true
     const style: NVLabel3DStyle = {
       textScale: parseFloat(scale),
       textAlignment: LabelTextAlignment[alignment],
       textColor: [1, 1, 0, 1],
       backgroundColor: [0, 0, 0, 0.5],
       lineWidth: parseFloat(lineWidth),
-      lineColor: [...rgb, 1],
+      lineColor: [1, 1, 0, 1],
       lineTerminator: LabelLineTerminator.NONE
     }
 
-    const points: number[] = pos.map(parseFloat)
-    const newLabel = new NVLabel3D(text, style, points)
-
-    nv.document.labels.push(newLabel)
+    const point = pos.map(parseFloat) as [number, number, number]
+    nv.addLabel(text, style, point)
     nv.updateGLVolume()
     refreshLabels()
   }
@@ -89,19 +89,17 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
   <Dialog.Overlay style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', position: 'fixed', inset: 0 }} />
-  <Dialog.Content style={{
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 1000
-  }}>
+  <Dialog.Content className="bg-white rounded shadow-lg fixed z-50 top-1/2 left-1/2 max-h-[90vh] w-[800px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-6">
 
-        <Dialog.Title>Manage 3D Labels</Dialog.Title>
-<Button onClick={() => setOpen(false)} style={{ position: 'absolute', top: 10, right: 10 }}>✕</Button>
+        <Theme>
+  <div className="flex items-center justify-between mb-4">
+    <Dialog.Title className="text-lg font-semibold">Manage 3D Labels</Dialog.Title>
+    <Dialog.Close asChild>
+      <button className="text-gray-500 hover:text-black" aria-label="Close">
+        <Cross2Icon />
+      </button>
+    </Dialog.Close>
+  </div>
         <Flex direction="column" gap="2">
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -155,7 +153,8 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
             <Button onClick={deleteLabel} color="red">Delete</Button>
           </Flex>
         </Flex>
-        </Dialog.Content>
+        </Theme>
+</Dialog.Content>
 </Dialog.Portal>
     </Dialog.Root>
   )
