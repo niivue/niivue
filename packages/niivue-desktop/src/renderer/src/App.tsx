@@ -19,7 +19,8 @@ import {
   registerDragModeHandler,
   registerMultiplanarEqualSizeHandler,
   registerOrientationLabelsInMarginHandler,
-  registerResetPreferencesHandler
+  registerResetPreferencesHandler,
+  registerLabelManagerDialogHandler
 } from './ipcHandlers/menuHandlers'
 import { registerLoadMeshHandler } from './ipcHandlers/loadMesh'
 import { registerLoadVolumeHandler } from './ipcHandlers/loadVolume'
@@ -27,6 +28,8 @@ import { registerLoadDocumentHandler } from './ipcHandlers/loadDocument'
 import { registerSaveCompressedDocumentHandler } from './ipcHandlers/saveDocument'
 import { fmriEvents, getColorForTrialType } from './types/events'
 import { PreferencesDialog } from './components/PreferencesDialog'
+import { LabelManagerDialog } from './components/LabelManagerDialog'
+
 const electron = window.electron
 
 // disable niivue drag and drop handler in favor of our custom electron solution
@@ -85,6 +88,7 @@ function App(): JSX.Element {
   const [meshes, setMeshes] = useState<NVMesh[]>([])
   const [selectedImage, setSelectedImage] = useState<NVImage | null>(null)
   const [sliceType, setSliceType] = useState<SLICE_TYPE | null>(null)
+  const [labelDialogOpen, setLabelDialogOpen] = useState(false)
   const niimathRef = useRef<Niimath>(new Niimath())
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
@@ -132,6 +136,12 @@ function App(): JSX.Element {
     }
   }
   
+  useEffect(() => {
+    window.electron?.ipcRenderer.on('openLabelManagerDialog', () => {
+      console.log('[Renderer] Received openLabelManagerDialog')
+      setLabelDialogOpen(true)
+    })
+  }, [])
 
   useEffect(() => {    
     const initApp = async (): Promise<void> => {
@@ -193,7 +203,7 @@ function App(): JSX.Element {
       registerLoadDocumentHandler({nv, setVolumes, setMeshes})
       registerSaveCompressedDocumentHandler(nv)
       registerResetPreferencesHandler()
-  
+      registerLabelManagerDialogHandler(setLabelDialogOpen)
       nv.drawScene() // draw after loading prefs
     }
   
@@ -243,6 +253,7 @@ function App(): JSX.Element {
         <Viewer />
       </div>
       <PreferencesDialog />
+      <LabelManagerDialog open={labelDialogOpen} setOpen={setLabelDialogOpen} />
     </AppContext.Provider>
   )
 }
