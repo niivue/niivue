@@ -4,6 +4,10 @@ import { httpServerAddress } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
 
 test.beforeEach(async ({ page }) => {
+  page.on('console', (msg) => {
+    console.log(`[BROWSER LOG] ${msg.type()}: ${msg.text()}`)
+  })
+
   await page.goto(httpServerAddress)
 })
 
@@ -42,7 +46,7 @@ test('niivue label addLabel', async ({ page }) => {
         lineWidth: 3.0,
         textColor: [1, 1, 0, 1],
         lineColor: [1, 1, 0, 1],
-        textScale: 0,
+        textScale: 1.0,
         lineTerminator: LabelLineTerminator.NONE
       },
       [
@@ -57,7 +61,7 @@ test('niivue label addLabel', async ({ page }) => {
         lineWidth: 3.0,
         textColor: [0, 1, 0, 1],
         lineColor: [0, 1, 0, 1],
-        textScale: 0,
+        textScale: 1.0,
         lineTerminator: LabelLineTerminator.NONE
       },
       [
@@ -72,7 +76,7 @@ test('niivue label addLabel', async ({ page }) => {
         lineWidth: 3.0,
         textColor: [0, 0, 1, 1],
         lineColor: [0, 0, 1, 1],
-        textScale: 0,
+        textScale: 1.0,
         lineTerminator: LabelLineTerminator.NONE
       },
       [
@@ -87,7 +91,7 @@ test('niivue label addLabel', async ({ page }) => {
         lineWidth: 3.0,
         textColor: [1, 0, 0, 1],
         lineColor: [1, 0, 0, 1],
-        textScale: 0,
+        textScale: 1.0,
         lineTerminator: LabelLineTerminator.NONE
       },
       [-25, -15, -25]
@@ -258,8 +262,6 @@ test('niivue label addLabel with anchor', async ({ page }) => {
 })
 
 test('niivue label onClick receives MouseEvent with right-click', async ({ page }) => {
-  await page.goto(httpServerAddress)
-
   const rightClickHandled = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
@@ -279,31 +281,51 @@ test('niivue label onClick receives MouseEvent with right-click', async ({ page 
     const label = nv.addLabel(
       'RightClickTest',
       {
-        textScale: 1.5,
+        textScale: 2.0,
         textColor: [1, 1, 1, 1],
         backgroundColor: [0, 0, 0, 0.5],
         lineWidth: 1,
         lineColor: [1, 1, 1, 1],
-        textAlignment: LabelTextAlignment.CENTER,
+        textAlignment: LabelTextAlignment.LEFT,
         lineTerminator: LabelLineTerminator.NONE
       },
-      [0, 0, 0]
+      undefined,
+      LabelAnchorPoint.TOPLEFT
     )
 
     return await new Promise((resolve) => {
       label.onClick = (_label, e) => {
+        console.log('Label clicked, e.button =', e?.button)
         resolve(e?.button === 2)
       }
 
-      const rect = nv.canvas.getBoundingClientRect()
-      const evt = new MouseEvent('mousedown', {
-        bubbles: true,
-        cancelable: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
-        button: 2 // right-click
-      })
-      nv.canvas.dispatchEvent(evt)
+      nv.drawScene()
+
+      setTimeout(() => {
+        const canvas = nv.canvas
+        const rect = canvas.getBoundingClientRect()
+
+        // === Use same math as getLabelAtPoint ===
+        const size = nv.opts.textHeight * Math.min(canvas.height, canvas.width)
+        const verticalMargin = nv.opts.textHeight * canvas.height
+        const labelSize = size * label.style.textScale
+        const textHeight = nv.textHeight(labelSize, label.text)
+        const textWidth = nv.textWidth(labelSize, label.text)
+
+        const screenX = textWidth / 2
+        const screenY = verticalMargin / 2 + textHeight / 2
+
+        console.log('Calculated label center at:', screenX, screenY)
+
+        const event = new MouseEvent('mousedown', {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + screenX,
+          clientY: rect.top + screenY,
+          button: 2
+        })
+        canvas.dispatchEvent(event)
+      }, 100)
     })
   }, TEST_OPTIONS)
 
