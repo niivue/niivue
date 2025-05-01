@@ -4222,6 +4222,25 @@ void main() {
 	vec3 d = smoothstep(thresh - 0.05, thresh + 0.05, cosTheta) * vClr.rgb;
 	color = vec4(d, opacity);
 }`;
+var fragMeshContourShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform float opacity;
+in vec4 vClr;
+in vec3 vN;
+out vec4 color;
+void main() {
+  const float edge0 = 0.1;
+  const float edge1 = 0.25;
+  const vec3 viewDir = vec3(0.0, 0.0, -1.0);
+  vec3 n = normalize(vN);
+  float cosTheta = abs(dot(n, viewDir));
+  float alpha = 1.0 - smoothstep(edge0, edge1, cosTheta);
+  if (alpha <= 0.0) {
+    discard;
+  }
+  color = vec4(0.0, 0.0, 0.0, opacity * alpha);
+}`;
 var fragMeshEdgeShader = `#version 300 es
 precision highp int;
 precision highp float;
@@ -16643,8 +16662,8 @@ var NVMeshLoaders = class _NVMeshLoaders {
       throw new Error("File too small to be mz3: bytes = " + buffer.byteLength);
     }
     let reader = new DataView(buffer);
-    let magic = reader.getUint16(0, true);
     let _buffer = buffer;
+    let magic = reader.getUint16(0, true);
     if (magic === 35615 || magic === 8075) {
       const raw = await NVUtilities.decompress(new Uint8Array(buffer));
       reader = new DataView(raw.buffer);
@@ -16664,7 +16683,12 @@ var NVMeshLoaders = class _NVMeshLoaders {
     const isRGBA = (attr & 4) !== 0;
     let isSCALAR = (attr & 8) !== 0;
     const isDOUBLE = (attr & 16) !== 0;
-    if (attr > 63) {
+    const isAOMAP = (attr & 32) !== 0;
+    const isLOOKUP = (attr & 64) !== 0;
+    utiltiesLogger.debug(
+      `isFace=${isFace} isVert=${isVert} isRGBA=${isRGBA} isSCALAR=${isSCALAR} isDOUBLE=${isDOUBLE} isAOMAP=${isAOMAP} isLOOKUP=${isLOOKUP}`
+    );
+    if (attr > 127) {
       throw new Error("Unsupported future version of MZ3 file");
     }
     let bytesPerScalar = 4;
@@ -16676,11 +16700,8 @@ var NVMeshLoaders = class _NVMeshLoaders {
       isSCALAR = true;
     }
     if (isSCALAR) {
-      let nv = n_vert;
-      if (n_vert === 0) {
-        nv = nvert;
-      }
-      const FSizeWoScalars = 16 + nskip + (isFace ? 1 : 0) * nface * 12 + (isVert ? 1 : 0) * nv * 12 + (isRGBA ? 1 : 0) * nv * 4;
+      const nv = n_vert || nvert;
+      const FSizeWoScalars = 16 + nskip + (isFace ? nface * 12 : 0) + (isVert ? nv * 12 : 0) + (isRGBA ? nv * 4 : 0);
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar);
       if (nvert !== n_vert && scalarFloats % n_vert === 0) {
         log.warn("Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT");
@@ -16699,41 +16720,57 @@ var NVMeshLoaders = class _NVMeshLoaders {
       log.warn("Layer has " + nvert + "vertices, but background mesh has " + n_vert);
     }
     let filepos = 16 + nskip;
+    const view = new DataView(_buffer);
     let indices = null;
     if (isFace) {
-      indices = new Uint32Array(_buffer, filepos, nface * 3);
-      filepos += nface * 3 * 4;
+      indices = new Uint32Array(nface * 3);
+      for (let i = 0; i < nface * 3; i++) {
+        indices[i] = view.getUint32(filepos, true);
+        filepos += 4;
+      }
     }
     let positions = null;
     if (isVert) {
-      positions = new Float32Array(_buffer, filepos, nvert * 3);
-      filepos += nvert * 3 * 4;
+      positions = new Float32Array(nvert * 3);
+      for (let i = 0; i < nvert * 3; i++) {
+        positions[i] = view.getFloat32(filepos, true);
+        filepos += 4;
+      }
     }
     let colors = null;
     if (isRGBA) {
       colors = new Float32Array(nvert * 3);
-      const rgba8 = new Uint8Array(_buffer, filepos, nvert * 4);
-      filepos += nvert * 4;
-      let k3 = 0;
-      let k4 = 0;
       for (let i = 0; i < nvert; i++) {
         for (let j = 0; j < 3; j++) {
-          colors[k3] = rgba8[k4] / 255;
-          k3++;
-          k4++;
+          colors[i * 3 + j] = view.getUint8(filepos++) / 255;
         }
-        k4++;
+        filepos++;
       }
     }
     let scalars = new Float32Array();
-    if ((!isRGBA || n_vert > 0) && isSCALAR && NSCALAR > 0) {
+    if (isSCALAR && NSCALAR > 0) {
       if (isDOUBLE) {
-        const flt64 = new Float64Array(_buffer, filepos, NSCALAR * nvert);
+        const flt64 = new Float64Array(NSCALAR * nvert);
+        for (let i = 0; i < NSCALAR * nvert; i++) {
+          flt64[i] = view.getFloat64(filepos, true);
+          filepos += 8;
+        }
         scalars = Float32Array.from(flt64);
       } else {
-        scalars = new Float32Array(_buffer, filepos, NSCALAR * nvert);
+        scalars = new Float32Array(NSCALAR * nvert);
+        for (let i = 0; i < NSCALAR * nvert; i++) {
+          scalars[i] = view.getFloat32(filepos, true);
+          filepos += 4;
+        }
       }
-      filepos += bytesPerScalar * NSCALAR * nvert;
+    }
+    if (n_vert > 0 && isLOOKUP && isSCALAR) {
+      const decoder = new TextDecoder("utf-8");
+      const jsonBytes = new Uint8Array(_buffer, 16, nskip);
+      const jsonText = decoder.decode(jsonBytes);
+      const colormap = JSON.parse(jsonText);
+      const colormapLabel = cmapper.makeLabelLut(colormap);
+      return { scalars, colormapLabel };
     }
     if (n_vert > 0 && isRGBA && isSCALAR) {
       let mx = scalars[0];
@@ -16756,24 +16793,13 @@ var NVMeshLoaders = class _NVMeshLoaders {
         }
       }
       const colormapLabel = cmapper.makeLabelLut(Labels);
-      return {
-        scalars,
-        colormapLabel
-      };
+      return { scalars, colormapLabel };
     }
     if (n_vert > 0) {
-      return {
-        scalars
-      };
+      return { scalars };
     }
-    return {
-      positions,
-      indices,
-      scalars,
-      colors
-    };
+    return { positions, indices, scalars, colors };
   }
-  // readMZ3()
   // read PLY format
   // https://en.wikipedia.org/wiki/PLY_(file_format)
   static readPLY(buffer) {
@@ -26656,8 +26682,8 @@ var NVMesh3 = class _NVMesh {
   // apply color lookup table to convert scalar array to RGBA array
   scalars2RGBA(rgba, layer, scalars, isNegativeCmap = false) {
     const nValues = scalars.length;
-    if (4 * nValues !== rgba.length) {
-      log.error(`colormap2RGBA incorrectly specified`);
+    if (4 * nValues < rgba.length) {
+      log.error(`colormap2RGBA incorrectly specified ${nValues}*4 != ${rgba.length}`);
       return rgba;
     }
     const opa255 = Math.round(layer.opacity * 255);
@@ -26689,6 +26715,9 @@ var NVMesh3 = class _NVMesh {
     const scale255 = 255 / (mx - mn);
     for (let j = 0; j < nValues; j++) {
       let v = scalars[j] * flip;
+      if (isNaN(v)) {
+        continue;
+      }
       let opa = opa255;
       if (v < mnCal) {
         if (v > 0 && isTranslucentBelowMin) {
@@ -26818,6 +26847,7 @@ var NVMesh3 = class _NVMesh {
     const u82 = new Uint8Array(posNormClr.buffer);
     const maxAdditiveBlend = 0;
     const additiveRGBA = new Uint8Array(nvtx * 4);
+    let tris = this.tris;
     if (this.layers && this.layers.length > 0) {
       for (let i = 0; i < this.layers.length; i++) {
         const layer = this.layers[i];
@@ -26836,6 +26866,10 @@ var NVMesh3 = class _NVMesh {
         }
         if (layer.colormapLabel && layer.colormapLabel.lut) {
           const colormapLabel = layer.colormapLabel;
+          let minv = 0;
+          if (layer.colormapLabel.min) {
+            minv = layer.colormapLabel.min;
+          }
           let lut2 = colormapLabel.lut;
           const opa255 = Math.round(layer.opacity * 255);
           if (lut2[3] > 0) {
@@ -26846,10 +26880,59 @@ var NVMesh3 = class _NVMesh {
           }
           const nLabel = Math.floor(lut2.length / 4);
           if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
+            const atlasValues = layer.atlasValues;
+            let hasNaN = false;
+            let onlyNaN = true;
+            for (let j = 0; j < nLabel; j++) {
+              if (isNaN(atlasValues[j])) {
+                hasNaN = true;
+              } else {
+                onlyNaN = false;
+              }
+            }
+            if (onlyNaN) {
+              log.debug(`invisible mesh: all atlasValues are NaN.`);
+              return;
+            }
+            if (hasNaN) {
+              log.debug(`some vertices have NaN atlasValues (mesh will be decimated).`);
+              const nanVtxs = new Array(nvtx).fill(false);
+              for (let j = 0; j < nvtx; j++) {
+                const v = Math.round(layer.values[j]) - minv;
+                if (isNaN(atlasValues[v])) {
+                  nanVtxs[j] = true;
+                }
+              }
+              const nanIdxs = new Array(tris.length).fill(false);
+              for (let j = 0; j < tris.length; j++) {
+                if (nanVtxs[tris[j]]) {
+                  nanIdxs[j] = true;
+                }
+              }
+              const trisIn = this.tris;
+              let nTriOK = 0;
+              for (let j = 0; j < trisIn.length; j += 3) {
+                if (!nanIdxs[j] && !nanIdxs[j + 1] && !nanIdxs[j + 2]) {
+                  nTriOK++;
+                }
+              }
+              if (nTriOK === 0) {
+                log.debug(`invisible mesh: all triangles of a vertex with a NaN atlasValue.`);
+              }
+              tris = new Uint32Array(nTriOK * 3);
+              let k2 = 0;
+              for (let j = 0; j < trisIn.length; j += 3) {
+                if (!nanIdxs[j] && !nanIdxs[j + 1] && !nanIdxs[j + 2]) {
+                  tris[k2++] = trisIn[j];
+                  tris[k2++] = trisIn[j + 1];
+                  tris[k2++] = trisIn[j + 2];
+                }
+              }
+            }
             lut2.fill(0);
-            lut2 = this.scalars2RGBA(lut2, layer, layer.atlasValues);
+            lut2 = this.scalars2RGBA(lut2, layer, atlasValues);
             if (layer.useNegativeCmap) {
-              lut2 = this.scalars2RGBA(lut2, layer, layer.atlasValues, true);
+              lut2 = this.scalars2RGBA(lut2, layer, atlasValues, true);
             }
           } else if (layer.atlasValues) {
             log.warn(`Expected ${nLabel} atlasValues but got ${layer.atlasValues.length} for mesh layer`);
@@ -26885,7 +26968,8 @@ var NVMesh3 = class _NVMesh {
           const rgba8 = new Uint8Array(nvtx * 4);
           let k = 0;
           for (let j = 0; j < nvtx; j++) {
-            let idx = 4 * Math.min(Math.max(layer.values[j + frameOffset], 0), nLabel - 1);
+            const v = layer.values[j + frameOffset] - minv;
+            const idx = 4 * Math.min(Math.max(v, 0), nLabel - 1);
             rgba8[k + 0] = lut2[idx + 0];
             rgba8[k + 1] = lut2[idx + 1];
             rgba8[k + 2] = lut2[idx + 2];
@@ -26994,10 +27078,10 @@ var NVMesh3 = class _NVMesh {
       }
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(this.tris), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(tris), gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, u82, gl.STATIC_DRAW);
-    this.indexCount = this.tris.length;
+    this.indexCount = tris.length;
     this.vertexCount = this.pts.length;
   }
   // updateMesh()
@@ -30170,6 +30254,10 @@ var Niivue = class {
       {
         Name: "Rim",
         Frag: fragMeshRimShader
+      },
+      {
+        Name: "Silhouette",
+        Frag: fragMeshContourShader
       }
     ]);
     // TODO just let users use DRAG_MODE instead
@@ -39381,7 +39469,7 @@ var Niivue = class {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     const panelHeight = this.getLegendPanelHeight();
     if (panelHeight > this.canvas.height) {
-      log.warn("Legend may overflow screen size");
+      log.debug("Legend may overflow screen size");
     }
     const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width);
     const bulletMargin = this.getBulletMarginWidth();
@@ -40255,12 +40343,15 @@ var Niivue = class {
       if (mxRowWid <= 0 || top <= 0) {
         break;
       }
-      const scaleW = this.gl.canvas.width / mxRowWid;
-      const scaleH = this.effectiveCanvasHeight() / top;
+      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin) / mxRowWid;
+      const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top;
       scale6 = Math.min(scaleW, scaleH);
       if (this.opts.centerMosaic) {
         marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale6));
         marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale6));
+      } else {
+        marginLeft = this.opts.tileMargin;
+        marginTop = this.opts.tileMargin;
       }
     }
     this.opts.textHeight = labelSize;
@@ -40311,7 +40402,13 @@ var Niivue = class {
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === "undefined") {
       if (this.meshes.length > 0) {
         if (this.sliceMosaicString.length > 0) {
+          if (this.opts.isColorbar) {
+            this.reserveColorbarPanel();
+          }
           this.drawMosaic(this.sliceMosaicString);
+          if (this.opts.isColorbar) {
+            this.drawColorbar();
+          }
           return;
         }
         this.screenSlices = [];

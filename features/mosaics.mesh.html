@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%;">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <textarea id="customText" name="customText" rows="12" style="width: 100%; box-sizing: border-box;"></textarea>
+      <button id="statsBtn">Update statistics</button>
+      <button id="saveBtn">Save Bitmap</button>
+      &nbsp;<label for="mosaicCheck">Mosaic</label>
+      <input type="checkbox" id="mosaicCheck" checked />
+      &nbsp;<label for="alphaCheck">Translucent</label>
+      <input type="checkbox" id="alphaCheck" unchecked />
+      <label id="statusLabel">&nbsp;&nbsp;</label>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      saveBtn.onclick = function () {
+        nv1.saveScene("ScreenShot.png")
+      }
+      statsBtn.onclick = function () {
+        const str = customText.value
+        const lines = str.split('\n')
+        const layer = nv1.meshes[0].layers[0]
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || !trimmed.includes('=')) continue
+          const [key, rawValue] = trimmed.split('=').map(s => s.trim())
+          let value
+          try {
+            value = eval(rawValue)
+          } catch {
+            value = rawValue
+          }
+          layer[key] = value
+        }
+        nv1.setMeshLayerProperty(nv1.meshes[0].id,0, "frame4D", 0)
+      }
+      mosaicCheck.onchange = function () {
+        if (this.checked) {
+          nv1.setSliceMosaicString('A R 0 R -0 S R 0 R -0 C R 0 R -0')
+        } else {
+          nv1.setSliceMosaicString('')
+        }
+      }
+      alphaCheck.onchange = function () {
+        if (this.checked) {
+          nv1.meshes[1].opacity = 0.2
+          nv1.setMeshShader(nv1.meshes[1].id, 'Rim')
+        } else {
+          nv1.meshes[1].opacity = 1
+          nv1.setMeshShader(nv1.meshes[1].id, 'Silhouette')
+        }
+      }
+      const handleLocationChange = (data) => {
+        statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
+      }
+      let defaults = {
+        backColor: [1, 1, 1, 1],
+        onLocationChange: handleLocationChange,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      await nv1.attachToCanvas(gl1)
+      await nv1.attachTo("gl1")
+      nv1.opts.tileMargin = 10
+      await nv1.loadMeshes([
+        {url: "../images/atl-Anatom_space-MNI.mz3"},
+        {url: "../images/mni152_2009.mz3", rgba255: [255, 255, 255, 255]},
+      ])
+      nv1.setMeshShader(nv1.meshes[0].id, 'Rim')
+      nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        0,
+        "isTransparentBelowCalMin",
+        true
+      )
+      nv1.setMeshLayerProperty(
+        nv1.meshes[0].id,
+        0,
+        "useNegativeCmap",
+        true
+      )
+      nv1.opts.textHeight = 0.03
+      nv1.opts.isColorbar = true
+      nv1.meshes[0].rgba255 = [192,192,192,128]
+      const nLabel = nv1.meshes[0].layers[0].colormapLabel.labels.length
+      const atlasValues = new Float32Array(nLabel).fill(NaN)
+      atlasValues[0] = -4
+      atlasValues[1] = 7
+      atlasValues[2] = -3
+      atlasValues[7] = 3
+      const text = `cal_min = 3\ncal_max = 5\ncolormap = 'warm'\ncolormapNegative = 'winter'\natlasValues = [${Array.from(atlasValues).join(', ')}]\n//[${Array.from(nv1.meshes[0].layers[0].colormapLabel.labels).join(', ')}]\n`
+      customText.value = text
+      statsBtn.onclick()
+      mosaicCheck.onchange()
+      alphaCheck.onchange()
+    </script>
+  </body>
+</html>
