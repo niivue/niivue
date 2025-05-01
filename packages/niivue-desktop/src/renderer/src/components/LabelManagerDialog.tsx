@@ -68,7 +68,9 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
       lineColor: [...rgb, 1],
       lineTerminator: LabelLineTerminator.NONE
     }
-    const point = pos.map(parseFloat) as [number, number, number]
+    const crossFrac = nv.scene.crosshairPos as [number, number, number]
+    const mm = nv.frac2mm(crossFrac)
+    const point = [mm[0], mm[1], mm[2]] as [number, number, number]
     nv.addLabel(text, style, point)
     nv.updateGLVolume()
     refreshLabels()
@@ -101,6 +103,7 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
                 Label Text
                 <input type="text" value={text} onChange={e => setText(e.target.value)} autoFocus style={{ width: '100%' }} />
               </label>
+              {editMode && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 Position (X, Y, Z)
                 <div style={{ display: 'flex', gap: 4 }}>
@@ -109,20 +112,11 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
                   <input type="text" value={pos[2]} onChange={e => setPos([pos[0], pos[1], e.target.value])} style={{ flex: 1 }} />
                 </div>
               </label>
+            )}
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 Text Scale
                 <input type="text" value={scale} onChange={e => setScale(e.target.value)} style={{ width: '100%' }} />
-              </label>
-              <Button onClick={() => {
-                const pos3D = nvRef.current.crosshairs3D?.position ?? [0, 0, 0]
-                setEditMode(false)
-                setText('')
-                setPos(pos3D.map(n => n.toFixed(2)) as [string, string, string])
-                setScale('1')
-                setLineWidth('1')
-                setLineColor('#ffffff')
-                setSelectedLabel('')
-              }}>New Label</Button>
+              </label>              
               <Select.Root value={selectedLabel} onValueChange={onLabelSelect}>
                 <Select.Trigger />
                 <Select.Content>
@@ -141,6 +135,26 @@ export const LabelManagerDialog = ({ open, setOpen }: { open: boolean, setOpen: 
               </label>
               <Flex gap="3">
                 <Button onClick={updateLabel} disabled={!text.trim()}>Save</Button>
+                <Button onClick={() => {
+                  const nv = nvRef.current
+                  const pos3D = nv.crosshairs3D?.position ?? [0, 0, 0]
+                  setEditMode(false)
+                  setText('')
+                  setPos(pos3D.map(n => n.toFixed(2)) as [string, string, string])
+                  setScale('1')
+                  setLineWidth('1')
+                  setSelectedLabel('')
+
+                  // Keep last line color if one was added, otherwise use crosshair color
+                  const lastLabel = nv.document.labels.at(-1)
+                  if (lastLabel?.style?.lineColor) {
+                    const hex = '#' + lastLabel.style.lineColor.slice(0, 3).map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+                    setLineColor(hex)
+                  } else {
+                    const hex = '#' + nv.opts.crosshairColor.slice(0, 3).map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+                    setLineColor(hex)
+                  }
+                }}>New Label</Button>
                 {editMode && <Button onClick={deleteLabel} color="red">Delete</Button>}
               </Flex>
               {editMode && <div className="text-sm text-gray-500 mb-2">Editing existing label</div>}
