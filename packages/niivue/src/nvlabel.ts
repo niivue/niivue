@@ -89,7 +89,7 @@ export class NVLabel3D {
   style: NVLabel3DStyle
   points?: number[] | number[][]
   anchor: LabelAnchorPoint
-  onClick?: (label: NVLabel3D) => void
+  onClick?: (label: NVLabel3D, e?: MouseEvent) => void
 
   /**
    * @param text - The text of the label
@@ -101,7 +101,7 @@ export class NVLabel3D {
     style: NVLabel3DStyle,
     points?: number[] | number[][],
     anchor?: LabelAnchorPoint,
-    onClick?: (label: NVLabel3D) => void
+    onClick?: (label: NVLabel3D, e?: MouseEvent) => void
   ) {
     this.text = text
     this.style = style
