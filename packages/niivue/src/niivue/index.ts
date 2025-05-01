@@ -1344,7 +1344,7 @@ export class Niivue {
     if (label) {
       // check for user defined onclick handler
       if (label.onClick) {
-        label.onClick(label)
+        label.onClick(label, e)
         return
       }
       // find associated mesh
