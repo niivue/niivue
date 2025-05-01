@@ -152,13 +152,13 @@ declare class NVLabel3D {
     style: NVLabel3DStyle;
     points?: number[] | number[][];
     anchor: LabelAnchorPoint;
-    onClick?: (label: NVLabel3D) => void;
+    onClick?: (label: NVLabel3D, e?: MouseEvent) => void;
     /**
      * @param text - The text of the label
      * @param style - The style of the label
      * @param points - An array of points label for label lines
      */
-    constructor(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint, onClick?: (label: NVLabel3D) => void);
+    constructor(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint, onClick?: (label: NVLabel3D, e?: MouseEvent) => void);
 }
 
 /**

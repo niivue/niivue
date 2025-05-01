@@ -30917,7 +30917,7 @@ var Niivue = class {
     const label = this.getLabelAtPoint([x, y]);
     if (label) {
       if (label.onClick) {
-        label.onClick(label);
+        label.onClick(label, e);
         return;
       }
       for (const mesh of this.meshes) {
