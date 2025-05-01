@@ -41,7 +41,19 @@ export default defineConfig({
         headless: true,
         launchOptions: {
           // args: ['--headless', '--no-sandbox', '--use-angle=angle', '--use-gl=swiftshader']
-          args: ['--window-size=1280,720', '--no-sandbox']
+          // args: ['--window-size=1280,720', '--no-sandbox']
+          args: [
+            '--headless=new', // new headless engine (Ozone/EGL)
+            '--enable-features=UseOzonePlatform',
+            '--ozone-platform=headless', // force Ozone headless backend
+            '--use-gl=angle', // route GL through ANGLE :contentReference[oaicite:0]{index=0}
+            // drop any --use-angle=swiftshader-webgl here—
+            // ANGLE will pick up your system’s Mesa/EGL or SwiftShader automatically
+            '--in-process-gpu', // run the GPU thread in-process so it can see your Mesa libs :contentReference[oaicite:1]{index=1}
+            '--disable-software-rasterizer', // prefer ANGLE path
+            '--no-sandbox',
+            '--disable-dev-shm-usage'
+          ]
         }
       }
     }
