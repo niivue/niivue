@@ -4,9 +4,10 @@ import { httpServerAddress } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
 
 test.beforeEach(async ({ page }) => {
-  page.on('console', (msg) => {
-    console.log(`[BROWSER LOG] ${msg.type()}: ${msg.text()}`)
-  })
+  // Uncomment for trouble shooting tests
+  // page.on('console', (msg) => {
+  //   console.log(`[BROWSER LOG] ${msg.type()}: ${msg.text()}`)
+  // })
 
   await page.goto(httpServerAddress)
 })
