@@ -1743,7 +1743,6 @@ export class NVMeshLoaders {
       const FSizeWoScalars = 16 + nskip + (isFace ? nface * 12 : 0) + (isVert ? nv * 12 : 0) + (isRGBA ? nv * 4 : 0)
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar)
       if (nvert !== n_vert && scalarFloats % n_vert === 0) {
-        log.warn('Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT')
         nvert = n_vert
       }
       NSCALAR = Math.floor(scalarFloats / nvert)

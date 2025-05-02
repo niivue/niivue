@@ -12136,6 +12136,10 @@ export class Niivue {
     // let isCrossLinesUsed = false;
     let marginLeft = 0
     let marginTop = 0
+    let tileGap = 0
+    if (!this.volumes[0]?.dims) {
+      tileGap = Math.ceil(this.opts.tileMargin * 0.3)
+    }
     for (let pass = 0; pass < 2; pass++) {
       // two pass: first calculate dimensions to determine scale, second draw items
       let isRender = false
@@ -12236,6 +12240,7 @@ export class Niivue {
           isCrossLines = false
         }
         left += w
+        left += tileGap
         rowHt = Math.max(rowHt, h)
       }
       top += rowHt
@@ -12243,8 +12248,7 @@ export class Niivue {
       if (mxRowWid <= 0 || top <= 0) {
         break
       }
-
-      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin) / mxRowWid
+      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin - tileGap) / mxRowWid
       const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top
       scale = Math.min(scaleW, scaleH)
       if (this.opts.centerMosaic) {
