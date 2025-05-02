@@ -2,6 +2,7 @@ import { Tabs, Text } from '@radix-ui/themes'
 import { GeneralTab } from './GeneralTab'
 import { MeshTab } from './MeshTab'
 import { VolumeTab } from './VolumeTab'
+import { AtlasTab } from './AtlasTab'
 
 export const SceneTabs = (): JSX.Element => {
   return (
@@ -16,6 +17,9 @@ export const SceneTabs = (): JSX.Element => {
         <Tabs.Trigger value="mesh">
           <Text size="1">Mesh</Text>
         </Tabs.Trigger>
+        <Tabs.Trigger value="atlas">
+          <Text size="1">Atlas</Text>
+        </Tabs.Trigger>
       </Tabs.List>
       <div className="flex flex-col grow w-full">
         <Tabs.Content value="general">
@@ -24,8 +28,11 @@ export const SceneTabs = (): JSX.Element => {
         <Tabs.Content value="volume">
           <VolumeTab />
         </Tabs.Content>
-        <Tabs.Content value="mesh">
+        <Tabs.Content value="mesh">          
           <MeshTab />
+        </Tabs.Content>
+        <Tabs.Content value="atlas">
+          <AtlasTab />
         </Tabs.Content>
       </div>
     </Tabs.Root>
