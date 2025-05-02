@@ -1,8 +1,11 @@
 import { readFile } from 'fs/promises'
 import volumeMni152 from '../../../resources/images/standard/mni152.nii.gz?asset'
 import meshaal from '../../../resources/images/standard/aal.mz3?asset'
+import volaal from '../../../resources/images/standard/aal.nii.gz?asset'
 import ICBM152LH from '../../../resources/images/standard/ICBM152.lh.mz3?asset'
 import ICBM152LHMotor from '../../../resources/images/standard/ICBM152.lh.motor.mz3?asset'
+// https://electron-vite.org/guide/assets#importing-json-file-as-file-path
+import jsonaal from '../../../resources/images/standard/aal.json?commonjs-external&asset'
 import { store } from './appStore.js'
 
 // read a known standard file and return it as a base64 string
@@ -21,10 +24,17 @@ export const readStandardFile = async (path: string): Promise<string> => {
     case 'ICBM152.lh.motor.mz3':
       standardFilePath = ICBM152LHMotor
       break
+    case 'aal.nii.gz':
+      standardFilePath = volaal
+      break
+    case 'aal.json':
+      standardFilePath = jsonaal
+      break;
     default:
       break
   }
   try {
+    console.log('loading standard file', standardFilePath)
     const data = Buffer.from(await readFile(standardFilePath))
     const base64 = data.toString('base64')
     store.addRecentFile(standardFilePath)
