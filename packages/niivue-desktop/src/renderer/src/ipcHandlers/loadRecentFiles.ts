@@ -1,7 +1,7 @@
 import { NVImage, NVMesh, Niivue, NVDocument } from '@niivue/niivue'
 import React from 'react'
 import { MESH_EXTENSIONS } from '../../../common/extensions'
-import { base64ToJson } from '@renderer/utils/base64ToJSON'
+import { base64ToJson, decompressGzipBase64ToJson, isProbablyGzip } from '@renderer/utils/base64ToJSON'
 
 const electron = window.electron
 
@@ -23,7 +23,9 @@ export const registerLoadRecentFileHandler = ({
     // Check if the file is a mesh or a volume
     const pathLower = filePath.toLowerCase()
     if(pathLower.endsWith('.nvd')) {
-      const json = base64ToJson(base64)
+      const json = isProbablyGzip(base64)
+      ? await decompressGzipBase64ToJson(base64)
+      : base64ToJson(base64)
       if (!json) throw new Error('Invalid .nvd content')
       const doc = NVDocument.loadFromJSON(json)
       await nv.loadDocument(doc)

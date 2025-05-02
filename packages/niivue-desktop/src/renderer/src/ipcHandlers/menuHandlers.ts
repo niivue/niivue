@@ -131,9 +131,13 @@ export const registerResetPreferencesHandler = () => {
   })
 }
 
-export const registerLabelManagerDialogHandler = (setOpen: (v: boolean) => void): void => {
+export const registerLabelManagerDialogHandler = (
+  setOpen: (v: boolean) => void,
+  setEditMode: (v: boolean) => void
+): void => {
   window.electron.ipcRenderer.on('openLabelManagerDialog', () => {
-    console.log('[Renderer] Received openLabelManagerDialog')
+    setEditMode(false)
     setOpen(true)
   })
 }
+

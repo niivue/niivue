@@ -89,6 +89,8 @@ function App(): JSX.Element {
   const [selectedImage, setSelectedImage] = useState<NVImage | null>(null)
   const [sliceType, setSliceType] = useState<SLICE_TYPE | null>(null)
   const [labelDialogOpen, setLabelDialogOpen] = useState(false)
+  const [labelEditMode, setLabelEditMode] = useState(false)
+
   const niimathRef = useRef<Niimath>(new Niimath())
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
@@ -140,6 +142,7 @@ function App(): JSX.Element {
     window.electron?.ipcRenderer.on('openLabelManagerDialog', () => {
       console.log('[Renderer] Received openLabelManagerDialog')
       setLabelDialogOpen(true)
+      setLabelEditMode(false)
     })
   }, [])
 
@@ -203,7 +206,7 @@ function App(): JSX.Element {
       registerLoadDocumentHandler({nv, setVolumes, setMeshes})
       registerSaveCompressedDocumentHandler(nv)
       registerResetPreferencesHandler()
-      registerLabelManagerDialogHandler(setLabelDialogOpen)
+      registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
       nv.drawScene() // draw after loading prefs
     }
   
@@ -253,7 +256,7 @@ function App(): JSX.Element {
         <Viewer />
       </div>
       <PreferencesDialog />
-      <LabelManagerDialog open={labelDialogOpen} setOpen={setLabelDialogOpen} />
+      <LabelManagerDialog open={labelDialogOpen} setOpen={setLabelDialogOpen} editMode={labelEditMode} setEditMode={setLabelEditMode} />
     </AppContext.Provider>
   )
 }

@@ -687,7 +687,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       label: 'Labels',
       submenu: [
         {
-          label: 'Manage Labels',
+          label: 'Add Label',
           click: () => {
             win.webContents.send('openLabelManagerDialog')
           }
