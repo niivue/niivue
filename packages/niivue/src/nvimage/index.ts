@@ -3144,7 +3144,7 @@ export class NVImage {
 
     // Handle input buffer types
     if (url instanceof Uint8Array) {
-      url = url.buffer as ArrayBuffer
+      url = url.slice().buffer as ArrayBuffer
     }
     if (buffer.byteLength > 0) {
       url = buffer

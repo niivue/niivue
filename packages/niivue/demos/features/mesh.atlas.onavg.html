@@ -65,6 +65,7 @@ B: [25, 40, 160, 0, 50, 100, 10, 140, 220, 120, 140, 140, 50, 140, 75, 50, 60, 6
         show3Dcrosshair: true,
       }
       var nv1 = new niivue.Niivue(defaults)
+      nv1.opts.showLegend = false
       await nv1.attachTo("gl1")
       await nv1.loadMeshes([{url: "../images/lhpialparc.mz3",}])
       await nv1.setMeshLayerProperty(nv1.meshes[0].id,0,"colormapLabel", "../images/parc.json", nv1.gl)

@@ -24,7 +24,12 @@
         class="slider"
         id="meshSlider"
       />
-      <label id="shaders">Shaders:</label>
+      &nbsp;
+      <label for="legendCheck">Legend</label>
+      <input type="checkbox" id="legendCheck" checked />
+      &nbsp;
+      &nbsp;
+      <label id="shaders">Shaders: </label>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -38,9 +43,11 @@
 </html>
 <script type="module" async>
   import * as niivue from "../dist/index.js";
-  
-  var slider = document.getElementById("meshSlider");
-  slider.oninput = function () {
+  legendCheck.onchange = function () {
+    nv1.opts.showLegend = this.checked
+    nv1.drawScene()
+  }
+  meshSlider.oninput = function () {
     nv1.setMeshLayerProperty(
       nv1.meshes[0].id,
       0,

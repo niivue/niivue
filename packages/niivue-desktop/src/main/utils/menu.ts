@@ -682,6 +682,18 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         }
       ]
     },
+    // { role: 'labelMenu' }
+    {
+      label: 'Labels',
+      submenu: [
+        {
+          label: 'Add Label',
+          click: () => {
+            win.webContents.send('openLabelManagerDialog')
+          }
+        }
+      ]
+    },
     // { role: 'windowMenu' }
     {
       label: 'Window',
