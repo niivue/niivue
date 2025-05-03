@@ -93,7 +93,7 @@
       binaryCurvCheck.onchange = function () {
         const threshLo = this.checked ? 0.49 : 0.35
         const threshHi = this.checked ? 0.51 : 0.65
-        nv1.meshes[0].layers[kCurvLayer].cal_min = threshLo;
+        nv1.meshes[0].layers[kCurvLayer].cal_min = threshLo
         nv1.setMeshLayerProperty(
           nv1.meshes[0].id,
           0,
@@ -183,14 +183,14 @@
       customText.value = text
       statsBtn.onclick()
       mosaicCheck.onchange()
-      let shaders = nv1.meshShaderNames();
+      let shaders = nv1.meshShaderNames()
       for (let i = 0; i < shaders.length; i++) {
-        let btn = document.createElement("button");
-        btn.innerHTML = shaders[i];
+        let btn = document.createElement("button")
+        btn.innerHTML = shaders[i]
         btn.onclick = function () {
-          nv1.setMeshShader(nv1.meshes[0].id, shaders[i]);
-        };
-        shaderBtns.appendChild(btn);
+          nv1.setMeshShader(nv1.meshes[0].id, shaders[i])
+        }
+        shaderBtns.appendChild(btn)
       }
     </script>
   </body>
