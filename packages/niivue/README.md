@@ -23,7 +23,7 @@ The command `npm run demo` will minify the project and locally host all of the [
 
 [Click here for the docs web page](https://niivue.github.io/niivue/devdocs/)
 
-# Projects and People using NiiVue
+# NiiVue Users
 
 - Analysis of Functional NeuroImages (AFNI) [Scientific and Statistical Computing Core](https://afni.nimh.nih.gov/) (National Institutes of Health)
 - [BOOSTLET.js](https://boostlet.org/) image processing plugins work with NiiVue.
@@ -35,6 +35,7 @@ The command `npm run demo` will minify the project and locally host all of the [
 - [Digital Brain Bank](https://elifesciences.org/articles/73153) for navigating MRI datasets
 - FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/) (University of Oxford)
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) (Massachusetts General Hospital) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
+- [lazybids-ui](https://github.com/lazybids/lazybids-ui) is a web-based user interface for interacting with BIDS datasets.
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
 - [neurosift](https://github.com/flatironinstitute/neurosift) provides NWB visualization and DANDI exploration
