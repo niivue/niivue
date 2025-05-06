@@ -16704,7 +16704,6 @@ var NVMeshLoaders = class _NVMeshLoaders {
       const FSizeWoScalars = 16 + nskip + (isFace ? nface * 12 : 0) + (isVert ? nv * 12 : 0) + (isRGBA ? nv * 4 : 0);
       const scalarFloats = Math.floor((_buffer.byteLength - FSizeWoScalars) / bytesPerScalar);
       if (nvert !== n_vert && scalarFloats % n_vert === 0) {
-        log.warn("Issue 729: mz3 mismatch scalar NVERT does not match mesh NVERT");
         nvert = n_vert;
       }
       NSCALAR = Math.floor(scalarFloats / nvert);
@@ -40047,7 +40046,7 @@ var Niivue = class {
     let sliceFrac = tile.sliceFrac;
     const isRender = sliceFrac === Infinity;
     if (isRender) {
-      log.warn("Rendering approximate cross lines in world view mode");
+      log.debug("Rendering approximate cross lines in world view mode");
     }
     if (sliceFrac === Infinity) {
       sliceFrac = 0.5;
@@ -40243,6 +40242,10 @@ var Niivue = class {
     const labelSize = this.opts.textHeight;
     let marginLeft = 0;
     let marginTop = 0;
+    let tileGap = 0;
+    if (!this.volumes[0]?.dims) {
+      tileGap = Math.ceil(this.opts.tileMargin * 0.3);
+    }
     for (let pass = 0; pass < 2; pass++) {
       let isRender = false;
       let isCrossLines = false;
@@ -40253,6 +40256,9 @@ var Niivue = class {
       let mxRowWid = 0;
       let isLabel = false;
       let axCorSag = 0 /* AXIAL */;
+      let horizontalOverlap = 0;
+      let prevW = 0;
+      let w = 0;
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.includes("X")) {
@@ -40263,33 +40269,49 @@ var Niivue = class {
           isLabel = !item.includes("-");
           continue;
         }
-        if (item.includes("V") || item.includes("H")) {
+        if (item.includes("H")) {
+          i++;
+          horizontalOverlap = Math.max(0, Math.min(1, parseFloat(items[i])));
+          horizontalOverlap = Math.abs(horizontalOverlap);
+          continue;
+        }
+        if (item.includes("V")) {
           i++;
           continue;
         }
         if (item.includes("A")) {
           axCorSag = 0 /* AXIAL */;
+          continue;
         }
         if (item.includes("C")) {
           axCorSag = 1 /* CORONAL */;
+          continue;
         }
         if (item.includes("S")) {
           axCorSag = 2 /* SAGITTAL */;
+          continue;
         }
         if (item.includes("R")) {
           isRender = true;
+          continue;
         }
         if (item.includes(";")) {
           top += rowHt;
-          mxRowWid = Math.max(mxRowWid, left);
+          mxRowWid = Math.max(mxRowWid, left + prevW);
           rowHt = 0;
           left = 0;
         }
+        w = prevW;
+        if (horizontalOverlap > 0 && !isRender) {
+          w = Math.round(w * (1 - horizontalOverlap));
+        }
+        log.debug(`slice ${i} width with overlap ${w} pixels`);
+        left += w;
+        w = 0;
         const sliceMM = parseFloat(item);
         if (isNaN(sliceMM)) {
           continue;
         }
-        let w = 0;
         let h = 0;
         let fov = fovSliceMM;
         if (isRender) {
@@ -40335,15 +40357,16 @@ var Niivue = class {
           isRender = false;
           isCrossLines = false;
         }
-        left += w;
+        prevW = w;
+        left += tileGap;
         rowHt = Math.max(rowHt, h);
       }
       top += rowHt;
-      mxRowWid = Math.max(mxRowWid, left);
+      mxRowWid = Math.max(mxRowWid, left + prevW);
       if (mxRowWid <= 0 || top <= 0) {
         break;
       }
-      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin) / mxRowWid;
+      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin - tileGap) / mxRowWid;
       const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top;
       scale6 = Math.min(scaleW, scaleH);
       if (this.opts.centerMosaic) {
