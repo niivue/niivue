@@ -81,6 +81,7 @@
   })
   nv1.setSliceType(nv1.sliceTypeRender)
   await nv1.attachTo("gl1")
+  nv1.opts.showLegend = false
   await nv1.loadMeshes([
     { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
     {

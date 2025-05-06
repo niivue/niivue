@@ -4,55 +4,112 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Basic Mosaics</title>
-    <link rel="stylesheet" href="light.css" />
+    <title>Voxel Mosaics</title>
+    <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <button id="about">Mosaic string:</button>
+      <button id="aboutBtn">Mosaic String:</button>
       <input
         type="text"
         id="str"
-        value="A -10 0 20 L+ C -10 0; L-  C 20 40  S -10 0 20; A R X 0 R X -0 C R X 0 R X -0 S R X 0 R X -0"
+        value="A -20 50 60 70 C -10 -20 -50 S R X 0 R X -0"
         required
         minlength="2"
         maxlength="128"
         size="128"
       />
-      <label for="centerCheck">Center</label>
-      <input type="checkbox" id="centerCheck" unchecked />
+      <label for="slideOutline"> &nbsp; Outline</label>
+      <input
+        type="range"
+        min="0"
+        max="8"
+        value="0"
+        class="slider"
+        id="slideOutline"
+      />
+      <select id="alphaMode">
+        <option selected>restrict colorbar to range</option>
+        <option>colorbar from 0,transparent subthreshold</option>
+        <option>colorbar from 0, translucent subthreshold</option>
+      </select>
+      &nbsp;
+      <label for="renderMode">Glossy</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0">matte</option>
+        <option value="0.3" selected>low</option>
+        <option value="0.6">medium</option>
+        <option value="1.0">high</option>
+      </select>
+      &nbsp;
+      <label for="darkCheck">Dark</label>
+      <input type="checkbox" id="darkCheck" unchecked />
+      &nbsp;
+      <button id="saveBtn">Save Bitmap</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
       import * as niivue from "../dist/index.js"
-      centerCheck.onchange = function () {
-        nv1.opts.centerMosaic = this.checked
+      // value="H 0.3 A -20 50 60 H 0.4 70 H 0.25 C -10 H 0.1 -20 -50 S R X 0 R X -0"
+      renderMode.onchange = function () {
+        nv1.setVolumeRenderIllumination(this.value)
+      }
+      aboutBtn.onclick = function () {
+        window.alert(
+          "Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X), renderings (R), and horizontal overlap (H)."
+        )
+      }
+      slideOutline.oninput = function () {
+        nv1.overlayOutlineWidth = 0.25 * this.value
+        nv1.updateGLVolume()
+      }
+      alphaMode.onchange = function () {
+        nv1.volumes[1].colormapType = this.selectedIndex
+        nv1.updateGLVolume()
+      }
+      darkCheck.onchange = function () {
+        let v = 1
+        if (this.checked)
+            v = 0
+        nv1.opts.backColor = [v, v, v]
         nv1.drawScene()
+      }
+      saveBtn.onclick = function () {
+        nv1.saveScene("ScreenShot.png")
       }
       var volumeList1 = [
         {
           url: "../images/mni152.nii.gz",
+          colorbarVisible: false
         },
-      ];
-      var nv1 = new niivue.Niivue();
-      await nv1.attachTo("gl1");
-      nv1.loadVolumes(volumeList1);
-      var txt = document.getElementById("str");
-      nv1.setSliceType(nv1.sliceTypeAxial);
-      nv1.setSliceMosaicString(txt.value);
-      document.getElementById("str").addEventListener("keyup", doStr);
+        {
+          url: "../images/spmMotor.nii.gz",
+          cal_min: 4.2,
+          cal_max: 8,
+          colormap: "warm",
+          colormapNegative: "winter"
+        },
+      ]
+      var nv1 = new niivue.Niivue()
+      await nv1.attachTo("gl1")
+      nv1.opts.isColorbar = true
+      nv1.isAlphaClipDark = true
+      nv1.opts.centerMosaic = true
+      await nv1.loadVolumes(volumeList1)
+      var txt = document.getElementById("str")
+      nv1.setSliceMosaicString(txt.value)
+      document.getElementById("str").addEventListener("keyup", doStr)
       function doStr() {
-        nv1.setSliceMosaicString(txt.value);
+        nv1.setSliceMosaicString(txt.value)
       }
-      document.getElementById("about").addEventListener("click", doAbout);
-      function doAbout() {
-        window.alert(
-          "Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R)."
-        );
-      }
+      darkCheck.onchange()
+      slideOutline.oninput()
+      alphaMode.onchange()
+      renderMode.onchange()
     </script>
   </body>
 </html>
