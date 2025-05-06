@@ -12201,7 +12201,7 @@ export class Niivue {
         if (horizontalOverlap > 0 && !isRender) {
           w = Math.round(w * (1.0 - horizontalOverlap))
         }
-        console.log(i, w)
+        log.debug(`slice ${i} width with overlap ${w} pixels`)
         left += w
         w = 0
         const sliceMM = parseFloat(item)
