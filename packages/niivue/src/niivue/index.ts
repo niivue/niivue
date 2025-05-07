@@ -11923,7 +11923,7 @@ export class Niivue {
     let sliceFrac = tile.sliceFrac
     const isRender = sliceFrac === Infinity
     if (isRender) {
-      log.warn('Rendering approximate cross lines in world view mode')
+      log.debug('Rendering approximate cross lines in world view mode')
     }
     if (sliceFrac === Infinity) {
       sliceFrac = 0.5
@@ -12136,6 +12136,10 @@ export class Niivue {
     // let isCrossLinesUsed = false;
     let marginLeft = 0
     let marginTop = 0
+    let tileGap = 0
+    if (!this.volumes[0]?.dims) {
+      tileGap = Math.ceil(this.opts.tileMargin * 0.3)
+    }
     for (let pass = 0; pass < 2; pass++) {
       // two pass: first calculate dimensions to determine scale, second draw items
       let isRender = false
@@ -12147,6 +12151,9 @@ export class Niivue {
       let mxRowWid = 0
       let isLabel = false
       let axCorSag = SLICE_TYPE.AXIAL
+      let horizontalOverlap = 0
+      let prevW = 0
+      let w = 0
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
         if (item.includes('X')) {
@@ -12157,34 +12164,51 @@ export class Niivue {
           isLabel = !item.includes('-')
           continue
         }
-        if (item.includes('V') || item.includes('H')) {
-          i++ // skip numeric value for vertical/horizontal overlap
+        if (item.includes('H')) {
+          i++ // detect horizontal overlap
+          horizontalOverlap = Math.max(0, Math.min(1, parseFloat(items[i])))
+          horizontalOverlap = Math.abs(horizontalOverlap)
+          continue
+        }
+        if (item.includes('V')) {
+          i++ // skip numeric value for vertical overlap
           continue
         }
         if (item.includes('A')) {
           axCorSag = SLICE_TYPE.AXIAL
+          continue
         }
         if (item.includes('C')) {
           axCorSag = SLICE_TYPE.CORONAL
+          continue
         }
         if (item.includes('S')) {
           axCorSag = SLICE_TYPE.SAGITTAL
+          continue
         }
         if (item.includes('R')) {
           isRender = true
+          continue
         }
         if (item.includes(';')) {
           // EOLN
           top += rowHt
-          mxRowWid = Math.max(mxRowWid, left)
+          mxRowWid = Math.max(mxRowWid, left + prevW)
           rowHt = 0
           left = 0
         }
+        w = prevW
+        if (horizontalOverlap > 0 && !isRender) {
+          w = Math.round(w * (1.0 - horizontalOverlap))
+        }
+        log.debug(`slice ${i} width with overlap ${w} pixels`)
+        left += w
+        w = 0
         const sliceMM = parseFloat(item)
         if (isNaN(sliceMM)) {
           continue
         }
-        let w = 0
+
         let h = 0
         let fov = fovSliceMM
         if (isRender) {
@@ -12235,16 +12259,16 @@ export class Niivue {
           isRender = false
           isCrossLines = false
         }
-        left += w
+        prevW = w
+        left += tileGap
         rowHt = Math.max(rowHt, h)
       }
       top += rowHt
-      mxRowWid = Math.max(mxRowWid, left)
+      mxRowWid = Math.max(mxRowWid, left + prevW)
       if (mxRowWid <= 0 || top <= 0) {
         break
       }
-
-      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin) / mxRowWid
+      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin - tileGap) / mxRowWid
       const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top
       scale = Math.min(scaleW, scaleH)
       if (this.opts.centerMosaic) {

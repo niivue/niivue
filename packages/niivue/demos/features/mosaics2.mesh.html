@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="curveSlider">Curvature</label>
+      <input type="checkbox" id="binaryCurvCheck" checked />
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        class="slider"
+        id="curveSlider"
+      />
+      &nbsp; &nbsp;
+      <label for="atlasSlider">Atlas</label>
+      <select id="borderDrop">
+        <option value="-1">Dark border</option>
+        <option value="1">Transparent border</option>
+        <option value="0">No border</option>
+        <option value="100" selected>Opaque border</option>
+      </select>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="1"
+        class="slider"
+        id="atlasSlider"
+      />
+      &nbsp; &nbsp;
+      <label for="statsSlider">Statistics</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        class="slider"
+        id="statsSlider"
+      />
+      <button id="saveBtn">Save Bitmap</button>
+      &nbsp;<label for="mosaicCheck">Mosaic</label>
+      <input type="checkbox" id="mosaicCheck" checked />
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%;">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <textarea id="customText" name="customText" rows="12" style="width: 100%; box-sizing: border-box;"></textarea>
+      <button id="statsBtn">Update statistics</button>
+      &nbsp; &nbsp;<label id="shaderBtns">Shaders: </label>
+      &nbsp; &nbsp;<label id="statusLabel">&nbsp;</label>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      saveBtn.onclick = function () {
+        nv1.saveScene("ScreenShot.png")
+      }
+      const kCurvLayer = 0
+      const kStatLayer = 2
+      const kAltasLayer = 1
+      statsBtn.onclick = function () {
+        const str = customText.value
+        const lines = str.split('\n')
+        const layer = nv1.meshes[0].layers[kStatLayer]
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || !trimmed.includes('=')) continue
+          const [key, rawValue] = trimmed.split('=').map(s => s.trim())
+          let value
+          try {
+            value = eval(rawValue)
+          } catch {
+            value = rawValue
+          }
+          layer[key] = value
+        }
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, kStatLayer, "frame4D", 0)
+      }
+      binaryCurvCheck.onchange = function () {
+        const threshLo = this.checked ? 0.49 : 0.35
+        const threshHi = this.checked ? 0.51 : 0.65
+        nv1.meshes[0].layers[kCurvLayer].cal_min = threshLo
+        nv1.setMeshLayerProperty(
+          nv1.meshes[0].id,
+          0,
+          "cal_max",
+          threshHi
+        )
+      }
+      curveSlider.oninput = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, kCurvLayer, "opacity", this.value * 0.01)
+      }
+      atlasSlider.oninput = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, kAltasLayer, "opacity", this.value * 0.01)
+      }
+      statsSlider.oninput = function () {
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, kStatLayer, "opacity", this.value * 0.01)
+      }
+      borderDrop.onchange = function () {
+        const borderValue = parseInt(this.value) / 100
+        nv1.setMeshLayerProperty(
+          nv1.meshes[0].id,
+          kAltasLayer,
+          "outlineBorder",
+          borderValue
+        )
+      }
+      mosaicCheck.onchange = function () {
+        if (this.checked) {
+          nv1.setSliceMosaicString('A R 0 R -0 S R 0 R -0 C R 0 R -0')
+        } else {
+          nv1.setSliceMosaicString('')
+        }
+      }
+      const handleLocationChange = (data) => {
+        statusLabel.innerHTML ="&nbsp;&nbsp;" + data.string
+      }
+      let defaults = {
+        backColor: [1, 1, 1, 1],
+        onLocationChange: handleLocationChange,
+      }
+      var nv1 = new niivue.Niivue(defaults)
+      await nv1.attachToCanvas(gl1)
+      await nv1.attachTo("gl1")
+      nv1.opts.tileMargin = 10
+      const atlas = "../images/boggle.lh.annot"
+      var meshLHLayersList1 = [
+        {
+          url: "../images/lh.curv",
+          colormap: "gray",
+          cal_min: 0.49,
+          cal_max: 0.51,
+          opacity: 0.5,
+        },
+        {
+          url: atlas,
+          opacity: 0.01,
+        },
+        {
+          url: atlas,
+          opacity: 0.5,
+          useNegativeCmap: true
+        },
+      ]
+      await nv1.loadMeshes([
+        {url: "../images/lh.pial", layers: meshLHLayersList1},
+      ])
+      console.log(nv1.meshes[0].layers[0])
+      nv1.meshes[0].layers[kCurvLayer].colorbarVisible  = false
+      nv1.meshes[0].layers[kAltasLayer].colorbarVisible  = false
+      nv1.meshes[0].layers[kAltasLayer].showLegend = false
+      borderDrop.onchange()
+      nv1.setMeshShader(nv1.meshes[0].id, "Rim")
+      nv1.opts.textHeight = 0.03
+      nv1.opts.isColorbar = true
+     const nLabel = nv1.meshes[0].layers[kStatLayer].colormapLabel.labels.length
+      const atlasValues = new Float32Array(nLabel).fill(0)
+      atlasValues[13] = -3
+      atlasValues[21] = -5
+      atlasValues[24] = 7
+      atlasValues[27] = 4
+      atlasValues[28] = 7
+      const text = `cal_min = 3
+        cal_max = 7
+        colormap = 'warm'
+        colormapNegative = 'winter'
+        atlasValues = [${Array.from(atlasValues).join(', ')}]
+        //[${Array.from(nv1.meshes[0].layers[kStatLayer].colormapLabel.labels).join(', ')}]`
+      customText.value = text
+      statsBtn.onclick()
+      mosaicCheck.onchange()
+      let shaders = nv1.meshShaderNames()
+      for (let i = 0; i < shaders.length; i++) {
+        let btn = document.createElement("button")
+        btn.innerHTML = shaders[i]
+        btn.onclick = function () {
+          nv1.setMeshShader(nv1.meshes[0].id, shaders[i])
+        }
+        shaderBtns.appendChild(btn)
+      }
+    </script>
+  </body>
+</html>
