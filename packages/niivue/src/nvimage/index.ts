@@ -3545,7 +3545,13 @@ export class NVImage {
         useQFormNotSForm,
         colormapNegative,
         frame4D,
-        imageType
+        imageType,
+        NaN,
+        NaN,
+        true,
+        null,
+        0,
+        null
       )
       // add a reference to the file object as a new property of the NVImage instance
       // is this too hacky?
@@ -3694,7 +3700,9 @@ export class NVImage {
         cal_minNeg,
         cal_maxNeg,
         colorbarVisible,
-        colormapLabel
+        colormapLabel,
+        0,
+        null
       )
     } catch (err) {
       log.debug(err)
