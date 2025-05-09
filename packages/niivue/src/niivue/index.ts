@@ -6,6 +6,7 @@ import {
   vertOrientCubeShader,
   fragOrientCubeShader,
   vertSliceMMShader,
+  fragSlice2DShader,
   fragSliceMMShader,
   fragSliceV1Shader,
   vertRectShader,
@@ -314,6 +315,8 @@ type UIData = {
   lastTwoTouchDistance: number
   multiTouchGesture: boolean
   dpr?: number
+  max2D?: number
+  max3D?: number
   windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
   windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
 }
@@ -383,6 +386,7 @@ export class Niivue {
   overlayTexture: WebGLTexture | null = null
   overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
+  slice2DShader?: Shader
   sliceV1Shader?: Shader
   orientCubeShader?: Shader
   orientCubeShaderVAO: WebGLVertexArrayObject | null = null
@@ -1016,8 +1020,11 @@ export class Niivue {
       alpha: true,
       antialias: isAntiAlias
     })
+    this.uiData.max2D = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE)
+    this.uiData.max3D = this.gl.getParameter(this.gl.MAX_3D_TEXTURE_SIZE)
 
     log.info('NIIVUE VERSION ', version)
+    log.debug(`Max texture size 2D: ${this.uiData.max2D} 3D: ${this.uiData.max3D}`)
 
     // set parent background container to black (default empty canvas color)
     // avoids white cube around image in 3D render mode
@@ -3109,7 +3116,11 @@ export class Niivue {
     const perm = drawingBitmap.permRAS!
     const vx = dims[1] * dims[2] * dims[3]
     this.drawBitmap = new Uint8Array(vx)
-    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims!, true)
+    if (this.opts.is2DSliceShader) {
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    } else {
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims!, true)
+    }
     const layout = [0, 0, 0]
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -5800,18 +5811,45 @@ export class Niivue {
         }
       }
     }
-    const startPt = [this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]]
+    function constrainXY(xy: number[]): number[] {
+      const x = Math.min(Math.max(xy[0], 0), dims2D[0] - 1)
+      const y = Math.min(Math.max(xy[1], 0), dims2D[1] - 1)
+      return [x, y]
+    }
+    const startPt = constrainXY([this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]])
+    let minPt = [...startPt]
+    let maxPt = [...startPt]
     let prevPt = startPt
     for (let i = 1; i < nPts; i++) {
-      const pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]]
+      let pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]]
+      pt = constrainXY(pt)
+      minPt = [Math.min(pt[0], minPt[0]), Math.min(pt[1], minPt[1])]
+      maxPt = [Math.max(pt[0], maxPt[0]), Math.max(pt[1], maxPt[1])]
       drawLine2D(prevPt, pt)
       prevPt = pt
     }
     drawLine2D(startPt, prevPt) // close drawing
+    const pad = 1
+    minPt[0] = Math.max(0, minPt[0] - pad)
+    minPt[1] = Math.max(0, minPt[1] - pad)
+    maxPt[0] = Math.min(dims2D[0] - 1, maxPt[0] + pad)
+    maxPt[1] = Math.min(dims2D[1] - 1, maxPt[1] + pad)
+    for (let y = 0; y < dims2D[1]; y++) {
+      for (let x = 0; x < dims2D[0]; x++) {
+        if (x >= minPt[0] && x < maxPt[0] && y >= minPt[1] && y <= maxPt[1]) {
+          continue
+        }
+        const pxl = x + y * dims2D[0]
+        if (img2D[pxl] !== 0) {
+          continue
+        }
+        img2D[pxl] = 2
+      }
+    }
     // flood fill
     const seeds: number[][] = []
     function setSeed(pt: number[]): void {
-      if (pt[0] < 0 || pt[1] < 0 || pt[0] >= dims2D[0] || pt[1] >= dims2D[1]) {
+      if (pt[0] < minPt[0] || pt[1] < minPt[1] || pt[0] > maxPt[0] || pt[1] > maxPt[1]) {
         return
       }
       const pxl = pt[0] + pt[1] * dims2D[0]
@@ -5823,25 +5861,16 @@ export class Niivue {
     }
     // https://en.wikipedia.org/wiki/Flood_fill
     // first seed all edges
-    // bottom row
-    for (let i = 0; i < dims2D[0]; i++) {
-      setSeed([i, 0])
+    for (let x = minPt[0]; x <= maxPt[0]; x++) {
+      setSeed([x, minPt[1]])
+      setSeed([x, maxPt[1]])
     }
-    // top row
-    for (let i = 0; i < dims2D[0]; i++) {
-      setSeed([i, dims2D[1] - 1])
-    }
-    // left column
-    for (let i = 0; i < dims2D[1]; i++) {
-      setSeed([0, i])
-    }
-    // right columns
-    for (let i = 0; i < dims2D[1]; i++) {
-      setSeed([dims2D[0] - 1, i])
+    for (let y = minPt[1] + 1; y <= maxPt[1] - 1; y++) {
+      setSeed([minPt[0], y])
+      setSeed([maxPt[0], y])
     }
     // now retire first in first out
     while (seeds.length > 0) {
-      // always remove one seed, plant 0..4 new ones
       const seed = seeds.shift()!
       setSeed([seed[0] - 1, seed[1]])
       setSeed([seed[0] + 1, seed[1]])
@@ -5971,12 +6000,28 @@ export class Niivue {
 
     // Proceed with texture update using bitmapDataSource
     this.gl.activeTexture(TEXTURE7_DRAW)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture) // Ensure drawTexture exists
-    if (!this.drawTexture) {
-      log.error('refreshDrawing: drawTexture (GPU texture) is null.')
-      return
-    }
-    try {
+    if (this.opts.is2DSliceShader) {
+      const vox = this.frac2vox(this.scene.crosshairPos)
+      const z = Math.min(Math.max(vox[2], 0), dims[3] - 1)
+      const sliceBytes = dims[1] * dims[2]
+      const zOffset = z * sliceBytes
+      log.debug(`refresh huge 2D drawing x×y×z ${dims[1]}×${dims[2]}×${dims[3]} slice ${zOffset}`)
+      const sliceData = bitmapDataSource.subarray(zOffset, zOffset + sliceBytes)
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0, // Level
+        0,
+        0, // xOffset, yOffset
+        dims[1],
+        dims[2], // Width, Height
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        bitmapDataSource
+      )
+      // TODO: this.clickToSegmentGrowingBitmap may need to be changed for huge bitmaps
+    } else {
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
       this.gl.texSubImage3D(
         this.gl.TEXTURE_3D,
         0,
@@ -5988,16 +6033,49 @@ export class Niivue {
         dims[3],
         this.gl.RED,
         this.gl.UNSIGNED_BYTE,
-        bitmapDataSource // Use the determined source
+        bitmapDataSource
       )
-    } catch (error) {
-      log.error('Error during texSubImage3D in refreshDrawing:', error)
-      log.error('Dimensions:', dims, 'Bitmap length:', bitmapDataSource?.length)
+    }
+    if (!this.drawTexture) {
+      log.error('refreshDrawing: drawTexture (GPU texture) is null.')
+      return
     }
 
     if (isForceRedraw) {
       this.drawScene()
     }
+  }
+
+  // not included in public docs
+  // Create 3D 1-component (red) uint8 texture on GPU using dims[1] and dims[2]
+  r8Tex2D(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texID)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
+    this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.R8, dims[1], dims[2])
+    if (isInit) {
+      const img8 = new Uint8Array(dims[1] * dims[2])
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0, // Level
+        0,
+        0, // xOffset, yOffset
+        dims[1],
+        dims[2], // Width, Height
+        this.gl.RED,
+        this.gl.UNSIGNED_BYTE,
+        img8
+      )
+    }
+    return texID
   }
 
   // not included in public docs
@@ -6030,6 +6108,59 @@ export class Niivue {
         this.gl.RED,
         this.gl.UNSIGNED_BYTE,
         img8
+      )
+    }
+    return texID
+  }
+
+  // not included in public docs
+  // create 3D 4-component (red,green,blue,alpha) uint8 texture on GPU
+  rgbaTex2D(
+    texID: WebGLTexture | null,
+    activeID: number,
+    dims: number[],
+    data: Uint8Array | null = null,
+    isFlipVertical: boolean = true
+  ): WebGLTexture | null {
+    if (texID) {
+      this.gl.deleteTexture(texID)
+    }
+    texID = this.gl.createTexture()
+    this.gl.activeTexture(activeID)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texID)
+
+    // Set texture parameters
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
+
+    // Allocate storage for the 2D texture
+    this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, dims[1], dims[2])
+    if (data) {
+      let drawData = data
+      const width = dims[1]
+      const height = dims[2]
+      if (isFlipVertical) {
+        drawData = new Uint8Array(data.length)
+        const rowSize = width * 4 // RGBA has 4 bytes per pixel
+        for (let y = 0; y < height; y++) {
+          const srcStart = y * rowSize
+          const destStart = (height - 1 - y) * rowSize
+          drawData.set(data.subarray(srcStart, srcStart + rowSize), destStart)
+        }
+      }
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0, // Level
+        0,
+        0, // xOffset, yOffset
+        width,
+        height, // Width, Height
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        drawData
       )
     }
     return texID
@@ -6472,7 +6603,14 @@ export class Niivue {
     gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
     gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
     gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7)
-    // slice shader
+    // slice 2D shader
+    this.slice2DShader = new Shader(gl, vertSliceMMShader, fragSlice2DShader)
+    this.slice2DShader.use(gl)
+    gl.uniform1i(this.slice2DShader.uniforms.volume, 0)
+    gl.uniform1i(this.slice2DShader.uniforms.colormap, 1)
+    gl.uniform1i(this.slice2DShader.uniforms.overlay, 2)
+    gl.uniform1i(this.slice2DShader.uniforms.drawing, 7)
+    gl.uniform1f(this.slice2DShader.uniforms.drawOpacity, this.drawOpacity)
     // slice mm shader
     this.sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader)
     this.sliceMMShader.use(gl)
@@ -6787,8 +6925,6 @@ export class Niivue {
     } else if (masks.length < 1 && roiIsMask) {
       // fill mask with zeros
       mask.fill(0)
-      console.log('startVox', startVox)
-      console.log('endVox', endVox)
 
       // identify the constant dimension (the plane where the ellipse is drawn)
       let constantDim = -1
@@ -6984,13 +7120,63 @@ export class Niivue {
       this.back.matRAS = overlayItem.matRAS
       this.back.dims = overlayItem.dimsRAS
       this.back.pixDims = overlayItem.pixDimsRAS
-      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!) // this.back.dims)
 
       const { volScale, vox } = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
 
       this.volScale = volScale
       this.vox = vox
       this.volumeObject3D.scale = volScale
+
+      const isAboveMax2D = hdr.dims[1] > this.uiData.max2D || hdr.dims[2] > this.uiData.max2D
+      if (isAboveMax2D) {
+        log.error(`Image dimensions exceed maximum texture size of hardware.`)
+      }
+      const isAboveMax3D =
+        hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D || hdr.dims[3] > this.uiData.max3D
+      if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
+        log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
+        // high res 2D image
+        this.opts.is2DSliceShader = true
+        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array)
+        return
+      }
+      if (isAboveMax3D) {
+        log.info(
+          `Large scalar image (>${this.uiData.max3D}) requires Texture2D (${hdr.dims[1]}×${hdr.dims[2]}×${hdr.dims[3]})`
+        )
+        const nPix = hdr.dims[1] * hdr.dims[2]
+        const vox = this.frac2vox(this.scene.crosshairPos)
+        const z = Math.min(Math.max(vox[2], 0), hdr.dims[3] - 1)
+        const zOffset = z * nPix
+        const img2D = new Uint8Array(nPix * 4)
+        const img2D_U32 = new Uint32Array(img2D.buffer)
+        const opacity = Math.floor(overlayItem.opacity * 255)
+        const scale = (255 * hdr.scl_slope) / (overlayItem.cal_max - overlayItem.cal_min)
+        const intercept = (255 * (hdr.scl_inter - overlayItem.cal_min)) / (overlayItem.cal_max - overlayItem.cal_min)
+        const cmap = new Uint8Array(this.colormap(overlayItem.colormap))
+        const cmap_U32 = new Uint32Array(cmap.buffer)
+        let j = -1
+        for (let i = 0; i < nPix; i++) {
+          const v = img[i + zOffset] * scale + intercept
+          const v255 = Math.round(Math.min(255, Math.max(0, v))) // Clamp to 0..255
+          img2D_U32[i] = cmap_U32[v255]
+          img2D[(j += 4)] = opacity
+        }
+        this.opts.is2DSliceShader = true
+        outTexture = this.rgbaTex2D(
+          this.volumeTexture,
+          TEXTURE0_BACK_VOL,
+          overlayItem.dimsRAS!,
+          img2D as Uint8Array,
+          false
+        )
+        return
+      }
+      if (isAboveMax3D) {
+        log.warn(`dimensions exceed 3D limits ${hdr.dims}`)
+      }
+      this.opts.is2DSliceShader = false
+      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS!) // this.back.dims)
 
       if (!this.renderShader) {
         throw new Error('renderShader undefined')
@@ -7498,6 +7684,9 @@ export class Niivue {
     this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
     this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     let shader = this.sliceMMShader
+    if (this.opts.is2DSliceShader) {
+      shader = this.slice2DShader
+    }
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader
     }
@@ -7516,7 +7705,11 @@ export class Niivue {
     }
     this.gl.uniform1i(shader.uniforms.drawing, 7)
     this.gl.activeTexture(TEXTURE7_DRAW)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+    if (this.opts.is2DSliceShader) {
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
+    } else {
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
+    }
     this.updateInterpolation(layer)
     //
     // this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
@@ -9747,8 +9940,15 @@ export class Niivue {
     } else {
       this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
     }
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
+    // if (this.opts.is2DSliceShader) {
+    // n.b. we set interpolation for BOTH 2D and 3D textures
+    if (this.opts.is2DSliceShader) {
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)
+    } else {
+      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
+      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
+    }
   }
 
   // not included in public docs
@@ -10152,6 +10352,9 @@ export class Niivue {
     gl.disable(gl.CULL_FACE) // show front and back faces
     if (this.volumes.length > 0) {
       let shader = this.sliceMMShader
+      if (this.opts.is2DSliceShader) {
+        shader = this.slice2DShader
+      }
       if (this.opts.isV1SliceShader) {
         shader = this.sliceV1Shader
       }
@@ -11670,6 +11873,7 @@ export class Niivue {
    */
   moveCrosshairInVox(x: number, y: number, z: number): void {
     const vox = this.frac2vox(this.scene.crosshairPos)
+    const vox2 = vox[2]
     vox[0] += x
     vox[1] += y
     vox[2] += z
@@ -11678,6 +11882,10 @@ export class Niivue {
     vox[2] = clamp(vox[2], 0, this.volumes[0].dimsRAS![3] - 1)
     this.scene.crosshairPos = this.vox2frac(vox)
     this.createOnLocationChange()
+    if (this.opts.is2DSliceShader && vox2 !== vox[2]) {
+      this.updateGLVolume()
+      this.refreshDrawing(false)
+    }
     this.drawScene()
   }
 
