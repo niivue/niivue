@@ -1,4 +1,5 @@
 import { NIFTI1, NIFTI2, NIFTIEXTENSION, readHeaderAsync } from 'nifti-reader-js'
+import * as zarr from 'zarrita'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Gunzip } from 'fflate'
@@ -504,7 +505,8 @@ export class NVImage {
     cal_maxNeg = NaN,
     colorbarVisible = true,
     colormapLabel: LUT | null = null,
-    colormapType = 0
+    colormapType = 0,
+    zarrData: null | unknown
   ): Promise<NVImage> {
     const newImg = new NVImage()
     const re = /(?:\.([^.]+))?$/
@@ -583,8 +585,8 @@ export class NVImage {
         imgRaw = await newImg.readNPZ(dataBuffer as ArrayBuffer)
         break
       case NVIMAGE_TYPE.ZARR:
-        // imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
-        throw new Error('Image type ZARR not (yet) supported')
+        imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
+        break
       case NVIMAGE_TYPE.NII:
         imgRaw = await ImageReaders.Nii.readNifti(newImg, dataBuffer as ArrayBuffer)
         if (imgRaw === null) {
@@ -1327,6 +1329,61 @@ export class NVImage {
     return data.buffer as ArrayBuffer
   }
 
+  async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
+    let { width, height, depth = 1, data } = (zarrData ?? {}) as any
+    let expectedLength = width * height * depth * 3
+    let isRGB = expectedLength === data.length
+    if (!isRGB) {
+      expectedLength = width * height * depth
+      if (depth === 3) {
+        // see https://zarrita.dev/get-started.html R,G,B channels returns as depth!
+        isRGB = true
+        depth = 1
+      }
+    }
+    if (expectedLength !== data.length) {
+      throw new Error(`Expected RGB ${width}×${height}×${depth}×3 =  ${expectedLength}, but ZARR length ${data.length}`)
+    }
+    this.hdr = new NIFTI1()
+    const hdr = this.hdr
+    hdr.dims = [3, width, height, depth, 1, 1, 1, 1]
+    hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0]
+
+    hdr.affine = [
+      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+      [0, 0, 0, 1]
+    ]
+    if (!isRGB) {
+      hdr.numBitsPerVoxel = 8
+      hdr.datatypeCode = NiiDataType.DT_UINT8
+      return data
+    }
+    hdr.numBitsPerVoxel = 24
+    hdr.datatypeCode = NiiDataType.DT_RGB24
+    function zxy2xyz(data, X, Y, Z): Uint8Array {
+      const voxelCount = X * Y
+      const rgb = new Uint8Array(voxelCount * Z * 3)
+      const offsets = new Array(Z)
+      for (let s = 0; s < Z; s++) {
+        offsets[s] = voxelCount * 3 * s
+      }
+      let srcIndex = 0
+      let dstIndex = 0
+      for (let v = 0; v < voxelCount; v++) {
+        for (let s = 0; s < Z; s++) {
+          rgb[offsets[s] + dstIndex] = data[srcIndex++] // R
+          rgb[offsets[s] + dstIndex + 1] = data[srcIndex++] // G
+          rgb[offsets[s] + dstIndex + 2] = data[srcIndex++] // B
+        }
+        dstIndex += 3
+      }
+      return rgb
+    }
+    return zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3])
+  }
+
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
@@ -1485,7 +1542,6 @@ export class NVImage {
     const buff8 = new Uint8Array(new ArrayBuffer(nBytes))
     const arrFA = Float32Array.from(mat.dti_fa)
     if ('mask' in mat) {
-      console.log(mat)
       let slope = 1
       if ('dti_fa_slope' in mat) {
         slope = mat.dti_fa_slope[0]
@@ -2916,10 +2972,7 @@ export class NVImage {
         throw Error(response.statusText)
       }
       const contents = await response.arrayBuffer()
-      dataBuffer.push({
-        name: line,
-        data: contents
-      })
+      dataBuffer.push({ name: line, data: contents })
     }
     return dataBuffer
   }
@@ -3141,6 +3194,7 @@ export class NVImage {
     }
     let nvimage = null
     let dataBuffer = null
+    let zarrData: null | unknown = null
 
     // Handle input buffer types
     if (url instanceof Uint8Array) {
@@ -3185,6 +3239,59 @@ export class NVImage {
             imageType = NVIMAGE_TYPE.parse(ext)
           }
         }
+      }
+    }
+    // try url and name attributes to test for .zarr
+    if (imageType === NVIMAGE_TYPE.ZARR) {
+      // get the z, x, y slice indices from the query string
+      const urlParams = new URL(url).searchParams
+      const zIndex = urlParams.get('z')
+      const yIndex = urlParams.get('y')
+      const xIndex = urlParams.get('x')
+      const zRange = zIndex ? zarr.slice(parseInt(zIndex), parseInt(zIndex) + 1) : null
+      const yRange = yIndex ? zarr.slice(parseInt(yIndex), parseInt(yIndex) + 1) : null
+      const xRange = xIndex ? zarr.slice(parseInt(xIndex), parseInt(xIndex) + 1) : null
+      // remove the query string from the original URL
+      const zarrUrl = url.split('?')[0]
+      // if multiscale, must provide the full path to the zarr array data
+      const store = new zarr.FetchStore(zarrUrl)
+      const root = zarr.root(store)
+      let arr
+      try {
+        // TODO: probably remove this, since it's not needed
+        arr = await zarr.open(root.resolve(url), { kind: 'array' })
+      } catch (e) {
+        arr = await zarr.open(root, { kind: 'array' })
+      }
+      console.log('arr', arr)
+      let view
+      if (arr.shape.length === 4) {
+        const cRange = null
+        // make sure we are not exceeding the array shape. If so, set to max
+        const zDim = arr.shape[2]
+        const yDim = arr.shape[1]
+        const xDim = arr.shape[0]
+        if (zRange && zRange[0] >= zDim) {
+          zRange[0] = zDim - 1
+        }
+        if (yRange && yRange[0] >= yDim) {
+          yRange[0] = yDim - 1
+        }
+        if (xRange && xRange[0] >= xDim) {
+          xRange[0] = xDim - 1
+        }
+        view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
+      } else {
+        view = await zarr.get(arr, [xRange, yRange, zRange])
+      }
+      dataBuffer = view.data
+      const [height, width, zDim, cDim] = view.shape
+      zarrData = {
+        data: dataBuffer,
+        width,
+        height,
+        depth: zDim,
+        channels: cDim
       }
     }
     // DICOM assigned for unknown extensions: therefore test signature to see if mystery file is NIfTI
@@ -3300,7 +3407,13 @@ export class NVImage {
       useQFormNotSForm,
       colormapNegative,
       frame4D,
-      imageType
+      imageType,
+      NaN,
+      NaN,
+      true,
+      null,
+      0,
+      zarrData
     )
     nvimage.url = url
     nvimage.colorbarVisible = colorbarVisible
@@ -3432,7 +3545,13 @@ export class NVImage {
         useQFormNotSForm,
         colormapNegative,
         frame4D,
-        imageType
+        imageType,
+        NaN,
+        NaN,
+        true,
+        null,
+        0,
+        null
       )
       // add a reference to the file object as a new property of the NVImage instance
       // is this too hacky?
@@ -3581,7 +3700,9 @@ export class NVImage {
         cal_minNeg,
         cal_maxNeg,
         colorbarVisible,
-        colormapLabel
+        colormapLabel,
+        0,
+        null
       )
     } catch (err) {
       log.debug(err)
@@ -3645,19 +3766,7 @@ export class NVImage {
     const dt = pixDims[4]
     const bpv = Math.floor(this.hdr.numBitsPerVoxel / 8)
 
-    return {
-      id,
-      datatypeCode,
-      nx,
-      ny,
-      nz,
-      nt,
-      dx,
-      dy,
-      dz,
-      dt,
-      bpv
-    }
+    return { id, datatypeCode, nx, ny, nz, nt, dx, dy, dz, dt, bpv }
   }
 
   /**
