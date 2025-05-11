@@ -30,6 +30,7 @@ export default defineConfig({
     __NIIVUE_VERSION__: JSON.stringify(process.env.npm_package_version),
     __NIIVUE_UMD__: JSON.stringify(niivueUmd)
   },
+  publicDir: process.env.NODE_ENV !== 'production',
   root: '.',
   server: {
     open: '/src/index.html',
