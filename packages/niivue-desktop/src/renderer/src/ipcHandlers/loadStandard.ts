@@ -24,6 +24,7 @@ export const registerLoadStandardHandler = ({ nv, setVolumes, setMeshes }: Handl
         gl: nv.gl,
         name: path
       })
+      nv.addMesh(mesh)
       setMeshes((prev) => [...prev, mesh])
     } else {
       // assume it's a volume if it's not a mesh. NVImage will try to parse the volume if the file type is supported
@@ -31,6 +32,7 @@ export const registerLoadStandardHandler = ({ nv, setVolumes, setMeshes }: Handl
         base64,
         name: path
       })
+      nv.addVolume(vol)
       setVolumes((prev) => [...prev, vol])
     }
   })

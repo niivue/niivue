@@ -13,12 +13,7 @@ const electron = window.electron
 
 function MainApp(): JSX.Element {
   const niimathRef = useRef(new Niimath())
-  const nvRef = useRef<Niivue>(new Niivue({ dragAndDropEnabled: false }))
-
-  const [volumes, setVolumes] = useState<NVImage[]>([])
-  const [meshes, setMeshes] = useState<NVMesh[]>([])
-  const [selectedImage, setSelectedImage] = useState<NVImage | null>(null)
-  const [sliceType, setSliceType] = useState<SLICE_TYPE | null>(null)
+  const defaultNvRef = useRef<Niivue>(new Niivue({ dragAndDropEnabled: false }))
   const [labelDialogOpen, setLabelDialogOpen] = useState(false)
   const [labelEditMode, setLabelEditMode] = useState(false)
 
@@ -32,43 +27,57 @@ function MainApp(): JSX.Element {
 
   const selected = useSelectedInstance()
 
+  const [volumes, setVolumes] = useState<NVImage[]>([])
+  const [meshes, setMeshes] = useState<NVMesh[]>([])
+  const [selectedImage, setSelectedImage] = useState<NVImage | null>(null)
+  const [sliceType, setSliceType] = useState<SLICE_TYPE | null>(null)
+
   useEffect(() => {
-    const nv = nvRef.current
+    if (documents.length > 0) return
 
     const init = async () => {
-      if (documents.length === 0) {
-        const doc: NiivueInstanceContext = {
-          id: 'doc-1',
-          nvRef,
-          volumes,
-          setVolumes,
-          meshes,
-          setMeshes,
-          selectedImage,
-          setSelectedImage,
-          sliceType,
-          setSliceType
-        }
+      const nv = defaultNvRef.current
 
-        addDocument(doc)
-
-        const prefs = await electron.ipcRenderer.invoke('getPreferences')
-        Object.entries(prefs ?? {}).forEach(([key, value]) => {
-          if (key in nv.opts) {
-            // @ts-ignore
-            nv.opts[key] = value
-          }
-        })
-
-        await niimathRef.current.init()
+      const doc: NiivueInstanceContext = {
+        id: 'doc-1',
+        nvRef: defaultNvRef,
+        volumes,
+        setVolumes,
+        meshes,
+        setMeshes,
+        selectedImage,
+        setSelectedImage,
+        sliceType,
+        setSliceType
       }
 
-      registerAllIpcHandlers(nv, setVolumes, setMeshes, setLabelDialogOpen, setLabelEditMode)
+      addDocument(doc)
+
+      const prefs = await electron.ipcRenderer.invoke('getPreferences')
+      Object.entries(prefs ?? {}).forEach(([key, value]) => {
+        if (key in nv.opts) {
+          // @ts-ignore
+          nv.opts[key] = value
+        }
+      })
+
+      await niimathRef.current.init()
       nv.drawScene()
     }
 
     init()
   }, [documents.length])
+
+  useEffect(() => {
+    if (!selected) return
+    registerAllIpcHandlers(
+      selected.nvRef.current,
+      selected.setVolumes,
+      selected.setMeshes,
+      setLabelDialogOpen,
+      setLabelEditMode
+    )
+  }, [selected])
 
   const handleRemoveMesh = (mesh: NVMesh): void => {
     const nv = selected?.nvRef.current

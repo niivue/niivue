@@ -1,5 +1,3 @@
-// src/ipcHandlers/registerAllIpcHandlers.ts
-
 import { Niivue } from '@niivue/niivue'
 import { registerLoadStandardHandler } from './loadStandard'
 import { registerLoadRecentFileHandler } from './loadRecentFiles'
@@ -11,6 +9,8 @@ import { registerLoadDocumentHandler } from './loadDocument'
 import { registerSaveCompressedDocumentHandler } from './saveDocument'
 import { registerResetPreferencesHandler } from './menuHandlers'
 
+const electron = window.electron
+
 export const registerAllIpcHandlers = (
   nv: Niivue,
   setVolumes: React.Dispatch<React.SetStateAction<any[]>>,
@@ -19,6 +19,14 @@ export const registerAllIpcHandlers = (
   setLabelEditMode: (v: boolean) => void
 ): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
+
+  // 🧹 Clear previously registered listeners to avoid duplicates
+  electron.ipcRenderer.removeAllListeners('loadStandard')
+  electron.ipcRenderer.removeAllListeners('loadRecentFile')
+  electron.ipcRenderer.removeAllListeners('loadVolume')
+  electron.ipcRenderer.removeAllListeners('loadMesh')
+  electron.ipcRenderer.removeAllListeners('loadDocument')
+  electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
 
   registerLoadStandardHandler({ nv, setVolumes, setMeshes })
   console.log('[Renderer] registered loadStandard handler')
@@ -29,7 +37,7 @@ export const registerAllIpcHandlers = (
   registerSliceTypeHandler(nv)
   registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
   registerLoadMeshHandler({ nv, setMeshes })
-  registerLoadVolumeHandler({ setVolumes })
+  registerLoadVolumeHandler({nv, setVolumes })
   registerLoadDocumentHandler({ nv, setVolumes, setMeshes })
   registerSaveCompressedDocumentHandler(nv)
   registerResetPreferencesHandler()

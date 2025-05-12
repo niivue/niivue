@@ -18,6 +18,7 @@ export const registerLoadRecentFileHandler = ({
   setMeshes
 }: HandlerProps): void => {
   electron.ipcRenderer.on('loadRecentFile', async (_, filePath: string) => {
+    console.log('[Renderer] loadRecentFile received for path:', filePath)
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', filePath)
 
     // Check if the file is a mesh or a volume
@@ -44,6 +45,7 @@ export const registerLoadRecentFileHandler = ({
         gl: nv.gl,
         name: filePath
       })
+      nv.addMesh(mesh)
       setMeshes((prev) => [...prev, mesh])
     } else {
       // Assume it's a volume
@@ -51,6 +53,8 @@ export const registerLoadRecentFileHandler = ({
         base64,
         name: filePath
       })
+      console.log('image loaded', vol)
+      nv.addVolume(vol)
       setVolumes((prev) => [...prev, vol])
     }
   })
