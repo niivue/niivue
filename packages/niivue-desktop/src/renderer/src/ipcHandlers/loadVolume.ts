@@ -9,6 +9,7 @@ interface HandlerProps {
 
 export const registerLoadVolumeHandler = ({ setVolumes }: HandlerProps): void => {
   electron.ipcRenderer.on('loadVolume', async (_, path: string) => {
+    console.log('loadVolume received for path:', path)
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', path)
     // if the file is a mesh, load it as a mesh, otherwise load it as a volume
     const pathLower = path.toLowerCase()

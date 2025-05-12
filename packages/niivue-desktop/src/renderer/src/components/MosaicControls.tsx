@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { Niivue } from '@niivue/niivue'
 import { Button, TextField, Switch } from '@radix-ui/themes'
 import { calculateMosaic, SliceOrientation } from '../utils/mosaics'
@@ -65,8 +65,9 @@ function updateMosaicForSelectedOrientation(
 }
 
 export function MosaicControls() {
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current as Niivue
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
 
   const [selectedOrientation, setSelectedOrientation] = useState<'A' | 'C' | 'S'>('A')
   const [showAllSlices, setShowAllSlices] = useState(false)

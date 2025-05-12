@@ -1,11 +1,11 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ScrollArea, Text } from '@radix-ui/themes'
-import { AppContext } from '../App'
 import { SceneTabs } from './SceneTabs'
 import { VolumeImageCard } from './VolumeImageCard'
 import { MeshImageCard } from './MeshImageCard'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { NVImage, NVMesh } from '@niivue/niivue'
+import { useSelectedInstance } from '../AppContext'
 
 interface SidebarProps {
   onRemoveVolume: (volume: NVImage) => void;
@@ -20,12 +20,19 @@ export function Sidebar({
   onMoveVolumeUp,
   onMoveVolumeDown
 }: SidebarProps): JSX.Element {
-  const { volumes, meshes } = useContext(AppContext)
+  const instance = useSelectedInstance()
+  const volumes = instance?.volumes ?? []
+  const meshes = instance?.meshes ?? []
   const [orderedVolumes, setOrderedVolumes] = useState<NVImage[]>([])
 
   useEffect(() => {
-    setOrderedVolumes(volumes)
+    const currentIds = orderedVolumes.map(v => v.id).join(',')
+    const nextIds = volumes.map(v => v.id).join(',')
+    if (currentIds !== nextIds) {
+      setOrderedVolumes(volumes)
+    }
   }, [volumes])
+  
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return
@@ -45,6 +52,8 @@ export function Sidebar({
       }
     }
   }
+
+  if (!instance) return <></>
 
   return (
     <div className="flex flex-col bg-gray-100 px-2 w-1/3 basis-1/3 min-w-[300px] max-w-[500px]">
@@ -91,11 +100,8 @@ export function Sidebar({
           ))}
         </ScrollArea>
       </DragDropContext>
-      
-      {/* Scene tab selectors */}
-      <SceneTabs />
 
-      
+      <SceneTabs />
     </div>
   )
 }

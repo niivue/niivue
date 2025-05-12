@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { NVMesh, NVMeshLayerDefaults } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { MeshLayerCard } from './MeshLayerCard'
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
@@ -19,8 +19,10 @@ export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.
   const [visible, setVisible] = useState<boolean>(true)
   const [shaders, setShaders] = useState<string[]>([])
   const [shader, setShader] = useState<string>('Phong')
-  const { nvRef, setMeshes } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  const setMeshes = instance?.setMeshes
+  if (!nv || !setMeshes) return <></>
 
   useEffect(() => {
     electron.ipcRenderer.on('openMeshFileDialogResult', async (_, path) => {

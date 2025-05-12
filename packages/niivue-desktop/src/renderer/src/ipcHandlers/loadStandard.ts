@@ -9,9 +9,11 @@ interface HandlerProps {
   setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   nv: Niivue
 }
+console.log('[Renderer] registering loadStandard handler')
 
 export const registerLoadStandardHandler = ({ nv, setVolumes, setMeshes }: HandlerProps): void => {
   electron.ipcRenderer.on('loadStandard', async (_, path: string) => {
+    console.log('[Renderer] loadStandard received for path:', path)
     const base64 = await electron.ipcRenderer.invoke('loadStandard', path)
     // if the file is a mesh, load it as a mesh, otherwise load it as a volume
     const pathLower = path.toLowerCase()

@@ -1,15 +1,16 @@
 import { useContext, useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button, TextField } from '@radix-ui/themes'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { loadFMRIEvents, fmriEvents, getColorForTrialType } from '@renderer/types/events'
 import { MosaicControls } from './MosaicControls'
 
 const electron = window.electron
 
 export const VolumeTab = (): JSX.Element => {
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
 
   // Time series?
   const hasTimeSeries =
@@ -41,13 +42,13 @@ export const VolumeTab = (): JSX.Element => {
 
   // Poll for mosaic-string changes (so controls appear/disappear)
   useEffect(() => {
-    if (!nv) return
-    const interval = setInterval(() => {
-      const current = nv.opts.sliceMosaicString?.trim() || ''
-      if (current !== mosaicStr.trim()) setMosaicStr(current)
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [nv, mosaicStr])
+  if (!nv) return
+  const interval = setInterval(() => {
+    const current = nv.opts.sliceMosaicString?.trim() || ''
+    setMosaicStr(prev => (prev !== current ? current : prev))
+  }, 1000)
+  return () => clearInterval(interval)
+}, [nv])
 
   const toggleGraphVisibility = (visible: boolean) => {
     nv.graph.opacity = visible ? 1.0 : 0.0

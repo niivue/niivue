@@ -1,11 +1,13 @@
 import { Text, Slider } from '@radix-ui/themes'
 import { useState, useContext } from 'react'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 
 export const SliderMeshXRay = (): JSX.Element => {
-  const { nvRef } = useContext(AppContext)
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
+  
   const [xRay, setXRay] = useState([0])
-  const nv = nvRef.current
 
   const handleXRayChange = (value: number[]): void => {
     setXRay(value)

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Switch, Slider, Button } from '@radix-ui/themes'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { groupedConfigMeta } from '../utils/configMeta'
 import { ColorPicker } from './ColorPicker'
 import { EnumSelect } from './EnumSelect'
@@ -10,8 +10,10 @@ import { filterEnum } from '../utils/config'
 const electron = window.electron
 
 export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
+  
   const [modifiedPrefs, setModifiedPrefs] = useState<Record<string, any>>({})
 
   const updateOption = (
