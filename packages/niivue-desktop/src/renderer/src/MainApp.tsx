@@ -8,8 +8,35 @@ import { PreferencesDialog } from './components/PreferencesDialog'
 import { LabelManagerDialog } from './components/LabelManagerDialog'
 import { AppContext, NiivueInstanceContext, useSelectedInstance } from './AppContext'
 import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers'
+import { fmriEvents, getColorForTrialType } from './types/events'
+import { loadDroppedFiles } from './utils/dragAndDrop'
 
 const electron = window.electron
+
+function overrideDrawGraph(nv: Niivue) {
+  const originalDrawGraph = nv.drawGraph.bind(nv)
+
+  nv.drawGraph = () => {
+    originalDrawGraph()
+    if (!nv.graph.plotLTWH || !fmriEvents.length) return
+    const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
+    const numFrames = nv.graph.lines?.[0]?.length || 0
+    if (numFrames === 0) return
+
+    const hdr = nv.volumes[0]?.hdr
+    const TR = hdr?.pixDims?.[4] ?? 1
+    const scaleW = plotW / numFrames
+
+    for (const ev of fmriEvents) {
+      const startFrame = ev.onset / TR
+      const endFrame = (ev.onset + ev.duration) / TR
+      const x0 = plotX + startFrame * scaleW
+      const x1 = plotX + endFrame * scaleW
+      const color = getColorForTrialType(ev.trial_type)
+      nv.drawRect([x0, plotY, x1 - x0, plotH], color)
+    }
+  }
+}
 
 function MainApp(): JSX.Element {
   const niimathRef = useRef(new Niimath())
@@ -61,6 +88,9 @@ function MainApp(): JSX.Element {
         }
       })
 
+      nv.setSliceType(nv.sliceTypeMultiplanar)
+      overrideDrawGraph(nv)
+
       await niimathRef.current.init()
       nv.drawScene()
     }
@@ -78,6 +108,46 @@ function MainApp(): JSX.Element {
       setLabelEditMode
     )
   }, [selected])
+
+  useEffect(() => {
+    window.electron?.ipcRenderer.on('openLabelManagerDialog', () => {
+      setLabelDialogOpen(true)
+      setLabelEditMode(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    const handleClearScene = () => {
+      const nv = selected?.nvRef.current
+      if (!nv) return
+      nv.volumes = []
+      nv.meshes = []
+      nv.mediaUrlMap.clear()
+      nv.createEmptyDrawing()
+      nv.drawScene()
+      selected.setVolumes([])
+      selected.setMeshes([])
+      selected.setSelectedImage(null)
+    }
+
+    electron.ipcRenderer.on('clear-scene', handleClearScene)
+    return () => {
+      electron.ipcRenderer.removeAllListeners('clear-scene')
+    }
+  }, [selected])
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const nv = selected?.nvRef.current
+    if (!nv || !selected) return
+    nv.volumes = []
+    nv.meshes = []
+    nv.updateGLVolume()
+    loadDroppedFiles(e, selected.setVolumes, selected.setMeshes, nv.gl)
+  }
 
   const handleRemoveMesh = (mesh: NVMesh): void => {
     const nv = selected?.nvRef.current
@@ -136,7 +206,7 @@ function MainApp(): JSX.Element {
   return (
     <>
       {renderTabs()}
-      <div className="flex flex-row size-full">
+      <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar
           onRemoveMesh={handleRemoveMesh}
           onRemoveVolume={handleRemoveVolume}
