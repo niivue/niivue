@@ -4957,7 +4957,11 @@ export class Niivue {
     this.clickToSegmentGrowingBitmap = new Uint8Array(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
-    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    if (this.opts.is2DSliceShader) {
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims)
+    } else {
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
+    }
     this.refreshDrawing(false)
   }
 
@@ -6017,7 +6021,7 @@ export class Niivue {
         dims[2], // Width, Height
         this.gl.RED,
         this.gl.UNSIGNED_BYTE,
-        bitmapDataSource
+        sliceData
       )
       // TODO: this.clickToSegmentGrowingBitmap may need to be changed for huge bitmaps
     } else {

@@ -1329,7 +1329,7 @@ export class NVImage {
     return data.buffer as ArrayBuffer
   }
 
-  async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array> {
+  async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<ArrayBufferLike> {
     let { width, height, depth = 1, data } = (zarrData ?? {}) as any
     let expectedLength = width * height * depth * 3
     let isRGB = expectedLength === data.length
@@ -1358,6 +1358,13 @@ export class NVImage {
     if (!isRGB) {
       hdr.numBitsPerVoxel = 8
       hdr.datatypeCode = NiiDataType.DT_UINT8
+      // if data is a Uint8Array, convert to ArrayBuffer
+      if (data instanceof Uint8Array) {
+        const retBuffer = new ArrayBuffer(data.length)
+        const retView = new Uint8Array(retBuffer)
+        retView.set(data)
+        return retBuffer
+      }
       return data
     }
     hdr.numBitsPerVoxel = 24
@@ -1381,7 +1388,12 @@ export class NVImage {
       }
       return rgb
     }
-    return zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3])
+    const retData = zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3])
+    // convert retData Uint8Array to ArrayBuffer
+    const retBuffer = new ArrayBuffer(retData.length)
+    const retView = new Uint8Array(retBuffer)
+    retView.set(retData)
+    return retBuffer
   }
 
   // not included in public docs
@@ -3263,7 +3275,6 @@ export class NVImage {
       } catch (e) {
         arr = await zarr.open(root, { kind: 'array' })
       }
-      console.log('arr', arr)
       let view
       if (arr.shape.length === 4) {
         const cRange = null
