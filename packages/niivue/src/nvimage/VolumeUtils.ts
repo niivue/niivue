@@ -1,13 +1,14 @@
+import { vec4 } from 'gl-matrix'
 import { log } from '../logger.js'
 import { NiiDataType } from './utils.js'
 import type { NVImage, TypedVoxelArray } from './index.js'
 
 /**
- * Returns voxel intensity at specified native coordinates. Handles reorientation if necessary.
+ * Returns voxel intensity at specified coordinates.
  * @param nvImage - The NVImage instance
- * @param x - Native X coordinate (0-indexed)
- * @param y - Native Y coordinate (0-indexed)
- * @param z - Native Z coordinate (0-indexed)
+ * @param x - X coordinate (0-indexed)
+ * @param y - Y coordinate (0-indexed)
+ * @param z - Z coordinate (0-indexed)
  * @param frame4D - 4D frame index (0-indexed)
  * @param isReadImaginary - Flag to read from imaginary data array if complex
  * @returns Scaled voxel intensity
@@ -23,12 +24,10 @@ export function getValue(
   if (!nvImage.hdr) {
     throw new Error('getValue: NVImage header is not defined.')
   }
-  // Image data existence check depends on isReadImaginary
   if (!isReadImaginary && !nvImage.img) {
     throw new Error('getValue: NVImage image data is not defined.')
   }
   if (isReadImaginary && !nvImage.imaginary) {
-    // If requesting imaginary but it doesn't exist, return 0 or throw? Let's return 0 for now.
     log.warn('getValue: Attempted to read imaginary data, but none exists.')
     return 0
   }
@@ -37,24 +36,28 @@ export function getValue(
   const ny = nvImage.hdr.dims[2]
   const nz = nvImage.hdr.dims[3]
 
-  // Input coordinates (x, y, z) are assumed to be in the image's NATIVE space based on original function context.
-  // NO reorientation logic needed here if inputs are native.
-  // If coordinates were meant to be RAS, reorientation would be needed *before* this function or added here.
-  // Sticking to the original implementation's apparent assumption of native coordinates.
+  const perm = nvImage.permRAS!.slice()
+  if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+    const pos = vec4.fromValues(x, y, z, 1)
+    vec4.transformMat4(pos, pos, nvImage.toRASvox!)
+    x = pos[0]
+    y = pos[1]
+    z = pos[2]
+  }
 
-  // Clamp coordinates to valid native range
+  // Clamp coordinates to valid range
   x = Math.max(0, Math.min(Math.round(x), nx - 1))
   y = Math.max(0, Math.min(Math.round(y), ny - 1))
   z = Math.max(0, Math.min(Math.round(z), nz - 1))
-  frame4D = Math.max(0, frame4D) // Basic frame check
+  frame4D = Math.max(0, frame4D)
 
-  let vx = x + y * nx + z * nx * ny // Native voxel index within a 3D volume
+  let vx = x + y * nx + z * nx * ny // voxel index within a 3D volume
 
   // Handle RGB(A) data - calculate luminance
   if (nvImage.hdr.datatypeCode === NiiDataType.DT_RGBA32) {
     if (!nvImage.img) {
       return 0
-    } // Guard added
+    }
     vx *= 4 // 4 bytes per voxel
     // Check bounds for RGBA index access
     if (vx + 2 >= nvImage.img.length) {
@@ -63,13 +66,12 @@ export function getValue(
     }
     // convert rgb to luminance Y = 0.2126 R + 0.7152 G + 0.0722 B (Rec. 709)
     const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722
-    // RGB is usually UINT8, doesn't typically use scl_slope/inter
     return Math.round(lum)
   }
   if (nvImage.hdr.datatypeCode === NiiDataType.DT_RGB24) {
     if (!nvImage.img) {
       return 0
-    } // Guard added
+    }
     vx *= 3 // 3 bytes per voxel
     if (vx + 2 >= nvImage.img.length) {
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGB data.`)
@@ -89,8 +91,6 @@ export function getValue(
 
   // Check final index bounds
   if (finalVxIndex < 0 || finalVxIndex >= dataArray.length) {
-    // log.warn(`getValue: Calculated index ${finalVxIndex} is out of bounds [0..${dataArray.length-1}]. Frame ${frame4D}?`);
-    // Return 0 for out-of-bounds access, consistent with how shaders might clamp.
     return 0
   }
 
@@ -204,9 +204,6 @@ export function getVolumeData(
         // Safely read from source image
         if (nativeIndex >= 0 && nativeIndex < sourceImg.length) {
           value = sourceImg[nativeIndex]
-        } else {
-          // log.warn(`getVolumeData: Calculated native index ${nativeIndex} out of bounds during read.`);
-          // Use 0 for out-of-bounds reads
         }
 
         // Store the raw value in the output array
@@ -329,15 +326,8 @@ export function setVolumeData(
         const xi = start[0] + rx * step[0] // Native offset component for RAS X
         const nativeIndex = xi + yi + zi // Final index in the native target buffer
 
-        // Safely write into target image if index is valid
         if (nativeIndex >= 0 && nativeIndex < targetImg.length) {
-          // Potential type mismatch here! The input `slabData` might be Float32
-          // while `targetImg` might be Uint8. Direct assignment might truncate.
-          // Consider adding type checks or conversion logic if needed based on targetImg type.
-          // For now, direct assignment assumes compatible types or acceptable truncation.
           targetImg[nativeIndex] = slabData[sourceIndex]
-        } else {
-          // log.warn(`setVolumeData: Calculated native index ${nativeIndex} out of bounds during write.`);
         }
         sourceIndex++
       }

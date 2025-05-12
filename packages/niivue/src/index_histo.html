@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="formatSelect">Format</label>
+      <select id="formatSelect">
+        <option  selected>Juelich histology MNI</option>
+        <option>Huge</option>
+        <option> Histology</option>
+        <option>ZARR</option>
+        <option>NPZ</option>
+        <option>DANDI</option>
+        <option>FS</option>
+        <option>Grayscale bitmap</option>
+        <option>Online ZARR</option>
+        <option>Online vizarr</option>
+        <option>mni152</option>
+      </select>
+      <label for="dragSelect">Drag</label>
+      <select id="dragSelect">
+        <option>None</option>
+        <option>Contrast</option>
+        <option>Measurement</option>
+        <option selected>Pan</option>
+      </select>
+      <label for="smoothCheck">Smooth</label>
+      <input type="checkbox" checked="true" id="smoothCheck" />
+        <button id="prevBtn">Previous Slice</button>
+        <button id="nextBtn">Next Slice</button>
+      &nbsp;&nbsp;&nbsp;
+      <select id="drawSelect">
+        <option value="-1">Off</option>
+        <option value="0">Erase</option>
+        <option value="1">Red</option>
+        <option value="2">Green</option>
+        <option value="3">Blue</option>
+        <option value="8">Filled Erase</option>
+        <option value="9" selected>Filled Red</option>
+        <option value="10">Filled Green</option>
+        <option value="11">Filled Blue</option>
+        <option value="12">Erase Selected Cluster</option>
+      </select>
+      <label for="opacitySlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="80"
+        class="slider"
+        id="opacitySlider"
+      />
+      <button id="undoBtn">Undo</button>
+      <button id="saveBtn">Save</button>
+      &nbsp;&nbsp;&nbsp;
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer id="statusText">&nbsp;</footer>
+    <script type="module" async>
+      import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
+      drawSelect.onchange = function () {
+        const mode = parseInt(this.value)
+        nv1.setDrawingEnabled(mode >= 0)
+        if (mode >= 0) nv1.setPenValue(mode & 7, mode > 7)
+        if (mode === 12)
+          //erase selected cluster
+          nv1.setPenValue(-0)
+      }
+      opacitySlider.onchange = function () {
+        nv1.setDrawOpacity(this.value * 0.01)
+      }
+      formatSelect.onchange = async function () {
+        const idx = this.selectedIndex
+        var volumeLists = [
+          [
+            {
+              url: '/mni100u8.nii.gz'
+            }
+          ],
+          [
+            {
+              url: '/retina.jpg'
+            }
+          ],
+          [
+            {
+              url: '/histology.nii.gz'
+            }
+          ],
+          [
+            {
+              url: 'http://localhost:5173/rgb.ome.zarr/scale0/image?z=1200',
+              name: 'example.zarr'
+            }
+          ],
+          [
+            {
+              url: '/c001_A_segmentation4.npz'
+            }
+          ],
+          [
+            {
+              url: 'https://niivue.github.io/niivue-demo-images/sub-370_sample-0002_TEM.png'
+            }
+          ],
+          [
+            {
+              url: 'https://niivue.github.io/niivue-demo-images/HCD1464653.qsdr.fz'
+            }
+          ],
+          [
+            {
+              url: 'https://niivue.github.io/niivue-demo-images/gray_bmp.png',
+              colormap: 'actc'
+            }
+          ],
+          [
+            {
+              url: 'https://raw.githubusercontent.com/zarr-developers/zarr_implementations/5dc998ac72/examples/zarr.zr/blosc',
+              name: 'example.zarr'
+            }
+          ],
+          [
+            {
+              // https://hms-dbmi.github.io/vizarr/?source=https://minio-dev.openmicroscopy.org/idr/v0.3/idr0062-blin-nuclearsegmentation/6001240.zarr&viewState={%22target%22:[148.82158305779987,128.923106260876],%22zoom%22:2.3938329406834296}
+              
+              url: 'https://minio-dev.openmicroscopy.org/idr/v0.3/idr0062-blin-nuclearsegmentation/6001240.zarr',
+              name: 'example.zarr'
+            }
+          ],
+          [
+            {
+              url: '../demos/images/mni152.nii.gz'
+            }
+          ]
+        ]
+        await nv1.loadVolumes(volumeLists[this.selectedIndex])
+      }
+      aboutBtn.onclick = function () {
+        alert(nv1.volumes[0].hdr.toFormattedString())
+        // await nv1.loadDrawingFromUrl("./retina_draw.nii.gz")
+      }
+      undoBtn.onclick = function () {
+        nv1.drawUndo()
+      }
+      saveBtn.onclick = async function () {
+        await nv1.saveImage({ filename: 'test.nii', isSaveDrawing: true})
+      }
+      prevBtn.onclick = function () {
+         nv1.moveCrosshairInVox(0, 0, -1)
+      }
+      nextBtn.onclick = function () {
+         nv1.moveCrosshairInVox(0, 0, 1)
+      }
+      dragSelect.onchange = function () {
+        const drag = this.options[this.selectedIndex].text
+        console.log(drag)
+        if (drag === 'None') {
+          nv1.opts.dragMode = nv1.dragModes.none
+        } else if (drag === 'Contrast') {
+          nv1.opts.dragMode = nv1.dragModes.contrast
+        } else if (drag === 'Measurement') {
+          nv1.opts.dragMode = nv1.dragModes.measurement
+        } else if (drag === 'Pan') {
+          nv1.opts.dragMode = nv1.dragModes.pan
+        }
+      }
+      smoothCheck.onchange = function () {
+        nv1.setInterpolation(!this.checked)
+      }
+      const onLocationChange = (data) => {
+        statusText.innerHTML = '&nbsp;&nbsp;' + data.string + ` slice: ${data.vox[2]+1}/${nv1.back.dims[3]}`
+      }
+      let defaults = {
+        backColor: [0, 0.2, 0.3, 1],
+        show3Dcrosshair: true,
+        //logLevel: 'debug',
+        isRuler: true,
+        dragMode: DRAG_MODE.pan,
+        onLocationChange: onLocationChange,
+        showMeasureUnits: true,
+        measureTextColor: [0, 1, 0, 1],
+        measureLineColor: [1, 0, 0, 1],
+        measureTextHeight: 0.04
+      }
+      var nv1 = new Niivue(defaults)
+      nv1.attachToCanvas(gl1)
+      nv1.onImageLoaded = (volume) => {
+        nv1.closeDrawing()
+        drawSelect.onchange()
+        opacitySlider.onchange()
+        nv1.setVolumeRenderIllumination(0)
+        if (nv1.volumes[0].hdr.dims[3] > 1) {
+          prevBtn.style.display = 'inline-block'
+          nextBtn.style.display = 'inline-block'
+          // if dims[1, 2, 3] > 2048 set nv1.opts.is2DSliceShader = true
+          if (nv1.volumes[0].hdr.dims[1] > 2048 || nv1.volumes[0].hdr.dims[2] > 2048 || nv1.volumes[0].hdr.dims[3] > 2048) {
+            nv1.opts.is2DSliceShader = true
+          } else {
+            nv1.opts.is2DSliceShader = false
+          }
+          if (nv1.opts.is2DSliceShader) {
+            nv1.setSliceType(nv1.sliceTypeAxial)
+            nv1.setVolumeRenderIllumination(-1)
+          } else {
+            nv1.setSliceType(nv1.sliceTypeMultiplanar)
+          }
+        } else {
+          prevBtn.style.display = 'none'
+          nextBtn.style.display = 'none'
+          nv1.setSliceType(nv1.sliceTypeAxial)
+        }
+      }
+      formatSelect.selectedIndex = 3
+      await formatSelect.onchange()
+    </script>
+  </body>
+</html>

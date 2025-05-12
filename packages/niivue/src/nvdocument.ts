@@ -199,6 +199,7 @@ export type NVConfigOptions = {
   renderSilhouette: number
   gradientAmount: number
   invertScrollDirection: boolean
+  is2DSliceShader: boolean
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -303,7 +304,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   gradientOpacity: 0.0,
   renderSilhouette: 0.0,
   gradientAmount: 0.0,
-  invertScrollDirection: false
+  invertScrollDirection: false,
+  is2DSliceShader: false
 }
 
 type SceneData = {

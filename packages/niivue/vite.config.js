@@ -6,6 +6,7 @@ export default defineConfig({
   define: {
     __NIIVUE_VERSION__: JSON.stringify(process.env.npm_package_version)
   },
+  publicDir: process.env.NODE_ENV !== 'production',
   root: '.',
   server: {
     open: '/src/index.html',
