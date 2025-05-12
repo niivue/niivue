@@ -5247,7 +5247,7 @@ var forEach3 = function() {
 }();
 
 // package.json
-var version = "0.56.0";
+var version = "0.57.0";
 
 // src/logger.ts
 var _Log = class _Log {
@@ -25378,6 +25378,14 @@ function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
   const nx = nvImage.hdr.dims[1];
   const ny = nvImage.hdr.dims[2];
   const nz = nvImage.hdr.dims[3];
+  const perm = nvImage.permRAS.slice();
+  if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+    const pos = vec4_exports.fromValues(x, y, z, 1);
+    vec4_exports.transformMat4(pos, pos, nvImage.toRASvox);
+    x = pos[0];
+    y = pos[1];
+    z = pos[2];
+  }
   x = Math.max(0, Math.min(Math.round(x), nx - 1));
   y = Math.max(0, Math.min(Math.round(y), ny - 1));
   z = Math.max(0, Math.min(Math.round(z), nz - 1));
@@ -25486,7 +25494,6 @@ function getVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0],
         let value = 0;
         if (nativeIndex >= 0 && nativeIndex < sourceImg.length) {
           value = sourceImg[nativeIndex];
-        } else {
         }
         outputImg[outputIndex++] = value;
       }
@@ -25573,7 +25580,6 @@ function setVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0],
         const nativeIndex = xi + yi + zi;
         if (nativeIndex >= 0 && nativeIndex < targetImg.length) {
           targetImg[nativeIndex] = slabData[sourceIndex];
-        } else {
         }
         sourceIndex++;
       }
@@ -27234,6 +27240,12 @@ var NVImage = class _NVImage {
     if (!isRGB) {
       hdr.numBitsPerVoxel = 8;
       hdr.datatypeCode = 2 /* DT_UINT8 */;
+      if (data instanceof Uint8Array) {
+        const retBuffer2 = new ArrayBuffer(data.length);
+        const retView2 = new Uint8Array(retBuffer2);
+        retView2.set(data);
+        return retBuffer2;
+      }
       return data;
     }
     hdr.numBitsPerVoxel = 24;
@@ -27257,7 +27269,11 @@ var NVImage = class _NVImage {
       }
       return rgb;
     }
-    return zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    const retData = zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    const retBuffer = new ArrayBuffer(retData.length);
+    const retView = new Uint8Array(retBuffer);
+    retView.set(retData);
+    return retBuffer;
   }
   // not included in public docs
   // read brainvoyager format VMR image
@@ -28926,7 +28942,6 @@ var NVImage = class _NVImage {
       } catch (e) {
         arr = await open(root2, { kind: "array" });
       }
-      console.log("arr", arr);
       let view;
       if (arr.shape.length === 4) {
         const cRange = null;
@@ -38291,7 +38306,11 @@ var Niivue = class {
     this.clickToSegmentGrowingBitmap = new Uint8Array(vx);
     this.drawClearAllUndoBitmaps();
     this.drawAddUndoBitmap();
-    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true);
+    if (this.opts.is2DSliceShader) {
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims);
+    } else {
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true);
+    }
     this.refreshDrawing(false);
   }
   // not included in public docs
@@ -39202,7 +39221,7 @@ var Niivue = class {
         // Width, Height
         this.gl.RED,
         this.gl.UNSIGNED_BYTE,
-        bitmapDataSource
+        sliceData
       );
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);

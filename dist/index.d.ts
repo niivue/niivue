@@ -403,7 +403,7 @@ declare class NVImage {
     readNPZ(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData>;
     readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer>;
-    readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<Uint8Array>;
+    readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<ArrayBufferLike>;
     readVMR(buffer: ArrayBuffer): ArrayBuffer;
     readFIB(buffer: ArrayBuffer): Promise<[ArrayBuffer, Float32Array]>;
     readSRC(buffer: ArrayBuffer): Promise<ArrayBuffer>;
