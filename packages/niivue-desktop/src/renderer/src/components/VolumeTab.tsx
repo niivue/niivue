@@ -1,6 +1,7 @@
-import { useContext, useEffect, useState } from 'react'
+// src/components/VolumeTab.tsx
+import { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import { ScrollArea, Text, Flex, Switch, Button, TextField } from '@radix-ui/themes'
+import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
 import { useSelectedInstance } from '../AppContext'
 import { loadFMRIEvents, fmriEvents, getColorForTrialType } from '@renderer/types/events'
 import { MosaicControls } from './MosaicControls'
@@ -10,76 +11,53 @@ const electron = window.electron
 export const VolumeTab = (): JSX.Element => {
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
-  if (!nv) return <></>
+  if (!nv || !instance) return <></>
 
-  // Time series?
-  const hasTimeSeries =
-    nv.volumes &&
-    nv.volumes.length > 0 &&
-    nv.volumes[0].nFrame4D &&
-    nv.volumes[0].nFrame4D > 1
+  const hasTimeSeries: boolean =
+    nv.volumes?.[0]?.nFrame4D !== undefined && nv.volumes[0].nFrame4D > 1
 
-  // Graph settings state
-  const [graphVisible, setGraphVisible] = useState(nv.graph.opacity > 0)
+  const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
+  const [showColorMaps, setShowColorMaps] = useState<boolean>(nv.opts.isColorbar)
+  const [mosaicStr, setMosaicStr] = useState<string>(instance.opts.sliceMosaicString || '')
 
-  // Color bar toggle state
-  const [showColorMaps, setShowColorMaps] = useState<boolean>(!!nv.opts.isColorbar)
+  useEffect((): void => {
+    nv.graph.autoSizeMultiplanar = true
+    setGraphVisible(nv.graph.opacity > 0)
+    setNormalizeGraph(nv.graph.normalizeValues)
+    setShowColorMaps(nv.opts.isColorbar)
+    setMosaicStr(instance.opts.sliceMosaicString || '')
+  }, [nv, instance.opts.sliceMosaicString])
 
-  // Mosaic state
-  const [mosaicStr, setMosaicStr] = useState<string>(
-    nv.opts.sliceMosaicString?.trim() || ''
-  )
-
-  const trialTypes = Array.from(new Set(fmriEvents.map(ev => ev.trial_type)))
-
-  useEffect(() => {
-    if (nv) {
-      setGraphVisible(nv.graph.opacity > 0)
-      nv.graph.autoSizeMultiplanar = true
-    }
-  }, [nv])
-
-  // Poll for mosaic-string changes (so controls appear/disappear)
-  useEffect(() => {
-  if (!nv) return
-  const interval = setInterval(() => {
-    const current = nv.opts.sliceMosaicString?.trim() || ''
-    setMosaicStr(prev => (prev !== current ? current : prev))
-  }, 1000)
-  return () => clearInterval(interval)
-}, [nv])
-
-  const toggleGraphVisibility = (visible: boolean) => {
+  const toggleGraphVisibility = (visible: boolean): void => {
     nv.graph.opacity = visible ? 1.0 : 0.0
     nv.drawScene()
     setGraphVisible(visible)
   }
 
-  const loadFMRIEventsFromFile = async () => {
-    const paths = await electron.ipcRenderer.invoke('dialog:openFile', {
-      title: 'Load fMRI Events',
-      filters: [{ name: 'TSV Files', extensions: ['tsv'] }]
-    })
-    if (!paths?.length) return
-    const base64 = await electron.ipcRenderer.invoke('loadFromFile', paths[0])
-    loadFMRIEvents(atob(base64), nv)
-  }
-
-  // Watch the colorbar toggle
-  const toggleColorbar = (visible: boolean) => {
+  const toggleColorbar = (visible: boolean): void => {
     nv.opts.isColorbar = visible
+    instance.setOpts({ isColorbar: visible })
     nv.drawScene()
     setShowColorMaps(visible)
   }
 
-  // Update mosaic when user edits or polls pick up a change
-  useEffect(() => {
-    if (mosaicStr.trim()) {
-      nv.setSliceMosaicString(mosaicStr)
-      nv.drawScene()
-    }
-  }, [nv, mosaicStr])
+  const loadFMRIEventsFromFile = async (): Promise<void> => {
+    const paths: string[] = await electron.ipcRenderer.invoke('dialog:openFile', {
+      title: 'Load fMRI Events',
+      filters: [{ name: 'TSV Files', extensions: ['tsv'] }]
+    })
+    if (!paths?.length) return
+    const base64: string = await electron.ipcRenderer.invoke('loadFromFile', paths[0])
+    loadFMRIEvents(atob(base64), nv)
+  }
+
+  const handleMosaicChange = (newStr: string): void => {
+    setMosaicStr(newStr)
+    nv.setSliceMosaicString(newStr)
+    instance.setOpts({ sliceMosaicString: newStr })
+    nv.drawScene()
+  }
 
   return (
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>
@@ -105,7 +83,7 @@ export const VolumeTab = (): JSX.Element => {
                     <Text size="2" weight="bold" className="mr-auto">Normalize Graph</Text>
                     <Switch
                       checked={normalizeGraph}
-                      onCheckedChange={checked => {
+                      onCheckedChange={(checked: boolean): void => {
                         nv.graph.normalizeValues = checked
                         nv.updateGLVolume()
                         setNormalizeGraph(checked)

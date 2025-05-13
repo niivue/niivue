@@ -1,78 +1,57 @@
-// AppContext.tsx
-import React, {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  Dispatch,
-  SetStateAction
-} from 'react'
-import { NVImage, NVMesh, Niivue, SLICE_TYPE } from '@niivue/niivue'
+// src/AppContext.tsx
+import React, { createContext, useContext, useState } from 'react'
+import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 
 export interface NiivueInstanceContext {
   id: string
+  title?: string
   nvRef: React.MutableRefObject<Niivue>
   volumes: NVImage[]
-  setVolumes: Dispatch<SetStateAction<NVImage[]>>
+  setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
   meshes: NVMesh[]
-  setMeshes: Dispatch<SetStateAction<NVMesh[]>>
+  setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   selectedImage: NVImage | null
   setSelectedImage: (img: NVImage | null) => void
   sliceType: SLICE_TYPE | null
-  setSliceType: (st: SLICE_TYPE | null) => void
-  title: string
+  setSliceType: (s: SLICE_TYPE | null) => void
+  opts: Partial<Niivue['opts']>
+  setOpts: (opts: Partial<Niivue['opts']>) => void
 }
 
 interface AppCtx {
   documents: NiivueInstanceContext[]
-  selectedDocId: string | null
-  addDocument: (doc: NiivueInstanceContext) => void
-  removeDocument: (id: string) => void
+  selectedDocId: string
   selectDocument: (id: string) => void
-  updateDocument: <K extends keyof NiivueInstanceContext>(
-    id: string,
-    updates: Partial<{ [P in K]: SetStateAction<NiivueInstanceContext[P]> }>
-  ) => void
+  addDocument: (doc: NiivueInstanceContext) => void
+  updateDocument: (id: string, updates: Partial<NiivueInstanceContext>) => void
+  removeDocument: (id: string) => void
 }
 
 const AppContext = createContext<AppCtx | null>(null)
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
+export const AppProvider = ({ children }: { children: React.ReactNode }): JSX.Element => {
   const [documents, setDocuments] = useState<NiivueInstanceContext[]>([])
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(null)
+  const [selectedDocId, setSelectedDocId] = useState<string>('')
 
-  const addDocument = (doc: NiivueInstanceContext) => {
-    setDocuments(prev => [...prev, doc])
-    setSelectedDocId(doc.id)
-  }
-
-  const removeDocument = (id: string) => {
-    setDocuments(prev => prev.filter(doc => doc.id !== id))
-    setSelectedDocId(prev => (prev === id ? null : prev))
-  }
-
-  const selectDocument = (id: string) => {
+  const selectDocument = (id: string): void => {
     setSelectedDocId(id)
   }
 
-  const updateDocument = <K extends keyof NiivueInstanceContext>(
-    id: string,
-    updates: Partial<{ [P in K]: SetStateAction<NiivueInstanceContext[P]> }>
-  ) => {
-    setDocuments(prev =>
-      prev.map(doc => {
-        if (doc.id !== id) return doc
-        const updated = { ...doc }
-        for (const key in updates) {
-          const val = updates[key as K]
-          updated[key as K] =
-            typeof val === 'function'
-              ? (val as (prev: any) => any)(doc[key as K])
-              : val
-        }
-        return updated
-      })
-    )
+  const addDocument = (doc: NiivueInstanceContext): void => {
+    setDocuments((prev) => [...prev, doc])
+    setSelectedDocId(doc.id)
+  }
+
+  const updateDocument = (id: string, updates: Partial<NiivueInstanceContext>): void => {
+    setDocuments((prev) => prev.map((doc) => (doc.id === id ? { ...doc, ...updates } : doc)))
+  }
+
+  const removeDocument = (id: string): void => {
+    setDocuments((prev) => prev.filter((doc) => doc.id !== id))
+    if (selectedDocId === id && documents.length > 1) {
+      const fallback = documents.find((d) => d.id !== id)
+      if (fallback) setSelectedDocId(fallback.id)
+    }
   }
 
   return (
@@ -80,10 +59,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         documents,
         selectedDocId,
-        addDocument,
-        removeDocument,
         selectDocument,
-        updateDocument
+        addDocument,
+        updateDocument,
+        removeDocument
       }}
     >
       {children}
@@ -91,14 +70,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   )
 }
 
-// ✅ use this instead of React.useContext(AppContext)
 export const useAppContext = (): AppCtx => {
-  const context = useContext(AppContext)
-  if (!context) throw new Error('AppContext must be used within AppProvider')
-  return context
+  const ctx = useContext(AppContext)
+  if (!ctx) throw new Error('AppContext not found')
+  return ctx
 }
 
 export const useSelectedInstance = (): NiivueInstanceContext | undefined => {
   const { documents, selectedDocId } = useAppContext()
-  return documents.find(doc => doc.id === selectedDocId)
+  return documents.find((doc) => doc.id === selectedDocId)
 }

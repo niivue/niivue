@@ -1,4 +1,3 @@
-// src/MainApp.tsx
 import React, { useEffect, useRef, useState } from 'react'
 import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
 import { Niimath } from '@niivue/niimath'
@@ -12,12 +11,13 @@ import { registerSaveCompressedDocumentHandler } from './ipcHandlers/saveDocumen
 import { fmriEvents, getColorForTrialType } from './types/events'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 import { useAppContext } from './AppContext'
+import { IpcRendererEvent } from 'electron'
 
 const electron = window.electron
 
-function overrideDrawGraph(nv: Niivue) {
+function overrideDrawGraph(nv: Niivue): void {
   const originalDrawGraph = nv.drawGraph.bind(nv)
-  nv.drawGraph = () => {
+  nv.drawGraph = (): void => {
     originalDrawGraph()
     if (!nv.graph.plotLTWH || !fmriEvents.length) return
     const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
@@ -42,41 +42,73 @@ function MainApp(): JSX.Element {
   const [labelDialogOpen, setLabelDialogOpen] = useState(false)
   const [labelEditMode, setLabelEditMode] = useState(false)
 
-  const {
-    documents,
-    selectedDocId,
-    addDocument,
-    removeDocument,
-    selectDocument,
-    updateDocument
-  } = useAppContext()
+  const { documents, selectedDocId, addDocument, removeDocument, selectDocument, updateDocument } =
+    useAppContext()
 
   const selected = useSelectedInstance()
 
-  useEffect(() => {
+  useEffect((): void => {
     if (documents.length > 0) return
     createNewDocument()
   }, [documents.length])
 
-  const createNewDocument = async () => {
+  useEffect((): (() => void) => {
+    const handleSaved = (
+      _e: IpcRendererEvent,
+      { id, path }: { id: string; path: string }
+    ): void => {
+      const title = path.split('/').pop()?.replace(/\.nvd$/, '') || 'Untitled'
+      updateDocument(id, { title })
+    }
+    electron.ipcRenderer.on('document:saved', handleSaved)
+    return () => {
+      electron.ipcRenderer.removeListener('document:saved', handleSaved)
+    }
+  }, [updateDocument])
+
+  const createNewDocument = async (): Promise<void> => {
     const nv = new Niivue({ dragAndDropEnabled: false })
     const nvRef = { current: nv }
     const docId = `doc-${documents.length + 1}`
+
+    const resolveState = <T,>(val: React.SetStateAction<T>, current: T): T =>
+      typeof val === 'function' ? (val as (prev: T) => T)(current) : val
+
     const doc: NiivueInstanceContext = {
       id: docId,
       nvRef,
       volumes: [],
-      setVolumes: (vols) => updateDocument(docId, { volumes: typeof vols === 'function' ? vols : () => vols }),
+      setVolumes: (vols: React.SetStateAction<NVImage[]>): void => {
+        const currentVols = documents.find((d) => d.id === docId)?.volumes || []
+        updateDocument(docId, { volumes: resolveState(vols, currentVols) })
+      },
       meshes: [],
-      setMeshes: (meshes) => updateDocument(docId, { meshes: typeof meshes === 'function' ? meshes : () => meshes }),
+      setMeshes: (meshes: React.SetStateAction<NVMesh[]>): void => {
+        const currentMeshes = documents.find((d) => d.id === docId)?.meshes || []
+        updateDocument(docId, { meshes: resolveState(meshes, currentMeshes) })
+      },
       selectedImage: null,
-      setSelectedImage: (img) => updateDocument(docId, { selectedImage: img }),
+      setSelectedImage: (img: NVImage | null): void => {
+        updateDocument(docId, { selectedImage: img })
+      },
       sliceType: null,
-      setSliceType: (st) => updateDocument(docId, { sliceType: st }),
+      setSliceType: (st: SLICE_TYPE | null): void => {
+        updateDocument(docId, { sliceType: st })
+      },
+      opts: { ...nv.opts },
+      setOpts: (opts: Partial<typeof nv.opts>): void => {
+        updateDocument(docId, {
+          opts: {
+            ...nv.opts,
+            ...opts
+          }
+        })
+      },
       title: 'Untitled'
     }
-    addDocument(doc)    
-  
+
+    addDocument(doc)
+
     const prefs = await electron.ipcRenderer.invoke('getPreferences')
     Object.entries(prefs ?? {}).forEach(([key, value]) => {
       if (key in nv.opts) {
@@ -84,18 +116,19 @@ function MainApp(): JSX.Element {
         nv.opts[key] = value
       }
     })
-  
+
     nv.setSliceType(nv.sliceTypeMultiplanar)
     overrideDrawGraph(nv)
     await niimathRef.current.init()
-  
-    registerSaveCompressedDocumentHandler(nv, docId, (title: string) =>
-      updateDocument(docId, { title }))
+
+    registerSaveCompressedDocumentHandler(nv, docId, (title: string): void => {
+      updateDocument(docId, { title })
+    })
+
     nv.drawScene()
   }
-  
 
-  useEffect(() => {
+  useEffect((): void => {
     if (!selected) return
     registerAllIpcHandlers(
       selected.nvRef.current,
@@ -106,15 +139,15 @@ function MainApp(): JSX.Element {
     )
   }, [selected])
 
-  useEffect(() => {
+  useEffect((): void => {
     window.electron?.ipcRenderer.on('openLabelManagerDialog', () => {
       setLabelDialogOpen(true)
       setLabelEditMode(false)
     })
   }, [])
 
-  useEffect(() => {
-    const handleClearScene = () => {
+  useEffect((): (() => void) => {
+    const handleClearScene = (): void => {
       const nv = selected?.nvRef.current
       if (!nv) return
       nv.volumes = []
@@ -132,11 +165,22 @@ function MainApp(): JSX.Element {
     }
   }, [selected])
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  useEffect(() => {
+    if (!selected) return
+    const nv = selected.nvRef.current
+    if (!nv) return
+  
+    // Apply the document-specific opts to the Niivue instance
+    Object.assign(nv.opts, selected.opts)
+  
+    nv.drawScene()
+  }, [selected])
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault()
   }
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
     const nv = selected?.nvRef.current
     if (!nv || !selected) return
     nv.volumes = []
@@ -149,14 +193,14 @@ function MainApp(): JSX.Element {
     const nv = selected?.nvRef.current
     if (!nv) return
     nv.removeMesh(mesh)
-    selected.setMeshes(prev => [...prev.filter(m => m.id !== mesh.id)])
+    selected.setMeshes((prev) => prev.filter((m) => m.id !== mesh.id))
   }
 
   const handleRemoveVolume = (vol: NVImage): void => {
     const nv = selected?.nvRef.current
     if (!nv) return
     nv.removeVolume(vol)
-    selected.setVolumes(prev => [...prev.filter(v => v.id !== vol.id)])
+    selected.setVolumes((prev) => prev.filter((v) => v.id !== vol.id))
   }
 
   const handleMoveVolumeUp = (vol: NVImage): void => {
@@ -185,20 +229,22 @@ function MainApp(): JSX.Element {
     }
   }
 
-  const renderTabs = () => (
+  const renderTabs = (): JSX.Element => (
     <div className="flex flex-row bg-gray-800 text-white px-2">
-      {documents.map(doc => (
+      {documents.map((doc) => (
         <div
           key={doc.id}
           className={`px-4 py-2 cursor-pointer ${doc.id === selectedDocId ? 'bg-gray-700' : ''}`}
-          onClick={() => selectDocument(doc.id)}
+          onClick={(): void => selectDocument(doc.id)}
         >
           {doc.title || doc.id}
         </div>
       ))}
       <div
         className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
-        onClick={createNewDocument}
+        onClick={() => {
+          void createNewDocument()
+        }}
       >
         +
       </div>

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSelectedInstance } from '../AppContext'
-import { Niivue } from '@niivue/niivue'
 import { Button, TextField, Switch } from '@radix-ui/themes'
 import { calculateMosaic, SliceOrientation } from '../utils/mosaics'
 
@@ -9,8 +8,7 @@ function shiftToken(token: string, delta: number): string {
   if (!match) return token
   const [, numericPart, leftover] = match
   const num = parseFloat(numericPart)
-  if (isNaN(num)) return token
-  return String(num + delta) + leftover
+  return isNaN(num) ? token : String(num + delta) + leftover
 }
 
 function updateMosaicForSelectedOrientation(
@@ -21,21 +19,23 @@ function updateMosaicForSelectedOrientation(
   const tokens = mosaicStr.trim().split(/\s+/)
   let currentOrientation: string | null = null
   const newTokens: string[] = []
+
   let i = 0
   while (i < tokens.length) {
-    let raw = tokens[i]
-    let token = raw
+    let token = tokens[i]
     let trail = ''
     if (token.endsWith(';')) {
       trail = ';'
       token = token.slice(0, -1)
     }
-    if (/^(A|C|S)$/.test(token)) {
+
+    if (/^[ACS]$/.test(token)) {
       currentOrientation = token
       newTokens.push(token + trail)
       i++
       continue
     }
+
     if (token === 'R' && tokens[i + 1] === 'X') {
       newTokens.push('R', 'X')
       i += 2
@@ -51,20 +51,26 @@ function updateMosaicForSelectedOrientation(
       }
       continue
     }
+
     const numMatch = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
     if (numMatch) {
-      if (currentOrientation === selected) newTokens.push(shiftToken(token, delta) + trail)
-      else newTokens.push(token + trail)
+      newTokens.push(
+        currentOrientation === selected
+          ? shiftToken(token, delta) + trail
+          : token + trail
+      )
       i++
       continue
     }
+
     newTokens.push(token + trail)
     i++
   }
+
   return newTokens.join(' ')
 }
 
-export function MosaicControls() {
+export function MosaicControls(): JSX.Element {
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
   if (!nv) return <></>
@@ -72,14 +78,13 @@ export function MosaicControls() {
   const [selectedOrientation, setSelectedOrientation] = useState<'A' | 'C' | 'S'>('A')
   const [showAllSlices, setShowAllSlices] = useState(false)
   const [cachedMosaic, setCachedMosaic] = useState<string | null>(null)
-  const [centerMosaic, setCenterMosaic] = useState<boolean>(nv.opts.centerMosaic ?? true)
-  const [mosaicStr, setMosaicStr] = useState(
-    nv.opts.sliceMosaicString?.trim() || 'A -10 0 20; C -10 0; S -10 0 20'
-  )
 
-  // Cache/restore or fully replace the mosaic string on toggle
+  const mosaicStr = instance.opts.sliceMosaicString?.trim() || ''
+  const centerMosaic = !!instance.opts.centerMosaic
+
   useEffect(() => {
     if (!nv) return
+
     if (showAllSlices) {
       setCachedMosaic(mosaicStr)
       const orientEnum =
@@ -88,23 +93,18 @@ export function MosaicControls() {
           : selectedOrientation === 'C'
           ? SliceOrientation.CORONAL
           : SliceOrientation.SAGITTAL
+
       const canvas = nv.gl.canvas as HTMLCanvasElement
       const vol = nv.volumes[0]
       if (!vol) return
-      const { mosaicString } = calculateMosaic(
-        vol,
-        canvas.width,
-        canvas.height,
-        orientEnum
-      )
-      setMosaicStr(mosaicString)
+      const { mosaicString } = calculateMosaic(vol, canvas.width, canvas.height, orientEnum)
+      instance.setOpts({ sliceMosaicString: mosaicString })
     } else if (cachedMosaic !== null) {
-      setMosaicStr(cachedMosaic)
+      instance.setOpts({ sliceMosaicString: cachedMosaic })
       setCachedMosaic(null)
     }
-  }, [showAllSlices, selectedOrientation, nv])
+  }, [showAllSlices, selectedOrientation])
 
-  // Apply changes to Niivue
   useEffect(() => {
     if (!nv) return
     nv.opts.centerMosaic = centerMosaic
@@ -112,22 +112,32 @@ export function MosaicControls() {
     nv.drawScene()
   }, [nv, mosaicStr, centerMosaic])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMosaicStr(e.target.value)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    instance.setOpts({ sliceMosaicString: e.target.value })
   }
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>): void => {
     if (showAllSlices) return
     e.preventDefault()
     const step = 5
-    setMosaicStr(prev =>
-      updateMosaicForSelectedOrientation(prev, selectedOrientation, e.deltaY < 0 ? step : -step)
-    )
+    instance.setOpts({
+      sliceMosaicString: updateMosaicForSelectedOrientation(
+        mosaicStr,
+        selectedOrientation,
+        e.deltaY < 0 ? step : -step
+      )
+    })
   }
 
-  const handleScroll = (delta: number) => {
+  const handleScroll = (delta: number): void => {
     if (showAllSlices) return
-    setMosaicStr(prev => updateMosaicForSelectedOrientation(prev, selectedOrientation, delta))
+    instance.setOpts({
+      sliceMosaicString: updateMosaicForSelectedOrientation(
+        mosaicStr,
+        selectedOrientation,
+        delta
+      )
+    })
   }
 
   const axisNames = { A: 'Axial', C: 'Coronal', S: 'Sagittal' }
@@ -154,7 +164,7 @@ export function MosaicControls() {
         <Switch
           id="centerMosaic"
           checked={centerMosaic}
-          onCheckedChange={checked => setCenterMosaic(checked as boolean)}
+          onCheckedChange={(checked) => instance.setOpts({ centerMosaic: !!checked })}
         />
         <label htmlFor="centerMosaic">Center Mosaic</label>
       </div>
@@ -172,7 +182,7 @@ export function MosaicControls() {
         <label style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>Orientation:</label>
         <select
           value={selectedOrientation}
-          onChange={e => setSelectedOrientation(e.target.value as 'A' | 'C' | 'S')}
+          onChange={(e) => setSelectedOrientation(e.target.value as 'A' | 'C' | 'S')}
           disabled={showAllSlices}
         >
           <option value="A">Axial (A)</option>
