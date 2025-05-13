@@ -1,0 +1,143 @@
+---
+title: Using Colormaps
+sidebar_position: 3
+---
+
+import { Niivue } from '@niivue/niivue';
+import { ColormapDemo } from '../src/components/ColormapDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+Colormaps are essential for visualizing data, as they map the values within your images to specific colors displayed on the screen. Niivue provides a range of built-in colormaps and allows you to define your own custom maps.
+
+**Try interacting with the Niivue canvas below!** You can select different colormaps, invert the current map, and adjust the gamma level using the controls.
+
+<NiivueBrowserWrapper>
+  <ColormapDemo />
+</NiivueBrowserWrapper>
+
+
+## Setting an Initial Colormap
+
+When loading volumes, you can specify the initial colormap for each volume directly in the configuration object.
+
+```javascript
+// Assuming 'nv' is your initialized Niivue instance (e.g., const nv = new Niivue();)
+// Ensure nv is attached to a canvas element.
+
+const volumeList = [
+  {
+    url: "/images/mni152.nii.gz", // Replace with your image path
+    colormap: "gray", // Set the initial colormap here ('gray' is the default)
+    opacity: 1,
+    visible: true,
+  },
+  // You can add more volumes with different initial colormaps
+];
+
+await nv.loadVolumes(volumeList);
+```
+
+## Listing Available Colormaps
+
+Niivue comes with several predefined colormaps. You can retrieve a list of their names using the `colormaps()` method.
+
+```javascript
+// Assuming 'nv' is your Niivue instance
+
+const availableColormaps = nv.colormaps();
+console.log(availableColormaps);
+// Example Output: ['gray', 'warm', 'cool', 'plasma', 'viridis', 'inferno', ...]
+
+// You can use this list to populate UI elements like dropdowns or buttons.
+```
+
+## Changing the Colormap
+After a volume is loaded, you can dynamically change its colormap using the `setColormap` method. You need the ID of the volume you want to modify. Often, for the first loaded volume, this is `nv.volumes[0].id`.
+
+```javascript
+// Assuming 'nv' is your Niivue instance and at least one volume is loaded
+
+const firstVolumeId = nv.volumes[0].id;
+
+// Change the colormap of the first volume to 'viridis'
+nv.setColormap(firstVolumeId, 'viridis');
+
+// Change it to another map, e.g., 'plasma'
+// nv.setColormap(firstVolumeId, 'plasma');
+```
+
+## Inverting a Colormap
+You can invert the current colormap applied to a volume. This reverses the mapping, so low intensities map to colors previously used for high intensities, and vice-versa.
+
+```javascript
+// Assuming 'nv' is your Niivue instance and at least one volume is loaded
+
+// Get the first volume
+const volume = nv.volumes[0];
+
+// Set the inversion status (true to invert, false for normal)
+volume.colormapInvert = true;
+
+// Important: You must call updateGLVolume() to apply the change visually
+nv.updateGLVolume();
+
+// To revert back:
+// volume.colormapInvert = false;
+// nv.updateGLVolume();
+```
+
+## Adjusting Gamma
+While not strictly a colormap change, the gamma setting adjusts the intensity mapping curve, affecting the brightness and contrast, which interacts significantly with how the colormap appears. A gamma value greater than 1 makes the image brighter, while less than 1 makes it darker.
+
+```javascript
+// Assuming 'nv' is your Niivue instance
+
+nv.setGamma(1.5); // Makes the image brighter
+
+// Set gamma to make the image darker
+// nv.setGamma(0.7);
+
+// Reset to default
+// nv.setGamma(1.0);
+```
+Note: Unlike `colormapInvert`, changes via setGamma update the view automatically
+
+## Defining and Using Custom Colormaps
+You can create your own colormaps by defining an object with specific properties: R, G, B (arrays of red, green, blue values from 0-255), A (alpha/opacity values from 0-255), and I (intensity values defining the control points for the mapping).
+
+```javascript
+// Assuming 'nv' is your Niivue instance and at least one volume is loaded
+
+// 1. Define the custom colormap structure
+const myCustomCmap = {
+ R: [0, 255, 0],   // Red channel values at control points
+ G: [0, 0, 255],   // Green channel values at control points
+ B: [0, 0, 0],     // Blue channel values at control points
+ A: [0, 128, 255], // Alpha values
+ I: [0, 127, 255], // Intensity values (must be sorted 0-255) corresponding to R,G,B,A points
+};
+
+// 2. Add the colormap to Niivue with a unique name
+nv.addColormap('MyCustomMap', myCustomCmap);
+
+// 3. Apply the custom colormap like any other colormap
+const firstVolumeId = nv.volumes[0].id;
+nv.setColormap(firstVolumeId, 'MyCustomMap');
+
+// You can also apply it directly after adding:
+// nv.volumes[0].colormap = 'MyCustomMap';
+// nv.updateGLVolume(); // Requires manual update if set this way
+```
+
+## Displaying the Colorbar
+It's often helpful to display a colorbar alongside the image to show the current colormap and its corresponding data range. You can enable this in the Niivue options.
+
+```javascript
+// Option 1: Set when creating the Niivue instance
+const nv = new Niivue({ isColorbar: true });
+
+// Option 2: Set after creating the instance
+const nv = new Niivue();
+nv.opts.isColorbar = true; // or false
+nv.drawScene() // to see the changes. 
+```
