@@ -6,7 +6,6 @@ import { registerLabelManagerDialogHandler } from './menuHandlers'
 import { registerLoadMeshHandler } from './loadMesh'
 import { registerLoadVolumeHandler } from './loadVolume'
 import { registerLoadDocumentHandler } from './loadDocument'
-import { registerSaveCompressedDocumentHandler } from './saveDocument'
 import { registerResetPreferencesHandler } from './menuHandlers'
 
 const electron = window.electron
@@ -39,6 +38,5 @@ export const registerAllIpcHandlers = (
   registerLoadMeshHandler({ nv, setMeshes })
   registerLoadVolumeHandler({nv, setVolumes })
   registerLoadDocumentHandler({ nv, setVolumes, setMeshes })
-  registerSaveCompressedDocumentHandler(nv)
   registerResetPreferencesHandler()
 }
