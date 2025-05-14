@@ -40,6 +40,9 @@ function overrideDrawGraph(nv: Niivue): void {
 function MainApp(): JSX.Element {
   const niimathRef = useRef(new Niimath())
   const { documents, selectedDocId, addDocument, selectDocument, updateDocument } = useAppContext()
+  const [editingDocId, setEditingDocId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState<string>('')
+
   const selected = useSelectedInstance()
 
   // Create the first document on mount
@@ -267,26 +270,66 @@ function MainApp(): JSX.Element {
 
   // Tab strip
   function renderTabs(): JSX.Element {
-    return (
-      <div className="flex flex-row bg-gray-800 text-white px-2">
-        {documents.map((doc) => (
+  return (
+    <div className="flex flex-row bg-gray-800 text-white px-2">
+      {documents.map((doc) => {
+        const isEditing = doc.id === editingDocId
+        return (
           <div
             key={doc.id}
-            className={`px-4 py-2 cursor-pointer ${doc.id === selectedDocId ? 'bg-gray-700' : ''}`}
-            onClick={(): void => selectDocument(doc.id)}
+            className={`px-4 py-2 cursor-pointer ${
+              doc.id === selectedDocId ? 'bg-gray-700' : ''
+            }`}
+            onClick={() => {
+              if (!isEditing) selectDocument(doc.id)
+            }}
           >
-            {doc.title || doc.id}
+            {isEditing ? (
+              <input
+                type="text"
+                className="bg-white text-black px-1 py-0.5 w-full"
+                value={editingName}
+                autoFocus
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={() => {
+                  const newTitle = editingName.trim() || doc.id
+                  updateDocument(doc.id, { title: newTitle })
+                  setEditingDocId(null)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const newTitle = editingName.trim() || doc.id
+                    updateDocument(doc.id, { title: newTitle })
+                    setEditingDocId(null)
+                  } else if (e.key === 'Escape') {
+                    setEditingDocId(null)
+                  }
+                }}
+              />
+            ) : (
+              <span
+                onDoubleClick={() => {
+                  setEditingDocId(doc.id)
+                  setEditingName(doc.title ?? '')
+                }}
+              >
+                {doc.title || doc.id}
+              </span>
+            )}
           </div>
-        ))}
-        <div
-          className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
-          onClick={(): void => void createNewDocument()}
-        >
-          +
-        </div>
+        )
+      })}
+
+      <div
+        className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
+        onClick={() => void createNewDocument()}
+      >
+        +
       </div>
-    )
-  }
+    </div>
+  )
+}
+
 
   return (
     <>

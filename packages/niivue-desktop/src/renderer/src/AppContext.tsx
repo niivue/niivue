@@ -6,7 +6,7 @@ import React, {
   ReactNode,
 } from 'react'
 import type { NVImage, NVMesh, Niivue, SLICE_TYPE } from '@niivue/niivue'
-import { layouts } from '../common/layouts'
+import { layouts } from '../../common/layouts'
 
 export type NiivueInstanceContext = {
   id: string
