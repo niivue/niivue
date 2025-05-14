@@ -25,7 +25,7 @@ export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.
   if (!nv || !setMeshes) return <></>
 
   useEffect(() => {
-    electron.ipcRenderer.on('openMeshFileDialogResult', async (_, path) => {
+    electron.ipcRenderer.once('openMeshFileDialogResult', async (_, path) => {
       console.log('openMeshFileDialogResult', path)
       // // ICBM152.lh.motor.mz3 mesh
       const layerBase64 = await electron.ipcRenderer.invoke('loadFromFile', path)

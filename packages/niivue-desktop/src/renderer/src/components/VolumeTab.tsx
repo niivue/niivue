@@ -19,15 +19,15 @@ export const VolumeTab = (): JSX.Element => {
   const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
   const [showColorMaps, setShowColorMaps] = useState<boolean>(nv.opts.isColorbar)
-  const [mosaicStr, setMosaicStr] = useState<string>(instance.opts.sliceMosaicString || '')
+  const [mosaicStr, setMosaicStr] = useState<string>(instance.sliceMosaicString || '')
 
   useEffect((): void => {
     nv.graph.autoSizeMultiplanar = true
     setGraphVisible(nv.graph.opacity > 0)
     setNormalizeGraph(nv.graph.normalizeValues)
     setShowColorMaps(nv.opts.isColorbar)
-    setMosaicStr(instance.opts.sliceMosaicString || '')
-  }, [nv, instance.opts.sliceMosaicString])
+    setMosaicStr(instance.sliceMosaicString || '')
+  }, [nv, instance.sliceMosaicString])
 
   const toggleGraphVisibility = (visible: boolean): void => {
     nv.graph.opacity = visible ? 1.0 : 0.0
@@ -55,7 +55,7 @@ export const VolumeTab = (): JSX.Element => {
   const handleMosaicChange = (newStr: string): void => {
     setMosaicStr(newStr)
     nv.setSliceMosaicString(newStr)
-    instance.setOpts({ sliceMosaicString: newStr })
+    instance.setSliceMosaicString(newStr)
     nv.drawScene()
   }
 
