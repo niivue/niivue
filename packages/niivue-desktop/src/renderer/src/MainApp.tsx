@@ -42,7 +42,7 @@ function MainApp(): JSX.Element {
   const { documents, selectedDocId, addDocument, selectDocument, updateDocument } = useAppContext()
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
-
+  
   const selected = useSelectedInstance()
 
   // Create the first document on mount
@@ -131,6 +131,32 @@ function MainApp(): JSX.Element {
     }
   }, [selected])
 
+  useEffect(() => {
+    // define once, with `selected` & `updateDocument` in scope
+    const onSave = async () => {
+      if (!selected) return
+      const { id, title: friendlyName = id, nvRef } = selected
+      const nv = nvRef.current
+  
+      const jsonStr = JSON.stringify(nv.document.json())
+      const savedPath: string | undefined = await window.electron.ipcRenderer.invoke(
+        'saveCompressedNVD',
+        jsonStr,
+        friendlyName
+      )
+      if (savedPath) {
+        const raw = savedPath.split('/').pop() || friendlyName
+        const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || friendlyName
+        updateDocument(id, { title: newTitle })
+      }
+    }
+  
+    window.electron.ipcRenderer.on('saveCompressedDocument', onSave)
+    return () => {
+      window.electron.ipcRenderer.removeListener('saveCompressedDocument', onSave)
+    }
+  }, [selected, updateDocument])
+
   /**
    * Create a brand‐new Niivue document instance,
    * wire up its IPC & state setters, then add to context.
@@ -209,10 +235,7 @@ function MainApp(): JSX.Element {
     nv.setSliceType(nv.sliceTypeMultiplanar)
     overrideDrawGraph(nv)
     await niimathRef.current.init()
-
-    registerSaveCompressedDocumentHandler(nv, docId, (newTitle: string): void => {
-      updateDocument(docId, { title: newTitle })
-    })
+    
 
     nv.drawScene()
   }
