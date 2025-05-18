@@ -1,12 +1,12 @@
 import { Text, Slider } from '@radix-ui/themes'
-import { useState, useContext } from 'react'
+import { useState } from 'react'
 import { useSelectedInstance } from '../AppContext'
 
 export const SliderMeshDepth2D = (): JSX.Element => {
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
   if (!nv) return <></>
-  
+
   const [clippingDepth, setClippingDepth] = useState([11])
 
   const handleClippingDepthChange = (value: number[]): void => {

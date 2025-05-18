@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 import { NVMesh } from '@niivue/niivue'

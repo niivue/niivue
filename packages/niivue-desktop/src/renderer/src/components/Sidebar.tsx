@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollArea, Text } from '@radix-ui/themes'
 import { SceneTabs } from './SceneTabs'
 import { VolumeImageCard } from './VolumeImageCard'

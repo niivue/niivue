@@ -1,8 +1,8 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
 import { useSelectedInstance } from '../AppContext'
-import { NVImage, NVMesh, SHOW_RENDER } from '@niivue/niivue'
+import { NVImage, NVMesh } from '@niivue/niivue'
 import { MESH_EXTENSIONS } from '../../../common/extensions'
 import { base64ToString } from '@renderer/utils/base64ToJSON'
 

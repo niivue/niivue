@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Button, Flex } from '@radix-ui/themes'
 import { LabelTextAlignment, NVLabel3D, NVLabel3DStyle, LabelLineTerminator } from '@niivue/niivue'
@@ -64,7 +64,7 @@ export const LabelManagerDialog = ({
       lineTerminator: LabelLineTerminator.NONE
     }
     const mm = nv.frac2mm(nv.scene.crosshairPos)
-    const label = nv.addLabel(text, style, mm)
+    const label = nv.addLabel(text, style, Array.from(mm))
     if (label) {
       label.onClick = (clickedLabel: NVLabel3D, e?: MouseEvent) => {
         if (e?.button === 2) {

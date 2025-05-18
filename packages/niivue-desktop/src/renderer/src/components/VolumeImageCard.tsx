@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Button,
   ContextMenu,
@@ -46,7 +46,7 @@ export function VolumeImageCard({
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
   if (!nv) return <></>
-  
+
   // Update the display name when image.name changes
   useEffect(() => {
     setDisplayName(baseName(image.name))

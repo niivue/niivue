@@ -8,7 +8,6 @@ import { PreferencesDialog } from './components/PreferencesDialog'
 import { LabelManagerDialog } from './components/LabelManagerDialog'
 import { NiivueInstanceContext, useSelectedInstance, useAppContext } from './AppContext'
 import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers'
-import { registerSaveCompressedDocumentHandler } from './ipcHandlers/saveDocument'
 import { fmriEvents, getColorForTrialType } from './types/events'
 import { loadDroppedFiles } from './utils/dragAndDrop'
 import { layouts } from '../../common/layouts'
@@ -166,7 +165,7 @@ function MainApp(): JSX.Element {
    */
   async function createNewDocument(): Promise<void> {
     const nv = new Niivue({ dragAndDropEnabled: false })
-    const nvRef = { current: nv }
+    // const nvRef = { current: nv }
     const docId = `doc-${documents.length + 1}`
 
     function getCurrent<T extends keyof NiivueInstanceContext>(field: T): NiivueInstanceContext[T] {

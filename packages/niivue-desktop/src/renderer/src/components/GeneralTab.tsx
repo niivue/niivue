@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react'
+import React, { useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Switch, Slider } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'

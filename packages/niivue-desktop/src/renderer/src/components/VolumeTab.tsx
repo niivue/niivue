@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
 import { useSelectedInstance } from '../AppContext'
-import { loadFMRIEvents, fmriEvents, getColorForTrialType } from '@renderer/types/events'
+import { loadFMRIEvents } from '@renderer/types/events'
 import { MosaicControls } from './MosaicControls'
 
 const electron = window.electron
@@ -19,15 +19,17 @@ export const VolumeTab = (): JSX.Element => {
   const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
   const [showColorMaps, setShowColorMaps] = useState<boolean>(nv.opts.isColorbar)
-  const [mosaicStr, setMosaicStr] = useState<string>(instance.sliceMosaicString || '')
+  const [mosaicStr, setMosaicStr] = useState(
+    () => instance.opts.sliceMosaicString ?? ''
+  )
 
   useEffect((): void => {
     nv.graph.autoSizeMultiplanar = true
     setGraphVisible(nv.graph.opacity > 0)
     setNormalizeGraph(nv.graph.normalizeValues)
     setShowColorMaps(nv.opts.isColorbar)
-    setMosaicStr(instance.sliceMosaicString || '')
-  }, [nv, instance.sliceMosaicString])
+    setMosaicStr(nv.opts.sliceMosaicString ?? '')
+  }, [nv, nv.opts.sliceMosaicString])
 
   const toggleGraphVisibility = (visible: boolean): void => {
     nv.graph.opacity = visible ? 1.0 : 0.0
@@ -52,12 +54,12 @@ export const VolumeTab = (): JSX.Element => {
     loadFMRIEvents(atob(base64), nv)
   }
 
-  const handleMosaicChange = (newStr: string): void => {
-    setMosaicStr(newStr)
-    nv.setSliceMosaicString(newStr)
-    instance.setSliceMosaicString(newStr)
-    nv.drawScene()
-  }
+  // const handleMosaicChange = (newStr: string): void => {
+  //   setMosaicStr(newStr)
+  //   nv.setSliceMosaicString(newStr)
+  //   instance.setSliceMosaicString(newStr)
+  //   nv.drawScene()
+  // }
 
   return (
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>

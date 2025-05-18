@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { NVMesh, NVMeshLayerDefaults } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
