@@ -12,15 +12,15 @@ export type NiivueInstanceContext = {
   id: string
   nvRef: React.MutableRefObject<Niivue>
   volumes: NVImage[]
-  setVolumes: (vols: NVImage[]) => void
+  setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
   meshes: NVMesh[]
-  setMeshes: (meshes: NVMesh[]) => void
+  setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   selectedImage: NVImage | null
-  setSelectedImage: (img: NVImage | null) => void
+  setSelectedImage: React.Dispatch<React.SetStateAction<NVImage | null>>
   sliceType: SLICE_TYPE | null
   setSliceType: (st: SLICE_TYPE | null) => void
   opts: Partial<Niivue['opts']>
-  setOpts: (opts: Partial<Niivue['opts']>) => void
+  setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>>
   layout: keyof typeof layouts
   setLayout: (layout: keyof typeof layouts) => void
   mosaicOrientation: 'A' | 'C' | 'S'

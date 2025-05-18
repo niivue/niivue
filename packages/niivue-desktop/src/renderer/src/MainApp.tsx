@@ -93,7 +93,10 @@ function MainApp(): JSX.Element {
       selected.setVolumes,
       selected.setMeshes,
       setLabelDialogOpen,
-      setLabelEditMode
+      setLabelEditMode,
+      (newTitle: string) => {
+        updateDocument(selected.id, { title: newTitle })
+      }
     )
   }, [selected])
 
@@ -166,63 +169,118 @@ function MainApp(): JSX.Element {
     const nvRef = { current: nv }
     const docId = `doc-${documents.length + 1}`
 
-    // Placeholder: will be populated after addDocument runs
-    let instance!: NiivueInstanceContext
+    function getCurrent<T extends keyof NiivueInstanceContext>(field: T): NiivueInstanceContext[T] {
+      const d = documents.find(d => d.id === docId)
+      return d ? (d[field] as any) : (undefined as any)
+    }
+
+    const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
+      const prev = getCurrent("volumes") as NVImage[]
+      const next = typeof action === "function"
+        ? (action as (prev: NVImage[]) => NVImage[])(prev)
+        : action
+      updateDocument(docId, { volumes: next })
+    }
+  
+    const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
+      const prev = getCurrent("meshes") as NVMesh[]
+      const next = typeof action === "function"
+        ? (action as (prev: NVMesh[]) => NVMesh[])(prev)
+        : action
+      updateDocument(docId, { meshes: next })
+    }
+
+    const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage|null>> = (action) => {
+      const prev = getCurrent('selectedImage') as NVImage|null
+      const next = typeof action === 'function'
+        ? (action as (prev: NVImage|null) => NVImage|null)(prev)
+        : action
+      updateDocument(docId, { selectedImage: next })
+    }
+
+    const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE|null>> = (action) => {
+      const prev = getCurrent('sliceType') as SLICE_TYPE|null
+      const next = typeof action === 'function'
+        ? (action as (prev: SLICE_TYPE|null) => SLICE_TYPE|null)(prev)
+        : action
+      if (next !== null) nv.setSliceType(next)
+      updateDocument(docId, { sliceType: next })
+    }
+
+    const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> =
+  (action) => {
+    // 1. Grab the previous opts from your context
+    const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
+
+    // 2. Compute the “next” opts, whether action is a value or updater fn
+    const nextOpts =
+      typeof action === 'function'
+        ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
+        : action
+
+    // 3. Apply to Niivue instance and push into your document state
+    Object.assign(nv.opts, nextOpts)
+    updateDocument(docId, { opts: { ...nv.opts } })
+  }
+
+    const setLayout: React.Dispatch<React.SetStateAction<keyof typeof layouts>> = (action) => {
+      const prevLayout = getCurrent('layout') as keyof typeof layouts
+      const nextLayout =
+        typeof action === 'function'
+          ? (action as (prev: keyof typeof layouts) => keyof typeof layouts)(prevLayout)
+          : action
+    
+      const layoutValue = layouts[nextLayout]
+      if (layoutValue) nv.setMultiplanarLayout(layoutValue)
+      updateDocument(docId, { layout: nextLayout })
+    }
+    
+    // 2) Mosaic orientation setter
+    type Ori = 'A' | 'C' | 'S'
+    const setMosaicOrientation: React.Dispatch<React.SetStateAction<Ori>> = (action) => {
+      const prevOri = getCurrent('mosaicOrientation') as Ori
+      const nextOri =
+        typeof action === 'function'
+          ? (action as (prev: Ori) => Ori)(prevOri)
+          : action
+    
+      // if you need to drive Niivue itself:
+      // nv.setSliceMosaicOrientation?.(nextOri)
+    
+      updateDocument(docId, { mosaicOrientation: nextOri })
+    }
+  
 
     const doc: NiivueInstanceContext = {
       id: docId,
-      nvRef,
-
-      volumes: [],
-      setVolumes: (vols: React.SetStateAction<NVImage[]>): void => {
-        const old = instance.volumes
-        const newVolumes = typeof vols === 'function' ? (vols as any)(old) : vols
-        updateDocument(docId, { volumes: newVolumes })
-      },
-
-      meshes: [],
-      setMeshes: (meshs: React.SetStateAction<NVMesh[]>): void => {
-        const old = instance.meshes
-        const newMeshes = typeof meshs === 'function' ? (meshs as any)(old) : meshs
-        updateDocument(docId, { meshes: newMeshes })
-      },
-
-      selectedImage: null,
-      setSelectedImage: (img: NVImage | null): void => {
-        updateDocument(docId, { selectedImage: img })
-      },
-
-      sliceType: null,
-      setSliceType: (st: SLICE_TYPE | null): void => {
-        if (st != null) nv.setSliceType(st)
-        updateDocument(docId, { sliceType: st })
-      },
-
-      opts: { ...nv.opts },
-      setOpts: (opts): void => {
-        nv.opts = { ...nv.opts, ...opts }
-        updateDocument(docId, { opts: { ...nv.opts } })
-      },
-
-      layout: 'Row',
-      setLayout: (layoutName: string): void => {
-        const layoutValue = layouts[layoutName]
-        if (layoutValue) nv.setMultiplanarLayout(layoutValue)
-        updateDocument(docId, { layout: layoutName })
-      },
-
+      nvRef: { current: nv },
+  
+      volumes:    [],
+      setVolumes,
+  
+      meshes:     [],
+      setMeshes,
+  
+      selectedImage:   null,
+      setSelectedImage,
+  
+      sliceType:  null,
+      setSliceType,
+  
+      opts:       { ...nv.opts },
+      setOpts,
+  
+      layout:     'Row',
+      setLayout,
+  
       mosaicOrientation: 'A',
-      setMosaicOrientation: (ori: 'A' | 'C' | 'S'): void => {
-        updateDocument(docId, { mosaicOrientation: ori })
-      },
-
-      title: 'Untitled'
+      setMosaicOrientation,
+  
+      title:      'Untitled'
     }
 
     addDocument(doc)
-    // grab the live instance for setters:
-    instance = (documents.find((d) => d.id === docId) as NiivueInstanceContext) || doc
-
+    
     // load persisted prefs
     const prefs = await electron.ipcRenderer.invoke('getPreferences')
     Object.entries(prefs ?? {}).forEach(([key, value]) => {
