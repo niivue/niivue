@@ -2,12 +2,19 @@ import { loadFromFileHandler } from './loadFromFile.js'
 import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
 import { saveCompressedNVDHandler } from './saveFile.js'
-import { dialog, ipcMain } from 'electron'
+import { app, dialog, ipcMain, nativeImage } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
 import { viewState, refreshMenu } from './menu.js'
 import { sliceTypeMap } from '../../common/sliceTypes.js'
 import { layouts } from '../../common/layouts.js'
+import fs from 'fs'
+import path from 'path'
+import dragIconPath from '../../../resources/icons/file_icon_square.png?asset'
+
+const emptyIcon = nativeImage.createEmpty().resize({ width: 64, height: 64 })
+const textfilePath = path.join(app.getPath('documents'), 'test.txt')
+fs.writeFileSync(textfilePath, 'test')
 
 export const registerIpcHandlers = (): void => {
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
@@ -54,4 +61,40 @@ export const registerIpcHandlers = (): void => {
       refreshMenu()
     }
   })
+
+  ipcMain.on('start-tab-drag', (event, { fileName, jsonStr }) => {
+    try {
+      const filePath = path.join(app.getPath('documents'), fileName)
+      fs.writeFileSync(filePath, jsonStr, 'utf-8')
+      console.log('start-tab-drag called')
+      console.log('icon path', dragIconPath)
+      console.log('exists:', fs.existsSync(dragIconPath))
+      const icon = nativeImage.createFromPath(dragIconPath)
+
+    if (icon.isEmpty()) {
+      console.warn('[start-tab-drag] Failed to load icon:', dragIconPath)
+      // event.sender.startDrag({ file: filePath })
+    } else {
+      console.warn('[start-tab-drag] loaded icon:', dragIconPath)
+      console.log('icon size:', icon.getSize())
+      console.log('is empty:', icon.isEmpty())
+      console.log('toDataURL:', icon.toDataURL().substring(0, 100))
+      event.sender.startDrag({
+        file: textfilePath,
+        icon: emptyIcon
+        // icon//: icon.resize({ width: 64, height: 64 })
+      })
+
+      // Prevent drag from being cut off
+      setTimeout(() => {
+        console.log('[start-tab-drag] drag complete (timeout fallback)')
+      }, 500)
+
+      console.log('timeout complete')
+    }
+    } catch (err) {
+      console.error('[start-tab-drag] Failed:', err)
+    }
+  })
+  
 }

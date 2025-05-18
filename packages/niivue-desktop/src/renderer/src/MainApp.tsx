@@ -174,7 +174,7 @@ function MainApp(): JSX.Element {
     }
 
     const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
-      const prev = getCurrent("volumes") as NVImage[]
+      const prev = (getCurrent("volumes") as NVImage[]) ?? []
       const next = typeof action === "function"
         ? (action as (prev: NVImage[]) => NVImage[])(prev)
         : action
@@ -182,7 +182,7 @@ function MainApp(): JSX.Element {
     }
   
     const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
-      const prev = getCurrent("meshes") as NVMesh[]
+      const prev = (getCurrent("meshes") as NVMesh[]) ?? []
       const next = typeof action === "function"
         ? (action as (prev: NVMesh[]) => NVMesh[])(prev)
         : action
@@ -348,8 +348,29 @@ function MainApp(): JSX.Element {
     }
   }
 
+  function handleDragStart(
+    _: React.DragEvent,
+    docId: string,
+    getDocJson: () => any
+  ) {
+    try {
+      const fileName = `${docId}.nvd`
+      const json = getDocJson()
+  
+      if (!json || typeof json !== 'object') {
+        throw new Error(`Cannot serialize: invalid document content for ${docId}`)
+      }
+  
+      const jsonStr = JSON.stringify(json, null, 2)
+      console.log('drag start handled')
+      window.electron.ipcRenderer.send('start-tab-drag', { fileName, jsonStr })
+    } catch (err) {
+      console.error('Drag start failed:', err)
+    }
+  }
+
   // Tab strip
-  function renderTabs(): JSX.Element {
+  function renderTabs(nv: Niivue): JSX.Element {
   return (
     <div className="flex flex-row bg-gray-800 text-white px-2">
       {documents.map((doc) => {
@@ -363,6 +384,8 @@ function MainApp(): JSX.Element {
             onClick={() => {
               if (!isEditing) selectDocument(doc.id)
             }}
+            draggable
+            onDragStart={(e) => handleDragStart(e, doc.id, () => nv.document.json())}
           >
             {isEditing ? (
               <input
@@ -413,7 +436,7 @@ function MainApp(): JSX.Element {
 
   return (
     <>
-      {renderTabs()}
+      {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar
           onRemoveMesh={handleRemoveMesh}
