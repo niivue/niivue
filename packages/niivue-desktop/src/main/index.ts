@@ -1,9 +1,11 @@
-import { app, shell, BrowserWindow, Menu } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, Menu, nativeImage } from 'electron'
+import path, { join } from 'path'
 import { registerIpcHandlers } from './utils/ipcHandlers.js'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../build/icons/app_icon.png?asset'
 import { createMenu } from './utils/menu.js'
+
+
 
 let mainWindow: BrowserWindow | null = null // Global variable to store the window instance
 
@@ -13,6 +15,7 @@ function createWindow(): void {
     width: 900,
     height: 670,
     show: true,
+    icon,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
@@ -46,6 +49,11 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    const dockIcon = nativeImage.createFromPath(icon)
+    console.log('📦 Dock icon loaded:', dockIcon.isEmpty() ? '❌ empty image' : '✅ loaded')
+    app.dock.setIcon(dockIcon)
+  }
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
