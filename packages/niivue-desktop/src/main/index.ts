@@ -4,6 +4,7 @@ import { registerIpcHandlers } from './utils/ipcHandlers.js'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../build/icons/app_icon.png?asset'
 import { createMenu } from './utils/menu.js'
+import { getPlatformIcon } from './utils/getPlatformIcon.js'
 
 
 
@@ -15,7 +16,7 @@ function createWindow(): void {
     width: 900,
     height: 670,
     show: true,
-    icon,
+    icon: getPlatformIcon(),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
@@ -50,9 +51,10 @@ function createWindow(): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   if (process.platform === 'darwin') {
-    const dockIcon = nativeImage.createFromPath(icon)
-    console.log('📦 Dock icon loaded:', dockIcon.isEmpty() ? '❌ empty image' : '✅ loaded')
-    app.dock.setIcon(dockIcon)
+    const icon = getPlatformIcon()
+    if (typeof icon !== 'string') {
+      app.dock.setIcon(icon)
+    }
   }
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
