@@ -346,28 +346,7 @@ function MainApp(): JSX.Element {
       nv.volumes = vols
       selected.setVolumes(vols)
     }
-  }
-
-  function handleDragStart(
-    _: React.DragEvent,
-    docId: string,
-    getDocJson: () => any
-  ) {
-    try {
-      const fileName = `${docId}.nvd`
-      const json = getDocJson()
-  
-      if (!json || typeof json !== 'object') {
-        throw new Error(`Cannot serialize: invalid document content for ${docId}`)
-      }
-  
-      const jsonStr = JSON.stringify(json, null, 2)
-      console.log('drag start handled')
-      window.electron.ipcRenderer.send('start-tab-drag', { fileName, jsonStr })
-    } catch (err) {
-      console.error('Drag start failed:', err)
-    }
-  }
+  }  
 
   // Tab strip
   function renderTabs(nv: Niivue): JSX.Element {
@@ -385,7 +364,12 @@ function MainApp(): JSX.Element {
               if (!isEditing) selectDocument(doc.id)
             }}
             draggable
-            onDragStart={(e) => handleDragStart(e, doc.id, () => nv.document.json())}
+            onDragStart={(e) => {
+              e.preventDefault()
+              const fileName = `${doc.id}.nvd`
+              const jsonStr = JSON.stringify(nv.document.json(), null, 2)
+              window.electron.startTabDrag(fileName, jsonStr)
+            }}
           >
             {isEditing ? (
               <input

@@ -2,7 +2,7 @@ import { loadFromFileHandler } from './loadFromFile.js'
 import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
 import { saveCompressedNVDHandler } from './saveFile.js'
-import { app, dialog, ipcMain, nativeImage } from 'electron'
+import { app, dialog, ipcMain, nativeImage, shell } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
 import { viewState, refreshMenu } from './menu.js'
@@ -13,8 +13,8 @@ import path from 'path'
 import dragIconPath from '../../../resources/icons/file_icon_square.png?asset'
 
 const emptyIcon = nativeImage.createEmpty().resize({ width: 64, height: 64 })
-const textfilePath = path.join(app.getPath('documents'), 'test.txt')
-fs.writeFileSync(textfilePath, 'test')
+// const textfilePath = path.join(app.getPath('documents'), 'test.txt')
+// fs.writeFileSync(textfilePath, 'test')
 
 export const registerIpcHandlers = (): void => {
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
@@ -62,36 +62,33 @@ export const registerIpcHandlers = (): void => {
     }
   })
 
-  ipcMain.on('start-tab-drag', (event, { fileName, jsonStr }) => {
+  ipcMain.on('start-tab-drag', (event, { fileName, jsonStr }: { fileName: string; jsonStr: string }) => {
     try {
       const filePath = path.join(app.getPath('documents'), fileName)
       fs.writeFileSync(filePath, jsonStr, 'utf-8')
-      console.log('start-tab-drag called')
-      console.log('icon path', dragIconPath)
-      console.log('exists:', fs.existsSync(dragIconPath))
+      console.log('[start-tab-drag] File written to:', filePath)
+  
       const icon = nativeImage.createFromPath(dragIconPath)
-
-    if (icon.isEmpty()) {
-      console.warn('[start-tab-drag] Failed to load icon:', dragIconPath)
-      // event.sender.startDrag({ file: filePath })
-    } else {
-      console.warn('[start-tab-drag] loaded icon:', dragIconPath)
-      console.log('icon size:', icon.getSize())
-      console.log('is empty:', icon.isEmpty())
-      console.log('toDataURL:', icon.toDataURL().substring(0, 100))
+      const finalIcon = icon.isEmpty()
+        ? nativeImage.createEmpty().resize({ width: 64, height: 64 })
+        : icon.resize({ width: 64, height: 64 })
+      // console.log('icon resized')
+      // console.log('icon size:', icon.getSize())
+      // console.log('is empty:', icon.isEmpty())
+      // console.log('toDataURL:', icon.toDataURL().substring(0, 100))
       event.sender.startDrag({
-        file: textfilePath,
-        icon: emptyIcon
-        // icon//: icon.resize({ width: 64, height: 64 })
+        file: filePath,
+        icon: finalIcon
       })
-
-      // Prevent drag from being cut off
-      setTimeout(() => {
-        console.log('[start-tab-drag] drag complete (timeout fallback)')
-      }, 500)
-
-      console.log('timeout complete')
-    }
+      // console.log('drag started')
+      // Optional fallback for Linux or debugging
+      // if (process.platform === 'linux') {
+      //   shell.showItemInFolder(filePath)
+      // }
+  
+      // setTimeout(() => {
+      //   console.log('[start-tab-drag] drag complete (timeout fallback)')
+      // }, 500)
     } catch (err) {
       console.error('[start-tab-drag] Failed:', err)
     }
