@@ -126,6 +126,12 @@ function MainApp(): JSX.Element {
       selected.setVolumes([])
       selected.setMeshes([])
       selected.setSelectedImage(null)
+      updateDocument(selected.id, {
+        volumes: [],
+        meshes: [],
+        selectedImage: null,
+        isDirty: true
+      })
     }
     electron.ipcRenderer.on('clear-scene', handleClear)
     return (): void => {
@@ -139,7 +145,7 @@ function MainApp(): JSX.Element {
       if (!selected) return
       const { id, title: friendlyName = id, nvRef } = selected
       const nv = nvRef.current
-  
+
       const jsonStr = JSON.stringify(nv.document.json())
       const savedPath: string | undefined = await window.electron.ipcRenderer.invoke(
         'saveCompressedNVD',
@@ -149,10 +155,14 @@ function MainApp(): JSX.Element {
       if (savedPath) {
         const raw = savedPath.split('/').pop() || friendlyName
         const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || friendlyName
-        updateDocument(id, { title: newTitle })
+        updateDocument(id, {
+          title: newTitle,
+          filePath: savedPath,
+          isDirty: false
+        })
       }
     }
-  
+
     window.electron.ipcRenderer.on('saveCompressedDocument', onSave)
     return () => {
       window.electron.ipcRenderer.removeListener('saveCompressedDocument', onSave)
@@ -169,58 +179,57 @@ function MainApp(): JSX.Element {
     const docId = `doc-${documents.length + 1}`
 
     function getCurrent<T extends keyof NiivueInstanceContext>(field: T): NiivueInstanceContext[T] {
-      const d = documents.find(d => d.id === docId)
+      const d = documents.find((d) => d.id === docId)
       return d ? (d[field] as any) : (undefined as any)
     }
 
     const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
-      const prev = (getCurrent("volumes") as NVImage[]) ?? []
-      const next = typeof action === "function"
-        ? (action as (prev: NVImage[]) => NVImage[])(prev)
-        : action
-      updateDocument(docId, { volumes: next })
+      const prev = (getCurrent('volumes') as NVImage[]) ?? []
+      const next =
+        typeof action === 'function' ? (action as (prev: NVImage[]) => NVImage[])(prev) : action
+      updateDocument(docId, { volumes: next, isDirty: true })
     }
-  
+
     const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
-      const prev = (getCurrent("meshes") as NVMesh[]) ?? []
-      const next = typeof action === "function"
-        ? (action as (prev: NVMesh[]) => NVMesh[])(prev)
-        : action
-      updateDocument(docId, { meshes: next })
+      const prev = (getCurrent('meshes') as NVMesh[]) ?? []
+      const next =
+        typeof action === 'function' ? (action as (prev: NVMesh[]) => NVMesh[])(prev) : action
+      updateDocument(docId, { meshes: next, isDirty: true })
     }
 
-    const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage|null>> = (action) => {
-      const prev = getCurrent('selectedImage') as NVImage|null
-      const next = typeof action === 'function'
-        ? (action as (prev: NVImage|null) => NVImage|null)(prev)
-        : action
-      updateDocument(docId, { selectedImage: next })
+    const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage | null>> = (action) => {
+      const prev = getCurrent('selectedImage') as NVImage | null
+      const next =
+        typeof action === 'function'
+          ? (action as (prev: NVImage | null) => NVImage | null)(prev)
+          : action
+      updateDocument(docId, { selectedImage: next, isDirty: true })
     }
 
-    const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE|null>> = (action) => {
-      const prev = getCurrent('sliceType') as SLICE_TYPE|null
-      const next = typeof action === 'function'
-        ? (action as (prev: SLICE_TYPE|null) => SLICE_TYPE|null)(prev)
-        : action
+    const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE | null>> = (action) => {
+      const prev = getCurrent('sliceType') as SLICE_TYPE | null
+      const next =
+        typeof action === 'function'
+          ? (action as (prev: SLICE_TYPE | null) => SLICE_TYPE | null)(prev)
+          : action
       if (next !== null) nv.setSliceType(next)
-      updateDocument(docId, { sliceType: next })
+      updateDocument(docId, { sliceType: next, isDirty: true })
     }
 
-    const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> =
-  (action) => {
-    // 1. Grab the previous opts from your context
-    const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
+    const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> = (action) => {
+      // 1. Grab the previous opts from your context
+      const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
 
-    // 2. Compute the “next” opts, whether action is a value or updater fn
-    const nextOpts =
-      typeof action === 'function'
-        ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
-        : action
+      // 2. Compute the “next” opts, whether action is a value or updater fn
+      const nextOpts =
+        typeof action === 'function'
+          ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
+          : action
 
-    // 3. Apply to Niivue instance and push into your document state
-    Object.assign(nv.opts, nextOpts)
-    updateDocument(docId, { opts: { ...nv.opts } })
-  }
+      // 3. Apply to Niivue instance and push into your document state
+      Object.assign(nv.opts, nextOpts)
+      updateDocument(docId, { opts: { ...nv.opts }, isDirty: true })
+    }
 
     const setLayout: React.Dispatch<React.SetStateAction<keyof typeof layouts>> = (action) => {
       const prevLayout = getCurrent('layout') as keyof typeof layouts
@@ -228,58 +237,58 @@ function MainApp(): JSX.Element {
         typeof action === 'function'
           ? (action as (prev: keyof typeof layouts) => keyof typeof layouts)(prevLayout)
           : action
-    
+
       const layoutValue = layouts[nextLayout]
       if (layoutValue) nv.setMultiplanarLayout(layoutValue)
-      updateDocument(docId, { layout: nextLayout })
+      updateDocument(docId, { layout: nextLayout, isDirty: true })
     }
-    
+
     // 2) Mosaic orientation setter
     type Ori = 'A' | 'C' | 'S'
     const setMosaicOrientation: React.Dispatch<React.SetStateAction<Ori>> = (action) => {
       const prevOri = getCurrent('mosaicOrientation') as Ori
       const nextOri =
-        typeof action === 'function'
-          ? (action as (prev: Ori) => Ori)(prevOri)
-          : action
-    
+        typeof action === 'function' ? (action as (prev: Ori) => Ori)(prevOri) : action
+
       // if you need to drive Niivue itself:
       // nv.setSliceMosaicOrientation?.(nextOri)
-    
-      updateDocument(docId, { mosaicOrientation: nextOri })
+
+      updateDocument(docId, { mosaicOrientation: nextOri, isDirty: true })
     }
-  
 
     const doc: NiivueInstanceContext = {
       id: docId,
       nvRef: { current: nv },
-  
-      volumes:    [],
+
+      volumes: [],
       setVolumes,
-  
-      meshes:     [],
+
+      meshes: [],
       setMeshes,
-  
-      selectedImage:   null,
+
+      selectedImage: null,
       setSelectedImage,
-  
-      sliceType:  null,
+
+      sliceType: null,
       setSliceType,
-  
-      opts:       { ...nv.opts },
+
+      opts: { ...nv.opts },
       setOpts,
-  
-      layout:     'Row',
+
+      layout: 'Row',
       setLayout,
-  
+
       mosaicOrientation: 'A',
       setMosaicOrientation,
-  
-      title:      'Untitled'
+
+      title: 'Untitled',
+
+      filePath: null,
+      isDirty: false
     }
 
     addDocument(doc)
-    
+
     // load persisted prefs
     const prefs = await electron.ipcRenderer.invoke('getPreferences')
     Object.entries(prefs ?? {}).forEach(([key, value]) => {
@@ -292,7 +301,6 @@ function MainApp(): JSX.Element {
     nv.setSliceType(nv.sliceTypeMultiplanar)
     overrideDrawGraph(nv)
     await niimathRef.current.init()
-    
 
     nv.drawScene()
   }
@@ -315,13 +323,19 @@ function MainApp(): JSX.Element {
     if (!selected) return
     const nv = selected.nvRef.current
     nv.removeMesh(mesh)
-    selected.setMeshes((prev) => prev.filter((m) => m.id !== mesh.id))
+    selected.setMeshes((prev) => {
+      updateDocument(selected.id, { isDirty: true })
+      return prev.filter((m) => m.id !== mesh.id)
+    })
   }
   function handleRemoveVolume(vol: NVImage): void {
     if (!selected) return
     const nv = selected.nvRef.current
     nv.removeVolume(vol)
-    selected.setVolumes((prev) => prev.filter((v) => v.id !== vol.id))
+    selected.setVolumes((prev) => {
+      updateDocument(selected.id, { isDirty: true })
+      return prev.filter((v) => v.id !== vol.id)
+    })
   }
   function handleMoveVolumeUp(vol: NVImage): void {
     if (!selected) return
@@ -333,6 +347,7 @@ function MainApp(): JSX.Element {
       vols.splice(idx - 1, 0, vol)
       nv.volumes = vols
       selected.setVolumes(vols)
+      updateDocument(selected.id, { isDirty: true })
     }
   }
   function handleMoveVolumeDown(vol: NVImage): void {
@@ -345,78 +360,78 @@ function MainApp(): JSX.Element {
       vols.splice(idx + 1, 0, vol)
       nv.volumes = vols
       selected.setVolumes(vols)
+      updateDocument(selected.id, { isDirty: true })
     }
-  }  
+  }
 
   // Tab strip
   function renderTabs(nv: Niivue): JSX.Element {
-  return (
-    <div className="flex flex-row bg-gray-800 text-white px-2">
-      {documents.map((doc) => {
-        const isEditing = doc.id === editingDocId
-        return (
-          <div
-            key={doc.id}
-            className={`px-4 py-2 cursor-pointer ${
-              doc.id === selectedDocId ? 'bg-gray-700' : ''
-            }`}
-            onClick={() => {
-              if (!isEditing) selectDocument(doc.id)
-            }}
-            draggable
-            onDragStart={(e) => {
-              e.preventDefault()
-              const fileName = `${doc.id}.nvd`
-              const jsonStr = JSON.stringify(nv.document.json(), null, 2)
-              window.electron.startTabDrag(fileName, jsonStr)
-            }}
-          >
-            {isEditing ? (
-              <input
-                type="text"
-                className="bg-white text-black px-1 py-0.5 w-full"
-                value={editingName}
-                autoFocus
-                onChange={(e) => setEditingName(e.target.value)}
-                onBlur={() => {
-                  const newTitle = editingName.trim() || doc.id
-                  updateDocument(doc.id, { title: newTitle })
-                  setEditingDocId(null)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+    return (
+      <div className="flex flex-row bg-gray-800 text-white px-2">
+        {documents.map((doc) => {
+          const isEditing = doc.id === editingDocId
+          return (
+            <div
+              key={doc.id}
+              className={`px-4 py-2 cursor-pointer ${
+                doc.id === selectedDocId ? 'bg-gray-700' : ''
+              }`}
+              onClick={() => {
+                if (!isEditing) selectDocument(doc.id)
+              }}
+              draggable
+              onDragStart={(e) => {
+                e.preventDefault()
+                const fileName = `${doc.id}.nvd`
+                const jsonStr = JSON.stringify(nv.document.json(), null, 2)
+                window.electron.startTabDrag(fileName, jsonStr)
+              }}
+            >
+              {isEditing ? (
+                <input
+                  type="text"
+                  className="bg-white text-black px-1 py-0.5 w-full"
+                  value={editingName}
+                  autoFocus
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={() => {
                     const newTitle = editingName.trim() || doc.id
-                    updateDocument(doc.id, { title: newTitle })
+                    updateDocument(doc.id, { title: newTitle, isDirty: true })
                     setEditingDocId(null)
-                  } else if (e.key === 'Escape') {
-                    setEditingDocId(null)
-                  }
-                }}
-              />
-            ) : (
-              <span
-                onDoubleClick={() => {
-                  setEditingDocId(doc.id)
-                  setEditingName(doc.title ?? '')
-                }}
-              >
-                {doc.title || doc.id}
-              </span>
-            )}
-          </div>
-        )
-      })}
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const newTitle = editingName.trim() || doc.id
+                      updateDocument(doc.id, { title: newTitle, isDirty: true })
+                      setEditingDocId(null)
+                    } else if (e.key === 'Escape') {
+                      setEditingDocId(null)
+                    }
+                  }}
+                />
+              ) : (
+                <span
+                  onDoubleClick={() => {
+                    setEditingDocId(doc.id)
+                    setEditingName(doc.title ?? '')
+                  }}
+                >
+                  {(doc.title || doc.id) + (doc.isDirty ? ' *' : '')}
+                </span>
+              )}
+            </div>
+          )
+        })}
 
-      <div
-        className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
-        onClick={() => void createNewDocument()}
-      >
-        +
+        <div
+          className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
+          onClick={() => void createNewDocument()}
+        >
+          +
+        </div>
       </div>
-    </div>
-  )
-}
-
+    )
+  }
 
   return (
     <>

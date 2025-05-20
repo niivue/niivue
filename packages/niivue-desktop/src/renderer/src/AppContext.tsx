@@ -1,10 +1,5 @@
 // src/AppContext.tsx
-import React, {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-} from 'react'
+import React, { createContext, useContext, useState, ReactNode } from 'react'
 import type { NVImage, NVMesh, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { layouts } from '../../common/layouts'
 
@@ -26,6 +21,8 @@ export type NiivueInstanceContext = {
   mosaicOrientation: 'A' | 'C' | 'S'
   setMosaicOrientation: (orient: 'A' | 'C' | 'S') => void
   title: string
+  filePath: string | null // ✅ NEW: Full path to .nvd file or null if unsaved
+  isDirty: boolean // ✅ NEW: True if unsaved changes exist
 }
 
 export type AppContextType = {
@@ -34,10 +31,7 @@ export type AppContextType = {
   addDocument: (doc: NiivueInstanceContext) => void
   removeDocument: (id: string) => void
   selectDocument: (id: string) => void
-  updateDocument: (
-    id: string,
-    partial: Partial<NiivueInstanceContext>
-  ) => void
+  updateDocument: (id: string, partial: Partial<NiivueInstanceContext>) => void
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -63,13 +57,8 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
     setSelectedDocId(id)
   }
 
-  const updateDocument = (
-    id: string,
-    partial: Partial<NiivueInstanceContext>
-  ): void => {
-    setDocuments((docs) =>
-      docs.map((d) => (d.id === id ? { ...d, ...partial } : d))
-    )
+  const updateDocument = (id: string, partial: Partial<NiivueInstanceContext>): void => {
+    setDocuments((docs) => docs.map((d) => (d.id === id ? { ...d, ...partial } : d)))
   }
 
   return (
@@ -80,7 +69,7 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
         addDocument,
         removeDocument,
         selectDocument,
-        updateDocument,
+        updateDocument
       }}
     >
       {children}
