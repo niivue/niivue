@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react'
-import { AppContext } from '../App'
-import { Niivue } from '@niivue/niivue'
+// src/components/MosaicControls.tsx
+
+import React, { useEffect, useState } from 'react'
+import { useSelectedInstance } from '../AppContext'
 import { Button, TextField, Switch } from '@radix-ui/themes'
 import { calculateMosaic, SliceOrientation } from '../utils/mosaics'
 
@@ -53,8 +54,11 @@ function updateMosaicForSelectedOrientation(
     }
     const numMatch = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
     if (numMatch) {
-      if (currentOrientation === selected) newTokens.push(shiftToken(token, delta) + trail)
-      else newTokens.push(token + trail)
+      if (currentOrientation === selected) {
+        newTokens.push(shiftToken(token, delta) + trail)
+      } else {
+        newTokens.push(token + trail)
+      }
       i++
       continue
     }
@@ -64,19 +68,28 @@ function updateMosaicForSelectedOrientation(
   return newTokens.join(' ')
 }
 
-export function MosaicControls() {
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current as Niivue
+export function MosaicControls(): JSX.Element {
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv || !instance) return <></>
 
   const [selectedOrientation, setSelectedOrientation] = useState<'A' | 'C' | 'S'>('A')
   const [showAllSlices, setShowAllSlices] = useState(false)
   const [cachedMosaic, setCachedMosaic] = useState<string | null>(null)
-  const [centerMosaic, setCenterMosaic] = useState<boolean>(nv.opts.centerMosaic ?? true)
-  const [mosaicStr, setMosaicStr] = useState(
-    nv.opts.sliceMosaicString?.trim() || 'A -10 0 20; C -10 0; S -10 0 20'
+  const [centerMosaic, setCenterMosaic] = useState<boolean>(instance.opts.centerMosaic ?? true)
+  const [mosaicStr, setMosaicStr] = useState<string>(
+    instance.opts.sliceMosaicString?.trim() || 'A -10 0 20; C -10 0; S -10 0 20'
   )
 
-  // Cache/restore or fully replace the mosaic string on toggle
+  // Reset cache when switching documents
+  useEffect(() => {
+    setMosaicStr(instance.opts.sliceMosaicString?.trim() || 'A -10 0 20; C -10 0; S -10 0 20')
+    setCachedMosaic(null)
+    setCenterMosaic(instance.opts.centerMosaic ?? true)
+    setShowAllSlices(false)
+  }, [instance.id])
+
+  // Update mosaic string when toggling showAllSlices
   useEffect(() => {
     if (!nv) return
     if (showAllSlices) {
@@ -90,12 +103,7 @@ export function MosaicControls() {
       const canvas = nv.gl.canvas as HTMLCanvasElement
       const vol = nv.volumes[0]
       if (!vol) return
-      const { mosaicString } = calculateMosaic(
-        vol,
-        canvas.width,
-        canvas.height,
-        orientEnum
-      )
+      const { mosaicString } = calculateMosaic(vol, canvas.width, canvas.height, orientEnum)
       setMosaicStr(mosaicString)
     } else if (cachedMosaic !== null) {
       setMosaicStr(cachedMosaic)
@@ -103,19 +111,23 @@ export function MosaicControls() {
     }
   }, [showAllSlices, selectedOrientation, nv])
 
-  // Apply changes to Niivue
+  // Apply changes to Niivue and instance state
   useEffect(() => {
     if (!nv) return
     nv.opts.centerMosaic = centerMosaic
     nv.setSliceMosaicString(mosaicStr)
+    instance.setOpts({
+      centerMosaic,
+      sliceMosaicString: mosaicStr
+    })
     nv.drawScene()
   }, [nv, mosaicStr, centerMosaic])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setMosaicStr(e.target.value)
   }
 
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>): void => {
     if (showAllSlices) return
     e.preventDefault()
     const step = 5
@@ -124,7 +136,7 @@ export function MosaicControls() {
     )
   }
 
-  const handleScroll = (delta: number) => {
+  const handleScroll = (delta: number): void => {
     if (showAllSlices) return
     setMosaicStr(prev => updateMosaicForSelectedOrientation(prev, selectedOrientation, delta))
   }

@@ -1,9 +1,9 @@
-import React, { useState, useContext } from 'react'
+import React, { useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Switch, Slider } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider'
 import { SliceSelection } from './SliceSelection'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { ColorPicker } from './ColorPicker'
 import { hexToRgba10 } from '../utils/colors'
 import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
@@ -11,8 +11,9 @@ import { filterEnum } from '@renderer/utils/config'
 import { EnumSelect } from './EnumSelect'
 
 export const GeneralTab: React.FC = (): JSX.Element => {
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
 
   const [show3Dcrosshair, setShow3Dcrosshair] = useState<boolean>(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState<number[]>(Array.from(nv.opts.crosshairColor))

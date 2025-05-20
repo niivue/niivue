@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Button,
   ContextMenu,
@@ -12,7 +12,7 @@ import {
 } from '@radix-ui/themes'
 import { NVImage } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
-import { AppContext } from '@renderer/App'
+import { useSelectedInstance } from '../AppContext' //
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 interface VolumeImageCardProps {
@@ -43,8 +43,9 @@ export function VolumeImageCard({
   // State to control the header dialog (to show NIfTI header info)
   const [headerDialogOpen, setHeaderDialogOpen] = useState<boolean>(false)
 
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
 
   // Update the display name when image.name changes
   useEffect(() => {

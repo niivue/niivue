@@ -51,3 +51,7 @@ test-results
 ts-build
 packages/niivue/public/
 *.zarr
+# Exception: allow only this specific build folder and its icons
+!packages/niivue-desktop/build/
+!packages/niivue-desktop/build/icons/
+!packages/niivue-desktop/build/icons/**

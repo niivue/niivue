@@ -1,16 +1,20 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
-import { AppContext } from '../App'
-import { NVImage, NVMesh, SHOW_RENDER } from '@niivue/niivue'
+import { useSelectedInstance } from '../AppContext'
+import { NVImage, NVMesh } from '@niivue/niivue'
 import { MESH_EXTENSIONS } from '../../../common/extensions'
 import { base64ToString } from '@renderer/utils/base64ToJSON'
 
 const electron = window.electron
 
 export const AtlasTab: React.FC = () => {
-  const { nvRef, setVolumes, setMeshes } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
+
+  const setVolumes = instance?.setVolumes ?? (() => {})
+  const setMeshes = instance?.setMeshes ?? (() => {})
 
   // Track current atlas type and index
   const [atlasInfo, setAtlasInfo] = useState<{ type: 'volume' | 'mesh'; idx: number } | null>(null)
@@ -37,7 +41,10 @@ export const AtlasTab: React.FC = () => {
       const idx = nv.volumes[atlasInfo.idx].getValue(vox[0], vox[1], vox[2])
       if (!isFinite(idx) || idx === prevIdx) return
       prevIdx = idx
-      setHoverLabel(atlasLabels[idx] || '')
+      const newLabel = atlasLabels[idx] || ''
+      if (newLabel !== hoverLabel) {
+        setHoverLabel(newLabel)
+      }
     }
     canvas.addEventListener('mousemove', onMouseMove)
     return () => canvas.removeEventListener('mousemove', onMouseMove)

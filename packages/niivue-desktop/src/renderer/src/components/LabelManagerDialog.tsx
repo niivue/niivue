@@ -1,27 +1,44 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { AppContext } from '../App'
 import { Button, Flex } from '@radix-ui/themes'
 import { LabelTextAlignment, NVLabel3D, NVLabel3DStyle, LabelLineTerminator } from '@niivue/niivue'
 import { Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
+import { useSelectedInstance } from '../AppContext'
 
-export const LabelManagerDialog = ({ open, setOpen, editMode, setEditMode }: { open: boolean, setOpen: (v: boolean) => void, editMode: boolean, setEditMode: (v: boolean) => void }) => {
-  const { nvRef } = useContext(AppContext)
+export const LabelManagerDialog = ({
+  open,
+  setOpen,
+  editMode,
+  setEditMode
+}: {
+  open: boolean
+  setOpen: (v: boolean) => void
+  editMode: boolean
+  setEditMode: (v: boolean) => void
+}) => {
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+
   const [text, setText] = useState('')
   const [pos, setPos] = useState<[string, string, string]>(['0', '0', '0'])
   const [scale, setScale] = useState('1')
   const [lineWidth, setLineWidth] = useState('1')
   const [lineColor, setLineColor] = useState('#ffffff')
 
+  // Called externally to load label for editing
   const editLabel = (label: NVLabel3D) => {
+    if (!nv) return
     setEditMode(true)
     setText(label.text)
     setScale(label.style?.textScale?.toString() || '1')
     setLineWidth(label.style?.lineWidth?.toString() || '1')
     setLineColor(
       label.style?.lineColor
-        ? `#${label.style.lineColor.slice(0, 3).map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')}`
+        ? `#${label.style.lineColor
+            .slice(0, 3)
+            .map(c => Math.round(c * 255).toString(16).padStart(2, '0'))
+            .join('')}`
         : '#ffffff'
     )
     const point = Array.isArray(label.points?.[0]) ? label.points[0] : label.points
@@ -31,9 +48,12 @@ export const LabelManagerDialog = ({ open, setOpen, editMode, setEditMode }: { o
   }
 
   const updateLabel = () => {
-    const nv = nvRef.current
+    if (!nv) return
     nv.opts.showLegend = true
-    const rgb = lineColor.match(/#(..)(..)(..)/)?.slice(1).map(c => parseInt(c, 16) / 255) || [1, 1, 1]
+    const rgb = lineColor
+      .match(/#(..)(..)(..)/)
+      ?.slice(1)
+      .map(c => parseInt(c, 16) / 255) || [1, 1, 1]
     const style: NVLabel3DStyle = {
       textScale: parseFloat(scale),
       textAlignment: LabelTextAlignment.CENTER,
@@ -43,20 +63,16 @@ export const LabelManagerDialog = ({ open, setOpen, editMode, setEditMode }: { o
       lineColor: [...rgb, 1],
       lineTerminator: LabelLineTerminator.NONE
     }
-    const crossFrac = nv.scene.crosshairPos as [number, number, number]
-    const mm = nv.frac2mm(crossFrac)
-    const point = [mm[0], mm[1], mm[2]] as [number, number, number]
-    const label = nv.addLabel(text, style, point)
+    const mm = nv.frac2mm(nv.scene.crosshairPos)
+    const label = nv.addLabel(text, style, Array.from(mm))
     if (label) {
       label.onClick = (clickedLabel: NVLabel3D, e?: MouseEvent) => {
-        if (e) {
+        if (e?.button === 2) {
           e.preventDefault()
-          if (e.button === 2) {
-            editLabel(clickedLabel)
-          } else {
-            const pt = Array.isArray(clickedLabel.points?.[0]) ? clickedLabel.points[0] : clickedLabel.points
-            if (pt) nv.scene.crosshairPos = nv.mm2frac(pt as [number, number, number])
-          }
+          editLabel(clickedLabel)
+        } else {
+          const pt = Array.isArray(clickedLabel.points?.[0]) ? clickedLabel.points[0] : clickedLabel.points
+          if (pt) nv.scene.crosshairPos = nv.mm2frac(pt as [number, number, number])
         }
       }
     }
@@ -65,30 +81,30 @@ export const LabelManagerDialog = ({ open, setOpen, editMode, setEditMode }: { o
   }
 
   const deleteLabel = () => {
-    const nv = nvRef.current
+    if (!nv) return
     nv.document.labels = nv.document.labels.filter(l => l.text !== text)
     nv.updateGLVolume()
     setEditMode(false)
   }
 
+  // Initialize new label (unconditionally, but gated logic inside)
   useEffect(() => {
-    if (!open || editMode) return
-    const nv = nvRef.current
-    const crossFrac = nv.scene.crosshairPos as [number, number, number]
-    const mm = nv.frac2mm(crossFrac)
+    if (!open || editMode || !nv) return
+    const mm = nv.frac2mm(nv.scene.crosshairPos)
     setPos(mm.map(n => n.toFixed(2)) as [string, string, string])
     setText('')
     setScale('1')
     setLineWidth('1')
     const lastLabel = nv.document.labels.at(-1)
-    if (lastLabel?.style?.lineColor) {
-      const hex = '#' + lastLabel.style.lineColor.slice(0, 3).map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
-      setLineColor(hex)
-    } else {
-      const hex = '#' + nv.opts.crosshairColor.slice(0, 3).map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
-      setLineColor(hex)
-    }
-  }, [open, editMode])
+    const colorSource = lastLabel?.style?.lineColor || nv.opts.crosshairColor
+    const hex = '#' + colorSource
+      .slice(0, 3)
+      .map(c => Math.round(c * 255).toString(16).padStart(2, '0'))
+      .join('')
+    setLineColor(hex)
+  }, [open, editMode, nv])
+
+  if (!nv) return <></>
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -105,29 +121,29 @@ export const LabelManagerDialog = ({ open, setOpen, editMode, setEditMode }: { o
               </Dialog.Close>
             </div>
             <Flex direction="column" gap="2">
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label>
                 Label Text
-                <input type="text" value={text} onChange={e => setText(e.target.value)} autoFocus style={{ width: '100%' }} />
+                <input type="text" value={text} onChange={e => setText(e.target.value)} autoFocus />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label>
                 Crosshair Position (mm)
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <input type="text" value={pos[0]} disabled style={{ flex: 1 }} />
-                  <input type="text" value={pos[1]} disabled style={{ flex: 1 }} />
-                  <input type="text" value={pos[2]} disabled style={{ flex: 1 }} />
+                  <input type="text" value={pos[0]} disabled />
+                  <input type="text" value={pos[1]} disabled />
+                  <input type="text" value={pos[2]} disabled />
                 </div>
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label>
                 Text Scale
-                <input type="text" value={scale} onChange={e => setScale(e.target.value)} style={{ width: '100%' }} />
+                <input type="text" value={scale} onChange={e => setScale(e.target.value)} />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label>
                 Line Color
-                <input type="color" value={lineColor} onChange={e => setLineColor(e.target.value)} style={{ width: '100%', height: '2rem', border: 'none', background: 'none' }} />
+                <input type="color" value={lineColor} onChange={e => setLineColor(e.target.value)} style={{ height: '2rem', border: 'none' }} />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label>
                 Line Width
-                <input type="text" value={lineWidth} onChange={e => setLineWidth(e.target.value)} style={{ width: '100%' }} />
+                <input type="text" value={lineWidth} onChange={e => setLineWidth(e.target.value)} />
               </label>
               <Flex gap="3">
                 <Button onClick={updateLabel} disabled={!text.trim()}>Save</Button>
