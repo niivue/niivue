@@ -41,7 +41,7 @@ function MainApp(): JSX.Element {
   const { documents, selectedDocId, addDocument, selectDocument, updateDocument } = useAppContext()
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
-  
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const selected = useSelectedInstance()
 
   // Create the first document on mount
@@ -427,8 +427,10 @@ function MainApp(): JSX.Element {
           onRemoveVolume={handleRemoveVolume}
           onMoveVolumeUp={handleMoveVolumeUp}
           onMoveVolumeDown={handleMoveVolumeDown}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
-        {selected && <Viewer doc={selected} />}
+        {selected && <Viewer doc={selected} collapsed={sidebarCollapsed} />}
       </div>
       <PreferencesDialog />
       <LabelManagerDialog

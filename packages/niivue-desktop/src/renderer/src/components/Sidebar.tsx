@@ -8,17 +8,21 @@ import { NVImage, NVMesh } from '@niivue/niivue'
 import { useSelectedInstance } from '../AppContext'
 
 interface SidebarProps {
-  onRemoveVolume: (volume: NVImage) => void;
-  onRemoveMesh: (mesh: NVMesh) => void;
-  onMoveVolumeUp: (volume: NVImage) => void;
-  onMoveVolumeDown: (volume: NVImage) => void;
+  onRemoveVolume: (volume: NVImage) => void
+  onRemoveMesh: (mesh: NVMesh) => void
+  onMoveVolumeUp: (volume: NVImage) => void
+  onMoveVolumeDown: (volume: NVImage) => void
+  collapsed: boolean
+  onToggle: () => void
 }
 
 export function Sidebar({
   onRemoveMesh,
   onRemoveVolume,
   onMoveVolumeUp,
-  onMoveVolumeDown
+  onMoveVolumeDown,
+  collapsed,
+  onToggle
 }: SidebarProps): JSX.Element {
   const instance = useSelectedInstance()
   const volumes = instance?.volumes ?? []
@@ -26,13 +30,12 @@ export function Sidebar({
   const [orderedVolumes, setOrderedVolumes] = useState<NVImage[]>([])
 
   useEffect(() => {
-    const currentIds = orderedVolumes.map(v => v.id).join(',')
-    const nextIds = volumes.map(v => v.id).join(',')
+    const currentIds = orderedVolumes.map((v) => v.id).join(',')
+    const nextIds = volumes.map((v) => v.id).join(',')
     if (currentIds !== nextIds) {
       setOrderedVolumes(volumes)
     }
   }, [volumes])
-  
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return
@@ -56,52 +59,79 @@ export function Sidebar({
   if (!instance) return <></>
 
   return (
-    <div className="flex flex-col bg-gray-100 px-2 w-1/3 basis-1/3 min-w-[300px] max-w-[500px]">
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <ScrollArea style={{ height: '50%', paddingRight: '10px', marginBottom: '12px' }}>
-          <Text size="2" weight="bold">Layers</Text>
-          <Droppable droppableId="volumesDroppable">
-            {(provided) => (
-              <div ref={provided.innerRef} {...provided.droppableProps}>
-                {orderedVolumes.map((volume, index) => (
-                  <Draggable
-                    key={volume.id ?? index.toString()}
-                    draggableId={volume.id ?? index.toString()}
-                    index={index}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        style={{
-                          userSelect: 'none',
-                          margin: '0 0 8px 0',
-                          ...provided.draggableProps.style,
-                          background: snapshot.isDragging ? '#f0f0f0' : 'white'
-                        }}
-                      >
-                        <VolumeImageCard
-                          image={volume}
-                          onRemoveVolume={onRemoveVolume}
-                          onMoveVolumeUp={onMoveVolumeUp}
-                          onMoveVolumeDown={onMoveVolumeDown}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-          {meshes.map((mesh, idx) => (
-            <MeshImageCard key={idx} image={mesh} onRemoveMesh={onRemoveMesh} />
-          ))}
-        </ScrollArea>
-      </DragDropContext>
+    <div
+      className={
+        `flex flex-col bg-gray-100 px-2 h-full relative transition-all duration-200 ` +
+        (collapsed
+          ? 'w-[60px] basis-[60px] min-w-[40px] max-w-[40px]'
+          : 'w-1/3 basis-1/3 min-w-[300px] max-w-[500px]')
+      }
+    >
+      {/* toggle button */}
+      <button
+        className="toggle-btn absolute top-2 right-2  w-6 h-6 rounded-full shadow z-10"
+        onClick={onToggle}
+      >
+        {collapsed ? '▶' : '◀'}
+      </button>
 
-      <SceneTabs />
+      {!collapsed && (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <ScrollArea
+            style={{
+              height: '50%',
+              paddingRight: '10px',
+              marginBottom: '12px'
+            }}
+          >
+            <Text size="2" weight="bold">
+              Layers
+            </Text>
+
+            <Droppable droppableId="volumesDroppable">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {orderedVolumes.map((volume, index) => (
+                    <Draggable
+                      key={volume.id ?? index.toString()}
+                      draggableId={volume.id ?? index.toString()}
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            userSelect: 'none',
+                            margin: '0 0 8px 0',
+                            ...provided.draggableProps.style,
+                            background: snapshot.isDragging ? '#f0f0f0' : 'white'
+                          }}
+                        >
+                          <VolumeImageCard
+                            image={volume}
+                            onRemoveVolume={onRemoveVolume}
+                            onMoveVolumeUp={onMoveVolumeUp}
+                            onMoveVolumeDown={onMoveVolumeDown}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+
+            {meshes.map((mesh, idx) => (
+              <MeshImageCard key={idx} image={mesh} onRemoveMesh={onRemoveMesh} />
+            ))}
+          </ScrollArea>
+
+          <SceneTabs />
+        </DragDropContext>
+      )}
     </div>
   )
 }
