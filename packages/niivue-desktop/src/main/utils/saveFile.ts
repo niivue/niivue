@@ -10,9 +10,10 @@ const gzipAsync = promisify(gzip)
 
 export const saveCompressedNVDHandler = async (_: unknown, jsonStr: string, defaultName = 'document'): Promise<string | undefined> => {
   try {
+    const safeName = defaultName.replace(/\.nvd(\.gz)?$/, '')
     const { filePath, canceled } = await dialog.showSaveDialog({
       title: 'Save Compressed Niivue Document',
-      defaultPath: `${defaultName}.nvd`,
+      defaultPath: `${safeName}.nvd`,
       filters: [{ name: 'Gzipped NVD', extensions: ['nvd', 'nvd.gz'] }]
     })
 

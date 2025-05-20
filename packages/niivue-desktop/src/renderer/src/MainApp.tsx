@@ -143,19 +143,20 @@ function MainApp(): JSX.Element {
     // define once, with `selected` & `updateDocument` in scope
     const onSave = async () => {
       if (!selected) return
-      const { id, title: friendlyName = id, nvRef } = selected
+      const { id, title, nvRef } = selected
       const nv = nvRef.current
 
       const jsonStr = JSON.stringify(nv.document.json())
-      const suggestedName = `${friendlyName || id}.nvd`
+      const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
+      const suggestedName = `${base}.nvd`
       const savedPath: string | undefined = await window.electron.ipcRenderer.invoke(
         'saveCompressedNVD',
         jsonStr,
         suggestedName
       )
       if (savedPath) {
-        const raw = savedPath.split('/').pop() || friendlyName
-        const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || friendlyName
+        const raw = savedPath.split('/').pop() || suggestedName
+        const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
         updateDocument(id, {
           title: newTitle,
           filePath: savedPath,
