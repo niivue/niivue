@@ -62,36 +62,38 @@ export const registerIpcHandlers = (): void => {
     }
   })
 
-  ipcMain.on('start-tab-drag', (event, { fileName, jsonStr }: { fileName: string; jsonStr: string }) => {
-    try {
-      const filePath = path.join(app.getPath('documents'), fileName)
-      fs.writeFileSync(filePath, jsonStr, 'utf-8')
-      console.log('[start-tab-drag] File written to:', filePath)
-  
-      const icon = nativeImage.createFromPath(dragIconPath)
-      const finalIcon = icon.isEmpty()
-        ? nativeImage.createEmpty().resize({ width: 64, height: 64 })
-        : icon.resize({ width: 64, height: 64 })
-      // console.log('icon resized')
-      // console.log('icon size:', icon.getSize())
-      // console.log('is empty:', icon.isEmpty())
-      // console.log('toDataURL:', icon.toDataURL().substring(0, 100))
-      event.sender.startDrag({
-        file: filePath,
-        icon: finalIcon
-      })
-      // console.log('drag started')
-      // Optional fallback for Linux or debugging
-      // if (process.platform === 'linux') {
-      //   shell.showItemInFolder(filePath)
-      // }
-  
-      // setTimeout(() => {
-      //   console.log('[start-tab-drag] drag complete (timeout fallback)')
-      // }, 500)
-    } catch (err) {
-      console.error('[start-tab-drag] Failed:', err)
+  ipcMain.on(
+    'start-tab-drag',
+    (event, { fileName, jsonStr }: { fileName: string; jsonStr: string }) => {
+      try {
+        const filePath = path.join(app.getPath('documents'), fileName)
+        fs.writeFileSync(filePath, jsonStr, 'utf-8')
+        console.log('[start-tab-drag] File written to:', filePath)
+
+        const icon = nativeImage.createFromPath(dragIconPath)
+        const finalIcon = icon.isEmpty()
+          ? nativeImage.createEmpty().resize({ width: 64, height: 64 })
+          : icon.resize({ width: 64, height: 64 })
+        // console.log('icon resized')
+        // console.log('icon size:', icon.getSize())
+        // console.log('is empty:', icon.isEmpty())
+        // console.log('toDataURL:', icon.toDataURL().substring(0, 100))
+        event.sender.startDrag({
+          file: filePath,
+          icon: finalIcon
+        })
+        // console.log('drag started')
+        // Optional fallback for Linux or debugging
+        // if (process.platform === 'linux') {
+        //   shell.showItemInFolder(filePath)
+        // }
+
+        // setTimeout(() => {
+        //   console.log('[start-tab-drag] drag complete (timeout fallback)')
+        // }, 500)
+      } catch (err) {
+        console.error('[start-tab-drag] Failed:', err)
+      }
     }
-  })
-  
+  )
 }

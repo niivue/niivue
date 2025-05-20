@@ -147,10 +147,11 @@ function MainApp(): JSX.Element {
       const nv = nvRef.current
 
       const jsonStr = JSON.stringify(nv.document.json())
+      const suggestedName = `${friendlyName || id}.nvd`
       const savedPath: string | undefined = await window.electron.ipcRenderer.invoke(
         'saveCompressedNVD',
         jsonStr,
-        friendlyName
+        suggestedName
       )
       if (savedPath) {
         const raw = savedPath.split('/').pop() || friendlyName
@@ -382,7 +383,7 @@ function MainApp(): JSX.Element {
               draggable
               onDragStart={(e) => {
                 e.preventDefault()
-                const fileName = `${doc.id}.nvd`
+                const fileName = `${doc.title || doc.id}.nvd`
                 const jsonStr = JSON.stringify(nv.document.json(), null, 2)
                 window.electron.startTabDrag(fileName, jsonStr)
               }}
