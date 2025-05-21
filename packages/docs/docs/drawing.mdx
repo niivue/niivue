@@ -1,0 +1,240 @@
+---
+title: Drawing and Segmentation
+sidebar_position: 6
+---
+
+import { Niivue } from '@niivue/niivue';
+import { DrawingDemo } from '../src/components/DrawingDemo';
+import { MagicWandDemo } from '../src/components/MagicWandDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+Niivue provides powerful tools for manual and semi-automatic segmentation of volumetric medical images. These tools allow users to create, edit, and save regions of interest (ROIs) directly within the visualization. Whether you need precise manual delineation of structures or want to leverage automatic segmentation methods, Niivue's drawing tools offer flexibility and control.
+
+**Try interacting with the drawing controls below to see their effect in real-time!**
+
+<NiivueBrowserWrapper>
+  <DrawingDemo />
+</NiivueBrowserWrapper>
+
+## Basic Drawing Concepts
+
+Drawing in Niivue allows you to create and modify segmentations by painting directly on the image slices. The drawing layer is a separate volume that overlays the base image, with each voxel value representing a different label or region.
+
+Key drawing concepts include:
+
+- **Pen Values**: Different numerical values representing different regions/colors
+- **Drawing Modes**: Regular pen (edge only) vs. filled pen (flood fill)
+- **Drawing Opacity**: Control the transparency of the drawing layer
+- **Navigation**: Move through slices while drawing to segment in 3D
+
+## Setting Up Drawing
+
+To enable drawing on a volume, first load your base image and then initialize the drawing layer:
+
+```javascript
+// Create and initialize Niivue instance
+const nv = new Niivue({
+  backColor: [1, 1, 1, 1],
+});
+await nv.attachToCanvas(document.getElementById('canvas'));
+
+// Load a background volume
+await nv.loadVolumes([{ 
+  url: '/path/to/image.nii.gz' 
+}]);
+
+// Initialize an empty drawing layer
+nv.setDrawingEnabled(true);
+
+// Alternatively, load an existing segmentation
+await nv.loadDrawingFromUrl('/path/to/segmentation.nii.gz');
+```
+
+## Drawing Controls
+
+### Basic Drawing Operations
+
+```javascript
+// Enable drawing mode
+nv.setDrawingEnabled(true);
+
+// Set the pen value (0-255)
+// 0 is typically used for erasing
+nv.setPenValue(1);
+
+// Set the pen to fill mode (flood fill)
+nv.setPenValue(1, true);
+
+// Set drawing opacity (0.0-1.0)
+nv.setDrawOpacity(0.8);
+
+// Undo last drawing operation
+nv.drawUndo();
+
+// Save the drawing layer
+nv.saveImage({ filename: 'segmentation.nii', isSaveDrawing: true });
+```
+
+### Customizing Drawing Colors
+
+You can customize the colors used for drawing by setting a custom colormap for the drawing layer:
+
+```javascript
+// Define a custom colormap for drawing
+const drawingColormap = {
+  R: [0, 255, 0, 0],     // Red values for indices 0-3
+  G: [0, 0, 255, 0],     // Green values for indices 0-3
+  B: [0, 0, 0, 255],     // Blue values for indices 0-3
+  labels: ["Background", "Red", "Green", "Blue"] // Names for each value
+};
+
+// Apply the custom colormap
+nv.setDrawColormap(drawingColormap);
+```
+
+### Drawing Options
+
+Niivue provides several options to control drawing behavior:
+
+```javascript
+// Control whether fill operations overwrite existing values
+nv.drawFillOverwrites = true;
+
+// Set radiological convention (left is right)
+nv.setRadiologicalConvention(false);
+
+// Use world space coordinates (mm) instead of voxel coordinates
+nv.setSliceMM(false);
+
+// Toggle linear interpolation (affects visual quality)
+nv.setInterpolation(true);
+
+// Enable high DPI support for retina displays
+nv.setHighResolutionCapable(true);
+```
+
+## Advanced: Semi-Automatic Segmentation
+
+Niivue includes tools for semi-automatic segmentation to speed up the segmentation process.
+
+### Grow Cut Algorithm
+
+The Grow Cut algorithm is an interactive segmentation method that expands from seed regions:
+
+```javascript
+// First, draw seed regions using different pen values
+// Then run the grow cut algorithm
+nv.drawGrowCut();
+```
+
+### Magic Wand Segmentation
+
+The Magic Wand tool (click-to-segment) allows automatic segmentation of regions with similar intensity:
+
+<NiivueBrowserWrapper>
+  <MagicWandDemo />
+</NiivueBrowserWrapper>
+
+To enable Magic Wand segmentation:
+
+```javascript
+// Create a Niivue instance with click-to-segment enabled
+const nv = new Niivue({
+  clickToSegment: true,          // Enable click-to-segment
+  clickToSegmentIs2D: true,      // Confine to 2D slice (false for 3D)
+  clickToSegmentAutoIntensity: true, // Auto-determine intensity threshold
+});
+
+// Enable drawing mode
+nv.setDrawingEnabled(true);
+
+// Set the pen value to use for the segmentation
+nv.setPenValue(1);
+```
+
+When enabled, clicking on a voxel will automatically segment connected voxels with similar intensity values.
+
+## Working with Segmentation Results
+
+Once you've created a segmentation, there are several ways to work with it:
+
+### Descriptive Statistics
+
+You can get statistics about your drawn regions:
+
+```javascript
+// Get statistics for all drawing regions
+const stats = nv.getDescriptives(0, [], true);
+console.log(stats); // Volume, mean intensity, etc. for each region
+```
+
+### Saving and Loading
+
+Save your segmentation for later use:
+
+```javascript
+// Save the drawing as a NIfTI file
+nv.saveImage({ 
+  filename: 'segmentation.nii', 
+  isSaveDrawing: true 
+});
+
+// Later, load the segmentation
+await nv.loadDrawingFromUrl('segmentation.nii.gz');
+```
+
+### Erasing Clusters
+
+You can erase entire connected clusters of voxels:
+
+```javascript
+// Set the pen to erase selected clusters
+nv.setPenValue(-0);
+// Now when you click on a cluster, it will erase the whole thing
+```
+
+## Practical Example: Lesion Segmentation
+
+Here's a complete example showing how to set up Niivue for lesion segmentation:
+
+```javascript
+// Create Niivue instance
+const nv = new Niivue({
+  backColor: [1, 1, 1, 1],
+  dragAndDropEnabled: true,
+  clipToVolumeBox: true,
+  clipPlaneEnabled: false,
+});
+await nv.attachToCanvas(document.getElementById('canvas'));
+
+// Load FLAIR image for lesion visualization
+await nv.loadVolumes([{ 
+  url: '/path/to/FLAIR.nii.gz',
+  colormap: 'gray'
+}]);
+
+// Set up multiplanar view
+nv.setSliceType(nv.sliceTypeMultiplanar);
+nv.opts.multiplanarShowRender = Niivue.SHOW_RENDER.ALWAYS;
+
+// Enable drawing with custom colormap
+nv.setDrawingEnabled(true);
+nv.setDrawOpacity(0.5);
+
+const lesionColormap = {
+  R: [0, 255, 0, 0],
+  G: [0, 0, 255, 0],
+  B: [0, 0, 0, 255],
+  labels: ["Background", "Lesion Type 1", "Lesion Type 2", "Lesion Type 3"]
+};
+nv.setDrawColormap(lesionColormap);
+
+// Enable click-to-segment for faster segmentation
+nv.opts.clickToSegment = true;
+nv.opts.clickToSegmentIs2D = true;
+
+// Set pen to first lesion type
+nv.setPenValue(1);
+```
+
+Drawing and segmentation tools are essential for many neuroimaging and medical imaging workflows. Niivue provides a flexible and comprehensive set of tools that can be integrated into web applications for use in research, clinical, or educational settings. These tools enable precise definition of regions of interest for further analysis, visualization, or quantification. 
