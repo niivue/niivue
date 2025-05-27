@@ -5790,6 +5790,7 @@ out vec4 fColor;
 		}
 	}
 ` + kRenderTail;
+var gradientOpacityLutCount = 192;
 var kFragRenderGradientDecl = `#version 300 es
 #line 215
 precision highp int;
@@ -5816,7 +5817,7 @@ uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 uniform float silhouettePower;
-uniform float gradientOpacity[256];
+uniform float gradientOpacity[${gradientOpacityLutCount}];
 in vec3 vColor;
 out vec4 fColor;
 `;
@@ -39682,12 +39683,12 @@ var Niivue = class {
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1]);
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
     this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette);
-    const gradientOpacityLut = new Float32Array(256);
-    for (let i = 0; i < 256; i++) {
+    const gradientOpacityLut = new Float32Array(gradientOpacityLutCount);
+    for (let i = 0; i < gradientOpacityLutCount; i++) {
       if (this.opts.gradientOpacity === 0) {
         gradientOpacityLut[i] = 1;
       } else {
-        gradientOpacityLut[i] = Math.pow(i / 255, this.opts.gradientOpacity * 8);
+        gradientOpacityLut[i] = Math.pow(i / (gradientOpacityLutCount - 1), this.opts.gradientOpacity * 8);
       }
     }
     this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, "gradientOpacity"), gradientOpacityLut);
