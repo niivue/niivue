@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Niivue } from "@niivue/niivue";
 
-const baseUrl = 'https://niivue.com';
+const baseUrl = 'https://niivue.com/demos';
 // Default images for demonstration
 const defaultImages = [
   {
