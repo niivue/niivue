@@ -8,7 +8,7 @@ import { DrawingDemo } from '../src/components/DrawingDemo';
 import { MagicWandDemo } from '../src/components/MagicWandDemo';
 import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
 
-Niivue provides powerful tools for manual and semi-automatic segmentation of volumetric medical images. These tools allow users to create, edit, and save regions of interest (ROIs) directly within the visualization. Whether you need precise manual delineation of structures or want to leverage automatic segmentation methods, Niivue's drawing tools offer flexibility and control.
+Niivue provides powerful tools for manual and semi-automatic segmentation of volumetric medical images. These tools allow users to create, edit, and save regions of interest (ROIs) as masks.
 
 **Try interacting with the drawing controls below to see their effect in real-time!**
 
@@ -18,7 +18,7 @@ Niivue provides powerful tools for manual and semi-automatic segmentation of vol
 
 ## Basic Drawing Concepts
 
-Drawing in Niivue allows you to create and modify segmentations by painting directly on the image slices. The drawing layer is a separate volume that overlays the base image, with each voxel value representing a different label or region.
+Niivue allows you to create and modify masks by using the pen tool. The drawing layer is a separate volume that overlays the base image. 
 
 Key drawing concepts include:
 
@@ -119,7 +119,7 @@ Niivue includes tools for semi-automatic segmentation to speed up the segmentati
 
 ### Grow Cut Algorithm
 
-The Grow Cut algorithm is an interactive segmentation method that expands from seed regions:
+The Grow Cut algorithm is an interactive segmentation method that expands from seed regions. It is powerful, but does require some initial manual input to define seed regions. The Grow Cut algorithm is borrowed from Slicer3D, and runs on the GPU.
 
 ```javascript
 // First, draw seed regions using different pen values
@@ -141,7 +141,7 @@ To enable Magic Wand segmentation:
 // Create a Niivue instance with click-to-segment enabled
 const nv = new Niivue({
   clickToSegment: true,          // Enable click-to-segment
-  clickToSegmentIs2D: true,      // Confine to 2D slice (false for 3D)
+  clickToSegmentIs2D: true,      // Confine to 2D slice (false for 3D. 3D may be slow depending on your image size)
   clickToSegmentAutoIntensity: true, // Auto-determine intensity threshold
 });
 
@@ -152,7 +152,7 @@ nv.setDrawingEnabled(true);
 nv.setPenValue(1);
 ```
 
-When enabled, clicking on a voxel will automatically segment connected voxels with similar intensity values.
+When enabled, clicking on a voxel will automatically segment connected voxels with similar intensity values. Use the scroll wheel to adjust the intensity threshold for segmentation.
 
 ## Working with Segmentation Results
 
@@ -237,4 +237,4 @@ nv.opts.clickToSegmentIs2D = true;
 nv.setPenValue(1);
 ```
 
-Drawing and segmentation tools are essential for many neuroimaging and medical imaging workflows. Niivue provides a flexible and comprehensive set of tools that can be integrated into web applications for use in research, clinical, or educational settings. These tools enable precise definition of regions of interest for further analysis, visualization, or quantification. 
+Drawing and segmentation tools are essential for many neuroimaging and medical imaging workflows. Niivue provides a flexible and comprehensive set of tools that can be integrated into web applications. These tools enable precise definition of regions of interest for further analysis, visualization, or quantification. 

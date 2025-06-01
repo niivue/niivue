@@ -8,7 +8,7 @@ import { ThresholdingDemo } from '../src/components/ThresholdingDemo';
 import { ModulationFSLDemo } from '../src/components/ModulationFSLDemo';
 import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
 
-Statistical thresholding is a crucial technique in neuroimaging and other medical imaging disciplines, allowing researchers to visualize only statistically significant regions in their data. Niivue provides powerful and flexible thresholding capabilities that enable users to display both positive and negative statistical values, customize thresholds, and adjust visualization options.
+Statistical thresholding is a crucial technique in neuroimaging and other medical imaging disciplines, allowing researchers to visualize only statistically significant regions in their data. Niivue provides powerful and flexible thresholding capabilities that enable users to display both positive and negative statistical values, customize thresholds, and adjust visualization options around these thresholds.
 
 **Try interacting with the thresholding controls below to see their effect in real-time!**
 
@@ -21,15 +21,15 @@ Statistical thresholding is a crucial technique in neuroimaging and other medica
 Statistical maps often include both positive and negative values, representing different activation or deactivation patterns. Niivue lets you control multiple threshold parameters:
 
 - **Positive Threshold**: The minimum positive value to display
-- **Positive Maximum**: The maximum positive value to display
+- **Positive Cap**: The most positive value to display
 - **Negative Threshold**: The minimum negative value to display (shown as absolute value)
-- **Negative Maximum**: The maximum negative value to display (shown as absolute value)
+- **Negative Cap**: The most negative value to display (shown as absolute value)
 
 Values outside these ranges are hidden or displayed differently based on your settings.
 
 ## Setting Up Statistical Overlays
 
-To apply statistical thresholding, you first need to load an anatomical image and a statistical overlay:
+To apply statistical thresholding, you first need to load an image and a statistical overlay:
 
 ```javascript
 // Create and initialize Niivue instance
@@ -50,10 +50,10 @@ await nv.loadVolumes([
     url: '/path/to/statistical.nii.gz',
     colormap: 'warm',
     colormapNegative: 'winter',
-    cal_min: 3.0,      // Positive threshold
-    cal_max: 6.0,      // Positive maximum
-    cal_minNeg: -6.0,  // Negative maximum
-    cal_maxNeg: -3.0   // Negative threshold
+    cal_min: 3.0,
+    cal_max: 6.0,
+    cal_minNeg: -6.0,
+    cal_maxNeg: -3.0 
   }
 ]);
 
@@ -181,10 +181,10 @@ await nv.loadVolumes([
     url: '/path/to/tstat.nii.gz',
     colormap: 'warm',
     colormapNegative: 'winter',
-    cal_min: 3.1,      // t > 3.1 (roughly p < 0.001)
+    cal_min: 3.1,      // t > 3.1
     cal_max: 6.0,      // Maximum display value
     cal_minNeg: -6.0,  // Minimum display value
-    cal_maxNeg: -3.1   // t < -3.1 (roughly p < 0.001)
+    cal_maxNeg: -3.1   // t < -3.1
   }
 ]);
 
@@ -200,7 +200,7 @@ nv.updateGLVolume();
 
 ## Advanced: Modulation
 
-Niivue supports modulating one image using another. This powerful feature allows visualization of images where one property (like directionality) is weighted by another property (like anisotropy).
+Niivue supports modulating one image using another. This feature allows visualization of images where one property (like directionality) is weighted by another property (like anisotropy).
 
 **Try interacting with the modulation controls below!**
 
@@ -233,7 +233,7 @@ nv.volumes[0].cal_min = 0.2;
 nv.updateGLVolume();
 ```
 
-### Visualization Modes
+### Visualization of Diffusion Data 
 
 Niivue provides several ways to visualize diffusion data:
 
@@ -242,20 +242,6 @@ Niivue provides several ways to visualize diffusion data:
 3. **V1 modulated by FA**: Show the direction map with intensity modulated by FA
 4. **Lines**: Show orientation lines representing fiber directions
 5. **Lines modulated by FA**: Show orientation lines with intensity modulated by FA values
-
-### Controlling Modulation Thresholds
-
-You can control which parts of the modulating volume affect the display by setting thresholds:
-
-```javascript
-// Set minimum threshold for the modulating volume (FA)
-nv.volumes[0].cal_min = 0.2;  // Only show areas with FA > 0.2
-
-// Set maximum threshold
-nv.volumes[0].cal_max = 0.8;  // Cap the modulation effect at FA = 0.8
-
-nv.updateGLVolume();
-```
 
 ### Clipping Dark Values
 
@@ -268,13 +254,3 @@ nv.updateGLVolume();
 ```
 
 When this option is enabled, voxels below the threshold are completely transparent rather than being shown at reduced opacity.
-
-### Practical Applications
-
-Modulation is especially useful in:
-
-1. **Diffusion Imaging**: Showing fiber orientation modulated by anisotropy
-2. **fMRI Analysis**: Modulating activation maps by anatomical features
-3. **Multi-modal Imaging**: Combining information from different scan types into a single visualization
-
-Statistical thresholding and modulation are powerful visualization techniques that help focus attention on important features in your data while reducing visual clutter. Niivue's flexible options make it easy to create informative, publication-quality visualizations for neuroimaging and other medical imaging applications. 

@@ -64,6 +64,12 @@ const config = {
             position: "left",
             label: "Documentation",
           },
+          // more demos link https://niivue.com/demos/
+          {
+            href: "https://niivue.com/demos/",
+            label: "Demos",
+            position: "left",
+          },
           {
             href: "https://github.com/niivue/niivue",
             label: "GitHub",
