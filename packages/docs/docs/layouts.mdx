@@ -1,2 +1,232 @@
+---
+title: Layouts and Slice Types
+sidebar_position: 4
+---
+
+import { Niivue, SLICE_TYPE, MULTIPLANAR_TYPE, SHOW_RENDER } from '@niivue/niivue';
+import { LayoutDemo } from '../src/components/LayoutDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
 # Layouts
+
+NiiVue supports many scene and slice configurations. Common layouts are provided out of the box, but custom layouts can be created too.
+
+**Try the interactive demo below!** Use the controls to switch between different slice types, multiplanar layouts, and experiment with custom arrangements.
+
+<NiivueBrowserWrapper>
+  <LayoutDemo />
+</NiivueBrowserWrapper>
+
+## Slice types
+
+NiiVue refers to `sliceType` as the value that determines which slice orientation(s) are displayed. You can set the slice type using the `setSliceType()` method.
+
+### Multiplanar
+
+The multiplanar view displays multiple slice orientations simultaneously, typically showing axial, coronal, and sagittal views together. This is the most comprehensive view for examining 3D medical images.
+
+```javascript
+// Set to multiplanar view
+nv.setSliceType(nv.sliceTypeMultiplanar);
+// or using the enum
+nv.setSliceType(SLICE_TYPE.MULTIPLANAR);
+```
+
+### Axial
+
+The axial view shows horizontal cross-sections through the volume, as if looking down from above. This is the traditional "slice-by-slice" view familiar from CT and MRI scans.
+
+```javascript
+// Set to axial view
+nv.setSliceType(nv.sliceTypeAxial);
+// or using the enum
+nv.setSliceType(SLICE_TYPE.AXIAL);
+```
+
+### Coronal
+
+The coronal view shows vertical cross-sections from front to back through the volume. This provides a frontal view of the anatomy.
+
+```javascript
+// Set to coronal view
+nv.setSliceType(nv.sliceTypeCoronal);
+// or using the enum
+nv.setSliceType(SLICE_TYPE.CORONAL);
+```
+
+### Sagittal
+
+The sagittal view shows vertical cross-sections from side to side through the volume. This provides a profile view of the anatomy.
+
+```javascript
+// Set to sagittal view
+nv.setSliceType(nv.sliceTypeSagittal);
+// or using the enum
+nv.setSliceType(SLICE_TYPE.SAGITTAL);
+```
+
+### Volume render
+
+The volume render view displays a 3D rendering of the entire volume.
+
+```javascript
+// Set to volume render view
+nv.setSliceType(nv.sliceTypeRender);
+// or using the enum
+nv.setSliceType(SLICE_TYPE.RENDER);
+```
+
+## Scene layouts
+
+NiiVue uses `layout` to refer to the arrangement of slices in the canvas when more than one is displayed in multiplanar mode. You can control this using the `setMultiplanarLayout()` method.
+
+### Auto
+
+The auto layout intelligently arranges the slice views based on the canvas dimensions and available space.
+
+```javascript
+// Set to auto layout
+nv.setMultiplanarLayout(0);
+// or using the enum
+nv.setMultiplanarLayout(MULTIPLANAR_TYPE.AUTO);
+```
+
+### Grid
+
+The grid layout arranges slice views in a 2x2 grid pattern, providing space for each view.
+
+```javascript
+// Set to grid layout
+nv.setMultiplanarLayout(2);
+// or using the enum
+nv.setMultiplanarLayout(MULTIPLANAR_TYPE.GRID);
+```
+
+### Row
+
+The row layout arranges slice views horizontally in a single row.
+
+```javascript
+// Set to row layout
+nv.setMultiplanarLayout(3);
+// or using the enum
+nv.setMultiplanarLayout(MULTIPLANAR_TYPE.ROW);
+```
+
+### Column
+
+The column layout arranges slice views vertically in a single column.
+
+```javascript
+// Set to column layout
+nv.setMultiplanarLayout(1);
+// or using the enum
+nv.setMultiplanarLayout(MULTIPLANAR_TYPE.COLUMN);
+```
+
+## Additional Layout Options
+
+### Show Volume Render
+
+You can control whether the volume render is shown alongside slice views in multiplanar mode:
+
+```javascript
+// Always show volume render with slices
+nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
+
+// Never show volume render with slices
+nv.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
+
+// Automatically decide based on space (default)
+nv.opts.multiplanarShowRender = SHOW_RENDER.AUTO;
+
+// Apply changes
+nv.drawScene();
+```
+
+### Equal Size Tiles
+
+Force all slice views to have equal space in the canvas:
+
+```javascript
+// Enable equal size tiles
+nv.opts.multiplanarEqualSize = true;
+nv.drawScene();
+```
+
+### Hero Image
+
+Designate one slice view to take up more space than others:
+
+```javascript
+// Set hero image fraction (0.0 to 1.0)
+// 0.0 = no hero, 1.0 = hero takes maximum space
+nv.setHeroImage(0.5);
+```
+
+### Corner Orientation Text
+
+Control the placement of orientation labels:
+
+```javascript
+// Show orientation text in corners
+nv.setCornerOrientationText(true);
+
+// Show orientation text centered (default)
+nv.setCornerOrientationText(false);
+```
+
+## Custom layouts
+
+NiiVue allows you to have full control over all layout options if you want. When using custom layouts, any other layout settings will not be applied. 
+
+Custom layouts use a position array format: `[left, top, width, height]` where all values are relative (0-1) to the canvas size.
+
+**Important:** Layout tiles cannot overlap. Each tile must occupy a distinct region of the canvas.
+
+```javascript
+// Define a custom layout
+const customLayout = [
+  // Left half - Sagittal view
+  { sliceType: SLICE_TYPE.SAGITTAL, position: [0, 0, 0.5, 1.0] },
+  // Top right quarter - Coronal view  
+  { sliceType: SLICE_TYPE.CORONAL, position: [0.5, 0, 0.5, 0.5] },
+  // Bottom right quarter - Axial view
+  { sliceType: SLICE_TYPE.AXIAL, position: [0.5, 0.5, 0.5, 0.5] }
+];
+
+// Apply the custom layout
+nv.setCustomLayout(customLayout);
+
+// Clear custom layout and return to standard multiplanar
+nv.clearCustomLayout();
+nv.setSliceType(SLICE_TYPE.MULTIPLANAR);
+```
+
+### Custom Layout Examples
+
+Here are some common custom layout patterns:
+
+```javascript
+// Large render with side axial
+const renderWithAxial = [
+  { sliceType: SLICE_TYPE.RENDER, position: [0, 0, 0.7, 1.0] },
+  { sliceType: SLICE_TYPE.AXIAL, position: [0.7, 0, 0.3, 1.0] }
+];
+
+// Vertical split
+const verticalSplit = [
+  { sliceType: SLICE_TYPE.SAGITTAL, position: [0, 0, 0.5, 1.0] },
+  { sliceType: SLICE_TYPE.AXIAL, position: [0.5, 0, 0.5, 1.0] }
+];
+
+// Triple view with large axial
+const tripleView = [
+  { sliceType: SLICE_TYPE.AXIAL, position: [0, 0, 0.7, 1.0] },
+  { sliceType: SLICE_TYPE.CORONAL, position: [0.7, 0, 0.3, 0.5] },
+  { sliceType: SLICE_TYPE.SAGITTAL, position: [0.7, 0.5, 0.3, 0.5] }
+];
+```
+
+The layout system provides powerful flexibility for creating custom medical image viewing applications tailored to specific needs. 
 

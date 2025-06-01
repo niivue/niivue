@@ -33,7 +33,7 @@ await nv2.loadVolumes([{ url: '/path/to/volume.nii.gz' }]);
 
 ## Setting Up Synchronization with broadcastTo
 
-Niivue provides a powerful `broadcastTo` method that lets you create synchronized connections between multiple viewers. This allows you to easily synchronize camera movements, crosshair positions, and more.
+Niivue provides a `broadcastTo` method that lets you create synchronized connections between multiple viewers. This allows you to easily synchronize movements, layouts, crosshair positions, and more.
 
 ```javascript
 // Set up bidirectional synchronization between nv1 and nv2
@@ -82,21 +82,9 @@ nv2.broadcastTo([nv1, nv3], { "2d": true, "3d": true });
 nv3.broadcastTo([nv1, nv2], { "2d": true, "3d": true });
 ```
 
-## Triggering Synchronization
-
-When you change a setting in one viewer, the synchronization happens automatically for most interactions like panning, zooming, or moving the crosshair. For some other changes, you may need to explicitly call the `sync()` method:
-
-```javascript
-// Make a change to nv1 (e.g., changing gamma)
-nv1.setGamma(1.5);
-
-// Force synchronization to the other viewers
-nv1.sync();
-```
-
 ## Synchronizing Views with Different Data
 
-You can synchronize views even when displaying different types of data, such as an anatomical MRI in one view and a functional overlay in another, as long as they share the same spatial coordinates.
+You can synchronize views even when displaying different types of data, such as an anatomical MRI in one view and a functional overlay in another. This is useful for comparing different modalities or time points. In most cases, you would want the images to be aligned first using tools like FSL, AFNI, ANTs, SPM, ITK, etc.
 
 ```javascript
 // Load an anatomical image in the first viewer
@@ -122,43 +110,3 @@ await nv2.loadVolumes([
 nv1.broadcastTo([nv2], { "2d": true, "3d": true });
 nv2.broadcastTo([nv1], { "2d": true, "3d": true });
 ```
-
-## Changing Multiplanar Layout
-
-When using synchronized views, you may want to coordinate the layout of multiple viewers:
-
-```javascript
-// Change the layout of both viewers
-// 0: Auto, 1: Column, 2: Grid, 3: Row
-nv1.setMultiplanarLayout(2); // Set to Grid layout
-nv2.setMultiplanarLayout(2); // Set to Grid layout
-```
-
-## Practical Example: Comparing Images
-
-A common use case for synchronized views is comparing different scans of the same subject:
-
-```javascript
-// Set up two Niivue instances
-const nv1 = new Niivue({
-  show3Dcrosshair: true,
-  backColor: [1, 1, 1, 1], // White background
-});
-await nv1.attachToCanvas(document.getElementById('viewer1'));
-
-const nv2 = new Niivue({
-  show3Dcrosshair: true,
-  backColor: [1, 1, 1, 1],
-});
-await nv2.attachToCanvas(document.getElementById('viewer2'));
-
-// Load different scans
-await nv1.loadVolumes([{ url: '/images/t1_scan.nii.gz' }]);
-await nv2.loadVolumes([{ url: '/images/t2_scan.nii.gz' }]);
-
-// Set up bidirectional synchronization
-nv1.broadcastTo([nv2], { "2d": true, "3d": true });
-nv2.broadcastTo([nv1], { "2d": true, "3d": true });
-```
-
-Synchronizing multiple Niivue instances gives you powerful ways to visualize and compare medical imaging data, enabling more effective analysis and interpretation. 

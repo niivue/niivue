@@ -52,7 +52,7 @@ console.log(availableColormaps);
 ```
 
 ## Changing the Colormap
-After a volume is loaded, you can dynamically change its colormap using the `setColormap` method. You need the ID of the volume you want to modify. Often, for the first loaded volume, this is `nv.volumes[0].id`.
+After a volume is loaded, you can dynamically change its colormap using the `setColormap` method. You need the ID of the volume you want to modify. Often, for the first loaded volume, this is `nv.volumes[0].id`. NiiVue sets the ID to a unique value when it is loaded so you don't have to manage this.
 
 ```javascript
 // Assuming 'nv' is your Niivue instance and at least one volume is loaded
@@ -114,7 +114,7 @@ const myCustomCmap = {
  G: [0, 0, 255],   // Green channel values at control points
  B: [0, 0, 0],     // Blue channel values at control points
  A: [0, 128, 255], // Alpha values
- I: [0, 127, 255], // Intensity values (must be sorted 0-255) corresponding to R,G,B,A points
+ I: [0, 127, 255], // Intensity values corresponding to R,G,B,A points
 };
 
 // 2. Add the colormap to Niivue with a unique name
