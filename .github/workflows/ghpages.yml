@@ -26,6 +26,9 @@ jobs:
           cp -r packages/niivue/devdocs packages/niivue/demos/
           mkdir -p packages/niivue/demos/devdocs/$version
           cp -r packages/niivue/devdocs/* packages/niivue/demos/devdocs/$version
+          # make the final ghpages directory with a demos subdirectory and copy the demos into it
+          mkdir -p ghpages/demos
+          cp -r packages/niivue/demos/* ghpages/demos/
 
       - name: Build Docusaurus docs
         run: |
@@ -33,10 +36,11 @@ jobs:
           npm run build:niivue
           npm run build:docusaurus
           mkdir -p packages/niivue/demos/docusaurus
-          cp -r packages/docs/build/* packages/niivue/demos/docusaurus
+          # copy the docusaurus build to the ghpages directory
+          cp -r packages/docs/build/* ghpages/
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: demo # The branch the action should deploy to.
-          folder: packages/niivue/demos # The folder the action should deploy.
+          folder: ghpages # The folder the action should deploy.

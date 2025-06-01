@@ -7,7 +7,7 @@ import { BasicNiivueCanvas } from '../src/components/BasicNiivueCanvas';
 
 # Getting started
 
-NiiVue is module for loading, parsing, and viewing medical imaging data in the browser.
+NiiVue is an all-in-one package for parsing, loading, and viewing medical imaging data in the browser.
 
 > **Note**: NiiVue is not intended to be used in Node.js environments. It is designed to be used in the browser to _view_ data and a WebGL2 rendering context is required. 
 
@@ -144,7 +144,7 @@ export class NiivueViewComponent implements OnInit {
 }
 ```
 
-## Embedded canvas example
+## Embedded canvas in your own docs
 
 **Go ahead, click around in the viewer below**. That's NiiVue in action! In this example, we are loading a single Nifti file. This is rendered in our Docusaurus MDX page using a custom React component.
 
@@ -156,45 +156,3 @@ export class NiivueViewComponent implements OnInit {
   />
 </NiivueBrowserWrapper>
 
-
-## Full component code
-
-Here's the full component code that was used to render the NiiVue component in our Docusaurus docs (React):
-
-```jsx
-import React from "react";
-import { Niivue } from "@niivue/niivue";
-
-export default function NiivueCanvas({ images, nvOpts }) {
-  // get the origin url and prepend it to the url property of the images
-  const origin = window.location.origin;
-  // needed due to the way docusaurus serves static files with github orgs pages
-  const basePath = '/niivue'; 
-  images = images.map((img) => {
-    return { ...img, url: origin + basePath + img.url };
-  });
-  // canvas ref
-  const canvasRef = React.useRef(null);
-  const niivue = React.useRef(null);
-  // initialise niivue instance on first mount
-  React.useEffect(async () => {
-    niivue.current = new Niivue({logLevel: 'debug', ...nvOpts});
-    await niivue.current.attachToCanvas(canvasRef.current);
-    await niivue.current.loadVolumes(images);
-  }, []);
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <canvas ref={canvasRef} width={640} height={480}></canvas>
-    </div>
-  );
-}
-```
