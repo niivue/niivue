@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Niivue } from "@niivue/niivue";
 
+const baseUrl = 'https://niivue.com';
 // Default images for demonstration
 const defaultImages = [
   {
-    url: "https://niivue.github.io/niivue/images/fslmean.nii.gz",
+    url: `${baseUrl}/images/fslmean.nii.gz`,
     colormap: "gray",
     opacity: 1,
     visible: true,
   },
   {
-    url: "https://niivue.github.io/niivue/images/fslt.nii.gz",
+    url: `${baseUrl}/images/fslt.nii.gz`,
     colormap: "warm",
     colormapNegative: "winter",
     cal_min: 0.3,

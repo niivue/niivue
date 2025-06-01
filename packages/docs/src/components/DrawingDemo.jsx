@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Niivue, SHOW_RENDER } from "@niivue/niivue";
 
+const baseUrl = "https://niivue.com"
+
 // Default image for demonstration
 const defaultImage = {
-  url: "https://niivue.github.io/niivue/images/FLAIR.nii.gz",
+  url: `${baseUrl}/images/FLAIR.nii.gz`,
   colormap: "gray",
   opacity: 1,
   visible: true,
@@ -11,7 +13,7 @@ const defaultImage = {
 
 // Default drawing for demonstration
 const defaultDrawing = {
-  url: "https://niivue.github.io/niivue/images/lesion.nii.gz",
+  url: `${baseUrl}/images/lesion.nii.gz`,
 };
 
 // Default Niivue options

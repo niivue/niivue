@@ -44,17 +44,6 @@ const config = {
       ({
         docs: {
           sidebarPath: "./sidebars.js",
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          // editUrl:
-          // 'https://github.com/niivue/niivue'
-        },
-        blog: {
-          showReadingTime: true,
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          // editUrl:
-          // 'https://github.com/niivue/niivue'
         },
         theme: {
           customCss: "./src/css/custom.css",
@@ -66,22 +55,15 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
-      // image: 'img/docusaurus-social-card.jpg',
       navbar: {
         title: "NiiVue",
-        // logo: {
-        //   alt: 'My Site Logo',
-        //   src: 'img/logo.svg',
-        // },
         items: [
           {
             type: "docSidebar",
             sidebarId: "tutorialSidebar",
             position: "left",
-            label: "Getting started",
+            label: "Documentation",
           },
-          { to: "/blog", label: "Blog", position: "left" },
           {
             href: "https://github.com/niivue/niivue",
             label: "GitHub",
@@ -113,10 +95,6 @@ const config = {
           {
             title: "More",
             items: [
-              {
-                label: "Blog",
-                to: "/blog",
-              },
               {
                 label: "GitHub",
                 href: "https://github.com/niivue/niivue",
