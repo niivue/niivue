@@ -27,7 +27,7 @@ The command `npm run demo` will minify the project and locally host all of the [
 
 # Developer Documentation
 
-[Click here for the docs web page](https://niivue.github.io/niivue/devdocs/)
+[Click here for the docs web page](https://niivue.github.io/niivue/docs/)
 
 # Projects and People using NiiVue
 
