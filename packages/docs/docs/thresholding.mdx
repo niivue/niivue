@@ -1,0 +1,256 @@
+---
+title: Statistical Thresholding
+sidebar_position: 5
+---
+
+import { Niivue } from '@niivue/niivue';
+import { ThresholdingDemo } from '../src/components/ThresholdingDemo';
+import { ModulationFSLDemo } from '../src/components/ModulationFSLDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+Statistical thresholding is a crucial technique in neuroimaging and other medical imaging disciplines, allowing researchers to visualize only statistically significant regions in their data. Niivue provides powerful and flexible thresholding capabilities that enable users to display both positive and negative statistical values, customize thresholds, and adjust visualization options around these thresholds.
+
+**Try interacting with the thresholding controls below to see their effect in real-time!**
+
+<NiivueBrowserWrapper>
+  <ThresholdingDemo />
+</NiivueBrowserWrapper>
+
+## Basic Thresholding Concepts
+
+Statistical maps often include both positive and negative values, representing different activation or deactivation patterns. Niivue lets you control multiple threshold parameters:
+
+- **Positive Threshold**: The minimum positive value to display
+- **Positive Cap**: The most positive value to display
+- **Negative Threshold**: The minimum negative value to display (shown as absolute value)
+- **Negative Cap**: The most negative value to display (shown as absolute value)
+
+Values outside these ranges are hidden or displayed differently based on your settings.
+
+## Setting Up Statistical Overlays
+
+To apply statistical thresholding, you first need to load an image and a statistical overlay:
+
+```javascript
+// Create and initialize Niivue instance
+const nv = new Niivue({
+  isColorbar: true,
+  backColor: [1, 1, 1, 1],
+  show3Dcrosshair: true
+});
+await nv.attachToCanvas(document.getElementById('canvas'));
+
+// Load anatomical background and statistical overlay
+await nv.loadVolumes([
+  { 
+    url: '/path/to/anatomical.nii.gz',
+    colormap: 'gray'
+  },
+  {
+    url: '/path/to/statistical.nii.gz',
+    colormap: 'warm',
+    colormapNegative: 'winter',
+    cal_min: 3.0,
+    cal_max: 6.0,
+    cal_minNeg: -6.0,
+    cal_maxNeg: -3.0 
+  }
+]);
+
+// Hide colorbar for anatomical image (optional)
+nv.volumes[0].colorbarVisible = false;
+```
+
+## Adjusting Thresholds Programmatically
+
+You can adjust thresholds programmatically after loading the volumes:
+
+```javascript
+// Get the statistical overlay (second volume)
+const statOverlay = nv.volumes[1];
+
+// Set positive thresholds
+statOverlay.cal_min = 3.0;  // Show values above 3.0
+statOverlay.cal_max = 6.0;  // Cap display at 6.0
+
+// Set negative thresholds
+statOverlay.cal_minNeg = -6.0;  // Cap display at -6.0
+statOverlay.cal_maxNeg = -3.0;  // Show values below -3.0
+
+// Update the display
+nv.updateGLVolume();
+```
+
+## Using Different Colormaps for Positive and Negative Values
+
+A common practice in statistical visualization is to use different colormaps for positive and negative values. Niivue makes this easy:
+
+```javascript
+// Set a warm colormap (red-yellow) for positive values
+nv.setColormap(statOverlay.id, 'warm');
+
+// Set a cool colormap (blue-cyan) for negative values
+nv.setColormapNegative(statOverlay.id, 'winter');
+
+// To disable negative colormap (show only positive values)
+// nv.setColormapNegative(statOverlay.id, '');
+```
+
+## Thresholding Display Options
+
+Niivue provides different ways to handle values below the threshold:
+
+```javascript
+// Set the colormap type (0, 1, or 2)
+statOverlay.colormapType = 0;
+nv.updateGLVolume();
+```
+
+The colormap types are:
+- **0**: Restrict colorbar to range (default)
+- **1**: Colorbar from 0, transparent subthreshold values
+- **2**: Colorbar from 0, translucent subthreshold values
+
+## Controlling Outline Width
+
+When displaying thresholded values, you can control the width of the outline around clusters:
+
+```javascript
+// Set the overlay outline width (0 = no outline)
+nv.overlayOutlineWidth = 0.25;
+nv.updateGLVolume();
+```
+
+## Managing Interpolation
+
+Interpolation can affect how thresholded values are displayed:
+
+```javascript
+// Enable or disable interpolation
+// false = nearest neighbor (recommended for binary/thresholded data)
+// true = linear interpolation (smoother appearance)
+nv.setInterpolation(true);
+```
+
+When interpolation is enabled (default), voxels at the boundary of your threshold are smoothed, which can create a more aesthetically pleasing image but may slightly alter which voxels appear to survive thresholding.
+
+## Working with Multiple Statistical Overlays
+
+You can load and threshold multiple overlays simultaneously:
+
+```javascript
+await nv.loadVolumes([
+  { url: '/path/to/anatomical.nii.gz', colormap: 'gray' },
+  { 
+    url: '/path/to/contrast1.nii.gz',
+    colormap: 'warm',
+    colormapNegative: 'winter',
+    cal_min: 3.0,
+    cal_max: 6.0
+  },
+  { 
+    url: '/path/to/contrast2.nii.gz',
+    colormap: 'copper',
+    cal_min: 2.5,
+    cal_max: 5.0,
+    opacity: 0.7
+  }
+]);
+```
+
+## Practical Example: Visualizing fMRI Results
+
+Here's a complete example showing how to visualize fMRI statistical results:
+
+```javascript
+// Create Niivue instance with a white background
+const nv = new Niivue({
+  isColorbar: true,
+  backColor: [1, 1, 1, 1],
+  show3Dcrosshair: true
+});
+await nv.attachToCanvas(document.getElementById('canvas'));
+
+// Load anatomical background and statistical overlay
+await nv.loadVolumes([
+  { 
+    url: '/path/to/mni152.nii.gz',
+    colormap: 'gray'
+  },
+  {
+    url: '/path/to/tstat.nii.gz',
+    colormap: 'warm',
+    colormapNegative: 'winter',
+    cal_min: 3.1,      // t > 3.1
+    cal_max: 6.0,      // Maximum display value
+    cal_minNeg: -6.0,  // Minimum display value
+    cal_maxNeg: -3.1   // t < -3.1
+  }
+]);
+
+// Hide colorbar for anatomical scan
+nv.volumes[0].colorbarVisible = false;
+
+// Set outline width
+nv.overlayOutlineWidth = 0.25;
+
+// Update display
+nv.updateGLVolume();
+```
+
+## Advanced: Modulation
+
+Niivue supports modulating one image using another. This feature allows visualization of images where one property (like directionality) is weighted by another property (like anisotropy).
+
+**Try interacting with the modulation controls below!**
+
+<NiivueBrowserWrapper>
+  <ModulationFSLDemo />
+</NiivueBrowserWrapper>
+
+### Modulation Basics
+
+Modulation is particularly useful when visualizing diffusion tensor imaging (DTI) data, where you might want to show primary diffusion direction (V1) modulated by fractional anisotropy (FA). This enhances visualization by emphasizing directions only in areas with high anisotropy.
+
+```javascript
+// Load FA and V1 volumes
+await nv.loadVolumes([
+  {
+    url: '/path/to/FA.nii.gz',
+    opacity: 1,
+  },
+  {
+    url: '/path/to/V1.nii.gz',
+    opacity: 1,
+  }
+]);
+
+// Modulate V1 by FA
+nv.setModulationImage(nv.volumes[1].id, nv.volumes[0].id);
+
+// Set minimum FA threshold to display
+nv.volumes[0].cal_min = 0.2;
+nv.updateGLVolume();
+```
+
+### Visualization of Diffusion Data 
+
+Niivue provides several ways to visualize diffusion data:
+
+1. **FA Only**: Show only the fractional anisotropy map
+2. **V1 Only**: Show only the primary eigenvector direction map
+3. **V1 modulated by FA**: Show the direction map with intensity modulated by FA
+4. **Lines**: Show orientation lines representing fiber directions
+5. **Lines modulated by FA**: Show orientation lines with intensity modulated by FA values
+
+### Clipping Dark Values
+
+When working with modulated data, you can choose to clip dark values completely:
+
+```javascript
+// Enable clipping of dark values
+nv.isAlphaClipDark = true;
+nv.updateGLVolume();
+```
+
+When this option is enabled, voxels below the threshold are completely transparent rather than being shown at reduced opacity.

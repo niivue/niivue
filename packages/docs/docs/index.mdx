@@ -7,13 +7,13 @@ import { BasicNiivueCanvas } from '../src/components/BasicNiivueCanvas';
 
 # Getting started
 
-NiiVue is module for loading, parsing, and viewing medical imaging data in the browser.
+NiiVue is an all-in-one package for parsing, loading, and viewing medical imaging data in the browser.
 
 > **Note**: NiiVue is not intended to be used in Node.js environments. It is designed to be used in the browser to _view_ data and a WebGL2 rendering context is required. 
 
 ## Installation
 
-To install NiiVue, you can use your favorite package manager:
+To install NiiVue, you can use your favorite package manager (npm, pnpm, yarn, etc.):
 
 ```bash
 npm install @niivue/niivue
@@ -21,7 +21,31 @@ npm install @niivue/niivue
 
 ## Usage
 
-The `Niivue` class can be used in any framework or plain JavaScript. Here is an example of how to use it in a React component. However, you will probably want to use `useRef` or `useContext` with your initialised `Niivue` instance to interact with it for better performance and reduce re-renders.
+### Basic - No framework
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NiiVue</title>
+  </head>
+  <body>
+    <canvas id="gl" width="640" height="640"></canvas>
+  </body>
+  <script type="module" async>
+    import { Niivue } from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+    var volumeList = [
+      { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" },
+    ];
+    var nv = new Niivue({ isResizeCanvas: false });
+    await nv.attachTo("gl");
+    await nv.loadVolumes(volumeList);
+  </script>
+</html>
+```
+
+### React
 
 ```jsx
 import { useRef, useEffect } from "react";
@@ -29,15 +53,20 @@ import { Niivue } from "@niivue/niivue";
 
 const NiiVue = ({ imageUrl }) => {
   const canvas = useRef();
+  const nvRef = useRef();
   useEffect(() => {
     const volumeList = [
       {
         url: imageUrl,
       },
     ];
-    const nv = new Niivue();
-    await nv.attachToCanvas(canvas.current);
-    nv.loadVolumes(volumeList);
+    async function setupAndLoad() {
+      const nv = new Niivue();
+      nv.attachToCanvas(canvas.current);
+      await nv.loadVolumes(volumeList);
+      const nvRef.current = nv
+    }
+    setupAndLoad()
   }, [imageUrl]);
 
   return <canvas ref={canvas} height={480} width={640} />;
@@ -45,7 +74,77 @@ const NiiVue = ({ imageUrl }) => {
 
 // use as: <NiiVue imageUrl={someUrl}> </NiiVue>
 ```
-## Embedded canvas example
+
+### Vue
+
+```jsx
+<script>
+import {Niivue} from '@niivue/niivue'
+const nv = new Niivue()
+
+
+export default {
+  name: 'App',
+  props: {
+
+  },
+  data(){
+    return {
+      volumeList: [
+        {
+          url: "./mni152.nii.gz",
+        }
+      ]
+
+    }
+  },
+
+  mounted() {
+    nv.attachTo('gl')
+    await nv.loadVolumes(this.volumeList)
+  }
+}
+
+</script>
+
+<template>
+<canvas id="gl" height="480" width="640">
+</canvas>
+</template>
+```
+
+### Angular
+
+```javascript
+import { Component, OnInit, ViewChild } from "@angular/core";
+
+import { Niivue } from "@niivue/niivue";
+
+@Component({
+  selector: "app-niivue-view",
+  templateUrl: "./niivue-view.component.html",
+  styleUrls: ["./niivue-view.component.sass"],
+})
+export class NiivueViewComponent implements OnInit {
+  @ViewChild("gl") canvas: HTMLCanvasElement | undefined;
+
+  constructor() {}
+
+  ngOnInit(): void {
+    const url = "/assets/mni152.nii.gz";
+    const volumeList = [
+      {
+        url,
+      },
+    ];
+    const niivue = new Niivue();
+    niivue.attachTo("gl");
+    await niivue.loadVolumes(volumeList);
+  }
+}
+```
+
+## Embedded canvas in your own docs
 
 **Go ahead, click around in the viewer below**. That's NiiVue in action! In this example, we are loading a single Nifti file. This is rendered in our Docusaurus MDX page using a custom React component.
 
@@ -57,45 +156,3 @@ const NiiVue = ({ imageUrl }) => {
   />
 </NiivueBrowserWrapper>
 
-
-## Full component code
-
-Here's the full component code that was used to render the canvas above:
-
-```jsx
-import React from "react";
-import { Niivue } from "@niivue/niivue";
-
-export default function NiivueCanvas({ images, nvOpts }) {
-  // get the origin url and prepend it to the url property of the images
-  const origin = window.location.origin;
-  // needed due to the way docusaurus serves static files with github orgs pages
-  const basePath = '/niivue'; 
-  images = images.map((img) => {
-    return { ...img, url: origin + basePath + img.url };
-  });
-  // canvas ref
-  const canvasRef = React.useRef(null);
-  const niivue = React.useRef(null);
-  // initialise niivue instance on first mount
-  React.useEffect(async () => {
-    niivue.current = new Niivue({logLevel: 'debug', ...nvOpts});
-    await niivue.current.attachToCanvas(canvasRef.current);
-    await niivue.current.loadVolumes(images);
-  }, []);
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <canvas ref={canvasRef} width={640} height={480}></canvas>
-    </div>
-  );
-}
-```

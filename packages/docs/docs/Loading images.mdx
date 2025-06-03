@@ -1,0 +1,266 @@
+---
+sidebar_position: 2
+---
+
+## Generic loading
+
+Use the `loadImages` method to load both volume (e.g. .nii, .nrrd) and mesh (e.g. .mz3, .obj) objects all at once. Niivue will determine the file type from the file extension in the URL or the name attributes. This is the easiest way to load images without thinking about how to handle various file types.
+
+### Loading from a URL
+
+```javascript
+// assuming nv is a NiiVue instance
+const volume = {
+    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+    name: "mni152.nii.gz" // optional if the url ends with a file extension
+}
+const mesh = {
+    url: "https://niivue.github.io/niivue-demo-images/BrainMesh_ICBM152.lh.mz3",
+    name: "my_mesh.mz3" // you can also supply a new name, but the file extension should be truthful
+}
+const imageList = [volume, mesh]
+// loadImages is an async function, so be sure to "await" it
+await nv.loadImages(imageList)
+```
+
+### Loading from an existing ArrayBuffer
+
+```javascript
+// The name must contain an extension so niivue can parse the array buffer correctly
+const name = "image.nii.gz" // volume example. For mesh data, use the proper extension for your loaded array buffer
+// Assuming arrayBufferData is an ArrayBuffer you have already fetched from somewhere
+nv.loadFromArrayBuffer(arrayBufferData, name)
+```
+
+### Loading from a Browser File object
+
+```javascript
+// Assuming you have already loaded "myFileObject" as a File in the browser (e.g. an input element)
+nv.loadFromFile(myFileObject) // the .name property of the File will be used to determine the file type from the extension
+```
+
+## Volume data
+
+If you just want to load volume data then you can use the `loadVolumes` method.
+
+```javascript
+// assuming nv is a NiiVue instance
+const volume = {
+    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+    name: "mni152.nii.gz" // optional if the url ends with a file extension
+}
+const volumeList = [volume]
+// loadVolumes is an async function, so be sure to "await" it
+await nv.loadVolumes(volumeList)
+```
+
+## Mesh data
+
+If you just want to load mesh data, then you can use the `loadMeshes` method. Note that if no volume data is also loaded, then mesh data will be rendered in 3D. If volume data is also loaded in the scene then slice views and 3D views are supported.
+
+```javascript
+// assuming nv is a NiiVue instance
+const mesh = {
+    url: "https://niivue.github.io/niivue-demo-images/BrainMesh_ICBM152.lh.mz3",
+    name: "my_mesh.mz3" // optional if the url ends with a file extension
+}
+const meshList = [mesh]
+// loadMeshes is an async function, so be sure to "await" it
+await nv.loadMeshes(meshList)
+```
+
+## Using custom image loaders
+
+NiiVue supports using custom image loader functions for new file formats. You can also replace built-in loaders for a supported file format if you wish.
+
+### Example external tiff loader
+
+NiiVue does not have a built-in tiff parser, but we have published a **[niivue tiff loader](https://github.com/niivue/tiff-loader/tree/main)** that can be used with `useLoader` as a plugin.
+
+```javascript
+import { Niivue } from '@niivue/niivue'
+import { tiff2nii } from '@niivue/tiff-loader'
+
+const nv = new Niivue()
+await nv.attachToCanvas(document.getElementById('niivue-canvas'))
+// supply loader function, fromExt, and toExt (without dots)
+nv.useLoader(tiff2nii, 'tif', 'nii') // use the tiff2nii loader function to parse "tif" and format it internally as "nii"
+nv.useLoader(tiff2nii, 'tiff', 'nii')
+nv.useLoader(tiff2nii, 'lsm', 'nii')
+// now niivue is aware of the new extensions, and how to load them
+await nv.loadImages([
+  {
+    url: '/example.tif'
+  }
+])
+```
+
+## DICOM loading
+
+NiiVue supports DICOM Volumes, but you must use a **[special DICOM loader](https://github.com/niivue/niivue/tree/main/packages/dicom-loader)** that we publish as a separate package. 
+
+Our DICOM loader uses the **[Web Assembly build of dcm2niix](https://github.com/rordenlab/dcm2niix/tree/master/js)**, which allows comprehensive DICOM parsing. This is an extra dependency in order to keep the core NiiVue package as lean as possible for most use cases.
+
+```javascript
+import { dicomLoader } from "@niivue/dicom-loader"
+import { Niivue } from "@niivue/niivue"
+
+const nv = new Niivue()
+
+nv.useDicomLoader({
+    loader: dicomLoader
+})
+
+nv.loadDicoms([
+    // dicom manifest example
+    // { url: "../tests/images/dicom/niivue-manifest.txt", isManifest: true},
+    // single file example (enhanced dicom)
+    { url: "../demos/images/enh.dcm"}
+])
+// NOTE: if you register the dicomLoader with Niivue, drag and drop of dicom folders is supported out of the box. Just drop a folder onto the canvas
+```
+
+## Drag and Drop
+
+NiiVue supports image loading if a file is dropped onto the canvas that is attached to a NiiVue instance. By default, all supported images formats are supported, and any custom image loaders that have been setup are also supported.
+
+There is special handling for folders of DICOM images dropped onto the canvas. If the `@niivue/dicom-loader` plugin has been setup, NiiVue will parse and display the DICOM images. 
+
+You can disable all drag and drop file loading if you set `dragAndDropEnabled` to `false` (default is `true`).
+
+```javascript
+// assuming nv is a niivue instance you have already created
+nv.opts.dragAndDropEnabled = false // disable drag and drop file loading
+```
+
+## Supported formats
+
+### Voxel-based formats
+
+| Format           | Volume 🟦 | Mesh 🟩 |
+|------------------|:---------:|:-------:|
+| NIfTI            |     ✔     |         |
+| NRRD             |     ✔     |         |
+| MRtrix MIF       |     ✔     |         |
+| AFNI HEAD/BRIK   |     ✔     |         |
+| MGH/MGZ          |     ✔     |         |
+| ITK MHD          |     ✔     |         |
+| ECAT7            |     ✔     |         |
+| DSI-Studio SRC   |     ✔     |         |
+| DICOM            |     ✔     |         |
+| DICOM Manifests  |     ✔     |         |
+
+### Mesh-based formats
+
+| Format           | Volume 🟦 | Mesh 🟩 |
+|------------------|:---------:|:-------:|
+| GIfTI            |           |    ✔    |
+| ASC              |           |    ✔    |
+| BYU/GEO/G        |           |    ✔    |
+| BrainSuite DFS   |           |    ✔    |
+| ICO/TRI          |           |    ✔    |
+| PLY              |           |    ✔    |
+| BrainNet NV      |           |    ✔    |
+| BrainVoyager SRF |           |    ✔    |
+| FreeSurfer       |           |    ✔    |
+| MZ3              |           |    ✔    |
+| OFF              |           |    ✔    |
+| Wavefront OBJ    |           |    ✔    |
+| STL              |           |    ✔    |
+| Legacy VTK       |           |    ✔    |
+| WRL              |           |    ✔    |
+| X3D              |           |    ✔    |
+
+### Mesh overlay formats
+
+| Format                        | Volume 🟦 | Mesh 🟩 |
+|-------------------------------|:---------:|:-------:|
+| GIfTI                         |           |    ✔    |
+| CIfTI-2                       |           |    ✔    |
+| MZ3                           |           |    ✔    |
+| SMP                           |           |    ✔    |
+| STC                           |           |    ✔    |
+| FreeSurfer (CURV/ANNOT)       |           |    ✔    |
+
+### Tractography formats
+
+| Format                        | Volume 🟦 | Mesh 🟩 |
+|-------------------------------|:---------:|:-------:|
+| TCK                           |           |    ✔    |
+| TRK                           |           |    ✔    |
+| TRX                           |           |    ✔    |
+| TSF                           |           |    ✔    |
+| TT                            |           |    ✔    |
+| VTK                           |           |    ✔    |
+| AFNI .niml.tract              |           |    ✔    |
+
+## Advanced Volume and Mesh loading
+
+The `loadImages`, `loadVolumes`, and `loadMeshes` methods of a NiiVue instance are the most convenient way to load images and display them all in one command.
+
+If you want more control over loading images, you can use the `NVImage` and `NVMesh` classes directly. The image loading methods on these classes are actually what a NiiVue instance calls under the hood. However, if you load image data with these classes, you will then need to call extra NiiVue functions to display the data as well.
+
+### NVImage.loadFromUrl
+
+```javascript
+import { NVImage, Niivue } from '@niivue/niivue'
+const nv = new Niivue()
+const image = await NVImage.loadFromUrl({
+    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz"
+})
+// To display, add to a NiiVue instance:
+nv.addVolume(image)
+```
+
+### NVImage.loadFromFile
+
+```javascript
+import { NVImage, Niivue } from '@niivue/niivue'
+const nv = new Niivue()
+// myFileObject is a File object from an input element
+const image = await NVImage.loadFromFile({file: myFileObject})
+nv.addVolume(image)
+```
+
+### NVImage.loadFromBase64
+
+```javascript
+import { NVImage, Niivue } from '@niivue/niivue'
+const nv = new Niivue()
+// base64String is a base64-encoded NIfTI file string
+const image = await NVImage.loadFromBase64({base64: base64String, name: "image.nii.gz"})
+nv.addVolume(image)
+```
+
+### NVMesh.loadFromUrl
+
+```javascript
+import { NVMesh, Niivue } from '@niivue/niivue'
+const nv = new Niivue()
+const image = await NVMesh.loadFromUrl({
+    url: "https://niivue.github.io/niivue-demo-images/BrainMesh_ICBM152.lh.mz3",
+    name: "mesh.mz3",
+    gl: nv.canvas.gl
+})
+nv.addMesh(image)
+```
+
+### NVMesh.loadFromFile
+
+```javascript
+import { NVMesh, Niivue } from '@niivue/niivue'
+const nv = new Niivue()
+// myFileObject is a File object from an input element
+const image = await NVMesh.loadFromFile({file: myFileObject, gl: nv.canvas.gl, name: myFileObject.name})
+nv.addMesh(image)
+```
+
+### NVMesh.loadFromBase64
+
+```javascript
+import { NVMesh, Niivue } from '@niivue/niivue'
+const nv = new Niivue()
+// base64String is a base64-encoded mesh file string
+const image = await NVMesh.loadFromBase64({base64: base64String, gl: nv.canvas.gl, name: "mesh.mz3"})
+nv.addMesh(image)
+```

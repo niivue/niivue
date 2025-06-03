@@ -6,27 +6,26 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Works everywhere',
+    title: 'Cross-Platform',
     description: (
       <>
-        NiiVue is a JavaScript library that can be used in any modern web
-        environment: Safari, Firefox, Chrome, Edge, Electron, iOS, Android.
+        Runs seamlessly across all modern browsers and mobile devices.
       </>
     ),
   },
   {
-    title: 'Simple API',
+    title: 'Developer-Friendly',
     description: (
       <>
-        NiiVue is designed to be easy to use and is platform and framework agnostic.
+        Intuitive API designed for rapid integration and development.
       </>
     ),
   },
   {
-    title: 'Community',
+    title: 'Extensible',
     description: (
       <>
-        The community has made <a style={{textDecoration: 'underline'}} href='https://github.com/niivue/niivue?tab=readme-ov-file#projects-and-people-using-niivue' target='_blank' rel='noopener noreferrer'>extensions, products, and plug-ins</a> using NiiVue. 
+        Community adoption with <a style={{textDecoration: 'underline'}} href='https://github.com/niivue/niivue?tab=readme-ov-file#projects-and-people-using-niivue' target='_blank' rel='noopener noreferrer'>plugins, extensions, and integrations</a>.
       </>
     ),
   },

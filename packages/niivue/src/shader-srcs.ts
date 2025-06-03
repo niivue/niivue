@@ -442,6 +442,8 @@ out vec4 fColor;
 ` +
   kRenderTail
 
+export const gradientOpacityLutCount = 192
+
 const kFragRenderGradientDecl = `#version 300 es
 #line 215
 precision highp int;
@@ -468,7 +470,7 @@ uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 uniform float silhouettePower;
-uniform float gradientOpacity[256];
+uniform float gradientOpacity[${gradientOpacityLutCount}];
 in vec3 vColor;
 out vec4 fColor;
 `
