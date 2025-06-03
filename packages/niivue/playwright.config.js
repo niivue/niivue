@@ -41,7 +41,14 @@ export default defineConfig({
         headless: true,
         launchOptions: {
           // args: ['--headless', '--no-sandbox', '--use-angle=angle', '--use-gl=swiftshader']
-          args: ['--window-size=1280,720', '--no-sandbox']
+          // args: ['--window-size=1280,720', '--no-sandbox']
+          args: [
+            '--window-size=1280,720',
+            '--use-gl=angle', // route GL through ANGLE :contentReference[oaicite:0]{index=0}
+            '--disable-software-rasterizer', // prefer ANGLE path
+            '--no-sandbox',
+            '--disable-dev-shm-usage'
+          ]
         }
       }
     }
