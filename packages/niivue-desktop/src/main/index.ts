@@ -1,12 +1,10 @@
-import { app, shell, BrowserWindow, Menu, nativeImage } from 'electron'
-import path, { join } from 'path'
+import { app, shell, BrowserWindow, Menu } from 'electron'
+import { join } from 'path'
 import { registerIpcHandlers } from './utils/ipcHandlers.js'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../build/icons/app_icon.png?asset'
 import { createMenu } from './utils/menu.js'
 import { getPlatformIcon } from './utils/getPlatformIcon.js'
-
-
 
 let mainWindow: BrowserWindow | null = null // Global variable to store the window instance
 

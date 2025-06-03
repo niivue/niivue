@@ -37,7 +37,7 @@ export function Sidebar({
     }
   }, [volumes])
 
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = (result: DropResult): void => {
     if (!result.destination) return
     const sourceIndex = result.source.index
     const destIndex = result.destination.index

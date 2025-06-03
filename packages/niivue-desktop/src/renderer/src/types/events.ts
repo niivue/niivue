@@ -1,3 +1,5 @@
+import { Niivue } from '@niivue/niivue'
+
 export type FMRIEvent = {
   onset: number
   duration: number
@@ -27,18 +29,18 @@ export function getColorForTrialType(type: string): [number, number, number, num
   return (trialTypeColorMap[type] = [...rgb, 0.25])
 }
 
-export function loadFMRIEvents(tsvText: string, nvInstance?: any): void {
+export function loadFMRIEvents(tsvText: string, nvInstance?: Niivue): void {
   // reset our events
   fmriEvents = []
-  
+
   const lines = tsvText.trim().split('\n')
   if (lines.length < 2) return
 
   fmriEvents.length = 0
-  Object.keys(trialTypeColorMap).forEach(k => delete trialTypeColorMap[k])
+  Object.keys(trialTypeColorMap).forEach((k) => delete trialTypeColorMap[k])
   nextColorIndex = 0
 
-  lines.slice(1).forEach(row => {
+  lines.slice(1).forEach((row) => {
     const [onsetStr, durationStr, type] = row.split('\t')
     const onset = parseFloat(onsetStr)
     const duration = parseFloat(durationStr)

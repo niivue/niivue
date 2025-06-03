@@ -24,7 +24,7 @@ function updateMosaicForSelectedOrientation(
   const newTokens: string[] = []
   let i = 0
   while (i < tokens.length) {
-    let raw = tokens[i]
+    const raw = tokens[i]
     let token = raw
     let trail = ''
     if (token.endsWith(';')) {
@@ -98,8 +98,8 @@ export function MosaicControls(): JSX.Element {
         selectedOrientation === 'A'
           ? SliceOrientation.AXIAL
           : selectedOrientation === 'C'
-          ? SliceOrientation.CORONAL
-          : SliceOrientation.SAGITTAL
+            ? SliceOrientation.CORONAL
+            : SliceOrientation.SAGITTAL
       const canvas = nv.gl.canvas as HTMLCanvasElement
       const vol = nv.volumes[0]
       if (!vol) return
@@ -131,14 +131,14 @@ export function MosaicControls(): JSX.Element {
     if (showAllSlices) return
     e.preventDefault()
     const step = 5
-    setMosaicStr(prev =>
+    setMosaicStr((prev) =>
       updateMosaicForSelectedOrientation(prev, selectedOrientation, e.deltaY < 0 ? step : -step)
     )
   }
 
   const handleScroll = (delta: number): void => {
     if (showAllSlices) return
-    setMosaicStr(prev => updateMosaicForSelectedOrientation(prev, selectedOrientation, delta))
+    setMosaicStr((prev) => updateMosaicForSelectedOrientation(prev, selectedOrientation, delta))
   }
 
   const axisNames = { A: 'Axial', C: 'Coronal', S: 'Sagittal' }
@@ -165,7 +165,7 @@ export function MosaicControls(): JSX.Element {
         <Switch
           id="centerMosaic"
           checked={centerMosaic}
-          onCheckedChange={checked => setCenterMosaic(checked as boolean)}
+          onCheckedChange={(checked) => setCenterMosaic(checked as boolean)}
         />
         <label htmlFor="centerMosaic">Center Mosaic</label>
       </div>
@@ -183,7 +183,7 @@ export function MosaicControls(): JSX.Element {
         <label style={{ fontWeight: 'bold', marginRight: '0.5rem' }}>Orientation:</label>
         <select
           value={selectedOrientation}
-          onChange={e => setSelectedOrientation(e.target.value as 'A' | 'C' | 'S')}
+          onChange={(e) => setSelectedOrientation(e.target.value as 'A' | 'C' | 'S')}
           disabled={showAllSlices}
         >
           <option value="A">Axial (A)</option>

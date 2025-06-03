@@ -8,7 +8,11 @@ import path from 'path'
 
 const gzipAsync = promisify(gzip)
 
-export const saveCompressedNVDHandler = async (_: unknown, jsonStr: string, defaultName = 'document'): Promise<string | undefined> => {
+export const saveCompressedNVDHandler = async (
+  _: unknown,
+  jsonStr: string,
+  defaultName = 'document'
+): Promise<string | undefined> => {
   try {
     const safeName = defaultName.replace(/\.nvd(\.gz)?$/, '')
     const { filePath, canceled } = await dialog.showSaveDialog({
@@ -31,4 +35,3 @@ export const saveCompressedNVDHandler = async (_: unknown, jsonStr: string, defa
     return undefined
   }
 }
-

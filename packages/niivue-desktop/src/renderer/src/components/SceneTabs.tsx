@@ -28,7 +28,7 @@ export const SceneTabs = (): JSX.Element => {
         <Tabs.Content value="volume">
           <VolumeTab />
         </Tabs.Content>
-        <Tabs.Content value="mesh">          
+        <Tabs.Content value="mesh">
           <MeshTab />
         </Tabs.Content>
         <Tabs.Content value="atlas">

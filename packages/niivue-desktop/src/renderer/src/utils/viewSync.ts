@@ -15,12 +15,11 @@ export function registerViewSync(nv: Niivue): void {
 /**
  * Monkey-patch setMultiplanarLayout to notify main when layout changes.
  */
-function patchMultiplanarLayout(nv: Niivue) {
+function patchMultiplanarLayout(nv: Niivue): void {
   const orig = nv.setMultiplanarLayout.bind(nv)
-  nv.setMultiplanarLayout = (layoutValue: any) => {
+  nv.setMultiplanarLayout = (layoutValue: number): void => {
     const result = orig(layoutValue)
-    const layoutKey = Object.keys(layouts)
-      .find((key) => layouts[key] === layoutValue)
+    const layoutKey = Object.keys(layouts).find((key) => layouts[key] === layoutValue)
     if (layoutKey) {
       window.electron.ipcRenderer.send('renderer:layout-changed', layoutKey)
     }
@@ -32,19 +31,19 @@ function patchMultiplanarLayout(nv: Niivue) {
  * Monkey-patch setSliceType to notify main when slice type changes.
  * Updated to match signature: setSliceType(st: SLICE_TYPE): Niivue
  */
-function patchSliceType(nv: Niivue) {
+function patchSliceType(nv: Niivue): void {
   const orig = nv.setSliceType.bind(nv)
 
-  nv.setSliceType = (st: SLICE_TYPE) => {
+  nv.setSliceType = (st: SLICE_TYPE): Niivue => {
     const result = orig(st)
 
-    const sliceKey = Object.keys(sliceTypeMap)
-      .find((key) => sliceTypeMap[key].sliceType === st)
+    const sliceKey = Object.keys(sliceTypeMap).find((key) => sliceTypeMap[key].sliceType === st)
 
     if (sliceKey) {
       const isRenderShown = nv.opts.multiplanarShowRender === SHOW_RENDER.ALWAYS
-      
-      let sliceName = (isRenderShown && sliceKey === 'Multiplanar' ) ? 'Multiplanar + 3D render' : sliceKey
+
+      const sliceName =
+        isRenderShown && sliceKey === 'Multiplanar' ? 'Multiplanar + 3D render' : sliceKey
       window.electron.ipcRenderer.send('renderer:sliceType-changed', sliceName)
       console.log('slice name', sliceName)
     }

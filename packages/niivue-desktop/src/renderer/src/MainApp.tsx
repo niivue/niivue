@@ -141,7 +141,7 @@ function MainApp(): JSX.Element {
 
   useEffect(() => {
     // define once, with `selected` & `updateDocument` in scope
-    const onSave = async () => {
+    const onSave = async (): Promise<void> => {
       if (!selected) return
       const { id, title, nvRef } = selected
       const nv = nvRef.current
@@ -166,7 +166,7 @@ function MainApp(): JSX.Element {
     }
 
     window.electron.ipcRenderer.on('saveCompressedDocument', onSave)
-    return () => {
+    return (): void => {
       window.electron.ipcRenderer.removeListener('saveCompressedDocument', onSave)
     }
   }, [selected, updateDocument])
@@ -180,9 +180,11 @@ function MainApp(): JSX.Element {
     // const nvRef = { current: nv }
     const docId = `doc-${documents.length + 1}`
 
-    function getCurrent<T extends keyof NiivueInstanceContext>(field: T): NiivueInstanceContext[T] {
+    function getCurrent<T extends keyof NiivueInstanceContext>(
+      field: T
+    ): NiivueInstanceContext[T] | undefined {
       const d = documents.find((d) => d.id === docId)
-      return d ? (d[field] as any) : (undefined as any)
+      return d?.[field]
     }
 
     const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
@@ -295,7 +297,6 @@ function MainApp(): JSX.Element {
     const prefs = await electron.ipcRenderer.invoke('getPreferences')
     Object.entries(prefs ?? {}).forEach(([key, value]) => {
       if (key in nv.opts) {
-        // @ts-ignore
         nv.opts[key] = value
       }
     })

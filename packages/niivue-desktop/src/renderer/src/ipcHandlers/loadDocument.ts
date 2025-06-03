@@ -1,6 +1,11 @@
-import { Niivue, NVDocument, NVImage, NVMesh } from '@niivue/niivue'
+import { DocumentData, Niivue, NVDocument, NVImage, NVMesh } from '@niivue/niivue'
 import React from 'react'
-import { base64ToJson, decompressGzipBase64ToJson, isProbablyGzip } from '@renderer/utils/base64ToJSON'
+import {
+  base64ToJson,
+  decompressGzipBase64ToJson,
+  isProbablyGzip
+} from '@renderer/utils/base64ToJSON'
+import type { IpcRendererEvent } from 'electron'
 
 const electron = window.electron
 
@@ -17,12 +22,12 @@ export const registerLoadDocumentHandler = ({
   setMeshes,
   onDocumentLoaded
 }: LoadDocumentHandlerProps): void => {
-  const listener = async (_: any, filePath: string) => {
+  const listener = async (_: IpcRendererEvent, filePath: string): Promise<void> => {
     // 1️⃣ read file
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', filePath)
     const json = isProbablyGzip(base64)
-      ? await decompressGzipBase64ToJson(base64)
-      : base64ToJson(base64)
+      ? ((await decompressGzipBase64ToJson(base64)) as DocumentData)
+      : (base64ToJson(base64) as DocumentData)
     if (!json) throw new Error('Invalid .nvd content')
 
     // 2️⃣ load it into Niivue
@@ -31,7 +36,7 @@ export const registerLoadDocumentHandler = ({
 
     // 3️⃣ sync volumes/meshes
     if (nv.volumes.length) setVolumes(nv.volumes)
-    if (nv.meshes.length)  setMeshes(nv.meshes)
+    if (nv.meshes.length) setMeshes(nv.meshes)
 
     // 4️⃣ determine new tab title
     let newTitle = json.title as string | undefined
@@ -46,5 +51,4 @@ export const registerLoadDocumentHandler = ({
   }
 
   electron.ipcRenderer.on('loadDocument', listener)
-  
 }

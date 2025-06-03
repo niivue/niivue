@@ -16,7 +16,7 @@ export const registerLoadVolumeHandler = ({ nv, setVolumes }: HandlerProps): voi
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', path)
     const pathLower = path.toLowerCase()
 
-    if (MESH_EXTENSIONS.some(ext => pathLower.endsWith(ext.toLowerCase()))) {
+    if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
       alert(`File is not a volume that Niivue can parse: ${path}`)
       throw new Error('File is not a volume')
     } else {
@@ -31,7 +31,7 @@ export const registerLoadVolumeHandler = ({ nv, setVolumes }: HandlerProps): voi
       nv.drawScene()
 
       // Add to React state
-      setVolumes(prev => [...prev, vol])
+      setVolumes((prev) => [...prev, vol])
     }
   })
 }

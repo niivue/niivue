@@ -3,7 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
   ...electronAPI,
-  startTabDrag: (fileName: string, jsonStr: string) => {
+  startTabDrag: (fileName: string, jsonStr: string): void => {
     ipcRenderer.send('start-tab-drag', { fileName, jsonStr })
   }
 }

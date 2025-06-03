@@ -36,7 +36,7 @@ export function Viewer({ doc, collapsed }: ViewerProps): JSX.Element {
     canvasRef.current.addEventListener('dragover', handleDragOver)
     canvasRef.current.addEventListener('drop', handleDrop)
 
-    return () => {
+    return (): void => {
       canvasRef.current?.removeEventListener('dragover', handleDragOver)
       canvasRef.current?.removeEventListener('drop', handleDrop)
     }

@@ -29,7 +29,7 @@ export const readStandardFile = async (path: string): Promise<string> => {
       break
     case 'aal.json':
       standardFilePath = jsonaal
-      break;
+      break
     default:
       break
   }

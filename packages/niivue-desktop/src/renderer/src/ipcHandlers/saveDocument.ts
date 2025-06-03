@@ -22,12 +22,11 @@ export function registerSaveCompressedDocumentHandler(
       const friendlyName = getTitle() || docId
 
       // pass that to the main process so the save‐dialog uses it
-      const savedPath: string | undefined =
-        await electron.ipcRenderer.invoke(
-          'saveCompressedNVD',
-          jsonStr,
-          friendlyName
-        )
+      const savedPath: string | undefined = await electron.ipcRenderer.invoke(
+        'saveCompressedNVD',
+        jsonStr,
+        friendlyName
+      )
 
       if (savedPath) {
         // notify your MainApp useEffect to update the tab title

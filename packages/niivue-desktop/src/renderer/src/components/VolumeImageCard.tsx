@@ -61,9 +61,9 @@ export function VolumeImageCard({
   useEffect(() => {
     const id = setInterval(() => {
       const frame = image.frame4D
-      setCurrentFrame(prev => (prev !== frame ? frame : prev))
+      setCurrentFrame((prev) => (prev !== frame ? frame : prev))
     }, 100)
-    return () => clearInterval(id)
+    return (): void => clearInterval(id)
   }, [image])
 
   const handleColormapChange = (value: string): void => {
@@ -167,15 +167,9 @@ export function VolumeImageCard({
             </div>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
-            <ContextMenu.Item onClick={() => onRemoveVolume(image)}>
-              Remove
-            </ContextMenu.Item>
-            <ContextMenu.Item onClick={() => onMoveVolumeUp(image)}>
-              Move Up
-            </ContextMenu.Item>
-            <ContextMenu.Item onClick={() => onMoveVolumeDown(image)}>
-              Move Down
-            </ContextMenu.Item>
+            <ContextMenu.Item onClick={() => onRemoveVolume(image)}>Remove</ContextMenu.Item>
+            <ContextMenu.Item onClick={() => onMoveVolumeUp(image)}>Move Up</ContextMenu.Item>
+            <ContextMenu.Item onClick={() => onMoveVolumeDown(image)}>Move Down</ContextMenu.Item>
             <ContextMenu.Item onClick={() => setHeaderDialogOpen(true)}>
               Show Header
             </ContextMenu.Item>
@@ -292,7 +286,7 @@ export function VolumeImageCard({
 }
 
 // A helper component to render NIfTI header details from the NVImage
-function NiftiHeaderView({ image }: { image: NVImage }) {
+function NiftiHeaderView({ image }: { image: NVImage }): JSX.Element {
   const hdr = image.hdr
   if (!hdr) {
     return <Text>No header information available.</Text>
@@ -307,7 +301,7 @@ function NiftiHeaderView({ image }: { image: NVImage }) {
   const xyzt_units = hdr.xyzt_units
 
   // Helper for spatial units (for dimensions I, J, K)
-  const interpretSpatialUnits = (unitsVal: number | undefined) => {
+  const interpretSpatialUnits = (unitsVal: number | undefined): string => {
     switch (unitsVal) {
       case 2:
         return 'Millimeters'
@@ -321,7 +315,7 @@ function NiftiHeaderView({ image }: { image: NVImage }) {
   }
 
   // Helper for time units. In NIfTI, time units are stored in bits 3-5 of xyzt_units.
-  const interpretTimeUnits = (unitsVal: number | undefined) => {
+  const interpretTimeUnits = (unitsVal: number | undefined): string => {
     if (unitsVal === undefined) return 'unknown'
     const timeUnitCode = unitsVal & 0x38 // extract time-related bits
     switch (timeUnitCode) {
@@ -378,9 +372,7 @@ function NiftiHeaderView({ image }: { image: NVImage }) {
                 <th className="p-1 font-bold">Time:</th>
                 <td className="p-1">{dims[4]}</td>
                 <th className="p-1 font-bold">Spacing:</th>
-                <td className="p-1">
-                  {pixDims?.[4]?.toFixed(4)}
-                </td>
+                <td className="p-1">{pixDims?.[4]?.toFixed(4)}</td>
               </tr>
               <tr>
                 <th className="p-1 font-bold">Time Units:</th>

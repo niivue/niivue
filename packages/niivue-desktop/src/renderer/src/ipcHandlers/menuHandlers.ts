@@ -21,7 +21,7 @@ export const registerSliceTypeHandler = (nv: Niivue): void => {
       return
     }
     // issue1134: unset mosaic string for non-mosaic views
-    nv.setSliceMosaicString('')    
+    nv.setSliceMosaicString('')
     nv.setSliceType(sliceType.sliceType)
   })
 }
@@ -121,7 +121,7 @@ export const registerPreferencesDialogHandler = (setOpen: (v: boolean) => void):
   })
 }
 
-export const registerResetPreferencesHandler = () => {
+export const registerResetPreferencesHandler = (): void => {
   window.electron.ipcRenderer.on('resetPreferencesConfirm', async () => {
     const confirmed = window.confirm('Are you sure you want to reset all preferences?')
     if (confirmed) {
@@ -140,4 +140,3 @@ export const registerLabelManagerDialogHandler = (
     setOpen(true)
   })
 }
-

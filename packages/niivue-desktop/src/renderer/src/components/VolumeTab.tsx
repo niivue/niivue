@@ -19,9 +19,7 @@ export const VolumeTab = (): JSX.Element => {
   const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
   const [showColorMaps, setShowColorMaps] = useState<boolean>(nv.opts.isColorbar)
-  const [mosaicStr, setMosaicStr] = useState(
-    () => instance.opts.sliceMosaicString ?? ''
-  )
+  const [mosaicStr, setMosaicStr] = useState(() => instance.opts.sliceMosaicString ?? '')
 
   useEffect((): void => {
     nv.graph.autoSizeMultiplanar = true
@@ -64,25 +62,32 @@ export const VolumeTab = (): JSX.Element => {
   return (
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>
       <Accordion.Root type="multiple" className="w-full">
-
         {/* Graph Settings */}
         {hasTimeSeries && (
           <Accordion.Item value="graph-settings" className="border-b border-gray-200">
             <Accordion.Header>
               <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
-                <Text size="2" weight="bold">Graph Settings</Text>
-                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">▼</span>
+                <Text size="2" weight="bold">
+                  Graph Settings
+                </Text>
+                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                  ▼
+                </span>
               </Accordion.Trigger>
             </Accordion.Header>
             <Accordion.Content className="px-4 py-2">
               <Flex align="center" gap="2" mb="4">
-                <Text size="2" weight="bold" className="mr-auto">Show Graph</Text>
+                <Text size="2" weight="bold" className="mr-auto">
+                  Show Graph
+                </Text>
                 <Switch checked={graphVisible} onCheckedChange={toggleGraphVisibility} />
               </Flex>
               {graphVisible && (
                 <>
                   <Flex align="center" gap="2" ml="4" mb="4">
-                    <Text size="2" weight="bold" className="mr-auto">Normalize Graph</Text>
+                    <Text size="2" weight="bold" className="mr-auto">
+                      Normalize Graph
+                    </Text>
                     <Switch
                       checked={normalizeGraph}
                       onCheckedChange={(checked: boolean): void => {
@@ -93,7 +98,9 @@ export const VolumeTab = (): JSX.Element => {
                     />
                   </Flex>
                   <Flex justify="start" ml="4" mt="2">
-                    <Button size="2" onClick={loadFMRIEventsFromFile}>Load fMRI Events (.tsv)</Button>
+                    <Button size="2" onClick={loadFMRIEventsFromFile}>
+                      Load fMRI Events (.tsv)
+                    </Button>
                   </Flex>
                 </>
               )}
@@ -105,13 +112,19 @@ export const VolumeTab = (): JSX.Element => {
         <Accordion.Item value="colormap-settings" className="border-b border-gray-200">
           <Accordion.Header>
             <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
-              <Text size="2" weight="bold">Color Map Display</Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">▼</span>
+              <Text size="2" weight="bold">
+                Color Map Display
+              </Text>
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                ▼
+              </span>
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="px-4 py-2">
             <Flex align="center" gap="2">
-              <Text size="2" weight="bold" className="mr-auto">Show Color Maps</Text>
+              <Text size="2" weight="bold" className="mr-auto">
+                Show Color Maps
+              </Text>
               <Switch checked={showColorMaps} onCheckedChange={toggleColorbar} />
             </Flex>
           </Accordion.Content>
@@ -122,8 +135,12 @@ export const VolumeTab = (): JSX.Element => {
           <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
             <Accordion.Header>
               <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
-                <Text size="2" weight="bold">Mosaic Settings</Text>
-                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">▼</span>
+                <Text size="2" weight="bold">
+                  Mosaic Settings
+                </Text>
+                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                  ▼
+                </span>
               </Accordion.Trigger>
             </Accordion.Header>
             <Accordion.Content className="px-4 py-2">
@@ -134,7 +151,6 @@ export const VolumeTab = (): JSX.Element => {
             </Accordion.Content>
           </Accordion.Item>
         )}
-
       </Accordion.Root>
     </ScrollArea>
   )

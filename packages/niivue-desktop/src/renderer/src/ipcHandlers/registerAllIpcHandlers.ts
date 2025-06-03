@@ -37,7 +37,7 @@ export const registerAllIpcHandlers = (
   registerSliceTypeHandler(nv)
   registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
   registerLoadMeshHandler({ nv, setMeshes })
-  registerLoadVolumeHandler({nv, setVolumes })
+  registerLoadVolumeHandler({ nv, setVolumes })
   registerLoadDocumentHandler({
     nv,
     setVolumes,

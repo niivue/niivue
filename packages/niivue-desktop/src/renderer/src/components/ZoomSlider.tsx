@@ -23,7 +23,6 @@ export const ZoomSlider = (): JSX.Element => {
       ])
     }
   }, [zoom, nv])
-  
 
   const handleReset = (): void => {
     setZoom([INITIAL_SCENE_DATA.pan2Dxyzmm[3]])

@@ -9,11 +9,11 @@ import { getMainWindow } from '../index.js'
 import fs from 'fs' // ✅ Works in ES Module mode
 
 export const viewState = {
-  layout:    /** default */     'Auto',
-  sliceType: /** default */     'Multiplanar',
-  dragMode:  DEFAULT_OPTIONS.dragMode,
+  layout: /** default */ 'Auto',
+  sliceType: /** default */ 'Multiplanar',
+  dragMode: DEFAULT_OPTIONS.dragMode,
   crosshair: true,
-  crosshair3D: DEFAULT_OPTIONS.show3Dcrosshair,
+  crosshair3D: DEFAULT_OPTIONS.show3Dcrosshair
   // …etc for any other checkbox/radios you sync…
 }
 
@@ -286,7 +286,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         {
           label: 'Save Document',
           accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => {
+          click: (): void => {
             win.webContents.send('saveCompressedDocument')
           }
         },
@@ -338,7 +338,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         {
           label: 'Clear Scene',
           accelerator: 'CmdOrCtrl+Shift+X',
-          click: () => {
+          click: (): void => {
             win.webContents.send('clear-scene')
           }
         }
@@ -688,7 +688,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       submenu: [
         {
           label: 'Add Label',
-          click: () => {
+          click: (): void => {
             win.webContents.send('openLabelManagerDialog')
           }
         }

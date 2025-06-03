@@ -10,7 +10,7 @@ export const PreferencesDialog: React.FC = () => {
 
   useEffect(() => {
     registerPreferencesDialogHandler(setOpen)
-    return () => {
+    return (): void => {
       window.electron.ipcRenderer.removeAllListeners('openPreferencesDialog')
     }
   }, [])
@@ -24,7 +24,7 @@ export const PreferencesDialog: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <Dialog.Title className="text-lg font-semibold">Preferences</Dialog.Title>
               <Dialog.Close asChild>
-                <button className="text-gray-500 hover:text-black" aria-label="Close" >
+                <button className="text-gray-500 hover:text-black" aria-label="Close">
                   <Cross2Icon />
                 </button>
               </Dialog.Close>

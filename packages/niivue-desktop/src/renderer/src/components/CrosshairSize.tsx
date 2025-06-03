@@ -6,7 +6,7 @@ export const CrosshairSize = (): JSX.Element => {
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
   if (!nv) return <></>
-  
+
   const [crosshairWidth, setCrosshairWidth] = useState(nv.opts.crosshairWidth)
 
   useEffect(() => {
