@@ -34,7 +34,12 @@
 }
 
 
-/* static/css/custom.css or src/css/custom.css */
-.contributing-page a {
+a {
   color: blue;
+
+}
+
+.navbar__link--active {
+  font-weight: bold;
+  text-decoration: underline;
 }
