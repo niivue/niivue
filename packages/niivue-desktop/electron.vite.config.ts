@@ -32,7 +32,7 @@ export default defineConfig({
         exclude: ['@niivue/niivue']
       },
       rollupOptions: {
-        external: ['zlib', 'pako', 'fflate', 'node:zlib', 'module']
+        external: ['zlib', 'pako', 'node:zlib', 'module']
       }
     },
     resolve: {
