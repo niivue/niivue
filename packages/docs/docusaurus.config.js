@@ -66,8 +66,13 @@ const config = {
           },
           // more demos link https://niivue.com/demos/
           {
-            href: "https://niivue.com/demos/",
-            label: "Demos",
+             to: "/gallery",
+            label: "Gallery",
+            position: "left",
+          },
+          {
+            href: "https://niivue.com/demos/devdocs/",
+            label: "API",
             position: "left",
           },
           {

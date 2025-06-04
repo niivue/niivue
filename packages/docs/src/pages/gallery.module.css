@@ -1,0 +1,99 @@
+.gallery {
+  padding: 2rem;
+  max-width: none; /* or a larger value like 1600px */
+  margin: 0 auto;
+}
+
+
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+  max-width: none;
+  width: 100%;
+}
+
+.fullWidth {
+  max-width: 100%;
+  width: 100%;
+  padding: 1rem;
+}
+
+.card {
+  background: #fdfdfd;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #005577;
+  text-decoration: none;
+}
+
+.cardTitle:hover {
+  text-decoration: underline;
+}
+
+.cardDescription {
+  font-size: 0.95rem;
+  color: #444;
+  margin: 0.5rem 0 1rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.25em 0.5em;
+  margin: 0.2em;
+  border-radius: 0.25em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.tag_atlas {
+  background-color: #10bd97;
+}
+
+.tag_connectome {
+  background-color: #ffc000;
+  color: black;
+}
+
+.tag_mesh {
+  background-color: #70ad47;
+}
+
+.tag_stat {
+  background-color: #d00031;
+}
+
+.tag_tract {
+  background-color: #ed7d31;
+}
+
+.tag_voxel {
+  background-color: #0a9bd5;
+}
