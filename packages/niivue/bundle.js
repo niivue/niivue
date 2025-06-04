@@ -18,7 +18,7 @@ import { build } from 'tsup'
     },
     minify: 'terser',
     terserOptions: {
-      mangle: false,
+      mangle: false
     },
     noExternal: [/(.*)/]
   })
