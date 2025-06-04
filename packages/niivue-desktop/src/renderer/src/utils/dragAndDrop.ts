@@ -22,7 +22,7 @@ export const loadDroppedFiles = async (
     const file = files[i]
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', file.path)
     if (volumeExtensions.some((ext) => file.name.endsWith(ext))) {
-      const vol = NVImage.loadFromBase64({
+      const vol = await NVImage.loadFromBase64({
         base64,
         name: file.path
       })

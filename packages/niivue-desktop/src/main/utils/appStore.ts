@@ -1,31 +1,51 @@
 import { app } from 'electron'
-import ElectronStore from 'electron-store'
+import { NVConfigOptions } from '@niivue/niivue'
 
-// Define schema
-interface StoreSchema {
-  recentFiles: string[]
-}
+import Store from 'electron-store'
 
-// Extend ElectronStore and explicitly declare `get` and `set`
-export class AppStore extends ElectronStore<StoreSchema> {
+// Define AppStore class using ElectronStore correctly
+export class AppStore {
+  private store: Store
+
   constructor() {
-    super({ defaults: { recentFiles: [] } }) // Ensure defaults are set
+    this.store = new Store()
+    console.log('store', this.store)
   }
 
+  // Recent Files Methods
   getRecentFiles(): string[] {
-    const files = super.get('recentFiles') ?? []
-    return files
+    const recentFiles = this.store.get('recentFiles') as []
+    console.log(recentFiles)
+    return recentFiles ?? []
   }
 
   addRecentFile(filePath: string): void {
     let recentFiles = this.getRecentFiles()
     recentFiles = [filePath, ...recentFiles.filter((f) => f !== filePath)].slice(0, 10)
-    super.set('recentFiles', recentFiles) // Explicitly call `super.set`
+    this.store.set('recentFiles', recentFiles)
+    console.log(recentFiles)
     app.addRecentDocument(filePath)
   }
 
   clearRecentFiles(): void {
-    super.set('recentFiles', []) // Explicitly call `super.set`
+    this.store.set('recentFiles', [])
+  }
+
+  // User Preferences Methods
+  getPreferences(): Partial<NVConfigOptions> {
+    const pref = this.store.get('preferences')
+    console.log('getting preferences', pref)
+    return this.store.get('preferences') ?? {}
+  }
+
+  setPreference<K extends keyof NVConfigOptions>(key: K, value: NVConfigOptions[K]): void {
+    const updatedPreferences = { ...this.getPreferences(), [key]: value }
+    this.store.set('preferences', updatedPreferences)
+    console.log('updated preferences', updatedPreferences)
+  }
+
+  resetPreferences(): void {
+    this.store.set('preferences', {})
   }
 }
 

@@ -14,5 +14,12 @@ export default defineConfig({
   },
   dts: true,
   metafile: true,
-  platform: 'browser'
+  platform: 'browser',
+  external: [
+    'fflate', // often the source of DEFLATE-related code
+    'pako', // another possible compression module
+    'zlib', // Node's native compression (not for browser!)
+    'node:zlib', // same reason
+    'node:module' // uses createRequire
+  ]
 })
