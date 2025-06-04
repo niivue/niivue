@@ -199,6 +199,7 @@ export class NVMesh {
   nodeScale = 4
   edgeScale = 1
   legendLineThickness = 0
+  showLegend = true
   nodeColormap = 'warm'
   edgeColormap = 'warm'
   nodeColormapNegative?: string

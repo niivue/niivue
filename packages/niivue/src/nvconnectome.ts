@@ -20,7 +20,8 @@ const defaultOptions: ConnectomeOptions = {
   edgeMin: 2,
   edgeMax: 6,
   edgeScale: 1,
-  legendLineThickness: 0
+  legendLineThickness: 0,
+  showLegend: true
 }
 
 export type FreeSurferConnectome = {
@@ -54,7 +55,6 @@ export class NVConnectome extends NVMesh {
     if (this.nodes) {
       this.updateLabels()
     }
-
     this.nodesChanged = new EventTarget()
   }
 
@@ -78,7 +78,6 @@ export class NVConnectome extends NVMesh {
         sizeValue: nodes.Size[i]
       })
     }
-
     for (let i = 0; i < nodes.names.length - 1; i++) {
       for (let j = i + 1; j < nodes.names.length; j++) {
         const colorValue = json.edges[i * nodes.names.length + j]
@@ -158,8 +157,11 @@ export class NVConnectome extends NVMesh {
       const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert)
       const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert)
       const hasNeg = 'nodeColormapNegative' in this
-      const legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0.0
+      let legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0.0
 
+      if (this.showLegend === false) {
+        legendLineThickness = 0
+      }
       for (let i = 0; i < nodes.length; i++) {
         let color = nodes[i].colorValue
         let isNeg = false
