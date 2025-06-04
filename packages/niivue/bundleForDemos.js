@@ -17,6 +17,9 @@ import { build } from 'tsup'
       '.png': 'dataurl'
     },
     minify: 'terser',
+    terserOptions: {
+      mangle: false,
+    },
     noExternal: [/(.*)/]
   })
 
