@@ -96,7 +96,7 @@
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 2, "opacity", this.value * 0.1);
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 3, "opacity", this.value * 0.1);
   };
-  redSlider.onchange = function () {
+  redSlider.oninput = function () {
     nv1.setMeshLayerProperty(
       nv1.meshes[0].id,
       1,
@@ -110,7 +110,7 @@
       parseInt(this.value) + 2.5
     );
   };
-  greenSlider.onchange = function () {
+  greenSlider.oninput = function () {
     nv1.setMeshLayerProperty(
       nv1.meshes[0].id,
       2,
@@ -124,7 +124,7 @@
       parseInt(this.value) + 2.5
     );
   };
-  blueSlider.onchange = function () {
+  blueSlider.oninput = function () {
     nv1.setMeshLayerProperty(
       nv1.meshes[0].id,
       3,

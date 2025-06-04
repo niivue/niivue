@@ -1192,7 +1192,7 @@ export class NVMesh {
     const u8 = new Uint8Array(posNormClr.buffer) // Each vertex has 7 components: PositionXYZ, NormalXYZ, RGBA32
     // create emission values
     // let posNormClrEmission = posNormClr.slice();
-    const maxAdditiveBlend = 0
+    let maxAdditiveBlend = 0
     const additiveRGBA = new Uint8Array(nvtx * 4) // emission
     let tris = this.tris
     if (this.layers && this.layers.length > 0) {
@@ -1400,6 +1400,9 @@ export class NVMesh {
           layer.isTransparentBelowCalMin = true
         }
         const lut = cmapper.colormap(layer.colormap, layer.colormapInvert)
+        if (layer.isAdditiveBlend) {
+          maxAdditiveBlend++
+        }
         this.blendColormap(u8, additiveRGBA, layer, layer.cal_min, layer.cal_max, lut)
         if (layer.useNegativeCmap) {
           const neglut = cmapper.colormap(layer.colormapNegative, layer.colormapInvert)
