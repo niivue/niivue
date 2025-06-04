@@ -32,3 +32,9 @@
   --ifm-background-color: #000000; /* Black background */
   --ifm-text-color: #ffffff; /* White text */
 }
+
+
+/* static/css/custom.css or src/css/custom.css */
+.contributing-page a {
+  color: blue;
+}

@@ -17,7 +17,7 @@ const FeatureList = [
     title: 'Developer-Friendly',
     description: (
       <>
-        Intuitive API designed for rapid integration and development.
+        Intuitive <a style={{textDecoration: 'underline'}} href='https://niivue.com/demos/devdocs/classes/Niivue.html' target='_blank' rel='noopener noreferrer'>API</a> designed for rapid integration and development.
       </>
     ),
   },
