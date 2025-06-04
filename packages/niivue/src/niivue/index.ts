@@ -9492,7 +9492,11 @@ export class Niivue {
   }
 
   getConnectomeLabels(): NVLabel3D[] {
-    const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
+    // const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
+    // const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
+    const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME && m.showLegend !== false)
+
+    // console.log(this.meshes[0].colorbarVisible)
     const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
     const meshLabels = meshNodes.map((n) => n.label)
     // filter our undefined labels
