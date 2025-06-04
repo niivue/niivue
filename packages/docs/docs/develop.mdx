@@ -1,0 +1,47 @@
+---
+title: Development
+sidebar_position: 8
+---
+
+<div className="contributing-page">
+# Development
+
+All NiiVue development is public on GitHub. The `main` branch represents the most current state of NiiVue. Contributions to NiiVue are encouraged and welcomed. 
+
+## Local Development
+
+The hot-reloadable web page is the most responsive way to test and develop new features in NiiVue. Whenever any core source files are modified, the page at /niivue/packages/niivue/src/index.html automatically reloads to reflect those changes. You can edit this index.html file to load specific datasets or create custom examples that demonstrate new functionality or reproduce issues.
+
+```
+git clone git@github.com:niivue/niivue.git
+cd niivue
+npm install
+npm run dev
+```
+
+The [API documentation](https://niivue.com/demos/devdocs/classes/Niivue.html) provides many live demos as recipes to illustrate the functionality. If you want to modify these demos, you can run them (though note that this mode is not hot-reloadable so you will have to re-run `npm run demo` after changing the core code).
+
+```
+git clone git@github.com:niivue/niivue.git
+cd niivue
+npm install
+npm run demo
+```
+
+## Documentation Development
+
+The [primary documentation](https://niivue.com/docs/) uses [Docusaurus](https://docusaurus.io/). The easiest way to enhance this documentation is to use the hot-reloadable mode, where changes in the code are rapidly reflected in the locally hosted web browser pages.
+
+```
+git clone git@github.com:niivue/niivue.git
+cd niivue
+npm install
+npm run build:niivue
+npm run dev:docs
+```
+
+## API Development
+
+NiiVue has a Application Programming Interface (API) that allows developers to use embed into larger projects. The API has its own [API online help](https://niivue.com/demos/devdocs/), with many functions including live demo web pages that provide minimal web pages to showcase functionality.  The code uses [JSDoc](https://jsdoc.app/) annotations. 
+
+</div>
