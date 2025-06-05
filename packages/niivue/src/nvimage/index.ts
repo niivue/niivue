@@ -187,7 +187,7 @@ export class NVImage {
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
-    colormap = 'gray',
+    colormap = '',
     opacity = 1.0,
     _pairedImgData: ArrayBuffer | null = null,
     cal_min = NaN,
@@ -206,6 +206,10 @@ export class NVImage {
     colormapType = 0,
     imgRaw: ArrayBuffer | ArrayBufferLike | null = null
   ): void {
+    const isNoColormap = colormap === ''
+    if (isNoColormap) {
+      colormap = 'gray'
+    }
     this.name = name
     this.imageType = imageType
     this.id = uuidv4()
@@ -223,10 +227,15 @@ export class NVImage {
     this.colormapType = colormapType // COLORMAP_TYPE MIN_TO_MAX
     // TODO this was missing
     this.useQFormNotSForm = useQFormNotSForm
+    //    console.log(colormap, 'poloA', this.hdr.intent_code)
     // Added to support zerosLike
     // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
       return
+    }
+    if (isNoColormap && this.hdr && this.hdr.intent_code === 1002) {
+      colormap = 'random'
+      this._colormap = colormap
     }
     if (this.hdr && typeof this.hdr.magic === 'number') {
       this.hdr.magic = 'n+1'
@@ -489,7 +498,7 @@ export class NVImage {
     // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
     dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null = null,
     name = '',
-    colormap = 'gray',
+    colormap = '',
     opacity = 1.0,
     pairedImgData: ArrayBuffer | null = null,
     cal_min = NaN,
@@ -3185,7 +3194,7 @@ export class NVImage {
     urlImgData = '',
     headers = {},
     name = '',
-    colormap = 'gray',
+    colormap = '',
     opacity = 1.0,
     cal_min = NaN,
     cal_max = NaN,
@@ -3489,7 +3498,7 @@ export class NVImage {
   static async loadFromFile({
     file, // file can be an array of file objects or a single file object
     name = '',
-    colormap = 'gray',
+    colormap = '',
     opacity = 1.0,
     urlImgData = null,
     cal_min = NaN,
@@ -3663,7 +3672,7 @@ export class NVImage {
   static async loadFromBase64({
     base64,
     name = '',
-    colormap = 'gray',
+    colormap = '',
     opacity = 1.0,
     cal_min = NaN,
     cal_max = NaN,
