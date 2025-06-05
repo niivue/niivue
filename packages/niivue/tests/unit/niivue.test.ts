@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { Niivue, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
 import { vec4 } from 'gl-matrix'
+import { Niivue, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
 
 test('backColor defaults to black', () => {
   const nv = new Niivue()
