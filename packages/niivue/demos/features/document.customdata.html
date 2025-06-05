@@ -32,7 +32,7 @@
   </main>
   <footer id="location">&nbsp;</footer>
   <script type="module" async>
-    import { Niivue, NVImage, NVMesh, NVMeshLoaders } from "../dist/index.js";
+    import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER } from "../dist/index.js";
 
     save.onclick = function () {
       console.log("document on save", nv1.document);
@@ -45,7 +45,7 @@
       nv1 = new Niivue(defaults);
       await nv1.attachToCanvas(gl1);
       nv1.opts.dragMode = nv1.dragModes.pan;
-      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
       nv1.opts.yoke3Dto2DZoom = true;
     }
 
@@ -87,7 +87,7 @@
     var nv1 = new Niivue(defaults);
     await nv1.attachToCanvas(gl1);
     nv1.opts.dragMode = nv1.dragModes.pan;
-    nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+    nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
     nv1.opts.yoke3Dto2DZoom = true;
     await nv1.loadVolumes(volumeList1);
 

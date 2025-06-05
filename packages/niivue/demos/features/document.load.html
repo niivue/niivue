@@ -137,13 +137,21 @@
         "../images/niivue.drawing.nvd",
         "../images/niivue.mesh.nvd",
       ];
+
+      var docsLoadedCount = 0;
       for (const documentUrl of documentUrls) {
         console.log("loading " + documentUrl);
+         
         niivue.NVDocument.loadFromUrl(documentUrl).then((doc) => {
           documents.push(doc);
           console.log("adding preview");
           console.log(doc.opts);
           addPreview(doc);
+          // if this is our first document load it into niivue
+          if(!docsLoadedCount) {
+            nv1.loadDocument(doc);
+          }
+          docsLoadedCount++;
         });
 
       }
