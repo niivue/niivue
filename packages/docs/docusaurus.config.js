@@ -104,6 +104,15 @@ const config = {
             ],
           },
           {
+            title: "Recipes",
+            items: [
+              {
+                label: "Gallery",
+                href: "./gallery",
+              },
+            ],
+          },
+          {
             title: "More",
             items: [
               {
