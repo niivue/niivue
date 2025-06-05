@@ -63,6 +63,7 @@
     backColor: [0.2, 0.2, 0.2, 1],
     onLocationChange: handleIntensityChange,
   })
+  nv1.opts.showLegend =  false
   nv1.setSliceType(nv1.sliceTypeRender)
   await nv1.attachTo("gl1")
   //you can convert between GIfTI and FreeSurfer annot files:
