@@ -15,6 +15,15 @@
       >
     </noscript>
     <header>
+      <label for="xRaySlider">XRay</label>
+      <input
+        type="range"
+        min="0"
+        max="30"
+        value="0"
+        class="slider"
+        id="xRaySlider"
+      />
       <label for="meshSlider2">Threshold</label>
       <input
         type="range"
@@ -56,6 +65,10 @@
     nv1.setMeshProperty(nv1.meshes[0].id, 'visible', checkbox1.checked);
     console.log(`visible=${nv1.meshes[0].visible}`);
   }
+  xRaySlider.oninput = function () {
+    nv1.opts.meshXRay = this.value * 0.01;
+    nv1.drawScene();
+  }
   var slider2 = document.getElementById("meshSlider2");
   slider2.oninput = function () {
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1);
@@ -72,10 +85,10 @@
     show3Dcrosshair: true,
     onLocationChange: handleLocationChange,
     backColor: [1, 1, 1, 1],
-    meshXRay: 0.3
   });
   await nv1.attachTo("gl1");
   nv1.opts.isColorbar = true;
+  nv1.opts.showLegend =  false;
   var meshLHLayersList1 = [
     {
       url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
@@ -93,6 +106,7 @@
     },
     { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
   ]);
+  nv1.setMeshLayerProperty(nv1.meshes[1].id, 0, "colorbarVisible", false);
   //n.b. one can also create asymmetric thresholds by explicitly setting negative values:
   // nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_maxNeg', -5.0)
   // nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_minNeg', -0.5)
