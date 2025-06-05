@@ -28,23 +28,43 @@
 }
 
 .card {
-  background: #fdfdfd;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  position: relative;
   padding: 1rem;
-  transition: box-shadow 0.2s ease;
+  border-radius: 8px;
+  background-color: rgba(242, 242, 242, 0.8); /* fallback */
+  overflow: hidden;
+  min-height: 200px;
+  z-index: 1; /* ensure content is above ::before */
 }
-
 .card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.33;
+  z-index: 0;
+  background-image: var(--bg-image);
+  pointer-events: none;
+}
+
+.cardContent {
+  position: relative;
+  z-index: 1;
 }
 
 
 .cardTitle {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #005577;
   text-decoration: none;
+  color: #00006F;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6); /* light shadow for darkening text */
+
 }
 
 .cardTitle:hover {
