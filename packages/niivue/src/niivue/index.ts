@@ -9492,16 +9492,14 @@ export class Niivue {
   }
 
   getConnectomeLabels(): NVLabel3D[] {
-    // const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
-    // const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
     const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME && m.showLegend !== false)
 
-    // console.log(this.meshes[0].colorbarVisible)
     const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
     const meshLabels = meshNodes.map((n) => n.label)
     // filter our undefined labels
 
-    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
+    // const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
+    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined && l.text !== '')
     // get all of our non-anchored labels
     const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === LabelAnchorPoint.NONE)
     // get the unique set of unanchored labels
