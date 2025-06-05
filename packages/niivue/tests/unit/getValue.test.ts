@@ -7,6 +7,9 @@ import { NVImage } from '../../src/niivue/index.js' // note the js extension
 test('nvimage getValue', async () => {
   const name = 'hippo.nii.gz'
   const dataBuffer = readFileSync(path.join('./tests/images/', name))
+  if (!dataBuffer.length) {
+    throw new Error('buffer not loaded')
+  }
   // console.log('data', dataBuffer)
   const image = await NVImage.new(dataBuffer.buffer, name)
   // console.log('image', image)
@@ -17,4 +20,3 @@ test('nvimage getValue', async () => {
   // The expected value at this position should be 9
   expect(value).toBe(9)
 })
-
