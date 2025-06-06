@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Mesh features versus performance</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <link rel="stylesheet" href="light.css" />
+  </head>
+    <body>
+      <header>
+        <label for="aaCheck">AntiAlias</label>
+        <input type="checkbox" id="aaCheck" checked />
+        &nbsp;
+        <label for="dpiCheck">HighDPI</label>
+        <input type="checkbox" id="dpiCheck" checked />
+        &nbsp;&nbsp;
+        <label for="alphaSelect">Alpha</label>
+        <select id="alphaSelect">
+          <option>Transparent</option>
+          <option selected>Translucent</option>
+          <option>Opaque</option>
+        </select>
+        &nbsp;&nbsp;
+        <label for="xRaySlider">XRay</label>
+        <input
+          type="range"
+          min="0"
+          max="20"
+          value="10"
+          class="slider"
+          id="xRaySlider"
+        />
+        &nbsp;&nbsp;&nbsp;
+        <label for="outlineCheck">Outline</label>
+        <input type="checkbox" id="outlineCheck" checked />
+
+
+        &nbsp;&nbsp;
+        <label for="curvSlider">Curve</label>
+        <input
+          type="range"
+          min="0"
+          max="255"
+          value="222"
+          class="slider"
+          id="curvSlider"
+        />
+        &nbsp;
+        <label for="atlasSlider">Atlas</label>
+        <input
+          type="range"
+          min="0"
+          max="255"
+          value="128"
+          class="slider"
+          id="atlasSlider"
+        />
+        &nbsp;
+        <label for="statSlider">Statistics</label>
+        <input
+          type="range"
+          min="0"
+          max="255"
+          value="162"
+          class="slider"
+          id="statSlider"
+        />
+        <label for="threshSlider">Threshold</label>
+        <input
+          type="range"
+          min="1"
+          max="35"
+          value="25"
+          class="slider"
+          id="threshSlider"
+        />
+        &nbsp;
+        <label for="atlasCheck">Atlas border</label>
+        <input type="checkbox" id="atlasCheck" checked />
+        &nbsp;
+        <label for="statCheck">Statistical border</label>
+        <input type="checkbox" id="statCheck" unchecked />
+        &nbsp;&nbsp;&nbsp;
+        <button id="aboutBtn">About</button>
+      </header>
+      <main id="canvas-container">
+        <canvas id="gl1"></canvas>
+      </main>
+    </body>
+  <script type="module" async>
+    import * as niivue from "../dist/index.js"
+    const meshLayersList1 = [
+      {
+        url: "../images/lh.curv",
+        colormap: "gray",
+        cal_min: 0.3,
+        cal_max: 0.5,
+        opacity: 222 / 255,
+      },
+      { url: "../images/boggle.lh.annot", colormap: "rocket", opacity: 1 },
+      {
+        url: "../images/pval.LH.nii.gz",
+        cal_min: 25,
+        cal_max: 35.0,
+        opacity: 1,
+      },
+    ]
+    var nv1
+    aboutBtn.onclick = async function () {
+        window.alert("This page shows features that may provide poor performance on slow devices. Using anti-aliaing, high-DPI, alpha translucency and x-ray all impact performance.")
+    }
+    alphaSelect.onchange = function () {
+      const index = this.selectedIndex
+      const midx = nv1.meshes.length - 1
+      nv1.meshes[midx].visible = index > 0
+      if (index === 1) {
+        nv1.meshes[midx].opacity = 0.2
+      } else if (index === 2) {
+        nv1.meshes[midx].opacity = 1
+      } else {
+        nv1.meshes[midx].opacity = 0
+      }
+      nv1.drawScene()
+    }
+    xRaySlider.onchange = function () {
+      nv1.opts.meshXRay = this.value * 0.01
+      nv1.drawScene()
+    }
+    dpiCheck.onclick = function () {
+      nv1.setHighResolutionCapable(this.checked)
+    }
+    outlineCheck.onclick = function () {
+      if (this.checked)
+        nv1.setMeshShader(nv1.meshes[1].id, "Outline")
+      else
+        nv1.setMeshShader(nv1.meshes[1].id, "Matcap")
+    }
+    curvSlider.oninput = function () {
+      nv1.setMeshLayerProperty(
+        nv1.meshes[1].id,
+        0,
+        "opacity",
+        this.value / 255.0
+      )
+    }
+    atlasSlider.oninput = function () {
+      nv1.setMeshLayerProperty(
+        nv1.meshes[1].id,
+        1,
+        "opacity",
+        this.value / 255.0
+      )
+    }
+    statSlider.oninput = function () {
+      nv1.setMeshLayerProperty(
+        nv1.meshes[1].id,
+        2,
+        "opacity",
+        this.value / 255.0
+      )
+    }
+    threshSlider.oninput = function () {
+      nv1.setMeshLayerProperty(nv1.meshes[1].id, 2, "cal_min", this.value)
+    }
+    atlasCheck.onclick = function () {
+      nv1.setMeshLayerProperty(
+        nv1.meshes[1].id,
+        1,
+        "outlineBorder",
+        Number(this.checked)
+      )
+    }
+    statCheck.onclick = function () {
+      nv1.setMeshLayerProperty(
+        nv1.meshes[1].id,
+        2,
+        "outlineBorder",
+        Number(this.checked * -1)
+      )
+    }
+    aaCheck.onclick = async function () {
+      const isAntiAlias = this.checked
+      const oldCanvas = document.getElementById("gl1")
+      oldCanvas.remove()
+      const newCanvas = document.createElement("canvas")
+      newCanvas.id = "gl1"
+      document.getElementById("canvas-container").appendChild(newCanvas)
+      // Recreate NiiVue with the new canvas and antialias setting
+      nv1 = new niivue.Niivue({backColor: [1, 1, 1, 1]})
+      nv1.opts.showLegend = false
+      await nv1.attachToCanvas(newCanvas, isAntiAlias)
+      await nv1.loadMeshes([
+        { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
+        {
+          url: "../images/lh.pial",
+          rgba255: [222, 164, 164, 255],
+          layers: meshLayersList1 
+        },
+      ])
+      // n.b. antiAlias set when WebGL context created: changing resets the state.
+      //  therefore, we must reset all properties after changing
+      dpiCheck.onclick()
+      alphaSelect.onchange()
+      xRaySlider.onchange()
+      outlineCheck.onclick()
+      curvSlider.oninput()
+      atlasSlider.oninput()
+      statSlider.oninput()
+      threshSlider.oninput()
+      atlasCheck.onclick()
+      statCheck.onclick()
+    }
+    aaCheck.onclick()
+  </script>
+</html>
