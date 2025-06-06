@@ -27,7 +27,7 @@
   "build": {
     "appId": "com.niivue.niivue-desktop",
     "mac": {
-      "icon": "build/icons/app_icon.icns",
+      "icon": "resources/icons/app_icon.icns",
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist"
     },
@@ -37,13 +37,13 @@
     },
     "files": [
       "out/**/*",
-      "build/icons/**/*",
+      "resources/icons/**/*",
       "node_modules/**/*",
       "package.json"
     ],
     "extraResources": [
       {
-        "from": "build/icons/",
+        "from": "resources/icons/",
         "to": "icons",
         "filter": [
           "*.png",

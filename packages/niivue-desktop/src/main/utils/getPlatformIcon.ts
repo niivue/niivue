@@ -3,7 +3,7 @@ import path from 'path'
 import { is } from '@electron-toolkit/utils'
 
 // This will be replaced with a string path at build time by Vite
-import devIconPath from '../../../build/icons/app_icon.png?asset'
+import devIconPath from '../../../resources/icons/app_icon.png?asset'
 
 export function getPlatformIcon(): string | Electron.NativeImage {
   if (is.dev) {
