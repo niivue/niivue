@@ -494,22 +494,17 @@ export default function Gallery() {
       <main className={`${styles.gallery} ${styles.fullWidth}`}>
         <div className={styles.grid}>
           {demos.map(demo => (
-            <div
+            <a
               key={demo.file}
+              href={demoRoot + demo.file}
+              target="_blank"
+              rel="noopener noreferrer"
               className={styles.card}
-              style={{
-                '--bg-image': `url(/img/thumbs/${demo.file.replace(/\.html$/, '.jpg')})`,
-              }}
             >
-              <div className={styles.cardContent}>
-                <a
-                  href={demoRoot + demo.file}
-                  className={styles.cardTitle}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+              <div className={styles.cardHeader}>
+                <div className={styles.cardTitle}>
                   {demo.name}
-                </a>
+                </div>
                 <div className={styles.tags}>
                   {demo.tags.map(tag => (
                     <span
@@ -521,7 +516,13 @@ export default function Gallery() {
                   ))}
                 </div>
               </div>
-            </div>
+              <div 
+                className={styles.cardThumbnail}
+                style={{
+                  backgroundImage: `url(/img/thumbs/${demo.file.replace(/\.html$/, '.jpg')})`,
+                }}
+              ></div>
+            </a>
           ))}
         </div>
       </main>
