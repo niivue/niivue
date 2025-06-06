@@ -26181,7 +26181,11 @@ var NVImage = class _NVImage {
     );
   }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  init(dataBuffer = null, name = "", colormap = "gray", opacity = 1, _pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0, imgRaw = null) {
+  init(dataBuffer = null, name = "", colormap = "", opacity = 1, _pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0, imgRaw = null) {
+    const isNoColormap = colormap === "";
+    if (isNoColormap) {
+      colormap = "gray";
+    }
     this.name = name;
     this.imageType = imageType;
     this.id = v4();
@@ -26200,6 +26204,10 @@ var NVImage = class _NVImage {
     this.useQFormNotSForm = useQFormNotSForm;
     if (!dataBuffer) {
       return;
+    }
+    if (isNoColormap && this.hdr && this.hdr.intent_code === 1002) {
+      colormap = "random";
+      this._colormap = colormap;
     }
     if (this.hdr && typeof this.hdr.magic === "number") {
       this.hdr.magic = "n+1";
@@ -26431,7 +26439,7 @@ var NVImage = class _NVImage {
     }
     this.calMinMax();
   }
-  static async new(dataBuffer = null, name = "", colormap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0, zarrData) {
+  static async new(dataBuffer = null, name = "", colormap = "", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0, zarrData) {
     const newImg = new _NVImage();
     const re = /(?:\.([^.]+))?$/;
     let ext = re.exec(name)[1] || "";
@@ -28863,7 +28871,7 @@ var NVImage = class _NVImage {
     urlImgData = "",
     headers = {},
     name = "",
-    colormap = "gray",
+    colormap = "",
     opacity = 1,
     cal_min = NaN,
     cal_max = NaN,
@@ -29136,7 +29144,7 @@ var NVImage = class _NVImage {
     file,
     // file can be an array of file objects or a single file object
     name = "",
-    colormap = "gray",
+    colormap = "",
     opacity = 1,
     urlImgData = null,
     cal_min = NaN,
@@ -29276,7 +29284,7 @@ var NVImage = class _NVImage {
   static async loadFromBase64({
     base64,
     name = "",
-    colormap = "gray",
+    colormap = "",
     opacity = 1,
     cal_min = NaN,
     cal_max = NaN,
@@ -30262,6 +30270,7 @@ var NVMesh3 = class _NVMesh {
     __publicField(this, "nodeScale", 4);
     __publicField(this, "edgeScale", 1);
     __publicField(this, "legendLineThickness", 0);
+    __publicField(this, "showLegend", true);
     __publicField(this, "nodeColormap", "warm");
     __publicField(this, "edgeColormap", "warm");
     __publicField(this, "nodeColormapNegative");
@@ -31090,7 +31099,7 @@ var NVMesh3 = class _NVMesh {
     const posNormClr = this.generatePosNormClr(this.pts, this.tris, this.rgba255);
     const nvtx = this.pts.length / 3;
     const u82 = new Uint8Array(posNormClr.buffer);
-    const maxAdditiveBlend = 0;
+    let maxAdditiveBlend = 0;
     const additiveRGBA = new Uint8Array(nvtx * 4);
     let tris = this.tris;
     if (this.layers && this.layers.length > 0) {
@@ -31287,6 +31296,9 @@ var NVMesh3 = class _NVMesh {
           layer.isTransparentBelowCalMin = true;
         }
         const lut = cmapper.colormap(layer.colormap, layer.colormapInvert);
+        if (layer.isAdditiveBlend) {
+          maxAdditiveBlend++;
+        }
         this.blendColormap(u82, additiveRGBA, layer, layer.cal_min, layer.cal_max, lut);
         if (layer.useNegativeCmap) {
           const neglut = cmapper.colormap(layer.colormapNegative, layer.colormapInvert);
@@ -33424,7 +33436,8 @@ var defaultOptions = {
   edgeMin: 2,
   edgeMax: 6,
   edgeScale: 1,
-  legendLineThickness: 0
+  legendLineThickness: 0,
+  showLegend: true
 };
 var NVConnectome = class _NVConnectome extends NVMesh3 {
   constructor(gl, connectome) {
@@ -33528,7 +33541,10 @@ var NVConnectome = class _NVConnectome extends NVMesh3 {
       const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
       const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert);
       const hasNeg = "nodeColormapNegative" in this;
-      const legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0;
+      let legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0;
+      if (this.showLegend === false) {
+        legendLineThickness = 0;
+      }
       for (let i = 0; i < nodes.length; i++) {
         let color = nodes[i].colorValue;
         let isNeg = false;
@@ -42260,10 +42276,10 @@ var Niivue = class {
     return labels;
   }
   getConnectomeLabels() {
-    const connectomes = this.meshes.filter((m) => m.type === "connectome" /* CONNECTOME */);
+    const connectomes = this.meshes.filter((m) => m.type === "connectome" /* CONNECTOME */ && m.showLegend !== false);
     const meshNodes = connectomes.flatMap((m) => m.nodes);
     const meshLabels = meshNodes.map((n) => n.label);
-    const definedMeshLabels = meshLabels.filter((l) => l !== void 0);
+    const definedMeshLabels = meshLabels.filter((l) => l !== void 0 && l.text !== "");
     const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === 0 /* NONE */);
     const nonAnchoredLabelSet = new Set(definedMeshLabels);
     for (const label of nonAnchoredLabels) {

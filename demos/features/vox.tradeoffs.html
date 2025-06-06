@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <title>Basic Multiplanar</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="aaCheck">AntiAlias</label>
+      <input type="checkbox" id="aaCheck" checked />
+      &nbsp;
+      <label for="dpiCheck">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" checked />
+      &nbsp;
+      <label for="renderMode">Render Mode</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0">matte</option>
+        <option value="0.3">low</option>
+        <option value="0.6" selected>medium</option>
+        <option value="1.0">high</option>
+      </select>
+      &nbsp;&nbsp;&nbsp;
+      <label for="atlasSlider">Atlas</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="64"
+        class="slider"
+        id="atlasSlider"
+      />
+      &nbsp;
+      <label for="statSlider">Statistics</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="255"
+        class="slider"
+        id="statSlider"
+      />
+      <button id="aboutBtn">About</button>
+      &nbsp;
+    </header>
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="statusBar">&nbsp;</footer>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  var nv1
+  const volumeList1 = [
+    { url: "../images/mni152.nii.gz"},
+    {url: "../images/aal.nii.gz"},
+    { url: "../images/stats.nv_demo_mskd.nii.gz", colormap: "warm", colormapNegative: "winter", frame4D: 1, cal_min: 3.3641, cal_max: 6},
+  ]
+  async function fetchJSON(fnm) {
+    const response = await fetch(fnm)
+    const js = await response.json()
+    return js
+  }
+  function handleIntensityChange(data) {
+    statusBar.innerHTML = data.string
+  }
+  aboutBtn.onclick = async function () {
+      window.alert("This page shows features that may provide poor volume rendering performance on slow devices. Using anti-aliaing, high-DPI, and reflective volume rendering modes all impact performance.")
+  }
+  dpiCheck.onclick = function () {
+    nv1.setHighResolutionCapable(this.checked)
+  }
+  renderMode.onchange = function () {
+    nv1.setVolumeRenderIllumination(this.value)
+  }
+  atlasSlider.oninput = function () {
+    nv1.setOpacity(1, this.value / 255.0)
+  }
+  statSlider.oninput = function () {
+    nv1.setOpacity(2, this.value / 255.0)
+  }
+  aaCheck.onclick = async function () {
+    const isAntiAlias = this.checked
+    const oldCanvas = document.getElementById("gl1")
+    oldCanvas.remove()
+    const newCanvas = document.createElement("canvas")
+    newCanvas.id = "gl1"
+    document.getElementById("canvas-container").appendChild(newCanvas)
+    // Recreate NiiVue with the new canvas and antialias setting
+    nv1 = new niivue.Niivue({
+      backColor: [1, 1, 1, 1],
+      show3Dcrosshair: true,
+      onLocationChange: handleIntensityChange
+    })
+    await nv1.attachToCanvas(newCanvas, isAntiAlias)
+    nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+    await nv1.loadVolumes(volumeList1)
+    let cmap = await fetchJSON("../images/aal.json")
+    nv1.volumes[1].setColormapLabel(cmap)
+    nv1.setSliceType(nv1.sliceTypeMultiplanar)
+    nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
+    nv1.volumes[1].colorbarVisible = false; //hide colorbar for atlas
+    nv1.opts.isColorbar = true
+    dpiCheck.onclick()
+    renderMode.onchange()
+    atlasSlider.oninput()
+    statSlider.oninput()
+  }
+  aaCheck.onclick()
+</script>

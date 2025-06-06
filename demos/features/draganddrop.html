@@ -10,6 +10,13 @@
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
+      <label for="fonts">Choose a font:</label>
+      <select name="fonts" id="fonts" onchange="changeFont()">
+        <option value="roboto">Roboto</option>
+        <option value="garamond">Garamond</option>
+        <option value="ubuntu">Ubuntu</option>
+        <option value="ubuntubold">UbuntuBold</option>
+      </select>
       Drag and drop a file from your local computer. Or drag and drop a
       <a href="../images/mni152.nii.gz">link to a NIfTI image</a> or a
       <a href="../images/CIT168.mz3">mesh</a>
@@ -20,25 +27,45 @@
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
+      import * as niivue from "../dist/index.js"
+      fonts.onchange = function () {
+        const fontName = document.getElementById("fonts").value
+        switch (fontName) {
+          case "roboto":
+            nv1.loadFont(
+              "../fonts/Roboto-Regular.png",
+              "../fonts/Roboto-Regular.json"
+            )
+            break
+          case "garamond":
+            nv1.loadFont("../fonts/Garamond.png", "../fonts/Garamond.json")
+            break
+          case "ubuntu":
+            nv1.loadFont("../fonts/Ubuntu.png", "../fonts/Ubuntu.json")
+            break
+          case "ubuntubold":
+            nv1.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
+            break
+        }
+      }
       async function addVolumeFromFiles(f) {
           console.log('attempting to open ', f[0].name)
           console.log('details', f[0])
           nv1.loadFromFile(f[0])
       }
       openBtn.onclick = function () {
-        let input = document.createElement('input');
-        input.style.display = 'none';
+        let input = document.createElement('input')
+        input.style.display = 'none'
         input.type = 'file'
-        document.body.appendChild(input);
+        document.body.appendChild(input)
         input.onchange = function (event) {
           addVolumeFromFiles(event.target.files)
         }
         input.click()
       }
-      var nv1 = new niivue.Niivue();
-      await nv1.attachTo("gl1");
-      nv1.setSliceType(nv1.sliceTypeRender);
+      var nv1 = new niivue.Niivue()
+      await nv1.attachTo("gl1")
+      nv1.setSliceType(nv1.sliceTypeRender)
     </script>
   </body>
 </html>

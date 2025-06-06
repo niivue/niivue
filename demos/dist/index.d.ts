@@ -1039,6 +1039,7 @@ type ConnectomeOptions = {
     edgeMax: number;
     edgeScale: number;
     legendLineThickness?: number;
+    showLegend?: boolean;
 };
 type Connectome = ConnectomeOptions & {
     nodes: NVConnectomeNode[];
@@ -1305,6 +1306,7 @@ declare class NVMesh {
     nodeScale: number;
     edgeScale: number;
     legendLineThickness: number;
+    showLegend: boolean;
     nodeColormap: string;
     edgeColormap: string;
     nodeColormapNegative?: string;
