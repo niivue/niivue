@@ -137,33 +137,13 @@ const demos = [
     tags: ['Mesh']
   },
   {
-    name: 'Mesh (auto Anti-Alias)',
-    file: 'mesh.freesurfer.html',
+    name: 'Mesh performance tradeoffs',
+    file: 'mesh.tradeoffs.html',
     tags: ['Mesh', 'Stat', 'Atlas']
   },
   {
-    name: 'Voxel (auto Anti-Alias)',
-    file: 'vox.aaAUTO.html',
-    tags: ['Voxel', 'Stat', 'Atlas']
-  },
-  {
-    name: 'Mesh (no Anti-Alias)',
-    file: 'mesh.freesurfer.aaOFF.html',
-    tags: ['Mesh', 'Stat', 'Atlas']
-  },
-  {
-    name: 'Voxel (no Anti-Alias)',
-    file: 'vox.aaOFF.html',
-    tags: ['Mesh', 'Stat', 'Atlas']
-  },
-  {
-    name: 'Mesh  (force Anti-Alias)',
-    file: 'mesh.freesurfer.aaON.html',
-    tags: ['Mesh', 'Stat', 'Atlas']
-  },
-  {
-    name: 'Voxel  (force Anti-Alias)',
-    file: 'vox.aaON.html',
+    name: 'Voxel performance tradeoffs',
+    file: 'vox.tradeoffs.html',
     tags: ['Voxel', 'Stat', 'Atlas']
   },
   {
