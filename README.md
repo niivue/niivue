@@ -24,7 +24,8 @@ npm run dev
 - [BrainLife.io](https://brainlife.io/about/) integrates NiiVue into [ezbids](https://brainlife.io/ezbids/)
 - [CACTAS](https://github.com/mpsych/CACTAS) is extending NiiVue drawing and segmentation capabilities
 - [ChRIS Research Integration System (ChRIS)](https://chrisproject.org/) uses [NiiVue](https://app.chrisproject.org/niivue)
-- FMRIB's Software Library (FSL) [Wellcome Centre for Integrative Neuroimaging](https://www.win.ox.ac.uk/)
+- [Thuy Dao](https://github.com/iishiishii/deepsyence) uses NiiVue for [deepsyence](https://iishiishii.github.io/deepsyence/)
+- FMRIB's Software Library (FSL) uses NiiVue for cloud tools and [documentation](https://fsl.fmrib.ox.ac.uk/fsl/docs/#/structural/bet/)
 - [fideus](https://fideus.io/) has developed the [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/) plugins.
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
