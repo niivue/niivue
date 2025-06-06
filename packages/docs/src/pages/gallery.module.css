@@ -1,6 +1,6 @@
 .gallery {
   padding: 2rem;
-  max-width: none; /* or a larger value like 1600px */
+  max-width: none;
   margin: 0 auto;
 }
 
@@ -29,46 +29,46 @@
 
 .card {
   position: relative;
-  padding: 1rem;
   border-radius: 8px;
-  background-color: rgba(242, 242, 242, 0.8); /* fallback */
+  background-color: #ffffff;
   overflow: hidden;
-  min-height: 200px;
-  z-index: 1; /* ensure content is above ::before */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: inherit;
 }
 
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
+.cardHeader {
+  padding: 1rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.cardThumbnail {
+  flex: 1;
   background-size: cover;
   background-position: center;
-  opacity: 0.33;
-  z-index: 0;
-  background-image: var(--bg-image);
-  pointer-events: none;
-}
-
-.cardContent {
-  position: relative;
-  z-index: 1;
+  background-repeat: no-repeat;
+  background-color: #f5f5f5;
 }
 
 
 .cardTitle {
   font-size: 1.1rem;
   font-weight: 600;
-  text-decoration: none;
   color: #00006F;
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.6); /* light shadow for darkening text */
-
-}
-
-.cardTitle:hover {
-  text-decoration: underline;
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .cardDescription {
@@ -80,16 +80,15 @@
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .tag {
   display: inline-block;
-  padding: 0.25em 0.5em;
-  margin: 0.2em;
+  padding: 0.2em 0.4em;
   border-radius: 0.25em;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 500;
   color: white;
 }
 
