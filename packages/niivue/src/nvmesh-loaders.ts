@@ -1573,25 +1573,70 @@ export class NVMeshLoaders {
       } // for each strip
     } else if (items[0].includes('POLYGONS')) {
       const npoly = parseInt(items[1])
-      for (let i = 0; i < npoly; i++) {
-        const ntri = reader.getInt32(pos, false) - 2 // 3 for single triangle, 4 for 2 triangles
-        if (i === 0 && ntri > 65535) {
-          throw new Error('Invalid VTK binary polygons using little-endian data (MRtrix)')
-        }
-        pos += 4
-        const fx = reader.getInt32(pos, false)
-        pos += 4
-        let fy = reader.getInt32(pos, false)
-        pos += 4
-        for (let t = 0; t < ntri; t++) {
-          const fz = reader.getInt32(pos, false)
+      const byteOffsetAfterPoly = pos
+      const maybeOffsetsLine = readStr()
+      if (maybeOffsetsLine.startsWith('OFFSETS')) {
+        let isInt64 = maybeOffsetsLine.includes('int64')
+        const offset = new Uint32Array(npoly)
+        let is32bitOverflow = false
+        for (let i = 0; i < npoly; i++) {
+          if (isInt64) {
+            if (reader.getInt32(pos, false) !== 0) {
+              is32bitOverflow = true
+            }
+            pos += 4
+          } // skip high 32 bits
+          offset[i] = reader.getInt32(pos, false)
           pos += 4
-          tris.push(fx)
-          tris.push(fy)
-          tris.push(fz)
-          fy = fz
-        } // for each triangle
-      } // for each polygon
+        }
+        if (!Number.isSafeInteger(npoly) || npoly >= 2147483648 || is32bitOverflow) {
+          throw new Error(`values exceed 2GB limit`)
+        }
+        const connLine = readStr()
+        if (!connLine.startsWith('CONNECTIVITY')) {
+          throw new Error('Expected CONNECTIVITY after OFFSETS')
+        }
+        isInt64 = connLine.includes('int64')
+        const numIndices = offset[npoly - 1]
+        const connectivity = new Uint32Array(numIndices)
+        for (let i = 0; i < numIndices; i++) {
+          if (isInt64) {
+            pos += 4
+          }
+          connectivity[i] = reader.getInt32(pos, false)
+          pos += 4
+        }
+
+        for (let i = 0; i < npoly; i++) {
+          const start = i === 0 ? 0 : offset[i - 1]
+          const end = offset[i]
+          for (let t = 1; t < end - start - 1; t++) {
+            tris.push(connectivity[start])
+            tris.push(connectivity[start + t])
+            tris.push(connectivity[start + t + 1])
+          }
+        }
+      } else {
+        // Classic binary VTK format: rewind and parse as before
+        pos = byteOffsetAfterPoly
+        for (let i = 0; i < npoly; i++) {
+          const ntri = reader.getInt32(pos, false) - 2
+          if (i === 0 && ntri > 65535) {
+            throw new Error('Invalid VTK binary polygons using little-endian data (MRtrix)')
+          }
+          pos += 4
+          const fx = reader.getInt32(pos, false)
+          pos += 4
+          let fy = reader.getInt32(pos, false)
+          pos += 4
+          for (let t = 0; t < ntri; t++) {
+            const fz = reader.getInt32(pos, false)
+            pos += 4
+            tris.push(fx, fy, fz)
+            fy = fz
+          }
+        }
+      }
     } else {
       throw new Error('Unsupported binary VTK datatype ' + items[0])
     }
