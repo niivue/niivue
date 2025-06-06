@@ -7,7 +7,11 @@ import path from 'path'
 test('nvimage getValue', async () => {
   const name = 'hippo.nii.gz'
   const dataBuffer = readFileSync(path.join('./tests/images/', name))
-  const image = await NVImage.new(dataBuffer.buffer, name)
+  const arrayBuffer = dataBuffer.buffer.slice(
+    dataBuffer.byteOffset,
+    dataBuffer.byteOffset + dataBuffer.byteLength
+  )
+  const image = await NVImage.new(arrayBuffer, name)
   const voxX = 31
   const voxY = 54
   const voxZ = 27
