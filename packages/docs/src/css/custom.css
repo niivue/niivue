@@ -32,3 +32,14 @@
   --ifm-background-color: #000000; /* Black background */
   --ifm-text-color: #ffffff; /* White text */
 }
+
+
+a {
+  color: blue;
+
+}
+
+.navbar__link--active {
+  font-weight: bold;
+  text-decoration: underline;
+}

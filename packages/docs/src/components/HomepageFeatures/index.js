@@ -17,7 +17,7 @@ const FeatureList = [
     title: 'Developer-Friendly',
     description: (
       <>
-        Intuitive API designed for rapid integration and development.
+        Intuitive <a style={{textDecoration: 'underline'}} href='https://niivue.com/demos/devdocs/classes/Niivue.html' target='_blank' rel='noopener noreferrer'>API</a> designed for rapid integration and development.
       </>
     ),
   },
@@ -25,7 +25,7 @@ const FeatureList = [
     title: 'Extensible',
     description: (
       <>
-        Community adoption with <a style={{textDecoration: 'underline'}} href='https://github.com/niivue/niivue?tab=readme-ov-file#projects-and-people-using-niivue' target='_blank' rel='noopener noreferrer'>plugins, extensions, and integrations</a>.
+        Community <a style={{textDecoration: 'underline'}} href='https://github.com/niivue/niivue?tab=readme-ov-file#projects-and-people-using-niivue' target='_blank' rel='noopener noreferrer'>adoption</a> with <a style={{textDecoration: 'underline'}} href='./docs/plugins' target='_blank' rel='noopener noreferrer'>plugins</a>.
       </>
     ),
   },
