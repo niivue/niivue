@@ -8,6 +8,15 @@ import { store } from './appStore.js'
 import { getMainWindow } from '../index.js'
 import fs from 'fs' // ✅ Works in ES Module mode
 
+export const viewState = {
+  layout: /** default */ 'Auto',
+  sliceType: /** default */ 'Multiplanar',
+  dragMode: DEFAULT_OPTIONS.dragMode,
+  crosshair: true,
+  crosshair3D: DEFAULT_OPTIONS.show3Dcrosshair
+  // …etc for any other checkbox/radios you sync…
+}
+
 const isMac = process.platform === 'darwin'
 
 const getRecentFilesMenu = (win: Electron.BrowserWindow): Electron.MenuItemConstructorOptions[] => {
@@ -58,17 +67,19 @@ const createDragModeSubmenu = (
 const createSliceTypeSubmenu = (
   win: Electron.BrowserWindow
 ): Electron.MenuItemConstructorOptions[] => {
-  return Object.keys(sliceTypeMap).map((sliceType) => {
+  return Object.keys(sliceTypeMap).map((sliceKey) => {
+    console.log(sliceKey)
     return {
-      label: sliceType,
-      id: sliceType,
+      label: sliceKey,
+      id: sliceKey,
       type: 'radio',
-      checked: sliceType === 'Multiplanar', // default to this slice type
+      //checked: sliceType === 'Multiplanar', // default to this slice type
+      checked: sliceKey === viewState.sliceType,
       click: (): void => {
         // get the slice type value from the sliceTypeMap object
-        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(sliceType)
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(sliceKey)
         const state = menuItem ? menuItem.checked : false
-        win.webContents.send('setSliceType', state ? sliceTypeMap[sliceType].name : 'multiplanar')
+        win.webContents.send('setSliceType', state ? sliceTypeMap[sliceKey].name : 'multiplanar')
       }
     }
   })
@@ -77,17 +88,17 @@ const createSliceTypeSubmenu = (
 const createLayoutSubmenu = (
   win: Electron.BrowserWindow
 ): Electron.MenuItemConstructorOptions[] => {
-  return Object.keys(layouts).map((layout) => {
+  return Object.keys(layouts).map((layoutKey) => {
     return {
-      label: layout,
-      id: layout,
+      label: layoutKey,
+      id: layoutKey,
       type: 'radio',
-      checked: layout === 'Auto', // default to this layout
+      checked: layoutKey === viewState.layout,
       click: (): void => {
         // get the layout value from the layouts object
-        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layout)
+        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layoutKey)
         const state = menuItem ? menuItem.checked : false
-        win.webContents.send('setLayout', state ? layout : 'Auto')
+        win.webContents.send('setLayout', state ? layoutKey : 'Auto')
       }
     }
   })
@@ -128,6 +139,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             label: app.name,
             submenu: [
               { role: 'about' },
+              {
+                label: 'Preferences...',
+                accelerator: 'CmdOrCtrl+,',
+                click: (): void => {
+                  win.webContents.send('openPreferencesDialog')
+                }
+              },
               { type: 'separator' },
               { role: 'services' },
               { type: 'separator' },
@@ -159,6 +177,22 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               }
             }
           ]
+        },
+        // Open Document
+        {
+          label: 'Open Document',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Open Document',
+                properties: ['openFile']
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  win.webContents.send('loadDocument', result.filePaths[0])
+                }
+              })
+          }
         },
         // Open Volume Image
         {
@@ -249,6 +283,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             }
           ]
         },
+        {
+          label: 'Save Document',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: (): void => {
+            win.webContents.send('saveCompressedDocument')
+          }
+        },
         // Save screenshot
         {
           label: 'Save Screenshot',
@@ -293,6 +334,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
                 }
               })
           }
+        },
+        {
+          label: 'Clear Scene',
+          accelerator: 'CmdOrCtrl+Shift+X',
+          click: (): void => {
+            win.webContents.send('clear-scene')
+          }
         }
       ]
     },
@@ -323,6 +371,27 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
     {
       label: 'Edit',
       submenu: [
+        {
+          label: 'Paste',
+          accelerator: 'CmdOrCtrl+V',
+          click: (): void => {
+            win.webContents.paste()
+          }
+        },
+        {
+          label: 'Preferences...',
+          accelerator: 'CmdOrCtrl+,',
+          click: (): void => {
+            console.log('Sending openPreferencesDialog')
+            win.webContents.send('openPreferencesDialog')
+          }
+        },
+        {
+          label: 'Reset Preferences',
+          click: (): void => {
+            win.webContents.send('resetPreferencesConfirm')
+          }
+        },
         {
           label: 'Drag mode (right click)',
           submenu: [...createDragModeSubmenu(win)]
@@ -609,6 +678,18 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             const menuItem = Menu.getApplicationMenu()?.getMenuItemById('ruler')
             const state = menuItem ? menuItem.checked : false
             win.webContents.send('setRuler', state)
+          }
+        }
+      ]
+    },
+    // { role: 'labelMenu' }
+    {
+      label: 'Labels',
+      submenu: [
+        {
+          label: 'Add Label',
+          click: (): void => {
+            win.webContents.send('openLabelManagerDialog')
           }
         }
       ]

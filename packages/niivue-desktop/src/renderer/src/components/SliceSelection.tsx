@@ -1,10 +1,10 @@
-import { useContext } from 'react'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { Button } from '@radix-ui/themes'
 
 export const SliceSelection = (): JSX.Element => {
-  const { nvRef } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  if (!nv) return <></>
 
   const handleL = (): void => {
     nv.moveCrosshairInVox(-1, 0, 0)

@@ -24,15 +24,46 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux"
   },
+  "build": {
+    "appId": "com.niivue.niivue-desktop",
+    "mac": {
+      "icon": "build/icons/app_icon.icns",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist"
+    },
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "out/**/*",
+      "build/icons/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icons/",
+        "to": "icons",
+        "filter": [
+          "*.png",
+          "!icon.icns"
+        ]
+      }
+    ]
+  },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "@niivue/niimath": "^0.3.0",
     "@radix-ui/react-accordion": "^1.2.2",
+    "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/themes": "^3.1.6",
-    "electron-updater": "^6.1.7"
+    "electron-store": "^10.0.1",
+    "electron-updater": "^6.1.7",
+    "react-beautiful-dnd": "^13.1.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
