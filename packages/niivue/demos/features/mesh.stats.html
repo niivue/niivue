@@ -135,14 +135,16 @@
      nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "colormapType", this.selectedIndex) 
   }
   negativeCheck.onchange = function () {
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "useNegativeCmap", this.checked) 
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "useNegativeCmap", this.checked)
+    nv1.refreshColormaps()
+    console.log(nv1.meshes[0].layers[1].useNegativeCmap)
   }
   outlineDrop.onchange = function () {
         nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "outlineBorder", parseInt(this.value)) 
   }
   var nv1 = new niivue.Niivue({
     show3Dcrosshair: true,
-    backColor: [0, 0, 0, 1],
+    backColor: [0.3, 0.3, 0.3, 1],
   })
   let shaders = nv1.meshShaderNames();
   for (let i = 0; i < shaders.length; i++) {
@@ -179,7 +181,6 @@
   ])
   nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false)
   doThreshChange()
-  shaderDrop.onchange()
   divergeCheck.onchange()
   colormapTypeDrop.onchange()
 </script>

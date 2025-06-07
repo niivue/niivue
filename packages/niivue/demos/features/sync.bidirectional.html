@@ -97,7 +97,6 @@
     canvasHeight.onchange = function () {
       const wid = parseInt(canvasWidth.value)
       const ht = parseInt(canvasHeight.value)
-      console.log(wid, ht)
       for (let canvas of [gl1, gl2, gl3]) {
         canvas.width = wid
         canvas.height = ht
@@ -147,11 +146,11 @@
     var volumeList2 = [{ url: "../images/aal.nii.gz" }]
     var volumeList3 = [{ url: "../images/mni152.nii.gz"}]
     await nv1.loadVolumes(volumeList1)
-    await nv2.loadVolumes(volumeList2)
-    await nv3.loadVolumes(volumeList3)
+    await nv2.loadVolumes(volumeList1)
+    await nv3.loadVolumes(volumeList1)
     // make sure all views can control each other
     nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true })
-    nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true })
-    nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
+   nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true })
+   nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
   </script>
 </html>

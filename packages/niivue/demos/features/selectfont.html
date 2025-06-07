@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Select Font</title>
+    <title>Drag and Drop</title>
     <link rel="stylesheet" href="light.css" />
   </head>
   <body>
@@ -17,38 +17,55 @@
         <option value="ubuntu">Ubuntu</option>
         <option value="ubuntubold">UbuntuBold</option>
       </select>
-      drag and drop a Nifti image or this
-      <a href="../images/mni152.nii.gz">link to a Nifti image</a>
+      Drag and drop a file from your local computer. Or drag and drop a
+      <a href="../images/mni152.nii.gz">link to a NIfTI image</a> or a
+      <a href="../images/CIT168.mz3">mesh</a>
+      or
+      <button id="openBtn">Choose an image or mesh with a dialog</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <script type="module" async>
-      var dropFont = document.getElementById("fonts");
-      dropFont.onchange = function () {
-        const fontName = document.getElementById("fonts").value;
+      import * as niivue from "../dist/index.js"
+      fonts.onchange = function () {
+        const fontName = document.getElementById("fonts").value
         switch (fontName) {
           case "roboto":
             nv1.loadFont(
               "../fonts/Roboto-Regular.png",
               "../fonts/Roboto-Regular.json"
-            );
-            break;
+            )
+            break
           case "garamond":
-            nv1.loadFont("../fonts/Garamond.png", "../fonts/Garamond.json");
-            break;
+            nv1.loadFont("../fonts/Garamond.png", "../fonts/Garamond.json")
+            break
           case "ubuntu":
-            nv1.loadFont("../fonts/Ubuntu.png", "../fonts/Ubuntu.json");
-            break;
+            nv1.loadFont("../fonts/Ubuntu.png", "../fonts/Ubuntu.json")
+            break
           case "ubuntubold":
-            nv1.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json");
-            break;
+            nv1.loadFont("../fonts/UbuntuBold.png", "../fonts/UbuntuBold.json")
+            break
         }
-      };
-      import * as niivue from "../dist/index.js";
-      var nv1 = new niivue.Niivue();
-      await nv1.attachTo("gl1");
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
+      }
+      async function addVolumeFromFiles(f) {
+          console.log('attempting to open ', f[0].name)
+          console.log('details', f[0])
+          nv1.loadFromFile(f[0])
+      }
+      openBtn.onclick = function () {
+        let input = document.createElement('input')
+        input.style.display = 'none'
+        input.type = 'file'
+        document.body.appendChild(input)
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files)
+        }
+        input.click()
+      }
+      var nv1 = new niivue.Niivue()
+      await nv1.attachTo("gl1")
+      nv1.setSliceType(nv1.sliceTypeRender)
     </script>
   </body>
 </html>
