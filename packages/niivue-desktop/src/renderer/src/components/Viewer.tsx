@@ -1,84 +1,78 @@
 import { useEffect, useRef } from 'react'
-import { useContext } from 'react'
-import { AppContext } from '../App'
+import { NiivueInstanceContext } from '../AppContext'
 import { loadDroppedFiles } from '../utils/dragAndDrop'
+import { registerViewSync } from '@renderer/utils/viewSync'
 
-export function Viewer(): JSX.Element {
-  const context = useContext(AppContext)
-  const { volumes, meshes, setVolumes, setMeshes, nvRef } = context
-  const nv = nvRef.current
+type ViewerProps = {
+  doc: NiivueInstanceContext
+  collapsed: boolean
+}
+
+export function Viewer({ doc, collapsed }: ViewerProps): JSX.Element {
+  const nv = doc.nvRef.current
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const handleDragOver = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
-    console.log('drag over')
     e.preventDefault()
     e.stopPropagation()
   }
 
   const handleDrop = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
-    if (!e.dataTransfer) {
-      throw new Error('No dataTransfer object found on drag event object')
-    }
+    if (!e.dataTransfer || !nv) return
     e.preventDefault()
     e.stopPropagation()
     nv.volumes = []
     nv.meshes = []
     nv.updateGLVolume()
-    console.log('dropped files', e.dataTransfer.files)
-    loadDroppedFiles(e, setVolumes, setMeshes, nv.gl)
+    loadDroppedFiles(e, doc.setVolumes, doc.setMeshes, nv.gl)
   }
 
   useEffect(() => {
-    if (canvasRef.current) {
-      const nv = nvRef.current
-      // register dragover and drop events
-      canvasRef.current.addEventListener('dragover', handleDragOver)
-      canvasRef.current.addEventListener('drop', handleDrop)
-      await nv.attachToCanvas(canvasRef.current)
-    }
-  }, [])
+    if (!canvasRef.current || !nv) return
 
-  // when volumes array changes (added, removed), update the scene
-  useEffect(() => {
-    if (volumes.length > 0 && canvasRef.current) {
-      const nv = nvRef.current
-      nv.volumes = []
-      for (let i = 0; i < volumes.length; i++) {
-        console.log('adding volume', volumes[i])
-        nv.addVolume(volumes[i])
-      }
-    }
-  }, [volumes])
+    nv.attachToCanvas(canvasRef.current)
+    registerViewSync(nv)
 
-  // when meshes array changes (added, removed), update the scene
-  useEffect(() => {
-    if (meshes.length > 0 && canvasRef.current) {
-      const nv = nvRef.current
-      nv.meshes = []
-      for (let i = 0; i < meshes.length; i++) {
-        console.log('adding mesh', meshes[i])
-        nv.addMesh(meshes[i])
-      }
+    canvasRef.current.addEventListener('dragover', handleDragOver)
+    canvasRef.current.addEventListener('drop', handleDrop)
+
+    return (): void => {
+      canvasRef.current?.removeEventListener('dragover', handleDragOver)
+      canvasRef.current?.removeEventListener('drop', handleDrop)
     }
-  }, [meshes])
+  }, [nv])
+
+  useEffect(() => {
+    if (!nv || !canvasRef.current) return
+    nv.volumes = []
+    doc.volumes.forEach((v) => nv.addVolume(v))
+  }, [doc.volumes])
+
+  useEffect(() => {
+    if (!nv || !canvasRef.current) return
+    nv.meshes = []
+    doc.meshes.forEach((m) => nv.addMesh(m))
+  }, [doc.meshes])
 
   return (
-    <div className="flex flex-col bg-black basis-2/3 h-full grow">
-      {/* toolbar (empty for now) */}
-      <div className="flex flex-row h-12 bg-black"></div>
-      {/* 
-        must account for h-12 (48px) toolbar height here or the resize
-        behavior could get stuck in a loop
-       */}
+    <div
+      className={
+        `flex flex-col bg-black h-full grow relative transition-all duration-200 ` +
+        (collapsed
+          ? 'basis-5/6' // when sidebar is collapsed, viewer takes more space
+          : 'basis-2/3') // when sidebar is open
+      }
+    >
+      <div className="flex flex-row h-12 bg-black" />
       <div className="w-full h-[calc(100%-48px)]">
         <canvas
-          className="outline-none"
+          id={`gl-canvas-${doc.id}`}
+          className="w-full h-full block outline-none"
           ref={canvasRef}
-          width={800}
-          height={600}
+          tabIndex={0}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
-        ></canvas>
+        />
       </div>
     </div>
   )

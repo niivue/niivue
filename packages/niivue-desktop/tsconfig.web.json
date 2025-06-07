@@ -5,12 +5,14 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
     "src/preload/*.d.ts",
-    "src/common/**/*"
+    "src/common/**/*",
+    "src/types"
   ],
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "types": ["vite/client"],
     "paths": {
       "@renderer/*": [
         "src/renderer/src/*"
