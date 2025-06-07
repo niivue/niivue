@@ -20,29 +20,40 @@
       padding: 1rem;
       background: #202020;
     }
-    
-    main {
-      flex-grow: 1;
-      display: flex;
-      justify-content: center;
-      background-color: #808080;
-    }
-    
-    .row {
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
-      gap: 8px;
-      padding: 1rem 0;
-    }
-    
-    canvas {
-      display: block;
-      background-color: #000;
-      image-rendering: pixelated;
-      width: 512px;
-      height: 512px;
-    }
+
+main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  background-color: #808080;
+  height: calc(100vh - 6rem); /* assumes header + footer ≈ 6rem total */
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.canvas-container {
+  flex: 1 1 33.3333%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: 100%;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-color: #000;
+  image-rendering: pixelated;
+}
+
     </style>
   </head>
   <body>
@@ -54,18 +65,6 @@
           <option value="2">Grid</option>
           <option value="3">Row</option>
         </select>
-        <label for="canvasHeight">Height</label>
-        <select id="canvasHeight">
-          <option value="256">256</option>
-          <option value="640" selected>512</option>
-          <option value="768">768</option>
-        </select>
-        <label for="canvasWidth">Width</label>
-        <select id="canvasWidth">
-          <option value="256">256</option>
-          <option value="640" selected>512</option>
-          <option value="768">768</option>
-        </select>
         <label for="syncDrop"> Broadcast</label>
         <select id="syncDrop">
           <option value="0">Sync Disabled</option>
@@ -76,9 +75,9 @@
     </header>
     <main>
       <div class="row">
-        <canvas id="gl1" width="512" height="512"></canvas>
-        <canvas id="gl2" width="512" height="512"></canvas>
-        <canvas id="gl3" width="512" height="512"></canvas>
+        <div class="canvas-container"><canvas id="gl1"></canvas></div>
+        <div class="canvas-container"><canvas id="gl2"></canvas></div>
+        <div class="canvas-container"><canvas id="gl3"></canvas></div>
       </div>
     </main>
     <footer>
@@ -93,23 +92,6 @@
       nv1.setMultiplanarLayout(parseInt(this.value))
       nv2.setMultiplanarLayout(parseInt(this.value))
       nv3.setMultiplanarLayout(parseInt(this.value))
-    }
-    canvasHeight.onchange = function () {
-      const wid = parseInt(canvasWidth.value)
-      const ht = parseInt(canvasHeight.value)
-      console.log(wid, ht)
-      for (let canvas of [gl1, gl2, gl3]) {
-        canvas.width = wid
-        canvas.height = ht
-        canvas.style.width = wid + 'px'
-        canvas.style.height = ht + 'px'
-      }
-      nv1.resizeListener()
-      nv2.resizeListener()
-      nv3.resizeListener()
-    }
-    canvasWidth.onchange = function () {
-      canvasHeight.onchange()
     }
     syncDrop.onchange = function() {
       const v = parseInt(syncDrop.value)
@@ -134,9 +116,9 @@
     function handleChange3(data) {
       status3.innerHTML = "&nbsp;&nbsp;" + data.string
     }
-    var nv1 = new niivue.Niivue({isResizeCanvas: false, onLocationChange: handleChange1})
-    var nv2 = new niivue.Niivue({isResizeCanvas: false, onLocationChange: handleChange2})
-    var nv3 = new niivue.Niivue({isResizeCanvas: false, onLocationChange: handleChange3})
+    var nv1 = new niivue.Niivue({onLocationChange: handleChange1})
+    var nv2 = new niivue.Niivue({onLocationChange: handleChange2})
+    var nv3 = new niivue.Niivue({onLocationChange: handleChange3})
     nv1.opts.multiplanarForceRender = true
     nv2.opts.multiplanarForceRender = true
     nv3.opts.multiplanarForceRender = true
@@ -151,7 +133,7 @@
     await nv3.loadVolumes(volumeList3)
     // make sure all views can control each other
     nv1.broadcastTo([nv2, nv3], { "3d": true, "2d": true })
-    nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true })
-    nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true });
+   nv2.broadcastTo([nv1, nv3], { "3d": true, "2d": true })
+   nv3.broadcastTo([nv1, nv2], { "3d": true, "2d": true })
   </script>
 </html>
