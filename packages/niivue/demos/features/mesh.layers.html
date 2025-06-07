@@ -15,6 +15,13 @@
       >
     </noscript>
     <header>
+        <label for="alphaSelect">Alpha</label>
+        <select id="alphaSelect">
+          <option>Transparent</option>
+          <option>Translucent</option>
+          <option selected>Opaque</option>
+        </select>
+        &nbsp;&nbsp
       <label for="xRaySlider">XRay</label>
       <input
         type="range"
@@ -42,12 +49,13 @@
         class="slider"
         id="meshSlider3"
       />
+      &nbsp
+      <label for="visibleCheck">Hemisphere Visible</label>
       <input
         type="checkbox"
-        id="meshCheckbox1"
+        id="visibleCheck"
         checked
       />
-      <label for="meshCheckbox1">Hemisphere Visible</label>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -58,37 +66,47 @@
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
-  
-  var checkbox1 = document.getElementById("meshCheckbox1");
-  checkbox1.onclick = function () {
-    nv1.setMeshProperty(nv1.meshes[0].id, 'visible', checkbox1.checked);
-    console.log(`visible=${nv1.meshes[0].visible}`);
+  import * as niivue from "../dist/index.js"
+  visibleCheck.onclick = function () {
+    nv1.setMeshProperty(nv1.meshes[1].id, 'visible', this.checked)
+  }
+  alphaSelect.onchange = function () {
+    const index = this.selectedIndex
+    const midx = nv1.meshes.length - 1
+    nv1.meshes[midx].visible = index > 0
+    if (index === 1) {
+      nv1.meshes[midx].opacity = 0.2
+    } else if (index === 2) {
+      nv1.meshes[midx].opacity = 1
+    } else {
+      nv1.meshes[midx].opacity = 0
+    }
+    nv1.drawScene()
   }
   xRaySlider.oninput = function () {
-    nv1.opts.meshXRay = this.value * 0.01;
-    nv1.drawScene();
+    nv1.opts.meshXRay = this.value * 0.01
+    nv1.drawScene()
   }
-  var slider2 = document.getElementById("meshSlider2");
+  var slider2 = document.getElementById("meshSlider2")
   slider2.oninput = function () {
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1);
-  };
-  var slider3 = document.getElementById("meshSlider3");
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.1)
+  }
+  var slider3 = document.getElementById("meshSlider3")
   slider3.oninput = function () {
-    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1);
-  };
+    nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1)
+  }
   function handleLocationChange(data) {
     document.getElementById("location").innerHTML =
-      "&nbsp;&nbsp;" + data.string;
+      "&nbsp;&nbsp;" + data.string
   }
   var nv1 = new niivue.Niivue({
     show3Dcrosshair: true,
     onLocationChange: handleLocationChange,
     backColor: [1, 1, 1, 1],
-  });
-  await nv1.attachTo("gl1");
-  nv1.opts.isColorbar = true;
-  nv1.opts.showLegend =  false;
+  })
+  await nv1.attachTo("gl1")
+  nv1.opts.isColorbar = true
+  nv1.opts.showLegend =  false
   var meshLHLayersList1 = [
     {
       url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
@@ -97,27 +115,27 @@
       useNegativeCmap: true,
       opacity: 0.7,
     },
-  ];
+  ]
   await nv1.loadMeshes([
+    { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
     {
       url: "../images/BrainMesh_ICBM152.lh.mz3",
       rgba255: [255, 255, 255, 255],
       layers: meshLHLayersList1,
     },
-    { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
-  ]);
-  nv1.setMeshLayerProperty(nv1.meshes[1].id, 0, "colorbarVisible", false);
+  ])
+  nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false)
   //n.b. one can also create asymmetric thresholds by explicitly setting negative values:
   // nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_maxNeg', -5.0)
   // nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, 'cal_minNeg', -0.5)
-  let cmaps = nv1.meshShaderNames();
-  let cmapEl = document.getElementById("shaders");
+  let cmaps = nv1.meshShaderNames()
+  let cmapEl = document.getElementById("shaders")
   for (let i = 0; i < cmaps.length; i++) {
-    let btn = document.createElement("button");
-    btn.innerHTML = cmaps[i];
+    let btn = document.createElement("button")
+    btn.innerHTML = cmaps[i]
     btn.onclick = function () {
-      nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
-    };
-    cmapEl.appendChild(btn);
+      nv1.setMeshShader(nv1.meshes[1].id, cmaps[i])
+    }
+    cmapEl.appendChild(btn)
   }
 </script>
