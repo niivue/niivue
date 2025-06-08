@@ -39,7 +39,7 @@ const demos = [
   {
     name: 'Mesh Formats',
     file: 'meshes.html',
-    tags: ['Mesh', 'Stat']
+    tags: ['Mesh']
   },
   {
     name: 'Mesh Statistics',
@@ -65,7 +65,7 @@ const demos = [
   {
     name: 'DSI-Studio tracts',
     file: 'tracts.dsi.html',
-    tags: ['Voxel', 'Tract']
+    tags: ['Voxel', 'Tract', 'Atlas']
   },
   {
     name: 'Tract atlas',
@@ -90,7 +90,7 @@ const demos = [
   {
     name: 'Mosaics',
     file: 'mosaics.html',
-    tags: ['Voxel']
+    tags: ['Voxel', 'Stat']
   },
   {
     name: 'Mesh mosaics',
