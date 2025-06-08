@@ -227,7 +227,6 @@ export class NVImage {
     this.colormapType = colormapType // COLORMAP_TYPE MIN_TO_MAX
     // TODO this was missing
     this.useQFormNotSForm = useQFormNotSForm
-    //    console.log(colormap, 'poloA', this.hdr.intent_code)
     // Added to support zerosLike
     // TODO this line causes an absurd amount of handling undefined fields - it would probably be better to isolate this as a separate class.
     if (!dataBuffer) {
@@ -2900,6 +2899,10 @@ export class NVImage {
     }
     this.cal_min = pct2
     this.cal_max = pct98
+    if (this.hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
+      this.cal_min = mnScale
+      this.cal_max = mxScale
+    }
     this.robust_min = this.cal_min
     this.robust_max = this.cal_max
     this.global_min = mnScale
