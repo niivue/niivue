@@ -17,8 +17,8 @@ test('nvmeshloaders readLayer', async ({ page }) => {
       meshXRay: 0.3
     })
     await nv.attachTo('gl')
-    nv.opts.isColorbar = true
-
+    nv.opts.isColorbar = false
+    nv.opts.showLegend = false
     await nv.loadMeshes([
       {
         url: './images/BrainMesh_ICBM152.lh.mz3',

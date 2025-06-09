@@ -8702,16 +8702,18 @@ export class Niivue {
             continue
           }
           const isColorbarFromZero = layer.colormapType !== COLORMAP_TYPE.MIN_TO_MAX
-          const neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg)
-          this.addColormapList(
-            layer.colormapNegative,
-            neg[0],
-            neg[1],
-            isColorbarFromZero,
-            true, // neg
-            true, // vis
-            layer.colormapInvert
-          )
+          if (layer.useNegativeCmap) {
+            const neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg)
+            this.addColormapList(
+              layer.colormapNegative,
+              neg[0],
+              neg[1],
+              isColorbarFromZero,
+              true, // neg
+              true, // vis
+              layer.colormapInvert
+            )
+          }
           this.addColormapList(
             layer.colormap,
             layer.cal_min,

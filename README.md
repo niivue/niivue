@@ -16,7 +16,7 @@ npm run dev
 ```
 
 
-# Projects and People using NiiVue
+# Projects using NiiVue
 
 - [Analysis of Functional NeuroImages (AFNI)](https://afni.nimh.nih.gov/) uses NiiVue for [afni_proc.py](https://pubmed.ncbi.nlm.nih.gov/39257641/)
 - [BOOSTLET.js](https://boostlet.org/) image processing plugins work with NiiVue.
