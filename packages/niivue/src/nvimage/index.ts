@@ -2675,7 +2675,7 @@ export class NVImage {
    * set contrast/brightness to robust range (2%..98%)
    * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
    * @param isBorder - if true (default) only center of volume used for estimate
-   * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
+   * @returns volume brightness and returns array [pct2, pct98, mnScale, mxScale]
    * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
    */
   calMinMax(vol: number = Number.POSITIVE_INFINITY, isBorder: boolean = true): number[] {
