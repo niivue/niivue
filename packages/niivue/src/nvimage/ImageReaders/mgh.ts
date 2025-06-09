@@ -5,6 +5,36 @@ import { NVUtilities } from '../../nvutilities.js'
 import type { NVImage } from '../index.js'
 import { NiiDataType } from '../utils.js'
 
+// not included in public docs
+// MGH images can contain strings in the optional footer
+function readFirstTag1String(view: DataView, offset: number, footerLength: number): string {
+  const end = offset + footerLength
+  let pos = offset
+
+  while (pos + 12 <= end) {
+    const tag = view.getInt32(pos, false) // tag (little-endian)
+    // skip 4 bytes (padding), read 4-byte length
+    const length = view.getInt32(pos + 8, false) // length of data
+    pos += 12
+    if (tag !== 1) {
+      pos += length // skip non-tag-1 data
+      continue
+    }
+    // Found tag 1, now decode the first length-prefixed string
+    if (pos + 4 > end) {
+      return ''
+    }
+    const strLen = view.getInt32(pos, false) // >>> 0 // big-endian
+    pos += 4
+    if (strLen <= 1 || pos + strLen > end) {
+      return ''
+    }
+    const raw = new Uint8Array(view.buffer, pos, strLen)
+    return new TextDecoder('utf-8').decode(raw.slice(0, -1)) // remove null terminator
+  }
+  return ''
+}
+
 /**
  * Reads FreeSurfer MGH/MGZ format image, modifying the provided NVImage header
  * and returning the raw image data buffer.
@@ -153,6 +183,19 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     return null
   } else if (remainingBytes > expectedBytes) {
     log.warn(`MGH file has extra ${remainingBytes - expectedBytes} bytes after image data. Truncating.`)
+    // n.b. ignore first 20 bytes of footer (5 * float32)
+    const footerStart = hdr.vox_offset + expectedBytes + 20
+    const footerLength = raw.byteLength - footerStart
+    if (footerLength > 12) {
+      const firstTag1String = readFirstTag1String(reader, footerStart, footerLength)
+      const isLUT = firstTag1String.toLowerCase().endsWith('lut.txt')
+      if (isLUT) {
+        // TODO: we assume labels are integers, not floats!
+        // TODO: we could support specific FreeSurfer LUTs
+        hdr.intent_code = 1002
+      }
+      log.debug(`First tag 1 string: ${firstTag1String} isLUT: ${isLUT}`)
+    }
   }
 
   // Return only the raw image data buffer
