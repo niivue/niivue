@@ -25636,6 +25636,30 @@ var mgh_exports = {};
 __export(mgh_exports, {
   readMgh: () => readMgh
 });
+function readFirstTag1String(view, offset, footerLength) {
+  const end = offset + footerLength;
+  let pos = offset;
+  while (pos + 12 <= end) {
+    const tag = view.getInt32(pos, false);
+    const length4 = view.getInt32(pos + 8, false);
+    pos += 12;
+    if (tag !== 1) {
+      pos += length4;
+      continue;
+    }
+    if (pos + 4 > end) {
+      return "";
+    }
+    const strLen = view.getInt32(pos, false);
+    pos += 4;
+    if (strLen <= 1 || pos + strLen > end) {
+      return "";
+    }
+    const raw = new Uint8Array(view.buffer, pos, strLen);
+    return new TextDecoder("utf-8").decode(raw.slice(0, -1));
+  }
+  return "";
+}
 async function readMgh(nvImage, buffer) {
   if (!nvImage.hdr) {
     log.warn("readMgh called before nvImage.hdr was initialized. Creating default.");
@@ -25757,6 +25781,16 @@ async function readMgh(nvImage, buffer) {
     return null;
   } else if (remainingBytes > expectedBytes) {
     log.warn(`MGH file has extra ${remainingBytes - expectedBytes} bytes after image data. Truncating.`);
+    const footerStart = hdr.vox_offset + expectedBytes + 20;
+    const footerLength = raw.byteLength - footerStart;
+    if (footerLength > 12) {
+      const firstTag1String = readFirstTag1String(reader, footerStart, footerLength);
+      const isLUT = firstTag1String.toLowerCase().endsWith("lut.txt");
+      if (isLUT) {
+        hdr.intent_code = 1002;
+      }
+      log.debug(`First tag 1 string: ${firstTag1String} isLUT: ${isLUT}`);
+    }
   }
   const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes);
   return imgRaw;
@@ -28658,6 +28692,10 @@ var NVImage = class _NVImage {
     }
     this.cal_min = pct2;
     this.cal_max = pct98;
+    if (this.hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
+      this.cal_min = mnScale;
+      this.cal_max = mxScale;
+    }
     this.robust_min = this.cal_min;
     this.robust_max = this.cal_max;
     this.global_min = mnScale;
@@ -41626,18 +41664,20 @@ var Niivue = class {
             continue;
           }
           const isColorbarFromZero = layer.colormapType !== 0 /* MIN_TO_MAX */;
-          const neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg);
-          this.addColormapList(
-            layer.colormapNegative,
-            neg[0],
-            neg[1],
-            isColorbarFromZero,
-            true,
-            // neg
-            true,
-            // vis
-            layer.colormapInvert
-          );
+          if (layer.useNegativeCmap) {
+            const neg = negMinMax(layer.cal_min, layer.cal_max, layer.cal_minNeg, layer.cal_maxNeg);
+            this.addColormapList(
+              layer.colormapNegative,
+              neg[0],
+              neg[1],
+              isColorbarFromZero,
+              true,
+              // neg
+              true,
+              // vis
+              layer.colormapInvert
+            );
+          }
           this.addColormapList(
             layer.colormap,
             layer.cal_min,
