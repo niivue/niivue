@@ -1,0 +1,56 @@
+{
+  "out": "./devdocs",
+  "customCss": "typedoc.css",
+  "name": "NiiVue API documentation",
+  "includeVersion": true,
+  "basePath": "src",
+  "entryPoints": ["src/niivue/index.ts"],
+  "kindSortOrder": ["Class"],
+  "excludeReferences": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "excludeNotDocumented": true,
+  "excludeNotDocumentedKinds": [
+    "Module",
+    "Namespace",
+    "Enum",
+    "Variable",
+    "Function",
+    "Class",
+    "Interface",
+    "Constructor",
+    "Property",
+    "Method",
+    "CallSignature",
+    "IndexSignature",
+    "ConstructorSignature",
+    "Accessor",
+    "GetSignature",
+    "SetSignature",
+    "TypeAlias",
+    "Reference"
+  ],
+  "hideParameterTypesInTitle": true,
+  "navigation": {
+    "includeCategories": false,
+    "includeGroups": false,
+    "includeFolders": false
+  },
+  "categorizeByGroup": false,
+  "sidebarLinks": {
+    "WebGL notes": "https://github.com/niivue/niivue/blob/main/docs/development-notes/webgl.md",
+    "Mesh notes": "https://github.com/niivue/niivue/blob/main/docs/development-notes/mesh.md",
+    "Font notes": "https://github.com/niivue/niivue/blob/main/docs/development-notes/font.md",
+    "Colormap notes": "https://github.com/niivue/niivue/blob/main/docs/development-notes/colormaps.md",
+    "DICOM manifests": "https://github.com/niivue/niivue/blob/main/docs/development-notes/dicom-manifests.md"
+  },
+  "navigationLinks": {
+    "Quick starts": "https://github.com/niivue/ipyniivue/blob/main/original_gallery.md",
+    "Live demos": "https://niivue.github.io/niivue/",
+    "GitHub": "https://github.com/niivue/niivue",
+    "npm": "https://www.npmjs.com/package/@niivue/niivue",
+    
+  }
+}
