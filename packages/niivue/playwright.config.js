@@ -43,9 +43,7 @@ export default defineConfig({
           args: [
             '--window-size=1280,720',
             '--use-gl=angle', // route GL through ANGLE :contentReference[oaicite:0]{index=0}
-            '--disable-software-rasterizer', // prefer ANGLE path
-            '--no-sandbox',
-            '--disable-dev-shm-usage'
+            '--no-sandbox'
           ]
         }
       }
