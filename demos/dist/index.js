@@ -28483,7 +28483,7 @@ var NVImage = class _NVImage {
    * set contrast/brightness to robust range (2%..98%)
    * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
    * @param isBorder - if true (default) only center of volume used for estimate
-   * @sets volume brightness and returns array [pct2, pct98, mnScale, mxScale]
+   * @returns volume brightness and returns array [pct2, pct98, mnScale, mxScale]
    * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
    */
   calMinMax(vol = Number.POSITIVE_INFINITY, isBorder = true) {
@@ -36866,7 +36866,7 @@ var Niivue = class {
   }
   /**
    * Open drawing
-   * @param filename - of NIfTI format drawing
+   * @param fnm - filename of NIfTI format drawing
    * @param isBinarize - if true will force drawing voxels to be either 0 or 1.
    * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
@@ -37061,12 +37061,17 @@ var Niivue = class {
     this.drawScene();
   }
   /**
-   * save voxel-based image to disk
-   * @param fnm - filename of NIfTI image to create
-   * @param isSaveDrawing - determines whether drawing or background image is saved
-   * @param volumeByIndex - determines layer to save (0 for background)
-   * @param volumeByIndex - determines layer to save (0 for background)
-   * @example niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
+   * Save voxel-based image to disk.
+   *
+   * @param options - configuration object with the following fields:
+   *   - `filename`: name of the NIfTI image to create
+   *   - `isSaveDrawing`: whether to save the drawing layer or the background image
+   *   - `volumeByIndex`: which image layer to save (0 for background)
+   * @returns `true` if successful when writing to disk, or a `Uint8Array` if exported as binary data
+   *
+   * @example
+   * niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
+   * niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
    * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
    */
   async saveImage(options = defaultSaveImageOptions) {
@@ -37180,7 +37185,7 @@ var Niivue = class {
    * change property of mesh, tractogram or connectome
    * @param id - identity of mesh to change
    * @param key - attribute to change
-   * @param value - for attribute
+   * @param val - for attribute
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
@@ -37196,7 +37201,7 @@ var Niivue = class {
   }
   /**
    * returns the index of the mesh vertex that is closest to the provided coordinates
-   * @param id - identity of mesh to change
+   * @param mesh - identity of mesh to change
    * @param Xmm - location in left/right dimension
    * @param Ymm - location in posterior/anterior dimension
    * @param Zmm - location in foot/head dimension
@@ -37232,7 +37237,7 @@ var Niivue = class {
   }
   /**
    * reverse triangle winding of mesh (swap front and back faces)
-   * @param id - identity of mesh to change
+   * @param mesh - identity of mesh to change
    * @example niivue.reverseFaces(niivue.meshes[0].id)
    * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
    */
@@ -37250,7 +37255,7 @@ var Niivue = class {
    * @param mesh - identity of mesh to change
    * @param layer - selects the mesh overlay (e.g. GIfTI or STC file)
    * @param key - attribute to change
-   * @param value - for attribute
+   * @param val - value for attribute
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html | live demo usage}
    */
@@ -37512,8 +37517,11 @@ var Niivue = class {
     return ret;
   }
   /**
-   * update the clip plane orientation in 3D view mode
-   * @param azimuthElevationDepth - a two component vector. azimuth: camera position in degrees around object, typically 0..360 (or -180..+180). elevation: camera height in degrees, range -90..90
+   * Update the clip plane orientation in 3D view mode.
+   * @param depthAzimuthElevation - a 3-component array:
+   *   - `depth`: distance of clip plane from center of volume (0 to ~1.73, or >2.0 to disable clipping)
+   *   - `azimuth`: camera angle around the object in degrees (0–360 or -180–180)
+   *   - `elevation`: camera height in degrees (-90 to 90)
    * @example
    * niivue = new Niivue()
    * niivue.setClipPlane([42, 42])
@@ -37662,7 +37670,7 @@ var Niivue = class {
   }
   /**
    * set the slice type. This changes the view mode
-   * @param sliceType - an enum of slice types to use
+   * @param st - sliceType is an enum of slice types to use
    * @example
    * niivue = new Niivue()
    * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
@@ -37725,7 +37733,8 @@ var Niivue = class {
   }
   /**
    * set the clipping region for volume rendering
-   * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+   * @param low - 3-component array specifying the lower bound of the clipping region along the X, Y, and Z axes. Values range from 0 (start) to 1 (end of volume).
+   * @param high - 3-component array specifying the upper bound of the clipping region along the X, Y, and Z axes. Values range from 0 to 1.
    * @example
    * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
    * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
@@ -38307,8 +38316,11 @@ var Niivue = class {
     return this;
   }
   /**
-   * load a connectome specified by url
-   * @returns Niivue instance
+   * Load a connectome from a given URL and initialize it.
+   *
+   * @param url - the URL to a JSON-formatted connectome definition
+   * @param headers - optional HTTP headers to include with the request (e.g. for authorization)
+   * @returns the `Niivue` instance (for method chaining)
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   async loadConnectomeFromUrl(url, headers = {}) {
@@ -38317,8 +38329,10 @@ var Niivue = class {
     return this.loadConnectome(json);
   }
   /**
-   * load a connectome specified by url
-   * @returns Niivue instance
+   * Load a FreeSurfer-style connectome from a given URL and initialize it.
+   * @param url - the URL of the JSON-formatted connectome file
+   * @param headers - optional HTTP headers to include in the fetch request (e.g. for authorization)
+   * @returns the `Niivue` instance (for method chaining)
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
   async loadFreeSurferConnectomeFromUrl(url, headers = {}) {
@@ -38328,7 +38342,7 @@ var Niivue = class {
   }
   /**
    * load a connectome specified by json
-   * @param connectome - freesurfer model
+   * @param json - freesurfer model
    * @returns Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
@@ -38372,7 +38386,7 @@ var Niivue = class {
   }
   /**
    * load a connectome specified by json
-   * @param connectome - model
+   * @param json - connectome model
    * @returns Niivue instance
    * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
    */
@@ -39599,7 +39613,7 @@ var Niivue = class {
   }
   /**
    * Load matcap for illumination model.
-   * @param name - name of matcap to load ("Shiny", "Cortex", "Cream")
+   * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
    * @example
    * niivue.loadMatCapTexture("Cortex");
    * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
@@ -39648,7 +39662,9 @@ var Niivue = class {
   }
   /**
    * Load typeface for colorbars, measurements and orientation text.
-   * @param name - name of matcap to load ("Roboto", "Garamond", "Ubuntu")
+   * @param fontSheetUrl - URL to a bitmap font sheet image (e.g., a PNG atlas of glyphs)
+   * @param metricsUrl - URL to the corresponding font metrics JSON (defines character bounds and spacing)
+   * @returns a Promise that resolves when the font is loaded
    * @example
    * niivue.loadMatCapTexture("Cortex");
    * @see {@link https://niivue.github.io/niivue/features/selectfont.html | live demo usage}
@@ -39745,9 +39761,9 @@ var Niivue = class {
   }
   /**
    * Define a new GLSL shader program to influence mesh coloration
-   * @param fragmentShaderText - custom fragment shader.
-   * @param ame - title for new shader.
-   * @returns index of the new shader (for setMeshShader)
+   * @param fragmentShaderText - the GLSL source code for the custom fragment shader
+   * @param name - a descriptive label for the shader (used in menus or debugging)
+   * @returns the index of the new shader (use with {@link setMeshShader})
    * @see {@link https://niivue.github.io/niivue/features/mesh.atlas.html | live demo usage}
    */
   setCustomMeshShader(fragmentShaderText = "", name = "Custom") {
@@ -40812,7 +40828,6 @@ var Niivue = class {
   }
   /**
    * query all available color maps that can be applied to volumes
-   * @param sort - whether or not to sort the returned array
    * @returns an array of colormap strings
    * @example
    * niivue = new Niivue()
@@ -40825,7 +40840,7 @@ var Niivue = class {
   /**
    * create a new colormap
    * @param key - name of new colormap
-   * @param colormap - properties (Red, Green, Blue, Alpha and Indices)
+   * @param cmap - colormap properties (Red, Green, Blue, Alpha and Indices)
    * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
    */
   addColormap(key, cmap) {
@@ -41446,7 +41461,7 @@ var Niivue = class {
   }
   /**
    * darken crevices and brighten corners when 3D rendering drawings.
-   * @param amount - amount of ambient occlusion (default 0.4)
+   * @param ao - amount of ambient occlusion (default 0.4)
    * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
    */
   setRenderDrawAmbientOcclusion(ao) {
@@ -43839,9 +43854,13 @@ var Niivue = class {
   }
   /**
    * Add a 3D Label
-   * @param text - text of the label
-   * @param style - label style
-   * @param point - 3D point on the model
+   * @param text - the text content of the label
+   * @param style - visual styling options for the label (e.g., color, scale, line width)
+   * @param points - a 3D point `[x, y, z]` or array of points to anchor the label in space
+   * @param anchor - optional label anchor position (e.g., top-left, center, etc.)
+   * @param onClick - optional callback function to invoke when the label is clicked
+   * @returns the created `NVLabel3D` instance
+   * @see {@link https://niivue.github.io/niivue/features/labels.html | live demo usage}
    */
   addLabel(text, style, points, anchor, onClick) {
     const defaultStyle = {
