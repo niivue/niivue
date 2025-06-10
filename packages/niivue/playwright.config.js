@@ -42,8 +42,7 @@ export default defineConfig({
         launchOptions: {
           args: [
             '--window-size=1280,720',
-            '--use-gl=angle', // route GL through ANGLE :contentReference[oaicite:0]{index=0}
-            '--no-sandbox'
+            '--use-gl=angle' // route GL through ANGLE :contentReference[oaicite:0]{index=0}
           ]
         }
       }
