@@ -82,6 +82,8 @@ type Mutable<T> = {
 export type NVConfigOptions = {
   // 0 for no text, fraction of canvas min(height,width)
   textHeight: number
+  textMinPoints: number
+  textTaperedGain: number
   // 0 for no colorbars, fraction of Nifti j dimension
   colorbarHeight: number
   // -1 for automatic (full width), positive number for custom width in pixels
@@ -204,6 +206,8 @@ export type NVConfigOptions = {
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
   textHeight: 0.06,
+  textMinPoints: 12,
+  textTaperedGain: 0.375,
   colorbarHeight: 0.05,
   colorbarWidth: -1, // automatic (full width)
   showColorbarBorder: true, // show border around the colorbar
