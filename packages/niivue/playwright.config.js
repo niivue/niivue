@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const isCI = !!process.env.CI
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
@@ -40,10 +42,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         headless: true,
         launchOptions: {
-          args: [
-            '--window-size=1280,720',
-            '--use-gl=angle' // route GL through ANGLE :contentReference[oaicite:0]{index=0}
-          ]
+          args: isCI ? ['--window-size=1280,720'] : ['--window-size=1280,720', '--use-gl=angle']
         }
       }
     }
