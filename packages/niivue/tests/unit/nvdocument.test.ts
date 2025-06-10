@@ -1,7 +1,7 @@
-import { assert, expect, test } from 'vitest'
-import { NVDocument, DocumentData } from '../../src/niivue/index.js' // note the js extension
-import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
 import { readFileSync } from 'fs'
+import { assert, expect, test } from 'vitest'
+import { NVDocument, DocumentData, DEFAULT_OPTIONS } from '../../src/niivue/index.js' // note the js extension
+import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
 
 test('loadFromFile loads a valid document', async () => {
   // Load the JSON document as a Blob
@@ -71,3 +71,38 @@ test('nvdocument convert colorMap and colorMapNegative to colormap and colormapN
   expect(colorMapNegativeIsInLayer).toBe(false)
 })
 
+test('nvdocument only saves config options that differ from DEFAULT_OPTIONS', () => {
+  const doc = new NVDocument()
+
+  // Modify one config field from the default
+  doc.opts.textHeight = 0.5
+  doc.opts.dragMode = 2
+  doc.opts.meshThicknessOn2D = Infinity
+
+  // Export document
+  const json = doc.json()
+
+  // Should not include every option
+  const savedKeys = Object.keys(json.opts)
+  expect(savedKeys).toContain('textHeight')
+  expect(savedKeys).toContain('dragMode')
+  expect(savedKeys).toContain('meshThicknessOn2D')
+  expect(savedKeys).not.toContain('colorbarHeight')
+  expect(savedKeys).not.toContain('crosshairGap')
+
+  // Should match values set
+  expect(json.opts.textHeight).toBe(0.5)
+  expect(json.opts.dragMode).toBe(2)
+  expect(json.opts.meshThicknessOn2D).toBe('infinity') // special case
+
+  // Reload document
+  const loaded = NVDocument.loadFromJSON({
+    ...doc.data,
+    opts: json.opts // simulate saving only diff
+  })
+
+  expect(loaded.opts.textHeight).toBe(0.5)
+  expect(loaded.opts.dragMode).toBe(2)
+  expect(loaded.opts.colorbarHeight).toBe(DEFAULT_OPTIONS.colorbarHeight)
+  expect(loaded.opts.meshThicknessOn2D).toBe(Infinity)
+})

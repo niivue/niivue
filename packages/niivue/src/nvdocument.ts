@@ -393,6 +393,33 @@ export type ExportDocumentData = {
 }
 
 /**
+ * Returns a partial configuration object containing only the fields in the provided
+ * options that differ from the DEFAULT_OPTIONS.
+ *
+ * This is used to reduce the size of the saved document by omitting any fields
+ * that match the default values.
+ *
+ * Array fields are compared element-wise, and any mismatch will result in the
+ * entire array being included in the diff.
+ *
+ * @param opts - The configuration options to compare against DEFAULT_OPTIONS
+ * @returns A Partial<NVConfigOptions> object with only the differing fields
+ */
+function diffOptions(opts: NVConfigOptions, defaults: NVConfigOptions): Partial<NVConfigOptions> {
+  const diff: Partial<NVConfigOptions> = {}
+  for (const key in opts) {
+    const value = opts[key]
+    const def = defaults[key]
+    const isArray = Array.isArray(value) && Array.isArray(def)
+
+    if ((isArray && value.some((v, i) => v !== def[i])) || (!isArray && value !== def)) {
+      diff[key] = value
+    }
+  }
+  return diff
+}
+
+/**
  * Creates and instance of NVDocument
  * @ignore
  */
@@ -665,7 +692,10 @@ export class NVDocument {
     // save our scene object
     data.sceneData = { ...this.scene.sceneData }
     // save our options
-    data.opts = { ...this.opts }
+    data.opts = diffOptions(this.opts, DEFAULT_OPTIONS) as NVConfigOptions
+    if (this.opts.meshThicknessOn2D === Infinity) {
+      data.opts.meshThicknessOn2D = 'infinity'
+    }
     // infinity is a symbol
     if (this.opts.meshThicknessOn2D === Infinity) {
       data.opts.meshThicknessOn2D = 'infinity'
@@ -889,17 +919,44 @@ export class NVDocument {
     return document
   }
 
-  /**
-   * Factory method to return an instance of NVDocument from JSON
-   */
-  static loadFromJSON(data: DocumentData): NVDocument {
-    const document = new NVDocument()
-    document.data = data
-    if (document.data.opts.meshThicknessOn2D === 'infinity') {
-      document.data.opts.meshThicknessOn2D = Infinity
-    }
-    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
-    NVDocument.deserializeMeshDataObjects(document)
-    return document
+ /**
+ * Factory method to return an instance of NVDocument from JSON.
+ * 
+ * This will merge any saved configuration options (`opts`) with the DEFAULT_OPTIONS,
+ * ensuring any missing values are filled with defaults. It also restores special-case
+ * fields like `meshThicknessOn2D` when serialized as the string "infinity".
+ *
+ * @param data - A serialized DocumentData object
+ * @returns A reconstructed NVDocument instance
+ */
+static loadFromJSON(data: DocumentData): NVDocument {
+  const document = new NVDocument()
+
+  // Merge opts with defaults
+  document.data.opts = {
+    ...DEFAULT_OPTIONS,
+    ...(data.opts || {})
   }
+
+  // Restore 'infinity' sentinel
+  if (document.data.opts.meshThicknessOn2D === 'infinity') {
+    document.data.opts.meshThicknessOn2D = Infinity
+  }
+
+  // Merge scene data
+  document.scene.sceneData = {
+    ...INITIAL_SCENE_DATA,
+    ...data.sceneData
+  }
+
+  // Assign mesh string and deserialize (must set this first)
+  if (data.meshesString) {
+    document.data.meshesString = data.meshesString
+    NVDocument.deserializeMeshDataObjects(document)
+  }
+
+  return document
+}
+
+
 }
