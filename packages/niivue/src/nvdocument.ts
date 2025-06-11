@@ -673,6 +673,35 @@ export class NVDocument {
   }
 
   /**
+   * Fetch any image data that is missing from this document.
+   * This includes loading image blobs for `ImageFromUrlOptions` with valid `url` fields.
+   * After calling this, `volumes` and `imageOptionsMap` will be populated.
+   */
+  async fetchLinkedData(): Promise<void> {
+  for (let i = 0; i < this.data.imageOptionsArray.length; i++) {
+    const imageOpts = this.data.imageOptionsArray[i]
+    const base64 = this.data.encodedImageBlobs[i]
+
+    if (!base64 && imageOpts.url) {
+      try {
+        const response = await fetch(imageOpts.url)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        const buffer = await response.arrayBuffer()
+        const base64Data = btoa(
+          String.fromCharCode(...new Uint8Array(buffer))
+        )
+        this.data.encodedImageBlobs[i] = base64Data
+      } catch (err) {
+        console.warn(`Failed to fetch/encode image from ${imageOpts.url}:`, err)
+      }
+    }
+  }
+}
+
+
+  /**
    * Returns the options for the image if it was added by url
    */
   getImageOptions(image: NVImage): ImageFromUrlOptions | null {
