@@ -4596,22 +4596,39 @@ export class Niivue {
   }
 
   /**
-   * save the entire scene (objects and settings) as a document
-   * @param fileName - the name of the document storing the scene
-   * @param compress - whether the file should be compressed
+   * Save the current scene as an .nvd document.
+   *
+   * @param fileName  Name of the file to create (default "untitled.nvd")
+   * @param compress  If true, gzip-compress the JSON (default true)
+   * @param options   Fine-grained switches:
+   *                  • embedImages  – store encodedImageBlobs  (default true)
+   *                  • embedPreview – store previewImageDataURL (default true)
+   *
    * @example
-   * niivue.saveDocument("niivue.basic.nvd")
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * // smallest possible file – no preview, just metadata
+   * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
    */
-  async saveDocument(fileName = 'untitled.nvd', compress = true): Promise<void> {
+  async saveDocument(
+    fileName = 'untitled.nvd',
+    compress = true,
+    options: { embedImages?: boolean; embedPreview?: boolean } = {}
+  ): Promise<void> {
+    const { embedImages = true, embedPreview = true } = options
+
     this.document.title = fileName
-    log.debug('saveDocument', this.volumes[0])
-    // we need to re-render before we generate the data URL https://stackoverflow.com/questions/30628064/how-to-toggle-preservedrawingbuffer-in-three-js
-    this.drawScene()
-    this.document.previewImageDataURL = this.canvas!.toDataURL()
     this.document.volumes = this.volumes
     this.document.meshes = this.meshes
-    return this.document.download(fileName, compress)
+
+    // preview image only when requested
+    if (embedPreview) {
+      this.drawScene() // make sure the framebuffer is up to date
+      this.document.previewImageDataURL = this.canvas!.toDataURL()
+    } else {
+      this.document.previewImageDataURL = '' // nothing embedded
+    }
+
+    // delegate the rest
+    await this.document.download(fileName, compress, { embedImages })
   }
 
   // generic loadImages that wraps loadVolumes and loadMeshes

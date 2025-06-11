@@ -353,18 +353,16 @@ export type Scene = {
 }
 
 export type DocumentData = {
-  title: string
-  imageOptionsArray: ImageFromUrlOptions[]
-  meshOptionsArray: unknown[]
-  opts: NVConfigOptions
-  previewImageDataURL: string
-  labels: NVLabel3D[]
-  encodedImageBlobs: string[]
-  encodedDrawingBlob: string
-  // TODO not sure if they should be here? They are needed for loadFromJSON
+  title?: string
+  imageOptionsArray?: ImageFromUrlOptions[]
+  meshOptionsArray?: unknown[]
+  opts?: Partial<NVConfigOptions>
+  previewImageDataURL?: string
+  labels?: NVLabel3D[]
+  encodedImageBlobs?: string[]
+  encodedDrawingBlob?: string
   meshesString?: string
-  sceneData?: SceneData
-  // TODO referenced in niivue/loadDocument
+  sceneData?: Partial<SceneData>
   connectomes?: string[]
   customData?: string
 }
@@ -390,6 +388,33 @@ export type ExportDocumentData = {
   labels: NVLabel3D[]
   connectomes: string[]
   customData: string
+}
+
+/**
+ * Returns a partial configuration object containing only the fields in the provided
+ * options that differ from the DEFAULT_OPTIONS.
+ *
+ * This is used to reduce the size of the saved document by omitting any fields
+ * that match the default values.
+ *
+ * Array fields are compared element-wise, and any mismatch will result in the
+ * entire array being included in the diff.
+ *
+ * @param opts - The configuration options to compare against DEFAULT_OPTIONS
+ * @returns A Partial<NVConfigOptions> object with only the differing fields
+ */
+function diffOptions(opts: NVConfigOptions, defaults: NVConfigOptions): Partial<NVConfigOptions> {
+  const diff: Partial<NVConfigOptions> = {}
+  for (const key in opts) {
+    const value = opts[key]
+    const def = defaults[key]
+    const isArray = Array.isArray(value) && Array.isArray(def)
+
+    if ((isArray && value.some((v, i) => v !== def[i])) || (!isArray && value !== def)) {
+      diff[key] = value
+    }
+  }
+  return diff
 }
 
 /**
@@ -553,7 +578,7 @@ export class NVDocument {
    * Gets the options of the {@link Niivue} instance
    */
   get opts(): NVConfigOptions {
-    return this.data.opts
+    return this.data.opts as NVConfigOptions
   }
 
   /**
@@ -646,6 +671,41 @@ export class NVDocument {
   }
 
   /**
+   * Fetch any image data that is missing from this document.
+   * This includes loading image blobs for `ImageFromUrlOptions` with valid `url` fields.
+   * After calling this, `volumes` and `imageOptionsMap` will be populated.
+   */
+  async fetchLinkedData(): Promise<void> {
+    this.data.encodedImageBlobs = []
+    if (!this.imageOptionsArray?.length) {
+      return
+    }
+
+    for (const imgOpt of this.imageOptionsArray) {
+      if (!imgOpt.url) {
+        continue
+      }
+
+      try {
+        const response = await fetch(imgOpt.url)
+        if (!response.ok) {
+          console.warn('Failed to fetch image:', imgOpt.url)
+          continue
+        }
+
+        const buffer = await response.arrayBuffer()
+        const uint8Array = new Uint8Array(buffer)
+        const b64 = NVUtilities.uint8tob64(uint8Array)
+        this.data.encodedImageBlobs.push(b64)
+
+        console.info('fetch linked data fetched from ', imgOpt.url)
+      } catch (err) {
+        console.warn(`Failed to fetch/encode image from ${imgOpt.url}:`, err)
+      }
+    }
+  }
+
+  /**
    * Returns the options for the image if it was added by url
    */
   getImageOptions(image: NVImage): ImageFromUrlOptions | null {
@@ -653,9 +713,12 @@ export class NVDocument {
   }
 
   /**
-   * Converts NVDocument to JSON
+   * Serialise the document.
+   *
+   * @param embedImages  If false, encodedImageBlobs is left empty
+   *                     (imageOptionsArray still records the URL / name).
    */
-  json(): ExportDocumentData {
+  json(embedImages = true): ExportDocumentData {
     const data: Partial<ExportDocumentData> = {
       encodedImageBlobs: [],
       previewImageDataURL: this.data.previewImageDataURL,
@@ -665,7 +728,10 @@ export class NVDocument {
     // save our scene object
     data.sceneData = { ...this.scene.sceneData }
     // save our options
-    data.opts = { ...this.opts }
+    data.opts = diffOptions(this.opts, DEFAULT_OPTIONS) as NVConfigOptions
+    if (this.opts.meshThicknessOn2D === Infinity) {
+      data.opts.meshThicknessOn2D = 'infinity'
+    }
     // infinity is a symbol
     if (this.opts.meshThicknessOn2D === Infinity) {
       data.opts.meshThicknessOn2D = 'infinity'
@@ -727,8 +793,10 @@ export class NVDocument {
 
         imageOptionsArray.push(imageOptions)
 
-        const encodedImageBlob = NVUtilities.uint8tob64(volume.toUint8Array())
-        data.encodedImageBlobs!.push(encodedImageBlob)
+        if (embedImages) {
+          const blob = NVUtilities.uint8tob64(volume.toUint8Array())
+          data.encodedImageBlobs!.push(blob)
+        }
         data.imageOptionsMap!.set(volume.id, i)
       }
     }
@@ -806,27 +874,28 @@ export class NVDocument {
     return data as ExportDocumentData
   }
 
-  /**
-   * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
-   */
-  async download(fileName: string, compress: boolean): Promise<void> {
-    const data = this.json()
-    const dataText = JSON.stringify(data)
-    const contentType = compress ? 'application/gzip' : 'application/json'
-    let content: string | ArrayBuffer
-    if (compress) {
-      content = await NVUtilities.compressStringToArrayBuffer(dataText)
-    } else {
-      content = dataText
-    }
+  async download(
+    fileName: string,
+    compress: boolean,
+    opts: { embedImages: boolean } = { embedImages: true }
+  ): Promise<void> {
+    const data = this.json(opts.embedImages)
+    const jsonTxt = JSON.stringify(data)
+    const mime = compress ? 'application/gzip' : 'application/json'
+    const payload = compress ? await NVUtilities.compressStringToArrayBuffer(jsonTxt) : jsonTxt
 
-    NVUtilities.download(content, fileName, contentType)
+    NVUtilities.download(payload, fileName, mime)
   }
 
   /**
    * Deserialize mesh data objects
    */
   static deserializeMeshDataObjects(document: NVDocument): void {
+    if (!document.data.meshesString || document.data.meshesString === '[]') {
+      document.meshDataObjects = []
+      return // ← early-exit
+    }
+
     if (document.data.meshesString) {
       document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
       for (const mesh of document.meshDataObjects!) {
@@ -890,9 +959,65 @@ export class NVDocument {
   }
 
   /**
-   * Factory method to return an instance of NVDocument from JSON
+   * Factory method to return an instance of NVDocument from JSON.
+   *
+   * This will merge any saved configuration options (`opts`) with the DEFAULT_OPTIONS,
+   * ensuring any missing values are filled with defaults. It also restores special-case
+   * fields like `meshThicknessOn2D` when serialized as the string "infinity".
+   *
+   * @param data - A serialized DocumentData object
+   * @returns A reconstructed NVDocument instance
    */
   static loadFromJSON(data: DocumentData): NVDocument {
+    // 1. start with a fresh document (its constructor already seeds
+    //    document.data with whatever defaults you want)
+    const document = new NVDocument()
+
+    // 2. copy *all* top-level saved fields over (this brings in
+    //    imageOptionsArray, encodedImageBlobs, masks, overlays, etc.)
+    Object.assign(document.data, {
+      ...data,
+      // 2a. ensure minimum required array fields are non-null
+      imageOptionsArray: data.imageOptionsArray ?? [],
+      encodedImageBlobs: data.encodedImageBlobs ?? [],
+      labels: data.labels ?? [],
+      meshOptionsArray: data.meshOptionsArray ?? [],
+      connectomes: data.connectomes ?? [],
+      encodedDrawingBlob: data.encodedDrawingBlob ?? '',
+      previewImageDataURL: data.previewImageDataURL ?? '',
+      customData: data.customData ?? '',
+      title: data.title ?? 'untitled'
+    })
+
+    // 3. now merge opts with your DEFAULT_OPTIONS
+    document.data.opts = {
+      ...DEFAULT_OPTIONS,
+      ...(data.opts || {})
+    } as NVConfigOptions
+
+    //    and restore the "infinity" sentinel
+    if (document.data.opts.meshThicknessOn2D === 'infinity') {
+      document.data.opts.meshThicknessOn2D = Infinity
+    }
+
+    // 4. merge sceneData
+    document.scene.sceneData = {
+      ...INITIAL_SCENE_DATA,
+      ...(data.sceneData || {})
+    }
+
+    // 5. finally, if there was a meshesString, deserialize it
+    if (document.data.meshesString) {
+      NVDocument.deserializeMeshDataObjects(document)
+    }
+
+    return document
+  }
+
+  /**
+   * Factory method to return an instance of NVDocument from JSON
+   */
+  static oldloadFromJSON(data: DocumentData): NVDocument {
     const document = new NVDocument()
     document.data = data
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
