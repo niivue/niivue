@@ -930,33 +930,53 @@ export class NVDocument {
  * @returns A reconstructed NVDocument instance
  */
 static loadFromJSON(data: DocumentData): NVDocument {
+  // 1. start with a fresh document (its constructor already seeds
+  //    document.data with whatever defaults you want)
   const document = new NVDocument()
 
-  // Merge opts with defaults
+  // 2. copy *all* top-level saved fields over (this brings in
+  //    imageOptionsArray, encodedImageBlobs, masks, overlays, etc.)
+  Object.assign(document.data, data)
+
+  // 3. now merge opts with your DEFAULT_OPTIONS
   document.data.opts = {
     ...DEFAULT_OPTIONS,
     ...(data.opts || {})
   }
-
-  // Restore 'infinity' sentinel
+  //    and restore the "infinity" sentinel
   if (document.data.opts.meshThicknessOn2D === 'infinity') {
     document.data.opts.meshThicknessOn2D = Infinity
   }
 
-  // Merge scene data
+  // 4. merge sceneData
   document.scene.sceneData = {
     ...INITIAL_SCENE_DATA,
-    ...data.sceneData
+    ...(data.sceneData || {})
   }
 
-  // Assign mesh string and deserialize (must set this first)
-  if (data.meshesString) {
-    document.data.meshesString = data.meshesString
+  // 5. finally, if there was a meshesString, deserialize it
+  if (document.data.meshesString) {
     NVDocument.deserializeMeshDataObjects(document)
   }
 
   return document
 }
+
+
+
+/**
+   * Factory method to return an instance of NVDocument from JSON
+   */
+  static oldloadFromJSON(data: DocumentData): NVDocument {
+    const document = new NVDocument()
+    document.data = data
+    if (document.data.opts.meshThicknessOn2D === 'infinity') {
+      document.data.opts.meshThicknessOn2D = Infinity
+    }
+    document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
+    NVDocument.deserializeMeshDataObjects(document)
+    return document
+  }
 
 
 }
