@@ -4596,42 +4596,40 @@ export class Niivue {
   }
 
   /**
- * Save the current scene as an .nvd document.
- *
- * @param fileName  Name of the file to create (default "untitled.nvd")
- * @param compress  If true, gzip-compress the JSON (default true)
- * @param options   Fine-grained switches:
- *                  • embedImages  – store encodedImageBlobs  (default true)
- *                  • embedPreview – store previewImageDataURL (default true)
- *
- * @example
- * // smallest possible file – no preview, just metadata
- * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
- */
-async saveDocument(
-  fileName  = 'untitled.nvd',
-  compress  = true,
-  options: { embedImages?: boolean; embedPreview?: boolean } = {}
-): Promise<void> {
+   * Save the current scene as an .nvd document.
+   *
+   * @param fileName  Name of the file to create (default "untitled.nvd")
+   * @param compress  If true, gzip-compress the JSON (default true)
+   * @param options   Fine-grained switches:
+   *                  • embedImages  – store encodedImageBlobs  (default true)
+   *                  • embedPreview – store previewImageDataURL (default true)
+   *
+   * @example
+   * // smallest possible file – no preview, just metadata
+   * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
+   */
+  async saveDocument(
+    fileName = 'untitled.nvd',
+    compress = true,
+    options: { embedImages?: boolean; embedPreview?: boolean } = {}
+  ): Promise<void> {
+    const { embedImages = true, embedPreview = true } = options
 
-  const { embedImages = true, embedPreview = true } = options;
+    this.document.title = fileName
+    this.document.volumes = this.volumes
+    this.document.meshes = this.meshes
 
-  this.document.title   = fileName;
-  this.document.volumes = this.volumes;
-  this.document.meshes  = this.meshes;
+    // preview image only when requested
+    if (embedPreview) {
+      this.drawScene() // make sure the framebuffer is up to date
+      this.document.previewImageDataURL = this.canvas!.toDataURL()
+    } else {
+      this.document.previewImageDataURL = '' // nothing embedded
+    }
 
-  // preview image only when requested
-  if (embedPreview) {
-    this.drawScene();                               // make sure the framebuffer is up to date
-    this.document.previewImageDataURL = this.canvas!.toDataURL();
-  } else {
-    this.document.previewImageDataURL = '';         // nothing embedded
+    // delegate the rest
+    await this.document.download(fileName, compress, { embedImages })
   }
-
-  // delegate the rest
-  await this.document.download(fileName, compress, { embedImages });
-}
-
 
   // generic loadImages that wraps loadVolumes and loadMeshes
   async loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this> {
