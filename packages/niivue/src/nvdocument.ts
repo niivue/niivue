@@ -678,27 +678,31 @@ export class NVDocument {
    * After calling this, `volumes` and `imageOptionsMap` will be populated.
    */
   async fetchLinkedData(): Promise<void> {
-  for (let i = 0; i < this.data.imageOptionsArray.length; i++) {
-    const imageOpts = this.data.imageOptionsArray[i]
-    const base64 = this.data.encodedImageBlobs[i]
+  this.data.encodedImageBlobs = []
+  if (!this.imageOptionsArray?.length) return
 
-    if (!base64 && imageOpts.url) {
-      try {
-        const response = await fetch(imageOpts.url)
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-        const buffer = await response.arrayBuffer()
-        const base64Data = btoa(
-          String.fromCharCode(...new Uint8Array(buffer))
-        )
-        this.data.encodedImageBlobs[i] = base64Data
-      } catch (err) {
-        console.warn(`Failed to fetch/encode image from ${imageOpts.url}:`, err)
+  for (const imgOpt of this.imageOptionsArray) {
+    if (!imgOpt.url) continue
+
+    try {
+      const response = await fetch(imgOpt.url)
+      if (!response.ok) {
+        console.warn('Failed to fetch image:', imgOpt.url)
+        continue
       }
+
+      const buffer = await response.arrayBuffer()
+      const uint8Array = new Uint8Array(buffer)
+      const b64 = NVUtilities.uint8tob64(uint8Array)
+      this.data.encodedImageBlobs.push(b64)
+
+      console.info('fetch linked data fetched from ', imgOpt.url)
+    } catch (err) {
+      console.warn(`Failed to fetch/encode image from ${imgOpt.url}:`, err)
     }
   }
 }
+
 
 
   /**
@@ -709,14 +713,17 @@ export class NVDocument {
   }
 
   /**
-   * Converts NVDocument to JSON
-   */
-  json(): ExportDocumentData {
-    const data: Partial<ExportDocumentData> = {
-      encodedImageBlobs: [],
-      previewImageDataURL: this.data.previewImageDataURL,
-      imageOptionsMap: new Map()
-    }
+ * Serialise the document.
+ *
+ * @param embedImages  If false, encodedImageBlobs is left empty
+ *                     (imageOptionsArray still records the URL / name).
+ */
+json(embedImages = true): ExportDocumentData {
+  const data: Partial<ExportDocumentData> = {
+    encodedImageBlobs   : [],
+    previewImageDataURL : this.data.previewImageDataURL,
+    imageOptionsMap     : new Map()
+  };
     const imageOptionsArray = []
     // save our scene object
     data.sceneData = { ...this.scene.sceneData }
@@ -786,8 +793,10 @@ export class NVDocument {
 
         imageOptionsArray.push(imageOptions)
 
-        const encodedImageBlob = NVUtilities.uint8tob64(volume.toUint8Array())
-        data.encodedImageBlobs!.push(encodedImageBlob)
+        if (embedImages) {
+          const blob = NVUtilities.uint8tob64(volume.toUint8Array());
+          data.encodedImageBlobs!.push(blob);
+        }
         data.imageOptionsMap!.set(volume.id, i)
       }
     }
@@ -865,27 +874,31 @@ export class NVDocument {
     return data as ExportDocumentData
   }
 
-  /**
-   * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
-   */
-  async download(fileName: string, compress: boolean): Promise<void> {
-    const data = this.json()
-    const dataText = JSON.stringify(data)
-    const contentType = compress ? 'application/gzip' : 'application/json'
-    let content: string | ArrayBuffer
-    if (compress) {
-      content = await NVUtilities.compressStringToArrayBuffer(dataText)
-    } else {
-      content = dataText
-    }
+  async download(
+  fileName   : string,
+  compress   : boolean,
+  opts: { embedImages: boolean } = { embedImages: true }
+): Promise<void> {
+  const data     = this.json(opts.embedImages);
+  const jsonTxt  = JSON.stringify(data);
+  const mime     = compress ? 'application/gzip' : 'application/json';
+  const payload  = compress
+      ? await NVUtilities.compressStringToArrayBuffer(jsonTxt)
+      : jsonTxt;
 
-    NVUtilities.download(content, fileName, contentType)
-  }
+  NVUtilities.download(payload, fileName, mime);
+}
+
 
   /**
    * Deserialize mesh data objects
    */
   static deserializeMeshDataObjects(document: NVDocument): void {
+    if (!document.data.meshesString || document.data.meshesString === '[]') {
+      document.meshDataObjects = []
+      return                                          // ← early-exit
+    }
+
     if (document.data.meshesString) {
       document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
       for (const mesh of document.meshDataObjects!) {
