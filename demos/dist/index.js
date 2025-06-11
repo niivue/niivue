@@ -5247,7 +5247,7 @@ var forEach3 = function() {
 }();
 
 // package.json
-var version = "0.57.0";
+var version = "0.58.0";
 
 // src/logger.ts
 var _Log = class _Log {
@@ -35956,11 +35956,14 @@ var Niivue = class {
   // handler for scroll wheel events (slice scrolling)
   // note: no test yet
   wheelListener(e) {
-    e.preventDefault();
-    e.stopPropagation();
     if (this.thumbnailVisible) {
       return;
     }
+    if (this.opts.sliceMosaicString.length > 0) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
     const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0);
     const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0);
     const validDrag = dragStartSum > 0 && dragEndSum > 0;
