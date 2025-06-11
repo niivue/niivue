@@ -2060,13 +2060,15 @@ export class Niivue {
   // handler for scroll wheel events (slice scrolling)
   // note: no test yet
   wheelListener(e: WheelEvent): void {
-    e.preventDefault()
-    e.stopPropagation()
-
-    // If a thumbnail is visible, do not process mouse wheel events for the main canvas
     if (this.thumbnailVisible) {
       return
     }
+    if (this.opts.sliceMosaicString.length > 0) {
+      return
+    }
+
+    e.preventDefault()
+    e.stopPropagation()
 
     // ROI Selection logic
     const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
