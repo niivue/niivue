@@ -4,7 +4,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        external: ['zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
+      }
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()]
@@ -20,7 +25,15 @@ export default defineConfig({
       format: 'es'
     },
     optimizeDeps: {
-      exclude: ['@niivue/niimath', '@niivue/dcm2niix']
+      exclude: ['@niivue/niivue', '@niivue/niimath', '@niivue/dcm2niix']
+    },
+    build: {
+      commonjsOptions: {
+        exclude: ['@niivue/niivue']
+      },
+      rollupOptions: {
+        external: ['zlib', 'pako', 'node:zlib', 'module']
+      }
     },
     resolve: {
       alias: {

@@ -1,9 +1,9 @@
-import { useEffect, useState, useContext } from 'react'
+import { useEffect, useState } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 import { NVMesh } from '@niivue/niivue'
 import { baseName } from '../utils/baseName'
-import { AppContext } from '../App'
+import { useSelectedInstance } from '../AppContext'
 import { NVMeshLayer } from '@renderer/types/MeshLayer'
 
 interface MeshImageCardProps {
@@ -17,8 +17,10 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshImageCardProps): J
   const [visible, setVisible] = useState<boolean>(true)
   const [colormaps, setColormaps] = useState<string[]>([])
   const [colormap, setColormap] = useState<string>('warm')
-  const { nvRef, setMeshes } = useContext(AppContext)
-  const nv = nvRef.current
+  const instance = useSelectedInstance()
+  const nv = instance?.nvRef.current
+  const setMeshes = instance?.setMeshes
+  if (!nv || !setMeshes) return <></>
 
   useEffect(() => {
     // make sure the layer is visible by default
