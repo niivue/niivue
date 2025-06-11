@@ -824,16 +824,16 @@ type Scene = {
     gamma?: number;
 };
 type DocumentData = {
-    title: string;
-    imageOptionsArray: ImageFromUrlOptions[];
-    meshOptionsArray: unknown[];
-    opts: NVConfigOptions;
-    previewImageDataURL: string;
-    labels: NVLabel3D[];
-    encodedImageBlobs: string[];
-    encodedDrawingBlob: string;
+    title?: string;
+    imageOptionsArray?: ImageFromUrlOptions[];
+    meshOptionsArray?: unknown[];
+    opts?: Partial<NVConfigOptions>;
+    previewImageDataURL?: string;
+    labels?: NVLabel3D[];
+    encodedImageBlobs?: string[];
+    encodedDrawingBlob?: string;
     meshesString?: string;
-    sceneData?: SceneData;
+    sceneData?: Partial<SceneData>;
     connectomes?: string[];
     customData?: string;
 };
@@ -927,17 +927,25 @@ declare class NVDocument {
      */
     removeImage(image: NVImage): void;
     /**
+     * Fetch any image data that is missing from this document.
+     * This includes loading image blobs for `ImageFromUrlOptions` with valid `url` fields.
+     * After calling this, `volumes` and `imageOptionsMap` will be populated.
+     */
+    fetchLinkedData(): Promise<void>;
+    /**
      * Returns the options for the image if it was added by url
      */
     getImageOptions(image: NVImage): ImageFromUrlOptions | null;
     /**
-     * Converts NVDocument to JSON
+     * Serialise the document.
+     *
+     * @param embedImages  If false, encodedImageBlobs is left empty
+     *                     (imageOptionsArray still records the URL / name).
      */
-    json(): ExportDocumentData;
-    /**
-     * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
-     */
-    download(fileName: string, compress: boolean): Promise<void>;
+    json(embedImages?: boolean): ExportDocumentData;
+    download(fileName: string, compress: boolean, opts?: {
+        embedImages: boolean;
+    }): Promise<void>;
     /**
      * Deserialize mesh data objects
      */
@@ -951,9 +959,20 @@ declare class NVDocument {
      */
     static loadFromFile(file: Blob): Promise<NVDocument>;
     /**
-     * Factory method to return an instance of NVDocument from JSON
+     * Factory method to return an instance of NVDocument from JSON.
+     *
+     * This will merge any saved configuration options (`opts`) with the DEFAULT_OPTIONS,
+     * ensuring any missing values are filled with defaults. It also restores special-case
+     * fields like `meshThicknessOn2D` when serialized as the string "infinity".
+     *
+     * @param data - A serialized DocumentData object
+     * @returns A reconstructed NVDocument instance
      */
     static loadFromJSON(data: DocumentData): NVDocument;
+    /**
+     * Factory method to return an instance of NVDocument from JSON
+     */
+    static oldloadFromJSON(data: DocumentData): NVDocument;
 }
 
 type NiftiHeader = {
@@ -2659,14 +2678,22 @@ declare class Niivue {
      */
     json(): ExportDocumentData;
     /**
-     * save the entire scene (objects and settings) as a document
-     * @param fileName - the name of the document storing the scene
-     * @param compress - whether the file should be compressed
+     * Save the current scene as an .nvd document.
+     *
+     * @param fileName  Name of the file to create (default "untitled.nvd")
+     * @param compress  If true, gzip-compress the JSON (default true)
+     * @param options   Fine-grained switches:
+     *                  • embedImages  – store encodedImageBlobs  (default true)
+     *                  • embedPreview – store previewImageDataURL (default true)
+     *
      * @example
-     * niivue.saveDocument("niivue.basic.nvd")
-     * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+     * // smallest possible file – no preview, just metadata
+     * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
      */
-    saveDocument(fileName?: string, compress?: boolean): Promise<void>;
+    saveDocument(fileName?: string, compress?: boolean, options?: {
+        embedImages?: boolean;
+        embedPreview?: boolean;
+    }): Promise<void>;
     loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this>;
     loadDicoms(dicomList: ImageFromUrlOptions[]): Promise<this>;
     /**

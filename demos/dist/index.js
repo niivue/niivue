@@ -29806,6 +29806,18 @@ var INITIAL_SCENE_DATA = {
   clipVolumeLow: [0, 0, 0],
   clipVolumeHigh: [1, 1, 1]
 };
+function diffOptions(opts, defaults) {
+  const diff = {};
+  for (const key in opts) {
+    const value = opts[key];
+    const def = defaults[key];
+    const isArray = Array.isArray(value) && Array.isArray(def);
+    if (isArray && value.some((v, i) => v !== def[i]) || !isArray && value !== def) {
+      diff[key] = value;
+    }
+  }
+  return diff;
+}
 var NVDocument = class _NVDocument {
   constructor() {
     __publicField(this, "data", {
@@ -30021,15 +30033,48 @@ var NVDocument = class _NVDocument {
     this.volumes = this.volumes.filter((i) => i.id !== image.id);
   }
   /**
+   * Fetch any image data that is missing from this document.
+   * This includes loading image blobs for `ImageFromUrlOptions` with valid `url` fields.
+   * After calling this, `volumes` and `imageOptionsMap` will be populated.
+   */
+  async fetchLinkedData() {
+    this.data.encodedImageBlobs = [];
+    if (!this.imageOptionsArray?.length) {
+      return;
+    }
+    for (const imgOpt of this.imageOptionsArray) {
+      if (!imgOpt.url) {
+        continue;
+      }
+      try {
+        const response = await fetch(imgOpt.url);
+        if (!response.ok) {
+          console.warn("Failed to fetch image:", imgOpt.url);
+          continue;
+        }
+        const buffer = await response.arrayBuffer();
+        const uint8Array = new Uint8Array(buffer);
+        const b64 = NVUtilities.uint8tob64(uint8Array);
+        this.data.encodedImageBlobs.push(b64);
+        console.info("fetch linked data fetched from ", imgOpt.url);
+      } catch (err2) {
+        console.warn(`Failed to fetch/encode image from ${imgOpt.url}:`, err2);
+      }
+    }
+  }
+  /**
    * Returns the options for the image if it was added by url
    */
   getImageOptions(image) {
     return this.imageOptionsMap.has(image.id) ? this.data.imageOptionsArray[this.imageOptionsMap.get(image.id)] : null;
   }
   /**
-   * Converts NVDocument to JSON
+   * Serialise the document.
+   *
+   * @param embedImages  If false, encodedImageBlobs is left empty
+   *                     (imageOptionsArray still records the URL / name).
    */
-  json() {
+  json(embedImages = true) {
     const data = {
       encodedImageBlobs: [],
       previewImageDataURL: this.data.previewImageDataURL,
@@ -30037,7 +30082,10 @@ var NVDocument = class _NVDocument {
     };
     const imageOptionsArray = [];
     data.sceneData = { ...this.scene.sceneData };
-    data.opts = { ...this.opts };
+    data.opts = diffOptions(this.opts, DEFAULT_OPTIONS);
+    if (this.opts.meshThicknessOn2D === Infinity) {
+      data.opts.meshThicknessOn2D = "infinity";
+    }
     if (this.opts.meshThicknessOn2D === Infinity) {
       data.opts.meshThicknessOn2D = "infinity";
     }
@@ -30087,8 +30135,10 @@ var NVDocument = class _NVDocument {
         imageOptions.cal_max = volume.cal_max || NaN;
         imageOptions.cal_min = volume.cal_min || NaN;
         imageOptionsArray.push(imageOptions);
-        const encodedImageBlob = NVUtilities.uint8tob64(volume.toUint8Array());
-        data.encodedImageBlobs.push(encodedImageBlob);
+        if (embedImages) {
+          const blob = NVUtilities.uint8tob64(volume.toUint8Array());
+          data.encodedImageBlobs.push(blob);
+        }
         data.imageOptionsMap.set(volume.id, i);
       }
     }
@@ -30160,25 +30210,21 @@ var NVDocument = class _NVDocument {
     }
     return data;
   }
-  /**
-   * Downloads a JSON file with options, scene, images, meshes and drawing of {@link Niivue} instance
-   */
-  async download(fileName, compress) {
-    const data = this.json();
-    const dataText = JSON.stringify(data);
-    const contentType = compress ? "application/gzip" : "application/json";
-    let content;
-    if (compress) {
-      content = await NVUtilities.compressStringToArrayBuffer(dataText);
-    } else {
-      content = dataText;
-    }
-    NVUtilities.download(content, fileName, contentType);
+  async download(fileName, compress, opts = { embedImages: true }) {
+    const data = this.json(opts.embedImages);
+    const jsonTxt = JSON.stringify(data);
+    const mime = compress ? "application/gzip" : "application/json";
+    const payload = compress ? await NVUtilities.compressStringToArrayBuffer(jsonTxt) : jsonTxt;
+    NVUtilities.download(payload, fileName, mime);
   }
   /**
    * Deserialize mesh data objects
    */
   static deserializeMeshDataObjects(document2) {
+    if (!document2.data.meshesString || document2.data.meshesString === "[]") {
+      document2.meshDataObjects = [];
+      return;
+    }
     if (document2.data.meshesString) {
       document2.meshDataObjects = deserialize(JSON.parse(document2.data.meshesString));
       for (const mesh of document2.meshDataObjects) {
@@ -30233,9 +30279,50 @@ var NVDocument = class _NVDocument {
     return document2;
   }
   /**
-   * Factory method to return an instance of NVDocument from JSON
+   * Factory method to return an instance of NVDocument from JSON.
+   *
+   * This will merge any saved configuration options (`opts`) with the DEFAULT_OPTIONS,
+   * ensuring any missing values are filled with defaults. It also restores special-case
+   * fields like `meshThicknessOn2D` when serialized as the string "infinity".
+   *
+   * @param data - A serialized DocumentData object
+   * @returns A reconstructed NVDocument instance
    */
   static loadFromJSON(data) {
+    const document2 = new _NVDocument();
+    Object.assign(document2.data, {
+      ...data,
+      // 2a. ensure minimum required array fields are non-null
+      imageOptionsArray: data.imageOptionsArray ?? [],
+      encodedImageBlobs: data.encodedImageBlobs ?? [],
+      labels: data.labels ?? [],
+      meshOptionsArray: data.meshOptionsArray ?? [],
+      connectomes: data.connectomes ?? [],
+      encodedDrawingBlob: data.encodedDrawingBlob ?? "",
+      previewImageDataURL: data.previewImageDataURL ?? "",
+      customData: data.customData ?? "",
+      title: data.title ?? "untitled"
+    });
+    document2.data.opts = {
+      ...DEFAULT_OPTIONS,
+      ...data.opts || {}
+    };
+    if (document2.data.opts.meshThicknessOn2D === "infinity") {
+      document2.data.opts.meshThicknessOn2D = Infinity;
+    }
+    document2.scene.sceneData = {
+      ...INITIAL_SCENE_DATA,
+      ...data.sceneData || {}
+    };
+    if (document2.data.meshesString) {
+      _NVDocument.deserializeMeshDataObjects(document2);
+    }
+    return document2;
+  }
+  /**
+   * Factory method to return an instance of NVDocument from JSON
+   */
+  static oldloadFromJSON(data) {
     const document2 = new _NVDocument();
     document2.data = data;
     if (document2.data.opts.meshThicknessOn2D === "infinity") {
@@ -38117,21 +38204,30 @@ var Niivue = class {
     return json;
   }
   /**
-   * save the entire scene (objects and settings) as a document
-   * @param fileName - the name of the document storing the scene
-   * @param compress - whether the file should be compressed
+   * Save the current scene as an .nvd document.
+   *
+   * @param fileName  Name of the file to create (default "untitled.nvd")
+   * @param compress  If true, gzip-compress the JSON (default true)
+   * @param options   Fine-grained switches:
+   *                  • embedImages  – store encodedImageBlobs  (default true)
+   *                  • embedPreview – store previewImageDataURL (default true)
+   *
    * @example
-   * niivue.saveDocument("niivue.basic.nvd")
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * // smallest possible file – no preview, just metadata
+   * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
    */
-  async saveDocument(fileName = "untitled.nvd", compress = true) {
+  async saveDocument(fileName = "untitled.nvd", compress = true, options = {}) {
+    const { embedImages = true, embedPreview = true } = options;
     this.document.title = fileName;
-    log.debug("saveDocument", this.volumes[0]);
-    this.drawScene();
-    this.document.previewImageDataURL = this.canvas.toDataURL();
     this.document.volumes = this.volumes;
     this.document.meshes = this.meshes;
-    return this.document.download(fileName, compress);
+    if (embedPreview) {
+      this.drawScene();
+      this.document.previewImageDataURL = this.canvas.toDataURL();
+    } else {
+      this.document.previewImageDataURL = "";
+    }
+    await this.document.download(fileName, compress, { embedImages });
   }
   // generic loadImages that wraps loadVolumes and loadMeshes
   async loadImages(images) {
