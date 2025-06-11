@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import { assert, expect, test } from 'vitest'
-import { NVDocument, DocumentData, DEFAULT_OPTIONS } from '../../src/niivue/index.js' // note the js extension
+import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js' // note the js extension
 import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
 
 test('loadFromFile loads a valid document', async () => {
@@ -105,4 +105,34 @@ test('nvdocument only saves config options that differ from DEFAULT_OPTIONS', ()
   expect(loaded.opts.dragMode).toBe(2)
   expect(loaded.opts.colorbarHeight).toBe(DEFAULT_OPTIONS.colorbarHeight)
   expect(loaded.opts.meshThicknessOn2D).toBe(Infinity)
+})
+
+test('nvdocument can be initialized from minimal JSON input', () => {
+  const minimal: Partial<DocumentData> = {
+    title: 'Minimal Doc',
+    imageOptionsArray: [
+      {
+        name: 'brain.nii.gz',
+        url: './images/brain.nii.gz',
+        colormap: 'gray',
+        opacity: 1
+      }
+    ]
+  }
+
+  const doc = NVDocument.loadFromJSON(minimal as DocumentData)
+
+  expect(doc.data.title).toBe('Minimal Doc')
+  expect(doc.data.imageOptionsArray!.length).toBe(1)
+  expect(doc.data.imageOptionsArray![0].name).toBe('brain.nii.gz')
+
+  // Ensure missing fields are filled with defaults
+  expect(doc.data.meshOptionsArray).toEqual([])
+  expect(doc.data.labels).toEqual([])
+  expect(doc.data.encodedImageBlobs).toEqual([])
+  expect(doc.data.encodedDrawingBlob).toBe('')
+  expect(doc.data.previewImageDataURL).toBe('')
+  expect(doc.data.customData).toBe('')
+  expect(doc.data.opts).toEqual(DEFAULT_OPTIONS)
+  expect(doc.scene.sceneData).toEqual(INITIAL_SCENE_DATA)
 })

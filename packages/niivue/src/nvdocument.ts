@@ -353,21 +353,20 @@ export type Scene = {
 }
 
 export type DocumentData = {
-  title: string
-  imageOptionsArray: ImageFromUrlOptions[]
-  meshOptionsArray: unknown[]
-  opts: NVConfigOptions
-  previewImageDataURL: string
-  labels: NVLabel3D[]
-  encodedImageBlobs: string[]
-  encodedDrawingBlob: string
-  // TODO not sure if they should be here? They are needed for loadFromJSON
+  title?: string
+  imageOptionsArray?: ImageFromUrlOptions[]
+  meshOptionsArray?: unknown[]
+  opts?: Partial<NVConfigOptions>
+  previewImageDataURL?: string
+  labels?: NVLabel3D[]
+  encodedImageBlobs?: string[]
+  encodedDrawingBlob?: string
   meshesString?: string
-  sceneData?: SceneData
-  // TODO referenced in niivue/loadDocument
+  sceneData?: Partial<SceneData>
   connectomes?: string[]
   customData?: string
 }
+
 
 export type ExportDocumentData = {
   // base64 encoded images
@@ -580,8 +579,9 @@ export class NVDocument {
    * Gets the options of the {@link Niivue} instance
    */
   get opts(): NVConfigOptions {
-    return this.data.opts
-  }
+  return this.data.opts as NVConfigOptions
+}
+
 
   /**
    * Sets the options of the {@link Niivue} instance
@@ -978,13 +978,26 @@ static loadFromJSON(data: DocumentData): NVDocument {
 
   // 2. copy *all* top-level saved fields over (this brings in
   //    imageOptionsArray, encodedImageBlobs, masks, overlays, etc.)
-  Object.assign(document.data, data)
+  Object.assign(document.data, {
+    ...data,
+    // 2a. ensure minimum required array fields are non-null
+    imageOptionsArray: data.imageOptionsArray ?? [],
+    encodedImageBlobs: data.encodedImageBlobs ?? [],
+    labels: data.labels ?? [],
+    meshOptionsArray: data.meshOptionsArray ?? [],
+    connectomes: data.connectomes ?? [],
+    encodedDrawingBlob: data.encodedDrawingBlob ?? '',
+    previewImageDataURL: data.previewImageDataURL ?? '',
+    customData: data.customData ?? '',
+    title: data.title ?? 'untitled'
+  })
 
   // 3. now merge opts with your DEFAULT_OPTIONS
   document.data.opts = {
-    ...DEFAULT_OPTIONS,
-    ...(data.opts || {})
-  }
+  ...DEFAULT_OPTIONS,
+  ...(data.opts || {})
+} as NVConfigOptions
+
   //    and restore the "infinity" sentinel
   if (document.data.opts.meshThicknessOn2D === 'infinity') {
     document.data.opts.meshThicknessOn2D = Infinity
@@ -1003,6 +1016,7 @@ static loadFromJSON(data: DocumentData): NVDocument {
 
   return document
 }
+
 
 
 
