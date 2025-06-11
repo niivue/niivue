@@ -16,7 +16,11 @@ import { build } from 'tsup'
       '.jpg': 'dataurl',
       '.png': 'dataurl'
     },
-    minify: 'terser'
+    minify: 'terser',
+    terserOptions: {
+      mangle: false
+    },
+    noExternal: [/(.*)/]
   })
 
   // load output and export it again as a string
