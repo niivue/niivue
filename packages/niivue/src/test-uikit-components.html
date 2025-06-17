@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>UIKit Components Test - Medical Imaging Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        #container {
+            display: flex;
+            height: 100vh;
+            padding-top: 40px;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            border-right: 2px solid #333;
+        }
+        
+        #gl1 {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        #controls-panel {
+            width: 350px;
+            background: linear-gradient(180deg, #1e1e1e 0%, #2a2a2a 100%);
+            border-left: 1px solid #444;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .panel-section {
+            background: rgba(45, 55, 72, 0.8);
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 100%;
+            overflow: hidden;
+        }
+        
+        .panel-title {
+            color: #68d391;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-title::before {
+            content: "⚡";
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        
+        .control-group {
+            margin-bottom: 18px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .control-group:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+        
+        .control-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+            text-transform: capitalize;
+        }
+        
+        .control-label span {
+            float: right;
+            color: #4CAF50;
+            font-weight: 600;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+        
+        /* Enhanced Canvas Styling */
+        canvas {
+            display: block !important;
+            border: 2px solid #333 !important;
+            border-radius: 6px !important;
+            background: #1a1a1a !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        canvas:hover {
+            border-color: #4CAF50 !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 8px rgba(76, 175, 80, 0.3) !important;
+        }
+        
+        /* Specific canvas sizing with proper WebGL viewport */
+        #brightness-canvas, #contrast-canvas, #zoom-canvas, #opacity-canvas, #slice-canvas {
+            width: 200px !important;
+            height: 30px !important;
+            margin-top: 8px !important;
+        }
+        
+        #crosshair-canvas, #colorbar-canvas, #radiological-canvas, #interpolation-canvas {
+            width: 70px !important;
+            height: 30px !important;
+            margin-top: 8px !important;
+        }
+        
+        #colormap-panel {
+            width: 280px !important;
+            height: 100px !important;
+            margin-top: 8px !important;
+        }
+        
+        #viewmode-panel {
+            width: 280px !important;
+            height: 50px !important;
+            margin-top: 8px !important;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .button-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+        
+        .button-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 130px;
+        }
+        
+        .button-label {
+            font-size: 10px;
+            color: #a0aec0;
+            margin-bottom: 3px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .button-group button,
+        .button-grid canvas {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            color: white;
+            border: 1px solid #4a5568;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+            width: 100%;
+            height: 30px;
+        }
+        
+        #log-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            max-height: 250px;
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 11px;
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        .log-entry {
+            margin-bottom: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-info { 
+            color: #4CAF50; 
+            border-left-color: #4CAF50;
+        }
+        .log-warn { 
+            color: #FF9800; 
+            background: rgba(255, 152, 0, 0.1); 
+            border-left-color: #FF9800;
+        }
+        .log-error { 
+            color: #F44336; 
+            background: rgba(244, 67, 54, 0.1); 
+            border-left-color: #F44336;
+        }
+        .log-event { 
+            color: #2196F3; 
+            background: rgba(33, 150, 243, 0.1); 
+            border-left-color: #2196F3;
+        }
+        
+        #status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(90deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 13px;
+            color: #ccc;
+            z-index: 1000;
+            border-bottom: 2px solid #4CAF50;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status-item {
+            margin-right: 30px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-item::before {
+            content: "●";
+            margin-right: 8px;
+            color: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .status-value {
+            color: #4CAF50;
+            font-weight: bold;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+        
+        #info-panel {
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            border-left: 3px solid #4CAF50;
+            transition: all 0.2s ease;
+        }
+        
+        .info-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(5px);
+        }
+        
+        .info-label {
+            color: #bbb;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #4CAF50;
+            font-weight: bold;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4CAF50;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #45a049;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a202c, #2d3748);
+            border-left: 2px solid #4a5568;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="status-bar">
+        <div class="status-item">UIKit Components Test - Medical Imaging</div>
+        <div class="status-item">Status: <span class="status-value" id="status-text">Initializing...</span></div>
+        <div class="status-item">WebGL: <span class="status-value" id="webgl-status">Checking...</span></div>
+    </div>
+
+    <div id="container">
+        <div id="canvas-container">
+            <canvas id="gl1"></canvas>
+        </div>
+        
+        <div id="controls-panel">
+            <div class="panel-section">
+                <div class="panel-title">Medical Imaging Controls</div>
+                
+                <div class="control-group">
+                    <label class="control-label">Brightness: <span id="brightness-value">50%</span></label>
+                    <canvas id="brightness-canvas" width="200" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Contrast: <span id="contrast-value">50%</span></label>
+                    <canvas id="contrast-canvas" width="200" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Zoom: <span id="zoom-value">100%</span></label>
+                    <canvas id="zoom-canvas" width="200" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Opacity: <span id="opacity-value">100%</span></label>
+                    <canvas id="opacity-canvas" width="200" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Slice Position: <span id="slice-value">50%</span></label>
+                    <canvas id="slice-canvas" width="200" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="panel-title">View Controls</div>
+                
+                <div class="control-group">
+                    <label class="control-label">Crosshair: <span id="crosshair-status">Enabled</span></label>
+                    <canvas id="crosshair-canvas" width="60" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Colorbar: <span id="colorbar-status">Visible</span></label>
+                    <canvas id="colorbar-canvas" width="60" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Radiological: <span id="radiological-status">Disabled</span></label>
+                    <canvas id="radiological-canvas" width="60" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Interpolation: <span id="interpolation-status">Enabled</span></label>
+                    <canvas id="interpolation-canvas" width="60" height="25" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="panel-title">Advanced Controls</div>
+                
+                <div class="control-group">
+                    <label class="control-label">Colormap Selector</label>
+                    <canvas id="colormap-panel" width="280" height="80" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">View Mode Selector</label>
+                    <canvas id="viewmode-panel" width="280" height="60" style="display: block; margin-top: 5px;"></canvas>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="panel-title">Actions</div>
+                <div class="button-grid">
+                    <div class="button-row">
+                        <div class="button-item">
+                            <label class="button-label">Screenshot</label>
+                            <canvas id="screenshot-btn-canvas" width="140" height="35" style="display: block; margin-top: 5px;"></canvas>
+                        </div>
+                        <div class="button-item">
+                            <label class="button-label">Background</label>
+                            <canvas id="background-btn-canvas" width="140" height="35" style="display: block; margin-top: 5px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="button-row">
+                        <div class="button-item">
+                            <label class="button-label">Logs</label>
+                            <canvas id="logs-btn-canvas" width="140" height="35" style="display: block; margin-top: 5px;"></canvas>
+                        </div>
+                        <div class="button-item">
+                            <label class="button-label">Reset All</label>
+                            <canvas id="reset-btn-canvas" width="140" height="35" style="display: block; margin-top: 5px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Legacy HTML buttons for fallback -->
+                <div class="button-group" style="display: none; margin-top: 10px;">
+                    <button id="reset-btn">Reset All</button>
+                    <button id="save-btn">Save Preset</button>
+                    <button id="load-btn">Load Preset</button>
+                    <button id="test-contrast-btn">Test Contrast Slider</button>
+                </div>
+            </div>
+            
+            <div id="info-panel">
+                <div class="panel-title">Current Parameters</div>
+                <div class="info-row">
+                    <span class="info-label">Brightness:</span>
+                    <span class="info-value" id="info-brightness">50%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Contrast:</span>
+                    <span class="info-value" id="info-contrast">50%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Zoom:</span>
+                    <span class="info-value" id="info-zoom">100%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Opacity:</span>
+                    <span class="info-value" id="info-opacity">100%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Slice Position:</span>
+                    <span class="info-value" id="info-slice">50%</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Crosshair:</span>
+                    <span class="info-value" id="info-crosshair">Enabled</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Colorbar:</span>
+                    <span class="info-value" id="info-colorbar">Visible</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Radiological:</span>
+                    <span class="info-value" id="info-radiological">Disabled</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Interpolation:</span>
+                    <span class="info-value" id="info-interpolation">Enabled</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="log-panel" style="display: none;">
+        <div class="log-entry log-info">UIKit Components Test Started</div>
+        <div class="log-entry log-info">Initializing WebGL context...</div>
+    </div>
+
+    <script type="module">
+        import * as niivue from '../dist/index.js'
+        import { 
+            UIKRenderer, 
+            UIKFont,
+            UIKSlider,
+            UIKToggle,
+            UIKPanel,
+            UIKColormapSelector,
+            UIKViewModeSelector,
+            UIKButton
+        } from '../../uikit/dist/index.es.js'
+
+        // Logging system
+        let logsVisible = false
+        
+        function log(message, type = 'info') {
+            const logPanel = document.getElementById('log-panel')
+            const entry = document.createElement('div')
+            entry.className = `log-entry log-${type}`
+            entry.textContent = `${new Date().toLocaleTimeString()}: ${message}`
+            logPanel.appendChild(entry)
+            logPanel.scrollTop = logPanel.scrollHeight
+            console.log(`[${type.toUpperCase()}] ${message}`)
+        }
+        
+        function toggleLogs() {
+            const logPanel = document.getElementById('log-panel')
+            logsVisible = !logsVisible
+            logPanel.style.display = logsVisible ? 'block' : 'none'
+            
+            if (uikitComponents.logsButton) {
+                uikitComponents.logsButton.setText(logsVisible ? '📋 Hide' : '📋 Logs')
+            }
+            
+            log(`Logs panel ${logsVisible ? 'shown' : 'hidden'}`, 'event')
+        }
+
+        // Status updates
+        function updateStatus(text) {
+            document.getElementById('status-text').textContent = text
+            log(`Status: ${text}`)
+        }
+
+        // Global variables
+        let nv = null
+        let medicalParams = {
+            brightness: 0.5,
+            contrast: 0.5,
+            zoom: 1.0,
+            opacity: 1.0,
+            slice: 0.5,
+            crosshair: true,
+            colorbar: true,
+            radiological: false,
+            interpolation: true,
+            colormap: 'gray',
+            viewMode: 'MultiPlanar'
+        }
+
+        // UIKit component instances
+        let uikitComponents = {
+            brightnessSlider: null,
+            contrastSlider: null,
+            zoomSlider: null,
+            opacitySlider: null,
+            sliceSlider: null,
+            crosshairToggle: null,
+            colorbarToggle: null,
+            radiologicalToggle: null,
+            interpolationToggle: null,
+            colormapSelector: null,
+            viewModeSelector: null,
+            screenshotButton: null,
+            backgroundButton: null,
+            logsButton: null,
+            resetButton: null
+        }
+
+        // Medical imaging state
+        let currentBackground = 'dark' // dark, light
+
+        // Initialize Niivue with medical image
+        async function initializeNiivue() {
+            try {
+                updateStatus('Creating Niivue instance...')
+                
+                // Create Niivue with medical imaging optimized settings
+                nv = new niivue.Niivue({
+                    backColor: [0.1, 0.1, 0.1, 1],
+                    show3Dcrosshair: true,
+                    onLocationChange: handleLocationChange,
+                    dragAndDropEnabled: true
+                })
+                
+                // Configure for medical imaging
+                nv.opts.isColorbar = true
+                nv.setRadiologicalConvention(false)
+                
+                updateStatus('Attaching to canvas...')
+                await nv.attachTo('gl1')
+                
+                // Check WebGL status
+                const gl = nv.gl
+                if (gl) {
+                    document.getElementById('webgl-status').textContent = 'WebGL2 Ready'
+                    log('WebGL2 context created successfully', 'info')
+                } else {
+                    throw new Error('Failed to create WebGL context')
+                }
+                
+                updateStatus('Loading medical image...')
+                
+                // Load a medical brain image (MNI152 template)
+                const volumeList = [{ 
+                    url: '../demos/images/mni152.nii.gz',
+                    colormap: 'gray',
+                    opacity: 1.0,
+                    visible: true
+                }]
+                
+                try {
+                    await nv.loadVolumes(volumeList)
+                    log(`Medical image loaded: ${volumeList[0].url}`, 'info')
+                    log(`Volume dimensions: ${nv.volumes[0].dims}`, 'info')
+                    
+                    // Set optimal view for medical imaging
+                    nv.setSliceType(nv.sliceTypeMultiplanar)
+                    nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                    nv.setRenderAzimuthElevation(120, 10)
+                    
+                    // Set rendering parameters for better visualization
+                    nv.setInterpolation(true) // Smoother display
+                    nv.opts.isColorbar = true
+                    
+                    // Configure slice positions for all three views
+                    nv.scene.sagittalPos = 0.5
+                    nv.scene.coronalPos = 0.5
+                    nv.scene.axialPos = 0.5
+                    
+                    // Update the volume rendering
+                    nv.updateGLVolume()
+                    
+                } catch (imageError) {
+                    log(`Failed to load medical image: ${imageError.message}`, 'error')
+                    log(`Attempted URL: ${volumeList[0].url}`, 'error')
+                    throw new Error(`Medical image loading failed: ${imageError.message}`)
+                }
+                
+                log('Medical image loaded successfully', 'info')
+                updateStatus('Initializing UIKit...')
+                
+                // UIKit components will be created with individual canvases
+                // No need to initialize UIKit on the main Niivue canvas
+                
+                log('UIKit setup ready for individual components', 'info')
+                updateStatus('Creating UI components...')
+                
+                // Wait for layout to be properly calculated before creating components
+                setTimeout(async () => {
+                    // Create UIKit components
+                    await createUIKitComponents()
+                    
+                    updateStatus('Ready - Medical Imaging Interface Active')
+                    log('All systems ready for medical imaging', 'info')
+                }, 200)  // Increased delay for layout calculation
+                
+            } catch (error) {
+                log(`Initialization error: ${error.message}`, 'error')
+                updateStatus('Initialization Failed')
+                document.getElementById('webgl-status').textContent = 'Error'
+            }
+        }
+
+        // Handle location changes in medical image
+        function handleLocationChange(data) {
+            if (data && data.string) {
+                log(`Location: ${data.string}`, 'event')
+            }
+        }
+
+        // Create UIKit components for medical imaging controls
+        async function createUIKitComponents() {
+            try {
+                log('Creating individual UIKit components in sidebar canvases', 'info')
+                
+                // Create brightness slider in its own canvas
+                const brightnessCanvas = document.getElementById('brightness-canvas')
+                const brightnessGL = brightnessCanvas.getContext('webgl2')
+                if (brightnessGL) {
+                    try {
+                        // Set viewport for this canvas
+                        brightnessGL.viewport(0, 0, brightnessCanvas.width, brightnessCanvas.height)
+                        
+                        const brightnessRenderer = new UIKRenderer(brightnessGL)
+                        const brightnessFont = new UIKFont(brightnessGL, [1, 1, 1, 1])
+                        await brightnessFont.loadDefaultFont()
+                        
+                        uikitComponents.brightnessSlider = new UIKSlider(brightnessRenderer, {
+                            bounds: [0, 0, 200, 25], // Match canvas size exactly
+                            value: medicalParams.brightness,
+                            min: 0,
+                            max: 1,
+                            trackColor: [0.8, 0.8, 0.8, 1], // Much lighter gray track
+                            fillColor: [0.0, 0.8, 0.0, 1], // Green theme
+                            thumbColor: [1.0, 1.0, 1.0, 1], // White thumb for maximum visibility
+                            font: brightnessFont,
+                            onValueChange: (value) => {
+                                medicalParams.brightness = value
+                                updateBrightness(value)
+                                document.getElementById('brightness-value').textContent = Math.round(value * 100) + '%'
+                                document.getElementById('info-brightness').textContent = Math.round(value * 100) + '%'
+                                log(`Brightness adjusted to ${Math.round(value * 100)}%`, 'event')
+                            }
+                        })
+                        
+                        log('Brightness slider created successfully', 'info')
+                        
+                        // Add mouse event listeners for brightness slider
+                        addCanvasEventListeners(brightnessCanvas, uikitComponents.brightnessSlider)
+                    } catch (error) {
+                        log(`Failed to create brightness slider: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for brightness canvas', 'error')
+                }
+                
+                // Create contrast slider in its own canvas
+                const contrastCanvas = document.getElementById('contrast-canvas')
+                const contrastGL = contrastCanvas.getContext('webgl2')
+                if (contrastGL) {
+                    try {
+                        // Set viewport for this canvas
+                        contrastGL.viewport(0, 0, contrastCanvas.width, contrastCanvas.height)
+                        
+                        const contrastRenderer = new UIKRenderer(contrastGL)
+                        const contrastFont = new UIKFont(contrastGL, [1, 1, 1, 1])
+                        await contrastFont.loadDefaultFont()
+                        
+                        uikitComponents.contrastSlider = new UIKSlider(contrastRenderer, {
+                            bounds: [0, 0, 200, 25], // Match canvas size exactly
+                            value: medicalParams.contrast,
+                            min: 0,
+                            max: 1,
+                            trackColor: [0.8, 0.8, 0.8, 1], // Much lighter gray track
+                            fillColor: [1.0, 0.6, 0.0, 1], // Orange theme
+                            thumbColor: [1.0, 1.0, 1.0, 1], // White thumb for maximum visibility
+                            font: contrastFont,
+                            onValueChange: (value) => {
+                                medicalParams.contrast = value
+                                updateContrast(value)
+                                document.getElementById('contrast-value').textContent = Math.round(value * 100) + '%'
+                                document.getElementById('info-contrast').textContent = Math.round(value * 100) + '%'
+                                log(`Contrast adjusted to ${Math.round(value * 100)}%`, 'event')
+                            }
+                        })
+                        
+                        log('Contrast slider created successfully', 'info')
+                        
+                        // Add mouse event listeners for contrast slider
+                        addCanvasEventListeners(contrastCanvas, uikitComponents.contrastSlider)
+                    } catch (error) {
+                        log(`Failed to create contrast slider: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for contrast canvas', 'error')
+                }
+                
+                // Create zoom slider in its own canvas
+                const zoomCanvas = document.getElementById('zoom-canvas')
+                const zoomGL = zoomCanvas.getContext('webgl2')
+                if (zoomGL) {
+                    try {
+                        // Set viewport for this canvas
+                        zoomGL.viewport(0, 0, zoomCanvas.width, zoomCanvas.height)
+                        
+                        const zoomRenderer = new UIKRenderer(zoomGL)
+                        const zoomFont = new UIKFont(zoomGL, [1, 1, 1, 1])
+                        await zoomFont.loadDefaultFont()
+                        
+                        uikitComponents.zoomSlider = new UIKSlider(zoomRenderer, {
+                            bounds: [0, 0, 200, 25], // Match canvas size exactly
+                            value: medicalParams.zoom,
+                            min: 0.1,
+                            max: 5.0,
+                            trackColor: [0.8, 0.8, 0.8, 1], // Much lighter gray track
+                            fillColor: [0.0, 0.6, 1.0, 1], // Blue theme
+                            thumbColor: [1.0, 1.0, 1.0, 1], // White thumb for maximum visibility
+                            font: zoomFont,
+                            onValueChange: (value) => {
+                                medicalParams.zoom = value
+                                updateZoom(value)
+                                document.getElementById('zoom-value').textContent = Math.round(value * 100) + '%'
+                                document.getElementById('info-zoom').textContent = Math.round(value * 100) + '%'
+                                log(`Zoom adjusted to ${Math.round(value * 100)}%`, 'event')
+                            }
+                        })
+                        
+                        log('Zoom slider created successfully', 'info')
+                        
+                        // Add mouse event listeners for zoom slider
+                        addCanvasEventListeners(zoomCanvas, uikitComponents.zoomSlider)
+                        
+                        // Debug: Test zoom slider immediately
+                        log(`Zoom slider bounds: [${uikitComponents.zoomSlider.getBounds()}]`, 'debug')
+                        log(`Zoom slider value: ${uikitComponents.zoomSlider.getValue()}`, 'debug')
+                    } catch (error) {
+                        log(`Failed to create zoom slider: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for zoom canvas', 'error')
+                }
+                
+                // Create opacity slider in its own canvas
+                const opacityCanvas = document.getElementById('opacity-canvas')
+                const opacityGL = opacityCanvas.getContext('webgl2')
+                if (opacityGL) {
+                    try {
+                        // Set viewport for this canvas
+                        opacityGL.viewport(0, 0, opacityCanvas.width, opacityCanvas.height)
+                        
+                        const opacityRenderer = new UIKRenderer(opacityGL)
+                        const opacityFont = new UIKFont(opacityGL, [1, 1, 1, 1])
+                        await opacityFont.loadDefaultFont()
+                        
+                        uikitComponents.opacitySlider = new UIKSlider(opacityRenderer, {
+                            bounds: [0, 0, 200, 25], // Match canvas size exactly
+                            value: medicalParams.opacity,
+                            min: 0,
+                            max: 1,
+                            trackColor: [0.8, 0.8, 0.8, 1], // Much lighter gray track
+                            fillColor: [0.8, 0.0, 0.8, 1], // Purple theme
+                            thumbColor: [1.0, 1.0, 1.0, 1], // White thumb for maximum visibility
+                            font: opacityFont,
+                            onValueChange: (value) => {
+                                medicalParams.opacity = value
+                                updateOpacity(value)
+                                document.getElementById('opacity-value').textContent = Math.round(value * 100) + '%'
+                                document.getElementById('info-opacity').textContent = Math.round(value * 100) + '%'
+                                log(`Opacity adjusted to ${Math.round(value * 100)}%`, 'event')
+                            }
+                        })
+                        
+                        log('Opacity slider created successfully', 'info')
+                        
+                        // Add mouse event listeners for opacity slider
+                        addCanvasEventListeners(opacityCanvas, uikitComponents.opacitySlider)
+                        
+                        // Debug: Test opacity slider immediately
+                        log(`Opacity slider bounds: [${uikitComponents.opacitySlider.getBounds()}]`, 'debug')
+                        log(`Opacity slider value: ${uikitComponents.opacitySlider.getValue()}`, 'debug')
+                    } catch (error) {
+                        log(`Failed to create opacity slider: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for opacity canvas', 'error')
+                }
+                
+                // Create slice position slider in its own canvas
+                const sliceCanvas = document.getElementById('slice-canvas')
+                const sliceGL = sliceCanvas.getContext('webgl2')
+                if (sliceGL) {
+                    try {
+                        // Set viewport for this canvas
+                        sliceGL.viewport(0, 0, sliceCanvas.width, sliceCanvas.height)
+                        
+                        const sliceRenderer = new UIKRenderer(sliceGL)
+                        const sliceFont = new UIKFont(sliceGL, [1, 1, 1, 1])
+                        await sliceFont.loadDefaultFont()
+                        
+                        uikitComponents.sliceSlider = new UIKSlider(sliceRenderer, {
+                            bounds: [0, 0, 200, 25], // Match canvas size exactly
+                            value: medicalParams.slice,
+                            min: 0,
+                            max: 1,
+                            trackColor: [0.8, 0.8, 0.8, 1], // Much lighter gray track
+                            fillColor: [1.0, 1.0, 0.0, 1], // Yellow theme
+                            thumbColor: [1.0, 1.0, 1.0, 1], // White thumb for maximum visibility
+                            font: sliceFont,
+                            onValueChange: (value) => {
+                                medicalParams.slice = value
+                                updateSlice(value)
+                                document.getElementById('slice-value').textContent = Math.round(value * 100) + '%'
+                                document.getElementById('info-slice').textContent = Math.round(value * 100) + '%'
+                                log(`Slice position adjusted to ${Math.round(value * 100)}%`, 'event')
+                            }
+                        })
+                        
+                        log('Slice position slider created successfully', 'info')
+                        
+                        // Add mouse event listeners for slice position slider
+                        addCanvasEventListeners(sliceCanvas, uikitComponents.sliceSlider)
+                        
+                        // Debug: Test slice slider immediately
+                        log(`Slice slider bounds: [${uikitComponents.sliceSlider.getBounds()}]`, 'debug')
+                        log(`Slice slider value: ${uikitComponents.sliceSlider.getValue()}`, 'debug')
+                    } catch (error) {
+                        log(`Failed to create slice position slider: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for slice canvas', 'error')
+                }
+                
+                // Create crosshair toggle in its own canvas
+                const crosshairCanvas = document.getElementById('crosshair-canvas')
+                const crosshairGL = crosshairCanvas.getContext('webgl2')
+                if (crosshairGL) {
+                    try {
+                        // Set viewport for this canvas
+                        crosshairGL.viewport(0, 0, crosshairCanvas.width, crosshairCanvas.height)
+                        
+                        const crosshairRenderer = new UIKRenderer(crosshairGL)
+                        const crosshairFont = new UIKFont(crosshairGL, [1, 1, 1, 1])
+                        await crosshairFont.loadDefaultFont()
+                        
+                        uikitComponents.crosshairToggle = new UIKToggle(crosshairRenderer, {
+                            bounds: [0, 0, 60, 25], // Match actual canvas size
+                            checked: medicalParams.crosshair,
+                            type: 'switch',
+                            font: crosshairFont,
+                            onToggle: (checked) => {
+                                medicalParams.crosshair = checked
+                                updateCrosshair(checked)
+                                document.getElementById('crosshair-status').textContent = checked ? 'Enabled' : 'Disabled'
+                                document.getElementById('info-crosshair').textContent = checked ? 'Enabled' : 'Disabled'
+                                log(`Crosshair ${checked ? 'enabled' : 'disabled'}`, 'event')
+                            }
+                        })
+                        
+                        log('Crosshair toggle created successfully', 'info')
+                        
+                        // Add mouse event listeners for crosshair toggle
+                        addCanvasEventListeners(crosshairCanvas, uikitComponents.crosshairToggle)
+                        
+                        // Debug: Test crosshair toggle immediately
+                        log(`Crosshair toggle bounds: [${uikitComponents.crosshairToggle.getBounds()}]`, 'debug')
+                        log(`Crosshair toggle checked: ${uikitComponents.crosshairToggle.isChecked()}`, 'debug')
+                    } catch (error) {
+                        log(`Failed to create crosshair toggle: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for crosshair canvas', 'error')
+                }
+                
+                // Create colorbar toggle in its own canvas
+                const colorbarCanvas = document.getElementById('colorbar-canvas')
+                const colorbarGL = colorbarCanvas.getContext('webgl2')
+                if (colorbarGL) {
+                    try {
+                        // Set viewport for this canvas
+                        colorbarGL.viewport(0, 0, colorbarCanvas.width, colorbarCanvas.height)
+                        
+                        const colorbarRenderer = new UIKRenderer(colorbarGL)
+                        const colorbarFont = new UIKFont(colorbarGL, [1, 1, 1, 1])
+                        await colorbarFont.loadDefaultFont()
+                        
+                        uikitComponents.colorbarToggle = new UIKToggle(colorbarRenderer, {
+                            bounds: [0, 0, 60, 25], // Match actual canvas size
+                            checked: medicalParams.colorbar,
+                            type: 'switch',
+                            font: colorbarFont,
+                            onToggle: (checked) => {
+                                medicalParams.colorbar = checked
+                                updateColorbar(checked)
+                                document.getElementById('colorbar-status').textContent = checked ? 'Visible' : 'Hidden'
+                                document.getElementById('info-colorbar').textContent = checked ? 'Visible' : 'Hidden'
+                                log(`Colorbar ${checked ? 'shown' : 'hidden'}`, 'event')
+                            }
+                        })
+                        
+                        log('Colorbar toggle created successfully', 'info')
+                        
+                        // Add mouse event listeners for colorbar toggle
+                        addCanvasEventListeners(colorbarCanvas, uikitComponents.colorbarToggle)
+                        
+                        // Debug: Test colorbar toggle immediately
+                        log(`Colorbar toggle bounds: [${uikitComponents.colorbarToggle.getBounds()}]`, 'debug')
+                        log(`Colorbar toggle checked: ${uikitComponents.colorbarToggle.isChecked()}`, 'debug')
+                    } catch (error) {
+                        log(`Failed to create colorbar toggle: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for colorbar canvas', 'error')
+                }
+                
+                // Create radiological toggle in its own canvas
+                const radiologicalCanvas = document.getElementById('radiological-canvas')
+                const radiologicalGL = radiologicalCanvas.getContext('webgl2')
+                if (radiologicalGL) {
+                    try {
+                        // Set viewport for this canvas
+                        radiologicalGL.viewport(0, 0, radiologicalCanvas.width, radiologicalCanvas.height)
+                        
+                        const radiologicalRenderer = new UIKRenderer(radiologicalGL)
+                        const radiologicalFont = new UIKFont(radiologicalGL, [1, 1, 1, 1])
+                        await radiologicalFont.loadDefaultFont()
+                        
+                        uikitComponents.radiologicalToggle = new UIKToggle(radiologicalRenderer, {
+                            bounds: [0, 0, 60, 25], // Match actual canvas size
+                            checked: medicalParams.radiological,
+                            type: 'switch',
+                            font: radiologicalFont,
+                            onToggle: (checked) => {
+                                medicalParams.radiological = checked
+                                updateRadiological(checked)
+                                document.getElementById('radiological-status').textContent = checked ? 'Enabled' : 'Disabled'
+                                document.getElementById('info-radiological').textContent = checked ? 'Enabled' : 'Disabled'
+                                log(`Radiological convention ${checked ? 'enabled' : 'disabled'}`, 'event')
+                            }
+                        })
+                        
+                        log('Radiological toggle created successfully', 'info')
+                        
+                        // Add mouse event listeners for radiological toggle
+                        addCanvasEventListeners(radiologicalCanvas, uikitComponents.radiologicalToggle)
+                    } catch (error) {
+                        log(`Failed to create radiological toggle: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for radiological canvas', 'error')
+                }
+                
+                // Create interpolation toggle in its own canvas
+                const interpolationCanvas = document.getElementById('interpolation-canvas')
+                const interpolationGL = interpolationCanvas.getContext('webgl2')
+                if (interpolationGL) {
+                    try {
+                        // Set viewport for this canvas
+                        interpolationGL.viewport(0, 0, interpolationCanvas.width, interpolationCanvas.height)
+                        
+                        const interpolationRenderer = new UIKRenderer(interpolationGL)
+                        const interpolationFont = new UIKFont(interpolationGL, [1, 1, 1, 1])
+                        await interpolationFont.loadDefaultFont()
+                        
+                        uikitComponents.interpolationToggle = new UIKToggle(interpolationRenderer, {
+                            bounds: [0, 0, 60, 25], // Match actual canvas size
+                            checked: medicalParams.interpolation,
+                            type: 'switch',
+                            font: interpolationFont,
+                            onToggle: (checked) => {
+                                medicalParams.interpolation = checked
+                                updateInterpolation(checked)
+                                document.getElementById('interpolation-status').textContent = checked ? 'Enabled' : 'Disabled'
+                                log(`Interpolation ${checked ? 'enabled' : 'disabled'}`, 'event')
+                            }
+                        })
+                        
+                        log('Interpolation toggle created successfully', 'info')
+                        
+                        // Add mouse event listeners for interpolation toggle
+                        addCanvasEventListeners(interpolationCanvas, uikitComponents.interpolationToggle)
+                    } catch (error) {
+                        log(`Failed to create interpolation toggle: ${error.message}`, 'error')
+                    }
+                } else {
+                    log('Failed to get WebGL2 context for interpolation canvas', 'error')
+                }
+                
+                log('All UIKit components successfully embedded in sidebar', 'info')
+                
+                // Create advanced components
+                await createAdvancedComponents()
+                
+            } catch (error) {
+                log(`Failed to create UIKit components: ${error.message}`, 'error')
+                throw error
+            }
+        }
+
+        // Create advanced UIKit components
+        async function createAdvancedComponents() {
+            try {
+                // Create colormap selector
+                const colormapCanvas = document.getElementById('colormap-panel')
+                const colormapGL = colormapCanvas.getContext('webgl2')
+                if (colormapGL) {
+                    const colormapRenderer = new UIKRenderer(colormapGL)
+                    const colormapFont = new UIKFont(colormapGL, [1, 1, 1, 1])
+                    await colormapFont.loadDefaultFont()
+                    
+                    uikitComponents.colormapSelector = new UIKColormapSelector(colormapRenderer, {
+                        bounds: [0, 0, 280, 80], // Match actual canvas size
+                        selectedColormap: medicalParams.colormap,
+                        colormaps: ['gray', 'plasma', 'viridis', 'inferno', 'hot', 'cool'],
+                        font: colormapFont,
+                        onColormapChange: updateColormap
+                    })
+                    
+                    addCanvasEventListeners(colormapCanvas, uikitComponents.colormapSelector)
+                    
+                    colormapGL.clearColor(0.15, 0.15, 0.15, 1.0)
+                    colormapGL.clear(colormapGL.COLOR_BUFFER_BIT)
+                    uikitComponents.colormapSelector.render()
+                    log('Colormap selector created', 'info')
+                }
+                
+                // Create view mode selector
+                const viewModeCanvas = document.getElementById('viewmode-panel')
+                const viewModeGL = viewModeCanvas.getContext('webgl2')
+                if (viewModeGL) {
+                    const viewModeRenderer = new UIKRenderer(viewModeGL)
+                    const viewModeFont = new UIKFont(viewModeGL, [1, 1, 1, 1])
+                    await viewModeFont.loadDefaultFont()
+                    
+                    uikitComponents.viewModeSelector = new UIKViewModeSelector(viewModeRenderer, {
+                        bounds: [0, 0, 280, 60], // Match actual canvas size
+                        selectedMode: medicalParams.viewMode,
+                        modes: ['Axial', 'Sagittal', 'Coronal', 'MultiPlanar'],
+                        font: viewModeFont,
+                        onModeChange: updateViewMode
+                    })
+                    
+                    addCanvasEventListeners(viewModeCanvas, uikitComponents.viewModeSelector)
+                    
+                    viewModeGL.clearColor(0.15, 0.15, 0.15, 1.0)
+                    viewModeGL.clear(viewModeGL.COLOR_BUFFER_BIT)
+                    uikitComponents.viewModeSelector.render()
+                    log('View mode selector created', 'info')
+                }
+                
+                log('Advanced UIKit components created successfully', 'info')
+                
+            } catch (error) {
+                log(`Failed to create advanced components: ${error.message}`, 'error')
+            }
+            
+            // Create UIKit buttons for medical imaging actions
+            try {
+                log('Creating UIKit action buttons', 'info')
+                
+                // Screenshot Button
+                const screenshotCanvas = document.getElementById('screenshot-btn-canvas')
+                const screenshotGL = screenshotCanvas.getContext('webgl2')
+                if (screenshotGL) {
+                    screenshotGL.viewport(0, 0, screenshotCanvas.width, screenshotCanvas.height)
+                    
+                    const screenshotRenderer = new UIKRenderer(screenshotGL)
+                    const screenshotFont = new UIKFont(screenshotGL, [1, 1, 1, 1])
+                    await screenshotFont.loadDefaultFont()
+                    
+                    uikitComponents.screenshotButton = new UIKButton(screenshotRenderer, {
+                        bounds: [0, 0, 140, 35],
+                        text: '📷 Save',
+                        font: screenshotFont,
+                        onClick: () => {
+                            if (nv) {
+                                nv.saveScene('MedicalImage_' + new Date().toISOString().slice(0,19).replace(/:/g, '-') + '.png')
+                                log('Screenshot saved successfully', 'info')
+                            }
+                        },
+                        style: {
+                            backgroundColor: [0.15, 0.6, 0.95, 1.0],
+                            hoverColor: [0.2, 0.7, 1.0, 1.0],
+                            activeColor: [0.1, 0.5, 0.85, 1.0],
+                            borderColor: [0.3, 0.8, 1.0, 1.0],
+                            textColor: [1, 1, 1, 1],
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            padding: [14, 8],
+                            shadowColor: [0, 0, 0, 0.3],
+                            shadowOffset: [0, 2]
+                        }
+                    })
+                    
+                    addCanvasEventListeners(screenshotCanvas, uikitComponents.screenshotButton)
+                    log('Screenshot button created', 'info')
+                }
+                
+                // Background Toggle Button
+                const backgroundCanvas = document.getElementById('background-btn-canvas')
+                const backgroundGL = backgroundCanvas.getContext('webgl2')
+                if (backgroundGL) {
+                    backgroundGL.viewport(0, 0, backgroundCanvas.width, backgroundCanvas.height)
+                    
+                    const backgroundRenderer = new UIKRenderer(backgroundGL)
+                    const backgroundFont = new UIKFont(backgroundGL, [1, 1, 1, 1])
+                    await backgroundFont.loadDefaultFont()
+                    
+                    uikitComponents.backgroundButton = new UIKButton(backgroundRenderer, {
+                        bounds: [0, 0, 140, 35],
+                        text: '🌙 Dark',
+                        font: backgroundFont,
+                        onClick: () => {
+                            if (nv) {
+                                if (currentBackground === 'dark') {
+                                    nv.opts.backColor = [1, 1, 1, 1] // White background
+                                    currentBackground = 'light'
+                                    uikitComponents.backgroundButton.setText('☀️ Light')
+                                } else {
+                                    nv.opts.backColor = [0.1, 0.1, 0.1, 1] // Dark background
+                                    currentBackground = 'dark'
+                                    uikitComponents.backgroundButton.setText('🌙 Dark')
+                                }
+                                nv.drawScene()
+                                log(`Background changed to ${currentBackground}`, 'event')
+                            }
+                        },
+                        style: {
+                            backgroundColor: [0.6, 0.3, 0.9, 1.0],
+                            hoverColor: [0.7, 0.4, 1.0, 1.0],
+                            activeColor: [0.5, 0.2, 0.8, 1.0],
+                            borderColor: [0.8, 0.5, 1.0, 1.0],
+                            textColor: [1, 1, 1, 1],
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            padding: [14, 8],
+                            shadowColor: [0, 0, 0, 0.3],
+                            shadowOffset: [0, 2]
+                        }
+                    })
+                    
+                    addCanvasEventListeners(backgroundCanvas, uikitComponents.backgroundButton)
+                    log('Background button created', 'info')
+                }
+                
+                // Logs Button
+                const logsCanvas = document.getElementById('logs-btn-canvas')
+                const logsGL = logsCanvas.getContext('webgl2')
+                if (logsGL) {
+                    logsGL.viewport(0, 0, logsCanvas.width, logsCanvas.height)
+                    
+                    const logsRenderer = new UIKRenderer(logsGL)
+                    const logsFont = new UIKFont(logsGL, [1, 1, 1, 1])
+                    await logsFont.loadDefaultFont()
+                    
+                    uikitComponents.logsButton = new UIKButton(logsRenderer, {
+                        bounds: [0, 0, 140, 35],
+                        text: '📋 Logs',
+                        font: logsFont,
+                        onClick: () => {
+                            toggleLogs()
+                        },
+                        style: {
+                            backgroundColor: [0.95, 0.6, 0.2, 1.0],
+                            hoverColor: [1.0, 0.7, 0.3, 1.0],
+                            activeColor: [0.85, 0.5, 0.15, 1.0],
+                            borderColor: [1.0, 0.8, 0.4, 1.0],
+                            textColor: [1, 1, 1, 1],
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            padding: [14, 8],
+                            shadowColor: [0, 0, 0, 0.3],
+                            shadowOffset: [0, 2]
+                        }
+                    })
+                    
+                    addCanvasEventListeners(logsCanvas, uikitComponents.logsButton)
+                    log('Logs button created', 'info')
+                }
+                
+                // Reset All Button
+                const resetCanvas = document.getElementById('reset-btn-canvas')
+                const resetGL = resetCanvas.getContext('webgl2')
+                if (resetGL) {
+                    resetGL.viewport(0, 0, resetCanvas.width, resetCanvas.height)
+                    
+                    const resetRenderer = new UIKRenderer(resetGL)
+                    const resetFont = new UIKFont(resetGL, [1, 1, 1, 1])
+                    await resetFont.loadDefaultFont()
+                    
+                    uikitComponents.resetButton = new UIKButton(resetRenderer, {
+                        bounds: [0, 0, 140, 35],
+                        text: '🔄 Reset',
+                        font: resetFont,
+                        onClick: () => {
+                            // Trigger the same reset functionality as the HTML button
+                            document.getElementById('reset-btn').click()
+                        },
+                        style: {
+                            backgroundColor: [0.9, 0.3, 0.3, 1.0],
+                            hoverColor: [1.0, 0.4, 0.4, 1.0],
+                            activeColor: [0.8, 0.2, 0.2, 1.0],
+                            borderColor: [1.0, 0.5, 0.5, 1.0],
+                            textColor: [1, 1, 1, 1],
+                            borderWidth: 1,
+                            borderRadius: 3,
+                            padding: [14, 8],
+                            shadowColor: [0, 0, 0, 0.3],
+                            shadowOffset: [0, 2]
+                        }
+                    })
+                    
+                    addCanvasEventListeners(resetCanvas, uikitComponents.resetButton)
+                    log('Reset button created', 'info')
+                }
+                
+                log('All UIKit action buttons created successfully', 'info')
+                
+            } catch (error) {
+                log(`Failed to create action buttons: ${error.message}`, 'error')
+            }
+        }
+
+        // Add event listeners to canvas for UIKit component interaction
+        function addCanvasEventListeners(canvas, component) {
+            function createMouseEvent(originalEvent, eventType) {
+                // Create a comprehensive mock MouseEvent object for components that expect it
+                const rect = canvas.getBoundingClientRect()
+                return {
+                    type: eventType,
+                    offsetX: originalEvent.clientX - rect.left,
+                    offsetY: originalEvent.clientY - rect.top,
+                    clientX: originalEvent.clientX,
+                    clientY: originalEvent.clientY,
+                    button: originalEvent.button || 0,
+                    buttons: originalEvent.buttons || 0,
+                    target: canvas,
+                    currentTarget: canvas,
+                    preventDefault: () => originalEvent.preventDefault(),
+                    stopPropagation: () => originalEvent.stopPropagation()
+                }
+            }
+            
+            // Unified event handling for all components
+            canvas.addEventListener('mousedown', (event) => {
+                if (component.handleMouseEvent) {
+                    const mockEvent = createMouseEvent(event, 'mousedown')
+                    component.handleMouseEvent(mockEvent)
+                }
+            })
+            
+            canvas.addEventListener('mousemove', (event) => {
+                if (component.handleMouseEvent) {
+                    const mockEvent = createMouseEvent(event, 'mousemove')
+                    component.handleMouseEvent(mockEvent)
+                }
+            })
+            
+            canvas.addEventListener('mouseup', (event) => {
+                if (component.handleMouseEvent) {
+                    const mockEvent = createMouseEvent(event, 'mouseup')
+                    component.handleMouseEvent(mockEvent)
+                }
+            })
+            
+            canvas.addEventListener('mouseleave', (event) => {
+                if (component.handleMouseEvent) {
+                    const mockEvent = createMouseEvent(event, 'mouseleave')
+                    component.handleMouseEvent(mockEvent)
+                }
+            })
+
+            canvas.addEventListener('click', (event) => {
+                if (component.handleMouseEvent) {
+                    const mockEvent = createMouseEvent(event, 'click')
+                    component.handleMouseEvent(mockEvent)
+                }
+            })
+            
+            // Add cursor styling for interactivity
+            canvas.style.cursor = 'pointer'
+        }
+
+        // Medical imaging parameter update functions
+        function updateBrightness(value) {
+            medicalParams.brightness = value
+            if (nv && nv.volumes.length > 0) {
+                // Apply brightness to medical image
+                // FIXED: Invert the relationship so higher values = brighter image
+                // Higher slider value should result in lower cal_min (brighter)
+                // Map slider 0-1 to cal_min range 100-0 (inverted)
+                nv.volumes[0].cal_min = (1 - value) * 100
+                nv.updateGLVolume()
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            document.getElementById('brightness-value').textContent = `${Math.round(value * 100)}%`
+            document.getElementById('info-brightness').textContent = `${Math.round(value * 100)}%`
+            log(`Brightness adjusted to ${Math.round(value * 100)}% (cal_min: ${Math.round((1 - value) * 100)})`, 'event')
+        }
+
+        function updateContrast(value) {
+            medicalParams.contrast = value
+            if (nv && nv.volumes.length > 0) {
+                // Apply contrast to medical image
+                // FIXED: Improve contrast mapping for better medical imaging
+                // Map slider 0-1 to a more appropriate contrast range
+                // Lower values = lower contrast (wider window), higher values = higher contrast (narrower window)
+                const baseMax = 100 + ((1 - value) * 200) // Inverted: lower slider = higher cal_max = lower contrast
+                nv.volumes[0].cal_max = baseMax
+                nv.updateGLVolume()
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            document.getElementById('contrast-value').textContent = `${Math.round(value * 100)}%`
+            document.getElementById('info-contrast').textContent = `${Math.round(value * 100)}%`
+            log(`Contrast adjusted to ${Math.round(value * 100)}% (cal_max: ${Math.round(100 + ((1 - value) * 200))})`, 'event')
+        }
+
+        function updateZoom(value) {
+            medicalParams.zoom = value
+            if (nv) {
+                // Apply zoom to medical image view
+                nv.scene.volScaleMultiplier = value
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            document.getElementById('zoom-value').textContent = `${Math.round(value * 100)}%`
+            document.getElementById('info-zoom').textContent = `${Math.round(value * 100)}%`
+            log(`Zoom adjusted to ${Math.round(value * 100)}%`, 'event')
+        }
+
+        function updateOpacity(value) {
+            medicalParams.opacity = value
+            if (nv && nv.volumes.length > 0) {
+                // Apply opacity to medical image
+                nv.volumes[0].opacity = value
+                nv.updateGLVolume()
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            document.getElementById('opacity-value').textContent = `${Math.round(value * 100)}%`
+            document.getElementById('info-opacity').textContent = `${Math.round(value * 100)}%`
+            log(`Opacity adjusted to ${Math.round(value * 100)}%`, 'event')
+        }
+
+        function updateSlice(value) {
+            medicalParams.slice = value
+            if (nv) {
+                // Apply slice position to medical image
+                nv.scene.sagittalPos = value
+                nv.scene.coronalPos = value
+                nv.scene.axialPos = value
+                nv.updateGLVolume()
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            document.getElementById('slice-value').textContent = `${Math.round(value * 100)}%`
+            document.getElementById('info-slice').textContent = `${Math.round(value * 100)}%`
+            log(`Slice position adjusted to ${Math.round(value * 100)}%`, 'event')
+        }
+
+        function updateCrosshair(checked) {
+            medicalParams.crosshair = checked
+            if (nv) {
+                nv.opts.show3Dcrosshair = checked
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            const status = checked ? 'Enabled' : 'Disabled'
+            document.getElementById('crosshair-status').textContent = status
+            document.getElementById('info-crosshair').textContent = status
+            log(`Crosshair ${status.toLowerCase()}`, 'event')
+        }
+
+        function updateColorbar(checked) {
+            medicalParams.colorbar = checked
+            if (nv) {
+                nv.opts.isColorbar = checked
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            const status = checked ? 'Visible' : 'Hidden'
+            document.getElementById('colorbar-status').textContent = status
+            document.getElementById('info-colorbar').textContent = status
+            log(`Colorbar ${status.toLowerCase()}`, 'event')
+        }
+
+        function updateRadiological(checked) {
+            medicalParams.radiological = checked
+            if (nv) {
+                nv.setRadiologicalConvention(checked)
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            const status = checked ? 'Enabled' : 'Disabled'
+            document.getElementById('radiological-status').textContent = status
+            document.getElementById('info-radiological').textContent = status
+            log(`Radiological ${status.toLowerCase()}`, 'event')
+        }
+
+        function updateInterpolation(checked) {
+            medicalParams.interpolation = checked
+            if (nv) {
+                nv.setInterpolation(checked)
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            const status = checked ? 'Enabled' : 'Disabled'
+            document.getElementById('interpolation-status').textContent = status
+            document.getElementById('info-interpolation').textContent = status
+            log(`Interpolation ${status.toLowerCase()}`, 'event')
+        }
+
+        function updateColormap(colormap) {
+            medicalParams.colormap = colormap
+            if (nv) {
+                // Apply colormap to medical image
+                nv.volumes[0].colormap = colormap
+                nv.updateGLVolume()
+                nv.drawScene()
+            }
+            
+            // Update UI displays
+            document.getElementById('colormap-panel').style.backgroundColor = colormap
+            log(`Colormap changed to ${colormap}`, 'event')
+        }
+
+        function updateViewMode(mode) {
+            medicalParams.viewMode = mode
+            if (nv) {
+                // Apply view mode to medical image using correct Niivue constants
+                let sliceType
+                switch (mode) {
+                    case 'Axial':
+                        sliceType = nv.sliceTypeAxial
+                        break
+                    case 'Coronal':
+                        sliceType = nv.sliceTypeCoronal
+                        break
+                    case 'Sagittal':
+                        sliceType = nv.sliceTypeSagittal
+                        break
+                    case 'Render':
+                        sliceType = nv.sliceTypeRender
+                        break
+                    case 'MultiPlanar':
+                        sliceType = nv.sliceTypeMultiplanar
+                        nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
+                        break
+                    case 'MultiPlanarRender':
+                        sliceType = nv.sliceTypeMultiplanar
+                        nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                        break
+                    default:
+                        sliceType = nv.sliceTypeMultiplanar
+                        nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                }
+                
+                nv.setSliceType(sliceType)
+                nv.drawScene()
+                
+                log(`View mode applied: ${mode} (sliceType: ${sliceType})`, 'debug')
+            }
+            
+            // Update UI displays
+            document.getElementById('viewmode-panel').style.backgroundColor = mode
+            log(`View mode changed to ${mode}`, 'event')
+        }
+
+        // Handle mouse events for UIKit components
+        function handleMouseEvents(event) {
+            if (!nv || !nv.ui) return
+
+            let handled = false
+            
+            // Check each component for mouse interaction
+            for (const [name, component] of Object.entries(uikitComponents)) {
+                if (component && component.handleMouseEvent) {
+                    if (component.handleMouseEvent(event)) {
+                        handled = true
+                        break
+                    }
+                }
+            }
+            
+            if (handled) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+        }
+
+        // Render loop for UIKit components
+        function renderUIKitComponents() {
+            Object.entries(uikitComponents).forEach(([name, component]) => {
+                if (!component) return
+
+                // Map component names to actual canvas IDs
+                let canvasId
+                switch (name) {
+                    case 'brightnessSlider':
+                        canvasId = 'brightness-canvas'
+                        break
+                    case 'contrastSlider':
+                        canvasId = 'contrast-canvas'
+                        break
+                    case 'zoomSlider':
+                        canvasId = 'zoom-canvas'
+                        break
+                    case 'opacitySlider':
+                        canvasId = 'opacity-canvas'
+                        break
+                    case 'sliceSlider':
+                        canvasId = 'slice-canvas'
+                        break
+                    case 'crosshairToggle':
+                        canvasId = 'crosshair-canvas'
+                        break
+                    case 'colorbarToggle':
+                        canvasId = 'colorbar-canvas'
+                        break
+                    case 'radiologicalToggle':
+                        canvasId = 'radiological-canvas'
+                        break
+                    case 'interpolationToggle':
+                        canvasId = 'interpolation-canvas'
+                        break
+                    case 'colormapSelector':
+                        canvasId = 'colormap-panel'
+                        break
+                    case 'viewModeSelector':
+                        canvasId = 'viewmode-panel'
+                        break
+                    case 'screenshotButton':
+                        canvasId = 'screenshot-btn-canvas'
+                        break
+                    case 'backgroundButton':
+                        canvasId = 'background-btn-canvas'
+                        break
+                    case 'logsButton':
+                        canvasId = 'logs-btn-canvas'
+                        break
+                    case 'resetButton':
+                        canvasId = 'reset-btn-canvas'
+                        break
+                    default:
+                        console.warn(`Unknown component: ${name}`)
+                        return
+                }
+
+                const canvas = document.getElementById(canvasId)
+                if (!canvas) {
+                    console.warn(`Canvas not found for component ${name} with id ${canvasId}`)
+                    return
+                }
+
+                const gl = canvas.getContext('webgl2')
+                if (!gl) return
+
+                // *** THIS IS THE CRITICAL FIX ***
+                // Set the viewport for each canvas on every frame
+                gl.viewport(0, 0, canvas.width, canvas.height)
+                
+                // Set a clear color and clear the buffer
+                gl.clearColor(0.15, 0.18, 0.22, 1.0) // Dark slate color
+                gl.clear(gl.COLOR_BUFFER_BIT)
+
+                // Update component state (e.g., animations)
+                if (typeof component.update === 'function') {
+                    component.update()
+                }
+
+                // Render the component
+                component.render()
+            })
+        }
+
+        // DEBUG: Simple test function to render just the contrast slider
+        function testContrastSliderOnly() {
+            const contrastCanvas = document.getElementById('contrast-canvas')
+            if (!contrastCanvas) {
+                console.error('Contrast canvas not found!')
+                return
+            }
+            
+            const gl = contrastCanvas.getContext('webgl2')
+            if (!gl) {
+                console.error('WebGL2 context not available!')
+                return
+            }
+            
+            console.log('Canvas dimensions:', contrastCanvas.width, 'x', contrastCanvas.height)
+            console.log('WebGL viewport:', gl.getParameter(gl.VIEWPORT))
+            
+            // Set viewport and clear
+            gl.viewport(0, 0, contrastCanvas.width, contrastCanvas.height)
+            gl.clearColor(1.0, 0.0, 0.0, 1.0) // Red background for testing
+            gl.clear(gl.COLOR_BUFFER_BIT)
+            
+            // Try to get the contrast slider component
+            const contrastSlider = uikitComponents.contrastSlider
+            if (!contrastSlider) {
+                console.error('Contrast slider component not found!')
+                return
+            }
+            
+            console.log('Contrast slider found, attempting to render...')
+            console.log('Slider bounds:', contrastSlider.getBounds())
+            console.log('Slider value:', contrastSlider.getValue())
+            
+            try {
+                contrastSlider.render()
+                console.log('Contrast slider rendered successfully!')
+            } catch (error) {
+                console.error('Error rendering contrast slider:', error)
+            }
+        }
+
+        // Main render loop
+        function renderLoop() {
+            if (nv) {
+                // Render Niivue scene first
+                nv.drawScene()
+                
+                // Render UIKit components in their individual canvases
+                renderUIKitComponents()
+            }
+            
+            requestAnimationFrame(renderLoop)
+        }
+
+        // Button event handlers
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            // Reset to exact initial state
+            const initialParams = {
+                brightness: 0.5,
+                contrast: 0.5,
+                zoom: 1.0,
+                opacity: 1.0,
+                slice: 0.5,
+                crosshair: true,
+                colorbar: true,
+                radiological: false,
+                interpolation: true,
+                colormap: 'gray',
+                viewMode: 'MultiPlanar'
+            }
+            
+            // Update medicalParams
+            Object.assign(medicalParams, initialParams)
+            
+            // Reset all Niivue settings to initial state
+            if (nv) {
+                // Reset view mode
+                nv.setSliceType(nv.sliceTypeMultiplanar)
+                nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                
+                // Reset volume properties
+                if (nv.volumes.length > 0) {
+                    // FIXED: Use corrected formulas to maintain same visual appearance
+                    nv.volumes[0].cal_min = (1 - initialParams.brightness) * 100  // Inverted for brightness
+                    nv.volumes[0].cal_max = 100 + ((1 - initialParams.contrast) * 200)  // Inverted for contrast
+                    nv.volumes[0].opacity = initialParams.opacity
+                    nv.volumes[0].colormap = initialParams.colormap
+                }
+                
+                // Reset scene properties
+                nv.scene.volScaleMultiplier = initialParams.zoom
+                nv.scene.sagittalPos = initialParams.slice
+                nv.scene.coronalPos = initialParams.slice
+                nv.scene.axialPos = initialParams.slice
+                
+                // Reset display options
+                nv.opts.show3Dcrosshair = initialParams.crosshair
+                nv.opts.isColorbar = initialParams.colorbar
+                nv.setRadiologicalConvention(initialParams.radiological)
+                nv.setInterpolation(initialParams.interpolation)
+                
+                // Update display
+                nv.updateGLVolume()
+                nv.drawScene()
+            }
+            
+            // Update all component values
+            if (uikitComponents.brightnessSlider) uikitComponents.brightnessSlider.setValue(initialParams.brightness)
+            if (uikitComponents.contrastSlider) uikitComponents.contrastSlider.setValue(initialParams.contrast)
+            if (uikitComponents.zoomSlider) uikitComponents.zoomSlider.setValue(initialParams.zoom)
+            if (uikitComponents.opacitySlider) uikitComponents.opacitySlider.setValue(initialParams.opacity)
+            if (uikitComponents.sliceSlider) uikitComponents.sliceSlider.setValue(initialParams.slice)
+            if (uikitComponents.crosshairToggle) uikitComponents.crosshairToggle.setChecked(initialParams.crosshair)
+            if (uikitComponents.colorbarToggle) uikitComponents.colorbarToggle.setChecked(initialParams.colorbar)
+            if (uikitComponents.radiologicalToggle) uikitComponents.radiologicalToggle.setChecked(initialParams.radiological)
+            if (uikitComponents.interpolationToggle) uikitComponents.interpolationToggle.setChecked(initialParams.interpolation)
+            if (uikitComponents.viewModeSelector) uikitComponents.viewModeSelector.setSelectedMode(initialParams.viewMode)
+            
+            // Update all UI text displays
+            document.getElementById('brightness-value').textContent = Math.round(initialParams.brightness * 100) + '%'
+            document.getElementById('contrast-value').textContent = Math.round(initialParams.contrast * 100) + '%'
+            document.getElementById('zoom-value').textContent = Math.round(initialParams.zoom * 100) + '%'
+            document.getElementById('opacity-value').textContent = Math.round(initialParams.opacity * 100) + '%'
+            document.getElementById('slice-value').textContent = Math.round(initialParams.slice * 100) + '%'
+            document.getElementById('crosshair-status').textContent = initialParams.crosshair ? 'Enabled' : 'Disabled'
+            document.getElementById('colorbar-status').textContent = initialParams.colorbar ? 'Visible' : 'Hidden'
+            document.getElementById('radiological-status').textContent = initialParams.radiological ? 'Enabled' : 'Disabled'
+            document.getElementById('interpolation-status').textContent = initialParams.interpolation ? 'Enabled' : 'Disabled'
+            
+            // Update info panel
+            document.getElementById('info-brightness').textContent = Math.round(initialParams.brightness * 100) + '%'
+            document.getElementById('info-contrast').textContent = Math.round(initialParams.contrast * 100) + '%'
+            document.getElementById('info-zoom').textContent = Math.round(initialParams.zoom * 100) + '%'
+            document.getElementById('info-opacity').textContent = Math.round(initialParams.opacity * 100) + '%'
+            document.getElementById('info-slice').textContent = Math.round(initialParams.slice * 100) + '%'
+            document.getElementById('info-crosshair').textContent = initialParams.crosshair ? 'Enabled' : 'Disabled'
+            document.getElementById('info-colorbar').textContent = initialParams.colorbar ? 'Visible' : 'Hidden'
+            document.getElementById('info-radiological').textContent = initialParams.radiological ? 'Enabled' : 'Disabled'
+            document.getElementById('info-interpolation').textContent = initialParams.interpolation ? 'Enabled' : 'Disabled'
+            
+            log('All parameters reset to initial defaults', 'info')
+        })
+
+        document.getElementById('save-btn').addEventListener('click', () => {
+            localStorage.setItem('medicalImagingPreset', JSON.stringify(medicalParams))
+            log('Preset saved to local storage', 'info')
+        })
+
+        document.getElementById('load-btn').addEventListener('click', () => {
+            const saved = localStorage.getItem('medicalImagingPreset')
+            if (saved) {
+                const params = JSON.parse(saved)
+                Object.assign(medicalParams, params)
+                
+                // Update all components
+                if (uikitComponents.brightnessSlider) uikitComponents.brightnessSlider.setValue(params.brightness)
+                if (uikitComponents.contrastSlider) uikitComponents.contrastSlider.setValue(params.contrast)
+                if (uikitComponents.zoomSlider) uikitComponents.zoomSlider.setValue(params.zoom)
+                if (uikitComponents.opacitySlider) uikitComponents.opacitySlider.setValue(params.opacity)
+                if (uikitComponents.sliceSlider) uikitComponents.sliceSlider.setValue(params.slice)
+                if (uikitComponents.crosshairToggle) uikitComponents.crosshairToggle.setChecked(params.crosshair)
+                if (uikitComponents.colorbarToggle) uikitComponents.colorbarToggle.setChecked(params.colorbar)
+                if (uikitComponents.radiologicalToggle) uikitComponents.radiologicalToggle.setChecked(params.radiological)
+                if (uikitComponents.interpolationToggle) uikitComponents.interpolationToggle.setChecked(params.interpolation)
+                if (uikitComponents.colormapSelector) uikitComponents.colormapSelector.setSelectedColormap(params.colormap)
+                if (uikitComponents.viewModeSelector) uikitComponents.viewModeSelector.setSelectedMode(params.viewMode)
+                
+                log('Preset loaded from local storage', 'info')
+            } else {
+                log('No saved preset found', 'warn')
+            }
+        })
+
+        // Test button for debugging contrast slider
+        document.getElementById('test-contrast-btn').addEventListener('click', () => {
+            log('Testing contrast slider rendering...', 'info')
+            testContrastSliderOnly()
+        })
+
+        // Set up mouse event handling
+        const canvas = document.getElementById('gl1')
+        canvas.addEventListener('mousedown', handleMouseEvents)
+        canvas.addEventListener('mousemove', handleMouseEvents)
+        canvas.addEventListener('mouseup', handleMouseEvents)
+
+        // Initialize everything
+        window.addEventListener('load', async () => {
+            log('Page loaded, starting initialization...', 'info')
+            await initializeNiivue()
+            renderLoop()
+            
+            // Test contrast slider after a short delay
+            setTimeout(() => {
+                log('Running automatic contrast slider test...', 'info')
+                testContrastSliderOnly()
+            }, 2000)
+        })
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (nv) {
+                nv.resizeListener()
+                // Reposition UIKit components if needed
+                log('Window resized, adjusting layout', 'info')
+            }
+        })
+
+    </script>
+</body>
+</html> 

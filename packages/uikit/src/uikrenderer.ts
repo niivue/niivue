@@ -20,74 +20,33 @@ import { UIKFont } from "./assets/uikfont.js"
 
 export class UIKRenderer {
   private gl: WebGL2RenderingContext
-  protected static lineShader: UIKShader
-  protected static circleShader: UIKShader
-  protected static rectShader: UIKShader
-  protected static roundedRectShader: UIKShader
-  protected static triangleShader: UIKShader
-  protected static rotatedFontShader: UIKShader
-  protected static colorbarShader: UIKShader
-  protected static projectedLineShader: UIKShader
-  protected static ellipticalFillShader: UIKShader
-  protected static genericVAO: WebGLVertexArrayObject
-  protected static triangleVertexBuffer: WebGLBuffer
+  private lineShader: UIKShader
+  private circleShader: UIKShader
+  private rectShader: UIKShader
+  private roundedRectShader: UIKShader
+  private triangleShader: UIKShader
+  private rotatedFontShader: UIKShader
+  private colorbarShader: UIKShader
+  private projectedLineShader: UIKShader
+  private ellipticalFillShader: UIKShader
+  private genericVAO: WebGLVertexArrayObject
+  private triangleVertexBuffer: WebGLBuffer
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
+    
+    // Create shaders for this specific WebGL context
+    this.lineShader = new UIKShader(gl, lineVert, solidColorFrag)
+    this.rectShader = new UIKShader(gl, rectVert, solidColorFrag)
+    this.roundedRectShader = new UIKShader(gl, rectVert, roundedRectFrag)
+    this.circleShader = new UIKShader(gl, circleVert, circleFrag)
+    this.triangleShader = new UIKShader(gl, triangleVert, triangleFrag)
+    this.rotatedFontShader = new UIKShader(gl, rotatedFontVert, rotatedFontFrag)
+    this.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
+    this.projectedLineShader = new UIKShader(gl, projectedLineVert, solidColorFrag)
+    this.ellipticalFillShader = new UIKShader(gl, ellipseVert, ellipseFrag)
 
-    if (!UIKRenderer.lineShader) {
-      UIKRenderer.lineShader = new UIKShader(gl, lineVert, solidColorFrag)
-    }
-
-    if (!UIKRenderer.rectShader) {
-      UIKRenderer.rectShader = new UIKShader(gl, rectVert, solidColorFrag)
-    }
-
-    if (!UIKRenderer.roundedRectShader) {
-      UIKRenderer.roundedRectShader = new UIKShader(
-        gl,
-        rectVert,
-        roundedRectFrag
-      )
-    }
-
-    if (!UIKRenderer.circleShader) {
-      UIKRenderer.circleShader = new UIKShader(gl, circleVert, circleFrag)
-    }
-
-    if (!UIKRenderer.triangleShader) {
-      UIKRenderer.triangleShader = new UIKShader(gl, triangleVert, triangleFrag)
-    }
-
-    if (!UIKRenderer.rotatedFontShader) {
-      UIKRenderer.rotatedFontShader = new UIKShader(
-        gl,
-        rotatedFontVert,
-        rotatedFontFrag
-      )
-    }
-
-    if (!UIKRenderer.colorbarShader) {
-      UIKRenderer.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
-    }
-
-    if (!UIKRenderer.projectedLineShader) {
-      UIKRenderer.projectedLineShader = new UIKShader(
-        gl,
-        projectedLineVert,
-        solidColorFrag
-      )
-    }
-
-    if (!UIKRenderer.ellipticalFillShader) {
-      UIKRenderer.ellipticalFillShader = new UIKShader(
-        gl,
-        ellipseVert,
-        ellipseFrag
-      )
-    }
-
-    if (!UIKRenderer.genericVAO) {
+    // Create VAO for this specific WebGL context
       const rectStrip = [
         1,
         1,
@@ -142,14 +101,12 @@ export class UIKRenderer {
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0)
 
       gl.bindVertexArray(null) // Unbind VAO when done
+      
+    this.genericVAO = vao
 
-      UIKRenderer.genericVAO = vao
-    }
-
-    if (!UIKRenderer.triangleVertexBuffer) {
-      // Create a static vertex buffer
-      UIKRenderer.triangleVertexBuffer = this.gl.createBuffer() as WebGLBuffer
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.triangleVertexBuffer)
+    // Create triangle vertex buffer for this specific WebGL context
+    this.triangleVertexBuffer = this.gl.createBuffer() as WebGLBuffer
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.triangleVertexBuffer)
 
       // Allocate space for 3 vertices (triangle), each with 2 components (x, y)
       const initialVertices = new Float32Array(6)
@@ -161,7 +118,6 @@ export class UIKRenderer {
       gl.bindVertexArray(null) // Unbind VAO when done
       // Unbind the buffer to prevent accidental modification
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
-    }
   }
 
   private setup2D() {
@@ -209,11 +165,11 @@ export class UIKRenderer {
     const webglBaseMidY = 1 - (bmp[1] / canvas.height) * 2
 
     // Ensure the vertex buffer is defined
-    if (!UIKRenderer.triangleVertexBuffer) {
-      console.error("Vertex buffer is not defined at draw time")
+    if (!this.triangleVertexBuffer) {
+      console.error('Vertex buffer is not defined at draw time')
       return
     }
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.triangleVertexBuffer)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.triangleVertexBuffer)
 
     // Calculate left and right base vertices
     const directionX = webglHeadX - webglBaseMidX
@@ -240,33 +196,22 @@ export class UIKRenderer {
 
     this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, vertices)
     // Use the shader program
-    UIKRenderer.triangleShader.use(this.gl)
+    this.triangleShader.use(this.gl)
 
     // Bind the position attribute
-    const positionLocation = UIKRenderer.triangleShader.uniforms
-      .a_position as GLuint
+    const positionLocation = this.triangleShader.uniforms.a_position as GLuint
     this.gl.enableVertexAttribArray(positionLocation)
     this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0)
 
     // Set u_antialiasing in pixels and canvas size in pixels
-    this.gl.uniform1f(
-      UIKRenderer.triangleShader.uniforms.u_antialiasing,
-      baseLength * 0.01
-    ) // Example proportion
-    this.gl.uniform2f(
-      UIKRenderer.triangleShader.uniforms.u_canvasSize,
-      canvas.width,
-      canvas.height
-    )
+    this.gl.uniform1f(this.triangleShader.uniforms.u_antialiasing, baseLength * 0.01) // Example proportion
+    this.gl.uniform2f(this.triangleShader.uniforms.u_canvasSize, canvas.width, canvas.height)
 
     // Set the color uniform
-    this.gl.uniform4fv(
-      UIKRenderer.triangleShader.uniforms.u_color,
-      color as Float32List
-    )
+    this.gl.uniform4fv(this.triangleShader.uniforms.u_color, color as Float32List)
 
     // Set z value
-    this.gl.uniform1f(UIKRenderer.triangleShader.uniforms.u_z, z)
+    this.gl.uniform1f(this.triangleShader.uniforms.u_z, z)
 
     // Draw the triangle
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
@@ -292,17 +237,14 @@ export class UIKRenderer {
     fillPercent?: number
     z?: number
   }): void {
-    if (!UIKRenderer.circleShader) {
-      throw new Error("circleShader undefined")
+    if (!this.circleShader) {
+      throw new Error('circleShader undefined')
     }
 
-    UIKRenderer.circleShader.use(this.gl)
+    this.circleShader.use(this.gl)
     this.setup2D()
-    this.gl.uniform4fv(
-      UIKRenderer.circleShader.uniforms.circleColor,
-      circleColor as Float32List
-    )
-    this.gl.uniform2fv(UIKRenderer.circleShader.uniforms.canvasWidthHeight, [
+    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor as Float32List)
+    this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [
       this.gl.canvas.width,
       this.gl.canvas.height,
     ])
@@ -316,16 +258,10 @@ export class UIKRenderer {
         )
       : leftTopWidthHeight
 
-    this.gl.uniform4fv(
-      UIKRenderer.circleShader.uniforms.leftTopWidthHeight,
-      rectParams as Float32List
-    )
-    this.gl.uniform1f(
-      UIKRenderer.circleShader.uniforms.fillPercent,
-      fillPercent
-    )
-    this.gl.uniform1f(UIKRenderer.circleShader.uniforms.z, z)
-    this.gl.bindVertexArray(UIKRenderer.genericVAO)
+    this.gl.uniform4fv(this.circleShader.uniforms.leftTopWidthHeight, rectParams as Float32List)
+    this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent)
+    this.gl.uniform1f(this.circleShader.uniforms.z, z)
+    this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null) // Unbind to avoid side effects
   }
@@ -450,20 +386,14 @@ export class UIKRenderer {
     } else {
       // Draw solid line if no dash/dot style specified
       const shortenedLine = vec4.fromValues(startX, startY, endX, endY)
-      UIKRenderer.lineShader.use(gl)
+      this.lineShader.use(gl)
       gl.enable(gl.BLEND)
-      gl.uniform4fv(
-        UIKRenderer.lineShader.uniforms.lineColor,
-        color as Float32List
-      )
-      gl.uniform2fv(UIKRenderer.lineShader.uniforms.canvasWidthHeight, [
-        gl.canvas.width,
-        gl.canvas.height,
-      ])
-      gl.uniform1f(UIKRenderer.lineShader.uniforms.thickness, thickness)
-      gl.uniform4fv(UIKRenderer.lineShader.uniforms.startXYendXY, shortenedLine)
+      gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
+      gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+      gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+      gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine)
 
-      gl.bindVertexArray(UIKRenderer.genericVAO)
+      gl.bindVertexArray(this.genericVAO)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       gl.bindVertexArray(null) // Unbind to avoid side effects
     }
@@ -521,16 +451,13 @@ export class UIKRenderer {
   }): void {
     const { segmentCoords, thickness, color } = config
     const gl = this.gl
-    this.setup2D()
-    UIKRenderer.lineShader.use(gl)
-    gl.uniform4fv(
-      UIKRenderer.lineShader.uniforms.lineColor,
-      color as Float32List
-    )
-    gl.uniform1f(UIKRenderer.lineShader.uniforms.thickness, thickness)
-    gl.uniform4fv(UIKRenderer.lineShader.uniforms.startXYendXY, segmentCoords)
 
-    gl.bindVertexArray(UIKRenderer.genericVAO)
+    this.lineShader.use(gl)
+    gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
+    gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentCoords)
+
+    gl.bindVertexArray(this.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(null) // Unbind to avoid side effects
   }
@@ -544,7 +471,7 @@ export class UIKRenderer {
     thickness = 10
   }: RoundedRectConfig): void {
     const gl = this.gl
-    const shader = UIKRenderer.roundedRectShader
+    const shader = this.roundedRectShader
     if (!shader) throw new Error('roundedRectShader undefined')
 
     shader.use(gl)
@@ -574,7 +501,7 @@ export class UIKRenderer {
     gl.uniform4fv(shader.uniforms.leftTopWidthHeight, rectParams as Float32List)
 
     // draw
-    gl.bindVertexArray(UIKRenderer.genericVAO)
+    gl.bindVertexArray(this.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(null)
   }
@@ -615,12 +542,12 @@ export class UIKRenderer {
       return
     }
 
-    if (!UIKRenderer.rotatedFontShader) {
-      throw new Error("rotatedFontShader undefined")
+    if (!this.rotatedFontShader) {
+      throw new Error('rotatedTextShader undefined')
     }
 
     const gl = this.gl
-    const shader = UIKRenderer.rotatedFontShader
+    const shader = this.rotatedFontShader
 
     // Bind the font texture
     gl.activeTexture(gl.TEXTURE0)
@@ -657,8 +584,8 @@ export class UIKRenderer {
     )
     gl.uniform1f(shader.uniforms.screenPxRange, screenPxRange)
 
-    // Bind VAO
-    gl.bindVertexArray(UIKRenderer.genericVAO)
+    // Bind VAO for generic rectangle
+    gl.bindVertexArray(this.genericVAO)
 
     // Set orthographic projection matrix
     const orthoMatrix = mat4.create()
