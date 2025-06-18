@@ -529,7 +529,7 @@
     </div>
 
     <script type="module">
-        import * as niivue from '../dist/index.js'
+        import * as niivue from '../niivue/dist/index.js'
         import { 
             UIKRenderer, 
             UIKFont,
@@ -539,7 +539,7 @@
             UIKColormapSelector,
             UIKViewModeSelector,
             UIKButton
-        } from '../../uikit/dist/index.es.js'
+        } from '../uikit/dist/index.es.js'
 
         // Logging system
         let logsVisible = false
@@ -643,7 +643,7 @@
                 
                 // Load a medical brain image (MNI152 template)
                 const volumeList = [{ 
-                    url: '../demos/images/mni152.nii.gz',
+                    url: '../niivue/demos/images/mni152.nii.gz',
                     colormap: 'gray',
                     opacity: 1.0,
                     visible: true

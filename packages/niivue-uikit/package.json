@@ -1,0 +1,42 @@
+{
+  "name": "@niivue/niivue-uikit",
+  "version": "0.1.0",
+  "description": "Medical imaging demo showcasing NIIvue with UIKit components",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "index.html"
+  ],
+  "scripts": {
+    "dev": "vite --open",
+    "build": "vite build && tsc --project tsconfig.json",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "medical-imaging",
+    "neuroimaging",
+    "webgl",
+    "ui-components",
+    "niivue"
+  ],
+  "author": "NIIvue Team",
+  "license": "BSD-2-Clause",
+  "type": "module",
+  "dependencies": {
+    "@niivue/niivue": "file:../niivue",
+    "@niivue/uikit": "file:../uikit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  }
+} 
