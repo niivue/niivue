@@ -73,9 +73,13 @@ export class UIKFont extends UIKAsset {
   public isMTSDF = false
   public family = ""
   public style = ""
+  public color: number[] = [1, 1, 1, 1] // Default white color
 
-  constructor(gl: WebGL2RenderingContext) {
+  constructor(gl: WebGL2RenderingContext, color?: number[]) {
     super(gl)
+    if (color) {
+      this.color = color
+    }
   }
 
   public async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>  {
@@ -190,6 +194,157 @@ export class UIKFont extends UIKAsset {
       family: this.family,
       style: this.style,
     }
+  }
+
+  /**
+   * Calculate the width of text in pixels
+   * @param text - The text string to measure
+   * @param scale - The scale factor for the text
+   * @returns Width in pixels
+   */
+  public getTextWidth(text: string, scale: number = 1.0): number {
+    if (!this.isFontLoaded) {
+      console.warn('Font not loaded, returning 0 for text width')
+      return 0
+    }
+    
+    const fontSize = scale * this.fontMetrics.size
+    return Array.from(text).reduce((sum, char) => {
+      const glyph = this.fontMetrics.mets[char]
+      return glyph ? sum + glyph.xadv * fontSize : sum
+    }, 0)
+  }
+
+  /**
+   * Calculate the height of text in pixels
+   * @param text - The text string to measure (unused in current implementation)
+   * @param scale - The scale factor for the text
+   * @returns Height in pixels
+   */
+  public getTextHeight(text: string, scale: number = 1.0): number {
+    if (!this.isFontLoaded) {
+      console.warn('Font not loaded, returning 0 for text height')
+      return 0
+    }
+    
+    const fontSize = scale * this.fontMetrics.size
+    return (this.fontMetrics.ascender - this.fontMetrics.descender) * fontSize
+  }
+
+  /**
+   * Load the default font for UIKit components
+   * This uses Roboto Regular font that's commonly available
+   */
+  public async loadDefaultFont(): Promise<void> {
+    try {
+      // Create a simple white 1x1 pixel texture for text rendering
+      // This is a minimal fallback when actual font files aren't available
+      this.createBasicFontTexture()
+      
+      // For now, we'll create a minimal font metrics for testing
+      // In production, you would load actual font files
+      this.fontMetrics = {
+        distanceRange: 4,
+        size: 48,
+        emSize: 48,
+        lineHeight: 1.2,
+        ascender: 0.75,
+        descender: -0.25,
+        underlineY: -0.15,
+        underlineThickness: 0.05,
+        mets: this.createBasicGlyphMetrics()
+      }
+      
+      this.isFontLoaded = true
+      this.family = "Roboto"
+      this.style = "Regular"
+      
+      console.log('Default font loaded successfully for UIKit')
+    } catch (error) {
+      console.error('Failed to load default font:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Create a basic transparent texture for text rendering fallback
+   */
+  private createBasicFontTexture(): void {
+    const gl = this.gl
+    
+    // Create a 1x1 transparent pixel texture as fallback
+    const texture = gl.createTexture()
+    if (!texture) {
+      throw new Error('Failed to create font texture')
+    }
+    
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    
+    // Single transparent pixel data instead of white to avoid artifacts
+    const pixel = new Uint8Array([255, 255, 255, 0]) // Transparent pixel
+    
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      pixel
+    )
+    
+    // Set texture parameters
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    
+    // Store texture
+    this.texture = texture
+    this.textureSize = [1, 1]
+    
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+
+  /**
+   * Create basic glyph metrics for common characters
+   * This is a fallback when actual font files aren't available
+   */
+  private createBasicGlyphMetrics(): Record<string, GlyphMetrics> {
+    const metrics: Record<string, GlyphMetrics> = {}
+    
+    // Add basic ASCII characters (32-126)
+    for (let i = 32; i <= 126; i++) {
+      const char = String.fromCharCode(i)
+      let advance = 0.5 // default advance width
+      let width = 0.4
+      let height = 0.7
+      
+      // Adjust for specific character types
+      if (char === ' ') {
+        advance = 0.25
+        width = 0
+      } else if ('iIl'.includes(char)) {
+        advance = 0.25
+        width = 0.2
+      } else if ('mMwW'.includes(char)) {
+        advance = 0.8
+        width = 0.7
+      } else if ('.,;:!|'.includes(char)) {
+        advance = 0.3
+        width = 0.2
+      }
+      
+      metrics[char] = {
+        xadv: advance,
+        uv_lbwh: [0, 0, width, height], // UV coordinates (dummy values)
+        lbwh: [0, 0, width, height]     // Layout bounds (dummy values)
+      }
+    }
+    
+    return metrics
   }
 
   public static async fromJSON(

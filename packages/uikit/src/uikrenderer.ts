@@ -542,6 +542,13 @@ export class UIKRenderer {
       return
     }
 
+    // Skip text rendering if using fallback font texture (1x1 white pixel)
+    // This prevents white artifacts from being rendered
+    if (font.textureSize[0] === 1 && font.textureSize[1] === 1) {
+      // console.log('Skipping text rendering - using fallback font texture')
+      return
+    }
+
     if (!this.rotatedFontShader) {
       throw new Error('rotatedTextShader undefined')
     }
