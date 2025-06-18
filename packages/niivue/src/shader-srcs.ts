@@ -502,7 +502,7 @@ export const fragRenderGradientShader =
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-			int gradIdx = int(grad.a * 255.0);
+			int gradIdx = int(grad.a * ${gradientOpacityLutCount}.0);
 			colorSample.a *= gradientOpacity[gradIdx];
 			float lightNormDot = dot(grad.rgb, rayDir);
 			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
