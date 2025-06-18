@@ -1,19 +1,19 @@
-import { UIKRenderer } from './uikrenderer.js'
-import { UIKFont } from './assets/uikfont.js'
-import { LineTerminator, LineStyle, Vec2 } from './types.js'
-import defaultFontPNG from './fonts/Roboto-Regular.png'
-import defaultFontJSON from './fonts/Roboto-Regular.json' assert { type: 'json' }
+import { UIKRenderer } from "./uikrenderer.js"
+import { UIKFont } from "./assets/uikfont.js"
+import { LineTerminator, LineStyle, Vec2 } from "./types.js"
+import defaultFontPNG from "./fonts/Roboto-Regular.png"
+import defaultFontJSON from "./fonts/Roboto-Regular.json" assert { type: "json" }
 
-window.addEventListener('load', async () => {
-  const canvas = document.getElementById('uikCanvas') as HTMLCanvasElement
+window.addEventListener("load", async () => {
+  const canvas = document.getElementById("uikCanvas") as HTMLCanvasElement
   if (!canvas) {
     console.error('Cannot find <canvas id="uikCanvas"> in document.')
     return
   }
 
-  const gl = canvas.getContext('webgl2')
+  const gl = canvas.getContext("webgl2")
   if (!gl) {
-    alert('WebGL2 is not supported by your browser.')
+    alert("WebGL2 is not supported by your browser.")
     return
   }
 
@@ -24,19 +24,16 @@ window.addEventListener('load', async () => {
   // 👉 Load and use UIKFont to draw text and ruler
   const font = new UIKFont(gl)
   const fontTexture = await font.loadFontTexture(defaultFontPNG)
-  if(!fontTexture) {
+  if (!fontTexture) {
     throw new Error(`texture not loaded from ${defaultFontPNG}`)
   }
   font.loadFromRawData(defaultFontJSON)
-
- 
-  
 
   renderer.drawCircle({
     leftTopWidthHeight: [50, 50, 200, 200],
     circleColor: [0.1, 0.8, 0.1, 1],
     fillPercent: 1.0,
-    z: 0
+    z: 0,
   })
 
   renderer.drawLine({
@@ -44,7 +41,7 @@ window.addEventListener('load', async () => {
     thickness: 4,
     color: [1, 0, 0, 1],
     terminator: LineTerminator.NONE,
-    style: LineStyle.SOLID
+    style: LineStyle.SOLID,
   })
 
   renderer.drawTriangle({
@@ -52,7 +49,7 @@ window.addEventListener('load', async () => {
     baseMidPoint: [500, 500],
     baseLength: 150,
     color: [0, 0.2, 1, 1],
-    z: 0
+    z: 0,
   })
 
   renderer.drawLine({
@@ -61,36 +58,45 @@ window.addEventListener('load', async () => {
     color: [0, 0, 0, 1],
     terminator: LineTerminator.ARROW,
     style: LineStyle.DASHED,
-    dashDotLength: 20
+    dashDotLength: 20,
   })
 
-   // Draw a ruler between two points
+  // Draw a ruler between two points
   const pointA: Vec2 = [150, 600]
   const pointB: Vec2 = [650, 250]
   renderer.drawRuler({
     pointA,
     pointB,
     length: 42.68,
-    units: 'mm',
+    units: "mm",
     font,
     textColor: [0.1, 0.1, 0.1, 1],
     lineColor: [0.2, 0.2, 0.2, 1],
     lineThickness: 2,
     offset: 40,
-    scale: 0.03
+    scale: 0.03,
   })
 
   // Draw rotated text
   renderer.drawRotatedText({
     font,
     xy: [300, 100],
-    str: 'Rotated Text',
+    str: "Rotated Text",
     scale: 0.03,
     color: [0.2, 0.2, 0.2, 1],
-    rotation: Math.PI / 8
+    rotation: Math.PI / 8,
   })
 
-  
+  // demo: draw a rounded rect at pixel (100,100) sized 250×150
+  renderer.drawRoundedRect({
+    bounds: [200, 50, 450, 150],
+    fillColor: [0.2, 0.6, 1, 0.5], // semi‐transparent blue
+    bottomColor: [0.1, 0.1, 0.3, 0.7], // darker at bottom
+    outlineColor: [0, 0, 0, 1], // solid black border
+    cornerRadius: 20, // px
+    thickness: 8, // outline thickness
+  })
+
   // gl.enable(gl.DEPTH_TEST);                     // turn depth-testing back on (if you ever need it)
   // gl.enable(gl.CULL_FACE);                      // restore face-culling (if you ever had it)
   // gl.disable(gl.BLEND);                         // turn off blending

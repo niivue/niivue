@@ -15,7 +15,7 @@ import triangleVert from "./shaders/vert/triangle.vert.glsl"
 import triangleFrag from "./shaders/frag/triangle.frag.glsl"
 import rotatedFontVert from "./shaders/vert/rotated-font.vert.glsl"
 import rotatedFontFrag from "./shaders/frag/rotated-font.frag.glsl"
-import { Vec4, Color, LineTerminator, LineStyle, Vec2 } from "./types.js"
+import { Vec4, Color, LineTerminator, LineStyle, Vec2, RoundedRectConfig } from "./types.js"
 import { UIKFont } from "./assets/uikfont.js"
 
 export class UIKRenderer {
@@ -533,6 +533,50 @@ export class UIKRenderer {
     gl.bindVertexArray(UIKRenderer.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(null) // Unbind to avoid side effects
+  }
+
+  public drawRoundedRect({
+    bounds,
+    fillColor,
+    outlineColor,
+    bottomColor = fillColor,
+    cornerRadius = -1,
+    thickness = 10
+  }: RoundedRectConfig): void {
+    const gl = this.gl
+    const shader = UIKRenderer.roundedRectShader
+    if (!shader) throw new Error('roundedRectShader undefined')
+
+    shader.use(gl)
+
+    // enable blending for smooth corners
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    // decide radius
+    const radius = cornerRadius === -1 ? thickness * 2 : cornerRadius
+
+    // convert bounds to vec4
+    const rectParams = Array.isArray(bounds)
+      ? vec4.fromValues(bounds[0], bounds[1], bounds[2], bounds[3])
+      : bounds
+
+    // set uniforms
+    gl.uniform1f(shader.uniforms.thickness, thickness)
+    gl.uniform1f(shader.uniforms.cornerRadius, radius)
+    gl.uniform4fv(shader.uniforms.borderColor, outlineColor as Float32List)
+    gl.uniform4fv(shader.uniforms.topColor, fillColor as Float32List)
+    gl.uniform4fv(shader.uniforms.bottomColor, bottomColor as Float32List)
+    gl.uniform2fv(shader.uniforms.canvasWidthHeight, [
+      (gl.canvas as HTMLCanvasElement).width,
+      (gl.canvas as HTMLCanvasElement).height
+    ])
+    gl.uniform4fv(shader.uniforms.leftTopWidthHeight, rectParams as Float32List)
+
+    // draw
+    gl.bindVertexArray(UIKRenderer.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.bindVertexArray(null)
   }
 
   /**
