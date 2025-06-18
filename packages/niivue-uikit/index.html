@@ -640,9 +640,9 @@
                 
                 updateStatus('Loading medical image...')
                 
-                // Load a medical brain image (MNI152 template)
+                // Try to load a medical brain image (MNI152 template)
                 const volumeList = [{ 
-                    url: '../niivue/demos/images/mni152.nii.gz',
+                    url: 'https://niivue.github.io/niivue-demo-images/mni152.nii.gz',
                     colormap: 'gray',
                     opacity: 1.0,
                     visible: true
@@ -673,7 +673,13 @@
                 } catch (imageError) {
                     log(`Failed to load medical image: ${imageError.message}`, 'error')
                     log(`Attempted URL: ${volumeList[0].url}`, 'error')
-                    throw new Error(`Medical image loading failed: ${imageError.message}`)
+                    log('Creating demo without medical image - UIKit components will still work', 'warn')
+                    
+                    // Set up basic view even without image
+                    nv.setSliceType(nv.sliceTypeMultiplanar)
+                    nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                    
+                    updateStatus('Demo Ready - Drag and drop a NIfTI file to test')
                 }
                 
                 log('Medical image loaded successfully', 'info')
@@ -1383,7 +1389,7 @@
         // Medical imaging parameter update functions
         function updateBrightness(value) {
             medicalParams.brightness = value
-            if (nv && nv.volumes.length > 0) {
+            if (nv && nv.volumes && nv.volumes.length > 0) {
                 // Apply brightness to medical image
                 // FIXED: Invert the relationship so higher values = brighter image
                 // Higher slider value should result in lower cal_min (brighter)
@@ -1391,12 +1397,14 @@
                 nv.volumes[0].cal_min = (1 - value) * 100
                 nv.updateGLVolume()
                 nv.drawScene()
+                log(`Brightness adjusted to ${Math.round(value * 100)}% (cal_min: ${Math.round((1 - value) * 100)})`, 'event')
+            } else {
+                log(`Brightness setting stored: ${Math.round(value * 100)}% (will apply when image is loaded)`, 'event')
             }
             
             // Update UI displays
             document.getElementById('brightness-value').textContent = `${Math.round(value * 100)}%`
             document.getElementById('info-brightness').textContent = `${Math.round(value * 100)}%`
-            log(`Brightness adjusted to ${Math.round(value * 100)}% (cal_min: ${Math.round((1 - value) * 100)})`, 'event')
         }
 
         function updateContrast(value) {
