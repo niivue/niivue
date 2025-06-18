@@ -477,7 +477,6 @@
                     <button id="reset-btn">Reset All</button>
                     <button id="save-btn">Save Preset</button>
                     <button id="load-btn">Load Preset</button>
-                    <button id="test-contrast-btn">Test Contrast Slider</button>
                 </div>
             </div>
             
@@ -1684,46 +1683,7 @@
             })
         }
 
-        // DEBUG: Simple test function to render just the contrast slider
-        function testContrastSliderOnly() {
-            const contrastCanvas = document.getElementById('contrast-canvas')
-            if (!contrastCanvas) {
-                console.error('Contrast canvas not found!')
-                return
-            }
-            
-            const gl = contrastCanvas.getContext('webgl2')
-            if (!gl) {
-                console.error('WebGL2 context not available!')
-                return
-            }
-            
-            console.log('Canvas dimensions:', contrastCanvas.width, 'x', contrastCanvas.height)
-            console.log('WebGL viewport:', gl.getParameter(gl.VIEWPORT))
-            
-            // Set viewport and clear
-            gl.viewport(0, 0, contrastCanvas.width, contrastCanvas.height)
-            gl.clearColor(1.0, 0.0, 0.0, 1.0) // Red background for testing
-            gl.clear(gl.COLOR_BUFFER_BIT)
-            
-            // Try to get the contrast slider component
-            const contrastSlider = uikitComponents.contrastSlider
-            if (!contrastSlider) {
-                console.error('Contrast slider component not found!')
-                return
-            }
-            
-            console.log('Contrast slider found, attempting to render...')
-            console.log('Slider bounds:', contrastSlider.getBounds())
-            console.log('Slider value:', contrastSlider.getValue())
-            
-            try {
-                contrastSlider.render()
-                console.log('Contrast slider rendered successfully!')
-            } catch (error) {
-                console.error('Error rendering contrast slider:', error)
-            }
-        }
+
 
         // Main render loop
         function renderLoop() {
@@ -1857,11 +1817,7 @@
             }
         })
 
-        // Test button for debugging contrast slider
-        document.getElementById('test-contrast-btn').addEventListener('click', () => {
-            log('Testing contrast slider rendering...', 'info')
-            testContrastSliderOnly()
-        })
+
 
         // Set up mouse event handling
         const canvas = document.getElementById('gl1')
@@ -1874,12 +1830,6 @@
             log('Page loaded, starting initialization...', 'info')
             await initializeNiivue()
             renderLoop()
-            
-            // Test contrast slider after a short delay
-            setTimeout(() => {
-                log('Running automatic contrast slider test...', 'info')
-                testContrastSliderOnly()
-            }, 2000)
         })
 
         // Handle window resize
