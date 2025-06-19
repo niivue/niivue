@@ -9,33 +9,44 @@ uniform vec4 outlineColor;
 uniform float screenPxRange;
 uniform float outlineThickness;
 uniform vec2 canvasWidthHeight;
+uniform bool isMTSDF; // ← Add toggle for MTSDF vs MSDF
 
 in vec2 vUV;
 out vec4 color;
 
 float median(float r, float g, float b) {
-    return max(min(r, g), min(max(r, g), b));
+  return max(min(r, g), min(max(r, g), b));
+}
+
+// Signed distance for MTSDF
+float screenDistanceFromMTSDF(vec3 msdf) {
+  vec3 v = msdf * 2.0 - 1.0; // Normalize to [-1, 1]
+  return length(v) * sign(median(msdf.r, msdf.g, msdf.b) - 0.5);
+}
+
+// Signed distance for MSDF
+float screenDistanceFromMSDF(vec3 msdf) {
+  return screenPxRange * (median(msdf.r, msdf.g, msdf.b) - 0.5);
 }
 
 void main() {
-    vec3 msd = texture(fontTexture, vUV).rgb;
-    float sd = median(msd.r, msd.g, msd.b);
-    
-    // Convert outline thickness from pixels to normalized device coordinates (NDC)
-    float outlineThicknessNDC = outlineThickness / max(canvasWidthHeight.x, canvasWidthHeight.y);
-    float screenPxDistance = screenPxRange * (sd - 0.5);
+  vec3 msdf = texture(fontTexture, vUV).rgb;
 
-    // Calculate the glyph visibility
-    float glyphAlpha = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+  float sd = isMTSDF
+    ? screenDistanceFromMTSDF(msdf)
+    : screenDistanceFromMSDF(msdf);
 
-    // Calculate the outline visibility with sharp fall-off
-    float outlineEdgeStart = -outlineThicknessNDC;
-    float outlineEdgeEnd = 0.0;
-    float outlineAlpha = smoothstep(outlineEdgeStart - 0.01, outlineEdgeEnd + 0.01, screenPxDistance) * (1.0 - glyphAlpha);
+  float outlineThicknessNDC = outlineThickness / max(canvasWidthHeight.x, canvasWidthHeight.y);
+  float screenPxDistance = isMTSDF ? screenPxRange * sd : sd;
 
-    // Combine the colors
-    vec3 finalColor = mix(outlineColor.rgb, fontColor.rgb, glyphAlpha);
-    float finalAlpha = max(outlineAlpha * outlineColor.a, glyphAlpha * fontColor.a);
+  float glyphAlpha = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 
-    color = vec4(finalColor, finalAlpha);
+  float outlineEdgeStart = -outlineThicknessNDC;
+  float outlineEdgeEnd = 0.0;
+  float outlineAlpha = smoothstep(outlineEdgeStart - 0.01, outlineEdgeEnd + 0.01, screenPxDistance) * (1.0 - glyphAlpha);
+
+  vec3 finalColor = mix(outlineColor.rgb, fontColor.rgb, glyphAlpha);
+  float finalAlpha = max(outlineAlpha * outlineColor.a, glyphAlpha * fontColor.a);
+
+  color = vec4(finalColor, finalAlpha);
 }

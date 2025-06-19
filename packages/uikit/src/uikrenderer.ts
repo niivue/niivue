@@ -1,82 +1,65 @@
-import { mat4, vec2, vec4 } from 'gl-matrix'
-import { UIKShader } from './uikshader.js'
-import circleVert from './shaders/vert/circle.vert.glsl'
-import circleFrag from './shaders/frag/circle.frag.glsl'
-import colorbarVert from './shaders/vert/colorbar.vert.glsl'
-import colorbarFrag from './shaders/frag/colorbar.frag.glsl'
-import ellipseVert from './shaders/vert/elliptical-fill.vert.glsl'
-import ellipseFrag from './shaders/frag/elliptical-fill.frag.glsl'
-import lineVert from './shaders/vert/line.vert.glsl'
-import projectedLineVert from './shaders/vert/projected-line.vert.glsl'
-import rectVert from './shaders/vert/rect.vert.glsl'
-import solidColorFrag from './shaders/frag/solid-color.frag.glsl'
-import roundedRectFrag from './shaders/frag/rounded-rect.frag.glsl'
-import triangleVert from './shaders/vert/triangle.vert.glsl'
-import triangleFrag from './shaders/frag/triangle.frag.glsl'
-import rotatedFontVert from './shaders/vert/rotated-font.vert.glsl'
-import rotatedFontFrag from './shaders/frag/rotated-font.frag.glsl'
-import { Vec4, Color, LineTerminator, LineStyle, Vec2 } from './types.js'
-import { UIKFont } from './assets/uikfont.js'
+import { mat4, vec2, vec4 } from "gl-matrix"
+import { UIKShader } from "./uikshader.js"
+import circleVert from "./shaders/vert/circle.vert.glsl"
+import circleFrag from "./shaders/frag/circle.frag.glsl"
+import colorbarVert from "./shaders/vert/colorbar.vert.glsl"
+import colorbarFrag from "./shaders/frag/colorbar.frag.glsl"
+import ellipseVert from "./shaders/vert/elliptical-fill.vert.glsl"
+import ellipseFrag from "./shaders/frag/elliptical-fill.frag.glsl"
+import lineVert from "./shaders/vert/line.vert.glsl"
+import projectedLineVert from "./shaders/vert/projected-line.vert.glsl"
+import rectVert from "./shaders/vert/rect.vert.glsl"
+import solidColorFrag from "./shaders/frag/solid-color.frag.glsl"
+import roundedRectFrag from "./shaders/frag/rounded-rect.frag.glsl"
+import triangleVert from "./shaders/vert/triangle.vert.glsl"
+import triangleFrag from "./shaders/frag/triangle.frag.glsl"
+import rotatedFontVert from "./shaders/vert/rotated-font.vert.glsl"
+import rotatedFontFrag from "./shaders/frag/rotated-font.frag.glsl"
+import { Vec4, Color, LineTerminator, LineStyle, Vec2, RoundedRectConfig } from "./types.js"
+import { UIKFont } from "./assets/uikfont.js"
 
 export class UIKRenderer {
   private gl: WebGL2RenderingContext
-  protected static lineShader: UIKShader
-  protected static circleShader: UIKShader
-  protected static rectShader: UIKShader
-  protected static roundedRectShader: UIKShader
-  protected static triangleShader: UIKShader
-  protected static rotatedFontShader: UIKShader
-  protected static colorbarShader: UIKShader
-  protected static projectedLineShader: UIKShader
-  protected static ellipticalFillShader: UIKShader
-  protected static genericVAO: WebGLVertexArrayObject
-  protected static triangleVertexBuffer: WebGLBuffer
+  private lineShader: UIKShader
+  private circleShader: UIKShader
+  private rectShader: UIKShader
+  private roundedRectShader: UIKShader
+  private triangleShader: UIKShader
+  private rotatedFontShader: UIKShader
+  private colorbarShader: UIKShader
+  private projectedLineShader: UIKShader
+  private ellipticalFillShader: UIKShader
+  private genericVAO: WebGLVertexArrayObject
+  private triangleVertexBuffer: WebGLBuffer
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
     
-    if(!UIKRenderer.lineShader) {
-      UIKRenderer.lineShader = new UIKShader(gl, lineVert, solidColorFrag)
-    }
+    // Create shaders for this specific WebGL context
+    this.lineShader = new UIKShader(gl, lineVert, solidColorFrag)
+    this.rectShader = new UIKShader(gl, rectVert, solidColorFrag)
+    this.roundedRectShader = new UIKShader(gl, rectVert, roundedRectFrag)
+    this.circleShader = new UIKShader(gl, circleVert, circleFrag)
+    this.triangleShader = new UIKShader(gl, triangleVert, triangleFrag)
+    this.rotatedFontShader = new UIKShader(gl, rotatedFontVert, rotatedFontFrag)
+    this.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
+    this.projectedLineShader = new UIKShader(gl, projectedLineVert, solidColorFrag)
+    this.ellipticalFillShader = new UIKShader(gl, ellipseVert, ellipseFrag)
 
-    if (!UIKRenderer.rectShader) {
-      UIKRenderer.rectShader = new UIKShader(gl, rectVert, solidColorFrag)
-    }
-
-    if (!UIKRenderer.roundedRectShader) {
-      UIKRenderer.roundedRectShader = new UIKShader(gl, rectVert, roundedRectFrag)
-    }
-
-    if (!UIKRenderer.circleShader) {
-      UIKRenderer.circleShader = new UIKShader(gl, circleVert, circleFrag)
-    }
-
-    if (!UIKRenderer.triangleShader) {
-      UIKRenderer.triangleShader = new UIKShader(gl, triangleVert, triangleFrag)
-    }
-
-    if (!UIKRenderer.rotatedFontShader) {
-      UIKRenderer.rotatedFontShader = new UIKShader(gl, rotatedFontVert, rotatedFontFrag)
-    }
-
-    if (!UIKRenderer.colorbarShader) {
-      UIKRenderer.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
-    }
-
-    if (!UIKRenderer.projectedLineShader) {
-      UIKRenderer.projectedLineShader = new UIKShader(gl, projectedLineVert, solidColorFrag)
-    }
-
-    if (!UIKRenderer.ellipticalFillShader) {
-      UIKRenderer.ellipticalFillShader = new UIKShader(gl, ellipseVert, ellipseFrag)
-    }
-
-    if (!UIKRenderer.genericVAO) {
+    // Create VAO for this specific WebGL context
       const rectStrip = [
-        1, 1, 0, // Top-right
-        1, 0, 0, // Bottom-right
-        0, 1, 0, // Top-left
-        0, 0, 0  // Bottom-left
+        1,
+        1,
+        0, // Top-right
+        1,
+        0,
+        0, // Bottom-right
+        0,
+        1,
+        0, // Top-left
+        0,
+        0,
+        0, // Bottom-left
       ]
       const vao = gl.createVertexArray()!
       const vbo = gl.createBuffer()!
@@ -85,7 +68,11 @@ export class UIKRenderer {
 
       // Setup position VBO
       gl.bindBuffer(gl.ARRAY_BUFFER, vbo)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rectStrip), gl.STATIC_DRAW)
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(rectStrip),
+        gl.STATIC_DRAW
+      )
       gl.enableVertexAttribArray(0)
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
 
@@ -98,12 +85,16 @@ export class UIKRenderer {
         0.0,
         1.0, // Top-left
         0.0,
-        0.0 // Bottom-left
+        0.0, // Bottom-left
       ]
 
       const texCoordBuffer = gl.createBuffer()
       gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoordData), gl.STATIC_DRAW)
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(texCoordData),
+        gl.STATIC_DRAW
+      )
 
       // Assign a_texcoord (location = 1)
       gl.enableVertexAttribArray(1)
@@ -111,22 +102,30 @@ export class UIKRenderer {
 
       gl.bindVertexArray(null) // Unbind VAO when done
       
+    this.genericVAO = vao
 
-      UIKRenderer.genericVAO = vao
-    }
-
-    if (!UIKRenderer.triangleVertexBuffer) {
-      // Create a static vertex buffer
-      UIKRenderer.triangleVertexBuffer = this.gl.createBuffer() as WebGLBuffer
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.triangleVertexBuffer)
+    // Create triangle vertex buffer for this specific WebGL context
+    this.triangleVertexBuffer = this.gl.createBuffer() as WebGLBuffer
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.triangleVertexBuffer)
 
       // Allocate space for 3 vertices (triangle), each with 2 components (x, y)
       const initialVertices = new Float32Array(6)
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, initialVertices, this.gl.DYNAMIC_DRAW)
+      this.gl.bufferData(
+        this.gl.ARRAY_BUFFER,
+        initialVertices,
+        this.gl.DYNAMIC_DRAW
+      )
       gl.bindVertexArray(null) // Unbind VAO when done
       // Unbind the buffer to prevent accidental modification
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
-    }
+  }
+
+  private setup2D() {
+    const gl = this.gl
+    gl.disable(gl.DEPTH_TEST)
+    gl.disable(gl.CULL_FACE)
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
   }
 
   /**
@@ -143,7 +142,7 @@ export class UIKRenderer {
     baseMidPoint,
     baseLength,
     color,
-    z = 0
+    z = 0,
   }: {
     headPoint: Vec2
     baseMidPoint: Vec2
@@ -152,21 +151,25 @@ export class UIKRenderer {
     z?: number
   }): void {
     const canvas = this.gl.canvas as HTMLCanvasElement
-
+    this.setup2D()
     // Convert screen points to WebGL coordinates
-    const hp = Array.isArray(headPoint) ? headPoint : [headPoint[0], headPoint[1]]
-    const bmp = Array.isArray(baseMidPoint) ? baseMidPoint : [baseMidPoint[0], baseMidPoint[1]]
+    const hp = Array.isArray(headPoint)
+      ? headPoint
+      : [headPoint[0], headPoint[1]]
+    const bmp = Array.isArray(baseMidPoint)
+      ? baseMidPoint
+      : [baseMidPoint[0], baseMidPoint[1]]
     const webglHeadX = (hp[0] / canvas.width) * 2 - 1
     const webglHeadY = 1 - (hp[1] / canvas.height) * 2
     const webglBaseMidX = (bmp[0] / canvas.width) * 2 - 1
     const webglBaseMidY = 1 - (bmp[1] / canvas.height) * 2
 
     // Ensure the vertex buffer is defined
-    if (!UIKRenderer.triangleVertexBuffer) {
+    if (!this.triangleVertexBuffer) {
       console.error('Vertex buffer is not defined at draw time')
       return
     }
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, UIKRenderer.triangleVertexBuffer)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.triangleVertexBuffer)
 
     // Calculate left and right base vertices
     const directionX = webglHeadX - webglBaseMidX
@@ -188,33 +191,33 @@ export class UIKRenderer {
       leftBaseX,
       leftBaseY, // Left base vertex
       rightBaseX,
-      rightBaseY // Right base vertex
+      rightBaseY, // Right base vertex
     ])
 
     this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, vertices)
     // Use the shader program
-    UIKRenderer.triangleShader.use(this.gl)
+    this.triangleShader.use(this.gl)
 
     // Bind the position attribute
-    const positionLocation = UIKRenderer.triangleShader.uniforms.a_position as GLuint
+    const positionLocation = this.triangleShader.uniforms.a_position as GLuint
     this.gl.enableVertexAttribArray(positionLocation)
     this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0)
 
     // Set u_antialiasing in pixels and canvas size in pixels
-    this.gl.uniform1f(UIKRenderer.triangleShader.uniforms.u_antialiasing, baseLength * 0.01) // Example proportion
-    this.gl.uniform2f(UIKRenderer.triangleShader.uniforms.u_canvasSize, canvas.width, canvas.height)
+    this.gl.uniform1f(this.triangleShader.uniforms.u_antialiasing, baseLength * 0.01) // Example proportion
+    this.gl.uniform2f(this.triangleShader.uniforms.u_canvasSize, canvas.width, canvas.height)
 
     // Set the color uniform
-    this.gl.uniform4fv(UIKRenderer.triangleShader.uniforms.u_color, color as Float32List)
+    this.gl.uniform4fv(this.triangleShader.uniforms.u_color, color as Float32List)
 
     // Set z value
-    this.gl.uniform1f(UIKRenderer.triangleShader.uniforms.u_z, z)
+    this.gl.uniform1f(this.triangleShader.uniforms.u_z, z)
 
     // Draw the triangle
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
     this.gl.bindVertexArray(null)
   }
-  
+
   /**
    * Draws a circle.
    * @param params - Object containing the circle parameters.
@@ -227,33 +230,38 @@ export class UIKRenderer {
     leftTopWidthHeight,
     circleColor = [1, 1, 1, 1],
     fillPercent = 1.0,
-    z = 0
+    z = 0,
   }: {
     leftTopWidthHeight: Vec4
     circleColor?: Color
     fillPercent?: number
     z?: number
   }): void {
-    if (!UIKRenderer.circleShader) {
+    if (!this.circleShader) {
       throw new Error('circleShader undefined')
     }
 
-    UIKRenderer.circleShader.use(this.gl)
-    this.gl.enable(this.gl.BLEND)
-    this.gl.uniform4fv(UIKRenderer.circleShader.uniforms.circleColor, circleColor as Float32List)
-    this.gl.uniform2fv(UIKRenderer.circleShader.uniforms.canvasWidthHeight, [
+    this.circleShader.use(this.gl)
+    this.setup2D()
+    this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor as Float32List)
+    this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [
       this.gl.canvas.width,
-      this.gl.canvas.height
+      this.gl.canvas.height,
     ])
 
     const rectParams = Array.isArray(leftTopWidthHeight)
-      ? vec4.fromValues(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
+      ? vec4.fromValues(
+          leftTopWidthHeight[0],
+          leftTopWidthHeight[1],
+          leftTopWidthHeight[2],
+          leftTopWidthHeight[3]
+        )
       : leftTopWidthHeight
 
-    this.gl.uniform4fv(UIKRenderer.circleShader.uniforms.leftTopWidthHeight, rectParams as Float32List)
-    this.gl.uniform1f(UIKRenderer.circleShader.uniforms.fillPercent, fillPercent)
-    this.gl.uniform1f(UIKRenderer.circleShader.uniforms.z, z)
-    this.gl.bindVertexArray(UIKRenderer.genericVAO)
+    this.gl.uniform4fv(this.circleShader.uniforms.leftTopWidthHeight, rectParams as Float32List)
+    this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent)
+    this.gl.uniform1f(this.circleShader.uniforms.z, z)
+    this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null) // Unbind to avoid side effects
   }
@@ -285,16 +293,18 @@ export class UIKRenderer {
       color = [1, 0, 0, -1],
       terminator = LineTerminator.NONE,
       style = LineStyle.SOLID,
-      dashDotLength = 5
+      dashDotLength = 5,
     } = config
     const gl = this.gl
-
+    this.setup2D()
     // Extract start and end points
     const lineCoords = Array.isArray(startEnd)
       ? vec4.fromValues(startEnd[0], startEnd[1], startEnd[2], startEnd[3])
       : startEnd
 
-    let [startX, startY, endX, endY] = lineCoords
+    const [startX, startY, endXRaw, endYRaw] = lineCoords
+    let endX = endXRaw
+    let endY = endYRaw
 
     // Calculate direction and adjust for terminator
     const direction = vec2.sub(vec2.create(), [endX, endY], [startX, startY])
@@ -310,28 +320,54 @@ export class UIKRenderer {
 
     if (style === LineStyle.DASHED || style === LineStyle.DOTTED) {
       const lineLength = vec2.distance([startX, startY], [endX, endY])
-      const segmentSpacing = style === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
+      const segmentSpacing =
+        style === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
       const segmentCount = Math.floor(lineLength / segmentSpacing)
 
       for (let i = 0; i <= segmentCount; i++) {
-        const segmentStart = vec2.scaleAndAdd(vec2.create(), [startX, startY], direction, i * segmentSpacing)
+        const segmentStart = vec2.scaleAndAdd(
+          vec2.create(),
+          [startX, startY],
+          direction,
+          i * segmentSpacing
+        )
 
         if (i === segmentCount) {
           // Connect the last dash or dot to the adjusted endpoint
           if (style === LineStyle.DASHED) {
-            const segmentCoords = vec4.fromValues(segmentStart[0], segmentStart[1], endX, endY)
+            const segmentCoords = vec4.fromValues(
+              segmentStart[0],
+              segmentStart[1],
+              endX,
+              endY
+            )
             this.drawSegment({ segmentCoords, thickness, color })
           } else if (style === LineStyle.DOTTED) {
             this.drawCircle({
-              leftTopWidthHeight: [endX - dashDotLength / 2, endY - dashDotLength / 2, dashDotLength, dashDotLength],
-              circleColor: color
+              leftTopWidthHeight: [
+                endX - dashDotLength / 2,
+                endY - dashDotLength / 2,
+                dashDotLength,
+                dashDotLength,
+              ],
+              circleColor: color,
             })
           }
         } else {
           if (style === LineStyle.DASHED) {
             // Draw dashed segment
-            const segmentEnd = vec2.scaleAndAdd(vec2.create(), segmentStart, direction, dashDotLength)
-            const segmentCoords = vec4.fromValues(segmentStart[0], segmentStart[1], segmentEnd[0], segmentEnd[1])
+            const segmentEnd = vec2.scaleAndAdd(
+              vec2.create(),
+              segmentStart,
+              direction,
+              dashDotLength
+            )
+            const segmentCoords = vec4.fromValues(
+              segmentStart[0],
+              segmentStart[1],
+              segmentEnd[0],
+              segmentEnd[1]
+            )
             this.drawSegment({ segmentCoords, thickness, color })
           } else if (style === LineStyle.DOTTED) {
             // Draw dot as a small circle
@@ -340,9 +376,9 @@ export class UIKRenderer {
                 segmentStart[0] - dashDotLength / 2,
                 segmentStart[1] - dashDotLength / 2,
                 dashDotLength,
-                dashDotLength
+                dashDotLength,
               ],
-              circleColor: color
+              circleColor: color,
             })
           }
         }
@@ -350,14 +386,14 @@ export class UIKRenderer {
     } else {
       // Draw solid line if no dash/dot style specified
       const shortenedLine = vec4.fromValues(startX, startY, endX, endY)
-      UIKRenderer.lineShader.use(gl)
+      this.lineShader.use(gl)
       gl.enable(gl.BLEND)
-      gl.uniform4fv(UIKRenderer.lineShader.uniforms.lineColor, color as Float32List)
-      gl.uniform2fv(UIKRenderer.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
-      gl.uniform1f(UIKRenderer.lineShader.uniforms.thickness, thickness)
-      gl.uniform4fv(UIKRenderer.lineShader.uniforms.startXYendXY, shortenedLine)
+      gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
+      gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+      gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+      gl.uniform4fv(this.lineShader.uniforms.startXYendXY, shortenedLine)
 
-      gl.bindVertexArray(UIKRenderer.genericVAO)
+      gl.bindVertexArray(this.genericVAO)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       gl.bindVertexArray(null) // Unbind to avoid side effects
     }
@@ -367,9 +403,12 @@ export class UIKRenderer {
       case LineTerminator.ARROW:
         this.drawTriangle({
           headPoint: [startEnd[2], startEnd[3]],
-          baseMidPoint: [endX - (direction[0] * terminatorSize) / 2, endY - (direction[1] * terminatorSize) / 2],
+          baseMidPoint: [
+            endX - (direction[0] * terminatorSize) / 2,
+            endY - (direction[1] * terminatorSize) / 2,
+          ],
           baseLength: terminatorSize,
-          color
+          color,
         })
         break
       case LineTerminator.CIRCLE:
@@ -378,9 +417,9 @@ export class UIKRenderer {
             startEnd[2] - terminatorSize / 2,
             startEnd[3] - terminatorSize / 2,
             terminatorSize,
-            terminatorSize
+            terminatorSize,
           ],
-          circleColor: color
+          circleColor: color,
         })
         break
       case LineTerminator.RING:
@@ -389,10 +428,10 @@ export class UIKRenderer {
             startEnd[2] - terminatorSize / 2,
             startEnd[3] - terminatorSize / 2,
             terminatorSize,
-            terminatorSize
+            terminatorSize,
           ],
           circleColor: color,
-          fillPercent: 0.5
+          fillPercent: 0.5,
         })
         break
     }
@@ -405,18 +444,66 @@ export class UIKRenderer {
    *   - thickness: The thickness of the segment.
    *   - color: The color of the segment, as a Color array in [R, G, B, A] format.
    */
-  private drawSegment(config: { segmentCoords: Vec4; thickness: number; color: Color }): void {
+  private drawSegment(config: {
+    segmentCoords: Vec4
+    thickness: number
+    color: Color
+  }): void {
     const { segmentCoords, thickness, color } = config
     const gl = this.gl
 
-    UIKRenderer.lineShader.use(gl)
-    gl.uniform4fv(UIKRenderer.lineShader.uniforms.lineColor, color as Float32List)
-    gl.uniform1f(UIKRenderer.lineShader.uniforms.thickness, thickness)
-    gl.uniform4fv(UIKRenderer.lineShader.uniforms.startXYendXY, segmentCoords)
+    this.lineShader.use(gl)
+    gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
+    gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
+    gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentCoords)
 
-    gl.bindVertexArray(UIKRenderer.genericVAO)
+    gl.bindVertexArray(this.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(null) // Unbind to avoid side effects
+  }
+
+  public drawRoundedRect({
+    bounds,
+    fillColor,
+    outlineColor,
+    bottomColor = fillColor,
+    cornerRadius = -1,
+    thickness = 10
+  }: RoundedRectConfig): void {
+    const gl = this.gl
+    const shader = this.roundedRectShader
+    if (!shader) throw new Error('roundedRectShader undefined')
+
+    shader.use(gl)
+
+    // enable blending for smooth corners
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    // decide radius
+    const radius = cornerRadius === -1 ? thickness * 2 : cornerRadius
+
+    // convert bounds to vec4
+    const rectParams = Array.isArray(bounds)
+      ? vec4.fromValues(bounds[0], bounds[1], bounds[2], bounds[3])
+      : bounds
+
+    // set uniforms
+    gl.uniform1f(shader.uniforms.thickness, thickness)
+    gl.uniform1f(shader.uniforms.cornerRadius, radius)
+    gl.uniform4fv(shader.uniforms.borderColor, outlineColor as Float32List)
+    gl.uniform4fv(shader.uniforms.topColor, fillColor as Float32List)
+    gl.uniform4fv(shader.uniforms.bottomColor, bottomColor as Float32List)
+    gl.uniform2fv(shader.uniforms.canvasWidthHeight, [
+      (gl.canvas as HTMLCanvasElement).width,
+      (gl.canvas as HTMLCanvasElement).height
+    ])
+    gl.uniform4fv(shader.uniforms.leftTopWidthHeight, rectParams as Float32List)
+
+    // draw
+    gl.bindVertexArray(this.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.bindVertexArray(null)
   }
 
   /**
@@ -439,7 +526,7 @@ export class UIKRenderer {
     color = [1.0, 0.0, 0.0, 1.0],
     rotation = 0.0,
     outlineColor = [0, 0, 0, 1.0],
-    outlineThickness = 2
+    outlineThickness = 2,
   }: {
     font: UIKFont
     xy: Vec2
@@ -451,87 +538,114 @@ export class UIKRenderer {
     outlineThickness?: number
   }): void {
     if (!font.isFontLoaded) {
-      console.error('font not loaded')
+      console.error("font not loaded")
       return
     }
 
-    if (!UIKRenderer.rotatedFontShader) {
+    // Skip text rendering if using fallback font texture (1x1 white pixel)
+    // This prevents white artifacts from being rendered
+    if (font.textureSize[0] === 1 && font.textureSize[1] === 1) {
+      // console.log('Skipping text rendering - using fallback font texture')
+      return
+    }
+
+    if (!this.rotatedFontShader) {
       throw new Error('rotatedTextShader undefined')
     }
 
-    const rotatedFontShader = UIKRenderer.rotatedFontShader
     const gl = this.gl
+    const shader = this.rotatedFontShader
 
     // Bind the font texture
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, font.getTexture())
 
-    rotatedFontShader.use(gl)
+    shader.use(gl)
+    // ─── save GL state ─────────────────────────────────────────────────────────
+    const blendOn = gl.isEnabled(gl.BLEND)
+    const depthOn = gl.isEnabled(gl.DEPTH_TEST)
+    const cullOn = gl.isEnabled(gl.CULL_FACE)
+    const srcRGB = gl.getParameter(gl.BLEND_SRC_RGB) as number
+    const dstRGB = gl.getParameter(gl.BLEND_DST_RGB) as number
+    const srcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA) as number
+    const dstAlpha = gl.getParameter(gl.BLEND_DST_ALPHA) as number
 
-    // Enable blending for text rendering
+    // ─── set up for text ──────────────────────────────────────────────────────
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.disable(gl.DEPTH_TEST) // TODO: remove
+    gl.disable(gl.DEPTH_TEST)
     gl.disable(gl.CULL_FACE)
 
-    // Set uniform values
-    const finalColor = color || font.fontColor
-    gl.uniform4fv(rotatedFontShader.uniforms.fontColor, finalColor as Float32List)
-    let screenPxRange = (scale / font.fontMets!.size) * font.fontMets!.distanceRange
-    screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange must never be lower than 1
-    gl.uniform1f(rotatedFontShader.uniforms.screenPxRange, screenPxRange)
-    gl.uniform1i(rotatedFontShader.uniforms.fontTexture, 0)
+    // Uniforms
+    gl.uniform4fv(shader.uniforms.fontColor, color as Float32List)
+    gl.uniform4fv(shader.uniforms.outlineColor, outlineColor as Float32List)
+    gl.uniform1f(shader.uniforms.outlineThickness, outlineThickness)
+    gl.uniform1i(shader.uniforms.fontTexture, 0)
+    gl.uniform1i(shader.uniforms.u_isMTSDF, font.isMTSDF ? 1 : 0)
 
-    // Outline uniforms
-    gl.uniform4fv(rotatedFontShader.uniforms.outlineColor, outlineColor as Float32List)
-    gl.uniform1f(rotatedFontShader.uniforms.outlineThickness, outlineThickness)
+    // Calculate screenPxRange based on scale and font metrics
+    const canvasSize = Math.min(gl.canvas.width, gl.canvas.height)
+    const screenPxRange = Math.max(
+      (scale / font.fontMetrics.size) * font.fontMetrics.distanceRange,
+      1.0
+    )
+    gl.uniform1f(shader.uniforms.screenPxRange, screenPxRange)
 
     // Bind VAO for generic rectangle
-    gl.bindVertexArray(UIKRenderer.genericVAO)
+    gl.bindVertexArray(this.genericVAO)
 
-    // Set up orthographic projection matrix
+    // Set orthographic projection matrix
     const orthoMatrix = mat4.create()
     mat4.ortho(orthoMatrix, 0, gl.canvas.width, gl.canvas.height, 0, -1, 1)
 
-    // Iterate over each character in the string
+    // Draw characters
     let x = xy[0]
     let y = xy[1]
-
-    const size = font.textHeight * Math.min(gl.canvas.height, gl.canvas.width) * scale
+    const size = canvasSize * scale
     const chars = Array.from(str)
+
     for (const char of chars) {
-      const metrics = font.fontMets!.mets[char]
-      if (!metrics) {
-        continue
-      }
+      const metrics = font.fontMetrics.mets[char]
+      if (!metrics) continue
 
       const modelMatrix = mat4.create()
       mat4.translate(modelMatrix, modelMatrix, [
         x + Math.sin(rotation) * metrics.lbwh[1] * size,
         y - Math.cos(rotation) * metrics.lbwh[1] * size,
-        0.0
+        0.0,
       ])
       mat4.rotateZ(modelMatrix, modelMatrix, rotation)
-      mat4.scale(modelMatrix, modelMatrix, [metrics.lbwh[2] * size, -metrics.lbwh[3] * size, 1.0])
+      mat4.scale(modelMatrix, modelMatrix, [
+        metrics.lbwh[2] * size,
+        -metrics.lbwh[3] * size,
+        1.0,
+      ])
 
-      // Combine the orthographic matrix with the model matrix to create the final MVP matrix
       const mvpMatrix = mat4.create()
       mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
 
-      // Set uniform values for MVP matrix and UV coordinates
-      gl.uniformMatrix4fv(rotatedFontShader.uniforms.modelViewProjectionMatrix, false, mvpMatrix)
-      gl.uniform4fv(rotatedFontShader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
+      gl.uniformMatrix4fv(
+        shader.uniforms.modelViewProjectionMatrix,
+        false,
+        mvpMatrix
+      )
+      gl.uniform4fv(shader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-      // Update x position for the next character, advancing with rotation in mind
       const advanceX = Math.cos(rotation) * metrics.xadv * size
       const advanceY = Math.sin(rotation) * metrics.xadv * size
       x += advanceX
       y += advanceY
     }
 
-    // Unbind the VAO
     gl.bindVertexArray(null)
+    // ─── restore GL state ─────────────────────────────────────────────────────
+    // restore blend func
+    gl.blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha)
+    // restore enables
+    blendOn || gl.disable(gl.BLEND)
+    depthOn && gl.enable(gl.DEPTH_TEST)
+    cullOn && gl.enable(gl.CULL_FACE)
   }
 
   /**
@@ -559,7 +673,7 @@ export class UIKRenderer {
     lineThickness = 1,
     offset = 40,
     scale = 1.0,
-    showTickmarkNumbers = true
+    showTickmarkNumbers = true,
   }: {
     pointA: Vec2
     pointB: Vec2
@@ -573,29 +687,45 @@ export class UIKRenderer {
     scale?: number
     showTickmarkNumbers?: boolean
   }): void {
-    // Calculate the angle between the points
+    const gl = this.gl
+    const canvasHeight = gl.canvas.height
+    const fontSize = canvasHeight * scale
+    const getTextWidth = (text: string): number => {
+      return Array.from(text).reduce((sum, char) => {
+        const glyph = font.fontMetrics.mets[char]
+        return glyph ? sum + glyph.xadv * fontSize : sum
+      }, 0)
+    }
+
+    const getTextHeight = (): number => {
+      const m = font.fontMetrics
+      return (m.ascender - m.descender) * fontSize
+    }
+
     const deltaX = pointB[0] - pointA[0]
     const deltaY = pointB[1] - pointA[1]
     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
     let angle = Math.atan2(deltaY, deltaX)
 
-    // Calculate the midpoint
-    const midPoint: Vec2 = [(pointA[0] + pointB[0]) / 2, (pointA[1] + pointB[1]) / 2]
-
-    // Format the length text
+    const midPoint: Vec2 = [
+      (pointA[0] + pointB[0]) / 2,
+      (pointA[1] + pointB[1]) / 2,
+    ]
     const text = `${length.toFixed(2)}`
-
-    // Adjust the text position to ensure it's centered above the parallel line
-    const textWidth = font.getTextWidth(text, scale)
-    const textHeight = font.getTextHeight(text, scale)
+    const textWidth = getTextWidth(text)
+    const textHeight = getTextHeight()
     const halfTextWidth = textWidth / 2
     const halfTextHeight = textHeight / 2
+
     let textPosition: Vec2 = [
-      midPoint[0] - halfTextWidth * Math.cos(angle) + (halfTextHeight + offset) * Math.sin(angle),
-      midPoint[1] - halfTextWidth * Math.sin(angle) - (halfTextHeight + offset) * Math.cos(angle)
+      midPoint[0] -
+        halfTextWidth * Math.cos(angle) +
+        (halfTextHeight + offset) * Math.sin(angle),
+      midPoint[1] -
+        halfTextWidth * Math.sin(angle) -
+        (halfTextHeight + offset) * Math.cos(angle),
     ]
 
-    // Ensure text is not upside down
     if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
       angle += Math.PI
       textPosition = [
@@ -606,19 +736,24 @@ export class UIKRenderer {
         midPoint[1] -
           (textWidth / 2) * Math.sin(angle) +
           (textHeight / 2 + offset) * Math.cos(angle) +
-          offset * Math.cos(angle)
+          offset * Math.cos(angle),
       ]
     }
 
-    // Draw the rotated length text at the adjusted position
-    this.drawRotatedText({ font, xy: textPosition, str: text, scale, color: textColor, rotation: angle })
+    this.drawRotatedText({
+      font,
+      xy: textPosition,
+      str: text,
+      scale,
+      color: textColor,
+      rotation: angle,
+    })
 
-    // Draw the units at half the requested scale
     const unitsScale = scale / 2
-    const unitsTextWidth = font.getTextWidth(units, unitsScale)
+    const unitsTextWidth = getTextWidth(units)
     const unitsTextPosition: Vec2 = [
       textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
-      textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle)
+      textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle),
     ]
     this.drawRotatedText({
       font,
@@ -626,39 +761,41 @@ export class UIKRenderer {
       str: units,
       scale: unitsScale,
       color: textColor,
-      rotation: angle
+      rotation: angle,
     })
 
-    // Draw a parallel line of equal length to the original line
     const parallelPointA: Vec2 = [
       pointA[0] + (offset * deltaY) / actualLength,
-      pointA[1] - (offset * deltaX) / actualLength
+      pointA[1] - (offset * deltaX) / actualLength,
     ]
     const parallelPointB: Vec2 = [
       pointB[0] + (offset * deltaY) / actualLength,
-      pointB[1] - (offset * deltaX) / actualLength
+      pointB[1] - (offset * deltaX) / actualLength,
     ]
     this.drawLine({
-      startEnd: [parallelPointA[0], parallelPointA[1], parallelPointB[0], parallelPointB[1]],
+      startEnd: [
+        parallelPointA[0],
+        parallelPointA[1],
+        parallelPointB[0],
+        parallelPointB[1],
+      ],
       thickness: lineThickness,
-      color: lineColor
+      color: lineColor,
     })
 
-    // Draw lines terminating in arrows from the ends of the parallel line to points A and B
     this.drawLine({
       startEnd: [parallelPointA[0], parallelPointA[1], pointA[0], pointA[1]],
       thickness: lineThickness,
       color: lineColor,
-      terminator: LineTerminator.ARROW
+      terminator: LineTerminator.ARROW,
     })
     this.drawLine({
       startEnd: [parallelPointB[0], parallelPointB[1], pointB[0], pointB[1]],
       thickness: lineThickness,
       color: lineColor,
-      terminator: LineTerminator.ARROW
+      terminator: LineTerminator.ARROW,
     })
 
-    // Draw perpendicular hash marks like a ruler
     const numHashMarks = Math.floor(length)
     const hashLength = 8
     const parallelOffset = offset / 4
@@ -673,13 +810,16 @@ export class UIKRenderer {
       if (i % 5 === 0) {
         const hashText = `${i}`
         const hashTextScale = scale / 5
-        const hashTextWidth = font.getTextWidth(hashText, hashTextScale)
+        const hashTextWidth = getTextWidth(hashText)
         const hashTextPosition: Vec2 = [
           hashPoint[0] +
             perpOffsetX -
             (hashTextWidth / 2) * Math.cos(angle) +
             (currentHashLength / 4) * Math.sin(angle),
-          hashPoint[1] + perpOffsetY - (hashTextWidth / 2) * Math.sin(angle) - (currentHashLength / 4) * Math.cos(angle)
+          hashPoint[1] +
+            perpOffsetY -
+            (hashTextWidth / 2) * Math.sin(angle) -
+            (currentHashLength / 4) * Math.cos(angle),
         ]
         if (showTickmarkNumbers) {
           this.drawRotatedText({
@@ -688,22 +828,32 @@ export class UIKRenderer {
             str: hashText,
             scale: hashTextScale,
             color: textColor,
-            rotation: angle
+            rotation: angle,
           })
         }
       }
 
       const hashStart: Vec2 = [
-        hashPoint[0] + perpOffsetX - (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
-        hashPoint[1] + perpOffsetY - (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
+        hashPoint[0] +
+          perpOffsetX -
+          (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
+        hashPoint[1] +
+          perpOffsetY -
+          (currentHashLength / 2) * Math.sin(angle + Math.PI / 2),
       ]
       const hashEnd: Vec2 = [
-        hashPoint[0] + perpOffsetX + (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
-        hashPoint[1] + perpOffsetY + (currentHashLength / 2) * Math.sin(angle + Math.PI / 2)
+        hashPoint[0] +
+          perpOffsetX +
+          (currentHashLength / 2) * Math.cos(angle + Math.PI / 2),
+        hashPoint[1] +
+          perpOffsetY +
+          (currentHashLength / 2) * Math.sin(angle + Math.PI / 2),
       ]
-      this.drawLine({ startEnd: [hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]], thickness: 1, color: lineColor })
+      this.drawLine({
+        startEnd: [hashStart[0], hashStart[1], hashEnd[0], hashEnd[1]],
+        thickness: 1,
+        color: lineColor,
+      })
     }
   }
-
-
 }

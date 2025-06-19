@@ -1,0 +1,29 @@
+<!-- packages/uikit/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>UIKit Package Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!--
+    Vite will automatically inject the correct <script type="module" src="...">
+    pointing at `/src/index.ts`. 
+    This also allows any imports in index.ts (like './uikrenderer') to be resolved.
+  -->
+    <script type="module" src="/src/index.ts"></script>
+</head>
+<body style="margin:0; padding:0; background:#f5f5f5; display:flex; flex-direction:column; align-items:center;">
+
+  <h1 style="margin: 20px 0; font-family:sans-serif; color:#333;">
+    UIKit Package – Simple WebGL Demo
+  </h1>
+
+  <!-- Container for our canvas -->
+  <div style="border:1px solid #999; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+    <canvas id="uikCanvas" width="800" height="600"></canvas>
+  </div>
+
+  <!-- Vite auto‐injects a <script type="module" src="/src/index.ts"> for you. -->
+</body>
+</html>

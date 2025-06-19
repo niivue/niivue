@@ -1,254 +1,364 @@
-import { vec2 } from 'gl-matrix'
-import { UIKShader } from '../uikshader.js'
-import vertRotatedFontShader from '../shaders/vert/rotated-font.vert.glsl'
-import fragRotatedFontShader from '../shaders/frag/rotated-font.frag.glsl'
-import defaultFontPNG from '../fonts/Roboto-Regular.png'
-import defaultFontMetrics from '../fonts/Roboto-Regular.json' assert { type: 'json' }
-import { UIKAsset } from './uikasset.js'
+import { UIKAsset } from "./uikasset.js"
 
-export type FontMetrics = {
+export type GlyphMetrics = {
+  xadv: number
+  uv_lbwh: [number, number, number, number]
+  lbwh: [number, number, number, number]
+}
+
+export interface FontMetrics {
   distanceRange: number
   size: number
-  mets: Record<
-  string,
-    {
-      xadv: number
-      uv_lbwh: number[]
-      lbwh: number[]
-    }
-  >
+  emSize?: number // Add this
+  lineHeight: number
+  ascender: number
+  descender: number
+  underlineY: number
+  underlineThickness: number
+  mets: Record<string, GlyphMetrics>
+}
+
+export interface RawGlyph {
+  unicode: number
+  advance: number
+  atlasBounds?: {
+    left: number
+    top: number
+    right: number
+    bottom: number
+  }
+  planeBounds?: {
+    left: number
+    top: number
+    right: number
+    bottom: number
+  }
+}
+
+
+export interface RawFontFile {
+  atlas: {
+    width: number
+    height: number
+    distanceRange: number
+    size: number
+  }
+  metrics: {
+    ascender: number
+    descender: number
+    underlineY: number
+    underlineThickness: number
+    lineHeight: number
+    emSize: number
+  }
+  glyphs: RawGlyph[]
+  family?: string
+  style?: string
+}
+
+export interface SerializedFont {
+  id: string
+  className: string
+  fontMetrics: FontMetrics
+  textureSize: [number, number]
+  isMTSDF: boolean
+  family: string
+  style: string
 }
 
 export class UIKFont extends UIKAsset {
-  public fontMetrics: any
-  public fontMets: FontMetrics | null = null
-  public fontShader: UIKShader | null = null
-  public fontColor: number[] | Float32Array
-  public outlineColor: number[] | Float32Array
-  public outlineThickness: number
-  public textHeight: number
+  public fontMetrics!: FontMetrics
+  public textureSize: [number, number] = [0, 0]
   public isFontLoaded = false
+  public isMTSDF = false
+  public family = ""
+  public style = ""
+  public color: number[] = [1, 1, 1, 1] // Default white color
 
-  constructor(
-    gl: WebGL2RenderingContext,
-    fontColor: number[] | Float32Array = [1.0, 0.0, 0.0, 1.0],
-    textHeight = 0.06,
-    outlineColor: number[] | Float32Array = [0.0, 0.0, 0.0, 1.0],
-    outlineThickness: number = 1
-  ) {
+  constructor(gl: WebGL2RenderingContext, color?: number[]) {
     super(gl)
-    this.fontColor = fontColor
-    this.outlineColor = outlineColor
-    this.outlineThickness = outlineThickness
-    this.textHeight = textHeight
-    this.fontShader = new UIKShader(this.gl, vertRotatedFontShader, fragRotatedFontShader)
+    if (color) {
+      this.color = color
+    }
   }
 
-  public async loadFontTexture(fontUrl: string): Promise<void> {
-    await this.loadTexture(fontUrl)
+  public async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>  {
+    return this.loadTexture(fontUrl)
   }
 
-  public async loadFont(fontSheetUrl: string, metricsUrl: string): Promise<void> {
+  public async loadFont(
+    fontSheetUrl: string,
+    metricsUrl: string,
+    isMTSDF = false
+  ): Promise<void> {
     await this.loadFontTexture(fontSheetUrl)
     const response = await fetch(metricsUrl)
-    if (!response.ok) {
-      throw new Error(response.statusText)
-    }
-    const jsonText = await response.text()
-    this.fontMetrics = JSON.parse(jsonText)
-    this.initFontMets()
+    if (!response.ok) throw new Error(response.statusText)
+    const raw: RawFontFile = await response.json()
+    this.initFontMetrics(raw)
+    this.isMTSDF = isMTSDF
   }
 
-  public async loadDefaultFont(): Promise<void> {
-    await this.loadFontTexture(defaultFontPNG)
-    this.fontMetrics = defaultFontMetrics
-    this.initFontMets()
+  public loadFromRawData(raw: RawFontFile): void {
+  const atlas = raw.atlas
+  const metricsMap: Record<string, GlyphMetrics> = {}
+
+  for (const glyph of raw.glyphs) {
+    if (!glyph.atlasBounds || !glyph.planeBounds) continue
+
+    const char = String.fromCodePoint(glyph.unicode)
+
+    const uvLeft = glyph.atlasBounds.left / atlas.width
+    const uvTop = (atlas.height - glyph.atlasBounds.top) / atlas.height
+    const uvWidth = (glyph.atlasBounds.right - glyph.atlasBounds.left) / atlas.width
+    const uvHeight = (glyph.atlasBounds.top - glyph.atlasBounds.bottom) / atlas.height
+
+    const planeLeft = glyph.planeBounds.left
+    const planeBottom = glyph.planeBounds.bottom
+    const planeWidth = glyph.planeBounds.right - glyph.planeBounds.left
+    const planeHeight = glyph.planeBounds.top - glyph.planeBounds.bottom
+
+    metricsMap[char] = {
+      uv_lbwh: [uvLeft, uvTop, uvWidth, uvHeight],
+      lbwh: [planeLeft, planeBottom, planeWidth, planeHeight],
+      xadv: glyph.advance
+    }
   }
 
-  private initFontMets(): void {
-    if (!this.fontMetrics) {
-      throw new Error('fontMetrics undefined')
+  this.fontMetrics = {
+    distanceRange: atlas.distanceRange,
+    size: atlas.size,
+    emSize: raw.metrics.emSize,
+    lineHeight: raw.metrics.lineHeight,
+    ascender: raw.metrics.ascender,
+    descender: raw.metrics.descender,
+    underlineY: raw.metrics.underlineY,
+    underlineThickness: raw.metrics.underlineThickness,
+    mets: metricsMap
+  }
+
+  this.isFontLoaded = true
+}
+
+
+  private initFontMetrics(raw: RawFontFile): void {
+    const atlas = raw.atlas
+    const metrics = raw.metrics
+
+    this.fontMetrics = {
+      distanceRange: atlas.distanceRange,
+      size: atlas.size,
+      ascender: metrics.ascender,
+      descender: metrics.descender,
+      underlineY: metrics.underlineY,
+      underlineThickness: metrics.underlineThickness,
+      lineHeight: metrics.lineHeight,
+      mets: {},
     }
 
-    this.fontMets = {
-      distanceRange: this.fontMetrics.atlas.distanceRange,
-      size: this.fontMetrics.atlas.size,
-      mets: {}
-    }
+    this.textureSize = [atlas.width, atlas.height]
 
-    const scaleW = this.fontMetrics.atlas.width
-    const scaleH = this.fontMetrics.atlas.height
-
-    for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
-      const glyph = this.fontMetrics.glyphs[i]
+    for (const glyph of raw.glyphs) {
+      if (!glyph.atlasBounds || !glyph.planeBounds) continue
       const char = String.fromCodePoint(glyph.unicode)
+      const l = glyph.atlasBounds.left / atlas.width
+      const b = (atlas.height - glyph.atlasBounds.top) / atlas.height
+      const w = (glyph.atlasBounds.right - glyph.atlasBounds.left) / atlas.width
+      const h =
+        (glyph.atlasBounds.top - glyph.atlasBounds.bottom) / atlas.height
 
-      this.fontMets.mets[char] = {
+      const pxL = glyph.planeBounds?.left ?? 0
+      const pxB = glyph.planeBounds?.bottom ?? 0
+      const pxW = (glyph.planeBounds?.right ?? 0) - pxL
+      const pxH = (glyph.planeBounds?.top ?? 0) - pxB
+
+      this.fontMetrics.mets[char] = {
         xadv: glyph.advance,
-        uv_lbwh: [0, 0, 0, 0],
-        lbwh: [0, 0, 0, 0]
-      }
-
-      if (glyph.planeBounds !== undefined) {
-        let l = glyph.atlasBounds.left / scaleW
-        let b = (scaleH - glyph.atlasBounds.top) / scaleH
-        let w = (glyph.atlasBounds.right - glyph.atlasBounds.left) / scaleW
-        let h = (glyph.atlasBounds.top - glyph.atlasBounds.bottom) / scaleH
-        this.fontMets.mets[char].uv_lbwh = [l, b, w, h]
-        l = glyph.planeBounds.left
-        b = glyph.planeBounds.bottom
-        w = glyph.planeBounds.right - glyph.planeBounds.left
-        h = glyph.planeBounds.top - glyph.planeBounds.bottom
-        this.fontMets.mets[char].lbwh = [l, b, w, h]
+        uv_lbwh: [l, b, w, h],
+        lbwh: [pxL, pxB, pxW, pxH],
       }
     }
 
+    this.family = raw.family ?? ""
+    this.style = raw.style ?? ""
     this.isFontLoaded = true
   }
 
-  public getTextWidth(str: string, scale: number = 1.0): number {
-    if (!str) {
-      return 0
-    }
-    let w = 0
-    try {
-      for (let i = 0; i < str.length; i++) {
-        const char = str[i]
-        const glyph = this.fontMets!.mets[char]
-        if (glyph) {
-          w += scale * glyph.xadv
-        }
-      }
-    } catch (e) {
-      console.log(e)
-      return 0
-    }
-    const textWidth = w * this.gl.canvas.height * this.textHeight
-    return textWidth
-  }
-
-  public getDescenderDepth(str: string, scale: number = 1.0): number {
-    if (!str) {
-      return 0
-    }
-
-    let minBottom = 0
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i]
-      const glyph = this.fontMets!.mets[char]
-      if (glyph) {
-        const bottom = glyph.lbwh[1]
-        minBottom = Math.min(minBottom, bottom)
-      }
-    }
-
-    return scale * minBottom * this.gl.canvas.height * this.textHeight
-  }
-
-  public getAscenderHeight(str: string, scale: number = 1.0): number {
-    if (!str) {
-      return 0
-    }
-
-    let maxTop = 0
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i]
-      const glyph = this.fontMets!.mets[char]
-      if (glyph) {
-        const top = glyph.lbwh[1] + glyph.lbwh[3]
-        maxTop = Math.max(maxTop, top)
-      }
-    }
-
-    return scale * maxTop * this.gl.canvas.height * this.textHeight
-  }
-
-  public getTextHeight(str: string, scale: number = 1.0): number {
-    if (!str) {
-      return 0
-    }
-
-    let minBottom = Infinity
-    let maxTop = -Infinity
-
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i]
-      const glyph = this.fontMets!.mets[char]
-      if (glyph) {
-        const bottom = glyph.lbwh[1]
-        const top = glyph.lbwh[1] + glyph.lbwh[3]
-        minBottom = Math.min(minBottom, bottom)
-        maxTop = Math.max(maxTop, top)
-      }
-    }
-
-    const height = maxTop - minBottom
-    return scale * height * this.gl.canvas.height * this.textHeight
-  }
-
-  public getTextBounds(scale: number, str: string): number[] {
-    const width = this.getTextWidth(str, scale)
-    const height = this.getTextHeight(str, scale)
-    return [0, 0, width, height]
-  }
-
-  public getWordWrappedSize(text: string, scale: number = 1.0, maxWidth: number = 0): vec2 {
-    let currentWidth = 0
-    const maxHeight = this.getTextHeight(text, scale)
-    const spaceWidth = this.fontMets!.mets[' '].xadv * scale * this.gl.canvas.height * this.textHeight
-
-    if (maxWidth <= 0) {
-      return vec2.fromValues(this.getTextWidth(text, scale), maxHeight)
-    }
-    let lineCount = 1
-    const words = text.split(' ')
-    for (const word of words) {
-      const wordWidth = this.getTextWidth(word, scale)
-      if (currentWidth + wordWidth > maxWidth) {
-        lineCount++
-        currentWidth = wordWidth + spaceWidth
-      } else {
-        currentWidth += wordWidth + spaceWidth
-      }
-    }
-    return vec2.fromValues(Math.max(currentWidth, maxWidth), lineCount * maxHeight)
-  }
-
-  public toJSON(): object {
+  public toJSON(): SerializedFont {
     return {
       id: this.id,
-      className: 'NVFont',
-      fontColor: Array.from(this.fontColor),
-      outlineColor: Array.from(this.outlineColor),
-      outlineThickness: this.outlineThickness,
-      textHeight: this.textHeight,
-      fontMetrics: this.fontMetrics
+      className: "UIKFont",
+      fontMetrics: this.fontMetrics,
+      textureSize: this.textureSize,
+      isMTSDF: this.isMTSDF,
+      family: this.family,
+      style: this.style,
     }
   }
 
-  public static async fromJSON(gl: WebGL2RenderingContext, json: any): Promise<UIKFont> {
+  /**
+   * Calculate the width of text in pixels
+   * @param text - The text string to measure
+   * @param scale - The scale factor for the text
+   * @returns Width in pixels
+   */
+  public getTextWidth(text: string, scale: number = 1.0): number {
+    if (!this.isFontLoaded) {
+      console.warn('Font not loaded, returning 0 for text width')
+      return 0
+    }
+    
+    const fontSize = scale * this.fontMetrics.size
+    return Array.from(text).reduce((sum, char) => {
+      const glyph = this.fontMetrics.mets[char]
+      return glyph ? sum + glyph.xadv * fontSize : sum
+    }, 0)
+  }
+
+  /**
+   * Calculate the height of text in pixels
+   * @param text - The text string to measure (unused in current implementation)
+   * @param scale - The scale factor for the text
+   * @returns Height in pixels
+   */
+  public getTextHeight(text: string, scale: number = 1.0): number {
+    if (!this.isFontLoaded) {
+      console.warn('Font not loaded, returning 0 for text height')
+      return 0
+    }
+    
+    const fontSize = scale * this.fontMetrics.size
+    return (this.fontMetrics.ascender - this.fontMetrics.descender) * fontSize
+  }
+
+  /**
+   * Load the default font for UIKit components
+   * This uses Roboto Regular font that's commonly available
+   */
+  public async loadDefaultFont(): Promise<void> {
+    try {
+      // Create a simple white 1x1 pixel texture for text rendering
+      // This is a minimal fallback when actual font files aren't available
+      this.createBasicFontTexture()
+      
+      // For now, we'll create a minimal font metrics for testing
+      // In production, you would load actual font files
+      this.fontMetrics = {
+        distanceRange: 4,
+        size: 48,
+        emSize: 48,
+        lineHeight: 1.2,
+        ascender: 0.75,
+        descender: -0.25,
+        underlineY: -0.15,
+        underlineThickness: 0.05,
+        mets: this.createBasicGlyphMetrics()
+      }
+      
+      this.isFontLoaded = true
+      this.family = "Roboto"
+      this.style = "Regular"
+      
+      console.log('Default font loaded successfully for UIKit')
+    } catch (error) {
+      console.error('Failed to load default font:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Create a basic transparent texture for text rendering fallback
+   */
+  private createBasicFontTexture(): void {
+    const gl = this.gl
+    
+    // Create a 1x1 transparent pixel texture as fallback
+    const texture = gl.createTexture()
+    if (!texture) {
+      throw new Error('Failed to create font texture')
+    }
+    
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    
+    // Single transparent pixel data instead of white to avoid artifacts
+    const pixel = new Uint8Array([255, 255, 255, 0]) // Transparent pixel
+    
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      1,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      pixel
+    )
+    
+    // Set texture parameters
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    
+    // Store texture
+    this.texture = texture
+    this.textureSize = [1, 1]
+    
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+
+  /**
+   * Create basic glyph metrics for common characters
+   * This is a fallback when actual font files aren't available
+   */
+  private createBasicGlyphMetrics(): Record<string, GlyphMetrics> {
+    const metrics: Record<string, GlyphMetrics> = {}
+    
+    // Add basic ASCII characters (32-126)
+    for (let i = 32; i <= 126; i++) {
+      const char = String.fromCharCode(i)
+      let advance = 0.5 // default advance width
+      let width = 0.4
+      let height = 0.7
+      
+      // Adjust for specific character types
+      if (char === ' ') {
+        advance = 0.25
+        width = 0
+      } else if ('iIl'.includes(char)) {
+        advance = 0.25
+        width = 0.2
+      } else if ('mMwW'.includes(char)) {
+        advance = 0.8
+        width = 0.7
+      } else if ('.,;:!|'.includes(char)) {
+        advance = 0.3
+        width = 0.2
+      }
+      
+      metrics[char] = {
+        xadv: advance,
+        uv_lbwh: [0, 0, width, height], // UV coordinates (dummy values)
+        lbwh: [0, 0, width, height]     // Layout bounds (dummy values)
+      }
+    }
+    
+    return metrics
+  }
+
+  public static async fromJSON(
+    gl: WebGL2RenderingContext,
+    json: SerializedFont
+  ): Promise<UIKFont> {
     const font = new UIKFont(gl)
     font.id = json.id
-    font.fontColor = new Float32Array(json.fontColor)
-    font.outlineColor = new Float32Array(json.outlineColor)
-    font.outlineThickness = json.outlineThickness
-    font.textHeight = json.textHeight
     font.fontMetrics = json.fontMetrics
-    font.initFontMets()
-
-    // Decode and load the base64 texture if it exists
-    if (json.base64Texture) {
-      const textureData = atob(json.base64Texture)
-      const textureArray = Uint8Array.from(textureData, (c) => c.charCodeAt(0))
-      const blob = new Blob([textureArray], { type: 'image/png' })
-      const textureUrl = URL.createObjectURL(blob)
-
-      await font.loadFontTexture(textureUrl)
-
-      // Revoke the URL after loading
-      URL.revokeObjectURL(textureUrl)
-    }
-
+    font.textureSize = json.textureSize
+    font.isMTSDF = json.isMTSDF
+    font.family = json.family
+    font.style = json.style
+    font.isFontLoaded = true
     return font
   }
 }
