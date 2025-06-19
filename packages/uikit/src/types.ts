@@ -77,6 +77,15 @@ export enum Plane {
   YZ = 'YZ'
 }
 
+export interface RoundedRectConfig {
+  bounds: Vec4                // [left, top, width, height]
+  fillColor: Color
+  outlineColor: Color
+  bottomColor?: Color         // for vertical gradient
+  cornerRadius?: number
+  thickness?: number
+}
+
 export type Effect =
   | {
       type: 'setValue'

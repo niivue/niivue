@@ -28,7 +28,8 @@
         "test:unit": "npm run test:unit -w @niivue/niivue",
         "lint": "npm run lint -w @niivue/niivue",
         "lint:fix": "npm run lint:fix -w @niivue/niivue",
-        "lint:niivue": "npm run lint -w @niivue/niivue && npm run lint:ts -w @niivue/niivue"
+        "lint:niivue": "npm run lint -w @niivue/niivue && npm run lint:ts -w @niivue/niivue",
+        "dev:uikit": "npm run dev -w @niivue/niivue-uikit"
     },
     "author": "niivue authors",
     "license": "BSD-2-Clause",

@@ -15,6 +15,7 @@
     "dist"
   ],
   "scripts": {
+    "dev": "vite",
     "test": "vitest run",
     "build": "vite build && tsc --project tsconfig.json"
   },
