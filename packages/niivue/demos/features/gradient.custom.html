@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Custom Gradient Opacity</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <style>
+      header {
+        padding: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      header label {
+        margin-right: 5px;
+        font-weight: bold;
+      }
+
+      header input, header select {
+        margin-right: 15px;
+      }
+
+      #createDistanceMap {
+        background-color: #4CAF50;
+        color: white;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      #createDistanceMap:hover {
+        background-color: #45a049;
+      }
+
+      #createDistanceMap:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      #status {
+        font-style: italic;
+        color: #666;
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <label for="gradientOpacity">Gradient Opacity</label>
+      <input type="range" min="0" max="10" value="6" class="slider" id="gradientOpacity">
+      <label for="silhouetteEnhancement">Silhouette Enhancement</label>
+      <input type="range" min="0" max="19" value="10" class="slider" id="silhouetteEnhancement">
+      <label for="gradientOrder">Gradient Order</label>
+      <select id="gradientOrder">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+      </select>
+      <label for="illumination">Illumination</label>
+      <input type="range" min="0" max="10" value="7" class="slider" id="illumination">
+      <label for="gradientModulation">Center Modulation</label>
+      <input type="range" min="0" max="100" value="75" class="slider" id="gradientModulation">
+      <button id="createDistanceMap">Apply Center Distance Modulation</button>
+      <span id="status"></span>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1" height="1024"></canvas>
+      </div>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+    <script type="module" async>
+      import { Niivue, NVImage, SHOW_RENDER, DRAG_MODE } from '../dist/index.js'
+
+      let originalGradientData = null
+      let centerDistanceMap = null
+      let currentModulation = 0
+
+      function createCenterDistanceMap() {
+        try {
+          console.log('Creating center-based distance map...')
+
+          // Check if volumes are loaded
+          if (!nv1.volumes || nv1.volumes.length === 0) {
+            console.error('No volumes loaded')
+            document.getElementById('status').textContent = 'No volumes loaded'
+            return false
+          }
+
+          // Use the first volume for dimensions
+          const volume = nv1.volumes[0]
+          const dims = volume.hdr?.dims || volume.dims
+          if (!dims || dims.length < 4) {
+            console.error('Volume dimensions not available:', dims)
+            document.getElementById('status').textContent = 'Volume dimensions not available'
+            return false
+          }
+
+          const [, nx, ny, nz] = dims
+          const numVoxels = nx * ny * nz
+
+          // Calculate center coordinates
+          const centerX = (nx - 1) / 2
+          const centerY = (ny - 1) / 2
+          const centerZ = (nz - 1) / 2
+
+          // Create distance map from center
+          centerDistanceMap = new Float32Array(numVoxels)
+          let maxDistance = 0
+
+          for (let z = 0; z < nz; z++) {
+            for (let y = 0; y < ny; y++) {
+              for (let x = 0; x < nx; x++) {
+                const idx = z * nx * ny + y * nx + x
+
+                // Calculate Euclidean distance from center
+                const dx = x - centerX
+                const dy = y - centerY
+                const dz = z - centerZ
+                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz)
+
+                centerDistanceMap[idx] = distance
+                maxDistance = Math.max(maxDistance, distance)
+              }
+            }
+          }
+
+          // Normalize to 0-1 range (1.0 at center, 0.0 at max distance)
+          for (let i = 0; i < numVoxels; i++) {
+            centerDistanceMap[i] = 1.0 - (centerDistanceMap[i] / maxDistance)
+          }
+
+          return true
+
+        } catch (error) {
+          console.error('Error creating center distance map:', error)
+          document.getElementById('status').textContent = `Error: ${error.message}`
+          return false
+        }
+      }
+
+      function modulateGradientByCenter(modulation) {
+        if (!originalGradientData || !centerDistanceMap) {
+          console.warn('Original gradient data or center distance map not available')
+          document.getElementById('status').textContent = 'Distance map not created yet'
+          return
+        }
+
+        const modulatedGradient = new Float32Array(originalGradientData.length)
+        const numVoxels = centerDistanceMap.length
+        const gradientNumVoxels = originalGradientData.length / 4 // RGBA components
+
+        // Handle size mismatch between gradient and distance data
+        const useVoxelCount = Math.min(numVoxels, gradientNumVoxels)
+
+        for (let i = 0; i < useVoxelCount; i++) {
+          const baseIdx = i * 4
+          const centerDistance = centerDistanceMap[i] // 1.0 at center, 0.0 at boundary
+
+          // Apply modulation to alpha channel
+          // modulation = 0: no effect (alpha unchanged)
+          // modulation = 1: full effect (alpha = centerDistance, so 1.0 at center, 0.0 at boundary)
+          const alphaMultiplier = Math.pow(1.0 - modulation + (modulation * centerDistance), 5.0)
+
+          // Keep RGB unchanged, modulate alpha
+          modulatedGradient[baseIdx + 0] = originalGradientData[baseIdx + 0] // R
+          modulatedGradient[baseIdx + 1] = originalGradientData[baseIdx + 1] // G
+          modulatedGradient[baseIdx + 2] = originalGradientData[baseIdx + 2] // B
+          modulatedGradient[baseIdx + 3] = originalGradientData[baseIdx + 3] * alphaMultiplier // A (modulated)
+        }
+
+        // Copy remaining gradient data unchanged if gradient is larger
+        for (let i = useVoxelCount * 4; i < originalGradientData.length; i++) {
+          modulatedGradient[i] = originalGradientData[i]
+        }
+
+        nv1.setCustomGradientTexture(modulatedGradient)
+        document.getElementById('status').textContent = `Center modulation: ${Math.round(modulation * 100)}%`
+      }
+
+      async function createAndApplyModulation() {
+        try {
+          document.getElementById('createDistanceMap').disabled = true
+          document.getElementById('createDistanceMap').textContent = 'Processing...'
+          document.getElementById('status').textContent = 'Creating center distance map...'
+
+          // Get the original gradient data
+          originalGradientData = nv1.getGradientTextureData()
+          if (!originalGradientData) {
+            console.warn('Could not get gradient texture data')
+            document.getElementById('status').textContent = 'Could not get gradient data'
+            return
+          }
+
+          // Create center-based distance map
+          if (!createCenterDistanceMap()) {
+            return
+          }
+
+          // Apply initial modulation
+          currentModulation = gradientModulation.value / 100.0
+          modulateGradientByCenter(currentModulation)
+
+        } catch (error) {
+          console.error('Error in createAndApplyModulation:', error)
+          document.getElementById('status').textContent = `Error: ${error.message}`
+        } finally {
+          document.getElementById('createDistanceMap').disabled = false
+          document.getElementById('createDistanceMap').textContent = 'Apply Center Distance Modulation'
+        }
+      }
+
+      gradientOpacity.oninput = function () {
+        nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
+        modulateGradientByCenter(currentModulation)
+      }
+      silhouetteEnhancement.oninput = function () {
+        nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
+        modulateGradientByCenter(currentModulation)
+      }
+      illumination.oninput = function () {
+        nv1.setVolumeRenderIllumination(this.value * 0.1)
+        modulateGradientByCenter(currentModulation)
+      }
+      gradientOrder.onchange = function () {
+        nv1.opts.gradientOrder = parseInt(this.value)
+        nv1.updateGLVolume()
+      }
+      gradientModulation.oninput = function () {
+        const modulation = this.value / 100.0
+        currentModulation = modulation
+        modulateGradientByCenter(modulation)
+      }
+      createDistanceMap.onclick = createAndApplyModulation
+      var volumeList1 = [
+        {
+          url: "../images/mni152.nii.gz",
+          colormap: "gray",
+          visible: true,
+          opacity: 1.0
+        },
+        {
+          url: "../images/hippo.nii.gz",
+          colormap: "red",
+          visible: true,
+          opacity: 1.0
+        }
+      ];
+
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML = data.string
+      }
+      const clipPlane = [0.35, 290, 0]
+      const defaults = {
+        backColor: [0.5, 0.5, 1, 1],
+        show3Dcrosshair: true,
+        loglevel: 'debug',
+        isRuler: true,
+        onLocationChange: handleIntensityChange,
+      }
+      var nv1 = new Niivue(defaults)
+      await nv1.attachToCanvas(gl1)
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setClipPlane(clipPlane)
+      nv1.opts.gradientOrder = 2
+      nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
+      nv1.setVolumeRenderIllumination(0.7)
+    </script>
+  </body>
+</html>
