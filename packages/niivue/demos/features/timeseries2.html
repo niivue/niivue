@@ -43,6 +43,27 @@
       </select>
       <label for="darkCheck">Dark</label>
       <input type="checkbox" id="darkCheck" checked />
+      &nbsp;&nbsp;
+      <label for="dpiCheck">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" checked />
+      <label for="fontMinPxSlider">&nbsp;&nbsp;Min Font Size</label>
+      <input
+        type="range"
+        min="10"
+        max="40"
+        value="13"
+        class="slider"
+        id="fontMinPxSlider"
+      />
+      <label for="fontSizeScalingSlider">&nbsp;&nbsp;Font Scale</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        class="slider"
+        id="fontSizeScalingSlider"
+      />
       <div id="controls4D">
         &nbsp;&nbsp;<label for="normCheck">Normalize graph</label>
         <input type="checkbox" id="normCheck" unchecked />
@@ -53,7 +74,7 @@
         &nbsp;&nbsp;<button id="prevVolume">Back</button>
         &nbsp;&nbsp;<button id="nextVolume">Forward</button>
         &nbsp;&nbsp;<button id="animate">Animate</button>
-        &nbsp;&nbsp;<button id="about">About</button>
+        &nbsp;&nbsp;<button id="about">About 4D</button>
       </div>
     </header>
     <main id="container">
@@ -64,9 +85,23 @@
 </html>
 <script type="module">
   import * as niivue from "../dist/index.js"
+  fontMinPxSlider.oninput = function () {
+    nv1.opts.fontMinPx = this.value
+    nv1.resizeListener()
+    nv1.drawScene()
+  }
+  fontSizeScalingSlider.oninput = function () {
+    nv1.opts.fontSizeScaling = (this.value * 0.01)
+    nv1.resizeListener()
+    nv1.drawScene()
+  }
+  dpiCheck.onclick = function () {
+    nv1.setHighResolutionCapable(this.checked)
+  }
   var nv1 = new niivue.Niivue({
     onLocationChange: handleLocationChange,
-    onFrameChange: handleFrameChange
+    onFrameChange: handleFrameChange,
+    loglevel: 'debug'
   })
   darkCheck.onchange = function () {
     let v = 1
@@ -82,7 +117,6 @@
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
   nv1.graph.normalizeValues = false
   nv1.graph.opacity = 1.0
-  nv1.opts.textHeight = 0.03
   modalitySelect.onchange = async function (url) {
     var volumeList1 = [
       {

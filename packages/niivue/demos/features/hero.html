@@ -14,74 +14,98 @@
     </noscript>
     <header>
       <label id="menuLabel">≡</label>
+      &nbsp;&nbsp;<label id="statusLabel">&nbsp; </label>
       <div class="panel-box" id="panelBox" style="display: none;">
-      <label for="sceneSelect">Layout</label>
-      <select id="sceneSelect">
-        <option value="0" selected>fMRI</option>
-        <option value="1">T1</option>
-        <option value="2">FLAIR</option>
-        <option value="3">CT</option>
-      </select>
-      <label for="layoutSelect">&nbsp;&nbsp;Layout</label>
-      <select id="layoutSelect">
-        <option value="0" selected>Auto</option>
-        <option value="1">Column</option>
-        <option value="2">Grid</option>
-        <option value="3">Row</option>
-      </select>
-      <label for="sliderCheck">&nbsp;&nbsp;Sliders</label>
-      <input type="checkbox" id="sliderCheck" unchecked />
-      <label for="equalCheck">&nbsp;&nbsp;Equal Size</label>
-      <input type="checkbox" id="equalCheck" unchecked />
-      <label for="renderCheck">&nbsp;&nbsp;Volume Render</label>
-      <input type="checkbox" id="renderCheck" checked />
-      <label for="heroSlider">&nbsp;&nbsp;Hero Image</label>
-      <input
-        type="range"
-        min="0"
-        max="9"
-        value="6"
-        class="slider"
-        id="heroSlider"
-      />
-      <label for="gapSlider">&nbsp;&nbsp;Xhair Gap</label>
-      <input
-        type="range"
-        min="0"
-        max="9"
-        value="2"
-        class="slider"
-        id="gapSlider"
-      />
-      <label for="rulerSlider">&nbsp;&nbsp;Ruler Thick</label>
-      <input
-        type="range"
-        min="1"
-        max="10"
-        value="2"
-        class="slider"
-        id="rulerSlider"
-      />
-      <label for="thickSlider">&nbsp;&nbsp;Crosshair width</label>
-      <input
-        type="range"
-        min="1"
-        max="40"
-        value="4"
-        class="slider"
-        id="thickSlider"
-      />
-      <select id="crosshairUnits">
-        <option value="voxels">Voxels</option>
-        <option value="mm" selected>MM</option>
-        <option value="percent">percent</option>
-      </select>
-      <label for="smoothCheck">&nbsp;&nbsp;Smooth</label>
-      <input type="checkbox" id="smoothCheck" checked />
-      <label for="worldCheck">&nbsp;&nbsp;World space</label>
-      <input type="checkbox" id="worldCheck" unchecked />
+        <label for="sceneSelect">Layout</label>
+        <select id="sceneSelect">
+          <option value="0" selected>fMRI</option>
+          <option value="1">T1</option>
+          <option value="2">FLAIR</option>
+          <option value="3">CT</option>
+        </select>
+        <label for="layoutSelect">&nbsp;&nbsp;Layout</label>
+        <select id="layoutSelect">
+          <option value="0" selected>Auto</option>
+          <option value="1">Column</option>
+          <option value="2">Grid</option>
+          <option value="3">Row</option>
+        </select>
+        <label for="sliderCheck">&nbsp;&nbsp;Sliders</label>
+        <input type="checkbox" id="sliderCheck" unchecked />
+        <label for="equalCheck">&nbsp;&nbsp;Equal Size</label>
+        <input type="checkbox" id="equalCheck" unchecked />
+        <label for="renderCheck">&nbsp;&nbsp;Volume Render</label>
+        <input type="checkbox" id="renderCheck" checked />
+        <label for="heroSlider">&nbsp;&nbsp;Hero Image</label>
+        <input
+          type="range"
+          min="0"
+          max="9"
+          value="6"
+          class="slider"
+          id="heroSlider"
+        />
+        <label for="gapSlider">&nbsp;&nbsp;Xhair Gap</label>
+        <input
+          type="range"
+          min="0"
+          max="9"
+          value="2"
+          class="slider"
+          id="gapSlider"
+        />
+        <label for="rulerSlider">&nbsp;&nbsp;Ruler Thick</label>
+        <input
+          type="range"
+          min="1"
+          max="10"
+          value="2"
+          class="slider"
+          id="rulerSlider"
+        />
+        <label for="thickSlider">&nbsp;&nbsp;Crosshair width</label>
+        <input
+          type="range"
+          min="1"
+          max="40"
+          value="4"
+          class="slider"
+          id="thickSlider"
+        />
+        <select id="crosshairUnits">
+          <option value="voxels">Voxels</option>
+          <option value="mm" selected>MM</option>
+          <option value="percent">percent</option>
+        </select>
+        <label for="smoothCheck">&nbsp;&nbsp;Smooth</label>
+        <input type="checkbox" id="smoothCheck" checked />
+        <label for="worldCheck">&nbsp;&nbsp;World space</label>
+        <input type="checkbox" id="worldCheck" unchecked />
+  
+        &nbsp;&nbsp;
+        <label for="dpiCheck">HighDPI</label>
+        <input type="checkbox" id="dpiCheck" checked />
+        <label for="fontMinPxSlider">&nbsp;&nbsp;Min Font Size</label>
+        <input
+          type="range"
+          min="10"
+          max="40"
+          value="13"
+          class="slider"
+          id="fontMinPxSlider"
+        />
+        <label for="fontSizeScalingSlider">&nbsp;&nbsp;Font Scale</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value="50"
+          class="slider"
+          id="fontSizeScalingSlider"
+        />
+        &nbsp;&nbsp;
+        <button id="aboutBtn">About</button>
       </div>
-      <label id="statusLabel">&nbsp; </label>
     </header>
     <main id="canvas-container">
 
@@ -98,6 +122,20 @@
     </main>
     <script type="module" async>
       import * as niivue from "../dist/index.js"
+      fontMinPxSlider.oninput = function () {
+        nv1.opts.fontMinPx = this.value
+        nv1.resizeListener()
+        nv1.drawScene()
+      }
+      fontSizeScalingSlider.oninput = function () {
+        nv1.opts.fontSizeScaling = (this.value * 0.01)
+        nv1.resizeListener()
+        nv1.drawScene()
+      }
+      dpiCheck.onclick = function () {
+        nv1.setHighResolutionCapable(this.checked)
+      }
+
       thickSlider.oninput = function () {
         nv1.opts.crosshairWidth = this.value * 0.25
         nv1.drawScene()
@@ -116,6 +154,9 @@
       worldCheck.onclick = function () {
         nv1.setSliceMM(this.checked)
         resizeSliders()
+      }
+      aboutBtn.onclick = function () {
+        alert("Double clicks set slice view as hero image.")
       }
       var lastPos = null
       gl1.ondblclick = async function () {
@@ -238,7 +279,7 @@
       let defaults = {
         backColor: [0.1, 0.1, 0.1, 1],
         show3Dcrosshair: true,
-        loglevel: 'debug',
+        logLevel: 'debug',
         isRuler: true,
         onLocationChange: onLocationChange,
       }
@@ -256,7 +297,6 @@
       //nv1.opts.multiplanarPadPixels = 40
       await nv1.attachToCanvas(gl1)
       await nv1.loadVolumes(volumeList1)
-      nv1.opts.textHeight = 0.02
       equalCheck.onchange()
       layoutSelect.onchange()
       rulerSlider.oninput()
