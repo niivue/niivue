@@ -433,6 +433,7 @@ export class Niivue {
   private fontMetrics?: typeof defaultFontMetrics
   private fontMets: FontMetrics | null = null
   private fontPx = 12
+  private legendFontScaling = 1
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
@@ -1272,7 +1273,6 @@ export class Niivue {
     // Convert to pixels: multiply by dpi
     const fontPx = basePointSize * scale * dpi
     this.fontPx = fontPx
-    console.log(`---${this.opts.logLevel}`)
     log.debug(
       `${screenWidthPts.toFixed(0)}x${screenHeightPts.toFixed(0)} pts (dpi=${dpi}) => areaScale=${normalizedArea.toFixed(2)}, ` +
         `scale=${scale.toFixed(2)}, minPx=${this.opts.fontMinPx} fontScale=${this.opts.fontSizeScaling} fontPx=${fontPx.toFixed(2)}`
@@ -9651,18 +9651,17 @@ export class Niivue {
     return width
   }
 
-  getLegendPanelHeight(): number {
+  getLegendPanelHeight(panelScale = 1.0): number {
     const labels = this.getConnectomeLabels()
     let height = 0
     const verticalMargin = this.fontPx
     for (const label of labels) {
-      const labelSize = this.fontPx * label.style.textScale
+      const labelSize = this.fontPx * label.style.textScale * panelScale
       const textHeight = this.textHeight(labelSize, label.text)
       height += textHeight
     }
-
     if (height) {
-      height += (verticalMargin / 2) * (labels.length + 1)
+      height += (verticalMargin / 2) * (labels.length + 1) * panelScale
     }
     return height
   }
@@ -11323,7 +11322,7 @@ export class Niivue {
   }
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
-    const scale = 1.0
+    const scale = this.legendFontScaling
     const size = this.fontPx * scale
     const verticalMargin = this.fontPx * scale
 
@@ -11333,7 +11332,7 @@ export class Niivue {
         continue
       }
 
-      const labelSize = this.fontPx * label.style.textScale
+      const labelSize = this.fontPx * label.style.textScale * scale
       const textHeight = this.textHeight(labelSize, label.text)
       const textWidth = this.textWidth(labelSize, label.text)
 
@@ -11393,7 +11392,7 @@ export class Niivue {
       return label
     }
     log.debug('screenPoint', screenPoint)
-    const panelHeight = this.getLegendPanelHeight()
+    const panelHeight = this.getLegendPanelHeight(scale)
     const panelWidth = this.getLegendPanelWidth()
     const left = this.gl.canvas.width - panelWidth
     let top = (this.canvas!.height - panelHeight) / 2
@@ -11409,9 +11408,10 @@ export class Niivue {
 
     const labels = this.getConnectomeLabels()
     for (const label of labels) {
-      const labelSize = this.fontPx * label.style.textScale
+      const labelSize = this.fontPx * label.style.textScale * scale
       const textHeight = this.textHeight(labelSize, label.text)
       if (screenPoint[1] >= top && screenPoint[1] <= top + textHeight + size / 2) {
+        log.debug(`label clicked ${label.text}`)
         return label
       }
       top += textHeight
@@ -11449,14 +11449,15 @@ export class Niivue {
     leftTopWidthHeight?: number[],
     bulletMargin?: number,
     legendWidth?: number,
-    secondPass?: boolean
+    secondPass?: boolean,
+    scaling: number = 1.0
   ): void {
     const text = label.text
     const left = pos[0]
     const top = pos[1]
 
     // const scale = label.style.textScale;
-    const size = this.fontPx
+    const size = this.fontPx * scaling
 
     const textHeight = this.textHeight(label.style.textScale, text) * size
 
@@ -11500,21 +11501,23 @@ export class Niivue {
     if (!this.opts.showLegend || labels.length === 0) {
       return
     }
-
-    if (!this.canvas) {
+    let panelHeight = this.getLegendPanelHeight(1)
+    if (!this.canvas || panelHeight < 1) {
       throw new Error('canvas undefined')
     }
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
-    const panelHeight = this.getLegendPanelHeight()
+    this.legendFontScaling = 1
     if (panelHeight > this.canvas.height) {
+      const margin = 10 * this.uiData.dpr
+      this.legendFontScaling = Math.max(this.canvas.height - margin, 1) / panelHeight
       // legend too big for screen issue 1279
-      log.debug('Legend may overflow screen size')
+      log.debug(`Legend too large for screen, font reduction factor x${this.legendFontScaling}`)
+      panelHeight = this.getLegendPanelHeight(this.legendFontScaling)
     }
-    const size = this.fontPx
+    const size = this.fontPx * this.legendFontScaling
     const bulletMargin = this.getBulletMarginWidth()
-
     const panelWidth = this.getLegendPanelWidth()
     const left = gl.canvas.width - panelWidth
     let top = (this.canvas.height - panelHeight) / 2
@@ -11528,10 +11531,19 @@ export class Niivue {
     }
 
     for (const label of labels) {
-      this.draw3DLabel(label, [left, top], mvpMatrix, leftTopWidthHeight, bulletMargin, panelWidth, secondPass)
+      this.draw3DLabel(
+        label,
+        [left, top],
+        mvpMatrix,
+        leftTopWidthHeight,
+        bulletMargin,
+        panelWidth,
+        secondPass,
+        this.legendFontScaling
+      )
 
       const labelSize = this.fontPx * label.style.textScale
-      const textHeight = this.textHeight(labelSize, label.text)
+      const textHeight = this.textHeight(labelSize, label.text) * this.legendFontScaling
 
       top += textHeight // Math.max(textHeight, bulletHeight);
       top += size / 2
