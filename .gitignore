@@ -51,3 +51,6 @@ test-results
 ts-build
 packages/niivue/public/
 *.zarr
+
+# dynamic API docs
+packages/docs/docs/api

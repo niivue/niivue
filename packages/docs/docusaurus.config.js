@@ -64,14 +64,13 @@ const config = {
             position: "left",
             label: "Documentation",
           },
-          // more demos link https://niivue.com/demos/
           {
-             to: "/gallery",
+            to: "/gallery",
             label: "Gallery",
             position: "left",
           },
           {
-            href: "https://niivue.com/demos/devdocs/",
+            to: "/docs/api",
             label: "API",
             position: "left",
           },

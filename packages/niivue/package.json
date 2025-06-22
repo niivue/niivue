@@ -28,7 +28,7 @@
     "test-win": "npm run build-win && jest",
     "test-playwright": "npx playwright test --grep-invert \"niivue demo file:\"",
     "test-demos": "npx playwright test playwright/e2e/test.demos.spec.ts",
-    "docs": "typedoc",
+    "docs": "typedoc && rm -rf ../docs/docs/api && cp -r devdocs ../docs/docs/api",
     "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",
@@ -65,9 +65,9 @@
     "@lukeed/uuid": "^2.0.1",
     "@ungap/structured-clone": "^1.2.0",
     "array-equal": "^1.0.2",
+    "fflate": "^0.8.2",
     "gl-matrix": "^3.4.3",
     "nifti-reader-js": "^0.8.0",
-    "fflate": "^0.8.2",
     "zarrita": "^0.5.0"
   },
   "devDependencies": {
@@ -91,7 +91,9 @@
     "regenerator-runtime": "^0.14.1",
     "terser": "^5.31.3",
     "tsup": "^8.1.2",
-    "typedoc": "^0.26.4",
+    "typedoc": "^0.28.5",
+    "typedoc-docusaurus-theme": "^1.4.0",
+    "typedoc-plugin-markdown": "^4.7.0",
     "typescript": "^5.5.3",
     "vite": "^5.3.4",
     "vitest": "^3.1.3"
