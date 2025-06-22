@@ -12831,7 +12831,7 @@ export class Niivue {
         // inner pad is padding inside a tile. Note that a display with 1 row of tiles has no outer pad, but does have inner pad
         let innerPad = this.opts.tileMargin * this.uiData.dpr
         if (innerPad < 0) {
-          innerPad = 2 * (2 + Math.ceil(Math.max(this.fontPx, this.gl.canvas.width)))
+          innerPad = 2 * (2 + Math.ceil(this.fontPx))
         }
         function padPixelsWH(cols: number, rows: number): [number, number] {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]

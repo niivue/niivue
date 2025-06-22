@@ -16,6 +16,7 @@ test('niivue label addLabel', async ({ page }) => {
   const nlabels = await page.evaluate(async (testOptions) => {
     const nv = new Niivue(testOptions)
     await nv.attachTo('gl')
+    nv.setMultiplanarLayout(2)
     // load one volume object in an array
     const volumeList = [
       {
@@ -33,7 +34,7 @@ test('niivue label addLabel', async ({ page }) => {
       {
         textScale: 2.0,
         textAlignment: LabelTextAlignment.CENTER,
-        textColor: [],
+        textColor: [1, 1, 1, 1],
         lineWidth: 0,
         lineColor: [],
         lineTerminator: LabelLineTerminator.NONE
