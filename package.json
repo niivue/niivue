@@ -23,7 +23,7 @@
         "dev": "npm run dev -w @niivue/niivue",
         "predev:desktop": "npm run build:niivue",
         "dev:desktop": "npm run dev -w niivue-desktop",
-        "dev:docs": "npm run start -w @niivue/docs",
+        "dev:docs": "npm run build:docs && npm run start -w @niivue/docs",
         "test:e2e": "npm run test-playwright -w @niivue/niivue",
         "test:unit": "npm run test:unit -w @niivue/niivue",
         "lint": "npm run lint -w @niivue/niivue",
