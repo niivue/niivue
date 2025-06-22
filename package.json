@@ -10,7 +10,7 @@
         "build:niivue": "npm run build -w @niivue/niivue",
         "build:docs": "npm run docs -w @niivue/niivue",
         "build:github": "npm run build:forTests -w @niivue/niivue",
-        "build:docusaurus": "npm run build -w @niivue/docs",
+        "build:docusaurus": "npm run build:docs && npm run build -w @niivue/docs",
         "prebuild:desktop-mac": "npm run build:niivue",
         "build:desktop-mac": "npm run build:mac -w niivue-desktop",
         "prebuild:desktop-win": "npm run build:niivue",
