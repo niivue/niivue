@@ -306,13 +306,19 @@ test('niivue label onClick receives MouseEvent with right-click', async ({ page 
         const canvas = nv.canvas
         const rect = canvas.getBoundingClientRect()
 
-        // === Use same math as getLabelAtPoint ===
-        const size = nv.opts.textHeight * Math.min(canvas.height, canvas.width)
-        const verticalMargin = nv.opts.textHeight * canvas.height
-        const labelSize = size * label.style.textScale
+        // Use updated getLabelAtPoint math for anchor labels
+        const scale = 1
+        const fontPx = nv.opts.fontMinPx
+        const size = fontPx * scale
+        const verticalMargin = fontPx * scale
+
+        const labelSize = fontPx * label.style.textScale * scale
         const textHeight = nv.textHeight(labelSize, label.text)
         const textWidth = nv.textWidth(labelSize, label.text)
 
+        // For LabelAnchorPoint.TOPLEFT
+        // X: left-aligned, so pick a point within textWidth
+        // Y: top-aligned, so between verticalMargin/2 and textHeight + verticalMargin/2
         const screenX = textWidth / 2
         const screenY = verticalMargin / 2 + textHeight / 2
 
