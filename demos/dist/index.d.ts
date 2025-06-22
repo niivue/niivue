@@ -295,7 +295,7 @@ declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?:
 
 type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
 /**
- * a NVImage encapsulates some images data and provides methods to query and operate on images
+ * a NVImage encapsulates some image data and provides methods to query and operate on images
  */
 declare class NVImage {
     name: string;
@@ -361,33 +361,6 @@ declare class NVImage {
     urlImgData?: string;
     isManifest?: boolean;
     limitFrames4D?: number;
-    /**
-     *
-     * @param dataBuffer - an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
-     * @param name - a name for this image. Default is an empty string
-     * @param colormap - a color map to use. default is gray
-     * @param opacity - the opacity for this image. default is 1
-     * @param pairedImgData - Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
-     * @param cal_min - minimum intensity for color brightness/contrast
-     * @param cal_max - maximum intensity for color brightness/contrast
-     * @param trustCalMinMax - whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
-     * @param percentileFrac - the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
-     * @param ignoreZeroVoxels - whether or not to ignore zero voxels in setting the robust range of display values
-     * @param useQFormNotSForm - give precedence to QForm (Quaternion) or SForm (Matrix)
-     * @param colormapNegative - a color map to use for symmetrical negative intensities
-     * @param frame4D - volume displayed, 0 indexed, must be less than nFrame4D
-     *
-     * FIXME the following params are documented but not included in the actual constructor
-     * @param onColormapChange - callback for color map change
-     * @param onOpacityChange -callback for color map change
-     *
-     * TODO the following parameters were not documented
-     * @param imageType - TODO
-     * @param cal_minNeg - TODO
-     * @param cal_maxNeg - TODO
-     * @param colorbarVisible - TODO
-     * @param colormapLabel - TODO
-     */
     constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number);
     init(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, _pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number, imgRaw?: ArrayBuffer | ArrayBufferLike | null): void;
     static new(dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name: string, colormap: string, opacity: number, pairedImgData: ArrayBuffer | null, cal_min: number, cal_max: number, trustCalMinMax: boolean, percentileFrac: number, ignoreZeroVoxels: boolean, useQFormNotSForm: boolean, colormapNegative: string, frame4D: number, imageType: ImageType, cal_minNeg: number, cal_maxNeg: number, colorbarVisible: boolean, colormapLabel: LUT | null, colormapType: number, zarrData: null | unknown): Promise<NVImage>;
@@ -438,17 +411,11 @@ declare class NVImage {
     /**
      * Converts NVImage to NIfTI compliant byte array, potentially compressed.
      * Delegates to ImageWriter.saveToUint8Array.
-     * @param fnm - Filename (determines if compression is needed via .gz suffix)
-     * @param drawing8 - Optional Uint8Array drawing overlay
-     * @returns Promise<Uint8Array>
      */
     saveToUint8Array(fnm: string, drawing8?: Uint8Array | null): Promise<Uint8Array>;
     /**
      * save image as NIfTI volume and trigger download.
      * Delegates to ImageWriter.saveToDisk.
-     * @param fnm - Filename for download. If empty, returns data without download.
-     * @param drawing8 - Optional Uint8Array drawing overlay
-     * @returns Promise<Uint8Array>
      */
     saveToDisk(fnm?: string, drawing8?: Uint8Array | null): Promise<Uint8Array>;
     static fetchDicomData(url: string, headers?: Record<string, string>): Promise<Array<{
@@ -461,7 +428,6 @@ declare class NVImage {
     static loadInitialVolumes(url?: string, headers?: {}, limitFrames4D?: number): Promise<ArrayBuffer | null>;
     /**
      * factory function to load and return a new NVImage instance from a given URL
-     * @returns  NVImage instance
      */
     static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType, colorbarVisible, buffer }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
         url?: string | Uint8Array | ArrayBuffer;
@@ -484,48 +450,31 @@ declare class NVImage {
     static createNiftiHeader(dims?: number[], pixDims?: number[], affine?: number[], datatypeCode?: NiiDataType): NIFTI1;
     /**
      * read a 3D slab of voxels from a volume
-     * @param voxStart - first row, column and slice (RAS order) for selection
-     * @param voxEnd - final row, column and slice (RAS order) for selection
-     * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
-     * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
      * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
      */
     /**
      * read a 3D slab of voxels from a volume, specified in RAS coordinates.
      * Delegates to VolumeUtils.getVolumeData.
-     * @param voxStart - first row, column and slice (RAS order) for selection
-     * @param voxEnd - final row, column and slice (RAS order) for selection
-     * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
-     * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
      */
     getVolumeData(voxStart?: number[], voxEnd?: number[], dataType?: string): [TypedVoxelArray, number[]];
     /**
      * write a 3D slab of voxels from a volume
-     * @param voxStart - first row, column and slice (RAS order) for selection
-     * @param voxEnd - final row, column and slice (RAS order) for selection
-     * @param img - array of voxel values to insert (RAS order)
      * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
      */
     /**
      * write a 3D slab of voxels from a volume, specified in RAS coordinates.
      * Delegates to VolumeUtils.setVolumeData.
      * Input slabData is assumed to be in the correct raw data type for the target image.
-     * @param voxStart - first row, column and slice (RAS order) for selection
-     * @param voxEnd - final row, column and slice (RAS order) for selection
-     * @param img - array of voxel values to insert (RAS order, raw data type)
      */
     setVolumeData(voxStart?: number[], voxEnd?: number[], img?: TypedVoxelArray): void;
     /**
      * factory function to load and return a new NVImage instance from a base64 encoded string
-     *
-     * @returns NVImage instance
      * @example
      * myImage = NVImage.loadFromBase64('SomeBase64String')
      */
     static loadFromBase64({ base64, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, imageType, cal_minNeg, cal_maxNeg, colorbarVisible, colormapLabel }: ImageFromBase64): Promise<NVImage>;
     /**
      * make a clone of a NVImage instance and return a new NVImage
-     * @returns NVImage instance
      * @example
      * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
      * clonedImage = myImage.clone()
@@ -544,9 +493,6 @@ declare class NVImage {
     getImageMetadata(): ImageMetadata;
     /**
      * a factory function to make a zero filled image given a NVImage as a reference
-     * @param nvImage - an existing NVImage as a reference
-     * @param dataType - the output data type. Options: 'same', 'uint8'
-     * @returns new NVImage filled with zeros for the image data
      * @example
      * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
      * newZeroImage = NVImage.zerosLike(myImage)
@@ -555,12 +501,6 @@ declare class NVImage {
     /**
      * Returns voxel intensity at specific native coordinates.
      * Delegates to VolumeUtils.getValue.
-     * @param x - Native X coordinate (0-indexed)
-     * @param y - Native Y coordinate (0-indexed)
-     * @param z - Native Z coordinate (0-indexed)
-     * @param frame4D - 4D frame index (0-indexed)
-     * @param isReadImaginary - Flag to read from imaginary data array
-     * @returns Scaled voxel intensity
      */
     getValue(x: number, y: number, z: number, frame4D?: number, isReadImaginary?: boolean): number;
     /**
@@ -572,8 +512,6 @@ declare class NVImage {
      * Converts NVImage to NIfTI compliant byte array.
      * Handles potential re-orientation of drawing data.
      * Delegates to ImageWriter.toUint8Array.
-     * @param drawingBytes - Optional Uint8Array drawing overlay
-     * @returns Uint8Array
      */
     toUint8Array(drawingBytes?: Uint8Array | null): Uint8Array;
     convertVox2Frac(vox: vec3): vec3;

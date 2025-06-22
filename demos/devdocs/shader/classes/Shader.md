@@ -1,0 +1,56 @@
+# Class: Shader
+
+Defined in: [shader.ts:41](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L41)
+
+## Constructors
+
+### Constructor
+
+```ts
+new Shader(
+   gl: WebGL2RenderingContext,
+   vertexSrc: string,
+   fragmentSrc: string): Shader;
+```
+
+Defined in: [shader.ts:46](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L46)
+
+#### Parameters
+
+| Parameter     | Type                     |
+| ------------- | ------------------------ |
+| `gl`          | `WebGL2RenderingContext` |
+| `vertexSrc`   | `string`                 |
+| `fragmentSrc` | `string`                 |
+
+#### Returns
+
+`Shader`
+
+## Properties
+
+| Property                          | Type                                                   | Default value | Defined in                                                                                   |
+| --------------------------------- | ------------------------------------------------------ | ------------- | -------------------------------------------------------------------------------------------- |
+| <a id="ismatcap"></a> `isMatcap?` | `boolean`                                              | `undefined`   | [shader.ts:44](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L44) |
+| <a id="program"></a> `program`    | `WebGLProgram`                                         | `undefined`   | [shader.ts:42](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L42) |
+| <a id="uniforms"></a> `uniforms`  | `Record`\<`string`, `WebGLUniformLocation` \| `null`\> | `{}`          | [shader.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L43) |
+
+## Methods
+
+### use()
+
+```ts
+use(gl: WebGL2RenderingContext): void;
+```
+
+Defined in: [shader.ts:73](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L73)
+
+#### Parameters
+
+| Parameter | Type                     |
+| --------- | ------------------------ |
+| `gl`      | `WebGL2RenderingContext` |
+
+#### Returns
+
+`void`

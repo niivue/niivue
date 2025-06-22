@@ -26133,33 +26133,6 @@ async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
 
 // src/nvimage/index.ts
 var NVImage = class _NVImage {
-  /**
-   *
-   * @param dataBuffer - an array buffer of image data to load (there are also methods that abstract this more. See loadFromUrl, and loadFromFile)
-   * @param name - a name for this image. Default is an empty string
-   * @param colormap - a color map to use. default is gray
-   * @param opacity - the opacity for this image. default is 1
-   * @param pairedImgData - Allows loading formats where header and image are separate files (e.g. nifti.hdr, nifti.img)
-   * @param cal_min - minimum intensity for color brightness/contrast
-   * @param cal_max - maximum intensity for color brightness/contrast
-   * @param trustCalMinMax - whether or not to trust cal_min and cal_max from the nifti header (trusting results in faster loading)
-   * @param percentileFrac - the percentile to use for setting the robust range of the display values (smart intensity setting for images with large ranges)
-   * @param ignoreZeroVoxels - whether or not to ignore zero voxels in setting the robust range of display values
-   * @param useQFormNotSForm - give precedence to QForm (Quaternion) or SForm (Matrix)
-   * @param colormapNegative - a color map to use for symmetrical negative intensities
-   * @param frame4D - volume displayed, 0 indexed, must be less than nFrame4D
-   *
-   * FIXME the following params are documented but not included in the actual constructor
-   * @param onColormapChange - callback for color map change
-   * @param onOpacityChange -callback for color map change
-   *
-   * TODO the following parameters were not documented
-   * @param imageType - TODO
-   * @param cal_minNeg - TODO
-   * @param cal_maxNeg - TODO
-   * @param colorbarVisible - TODO
-   * @param colormapLabel - TODO
-   */
   constructor(dataBuffer = null, name = "", colormap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0) {
     __publicField(this, "name");
     __publicField(this, "id");
@@ -28727,9 +28700,6 @@ var NVImage = class _NVImage {
   /**
    * Converts NVImage to NIfTI compliant byte array, potentially compressed.
    * Delegates to ImageWriter.saveToUint8Array.
-   * @param fnm - Filename (determines if compression is needed via .gz suffix)
-   * @param drawing8 - Optional Uint8Array drawing overlay
-   * @returns Promise<Uint8Array>
    */
   async saveToUint8Array(fnm, drawing8 = null) {
     return saveToUint8Array(this, fnm, drawing8);
@@ -28737,9 +28707,6 @@ var NVImage = class _NVImage {
   /**
    * save image as NIfTI volume and trigger download.
    * Delegates to ImageWriter.saveToDisk.
-   * @param fnm - Filename for download. If empty, returns data without download.
-   * @param drawing8 - Optional Uint8Array drawing overlay
-   * @returns Promise<Uint8Array>
    */
   async saveToDisk(fnm = "", drawing8 = null) {
     return saveToDisk(this, fnm, drawing8);
@@ -28945,7 +28912,6 @@ var NVImage = class _NVImage {
   }
   /**
    * factory function to load and return a new NVImage instance from a given URL
-   * @returns  NVImage instance
    */
   static async loadFromUrl({
     url = "",
@@ -29320,45 +29286,29 @@ var NVImage = class _NVImage {
   }
   /**
    * read a 3D slab of voxels from a volume
-   * @param voxStart - first row, column and slice (RAS order) for selection
-   * @param voxEnd - final row, column and slice (RAS order) for selection
-   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
-   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
   /**
    * read a 3D slab of voxels from a volume, specified in RAS coordinates.
    * Delegates to VolumeUtils.getVolumeData.
-   * @param voxStart - first row, column and slice (RAS order) for selection
-   * @param voxEnd - final row, column and slice (RAS order) for selection
-   * @param dataType - array data type. Options: 'same' (default), 'uint8', 'float32', 'scaled', 'normalized', 'windowed'
-   * @returns the an array where ret[0] is the voxel values and ret[1] is dimension of selection
    */
   getVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], dataType = "same") {
     return getVolumeData(this, voxStart, voxEnd, dataType);
   }
   /**
    * write a 3D slab of voxels from a volume
-   * @param voxStart - first row, column and slice (RAS order) for selection
-   * @param voxEnd - final row, column and slice (RAS order) for selection
-   * @param img - array of voxel values to insert (RAS order)
    * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
    */
   /**
    * write a 3D slab of voxels from a volume, specified in RAS coordinates.
    * Delegates to VolumeUtils.setVolumeData.
    * Input slabData is assumed to be in the correct raw data type for the target image.
-   * @param voxStart - first row, column and slice (RAS order) for selection
-   * @param voxEnd - final row, column and slice (RAS order) for selection
-   * @param img - array of voxel values to insert (RAS order, raw data type)
    */
   setVolumeData(voxStart = [-1, 0, 0], voxEnd = [0, 0, 0], img = new Uint8Array()) {
     setVolumeData(this, voxStart, voxEnd, img);
   }
   /**
    * factory function to load and return a new NVImage instance from a base64 encoded string
-   *
-   * @returns NVImage instance
    * @example
    * myImage = NVImage.loadFromBase64('SomeBase64String')
    */
@@ -29426,7 +29376,6 @@ var NVImage = class _NVImage {
   }
   /**
    * make a clone of a NVImage instance and return a new NVImage
-   * @returns NVImage instance
    * @example
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * clonedImage = myImage.clone()
@@ -29473,9 +29422,6 @@ var NVImage = class _NVImage {
   }
   /**
    * a factory function to make a zero filled image given a NVImage as a reference
-   * @param nvImage - an existing NVImage as a reference
-   * @param dataType - the output data type. Options: 'same', 'uint8'
-   * @returns new NVImage filled with zeros for the image data
    * @example
    * myImage = NVImage.loadFromFile(SomeFileObject) // files can be from dialogs or drag and drop
    * newZeroImage = NVImage.zerosLike(myImage)
@@ -29498,12 +29444,6 @@ var NVImage = class _NVImage {
   /**
    * Returns voxel intensity at specific native coordinates.
    * Delegates to VolumeUtils.getValue.
-   * @param x - Native X coordinate (0-indexed)
-   * @param y - Native Y coordinate (0-indexed)
-   * @param z - Native Z coordinate (0-indexed)
-   * @param frame4D - 4D frame index (0-indexed)
-   * @param isReadImaginary - Flag to read from imaginary data array
-   * @returns Scaled voxel intensity
    */
   getValue(x, y, z, frame4D = 0, isReadImaginary = false) {
     return getValue(this, x, y, z, frame4D, isReadImaginary);
@@ -29553,8 +29493,6 @@ var NVImage = class _NVImage {
    * Converts NVImage to NIfTI compliant byte array.
    * Handles potential re-orientation of drawing data.
    * Delegates to ImageWriter.toUint8Array.
-   * @param drawingBytes - Optional Uint8Array drawing overlay
-   * @returns Uint8Array
    */
   toUint8Array(drawingBytes = null) {
     return toUint8Array(this, drawingBytes);
