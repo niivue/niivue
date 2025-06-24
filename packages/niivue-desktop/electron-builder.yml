@@ -1,8 +1,11 @@
 appId: com.electron.app
 productName: niivue-desktop
+afterPack: ./scripts/clean-xattrs-afterpack.js
+afterSign: ./scripts/afterSign-clean.cjs
 directories:
   buildResources: build
 files:
+  - 'out/main/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -26,7 +29,8 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
-  icon: resources/icons/app_icon.icns  # 👈 Path to your app icon
+  icon: resources/icons/app_icon.icns
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     NSCameraUsageDescription: Application requests access to the device's camera.
@@ -34,6 +38,8 @@ mac:
     NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
+  hardenedRuntime: true
+  gatekeeperAssess: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
