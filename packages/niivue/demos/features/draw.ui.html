@@ -234,6 +234,10 @@
 
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0
   var isFilled = true
+  async function handleImageLoaded(data) {
+    nv1.closeDrawing()
+    document.getElementById('@Off')?.click()
+  }
   function handleIntensityChange(data) {
     document.getElementById('intensity').innerHTML = '  ' + data.string
   }
@@ -243,6 +247,7 @@
     textHeight: 0.03, // Smaller text
     show3Dcrosshair: true,
     onLocationChange: handleIntensityChange,
+    onImageLoaded: handleImageLoaded,
     logLevel: 'debug',
     clickToSegmentIs2D: true // Default to 2D
   })
@@ -674,6 +679,10 @@
         }
         toggleGroup(id)
       } else if (id.startsWith('_')) {
+        if (nv1.drawBitmap) {
+          window.alert("Close open drawing before opening a new volume.")
+          return;
+        }
         nv1.meshes = [] //close open meshes
         let root = '../images/' // Adjust path if needed
         let s = id.substring(1)
