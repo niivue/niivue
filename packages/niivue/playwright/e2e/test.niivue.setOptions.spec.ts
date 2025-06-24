@@ -11,7 +11,7 @@ test('niivue options enforced', async ({ page }) => {
   const opts = await page.evaluate(async (testOptions) => {
     const nv = new Niivue({
       ...testOptions,
-      textHeight: 0.05, // larger text
+      fontMinPx: 16, // larger text
       crosshairColor: [0, 0, 1, 1] // blue
     })
     await nv.attachTo('gl')
@@ -30,7 +30,7 @@ test('niivue options enforced', async ({ page }) => {
     return nv.opts
   }, TEST_OPTIONS)
 
-  expect(opts.textHeight).toEqual(0.05)
+  expect(opts.fontMinPx).toEqual(16)
   expect(opts.crosshairColor).toEqual([0, 0, 1, 1])
   await expect(page).toHaveScreenshot({ timeout: 30000 })
 })

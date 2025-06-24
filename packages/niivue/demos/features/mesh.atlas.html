@@ -56,7 +56,13 @@
         <option value="1" >Opaque</option>
         <option value="-1">Black</option>
       </select>
-      <input type="checkbox" id="check2" unchecked />
+      &nbsp;
+      <label for="dpiCheck">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" checked />
+      &nbsp;
+      <label for="legendCheck">Legend</label>
+      <input type="checkbox" id="legendCheck" checked />
+      &nbsp;
       <label for="crossCheck">Crosshairs</label>
       <input type="checkbox" id="crossCheck" checked />
       &nbsp;
@@ -151,6 +157,13 @@ void main() {
       "opacity",
       this.value / 255.0
     )
+  }
+  dpiCheck.onclick = function () {
+    nv1.setHighResolutionCapable(this.checked)
+  }
+  legendCheck.onchange = function () {
+    nv1.opts.showLegend = this.checked
+    nv1.drawScene()
   }
   crossCheck.onchange = function () {
     nv1.opts.show3Dcrosshair = this.checked

@@ -432,6 +432,8 @@ export class Niivue {
   private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
   private fontMetrics?: typeof defaultFontMetrics
   private fontMets: FontMetrics | null = null
+  private fontPx = 12
+  private legendFontScaling = 1
   backgroundMasksOverlays = 0
   overlayOutlineWidth = 0 // float, 0 for none
   overlayAlphaShader = 1 // float, 1 for opaque
@@ -1245,6 +1247,39 @@ export class Niivue {
   }
 
   /**
+   * Compute point size for screen text that scales with resolution and screen size.
+   * - Keeps physical font size consistent across different DPIs.
+   * - Uses fontSizeScaling to scale with canvas size above a reference threshold.
+   */
+  textSizePoints(): void {
+    if (this.opts.textHeight >= 0) {
+      log.warn(`textHeight is deprecated (use fontMinPx and fontSizeScaling)`)
+      this.opts.fontMinPx = this.opts.textHeight * 217
+      this.opts.fontSizeScaling = 0.4
+      this.opts.textHeight = -1.0
+    }
+    const dpi = this.uiData.dpr || 1
+    // basePointSize is defined in screen points (independent of dpi)
+    const basePointSize = this.opts.fontMinPx
+    // Convert canvas width/height to screen points (divide by dpr)
+    const screenWidthPts = this.gl.canvas.width / dpi
+    const screenHeightPts = this.gl.canvas.height / dpi
+    const screenAreaPts = screenWidthPts * screenHeightPts
+    // Reference screen area in points (800×600)
+    const refAreaPts = 800 * 600
+    const normalizedArea = Math.max(screenAreaPts / refAreaPts, 1)
+    // Power-law scaling
+    const scale = Math.pow(normalizedArea, this.opts.fontSizeScaling)
+    // Convert to pixels: multiply by dpi
+    const fontPx = basePointSize * scale * dpi
+    this.fontPx = fontPx
+    log.debug(
+      `${screenWidthPts.toFixed(0)}x${screenHeightPts.toFixed(0)} pts (dpi=${dpi}) => areaScale=${normalizedArea.toFixed(2)}, ` +
+        `scale=${scale.toFixed(2)}, minPx=${this.opts.fontMinPx} fontScale=${this.opts.fontSizeScaling} fontPx=${fontPx.toFixed(2)}`
+    )
+  }
+
+  /**
    * callback function to handle resize window events, redraws the scene.
    * @internal
    */
@@ -1282,6 +1317,7 @@ export class Niivue {
       this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr
     }
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+    this.textSizePoints()
     this.drawScene()
   }
 
@@ -9416,7 +9452,7 @@ export class Niivue {
       this.drawTextBetween(
         textCoords,
         stringMM,
-        this.opts.measureTextHeight / this.opts.textHeight,
+        this.opts.measureTextHeight / 0.06, // <- TODO measureFontPx
         this.opts.measureTextColor
       )
     }
@@ -9573,12 +9609,12 @@ export class Niivue {
       labels.length === 1
         ? labels[0]
         : labels.reduce((a, b) => {
-            const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-            const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+            const aSize = this.fontPx * a.style.textScale
+            const bSize = this.fontPx * b.style.textScale
             const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
             return taller
           })
-    const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale
+    const size = this.fontPx * tallestLabel.style.textScale
     bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
     bulletMargin += size
     return bulletMargin
@@ -9590,17 +9626,17 @@ export class Niivue {
       return 0
     }
     const scale = 1.0 // we may want to make this adjustable in the future
-    const horizontalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+    const horizontalMargin = this.fontPx * scale
     let width = 0
 
     const longestLabel = labels.reduce((a, b) => {
-      const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale
-      const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale
+      const aSize = this.fontPx * a.style.textScale
+      const bSize = this.fontPx * b.style.textScale
       const longer = this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b
       return longer
     })
 
-    const longestTextSize = this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale
+    const longestTextSize = this.fontPx * longestLabel.style.textScale
     const longestTextLength = this.textWidth(longestTextSize, longestLabel.text)
 
     const bulletMargin = this.getBulletMarginWidth()
@@ -9615,18 +9651,17 @@ export class Niivue {
     return width
   }
 
-  getLegendPanelHeight(): number {
+  getLegendPanelHeight(panelScale = 1.0): number {
     const labels = this.getConnectomeLabels()
     let height = 0
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height
+    const verticalMargin = this.fontPx
     for (const label of labels) {
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.fontPx * label.style.textScale * panelScale
       const textHeight = this.textHeight(labelSize, label.text)
       height += textHeight
     }
-
     if (height) {
-      height += (verticalMargin / 2) * (labels.length + 1)
+      height += (verticalMargin / 2) * (labels.length + 1) * panelScale
     }
     return height
   }
@@ -9634,10 +9669,10 @@ export class Niivue {
   // not included in public docs
   // determine canvas pixels required for colorbar
   reserveColorbarPanel(): number[] {
-    let txtHt = Math.max(this.opts.textHeight, 0.01)
-    txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
-
-    const fullHt = 3 * txtHt
+    const fullHt = 3 * this.fontPx
+    if (fullHt < 0) {
+      return [0, 0, 0, 0]
+    }
 
     // Calculate width as a percentage of canvas width
     // If colorbarWidth is not set (0) or invalid, use full width
@@ -9669,8 +9704,10 @@ export class Niivue {
     if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
       return
     }
-    let txtHt = Math.max(this.opts.textHeight, 0.01)
-    txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
+    const txtHt = this.fontPx
+    if (txtHt <= 0) {
+      return
+    }
     let margin = txtHt
     const fullHt = 3 * txtHt
     let barHt = txtHt
@@ -9779,9 +9816,10 @@ export class Niivue {
       return
     }
     let leftTopWidthHeight = this.reserveColorbarPanel()
-    let txtHt = Math.max(this.opts.textHeight, 0.01)
-    txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width)
-    const fullHt = 3 * txtHt
+    const fullHt = 3 * this.fontPx
+    if (fullHt < 0) {
+      return
+    }
     let wid = leftTopWidthHeight[2] / nVisible
     if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
       wid = this.gl.canvas.width / nVisible
@@ -9866,15 +9904,14 @@ export class Niivue {
 
   // not included in public docs
   drawText(xy: number[], str: string, scale = 1, color: Float32List | null = null): void {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return
     }
     if (!this.fontShader) {
       throw new Error('fontShader undefined')
     }
     this.fontShader.use(this.gl)
-    // let size = this.opts.textHeight * this.gl.canvas.height * scale;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const size = this.fontPx * scale
     this.gl.enable(this.gl.BLEND)
     this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
     if (color === null) {
@@ -9895,20 +9932,20 @@ export class Niivue {
   // not included in public docs
   drawTextRight(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
     // to right of x, vertically centered on y
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return
     }
-    xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height
+    xy[1] -= 0.5 * this.fontPx
     this.drawText(xy, str, scale, color)
   }
 
   // not included in public docs
   drawTextLeft(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
     // to left of x, vertically centered on y
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return
     }
-    const size = this.opts.textHeight * this.gl.canvas.height * scale
+    const size = this.fontPx * scale
     xy[0] -= this.textWidth(size, str)
     xy[1] -= 0.5 * size
     this.drawText(xy, str, scale, color)
@@ -9917,7 +9954,7 @@ export class Niivue {
   // not included in public docs
   drawTextRightBelow(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
     // to right of x, vertically centered on y
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return
     }
 
@@ -9927,11 +9964,11 @@ export class Niivue {
   // not included in public docs
   drawTextBetween(startXYendXY: number[], str: string, scale = 1, color: number[] | null = null): void {
     // horizontally centered on x, below y
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return
     }
     const xy = [(startXYendXY[0] + startXYendXY[2]) * 0.5, (startXYendXY[1] + startXYendXY[3]) * 0.5]
-    const size = this.opts.textHeight * this.gl.canvas.height * scale
+    const size = this.fontPx * scale
     const w = this.textWidth(size, str)
     xy[0] -= 0.5 * w
     xy[1] -= 0.5 * size
@@ -9953,17 +9990,17 @@ export class Niivue {
   // not included in public docs
   drawTextBelow(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
     // horizontally centered on x, below y
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return
     }
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-    let size = this.opts.textHeight * this.gl.canvas.height * scale
+    let size = this.fontPx * scale
     let width = this.textWidth(size, str)
     if (width > this.canvas.width) {
       scale *= (this.canvas.width - 2) / width
-      size = this.opts.textHeight * this.gl.canvas.height * scale
+      size = this.fontPx * scale
       width = this.textWidth(size, str)
     }
     xy[0] -= 0.5 * this.textWidth(size, str)
@@ -10205,7 +10242,7 @@ export class Niivue {
     let drawBelow = true
     let drawRight = true
     if (!isNaN(padLeftTop[0])) {
-      const ht = this.opts.textHeight * this.gl.canvas.height + 2
+      const ht = this.fontPx + 2
       if (padLeftTop[1] > ht) {
         this.drawTextBelow(
           [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + padLeftTop[1] - ht],
@@ -10849,15 +10886,18 @@ export class Niivue {
       // drop trailing zeros from numerical string
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
-    const minWH = Math.min(graph.LTWH[2], graph.LTWH[3])
-    const baseSize = 16
-    const baseWH = 480
-    const exponent = 0.5 // square root scaling
-    let fntSize = baseSize * Math.pow(minWH / baseWH, exponent)
-    if (fntSize < 12) {
+    let fntSize = this.fontPx * 0.7
+    const screenWidthPts = this.gl.canvas.width / this.uiData.dpr
+    const screenHeightPts = this.gl.canvas.height / this.uiData.dpr
+    const screenAreaPts = screenWidthPts * screenHeightPts
+    // Reference canvas area in points (800×600)
+    const refAreaPts = 800 * 600
+    if (screenAreaPts < refAreaPts) {
       fntSize = 0
+    } else {
+      fntSize = Math.max(fntSize, this.opts.fontMinPx)
     }
-    const fntScale = fntSize / (this.opts.textHeight * this.gl.canvas.height)
+    const fntScale = fntSize / this.fontPx
     let maxTextWid = 0
     let lineH = ticMin
     // determine widest label in vertical axis
@@ -11282,9 +11322,9 @@ export class Niivue {
   }
 
   getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null {
-    const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+    const scale = this.legendFontScaling
+    const size = this.fontPx * scale
+    const verticalMargin = this.fontPx * scale
 
     // get all non-connectome labels
     for (const label of this.document.labels) {
@@ -11292,7 +11332,7 @@ export class Niivue {
         continue
       }
 
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.fontPx * label.style.textScale * scale
       const textHeight = this.textHeight(labelSize, label.text)
       const textWidth = this.textWidth(labelSize, label.text)
 
@@ -11352,7 +11392,7 @@ export class Niivue {
       return label
     }
     log.debug('screenPoint', screenPoint)
-    const panelHeight = this.getLegendPanelHeight()
+    const panelHeight = this.getLegendPanelHeight(scale)
     const panelWidth = this.getLegendPanelWidth()
     const left = this.gl.canvas.width - panelWidth
     let top = (this.canvas!.height - panelHeight) / 2
@@ -11368,9 +11408,10 @@ export class Niivue {
 
     const labels = this.getConnectomeLabels()
     for (const label of labels) {
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
+      const labelSize = this.fontPx * label.style.textScale * scale
       const textHeight = this.textHeight(labelSize, label.text)
       if (screenPoint[1] >= top && screenPoint[1] <= top + textHeight + size / 2) {
+        log.debug(`label clicked ${label.text}`)
         return label
       }
       top += textHeight
@@ -11408,14 +11449,15 @@ export class Niivue {
     leftTopWidthHeight?: number[],
     bulletMargin?: number,
     legendWidth?: number,
-    secondPass?: boolean
+    secondPass?: boolean,
+    scaling: number = 1.0
   ): void {
     const text = label.text
     const left = pos[0]
     const top = pos[1]
 
     // const scale = label.style.textScale;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    const size = this.fontPx * scaling
 
     const textHeight = this.textHeight(label.style.textScale, text) * size
 
@@ -11459,21 +11501,23 @@ export class Niivue {
     if (!this.opts.showLegend || labels.length === 0) {
       return
     }
-
-    if (!this.canvas) {
+    let panelHeight = this.getLegendPanelHeight(1)
+    if (!this.canvas || panelHeight < 1) {
       throw new Error('canvas undefined')
     }
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
-    const panelHeight = this.getLegendPanelHeight()
+    this.legendFontScaling = 1
     if (panelHeight > this.canvas.height) {
+      const margin = 10 * this.uiData.dpr
+      this.legendFontScaling = Math.max(this.canvas.height - margin, 1) / panelHeight
       // legend too big for screen issue 1279
-      log.debug('Legend may overflow screen size')
+      log.debug(`Legend too large for screen, font reduction factor x${this.legendFontScaling}`)
+      panelHeight = this.getLegendPanelHeight(this.legendFontScaling)
     }
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width)
+    const size = this.fontPx * this.legendFontScaling
     const bulletMargin = this.getBulletMarginWidth()
-
     const panelWidth = this.getLegendPanelWidth()
     const left = gl.canvas.width - panelWidth
     let top = (this.canvas.height - panelHeight) / 2
@@ -11487,10 +11531,19 @@ export class Niivue {
     }
 
     for (const label of labels) {
-      this.draw3DLabel(label, [left, top], mvpMatrix, leftTopWidthHeight, bulletMargin, panelWidth, secondPass)
+      this.draw3DLabel(
+        label,
+        [left, top],
+        mvpMatrix,
+        leftTopWidthHeight,
+        bulletMargin,
+        panelWidth,
+        secondPass,
+        this.legendFontScaling
+      )
 
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale
-      const textHeight = this.textHeight(labelSize, label.text)
+      const labelSize = this.fontPx * label.style.textScale
+      const textHeight = this.textHeight(labelSize, label.text) * this.legendFontScaling
 
       top += textHeight // Math.max(textHeight, bulletHeight);
       top += size / 2
@@ -11507,7 +11560,7 @@ export class Niivue {
   }
 
   drawAnchoredLabels(): void {
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1.0
+    const size = this.fontPx
     const anchoredLabels = this.document.labels.filter((l) => l.anchor != null && l.anchor !== LabelAnchorPoint.NONE)
     for (const label of anchoredLabels) {
       const text = label.text
@@ -11517,7 +11570,7 @@ export class Niivue {
       let top: number
 
       const scale = 1.0 // we may want to make this adjustable in the future
-      const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale
+      const verticalMargin = this.fontPx * scale
       const rectHeightDiff = verticalMargin
       let rectWidthDiff = verticalMargin / 4
       let rectHorizontalOffset = 0
@@ -12113,7 +12166,7 @@ export class Niivue {
     const totalLength = vec2.length(segment)
     vec2.normalize(segment, segment)
     const scale = 1.0
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale
+    const size = this.fontPx * scale
     vec2.scale(segment, segment, size / 2)
     const segmentLength = vec2.length(segment)
     let segmentCount = Math.floor(totalLength / segmentLength)
@@ -12387,7 +12440,7 @@ export class Niivue {
     const sagMM = []
     const items = mosaicStr.split(/\s+/)
     let scale = 1.0 // e.g. if 1.0 1mm per pixel
-    const labelSize = this.opts.textHeight
+    const labelSize = this.fontPx
     // let isCrossLinesUsed = false;
     let marginLeft = 0
     let marginTop = 0
@@ -12496,7 +12549,7 @@ export class Niivue {
         } else {
           // 2nd pass draw
           const ltwh = [marginLeft + scale * left, marginTop + scale * top, scale * w, scale * h]
-          this.opts.textHeight = isLabel ? labelSize : 0
+          this.fontPx = isLabel ? labelSize : 0
 
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity
@@ -12534,7 +12587,7 @@ export class Niivue {
         marginTop = this.opts.tileMargin
       }
     }
-    this.opts.textHeight = labelSize
+    this.fontPx = labelSize
   }
 
   calculateWidthHeight(
@@ -12774,14 +12827,11 @@ export class Niivue {
           log.debug('multiplanarPadPixels must be numeric')
         }
         // pad is "outer padding" minimum distance between tiles
-        const pad = parseFloat(`${this.opts.multiplanarPadPixels}`)
+        const pad = parseFloat(`${this.opts.multiplanarPadPixels}`) * this.uiData.dpr
         // inner pad is padding inside a tile. Note that a display with 1 row of tiles has no outer pad, but does have inner pad
-        let innerPad = this.opts.tileMargin
+        let innerPad = this.opts.tileMargin * this.uiData.dpr
         if (innerPad < 0) {
-          innerPad =
-            2 *
-            (2 +
-              Math.ceil(Math.max(this.opts.textHeight, 0.01) * Math.min(this.gl.canvas.height, this.gl.canvas.width)))
+          innerPad = 2 * (2 + Math.ceil(this.fontPx))
         }
         function padPixelsWH(cols: number, rows: number): [number, number] {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]

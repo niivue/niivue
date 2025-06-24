@@ -153,15 +153,8 @@ export class ColorTables {
     let cmap: ColorMap = typeof name === 'object' ? name : cmaps[name as keyof typeof cmaps]
 
     if (cmap === undefined) {
-      cmap = {
-        min: 0,
-        max: 0,
-        R: [0, 255, 0, 0, 255, 0, 255],
-        G: [0, 0, 255, 0, 255, 255, 0],
-        B: [0, 0, 0, 255, 0, 255, 255],
-        A: [0, 255, 255, 255, 255, 255, 255],
-        I: [0, 255]
-      }
+      log.warn('colormap undefined ', name)
+      cmap = this.colormapFromKey('')
     }
 
     const cm = this.makeLabelLut(cmap, 255)
