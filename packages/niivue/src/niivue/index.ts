@@ -1013,6 +1013,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * await niivue.attachToCanvas(document.getElementById(id))
+   * @see {@link https://niivue.com/demos/features/dsistudio.html | live demo usage}
    */
   async attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean | null = null): Promise<this> {
     this.canvas = canvas
@@ -2501,10 +2502,12 @@ export class Niivue {
     await this.addVolumeFromUrl(imageOptions)
   }
 
-  /**
-   * Load a mesh or image from a file object
-   * @param file - File object
-   */
+/**
+ * Load a mesh or image volume from a File object
+ * @param file - File object selected by the user (e.g. from an <input type="file"> element)
+ * @returns a Promise that resolves when the file has been loaded and added to the scene
+ * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
+ */
   async loadFromFile(file: File): Promise<void> {
     const ext = this.getFileExt(file.name)
     // first check if it's a mesh
@@ -2821,11 +2824,12 @@ export class Niivue {
     this.updateGLVolume()
   }
 
-  /**
-   * determine if orientation text appears in 2D slice view.
-   * @param isOrientationTextVisible - controls position of text
-   * @example niivue.setIsOrientationTextVisible(false)
-   */
+/**
+ * Show or hide orientation labels (e.g., L/R, A/P) in 2D slice views
+ * @param isOrientationTextVisible - whether orientation text should be displayed
+ * @example niivue.setIsOrientationTextVisible(false)
+ * @see {@link https://niivue.com/demos/features/basic.multiplanar.html | live demo usage}
+ */
   setIsOrientationTextVisible(isOrientationTextVisible: boolean): void {
     this.opts.isOrientationTextVisible = isOrientationTextVisible
     this.drawScene()
@@ -3035,7 +3039,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.addVolume(NVImage.loadFromUrl({url:'../someURL.nii.gz'}))
-   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
    */
   addVolume(volume: NVImage): void {
     this.volumes.push(volume)
@@ -3229,7 +3233,11 @@ export class Niivue {
     return true
   }
 
-  // not included in public docs
+/**
+ * Binarize a volume by converting all non-zero voxels to 1
+ * @param volume - the image volume to modify in place
+ * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
+ */
   binarize(volume: NVImage): void {
     const dims = volume.hdr!.dims
     const vx = dims[1] * dims[2] * dims[3]
@@ -3817,10 +3825,12 @@ export class Niivue {
     this.drawScene()
   }
 
-  /**
-   * Remove a volume by index
-   * @param index - of volume to remove
-   */
+/**
+ * Remove a volume from the scene by its index
+ * @param index - index of the volume to remove
+ * @throws if the index is out of bounds
+ * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
+ */
   removeVolumeByIndex(index: number): void {
     if (index >= this.volumes.length) {
       throw new Error('Index of volume out of bounds')
@@ -4491,6 +4501,7 @@ export class Niivue {
  * const javascript = this.generateLoadDocumentJavaScript("gl1");
  * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
         ${javascript}</script></body></html>`;
+ * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
  */
   async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
     const json = this.json()
@@ -4607,12 +4618,14 @@ export class Niivue {
     return html
   }
 
-  /**
-   * save current scene as HTML
-   * @param fileName - the name of the HTML file
-   * @param canvasId - id of canvas NiiVue will be attached to
-   * @param esm - bundled version of NiiVue
-   */
+/**
+ * Save the current scene as a standalone HTML file
+ * @param fileName - name of the HTML file to save (default: "untitled.html")
+ * @param canvasId - ID of the canvas element NiiVue will attach to
+ * @param esm - bundled ES module source for NiiVue
+ * @returns a Promise that resolves when the file is downloaded
+ * @see {@link https://niivue.com/demos/features/save.html.html | live demo usage}
+ */
   async saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): Promise<void> {
     const html = await this.generateHTML(canvasId, esm)
     return NVUtilities.download(html, fileName, 'application/html')
@@ -4646,6 +4659,7 @@ export class Niivue {
    * @example
    * // smallest possible file – no preview, just metadata
    * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
+   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   async saveDocument(
     fileName = 'untitled.nvd',
@@ -4670,7 +4684,13 @@ export class Niivue {
     await this.document.download(fileName, compress, { embedImages })
   }
 
-  // generic loadImages that wraps loadVolumes and loadMeshes
+/**
+ * Load an array of image or mesh URLs using appropriate handlers
+ * @param images - array of image or mesh descriptors (with URL and optional name)
+ * @returns a Promise resolving to the current NiiVue instance after loading completes
+ * @remarks Automatically dispatches each item to either volume or mesh loader based on file extension or registered custom loader
+ * @see {@link https://niivue.com/demos/features/timeseries2.html | live demo usage}
+ */
   async loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this> {
     const volumes = []
     const meshes = []
@@ -6880,6 +6900,7 @@ export class Niivue {
     gl.deleteBuffer(vbo2)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   } /**
+
    * Get the gradient texture produced by gradientGL as a TypedArray
    * @returns Float32Array containing the gradient texture data, or null if no gradient texture exists
    * @example
@@ -6890,8 +6911,8 @@ export class Niivue {
    * if (gradientData) {
    *   console.log('Gradient texture dimensions:', gradientData.length)
    * }
+   * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
-
   getGradientTextureData(): Float32Array | null {
     if (!this.gradientTexture || !this.back) {
       return null
@@ -6979,6 +7000,7 @@ export class Niivue {
    *
    * // To revert to auto-generated gradient:
    * niivue.setCustomGradientTexture(null)
+   * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
   setCustomGradientTexture(data: Float32Array | Uint8Array | null, dims?: number[]): void {
     const gl = this.gl
@@ -8291,6 +8313,15 @@ export class Niivue {
     return [cl, ls]
   } // bwlabel()
 
+/**
+ * Create a connected component label map from a volume
+ * @param id - ID of the input volume
+ * @param conn - connectivity for clustering (6 = faces, 18 = faces + edges, 26 = faces + edges + corners)
+ * @param binarize - whether to binarize the volume before labeling
+ * @param onlyLargestClusterPerClass - retain only the largest cluster for each label
+ * @returns a new NVImage with labeled clusters, using random colormap
+ * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
+ */
   async createConnectedLabelImage(
     id: string,
     conn: number = 26,
@@ -8513,8 +8544,16 @@ export class Niivue {
     return [out_affine, vox2vox, inv_vox2vox]
   }
 
-  // Create a binary byte array with a NIfTI format header as well as image data
-
+/**
+ * Create a binary NIfTI file as a Uint8Array, including header and image data
+ * @param dims - image dimensions [x, y, z]
+ * @param pixDims - voxel dimensions in mm [x, y, z]
+ * @param affine - 4×4 affine transformation matrix in row-major order
+ * @param datatypeCode - NIfTI datatype code (e.g., DT_UINT8, DT_FLOAT32)
+ * @param img - image data buffer (optional)
+ * @returns a Uint8Array representing a complete NIfTI file
+ * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
+ */
   async createNiftiArray(
     dims = [256, 256, 256],
     pixDims = [1, 1, 1],
@@ -8525,14 +8564,21 @@ export class Niivue {
     return await NVImage.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
   }
 
-  // Convert a binary byte array with a NIfTI image to NiiVue's internal NVImage object
-
-  async niftiArray2NVImage(bytes = new Uint8Array()): Promise<NVImage> {
+/**
+ * Convert a binary NIfTI file (as a Uint8Array) to an NVImage object
+ * @param bytes - binary contents of a NIfTI file
+ * @returns a Promise resolving to an NVImage object
+ * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
+ */  async niftiArray2NVImage(bytes = new Uint8Array()): Promise<NVImage> {
     return await NVImage.loadFromUrl({ url: bytes })
   }
 
-  // Read a NIfTI file and convert as NiiVue internal NVImage: AddVolume this does not load image to GPU
-
+/**
+ * Load a NIfTI image from a URL and convert it to an NVImage object
+ * @param fnm - URL of the NIfTI file to load
+ * @returns a Promise resolving to an NVImage (not yet added to GPU or scene)
+ * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
+ */
   async loadFromUrl(fnm: string): Promise<NVImage> {
     return await NVImage.loadFromUrl({ url: fnm })
   }
@@ -8706,7 +8752,11 @@ export class Niivue {
     this.drawScene()
   }
 
-  // compatibility alias for NiiVue < 0.35
+/**
+ * @deprecated Use {@link setColormap} instead. This alias is retained for compatibility with NiiVue < 0.35.
+ * @param id - ID of the volume
+ * @param colormap - name of the colormap to apply
+ */
   setColorMap(id: string, colormap: string): void {
     this.setColormap(id, colormap)
   }
@@ -8835,7 +8885,13 @@ export class Niivue {
     return cmapper.colormapFromKey(name)
   }
 
-  // not included in public docs
+/**
+ * Retrieve a colormap with optional inversion
+ * @param lutName - name of the lookup table (LUT) colormap
+ * @param isInvert - whether to invert the colormap
+ * @returns the RGBA colormap as a Uint8ClampedArray
+ * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
+ */
   colormap(lutName = '', isInvert = false): Uint8ClampedArray {
     return cmapper.colormap(lutName, isInvert)
   }
@@ -8881,7 +8937,11 @@ export class Niivue {
     })
   }
 
-  // not included in public docs
+/**
+ * Rebuild and upload all colormap textures for volumes and meshes
+ * @returns the current NiiVue instance, or undefined if no colormaps are used
+ * @see {@link https://niivue.com/demos/features/mesh.stats.html | live demo usage}
+ */
   refreshColormaps(): this | undefined {
     this.colormapLists = [] // one entry per colorbar: min, max, tic
     if (this.volumes.length < 1 && this.meshes.length < 1) {
@@ -10201,7 +10261,11 @@ export class Niivue {
     }
   }
 
-  // not included in public docs
+/**
+ * Enable or disable atlas outline overlay
+ * @param isOutline - number 0 to 1 for outline opacity
+ * @see {@link https://niivue.com/demos/features/atlas.sparse.html | live demo usage}
+ */
   setAtlasOutline(isOutline: number): void {
     this.opts.atlasOutline = isOutline
     this.updateGLVolume()
@@ -11344,8 +11408,12 @@ export class Niivue {
     this.gl.disable(this.gl.CULL_FACE)
   }
 
-  // not included in public docs
-  // fills data returned with the onLocationChanvge() callback
+/**
+ * Internal utility to generate human-readable location strings for the onLocationChange callback
+ * @param axCorSag - optional axis index for coordinate interpretation (NaN by default)
+ * @remarks Not included in public documentation. Computes string representation of current crosshair position in mm (and frame if 4D).
+ * @see {@link https://niivue.com/demos/features/modulateAfni.html | live demo usage}
+ */
   createOnLocationChange(axCorSag = NaN): void {
     // first: provide a string representation
     const [_mn, _mx, range] = this.sceneExtentsMinMax(true)
