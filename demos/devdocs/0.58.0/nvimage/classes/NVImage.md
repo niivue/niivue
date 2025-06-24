@@ -329,7 +329,7 @@ volume brightness and returns array [pct2, pct98, mnScale, mxScale]
 
 #### See
 
-[live demo usage](https://niivue.github.io/niivue/features/timeseries2.html)
+[live demo usage](https://niivue.com/demos/features/timeseries2.html)
 
 ---
 
