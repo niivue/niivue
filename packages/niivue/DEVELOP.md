@@ -43,7 +43,7 @@ nv.loadVolumes(volumeList);
 import { Niivue } from "@niivue/niivue";
 // make an array of meshes to load
 let meshList = [
-  { url: "https://niivue.github.io/niivue/images/BrainMesh_ICBM152.lh.mz3"},
+  { url: "https://niivue.com/demos/images/BrainMesh_ICBM152.lh.mz3"},
 ];
 const nv = new Niivue();
 await nv.attachTo("gl"); // attach to canvas with id="gl"
@@ -73,11 +73,11 @@ nv.loadVolumes(volumeList);
   // make an array of volumes to load
   let volumeList = [
     {
-      url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
+      url: "https://niivue.com/demos/images/mni152.nii.gz",
       colormap: "grey"
     },
     {
-      url: "https://niivue.github.io/niivue/images/hippo.nii.gz",
+      url: "https://niivue.com/demos/images/hippo.nii.gz",
       colormap: "red"
     },
   ]
@@ -93,13 +93,13 @@ nv.loadVolumes(volumeList);
   // make an array of volumes to load
   let volumeList = [
     {
-      url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
+      url: "https://niivue.com/demos/images/mni152.nii.gz",
       colormap: "grey"
     },
   ]
   // make an array of meshes to load
   let meshList = [
-    { url: "https://niivue.github.io/niivue/images/BrainMesh_ICBM152.lh.mz3"},
+    { url: "https://niivue.com/demos/images/BrainMesh_ICBM152.lh.mz3"},
   ]
   const nv = new Niivue();
   await nv.attachTo("gl"); // attach to canvas with id="gl"
@@ -114,7 +114,7 @@ nv.loadVolumes(volumeList);
     // make an array of volumes to load
     let volumeList = [
       {
-        url: "https://niivue.github.io/niivue/images/mni152.nii.gz",
+        url: "https://niivue.com/demos/images/mni152.nii.gz",
         colormap: "grey"
       },
     ]

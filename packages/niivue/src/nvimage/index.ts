@@ -2648,7 +2648,7 @@ export class NVImage {
    * @param vol - volume for estimate (use -1 to use estimate on all loaded volumes; use INFINITY for current volume)
    * @param isBorder - if true (default) only center of volume used for estimate
    * @returns volume brightness and returns array [pct2, pct98, mnScale, mxScale]
-   * @see {@link https://niivue.github.io/niivue/features/timeseries2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/timeseries2.html | live demo usage}
    */
   calMinMax(vol: number = Number.POSITIVE_INFINITY, isBorder: boolean = true): number[] {
     if (!this.hdr) {
@@ -3581,7 +3581,7 @@ export class NVImage {
 
   /**
    * read a 3D slab of voxels from a volume
-   * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/slab_selection.html | live demo usage}
    */
 
   /**
@@ -3598,7 +3598,7 @@ export class NVImage {
 
   /**
    * write a 3D slab of voxels from a volume
-   * @see {@link https://niivue.github.io/niivue/features/slab_selection.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/slab_selection.html | live demo usage}
    */
 
   /**

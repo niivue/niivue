@@ -961,7 +961,7 @@ export class Niivue {
    * save webgl2 canvas as png format bitmap
    * @param filename - filename for screen capture
    * @example niivue.saveScene('test.png');
-   * @see {@link https://niivue.github.io/niivue/features/ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/ui.html | live demo usage}
    */
   async saveScene(filename = 'niivue.png'): Promise<void> {
     function saveBlob(blob: Blob, name: string): void {
@@ -999,7 +999,7 @@ export class Niivue {
    * @param isAntiAlias - determines if anti-aliasing is requested (if not specified, AA usage depends on hardware)
    * @example niivue = new Niivue().attachTo('gl')
    * @example await niivue.attachTo('gl')
-   * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/basic.multiplanar.html | live demo usage}
    */
   async attachTo(id: string, isAntiAlias = null): Promise<this> {
     await this.attachToCanvas(document.getElementById(id) as HTMLCanvasElement, isAntiAlias)
@@ -1013,6 +1013,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * await niivue.attachToCanvas(document.getElementById(id))
+   * @see {@link https://niivue.com/demos/features/dsistudio.html | live demo usage}
    */
   async attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean | null = null): Promise<this> {
     this.canvas = canvas
@@ -1085,7 +1086,7 @@ export class Niivue {
    * niivue2 = new Niivue()
    * niivue2.syncWith(niivue1)
    * @deprecated use broadcastTo instead
-   * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/sync.mesh.html | live demo usage}
    */
   syncWith(otherNV: Niivue | Niivue[], syncOpts = { '2d': true, '3d': true }): void {
     // if otherNV is not an array, make it an array of one
@@ -1105,7 +1106,7 @@ export class Niivue {
    * niivue3 = new Niivue()
    * niivue1.broadcastTo(niivue2)
    * niivue1.broadcastTo([niivue2, niivue3])
-   * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/sync.mesh.html | live demo usage}
    */
   broadcastTo(otherNV: Niivue | Niivue[], syncOpts = { '2d': true, '3d': true }): void {
     // if otherNV is a single instance then make it an array of one
@@ -2296,7 +2297,7 @@ export class Niivue {
 
   /**
    * Add an image and notify subscribers
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   async addVolumeFromUrl(imageOptions: ImageFromUrlOptions): Promise<NVImage> {
     const volume = await NVImage.loadFromUrl(imageOptions)
@@ -2390,7 +2391,7 @@ export class Niivue {
   /**
    * Remove volume by url
    * @param url - Volume added by url to remove
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   removeVolumeByUrl(url: string): void {
     const volume = this.getMediaByUrl(url)
@@ -2502,8 +2503,10 @@ export class Niivue {
   }
 
   /**
-   * Load a mesh or image from a file object
-   * @param file - File object
+   * Load a mesh or image volume from a File object
+   * @param file - File object selected by the user (e.g. from an HTML input element)
+   * @returns a Promise that resolves when the file has been loaded and added to the scene
+   * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
    */
   async loadFromFile(file: File): Promise<void> {
     const ext = this.getFileExt(file.name)
@@ -2789,7 +2792,7 @@ export class Niivue {
    * insert a gap between slices of a mutliplanar view.
    * @param pixels - spacing between tiles of multiplanar view
    * @example niivue.setMultiplanarPadPixels(4)
-   * @see {@link https://niivue.github.io/niivue/features/atlas.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/atlas.html | live demo usage}
    */
   setMultiplanarPadPixels(pixels: number): void {
     this.opts.multiplanarPadPixels = pixels
@@ -2800,7 +2803,7 @@ export class Niivue {
    * control placement of 2D slices.
    * @param layout - AUTO: 0, COLUMN: 1, GRID: 2, ROW: 3,
    * @example niivue.setMultiplanarLayout(2)
-   * @see {@link https://niivue.github.io/niivue/features/layout.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/layout.html | live demo usage}
    */
   setMultiplanarLayout(layout: number): void {
     if (typeof layout === 'string') {
@@ -2814,7 +2817,7 @@ export class Niivue {
    * determine if text appears at corner (true) or sides of 2D slice.
    * @param isCornerOrientationText - controls position of text
    * @example niivue.setCornerOrientationText(true)
-   * @see {@link https://niivue.github.io/niivue/features/worldspace2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/worldspace2.html | live demo usage}
    */
   setCornerOrientationText(isCornerOrientationText: boolean): void {
     this.opts.isCornerOrientationText = isCornerOrientationText
@@ -2822,9 +2825,10 @@ export class Niivue {
   }
 
   /**
-   * determine if orientation text appears in 2D slice view.
-   * @param isOrientationTextVisible - controls position of text
+   * Show or hide orientation labels (e.g., L/R, A/P) in 2D slice views
+   * @param isOrientationTextVisible - whether orientation text should be displayed
    * @example niivue.setIsOrientationTextVisible(false)
+   * @see {@link https://niivue.com/demos/features/basic.multiplanar.html | live demo usage}
    */
   setIsOrientationTextVisible(isOrientationTextVisible: boolean): void {
     this.opts.isOrientationTextVisible = isOrientationTextVisible
@@ -2835,7 +2839,7 @@ export class Niivue {
    * determine proportion of screen real estate devoted to rendering in multiplanar view.
    * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
    * @example niivue.setHeroImage(0.5)
-   * @see {@link https://niivue.github.io/niivue/features/layout.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/layout.html | live demo usage}
    */
   setHeroImage(fraction: number): void {
     this.opts.heroImageFraction = fraction
@@ -2924,7 +2928,7 @@ export class Niivue {
    * control whether 2D slices use radiological or neurological convention.
    * @param isRadiologicalConvention - new display convention
    * @example niivue.setRadiologicalConvention(true)
-   * @see {@link https://niivue.github.io/niivue/features/worldspace.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/worldspace.html | live demo usage}
    */
   setRadiologicalConvention(isRadiologicalConvention: boolean): void {
     this.opts.isRadiologicalConvention = isRadiologicalConvention
@@ -2936,7 +2940,7 @@ export class Niivue {
    * @param options - @see NiiVueOptions
    * @param resetBriCon - also reset contrast (default false).
    * @example niivue.nv1.setDefaults(opts, true);
-   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   setDefaults(options: Partial<NVConfigOptions> = {}, resetBriCon = false): void {
     this.document.opts = { ...DEFAULT_OPTIONS }
@@ -2965,7 +2969,7 @@ export class Niivue {
    * Limit visibility of mesh in front of a 2D image. Requires world-space mode.
    * @param meshThicknessOn2D - distance from voxels for clipping mesh. Use Infinity to show entire mesh or 0.0 to hide mesh.
    * @example niivue.setMeshThicknessOn2D(42)
-   * @see {@link https://niivue.github.io/niivue/features/worldspace2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/worldspace2.html | live demo usage}
    */
   setMeshThicknessOn2D(meshThicknessOn2D: number): void {
     this.opts.meshThicknessOn2D = meshThicknessOn2D
@@ -2976,7 +2980,7 @@ export class Niivue {
    * Create a custom multi-slice mosaic (aka lightbox, montage) view.
    * @param str - description of mosaic.
    * @example niivue.setSliceMosaicString("A 0 20 C 30 S 42")
-   * @see {@link https://niivue.github.io/niivue/features/mosaics.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mosaics.html | live demo usage}
    */
   setSliceMosaicString(str: string): void {
     this.sliceMosaicString = str
@@ -2987,7 +2991,7 @@ export class Niivue {
    * control 2D slice view mode.
    * @param isSliceMM - control whether 2D slices use world space (true) or voxel space (false). Beware that voxel space mode limits properties like panning, zooming and mesh visibility.
    * @example niivue.setSliceMM(true)
-   * @see {@link https://niivue.github.io/niivue/features/worldspace2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/worldspace2.html | live demo usage}
    */
   setSliceMM(isSliceMM: boolean): void {
     this.opts.isSliceMM = isSliceMM
@@ -2998,7 +3002,7 @@ export class Niivue {
    * control whether voxel overlays are combined using additive (emission) or traditional (transmission) blending.
    * @param isAdditiveBlend - emission (true) or transmission (false) mixing
    * @example niivue.isAdditiveBlend(true)
-   * @see {@link https://niivue.github.io/niivue/features/additive.voxels.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/additive.voxels.html | live demo usage}
    */
   setAdditiveBlend(isAdditiveBlend: boolean): void {
     this.opts.isAdditiveBlend = isAdditiveBlend
@@ -3018,7 +3022,7 @@ export class Niivue {
    * Force WebGL canvas to use high resolution display, regardless of browser defaults.
    * @param forceDevicePixelRatio - -1: block high DPI; 0= allow high DPI: >0 use specified pixel ratio
    * @example niivue.setHighResolutionCapable(true);
-   * @see {@link https://niivue.github.io/niivue/features/sync.mesh.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/sync.mesh.html | live demo usage}
    */
   setHighResolutionCapable(forceDevicePixelRatio: number | boolean): void {
     if (typeof forceDevicePixelRatio === 'boolean') {
@@ -3035,7 +3039,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.addVolume(NVImage.loadFromUrl({url:'../someURL.nii.gz'}))
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
    */
   addVolume(volume: NVImage): void {
     this.volumes.push(volume)
@@ -3052,7 +3056,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.addMesh(NVMesh.loadFromUrl({url:'../someURL.gii'}))
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   addMesh(mesh: NVMesh): void {
     this.meshes.push(mesh)
@@ -3110,7 +3114,7 @@ export class Niivue {
   /**
    * Restore drawing to previous state
    * @example niivue.drawUndo();
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   drawUndo(): void {
     if (this.drawUndoBitmaps.length < 1) {
@@ -3229,7 +3233,11 @@ export class Niivue {
     return true
   }
 
-  // not included in public docs
+  /**
+   * Binarize a volume by converting all non-zero voxels to 1
+   * @param volume - the image volume to modify in place
+   * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
+   */
   binarize(volume: NVImage): void {
     const dims = volume.hdr!.dims
     const vx = dims[1] * dims[2] * dims[3]
@@ -3250,7 +3258,7 @@ export class Niivue {
    * @param fnm - filename of NIfTI format drawing
    * @param isBinarize - if true will force drawing voxels to be either 0 or 1.
    * @example niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   async loadDrawingFromUrl(fnm: string, isBinarize = false): Promise<boolean> {
     if (this.drawBitmap) {
@@ -3383,7 +3391,7 @@ export class Niivue {
    * remove dark voxels in air
    * @param levels - (2-4) segment brain into this many types. For example drawOtsu(2) will create a binary drawing where bright voxels are colored and dark voxels are clear.
    * @example niivue.drawOtsu(3);
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   drawOtsu(levels = 2): void {
     if (this.volumes.length === 0) {
@@ -3423,7 +3431,7 @@ export class Niivue {
    * @param level - (1-5) larger values for more preserved voxels
    * @param volIndex - volume to dehaze
    * @example niivue.removeHaze(3, 0);
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   removeHaze(level = 5, volIndex = 0): void {
     const img = this.volumes[volIndex].img!
@@ -3474,7 +3482,7 @@ export class Niivue {
    * @example
    * niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
    * niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   async saveImage(options: SaveImageOptions = defaultSaveImageOptions): Promise<boolean | Uint8Array> {
     const saveOptions: SaveImageOptions = {
@@ -3597,7 +3605,7 @@ export class Niivue {
    * @param key - attribute to change
    * @param val - for attribute
    * @example niivue.setMeshProperty(niivue.meshes[0].id, 'fiberLength', 42)
-   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   setMeshProperty(
     id: number,
@@ -3622,7 +3630,7 @@ export class Niivue {
    * @param Zmm - location in foot/head dimension
    * @returns the an array where ret[0] is the mesh index and ret[1] is distance from vertex to coordinates
    * @example niivue.indexNearestXYZmm(niivue.meshes[0].id, -22, 42, 13)
-   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
    */
   indexNearestXYZmm(mesh: number, Xmm: number, Ymm: number, Zmm: number): number[] {
     const idx = this.getMeshIndexByID(mesh)
@@ -3639,7 +3647,7 @@ export class Niivue {
    * @param order - decimation order 0..6
    * @example niivue.decimateHierarchicalMesh(niivue.meshes[0].id, 4)
    * @returns boolean false if mesh is not hierarchical or of lower order
-   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   decimateHierarchicalMesh(mesh: number, order: number = 3): boolean {
     const idx = this.getMeshIndexByID(mesh)
@@ -3656,7 +3664,7 @@ export class Niivue {
    * reverse triangle winding of mesh (swap front and back faces)
    * @param mesh - identity of mesh to change
    * @example niivue.reverseFaces(niivue.meshes[0].id)
-   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   reverseFaces(mesh: number): void {
     const idx = this.getMeshIndexByID(mesh)
@@ -3675,7 +3683,7 @@ export class Niivue {
    * @param key - attribute to change
    * @param val - value for attribute
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
-   * @see {@link https://niivue.github.io/niivue/features/mesh.4D.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mesh.4D.html | live demo usage}
    */
   async setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
     const idx = this.getMeshIndexByID(mesh)
@@ -3703,7 +3711,7 @@ export class Niivue {
   /**
    * set rotation of 3D render view
    * @example niivue.setRenderAzimuthElevation(45, 15)
-   * @see {@link https://niivue.github.io/niivue/features/mask.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mask.html | live demo usage}
    */
   setRenderAzimuthElevation(a: number, e: number): void {
     this.scene.renderAzimuth = a
@@ -3801,7 +3809,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.removeVolume(this.volumes[3])
-   * @see {@link https://niivue.github.io/niivue/features/document.3d.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   removeVolume(volume: NVImage): void {
     this.setVolume(volume, -1)
@@ -3818,8 +3826,10 @@ export class Niivue {
   }
 
   /**
-   * Remove a volume by index
-   * @param index - of volume to remove
+   * Remove a volume from the scene by its index
+   * @param index - index of the volume to remove
+   * @throws if the index is out of bounds
+   * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
    */
   removeVolumeByIndex(index: number): void {
     if (index >= this.volumes.length) {
@@ -3834,7 +3844,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.removeMesh(this.meshes[3])
-   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   removeMesh(mesh: NVMesh): void {
     mesh.unloadMesh(this.gl)
@@ -3974,7 +3984,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.setClipPlane([42, 42])
-   * @see {@link https://niivue.github.io/niivue/features/mask.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mask.html | live demo usage}
    */
   setClipPlane(depthAzimuthElevation: number[]): void {
     //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
@@ -3996,7 +4006,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.setCrosshairColor([0, 1, 0, 0.5]) // set crosshair to transparent green
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   setCrosshairColor(color: number[]): void {
     this.opts.crosshairColor = color
@@ -4006,7 +4016,7 @@ export class Niivue {
   /**
    * set thickness of crosshair
    * @example niivue.crosshairWidth(2)
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   setCrosshairWidth(crosshairWidth: number): void {
     this.opts.crosshairWidth = crosshairWidth
@@ -4028,7 +4038,7 @@ export class Niivue {
    *    labels: ["", "white-matter", "delete T1"],
    *  };
    *  nv.setDrawColormap(cmap);
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   setDrawColormap(name: string): void {
     this.drawLut = cmapper.makeDrawLut(name)
@@ -4039,7 +4049,7 @@ export class Niivue {
    * does dragging over a 2D slice create a drawing?
    * @param trueOrFalse - enabled (true) or not (false)
    * @example niivue.setDrawingEnabled(true)
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   setDrawingEnabled(trueOrFalse: boolean): void {
     this.opts.drawingEnabled = trueOrFalse
@@ -4067,7 +4077,7 @@ export class Niivue {
    * @param penValue - sets the color of the pen
    * @param isFilledPen - determines if dragging creates flood-filled shape
    * @example niivue.setPenValue(1, true)
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   setPenValue(penValue: number, isFilledPen = false): void {
     this.opts.penValue = penValue
@@ -4079,7 +4089,7 @@ export class Niivue {
    * control whether drawing is transparent (0), opaque (1) or translucent (between 0 and 1).
    * @param opacity - translucency of drawing
    * @example niivue.setDrawOpacity(0.7)
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   setDrawOpacity(opacity: number): void {
     this.drawOpacity = opacity
@@ -4092,7 +4102,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.setSelectionBoxColor([0, 1, 0, 0.5]) // set to transparent green
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   setSelectionBoxColor(color: number[]): void {
     this.opts.selectionBoxColor = color
@@ -4147,7 +4157,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.setSliceType(Niivue.sliceTypeMultiplanar)
-   * @see {@link https://niivue.github.io/niivue/features/basic.multiplanar.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/basic.multiplanar.html | live demo usage}
    */
   setSliceType(st: SLICE_TYPE): this {
     this.opts.sliceType = st
@@ -4162,7 +4172,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.setOpacity(0, 0.5) // make the first volume transparent
-   * @see {@link https://niivue.github.io/niivue/features/atlas.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/atlas.html | live demo usage}
    */
   setOpacity(volIdx: number, newOpacity: number): void {
     this.volumes[volIdx].opacity = newOpacity
@@ -4174,7 +4184,7 @@ export class Niivue {
    * @param scale - the new scale value
    * @example
    * niivue.setScale(2) // zoom some
-   * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
    */
   setScale(scale: number): void {
     this.scene.volScaleMultiplier = scale
@@ -4186,7 +4196,7 @@ export class Niivue {
    * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
    * @example
    * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
-   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
    */
   setClipPlaneColor(color: number[]): void {
     this.opts.clipPlaneColor = color
@@ -4200,7 +4210,7 @@ export class Niivue {
    * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
    * @example
    * niivue.setClipPlaneThick(0.3) // thin slab
-   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
    */
   setClipPlaneThick(thick: number): void {
     this.opts.clipThick = thick
@@ -4217,7 +4227,7 @@ export class Niivue {
    * @param high - 3-component array specifying the upper bound of the clipping region along the X, Y, and Z axes. Values range from 0 to 1.
    * @example
    * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
-   * @see {@link https://niivue.github.io/niivue/features/clipplanes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
    */
   setClipVolume(low: number[], high: number[]): void {
     this.opts.clipVolumeLow = [Math.min(low[0], high[0]), Math.min(low[1], high[1]), Math.min(low[2], high[2])]
@@ -4236,8 +4246,8 @@ export class Niivue {
    * @param gradientAmount - amount of matcap (NaN or 0..1), default 0 (matte, surface normal does not influence color). NaN renders the gradients.
    * @example
    * niivue.setVolumeRenderIllumination(0.6);
-   * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
-   * @see {@link https://niivue.github.io/niivue/features/gradient.order.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/gradient.order.html | live demo usage}
    */
   async setVolumeRenderIllumination(gradientAmount = 0.0): Promise<void> {
     this.renderGradientValues = Number.isNaN(gradientAmount)
@@ -4273,7 +4283,7 @@ export class Niivue {
    * @param renderSilhouette - make core transparent to enhance rims (0..1), default 0 (no-influence)
    * @example
    * niivue.setGradientOpacity(0.6);
-   * @see {@link https://niivue.github.io/niivue/features/gradient.opacity.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/gradient.opacity.html | live demo usage}
    */
   async setGradientOpacity(gradientOpacity = 0.0, renderSilhouette = 0.0): Promise<void> {
     this.opts.gradientOpacity = gradientOpacity
@@ -4354,7 +4364,7 @@ export class Niivue {
   /**
    * Loads an NVDocument
    * @returns  Niivue instance
-   * @see {@link https://niivue.github.io/niivue/features/document.load.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/document.load.html | live demo usage}
    */
   async loadDocument(document: NVDocument): Promise<this> {
     this.volumes = []
@@ -4491,6 +4501,7 @@ export class Niivue {
  * const javascript = this.generateLoadDocumentJavaScript("gl1");
  * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
         ${javascript}</script></body></html>`;
+ * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
  */
   async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
     const json = this.json()
@@ -4608,10 +4619,12 @@ export class Niivue {
   }
 
   /**
-   * save current scene as HTML
-   * @param fileName - the name of the HTML file
-   * @param canvasId - id of canvas NiiVue will be attached to
-   * @param esm - bundled version of NiiVue
+   * Save the current scene as a standalone HTML file
+   * @param fileName - name of the HTML file to save (default: "untitled.html")
+   * @param canvasId - ID of the canvas element NiiVue will attach to
+   * @param esm - bundled ES module source for NiiVue
+   * @returns a Promise that resolves when the file is downloaded
+   * @see {@link https://niivue.com/demos/features/save.html.html | live demo usage}
    */
   async saveHTML(fileName = 'untitled.html', canvasId = 'gl1', esm: string): Promise<void> {
     const html = await this.generateHTML(canvasId, esm)
@@ -4646,6 +4659,7 @@ export class Niivue {
    * @example
    * // smallest possible file – no preview, just metadata
    * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
+   * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   async saveDocument(
     fileName = 'untitled.nvd',
@@ -4670,7 +4684,13 @@ export class Niivue {
     await this.document.download(fileName, compress, { embedImages })
   }
 
-  // generic loadImages that wraps loadVolumes and loadMeshes
+  /**
+   * Load an array of image or mesh URLs using appropriate handlers
+   * @param images - array of image or mesh descriptors (with URL and optional name)
+   * @returns a Promise resolving to the current NiiVue instance after loading completes
+   * @remarks Automatically dispatches each item to either volume or mesh loader based on file extension or registered custom loader
+   * @see {@link https://niivue.com/demos/features/timeseries2.html | live demo usage}
+   */
   async loadImages(images: Array<ImageFromUrlOptions | LoadFromUrlParams>): Promise<this> {
     const volumes = []
     const meshes = []
@@ -4759,7 +4779,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
-   * @see {@link https://niivue.github.io/niivue/features/mask.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mask.html | live demo usage}
    */
   async loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<this> {
     this.drawScene()
@@ -4885,7 +4905,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.loadMeshes([{url: 'someMesh.gii'}])
-   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   async loadMeshes(meshList: LoadFromUrlParams[]): Promise<this> {
     this.drawScene()
@@ -4923,7 +4943,7 @@ export class Niivue {
    * @param url - the URL to a JSON-formatted connectome definition
    * @param headers - optional HTTP headers to include with the request (e.g. for authorization)
    * @returns the `Niivue` instance (for method chaining)
-   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   async loadConnectomeFromUrl(url: string, headers = {}): Promise<this> {
     const response = await fetch(url, { headers })
@@ -4936,7 +4956,7 @@ export class Niivue {
    * @param url - the URL of the JSON-formatted connectome file
    * @param headers - optional HTTP headers to include in the fetch request (e.g. for authorization)
    * @returns the `Niivue` instance (for method chaining)
-   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   async loadFreeSurferConnectomeFromUrl(url: string, headers = {}): Promise<this> {
     const response = await fetch(url, { headers })
@@ -4948,7 +4968,7 @@ export class Niivue {
    * load a connectome specified by json
    * @param json - freesurfer model
    * @returns Niivue instance
-   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   async loadFreeSurferConnectome(json: FreeSurferConnectome): Promise<this> {
     const connectome = NVConnectome.convertFreeSurferConnectome(json)
@@ -4996,7 +5016,7 @@ export class Niivue {
    * load a connectome specified by json
    * @param json - connectome model
    * @returns Niivue instance
-   * @see {@link https://niivue.github.io/niivue/features/connectome.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   loadConnectome(json: Connectome | LegacyConnectome): this {
     this.drawScene()
@@ -5013,7 +5033,7 @@ export class Niivue {
   /**
    * generate a blank canvas for the pen tool
    * @example niivue.createEmptyDrawing()
-   * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
    */
   createEmptyDrawing(): void {
     if (this.back === null || !this.back.dims) {
@@ -5077,7 +5097,7 @@ export class Niivue {
    * dilate drawing so all voxels are colored.
    * works on drawing with multiple colors
    * @example niivue.drawGrowCut();
-   * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   drawGrowCut(): void {
     // this compute shader transiently requires 5 3D Textures:
@@ -6007,7 +6027,7 @@ export class Niivue {
   /**
    * close drawing: make sure you have saved any changes before calling this!
    * @example niivue.closeDrawing();
-   * @see {@link https://niivue.github.io/niivue/features/draw.ui.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   closeDrawing(): void {
     this.drawClearAllUndoBitmaps()
@@ -6021,7 +6041,7 @@ export class Niivue {
    * copy drawing bitmap from CPU to GPU storage and redraw the screen
    * @param isForceRedraw - refreshes scene immediately (default true)
    * @example niivue.refreshDrawing();
-   * @see {@link https://niivue.github.io/niivue/features/cactus.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
    */
   refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false): void {
     // Only use the growing bitmap if drawing AND clickToSegment are enabled.
@@ -6394,7 +6414,7 @@ export class Niivue {
    * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
    * @example
    * niivue.loadMatCapTexture("Cortex");
-   * @see {@link https://niivue.github.io/niivue/features/shiny.volumes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
    */
   async loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null> {
     return this.loadPngAsTexture(bmpUrl, 5)
@@ -6449,7 +6469,7 @@ export class Niivue {
    * @returns a Promise that resolves when the font is loaded
    * @example
    * niivue.loadMatCapTexture("Cortex");
-   * @see {@link https://niivue.github.io/niivue/features/selectfont.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
    */
   async loadFont(fontSheetUrl = defaultFontPNG, metricsUrl = defaultFontMetrics): Promise<void> {
     await this.loadFontTexture(fontSheetUrl)
@@ -6507,7 +6527,7 @@ export class Niivue {
    * @param id - id of mesh to change
    * @param meshShaderNameOrNumber - identify shader for usage
    * @example niivue.setMeshShader('toon');
-   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   setMeshShader(id: number, meshShaderNameOrNumber = 2): void {
     let shaderIndex: number | undefined = 0
@@ -6570,7 +6590,7 @@ export class Niivue {
    * @param fragmentShaderText - the GLSL source code for the custom fragment shader
    * @param name - a descriptive label for the shader (used in menus or debugging)
    * @returns the index of the new shader (use with {@link setMeshShader})
-   * @see {@link https://niivue.github.io/niivue/features/mesh.atlas.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mesh.atlas.html | live demo usage}
    */
   setCustomMeshShader(fragmentShaderText = '', name = 'Custom'): number {
     const m = this.createCustomMeshShader(fragmentShaderText, name)
@@ -6585,7 +6605,7 @@ export class Niivue {
    * @param sort - sort output alphabetically
    * @returns list of available mesh shader names
    * @example niivue.meshShaderNames();
-   * @see {@link https://niivue.github.io/niivue/features/meshes.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   meshShaderNames(sort = true): string[] {
     const cm = []
@@ -6880,6 +6900,7 @@ export class Niivue {
     gl.deleteBuffer(vbo2)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   } /**
+
    * Get the gradient texture produced by gradientGL as a TypedArray
    * @returns Float32Array containing the gradient texture data, or null if no gradient texture exists
    * @example
@@ -6890,6 +6911,7 @@ export class Niivue {
    * if (gradientData) {
    *   console.log('Gradient texture dimensions:', gradientData.length)
    * }
+   * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
 
   getGradientTextureData(): Float32Array | null {
@@ -6979,6 +7001,7 @@ export class Niivue {
    *
    * // To revert to auto-generated gradient:
    * niivue.setCustomGradientTexture(null)
+   * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
   setCustomGradientTexture(data: Float32Array | Uint8Array | null, dims?: number[]): void {
     const gl = this.gl
@@ -7055,7 +7078,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.updateGLVolume()
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   updateGLVolume(): void {
     // load volume or change contrast
@@ -7107,7 +7130,7 @@ export class Niivue {
    *   startVox: [10, 20, 30], // ignored if roiIsMask is false
    *   endVox: [40, 50, 60] // ignored if roiIsMask is false
    * });
-   * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   getDescriptives(options: {
     layer?: number
@@ -7968,7 +7991,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * colormaps = niivue.colormaps()
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   colormaps(): string[] {
     return cmapper.colormaps()
@@ -7978,7 +8001,7 @@ export class Niivue {
    * create a new colormap
    * @param key - name of new colormap
    * @param cmap - colormap properties (Red, Green, Blue, Alpha and Indices)
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   addColormap(key: string, cmap: ColorMap): void {
     cmapper.addColormap(key, cmap)
@@ -7990,7 +8013,7 @@ export class Niivue {
    * @param colormap - the name of the colormap to use
    * @example
    * niivue.setColormap(niivue.volumes[0].id,, 'red')
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   setColormap(id: string, colormap: string): void {
     const idx = this.getVolumeIndexByID(id)
@@ -8291,6 +8314,15 @@ export class Niivue {
     return [cl, ls]
   } // bwlabel()
 
+  /**
+   * Create a connected component label map from a volume
+   * @param id - ID of the input volume
+   * @param conn - connectivity for clustering (6 = faces, 18 = faces + edges, 26 = faces + edges + corners)
+   * @param binarize - whether to binarize the volume before labeling
+   * @param onlyLargestClusterPerClass - retain only the largest cluster for each label
+   * @returns a new NVImage with labeled clusters, using random colormap
+   * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
+   */
   async createConnectedLabelImage(
     id: string,
     conn: number = 26,
@@ -8513,8 +8545,16 @@ export class Niivue {
     return [out_affine, vox2vox, inv_vox2vox]
   }
 
-  // Create a binary byte array with a NIfTI format header as well as image data
-
+  /**
+   * Create a binary NIfTI file as a Uint8Array, including header and image data
+   * @param dims - image dimensions [x, y, z]
+   * @param pixDims - voxel dimensions in mm [x, y, z]
+   * @param affine - 4×4 affine transformation matrix in row-major order
+   * @param datatypeCode - NIfTI datatype code (e.g., DT_UINT8, DT_FLOAT32)
+   * @param img - image data buffer (optional)
+   * @returns a Uint8Array representing a complete NIfTI file
+   * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
+   */
   async createNiftiArray(
     dims = [256, 256, 256],
     pixDims = [1, 1, 1],
@@ -8525,14 +8565,21 @@ export class Niivue {
     return await NVImage.createNiftiArray(dims, pixDims, affine, datatypeCode, img)
   }
 
-  // Convert a binary byte array with a NIfTI image to NiiVue's internal NVImage object
-
-  async niftiArray2NVImage(bytes = new Uint8Array()): Promise<NVImage> {
+  /**
+   * Convert a binary NIfTI file (as a Uint8Array) to an NVImage object
+   * @param bytes - binary contents of a NIfTI file
+   * @returns a Promise resolving to an NVImage object
+   * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
+   */ async niftiArray2NVImage(bytes = new Uint8Array()): Promise<NVImage> {
     return await NVImage.loadFromUrl({ url: bytes })
   }
 
-  // Read a NIfTI file and convert as NiiVue internal NVImage: AddVolume this does not load image to GPU
-
+  /**
+   * Load a NIfTI image from a URL and convert it to an NVImage object
+   * @param fnm - URL of the NIfTI file to load
+   * @returns a Promise resolving to an NVImage (not yet added to GPU or scene)
+   * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
+   */
   async loadFromUrl(fnm: string): Promise<NVImage> {
     return await NVImage.loadFromUrl({ url: fnm })
   }
@@ -8550,7 +8597,7 @@ export class Niivue {
    * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
    * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
    * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
-   * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
    */
   async conform(
     volume: NVImage,
@@ -8693,7 +8740,7 @@ export class Niivue {
   /**
    * darken crevices and brighten corners when 3D rendering drawings.
    * @param ao - amount of ambient occlusion (default 0.4)
-   * @see {@link https://niivue.github.io/niivue/features/torso.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
    */
   setRenderDrawAmbientOcclusion(ao: number): void {
     if (!this.renderShader) {
@@ -8706,7 +8753,11 @@ export class Niivue {
     this.drawScene()
   }
 
-  // compatibility alias for NiiVue < 0.35
+  /**
+   * @deprecated Use {@link setColormap} instead. This alias is retained for compatibility with NiiVue < 0.35.
+   * @param id - ID of the volume
+   * @param colormap - name of the colormap to apply
+   */
   setColorMap(id: string, colormap: string): void {
     this.setColormap(id, colormap)
   }
@@ -8718,7 +8769,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * niivue.setColormapNegative(niivue.volumes[1].id,"winter");
-   * @see {@link https://niivue.github.io/niivue/features/mosaics2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mosaics2.html | live demo usage}
    */
   setColormapNegative(id: string, colormapNegative: string): void {
     const idx = this.getVolumeIndexByID(id)
@@ -8732,8 +8783,8 @@ export class Niivue {
    * @param idModulation - the ID of the NVImage that controls bias (empty string to disable modulation)
    * @param modulateAlpha - does the modulation influence alpha transparency (values greater than 1).
    * @example niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
-   * @see {@link https://niivue.github.io/niivue/features/modulate.html | live demo scalar usage}
-   * @see {@link https://niivue.github.io/niivue/features/modulateAfni.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/modulate.html | live demo scalar usage}
+   * @see {@link https://niivue.com/demos/features/modulateAfni.html | live demo usage}
    */
   setModulationImage(idTarget: string, idModulation: string, modulateAlpha = 0): void {
     // to set:
@@ -8755,7 +8806,7 @@ export class Niivue {
    * adjust screen gamma. Low values emphasize shadows but can appear flat, high gamma hides shadow details.
    * @param gamma - selects luminance, default is 1
    * @example niivue.setGamma(1.0);
-   * @see {@link https://niivue.github.io/niivue/features/colormaps.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   setGamma(gamma = 1.0): void {
     this.scene.gamma = gamma
@@ -8796,7 +8847,7 @@ export class Niivue {
    * @param id - the ID of the 4D NVImage
    * @param frame4D - frame to display (indexed from zero)
    * @example nv1.setFrame4D(nv1.volumes[0].id, 42);
-   * @see {@link https://niivue.github.io/niivue/features/timeseries.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/timeseries.html | live demo usage}
    */
   setFrame4D(id: string, frame4D: number): void {
     const idx = this.getVolumeIndexByID(id)
@@ -8823,7 +8874,7 @@ export class Niivue {
    * @param id - the ID of the 4D NVImage
    * @returns currently selected volume (indexed from 0)
    * @example nv1.getFrame4D(nv1.volumes[0].id);
-   * @see {@link https://niivue.github.io/niivue/features/timeseries.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/timeseries.html | live demo usage}
    */
   getFrame4D(id: string): number {
     const idx = this.getVolumeIndexByID(id)
@@ -8835,7 +8886,13 @@ export class Niivue {
     return cmapper.colormapFromKey(name)
   }
 
-  // not included in public docs
+  /**
+   * Retrieve a colormap with optional inversion
+   * @param lutName - name of the lookup table (LUT) colormap
+   * @param isInvert - whether to invert the colormap
+   * @returns the RGBA colormap as a Uint8ClampedArray
+   * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
+   */
   colormap(lutName = '', isInvert = false): Uint8ClampedArray {
     return cmapper.colormap(lutName, isInvert)
   }
@@ -8881,7 +8938,11 @@ export class Niivue {
     })
   }
 
-  // not included in public docs
+  /**
+   * Rebuild and upload all colormap textures for volumes and meshes
+   * @returns the current NiiVue instance, or undefined if no colormaps are used
+   * @see {@link https://niivue.com/demos/features/mesh.stats.html | live demo usage}
+   */
   refreshColormaps(): this | undefined {
     this.colormapLists = [] // one entry per colorbar: min, max, tic
     if (this.volumes.length < 1 && this.meshes.length < 1) {
@@ -10201,7 +10262,11 @@ export class Niivue {
     }
   }
 
-  // not included in public docs
+  /**
+   * Enable or disable atlas outline overlay
+   * @param isOutline - number 0 to 1 for outline opacity
+   * @see {@link https://niivue.com/demos/features/atlas.sparse.html | live demo usage}
+   */
   setAtlasOutline(isOutline: number): void {
     this.opts.atlasOutline = isOutline
     this.updateGLVolume()
@@ -10212,7 +10277,7 @@ export class Niivue {
    * select between nearest and linear interpolation for voxel based images
    * @param isNearest - whether nearest neighbor interpolation is used, else linear interpolation
    * @example niivue.setInterpolation(true);
-   * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   setInterpolation(isNearest: boolean): void {
     this.opts.isNearestInterpolation = isNearest
@@ -11344,8 +11409,12 @@ export class Niivue {
     this.gl.disable(this.gl.CULL_FACE)
   }
 
-  // not included in public docs
-  // fills data returned with the onLocationChanvge() callback
+  /**
+   * Internal utility to generate human-readable location strings for the onLocationChange callback
+   * @param axCorSag - optional axis index for coordinate interpretation (NaN by default)
+   * @remarks Not included in public documentation. Computes string representation of current crosshair position in mm (and frame if 4D).
+   * @see {@link https://niivue.com/demos/features/modulateAfni.html | live demo usage}
+   */
   createOnLocationChange(axCorSag = NaN): void {
     // first: provide a string representation
     const [_mn, _mx, range] = this.sceneExtentsMinMax(true)
@@ -11449,7 +11518,7 @@ export class Niivue {
    * @param anchor - optional label anchor position (e.g., top-left, center, etc.)
    * @param onClick - optional callback function to invoke when the label is clicked
    * @returns the created `NVLabel3D` instance
-   * @see {@link https://niivue.github.io/niivue/features/labels.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/labels.html | live demo usage}
    */
   addLabel(
     text: string,
@@ -11908,7 +11977,7 @@ export class Niivue {
       gl.enable(gl.CULL_FACE) // issue700
     }
     gl.cullFace(gl.BACK) // CR: issue700
-    // show front and back face for mesh clipping https://niivue.github.io/niivue/features/worldspace2.html
+    // show front and back face for mesh clipping https://niivue.com/demos/features/worldspace2.html
     // if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
     // else gl.enable(gl.CULL_FACE); //issue700: only show front faces
     // gl.frontFace(gl.CCW); //issue700: we now require CCW
@@ -12139,7 +12208,7 @@ export class Niivue {
    * @param y - translate posterior (-) or +anterior (+)
    * @param z - translate inferior (-) or superior (+)
    * @example niivue.moveCrosshairInVox(1, 0, 0)
-   * @see {@link https://niivue.github.io/niivue/features/draw2.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   moveCrosshairInVox(x: number, y: number, z: number): void {
     const vox = this.frac2vox(this.scene.crosshairPos)
@@ -12593,7 +12662,7 @@ export class Niivue {
    * display a lightbox or montage view
    * @param mosaicStr - specifies orientation (A,C,S) and location of slices.
    * @example niivue.setSliceMosaicString("A -10 0 20");
-   * @see {@link https://niivue.github.io/niivue/features/mosaics.html | live demo usage}
+   * @see {@link https://niivue.com/demos/features/mosaics.html | live demo usage}
    */
   drawMosaic(mosaicStr: string): void {
     this.screenSlices = []

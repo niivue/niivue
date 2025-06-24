@@ -70,11 +70,6 @@ const config = {
             position: "left",
           },
           {
-            to: "/docs/api",
-            label: "API",
-            position: "left",
-          },
-          {
             href: "https://github.com/niivue/niivue",
             label: "GitHub",
             position: "right",

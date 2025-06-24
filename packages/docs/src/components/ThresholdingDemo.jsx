@@ -14,10 +14,10 @@ const defaultImages = [
     url: `${baseUrl}/images/fslt.nii.gz`,
     colormap: "warm",
     colormapNegative: "winter",
-    cal_min: 0.3,
+    cal_min: 1.3,
     cal_max: 0.6,
-    cal_minNeg: -0.6,
-    cal_maxNeg: -0.3,
+    cal_minNeg: -1.6,
+    cal_maxNeg: -2.3,
     visible: true,
   },
 ];
@@ -35,10 +35,10 @@ export const ThresholdingDemo = ({ nvOpts = {} }) => {
   const niivueRef = useRef(null);
   
   // State for settings
-  const [posThreshold, setPosThreshold] = useState(3);
-  const [posMax, setPosMax] = useState(6);
-  const [negThreshold, setNegThreshold] = useState(3);
-  const [negMax, setNegMax] = useState(6);
+  const [posThreshold, setPosThreshold] = useState(20);
+  const [posMax, setPosMax] = useState(60);
+  const [negThreshold, setNegThreshold] = useState(30);
+  const [negMax, setNegMax] = useState(70);
   const [outlineWidth, setOutlineWidth] = useState(1);
   const [colormapType, setColormapType] = useState(0);
   const [showNegative, setShowNegative] = useState(true);

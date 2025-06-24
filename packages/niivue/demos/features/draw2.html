@@ -44,14 +44,19 @@
         class="slider"
         id="drawOpacity"
       />
+      &nbsp;
       <label for="check1">fill pen overwrites</label>
       <input type="checkbox" id="check1" name="check1" checked />
+      &nbsp;
       <label for="check2">Radiological</label>
       <input type="checkbox" id="check2" name="check2" unchecked />
+      &nbsp;
       <label for="check3">World space</label>
       <input type="checkbox" id="check3" name="check3" unchecked />
+      &nbsp;
       <label for="check9">Linear Interpolation</label>
       <input type="checkbox" id="check9" name="check9" checked />
+      &nbsp;
       <label for="check10">HighDPI</label>
       <input type="checkbox" id="check10" name="check10" checked />
     </header>
@@ -156,10 +161,16 @@
     document.getElementById("location").innerHTML =
       "&nbsp;&nbsp;" + data.string;
   }
+  async function handleImageLoaded(data) {
+    nv1.closeDrawing()
+    nv1.setDrawingEnabled(false)
+    drawPen.selectedIndex = 0
+  }
   var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
   var nv1 = new niivue.Niivue({
     backColor: [1, 1, 1, 1],
     onLocationChange: handleLocationChange,
+    onImageLoaded: handleImageLoaded,
   });
   nv1.setRadiologicalConvention(false);
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
