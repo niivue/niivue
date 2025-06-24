@@ -23,16 +23,16 @@ The term Textures refers to bitmap images that are stored on the graphics card. 
 - `TEXTURE3_FONT`: Font. This is a 2D bitmap that stores the [multi-channel signed distance field typeface](https://github.com/Chlumsky/msdfgen).
 - `TEXTURE4_THUMBNAIL`: Thumbnail. This is a 2D bitmap that can be rapidly displayed. When a user clicks on the thumbnail the (large and slow) volumes and meshes will be loaded.
 - `TEXTURE5_MATCAP`: Matcap. This is a 2D bitmap used for exclusively by the matcap mesh shader (transiently enabled with the shader, so available for other functions). It is also used as a temporary 2D texture: this is used to blend multiple overlays into a single texture (TEXTURE2). 
-- `TEXTURE6_GRADIENT`: Gradient texture for [shiny volume rendering shaders](https://niivue.github.io/niivue/features/shiny.volumes.html) that use a gradient map for lighting.
+- `TEXTURE6_GRADIENT`: Gradient texture for [shiny volume rendering shaders](https://niivue.com/demos/features/shiny.volumes.html) that use a gradient map for lighting.
 - `TEXTURE7_DRAW`: Drawing texture: this stores any active drawing, having the same resolution as TEXTURE0.
 - `TEXTURE8_GRADIENT_TEMP`: Transient texture used when generating TEXTURE6_GRADIENT.
 - `TEXTURE9_ORIENT`: Transient texture used when re-orienting voxel-based volumes to RAS orientation.
 - `TEXTURE10_BLEND`: Transient texture for blending different overlay volumes into the single TEXTURE2_OVERLAY_VOL.
-- `TEXTURE11_GC_BACK`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: background voxel intensity.
-- `TEXTURE12_GC_STRENGTH0`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: edge strength that ping-pongs between read and write.
-- `TEXTURE13_GC_STRENGTH1`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: edge strength that ping-pongs between write and read.
-- `TEXTURE14_GC_LABEL0: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: drawing color that ping-pongs between read and write.
-- `TEXTURE15_GC_LABEL1`: Transient texture used [growcut](https://niivue.github.io/niivue/features/draw2.html) shader: drawing color that ping-pongs between write and read.
+- `TEXTURE11_GC_BACK`: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: background voxel intensity.
+- `TEXTURE12_GC_STRENGTH0`: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: edge strength that ping-pongs between read and write.
+- `TEXTURE13_GC_STRENGTH1`: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: edge strength that ping-pongs between write and read.
+- `TEXTURE14_GC_LABEL0: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: drawing color that ping-pongs between read and write.
+- `TEXTURE15_GC_LABEL1`: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: drawing color that ping-pongs between write and read.
 
 ##### Color Schemes
 
