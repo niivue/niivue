@@ -621,6 +621,8 @@ declare enum COLORMAP_TYPE {
  */
 type NVConfigOptions = {
     textHeight: number;
+    fontSizeScaling: number;
+    fontMinPx: number;
     colorbarHeight: number;
     colorbarWidth: number;
     showColorbarBorder: boolean;
@@ -1633,6 +1635,8 @@ declare class Niivue {
     private DEFAULT_FONT_METRICS;
     private fontMetrics?;
     private fontMets;
+    private fontPx;
+    private legendFontScaling;
     backgroundMasksOverlays: number;
     overlayOutlineWidth: number;
     overlayAlphaShader: number;
@@ -1979,6 +1983,12 @@ declare class Niivue {
      * TODO this should maybe just use array-equal from NPM
      */
     arrayEquals(a: unknown[], b: unknown[]): boolean;
+    /**
+     * Compute point size for screen text that scales with resolution and screen size.
+     * - Keeps physical font size consistent across different DPIs.
+     * - Uses fontSizeScaling to scale with canvas size above a reference threshold.
+     */
+    textSizePoints(): void;
     /**
      * callback function to handle resize window events, redraws the scene.
      * @internal
@@ -3025,7 +3035,7 @@ declare class Niivue {
     getConnectomeLabels(): NVLabel3D[];
     getBulletMarginWidth(): number;
     getLegendPanelWidth(): number;
-    getLegendPanelHeight(): number;
+    getLegendPanelHeight(panelScale?: number): number;
     reserveColorbarPanel(): number[];
     drawColorbarCore(layer: number, leftTopWidthHeight: number[], isNegativeColor: boolean, min: number, max: number, isAlphaThreshold: boolean): void;
     drawColorbar(): void;
@@ -3084,7 +3094,7 @@ declare class Niivue {
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4;
     getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null;
     drawLabelLine(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
-    draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix?: mat4, leftTopWidthHeight?: number[], bulletMargin?: number, legendWidth?: number, secondPass?: boolean): void;
+    draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix?: mat4, leftTopWidthHeight?: number[], bulletMargin?: number, legendWidth?: number, secondPass?: boolean, scaling?: number): void;
     draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
     drawAnchoredLabels(): void;
     draw3D(leftTopWidthHeight?: number[], mvpMatrix?: mat4 | null, modelMatrix?: mat4 | null, normalMatrix?: mat4 | null, azimuth?: number | null, elevation?: number): string | undefined;

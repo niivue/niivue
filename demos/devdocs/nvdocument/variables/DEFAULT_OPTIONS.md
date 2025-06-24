@@ -4,4 +4,4 @@
 const DEFAULT_OPTIONS: NVConfigOptions;
 ```
 
-Defined in: [nvdocument.ts:205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L205)
+Defined in: [nvdocument.ts:207](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L207)

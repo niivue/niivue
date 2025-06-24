@@ -191,7 +191,7 @@ makeLut(
    isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [colortables.ts:205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L205)
+Defined in: [colortables.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L198)
 
 #### Parameters
 

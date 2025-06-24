@@ -16745,15 +16745,8 @@ var ColorTables = class {
   makeDrawLut(name) {
     let cmap = typeof name === "object" ? name : cmaps_exports[name];
     if (cmap === void 0) {
-      cmap = {
-        min: 0,
-        max: 0,
-        R: [0, 255, 0, 0, 255, 0, 255],
-        G: [0, 0, 255, 0, 255, 255, 0],
-        B: [0, 0, 0, 255, 0, 255, 255],
-        A: [0, 255, 255, 255, 255, 255, 255],
-        I: [0, 255]
-      };
+      log.warn("colormap undefined ", name);
+      cmap = this.colormapFromKey("");
     }
     const cm = this.makeLabelLut(cmap, 255);
     if (cm.labels === void 0) {
@@ -29613,7 +29606,9 @@ var COLORMAP_TYPE = /* @__PURE__ */ ((COLORMAP_TYPE2) => {
   return COLORMAP_TYPE2;
 })(COLORMAP_TYPE || {});
 var DEFAULT_OPTIONS = {
-  textHeight: 0.06,
+  textHeight: -1,
+  fontSizeScaling: 0.4,
+  fontMinPx: 13,
   colorbarHeight: 0.05,
   colorbarWidth: -1,
   // automatic (full width)
@@ -34480,6 +34475,8 @@ var Niivue = class {
     // "/fonts/Roboto-Regular.json";
     __publicField(this, "fontMetrics");
     __publicField(this, "fontMets", null);
+    __publicField(this, "fontPx", 12);
+    __publicField(this, "legendFontScaling", 1);
     __publicField(this, "backgroundMasksOverlays", 0);
     __publicField(this, "overlayOutlineWidth", 0);
     // float, 0 for none
@@ -35193,6 +35190,32 @@ var Niivue = class {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
   }
   /**
+   * Compute point size for screen text that scales with resolution and screen size.
+   * - Keeps physical font size consistent across different DPIs.
+   * - Uses fontSizeScaling to scale with canvas size above a reference threshold.
+   */
+  textSizePoints() {
+    if (this.opts.textHeight >= 0) {
+      log.warn(`textHeight is deprecated (use fontMinPx and fontSizeScaling)`);
+      this.opts.fontMinPx = this.opts.textHeight * 217;
+      this.opts.fontSizeScaling = 0.4;
+      this.opts.textHeight = -1;
+    }
+    const dpi = this.uiData.dpr || 1;
+    const basePointSize = this.opts.fontMinPx;
+    const screenWidthPts = this.gl.canvas.width / dpi;
+    const screenHeightPts = this.gl.canvas.height / dpi;
+    const screenAreaPts = screenWidthPts * screenHeightPts;
+    const refAreaPts = 800 * 600;
+    const normalizedArea = Math.max(screenAreaPts / refAreaPts, 1);
+    const scale6 = Math.pow(normalizedArea, this.opts.fontSizeScaling);
+    const fontPx = basePointSize * scale6 * dpi;
+    this.fontPx = fontPx;
+    log.debug(
+      `${screenWidthPts.toFixed(0)}x${screenHeightPts.toFixed(0)} pts (dpi=${dpi}) => areaScale=${normalizedArea.toFixed(2)}, scale=${scale6.toFixed(2)}, minPx=${this.opts.fontMinPx} fontScale=${this.opts.fontSizeScaling} fontPx=${fontPx.toFixed(2)}`
+    );
+  }
+  /**
    * callback function to handle resize window events, redraws the scene.
    * @internal
    */
@@ -35226,6 +35249,7 @@ var Niivue = class {
       this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr;
     }
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+    this.textSizePoints();
     this.drawScene();
   }
   /* Not included in public docs
@@ -42311,7 +42335,8 @@ var Niivue = class {
       this.drawTextBetween(
         textCoords,
         stringMM,
-        this.opts.measureTextHeight / this.opts.textHeight,
+        this.opts.measureTextHeight / 0.06,
+        // <- TODO measureFontPx
         this.opts.measureTextColor
       );
     }
@@ -42440,12 +42465,12 @@ var Niivue = class {
     }
     const widestBulletScale = labels.length === 1 ? labels[0].style.bulletScale : labels.reduce((a, b) => a.style.bulletScale > b.style.bulletScale ? a : b).style.bulletScale;
     const tallestLabel = labels.length === 1 ? labels[0] : labels.reduce((a, b) => {
-      const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
-      const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+      const aSize = this.fontPx * a.style.textScale;
+      const bSize = this.fontPx * b.style.textScale;
       const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b;
       return taller;
     });
-    const size = this.opts.textHeight * this.gl.canvas.height * tallestLabel.style.textScale;
+    const size = this.fontPx * tallestLabel.style.textScale;
     bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale;
     bulletMargin += size;
     return bulletMargin;
@@ -42456,15 +42481,15 @@ var Niivue = class {
       return 0;
     }
     const scale6 = 1;
-    const horizontalMargin = this.opts.textHeight * this.gl.canvas.height * scale6;
+    const horizontalMargin = this.fontPx * scale6;
     let width = 0;
     const longestLabel = labels.reduce((a, b) => {
-      const aSize = this.opts.textHeight * this.gl.canvas.height * a.style.textScale;
-      const bSize = this.opts.textHeight * this.gl.canvas.height * b.style.textScale;
+      const aSize = this.fontPx * a.style.textScale;
+      const bSize = this.fontPx * b.style.textScale;
       const longer = this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b;
       return longer;
     });
-    const longestTextSize = this.opts.textHeight * this.gl.canvas.height * longestLabel.style.textScale;
+    const longestTextSize = this.fontPx * longestLabel.style.textScale;
     const longestTextLength = this.textWidth(longestTextSize, longestLabel.text);
     const bulletMargin = this.getBulletMarginWidth();
     if (longestTextLength) {
@@ -42476,26 +42501,27 @@ var Niivue = class {
     }
     return width;
   }
-  getLegendPanelHeight() {
+  getLegendPanelHeight(panelScale = 1) {
     const labels = this.getConnectomeLabels();
     let height = 0;
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height;
+    const verticalMargin = this.fontPx;
     for (const label of labels) {
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+      const labelSize = this.fontPx * label.style.textScale * panelScale;
       const textHeight = this.textHeight(labelSize, label.text);
       height += textHeight;
     }
     if (height) {
-      height += verticalMargin / 2 * (labels.length + 1);
+      height += verticalMargin / 2 * (labels.length + 1) * panelScale;
     }
     return height;
   }
   // not included in public docs
   // determine canvas pixels required for colorbar
   reserveColorbarPanel() {
-    let txtHt = Math.max(this.opts.textHeight, 0.01);
-    txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
-    const fullHt = 3 * txtHt;
+    const fullHt = 3 * this.fontPx;
+    if (fullHt < 0) {
+      return [0, 0, 0, 0];
+    }
     const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1;
     const width = widthPercentage * this.gl.canvas.width;
     const leftTopWidthHeight = [
@@ -42514,8 +42540,10 @@ var Niivue = class {
     if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
       return;
     }
-    let txtHt = Math.max(this.opts.textHeight, 0.01);
-    txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
+    const txtHt = this.fontPx;
+    if (txtHt <= 0) {
+      return;
+    }
     let margin = txtHt;
     const fullHt = 3 * txtHt;
     let barHt = txtHt;
@@ -42614,9 +42642,10 @@ var Niivue = class {
       return;
     }
     let leftTopWidthHeight = this.reserveColorbarPanel();
-    let txtHt = Math.max(this.opts.textHeight, 0.01);
-    txtHt = txtHt * Math.min(this.gl.canvas.height, this.gl.canvas.width);
-    const fullHt = 3 * txtHt;
+    const fullHt = 3 * this.fontPx;
+    if (fullHt < 0) {
+      return;
+    }
     let wid = leftTopWidthHeight[2] / nVisible;
     if (leftTopWidthHeight[2] <= 0 || leftTopWidthHeight[3] <= 0) {
       wid = this.gl.canvas.width / nVisible;
@@ -42691,14 +42720,14 @@ var Niivue = class {
   }
   // not included in public docs
   drawText(xy, str6, scale6 = 1, color = null) {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return;
     }
     if (!this.fontShader) {
       throw new Error("fontShader undefined");
     }
     this.fontShader.use(this.gl);
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale6;
+    const size = this.fontPx * scale6;
     this.gl.enable(this.gl.BLEND);
     this.gl.uniform2f(this.fontShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height);
     if (color === null) {
@@ -42717,36 +42746,36 @@ var Niivue = class {
   }
   // not included in public docs
   drawTextRight(xy, str6, scale6 = 1, color = null) {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return;
     }
-    xy[1] -= 0.5 * this.opts.textHeight * this.gl.canvas.height;
+    xy[1] -= 0.5 * this.fontPx;
     this.drawText(xy, str6, scale6, color);
   }
   // not included in public docs
   drawTextLeft(xy, str6, scale6 = 1, color = null) {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return;
     }
-    const size = this.opts.textHeight * this.gl.canvas.height * scale6;
+    const size = this.fontPx * scale6;
     xy[0] -= this.textWidth(size, str6);
     xy[1] -= 0.5 * size;
     this.drawText(xy, str6, scale6, color);
   }
   // not included in public docs
   drawTextRightBelow(xy, str6, scale6 = 1, color = null) {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return;
     }
     this.drawText(xy, str6, scale6, color);
   }
   // not included in public docs
   drawTextBetween(startXYendXY, str6, scale6 = 1, color = null) {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return;
     }
     const xy = [(startXYendXY[0] + startXYendXY[2]) * 0.5, (startXYendXY[1] + startXYendXY[3]) * 0.5];
-    const size = this.opts.textHeight * this.gl.canvas.height * scale6;
+    const size = this.fontPx * scale6;
     const w = this.textWidth(size, str6);
     xy[0] -= 0.5 * w;
     xy[1] -= 0.5 * size;
@@ -42765,17 +42794,17 @@ var Niivue = class {
   }
   // not included in public docs
   drawTextBelow(xy, str6, scale6 = 1, color = null) {
-    if (this.opts.textHeight <= 0) {
+    if (this.fontPx <= 0) {
       return;
     }
     if (!this.canvas) {
       throw new Error("canvas undefined");
     }
-    let size = this.opts.textHeight * this.gl.canvas.height * scale6;
+    let size = this.fontPx * scale6;
     let width = this.textWidth(size, str6);
     if (width > this.canvas.width) {
       scale6 *= (this.canvas.width - 2) / width;
-      size = this.opts.textHeight * this.gl.canvas.height * scale6;
+      size = this.fontPx * scale6;
       width = this.textWidth(size, str6);
     }
     xy[0] -= 0.5 * this.textWidth(size, str6);
@@ -42979,7 +43008,7 @@ var Niivue = class {
     let drawBelow = true;
     let drawRight = true;
     if (!isNaN(padLeftTop[0])) {
-      const ht = this.opts.textHeight * this.gl.canvas.height + 2;
+      const ht = this.fontPx + 2;
       if (padLeftTop[1] > ht) {
         this.drawTextBelow(
           [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + padLeftTop[1] - ht],
@@ -43561,15 +43590,17 @@ var Niivue = class {
     function humanize(x) {
       return x.toFixed(6).replace(/\.?0*$/, "");
     }
-    const minWH = Math.min(graph.LTWH[2], graph.LTWH[3]);
-    const baseSize = 16;
-    const baseWH = 480;
-    const exponent = 0.5;
-    let fntSize = baseSize * Math.pow(minWH / baseWH, exponent);
-    if (fntSize < 12) {
+    let fntSize = this.fontPx * 0.7;
+    const screenWidthPts = this.gl.canvas.width / this.uiData.dpr;
+    const screenHeightPts = this.gl.canvas.height / this.uiData.dpr;
+    const screenAreaPts = screenWidthPts * screenHeightPts;
+    const refAreaPts = 800 * 600;
+    if (screenAreaPts < refAreaPts) {
       fntSize = 0;
+    } else {
+      fntSize = Math.max(fntSize, this.opts.fontMinPx);
     }
-    const fntScale = fntSize / (this.opts.textHeight * this.gl.canvas.height);
+    const fntScale = fntSize / this.fontPx;
     let maxTextWid = 0;
     let lineH = ticMin;
     if (fntSize > 0) {
@@ -43929,14 +43960,14 @@ var Niivue = class {
     return screenPoint;
   }
   getLabelAtPoint(screenPoint) {
-    const scale6 = 1;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale6;
-    const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale6;
+    const scale6 = this.legendFontScaling;
+    const size = this.fontPx * scale6;
+    const verticalMargin = this.fontPx * scale6;
     for (const label of this.document.labels) {
       if (label.anchor == null || label.anchor === 0 /* NONE */) {
         continue;
       }
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+      const labelSize = this.fontPx * label.style.textScale * scale6;
       const textHeight = this.textHeight(labelSize, label.text);
       const textWidth = this.textWidth(labelSize, label.text);
       if (label.anchor & 1 /* LEFT */) {
@@ -43984,7 +44015,7 @@ var Niivue = class {
       return label;
     }
     log.debug("screenPoint", screenPoint);
-    const panelHeight = this.getLegendPanelHeight();
+    const panelHeight = this.getLegendPanelHeight(scale6);
     const panelWidth = this.getLegendPanelWidth();
     const left = this.gl.canvas.width - panelWidth;
     let top = (this.canvas.height - panelHeight) / 2;
@@ -43994,9 +44025,10 @@ var Niivue = class {
     }
     const labels = this.getConnectomeLabels();
     for (const label of labels) {
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
+      const labelSize = this.fontPx * label.style.textScale * scale6;
       const textHeight = this.textHeight(labelSize, label.text);
       if (screenPoint[1] >= top && screenPoint[1] <= top + textHeight + size / 2) {
+        log.debug(`label clicked ${label.text}`);
         return label;
       }
       top += textHeight;
@@ -44021,11 +44053,11 @@ var Niivue = class {
     }
   }
   // not included in public docs
-  draw3DLabel(label, pos, mvpMatrix, leftTopWidthHeight, bulletMargin, legendWidth, secondPass) {
+  draw3DLabel(label, pos, mvpMatrix, leftTopWidthHeight, bulletMargin, legendWidth, secondPass, scaling = 1) {
     const text = label.text;
     const left = pos[0];
     const top = pos[1];
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1;
+    const size = this.fontPx * scaling;
     const textHeight = this.textHeight(label.style.textScale, text) * size;
     if (label.style.lineWidth > 0 && Array.isArray(label.points)) {
       this.drawLabelLine(label, [left, top + textHeight], mvpMatrix, leftTopWidthHeight, secondPass);
@@ -44060,17 +44092,21 @@ var Niivue = class {
     if (!this.opts.showLegend || labels.length === 0) {
       return;
     }
-    if (!this.canvas) {
+    let panelHeight = this.getLegendPanelHeight(1);
+    if (!this.canvas || panelHeight < 1) {
       throw new Error("canvas undefined");
     }
     const gl = this.gl;
     gl.disable(gl.CULL_FACE);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    const panelHeight = this.getLegendPanelHeight();
+    this.legendFontScaling = 1;
     if (panelHeight > this.canvas.height) {
-      log.debug("Legend may overflow screen size");
+      const margin = 10 * this.uiData.dpr;
+      this.legendFontScaling = Math.max(this.canvas.height - margin, 1) / panelHeight;
+      log.debug(`Legend too large for screen, font reduction factor x${this.legendFontScaling}`);
+      panelHeight = this.getLegendPanelHeight(this.legendFontScaling);
     }
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width);
+    const size = this.fontPx * this.legendFontScaling;
     const bulletMargin = this.getBulletMarginWidth();
     const panelWidth = this.getLegendPanelWidth();
     const left = gl.canvas.width - panelWidth;
@@ -44083,9 +44119,18 @@ var Niivue = class {
       gl.depthFunc(gl.GREATER);
     }
     for (const label of labels) {
-      this.draw3DLabel(label, [left, top], mvpMatrix, leftTopWidthHeight, bulletMargin, panelWidth, secondPass);
-      const labelSize = this.opts.textHeight * this.gl.canvas.height * label.style.textScale;
-      const textHeight = this.textHeight(labelSize, label.text);
+      this.draw3DLabel(
+        label,
+        [left, top],
+        mvpMatrix,
+        leftTopWidthHeight,
+        bulletMargin,
+        panelWidth,
+        secondPass,
+        this.legendFontScaling
+      );
+      const labelSize = this.fontPx * label.style.textScale;
+      const textHeight = this.textHeight(labelSize, label.text) * this.legendFontScaling;
       top += textHeight;
       top += size / 2;
     }
@@ -44097,7 +44142,7 @@ var Niivue = class {
     }
   }
   drawAnchoredLabels() {
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * 1;
+    const size = this.fontPx;
     const anchoredLabels = this.document.labels.filter((l) => l.anchor != null && l.anchor !== 0 /* NONE */);
     for (const label of anchoredLabels) {
       const text = label.text;
@@ -44106,7 +44151,7 @@ var Niivue = class {
       let left;
       let top;
       const scale6 = 1;
-      const verticalMargin = this.opts.textHeight * this.gl.canvas.height * scale6;
+      const verticalMargin = this.fontPx * scale6;
       const rectHeightDiff = verticalMargin;
       let rectWidthDiff = verticalMargin / 4;
       let rectHorizontalOffset = 0;
@@ -44608,7 +44653,7 @@ var Niivue = class {
     const totalLength = vec2_exports.length(segment);
     vec2_exports.normalize(segment, segment);
     const scale6 = 1;
-    const size = this.opts.textHeight * Math.min(this.gl.canvas.height, this.gl.canvas.width) * scale6;
+    const size = this.fontPx * scale6;
     vec2_exports.scale(segment, segment, size / 2);
     const segmentLength = vec2_exports.length(segment);
     let segmentCount = Math.floor(totalLength / segmentLength);
@@ -44844,7 +44889,7 @@ var Niivue = class {
     const sagMM = [];
     const items = mosaicStr.split(/\s+/);
     let scale6 = 1;
-    const labelSize = this.opts.textHeight;
+    const labelSize = this.fontPx;
     let marginLeft = 0;
     let marginTop = 0;
     let tileGap = 0;
@@ -44946,7 +44991,7 @@ var Niivue = class {
           }
         } else {
           const ltwh = [marginLeft + scale6 * left, marginTop + scale6 * top, scale6 * w, scale6 * h];
-          this.opts.textHeight = isLabel ? labelSize : 0;
+          this.fontPx = isLabel ? labelSize : 0;
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity;
             if (Object.is(sliceMM, -0)) {
@@ -44982,7 +45027,7 @@ var Niivue = class {
         marginTop = this.opts.tileMargin;
       }
     }
-    this.opts.textHeight = labelSize;
+    this.fontPx = labelSize;
   }
   calculateWidthHeight(sliceType, volScale, containerWidth, containerHeight) {
     let xScale, yScale;
@@ -45155,10 +45200,10 @@ var Niivue = class {
         if (typeof this.opts.multiplanarPadPixels !== "number") {
           log.debug("multiplanarPadPixels must be numeric");
         }
-        const pad = parseFloat(`${this.opts.multiplanarPadPixels}`);
-        let innerPad = this.opts.tileMargin;
+        const pad = parseFloat(`${this.opts.multiplanarPadPixels}`) * this.uiData.dpr;
+        let innerPad = this.opts.tileMargin * this.uiData.dpr;
         if (innerPad < 0) {
-          innerPad = 2 * (2 + Math.ceil(Math.max(this.opts.textHeight, 0.01) * Math.min(this.gl.canvas.height, this.gl.canvas.width)));
+          innerPad = 2 * (2 + Math.ceil(this.fontPx));
         }
         let canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()];
         if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {

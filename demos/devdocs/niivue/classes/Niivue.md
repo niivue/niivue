@@ -19,7 +19,7 @@ let niivue = new Niivue({ crosshairColor: [0, 1, 0, 0.5], textHeight: 0.5 }); //
 new Niivue(options: Partial<NVConfigOptions>): Niivue;
 ```
 
-Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L838)
+Defined in: [niivue/index.ts:840](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L840)
 
 #### Parameters
 
@@ -36,8 +36,8 @@ Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/pac
 | Property                                                                       | Type                                                                                                                                                            | Default value            | Description                                                                                                                                                                                                                                                                                                         | Defined in                                                                                                 |
 | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | <a id="_gl"></a> `_gl`                                                         | `WebGL2RenderingContext`                                                                                                                                        | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:365](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L365) |
-| <a id="back"></a> `back`                                                       | [`NVImage`](../../nvimage/classes/NVImage.md)                                                                                                                   | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:489](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L489) |
-| <a id="backgroundmasksoverlays"></a> `backgroundMasksOverlays`                 | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:435](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L435) |
+| <a id="back"></a> `back`                                                       | [`NVImage`](../../nvimage/classes/NVImage.md)                                                                                                                   | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:491](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L491) |
+| <a id="backgroundmasksoverlays"></a> `backgroundMasksOverlays`                 | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:437](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L437) |
 | <a id="blurshader"></a> `blurShader`                                           | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:424](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L424) |
 | <a id="bmpshader"></a> `bmpShader`                                             | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:412](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L412) |
 | <a id="bmptexture"></a> `bmpTexture`                                           | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:413](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L413) |
@@ -47,28 +47,28 @@ Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/pac
 | <a id="clicktosegmentgrowingbitmap"></a> `clickToSegmentGrowingBitmap`         | `Uint8Array`                                                                                                                                                    | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:379](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L379) |
 | <a id="clicktosegmentisgrowing"></a> `clickToSegmentIsGrowing`                 | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:378](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L378) |
 | <a id="clicktosegmentxy"></a> `clickToSegmentXY`                               | `number`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:380](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L380) |
-| <a id="clip_plane_id"></a> `CLIP_PLANE_ID`                                     | `number`                                                                                                                                                        | `1`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:518](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L518) |
+| <a id="clip_plane_id"></a> `CLIP_PLANE_ID`                                     | `number`                                                                                                                                                        | `1`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:520](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L520) |
 | <a id="colorbarheight"></a> `colorbarHeight`                                   | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:382](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L382) |
 | <a id="colorbarshader"></a> `colorbarShader?`                                  | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:406](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L406) |
 | <a id="colormaplists"></a> `colormapLists`                                     | `ColormapListEntry`[]                                                                                                                                           | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:369](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L369) |
 | <a id="colormaptexture"></a> `colormapTexture`                                 | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:368](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L368) |
 | <a id="crosshairs3d"></a> `crosshairs3D`                                       | `NiivueObject3D`                                                                                                                                                | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:430](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L430) |
-| <a id="cuboidvertexbuffer"></a> `cuboidVertexBuffer?`                          | `WebGLBuffer`                                                                                                                                                   | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:507](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L507) |
-| <a id="currentclipplaneindex"></a> `currentClipPlaneIndex`                     | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:514](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L514) |
-| <a id="currentdrawundobitmap"></a> `currentDrawUndoBitmap`                     | `number`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:833](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L833) |
-| <a id="customlayout"></a> `customLayout`                                       | `object`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:530](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L530) |
-| <a id="deferredmeshes"></a> `deferredMeshes`                                   | [`LoadFromUrlParams`](../../nvmesh/type-aliases/LoadFromUrlParams.md)[]                                                                                         | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:492](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L492) |
-| <a id="deferredvolumes"></a> `deferredVolumes`                                 | [`ImageFromUrlOptions`](../../nvimage/type-aliases/ImageFromUrlOptions.md)[]                                                                                    | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:491](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L491) |
+| <a id="cuboidvertexbuffer"></a> `cuboidVertexBuffer?`                          | `WebGLBuffer`                                                                                                                                                   | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:509](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L509) |
+| <a id="currentclipplaneindex"></a> `currentClipPlaneIndex`                     | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:516](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L516) |
+| <a id="currentdrawundobitmap"></a> `currentDrawUndoBitmap`                     | `number`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:835](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L835) |
+| <a id="customlayout"></a> `customLayout`                                       | `object`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:532](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L532) |
+| <a id="deferredmeshes"></a> `deferredMeshes`                                   | [`LoadFromUrlParams`](../../nvmesh/type-aliases/LoadFromUrlParams.md)[]                                                                                         | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:494](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L494) |
+| <a id="deferredvolumes"></a> `deferredVolumes`                                 | [`ImageFromUrlOptions`](../../nvimage/type-aliases/ImageFromUrlOptions.md)[]                                                                                    | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:493](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L493) |
 | <a id="dicomloader"></a> `dicomLoader`                                         | [`DicomLoader`](../type-aliases/DicomLoader.md)                                                                                                                 | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:355](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L355) |
-| <a id="distance_from_camera"></a> `DISTANCE_FROM_CAMERA`                       | `number`                                                                                                                                                        | `-0.54`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:520](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L520) |
-| <a id="document"></a> `document`                                               | `NVDocument`                                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:805](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L805) |
-| <a id="dragmodes"></a> `dragModes`                                             | `object`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:596](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L596) |
-| `dragModes.callbackOnly`                                                       | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.callbackOnly` | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:602](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L602) |
-| `dragModes.contrast`                                                           | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.contrast`     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:597](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L597) |
-| `dragModes.measurement`                                                        | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.measurement`  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:598](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L598) |
-| `dragModes.none`                                                               | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.none`         | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:599](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L599) |
-| `dragModes.pan`                                                                | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.pan`          | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:600](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L600) |
-| `dragModes.slicer3D`                                                           | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.slicer3D`     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:601](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L601) |
+| <a id="distance_from_camera"></a> `DISTANCE_FROM_CAMERA`                       | `number`                                                                                                                                                        | `-0.54`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:522](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L522) |
+| <a id="document"></a> `document`                                               | `NVDocument`                                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:807](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L807) |
+| <a id="dragmodes"></a> `dragModes`                                             | `object`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:598](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L598) |
+| `dragModes.callbackOnly`                                                       | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.callbackOnly` | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:604](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L604) |
+| `dragModes.contrast`                                                           | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.contrast`     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:599](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L599) |
+| `dragModes.measurement`                                                        | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.measurement`  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:600](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L600) |
+| `dragModes.none`                                                               | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.none`         | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:601](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L601) |
+| `dragModes.pan`                                                                | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.pan`          | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:602](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L602) |
+| `dragModes.slicer3D`                                                           | `DRAG_MODE`                                                                                                                                                     | `DRAG_MODE.slicer3D`     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:603](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L603) |
 | <a id="drawfilloverwrites"></a> `drawFillOverwrites`                           | `boolean`                                                                                                                                                       | `true`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:385](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L385) |
 | <a id="drawlut"></a> `drawLut`                                                 | [`LUT`](../../colortables/type-aliases/LUT.md)                                                                                                                  | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:376](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L376) |
 | <a id="drawopacity"></a> `drawOpacity`                                         | `number`                                                                                                                                                        | `0.8`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:377](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L377) |
@@ -77,56 +77,56 @@ Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/pac
 | <a id="drawpenlocation"></a> `drawPenLocation`                                 | `number`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:383](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L383) |
 | <a id="drawtexture"></a> `drawTexture`                                         | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:374](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L374) |
 | <a id="drawundobitmaps"></a> `drawUndoBitmaps`                                 | `Uint8Array`[]                                                                                                                                                  | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:375](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L375) |
-| <a id="extentsmax"></a> `extentsMax?`                                          | `vec3`                                                                                                                                                          | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:440](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L440) |
-| <a id="extentsmin"></a> `extentsMin?`                                          | `vec3`                                                                                                                                                          | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:439](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L439) |
+| <a id="extentsmax"></a> `extentsMax?`                                          | `vec3`                                                                                                                                                          | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:442](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L442) |
+| <a id="extentsmin"></a> `extentsMin?`                                          | `vec3`                                                                                                                                                          | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:441](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L441) |
 | <a id="fibershader"></a> `fiberShader?`                                        | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:408](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L408) |
 | <a id="fontshader"></a> `fontShader`                                           | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:407](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L407) |
 | <a id="fonttexture"></a> `fontTexture`                                         | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:409](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L409) |
-| <a id="furthestfrompivot"></a> `furthestFromPivot`                             | `number`                                                                                                                                                        | `10.0`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:512](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L512) |
-| <a id="furthestvertexfromorigin"></a> `furthestVertexFromOrigin`               | `number`                                                                                                                                                        | `100`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:493](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L493) |
+| <a id="furthestfrompivot"></a> `furthestFromPivot`                             | `number`                                                                                                                                                        | `10.0`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:514](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L514) |
+| <a id="furthestvertexfromorigin"></a> `furthestVertexFromOrigin`               | `number`                                                                                                                                                        | `100`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:495](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L495) |
 | <a id="genericvao"></a> `genericVAO`                                           | `WebGLVertexArrayObject`                                                                                                                                        | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:428](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L428) |
 | <a id="gradienttexture"></a> `gradientTexture`                                 | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:371](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L371) |
 | <a id="gradienttextureamount"></a> `gradientTextureAmount`                     | `number`                                                                                                                                                        | `0.0`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:372](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L372) |
-| <a id="graph"></a> `graph`                                                     | `Graph`                                                                                                                                                         | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:521](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L521) |
+| <a id="graph"></a> `graph`                                                     | `Graph`                                                                                                                                                         | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:523](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L523) |
 | <a id="growcutshader"></a> `growCutShader?`                                    | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:416](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L416) |
-| <a id="initialized"></a> `initialized`                                         | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:832](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L832) |
+| <a id="initialized"></a> `initialized`                                         | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:834](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L834) |
 | <a id="isbusy"></a> `isBusy`                                                   | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:366](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L366) |
-| <a id="lastcalled"></a> `lastCalled`                                           | `number`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:515](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L515) |
+| <a id="lastcalled"></a> `lastCalled`                                           | `number`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:517](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L517) |
 | <a id="line3dshader"></a> `line3DShader?`                                      | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:398](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L398) |
 | <a id="lineshader"></a> `lineShader?`                                          | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:397](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L397) |
 | <a id="loaders"></a> `loaders`                                                 | `object`                                                                                                                                                        | `{}`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:353](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L353) |
 | <a id="matcaptexture"></a> `matCapTexture`                                     | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:411](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L411) |
-| <a id="mediaurlmap"></a> `mediaUrlMap`                                         | `Map`\< \| [`NVMesh`](../../nvmesh/classes/NVMesh.md) \| [`NVImage`](../../nvimage/classes/NVImage.md), `string`\>                                              | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:831](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L831) |
-| <a id="meshshaders"></a> `meshShaders`                                         | `object`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:536](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L536) |
-| <a id="mousepos"></a> `mousePos`                                               | `number`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:496](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L496) |
+| <a id="mediaurlmap"></a> `mediaUrlMap`                                         | `Map`\< \| [`NVMesh`](../../nvmesh/classes/NVMesh.md) \| [`NVImage`](../../nvimage/classes/NVImage.md), `string`\>                                              | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:833](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L833) |
+| <a id="meshshaders"></a> `meshShaders`                                         | `object`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:538](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L538) |
+| <a id="mousepos"></a> `mousePos`                                               | `number`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:498](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L498) |
 | <a id="needsrefresh"></a> `needsRefresh`                                       | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:367](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L367) |
-| <a id="onazimuthelevationchange"></a> `onAzimuthElevationChange`               | (`azimuth`: `number`, `elevation`: `number`) => `void`                                                                                                          | `undefined`              | callback function to run when the user changes the rotation of the 3D rendering **Example** `niivue.onAzimuthElevationChange = (azimuth, elevation) => { console.log('azimuth: ', azimuth) console.log('elevation: ', elevation) }`                                                                                 | [niivue/index.ts:780](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L780) |
-| <a id="onclicktosegment"></a> `onClickToSegment`                               | (`data`: `object`) => `void`                                                                                                                                    | `undefined`              | callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL **Example** `niivue.onClickToSegment = (data) => { console.log('clicked to segment') console.log('volume mm3: ', data.mm3) console.log('volume mL: ', data.mL) }` | [niivue/index.ts:661](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L661) |
-| <a id="onclipplanechange"></a> `onClipPlaneChange`                             | (`clipPlane`: `number`[]) => `void`                                                                                                                             | `undefined`              | callback function to run when the user changes the clip plane **Example** `niivue.onClipPlaneChange = (clipPlane) => { console.log('clipPlane: ', clipPlane) }`                                                                                                                                                     | [niivue/index.ts:789](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L789) |
-| <a id="oncolormapchange"></a> `onColormapChange`                               | () => `void`                                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:704](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L704) |
-| <a id="oncustommeshshaderadded"></a> `onCustomMeshShaderAdded`                 | (`fragmentShaderText`: `string`, `name`: `string`) => `void`                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:790](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L790) |
-| <a id="ondebug"></a> `onDebug`                                                 | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports a debug message **Example** `niivue.onDebug = (debug) => { console.log('debug: ', debug) }`                                                                                                                                                                            | [niivue/index.ts:731](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L731) |
-| <a id="ondicomloaderfinishedwithimages"></a> `onDicomLoaderFinishedWithImages` | (`files`: \| [`NVImage`](../../nvimage/classes/NVImage.md)[] \| [`NVMesh`](../../nvmesh/classes/NVMesh.md)[]) => `void`                                         | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:794](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L794) |
-| <a id="ondocumentloaded"></a> `onDocumentLoaded`                               | (`document`: `NVDocument`) => `void`                                                                                                                            | `undefined`              | callback function to run when the user loads a new NiiVue document **Example** `niivue.onDocumentLoaded = (document) => { console.log('document: ', document) }`                                                                                                                                                    | [niivue/index.ts:803](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L803) |
-| <a id="ondragrelease"></a> `onDragRelease`                                     | (`params`: [`DragReleaseParams`](../../types/type-aliases/DragReleaseParams.md)) => `void`                                                                      | `undefined`              | callback function to run when the right mouse button is released after dragging **Example** `niivue.onDragRelease = () => { console.log('drag ended') }`                                                                                                                                                            | [niivue/index.ts:620](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L620) |
-| <a id="onerror"></a> `onError`                                                 | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports an error **Example** `niivue.onError = (error) => { console.log('error: ', error) }`                                                                                                                                                                                   | [niivue/index.ts:701](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L701) |
-| <a id="onframechange"></a> `onFrameChange`                                     | (`volume`: [`NVImage`](../../nvimage/classes/NVImage.md), `index`: `number`) => `void`                                                                          | `undefined`              | callback function to run when the user changes the volume when a 4D image is loaded **Example** `niivue.onFrameChange = (volume, frameNumber) => { console.log('frame changed') console.log('volume: ', volume) console.log('frameNumber: ', frameNumber) }`                                                        | [niivue/index.ts:692](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L692) |
-| <a id="onimageloaded"></a> `onImageLoaded`                                     | (`volume`: [`NVImage`](../../nvimage/classes/NVImage.md)) => `void`                                                                                             | `undefined`              | callback function to run when a new volume is loaded **Example** `niivue.onImageLoaded = (volume) => { console.log('volume loaded') console.log('volume: ', volume) }`                                                                                                                                              | [niivue/index.ts:671](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L671) |
-| <a id="oninfo"></a> `onInfo`                                                   | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports detailed info **Example** `niivue.onInfo = (info) => { console.log('info: ', info) }`                                                                                                                                                                                  | [niivue/index.ts:713](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L713) |
-| <a id="onintensitychange"></a> `onIntensityChange`                             | (`volume`: [`NVImage`](../../nvimage/classes/NVImage.md)) => `void`                                                                                             | `undefined`              | callback function to run when the user changes the intensity range with the selection box action (right click) **Example** `niivue.onIntensityChange = (volume) => { console.log('intensity changed') console.log('volume: ', volume) }`                                                                            | [niivue/index.ts:650](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L650) |
-| <a id="onlocationchange"></a> `onLocationChange`                               | (`location`: `unknown`) => `void`                                                                                                                               | `undefined`              | callback function to run when the crosshair location changes **Example** `niivue.onLocationChange = (data) => { console.log('location changed') console.log('mm: ', data.mm) console.log('vox: ', data.vox) console.log('frac: ', data.frac) console.log('values: ', data.values) }`                                | [niivue/index.ts:641](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L641) |
-| <a id="onmeshadded"></a> `onMeshAdded`                                         | () => `void`                                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:766](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L766) |
-| <a id="onmeshaddedfromurl"></a> `onMeshAddedFromUrl`                           | (`meshOptions`: [`LoadFromUrlParams`](../../nvmesh/type-aliases/LoadFromUrlParams.md), `mesh`: [`NVMesh`](../../nvmesh/classes/NVMesh.md)) => `void`            | `undefined`              | callback function to run when a mesh is added from a url **Example** `niivue.onMeshAddedFromUrl = (meshOptions, mesh) => { console.log('mesh added from url') console.log('meshOptions: ', meshOptions) console.log('mesh: ', mesh) }`                                                                              | [niivue/index.ts:763](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L763) |
-| <a id="onmeshloaded"></a> `onMeshLoaded`                                       | (`mesh`: [`NVMesh`](../../nvmesh/classes/NVMesh.md)) => `void`                                                                                                  | `undefined`              | callback function to run when a new mesh is loaded **Example** `niivue.onMeshLoaded = (mesh) => { console.log('mesh loaded') console.log('mesh: ', mesh) }`                                                                                                                                                         | [niivue/index.ts:681](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L681) |
-| <a id="onmeshpropertychanged"></a> `onMeshPropertyChanged`                     | (`meshIndex`: `number`, `key`: `string`, `val`: `unknown`) => `void`                                                                                            | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:792](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L792) |
-| <a id="onmeshshaderchanged"></a> `onMeshShaderChanged`                         | (`meshIndex`: `number`, `shaderIndex`: `number`) => `void`                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:791](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L791) |
-| <a id="onmeshwithurlremoved"></a> `onMeshWithUrlRemoved`                       | (`url`: `string`) => `void`                                                                                                                                     | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:767](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L767) |
-| <a id="onmouseup"></a> `onMouseUp`                                             | (`data`: `Partial`\<`UIData`\>) => `void`                                                                                                                       | `undefined`              | callback function to run when the left mouse button is released **Example** `niivue.onMouseUp = () => { console.log('mouse up') }`                                                                                                                                                                                  | [niivue/index.ts:629](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L629) |
-| <a id="onvolumeaddedfromurl"></a> `onVolumeAddedFromUrl`                       | (`imageOptions`: [`ImageFromUrlOptions`](../../nvimage/type-aliases/ImageFromUrlOptions.md), `volume`: [`NVImage`](../../nvimage/classes/NVImage.md)) => `void` | `undefined`              | callback function to run when a volume is added from a url **Example** `niivue.onVolumeAddedFromUrl = (imageOptions, volume) => { console.log('volume added from url') console.log('imageOptions: ', imageOptions) console.log('volume: ', volume) }`                                                               | [niivue/index.ts:742](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L742) |
-| <a id="onvolumeupdated"></a> `onVolumeUpdated`                                 | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when updateGLVolume is called (most users will not need to use **Example** `niivue.onVolumeUpdated = () => { console.log('volume updated') }`                                                                                                                                              | [niivue/index.ts:752](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L752) |
-| <a id="onvolumewithurlremoved"></a> `onVolumeWithUrlRemoved`                   | (`url`: `string`) => `void`                                                                                                                                     | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:743](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L743) |
-| <a id="onwarn"></a> `onWarn`                                                   | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports a warning **Example** `niivue.onWarn = (warn) => { console.log('warn: ', warn) }`                                                                                                                                                                                      | [niivue/index.ts:722](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L722) |
-| <a id="onzoom3dchange"></a> `onZoom3DChange`                                   | (`zoom`: `number`) => `void`                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:770](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L770) |
+| <a id="onazimuthelevationchange"></a> `onAzimuthElevationChange`               | (`azimuth`: `number`, `elevation`: `number`) => `void`                                                                                                          | `undefined`              | callback function to run when the user changes the rotation of the 3D rendering **Example** `niivue.onAzimuthElevationChange = (azimuth, elevation) => { console.log('azimuth: ', azimuth) console.log('elevation: ', elevation) }`                                                                                 | [niivue/index.ts:782](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L782) |
+| <a id="onclicktosegment"></a> `onClickToSegment`                               | (`data`: `object`) => `void`                                                                                                                                    | `undefined`              | callback function when clickToSegment is enabled and the user clicks on the image. data contains the volume of the segmented region in mm3 and mL **Example** `niivue.onClickToSegment = (data) => { console.log('clicked to segment') console.log('volume mm3: ', data.mm3) console.log('volume mL: ', data.mL) }` | [niivue/index.ts:663](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L663) |
+| <a id="onclipplanechange"></a> `onClipPlaneChange`                             | (`clipPlane`: `number`[]) => `void`                                                                                                                             | `undefined`              | callback function to run when the user changes the clip plane **Example** `niivue.onClipPlaneChange = (clipPlane) => { console.log('clipPlane: ', clipPlane) }`                                                                                                                                                     | [niivue/index.ts:791](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L791) |
+| <a id="oncolormapchange"></a> `onColormapChange`                               | () => `void`                                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:706](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L706) |
+| <a id="oncustommeshshaderadded"></a> `onCustomMeshShaderAdded`                 | (`fragmentShaderText`: `string`, `name`: `string`) => `void`                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:792](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L792) |
+| <a id="ondebug"></a> `onDebug`                                                 | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports a debug message **Example** `niivue.onDebug = (debug) => { console.log('debug: ', debug) }`                                                                                                                                                                            | [niivue/index.ts:733](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L733) |
+| <a id="ondicomloaderfinishedwithimages"></a> `onDicomLoaderFinishedWithImages` | (`files`: \| [`NVImage`](../../nvimage/classes/NVImage.md)[] \| [`NVMesh`](../../nvmesh/classes/NVMesh.md)[]) => `void`                                         | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:796](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L796) |
+| <a id="ondocumentloaded"></a> `onDocumentLoaded`                               | (`document`: `NVDocument`) => `void`                                                                                                                            | `undefined`              | callback function to run when the user loads a new NiiVue document **Example** `niivue.onDocumentLoaded = (document) => { console.log('document: ', document) }`                                                                                                                                                    | [niivue/index.ts:805](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L805) |
+| <a id="ondragrelease"></a> `onDragRelease`                                     | (`params`: [`DragReleaseParams`](../../types/type-aliases/DragReleaseParams.md)) => `void`                                                                      | `undefined`              | callback function to run when the right mouse button is released after dragging **Example** `niivue.onDragRelease = () => { console.log('drag ended') }`                                                                                                                                                            | [niivue/index.ts:622](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L622) |
+| <a id="onerror"></a> `onError`                                                 | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports an error **Example** `niivue.onError = (error) => { console.log('error: ', error) }`                                                                                                                                                                                   | [niivue/index.ts:703](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L703) |
+| <a id="onframechange"></a> `onFrameChange`                                     | (`volume`: [`NVImage`](../../nvimage/classes/NVImage.md), `index`: `number`) => `void`                                                                          | `undefined`              | callback function to run when the user changes the volume when a 4D image is loaded **Example** `niivue.onFrameChange = (volume, frameNumber) => { console.log('frame changed') console.log('volume: ', volume) console.log('frameNumber: ', frameNumber) }`                                                        | [niivue/index.ts:694](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L694) |
+| <a id="onimageloaded"></a> `onImageLoaded`                                     | (`volume`: [`NVImage`](../../nvimage/classes/NVImage.md)) => `void`                                                                                             | `undefined`              | callback function to run when a new volume is loaded **Example** `niivue.onImageLoaded = (volume) => { console.log('volume loaded') console.log('volume: ', volume) }`                                                                                                                                              | [niivue/index.ts:673](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L673) |
+| <a id="oninfo"></a> `onInfo`                                                   | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports detailed info **Example** `niivue.onInfo = (info) => { console.log('info: ', info) }`                                                                                                                                                                                  | [niivue/index.ts:715](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L715) |
+| <a id="onintensitychange"></a> `onIntensityChange`                             | (`volume`: [`NVImage`](../../nvimage/classes/NVImage.md)) => `void`                                                                                             | `undefined`              | callback function to run when the user changes the intensity range with the selection box action (right click) **Example** `niivue.onIntensityChange = (volume) => { console.log('intensity changed') console.log('volume: ', volume) }`                                                                            | [niivue/index.ts:652](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L652) |
+| <a id="onlocationchange"></a> `onLocationChange`                               | (`location`: `unknown`) => `void`                                                                                                                               | `undefined`              | callback function to run when the crosshair location changes **Example** `niivue.onLocationChange = (data) => { console.log('location changed') console.log('mm: ', data.mm) console.log('vox: ', data.vox) console.log('frac: ', data.frac) console.log('values: ', data.values) }`                                | [niivue/index.ts:643](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L643) |
+| <a id="onmeshadded"></a> `onMeshAdded`                                         | () => `void`                                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:768](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L768) |
+| <a id="onmeshaddedfromurl"></a> `onMeshAddedFromUrl`                           | (`meshOptions`: [`LoadFromUrlParams`](../../nvmesh/type-aliases/LoadFromUrlParams.md), `mesh`: [`NVMesh`](../../nvmesh/classes/NVMesh.md)) => `void`            | `undefined`              | callback function to run when a mesh is added from a url **Example** `niivue.onMeshAddedFromUrl = (meshOptions, mesh) => { console.log('mesh added from url') console.log('meshOptions: ', meshOptions) console.log('mesh: ', mesh) }`                                                                              | [niivue/index.ts:765](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L765) |
+| <a id="onmeshloaded"></a> `onMeshLoaded`                                       | (`mesh`: [`NVMesh`](../../nvmesh/classes/NVMesh.md)) => `void`                                                                                                  | `undefined`              | callback function to run when a new mesh is loaded **Example** `niivue.onMeshLoaded = (mesh) => { console.log('mesh loaded') console.log('mesh: ', mesh) }`                                                                                                                                                         | [niivue/index.ts:683](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L683) |
+| <a id="onmeshpropertychanged"></a> `onMeshPropertyChanged`                     | (`meshIndex`: `number`, `key`: `string`, `val`: `unknown`) => `void`                                                                                            | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:794](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L794) |
+| <a id="onmeshshaderchanged"></a> `onMeshShaderChanged`                         | (`meshIndex`: `number`, `shaderIndex`: `number`) => `void`                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:793](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L793) |
+| <a id="onmeshwithurlremoved"></a> `onMeshWithUrlRemoved`                       | (`url`: `string`) => `void`                                                                                                                                     | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:769](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L769) |
+| <a id="onmouseup"></a> `onMouseUp`                                             | (`data`: `Partial`\<`UIData`\>) => `void`                                                                                                                       | `undefined`              | callback function to run when the left mouse button is released **Example** `niivue.onMouseUp = () => { console.log('mouse up') }`                                                                                                                                                                                  | [niivue/index.ts:631](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L631) |
+| <a id="onvolumeaddedfromurl"></a> `onVolumeAddedFromUrl`                       | (`imageOptions`: [`ImageFromUrlOptions`](../../nvimage/type-aliases/ImageFromUrlOptions.md), `volume`: [`NVImage`](../../nvimage/classes/NVImage.md)) => `void` | `undefined`              | callback function to run when a volume is added from a url **Example** `niivue.onVolumeAddedFromUrl = (imageOptions, volume) => { console.log('volume added from url') console.log('imageOptions: ', imageOptions) console.log('volume: ', volume) }`                                                               | [niivue/index.ts:744](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L744) |
+| <a id="onvolumeupdated"></a> `onVolumeUpdated`                                 | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when updateGLVolume is called (most users will not need to use **Example** `niivue.onVolumeUpdated = () => { console.log('volume updated') }`                                                                                                                                              | [niivue/index.ts:754](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L754) |
+| <a id="onvolumewithurlremoved"></a> `onVolumeWithUrlRemoved`                   | (`url`: `string`) => `void`                                                                                                                                     | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:745](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L745) |
+| <a id="onwarn"></a> `onWarn`                                                   | () => `void`                                                                                                                                                    | `undefined`              | callback function to run when niivue reports a warning **Example** `niivue.onWarn = (warn) => { console.log('warn: ', warn) }`                                                                                                                                                                                      | [niivue/index.ts:724](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L724) |
+| <a id="onzoom3dchange"></a> `onZoom3DChange`                                   | (`zoom`: `number`) => `void`                                                                                                                                    | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:772](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L772) |
 | <a id="orientcubeshader"></a> `orientCubeShader?`                              | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:392](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L392) |
 | <a id="orientcubeshadervao"></a> `orientCubeShaderVAO`                         | `WebGLVertexArrayObject`                                                                                                                                        | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:393](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L393) |
 | <a id="orientshaderatlasi"></a> `orientShaderAtlasI`                           | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:418](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L418) |
@@ -135,18 +135,18 @@ Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/pac
 | <a id="orientshaderi"></a> `orientShaderI`                                     | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:420](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L420) |
 | <a id="orientshaderrgbu"></a> `orientShaderRGBU`                               | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:422](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L422) |
 | <a id="orientshaderu"></a> `orientShaderU`                                     | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:419](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L419) |
-| <a id="othernv"></a> `otherNV`                                                 | `Niivue`[]                                                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:509](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L509) |
-| <a id="overlayalphashader"></a> `overlayAlphaShader`                           | `number`                                                                                                                                                        | `1`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:437](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L437) |
-| <a id="overlayoutlinewidth"></a> `overlayOutlineWidth`                         | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:436](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L436) |
-| <a id="overlays"></a> `overlays`                                               | [`NVImage`](../../nvimage/classes/NVImage.md)[]                                                                                                                 | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:490](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L490) |
+| <a id="othernv"></a> `otherNV`                                                 | `Niivue`[]                                                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:511](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L511) |
+| <a id="overlayalphashader"></a> `overlayAlphaShader`                           | `number`                                                                                                                                                        | `1`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:439](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L439) |
+| <a id="overlayoutlinewidth"></a> `overlayOutlineWidth`                         | `number`                                                                                                                                                        | `0`                      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:438](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L438) |
+| <a id="overlays"></a> `overlays`                                               | [`NVImage`](../../nvimage/classes/NVImage.md)[]                                                                                                                 | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:492](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L492) |
 | <a id="overlaytexture"></a> `overlayTexture`                                   | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:387](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L387) |
 | <a id="overlaytextureid"></a> `overlayTextureID`                               | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:388](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L388) |
 | <a id="passthroughshader"></a> `passThroughShader?`                            | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:399](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L399) |
 | <a id="pickingimageshader"></a> `pickingImageShader?`                          | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:405](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L405) |
 | <a id="pickingmeshshader"></a> `pickingMeshShader?`                            | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:404](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L404) |
-| <a id="pivot3d"></a> `pivot3D`                                                 | `number`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:511](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L511) |
-| <a id="position"></a> `position?`                                              | `vec3`                                                                                                                                                          | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:438](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L438) |
-| <a id="readyforsync"></a> `readyForSync`                                       | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:458](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L458) |
+| <a id="pivot3d"></a> `pivot3D`                                                 | `number`[]                                                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:513](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L513) |
+| <a id="position"></a> `position?`                                              | `vec3`                                                                                                                                                          | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:440](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L440) |
+| <a id="readyforsync"></a> `readyForSync`                                       | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:460](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L460) |
 | <a id="rectoutlineshader"></a> `rectOutlineShader?`                            | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:395](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L395) |
 | <a id="rectshader"></a> `rectShader?`                                          | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:394](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L394) |
 | <a id="renderdrawambientocclusion"></a> `renderDrawAmbientOcclusion`           | `number`                                                                                                                                                        | `0.4`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:381](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L381) |
@@ -156,29 +156,29 @@ Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/pac
 | <a id="rendershader"></a> `renderShader?`                                      | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:396](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L396) |
 | <a id="rendersliceshader"></a> `renderSliceShader?`                            | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:402](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L402) |
 | <a id="rendervolumeshader"></a> `renderVolumeShader?`                          | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:403](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L403) |
-| <a id="screenslices"></a> `screenSlices`                                       | `object`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:497](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L497) |
-| <a id="selectedobjectid"></a> `selectedObjectId`                               | `number`                                                                                                                                                        | `-1`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:517](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L517) |
+| <a id="screenslices"></a> `screenSlices`                                       | `object`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:499](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L499) |
+| <a id="selectedobjectid"></a> `selectedObjectId`                               | `number`                                                                                                                                                        | `-1`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:519](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L519) |
 | <a id="slice2dshader"></a> `slice2DShader?`                                    | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:390](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L390) |
 | <a id="slicemmshader"></a> `sliceMMShader?`                                    | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:389](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L389) |
-| <a id="slicetypeaxial"></a> `sliceTypeAxial`                                   | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.AXIAL`       | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:606](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L606) |
-| <a id="slicetypecoronal"></a> `sliceTypeCoronal`                               | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.CORONAL`     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:607](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L607) |
-| <a id="slicetypemultiplanar"></a> `sliceTypeMultiplanar`                       | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.MULTIPLANAR` | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:609](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L609) |
-| <a id="slicetyperender"></a> `sliceTypeRender`                                 | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.RENDER`      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:610](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L610) |
-| <a id="slicetypesagittal"></a> `sliceTypeSagittal`                             | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.SAGITTAL`    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:608](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L608) |
+| <a id="slicetypeaxial"></a> `sliceTypeAxial`                                   | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.AXIAL`       | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:608](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L608) |
+| <a id="slicetypecoronal"></a> `sliceTypeCoronal`                               | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.CORONAL`     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:609](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L609) |
+| <a id="slicetypemultiplanar"></a> `sliceTypeMultiplanar`                       | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.MULTIPLANAR` | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:611](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L611) |
+| <a id="slicetyperender"></a> `sliceTypeRender`                                 | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.RENDER`      | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:612](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L612) |
+| <a id="slicetypesagittal"></a> `sliceTypeSagittal`                             | `SLICE_TYPE`                                                                                                                                                    | `SLICE_TYPE.SAGITTAL`    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:610](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L610) |
 | <a id="slicev1shader"></a> `sliceV1Shader?`                                    | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:391](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L391) |
 | <a id="sobelblurshader"></a> `sobelBlurShader`                                 | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:425](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L425) |
 | <a id="sobelfirstordershader"></a> `sobelFirstOrderShader`                     | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:426](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L426) |
 | <a id="sobelsecondordershader"></a> `sobelSecondOrderShader`                   | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:427](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L427) |
 | <a id="surfaceshader"></a> `surfaceShader`                                     | [`Shader`](../../shader/classes/Shader.md)                                                                                                                      | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:423](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L423) |
-| <a id="syncopts"></a> `syncOpts`                                               | [`SyncOpts`](../../types/type-aliases/SyncOpts.md)                                                                                                              | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:446](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L446) |
+| <a id="syncopts"></a> `syncOpts`                                               | [`SyncOpts`](../../types/type-aliases/SyncOpts.md)                                                                                                              | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:448](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L448) |
 | <a id="thumbnailvisible"></a> `thumbnailVisible`                               | `boolean`                                                                                                                                                       | `false`                  | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:414](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L414) |
-| <a id="uidata"></a> `uiData`                                                   | `UIData`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:461](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L461) |
+| <a id="uidata"></a> `uiData`                                                   | `UIData`                                                                                                                                                        | `undefined`              | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:463](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L463) |
 | <a id="unusedvao"></a> `unusedVAO`                                             | `any`                                                                                                                                                           | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:429](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L429) |
-| <a id="volscale"></a> `volScale`                                               | `number`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:494](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L494) |
-| <a id="volume_id"></a> `VOLUME_ID`                                             | `number`                                                                                                                                                        | `254`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:519](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L519) |
-| <a id="volumeobject3d"></a> `volumeObject3D`                                   | `NiivueObject3D`                                                                                                                                                | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:510](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L510) |
+| <a id="volscale"></a> `volScale`                                               | `number`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:496](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L496) |
+| <a id="volume_id"></a> `VOLUME_ID`                                             | `number`                                                                                                                                                        | `254`                    | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:521](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L521) |
+| <a id="volumeobject3d"></a> `volumeObject3D`                                   | `NiivueObject3D`                                                                                                                                                | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:512](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L512) |
 | <a id="volumetexture"></a> `volumeTexture`                                     | `WebGLTexture`                                                                                                                                                  | `null`                   | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:370](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L370) |
-| <a id="vox"></a> `vox`                                                         | `number`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:495](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L495) |
+| <a id="vox"></a> `vox`                                                         | `number`[]                                                                                                                                                      | `[]`                     | -                                                                                                                                                                                                                                                                                                                   | [niivue/index.ts:497](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L497) |
 
 ## Accessors
 
@@ -190,7 +190,7 @@ Defined in: [niivue/index.ts:838](https://github.com/niivue/niivue/blob/main/pac
 get drawBitmap(): Uint8Array;
 ```
 
-Defined in: [niivue/index.ts:941](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L941)
+Defined in: [niivue/index.ts:943](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L943)
 
 ##### Returns
 
@@ -202,7 +202,7 @@ Defined in: [niivue/index.ts:941](https://github.com/niivue/niivue/blob/main/pac
 set drawBitmap(drawBitmap: Uint8Array): void;
 ```
 
-Defined in: [niivue/index.ts:945](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L945)
+Defined in: [niivue/index.ts:947](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L947)
 
 ##### Parameters
 
@@ -224,7 +224,7 @@ Defined in: [niivue/index.ts:945](https://github.com/niivue/niivue/blob/main/pac
 get gl(): WebGL2RenderingContext;
 ```
 
-Defined in: [niivue/index.ts:13075](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13075)
+Defined in: [niivue/index.ts:13125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13125)
 
 ##### Returns
 
@@ -236,7 +236,7 @@ Defined in: [niivue/index.ts:13075](https://github.com/niivue/niivue/blob/main/p
 set gl(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [niivue/index.ts:13082](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13082)
+Defined in: [niivue/index.ts:13132](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13132)
 
 ##### Parameters
 
@@ -258,7 +258,7 @@ Defined in: [niivue/index.ts:13082](https://github.com/niivue/niivue/blob/main/p
 get isAlphaClipDark(): boolean;
 ```
 
-Defined in: [niivue/index.ts:823](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L823)
+Defined in: [niivue/index.ts:825](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L825)
 
 ##### Returns
 
@@ -270,7 +270,7 @@ Defined in: [niivue/index.ts:823](https://github.com/niivue/niivue/blob/main/pac
 set isAlphaClipDark(newVal: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:827](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L827)
+Defined in: [niivue/index.ts:829](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L829)
 
 ##### Parameters
 
@@ -292,7 +292,7 @@ Defined in: [niivue/index.ts:827](https://github.com/niivue/niivue/blob/main/pac
 get meshes(): NVMesh[];
 ```
 
-Defined in: [niivue/index.ts:933](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L933)
+Defined in: [niivue/index.ts:935](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L935)
 
 ##### Returns
 
@@ -304,7 +304,7 @@ Defined in: [niivue/index.ts:933](https://github.com/niivue/niivue/blob/main/pac
 set meshes(meshes: NVMesh[]): void;
 ```
 
-Defined in: [niivue/index.ts:937](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L937)
+Defined in: [niivue/index.ts:939](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L939)
 
 ##### Parameters
 
@@ -326,7 +326,7 @@ Defined in: [niivue/index.ts:937](https://github.com/niivue/niivue/blob/main/pac
 get opts(): NVConfigOptions;
 ```
 
-Defined in: [niivue/index.ts:811](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L811)
+Defined in: [niivue/index.ts:813](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L813)
 
 ##### Returns
 
@@ -342,7 +342,7 @@ Defined in: [niivue/index.ts:811](https://github.com/niivue/niivue/blob/main/pac
 get scene(): Scene;
 ```
 
-Defined in: [niivue/index.ts:807](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L807)
+Defined in: [niivue/index.ts:809](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L809)
 
 ##### Returns
 
@@ -358,7 +358,7 @@ Defined in: [niivue/index.ts:807](https://github.com/niivue/niivue/blob/main/pac
 get sliceMosaicString(): string;
 ```
 
-Defined in: [niivue/index.ts:815](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L815)
+Defined in: [niivue/index.ts:817](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L817)
 
 ##### Returns
 
@@ -370,7 +370,7 @@ Defined in: [niivue/index.ts:815](https://github.com/niivue/niivue/blob/main/pac
 set sliceMosaicString(newSliceMosaicString: string): void;
 ```
 
-Defined in: [niivue/index.ts:819](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L819)
+Defined in: [niivue/index.ts:821](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L821)
 
 ##### Parameters
 
@@ -392,7 +392,7 @@ Defined in: [niivue/index.ts:819](https://github.com/niivue/niivue/blob/main/pac
 get volScaleMultiplier(): number;
 ```
 
-Defined in: [niivue/index.ts:949](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L949)
+Defined in: [niivue/index.ts:951](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L951)
 
 ##### Returns
 
@@ -404,7 +404,7 @@ Defined in: [niivue/index.ts:949](https://github.com/niivue/niivue/blob/main/pac
 set volScaleMultiplier(scale: number): void;
 ```
 
-Defined in: [niivue/index.ts:953](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L953)
+Defined in: [niivue/index.ts:955](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L955)
 
 ##### Parameters
 
@@ -426,7 +426,7 @@ Defined in: [niivue/index.ts:953](https://github.com/niivue/niivue/blob/main/pac
 get volumes(): NVImage[];
 ```
 
-Defined in: [niivue/index.ts:925](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L925)
+Defined in: [niivue/index.ts:927](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L927)
 
 ##### Returns
 
@@ -438,7 +438,7 @@ Defined in: [niivue/index.ts:925](https://github.com/niivue/niivue/blob/main/pac
 set volumes(volumes: NVImage[]): void;
 ```
 
-Defined in: [niivue/index.ts:929](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L929)
+Defined in: [niivue/index.ts:931](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L931)
 
 ##### Parameters
 
@@ -458,7 +458,7 @@ Defined in: [niivue/index.ts:929](https://github.com/niivue/niivue/blob/main/pac
 addColormap(key: string, cmap: ColorMap): void;
 ```
 
-Defined in: [niivue/index.ts:7777](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7777)
+Defined in: [niivue/index.ts:7813](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7813)
 
 create a new colormap
 
@@ -492,7 +492,7 @@ addColormapList(
    inv: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:8661](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8661)
+Defined in: [niivue/index.ts:8697](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8697)
 
 #### Parameters
 
@@ -523,7 +523,7 @@ addLabel(
    onClick?: (label: NVLabel3D) => void): NVLabel3D;
 ```
 
-Defined in: [niivue/index.ts:11244](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11244)
+Defined in: [niivue/index.ts:11284](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11284)
 
 Add a 3D Label
 
@@ -555,7 +555,7 @@ the created `NVLabel3D` instance
 addMesh(mesh: NVMesh): void;
 ```
 
-Defined in: [niivue/index.ts:3020](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3020)
+Defined in: [niivue/index.ts:3056](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3056)
 
 add a new mesh to the canvas
 
@@ -588,7 +588,7 @@ niivue.addMesh(NVMesh.loadFromUrl({ url: "../someURL.gii" }));
 addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]>;
 ```
 
-Defined in: [niivue/index.ts:4793](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4793)
+Defined in: [niivue/index.ts:4829](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4829)
 
 Add mesh and notify subscribers
 
@@ -610,7 +610,7 @@ Add mesh and notify subscribers
 addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh>;
 ```
 
-Defined in: [niivue/index.ts:4772](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4772)
+Defined in: [niivue/index.ts:4808](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4808)
 
 Add mesh and notify subscribers
 
@@ -632,7 +632,7 @@ Add mesh and notify subscribers
 addVolume(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3003](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3003)
+Defined in: [niivue/index.ts:3039](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3039)
 
 add a new volume to the canvas
 
@@ -665,7 +665,7 @@ niivue.addVolume(NVImage.loadFromUrl({ url: "../someURL.nii.gz" }));
 addVolumeFromUrl(imageOptions: ImageFromUrlOptions): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:2264](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2264)
+Defined in: [niivue/index.ts:2300](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2300)
 
 Add an image and notify subscribers
 
@@ -691,7 +691,7 @@ Add an image and notify subscribers
 addVolumesFromUrl(imageOptionsArray: ImageFromUrlOptions[]): Promise<NVImage[]>;
 ```
 
-Defined in: [niivue/index.ts:2276](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2276)
+Defined in: [niivue/index.ts:2312](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2312)
 
 #### Parameters
 
@@ -711,7 +711,7 @@ Defined in: [niivue/index.ts:2276](https://github.com/niivue/niivue/blob/main/pa
 arrayEquals(a: unknown[], b: unknown[]): boolean;
 ```
 
-Defined in: [niivue/index.ts:1243](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1243)
+Defined in: [niivue/index.ts:1245](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1245)
 
 Not documented publicly for now
 test if two arrays have equal values for each element
@@ -743,7 +743,7 @@ TODO this should maybe just use array-equal from NPM
 attachTo(id: string, isAntiAlias: any): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:1001](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1001)
+Defined in: [niivue/index.ts:1003](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1003)
 
 attach the Niivue instance to the webgl2 canvas by element id
 
@@ -780,7 +780,7 @@ await niivue.attachTo("gl");
 attachToCanvas(canvas: HTMLCanvasElement, isAntiAlias: boolean): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:1014](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1014)
+Defined in: [niivue/index.ts:1016](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1016)
 
 attach the Niivue instance to a canvas element directly
 
@@ -810,7 +810,7 @@ await niivue.attachToCanvas(document.getElementById(id));
 binarize(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3196)
+Defined in: [niivue/index.ts:3232](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3232)
 
 #### Parameters
 
@@ -830,7 +830,7 @@ Defined in: [niivue/index.ts:3196](https://github.com/niivue/niivue/blob/main/pa
 broadcastTo(otherNV: Niivue | Niivue[], syncOpts: object): void;
 ```
 
-Defined in: [niivue/index.ts:1107](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1107)
+Defined in: [niivue/index.ts:1109](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1109)
 
 Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to others. useful for using one canvas to drive another.
 
@@ -874,7 +874,7 @@ bwlabel(
    onlyLargestClusterPerClass: boolean): [number, Uint32Array];
 ```
 
-Defined in: [niivue/index.ts:8048](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8048)
+Defined in: [niivue/index.ts:8084](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8084)
 
 #### Parameters
 
@@ -898,7 +898,7 @@ Defined in: [niivue/index.ts:8048](https://github.com/niivue/niivue/blob/main/pa
 calculateMinMaxVoxIdx(array: number[]): number[];
 ```
 
-Defined in: [niivue/index.ts:1450](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1450)
+Defined in: [niivue/index.ts:1486](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1486)
 
 calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
 
@@ -922,7 +922,7 @@ an array of two values representing the min and max voxel indices
 calculateModelMatrix(azimuth: number, elevation: number): mat4;
 ```
 
-Defined in: [niivue/index.ts:10570](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10570)
+Defined in: [niivue/index.ts:10607](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10607)
 
 #### Parameters
 
@@ -947,7 +947,7 @@ calculateMvpMatrix(
    elevation: number): mat4[];
 ```
 
-Defined in: [niivue/index.ts:10521](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10521)
+Defined in: [niivue/index.ts:10558](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10558)
 
 #### Parameters
 
@@ -978,7 +978,7 @@ calculateMvpMatrix2D(
    isRadiolgical: boolean): MvpMatrix2D;
 ```
 
-Defined in: [niivue/index.ts:10023](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10023)
+Defined in: [niivue/index.ts:10060](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10060)
 
 #### Parameters
 
@@ -1005,7 +1005,7 @@ Defined in: [niivue/index.ts:10023](https://github.com/niivue/niivue/blob/main/p
 calculateNewRange(__namedParameters: object): void;
 ```
 
-Defined in: [niivue/index.ts:1459](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1459)
+Defined in: [niivue/index.ts:1495](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1495)
 
 #### Parameters
 
@@ -1026,7 +1026,7 @@ Defined in: [niivue/index.ts:1459](https://github.com/niivue/niivue/blob/main/pa
 calculateRayDirection(azimuth: number, elevation: number): vec3;
 ```
 
-Defined in: [niivue/index.ts:10590](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10590)
+Defined in: [niivue/index.ts:10627](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10627)
 
 #### Parameters
 
@@ -1050,7 +1050,7 @@ calculateScreenPoint(
    leftTopWidthHeight: number[]): vec4;
 ```
 
-Defined in: [niivue/index.ts:11268](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11268)
+Defined in: [niivue/index.ts:11308](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11308)
 
 #### Parameters
 
@@ -1076,7 +1076,7 @@ calculateWidthHeight(
    containerHeight: number): [number, number];
 ```
 
-Defined in: [niivue/index.ts:12540](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12540)
+Defined in: [niivue/index.ts:12593](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12593)
 
 #### Parameters
 
@@ -1099,7 +1099,7 @@ Defined in: [niivue/index.ts:12540](https://github.com/niivue/niivue/blob/main/p
 canvasPos2frac(canvasPos: number[]): vec3;
 ```
 
-Defined in: [niivue/index.ts:12001](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12001)
+Defined in: [niivue/index.ts:12054](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12054)
 
 #### Parameters
 
@@ -1127,7 +1127,7 @@ check_previous_slice(
    tt: Uint32Array): number;
 ```
 
-Defined in: [niivue/index.ts:7803](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7803)
+Defined in: [niivue/index.ts:7839](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7839)
 
 #### Parameters
 
@@ -1154,7 +1154,7 @@ Defined in: [niivue/index.ts:7803](https://github.com/niivue/niivue/blob/main/pa
 checkMultitouch(e: TouchEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1617](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1617)
+Defined in: [niivue/index.ts:1653](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1653)
 
 #### Parameters
 
@@ -1174,7 +1174,7 @@ Defined in: [niivue/index.ts:1617](https://github.com/niivue/niivue/blob/main/pa
 cleanup(): void;
 ```
 
-Defined in: [niivue/index.ts:876](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L876)
+Defined in: [niivue/index.ts:878](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L878)
 
 Clean up event listeners and observers
 Call this when the Niivue instance is no longer needed.
@@ -1198,7 +1198,7 @@ niivue.cleanup();
 clearCustomLayout(): void;
 ```
 
-Defined in: [niivue/index.ts:2869](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2869)
+Defined in: [niivue/index.ts:2905](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2905)
 
 Clear custom layout and rely on built-in layouts
 
@@ -1214,7 +1214,7 @@ Clear custom layout and rely on built-in layouts
 cloneVolume(index: number): NVImage;
 ```
 
-Defined in: [niivue/index.ts:4304](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4304)
+Defined in: [niivue/index.ts:4340](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4340)
 
 clone a volume and return a new volume
 
@@ -1245,7 +1245,7 @@ niivue.cloneVolume(0);
 closeDrawing(): void;
 ```
 
-Defined in: [niivue/index.ts:5975](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5975)
+Defined in: [niivue/index.ts:6011](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6011)
 
 close drawing: make sure you have saved any changes before calling this!
 
@@ -1271,7 +1271,7 @@ niivue.closeDrawing();
 colormap(lutName: string, isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [niivue/index.ts:8633](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8633)
+Defined in: [niivue/index.ts:8669](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8669)
 
 #### Parameters
 
@@ -1292,7 +1292,7 @@ Defined in: [niivue/index.ts:8633](https://github.com/niivue/niivue/blob/main/pa
 colormapFromKey(name: string): ColorMap;
 ```
 
-Defined in: [niivue/index.ts:8628](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8628)
+Defined in: [niivue/index.ts:8664](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8664)
 
 #### Parameters
 
@@ -1312,7 +1312,7 @@ Defined in: [niivue/index.ts:8628](https://github.com/niivue/niivue/blob/main/pa
 colormaps(): string[];
 ```
 
-Defined in: [niivue/index.ts:7767](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7767)
+Defined in: [niivue/index.ts:7803](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7803)
 
 query all available color maps that can be applied to volumes
 
@@ -1346,7 +1346,7 @@ conform(
 isRobustMinMax: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8349](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8349)
+Defined in: [niivue/index.ts:8385](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8385)
 
 FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
 
@@ -1381,7 +1381,7 @@ conformVox2Vox(
    toRAS: boolean): [mat4, mat4, mat4];
 ```
 
-Defined in: [niivue/index.ts:8252](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8252)
+Defined in: [niivue/index.ts:8288](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8288)
 
 #### Parameters
 
@@ -1408,7 +1408,7 @@ createColormapTexture(
    nCol: number): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:8640](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8640)
+Defined in: [niivue/index.ts:8676](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8676)
 
 #### Parameters
 
@@ -1434,7 +1434,7 @@ createConnectedLabelImage(
 onlyLargestClusterPerClass: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8088](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8088)
+Defined in: [niivue/index.ts:8124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8124)
 
 #### Parameters
 
@@ -1457,7 +1457,7 @@ Defined in: [niivue/index.ts:8088](https://github.com/niivue/niivue/blob/main/pa
 createCustomMeshShader(fragmentShaderText: string, name: string): object;
 ```
 
-Defined in: [niivue/index.ts:6505](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6505)
+Defined in: [niivue/index.ts:6541](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6541)
 
 #### Parameters
 
@@ -1474,9 +1474,9 @@ created custom mesh shader
 
 | Name     | Type                                       | Defined in                                                                                                   |
 | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `Frag`   | `string`                                   | [niivue/index.ts:6509](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6509) |
-| `Name`   | `string`                                   | [niivue/index.ts:6509](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6509) |
-| `shader` | [`Shader`](../../shader/classes/Shader.md) | [niivue/index.ts:6509](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6509) |
+| `Frag`   | `string`                                   | [niivue/index.ts:6545](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6545) |
+| `Name`   | `string`                                   | [niivue/index.ts:6545](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6545) |
+| `shader` | [`Shader`](../../shader/classes/Shader.md) | [niivue/index.ts:6545](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6545) |
 
 ---
 
@@ -1486,7 +1486,7 @@ created custom mesh shader
 createEmptyDrawing(): void;
 ```
 
-Defined in: [niivue/index.ts:4981](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4981)
+Defined in: [niivue/index.ts:5017](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5017)
 
 generate a blank canvas for the pen tool
 
@@ -1517,7 +1517,7 @@ createNiftiArray(
 img: Uint8Array): Promise<Uint8Array>;
 ```
 
-Defined in: [niivue/index.ts:8312](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8312)
+Defined in: [niivue/index.ts:8348](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8348)
 
 #### Parameters
 
@@ -1541,7 +1541,7 @@ Defined in: [niivue/index.ts:8312](https://github.com/niivue/niivue/blob/main/pa
 createOnLocationChange(axCorSag: number): void;
 ```
 
-Defined in: [niivue/index.ts:11139](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11139)
+Defined in: [niivue/index.ts:11179](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11179)
 
 #### Parameters
 
@@ -1561,7 +1561,7 @@ Defined in: [niivue/index.ts:11139](https://github.com/niivue/niivue/blob/main/p
 decimateHierarchicalMesh(mesh: number, order: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:3607](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3607)
+Defined in: [niivue/index.ts:3643](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3643)
 
 reduce complexity of FreeSurfer mesh
 
@@ -1596,7 +1596,7 @@ niivue.decimateHierarchicalMesh(niivue.meshes[0].id, 4);
 deleteThumbnail(): void;
 ```
 
-Defined in: [niivue/index.ts:8855](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8855)
+Defined in: [niivue/index.ts:8891](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8891)
 
 #### Returns
 
@@ -1610,7 +1610,7 @@ Defined in: [niivue/index.ts:8855](https://github.com/niivue/niivue/blob/main/pa
 depthPicker(leftTopWidthHeight: number[], mvpMatrix: mat4): void;
 ```
 
-Defined in: [niivue/index.ts:10987](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10987)
+Defined in: [niivue/index.ts:11027](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11027)
 
 #### Parameters
 
@@ -1631,7 +1631,7 @@ Defined in: [niivue/index.ts:10987](https://github.com/niivue/niivue/blob/main/p
 detectPartialllyLoaded4D(): boolean;
 ```
 
-Defined in: [niivue/index.ts:10698](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10698)
+Defined in: [niivue/index.ts:10735](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10735)
 
 #### Returns
 
@@ -1648,7 +1648,7 @@ do_initial_labelling(
    conn: number): [number, Uint32Array, Uint32Array];
 ```
 
-Defined in: [niivue/index.ts:7887](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7887)
+Defined in: [niivue/index.ts:7923](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7923)
 
 #### Parameters
 
@@ -1670,7 +1670,7 @@ Defined in: [niivue/index.ts:7887](https://github.com/niivue/niivue/blob/main/pa
 doClickToSegment(options: object): void;
 ```
 
-Defined in: [niivue/index.ts:8904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8904)
+Defined in: [niivue/index.ts:8940](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8940)
 
 #### Parameters
 
@@ -1693,7 +1693,7 @@ Defined in: [niivue/index.ts:8904](https://github.com/niivue/niivue/blob/main/pa
 doSync2d(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1123](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1123)
+Defined in: [niivue/index.ts:1125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1125)
 
 #### Parameters
 
@@ -1713,7 +1713,7 @@ Defined in: [niivue/index.ts:1123](https://github.com/niivue/niivue/blob/main/pa
 doSync3d(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1116](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1116)
+Defined in: [niivue/index.ts:1118](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1118)
 
 #### Parameters
 
@@ -1733,7 +1733,7 @@ Defined in: [niivue/index.ts:1116](https://github.com/niivue/niivue/blob/main/pa
 doSyncCalMax(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1156)
+Defined in: [niivue/index.ts:1158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1158)
 
 #### Parameters
 
@@ -1753,7 +1753,7 @@ Defined in: [niivue/index.ts:1156](https://github.com/niivue/niivue/blob/main/pa
 doSyncCalMin(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1147](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1147)
+Defined in: [niivue/index.ts:1149](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1149)
 
 #### Parameters
 
@@ -1773,7 +1773,7 @@ Defined in: [niivue/index.ts:1147](https://github.com/niivue/niivue/blob/main/pa
 doSyncClipPlane(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1169](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1169)
+Defined in: [niivue/index.ts:1171](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1171)
 
 #### Parameters
 
@@ -1793,7 +1793,7 @@ Defined in: [niivue/index.ts:1169](https://github.com/niivue/niivue/blob/main/pa
 doSyncCrosshair(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1142)
+Defined in: [niivue/index.ts:1144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1144)
 
 #### Parameters
 
@@ -1813,7 +1813,7 @@ Defined in: [niivue/index.ts:1142](https://github.com/niivue/niivue/blob/main/pa
 doSyncGamma(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1129](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1129)
+Defined in: [niivue/index.ts:1131](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1131)
 
 #### Parameters
 
@@ -1833,7 +1833,7 @@ Defined in: [niivue/index.ts:1129](https://github.com/niivue/niivue/blob/main/pa
 doSyncSliceType(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1165](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1165)
+Defined in: [niivue/index.ts:1167](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1167)
 
 #### Parameters
 
@@ -1853,7 +1853,7 @@ Defined in: [niivue/index.ts:1165](https://github.com/niivue/niivue/blob/main/pa
 doSyncZoomPan(otherNV: Niivue): void;
 ```
 
-Defined in: [niivue/index.ts:1138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1138)
+Defined in: [niivue/index.ts:1140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1140)
 
 #### Parameters
 
@@ -1873,7 +1873,7 @@ Defined in: [niivue/index.ts:1138](https://github.com/niivue/niivue/blob/main/pa
 dragEnterListener(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:2229](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2229)
+Defined in: [niivue/index.ts:2265](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2265)
 
 #### Parameters
 
@@ -1893,7 +1893,7 @@ Defined in: [niivue/index.ts:2229](https://github.com/niivue/niivue/blob/main/pa
 dragForCenterButton(startXYendXY: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9298](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9298)
+Defined in: [niivue/index.ts:9334](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9334)
 
 #### Parameters
 
@@ -1913,7 +1913,7 @@ Defined in: [niivue/index.ts:9298](https://github.com/niivue/niivue/blob/main/pa
 dragForPanZoom(startXYendXY: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9280](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9280)
+Defined in: [niivue/index.ts:9316](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9316)
 
 #### Parameters
 
@@ -1933,7 +1933,7 @@ Defined in: [niivue/index.ts:9280](https://github.com/niivue/niivue/blob/main/pa
 dragForSlicer3D(startXYendXY: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9303](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9303)
+Defined in: [niivue/index.ts:9339](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9339)
 
 #### Parameters
 
@@ -1953,7 +1953,7 @@ Defined in: [niivue/index.ts:9303](https://github.com/niivue/niivue/blob/main/pa
 dragOverListener(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:2235](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2235)
+Defined in: [niivue/index.ts:2271](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2271)
 
 #### Parameters
 
@@ -1977,7 +1977,7 @@ draw2D(
    imageWidthHeight: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:10478](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10478)
+Defined in: [niivue/index.ts:10515](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10515)
 
 #### Parameters
 
@@ -2003,7 +2003,7 @@ draw2DMain(
    customMM: number): void;
 ```
 
-Defined in: [niivue/index.ts:10273](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10273)
+Defined in: [niivue/index.ts:10310](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10310)
 
 #### Parameters
 
@@ -2031,7 +2031,7 @@ draw3D(
    elevation: number): string;
 ```
 
-Defined in: [niivue/index.ts:11563](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11563)
+Defined in: [niivue/index.ts:11616](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11616)
 
 #### Parameters
 
@@ -2060,22 +2060,24 @@ draw3DLabel(
    leftTopWidthHeight?: number[],
    bulletMargin?: number,
    legendWidth?: number,
-   secondPass?: boolean): void;
+   secondPass?: boolean,
+   scaling?: number): void;
 ```
 
-Defined in: [niivue/index.ts:11404](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11404)
+Defined in: [niivue/index.ts:11445](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11445)
 
 #### Parameters
 
-| Parameter             | Type        |
-| --------------------- | ----------- |
-| `label`               | `NVLabel3D` |
-| `pos`                 | `vec2`      |
-| `mvpMatrix?`          | `mat4`      |
-| `leftTopWidthHeight?` | `number`[]  |
-| `bulletMargin?`       | `number`    |
-| `legendWidth?`        | `number`    |
-| `secondPass?`         | `boolean`   |
+| Parameter             | Type        | Default value |
+| --------------------- | ----------- | ------------- |
+| `label`               | `NVLabel3D` | `undefined`   |
+| `pos`                 | `vec2`      | `undefined`   |
+| `mvpMatrix?`          | `mat4`      | `undefined`   |
+| `leftTopWidthHeight?` | `number`[]  | `undefined`   |
+| `bulletMargin?`       | `number`    | `undefined`   |
+| `legendWidth?`        | `number`    | `undefined`   |
+| `secondPass?`         | `boolean`   | `undefined`   |
+| `scaling?`            | `number`    | `1.0`         |
 
 #### Returns
 
@@ -2092,7 +2094,7 @@ draw3DLabels(
    secondPass: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:11456](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11456)
+Defined in: [niivue/index.ts:11498](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11498)
 
 #### Parameters
 
@@ -2118,7 +2120,7 @@ draw3DLine(
    lineColor: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:12082](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12082)
+Defined in: [niivue/index.ts:12135](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12135)
 
 #### Parameters
 
@@ -2141,7 +2143,7 @@ Defined in: [niivue/index.ts:12082](https://github.com/niivue/niivue/blob/main/p
 drawAddUndoBitmap(): void;
 ```
 
-Defined in: [niivue/index.ts:3047](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3047)
+Defined in: [niivue/index.ts:3083](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3083)
 
 #### Returns
 
@@ -2155,7 +2157,7 @@ Defined in: [niivue/index.ts:3047](https://github.com/niivue/niivue/blob/main/pa
 drawAnchoredLabels(): void;
 ```
 
-Defined in: [niivue/index.ts:11509](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11509)
+Defined in: [niivue/index.ts:11562](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11562)
 
 #### Returns
 
@@ -2172,7 +2174,7 @@ drawChar(
    char: number): number;
 ```
 
-Defined in: [niivue/index.ts:9836](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9836)
+Defined in: [niivue/index.ts:9874](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9874)
 
 #### Parameters
 
@@ -2197,7 +2199,7 @@ drawCircle(
    fillPercent: number): void;
 ```
 
-Defined in: [niivue/index.ts:9476](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9476)
+Defined in: [niivue/index.ts:9512](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9512)
 
 #### Parameters
 
@@ -2219,7 +2221,7 @@ Defined in: [niivue/index.ts:9476](https://github.com/niivue/niivue/blob/main/pa
 drawClearAllUndoBitmaps(): void;
 ```
 
-Defined in: [niivue/index.ts:3063](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3063)
+Defined in: [niivue/index.ts:3099](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3099)
 
 #### Returns
 
@@ -2233,7 +2235,7 @@ Defined in: [niivue/index.ts:3063](https://github.com/niivue/niivue/blob/main/pa
 drawColorbar(): void;
 ```
 
-Defined in: [niivue/index.ts:9766](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9766)
+Defined in: [niivue/index.ts:9803](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9803)
 
 #### Returns
 
@@ -2253,7 +2255,7 @@ drawColorbarCore(
    isAlphaThreshold: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:9661](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9661)
+Defined in: [niivue/index.ts:9696](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9696)
 
 #### Parameters
 
@@ -2283,7 +2285,7 @@ drawCrosshairs3D(
    isSliceMM: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:11779](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11779)
+Defined in: [niivue/index.ts:11832](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11832)
 
 #### Parameters
 
@@ -2312,7 +2314,7 @@ drawCrossLines(
    sagMM: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:12312](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12312)
+Defined in: [niivue/index.ts:12365](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12365)
 
 #### Parameters
 
@@ -2341,7 +2343,7 @@ drawCrossLinesMM(
    sagMM: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:12173](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12173)
+Defined in: [niivue/index.ts:12226](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12226)
 
 #### Parameters
 
@@ -2368,7 +2370,7 @@ drawDottedLine(
    lineColor: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:12101](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12101)
+Defined in: [niivue/index.ts:12154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12154)
 
 #### Parameters
 
@@ -2400,7 +2402,7 @@ drawFloodFill(
    isGrowClusterTool: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:5526](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5526)
+Defined in: [niivue/index.ts:5562](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5562)
 
 #### Parameters
 
@@ -2432,7 +2434,7 @@ drawFloodFillCore(
    neighbors: number): void;
 ```
 
-Defined in: [niivue/index.ts:5434](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5434)
+Defined in: [niivue/index.ts:5470](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5470)
 
 #### Parameters
 
@@ -2454,7 +2456,7 @@ Defined in: [niivue/index.ts:5434](https://github.com/niivue/niivue/blob/main/pa
 drawGraph(): void;
 ```
 
-Defined in: [niivue/index.ts:10712](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10712)
+Defined in: [niivue/index.ts:10749](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10749)
 
 #### Returns
 
@@ -2471,7 +2473,7 @@ drawGraphLine(
    thickness: number): void;
 ```
 
-Defined in: [niivue/index.ts:12168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12168)
+Defined in: [niivue/index.ts:12221](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12221)
 
 #### Parameters
 
@@ -2493,7 +2495,7 @@ Defined in: [niivue/index.ts:12168](https://github.com/niivue/niivue/blob/main/p
 drawGrowCut(): void;
 ```
 
-Defined in: [niivue/index.ts:5045](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5045)
+Defined in: [niivue/index.ts:5081](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5081)
 
 dilate drawing so all voxels are colored.
 works on drawing with multiple colors
@@ -2523,7 +2525,7 @@ drawImage3D(
    elevation: number): void;
 ```
 
-Defined in: [niivue/index.ts:11030](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11030)
+Defined in: [niivue/index.ts:11070](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11070)
 
 #### Parameters
 
@@ -2545,7 +2547,7 @@ Defined in: [niivue/index.ts:11030](https://github.com/niivue/niivue/blob/main/p
 drawingBinaryDilationWithSeed(seedXYZ: number[], neighbors: 6 | 18 | 26): void;
 ```
 
-Defined in: [niivue/index.ts:5302](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5302)
+Defined in: [niivue/index.ts:5338](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5338)
 
 Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
 
@@ -2573,7 +2575,7 @@ drawLabelLine(
    secondPass: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:11382](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11382)
+Defined in: [niivue/index.ts:11423](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11423)
 
 #### Parameters
 
@@ -2600,7 +2602,7 @@ drawLine(
    lineColor: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:12061](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12061)
+Defined in: [niivue/index.ts:12114](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12114)
 
 #### Parameters
 
@@ -2622,7 +2624,7 @@ Defined in: [niivue/index.ts:12061](https://github.com/niivue/niivue/blob/main/p
 drawLoadingText(text: string): void;
 ```
 
-Defined in: [niivue/index.ts:9854](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9854)
+Defined in: [niivue/index.ts:9892](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9892)
 
 #### Parameters
 
@@ -2642,7 +2644,7 @@ Defined in: [niivue/index.ts:9854](https://github.com/niivue/niivue/blob/main/pa
 drawMeasurementTool(startXYendXY: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9323](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9323)
+Defined in: [niivue/index.ts:9359](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9359)
 
 #### Parameters
 
@@ -2667,7 +2669,7 @@ drawMesh3D(
    normMtx?: mat4): void;
 ```
 
-Defined in: [niivue/index.ts:11659](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11659)
+Defined in: [niivue/index.ts:11712](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11712)
 
 #### Parameters
 
@@ -2691,7 +2693,7 @@ Defined in: [niivue/index.ts:11659](https://github.com/niivue/niivue/blob/main/p
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:12375](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12375)
+Defined in: [niivue/index.ts:12428](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12428)
 
 display a lightbox or montage view
 
@@ -2726,7 +2728,7 @@ drawOrientationCube(
    elevation: number): void;
 ```
 
-Defined in: [niivue/index.ts:11098](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11098)
+Defined in: [niivue/index.ts:11138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11138)
 
 #### Parameters
 
@@ -2748,7 +2750,7 @@ Defined in: [niivue/index.ts:11098](https://github.com/niivue/niivue/blob/main/p
 drawOtsu(levels: number): void;
 ```
 
-Defined in: [niivue/index.ts:3351](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3351)
+Defined in: [niivue/index.ts:3387](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3387)
 
 remove dark voxels in air
 
@@ -2780,7 +2782,7 @@ niivue.drawOtsu(3);
 drawPenFilled(): void;
 ```
 
-Defined in: [niivue/index.ts:5780](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5780)
+Defined in: [niivue/index.ts:5816](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5816)
 
 #### Returns
 
@@ -2797,7 +2799,7 @@ drawPenLine(
    penValue: number): void;
 ```
 
-Defined in: [niivue/index.ts:5217](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5217)
+Defined in: [niivue/index.ts:5253](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5253)
 
 #### Parameters
 
@@ -2824,7 +2826,7 @@ drawPt(
    drawBitmap: Uint8Array): void;
 ```
 
-Defined in: [niivue/index.ts:5173](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5173)
+Defined in: [niivue/index.ts:5209](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5209)
 
 #### Parameters
 
@@ -2848,7 +2850,7 @@ Defined in: [niivue/index.ts:5173](https://github.com/niivue/niivue/blob/main/pa
 drawRect(leftTopWidthHeight: number[], lineColor: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9429](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9429)
+Defined in: [niivue/index.ts:9465](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9465)
 
 #### Parameters
 
@@ -2869,7 +2871,7 @@ Defined in: [niivue/index.ts:9429](https://github.com/niivue/niivue/blob/main/pa
 drawRuler(): void;
 ```
 
-Defined in: [niivue/index.ts:9184](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9184)
+Defined in: [niivue/index.ts:9220](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9220)
 
 #### Returns
 
@@ -2886,7 +2888,7 @@ drawRuler10cm(
    rulerWidth: number): void;
 ```
 
-Defined in: [niivue/index.ts:9218](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9218)
+Defined in: [niivue/index.ts:9254](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9254)
 
 #### Parameters
 
@@ -2908,7 +2910,7 @@ Defined in: [niivue/index.ts:9218](https://github.com/niivue/niivue/blob/main/pa
 drawScene(): string | void;
 ```
 
-Defined in: [niivue/index.ts:13053](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13053)
+Defined in: [niivue/index.ts:13103](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13103)
 
 #### Returns
 
@@ -2922,7 +2924,7 @@ Defined in: [niivue/index.ts:13053](https://github.com/niivue/niivue/blob/main/p
 drawSceneCore(): string | void;
 ```
 
-Defined in: [niivue/index.ts:12585](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12585)
+Defined in: [niivue/index.ts:12638](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12638)
 
 #### Returns
 
@@ -2936,7 +2938,7 @@ Defined in: [niivue/index.ts:12585](https://github.com/niivue/niivue/blob/main/p
 drawSelectionBox(leftTopWidthHeight: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9500](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9500)
+Defined in: [niivue/index.ts:9536](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9536)
 
 #### Parameters
 
@@ -2959,7 +2961,7 @@ drawSliceOrientationText(
    padLeftTop: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:10187](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10187)
+Defined in: [niivue/index.ts:10224](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10224)
 
 #### Parameters
 
@@ -2985,7 +2987,7 @@ drawText(
    color: Float32List): void;
 ```
 
-Defined in: [niivue/index.ts:9868](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9868)
+Defined in: [niivue/index.ts:9906](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9906)
 
 #### Parameters
 
@@ -3012,7 +3014,7 @@ drawTextBelow(
    color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9954](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9954)
+Defined in: [niivue/index.ts:9991](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9991)
 
 #### Parameters
 
@@ -3039,7 +3041,7 @@ drawTextBetween(
    color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9928](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9928)
+Defined in: [niivue/index.ts:9965](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9965)
 
 #### Parameters
 
@@ -3066,7 +3068,7 @@ drawTextLeft(
    color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9906](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9906)
+Defined in: [niivue/index.ts:9943](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9943)
 
 #### Parameters
 
@@ -3093,7 +3095,7 @@ drawTextRight(
    color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9896](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9896)
+Defined in: [niivue/index.ts:9933](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9933)
 
 #### Parameters
 
@@ -3120,7 +3122,7 @@ drawTextRightBelow(
    color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:9918](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9918)
+Defined in: [niivue/index.ts:9955](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9955)
 
 #### Parameters
 
@@ -3143,7 +3145,7 @@ Defined in: [niivue/index.ts:9918](https://github.com/niivue/niivue/blob/main/pa
 drawThumbnail(): void;
 ```
 
-Defined in: [niivue/index.ts:12036](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12036)
+Defined in: [niivue/index.ts:12089](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12089)
 
 #### Returns
 
@@ -3157,7 +3159,7 @@ Defined in: [niivue/index.ts:12036](https://github.com/niivue/niivue/blob/main/p
 drawUndo(): void;
 ```
 
-Defined in: [niivue/index.ts:3078](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3078)
+Defined in: [niivue/index.ts:3114](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3114)
 
 Restore drawing to previous state
 
@@ -3183,7 +3185,7 @@ niivue.drawUndo();
 dropListener(e: DragEvent): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:2559](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2559)
+Defined in: [niivue/index.ts:2595](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2595)
 
 #### Parameters
 
@@ -3203,7 +3205,7 @@ Defined in: [niivue/index.ts:2559](https://github.com/niivue/niivue/blob/main/pa
 effectiveCanvasHeight(): number;
 ```
 
-Defined in: [niivue/index.ts:9511](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9511)
+Defined in: [niivue/index.ts:9547](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9547)
 
 #### Returns
 
@@ -3217,7 +3219,7 @@ Defined in: [niivue/index.ts:9511](https://github.com/niivue/niivue/blob/main/pa
 effectiveCanvasWidth(): number;
 ```
 
-Defined in: [niivue/index.ts:9516](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9516)
+Defined in: [niivue/index.ts:9552](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9552)
 
 #### Returns
 
@@ -3234,7 +3236,7 @@ fill_tratab(
    nr_set: number): void;
 ```
 
-Defined in: [niivue/index.ts:7962](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7962)
+Defined in: [niivue/index.ts:7998](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7998)
 
 #### Parameters
 
@@ -3256,7 +3258,7 @@ Defined in: [niivue/index.ts:7962](https://github.com/niivue/niivue/blob/main/pa
 findOtsu(mlevel: number): number[];
 ```
 
-Defined in: [niivue/index.ts:3238](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3238)
+Defined in: [niivue/index.ts:3274](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3274)
 
 #### Parameters
 
@@ -3279,7 +3281,7 @@ frac2mm(
    isForceSliceMM: boolean): vec4;
 ```
 
-Defined in: [niivue/index.ts:11940](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11940)
+Defined in: [niivue/index.ts:11993](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11993)
 
 #### Parameters
 
@@ -3301,7 +3303,7 @@ Defined in: [niivue/index.ts:11940](https://github.com/niivue/niivue/blob/main/p
 frac2vox(frac: vec3, volIdx: number): vec3;
 ```
 
-Defined in: [niivue/index.ts:11903](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11903)
+Defined in: [niivue/index.ts:11956](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11956)
 
 #### Parameters
 
@@ -3322,7 +3324,7 @@ Defined in: [niivue/index.ts:11903](https://github.com/niivue/niivue/blob/main/p
 generateHTML(canvasId: string, esm: string): Promise<string>;
 ```
 
-Defined in: [niivue/index.ts:4499](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4499)
+Defined in: [niivue/index.ts:4535](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4535)
 
 generates HTML of current scene
 
@@ -3355,7 +3357,7 @@ nv1.generateHTML("page.html", esm);
 generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string>;
 ```
 
-Defined in: [niivue/index.ts:4458](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4458)
+Defined in: [niivue/index.ts:4494](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4494)
 
 generates JavaScript to load the current scene as a document
 
@@ -3386,7 +3388,7 @@ const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
 generateMouseUpCallback(fracStart: vec3, fracEnd: vec3): void;
 ```
 
-Defined in: [niivue/index.ts:1526](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1526)
+Defined in: [niivue/index.ts:1562](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1562)
 
 #### Parameters
 
@@ -3407,7 +3409,7 @@ Defined in: [niivue/index.ts:1526](https://github.com/niivue/niivue/blob/main/pa
 getAllLabels(): NVLabel3D[];
 ```
 
-Defined in: [niivue/index.ts:9520](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9520)
+Defined in: [niivue/index.ts:9556](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9556)
 
 #### Returns
 
@@ -3421,7 +3423,7 @@ Defined in: [niivue/index.ts:9520](https://github.com/niivue/niivue/blob/main/pa
 getBulletMarginWidth(): number;
 ```
 
-Defined in: [niivue/index.ts:9561](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9561)
+Defined in: [niivue/index.ts:9597](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9597)
 
 #### Returns
 
@@ -3435,7 +3437,7 @@ Defined in: [niivue/index.ts:9561](https://github.com/niivue/niivue/blob/main/pa
 getConnectomeLabels(): NVLabel3D[];
 ```
 
-Defined in: [niivue/index.ts:9530](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9530)
+Defined in: [niivue/index.ts:9566](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9566)
 
 #### Returns
 
@@ -3449,7 +3451,7 @@ Defined in: [niivue/index.ts:9530](https://github.com/niivue/niivue/blob/main/pa
 getCustomLayout(): object[];
 ```
 
-Defined in: [niivue/index.ts:2878](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2878)
+Defined in: [niivue/index.ts:2914](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2914)
 
 Get the current custom layout if set
 
@@ -3467,7 +3469,7 @@ The current custom layout or null if using built-in layouts
 getDescriptives(options: object): Descriptive;
 ```
 
-Defined in: [niivue/index.ts:6906](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6906)
+Defined in: [niivue/index.ts:6942](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6942)
 
 basic statistics for selected voxel-based image
 
@@ -3514,7 +3516,7 @@ niivue.getDescriptives({
 getDicomLoader(): DicomLoader;
 ```
 
-Defined in: [niivue/index.ts:2541](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2541)
+Defined in: [niivue/index.ts:2577](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2577)
 
 #### Returns
 
@@ -3528,7 +3530,7 @@ Defined in: [niivue/index.ts:2541](https://github.com/niivue/niivue/blob/main/pa
 getFileExt(fullname: string, upperCase: boolean): string;
 ```
 
-Defined in: [niivue/index.ts:2241](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2241)
+Defined in: [niivue/index.ts:2277](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2277)
 
 #### Parameters
 
@@ -3549,7 +3551,7 @@ Defined in: [niivue/index.ts:2241](https://github.com/niivue/niivue/blob/main/pa
 getFrame4D(id: string): number;
 ```
 
-Defined in: [niivue/index.ts:8622](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8622)
+Defined in: [niivue/index.ts:8658](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8658)
 
 determine active 3D volume from 4D time series
 
@@ -3583,7 +3585,7 @@ nv1.getFrame4D(nv1.volumes[0].id);
 getLabelAtPoint(screenPoint: [number, number]): NVLabel3D;
 ```
 
-Defined in: [niivue/index.ts:11284](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11284)
+Defined in: [niivue/index.ts:11324](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11324)
 
 #### Parameters
 
@@ -3600,10 +3602,16 @@ Defined in: [niivue/index.ts:11284](https://github.com/niivue/niivue/blob/main/p
 ### getLegendPanelHeight()
 
 ```ts
-getLegendPanelHeight(): number;
+getLegendPanelHeight(panelScale: number): number;
 ```
 
-Defined in: [niivue/index.ts:9618](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9618)
+Defined in: [niivue/index.ts:9654](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9654)
+
+#### Parameters
+
+| Parameter    | Type     | Default value |
+| ------------ | -------- | ------------- |
+| `panelScale` | `number` | `1.0`         |
 
 #### Returns
 
@@ -3617,7 +3625,7 @@ Defined in: [niivue/index.ts:9618](https://github.com/niivue/niivue/blob/main/pa
 getLegendPanelWidth(): number;
 ```
 
-Defined in: [niivue/index.ts:9587](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9587)
+Defined in: [niivue/index.ts:9623](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9623)
 
 #### Returns
 
@@ -3631,7 +3639,7 @@ Defined in: [niivue/index.ts:9587](https://github.com/niivue/niivue/blob/main/pa
 getMaxVols(): number;
 ```
 
-Defined in: [niivue/index.ts:10686](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10686)
+Defined in: [niivue/index.ts:10723](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10723)
 
 #### Returns
 
@@ -3647,7 +3655,7 @@ getMediaByUrl(url: string):
   | NVImage;
 ```
 
-Defined in: [niivue/index.ts:2346](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2346)
+Defined in: [niivue/index.ts:2382](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2382)
 
 Find media by url
 
@@ -3670,7 +3678,7 @@ Find media by url
 getMeshIndexByID(id: string | number): number;
 ```
 
-Defined in: [niivue/index.ts:3540](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3540)
+Defined in: [niivue/index.ts:3576](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3576)
 
 #### Parameters
 
@@ -3690,7 +3698,7 @@ Defined in: [niivue/index.ts:3540](https://github.com/niivue/niivue/blob/main/pa
 getNoPaddingNoBorderCanvasRelativeMousePosition(event: MouseEvent, target: EventTarget): object;
 ```
 
-Defined in: [niivue/index.ts:1314](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1314)
+Defined in: [niivue/index.ts:1350](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1350)
 
 #### Parameters
 
@@ -3705,8 +3713,8 @@ Defined in: [niivue/index.ts:1314](https://github.com/niivue/niivue/blob/main/pa
 
 | Name | Type     | Defined in                                                                                                   |
 | ---- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `x`  | `number` | [niivue/index.ts:1317](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1317) |
-| `y`  | `number` | [niivue/index.ts:1317](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1317) |
+| `x`  | `number` | [niivue/index.ts:1353](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1353) |
+| `y`  | `number` | [niivue/index.ts:1353](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1353) |
 
 ---
 
@@ -3716,7 +3724,7 @@ Defined in: [niivue/index.ts:1314](https://github.com/niivue/niivue/blob/main/pa
 getOverlayIndexByID(id: string): number;
 ```
 
-Defined in: [niivue/index.ts:3686](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3686)
+Defined in: [niivue/index.ts:3722](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3722)
 
 get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
 
@@ -3749,7 +3757,7 @@ niivue.getOverlayIndexByID(someVolume.id);
 getRadiologicalConvention(): boolean;
 ```
 
-Defined in: [niivue/index.ts:2976](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2976)
+Defined in: [niivue/index.ts:3012](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3012)
 
 Detect if display is using radiological or neurological convention.
 
@@ -3773,7 +3781,7 @@ let rc = niivue.getRadiologicalConvention();
 getRelativeMousePosition(event: MouseEvent, target?: EventTarget): object;
 ```
 
-Defined in: [niivue/index.ts:1298](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1298)
+Defined in: [niivue/index.ts:1334](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1334)
 
 **`Internal`**
 
@@ -3794,8 +3802,8 @@ the mouse position relative to the canvas
 
 | Name | Type     | Defined in                                                                                                   |
 | ---- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `x`  | `number` | [niivue/index.ts:1298](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1298) |
-| `y`  | `number` | [niivue/index.ts:1298](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1298) |
+| `x`  | `number` | [niivue/index.ts:1334](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1334) |
+| `y`  | `number` | [niivue/index.ts:1334](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1334) |
 
 ---
 
@@ -3810,7 +3818,7 @@ getScale(
    f_high: number): [number, number];
 ```
 
-Defined in: [niivue/index.ts:8156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8156)
+Defined in: [niivue/index.ts:8192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8192)
 
 #### Parameters
 
@@ -3834,7 +3842,7 @@ Defined in: [niivue/index.ts:8156](https://github.com/niivue/niivue/blob/main/pa
 getVolumeIndexByID(id: string): number;
 ```
 
-Defined in: [niivue/index.ts:3034](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3034)
+Defined in: [niivue/index.ts:3070](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3070)
 
 get the index of a volume by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
 
@@ -3863,7 +3871,7 @@ niivue.getVolumeIndexByID(someVolume.id);
 gradientGL(hdr: NiftiHeader): void;
 ```
 
-Defined in: [niivue/index.ts:6770](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6770)
+Defined in: [niivue/index.ts:6806](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6806)
 
 #### Parameters
 
@@ -3883,7 +3891,7 @@ Defined in: [niivue/index.ts:6770](https://github.com/niivue/niivue/blob/main/pa
 handleNodeAdded(event: object): void;
 ```
 
-Defined in: [niivue/index.ts:4921](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4921)
+Defined in: [niivue/index.ts:4957](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4957)
 
 #### Parameters
 
@@ -3905,7 +3913,7 @@ Defined in: [niivue/index.ts:4921](https://github.com/niivue/niivue/blob/main/pa
 handlePinchZoom(e: TouchEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1953](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1953)
+Defined in: [niivue/index.ts:1989](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1989)
 
 #### Parameters
 
@@ -3929,7 +3937,7 @@ idx(
    DIM: Uint32Array): number;
 ```
 
-Defined in: [niivue/index.ts:7798](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7798)
+Defined in: [niivue/index.ts:7834](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7834)
 
 #### Parameters
 
@@ -3956,7 +3964,7 @@ indexNearestXYZmm(
    Zmm: number): number[];
 ```
 
-Defined in: [niivue/index.ts:3590](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3590)
+Defined in: [niivue/index.ts:3626](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3626)
 
 returns the index of the mesh vertex that is closest to the provided coordinates
 
@@ -3993,7 +4001,7 @@ niivue.indexNearestXYZmm(niivue.meshes[0].id, -22, 42, 13);
 inGraphTile(x: number, y: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:8865](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8865)
+Defined in: [niivue/index.ts:8901](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8901)
 
 #### Parameters
 
@@ -4014,7 +4022,7 @@ Defined in: [niivue/index.ts:8865](https://github.com/niivue/niivue/blob/main/pa
 init(): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:6583](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6583)
+Defined in: [niivue/index.ts:6619](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6619)
 
 #### Returns
 
@@ -4028,7 +4036,7 @@ Defined in: [niivue/index.ts:6583](https://github.com/niivue/niivue/blob/main/pa
 initFontMets(): void;
 ```
 
-Defined in: [niivue/index.ts:6368](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6368)
+Defined in: [niivue/index.ts:6404](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6404)
 
 #### Returns
 
@@ -4042,7 +4050,7 @@ Defined in: [niivue/index.ts:6368](https://github.com/niivue/niivue/blob/main/pa
 initRenderShader(shader: Shader, gradientAmount: number): void;
 ```
 
-Defined in: [niivue/index.ts:6562](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6562)
+Defined in: [niivue/index.ts:6598](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6598)
 
 #### Parameters
 
@@ -4063,7 +4071,7 @@ Defined in: [niivue/index.ts:6562](https://github.com/niivue/niivue/blob/main/pa
 initText(): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:6447](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6447)
+Defined in: [niivue/index.ts:6483](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6483)
 
 #### Returns
 
@@ -4077,7 +4085,7 @@ Defined in: [niivue/index.ts:6447](https://github.com/niivue/niivue/blob/main/pa
 inRenderTile(x: number, y: number): number;
 ```
 
-Defined in: [niivue/index.ts:8811](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8811)
+Defined in: [niivue/index.ts:8847](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8847)
 
 #### Parameters
 
@@ -4098,7 +4106,7 @@ Defined in: [niivue/index.ts:8811](https://github.com/niivue/niivue/blob/main/pa
 isMeshExt(url: string): boolean;
 ```
 
-Defined in: [niivue/index.ts:2442](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2442)
+Defined in: [niivue/index.ts:2478](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2478)
 
 Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
 
@@ -4120,7 +4128,7 @@ Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
 json(): ExportDocumentData;
 ```
 
-Defined in: [niivue/index.ts:4587](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4587)
+Defined in: [niivue/index.ts:4623](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4623)
 
 Converts NiiVue scene to JSON
 
@@ -4136,7 +4144,7 @@ Converts NiiVue scene to JSON
 keyDownListener(e: KeyboardEvent): void;
 ```
 
-Defined in: [niivue/index.ts:2021](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2021)
+Defined in: [niivue/index.ts:2057](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2057)
 
 #### Parameters
 
@@ -4156,7 +4164,7 @@ Defined in: [niivue/index.ts:2021](https://github.com/niivue/niivue/blob/main/pa
 keyUpListener(e: KeyboardEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1975](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1975)
+Defined in: [niivue/index.ts:2011](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2011)
 
 #### Parameters
 
@@ -4179,7 +4187,7 @@ largest_original_cluster_labels(
    ls: Uint32Array): [number, Uint32Array];
 ```
 
-Defined in: [niivue/index.ts:8009](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8009)
+Defined in: [niivue/index.ts:8045](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8045)
 
 #### Parameters
 
@@ -4201,7 +4209,7 @@ Defined in: [niivue/index.ts:8009](https://github.com/niivue/niivue/blob/main/pa
 loadBmpTexture(bmpUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:6351](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6351)
+Defined in: [niivue/index.ts:6387](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6387)
 
 #### Parameters
 
@@ -4223,7 +4231,7 @@ loadConnectome(json:
   | LegacyConnectome): this;
 ```
 
-Defined in: [niivue/index.ts:4964](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4964)
+Defined in: [niivue/index.ts:5000](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5000)
 
 load a connectome specified by json
 
@@ -4254,7 +4262,7 @@ loadConnectomeAsMesh(json:
   | FreeSurferConnectome): NVMesh;
 ```
 
-Defined in: [niivue/index.ts:4940](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4940)
+Defined in: [niivue/index.ts:4976](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4976)
 
 #### Parameters
 
@@ -4274,7 +4282,7 @@ Defined in: [niivue/index.ts:4940](https://github.com/niivue/niivue/blob/main/pa
 loadConnectomeFromUrl(url: string, headers: object): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4891](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4891)
+Defined in: [niivue/index.ts:4927](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4927)
 
 Load a connectome from a given URL and initialize it.
 
@@ -4303,7 +4311,7 @@ the `Niivue` instance (for method chaining)
 loadDefaultFont(): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:6440](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6440)
+Defined in: [niivue/index.ts:6476](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6476)
 
 #### Returns
 
@@ -4317,7 +4325,7 @@ Defined in: [niivue/index.ts:6440](https://github.com/niivue/niivue/blob/main/pa
 loadDefaultMatCap(): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:6435](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6435)
+Defined in: [niivue/index.ts:6471](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6471)
 
 #### Returns
 
@@ -4331,7 +4339,7 @@ Defined in: [niivue/index.ts:6435](https://github.com/niivue/niivue/blob/main/pa
 loadDeferred4DVolumes(id: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:8563](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8563)
+Defined in: [niivue/index.ts:8599](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8599)
 
 Load all volumes for image opened with `limitFrames4D`, the user can also click the `...` on a 4D timeline to load deferred volumes
 
@@ -4353,7 +4361,7 @@ Load all volumes for image opened with `limitFrames4D`, the user can also click 
 loadDicoms(dicomList: ImageFromUrlOptions[]): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4676](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4676)
+Defined in: [niivue/index.ts:4712](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4712)
 
 #### Parameters
 
@@ -4373,7 +4381,7 @@ Defined in: [niivue/index.ts:4676](https://github.com/niivue/niivue/blob/main/pa
 loadDocument(document: NVDocument): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4322](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4322)
+Defined in: [niivue/index.ts:4358](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4358)
 
 Loads an NVDocument
 
@@ -4401,7 +4409,7 @@ Niivue instance
 loadDocumentFromUrl(url: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:4312](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4312)
+Defined in: [niivue/index.ts:4348](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4348)
 
 #### Parameters
 
@@ -4421,7 +4429,7 @@ Defined in: [niivue/index.ts:4312](https://github.com/niivue/niivue/blob/main/pa
 loadDrawing(drawingBitmap: NVImage): boolean;
 ```
 
-Defined in: [niivue/index.ts:3099](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3099)
+Defined in: [niivue/index.ts:3135](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3135)
 
 #### Parameters
 
@@ -4441,7 +4449,7 @@ Defined in: [niivue/index.ts:3099](https://github.com/niivue/niivue/blob/main/pa
 loadDrawingFromUrl(fnm: string, isBinarize: boolean): Promise<boolean>;
 ```
 
-Defined in: [niivue/index.ts:3218](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3218)
+Defined in: [niivue/index.ts:3254](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3254)
 
 Open drawing
 
@@ -4474,7 +4482,7 @@ niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
 loadFont(fontSheetUrl: any, metricsUrl: object): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:6417](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6417)
+Defined in: [niivue/index.ts:6453](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6453)
 
 Load typeface for colorbars, measurements and orientation text.
 
@@ -4525,7 +4533,7 @@ niivue.loadMatCapTexture("Cortex");
 loadFontTexture(fontUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:6345](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6345)
+Defined in: [niivue/index.ts:6381](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6381)
 
 #### Parameters
 
@@ -4545,7 +4553,7 @@ Defined in: [niivue/index.ts:6345](https://github.com/niivue/niivue/blob/main/pa
 loadFreeSurferConnectome(json: FreeSurferConnectome): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4916](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4916)
+Defined in: [niivue/index.ts:4952](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4952)
 
 load a connectome specified by json
 
@@ -4573,7 +4581,7 @@ Niivue instance
 loadFreeSurferConnectomeFromUrl(url: string, headers: object): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4904)
+Defined in: [niivue/index.ts:4940](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4940)
 
 Load a FreeSurfer-style connectome from a given URL and initialize it.
 
@@ -4602,7 +4610,7 @@ the `Niivue` instance (for method chaining)
 loadFromArrayBuffer(buffer: ArrayBuffer, name: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:2455](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2455)
+Defined in: [niivue/index.ts:2491](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2491)
 
 Load an image or mesh from an array buffer
 
@@ -4629,7 +4637,7 @@ Load an image or mesh from an array buffer
 loadFromFile(file: File): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:2471](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2471)
+Defined in: [niivue/index.ts:2507](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2507)
 
 Load a mesh or image from a file object
 
@@ -4651,7 +4659,7 @@ Load a mesh or image from a file object
 loadFromUrl(fnm: string): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8330](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8330)
+Defined in: [niivue/index.ts:8366](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8366)
 
 #### Parameters
 
@@ -4673,7 +4681,7 @@ loadImages(images: (
 | LoadFromUrlParams)[]): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4637](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4637)
+Defined in: [niivue/index.ts:4673](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4673)
 
 #### Parameters
 
@@ -4693,7 +4701,7 @@ Defined in: [niivue/index.ts:4637](https://github.com/niivue/niivue/blob/main/pa
 loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:6362](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6362)
+Defined in: [niivue/index.ts:6398](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6398)
 
 Load matcap for illumination model.
 
@@ -4725,7 +4733,7 @@ niivue.loadMatCapTexture("Cortex");
 loadMeshes(meshList: LoadFromUrlParams[]): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4853](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4853)
+Defined in: [niivue/index.ts:4889](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4889)
 
 load an array of meshes
 
@@ -4760,7 +4768,7 @@ niivue.loadMeshes([{ url: "someMesh.gii" }]);
 loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:6289](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6289)
+Defined in: [niivue/index.ts:6325](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6325)
 
 #### Parameters
 
@@ -4781,7 +4789,7 @@ Defined in: [niivue/index.ts:6289](https://github.com/niivue/niivue/blob/main/pa
 loadVolumes(volumeList: ImageFromUrlOptions[]): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4727](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4727)
+Defined in: [niivue/index.ts:4763](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4763)
 
 load an array of volume objects
 
@@ -4816,7 +4824,7 @@ niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
 meshShaderNames(sort: boolean): string[];
 ```
 
-Defined in: [niivue/index.ts:6553](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6553)
+Defined in: [niivue/index.ts:6589](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6589)
 
 retrieve all currently loaded meshes
 
@@ -4850,7 +4858,7 @@ niivue.meshShaderNames();
 meshShaderNameToNumber(meshShaderName: string): number;
 ```
 
-Defined in: [niivue/index.ts:6459](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6459)
+Defined in: [niivue/index.ts:6495](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6495)
 
 #### Parameters
 
@@ -4876,7 +4884,7 @@ mm2frac(
    isForceSliceMM: boolean): vec3;
 ```
 
-Defined in: [niivue/index.ts:11868](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11868)
+Defined in: [niivue/index.ts:11921](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11921)
 
 #### Parameters
 
@@ -4898,7 +4906,7 @@ Defined in: [niivue/index.ts:11868](https://github.com/niivue/niivue/blob/main/p
 mouseCenterButtonHandler(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1413](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1413)
+Defined in: [niivue/index.ts:1449](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1449)
 
 #### Parameters
 
@@ -4922,7 +4930,7 @@ mouseClick(
    isDelta: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:9014](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9014)
+Defined in: [niivue/index.ts:9050](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9050)
 
 #### Parameters
 
@@ -4945,7 +4953,7 @@ Defined in: [niivue/index.ts:9014](https://github.com/niivue/niivue/blob/main/pa
 mouseContextMenuListener(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1328](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1328)
+Defined in: [niivue/index.ts:1364](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1364)
 
 #### Parameters
 
@@ -4965,7 +4973,7 @@ Defined in: [niivue/index.ts:1328](https://github.com/niivue/niivue/blob/main/pa
 mouseDown(x: number, y: number): void;
 ```
 
-Defined in: [niivue/index.ts:3876](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3876)
+Defined in: [niivue/index.ts:3912](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3912)
 
 #### Parameters
 
@@ -4986,7 +4994,7 @@ Defined in: [niivue/index.ts:3876](https://github.com/niivue/niivue/blob/main/pa
 mouseDownListener(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1335](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1335)
+Defined in: [niivue/index.ts:1371](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1371)
 
 #### Parameters
 
@@ -5006,7 +5014,7 @@ Defined in: [niivue/index.ts:1335](https://github.com/niivue/niivue/blob/main/pa
 mouseLeaveListener(): void;
 ```
 
-Defined in: [niivue/index.ts:1753](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1753)
+Defined in: [niivue/index.ts:1789](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1789)
 
 #### Returns
 
@@ -5020,7 +5028,7 @@ Defined in: [niivue/index.ts:1753](https://github.com/niivue/niivue/blob/main/pa
 mouseLeftButtonHandler(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1397](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1397)
+Defined in: [niivue/index.ts:1433](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1433)
 
 #### Parameters
 
@@ -5040,7 +5048,7 @@ Defined in: [niivue/index.ts:1397](https://github.com/niivue/niivue/blob/main/pa
 mouseMove(x: number, y: number): void;
 ```
 
-Defined in: [niivue/index.ts:3885](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3885)
+Defined in: [niivue/index.ts:3921](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3921)
 
 #### Parameters
 
@@ -5061,7 +5069,7 @@ Defined in: [niivue/index.ts:3885](https://github.com/niivue/niivue/blob/main/pa
 mouseMoveListener(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1785](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1785)
+Defined in: [niivue/index.ts:1821](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1821)
 
 #### Parameters
 
@@ -5081,7 +5089,7 @@ Defined in: [niivue/index.ts:1785](https://github.com/niivue/niivue/blob/main/pa
 mouseRightButtonHandler(e: MouseEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1430](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1430)
+Defined in: [niivue/index.ts:1466](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1466)
 
 #### Parameters
 
@@ -5101,7 +5109,7 @@ Defined in: [niivue/index.ts:1430](https://github.com/niivue/niivue/blob/main/pa
 mouseUpListener(): void;
 ```
 
-Defined in: [niivue/index.ts:1562](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1562)
+Defined in: [niivue/index.ts:1598](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1598)
 
 #### Returns
 
@@ -5118,7 +5126,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:11921](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11921)
+Defined in: [niivue/index.ts:11974](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11974)
 
 move crosshair a fixed number of voxels (not mm)
 
@@ -5152,7 +5160,7 @@ niivue.moveCrosshairInVox(1, 0, 0);
 moveVolumeDown(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3857](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3857)
+Defined in: [niivue/index.ts:3893](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3893)
 
 Move a volume down one index position in the stack of loaded volumes. This moves it down one layer
 
@@ -5181,7 +5189,7 @@ niivue.moveVolumeDown(this.volumes[1]); // move the second image to the backgrou
 moveVolumeToBottom(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3834](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3834)
+Defined in: [niivue/index.ts:3870](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3870)
 
 Move a volume to the bottom of the stack of loaded volumes. The volume will become the background
 
@@ -5210,7 +5218,7 @@ niivue.moveVolumeToBottom(this.volumes[3]); // move the 4th volume to the 0 posi
 moveVolumeToTop(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3869](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3869)
+Defined in: [niivue/index.ts:3905](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3905)
 
 Move a volume to the top position in the stack of loaded volumes. This will be the top layer
 
@@ -5239,7 +5247,7 @@ niivue.moveVolumeToTop(this.volumes[0]); // move the background image to the top
 moveVolumeUp(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3845](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3845)
+Defined in: [niivue/index.ts:3881](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3881)
 
 Move a volume up one index position in the stack of loaded volumes. This moves it up one layer
 
@@ -5268,7 +5276,7 @@ niivue.moveVolumeUp(this.volumes[0]); // move the background image to the second
 niftiArray2NVImage(bytes: Uint8Array): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8324](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8324)
+Defined in: [niivue/index.ts:8360](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8360)
 
 #### Parameters
 
@@ -5288,7 +5296,7 @@ Defined in: [niivue/index.ts:8324](https://github.com/niivue/niivue/blob/main/pa
 overlayRGBA(volume: NVImage): Uint8ClampedArray;
 ```
 
-Defined in: [niivue/index.ts:4261](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4261)
+Defined in: [niivue/index.ts:4297](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4297)
 
 #### Parameters
 
@@ -5312,7 +5320,7 @@ r16Tex(
    img16: Int16Array): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:5004](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5004)
+Defined in: [niivue/index.ts:5040](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5040)
 
 #### Parameters
 
@@ -5339,7 +5347,7 @@ r8Tex(
    isInit: boolean): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:6121](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6121)
+Defined in: [niivue/index.ts:6157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6157)
 
 #### Parameters
 
@@ -5366,7 +5374,7 @@ r8Tex2D(
    isInit: boolean): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:6089](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6089)
+Defined in: [niivue/index.ts:6125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6125)
 
 #### Parameters
 
@@ -5389,7 +5397,7 @@ Defined in: [niivue/index.ts:6089](https://github.com/niivue/niivue/blob/main/pa
 readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[];
 ```
 
-Defined in: [niivue/index.ts:2403](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2403)
+Defined in: [niivue/index.ts:2439](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2439)
 
 #### Parameters
 
@@ -5409,7 +5417,7 @@ Defined in: [niivue/index.ts:2403](https://github.com/niivue/niivue/blob/main/pa
 refreshColormaps(): Niivue;
 ```
 
-Defined in: [niivue/index.ts:8679](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8679)
+Defined in: [niivue/index.ts:8715](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8715)
 
 #### Returns
 
@@ -5423,7 +5431,7 @@ Defined in: [niivue/index.ts:8679](https://github.com/niivue/niivue/blob/main/pa
 refreshDrawing(isForceRedraw: boolean, useClickToSegmentBitmap: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:5989](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5989)
+Defined in: [niivue/index.ts:6025](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6025)
 
 copy drawing bitmap from CPU to GPU storage and redraw the screen
 
@@ -5456,7 +5464,7 @@ niivue.refreshDrawing();
 refreshLayers(overlayItem: NVImage, layer: number): void;
 ```
 
-Defined in: [niivue/index.ts:7128](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7128)
+Defined in: [niivue/index.ts:7164](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7164)
 
 #### Parameters
 
@@ -5477,7 +5485,7 @@ Defined in: [niivue/index.ts:7128](https://github.com/niivue/niivue/blob/main/pa
 registerInteractions(): void;
 ```
 
-Defined in: [niivue/index.ts:2181](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2181)
+Defined in: [niivue/index.ts:2217](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2217)
 
 #### Returns
 
@@ -5491,7 +5499,7 @@ Defined in: [niivue/index.ts:2181](https://github.com/niivue/niivue/blob/main/pa
 removeHaze(level: number, volIndex: number): void;
 ```
 
-Defined in: [niivue/index.ts:3391](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3391)
+Defined in: [niivue/index.ts:3427](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3427)
 
 remove dark voxels in air
 
@@ -5524,7 +5532,7 @@ niivue.removeHaze(3, 0);
 removeMesh(mesh: NVMesh): void;
 ```
 
-Defined in: [niivue/index.ts:3802](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3802)
+Defined in: [niivue/index.ts:3838](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3838)
 
 Remove a triangulated mesh, connectome or tractogram
 
@@ -5557,7 +5565,7 @@ niivue.removeMesh(this.meshes[3]);
 removeMeshByUrl(url: string): void;
 ```
 
-Defined in: [niivue/index.ts:3818](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3818)
+Defined in: [niivue/index.ts:3854](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3854)
 
 Remove a triangulated mesh, connectome or tractogram
 
@@ -5585,7 +5593,7 @@ niivue.removeMeshByUrl("../images/cit168.mz3");
 removeVolume(volume: NVImage): void;
 ```
 
-Defined in: [niivue/index.ts:3769](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3769)
+Defined in: [niivue/index.ts:3805](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3805)
 
 Remove a volume
 
@@ -5618,7 +5626,7 @@ niivue.removeVolume(this.volumes[3]);
 removeVolumeByIndex(index: number): void;
 ```
 
-Defined in: [niivue/index.ts:3787](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3787)
+Defined in: [niivue/index.ts:3823](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3823)
 
 Remove a volume by index
 
@@ -5640,7 +5648,7 @@ Remove a volume by index
 removeVolumeByUrl(url: string): void;
 ```
 
-Defined in: [niivue/index.ts:2358](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2358)
+Defined in: [niivue/index.ts:2394](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2394)
 
 Remove volume by url
 
@@ -5666,7 +5674,7 @@ Remove volume by url
 requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
 ```
 
-Defined in: [niivue/index.ts:6281](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6281)
+Defined in: [niivue/index.ts:6317](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6317)
 
 #### Parameters
 
@@ -5687,7 +5695,7 @@ Defined in: [niivue/index.ts:6281](https://github.com/niivue/niivue/blob/main/pa
 reserveColorbarPanel(): number[];
 ```
 
-Defined in: [niivue/index.ts:9636](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9636)
+Defined in: [niivue/index.ts:9671](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9671)
 
 #### Returns
 
@@ -5701,7 +5709,7 @@ Defined in: [niivue/index.ts:9636](https://github.com/niivue/niivue/blob/main/pa
 resetBriCon(msg: MouseEvent | TouchEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1853](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1853)
+Defined in: [niivue/index.ts:1889](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1889)
 
 #### Parameters
 
@@ -5721,7 +5729,7 @@ Defined in: [niivue/index.ts:1853](https://github.com/niivue/niivue/blob/main/pa
 resizeListener(): void;
 ```
 
-Defined in: [niivue/index.ts:1251](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1251)
+Defined in: [niivue/index.ts:1286](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1286)
 
 **`Internal`**
 
@@ -5739,7 +5747,7 @@ callback function to handle resize window events, redraws the scene.
 reverseFaces(mesh: number): void;
 ```
 
-Defined in: [niivue/index.ts:3624](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3624)
+Defined in: [niivue/index.ts:3660](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3660)
 
 reverse triangle winding of mesh (swap front and back faces)
 
@@ -5775,7 +5783,7 @@ rgba16Tex(
    isInit: boolean): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:6244](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6244)
+Defined in: [niivue/index.ts:6280](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6280)
 
 #### Parameters
 
@@ -5802,7 +5810,7 @@ rgbaTex(
    isInit: boolean): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:6209](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6209)
+Defined in: [niivue/index.ts:6245](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6245)
 
 #### Parameters
 
@@ -5830,7 +5838,7 @@ rgbaTex2D(
    isFlipVertical: boolean): WebGLTexture;
 ```
 
-Defined in: [niivue/index.ts:6156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6156)
+Defined in: [niivue/index.ts:6192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6192)
 
 #### Parameters
 
@@ -5857,7 +5865,7 @@ saveDocument(
 options: object): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:4613](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4613)
+Defined in: [niivue/index.ts:4649](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4649)
 
 Save the current scene as an .nvd document.
 
@@ -5896,7 +5904,7 @@ saveHTML(
 esm: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:4579](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4579)
+Defined in: [niivue/index.ts:4615](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4615)
 
 save current scene as HTML
 
@@ -5920,7 +5928,7 @@ save current scene as HTML
 saveImage(options: SaveImageOptions): Promise<boolean | Uint8Array>;
 ```
 
-Defined in: [niivue/index.ts:3442](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3442)
+Defined in: [niivue/index.ts:3478](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3478)
 
 Save voxel-based image to disk.
 
@@ -5955,7 +5963,7 @@ niivue.saveImage({ filename: "myimage.nii.gz", isSaveDrawing: true });
 saveScene(filename: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:963](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L963)
+Defined in: [niivue/index.ts:965](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L965)
 
 save webgl2 canvas as png format bitmap
 
@@ -5992,7 +6000,7 @@ scalecropFloat32(
 scale: number): Promise<Float32Array>;
 ```
 
-Defined in: [niivue/index.ts:8134](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8134)
+Defined in: [niivue/index.ts:8170](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8170)
 
 #### Parameters
 
@@ -6021,7 +6029,7 @@ scalecropUint8(
 scale: number): Promise<Uint8Array>;
 ```
 
-Defined in: [niivue/index.ts:8115](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8115)
+Defined in: [niivue/index.ts:8151](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8151)
 
 #### Parameters
 
@@ -6049,7 +6057,7 @@ scaleSlice(
    canvasWH: [number, number]): number[];
 ```
 
-Defined in: [niivue/index.ts:12013](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12013)
+Defined in: [niivue/index.ts:12066](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12066)
 
 #### Parameters
 
@@ -6072,7 +6080,7 @@ Defined in: [niivue/index.ts:12013](https://github.com/niivue/niivue/blob/main/p
 sceneExtentsMinMax(isSliceMM: boolean): vec3[];
 ```
 
-Defined in: [niivue/index.ts:10617](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10617)
+Defined in: [niivue/index.ts:10654](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10654)
 
 #### Parameters
 
@@ -6092,7 +6100,7 @@ Defined in: [niivue/index.ts:10617](https://github.com/niivue/niivue/blob/main/p
 screenFieldOfViewExtendedMM(axCorSag: number): MM;
 ```
 
-Defined in: [niivue/index.ts:10157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10157)
+Defined in: [niivue/index.ts:10194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10194)
 
 #### Parameters
 
@@ -6112,7 +6120,7 @@ Defined in: [niivue/index.ts:10157](https://github.com/niivue/niivue/blob/main/p
 screenFieldOfViewExtendedVox(axCorSag: number): MM;
 ```
 
-Defined in: [niivue/index.ts:10141](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10141)
+Defined in: [niivue/index.ts:10178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10178)
 
 #### Parameters
 
@@ -6132,7 +6140,7 @@ Defined in: [niivue/index.ts:10141](https://github.com/niivue/niivue/blob/main/p
 screenFieldOfViewMM(axCorSag: number, forceSliceMM: boolean): vec3;
 ```
 
-Defined in: [niivue/index.ts:10113](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10113)
+Defined in: [niivue/index.ts:10150](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10150)
 
 #### Parameters
 
@@ -6153,7 +6161,7 @@ Defined in: [niivue/index.ts:10113](https://github.com/niivue/niivue/blob/main/p
 screenFieldOfViewVox(axCorSag: number): vec3;
 ```
 
-Defined in: [niivue/index.ts:10106](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10106)
+Defined in: [niivue/index.ts:10143](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10143)
 
 #### Parameters
 
@@ -6176,7 +6184,7 @@ screenXY2mm(
    forceSlice: number): vec4;
 ```
 
-Defined in: [niivue/index.ts:9252](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9252)
+Defined in: [niivue/index.ts:9288](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9288)
 
 #### Parameters
 
@@ -6202,7 +6210,7 @@ screenXY2TextureFrac(
    restrict0to1: boolean): vec3;
 ```
 
-Defined in: [niivue/index.ts:11955](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11955)
+Defined in: [niivue/index.ts:12008](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12008)
 
 #### Parameters
 
@@ -6225,7 +6233,7 @@ Defined in: [niivue/index.ts:11955](https://github.com/niivue/niivue/blob/main/p
 setAdditiveBlend(isAdditiveBlend: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2966](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2966)
+Defined in: [niivue/index.ts:3002](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3002)
 
 control whether voxel overlays are combined using additive (emission) or traditional (transmission) blending.
 
@@ -6257,7 +6265,7 @@ niivue.isAdditiveBlend(true);
 setAtlasOutline(isOutline: number): void;
 ```
 
-Defined in: [niivue/index.ts:9998](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9998)
+Defined in: [niivue/index.ts:10035](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10035)
 
 #### Parameters
 
@@ -6277,7 +6285,7 @@ Defined in: [niivue/index.ts:9998](https://github.com/niivue/niivue/blob/main/pa
 setClipPlane(depthAzimuthElevation: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:3942](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3942)
+Defined in: [niivue/index.ts:3978](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3978)
 
 Update the clip plane orientation in 3D view mode.
 
@@ -6310,7 +6318,7 @@ niivue.setClipPlane([42, 42]);
 setClipPlaneColor(color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:4154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4154)
+Defined in: [niivue/index.ts:4190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4190)
 
 set the color of the 3D clip plane
 
@@ -6342,7 +6350,7 @@ niivue.setClipPlaneColor([1, 1, 1, 0.5]); // white, transparent
 setClipPlaneThick(thick: number): void;
 ```
 
-Defined in: [niivue/index.ts:4168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4168)
+Defined in: [niivue/index.ts:4204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4204)
 
 adjust thickness of the 3D clip plane
 
@@ -6374,7 +6382,7 @@ niivue.setClipPlaneThick(0.3); // thin slab
 setClipVolume(low: number[], high: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:4185](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4185)
+Defined in: [niivue/index.ts:4221](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4221)
 
 set the clipping region for volume rendering
 
@@ -6407,7 +6415,7 @@ niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]); // remove inferior 2
 setColormap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:7789](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7789)
+Defined in: [niivue/index.ts:7825](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7825)
 
 update the colormap of an image given its ID
 
@@ -6440,7 +6448,7 @@ niivue.setColormap(niivue.volumes[0].id,, 'red')
 setColorMap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:8504](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8504)
+Defined in: [niivue/index.ts:8540](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8540)
 
 #### Parameters
 
@@ -6461,7 +6469,7 @@ Defined in: [niivue/index.ts:8504](https://github.com/niivue/niivue/blob/main/pa
 setColormapNegative(id: string, colormapNegative: string): void;
 ```
 
-Defined in: [niivue/index.ts:8517](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8517)
+Defined in: [niivue/index.ts:8553](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8553)
 
 use given color map for negative voxels in image
 
@@ -6495,7 +6503,7 @@ niivue.setColormapNegative(niivue.volumes[1].id, "winter");
 setCornerOrientationText(isCornerOrientationText: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2782](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2782)
+Defined in: [niivue/index.ts:2818](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2818)
 
 determine if text appears at corner (true) or sides of 2D slice.
 
@@ -6527,7 +6535,7 @@ niivue.setCornerOrientationText(true);
 setCrosshairColor(color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:3964](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3964)
+Defined in: [niivue/index.ts:4000](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4000)
 
 set the crosshair and colorbar outline color
 
@@ -6560,7 +6568,7 @@ niivue.setCrosshairColor([0, 1, 0, 0.5]); // set crosshair to transparent green
 setCrosshairWidth(crosshairWidth: number): void;
 ```
 
-Defined in: [niivue/index.ts:3974](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3974)
+Defined in: [niivue/index.ts:4010](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4010)
 
 set thickness of crosshair
 
@@ -6592,7 +6600,7 @@ niivue.crosshairWidth(2);
 setCustomLayout(layout: object[]): void;
 ```
 
-Defined in: [niivue/index.ts:2834](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2834)
+Defined in: [niivue/index.ts:2870](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2870)
 
 Set a custom slice layout. This overrides the built-in layouts.
 
@@ -6640,7 +6648,7 @@ produces:
 setCustomMeshShader(fragmentShaderText: string, name: string): number;
 ```
 
-Defined in: [niivue/index.ts:6538](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6538)
+Defined in: [niivue/index.ts:6574](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6574)
 
 Define a new GLSL shader program to influence mesh coloration
 
@@ -6669,7 +6677,7 @@ the index of the new shader (use with [setMeshShader](#setmeshshader))
 setDefaults(options: Partial<NVConfigOptions>, resetBriCon: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2904)
+Defined in: [niivue/index.ts:2940](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2940)
 
 Reset scene to default settings.
 
@@ -6703,7 +6711,7 @@ niivue.nv1.setDefaults(opts, true);
 setDragEnd(x: number, y: number): void;
 ```
 
-Defined in: [niivue/index.ts:1912](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1912)
+Defined in: [niivue/index.ts:1948](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1948)
 
 #### Parameters
 
@@ -6724,7 +6732,7 @@ Defined in: [niivue/index.ts:1912](https://github.com/niivue/niivue/blob/main/pa
 setDragStart(x: number, y: number): void;
 ```
 
-Defined in: [niivue/index.ts:1905](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1905)
+Defined in: [niivue/index.ts:1941](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1941)
 
 #### Parameters
 
@@ -6745,7 +6753,7 @@ Defined in: [niivue/index.ts:1905](https://github.com/niivue/niivue/blob/main/pa
 setDrawColormap(name: string): void;
 ```
 
-Defined in: [niivue/index.ts:3996](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3996)
+Defined in: [niivue/index.ts:4032](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4032)
 
 #### Parameters
 
@@ -6765,7 +6773,7 @@ Defined in: [niivue/index.ts:3996](https://github.com/niivue/niivue/blob/main/pa
 setDrawingEnabled(trueOrFalse: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:4007](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4007)
+Defined in: [niivue/index.ts:4043](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4043)
 
 does dragging over a 2D slice create a drawing?
 
@@ -6797,7 +6805,7 @@ niivue.setDrawingEnabled(true);
 setDrawOpacity(opacity: number): void;
 ```
 
-Defined in: [niivue/index.ts:4047](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4047)
+Defined in: [niivue/index.ts:4083](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4083)
 
 control whether drawing is transparent (0), opaque (1) or translucent (between 0 and 1).
 
@@ -6829,7 +6837,7 @@ niivue.setDrawOpacity(0.7);
 setFrame4D(id: string, frame4D: number): void;
 ```
 
-Defined in: [niivue/index.ts:8595](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8595)
+Defined in: [niivue/index.ts:8631](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8631)
 
 show desired 3D volume from 4D time series
 
@@ -6862,7 +6870,7 @@ nv1.setFrame4D(nv1.volumes[0].id, 42);
 setGamma(gamma: number): void;
 ```
 
-Defined in: [niivue/index.ts:8554](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8554)
+Defined in: [niivue/index.ts:8590](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8590)
 
 adjust screen gamma. Low values emphasize shadows but can appear flat, high gamma hides shadow details.
 
@@ -6894,7 +6902,7 @@ niivue.setGamma(1.0);
 setGradientOpacity(gradientOpacity: number, renderSilhouette: number): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:4241](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4241)
+Defined in: [niivue/index.ts:4277](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4277)
 
 set volume rendering opacity influence of the gradient magnitude
 
@@ -6927,7 +6935,7 @@ niivue.setGradientOpacity(0.6);
 setHeroImage(fraction: number): void;
 ```
 
-Defined in: [niivue/index.ts:2803](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2803)
+Defined in: [niivue/index.ts:2839](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2839)
 
 determine proportion of screen real estate devoted to rendering in multiplanar view.
 
@@ -6959,7 +6967,7 @@ niivue.setHeroImage(0.5);
 setHighResolutionCapable(forceDevicePixelRatio: number | boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2986](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2986)
+Defined in: [niivue/index.ts:3022](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3022)
 
 Force WebGL canvas to use high resolution display, regardless of browser defaults.
 
@@ -6991,7 +6999,7 @@ niivue.setHighResolutionCapable(true);
 setInterpolation(isNearest: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:10010](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10010)
+Defined in: [niivue/index.ts:10047](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10047)
 
 select between nearest and linear interpolation for voxel based images
 
@@ -7023,7 +7031,7 @@ niivue.setInterpolation(true);
 setIsOrientationTextVisible(isOrientationTextVisible: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2792](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2792)
+Defined in: [niivue/index.ts:2828](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2828)
 
 determine if orientation text appears in 2D slice view.
 
@@ -7051,7 +7059,7 @@ niivue.setIsOrientationTextVisible(false);
 setMesh(mesh: NVMesh, toIndex: number): void;
 ```
 
-Defined in: [niivue/index.ts:3737](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3737)
+Defined in: [niivue/index.ts:3773](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3773)
 
 #### Parameters
 
@@ -7076,7 +7084,7 @@ setMeshLayerProperty(
 val: number): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:3643](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3643)
+Defined in: [niivue/index.ts:3679](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3679)
 
 reverse triangle winding of mesh (swap front and back faces)
 
@@ -7122,7 +7130,7 @@ setMeshProperty(
   | LegacyConnectome): void;
 ```
 
-Defined in: [niivue/index.ts:3565](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3565)
+Defined in: [niivue/index.ts:3601](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3601)
 
 change property of mesh, tractogram or connectome
 
@@ -7156,7 +7164,7 @@ niivue.setMeshProperty(niivue.meshes[0].id, "fiberLength", 42);
 setMeshShader(id: number, meshShaderNameOrNumber: number): void;
 ```
 
-Defined in: [niivue/index.ts:6475](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6475)
+Defined in: [niivue/index.ts:6511](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6511)
 
 select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
 
@@ -7189,7 +7197,7 @@ niivue.setMeshShader("toon");
 setMeshThicknessOn2D(meshThicknessOn2D: number): void;
 ```
 
-Defined in: [niivue/index.ts:2933](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2933)
+Defined in: [niivue/index.ts:2969](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2969)
 
 Limit visibility of mesh in front of a 2D image. Requires world-space mode.
 
@@ -7224,7 +7232,7 @@ setModulationImage(
    modulateAlpha: number): void;
 ```
 
-Defined in: [niivue/index.ts:8532](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8532)
+Defined in: [niivue/index.ts:8568](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8568)
 
 modulate intensity of one image based on intensity of another
 
@@ -7259,7 +7267,7 @@ niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
 setMultiplanarLayout(layout: number): void;
 ```
 
-Defined in: [niivue/index.ts:2768](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2768)
+Defined in: [niivue/index.ts:2804](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2804)
 
 control placement of 2D slices.
 
@@ -7291,7 +7299,7 @@ niivue.setMultiplanarLayout(2);
 setMultiplanarPadPixels(pixels: number): void;
 ```
 
-Defined in: [niivue/index.ts:2757](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2757)
+Defined in: [niivue/index.ts:2793](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2793)
 
 insert a gap between slices of a mutliplanar view.
 
@@ -7323,7 +7331,7 @@ niivue.setMultiplanarPadPixels(4);
 setOpacity(volIdx: number, newOpacity: number): void;
 ```
 
-Defined in: [niivue/index.ts:4130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4130)
+Defined in: [niivue/index.ts:4166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4166)
 
 set the opacity of a volume given by volume index
 
@@ -7357,7 +7365,7 @@ niivue.setOpacity(0, 0.5); // make the first volume transparent
 setPan2Dxyzmm(xyzmmZoom: vec4): void;
 ```
 
-Defined in: [niivue/index.ts:3658](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3658)
+Defined in: [niivue/index.ts:3694](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3694)
 
 adjust offset position and scale of 2D sliceScale
 
@@ -7385,7 +7393,7 @@ niivue.setPan2Dxyzmm([5, -4, 2, 1.5]);
 setPenValue(penValue: number, isFilledPen: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:4035](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4035)
+Defined in: [niivue/index.ts:4071](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4071)
 
 determine color and style of drawing
 
@@ -7418,7 +7426,7 @@ niivue.setPenValue(1, true);
 setPivot3D(): void;
 ```
 
-Defined in: [niivue/index.ts:10669](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10669)
+Defined in: [niivue/index.ts:10706](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10706)
 
 #### Returns
 
@@ -7432,7 +7440,7 @@ Defined in: [niivue/index.ts:10669](https://github.com/niivue/niivue/blob/main/p
 setRadiologicalConvention(isRadiologicalConvention: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2892](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2892)
+Defined in: [niivue/index.ts:2928](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2928)
 
 control whether 2D slices use radiological or neurological convention.
 
@@ -7464,7 +7472,7 @@ niivue.setRadiologicalConvention(true);
 setRenderAzimuthElevation(a: number, e: number): void;
 ```
 
-Defined in: [niivue/index.ts:3671](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3671)
+Defined in: [niivue/index.ts:3707](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3707)
 
 set rotation of 3D render view
 
@@ -7497,7 +7505,7 @@ niivue.setRenderAzimuthElevation(45, 15);
 setRenderDrawAmbientOcclusion(ao: number): void;
 ```
 
-Defined in: [niivue/index.ts:8492](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8492)
+Defined in: [niivue/index.ts:8528](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8528)
 
 darken crevices and brighten corners when 3D rendering drawings.
 
@@ -7523,7 +7531,7 @@ darken crevices and brighten corners when 3D rendering drawings.
 setScale(scale: number): void;
 ```
 
-Defined in: [niivue/index.ts:4142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4142)
+Defined in: [niivue/index.ts:4178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4178)
 
 set the scale of the 3D rendering. Larger numbers effectively zoom.
 
@@ -7555,7 +7563,7 @@ niivue.setScale(2); // zoom some
 setSelectionBoxColor(color: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:4060](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4060)
+Defined in: [niivue/index.ts:4096](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4096)
 
 set the selection box color. A selection box is drawn when you right click and drag to change image contrast
 
@@ -7588,7 +7596,7 @@ niivue.setSelectionBoxColor([0, 1, 0, 0.5]); // set to transparent green
 setSliceMM(isSliceMM: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:2955](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2955)
+Defined in: [niivue/index.ts:2991](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2991)
 
 control 2D slice view mode.
 
@@ -7620,7 +7628,7 @@ niivue.setSliceMM(true);
 setSliceMosaicString(str: string): void;
 ```
 
-Defined in: [niivue/index.ts:2944](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2944)
+Defined in: [niivue/index.ts:2980](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2980)
 
 Create a custom multi-slice mosaic (aka lightbox, montage) view.
 
@@ -7652,7 +7660,7 @@ niivue.setSliceMosaicString("A 0 20 C 30 S 42");
 setSliceType(st: SLICE_TYPE): this;
 ```
 
-Defined in: [niivue/index.ts:4115](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4115)
+Defined in: [niivue/index.ts:4151](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4151)
 
 set the slice type. This changes the view mode
 
@@ -7685,7 +7693,7 @@ niivue.setSliceType(Niivue.sliceTypeMultiplanar);
 setVolume(volume: NVImage, toIndex: number): void;
 ```
 
-Defined in: [niivue/index.ts:3705](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3705)
+Defined in: [niivue/index.ts:3741](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3741)
 
 set the index of a volume. This will change it's ordering and appearance if there are multiple volumes loaded.
 
@@ -7715,7 +7723,7 @@ niivue.setVolume(someVolume, 1); // move it to the second position in the array 
 setVolumeRenderIllumination(gradientAmount: number): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:4205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4205)
+Defined in: [niivue/index.ts:4241](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4241)
 
 set proportion of volume rendering influenced by selected matcap.
 
@@ -7748,7 +7756,7 @@ niivue.setVolumeRenderIllumination(0.6);
 sliceScale(forceVox: boolean): SliceScale;
 ```
 
-Defined in: [niivue/index.ts:8784](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8784)
+Defined in: [niivue/index.ts:8820](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8820)
 
 #### Parameters
 
@@ -7772,7 +7780,7 @@ sliceScroll2D(
    isDelta: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:4065](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4065)
+Defined in: [niivue/index.ts:4101](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4101)
 
 #### Parameters
 
@@ -7795,7 +7803,7 @@ Defined in: [niivue/index.ts:4065](https://github.com/niivue/niivue/blob/main/pa
 sliceScroll3D(posChange: number): void;
 ```
 
-Defined in: [niivue/index.ts:8822](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8822)
+Defined in: [niivue/index.ts:8858](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8858)
 
 #### Parameters
 
@@ -7815,7 +7823,7 @@ Defined in: [niivue/index.ts:8822](https://github.com/niivue/niivue/blob/main/pa
 sph2cartDeg(azimuth: number, elevation: number): number[];
 ```
 
-Defined in: [niivue/index.ts:3914](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3914)
+Defined in: [niivue/index.ts:3950](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L3950)
 
 convert spherical AZIMUTH, ELEVATION to Cartesian
 
@@ -7847,7 +7855,7 @@ xyz = niivue.sph2cartDeg(42, 42);
 sumBitmap(img: Uint8Array): number;
 ```
 
-Defined in: [niivue/index.ts:8896](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8896)
+Defined in: [niivue/index.ts:8932](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8932)
 
 #### Parameters
 
@@ -7867,7 +7875,7 @@ Defined in: [niivue/index.ts:8896](https://github.com/niivue/niivue/blob/main/pa
 swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE): vec3;
 ```
 
-Defined in: [niivue/index.ts:10093](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10093)
+Defined in: [niivue/index.ts:10130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10130)
 
 #### Parameters
 
@@ -7888,7 +7896,7 @@ Defined in: [niivue/index.ts:10093](https://github.com/niivue/niivue/blob/main/p
 sync(): void;
 ```
 
-Defined in: [niivue/index.ts:1182](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1182)
+Defined in: [niivue/index.ts:1184](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1184)
 
 **`Internal`**
 
@@ -7915,7 +7923,7 @@ niivue2.sync();
 syncWith(otherNV: Niivue | Niivue[], syncOpts: object): void;
 ```
 
-Defined in: [niivue/index.ts:1087](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1087)
+Defined in: [niivue/index.ts:1089](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1089)
 
 Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
 
@@ -7956,7 +7964,7 @@ use broadcastTo instead
 textHeight(scale: number, str: string): number;
 ```
 
-Defined in: [niivue/index.ts:9821](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9821)
+Defined in: [niivue/index.ts:9859](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9859)
 
 #### Parameters
 
@@ -7971,13 +7979,32 @@ Defined in: [niivue/index.ts:9821](https://github.com/niivue/niivue/blob/main/pa
 
 ---
 
+### textSizePoints()
+
+```ts
+textSizePoints(): void;
+```
+
+Defined in: [niivue/index.ts:1254](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1254)
+
+Compute point size for screen text that scales with resolution and screen size.
+
+- Keeps physical font size consistent across different DPIs.
+- Uses fontSizeScaling to scale with canvas size above a reference threshold.
+
+#### Returns
+
+`void`
+
+---
+
 ### textWidth()
 
 ```ts
 textWidth(scale: number, str: string): number;
 ```
 
-Defined in: [niivue/index.ts:9808](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9808)
+Defined in: [niivue/index.ts:9846](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9846)
 
 #### Parameters
 
@@ -7998,7 +8025,7 @@ Defined in: [niivue/index.ts:9808](https://github.com/niivue/niivue/blob/main/pa
 tileIndex(x: number, y: number): number;
 ```
 
-Defined in: [niivue/index.ts:8799](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8799)
+Defined in: [niivue/index.ts:8835](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8835)
 
 #### Parameters
 
@@ -8019,7 +8046,7 @@ Defined in: [niivue/index.ts:8799](https://github.com/niivue/niivue/blob/main/pa
 touchEndListener(e: TouchEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1667](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1667)
+Defined in: [niivue/index.ts:1703](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1703)
 
 #### Parameters
 
@@ -8039,7 +8066,7 @@ Defined in: [niivue/index.ts:1667](https://github.com/niivue/niivue/blob/main/pa
 touchMoveListener(e: TouchEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1922](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1922)
+Defined in: [niivue/index.ts:1958](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1958)
 
 #### Parameters
 
@@ -8059,7 +8086,7 @@ Defined in: [niivue/index.ts:1922](https://github.com/niivue/niivue/blob/main/pa
 touchStartListener(e: TouchEvent): void;
 ```
 
-Defined in: [niivue/index.ts:1629](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1629)
+Defined in: [niivue/index.ts:1665](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1665)
 
 #### Parameters
 
@@ -8083,7 +8110,7 @@ translate_labels(
    ttn: number): [number, Uint32Array];
 ```
 
-Defined in: [niivue/index.ts:7987](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7987)
+Defined in: [niivue/index.ts:8023](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8023)
 
 #### Parameters
 
@@ -8109,7 +8136,7 @@ traverseFileTree(
 fileArray: any): Promise<File[]>;
 ```
 
-Defined in: [niivue/index.ts:2367](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2367)
+Defined in: [niivue/index.ts:2403](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2403)
 
 #### Parameters
 
@@ -8131,7 +8158,7 @@ Defined in: [niivue/index.ts:2367](https://github.com/niivue/niivue/blob/main/pa
 updateBitmapFromClickToSegment(): void;
 ```
 
-Defined in: [niivue/index.ts:8880](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8880)
+Defined in: [niivue/index.ts:8916](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8916)
 
 #### Returns
 
@@ -8145,7 +8172,7 @@ Defined in: [niivue/index.ts:8880](https://github.com/niivue/niivue/blob/main/pa
 updateGLVolume(): void;
 ```
 
-Defined in: [niivue/index.ts:6854](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6854)
+Defined in: [niivue/index.ts:6890](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6890)
 
 update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
 
@@ -8172,7 +8199,7 @@ niivue.updateGLVolume();
 updateInterpolation(layer: number, isForceLinear: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:9976](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9976)
+Defined in: [niivue/index.ts:10013](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10013)
 
 #### Parameters
 
@@ -8193,7 +8220,7 @@ Defined in: [niivue/index.ts:9976](https://github.com/niivue/niivue/blob/main/pa
 useDicomLoader(loader: DicomLoader): void;
 ```
 
-Defined in: [niivue/index.ts:2537](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2537)
+Defined in: [niivue/index.ts:2573](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2573)
 
 #### Parameters
 
@@ -8216,7 +8243,7 @@ useLoader(
    toExt: string): void;
 ```
 
-Defined in: [niivue/index.ts:2527](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2527)
+Defined in: [niivue/index.ts:2563](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2563)
 
 #### Parameters
 
@@ -8238,7 +8265,7 @@ Defined in: [niivue/index.ts:2527](https://github.com/niivue/niivue/blob/main/pa
 vox2frac(vox: vec3, volIdx: number): vec3;
 ```
 
-Defined in: [niivue/index.ts:11898](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11898)
+Defined in: [niivue/index.ts:11951](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11951)
 
 #### Parameters
 
@@ -8259,7 +8286,7 @@ Defined in: [niivue/index.ts:11898](https://github.com/niivue/niivue/blob/main/p
 vox2mm(XYZ: number[], mtx: mat4): vec3;
 ```
 
-Defined in: [niivue/index.ts:4292](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4292)
+Defined in: [niivue/index.ts:4328](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4328)
 
 #### Parameters
 
@@ -8280,7 +8307,7 @@ Defined in: [niivue/index.ts:4292](https://github.com/niivue/niivue/blob/main/pa
 wheelListener(e: WheelEvent): void;
 ```
 
-Defined in: [niivue/index.ts:2062](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2062)
+Defined in: [niivue/index.ts:2098](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L2098)
 
 #### Parameters
 
@@ -8303,7 +8330,7 @@ windowingHandler(
    volIdx: number): void;
 ```
 
-Defined in: [niivue/index.ts:1693](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1693)
+Defined in: [niivue/index.ts:1729](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L1729)
 
 #### Parameters
 
@@ -8325,7 +8352,7 @@ Defined in: [niivue/index.ts:1693](https://github.com/niivue/niivue/blob/main/pa
 xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number): number[];
 ```
 
-Defined in: [niivue/index.ts:10234](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10234)
+Defined in: [niivue/index.ts:10271](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10271)
 
 #### Parameters
 
