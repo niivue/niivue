@@ -2504,7 +2504,7 @@ export class Niivue {
 
   /**
    * Load a mesh or image volume from a File object
-   * @param file - File object selected by the user (e.g. from an <input type="file"> element)
+   * @param file - File object selected by the user (e.g. from an HTML input element)
    * @returns a Promise that resolves when the file has been loaded and added to the scene
    * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
    */
