@@ -1573,6 +1573,7 @@ declare class Niivue {
     volumeTexture: WebGLTexture | null;
     gradientTexture: WebGLTexture | null;
     gradientTextureAmount: number;
+    useCustomGradientTexture: boolean;
     renderGradientValues: boolean;
     drawTexture: WebGLTexture | null;
     drawUndoBitmaps: Uint8Array[];
@@ -2857,7 +2858,37 @@ declare class Niivue {
     meshShaderNames(sort?: boolean): string[];
     initRenderShader(shader: Shader, gradientAmount?: number): void;
     init(): Promise<this>;
-    gradientGL(hdr: NiftiHeader): void;
+    gradientGL(hdr: NiftiHeader): void; /**
+     * Get the gradient texture produced by gradientGL as a TypedArray
+     * @returns Float32Array containing the gradient texture data, or null if no gradient texture exists
+     * @example
+     * niivue = new Niivue()
+     * niivue.loadVolumes([{url: './someImage.nii'}])
+     * // ... after volume is loaded and gradient is computed
+     * const gradientData = niivue.getGradientTextureData()
+     * if (gradientData) {
+     *   console.log('Gradient texture dimensions:', gradientData.length)
+     * }
+     */
+    getGradientTextureData(): Float32Array | null;
+    /**
+     * Set a custom gradient texture to use instead of the one produced by gradientGL
+     * When a custom gradient texture is set, the useCustomGradientTexture flag is set to true
+     * to prevent gradientGL from overwriting the custom texture during volume updates.
+     * @param data - Float32Array or Uint8Array containing RGBA gradient data, or null to revert to auto-generated gradient
+     * @param dims - Optional dimensions array [width, height, depth]. If not provided, uses current volume dimensions
+     * @example
+     * niivue = new Niivue()
+     * niivue.loadVolumes([{url: './someImage.nii'}])
+     * // Create custom gradient data
+     * const customGradient = new Float32Array(256 * 256 * 256 * 4) // example dimensions
+     * // ... fill customGradient with desired values
+     * niivue.setCustomGradientTexture(customGradient, [256, 256, 256])
+     *
+     * // To revert to auto-generated gradient:
+     * niivue.setCustomGradientTexture(null)
+     */
+    setCustomGradientTexture(data: Float32Array | Uint8Array | null, dims?: number[]): void;
     /**
      * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
      * @example

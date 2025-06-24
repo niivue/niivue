@@ -5845,7 +5845,7 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-			int gradIdx = int(grad.a * 255.0);
+			int gradIdx = int(grad.a * ${gradientOpacityLutCount}.0);
 			colorSample.a *= gradientOpacity[gradIdx];
 			float lightNormDot = dot(grad.rgb, rayDir);
 			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
@@ -34397,6 +34397,8 @@ var Niivue = class {
     __publicField(this, "gradientTexture", null);
     // 3D texture for volume rendering lighting
     __publicField(this, "gradientTextureAmount", 0);
+    __publicField(this, "useCustomGradientTexture", false);
+    // flag to indicate if a custom gradient texture is used
     __publicField(this, "renderGradientValues", false);
     __publicField(this, "drawTexture", null);
     // the GPU memory storage of the drawing
@@ -40098,6 +40100,135 @@ var Niivue = class {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
   /**
+  * Get the gradient texture produced by gradientGL as a TypedArray
+  * @returns Float32Array containing the gradient texture data, or null if no gradient texture exists
+  * @example
+  * niivue = new Niivue()
+  * niivue.loadVolumes([{url: './someImage.nii'}])
+  * // ... after volume is loaded and gradient is computed
+  * const gradientData = niivue.getGradientTextureData()
+  * if (gradientData) {
+  *   console.log('Gradient texture dimensions:', gradientData.length)
+  * }
+  */
+  getGradientTextureData() {
+    if (!this.gradientTexture || !this.back) {
+      return null;
+    }
+    const gl = this.gl;
+    const dims = this.back.dims;
+    const width = dims[1];
+    const height = dims[2];
+    const depth = dims[3];
+    const numVoxels = width * height * depth;
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    const data = new Float32Array(numVoxels * 4);
+    try {
+      for (let slice2 = 0; slice2 < depth; slice2++) {
+        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, slice2);
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+          console.warn(
+            "Framebuffer not complete for gradient texture reading, slice",
+            slice2,
+            "status:",
+            status.toString(16)
+          );
+          continue;
+        }
+        try {
+          const byteData = new Uint8Array(width * height * 4);
+          gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, byteData);
+          const sliceData = new Float32Array(width * height * 4);
+          for (let i = 0; i < byteData.length; i++) {
+            sliceData[i] = byteData[i] / 127.5 - 1;
+          }
+          const sliceOffset = slice2 * width * height * 4;
+          data.set(sliceData, sliceOffset);
+        } catch (readError) {
+          console.warn("Failed to read pixels for slice", slice2, ":", readError);
+          const sliceOffset = slice2 * width * height * 4;
+          const zeroSlice = new Float32Array(width * height * 4);
+          data.set(zeroSlice, sliceOffset);
+        }
+      }
+    } catch (error) {
+      console.error("Error reading gradient texture:", error);
+      return null;
+    } finally {
+      gl.deleteFramebuffer(fb);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    return data;
+  }
+  /**
+   * Set a custom gradient texture to use instead of the one produced by gradientGL
+   * When a custom gradient texture is set, the useCustomGradientTexture flag is set to true
+   * to prevent gradientGL from overwriting the custom texture during volume updates.
+   * @param data - Float32Array or Uint8Array containing RGBA gradient data, or null to revert to auto-generated gradient
+   * @param dims - Optional dimensions array [width, height, depth]. If not provided, uses current volume dimensions
+   * @example
+   * niivue = new Niivue()
+   * niivue.loadVolumes([{url: './someImage.nii'}])
+   * // Create custom gradient data
+   * const customGradient = new Float32Array(256 * 256 * 256 * 4) // example dimensions
+   * // ... fill customGradient with desired values
+   * niivue.setCustomGradientTexture(customGradient, [256, 256, 256])
+   *
+   * // To revert to auto-generated gradient:
+   * niivue.setCustomGradientTexture(null)
+   */
+  setCustomGradientTexture(data, dims) {
+    const gl = this.gl;
+    if (data === null) {
+      this.useCustomGradientTexture = false;
+      if (this.back && this.gradientTextureAmount > 0) {
+        this.gradientGL(this.back.hdr);
+      }
+      return;
+    }
+    if (!dims && !this.back) {
+      console.warn("No dimensions provided and no background volume loaded");
+      return;
+    }
+    const texDims = dims || this.back.dims;
+    const width = texDims[1];
+    const height = texDims[2];
+    const depth = texDims[3];
+    const expectedSize = width * height * depth * 4;
+    if (data.length !== expectedSize) {
+      console.warn(`Custom gradient data size mismatch. Expected ${expectedSize}, got ${data.length}`);
+      return;
+    }
+    this.useCustomGradientTexture = true;
+    if (this.gradientTexture !== null) {
+      gl.deleteTexture(this.gradientTexture);
+    }
+    this.gradientTexture = gl.createTexture();
+    gl.activeTexture(TEXTURE6_GRADIENT);
+    gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    let textureData;
+    if (data instanceof Float32Array) {
+      textureData = new Uint8Array(data.length);
+      for (let i = 0; i < data.length; i++) {
+        const clampedValue = Math.max(-1, Math.min(1, data[i]));
+        textureData[i] = Math.round((clampedValue + 1) * 127.5);
+      }
+    } else {
+      textureData = data;
+    }
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8, width, height, depth);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, width, height, depth, gl.RGBA, gl.UNSIGNED_BYTE, textureData);
+    this.drawScene();
+  }
+  /**
    * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
    * @example
    * niivue = new Niivue()
@@ -40826,9 +40957,9 @@ var Niivue = class {
     this.gl.deleteFramebuffer(fb);
     if (layer === 0) {
       this.volumeTexture = outTexture;
-      if (this.gradientTextureAmount > 0) {
+      if (this.gradientTextureAmount > 0 && !this.useCustomGradientTexture) {
         this.gradientGL(hdr);
-      } else {
+      } else if (this.gradientTextureAmount <= 0) {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture);
         }
