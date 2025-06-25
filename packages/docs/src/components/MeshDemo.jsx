@@ -42,8 +42,8 @@ export const MeshDemo = ({ nvOpts = {} }) => {
   const [isCanvasMounted, setIsCanvasMounted] = useState(false);
   const [isVoxel, setIsVoxel] = useState(true);
   const [isMesh, setIsMesh] = useState(true);
-  const [isConnect, setIsConnect] = useState(true);
-  const [isTract, setIsTract] = useState(true);
+  const [connectRadius, setConnect] = useState(3);
+  const [tractRadius, setTract] = useState(0);
   // Merge default and passed options
   const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
   const handleVoxelChange = useCallback((event) => {
@@ -58,14 +58,18 @@ export const MeshDemo = ({ nvOpts = {} }) => {
     niivueRef.current.setMeshProperty(0, 'visible', isChecked)
   }, []);
   const handleConnectChange = useCallback((event) => {
-    const isChecked = event.target.checked;
-    setIsConnect(isChecked); // Update component state
-    niivueRef.current.setMeshProperty(1, 'visible', isChecked)
+    const connect = event.target.value;
+    setConnect(connect); // Update component state
+    niivueRef.current.setMeshProperty(1, 'visible', connect > 0)
+    if (connect > 0) {
+      niivueRef.current.setMeshProperty(1, "nodeScale", connect)
+    }
   }, []);
   const handleTractChange = useCallback((event) => {
-    const isChecked = event.target.checked;
-    setIsTract(isChecked); // Update component state
-    niivueRef.current.setMeshProperty(2, 'visible', isChecked)
+    const tract = event.target.value;
+    setTract(tract); // Update component state
+    niivueRef.current.setMeshProperty(2, 'visible', tract >= 0)
+    niivueRef.current.setMeshProperty(2, "fiberRadius", tract * 0.1)
   }, []);
   // Setup a memoized handler for view type changes
   const handleViewTypeChange = useCallback((event) => {
@@ -210,26 +214,27 @@ export const MeshDemo = ({ nvOpts = {} }) => {
             disabled={!niivueRef.current}
           />
           &nbsp;
-          <label htmlFor="connectCheck" style={{ marginLeft: "5px" }}>
-            Connectome
-          </label>
+          <label htmlFor="connectSlider">Connectome</label>
           <input
-            type="checkbox"
-            id="connectCheck"
-            checked={isConnect}
+            type="range"
+            id="connectSlider"
+            min="0"
+            max="6.0"
+            step="0.5"
+            value={connectRadius}
             onChange={handleConnectChange}
             disabled={!niivueRef.current}
           />
           &nbsp;
-          <label htmlFor="tractCheck">
-            Tract
-          </label>
+          <label htmlFor="tractSlider">Tract</label>
           <input
-            type="checkbox"
-            id="tractCheck"
-            checked={isTract}
+            type="range"
+            id="tractSlider"
+            min="-2.0"
+            max="16.0"
+            step="2"
+            value={tractRadius}
             onChange={handleTractChange}
-
             disabled={!niivueRef.current}
           />
           &nbsp;

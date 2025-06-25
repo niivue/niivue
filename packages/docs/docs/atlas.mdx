@@ -1,0 +1,22 @@
+---
+title: Atlases
+sidebar_position: 8
+---
+
+import { Niivue } from '@niivue/niivue';
+import { AtlasDemo } from '../src/components/AtlasDemo';
+import { AtlasMeshDemo } from '../src/components/AtlasMeshDemo';
+
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+NiiVue supports voxel-based atlases, where each location in the brain volume is associated with a labeled region. In the embedded image below, you can see an example of this functionality. The opacity of the atlas can be adjusted using the slider, allowing you to view it in context with other data. Additionally, clicking on different locations will display the parcel name and its coordinates in the status area.
+
+<NiivueBrowserWrapper>
+  <AtlasDemo />
+</NiivueBrowserWrapper>
+
+Furthermore, NiiVue can load atlases onto meshes, providing similar functionality. This is illustrated in the below.
+
+<NiivueBrowserWrapper>
+  <AtlasMeshDemo />
+</NiivueBrowserWrapper>

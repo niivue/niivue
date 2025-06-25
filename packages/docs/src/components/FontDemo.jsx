@@ -59,9 +59,7 @@ export const FontDemo = ({
         }
       }
     };
-
     initializeNiivue();
-
     return () => {
       console.log("Cleaning up Niivue instance...");
       niivueRef.current = null; // Clear the ref

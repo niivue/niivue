@@ -1,0 +1,117 @@
+import React, { useState, useEffect, useRef } from "react";
+import { Niivue } from "@niivue/niivue";
+
+const baseUrl = 'https://niivue.com/demos/images/'
+const defaultMeshes = [
+  { url: `${baseUrl}CIT168.mz3`},
+  { url: `${baseUrl}BrainMesh_ICBM152.lh.mz3`, rgba255: [222, 164, 164, 255]},
+]
+
+// Default Niivue options
+const defaultNvOpts = {
+  logLevel: "info",
+  backColor: [1, 1, 1, 1],
+};
+
+export const WebGLDemo = ({
+  meshes = defaultMeshes,
+  nvOpts = {},
+}) => {
+  const canvasRef = useRef(null);
+  const niivueRef = useRef(null); // To store the Niivue instance
+
+  // State for interactive controls
+  const [currentShader, setCurrentShader] = useState("Phong");
+
+  // Merge default and passed options
+  const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
+
+  // Initialize Niivue and load volumes on mount
+  useEffect(() => {
+    const initializeNiivue = async () => {
+      // Ensure Niivue instance doesn't already exist
+      if (!niivueRef.current && canvasRef.current) {
+        console.log("Initializing Niivue...");
+        const nv = new Niivue(mergedNvOpts);
+        niivueRef.current = nv; // Store the instance
+
+        await nv.attachToCanvas(canvasRef.current);
+        nv.setSliceType(4)
+        nv.opts.showLegend = false
+        try {
+          await niivueRef.current.loadMeshes(defaultMeshes);
+        
+
+          // Set initial state based on loaded volume
+          //if (nv.volumes.length > 0) {
+          //  setCurrentShader(nv.volumes[0].colormap);
+          //}
+        } catch (error) {
+          console.error("Error loading volumes:", error);
+        }
+      }
+    };
+
+    initializeNiivue();
+
+    return () => {
+      console.log("Cleaning up Niivue instance...");
+      niivueRef.current = null; // Clear the ref
+    };
+  }, []); // Run only once on mount
+
+  // Handler for changing Shader
+  const handleShaderChange = (event) => {
+    const newShader = event.target.selectedOptions[0].text;
+    niivueRef.current.setMeshShader(1, newShader)
+  };
+
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "10px",
+        padding: "10px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        marginBottom: "15px",
+      }}
+    >
+      {/* Niivue Canvas */}
+      <div style={{ width: 640, height: 480 }}>
+        <canvas
+          ref={canvasRef}
+          width={640}
+          height={480}
+          style={{ border: "1px solid lightgray", display: "block" }}
+        ></canvas>
+      </div>
+
+      {/* Controls */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: "15px",
+          alignItems: "center",
+        }}
+      >
+        {/* Shader Selector */}
+        <label htmlFor="shaderSelect">Shader</label>
+        <select id="shaderSelect" onChange={handleShaderChange}>
+          <option>Phong</option>
+          <option>Matte</option>
+          <option>Rim</option>
+          <option>Toon</option>
+          <option>Matcap</option>
+          <option>Outline</option>
+        </select>
+
+      </div>
+    </div>
+  );
+};
