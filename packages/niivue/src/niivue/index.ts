@@ -839,7 +839,7 @@ export class Niivue {
   }
 
   /**
-   * Set whether voxels below minium intensity are drawn as dark or transparent.
+   * Set whether voxels below minimum intensity are drawn as dark or transparent.
    * @param {boolean} newVal - True to make dark voxels opaque, false for transparent.
    * @see {@link https://niivue.com/demos/features/segment.html | live demo usage}
    */
