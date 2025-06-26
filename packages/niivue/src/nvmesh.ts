@@ -111,18 +111,21 @@ export class NVMeshFromUrlOptions {
   }
 }
 
+/**
+ * Parameters for loading a base mesh or volume.
+ */
 type BaseLoadParams = {
-  // WebGL rendering context
+  /** WebGL rendering context. */
   gl: WebGL2RenderingContext
-  // a name for this image. Default is an empty string
+  /** Name for this image. Default is an empty string. */
   name: string
-  // the opacity for this image. default is 1
+  /** Opacity for this image. Default is 1. */
   opacity: number
-  // the base color of the mesh. RGBA values from 0 to 255. Default is white
+  /** Base color of the mesh in RGBA [0-255]. Default is white. */
   rgba255: number[] | Uint8Array
-  // whether or not this image is to be visible
+  /** Whether this image is visible. */
   visible: boolean
-  // layers of the mesh to load
+  /** Layers of the mesh to load. */
   layers: NVMeshLayer[]
 }
 

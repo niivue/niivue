@@ -22,7 +22,7 @@ export const WebGLDemo = ({
 
   // State for interactive controls
   const [currentShader, setCurrentShader] = useState("Phong");
-
+  const [shaderOptions, setShaderOptions] = useState([]);
   // Merge default and passed options
   const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
 
@@ -33,11 +33,14 @@ export const WebGLDemo = ({
       if (!niivueRef.current && canvasRef.current) {
         console.log("Initializing Niivue...");
         const nv = new Niivue(mergedNvOpts);
+        const shaders = nv.meshShaderNames(true); // sorted list
+        setShaderOptions(shaders);
         niivueRef.current = nv; // Store the instance
 
         await nv.attachToCanvas(canvasRef.current);
         nv.setSliceType(4)
         nv.opts.showLegend = false
+        
         try {
           await niivueRef.current.loadMeshes(defaultMeshes);
         
@@ -60,6 +63,12 @@ export const WebGLDemo = ({
     };
   }, []); // Run only once on mount
 
+
+  useEffect(() => {
+    if (shaderOptions.length > 0) {
+      setCurrentShader("Phong") // or a default like "Phong"
+    }
+  }, [shaderOptions])
   // Handler for changing Shader
   const handleShaderChange = (event) => {
     const newShader = event.target.selectedOptions[0].text;
@@ -102,13 +111,16 @@ export const WebGLDemo = ({
       >
         {/* Shader Selector */}
         <label htmlFor="shaderSelect">Shader</label>
-        <select id="shaderSelect" onChange={handleShaderChange}>
-          <option>Phong</option>
-          <option>Matte</option>
-          <option>Rim</option>
-          <option>Toon</option>
-          <option>Matcap</option>
-          <option>Outline</option>
+        <select
+          id="shaderSelect"
+          onChange={handleShaderChange}
+          value={currentShader}
+        >
+          {shaderOptions.map((shader) => (
+            <option key={shader} value={shader}>
+              {shader}
+            </option>
+          ))}
         </select>
 
       </div>
