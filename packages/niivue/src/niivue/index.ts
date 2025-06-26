@@ -1447,11 +1447,7 @@ export class Niivue {
       // find associated mesh
       for (const mesh of this.meshes) {
         if (mesh.type !== MeshType.CONNECTOME) {
-          if (
-            Array.isArray(label.points) &&
-            label.points.length === 3 &&
-            label.points.every(Number.isFinite)
-          ) {
+          if (Array.isArray(label.points) && label.points.length === 3 && label.points.every(Number.isFinite)) {
             const [x, y, z] = label.points as [number, number, number]
             this.scene.crosshairPos = this.mm2frac([x, y, z])
             this.updateGLVolume()

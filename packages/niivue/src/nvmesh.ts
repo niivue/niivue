@@ -1325,16 +1325,20 @@ export class NVMesh {
                 continue
               }
               rgba[3] = 1
-              const label = new NVLabel3D(labelName, {
-                textColor: rgba,
-                bulletScale: 1,
-                bulletColor: rgba,
-                lineWidth: 0,
-                lineColor: rgba,
-                textScale: 1.0,
-                textAlignment: LabelTextAlignment.LEFT,
-                lineTerminator: LabelLineTerminator.NONE,
-              },xyzMM)
+              const label = new NVLabel3D(
+                labelName,
+                {
+                  textColor: rgba,
+                  bulletScale: 1,
+                  bulletColor: rgba,
+                  lineWidth: 0,
+                  lineColor: rgba,
+                  textScale: 1.0,
+                  textAlignment: LabelTextAlignment.LEFT,
+                  lineTerminator: LabelLineTerminator.NONE
+                },
+                xyzMM
+              )
               layer.labels.push(label)
               log.debug('label for mesh layer:', label)
             } // for each label
