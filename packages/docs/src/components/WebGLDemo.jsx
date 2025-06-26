@@ -71,10 +71,10 @@ export const WebGLDemo = ({
   }, [shaderOptions])
   // Handler for changing Shader
   const handleShaderChange = (event) => {
-    const newShader = event.target.selectedOptions[0].text;
-    niivueRef.current.setMeshShader(1, newShader)
+    const newShader = event.target.value;
+    niivueRef.current.setMeshShader(1, newShader);
+    setCurrentShader(newShader);
   };
-
 
   return (
     <div
