@@ -6,13 +6,15 @@ directories:
   buildResources: build
 files:
   - 'out/main/**'
+  - 'out/preload/**'
+  - 'out/renderer/**'
+  - 'resources/icons/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - 'resources/icons/**'
 fileAssociations:
   - ext: nvd
     name: NiiVue Document
@@ -37,7 +39,7 @@ mac:
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  notarize: true
   hardenedRuntime: true
   gatekeeperAssess: false
 dmg:
