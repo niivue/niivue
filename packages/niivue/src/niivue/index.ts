@@ -12220,8 +12220,9 @@ export class Niivue {
     }
     let panelHeight = this.getLegendPanelHeight(1)
     if (!this.canvas || panelHeight < 1) {
-      throw new Error('canvas undefined')
+      return
     }
+    console.log(this.canvas)
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
