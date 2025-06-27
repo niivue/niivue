@@ -302,7 +302,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   measureTextJustify: 'center', // start, center, end
   measureTextColor: [1, 0, 0, 1], // red
   measureLineColor: [1, 0, 0, 1], // red
-  measureTextHeight: 0.03,
+  measureTextHeight: 0.06,
   isAlphaClipDark: false,
   gradientOrder: 1,
   gradientOpacity: 0.0,

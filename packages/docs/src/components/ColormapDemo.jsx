@@ -4,7 +4,7 @@ import { MULTIPLANAR_TYPE, Niivue, SHOW_RENDER } from "@niivue/niivue";
 // Default image if none provided via props
 const defaultImages = [
   {
-    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+    url: "https://niivue.github.io/niivue-demo-images/chris_t2.nii.gz",
     colormap: "gray", // Start with gray
     opacity: 1,
     visible: true,

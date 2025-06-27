@@ -13,7 +13,7 @@ import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
 </NiivueBrowserWrapper>
 
 There are [several approaches to render text in WebGL](https://stackoverflow.com/questions/25956272/better-quality-text-in-webgl) as described [here](https://css-tricks.com/techniques-for-rendering-text-with-webgl/). NiiVue uses
-[multi-channel signed distance field](https://github.com/Chlumsky/msdfgen). The default font supplied with NiiVue is [Roboto](https://fonts.google.com/specimen/Roboto?preview.text_type=custom), created with [msdf-atlas-gen](https://github.com/Chlumsky/msdf-atlas-gen) using the command:
+[multi-channel signed distance field](https://github.com/Chlumsky/msdfgen) fonts. As seen in this demo, NiiVue provides several in-built fonts and provides a mechanism to scale the font. You can also generate custom fonts, which may be especially important for supporting languages that do not use the Latin alphabet. The default font used by NiiVue is [Roboto](https://fonts.google.com/specimen/Roboto?preview.text_type=custom), created with [msdf-atlas-gen](https://github.com/Chlumsky/msdf-atlas-gen) using the command:
 
 ```
 msdf-atlas-gen.exe -font Roboto-Regular.ttf -charset chars.txt -pxrange 2 -dimensions 512 256 -format png -json fnt.json -imageout fnt.png

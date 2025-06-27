@@ -5,7 +5,7 @@ const baseUrl = 'https://niivue.com/demos/fonts/'
 // Default image if none provided via props
 const defaultImages = [
   {
-    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+    url: "https://niivue.github.io/niivue-demo-images/visiblehuman.nii.gz",
   },
 ];
 
