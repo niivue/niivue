@@ -52,8 +52,9 @@ type Geometry = {
     vao: WebGLVertexArrayObject | null;
 };
 /**
- * Object rendered with WebGL
- **/
+ * Represents a 3D object rendered with WebGL, including geometry, transformations, and rendering state.
+ * Used internally by Niivue for rendering meshes and crosshairs.
+ */
 declare class NiivueObject3D {
     static BLEND: number;
     static CULL_FACE: number;
@@ -1197,12 +1198,21 @@ declare class NVMeshFromUrlOptions {
     colorbarVisible: boolean;
     constructor(url?: string, gl?: any, name?: string, opacity?: number, rgba255?: Uint8Array, visible?: boolean, layers?: any[], colorbarVisible?: boolean);
 }
+/**
+ * Parameters for loading a base mesh or volume.
+ */
 type BaseLoadParams = {
+    /** WebGL rendering context. */
     gl: WebGL2RenderingContext;
+    /** Name for this image. Default is an empty string. */
     name: string;
+    /** Opacity for this image. Default is 1. */
     opacity: number;
+    /** Base color of the mesh in RGBA [0-255]. Default is white. */
     rgba255: number[] | Uint8Array;
+    /** Whether this image is visible. */
     visible: boolean;
+    /** Layers of the mesh to load. */
     layers: NVMeshLayer[];
 };
 type LoadFromUrlParams = Partial<BaseLoadParams> & {
@@ -1447,6 +1457,9 @@ declare class NVMeshUtilities {
     static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
 }
 
+/**
+ * Entry representing a single colormap with display properties.
+ */
 type ColormapListEntry = {
     name: string;
     min: number;
@@ -1875,11 +1888,24 @@ declare class Niivue {
      */
     onDocumentLoaded: (document: NVDocument) => void;
     document: NVDocument;
+    /** Get the current scene configuration. */
     get scene(): Scene;
+    /** Get the current visualization options. */
     get opts(): NVConfigOptions;
+    /** Get the slice mosaic layout string. */
     get sliceMosaicString(): string;
+    /** Set the slice mosaic layout string. */
     set sliceMosaicString(newSliceMosaicString: string);
+    /**
+     * Get whether voxels below minimum intensity are drawn as dark or transparent.
+     * @returns {boolean} True if dark voxels are opaque, false if transparent.
+     */
     get isAlphaClipDark(): boolean;
+    /**
+     * Set whether voxels below minimum intensity are drawn as dark or transparent.
+     * @param {boolean} newVal - True to make dark voxels opaque, false for transparent.
+     * @see {@link https://niivue.com/demos/features/segment.html | live demo usage}
+     */
     set isAlphaClipDark(newVal: boolean);
     mediaUrlMap: Map<NVImage | NVMesh, string>;
     initialized: boolean;
@@ -1957,14 +1983,46 @@ declare class Niivue {
         '2d': boolean;
         '3d': boolean;
     }): void;
+    /**
+     * Synchronizes 3D view settings (azimuth, elevation, scale) with another Niivue instance.
+     * @internal
+     */
     doSync3d(otherNV: Niivue): void;
+    /**
+     * Synchronizes 2D crosshair position and pan settings with another Niivue instance.
+     * @internal
+     */
     doSync2d(otherNV: Niivue): void;
     doSyncGamma(otherNV: Niivue): void;
+    /**
+     * Synchronizes gamma correction setting with another Niivue instance.
+     * @internal
+     */
     doSyncZoomPan(otherNV: Niivue): void;
+    /**
+     * Synchronizes crosshair position with another Niivue instance.
+     * @internal
+     */
     doSyncCrosshair(otherNV: Niivue): void;
+    /**
+     * Synchronizes cal_min with another Niivue instance, updating GPU volume only if needed.
+     * @internal
+     */
     doSyncCalMin(otherNV: Niivue): void;
+    /**
+     * Synchronizes cal_max with another Niivue instance, updating GPU volume only if needed.
+     * @internal
+     */
     doSyncCalMax(otherNV: Niivue): void;
+    /**
+     * Synchronizes slice view type with another Niivue instance.
+     * @internal
+     */
     doSyncSliceType(otherNV: Niivue): void;
+    /**
+     * Synchronizes clip plane settings with another Niivue instance.
+     * @internal
+     */
     doSyncClipPlane(otherNV: Niivue): void;
     /**
      * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
@@ -1977,6 +2035,7 @@ declare class Niivue {
      */
     sync(): void;
     /** Not documented publicly for now
+     * @internal
      * test if two arrays have equal values for each element
      * @param a - the first array
      * @param b - the second array
@@ -1986,6 +2045,7 @@ declare class Niivue {
      */
     arrayEquals(a: unknown[], b: unknown[]): boolean;
     /**
+     * @internal
      * Compute point size for screen text that scales with resolution and screen size.
      * - Keeps physical font size consistent across different DPIs.
      * - Uses fontSizeScaling to scale with canvas size above a reference threshold.
@@ -2005,43 +2065,155 @@ declare class Niivue {
         x: number;
         y: number;
     } | undefined;
+    /**
+     * Returns mouse position relative to the canvas, excluding padding and borders.
+     * @internal
+     */
     getNoPaddingNoBorderCanvasRelativeMousePosition(event: MouseEvent, target: EventTarget): {
         x: number;
         y: number;
     } | undefined;
+    /**
+     * Disables the default context menu to allow custom right-click behavior.
+     * @internal
+     */
     mouseContextMenuListener(e: MouseEvent): void;
+    /**
+     * Handles mouse down events for interaction, segmentation, and connectome label selection.
+     * Routes to appropriate button handler based on click type.
+     * @internal
+     */
     mouseDownListener(e: MouseEvent): void;
+    /**
+     * Handles left mouse button actions for crosshair or windowing mode.
+     * @internal
+     */
     mouseLeftButtonHandler(e: MouseEvent): void;
+    /**
+     * Handles center mouse button drag to initiate 2D panning or clip plane adjustment.
+     * @internal
+     */
     mouseCenterButtonHandler(e: MouseEvent): void;
+    /**
+     * Handles right mouse button drag to enable 2D panning or clip plane control.
+     * @internal
+     */
     mouseRightButtonHandler(e: MouseEvent): void;
     /**
      * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
+     * @internal
      * @param array - an array of two values
      * @returns an array of two values representing the min and max voxel indices
      */
     calculateMinMaxVoxIdx(array: number[]): number[];
+    /**
+     * Updates cal_min and cal_max based on intensity range within the drag-selected voxel region.
+     * Skips if no drag occurred, volume is missing, or selection has no variation.
+     * @internal
+     */
     calculateNewRange({ volIdx }?: {
         volIdx?: number;
     }): void;
+    /**
+     * Triggers a drag-release callback with voxel, mm, and tile info from the drag gesture.
+     * @internal
+     */
     generateMouseUpCallback(fracStart: vec3, fracEnd: vec3): void;
+    /**
+     * Handles mouse up events, finalizing drag actions, invoking callbacks, and updating contrast if needed.
+     * @internal
+     */
     mouseUpListener(): void;
+    /**
+     * Handles initial touch event to simulate mouse click if not in a multi-touch gesture.
+     * @internal
+     */
     checkMultitouch(e: TouchEvent): void;
+    /**
+     * Handles touch start events, detecting double taps and preparing for gesture or contrast reset.
+     * @internal
+     */
     touchStartListener(e: TouchEvent): void;
+    /**
+     * Handles touch end events, finalizing gestures and contrast adjustments, then triggers mouse up logic.
+     * @internal
+     */
     touchEndListener(e: TouchEvent): void;
+    /**
+     * Adjusts window/level (cal_min and cal_max) based on mouse or touch drag direction.
+     * @internal
+     */
     windowingHandler(x: number, y: number, volIdx?: number): void;
+    /**
+     * Handles mouse leaving the canvas, resetting segmentation, drawing, and drag states.
+     * @internal
+     */
     mouseLeaveListener(): void;
+    /**
+     * Handles mouse move events for dragging, crosshair movement, windowing, and click-to-segment preview.
+     * @internal
+     */
     mouseMoveListener(e: MouseEvent): void;
+    /**
+     * Resets brightness and contrast to robust min/max unless in render mode or during interaction.
+     * @internal
+     */
     resetBriCon(msg?: TouchEvent | MouseEvent | null): void;
+    /**
+     * Sets the drag start position in canvas coordinates.
+     * @internal
+     */
     setDragStart(x: number, y: number): void;
+    /**
+     * Sets the drag end position in canvas coordinates.
+     * @internal
+     */
     setDragEnd(x: number, y: number): void;
+    /**
+     * Handles touch movement for crosshair, windowing, and pinch-to-zoom interactions.
+     * @internal
+     */
     touchMoveListener(e: TouchEvent): void;
+    /**
+     * Handles pinch-to-zoom gestures for scrolling 2D slices.
+     * @internal
+     */
     handlePinchZoom(e: TouchEvent): void;
+    /**
+     * Handles keyboard shortcuts for toggling clip planes and slice view modes with debounce logic.
+     * @internal
+     */
     keyUpListener(e: KeyboardEvent): void;
+    /**
+     * Handles key down events for navigation, rendering controls, slice movement, and mode switching.
+     * @internal
+     */
     keyDownListener(e: KeyboardEvent): void;
+    /**
+     * Handles scroll wheel events for slice scrolling, ROI box resizing, zooming, or segmentation thresholding.
+     * @internal
+     */
     wheelListener(e: WheelEvent): void;
+    /**
+     * Registers all mouse, touch, keyboard, and drag event listeners for canvas interaction.
+     * n.b. any event listeners registered here should also be removed in `cleanup()`
+     * @internal
+     */
     registerInteractions(): void;
+    /**
+     * Prevents default behavior when a dragged item enters the canvas.
+     * @internal
+     */
     dragEnterListener(e: MouseEvent): void;
+    /**
+     * Prevents default behavior when a dragged item is over the canvas.
+     * @internal
+     */
     dragOverListener(e: MouseEvent): void;
+    /**
+     * Extracts and normalizes the file extension, handling special cases like .gz and .cbor.
+     * @internal
+     */
     getFileExt(fullname: string, upperCase?: boolean): string;
     /**
      * Add an image and notify subscribers
@@ -2050,7 +2222,8 @@ declare class Niivue {
     addVolumeFromUrl(imageOptions: ImageFromUrlOptions): Promise<NVImage>;
     addVolumesFromUrl(imageOptionsArray: ImageFromUrlOptions[]): Promise<NVImage[]>;
     /**
-     * Find media by url
+     * Returns the media object associated with the given URL, if any.
+     * @internal
      */
     getMediaByUrl(url: string): NVImage | NVMesh | undefined;
     /**
@@ -2059,11 +2232,22 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
      */
     removeVolumeByUrl(url: string): void;
+    /**
+     * Recursively traverses a file tree, populating file paths for directory uploads.
+     * Adds `_webkitRelativePath` to each file for compatibility with tools like dcm2niix.
+     * @internal
+     */
     traverseFileTree(item: any, path: string, fileArray: any): Promise<File[]>;
+    /**
+     * Recursively reads a directory and logs the File objects contained within.
+     * Used for processing dropped folders via drag-and-drop.
+     * @internal
+     */
     readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[];
     /**
      * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
      * @param url - filename
+     * @internal
      */
     isMeshExt(url: string): boolean;
     /**
@@ -2080,9 +2264,47 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
      */
     loadFromFile(file: File): Promise<void>;
+    /**
+     * Registers a custom external file loader for handling specific file types in Niivue.
+     *
+     * This method allows you to define how certain file extensions are handled when loaded into Niivue.
+     * The provided `loader` function should return an object containing an `ArrayBuffer` of the file's contents
+     * and the file extension (used for inferring how Niivue should process the data).
+     *
+     * Optionally, `positions` and `indices` can be returned to support loading mesh data (e.g. `.mz3` format).
+     *
+     * @example
+     * const myCustomLoader = async (file) => {
+     *   const arrayBuffer = await file.arrayBuffer()
+     *   return {
+     *     arrayBuffer,
+     *     fileExt: 'iwi.cbor',
+     *     positions: new Float32Array(...),
+     *     indices: new Uint32Array(...)
+     *   }
+     * }
+     *
+     * nv.useLoader(myCustomLoader, 'iwi.cbor', 'nii')
+     *
+     * @param loader - A function that accepts a `File` or `ArrayBuffer` and returns an object with `arrayBuffer` and `fileExt` properties. May also return `positions` and `indices` for meshes.
+     * @param fileExt - The original file extension (e.g. 'iwi.cbor') to associate with this loader.
+     * @param toExt - The target file extension Niivue should treat the file as (e.g. 'nii' or 'mz3').
+     */
     useLoader(loader: unknown, fileExt: string, toExt: string): void;
+    /**
+     * Set a custom loader for handling DICOM files.
+     */
     useDicomLoader(loader: DicomLoader): void;
+    /**
+     * Get the currently assigned DICOM loader.
+     */
     getDicomLoader(): DicomLoader;
+    /**
+     * Handles file and URL drag-and-drop events on the canvas.
+     * Supports loading of volumes, meshes, NVD documents, and DICOM directories.
+     * Honors modifier keys (e.g., Shift to replace, Alt for drawing overlays).
+     * @internal
+     */
     dropListener(e: DragEvent): Promise<void>;
     /**
      * insert a gap between slices of a mutliplanar view.
@@ -2245,7 +2467,16 @@ declare class Niivue {
      * niivue.getVolumeIndexByID(someVolume.id)
      */
     getVolumeIndexByID(id: string): number;
+    /**
+     * Saves the current drawing state as an RLE-compressed bitmap for undo history.
+     * Uses a circular buffer to limit undo memory usage.
+     * @internal
+     */
     drawAddUndoBitmap(): void;
+    /**
+     * Clears all stored drawing undo bitmaps and resets the undo index.
+     * @internal
+     */
     drawClearAllUndoBitmaps(): void;
     /**
      * Restore drawing to previous state
@@ -2253,6 +2484,14 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
      */
     drawUndo(): void;
+    /**
+     * Loads a drawing overlay and aligns it with the current background image.
+     * Converts the input image to match the background's orientation and stores it as a drawable bitmap.
+     * Initializes the undo history and prepares the drawing texture.
+     *
+     * @param drawingBitmap - A `NVImage` object representing the drawing to load. Must match the dimensions of the background image.
+     * @returns `true` if the drawing was successfully loaded and aligned; `false` if dimensions are incompatible.
+     */
     loadDrawing(drawingBitmap: NVImage): boolean;
     /**
      * Binarize a volume by converting all non-zero voxels to 1
@@ -2268,6 +2507,11 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
      */
     loadDrawingFromUrl(fnm: string, isBinarize?: boolean): Promise<boolean>;
+    /**
+     * Computes one or more Otsu threshold levels for the primary volume.
+     * Returns raw intensity values corresponding to bin-based thresholds.
+     * @internal
+     */
     findOtsu(mlevel?: number): number[];
     /**
      * remove dark voxels in air
@@ -2299,6 +2543,12 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
      */
     saveImage(options?: SaveImageOptions): Promise<boolean | Uint8Array>;
+    /**
+     * Returns the index of a mesh given its ID or index.
+     *
+     * @param id - The mesh ID as a string, or an index number.
+     * @returns The mesh index, or -1 if not found or out of range.
+     */
     getMeshIndexByID(id: string | number): number;
     /**
      * change property of mesh, tractogram or connectome
@@ -2376,6 +2626,15 @@ declare class Niivue {
      * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
      */
     setVolume(volume: NVImage, toIndex?: number): void;
+    /**
+     * Reorders a mesh within the internal mesh list.
+     *
+     * @param mesh - The `NVMesh` instance to reposition.
+     * @param toIndex - Target index to move the mesh to.
+     *   - If `0`, moves mesh to the front.
+     *   - If `< 0`, removes the mesh.
+     *   - If within bounds, inserts mesh at the specified index.
+     */
     setMesh(mesh: NVMesh, toIndex?: number): void;
     /**
      * Remove a volume
@@ -2441,7 +2700,16 @@ declare class Niivue {
      * niivue.moveVolumeToTop(this.volumes[0]) // move the background image to the top layer position
      */
     moveVolumeToTop(volume: NVImage): void;
+    /**
+     * Records the current mouse position in screen space (adjusted for device pixel ratio).
+     * @internal
+     */
     mouseDown(x: number, y: number): void;
+    /**
+     * Updates mouse position and modifies 3D render view if the pointer is in the render tile.
+     *
+     * @internal
+     */
     mouseMove(x: number, y: number): void;
     /**
      * convert spherical AZIMUTH, ELEVATION to Cartesian
@@ -2512,6 +2780,10 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
      */
     setSelectionBoxColor(color: number[]): void;
+    /**
+     * Handles mouse wheel or trackpad scroll to change slices, zoom, or frame depending on context.
+     * @internal
+     */
     sliceScroll2D(posChange: number, x: number, y: number, isDelta?: boolean): void;
     /**
      * set the slice type. This changes the view mode
@@ -2583,7 +2855,16 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/gradient.opacity.html | live demo usage}
      */
     setGradientOpacity(gradientOpacity?: number, renderSilhouette?: number): Promise<void>;
+    /**
+     * Generates a placeholder RGBA overlay of a green sphere for testing purposes only.
+     * @internal
+     * @remarks Marked for future removal — creates a test sphere, not intended for production use.
+     */
     overlayRGBA(volume: NVImage): Uint8ClampedArray;
+    /**
+     * Convert voxel coordinates to millimeters using a transformation matrix.
+     * @internal
+     */
     vox2mm(XYZ: number[], mtx: mat4): vec3;
     /**
      * clone a volume and return a new volume
@@ -2595,8 +2876,7 @@ declare class Niivue {
      */
     cloneVolume(index: number): NVImage;
     /**
-     *
-     * @param url - URL of NVDocument
+     * Loads an NVDocument from a URL and integrates it into the scene.
      */
     loadDocumentFromUrl(url: string): Promise<void>;
     /**
@@ -2719,11 +2999,22 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
      */
     loadFreeSurferConnectome(json: FreeSurferConnectome): Promise<this>;
+    /**
+     * Handles addition of a connectome node by adding a corresponding label and redrawing.
+     * @internal
+     */
     handleNodeAdded(event: {
         detail: {
             node: NVConnectomeNode;
         };
     }): void;
+    /**
+     * Converts various connectome JSON formats to a standardized mesh representation.
+     *
+     * @param json - Connectome data in current or legacy format.
+     * @returns The connectome as an `NVMesh`.
+     * @internal
+     */
     loadConnectomeAsMesh(json: Connectome | LegacyConnectome | FreeSurferConnectome): NVMesh;
     /**
      * load a connectome specified by json
@@ -2738,6 +3029,10 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
      */
     createEmptyDrawing(): void;
+    /**
+     * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
+     * @internal
+     */
     r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture;
     /**
      * dilate drawing so all voxels are colored.
@@ -2746,7 +3041,15 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
      */
     drawGrowCut(): void;
+    /**
+     * Sets the color value of a voxel and its neighbors in the drawing bitmap.
+     * @internal
+     */
     drawPt(x: number, y: number, z: number, penValue: number, drawBitmap?: Uint8Array | null): void;
+    /**
+     * Draws a 3D line between two voxels in the drawing bitmap using Bresenham's algorithm.
+     * @internal
+     */
     drawPenLine(ptA: number[], ptB: number[], penValue: number): void;
     /**
      * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
@@ -2756,8 +3059,26 @@ declare class Niivue {
      */
     drawingBinaryDilationWithSeed(seedXYZ: number[], // seed voxel x,y,z
     neighbors?: 6 | 18 | 26): void;
+    /**
+     * Flood fill to cluster connected voxels based on neighbor connectivity (6, 18, or 26 neighbors).
+     * Voxels with value 1 are included in the cluster and set to 2.
+     * Uses a queue-based breadth-first search.
+     *
+     * @internal
+     */
     drawFloodFillCore(img: Uint8Array, seedVx: number, neighbors?: number): void;
+    /**
+     * Performs a flood fill on the drawing bitmap starting from a seed voxel, recoloring all connected voxels
+     * based on spatial connectivity, intensity constraints, and other parameters.
+     * Supports 2D or 3D fills, cluster growing, distance constraints, and preview mode for clickToSegment.
+     *
+     * @internal
+     */
     drawFloodFill(seedXYZ: number[], newColor?: number, growSelectedCluster?: number, forceMin?: number, forceMax?: number, neighbors?: number, maxDistanceMM?: number, is2D?: boolean, targetBitmap?: Uint8Array | null, isGrowClusterTool?: boolean): void;
+    /**
+     * Connects and fills the interior of drawn line segments in 2D slice space.
+     * @internal
+     */
     drawPenFilled(): void;
     /**
      * close drawing: make sure you have saved any changes before calling this!
@@ -2772,14 +3093,53 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
      */
     refreshDrawing(isForceRedraw?: boolean, useClickToSegmentBitmap?: boolean): void;
+    /**
+     * Creates a 2D 1-component uint8 texture on the GPU with given dimensions.
+     * @internal
+     */
     r8Tex2D(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
+     * @internal
+     */
     r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
+     * @internal
+     */
     rgbaTex2D(texID: WebGLTexture | null, activeID: number, dims: number[], data?: Uint8Array | null, isFlipVertical?: boolean): WebGLTexture | null;
+    /**
+     * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
+     * @internal
+     */
     rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
+     * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
+     * @internal
+     */
     rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
+     * @internal
+     */
     requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
+    /**
+     * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
+     * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
+     * Automatically handles CORS and draws scene if needed.
+     * @internal
+     */
     loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null>;
+    /**
+     * Loads a font stored as a PNG bitmap into texture unit 3.
+     * @internal
+     */
     loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>;
+    /**
+     * Loads a PNG bitmap into texture unit 4.
+     * @internal
+     */
     loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null>;
     /**
      * Load matcap for illumination model.
@@ -2789,6 +3149,10 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
      */
     loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null>;
+    /**
+     * Initializes font metrics from loaded font data.
+     * @internal
+     */
     initFontMets(): void;
     /**
      * Load typeface for colorbars, measurements and orientation text.
@@ -2796,7 +3160,7 @@ declare class Niivue {
      * @param metricsUrl - URL to the corresponding font metrics JSON (defines character bounds and spacing)
      * @returns a Promise that resolves when the font is loaded
      * @example
-     * niivue.loadMatCapTexture("Cortex");
+     * niivue.loadFont("./Roboto.png","./Roboto.json")
      * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
      */
     loadFont(fontSheetUrl?: any, metricsUrl?: {
@@ -2839,9 +3203,26 @@ declare class Niivue {
         })[];
         kerning: any[];
     }): Promise<void>;
+    /**
+     * Loads the default MatCap texture.
+     * @internal
+     */
     loadDefaultMatCap(): Promise<WebGLTexture | null>;
+    /**
+     * Loads the default font texture and initializes font metrics.
+     * @internal
+     */
     loadDefaultFont(): Promise<void>;
+    /**
+     * Initializes text rendering by setting up font shader, loading default font and matcap texture,
+     * and drawing the loading text.
+     * @internal
+     */
     initText(): Promise<void>;
+    /**
+     * Maps a mesh shader name to its corresponding index number.
+     * @internal
+     */
     meshShaderNameToNumber(meshShaderName?: string): number | undefined;
     /**
      * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
@@ -2878,10 +3259,24 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
      */
     meshShaderNames(sort?: boolean): string[];
+    /**
+     * Initializes a rendering shader with texture units and uniforms.
+     * @internal
+     */
     initRenderShader(shader: Shader, gradientAmount?: number): void;
+    /**
+     * Initializes WebGL state, shaders, textures, buffers, and sets up the rendering pipeline.
+     * Also loads default fonts, matcap textures, and thumbnail if specified.
+     * @internal
+     * @returns {Promise<this>} Resolves to this instance after initialization completes.
+     */
     init(): Promise<this>;
-    gradientGL(hdr: NiftiHeader): void; /**
-  
+    /**
+     * Generates gradient texture from volume data using GPU shaders and framebuffers.
+     * @internal
+     */
+    gradientGL(hdr: NiftiHeader): void;
+    /**
      * Get the gradient texture produced by gradientGL as a TypedArray
      * @returns Float32Array containing the gradient texture data, or null if no gradient texture exists
      * @example
@@ -2951,6 +3346,10 @@ declare class Niivue {
         startVox?: number[];
         endVox?: number[];
     }): Descriptive;
+    /**
+     * Updates textures, shaders, and GPU state for a given overlay layer based on image properties and rendering options.
+     * @internal
+     */
     refreshLayers(overlayItem: NVImage, layer: number): void;
     /**
      * query all available color maps that can be applied to volumes
@@ -2977,12 +3376,40 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
      */
     setColormap(id: string, colormap: string): void;
+    /**
+     * Computes the linear voxel index from 3D coordinates using image dimensions.
+     * @internal
+     */
     idx(A: number, B: number, C: number, DIM: Uint32Array): number;
+    /**
+     * Checks if voxels below the given voxel have labels matching its value, returning the first matching label or 0.
+     * @internal
+     */
     check_previous_slice(bw: Uint32Array, il: Uint32Array, r: number, c: number, sl: number, dim: Uint32Array, conn: number, tt: Uint32Array): number;
+    /**
+     * Performs provisional labeling of connected voxels in a volume using specified connectivity.
+     * @internal
+     */
     do_initial_labelling(bw: Uint32Array, dim: Uint32Array, conn: number): [number, Uint32Array, Uint32Array];
+    /**
+     * Merges multiple provisional labels into a unified class using a translation table.
+     * @internal
+     */
     fill_tratab(tt: Uint32Array, nabo: Uint32Array, nr_set: number): void;
+    /**
+     * Removes gaps in label indices to produce a dense labeling.
+     * @internal
+     */
     translate_labels(il: Uint32Array, dim: Uint32Array, tt: Uint32Array, ttn: number): [number, Uint32Array];
+    /**
+     * Retains only the largest cluster for each region in a labeled volume.
+     * @internal
+     */
     largest_original_cluster_labels(bw: Uint32Array, cl: number, ls: Uint32Array): [number, Uint32Array];
+    /**
+     * Computes connected components labeling on a 3D image.
+     * @internal
+     */
     bwlabel(img: Uint32Array, dim: Uint32Array, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): [number, Uint32Array];
     /**
      * Create a connected component label map from a volume
@@ -2994,9 +3421,25 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
      */
     createConnectedLabelImage(id: string, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): Promise<NVImage>;
+    /**
+     * Scales and crops a Float32 image to Uint8 range.
+     * @internal
+     */
     scalecropUint8(img32: Float32Array, dst_min: number, dst_max: number, src_min: number, scale: number): Promise<Uint8Array>;
+    /**
+     * Scales and crops a Float32 image to a specified range.
+     * @internal
+     */
     scalecropFloat32(img32: Float32Array, dst_min: number, dst_max: number, src_min: number, scale: number): Promise<Float32Array>;
+    /**
+     * Computes offset and scale to robustly rescale image intensities to a target range.
+     * @internal
+     */
     getScale(volume: NVImage, dst_min?: number, dst_max?: number, f_low?: number, f_high?: number): [number, number];
+    /**
+     * Computes output affine, voxel-to-voxel transform, and its inverse for resampling.
+     * @internal
+     */
     conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number, toRAS?: boolean): [mat4, mat4, mat4];
     /**
      * Create a binary NIfTI file as a Uint8Array, including header and image data
@@ -3091,6 +3534,10 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/timeseries.html | live demo usage}
      */
     getFrame4D(id: string): number;
+    /**
+     * Returns a colormap by its name key.
+     * @internal
+     */
     colormapFromKey(name: string): ColorMap;
     /**
      * Retrieve a colormap with optional inversion
@@ -3100,7 +3547,15 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
      */
     colormap(lutName?: string, isInvert?: boolean): Uint8ClampedArray;
+    /**
+     * Creates or recreates a 2D RGBA colormap texture with specified rows and columns.
+     * @internal
+     */
     createColormapTexture(texture?: WebGLTexture | null, nRow?: number, nCol?: number): WebGLTexture | null;
+    /**
+     * Adds a colormap configuration to the internal list with given parameters.
+     * @internal
+     */
     addColormapList(nm?: string, mn?: number, mx?: number, alpha?: boolean, neg?: boolean, vis?: boolean, inv?: boolean): void;
     /**
      * Rebuild and upload all colormap textures for volumes and meshes
@@ -3108,50 +3563,220 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/mesh.stats.html | live demo usage}
      */
     refreshColormaps(): this | undefined;
+    /**
+     * Calculates volume scaling factors and voxel dimensions for rendering.
+     * @internal
+     */
     sliceScale(forceVox?: boolean): SliceScale;
+    /**
+     * Returns the index of the tile containing the given (x, y) screen coordinates.
+     * Returns -1 if the coordinates are outside all tiles.
+     * @internal
+     */
     tileIndex(x: number, y: number): number;
+    /**
+     * Returns the index of the render tile containing (x, y) screen coordinates, or -1 if none.
+     * @internal
+     */
     inRenderTile(x: number, y: number): number;
+    /**
+     * Adjusts clip plane depth if active, else zooms render size.
+     * @internal
+     */
     sliceScroll3D(posChange?: number): void;
+    /**
+     * Deletes loaded thumbnail texture and frees memory.
+     * @internal
+     */
     deleteThumbnail(): void;
+    /**
+     * Checks if (x,y) is within the visible graph plotting area.
+     * @internal
+     */
     inGraphTile(x: number, y: number): boolean;
+    /**
+     * Updates drawBitmap to match clickToSegmentGrowingBitmap if they differ in content and size.
+     * @internal
+     */
     updateBitmapFromClickToSegment(): void;
+    /**
+     * Calculates the sum of all voxel values in the given bitmap.
+     * @internal
+     */
     sumBitmap(img: Uint8Array): number;
+    /**
+     * Performs click-to-segment operation based on user click within a specified tile.
+     * Validates input, computes voxel coordinates from screen position, and applies flood fill
+     * with intensity-based thresholding and optional growing mask.
+     * Updates drawing bitmaps and triggers redraw and descriptive stats calculation.
+     * @internal
+     */
     doClickToSegment(options: {
         x: number;
         y: number;
         tileIndex: number;
     }): void;
+    /**
+     * Handles mouse click on canvas by updating crosshair position, drawing, or segmenting based on current mode and location.
+     * Supports thumbnail loading, graph interaction, 3D slice scrolling, and click-to-segment with flood fill.
+     * @internal
+     */
     mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): void;
+    /**
+     * Draws a 10cm ruler on a 2D slice tile based on screen FOV and slice dimensions.
+     * @internal
+     */
     drawRuler(): void;
+    /**
+     * Draws a 10cm ruler at specified coordinates with given color and width.
+     * @internal
+     */
     drawRuler10cm(startXYendXY: number[], rulerColor: number[], rulerWidth?: number): void;
+    /**
+     * Returns vec4 with XYZ millimeter coordinates and tile index for given screen XY.
+     * @internal
+     */
     screenXY2mm(x: number, y: number, forceSlice?: number): vec4;
+    /**
+     * Update scene pan position during drag based on start and end screen coordinates.
+     * @internal
+     */
     dragForPanZoom(startXYendXY: number[]): void;
+    /**
+     * Handle center-button drag as pan and zoom.
+     * @internal
+     */
     dragForCenterButton(startXYendXY: number[]): void;
+    /**
+     * Update 3D slicer zoom and pan based on drag movement.
+     * @internal
+     */
     dragForSlicer3D(startXYendXY: number[]): void;
+    /**
+     * Draw a measurement line with end caps and length text on a 2D tile.
+     * @internal
+     */
     drawMeasurementTool(startXYendXY: number[]): void;
+    /**
+     * Draw a rectangle or outline at given position with specified color or default crosshair color.
+     * @internal
+     */
     drawRect(leftTopWidthHeight: number[], lineColor?: number[]): void;
+    /**
+     * Draw a circle or outline at given position with specified color or default crosshair color.
+     * @internal
+     */
     drawCircle(leftTopWidthHeight: number[], circleColor?: Float32List, fillPercent?: number): void;
+    /**
+     * Draw selection box: circle if ROI selection mode, else rectangle.
+     * @internal
+     */
     drawSelectionBox(leftTopWidthHeight: number[]): void;
+    /**
+     * Get canvas height available for tiles (excludes colorbar).
+     * @internal
+     */
     effectiveCanvasHeight(): number;
+    /**
+     * Get canvas width available for tiles (excludes legend panel).
+     * @internal
+     */
     effectiveCanvasWidth(): number;
+    /**
+     * Get all 3D labels from document and connectome meshes.
+     * @internal
+     */
     getAllLabels(): NVLabel3D[];
+    /**
+     * Get all visible connectome and non-anchored mesh labels.
+     * @internal
+     */
     getConnectomeLabels(): NVLabel3D[];
+    /**
+     * Calculate bullet margin width based on widest bullet scale and tallest label height.
+     * @internal
+     */
     getBulletMarginWidth(): number;
+    /**
+     * Calculate width of legend panel based on labels and bullet margin.
+     * Returns 0 if legend is hidden or too wide for canvas.
+     * @internal
+     */
     getLegendPanelWidth(): number;
+    /**
+     * Calculate legend panel height based on labels and scale.
+     * @internal
+     */
     getLegendPanelHeight(panelScale?: number): number;
+    /**
+     * Calculate and reserve canvas area for colorbar panel.
+     * @internal
+     */
     reserveColorbarPanel(): number[];
+    /**
+     * Render a single colorbar with optional negative coloring and alpha threshold ticks.
+     * @internal
+     */
     drawColorbarCore(layer: number, leftTopWidthHeight: number[], isNegativeColor: boolean, min: number, max: number, isAlphaThreshold: boolean): void;
+    /**
+     * Draw all visible colorbars side by side in the reserved colorbar panel area.
+     * @internal
+     */
     drawColorbar(): void;
+    /**
+     * Calculate pixel width of text string based on glyph advances at given scale.
+     * @internal
+     */
     textWidth(scale: number, str: string): number;
+    /**
+     * Calculate pixel height of text based on tallest glyph at given scale.
+     * @internal
+     */
     textHeight(scale: number, str: string): number;
+    /**
+     * Render a single character glyph at specified position and scale; returns advance width.
+     * @internal
+     */
     drawChar(xy: number[], scale: number, char: number): number;
+    /**
+     * Render loading text centered on the canvas.
+     * @internal
+     */
     drawLoadingText(text: string): void;
+    /**
+     * Render a string of text at specified canvas coordinates with scaling and optional color.
+     * @internal
+     */
     drawText(xy: number[], str: string, scale?: number, color?: Float32List | null): void;
+    /**
+     * Draw text right-aligned to the given coordinates, vertically centered on y.
+     * @internal
+     */
     drawTextRight(xy: number[], str: string, scale?: number, color?: number[] | null): void;
+    /**
+     * Draw text left-aligned to the given coordinates, vertically centered on y.
+     * @internal
+     */
     drawTextLeft(xy: number[], str: string, scale?: number, color?: number[] | null): void;
+    /**
+     * Draw text right-aligned and below the given coordinates.
+     * @internal
+     */
     drawTextRightBelow(xy: number[], str: string, scale?: number, color?: number[] | null): void;
+    /**
+     * Draw text horizontally centered between start and end points with a semi-transparent background.
+     * @internal
+     */
     drawTextBetween(startXYendXY: number[], str: string, scale?: number, color?: number[] | null): void;
+    /**
+     * Draw text horizontally centered below a specified (x,y) position with canvas boundary clamping.
+     * @internal
+     */
     drawTextBelow(xy: number[], str: string, scale?: number, color?: number[] | null): void;
+    /**
+     * Update texture interpolation mode (nearest or linear) for background or overlay layer.
+     * @internal
+     */
     updateInterpolation(layer: number, isForceLinear?: boolean): void;
     /**
      * Enable or disable atlas outline overlay
@@ -3166,31 +3791,121 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
      */
     setInterpolation(isNearest: boolean): void;
+    /**
+     * Computes 2D model-view-projection and related matrices for rendering a slice of a 3D volume.
+     * Configures viewport and accounts for radiological orientation, depth clipping, and camera rotation.
+     * @internal
+     */
     calculateMvpMatrix2D(leftTopWidthHeight: number[], mn: vec3, mx: vec3, clipTolerance: number, clipDepth: number, azimuth: number, elevation: number, isRadiolgical: boolean): MvpMatrix2D;
+    /**
+     * Reorders the components of a 3D vector based on the slice orientation (axial, coronal, or sagittal).
+     * @internal
+     */
     swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE): vec3;
+    /**
+     * Returns the swizzled field of view for the given slice orientation.
+     * @internal
+     */
     screenFieldOfViewVox(axCorSag?: number): vec3;
+    /**
+     * Returns the field of view in millimeters for the given slice orientation.
+     * @internal
+     */
     screenFieldOfViewMM(axCorSag?: number, forceSliceMM?: boolean): vec3;
+    /**
+     * Returns extended voxel-aligned field of view and bounds for the given slice orientation.
+     * @internal
+     */
     screenFieldOfViewExtendedVox(axCorSag?: number): MM;
+    /**
+     * Returns extended millimeter-aligned field of view and bounds for the given slice orientation.
+     * @internal
+     */
     screenFieldOfViewExtendedMM(axCorSag?: number): MM;
+    /**
+     * Draws anatomical orientation labels (e.g., A/P/L/R) for the given slice view.
+     * @internal
+     */
     drawSliceOrientationText(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, padLeftTop?: number[]): void;
+    /**
+     * Computes a plane in mm space for a given slice orientation and depth.
+     * @internal
+     */
     xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number): number[];
+    /**
+     * Draw a 2D slice tile with appropriate orientation, zoom, pan, and optional mesh overlay.
+     * @internal
+     */
     draw2DMain(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number): void;
+    /**
+     * Draw a 2D slice tile with optional custom size and orientation text.
+     * @internal
+     */
     draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number, imageWidthHeight?: number[]): void;
+    /**
+     * Computes 3D model-view-projection matrices based on view angles and canvas size.
+     * @internal
+     */
     calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number): mat4[];
+    /**
+     * Computes the model transformation matrix for the given azimuth and elevation.
+     * Applies optional oblique RAS rotation if available.
+     * @internal
+     */
     calculateModelMatrix(azimuth: number, elevation: number): mat4;
+    /**
+     * Returns the normalized near-to-far ray direction for the given view angles.
+     * Ensures components are nonzero to avoid divide-by-zero errors.
+     * @internal
+     */
     calculateRayDirection(azimuth: number, elevation: number): vec3;
+    /**
+     * Returns the scene's min, max, and range extents in mm or voxel space.
+     * Includes both volume and mesh geometry.
+     * @internal
+     */
     sceneExtentsMinMax(isSliceMM?: boolean): vec3[];
+    /**
+     * Sets the 3D pivot point and scene scale based on volume and mesh extents.
+     * @internal
+     */
     setPivot3D(): void;
+    /**
+     * Returns the maximum number of 4D volumes across all loaded images.
+     * @internal
+     */
     getMaxVols(): number;
+    /**
+     * Returns true if any loaded 4D volume is missing frames.
+     * @internal
+     */
     detectPartialllyLoaded4D(): boolean;
+    /**
+     * Draws a graph of 4D volume intensity over time at the current crosshair position.
+     * Skips if volume is 3D, region is too small, or graph opacity is zero.
+     * @internal
+     */
     drawGraph(): void;
+    /**
+     * Updates crosshair position using depth-based mouse picking from screen pixel color.
+     * Only active when depth picking is enabled.
+     * @internal
+     */
     depthPicker(leftTopWidthHeight: number[], mvpMatrix: mat4): void;
+    /**
+     * Render a 3D volume visualization of the current NVImage using provided transformation matrices and angles.
+     * @internal
+     */
     drawImage3D(mvpMatrix: mat4, azimuth: number, elevation: number): void;
+    /**
+     * Draw a small orientation cube indicating L/R, A/P, I/S directions in the given tile area with specified azimuth and elevation.
+     * @internal
+     */
     drawOrientationCube(leftTopWidthHeight: number[], azimuth?: number, elevation?: number): void;
     /**
      * Internal utility to generate human-readable location strings for the onLocationChange callback
      * @param axCorSag - optional axis index for coordinate interpretation (NaN by default)
-     * @remarks Not included in public documentation. Computes string representation of current crosshair position in mm (and frame if 4D).
+     * @remarks Computes string representation of current crosshair position in mm (and frame if 4D).
      * @see {@link https://niivue.com/demos/features/modulateAfni.html | live demo usage}
      */
     createOnLocationChange(axCorSag?: number): void;
@@ -3205,17 +3920,65 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/labels.html | live demo usage}
      */
     addLabel(text: string, style: NVLabel3DStyle, points?: number[] | number[][], anchor?: LabelAnchorPoint, onClick?: (label: NVLabel3D) => void): NVLabel3D;
+    /**
+     * Calculate the 2D screen coordinates of a 3D point using the provided MVP matrix and tile position/size.
+     * @internal
+     */
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4;
+    /**
+     * Return the label located at the given screen coordinates, or null if none found.
+     * @internal
+     */
     getLabelAtPoint(screenPoint: [number, number]): NVLabel3D | null;
+    /**
+     * Draw lines from a 2D label position to its associated 3D points; supports solid and dotted lines.
+     * @internal
+     */
     drawLabelLine(label: NVLabel3D, pos: vec2, mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
+    /**
+     * Render a 3D label with optional leader lines, bullet markers, and text alignment within a legend.
+     * @internal
+     */
     draw3DLabel(label: NVLabel3D, pos: vec2, mvpMatrix?: mat4, leftTopWidthHeight?: number[], bulletMargin?: number, legendWidth?: number, secondPass?: boolean, scaling?: number): void;
+    /**
+     * Render all visible 3D labels in the legend panel, handling font scaling and layering.
+     * @internal
+     */
     draw3DLabels(mvpMatrix: mat4, leftTopWidthHeight: number[], secondPass?: boolean): void;
+    /**
+     * Draw all labels anchored to screen edges or corners with background rectangles.
+     * @internal
+     */
     drawAnchoredLabels(): void;
+    /**
+     * Render the 3D scene including volume, meshes, labels, crosshairs, and orientation cube.
+     * @internal
+     */
     draw3D(leftTopWidthHeight?: number[], mvpMatrix?: mat4 | null, modelMatrix?: mat4 | null, normalMatrix?: mat4 | null, azimuth?: number | null, elevation?: number): string | undefined;
+    /**
+     * Render all visible 3D meshes with proper blending, depth, and shader settings.
+     * @internal
+     */
     drawMesh3D(isDepthTest?: boolean, alpha?: number, m?: mat4, modelMtx?: mat4, normMtx?: mat4): void;
+    /**
+     * Render 3D crosshairs at the current crosshair position with optional depth testing and transparency.
+     * @internal
+     */
     drawCrosshairs3D(isDepthTest?: boolean, alpha?: number, mvpMtx?: mat4 | null, is2DView?: boolean, isSliceMM?: boolean): void;
+    /**
+     * Convert millimeter coordinates to fractional volume coordinates for the specified volume.
+     * @internal
+     */
     mm2frac(mm: vec3 | vec4, volIdx?: number, isForceSliceMM?: boolean): vec3;
+    /**
+     * Convert voxel coordinates to fractional volume coordinates for the specified volume.
+     * @internal
+     */
     vox2frac(vox: vec3, volIdx?: number): vec3;
+    /**
+     * Convert fractional volume coordinates to voxel coordinates for the specified volume.
+     * @internal
+     */
     frac2vox(frac: vec3, volIdx?: number): vec3;
     /**
      * move crosshair a fixed number of voxels (not mm)
@@ -3226,16 +3989,64 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
      */
     moveCrosshairInVox(x: number, y: number, z: number): void;
+    /**
+     * Convert fractional volume coordinates to millimeter space for the specified volume.
+     * @internal
+     */
     frac2mm(frac: vec3, volIdx?: number, isForceSliceMM?: boolean): vec4;
+    /**
+     * Convert screen pixel coordinates to texture fractional coordinates for the given slice index.
+     * @internal
+     */
     screenXY2TextureFrac(x: number, y: number, i: number, restrict0to1?: boolean): vec3;
+    /**
+     * Converts a canvas position to fractional texture coordinates.
+     * @internal
+     */
     canvasPos2frac(canvasPos: number[]): vec3;
+    /**
+     * Calculates scaled slice dimensions and position within the canvas.
+     * n.b. beware of similarly named `sliceScale` method.
+     * @internal
+     */
     scaleSlice(w: number, h: number, padPixelsWH?: [number, number], canvasWH?: [number, number]): number[];
+    /**
+     * Renders a centered thumbnail image using the bitmap shader.
+     * @internal
+     */
     drawThumbnail(): void;
+    /**
+     * Draws a 2D line with specified thickness and color on the canvas.
+     * If alpha < 0, uses the default crosshair color.
+     * @internal
+     */
     drawLine(startXYendXY: number[], thickness?: number, lineColor?: number[]): void;
+    /**
+     * Draws a 3D line from screen to world space with specified thickness and color.
+     * If alpha < 0, uses the default crosshair color.
+     * @internal
+     */
     draw3DLine(startXY: vec2, endXYZ: vec3, thickness?: number, lineColor?: number[]): void;
+    /**
+     * Draws a dotted 2D line with specified thickness and color.
+     * If alpha < 0, uses the default crosshair color with reduced opacity.
+     * @internal
+     */
     drawDottedLine(startXYendXY: number[], thickness?: number, lineColor?: number[]): void;
+    /**
+     * Draw a colored line on the graph using given coordinates, color, and thickness.
+     * @internal
+     */
     drawGraphLine(LTRB: number[], color?: number[], thickness?: number): void;
+    /**
+     * Draw crosshair lines in millimeters on a given 2D slice tile.
+     * @internal
+     */
     drawCrossLinesMM(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]): void;
+    /**
+     * Draw crosshair lines on 2D slice tile, delegating to mm-based drawing if appropriate.
+     * @internal
+     */
     drawCrossLines(sliceIndex: number, axCorSag: SLICE_TYPE, axiMM: number[], corMM: number[], sagMM: number[]): void;
     /**
      * display a lightbox or montage view
@@ -3244,10 +4055,30 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/mosaics.html | live demo usage}
      */
     drawMosaic(mosaicStr: string): void;
+    /**
+     * Calculate width and height to fit a slice within a container, preserving aspect ratio based on slice type and volume scaling.
+     * @internal
+     */
     calculateWidthHeight(sliceType: number, volScale: number[], containerWidth: number, containerHeight: number): [number, number];
+    /**
+     * Core function to draw the entire scene including volumes, meshes, slices, overlays, colorbars, graphs, and handle user interaction like dragging.
+     * @internal
+     */
     drawSceneCore(): string | void;
+    /**
+     * Manage draw calls to prevent concurrency issues, calling drawSceneCore and handling refresh flags.
+     * @internal
+     */
     drawScene(): string | void;
+    /**
+     * Getter for WebGL2 rendering context; throws error if context is unavailable.
+     * @internal
+     */
     get gl(): WebGL2RenderingContext;
+    /**
+     * Setter for WebGL2 rendering context.
+     * @internal
+     */
     set gl(gl: WebGL2RenderingContext | null);
 }
 

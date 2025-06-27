@@ -395,7 +395,7 @@
         break
       case 'CloseDraw':
         nv1.closeDrawing()
-        toggleGroup('@Off')
+        document.getElementById('@Off')?.click()
         handled = true
         break
       case 'SaveBitmap':
