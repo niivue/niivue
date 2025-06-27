@@ -124,8 +124,6 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
     attachAndLoadData();
   }, [isCanvasMounted]);
 
-
-
   // Handle view type changes
   useEffect(() => {
     if (!niivueRef.current) return;
@@ -168,23 +166,25 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
         border: "1px solid #ccc",
         borderRadius: "8px",
         marginBottom: "4px",
+        backgroundColor: "white",
       }}
     >
       {/* Conditionally render controls */}
       {showControls && (
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: "15px",
-          alignItems: "center",
-          width: "100%",
-        }}
-      >
+        <div
+          className="themed-background"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "15px",
+            alignItems: "center",
+            width: "100%",
+            borderRadius: "8px",
+          }}
+        >
         {/* View type selection */}
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-
           <label htmlFor="voxelCheck">
             Voxel
           </label>
@@ -245,7 +245,6 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
             <option value="MultiPlanarRender">A+C+S+R</option>
           </select>
         </div>
-
       </div>
       )}
       {/* Canvas container */}

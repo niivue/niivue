@@ -207,7 +207,7 @@ export const DrawingDemo = ({ nvOpts = {} }) => {
           alignItems: "center",
           width: "100%",
           padding: "10px",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "#8f8f8f",
           borderRadius: "4px",
         }}
       >

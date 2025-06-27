@@ -43,3 +43,7 @@ a {
   font-weight: bold;
   text-decoration: underline;
 }
+
+.themed-background {
+  background-color: var(--ifm-background-color);
+}

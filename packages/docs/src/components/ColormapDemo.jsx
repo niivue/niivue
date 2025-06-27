@@ -138,15 +138,25 @@ export const ColormapDemo = ({
       }}
     >
       {/* Niivue Canvas */}
-      <div style={{ width: 640, height: 480 }}>
+      <div
+        style={{
+          width: 640,
+          height: 480,
+          borderRadius: "12px",
+          overflow: "hidden", // actually clips child content
+        }}
+      >
         <canvas
           ref={canvasRef}
           width={640}
           height={480}
-          style={{ border: "1px solid lightgray", display: "block" }}
+          style={{
+            display: "block",
+            width: "100%",
+            height: "100%",
+          }}
         ></canvas>
       </div>
-
       {/* Controls */}
       <div
         style={{

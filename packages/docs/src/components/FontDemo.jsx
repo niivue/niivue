@@ -47,13 +47,8 @@ export const FontDemo = ({
         try {
           console.log("Loading volumes:", images);
           await nv.loadVolumes(images);
-          console.log("Volumes loaded.");
-
-
-          // Set initial state based on loaded volume
-          //if (nv.volumes.length > 0) {
-          //  setCurrentFont(nv.volumes[0].colormap);
-          //}
+          console.log("Volume loaded.");
+          nv.moveCrosshairInVox(0,0,21);
         } catch (error) {
           console.error("Error loading volumes:", error);
         }
@@ -107,7 +102,7 @@ export const FontDemo = ({
           ref={canvasRef}
           width={640}
           height={480}
-          style={{ border: "1px solid lightgray", display: "block" }}
+          style={{ display: "block" }}
         ></canvas>
       </div>
 
