@@ -7,9 +7,16 @@ import { BasicNiivueCanvas } from '../src/components/BasicNiivueCanvas';
 
 # Getting started
 
-NiiVue is an all-in-one package for parsing, loading, and viewing medical imaging data in the browser.
+NiiVue is an all-in-one package for parsing, loading, and viewing medical imaging data directly in the browser. Its modular design allows you to embed interactive visualizations into your pages using any framework—such as Angular, Vue, or React—or even as pure HTML. Below is an example of NiiVue embedded in a Docusaurus MDX page using a custom React component:
 
-> **Note**: NiiVue is not intended to be used in Node.js environments. It is designed to be used in the browser to _view_ data and a WebGL2 rendering context is required. 
+<NiivueBrowserWrapper>
+  <BasicNiivueCanvas
+  images={[
+    { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" }
+  ]}
+  />
+</NiivueBrowserWrapper>
+
 
 ## Installation
 
@@ -144,15 +151,7 @@ export class NiivueViewComponent implements OnInit {
 }
 ```
 
-## Embedded canvas in your own docs
+## Limitations
 
-**Go ahead, click around in the viewer below**. That's NiiVue in action! In this example, we are loading a single Nifti file. This is rendered in our Docusaurus MDX page using a custom React component.
-
-<NiivueBrowserWrapper>
-  <BasicNiivueCanvas
-  images={[
-    { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" }
-  ]}
-  />
-</NiivueBrowserWrapper>
+NiiVue is a graphical visualization tool and therefore cannot be used as a command-line utility in Node.js environments. It is designed to be embedded in a web browser window. However, as demonstrated in the end-to-end regression tests, NiiVue can run headlessly using Playwright to render a WebGL canvas and save a screenshot to disk.
 

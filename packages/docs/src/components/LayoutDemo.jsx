@@ -4,7 +4,7 @@ import { Niivue, SLICE_TYPE, MULTIPLANAR_TYPE, SHOW_RENDER } from '@niivue/niivu
 // Default image if none provided via props
 const defaultImages = [
   {
-    url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+    url: "https://niivue.com/demos/images/FLAIR.nii.gz",
     colormap: "gray",
     opacity: 1,
     visible: true,
@@ -271,22 +271,24 @@ export const LayoutDemo = ({
         }}
       >
         {/* Slice Type Selector */}
-        <div>
-          <label htmlFor="sliceTypeSelect" style={{ marginRight: "5px" }}>
-            Slice Type:
-          </label>
-          <select
-            id="sliceTypeSelect"
-            value={sliceType}
-            onChange={handleSliceTypeChange}
-          >
-            <option value={SLICE_TYPE.AXIAL}>Axial</option>
-            <option value={SLICE_TYPE.CORONAL}>Coronal</option>
-            <option value={SLICE_TYPE.SAGITTAL}>Sagittal</option>
-            <option value={SLICE_TYPE.MULTIPLANAR}>Multiplanar</option>
-            <option value={SLICE_TYPE.RENDER}>Volume Render</option>
-          </select>
-        </div>
+        {!customLayoutActive && (
+          <div>
+            <label htmlFor="sliceTypeSelect" style={{ marginRight: "5px" }}>
+              Slice Type:
+            </label>
+            <select
+              id="sliceTypeSelect"
+              value={sliceType}
+              onChange={handleSliceTypeChange}
+            >
+              <option value={SLICE_TYPE.AXIAL}>Axial</option>
+              <option value={SLICE_TYPE.CORONAL}>Coronal</option>
+              <option value={SLICE_TYPE.SAGITTAL}>Sagittal</option>
+              <option value={SLICE_TYPE.MULTIPLANAR}>Multiplanar</option>
+              <option value={SLICE_TYPE.RENDER}>Volume Render</option>
+            </select>
+          </div>
+        )}
 
         {/* Layout Selector - only show for multiplanar */}
         {sliceType === SLICE_TYPE.MULTIPLANAR && !customLayoutActive && (

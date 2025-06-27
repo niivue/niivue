@@ -1,22 +1,27 @@
 ---
 title: Plugins
-sidebar_position: 9
+sidebar_position: 15
 ---
 
 # Plugins
 
-NiiVue is modular. While the core module provides many functions, the primary module is designed to be lean with minimal dependencies. The plugin design allows you to solve more complex tasks by combining building blocks. Below are examples of existing modules, with minimal examples of their deployment.
+NiiVue is modular. While the core module provides many functions, the primary module is designed to be lean with minimal dependencies. The plugin design allows you to solve more complex tasks by combining building blocks. Below are examples of existing modules, with minimal examples for their deployment.
+
+![Overlay image](/img/pages/plugins.png)
 
 # Loader Plugins
 
-The core NiiVue module supports [many](https://github.com/niivue/niivue?tab=readme-ov-file#supported-formats) voxel and mesh formats. These natively supported formats are generally popular and simple, which helps minimize dependencies. For more complex or less common formats, NiiVue offers a plugin-based loader system that allows developers to add optional format support. This mechanism is also well-suited for prototyping and testing support for new formats.
+The core NiiVue module supports [many](./Loading%20images#supported-formats) voxel and mesh formats. These natively supported formats are generally popular and simple, which helps minimize dependencies. For more complex or less common formats, NiiVue offers a plugin-based loader system that allows developers to add optional format support. This mechanism is also well-suited for prototyping and testing support for new formats.
 
 Custom loaders must map incoming data to one of NiiVue’s core internal formats: NIfTI for voxel data and MZ3 for mesh data. These core formats impose certain constraints that loaders must accommodate. For example, the MZ3 format supports only triangulated meshes, so loaders handling polygonal formats must convert all faces to triangles to meet the expectations of modern low-level graphics APIs.
 
  - [cbor-loader](https://github.com/niivue/cbor-loader) meshes and voxels support [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/introduction/file_formats/index.html).
  - [dicom-loader](https://github.com/niivue/niivue/tree/main/packages/dicom-loader) uses a WebAssembly copy of [dcm2niix](https://github.com/rordenlab/dcm2niix) to handle DICOM voxel-based images.
+   - [Drag and drop live demo](https://niivue.github.io/niivue-dcm2niix/)
  - [minc-loader](https://github.com/niivue/minc-loader) handles voxel-based [MINC](https://en.wikibooks.org/wiki/MINC/SoftwareDevelopment/MINC2.0_File_Format_Reference) images.
+   - [Drag and drop live demo](https://niivue.github.io/minc-loader/)
  - [tiff-loader](https://github.com/niivue/tiff-loader) handles some Tagged Image File Format images, though note that a single TIFF file can store images with different resolutions (unlike NIfTI).
+   - [Drag and drop live demo](https://niivue.github.io/tiff-loader/)
  - [vox-loader](https://github.com/niivue/niivue/tree/main/packages/vox-loader) handles the very simple MagicaVoxel .vox format, so this is an excellent skeleton for creating a new voxel-based loaded.
 
 # WebAssembly plugins
@@ -24,17 +29,28 @@ Custom loaders must map incoming data to one of NiiVue’s core internal formats
 WebAssembly provides a way to use mature, high performance code written in languages like C on web browsers. Below are minimal examples illustrating integrating several popular tools with NiiVue, providing drag and drop solutions for many problems.
 
  - [niivue-niimath](https://github.com/niivue/niivue-niimath) general image processing.
+   - [Drag and drop live demo](https://niivue.github.io/niivue-niimath/)
  - [niivue-itk-wasm](https://github.com/niivue/niivue-itk-wasm) interfaces with [ITK-Wasm packages](https://docs.itk.org/projects/wasm/en/latest/introduction/packages.html).
+   - [Drag and drop live demo](https://ct2print.org/)
  - [niivue-flirt](https://github.com/softwiredtech/niivue-flirt) provides image coregistration.
+   - [Drag and drop live demo](https://softwiredtech.github.io/niivue-flirt/)
  - [niivue-bet](https://github.com/softwiredtech/niivue-bet) provides brain extraction.
- - [niivue-dcm2niix](https://github.com/niivue/niivue-dcm2niix) converts DICOM images to NIfTI.
- - [ct2print.org](https://ct2print.org/) combines niimath and ITK-Wasm to convert voxels to meshes.
- - [brainprint.org](https://brainprint.org/) combines brainchop, niimath and ITK-Wasm to segment T1-weighted MRI scans and subsequently convert these voxels to meshes.
+   - [Drag and drop live demo](https://softwiredtech.github.io/niivue-bet/)
 
 # AI plugins
 
 AI models are revolutionizing medical imaging. While models are computationally expensive to generate, clever models can be simple to deploy using web technologies (WebGL and WebGPU). We provide minimal examples showcasing deployment of the [brainchop](https://github.com/neuroneural/brainchop) models.
 
  - [T2lesion](https://github.com/niivue/T2lesion) uses TensorFlowJS to identify brain injury on T2-weighted MRI scans.
+   - [Drag and drop live demo](https://niivue.github.io/T2lesion/)
  - [niivue-onnx](https://github.com/niivue/niivue-onnx) uses [ONNX](https://onnx.ai/) for segmenting issues.
+   - [Drag and drop live demo](https://niivue.github.io/niivue-onnx/)
  - [niivue-tinygrad](https://github.com/niivue/niivue-tinygrad) uses [tinygrad](https://tinygrad.org/).
+   - [Drag and drop live demo](https://niivue.github.io/niivue-tinygrad/)
+
+# Combining plugins
+
+You can mix and match plugins to solve complex problems. 
+
+ - [ct2print.org](https://ct2print.org/) combines niimath and ITK-Wasm to convert voxels to meshes.
+ - [brainprint.org](https://brainprint.org/) combines brainchop AI models with niimath and ITK-Wasm to segment T1-weighted MRI scans and subsequently convert these voxels to meshes.

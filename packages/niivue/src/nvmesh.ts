@@ -111,18 +111,21 @@ export class NVMeshFromUrlOptions {
   }
 }
 
+/**
+ * Parameters for loading a base mesh or volume.
+ */
 type BaseLoadParams = {
-  // WebGL rendering context
+  /** WebGL rendering context. */
   gl: WebGL2RenderingContext
-  // a name for this image. Default is an empty string
+  /** Name for this image. Default is an empty string. */
   name: string
-  // the opacity for this image. default is 1
+  /** Opacity for this image. Default is 1. */
   opacity: number
-  // the base color of the mesh. RGBA values from 0 to 255. Default is white
+  /** Base color of the mesh in RGBA [0-255]. Default is white. */
   rgba255: number[] | Uint8Array
-  // whether or not this image is to be visible
+  /** Whether this image is visible. */
   visible: boolean
-  // layers of the mesh to load
+  /** Layers of the mesh to load. */
   layers: NVMeshLayer[]
 }
 
@@ -1296,6 +1299,24 @@ export class NVMesh {
             for (let j = 0; j < nLabel; j++) {
               const rgba = Array.from(lut.slice(j * 4, j * 4 + 4)).map((v) => v / 255)
               const labelName = layer.colormapLabel.labels[j]
+              // xyzMM is the center of mass for the label
+              // For folded cortical regions, this point often lies within the volume
+              const xyzMM = [0, 0, 0]
+              let count = 0
+              for (let i = 0; i < nvtx; i++) {
+                if (layer.values[i] === j) {
+                  const idx = i * 3
+                  xyzMM[0] += this.pts[idx]
+                  xyzMM[1] += this.pts[idx + 1]
+                  xyzMM[2] += this.pts[idx + 2]
+                  count++
+                }
+              }
+              if (count > 0) {
+                xyzMM[0] /= count
+                xyzMM[1] /= count
+                xyzMM[2] /= count
+              }
               if (
                 rgba[3] === 0 ||
                 !labelName || // handles empty string, null, undefined
@@ -1304,16 +1325,20 @@ export class NVMesh {
                 continue
               }
               rgba[3] = 1
-              const label = new NVLabel3D(labelName, {
-                textColor: rgba,
-                bulletScale: 1,
-                bulletColor: rgba,
-                lineWidth: 0,
-                lineColor: rgba,
-                textScale: 1.0,
-                textAlignment: LabelTextAlignment.LEFT,
-                lineTerminator: LabelLineTerminator.NONE
-              })
+              const label = new NVLabel3D(
+                labelName,
+                {
+                  textColor: rgba,
+                  bulletScale: 1,
+                  bulletColor: rgba,
+                  lineWidth: 0,
+                  lineColor: rgba,
+                  textScale: 1.0,
+                  textAlignment: LabelTextAlignment.LEFT,
+                  lineTerminator: LabelLineTerminator.NONE
+                },
+                xyzMM
+              )
               layer.labels.push(label)
               log.debug('label for mesh layer:', label)
             } // for each label

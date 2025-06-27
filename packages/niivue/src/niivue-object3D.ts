@@ -8,8 +8,9 @@ type Geometry = {
 }
 
 /**
- * Object rendered with WebGL
- **/
+ * Represents a 3D object rendered with WebGL, including geometry, transformations, and rendering state.
+ * Used internally by Niivue for rendering meshes and crosshairs.
+ */
 export class NiivueObject3D {
   static BLEND = 1
   static CULL_FACE = 2

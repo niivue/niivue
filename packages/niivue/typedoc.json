@@ -34,7 +34,7 @@
     "src/shader.ts",
     "src/types.ts"
   ],
-  "excludeInternal": false,
+  "excludeInternal": true,
   "excludeNotDocumented": false,
   "router": "member",
   "cleanOutputDir": true

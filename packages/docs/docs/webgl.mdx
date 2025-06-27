@@ -1,17 +1,29 @@
 ---
 title: WebGL2
-sidebar_position: 10
+sidebar_position: 16
 ---
 
-## Introduction
+import { Niivue } from '@niivue/niivue';
+import { WebGLDemo } from '../src/components/WebGLDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
 
 This project requires WebGL2. This specification was [finalized in January 2017](https://en.wikipedia.org/wiki/WebGL). It is supported by [all popular modern browsers](https://caniuse.com/webgl2). NiiVue exploits WebGL2 features that [are not available in WebGL1](https://webgl2fundamentals.org/webgl/lessons/webgl2-whats-new.html). Specifically, the images are represented using non-Power of two 3D textures. The shaders used by WebGL2 are written using the [OpenGL ES 3.0](https://en.wikipedia.org/wiki/OpenGL_ES) version of the [OpenGL Shading Language (GLSL)](https://en.wikipedia.org/wiki/OpenGL_Shading_Language). WebGL2 added additional texture formats that provide native support for most [NIfTI format data types](https://brainder.org/2012/09/23/the-nifti-file-format/).
+
+WebGL2 is a [shader-based](https://webgl2fundamentals.org/webgl/lessons/webgl-shaders-and-glsl.html) language. NiiVue includes many in-built shaders - the pull-down menu below allows you to explore a few of these. In addition, you can write your own custom shaders, as showcased in [this live demo](https://niivue.com/demos/features/mesh.atlas.html).
+
+<NiivueBrowserWrapper>
+  <WebGLDemo />
+</NiivueBrowserWrapper>
+
 
 NiiVue uses WebGL not only to display images but also to accelerate many of the functions. For example, the [grow cut](http://pieper.github.io/sites/glimp/growcut.html) drawings and the image reslicing described below.
 
 ##### Strengths and Weaknesses
 
 WebGL is a modern shader-based language. It lacks the fixed function pipeline, quad primitives and helper functions of legacy OpenGL. The benefit of this approach is that it forces the developer to use efficient methods that map closely to modern hardware design. However, it does have a steep learning curve. The minimal design of WebGL allows [ANGLE](https://en.wikipedia.org/wiki/ANGLE) to map it directly to the most efficient graphics library available (METAL, Vulkan, DirectX or Modern OpenGL). However, as it was designed as the least common denominator between these competing libraries, it does lack some useful features like geometry shaders. Therefore, one must adopt alternative approaches to implement features such as [wireframes and illuminated streamlines](https://github.com/niivue/niivue/issues/458). It also lacks [clip planes](https://github.com/niivue/niivue/issues/447) and the [depth buffer is read only](https://github.com/niivue/niivue/issues/345).
+
+While the emerging WebGPU has not yet been finalized, it can provide better performance than WebGL2, in particular when there are a huge number of draw calls. However, NiiVue is designed to only require a handful of draw calls, and therefore the visualization is already well optimized for modern devices. On the other hand, WebGPU can provide a huge boost for AI models, and we illustrate this potential with our [tinygrad](https://github.com/niivue/niivue-tinygrad) and [ONNX](https://github.com/niivue/niivue-onnx) implementations of the brain chop models.
 
 ##### Textures
 
@@ -48,7 +60,7 @@ The reslicing algorithm uses the [R8UI, R16I, R16UI and R32F](https://www.khrono
 
 The algorithm of the reslicing shader is shown in the Figure below. Each texture is a unit normalized cube (with the voxels accessed in the range 0..1 in the X,Y,Z dimensions, regardless of the number of voxels in the column, row and slice dimension). A 4x4 matrix provides the [affine transformation](https://en.wikipedia.org/wiki/Transformation_matrix) mapping the overlay (red in figure below) to the background image (black in image below). Since WebGL works with 2D framebuffers, the shader is run for every 2D slice of the background image's 3D volume. Therefore, this compute shader requires only the standard WebGL2 functions, without requiring the nascent [compute extensions](https://www.khronos.org/registry/webgl/specs/latest/2.0-compute/).
 
-![Overlay image](/img/pages/overlay.png)
+<img src="/img/pages/overlay.png" alt="Overlay image" style={{ maxWidth: "512px" }} />
 
 ##### Future Directions
 

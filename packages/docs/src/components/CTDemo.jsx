@@ -4,8 +4,8 @@ import { MULTIPLANAR_TYPE, Niivue, SHOW_RENDER } from "@niivue/niivue";
 // Default image if none provided via props
 const defaultImages = [
   {
-    url: "https://niivue.github.io/niivue-demo-images/chris_t2.nii.gz",
-    colormap: "gray", // Start with gray
+    url: "https://niivue.github.io/niivue-demo-images/CT_Abdo.nii.gz",
+    colormap: "ct_kidneys", // Start with gray
     opacity: 1,
     visible: true,
   },
@@ -19,7 +19,7 @@ const defaultNvOpts = {
   multiplanarLayout: MULTIPLANAR_TYPE.GRID
 };
 
-export const ColormapDemo = ({
+export const CTDemo = ({
   images = defaultImages,
   nvOpts = {},
 }) => {
@@ -29,7 +29,7 @@ export const ColormapDemo = ({
   // State for interactive controls
   const [availableColormaps, setAvailableColormaps] = useState([]);
   const [currentColormap, setCurrentColormap] = useState(
-    images[0]?.colormap || "gray"
+    images[0]?.colormap || "ct_kidneys"
   );
   const [gamma, setGamma] = useState(1.0);
   const [isInverted, setIsInverted] = useState(false);
@@ -56,8 +56,8 @@ export const ColormapDemo = ({
           console.log("Volumes loaded.");
 
           // After loading, get available colormaps
-          const maps = nv.colormaps();
-          console.log("Available colormaps:", maps);
+          const maps = nv.colormaps().filter((name) => name.startsWith("ct_"));
+          console.log("Filtered colormaps:", maps);
           setAvailableColormaps(maps);
 
           // Sync colorbar state with Niivue instance

@@ -3,38 +3,12 @@ title: DICOM
 sidebar_position: 14
 ---
 
-## Introduction
-
 While neuroimaging researchers often prefer simpler formats like NIfTI, clinical imaging is dominated by DICOM. A key challenge with classical DICOM is that it stores each 2D slice in a separate file, resulting in hundreds or thousands of files per series—though the newer enhanced DICOM standard addresses this. DICOM also supports various compression methods (transfer syntaxes), adding further complexity. NiiVue provides multiple mechanisms to handle DICOM data effectively.
 
 ## Using dcm2niix with NiiVue
 
-[dcm2niix](https://github.com/rordenlab/dcm2niix) is a widely used command-line tool for converting DICOM images to NIfTI. It can be used on the backend for preprocessing, or compiled to WebAssembly (WASM) and bundled as an [npm package](https://www.npmjs.com/package/@niivue/dcm2niix) for frontend use. This enables drag-and-drop DICOM support directly in the browser, as demonstrated in the [niivue-dcm2niix](https://github.com/niivue/niivue-dcm2niix) live demo.
+[dcm2niix](https://github.com/rordenlab/dcm2niix) is a widely used command-line tool for converting DICOM images to NIfTI. It can be used on the backend for preprocessing, or compiled to WebAssembly (WASM) and bundled as an [npm package](https://www.npmjs.com/package/@niivue/dcm2niix) for frontend use. This enables drag-and-drop DICOM support directly in the browser, as demonstrated in the [niivue-dcm2niix project](https://github.com/niivue/niivue-dcm2niix) which includes a [live demo](https://niivue.github.io/niivue-dcm2niix/).
 
-## Using daikon with NiiVue: DICOM Manifests
+## DICOM Manifests
 
-**Warning: daikon integration with NiiVue is not yet documented**
-
-Unlike enhanced DICOM, classic DICOM stores a single 2D image per file. Therefore, 3D volumetric data is stored in multiple files. A DICOM manifest is a text file that contains a list of relative URLs of DICOM files. When a manifest file is specified in the image options using the isManifest property Niivue will use the URL as a relative URL to download DICOM files.
-
-If no file name is specified in the URL, Niivue will append niivue-manifest.txt. A custom file can be used, but it must have a .txt extension.
-
-Check out this [example](https://github.com/niivue/niivue-demo-images/blob/main/dicom/niivue-manifest.txt) to see how DICOM files should be listed.
-
-```javascript
-import * as niivue from "@niivue/niivue";
-var volumeList1 = [
-  {
-    url: "https://raw.githubusercontent.com/niivue/niivue-demo-images/main/dicom/niivue-manifest.txt",
-    colormap: "gray",
-    opacity: 1,
-    visible: true,
-    isManifest: true,
-  },
-];
-var nv1 = new Niivue();
-nv1.setRadiologicalConvention(false);
-await nv1.attachTo("gl1");
-nv1.loadVolumes(volumeList1);
-nv1.setSliceType(nv1.sliceTypeMultiplanar);
-```
+Unlike enhanced DICOM, classic DICOM stores a single 2D image per file. Therefore, 3D volumetric data is stored in multiple files. A DICOM manifest is a text file that contains a list of relative URLs of DICOM files. Again, the [niivue-dcm2niix project](https://github.com/niivue/niivue-dcm2niix) provides a [live demo](https://niivue.github.io/niivue-dcm2niix/) for using manifest files. Specifically, it includes a button to load [this manifest file](https://niivue.github.io/niivue-demo-images/dicom/niivue-manifest.txt).

@@ -1,0 +1,14 @@
+---
+title: Gestures
+sidebar_position: 13
+---
+
+import { Niivue } from '@niivue/niivue';
+import { GestureDemo } from '../src/components/GestureDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+NiiVue supports a variety of interactive gestures for image manipulation. By default, the primary drag gesture (typically left-click and drag) adjusts image contrast, while the secondary drag gesture (usually right-click and drag) selects a region to automatically optimize contrast. The primary drag can also be configured to control the colormap window (i.e., brightness and contrast). The secondary drag is customizable as well—it can be set to pan the image, zoom, measure distances, or be disabled entirely. Developers can also define custom drag behavior by assigning a callback function, as demonstrated in the [drag callback live demo](https://niivue.com/demos/features/dragCallback.html).
+
+<NiivueBrowserWrapper>
+  <GestureDemo />
+</NiivueBrowserWrapper>
