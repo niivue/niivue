@@ -1,6 +1,16 @@
 ---
+title: Loading Volumes and Meshes
 sidebar_position: 2
 ---
+import { Niivue } from '@niivue/niivue';
+import { MeshDemo } from '../src/components/MeshDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+NiiVue supports multiple types of neuroimaging data, including voxel-based volumes (gray), surface meshes (green), connectomes (ball-and-stick), and tractography streamlines (blue). The live example below displays all four types. This page describes how to load each of these data formats using NiiVue.
+
+<NiivueBrowserWrapper>
+  <MeshDemo showControls={false} />
+</NiivueBrowserWrapper>
 
 ## Generic loading
 

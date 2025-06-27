@@ -82,11 +82,11 @@ export const WebGLDemo = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "10px",
-        padding: "10px",
+        gap: "4px",
+        padding: "4px",
         border: "1px solid #ccc",
         borderRadius: "8px",
-        marginBottom: "15px",
+        marginBottom: "4px",
       }}
     >
       {/* Niivue Canvas */}
@@ -95,7 +95,7 @@ export const WebGLDemo = ({
           ref={canvasRef}
           width={640}
           height={480}
-          style={{ border: "1px solid lightgray", display: "block" }}
+          style={{ display: "block" }}
         ></canvas>
       </div>
 

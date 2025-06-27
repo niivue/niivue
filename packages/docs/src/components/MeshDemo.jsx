@@ -32,13 +32,13 @@ const defaultNvOpts = {
   backColor: [1, 1, 1, 1],
 };
 
-export const MeshDemo = ({ nvOpts = {} }) => {
+
+export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
   const canvasRef = useRef(null);
   const niivueRef = useRef(null);
   
   // State for settings
   const [viewType, setViewType] = useState("Render");
-  const [locationText, setLocationText] = useState("");
   const [isCanvasMounted, setIsCanvasMounted] = useState(false);
   const [isVoxel, setIsVoxel] = useState(true);
   const [isMesh, setIsMesh] = useState(true);
@@ -76,19 +76,11 @@ export const MeshDemo = ({ nvOpts = {} }) => {
     setViewType(event.target.value);
   }, []);
 
-  // Setup a memoized handler for location changes
-  const handleLocationChange = useCallback((data) => {
-    setLocationText(data.string);
-  }, []);
-
   // Create Niivue instance only once
   useEffect(() => {
     if (!niivueRef.current) {
       console.log("Creating Niivue instance...");
-      niivueRef.current = new Niivue({
-        ...mergedNvOpts,
-        onLocationChange: handleLocationChange
-      });
+      niivueRef.current = new Niivue(mergedNvOpts);
     }
 
     return () => {
@@ -171,14 +163,15 @@ export const MeshDemo = ({ nvOpts = {} }) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "15px",
-        padding: "10px",
+        gap: "4px",
+        padding: "4px",
         border: "1px solid #ccc",
         borderRadius: "8px",
-        marginBottom: "15px",
+        marginBottom: "4px",
       }}
     >
-      {/* Controls above viewer */}
+      {/* Conditionally render controls */}
+      {showControls && (
       <div
         style={{
           display: "flex",
@@ -254,7 +247,7 @@ export const MeshDemo = ({ nvOpts = {} }) => {
         </div>
 
       </div>
-
+      )}
       {/* Canvas container */}
       <div style={{ 
         width: "100%",
@@ -265,9 +258,6 @@ export const MeshDemo = ({ nvOpts = {} }) => {
           style={{ width: "100%", height: "100%" }}
         ></canvas>
       </div>
-
-      {/* Intensity display */}
-      <div style={{ fontFamily: "monospace" }}>&nbsp;{locationText}</div>
     </div>
   );
 }; 

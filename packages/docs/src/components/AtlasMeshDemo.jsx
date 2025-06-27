@@ -53,9 +53,6 @@ export const AtlasMeshDemo = ({ nvOpts = {} }) => {
 
         try {
           await niivueRef.current.loadMeshes(defaultMeshes);
-          console.log("Volumes loaded in Niivue.");
-          let cmap = await fetchJSON(`${baseUrl}/aal.json`,)
-          nv.volumes[1].setColormapLabel(cmap)
           nv.updateGLVolume();
         } catch (error) {
           console.error("Error loading volumes:", error);
@@ -90,11 +87,13 @@ export const AtlasMeshDemo = ({ nvOpts = {} }) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "15px",
-        padding: "10px",
+        gap: "4px",
+        padding: "4px",
         border: "1px solid #ccc",
         borderRadius: "8px",
-        marginBottom: "15px",
+        marginBottom: "4px",
+        minWidth: "640px",
+        margin: "0 auto",
       }}
     >
       {/* Controls above viewer */}

@@ -5170,9 +5170,8 @@ export class Niivue {
     } else if ('nodes' in json) {
       const nodes = json.nodes
       if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
-        // legacy format
+        // convert dense "legacy" format to sparse format
         connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
-        log.warn('converted legacy connectome', connectome)
       }
     } else {
       throw new Error('not a known connectome format')
@@ -12218,7 +12217,6 @@ export class Niivue {
     if (!this.canvas || panelHeight < 1) {
       return
     }
-    console.log(this.canvas)
     const gl = this.gl
     gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)

@@ -91,11 +91,11 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "15px",
-        padding: "10px",
+        gap: "4px",
+        padding: "4px",
         border: "1px solid #ccc",
         borderRadius: "8px",
-        marginBottom: "15px",
+        marginBottom: "4px",
       }}
     >
       {/* Controls above viewer */}

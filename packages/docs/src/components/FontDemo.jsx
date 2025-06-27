@@ -94,11 +94,11 @@ export const FontDemo = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "10px",
-        padding: "10px",
+        gap: "4px",
+        padding: "4px",
         border: "1px solid #ccc",
         borderRadius: "8px",
-        marginBottom: "15px",
+        marginBottom: "4px",
       }}
     >
       {/* Niivue Canvas */}
