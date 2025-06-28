@@ -16,7 +16,6 @@ const defaultNvOpts = {
   isColorbar: true, // Show colorbar by default for demo
   logLevel: "info",
   multiplanarShowRender: SHOW_RENDER.ALWAYS, 
-  multiplanarLayout: MULTIPLANAR_TYPE.GRID
 };
 
 export const ColormapDemo = ({
@@ -57,7 +56,7 @@ export const ColormapDemo = ({
 
           // After loading, get available colormaps
           const maps = nv.colormaps();
-          console.log("Available colormaps:", maps);
+          // console.log("Available colormaps:", maps);
           setAvailableColormaps(maps);
 
           // Sync colorbar state with Niivue instance
@@ -140,20 +139,17 @@ export const ColormapDemo = ({
       {/* Niivue Canvas */}
       <div
         style={{
-          width: 640,
-          height: 480,
-          borderRadius: "12px",
+          borderRadius: "8px",
           overflow: "hidden", // actually clips child content
         }}
       >
         <canvas
           ref={canvasRef}
-          width={640}
-          height={480}
           style={{
             display: "block",
-            width: "100%",
-            height: "100%",
+            minWidth: "384px",
+            minHeight: "384px",
+            width: "100%", // optional: ensures it stretches horizontally
           }}
         ></canvas>
       </div>

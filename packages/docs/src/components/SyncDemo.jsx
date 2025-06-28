@@ -41,7 +41,7 @@ export const SyncDemo = ({
   // State for sync settings and display
   const [syncMode, setSyncMode] = useState(3); // 0=none, 1=2D, 2=3D, 3=both
   const [layout, setLayout] = useState(0); // 0=auto, 1=column, 2=grid, 3=row
-  const [canvasHeight, setCanvasHeight] = useState(512);
+  const [canvasHeight, setCanvasHeight] = useState(256);
   const [gamma, setGamma] = useState(1.0);
   const [intensity1, setIntensity1] = useState("");
   const [intensity2, setIntensity2] = useState("");
@@ -274,6 +274,7 @@ export const SyncDemo = ({
           <div style={{ height: "100%", width: "100%" }}>
             <canvas
               ref={canvas1Ref}
+              style={{minHeight: "256px"}}
             ></canvas>
           </div>
         </div>
@@ -281,6 +282,7 @@ export const SyncDemo = ({
           <div style={{ height: "100%", width: "100%" }}>
             <canvas
               ref={canvas2Ref}
+              style={{minHeight: "256px"}}
             ></canvas>
           </div>
         </div>

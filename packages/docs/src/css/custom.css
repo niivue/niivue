@@ -39,6 +39,10 @@ a {
 
 }
 
+[data-theme='dark'] a {
+  color: #58a6ff;
+}
+
 .navbar__link--active {
   font-weight: bold;
   text-decoration: underline;

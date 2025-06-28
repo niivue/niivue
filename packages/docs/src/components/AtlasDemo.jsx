@@ -31,13 +31,6 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
   // Merge default and passed options
   const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
 
-      async function fetchJSON(fnm) {
-        const response = await fetch(fnm)
-        const js = await response.json()
-        return js
-      }
-
-
   // Initialize Niivue instance and load volumes on mount
   useEffect(() => {
     const initializeNiivue = async () => {
@@ -55,7 +48,7 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
         try {
           await nv.loadVolumes(defaultImages);
           console.log("Volumes loaded in Niivue.");
-          let cmap = await fetchJSON(`${baseUrl}/aal.json`,)
+          let cmap = await (await fetch(`${baseUrl}/aal.json`)).json();
           nv.volumes[1].setColormapLabel(cmap)
           nv.updateGLVolume();
         } catch (error) {
@@ -72,10 +65,37 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
     };
   }, []);
 
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "data-theme"
+        ) {
+          const theme = document.documentElement.getAttribute("data-theme")
+          const isDark = theme === "dark"
+          if (niivueRef.current) {
+            niivueRef.current.opts.backColor = isDark ? [0, 0, 0, 1] : [1, 1, 1, 1]
+            niivueRef.current.drawScene() // refresh render
+          }
+        }
+      }
+    })
+  
+    observer.observe(document.documentElement, { attributes: true })
+  
+    // Optional: set initial theme immediately
+    const initialTheme = document.documentElement.getAttribute("data-theme")
+    const isDark = initialTheme === "dark"
+    if (niivueRef.current) {
+      niivueRef.current.opts.backColor = isDark ? [0, 0, 0, 1] : [1, 1, 1, 1]
+      niivueRef.current.drawScene()
+    }
+  
+    return () => observer.disconnect()
+  }, [])
 
   // Handlers for controls
-  
-  // Handler for changing FontSize
   const handleAlphaChange = (event) => {
     const newAlpha = parseFloat(event.target.value);
     if (niivueRef.current) {
@@ -127,16 +147,15 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
       {/* Canvas container */}
       <div style={{ 
         width: "100%",
-        height: 512,
       }}>
         <canvas
           ref={canvasRef}
-          style={{ width: "100%", height: "100%" }}
+          style={{ width: "100%", height: "100%" , minHeight: "512px",}}
         ></canvas>
       </div>
 
       {/* Intensity display */}
-      <div style={{ fontFamily: "monospace" }}>{intensity}</div>
+      <div style={{ fontFamily: "monospace" }}>{intensity || "\u00A0"}</div>
     </div>
   );
 }; 

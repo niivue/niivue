@@ -46,21 +46,16 @@ The term Textures refers to bitmap images that are stored on the graphics card. 
 - `TEXTURE14_GC_LABEL0: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: drawing color that ping-pongs between read and write.
 - `TEXTURE15_GC_LABEL1`: Transient texture used [growcut](https://niivue.com/demos/features/draw2.html) shader: drawing color that ping-pongs between write and read.
 
-##### Color Schemes
-
-The user can choose different colormaps for displaying dark to bright voxels. In addition to grayscale, one can choose from the [viridis color palettes](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) (Cividis, Inferno, Plasma and Viridis) which are designed to be both salient and compatible with the most common forms of colorblindness. Since WebGL2 does not support 1D textures, these are codes as 2D bitmap textures (sampler2D, with a width of 256 pixels and a height of one pixel). This explains the GLSL definition `sampler2D colormap`, with reading using `texture(colormap, vec2(f, 0.5))` (where f is a fraction from 0..1, and 0.5 indicates sampling in the vertical middle of the bitmap).
-
 ##### Overlays
 
-Overlay images are resliced to match the resolution of the background image. Multiple overlays may be loaded, but they are all blended together to generate a single RGBA texture. This overcomes OpenGL limits on the number of active textures loaded, and improves the speed of rendering.
+Overlay images are resliced to match the resolution of the background image. Multiple overlays may be loaded, but they are all blended together to generate a single RGBA texture. This overcomes WebGL limits on the number of active textures loaded, and improves the speed of rendering.
 
 JavaScript is slower than natively compiled programs for many computations, [using WebGL can dramatically increase performance providing near native performance](http://openglinsights.com/discovering.html#WebGLforOpenGLDevelopers). Therefore, while using the GPU instead of the CPU can accelerate performance regardless of language, the benefits are greater for JavaScript. Reslicing 3D volumes is compute intensive. Specifically, the GPU-based WebGL reslicing algorithm is also about an order of magnitude faster than the standard JavaScript code.
 
 The reslicing algorithm uses the [R8UI, R16I, R16UI and R32F](https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexStorage3D.xhtml) base formats for the [NIfTI](https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h) `DT_UINT8`, `DT_INT16`, `DT_UINT16`, and `DT_FLOAT32` datatypes. One limitation of WebGL is that these texture formats are not [filterable](https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html), meaning that only [nearest](https://open.gl/textures) interpolation is available. Therefore, overlays may appear blocky if there is not a one-to-one correspondence between the background image and an overlay. On the other hand, this is often desired for thresholded statistical maps (where many voxels are artificially zeroed). Another quirk of WebGL is that three shader programs are required to support unsigned integer, signed integer and floating point textures (using `usampler3D`, `isampler3D` and `sampler3D` respectively).
 
-The algorithm of the reslicing shader is shown in the Figure below. Each texture is a unit normalized cube (with the voxels accessed in the range 0..1 in the X,Y,Z dimensions, regardless of the number of voxels in the column, row and slice dimension). A 4x4 matrix provides the [affine transformation](https://en.wikipedia.org/wiki/Transformation_matrix) mapping the overlay (red in figure below) to the background image (black in image below). Since WebGL works with 2D framebuffers, the shader is run for every 2D slice of the background image's 3D volume. Therefore, this compute shader requires only the standard WebGL2 functions, without requiring the nascent [compute extensions](https://www.khronos.org/registry/webgl/specs/latest/2.0-compute/).
+A GLSL compute shader applies a 4×4 affine transformation matrix to map the overlay image onto the background volume. Since WebGL operates on 2D framebuffers, the shader processes one 2D slice of the 3D background volume at a time. This approach leverages standard WebGL2 functionality and does not rely on emerging [WebGL or WebGPU compute extensions](https://www.khronos.org/registry/webgl/specs/latest/2.0-compute/).
 
-<img src="/img/pages/overlay.png" alt="Overlay image" style={{ maxWidth: "512px" }} />
 
 ##### Future Directions
 

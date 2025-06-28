@@ -16,7 +16,6 @@ const defaultNvOpts = {
   isColorbar: true, // Show colorbar by default for demo
   logLevel: "info",
   multiplanarShowRender: SHOW_RENDER.ALWAYS, 
-  multiplanarLayout: MULTIPLANAR_TYPE.GRID
 };
 
 export const CTDemo = ({
@@ -28,12 +27,13 @@ export const CTDemo = ({
 
   // State for interactive controls
   const [availableColormaps, setAvailableColormaps] = useState([]);
+  const [currentRender, setCurrentRender] = useState(0);
   const [currentColormap, setCurrentColormap] = useState(
     images[0]?.colormap || "ct_kidneys"
   );
   const [gamma, setGamma] = useState(1.0);
   const [isInverted, setIsInverted] = useState(false);
-  const [isColorbarVisible, setIsColorbarVisible] = useState(defaultNvOpts.isColorbar);
+  const [clipDark, setClipDark] = useState(false);
 
   // Merge default and passed options
   const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
@@ -49,7 +49,8 @@ export const CTDemo = ({
 
         await nv.attachToCanvas(canvasRef.current);
         console.log("Niivue attached to canvas.");
-
+        nv.opts.backColor = [0.2, 0.2, 0.2, 1];
+        nv.isAlphaClipDark = clipDark;
         try {
           console.log("Loading volumes:", images);
           await nv.loadVolumes(images);
@@ -57,11 +58,8 @@ export const CTDemo = ({
 
           // After loading, get available colormaps
           const maps = nv.colormaps().filter((name) => name.startsWith("ct_"));
-          console.log("Filtered colormaps:", maps);
+          // console.log("Filtered colormaps:", maps);
           setAvailableColormaps(maps);
-
-          // Sync colorbar state with Niivue instance
-          setIsColorbarVisible(nv.opts.isColorbar);
 
           // Set initial state based on loaded volume
           if (nv.volumes.length > 0) {
@@ -93,6 +91,13 @@ export const CTDemo = ({
     }
   };
 
+  // Handler for changing rendering mode
+  const handleRenderChange = (event) => {
+    const newRender = parseFloat(event.target.value);
+     niivueRef.current.setVolumeRenderIllumination(newRender)
+    setCurrentRender(newRender);
+  };
+
   // Handler for inverting colormap
   const handleInvertChange = (event) => {
     const inverted = event.target.checked;
@@ -104,6 +109,14 @@ export const CTDemo = ({
     }
   };
 
+  // Effect for clip dark
+  useEffect(() => {
+    if (niivueRef.current) {
+      niivueRef.current.isAlphaClipDark = clipDark;
+      niivueRef.current.updateGLVolume();
+    }
+  }, [clipDark]);
+
   // Handler for changing gamma
   const handleGammaChange = (event) => {
     const newGamma = parseFloat(event.target.value);
@@ -114,15 +127,6 @@ export const CTDemo = ({
     }
   };
 
-  // Handler to toggle colorbar
-  const handleToggleColorbar = () => {
-    if (niivueRef.current) {
-      const nv = niivueRef.current;
-      nv.opts.isColorbar = !nv.opts.isColorbar;
-      setIsColorbarVisible(nv.opts.isColorbar);
-      nv.drawScene();
-    }
-  };
 
   return (
     <div
@@ -138,12 +142,20 @@ export const CTDemo = ({
       }}
     >
       {/* Niivue Canvas */}
-      <div style={{ width: 640, height: 480 }}>
+      <div
+        style={{
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}
+      >
         <canvas
           ref={canvasRef}
-          width={640}
-          height={480}
-          style={{ display: "block" }}
+          style={{
+            display: "block",
+            minWidth: "384px",
+            minHeight: "512px",
+            width: "100%", // optional: ensures it stretches horizontally
+          }}
         ></canvas>
       </div>
 
@@ -157,10 +169,6 @@ export const CTDemo = ({
           alignItems: "center",
         }}
       >
-        {/* Toggle Colorbar Button */}
-        <button onClick={handleToggleColorbar} disabled={!niivueRef.current}>
-          {isColorbarVisible ? "Hide Colorbar" : "Show Colorbar"}
-        </button>
 
         {/* Colormap Selector */}
         <div>
@@ -199,6 +207,17 @@ export const CTDemo = ({
           </label>
         </div>
 
+        {/* Clip dark checkbox */}
+        <div>
+          <input
+            type="checkbox"
+            id="clipDark"
+            checked={clipDark}
+            onChange={(e) => setClipDark(e.target.checked)}
+          />
+          <label htmlFor="clipDark">Clip Dark</label>
+        </div>
+
         {/* Gamma Slider */}
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
           <label htmlFor="gammaSlider">Gamma:</label>
@@ -213,6 +232,21 @@ export const CTDemo = ({
             disabled={!niivueRef.current}
           />
           <span>{gamma.toFixed(1)}</span>
+        </div>
+
+        <div>
+          <label htmlFor="renderSelect" style={{ marginRight: "5px" }}>
+            Render:
+          </label>
+          <select
+            id="renderSelect"
+            value={currentRender}
+            onChange={handleRenderChange}
+          >
+            <option value="-1">slices</option>
+            <option value="0">matte</option>
+            <option value="0.6">glossy</option>
+          </select>
         </div>
       </div>
     </div>
