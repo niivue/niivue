@@ -116,3 +116,12 @@
 .tag_voxel {
   background-color: #0a9bd5;
 }
+
+html[data-theme='dark'] .card {
+  background-color: #3c3c3e; /* softer dark gray */
+}
+
+html[data-theme='dark'] .cardHeader {
+  background-color: #7f7f7f;
+  border-bottom: 1px solid #444;
+}

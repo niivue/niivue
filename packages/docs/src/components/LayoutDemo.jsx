@@ -256,7 +256,7 @@ export const LayoutDemo = ({
           ref={canvasRef}
           width={640}
           height={480}
-          style={{ border: "1px solid lightgray", display: "block" }}
+          style={{display: "block" }}
         ></canvas>
       </div>
 

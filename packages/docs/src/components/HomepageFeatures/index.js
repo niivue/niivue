@@ -53,15 +53,21 @@ export default function HomepageFeatures() {
             <Feature key={idx} {...props} />
           ))}
         </div>
-        <NiivueBrowserWrapper>
-          <BasicNiivueCanvas
-            images={[
-              { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" }
-            ]}
-            nvOpts={{}}
-          />
-        </NiivueBrowserWrapper>
+        {/* Apply border radius without affecting layout */}
+        <div style={{ borderRadius: "16px", overflow: "hidden" }}>
+          <NiivueBrowserWrapper>
+            <BasicNiivueCanvas
+              images={[
+                {
+                  url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+                },
+              ]}
+              nvOpts={{}}
+            />
+          </NiivueBrowserWrapper>
+        </div>
       </div>
     </section>
-  );
+  )
 }
+

@@ -38,7 +38,7 @@ The typeface or character set can be changed by modifying the commands. NiiVue w
 
 ## Usage
 
-Viktor Chlumský's [GLSL fragment shader](https://github.com/Chlumsky/msdfgen) is easily adapted for WebGL. The uniform screenPxRange is described by Viktor as `the distance field range in output screen pixels. For example, if the pixel range was set to 2 when generating a 32x32 distance field, and it is used to draw a quad that is 72x72 pixels on the screen, it should return 4.5 (because 72/32 * 2 = 4.5).` Note that both distance range and distance field are reported in the JSON file created by msdf-atlas-gen: `"distanceRange":2,"size":59.65625`. Therefore, the complete WebGL fragment shader is:
+Viktor Chlumský's [GLSL fragment shader](https://github.com/Chlumsky/msdfgen) is easily adapted for WebGL. There are [many parameters you can tweak](https://www.redblobgames.com/x/2403-distance-field-fonts/). A core parameter is the uniform `screenPxRange`. Viktor describes this as `the distance field range in output screen pixels. For example, if the pixel range was set to 2 when generating a 32x32 distance field, and it is used to draw a quad that is 72x72 pixels on the screen, it should return 4.5 (because 72/32 * 2 = 4.5).` Note that both distance range and distance field are reported in the JSON file created by msdf-atlas-gen: `"distanceRange":2,"size":59.65625`. Therefore, the complete WebGL fragment shader is:
 
 ```
 #version 300 es

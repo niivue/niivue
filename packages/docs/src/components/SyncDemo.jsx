@@ -33,6 +33,52 @@ const defaultNvOpts = {
 export const SyncDemo = ({
   nvOpts = {},
 }) => {
+
+  //functions match background color for theme
+  function cssColorToRgbaArray(color) {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return [0, 0, 0, 1]
+    try {
+      ctx.fillStyle = color
+      const computed = ctx.fillStyle
+      // Case 1: rgb(...) or rgba(...)
+      if (computed.startsWith('rgb')) {
+        const match = computed.match(/\d+(\.\d+)?/g)
+        if (match && match.length >= 3) {
+          const [r, g, b, a = 1] = match.map(Number)
+          console.log(`${color} -> ${computed} -> ${r} ${g} ${b}`)
+          return [r / 255, g / 255, b / 255, Number(a)]
+        }
+      }
+      // Case 2: fallback hex format like "#1b1b1d"
+      if (computed.startsWith('#') && computed.length === 7) {
+        const r = parseInt(computed.slice(1, 3), 16)
+        const g = parseInt(computed.slice(3, 5), 16)
+        const b = parseInt(computed.slice(5, 7), 16)
+        console.log(`${color} -> ${computed} -> ${r} ${g} ${b}`)
+        return [r / 255, g / 255, b / 255, 1]
+      }
+      throw new Error(`Unrecognized color format: '${computed}'`)
+    } catch (e) {
+      console.warn(`cssColorToRgbaArray fallback for color '${color}': ${e.message}`)
+      return [0, 0, 0, 1]
+    }
+  }
+
+  function updateBackgroundColor() {
+    const computedColor = getComputedStyle(document.documentElement).backgroundColor
+    const rgbaArray = cssColorToRgbaArray(computedColor)
+    if (niivue2Ref.current) {
+      niivue2Ref.current.opts.backColor = rgbaArray
+      niivue2Ref.current.drawScene()
+    }
+    if (niivue1Ref.current) {
+      niivue1Ref.current.opts.backColor = rgbaArray
+      niivue1Ref.current.drawScene()
+    }
+  }
+
   const canvas1Ref = useRef(null);
   const canvas2Ref = useRef(null);
   const niivue1Ref = useRef(null);
@@ -41,7 +87,7 @@ export const SyncDemo = ({
   // State for sync settings and display
   const [syncMode, setSyncMode] = useState(3); // 0=none, 1=2D, 2=3D, 3=both
   const [layout, setLayout] = useState(0); // 0=auto, 1=column, 2=grid, 3=row
-  const [canvasHeight, setCanvasHeight] = useState(512);
+  const [canvasHeight, setCanvasHeight] = useState(256);
   const [gamma, setGamma] = useState(1.0);
   const [intensity1, setIntensity1] = useState("");
   const [intensity2, setIntensity2] = useState("");
@@ -87,7 +133,7 @@ export const SyncDemo = ({
         try {
           await nv2.loadVolumes(defaultImages2);
           console.log("Volumes loaded in Niivue 2.");
-          
+          updateBackgroundColor()
           // Initial synchronization setup once both instances are initialized
           setupSynchronization(syncMode);
         } catch (error) {
@@ -176,6 +222,24 @@ export const SyncDemo = ({
       setGamma(newGamma);
     }
   };
+
+  // Effect to set back color to match theme
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes" && mutation.attributeName === "data-theme") {
+        updateBackgroundColor()
+      }
+    }
+  })
+
+  observer.observe(document.documentElement, { attributes: true })
+
+  updateBackgroundColor()
+
+  return () => observer.disconnect()
+}, [])
+
 
   return (
     <div
@@ -274,6 +338,7 @@ export const SyncDemo = ({
           <div style={{ height: "100%", width: "100%" }}>
             <canvas
               ref={canvas1Ref}
+              style={{minHeight: "256px"}}
             ></canvas>
           </div>
         </div>
@@ -281,6 +346,7 @@ export const SyncDemo = ({
           <div style={{ height: "100%", width: "100%" }}>
             <canvas
               ref={canvas2Ref}
+              style={{minHeight: "256px"}}
             ></canvas>
           </div>
         </div>
