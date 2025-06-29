@@ -30,8 +30,9 @@ npm run dev
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
-- [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
+- [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
+- [neurosynth compose](https://compose.neurosynth.org/) uses NiiVue for [display](https://compose.neurosynth.org/meta-analyses/qKZkqm5STSqo)
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 - [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
 - [QuantCo](https://www.quantco.com/) is using NiiVue in medical imaging workflows

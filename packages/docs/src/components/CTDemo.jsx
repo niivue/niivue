@@ -16,6 +16,7 @@ const defaultNvOpts = {
   isColorbar: true, // Show colorbar by default for demo
   logLevel: "info",
   multiplanarShowRender: SHOW_RENDER.ALWAYS, 
+  show3Dcrosshair: true,
 };
 
 export const CTDemo = ({
