@@ -33,6 +33,7 @@ npm run dev
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
 - [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
 - [neurosynth compose](https://compose.neurosynth.org/) uses NiiVue for [display](https://compose.neurosynth.org/meta-analyses/qKZkqm5STSqo)
+- [NiChart](https://neuroimagingchart.com/components/#Data%20Visualization) is developing in-browser viewing of scans.
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 - [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
 - [QuantCo](https://www.quantco.com/) is using NiiVue in medical imaging workflows
