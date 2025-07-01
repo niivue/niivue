@@ -8,7 +8,7 @@ files:
   - 'out/main/**'
   - 'out/preload/**'
   - 'out/renderer/**'
-  - 'resources/icons/**'
+  - 'resources/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
@@ -60,3 +60,6 @@ publish:
   url: https://example.com/auto-updates
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+extraResources:
+  - from: resources/icons
+    to: icons

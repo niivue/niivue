@@ -11,6 +11,11 @@ import { layouts } from '../../common/layouts.js'
 import fs from 'fs'
 import path from 'path'
 
+const isDev = !app.isPackaged
+const RESOURCES_DIR = isDev
+  ? path.join(__dirname, '..', '..', 'resources')
+  : path.join(process.resourcesPath)
+
 export const registerIpcHandlers = (): void => {
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
   ipcMain.handle('loadFromFile', loadFromFileHandler)
@@ -62,12 +67,14 @@ export const registerIpcHandlers = (): void => {
     (event, { fileName, jsonStr }: { fileName: string; jsonStr: string }) => {
       try {
         // const filePath = path.join(app.getPath('documents'), fileName)
-        const tmpDir = app.getPath('temp');
-        const filePath = path.join(tmpDir, fileName);
+        const tmpDir = app.getPath('temp')
+        const filePath = path.join(tmpDir, fileName)
         fs.writeFileSync(filePath, jsonStr, 'utf-8')
         console.log('[start-tab-drag] File written to:', filePath)
 
-        const iconPath = path.join(process.resourcesPath, 'icons', 'file_icon.png')
+        // const iconPath = path.join(process.resourcesPath, 'icons', 'file_icon.png')
+        const iconPath = path.join(RESOURCES_DIR, 'icons', 'file_icon.png')
+        // const iconPath = path.join(process.resourcesPath, 'icons', 'file_icon.png')
         console.log('[start-tab-drag] loading icon from:', iconPath)
         // const icon = nativeImage.createFromPath(dragIconPath)
         const icon = nativeImage.createFromPath(iconPath)
@@ -78,23 +85,11 @@ export const registerIpcHandlers = (): void => {
         const finalIcon = icon.isEmpty()
           ? nativeImage.createEmpty().resize({ width: 64, height: 64 })
           : icon.resize({ width: 64, height: 96 })
-        // console.log('icon resized')
-        // console.log('icon size:', icon.getSize())
-        // console.log('is empty:', icon.isEmpty())
-        // console.log('toDataURL:', icon.toDataURL().substring(0, 100))
+
         event.sender.startDrag({
           file: filePath,
           icon: finalIcon
         })
-        // console.log('drag started')
-        // Optional fallback for Linux or debugging
-        // if (process.platform === 'linux') {
-        //   shell.showItemInFolder(filePath)
-        // }
-
-        // setTimeout(() => {
-        //   console.log('[start-tab-drag] drag complete (timeout fallback)')
-        // }, 500)
       } catch (err) {
         console.error('[start-tab-drag] Failed:', err)
       }
