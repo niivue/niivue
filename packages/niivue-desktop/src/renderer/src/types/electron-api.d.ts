@@ -4,6 +4,7 @@ declare global {
   interface Window {
     electron: ElectronAPI & {
       startTabDrag: (fileName: string, jsonStr: string) => void
+      setZoomFactor: (factor: number) => void
     }
   }
 }
