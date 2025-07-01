@@ -31,6 +31,16 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
   // Merge default and passed options
   const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
 
+  let activeIdx = - 1
+  function handleLocationChange(data) {
+    setIntensity(data.string)
+    let idx = data.values[1].value
+    if ((isFinite(idx)) && (idx !== activeIdx)) {
+      activeIdx = idx
+      niivueRef.current.opts.atlasActiveIndex = activeIdx
+      niivueRef.current.updateGLVolume()
+    }
+  }
   // Initialize Niivue instance and load volumes on mount
   useEffect(() => {
     const initializeNiivue = async () => {
@@ -38,7 +48,7 @@ export const AtlasDemo = ({ nvOpts = {} }) => {
         console.log("Initializing Niivue...");
         const nv = new Niivue({
           ...mergedNvOpts,
-          onLocationChange: (data) => setIntensity(data.string)
+          onLocationChange: handleLocationChange
         });
         niivueRef.current = nv;
 

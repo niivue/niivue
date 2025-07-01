@@ -8116,6 +8116,7 @@ export class Niivue {
     let outline = 0
     if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
       outline = this.opts.atlasOutline
+      this.gl.uniform1ui(orientShader.uniforms.activeIndex, this.opts.atlasActiveIndex | 0)
     }
     this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
       1.0 / this.back.dims[1],
@@ -13269,12 +13270,14 @@ export class Niivue {
           mxRowWid = Math.max(mxRowWid, left + prevW)
           rowHt = 0
           left = 0
+          prevW = 0
+          continue
         }
         w = prevW
         if (horizontalOverlap > 0 && !isRender) {
           w = Math.round(w * (1.0 - horizontalOverlap))
         }
-        log.debug(`slice ${i} width with overlap ${w} pixels`)
+        log.debug(`item ${i} width with overlap ${w} pixels`)
         left += w
         w = 0
         const sliceMM = parseFloat(item)

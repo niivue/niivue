@@ -118,6 +118,7 @@ export type NVConfigOptions = {
   keyDebounceTime: number
   isNearestInterpolation: boolean
   atlasOutline: number
+  atlasActiveIndex: number
   isRuler: boolean
   isColorbar: boolean
   isOrientCube: boolean
@@ -235,6 +236,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isNearestInterpolation: false,
   isResizeCanvas: true,
   atlasOutline: 0,
+  atlasActiveIndex: 0,
   isRuler: false,
   isColorbar: false,
   isOrientCube: false,
