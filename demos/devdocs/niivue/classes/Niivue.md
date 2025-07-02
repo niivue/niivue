@@ -443,7 +443,7 @@ Defined in: [niivue/index.ts:948](https://github.com/niivue/niivue/blob/main/pac
 addColormap(key: string, cmap: ColorMap): void;
 ```
 
-Defined in: [niivue/index.ts:8235](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8235)
+Defined in: [niivue/index.ts:8236](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8236)
 
 create a new colormap
 
@@ -475,7 +475,7 @@ addLabel(
    onClick?: (label: NVLabel3D) => void): NVLabel3D;
 ```
 
-Defined in: [niivue/index.ts:11979](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11979)
+Defined in: [niivue/index.ts:11980](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11980)
 
 Add a 3D Label
 
@@ -896,7 +896,7 @@ niivue.closeDrawing();
 colormap(lutName: string, isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [niivue/index.ts:9160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9160)
+Defined in: [niivue/index.ts:9161](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9161)
 
 Retrieve a colormap with optional inversion
 
@@ -925,7 +925,7 @@ the RGBA colormap as a Uint8ClampedArray
 colormaps(): string[];
 ```
 
-Defined in: [niivue/index.ts:8225](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8225)
+Defined in: [niivue/index.ts:8226](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8226)
 
 query all available color maps that can be applied to volumes
 
@@ -959,7 +959,7 @@ conform(
 isRobustMinMax: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8863](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8863)
+Defined in: [niivue/index.ts:8864](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8864)
 
 FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
 
@@ -993,7 +993,7 @@ createConnectedLabelImage(
 onlyLargestClusterPerClass: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8574](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8574)
+Defined in: [niivue/index.ts:8575](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8575)
 
 Create a connected component label map from a volume
 
@@ -1084,7 +1084,7 @@ createNiftiArray(
 img: Uint8Array): Promise<Uint8Array>;
 ```
 
-Defined in: [niivue/index.ts:8819](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8819)
+Defined in: [niivue/index.ts:8820](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8820)
 
 Create a binary NIfTI file as a Uint8Array, including header and image data
 
@@ -1116,7 +1116,7 @@ a Uint8Array representing a complete NIfTI file
 createOnLocationChange(axCorSag: number): void;
 ```
 
-Defined in: [niivue/index.ts:11874](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11874)
+Defined in: [niivue/index.ts:11875](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11875)
 
 Internal utility to generate human-readable location strings for the onLocationChange callback
 
@@ -1251,7 +1251,7 @@ Performs a 1-voxel binary dilation on a connected cluster within the drawing mas
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:13193](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13193)
+Defined in: [niivue/index.ts:13194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13194)
 
 display a lightbox or montage view
 
@@ -1490,7 +1490,7 @@ Get the currently assigned DICOM loader.
 getFrame4D(id: string): number;
 ```
 
-Defined in: [niivue/index.ts:9140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9140)
+Defined in: [niivue/index.ts:9141](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9141)
 
 determine active 3D volume from 4D time series
 
@@ -1784,7 +1784,7 @@ the `Niivue` instance (for method chaining)
 loadDeferred4DVolumes(id: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:9081](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9081)
+Defined in: [niivue/index.ts:9082](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9082)
 
 Load all volumes for image opened with `limitFrames4D`, the user can also click the `...` on a 4D timeline to load deferred volumes
 
@@ -2098,7 +2098,7 @@ a Promise that resolves when the file has been loaded and added to the scene
 loadFromUrl(fnm: string): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8844](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8844)
+Defined in: [niivue/index.ts:8845](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8845)
 
 Load a NIfTI image from a URL and convert it to an NVImage object
 
@@ -2299,7 +2299,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:12707](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12707)
+Defined in: [niivue/index.ts:12708](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12708)
 
 move crosshair a fixed number of voxels (not mm)
 
@@ -2449,7 +2449,7 @@ niivue.moveVolumeUp(this.volumes[0]); // move the background image to the second
 niftiArray2NVImage(bytes: Uint8Array): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:8834](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8834)
+Defined in: [niivue/index.ts:8835](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8835)
 
 Convert a binary NIfTI file (as a Uint8Array) to an NVImage object
 
@@ -2477,7 +2477,7 @@ a Promise resolving to an NVImage object
 refreshColormaps(): Niivue;
 ```
 
-Defined in: [niivue/index.ts:9215](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9215)
+Defined in: [niivue/index.ts:9216](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9216)
 
 Rebuild and upload all colormap textures for volumes and meshes
 
@@ -2922,7 +2922,7 @@ niivue.isAdditiveBlend(true);
 setAtlasOutline(isOutline: number): void;
 ```
 
-Defined in: [niivue/index.ts:10664](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10664)
+Defined in: [niivue/index.ts:10665](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10665)
 
 Enable or disable atlas outline overlay
 
@@ -3078,7 +3078,7 @@ niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]); // remove inferior 2
 setColormap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:8247](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8247)
+Defined in: [niivue/index.ts:8248](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8248)
 
 update the colormap of an image given its ID
 
@@ -3111,7 +3111,7 @@ niivue.setColormap(niivue.volumes[0].id,, 'red')
 setColorMap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:9022](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9022)
+Defined in: [niivue/index.ts:9023](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9023)
 
 #### Parameters
 
@@ -3136,7 +3136,7 @@ Use [setColormap](#setcolormap) instead. This alias is retained for compatibilit
 setColormapNegative(id: string, colormapNegative: string): void;
 ```
 
-Defined in: [niivue/index.ts:9035](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9035)
+Defined in: [niivue/index.ts:9036](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9036)
 
 use given color map for negative voxels in image
 
@@ -3505,7 +3505,7 @@ niivue.setDrawOpacity(0.7);
 setFrame4D(id: string, frame4D: number): void;
 ```
 
-Defined in: [niivue/index.ts:9113](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9113)
+Defined in: [niivue/index.ts:9114](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9114)
 
 show desired 3D volume from 4D time series
 
@@ -3538,7 +3538,7 @@ nv1.setFrame4D(nv1.volumes[0].id, 42);
 setGamma(gamma: number): void;
 ```
 
-Defined in: [niivue/index.ts:9072](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9072)
+Defined in: [niivue/index.ts:9073](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9073)
 
 adjust screen gamma. Low values emphasize shadows but can appear flat, high gamma hides shadow details.
 
@@ -3667,7 +3667,7 @@ niivue.setHighResolutionCapable(true);
 setInterpolation(isNearest: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:10676](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10676)
+Defined in: [niivue/index.ts:10677](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10677)
 
 select between nearest and linear interpolation for voxel based images
 
@@ -3906,7 +3906,7 @@ setModulationImage(
    modulateAlpha: number): void;
 ```
 
-Defined in: [niivue/index.ts:9050](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9050)
+Defined in: [niivue/index.ts:9051](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9051)
 
 modulate intensity of one image based on intensity of another
 
@@ -4165,7 +4165,7 @@ niivue.setRenderAzimuthElevation(45, 15);
 setRenderDrawAmbientOcclusion(ao: number): void;
 ```
 
-Defined in: [niivue/index.ts:9006](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9006)
+Defined in: [niivue/index.ts:9007](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9007)
 
 darken crevices and brighten corners when 3D rendering drawings.
 

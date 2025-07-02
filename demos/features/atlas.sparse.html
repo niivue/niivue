@@ -19,15 +19,22 @@
         class="slider"
         id="alphaSlider"
       />
-      <label for="outlineSlider">Outline</label>
-      <input
-        type="range"
-        min="0"
-        max="255"
-        value="255"
-        class="slider"
-        id="outlineSlider"
-      />
+      <label for="atlasOutlineSelect">Atlas Outline</label>
+      <select id="atlasOutlineSelect">
+        <option value="0">None</option>
+        <option value="0.01" selected>Gap</option>
+        <option value="1">Opaque</option>
+        <option value="-1">Black</option>
+      </select>
+      &nbsp; &nbsp;
+      <label for="renderMode">Render Mode</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0">matte</option>
+        <option value="0.3" selected>low</option>
+        <option value="0.6">medium</option>
+        <option value="1.0">high</option>
+      </select>
       <button id="about">About</button>
     </header>
     <main>
@@ -40,10 +47,26 @@
         {url: "../images/inia19-t1-brain.nii.gz"},
         {url: "../images/inia19-NeuroMaps.nii.gz", opacity: 0.5},
       ]
+      let activeIdx = - 1
       function handleLocationChange(data) {
         document.getElementById("location").innerHTML = data.string
+        let idx = data.values[1].value
+        if ((isFinite(idx)) && (idx !== activeIdx)) {
+          activeIdx = idx
+          nv1.opts.atlasActiveIndex = activeIdx
+          nv1.updateGLVolume()
+        }
       }
-      var nv1 = new niivue.Niivue({ onLocationChange: handleLocationChange })
+      alphaSlider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255)
+      }
+      atlasOutlineSelect.onchange = function () {
+        nv1.setAtlasOutline(parseFloat(this.value))
+      }
+      renderMode.onchange = function () {
+        nv1.setVolumeRenderIllumination(this.value)
+      }
+      var nv1 = new niivue.Niivue({show3Dcrosshair: true, onLocationChange: handleLocationChange })
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.opts.dragMode = nv1.dragModes.pan
       nv1.opts.yoke3Dto2DZoom = true
@@ -51,14 +74,10 @@
       await nv1.loadVolumes(volumeList1)
       await nv1.volumes[1].setColormapLabelFromUrl("../images/inia19-NeuroMaps.json")
       nv1.updateGLVolume()
-      outlineSlider.oninput = function () {
-        nv1.setAtlasOutline(this.value / 255)
-      }
-      alphaSlider.oninput = function () {
-        nv1.setOpacity(1, this.value / 255)
-      }
+
       alphaSlider.oninput()
-      outlineSlider.oninput()
+      atlasOutlineSelect.onchange()
+      renderMode.onchange()
       document.getElementById("about").addEventListener("click", doAbout)
       function doAbout() {
         window.alert(

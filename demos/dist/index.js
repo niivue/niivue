@@ -6347,11 +6347,13 @@ precision highp int;
 precision highp float;
 in vec2 TexCoord;
 out vec4 FragColor;
+uniform bool isAdditiveBlend;
 uniform float coordZ;
 uniform float layer;
 uniform highp sampler2D colormap;
 uniform lowp sampler3D blend3D;
 uniform float opacity;
+uniform uint activeIndex;
 uniform vec4 xyzaFrac;
 uniform mat4 mtx;
 void main(void) {
@@ -6366,9 +6368,11 @@ void main(void) {
 	float nlayer = float(textureSize(colormap, 0).y);
 	float y = ((2.0 * layer) + 1.5)/nlayer;
 	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	float alpha = FragColor.a;
+	if (FragColor.a > 0.0)
+		FragColor.a = 1.0;
 	FragColor.a *= opacity;
-	if (xyzaFrac.a > 0.0) { //outline
+	bool isBorder = false;
+	if (xyzaFrac.a != 0.0) { //outline
 		vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
 		uint R = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x-xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
@@ -6381,9 +6385,30 @@ void main(void) {
 		uint S = uint(texture(intensityVol, vx.xyz).r);
 		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
 		uint I = uint(texture(intensityVol, vx.xyz).r);
-		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I))
-			FragColor.a = alpha * xyzaFrac.a;
+		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
+			isBorder = true;
+			if (xyzaFrac.a > 0.0)
+				FragColor.a = xyzaFrac.a;
+			else
+				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		}
 	}
+	if ((!isBorder) &&(idx == activeIndex)) {
+		if (FragColor.a > 0.5)
+			FragColor.a *= 0.4;
+		else
+			FragColor.a =0.8;
+	}
+	if (layer < 1.0) return;
+		vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+		// https://en.wikipedia.org/wiki/Alpha_compositing
+		float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+		if (aout <= 0.0) return;
+		if (isAdditiveBlend)
+			FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a)) / aout;
+		else
+			FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+		FragColor.a = aout;
 }`;
 var fragOrientShader = `#line 691
 precision highp int;
@@ -29638,6 +29663,7 @@ var DEFAULT_OPTIONS = {
   isNearestInterpolation: false,
   isResizeCanvas: true,
   atlasOutline: 0,
+  atlasActiveIndex: 0,
   isRuler: false,
   isColorbar: false,
   isOrientCube: false,
@@ -41204,6 +41230,7 @@ var Niivue = class {
     let outline = 0;
     if (hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
       outline = this.opts.atlasOutline;
+      this.gl.uniform1ui(orientShader.uniforms.activeIndex, this.opts.atlasActiveIndex | 0);
     }
     this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
       1 / this.back.dims[1],
@@ -45698,12 +45725,14 @@ var Niivue = class {
           mxRowWid = Math.max(mxRowWid, left + prevW);
           rowHt = 0;
           left = 0;
+          prevW = 0;
+          continue;
         }
         w = prevW;
         if (horizontalOverlap > 0 && !isRender) {
           w = Math.round(w * (1 - horizontalOverlap));
         }
-        log.debug(`slice ${i} width with overlap ${w} pixels`);
+        log.debug(`item ${i} width with overlap ${w} pixels`);
         left += w;
         w = 0;
         const sliceMM = parseFloat(item);

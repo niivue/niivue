@@ -15,32 +15,10 @@
     <strong>niivue requires JavaScript.</strong>
   </noscript>
   <header>
-    <label for="fiberRadius">Radius</label>
-    <input type="range" min="0" max="20" value="5" class="slider" id="fiberRadius" />
-    <label for="fiberDitherSlider">Dither</label>
-    <input type="range" min="0" max="10" value="0" class="slider" id="fiberDitherSlider" />
-    <label for="fiberColor">Fiber color</label>
-    <select id="fiberColor">
-      <option value="Global">Global direction</option>
-      <option value="Local">Local direction</option>
-      <option value="Fixed">Fixed</option>
-      <option value="DPV0" selected>First Per Vertex Type (if available)</option>
-    </select>
-    <label for="fiberColormap">Colormap</label>
-    <select id="fiberColormap">
-      <option value="actc">ACTC</option>
-      <option value="inferno" selected>Inferno</option>
-      <option value="plasma">Plasma</option>
-      <option value="warm">Warm</option>
-      <option value="winter">Winter</option>
-    </select>
-    <label for="fiberCalMin">Color Minimum</label>
-    <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
     <button id="about">Save NVD</button>
     <button id="clear">Clear</button>
     <button id="update">Update</button>
     <button id="info">Info</button>
-    <button id="colormap">Set Colormap</button>
   </header>
   <main id="canvas-container">
     <canvas id="gl1"></canvas>
@@ -48,24 +26,6 @@
   <footer id="location">&nbsp;</footer>
   <script type="module" async>
     import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER } from "../dist/index.js";
-    fiberRadius.oninput = function () {
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
-      nv1.updateGLVolume();
-    };
-    fiberColor.onchange = function () {
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
-    };
-    fiberColormap.onchange = function () {
-      nv1.setMeshProperty(nv1.meshes[0].id, "colormap", this.value);
-    };
-
-    fiberDitherSlider.oninput = function () {
-      nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", this.value * 0.1);
-    };
-    fiberCalMin.oninput = function () {
-      nv1.meshes[0].dpv[0].cal_min = this.value * 1; //*1 converts string to number
-      nv1.setMeshProperty(nv1.meshes[0].id, "colormap", fiberColormap.value);
-    };
     about.onclick = function () {
       //window.alert("The `Per Vertex` colors visualize a tsf format overlay created with tcksample");
       console.log("document on save", nv1.document);
@@ -90,16 +50,6 @@
         console.log('vol', vol);
       }
     }
-
-    colormap.onclick = async function() {
-      console.log('setting colormap')
-      let cmap = await fetchJSON("../images/aal.json")
-      console.log('colormap loaded')
-      nv1.volumes[1].setColormapLabel(cmap)
-      nv1.updateGLVolume()
-      console.log('finished')
-    }
-
     var volumeList1 = [
       { url: "../images/mni152.nii.gz" }, 
       { url: "../images/aal.nii.gz" }];
@@ -116,14 +66,10 @@
     }
     function handleLocationChange(data) {
       document.getElementById("location").innerHTML = data.string
-      
-
     }
-
     async function handleDocumentLoaded(doc) {
       console.log("doc loaded", doc);
     }
-
     var nv1 = new Niivue(defaults);
     await nv1.attachToCanvas(gl1);
     nv1.opts.dragMode = nv1.dragModes.pan;
@@ -132,14 +78,6 @@
     await nv1.loadVolumes(volumeList1);
     let cmap = await fetchJSON("../images/aal.json")
     nv1.volumes[1].setColormapLabel(cmap)
-    var layerList = [{url: "../images/mni152.SLF1_R.tsf"}];
-    await nv1.loadMeshes([{ url: "../images/tract.SLF1_R.tck", layers: layerList,}]);
-    // console.log("meshes at load", nv1.meshes);
-    nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "DPV0");
-    nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
-    nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
-    nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed
-    nv1.setMeshShader(nv1.meshes[0].id, "diffuse");
     var meshLayersList1 = [
       {
         url: "../images/lh.curv",
@@ -164,12 +102,10 @@
       },
       { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
     ])
-
-
+    nv1.opts.showLegend = false
     nv1.setClipPlane([-0.12, 180, 40]);
     nv1.setRenderAzimuthElevation(230,15)
     nv1.setSliceType(nv1.sliceTypeMultiplanar);
-    
   </script>
 </body>
 

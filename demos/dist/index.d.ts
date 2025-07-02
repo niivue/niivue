@@ -650,6 +650,7 @@ type NVConfigOptions = {
     keyDebounceTime: number;
     isNearestInterpolation: boolean;
     atlasOutline: number;
+    atlasActiveIndex: number;
     isRuler: boolean;
     isColorbar: boolean;
     isOrientCube: boolean;

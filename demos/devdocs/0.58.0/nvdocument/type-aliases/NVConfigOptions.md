@@ -10,6 +10,16 @@ NVConfigOptions
 
 ## Properties
 
+### atlasActiveIndex
+
+```ts
+atlasActiveIndex: number;
+```
+
+Defined in: [nvdocument.ts:121](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L121)
+
+---
+
 ### atlasOutline
 
 ```ts
@@ -36,7 +46,7 @@ Defined in: [nvdocument.ts:98](https://github.com/niivue/niivue/blob/main/packag
 centerMosaic: boolean;
 ```
 
-Defined in: [nvdocument.ts:175](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L175)
+Defined in: [nvdocument.ts:176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L176)
 
 ---
 
@@ -46,7 +56,7 @@ Defined in: [nvdocument.ts:175](https://github.com/niivue/niivue/blob/main/packa
 clickToSegment: boolean;
 ```
 
-Defined in: [nvdocument.ts:179](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L179)
+Defined in: [nvdocument.ts:180](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L180)
 
 ---
 
@@ -56,7 +66,7 @@ Defined in: [nvdocument.ts:179](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentAutoIntensity: boolean;
 ```
 
-Defined in: [nvdocument.ts:182](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L182)
+Defined in: [nvdocument.ts:183](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L183)
 
 ---
 
@@ -66,7 +76,7 @@ Defined in: [nvdocument.ts:182](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentBright: boolean;
 ```
 
-Defined in: [nvdocument.ts:181](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L181)
+Defined in: [nvdocument.ts:182](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L182)
 
 ---
 
@@ -76,7 +86,7 @@ Defined in: [nvdocument.ts:181](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentIntensityMax: number;
 ```
 
-Defined in: [nvdocument.ts:183](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L183)
+Defined in: [nvdocument.ts:184](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L184)
 
 ---
 
@@ -86,7 +96,7 @@ Defined in: [nvdocument.ts:183](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentIntensityMin: number;
 ```
 
-Defined in: [nvdocument.ts:184](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L184)
+Defined in: [nvdocument.ts:185](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L185)
 
 ---
 
@@ -96,7 +106,7 @@ Defined in: [nvdocument.ts:184](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentIs2D: boolean;
 ```
 
-Defined in: [nvdocument.ts:187](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L187)
+Defined in: [nvdocument.ts:188](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L188)
 
 ---
 
@@ -106,7 +116,7 @@ Defined in: [nvdocument.ts:187](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentMaxDistanceMM: number;
 ```
 
-Defined in: [nvdocument.ts:186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L186)
+Defined in: [nvdocument.ts:187](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L187)
 
 ---
 
@@ -116,7 +126,7 @@ Defined in: [nvdocument.ts:186](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentPercent: number;
 ```
 
-Defined in: [nvdocument.ts:185](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L185)
+Defined in: [nvdocument.ts:186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L186)
 
 ---
 
@@ -126,7 +136,7 @@ Defined in: [nvdocument.ts:185](https://github.com/niivue/niivue/blob/main/packa
 clickToSegmentRadius: number;
 ```
 
-Defined in: [nvdocument.ts:180](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L180)
+Defined in: [nvdocument.ts:181](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L181)
 
 ---
 
@@ -266,7 +276,7 @@ Defined in: [nvdocument.ts:115](https://github.com/niivue/niivue/blob/main/packa
 dragAndDropEnabled: boolean;
 ```
 
-Defined in: [nvdocument.ts:150](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L150)
+Defined in: [nvdocument.ts:151](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L151)
 
 ---
 
@@ -278,7 +288,7 @@ dragMode:
   | DRAG_MODE_SECONDARY;
 ```
 
-Defined in: [nvdocument.ts:133](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L133)
+Defined in: [nvdocument.ts:134](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L134)
 
 ---
 
@@ -288,7 +298,7 @@ Defined in: [nvdocument.ts:133](https://github.com/niivue/niivue/blob/main/packa
 dragModePrimary: DRAG_MODE_PRIMARY;
 ```
 
-Defined in: [nvdocument.ts:134](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L134)
+Defined in: [nvdocument.ts:135](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L135)
 
 ---
 
@@ -298,7 +308,7 @@ Defined in: [nvdocument.ts:134](https://github.com/niivue/niivue/blob/main/packa
 drawingEnabled: boolean;
 ```
 
-Defined in: [nvdocument.ts:152](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L152)
+Defined in: [nvdocument.ts:153](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L153)
 
 ---
 
@@ -308,7 +318,7 @@ Defined in: [nvdocument.ts:152](https://github.com/niivue/niivue/blob/main/packa
 floodFillNeighbors: number;
 ```
 
-Defined in: [nvdocument.ts:156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L156)
+Defined in: [nvdocument.ts:157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L157)
 
 ---
 
@@ -348,7 +358,7 @@ Defined in: [nvdocument.ts:85](https://github.com/niivue/niivue/blob/main/packag
 forceDevicePixelRatio: number;
 ```
 
-Defined in: [nvdocument.ts:146](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L146)
+Defined in: [nvdocument.ts:147](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L147)
 
 ---
 
@@ -358,7 +368,7 @@ Defined in: [nvdocument.ts:146](https://github.com/niivue/niivue/blob/main/packa
 gradientAmount: number;
 ```
 
-Defined in: [nvdocument.ts:202](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L202)
+Defined in: [nvdocument.ts:203](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L203)
 
 ---
 
@@ -368,7 +378,7 @@ Defined in: [nvdocument.ts:202](https://github.com/niivue/niivue/blob/main/packa
 gradientOpacity: number;
 ```
 
-Defined in: [nvdocument.ts:200](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L200)
+Defined in: [nvdocument.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L201)
 
 ---
 
@@ -378,7 +388,7 @@ Defined in: [nvdocument.ts:200](https://github.com/niivue/niivue/blob/main/packa
 gradientOrder: number;
 ```
 
-Defined in: [nvdocument.ts:199](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L199)
+Defined in: [nvdocument.ts:200](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L200)
 
 ---
 
@@ -388,7 +398,7 @@ Defined in: [nvdocument.ts:199](https://github.com/niivue/niivue/blob/main/packa
 heroImageFraction: number;
 ```
 
-Defined in: [nvdocument.ts:139](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L139)
+Defined in: [nvdocument.ts:140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L140)
 
 ---
 
@@ -398,7 +408,7 @@ Defined in: [nvdocument.ts:139](https://github.com/niivue/niivue/blob/main/packa
 heroSliceType: SLICE_TYPE;
 ```
 
-Defined in: [nvdocument.ts:140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L140)
+Defined in: [nvdocument.ts:141](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L141)
 
 ---
 
@@ -408,7 +418,7 @@ Defined in: [nvdocument.ts:140](https://github.com/niivue/niivue/blob/main/packa
 interactive: boolean;
 ```
 
-Defined in: [nvdocument.ts:177](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L177)
+Defined in: [nvdocument.ts:178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L178)
 
 ---
 
@@ -418,7 +428,7 @@ Defined in: [nvdocument.ts:177](https://github.com/niivue/niivue/blob/main/packa
 invertScrollDirection: boolean;
 ```
 
-Defined in: [nvdocument.ts:203](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L203)
+Defined in: [nvdocument.ts:204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L204)
 
 ---
 
@@ -428,7 +438,7 @@ Defined in: [nvdocument.ts:203](https://github.com/niivue/niivue/blob/main/packa
 is2DSliceShader: boolean;
 ```
 
-Defined in: [nvdocument.ts:204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L204)
+Defined in: [nvdocument.ts:205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L205)
 
 ---
 
@@ -438,7 +448,7 @@ Defined in: [nvdocument.ts:204](https://github.com/niivue/niivue/blob/main/packa
 isAdditiveBlend: boolean;
 ```
 
-Defined in: [nvdocument.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L162)
+Defined in: [nvdocument.ts:163](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L163)
 
 ---
 
@@ -448,7 +458,7 @@ Defined in: [nvdocument.ts:162](https://github.com/niivue/niivue/blob/main/packa
 isAlphaClipDark: boolean;
 ```
 
-Defined in: [nvdocument.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L198)
+Defined in: [nvdocument.ts:199](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L199)
 
 ---
 
@@ -458,7 +468,7 @@ Defined in: [nvdocument.ts:198](https://github.com/niivue/niivue/blob/main/packa
 isAntiAlias: boolean | null;
 ```
 
-Defined in: [nvdocument.ts:161](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L161)
+Defined in: [nvdocument.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L162)
 
 ---
 
@@ -468,7 +478,7 @@ Defined in: [nvdocument.ts:161](https://github.com/niivue/niivue/blob/main/packa
 isColorbar: boolean;
 ```
 
-Defined in: [nvdocument.ts:122](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L122)
+Defined in: [nvdocument.ts:123](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L123)
 
 ---
 
@@ -478,7 +488,7 @@ Defined in: [nvdocument.ts:122](https://github.com/niivue/niivue/blob/main/packa
 isCornerOrientationText: boolean;
 ```
 
-Defined in: [nvdocument.ts:137](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L137)
+Defined in: [nvdocument.ts:138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L138)
 
 ---
 
@@ -488,7 +498,7 @@ Defined in: [nvdocument.ts:137](https://github.com/niivue/niivue/blob/main/packa
 isDepthPickMesh: boolean;
 ```
 
-Defined in: [nvdocument.ts:136](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L136)
+Defined in: [nvdocument.ts:137](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L137)
 
 ---
 
@@ -498,7 +508,7 @@ Defined in: [nvdocument.ts:136](https://github.com/niivue/niivue/blob/main/packa
 isFilledPen: boolean;
 ```
 
-Defined in: [nvdocument.ts:157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L157)
+Defined in: [nvdocument.ts:158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L158)
 
 ---
 
@@ -508,7 +518,7 @@ Defined in: [nvdocument.ts:157](https://github.com/niivue/niivue/blob/main/packa
 isForceMouseClickToVoxelCenters: boolean;
 ```
 
-Defined in: [nvdocument.ts:149](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L149)
+Defined in: [nvdocument.ts:150](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L150)
 
 ---
 
@@ -528,7 +538,7 @@ Defined in: [nvdocument.ts:119](https://github.com/niivue/niivue/blob/main/packa
 isOrientationTextVisible: boolean;
 ```
 
-Defined in: [nvdocument.ts:138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L138)
+Defined in: [nvdocument.ts:139](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L139)
 
 ---
 
@@ -538,7 +548,7 @@ Defined in: [nvdocument.ts:138](https://github.com/niivue/niivue/blob/main/packa
 isOrientCube: boolean;
 ```
 
-Defined in: [nvdocument.ts:123](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L123)
+Defined in: [nvdocument.ts:124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L124)
 
 ---
 
@@ -548,7 +558,7 @@ Defined in: [nvdocument.ts:123](https://github.com/niivue/niivue/blob/main/packa
 isRadiologicalConvention: boolean;
 ```
 
-Defined in: [nvdocument.ts:130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L130)
+Defined in: [nvdocument.ts:131](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L131)
 
 ---
 
@@ -558,7 +568,7 @@ Defined in: [nvdocument.ts:130](https://github.com/niivue/niivue/blob/main/packa
 isResizeCanvas: boolean;
 ```
 
-Defined in: [nvdocument.ts:165](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L165)
+Defined in: [nvdocument.ts:166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L166)
 
 ---
 
@@ -568,7 +578,7 @@ Defined in: [nvdocument.ts:165](https://github.com/niivue/niivue/blob/main/packa
 isRuler: boolean;
 ```
 
-Defined in: [nvdocument.ts:121](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L121)
+Defined in: [nvdocument.ts:122](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L122)
 
 ---
 
@@ -578,7 +588,7 @@ Defined in: [nvdocument.ts:121](https://github.com/niivue/niivue/blob/main/packa
 isSliceMM: boolean;
 ```
 
-Defined in: [nvdocument.ts:143](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L143)
+Defined in: [nvdocument.ts:144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L144)
 
 ---
 
@@ -588,7 +598,7 @@ Defined in: [nvdocument.ts:143](https://github.com/niivue/niivue/blob/main/packa
 isV1SliceShader: boolean;
 ```
 
-Defined in: [nvdocument.ts:145](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L145)
+Defined in: [nvdocument.ts:146](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L146)
 
 ---
 
@@ -608,7 +618,7 @@ Defined in: [nvdocument.ts:118](https://github.com/niivue/niivue/blob/main/packa
 legendBackgroundColor: number[];
 ```
 
-Defined in: [nvdocument.ts:170](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L170)
+Defined in: [nvdocument.ts:171](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L171)
 
 ---
 
@@ -618,7 +628,7 @@ Defined in: [nvdocument.ts:170](https://github.com/niivue/niivue/blob/main/packa
 legendTextColor: number[];
 ```
 
-Defined in: [nvdocument.ts:171](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L171)
+Defined in: [nvdocument.ts:172](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L172)
 
 ---
 
@@ -628,7 +638,7 @@ Defined in: [nvdocument.ts:171](https://github.com/niivue/niivue/blob/main/packa
 limitFrames4D: number;
 ```
 
-Defined in: [nvdocument.ts:167](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L167)
+Defined in: [nvdocument.ts:168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L168)
 
 ---
 
@@ -638,7 +648,7 @@ Defined in: [nvdocument.ts:167](https://github.com/niivue/niivue/blob/main/packa
 loadingText: string;
 ```
 
-Defined in: [nvdocument.ts:148](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L148)
+Defined in: [nvdocument.ts:149](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L149)
 
 ---
 
@@ -648,7 +658,7 @@ Defined in: [nvdocument.ts:148](https://github.com/niivue/niivue/blob/main/packa
 logLevel: "debug" | "info" | "warn" | "error" | "fatal" | "silent";
 ```
 
-Defined in: [nvdocument.ts:147](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L147)
+Defined in: [nvdocument.ts:148](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L148)
 
 ---
 
@@ -668,7 +678,7 @@ Defined in: [nvdocument.ts:116](https://github.com/niivue/niivue/blob/main/packa
 maxDrawUndoBitmaps: number;
 ```
 
-Defined in: [nvdocument.ts:159](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L159)
+Defined in: [nvdocument.ts:160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L160)
 
 ---
 
@@ -678,7 +688,7 @@ Defined in: [nvdocument.ts:159](https://github.com/niivue/niivue/blob/main/packa
 measureLineColor: number[];
 ```
 
-Defined in: [nvdocument.ts:196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L196)
+Defined in: [nvdocument.ts:197](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L197)
 
 ---
 
@@ -688,7 +698,7 @@ Defined in: [nvdocument.ts:196](https://github.com/niivue/niivue/blob/main/packa
 measureTextColor: number[];
 ```
 
-Defined in: [nvdocument.ts:195](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L195)
+Defined in: [nvdocument.ts:196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L196)
 
 ---
 
@@ -698,7 +708,7 @@ Defined in: [nvdocument.ts:195](https://github.com/niivue/niivue/blob/main/packa
 measureTextHeight: number;
 ```
 
-Defined in: [nvdocument.ts:197](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L197)
+Defined in: [nvdocument.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L198)
 
 ---
 
@@ -708,7 +718,7 @@ Defined in: [nvdocument.ts:197](https://github.com/niivue/niivue/blob/main/packa
 measureTextJustify: "start" | "center" | "end";
 ```
 
-Defined in: [nvdocument.ts:194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L194)
+Defined in: [nvdocument.ts:195](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L195)
 
 ---
 
@@ -718,7 +728,7 @@ Defined in: [nvdocument.ts:194](https://github.com/niivue/niivue/blob/main/packa
 meshThicknessOn2D: number | string;
 ```
 
-Defined in: [nvdocument.ts:132](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L132)
+Defined in: [nvdocument.ts:133](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L133)
 
 ---
 
@@ -728,7 +738,7 @@ Defined in: [nvdocument.ts:132](https://github.com/niivue/niivue/blob/main/packa
 meshXRay: number;
 ```
 
-Defined in: [nvdocument.ts:166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L166)
+Defined in: [nvdocument.ts:167](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L167)
 
 ---
 
@@ -738,7 +748,7 @@ Defined in: [nvdocument.ts:166](https://github.com/niivue/niivue/blob/main/packa
 multiplanarEqualSize: boolean;
 ```
 
-Defined in: [nvdocument.ts:128](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L128)
+Defined in: [nvdocument.ts:129](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L129)
 
 ---
 
@@ -748,7 +758,7 @@ Defined in: [nvdocument.ts:128](https://github.com/niivue/niivue/blob/main/packa
 multiplanarForceRender: boolean;
 ```
 
-Defined in: [nvdocument.ts:127](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L127)
+Defined in: [nvdocument.ts:128](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L128)
 
 ---
 
@@ -758,7 +768,7 @@ Defined in: [nvdocument.ts:127](https://github.com/niivue/niivue/blob/main/packa
 multiplanarLayout: MULTIPLANAR_TYPE;
 ```
 
-Defined in: [nvdocument.ts:172](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L172)
+Defined in: [nvdocument.ts:173](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L173)
 
 ---
 
@@ -768,7 +778,7 @@ Defined in: [nvdocument.ts:172](https://github.com/niivue/niivue/blob/main/packa
 multiplanarPadPixels: number;
 ```
 
-Defined in: [nvdocument.ts:125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L125)
+Defined in: [nvdocument.ts:126](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L126)
 
 ---
 
@@ -778,7 +788,7 @@ Defined in: [nvdocument.ts:125](https://github.com/niivue/niivue/blob/main/packa
 multiplanarShowRender: SHOW_RENDER;
 ```
 
-Defined in: [nvdocument.ts:129](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L129)
+Defined in: [nvdocument.ts:130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L130)
 
 ---
 
@@ -788,7 +798,7 @@ Defined in: [nvdocument.ts:129](https://github.com/niivue/niivue/blob/main/packa
 penSize: number;
 ```
 
-Defined in: [nvdocument.ts:178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L178)
+Defined in: [nvdocument.ts:179](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L179)
 
 ---
 
@@ -798,7 +808,7 @@ Defined in: [nvdocument.ts:178](https://github.com/niivue/niivue/blob/main/packa
 penValue: number;
 ```
 
-Defined in: [nvdocument.ts:154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L154)
+Defined in: [nvdocument.ts:155](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L155)
 
 ---
 
@@ -808,7 +818,7 @@ Defined in: [nvdocument.ts:154](https://github.com/niivue/niivue/blob/main/packa
 renderOverlayBlend: number;
 ```
 
-Defined in: [nvdocument.ts:173](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L173)
+Defined in: [nvdocument.ts:174](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L174)
 
 ---
 
@@ -818,7 +828,7 @@ Defined in: [nvdocument.ts:173](https://github.com/niivue/niivue/blob/main/packa
 renderSilhouette: number;
 ```
 
-Defined in: [nvdocument.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L201)
+Defined in: [nvdocument.ts:202](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L202)
 
 ---
 
@@ -848,7 +858,7 @@ Defined in: [nvdocument.ts:96](https://github.com/niivue/niivue/blob/main/packag
 sagittalNoseLeft: boolean;
 ```
 
-Defined in: [nvdocument.ts:142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L142)
+Defined in: [nvdocument.ts:143](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L143)
 
 ---
 
@@ -858,7 +868,7 @@ Defined in: [nvdocument.ts:142](https://github.com/niivue/niivue/blob/main/packa
 scrollRequiresFocus: boolean;
 ```
 
-Defined in: [nvdocument.ts:191](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L191)
+Defined in: [nvdocument.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L192)
 
 ---
 
@@ -878,7 +888,7 @@ Defined in: [nvdocument.ts:101](https://github.com/niivue/niivue/blob/main/packa
 selectionBoxIsOutline: boolean;
 ```
 
-Defined in: [nvdocument.ts:190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L190)
+Defined in: [nvdocument.ts:191](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L191)
 
 ---
 
@@ -888,7 +898,7 @@ Defined in: [nvdocument.ts:190](https://github.com/niivue/niivue/blob/main/packa
 selectionBoxLineThickness: number;
 ```
 
-Defined in: [nvdocument.ts:189](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L189)
+Defined in: [nvdocument.ts:190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L190)
 
 ---
 
@@ -918,7 +928,7 @@ Defined in: [nvdocument.ts:91](https://github.com/niivue/niivue/blob/main/packag
 showLegend: boolean;
 ```
 
-Defined in: [nvdocument.ts:169](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L169)
+Defined in: [nvdocument.ts:170](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L170)
 
 ---
 
@@ -928,7 +938,7 @@ Defined in: [nvdocument.ts:169](https://github.com/niivue/niivue/blob/main/packa
 showMeasureUnits: boolean;
 ```
 
-Defined in: [nvdocument.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L192)
+Defined in: [nvdocument.ts:193](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L193)
 
 ---
 
@@ -938,7 +948,7 @@ Defined in: [nvdocument.ts:192](https://github.com/niivue/niivue/blob/main/packa
 sliceMosaicString: string;
 ```
 
-Defined in: [nvdocument.ts:174](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L174)
+Defined in: [nvdocument.ts:175](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L175)
 
 ---
 
@@ -948,7 +958,7 @@ Defined in: [nvdocument.ts:174](https://github.com/niivue/niivue/blob/main/packa
 sliceType: SLICE_TYPE;
 ```
 
-Defined in: [nvdocument.ts:160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L160)
+Defined in: [nvdocument.ts:161](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L161)
 
 ---
 
@@ -968,7 +978,7 @@ Defined in: [nvdocument.ts:84](https://github.com/niivue/niivue/blob/main/packag
 thumbnail: string;
 ```
 
-Defined in: [nvdocument.ts:158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L158)
+Defined in: [nvdocument.ts:159](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L159)
 
 ---
 
@@ -978,7 +988,7 @@ Defined in: [nvdocument.ts:158](https://github.com/niivue/niivue/blob/main/packa
 tileMargin: number;
 ```
 
-Defined in: [nvdocument.ts:124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L124)
+Defined in: [nvdocument.ts:125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L125)
 
 ---
 
@@ -1008,4 +1018,4 @@ Defined in: [nvdocument.ts:114](https://github.com/niivue/niivue/blob/main/packa
 yoke3Dto2DZoom: boolean;
 ```
 
-Defined in: [nvdocument.ts:135](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L135)
+Defined in: [nvdocument.ts:136](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L136)
