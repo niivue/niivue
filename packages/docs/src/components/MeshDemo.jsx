@@ -58,7 +58,7 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
     niivueRef.current.setMeshProperty(0, 'visible', isChecked)
   }, []);
   const handleConnectChange = useCallback((event) => {
-    const connect = event.target.value;
+    const connect = parseFloat(event.target.value);
     setConnect(connect); // Update component state
     niivueRef.current.setMeshProperty(1, 'visible', connect > 0)
     if (connect > 0) {
@@ -124,8 +124,6 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
     attachAndLoadData();
   }, [isCanvasMounted]);
 
-
-
   // Handle view type changes
   useEffect(() => {
     if (!niivueRef.current) return;
@@ -157,6 +155,36 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
     }
   }, [viewType]);
 
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "data-theme"
+        ) {
+          const theme = document.documentElement.getAttribute("data-theme")
+          const isDark = theme === "dark"
+          if (niivueRef.current) {
+            niivueRef.current.opts.backColor = isDark ? [27/255, 27/255, 27/255, 1] : [1, 1, 1, 1]
+            niivueRef.current.drawScene() // refresh render
+          }
+        }
+      }
+    })
+  
+    observer.observe(document.documentElement, { attributes: true })
+  
+    // Optional: set initial theme immediately
+    const initialTheme = document.documentElement.getAttribute("data-theme")
+    const isDark = initialTheme === "dark"
+    if (niivueRef.current) {
+      niivueRef.current.opts.backColor = isDark ? [27/255, 27/255, 27/255, 1] : [1, 1, 1, 1]
+      niivueRef.current.drawScene()
+    }
+  
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div
       style={{
@@ -168,23 +196,25 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
         border: "1px solid #ccc",
         borderRadius: "8px",
         marginBottom: "4px",
+
       }}
     >
       {/* Conditionally render controls */}
       {showControls && (
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: "15px",
-          alignItems: "center",
-          width: "100%",
-        }}
-      >
+        <div
+          className="themed-background"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "15px",
+            alignItems: "center",
+            width: "100%",
+            borderRadius: "8px",
+          }}
+        >
         {/* View type selection */}
         <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-
           <label htmlFor="voxelCheck">
             Voxel
           </label>
@@ -245,7 +275,6 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
             <option value="MultiPlanarRender">A+C+S+R</option>
           </select>
         </div>
-
       </div>
       )}
       {/* Canvas container */}

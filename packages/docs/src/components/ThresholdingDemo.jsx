@@ -171,6 +171,37 @@ export const ThresholdingDemo = ({ nvOpts = {} }) => {
     }
   }, [smooth]);
 
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "data-theme"
+        ) {
+          const theme = document.documentElement.getAttribute("data-theme")
+          const isDark = theme === "dark"
+          console.log(">>>>>",isDark)
+          if (niivueRef.current) {
+            niivueRef.current.opts.backColor = isDark ? [0, 0, 0, 1] : [1, 1, 1, 1]
+            niivueRef.current.drawScene() // refresh render
+          }
+        }
+      }
+    })
+  
+    observer.observe(document.documentElement, { attributes: true })
+  
+    // Optional: set initial theme immediately
+    const initialTheme = document.documentElement.getAttribute("data-theme")
+    const isDark = initialTheme === "dark"
+    if (niivueRef.current) {
+      niivueRef.current.opts.backColor = isDark ? [0, 0, 0, 1] : [1, 1, 1, 1]
+      niivueRef.current.drawScene()
+    }
+  
+    return () => observer.disconnect()
+  }, [])
+
   // Handlers for controls
   const handleColormapTypeChange = (event) => {
     setColormapType(parseInt(event.target.value));

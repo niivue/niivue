@@ -3,12 +3,7 @@
  * and scoped locally.
  */
 
-.heroBanner {
-  padding: 4rem 0;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
+
 
 @media screen and (max-width: 996px) {
   .heroBanner {
@@ -20,4 +15,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* colors hard coded to match ifm-footer-background-color ifm-footer-title-color */
+/* in dark mode the default hero banner is extremely bright */
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background-color: #303846;
+  color: white;
 }

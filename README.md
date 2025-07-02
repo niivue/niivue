@@ -30,8 +30,9 @@ npm run dev
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
-- [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
+- [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
+- [neurosynth compose](https://compose.neurosynth.org/) uses NiiVue for [display](https://compose.neurosynth.org/meta-analyses/qKZkqm5STSqo)
 - [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
 - [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
 - [QuantCo](https://www.quantco.com/) is using NiiVue in medical imaging workflows
@@ -41,7 +42,7 @@ npm run dev
 - [ipyniivue](https://github.com/niivue/ipyniivue) allows NiiVue to be used in Jupyter Notebooks
 - [T2Lesion](https://niivue.github.io/T2lesion/) uses NiiVue to show input data and segmented lesion masks
 - [NiiVue Desktop](https://github.com/niivue/desktop) uses NiiVue in a crossplatform Electron app
-- [NiiVue iOS](https://github.com/niivue/ios) uses NiiVue in a hybrid Swift + webView mobile app
+- [NiiVue iOS](https://github.com/niivue/ios) is a Swift tool [available on the Apple App store for MacOS and iOS](https://apps.apple.com/kw/app/niivue/id6497066801)
 - [NiiVue Neglect](https://niivue.github.io/niivue-neglect/) uses NiiVue to visualise stroke lesion data in the spatial neglect severity prediction tool
 - [Plurimedia](https://www.plurimedia.it/) uses NiiVue in client work for medical image visualization
 - [Slice:Drop Reloaded](https://gaiborjosue.github.io/slicedrop.github.com/reload/) uses NiiVue to extend the original [slicedrop](https://slicedrop.com/)

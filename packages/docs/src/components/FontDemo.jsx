@@ -25,7 +25,7 @@ export const FontDemo = ({
   const niivueRef = useRef(null); // To store the Niivue instance
 
   // State for interactive controls
-  const [currentFont, setCurrentFont] = useState("Roboto");
+  const [currentFont, setCurrentFont] = useState("Roboto-Regular");
   const [fontSize, setFontSize] = useState(13.0);
 
   // Merge default and passed options
@@ -47,13 +47,8 @@ export const FontDemo = ({
         try {
           console.log("Loading volumes:", images);
           await nv.loadVolumes(images);
-          console.log("Volumes loaded.");
-
-
-          // Set initial state based on loaded volume
-          //if (nv.volumes.length > 0) {
-          //  setCurrentFont(nv.volumes[0].colormap);
-          //}
+          console.log("Volume loaded.");
+          nv.moveCrosshairInVox(0,0,21);
         } catch (error) {
           console.error("Error loading volumes:", error);
         }
@@ -69,9 +64,9 @@ export const FontDemo = ({
   // Handler for changing Font
   const handleFontChange = (event) => {
     const newFont = event.target.value;
-    console.log(`Loading: ${baseUrl}${newFont}.png`)
-    niivueRef.current.loadFont(`${baseUrl}${newFont}.png`, `${baseUrl}${newFont}.json`)
-
+    console.log(`Loading: ${baseUrl}${newFont}.png`);
+    niivueRef.current.loadFont(`${baseUrl}${newFont}.png`, `${baseUrl}${newFont}.json`);
+    setCurrentFont(newFont);
   };
 
 
@@ -79,7 +74,6 @@ export const FontDemo = ({
   const handleFontSizeChange = (event) => {
     const newFontSize = parseFloat(event.target.value);
     if (niivueRef.current) {
-      console.log(`Setting size to: ${newFontSize}`);
       niivueRef.current.opts.fontMinPx = newFontSize
       niivueRef.current.resizeListener()
       niivueRef.current.drawScene()
@@ -107,7 +101,7 @@ export const FontDemo = ({
           ref={canvasRef}
           width={640}
           height={480}
-          style={{ border: "1px solid lightgray", display: "block" }}
+          style={{ display: "block" }}
         ></canvas>
       </div>
 

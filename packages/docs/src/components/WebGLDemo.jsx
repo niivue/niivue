@@ -38,11 +38,13 @@ export const WebGLDemo = ({
         niivueRef.current = nv; // Store the instance
 
         await nv.attachToCanvas(canvasRef.current);
-        nv.setSliceType(4)
-        nv.opts.showLegend = false
+        nv.opts.backColor =[0.45, 0.55, 0.7, 1];
+        
+        nv.setSliceType(4);
+        nv.opts.showLegend = false;
         
         try {
-          await niivueRef.current.loadMeshes(defaultMeshes);
+          await niivueRef.current.loadMeshes(meshes);
         
 
           // Set initial state based on loaded volume
@@ -90,7 +92,12 @@ export const WebGLDemo = ({
       }}
     >
       {/* Niivue Canvas */}
-      <div style={{ width: 640, height: 480 }}>
+      <div
+        style={{
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}
+      >
         <canvas
           ref={canvasRef}
           width={640}
