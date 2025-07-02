@@ -1,0 +1,234 @@
+---
+title: Options Watching
+sidebar_position: 7
+---
+
+import { Niivue, NVConfigOptions } from '@niivue/niivue';
+import { OptionsDemo } from '../src/components/OptionsDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+# Options Watching
+
+NiiVue provides a powerful options watching system that allows you to monitor changes to any configuration option in real-time. This is particularly useful for creating responsive UIs, synchronizing multiple viewers, or implementing custom behaviors based on user interactions.
+
+**Try the interactive demo below!** Use the controls to change various options and watch the change log update in real-time.
+
+<NiivueBrowserWrapper>
+  <OptionsDemo />
+</NiivueBrowserWrapper>
+
+## Overview
+
+The options watching feature uses JavaScript Proxies to detect when any property in the `opts` object changes. When a change occurs, a callback function is triggered with information about what changed, including the property name, old value, and new value.
+
+## Basic Usage
+
+### Setting up Options Watching
+
+Use the `watchOptsChanges()` method to start monitoring option changes:
+
+```javascript
+// Create a Niivue instance
+const nv = new Niivue();
+await nv.attachToCanvas(canvas);
+
+// Set up options watcher
+nv.watchOptsChanges((propertyName, newValue, oldValue) => {
+  console.log(`Option ${propertyName} changed:`);
+  console.log(`  Old value:`, oldValue);
+  console.log(`  New value:`, newValue);
+});
+
+// Now any changes to options will trigger the callback
+nv.opts.crosshairWidth = 5;           // Triggers callback
+nv.opts.backColor = [1, 0, 0, 1];     // Triggers callback
+nv.opts.isColorbar = true;            // Triggers callback
+```
+
+### Alternative: Direct Callback Assignment
+
+You can also assign the callback directly to the `onOptsChange` property:
+
+```javascript
+nv.onOptsChange = (propertyName, newValue, oldValue) => {
+  console.log(`${propertyName}: ${oldValue} → ${newValue}`);
+};
+```
+
+### Stopping Options Watching
+
+Use `unwatchOptsChanges()` to stop monitoring changes:
+
+```javascript
+// Stop watching for changes
+nv.unwatchOptsChanges();
+
+// Changes after this point will not trigger callbacks
+nv.opts.crosshairWidth = 10; // No callback triggered
+```
+
+## Advanced Features
+
+### Change Detection Logic
+
+The options watcher is intelligent about change detection:
+
+- **No duplicate events**: Setting the same value multiple times only triggers the callback once
+- **Deep value comparison**: Array and object changes are properly detected
+- **Type preservation**: Original data types are maintained in old/new value parameters
+
+```javascript
+// Only triggers callback once, even though set multiple times
+nv.opts.crosshairWidth = 3;
+nv.opts.crosshairWidth = 3; // No callback (same value)
+nv.opts.crosshairWidth = 3; // No callback (same value)
+nv.opts.crosshairWidth = 5; // Triggers callback (different value)
+```
+
+### Array and Object Changes
+
+The watcher properly handles complex data types:
+
+```javascript
+nv.watchOptsChanges((propertyName, newValue, oldValue) => {
+  if (propertyName === 'backColor') {
+    console.log('Background color changed:');
+    console.log('Old:', oldValue); // [0, 0, 0, 1]
+    console.log('New:', newValue); // [1, 0, 0, 1]
+  }
+});
+
+// Array changes are detected
+nv.opts.backColor = [1, 0, 0, 1];           // Red background
+nv.opts.crosshairColor = [0, 1, 0, 1];      // Green crosshair
+nv.opts.clipVolumeLow = [0.1, 0.1, 0.1];    // Clipping bounds
+```
+
+### Automatic Cleanup
+
+The options watcher is automatically cleaned up when the Niivue instance is destroyed:
+
+```javascript
+// Watcher is active
+nv.watchOptsChanges(callback);
+
+// Cleanup the instance
+nv.cleanup();
+
+// Watcher is automatically removed - no memory leaks
+```
+
+## Example Use Cases
+
+### Creating Responsive UIs
+
+```javascript
+nv.watchOptsChanges((propertyName, newValue, oldValue) => {
+  // Update UI controls when options change programmatically
+  if (propertyName === 'isColorbar') {
+    document.getElementById('colorbarToggle').checked = newValue;
+  }
+  
+  if (propertyName === 'backColor') {
+    updateColorPicker('backgroundColor', newValue);
+  }
+});
+```
+
+### Implementing Undo/Redo
+
+```javascript
+const changeHistory = [];
+
+nv.watchOptsChanges((propertyName, newValue, oldValue) => {
+  // Store change for undo functionality
+  changeHistory.push({
+    property: propertyName,
+    oldValue: oldValue,
+    newValue: newValue,
+    timestamp: Date.now()
+  });
+  
+  // Keep history manageable
+  if (changeHistory.length > 100) {
+    changeHistory.shift();
+  }
+});
+
+function undo() {
+  const lastChange = changeHistory.pop();
+  if (lastChange) {
+    // Temporarily stop watching to avoid creating new history entries
+    nv.unwatchOptsChanges();
+    nv.opts[lastChange.property] = lastChange.oldValue;
+    nv.watchOptsChanges(/* restore watcher */);
+  }
+}
+```
+
+### Analytics and Logging
+
+```javascript
+nv.watchOptsChanges((propertyName, newValue, oldValue) => {
+  // Log user interactions for analytics
+  analytics.track('niivue_option_changed', {
+    property: propertyName,
+    oldValue: JSON.stringify(oldValue),
+    newValue: JSON.stringify(newValue),
+    sessionId: getCurrentSessionId()
+  });
+});
+```
+
+## Supported Options
+
+The options watcher monitors all properties in the `NVConfigOptions` interface, including:
+
+### Visual Options
+- `crosshairWidth`, `crosshairColor`, `crosshairGap`
+- `backColor`, `fontColor`
+- `textHeight`, `colorbarHeight`, `colorbarWidth`
+- `isColorbar`, `isRuler`, `isOrientCube`
+
+### Interaction Options
+- `dragMode`, `doubleTouchTimeout`, `longTouchTimeout`
+- `penValue`, `penSize`, `isFilledPen`
+- `drawingEnabled`
+
+### Display Options
+- `isRadiologicalConvention`, `isNearestInterpolation`
+- `show3Dcrosshair`, `showColorbarBorder`
+- `multiplanarShowRender`, `multiplanarEqualSize`
+
+### Layout Options
+- `sliceMosaicString`
+- `clipVolumeLow`, `clipVolumeHigh`
+
+And many more! Any option that can be set through `nv.opts` will trigger the watcher when changed.
+
+## Technical Details
+
+### Performance
+
+The options watching system is designed to be lightweight:
+- Uses JavaScript Proxies for efficient property interception
+- No polling or periodic checks required
+- Minimal overhead for unchanged properties
+- Automatic cleanup prevents memory leaks
+
+### Type Safety
+
+When using TypeScript, the options watcher provides full type safety:
+
+```typescript
+import { NVConfigOptions } from '@niivue/niivue';
+
+nv.watchOptsChanges((
+  propertyName: keyof NVConfigOptions,
+  newValue: NVConfigOptions[keyof NVConfigOptions],
+  oldValue: NVConfigOptions[keyof NVConfigOptions]
+) => {
+  // TypeScript knows the exact types of all parameters
+  console.log(`${propertyName} changed from ${oldValue} to ${newValue}`);
+});
+```
