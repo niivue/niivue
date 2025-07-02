@@ -121,6 +121,7 @@ export function toUint8Array(nvImage: NVImage, drawingBytes: Uint8Array | null =
   // Create a deep copy of the header to modify safely for output
   const hdrCopy = JSON.parse(JSON.stringify(nvImage.hdr)) as NIFTI1 | NIFTI2
   hdrCopy.vox_offset = Math.max(352, hdrCopy.vox_offset) // Ensure standard offset at least
+  console.log('vox offseet', hdrCopy.vox_offset)
 
   // If saving a drawing, ensure output header reflects drawing data type (UINT8) and resets scaling
   if (isDrawing) {
