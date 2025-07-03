@@ -10221,7 +10221,7 @@ export class Niivue {
     const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)))
     const angleRad = Math.acos(cosAngle)
     // Convert to degrees
-    let angleDeg = angleRad * (180 / Math.PI)
+    const angleDeg = angleRad * (180 / Math.PI)
     return angleDeg
   }
 
