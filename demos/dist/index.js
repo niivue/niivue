@@ -29749,6 +29749,7 @@ var DRAG_MODE = /* @__PURE__ */ ((DRAG_MODE2) => {
   DRAG_MODE2[DRAG_MODE2["slicer3D"] = 4] = "slicer3D";
   DRAG_MODE2[DRAG_MODE2["callbackOnly"] = 5] = "callbackOnly";
   DRAG_MODE2[DRAG_MODE2["roiSelection"] = 6] = "roiSelection";
+  DRAG_MODE2[DRAG_MODE2["angle"] = 7] = "angle";
   return DRAG_MODE2;
 })(DRAG_MODE || {});
 var DRAG_MODE_SECONDARY = /* @__PURE__ */ ((DRAG_MODE_SECONDARY2) => {
@@ -29759,6 +29760,7 @@ var DRAG_MODE_SECONDARY = /* @__PURE__ */ ((DRAG_MODE_SECONDARY2) => {
   DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["slicer3D"] = 4] = "slicer3D";
   DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["callbackOnly"] = 5] = "callbackOnly";
   DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["roiSelection"] = 6] = "roiSelection";
+  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["angle"] = 7] = "angle";
   return DRAG_MODE_SECONDARY2;
 })(DRAG_MODE_SECONDARY || {});
 var DRAG_MODE_PRIMARY = /* @__PURE__ */ ((DRAG_MODE_PRIMARY2) => {
@@ -34761,7 +34763,9 @@ var Niivue = class {
       lastTwoTouchDistance: 0,
       multiTouchGesture: false,
       windowX: 0,
-      windowY: 0
+      windowY: 0,
+      angleFirstLine: [0, 0, 0, 0],
+      angleState: "none"
     });
     __publicField(this, "back", null);
     // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -34861,6 +34865,7 @@ var Niivue = class {
     __publicField(this, "dragModes", {
       contrast: 1 /* contrast */,
       measurement: 2 /* measurement */,
+      angle: 7 /* angle */,
       none: 0 /* none */,
       pan: 3 /* pan */,
       slicer3D: 4 /* slicer3D */,
@@ -35585,8 +35590,10 @@ var Niivue = class {
     this.drawPenLocation = [NaN, NaN, NaN];
     this.drawPenAxCorSag = -1;
     this.uiData.mousedown = true;
-    this.setDragStart(0, 0);
-    this.setDragEnd(0, 0);
+    if (!(this.opts.dragMode === 7 /* angle */ && this.uiData.angleState === "drawing_second_line")) {
+      this.setDragStart(0, 0);
+      this.setDragEnd(0, 0);
+    }
     log.debug("mouse down");
     log.debug(e);
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
@@ -35677,6 +35684,18 @@ var Niivue = class {
     this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
     if (this.opts.dragMode === 0 /* none */) {
       return;
+    }
+    if (this.opts.dragMode === 7 /* angle */) {
+      if (this.uiData.angleState === "none") {
+        this.uiData.angleState = "drawing_first_line";
+      } else if (this.uiData.angleState === "drawing_second_line") {
+        this.uiData.angleState = "complete";
+        this.drawScene();
+        return;
+      } else if (this.uiData.angleState === "complete") {
+        this.resetAngleMeasurement();
+        this.uiData.angleState = "drawing_first_line";
+      }
     }
     this.setDragStart(pos.x, pos.y);
     if (!this.uiData.isDragging) {
@@ -35827,6 +35846,24 @@ var Niivue = class {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false;
+      if (this.opts.dragMode === 7 /* angle */) {
+        if (this.uiData.angleState === "drawing_first_line") {
+          this.uiData.angleFirstLine = [
+            this.uiData.dragStart[0],
+            this.uiData.dragStart[1],
+            this.uiData.dragEnd[0],
+            this.uiData.dragEnd[1]
+          ];
+          this.uiData.angleState = "drawing_second_line";
+          this.uiData.isDragging = true;
+          this.drawScene();
+          return;
+        } else if (this.uiData.angleState === "drawing_second_line") {
+          this.uiData.angleState = "complete";
+          this.drawScene();
+          return;
+        }
+      }
       if (this.opts.dragMode === 5 /* callbackOnly */) {
         this.drawScene();
       }
@@ -36023,6 +36060,13 @@ var Niivue = class {
       this.drawScene();
       this.uiData.prevX = this.uiData.currX;
       this.uiData.prevY = this.uiData.currY;
+    } else if (this.opts.dragMode === 7 /* angle */ && this.uiData.angleState === "drawing_second_line") {
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+      if (!pos) {
+        return;
+      }
+      this.setDragEnd(pos.x, pos.y);
+      this.drawScene();
     } else if (!this.uiData.mousedown && this.opts.clickToSegment) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
       if (!pos) {
@@ -43033,7 +43077,7 @@ var Niivue = class {
    * Draw a measurement line with end caps and length text on a 2D tile.
    * @internal
    */
-  drawMeasurementTool(startXYendXY) {
+  drawMeasurementTool(startXYendXY, isDrawText = true) {
     function extendTo(x0, y0, x1, y1, distance4) {
       const x = x0 - x1;
       const y = y0 - y1;
@@ -43112,15 +43156,152 @@ var Niivue = class {
           textCoords = startXYendXY;
           break;
       }
-      this.drawTextBetween(
-        textCoords,
-        stringMM,
-        this.opts.measureTextHeight / 0.06,
-        // <- TODO measureFontPx
-        this.opts.measureTextColor
-      );
+      if (isDrawText) {
+        this.drawTextBetween(
+          textCoords,
+          stringMM,
+          this.opts.measureTextHeight / 0.06,
+          // <- TODO measureFontPx
+          this.opts.measureTextColor
+        );
+      }
     }
     gl.bindVertexArray(this.unusedVAO);
+  }
+  /**
+   * Draw angle measurement tool with two lines and angle display.
+   * @internal
+   */
+  drawAngleMeasurementTool() {
+    if (this.uiData.angleState === "drawing_first_line") {
+      this.drawMeasurementTool(
+        [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]],
+        false
+      );
+    } else if (this.uiData.angleState === "drawing_second_line") {
+      this.drawMeasurementTool(this.uiData.angleFirstLine, false);
+      this.drawMeasurementTool(
+        [
+          this.uiData.angleFirstLine[2],
+          // start from end of first line
+          this.uiData.angleFirstLine[3],
+          this.uiData.dragEnd[0],
+          // to current mouse position
+          this.uiData.dragEnd[1]
+        ],
+        false
+      );
+      this.drawAngleText();
+    } else if (this.uiData.angleState === "complete") {
+      this.drawMeasurementTool(this.uiData.angleFirstLine, false);
+      const secondLine = [
+        this.uiData.angleFirstLine[2],
+        // start from end of first line
+        this.uiData.angleFirstLine[3],
+        this.uiData.dragEnd[0],
+        // to final position
+        this.uiData.dragEnd[1]
+      ];
+      this.drawMeasurementTool(secondLine, false);
+      this.drawAngleText();
+    }
+  }
+  /**
+   * Calculate and draw angle text at the intersection of two lines.
+   * @internal
+   */
+  drawAngleText() {
+    const line1 = this.uiData.angleFirstLine;
+    const line2 = [
+      this.uiData.angleFirstLine[2],
+      // start from end of first line
+      this.uiData.angleFirstLine[3],
+      this.uiData.dragEnd[0],
+      // to current mouse position
+      this.uiData.dragEnd[1]
+    ];
+    const angle3 = this.calculateAngleBetweenLines(line1, line2);
+    const intersectionX = this.uiData.angleFirstLine[2];
+    const intersectionY = this.uiData.angleFirstLine[3];
+    const angleText = `${angle3.toFixed(1)}\xB0`;
+    this.drawTextBetween(
+      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
+      angleText,
+      this.opts.measureTextHeight / 0.06,
+      this.opts.measureTextColor
+    );
+  }
+  /**
+   * Calculate angle between two lines in degrees.
+   * @internal
+   */
+  calculateAngleBetweenLines(line1, line2) {
+    const intersectionX = line1[2];
+    const intersectionY = line1[3];
+    const v1x = line1[0] - intersectionX;
+    const v1y = line1[1] - intersectionY;
+    const v2x = line2[2] - intersectionX;
+    const v2y = line2[3] - intersectionY;
+    const dot4 = v1x * v2x + v1y * v2y;
+    const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+    const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+    if (mag1 === 0 || mag2 === 0) {
+      return 0;
+    }
+    const cosAngle = Math.max(-1, Math.min(1, dot4 / (mag1 * mag2)));
+    const angleRad = Math.acos(cosAngle);
+    const angleDeg = angleRad * (180 / Math.PI);
+    return angleDeg;
+  }
+  /**
+   * Reset the angle measurement state.
+   * @internal
+   */
+  resetAngleMeasurement() {
+    this.uiData.angleState = "none";
+    this.uiData.angleFirstLine = [0, 0, 0, 0];
+  }
+  /**
+   * Set the drag mode for mouse interactions.
+   * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
+   */
+  setDragMode(mode) {
+    if (typeof mode === "string") {
+      switch (mode) {
+        case "none":
+          this.opts.dragMode = 0 /* none */;
+          break;
+        case "contrast":
+          this.opts.dragMode = 1 /* contrast */;
+          break;
+        case "measurement":
+          this.opts.dragMode = 2 /* measurement */;
+          break;
+        case "angle":
+          this.opts.dragMode = 7 /* angle */;
+          break;
+        case "pan":
+          this.opts.dragMode = 3 /* pan */;
+          break;
+        case "slicer3D":
+          this.opts.dragMode = 4 /* slicer3D */;
+          break;
+        case "callbackOnly":
+          this.opts.dragMode = 5 /* callbackOnly */;
+          break;
+        case "roiSelection":
+          this.opts.dragMode = 6 /* roiSelection */;
+          break;
+        default:
+          console.warn(`Unknown drag mode: ${mode}`);
+          return;
+      }
+    } else {
+      this.opts.dragMode = mode;
+    }
+    if (this.opts.dragMode !== 7 /* angle */) {
+      this.resetAngleMeasurement();
+    }
   }
   /**
    * Draw a rectangle or outline at given position with specified color or default crosshair color.
@@ -46380,6 +46561,10 @@ var Niivue = class {
           this.uiData.dragEnd[0],
           this.uiData.dragEnd[1]
         ]);
+        return;
+      }
+      if (this.opts.dragMode === 7 /* angle */) {
+        this.drawAngleMeasurementTool();
         return;
       }
       const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);

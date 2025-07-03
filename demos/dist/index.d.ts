@@ -598,7 +598,8 @@ declare enum DRAG_MODE {
     pan = 3,
     slicer3D = 4,
     callbackOnly = 5,
-    roiSelection = 6
+    roiSelection = 6,
+    angle = 7
 }
 declare enum DRAG_MODE_SECONDARY {
     none = 0,
@@ -607,7 +608,8 @@ declare enum DRAG_MODE_SECONDARY {
     pan = 3,
     slicer3D = 4,
     callbackOnly = 5,
-    roiSelection = 6
+    roiSelection = 6,
+    angle = 7
 }
 declare enum DRAG_MODE_PRIMARY {
     crosshair = 0,
@@ -1569,6 +1571,8 @@ type UIData = {
     max3D?: number;
     windowX: number;
     windowY: number;
+    angleFirstLine: number[];
+    angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete';
 };
 type SaveImageOptions = {
     filename: string;
@@ -1721,6 +1725,7 @@ declare class Niivue {
     dragModes: {
         contrast: DRAG_MODE;
         measurement: DRAG_MODE;
+        angle: DRAG_MODE;
         none: DRAG_MODE;
         pan: DRAG_MODE;
         slicer3D: DRAG_MODE;
@@ -3697,7 +3702,32 @@ declare class Niivue {
      * Draw a measurement line with end caps and length text on a 2D tile.
      * @internal
      */
-    drawMeasurementTool(startXYendXY: number[]): void;
+    drawMeasurementTool(startXYendXY: number[], isDrawText?: boolean): void;
+    /**
+     * Draw angle measurement tool with two lines and angle display.
+     * @internal
+     */
+    drawAngleMeasurementTool(): void;
+    /**
+     * Calculate and draw angle text at the intersection of two lines.
+     * @internal
+     */
+    drawAngleText(): void;
+    /**
+     * Calculate angle between two lines in degrees.
+     * @internal
+     */
+    calculateAngleBetweenLines(line1: number[], line2: number[]): number;
+    /**
+     * Reset the angle measurement state.
+     * @internal
+     */
+    resetAngleMeasurement(): void;
+    /**
+     * Set the drag mode for mouse interactions.
+     * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
+     */
+    setDragMode(mode: string | DRAG_MODE): void;
     /**
      * Draw a rectangle or outline at given position with specified color or default crosshair color.
      * @internal
