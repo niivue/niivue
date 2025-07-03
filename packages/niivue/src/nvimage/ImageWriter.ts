@@ -120,7 +120,38 @@ export function toUint8Array(nvImage: NVImage, drawingBytes: Uint8Array | null =
   const isDrawing = drawingBytes !== null
   // Create a deep copy of the header to modify safely for output
   const hdrCopy = JSON.parse(JSON.stringify(nvImage.hdr)) as NIFTI1 | NIFTI2
-  hdrCopy.vox_offset = Math.max(352, hdrCopy.vox_offset) // Ensure standard offset at least
+
+  // Handle extensions
+  const hasExtensions = nvImage.extensions && nvImage.extensions.length > 0
+  const extFlag = new Uint8Array(4)
+  extFlag[0] = hasExtensions ? 1 : 0
+
+  let extensionsData = new Uint8Array(0)
+  if (hasExtensions) {
+    const blocks: Uint8Array[] = []
+    let totalSize = 0
+    for (const ext of nvImage.extensions!) {
+      const block = new Uint8Array(8 + ext.edata.length)
+      const dv = new DataView(block.buffer)
+      dv.setInt32(0, ext.esize, true)
+      dv.setInt32(4, ext.ecode, true)
+      block.set(ext.edata, 8)
+      blocks.push(block)
+      totalSize += block.length
+    }
+    extensionsData = new Uint8Array(totalSize)
+    let offset = 0
+    for (const block of blocks) {
+      extensionsData.set(block, offset)
+      offset += block.length
+    }
+  }
+
+  const headerSize = 348 // nifti-1 standard
+  hdrCopy.vox_offset = Math.max(
+    352,
+    headerSize + extFlag.length + extensionsData.length
+  )
 
   // If saving a drawing, ensure output header reflects drawing data type (UINT8) and resets scaling
   if (isDrawing) {
@@ -205,17 +236,27 @@ export function toUint8Array(nvImage: NVImage, drawingBytes: Uint8Array | null =
   }
 
   // Calculate padding needed to reach the specified vox_offset in the header
-  const headerSize = hdrBytes.length
-  const paddingSize = Math.max(0, hdrCopy.vox_offset - headerSize)
+  const preImageBytesSize = hdrBytes.length + extFlag.length + extensionsData.length
+  const paddingSize = Math.max(0, hdrCopy.vox_offset - preImageBytesSize)
   const padding = new Uint8Array(paddingSize)
 
-  // Combine header, padding, and the selected image data (main or reoriented drawing)
   const totalLength = hdrCopy.vox_offset + imageBytesToSave.length
   const outputData = new Uint8Array(totalLength)
 
-  outputData.set(hdrBytes, 0) // Place header at the beginning
-  outputData.set(padding, headerSize) // Place padding after header
-  outputData.set(imageBytesToSave, hdrCopy.vox_offset) // Place image data at the offset
+  let offset = 0
+  outputData.set(hdrBytes, offset)
+  offset += hdrBytes.length
+
+  outputData.set(extFlag, offset)
+  offset += extFlag.length
+
+  outputData.set(extensionsData, offset)
+  offset += extensionsData.length
+
+  outputData.set(padding, offset)
+  offset += padding.length
+
+  outputData.set(imageBytesToSave, hdrCopy.vox_offset)
 
   return outputData
 }

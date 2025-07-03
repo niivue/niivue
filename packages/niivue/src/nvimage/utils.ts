@@ -458,7 +458,7 @@ export function hdrToArrayBuffer(hdr: NiftiHeader, isDrawing8 = false, isInputEn
     view.setFloat32(116, 0.0, isLittleEndian)
   } else {
     // view.setFloat32(108, hdr.vox_offset, isLittleEndian)
-    view.setFloat32(108, 352, isLittleEndian)
+    view.setFloat32(108, hdr.vox_offset, isLittleEndian)
     view.setFloat32(112, hdr.scl_slope, isLittleEndian)
     view.setFloat32(116, hdr.scl_inter, isLittleEndian)
   }
