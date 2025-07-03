@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NiiVue Angle Measurement Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: white;
+        }
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.active {
+            background: #28a745;
+        }
+        .instructions {
+            margin-top: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <h3>Angle Measurement Demo</h3>
+            <div>
+                <button id="angleBtn">Enable Angle Tool</button>
+                <button id="measureBtn">Distance Tool</button>
+                <button id="panBtn">Pan Tool</button>
+                <button id="noneBtn">None</button>
+            </div>
+            <div class="instructions">
+                <strong>Angle Tool Usage:</strong><br>
+                1. Right-click and drag to draw first line<br>
+                2. Release mouse button<br>
+                3. Move mouse to position second line<br>
+                4. Right-click once to complete angle<br>
+                5. Angle is displayed at intersection
+            </div>
+        </div>
+        <canvas id="gl1"></canvas>
+    </div>
+
+    <script type="module">
+        import { Niivue } from '../dist/index.js'
+
+        const nv = new Niivue()
+        nv.attachToCanvas(document.getElementById('gl1'))
+        
+        // Load a sample volume
+        const volumeList = [
+            {
+                url: 'https://niivue.github.io/niivue-demo-images/mni152.nii.gz',
+                colormap: 'gray'
+            }
+        ]
+        
+        nv.loadVolumes(volumeList)
+
+        // Button event handlers
+        document.getElementById('angleBtn').addEventListener('click', function() {
+            nv.setDragMode('angle')
+            updateActiveButton(this)
+        })
+
+        document.getElementById('measureBtn').addEventListener('click', function() {
+            nv.setDragMode('measurement')
+            updateActiveButton(this)
+        })
+
+        document.getElementById('panBtn').addEventListener('click', function() {
+            nv.setDragMode('pan')
+            updateActiveButton(this)
+        })
+
+        document.getElementById('noneBtn').addEventListener('click', function() {
+            nv.setDragMode('none')
+            updateActiveButton(this)
+        })
+
+        function updateActiveButton(activeBtn) {
+            document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'))
+            activeBtn.classList.add('active')
+        }
+
+        // Set initial state
+        updateActiveButton(document.getElementById('noneBtn'))
+    </script>
+</body>
+</html>

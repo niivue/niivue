@@ -47,7 +47,8 @@ export enum DRAG_MODE {
   pan = 3,
   slicer3D = 4,
   callbackOnly = 5,
-  roiSelection = 6
+  roiSelection = 6,
+  angle = 7
 }
 
 export enum DRAG_MODE_SECONDARY {
@@ -57,7 +58,8 @@ export enum DRAG_MODE_SECONDARY {
   pan = 3,
   slicer3D = 4,
   callbackOnly = 5,
-  roiSelection = 6
+  roiSelection = 6,
+  angle = 7
 }
 
 export enum DRAG_MODE_PRIMARY {
