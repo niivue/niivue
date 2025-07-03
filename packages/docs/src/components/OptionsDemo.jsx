@@ -213,7 +213,6 @@ export const OptionsDemo = ({
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '20px',
         padding: '20px',
-        backgroundColor: '#f8f9fa',
         borderRadius: '4px'
       }}>
         {/* Crosshair Controls */}
