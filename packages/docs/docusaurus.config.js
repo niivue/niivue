@@ -118,6 +118,9 @@ const config = {
         ],
         copyright: `Copyright © ${new Date().getFullYear()} NiiVue authors`,
       },
+      colorMode: {
+        defaultMode: 'dark',
+      },
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
