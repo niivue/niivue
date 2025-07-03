@@ -183,6 +183,7 @@ export const OptionsDemo = ({
     niivueRef.current.opts.backColor = [randomR, randomG, randomB, 1];
     niivueRef.current.opts.textHeight = randomTextHeight;
     niivueRef.current.opts.isColorbar = !isColorbar;
+    niivueRef.current.drawScene();
   }, [isColorbar]);
 
   return (
