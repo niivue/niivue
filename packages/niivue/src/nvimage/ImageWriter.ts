@@ -131,11 +131,12 @@ export function toUint8Array(nvImage: NVImage, drawingBytes: Uint8Array | null =
     const blocks: Uint8Array[] = []
     let totalSize = 0
     for (const ext of nvImage.extensions!) {
-      const block = new Uint8Array(8 + ext.edata.length)
+      const edataBytes = new Uint8Array(ext.edata)
+      const block = new Uint8Array(8 + edataBytes.length)
       const dv = new DataView(block.buffer)
       dv.setInt32(0, ext.esize, true)
       dv.setInt32(4, ext.ecode, true)
-      block.set(ext.edata, 8)
+      block.set(edataBytes, 8)
       blocks.push(block)
       totalSize += block.length
     }
