@@ -23376,6 +23376,9 @@ async function readHeaderAsync(data, isHdrImgPairOK = false) {
   header.readHeader(dat);
   return header;
 }
+function hasExtension(header) {
+  return header.extensionFlag[0] != 0;
+}
 function readImage(header, data) {
   var imageOffset = header.vox_offset, timeDim = 1, statDim = 1;
   if (header.dims[4]) {
@@ -25177,7 +25180,7 @@ function hdrToArrayBuffer(hdr, isDrawing8 = false, isInputEndian = false) {
     view.setFloat32(112, 1, isLittleEndian);
     view.setFloat32(116, 0, isLittleEndian);
   } else {
-    view.setFloat32(108, 352, isLittleEndian);
+    view.setFloat32(108, hdr.vox_offset, isLittleEndian);
     view.setFloat32(112, hdr.scl_slope, isLittleEndian);
     view.setFloat32(116, hdr.scl_inter, isLittleEndian);
   }
@@ -25412,7 +25415,32 @@ function toUint8Array(nvImage, drawingBytes = null) {
   }
   const isDrawing = drawingBytes !== null;
   const hdrCopy = JSON.parse(JSON.stringify(nvImage.hdr));
-  hdrCopy.vox_offset = Math.max(352, hdrCopy.vox_offset);
+  const hasExtensions = nvImage.extensions && nvImage.extensions.length > 0;
+  const extFlag = new Uint8Array(4);
+  extFlag[0] = hasExtensions ? 1 : 0;
+  let extensionsData = new Uint8Array(0);
+  if (hasExtensions) {
+    const blocks = [];
+    let totalSize = 0;
+    for (const ext of nvImage.extensions) {
+      const edataBytes = new Uint8Array(ext.edata);
+      const block = new Uint8Array(8 + edataBytes.length);
+      const dv = new DataView(block.buffer);
+      dv.setInt32(0, ext.esize, true);
+      dv.setInt32(4, ext.ecode, true);
+      block.set(edataBytes, 8);
+      blocks.push(block);
+      totalSize += block.length;
+    }
+    extensionsData = new Uint8Array(totalSize);
+    let offset2 = 0;
+    for (const block of blocks) {
+      extensionsData.set(block, offset2);
+      offset2 += block.length;
+    }
+  }
+  const headerSize = 348;
+  hdrCopy.vox_offset = Math.max(352, headerSize + extFlag.length + extensionsData.length);
   if (isDrawing) {
     hdrCopy.datatypeCode = 2 /* DT_UINT8 */;
     hdrCopy.numBitsPerVoxel = 8;
@@ -25476,13 +25504,20 @@ function toUint8Array(nvImage, drawingBytes = null) {
     }
     imageBytesToSave = new Uint8Array(nvImage.img.buffer, nvImage.img.byteOffset, nvImage.img.byteLength);
   }
-  const headerSize = hdrBytes.length;
-  const paddingSize = Math.max(0, hdrCopy.vox_offset - headerSize);
+  const preImageBytesSize = hdrBytes.length + extFlag.length + extensionsData.length;
+  const paddingSize = Math.max(0, hdrCopy.vox_offset - preImageBytesSize);
   const padding = new Uint8Array(paddingSize);
   const totalLength = hdrCopy.vox_offset + imageBytesToSave.length;
   const outputData = new Uint8Array(totalLength);
-  outputData.set(hdrBytes, 0);
-  outputData.set(padding, headerSize);
+  let offset = 0;
+  outputData.set(hdrBytes, offset);
+  offset += hdrBytes.length;
+  outputData.set(extFlag, offset);
+  offset += extFlag.length;
+  outputData.set(extensionsData, offset);
+  offset += extensionsData.length;
+  outputData.set(padding, offset);
+  offset += padding.length;
   outputData.set(imageBytesToSave, hdrCopy.vox_offset);
   return outputData;
 }
@@ -25935,6 +25970,9 @@ async function readNifti(nvImage, buffer) {
       throw new Error("Buffer became invalid after decompression attempt.");
     }
     nvImage.hdr = await readHeaderAsync(dataBuffer);
+    if (hasExtension(nvImage.hdr)) {
+      nvImage.extensions = nvImage.hdr.extensions;
+    }
     if (nvImage.hdr === null) {
       throw new Error(`Failed to read NIfTI header: ${nvImage.name}`);
     }
@@ -26303,6 +26341,7 @@ var NVImage = class _NVImage {
     __publicField(this, "extentsMaxOrtho");
     __publicField(this, "mm2ortho");
     __publicField(this, "hdr", null);
+    __publicField(this, "extensions");
     __publicField(this, "imageType");
     __publicField(this, "img");
     __publicField(this, "imaginary");

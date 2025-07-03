@@ -1,5 +1,5 @@
 import { mat4, vec3, vec4, vec2 } from 'gl-matrix';
-import { NIFTI1, NIFTI2 } from 'nifti-reader-js';
+import { NIFTI1, NIFTI2, NIFTIEXTENSION } from 'nifti-reader-js';
 
 type ColorMap = {
     R: number[];
@@ -341,6 +341,7 @@ declare class NVImage {
     extentsMaxOrtho?: number[];
     mm2ortho?: mat4;
     hdr: NIFTI1 | NIFTI2 | null;
+    extensions?: NIFTIEXTENSION[];
     imageType?: ImageType;
     img?: TypedVoxelArray;
     imaginary?: Float32Array;
