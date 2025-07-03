@@ -1,5 +1,5 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
-import { version } from '../../package.json'
+import packageJson from '../../package.json' with { type: 'json' }
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
 import {
@@ -127,6 +127,7 @@ import {
   unpackFloatFromVec4i,
   readFileAsDataURL
 } from './utils.js'
+const { version } = packageJson
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
@@ -808,6 +809,18 @@ export class Niivue {
    */
   onDocumentLoaded: (document: NVDocument) => void = () => {}
 
+  /**
+   * Callback for when any configuration option changes.
+   * @param propertyName - The name of the option that changed.
+   * @param newValue - The new value of the option.
+   * @param oldValue - The previous value of the option.
+   */
+  onOptsChange: (
+    propertyName: keyof NVConfigOptions,
+    newValue: NVConfigOptions[keyof NVConfigOptions],
+    oldValue: NVConfigOptions[keyof NVConfigOptions]
+  ) => void = () => {}
+
   document = new NVDocument()
 
   /** Get the current scene configuration. */
@@ -884,6 +897,11 @@ export class Niivue {
     }
 
     log.setLogLevel(this.opts.logLevel)
+
+    // Set up opts change watching
+    this.document.setOptsChangeCallback((propertyName, newValue, oldValue) => {
+      this.onOptsChange(propertyName, newValue, oldValue)
+    })
   }
 
   /**
@@ -937,6 +955,9 @@ export class Niivue {
       this.canvas.removeEventListener('keyup', this.keyUpListener.bind(this))
       this.canvas.removeEventListener('keydown', this.keyDownListener.bind(this))
     }
+
+    // Clean up opts change callback
+    this.document.removeOptsChangeCallback()
 
     // Todo: other cleanup tasks could be added here
   }
@@ -3147,6 +3168,36 @@ export class Niivue {
     this.opts.forceDevicePixelRatio = forceDevicePixelRatio
     this.resizeListener()
     this.drawScene()
+  }
+
+  /**
+   * Start watching for changes to configuration options.
+   * This is a convenience method that sets up the onOptsChange callback.
+   * @param callback - Function to call when any option changes
+   * @example
+   * niivue.watchOptsChanges((propertyName, newValue, oldValue) => {
+   *   console.log(`Option ${propertyName} changed from ${oldValue} to ${newValue}`)
+   * })
+   * @see {@link https://niivue.com/demos/ | live demo usage}
+   */
+  watchOptsChanges(
+    callback: (
+      propertyName: keyof NVConfigOptions,
+      newValue: NVConfigOptions[keyof NVConfigOptions],
+      oldValue: NVConfigOptions[keyof NVConfigOptions]
+    ) => void
+  ): void {
+    this.onOptsChange = callback
+  }
+
+  /**
+   * Stop watching for changes to configuration options.
+   * This removes the current onOptsChange callback.
+   * @example niivue.unwatchOptsChanges()
+   * @see {@link https://niivue.com/demos/ | live demo usage}
+   */
+  unwatchOptsChanges(): void {
+    this.onOptsChange = (): void => {}
   }
 
   /**

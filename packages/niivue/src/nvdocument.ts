@@ -448,6 +448,15 @@ export class NVDocument {
   imageOptionsMap = new Map()
   meshOptionsMap = new Map()
 
+  private _optsProxy: NVConfigOptions | null = null
+  private _optsChangeCallback:
+    | ((
+        propertyName: keyof NVConfigOptions,
+        newValue: NVConfigOptions[keyof NVConfigOptions],
+        oldValue: NVConfigOptions[keyof NVConfigOptions]
+      ) => void)
+    | null = null
+
   constructor() {
     this.scene = {
       onAzimuthElevationChange: (): void => {},
@@ -584,7 +593,10 @@ export class NVDocument {
    * Gets the options of the {@link Niivue} instance
    */
   get opts(): NVConfigOptions {
-    return this.data.opts as NVConfigOptions
+    if (!this._optsProxy) {
+      this._createOptsProxy()
+    }
+    return this._optsProxy as NVConfigOptions
   }
 
   /**
@@ -592,6 +604,7 @@ export class NVDocument {
    */
   set opts(opts) {
     this.data.opts = { ...opts }
+    this._optsProxy = null // Force recreation of proxy
   }
 
   /**
@@ -1032,5 +1045,56 @@ export class NVDocument {
     document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
     NVDocument.deserializeMeshDataObjects(document)
     return document
+  }
+
+  /**
+   * Sets the callback function to be called when opts properties change
+   */
+  setOptsChangeCallback(
+    callback: (
+      propertyName: keyof NVConfigOptions,
+      newValue: NVConfigOptions[keyof NVConfigOptions],
+      oldValue: NVConfigOptions[keyof NVConfigOptions]
+    ) => void
+  ): void {
+    this._optsChangeCallback = callback
+    this._optsProxy = null // Force recreation with new callback
+  }
+
+  /**
+   * Removes the opts change callback
+   */
+  removeOptsChangeCallback(): void {
+    this._optsChangeCallback = null
+    this._optsProxy = null // Force recreation without callback
+  }
+
+  /**
+   * Creates a Proxy wrapper around the opts object to detect changes
+   */
+  private _createOptsProxy(): void {
+    const target = this.data.opts as NVConfigOptions
+
+    this._optsProxy = new Proxy(target, {
+      set: (obj: any, prop: string | symbol, value: any): boolean => {
+        const oldValue = obj[prop]
+
+        // Only proceed if the value actually changed
+        if (oldValue !== value) {
+          obj[prop] = value
+
+          // Call the change callback if one is registered
+          if (this._optsChangeCallback && typeof prop === 'string' && prop in DEFAULT_OPTIONS) {
+            this._optsChangeCallback(prop as keyof NVConfigOptions, value, oldValue)
+          }
+        }
+
+        return true
+      },
+
+      get: (obj: any, prop: string | symbol): any => {
+        return obj[prop]
+      }
+    })
   }
 }
