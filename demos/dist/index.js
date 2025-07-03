@@ -5247,7 +5247,110 @@ var forEach3 = function() {
 }();
 
 // package.json
-var version = "0.58.0";
+var package_default = {
+  name: "@niivue/niivue",
+  version: "0.58.0",
+  description: "minimal webgl2 nifti image viewer",
+  types: "./build/index.d.ts",
+  main: "./build/index.js",
+  type: "module",
+  unpkg: "./dist/index.min.js",
+  module: "./build/index.js",
+  exports: {
+    ".": {
+      import: "./build/index.js"
+    },
+    "./min": {
+      import: "./build/index.min.js"
+    }
+  },
+  scripts: {
+    dev: "vite",
+    "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
+    build: "tsup --config tsup.config.ts && npm run build:forTests && npm run build:min && npm run build:umd",
+    "build:forTests": "tsup --config tsup.config.tests.ts && npm run build:mindemos",
+    "build:min": "node bundle.js",
+    "build:mindemos": "node bundleForDemos.js",
+    demo: "npm run build:forTests && rm -rf demos/dist && cp -r dist demos/dist && npx http-server demos/ --cors",
+    "demo-win": "npm run build && npx http-server demos/",
+    test: "npm run build:forTests && npm run test:unit && jest --maxWorkers=1",
+    "test-win": "npm run build-win && jest",
+    "test-playwright": 'npx playwright test --grep-invert "niivue demo file:"',
+    "test-demos": "npx playwright test playwright/e2e/test.demos.spec.ts",
+    docs: "typedoc && rm -rf ../docs/docs/api && cp -r devdocs ../docs/docs/api",
+    "test:unit": "vitest --run --coverage",
+    "serve-docs": "npx http-server devdocs",
+    pub: "npm run build && npm publish --access public",
+    lint: "eslint .",
+    "lint:ts": "tsc --noEmit",
+    "lint:fix": "eslint --fix .",
+    "lint:debug": "DEBUG=eslint:cli-engine eslint .",
+    "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
+    "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
+  },
+  files: [
+    "src",
+    "build",
+    "dist"
+  ],
+  repository: {
+    type: "git",
+    url: "git+https://github.com/niivue/niivue.git"
+  },
+  keywords: [
+    "niivue",
+    "webgl2",
+    "nifti",
+    "image",
+    "viewer"
+  ],
+  author: "niivue authors",
+  license: "BSD-2-Clause",
+  bugs: {
+    url: "https://github.com/niivue/niivue/issues"
+  },
+  homepage: "https://github.com/niivue/niivue#readme",
+  dependencies: {
+    "@lukeed/uuid": "^2.0.1",
+    "@ungap/structured-clone": "^1.2.0",
+    "array-equal": "^1.0.2",
+    fflate: "^0.8.2",
+    "gl-matrix": "^3.4.3",
+    "nifti-reader-js": "^0.8.0",
+    zarrita: "^0.5.0"
+  },
+  devDependencies: {
+    "@playwright/test": "^1.45.2",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@types/array-equal": "^1.0.2",
+    "@types/node": "^20.14.11",
+    "@types/ungap__structured-clone": "^1.2.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "@vitest/coverage-v8": "^3.1.3",
+    eslint: "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-tsdoc": "^0.3.0",
+    express: "^4.19.2",
+    "happy-dom": "^15.11.6",
+    "http-server": "^14.1.1",
+    prettier: "^3.3.3",
+    "regenerator-runtime": "^0.14.1",
+    terser: "^5.31.3",
+    tsup: "^8.1.2",
+    typedoc: "^0.28.5",
+    "typedoc-docusaurus-theme": "^1.4.0",
+    "typedoc-plugin-markdown": "^4.7.0",
+    typescript: "^5.5.3",
+    vite: "^5.3.4",
+    vitest: "^3.1.3"
+  },
+  optionalDependencies: {
+    "@rollup/rollup-linux-x64-gnu": "^4.18.1"
+  }
+};
 
 // src/logger.ts
 var _Log = class _Log {
@@ -29796,6 +29899,8 @@ var NVDocument = class _NVDocument {
     __publicField(this, "drawBitmap", null);
     __publicField(this, "imageOptionsMap", /* @__PURE__ */ new Map());
     __publicField(this, "meshOptionsMap", /* @__PURE__ */ new Map());
+    __publicField(this, "_optsProxy", null);
+    __publicField(this, "_optsChangeCallback", null);
     this.scene = {
       onAzimuthElevationChange: () => {
       },
@@ -29915,13 +30020,17 @@ var NVDocument = class _NVDocument {
    * Gets the options of the {@link Niivue} instance
    */
   get opts() {
-    return this.data.opts;
+    if (!this._optsProxy) {
+      this._createOptsProxy();
+    }
+    return this._optsProxy;
   }
   /**
    * Sets the options of the {@link Niivue} instance
    */
   set opts(opts) {
     this.data.opts = { ...opts };
+    this._optsProxy = null;
   }
   /**
    * Gets the 3D labels of the {@link Niivue} instance
@@ -30290,6 +30399,41 @@ var NVDocument = class _NVDocument {
     document2.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData };
     _NVDocument.deserializeMeshDataObjects(document2);
     return document2;
+  }
+  /**
+   * Sets the callback function to be called when opts properties change
+   */
+  setOptsChangeCallback(callback) {
+    this._optsChangeCallback = callback;
+    this._optsProxy = null;
+  }
+  /**
+   * Removes the opts change callback
+   */
+  removeOptsChangeCallback() {
+    this._optsChangeCallback = null;
+    this._optsProxy = null;
+  }
+  /**
+   * Creates a Proxy wrapper around the opts object to detect changes
+   */
+  _createOptsProxy() {
+    const target = this.data.opts;
+    this._optsProxy = new Proxy(target, {
+      set: (obj, prop, value) => {
+        const oldValue = obj[prop];
+        if (oldValue !== value) {
+          obj[prop] = value;
+          if (this._optsChangeCallback && typeof prop === "string" && prop in DEFAULT_OPTIONS) {
+            this._optsChangeCallback(prop, value, oldValue);
+          }
+        }
+        return true;
+      },
+      get: (obj, prop) => {
+        return obj[prop];
+      }
+    });
   }
 };
 
@@ -34352,6 +34496,7 @@ function intensityRaw2Scaled(hdr, raw) {
 }
 
 // src/niivue/index.ts
+var { version } = package_default;
 var MESH_EXTENSIONS = [
   "ASC",
   "BYU",
@@ -34889,6 +35034,14 @@ var Niivue = class {
      */
     __publicField(this, "onDocumentLoaded", () => {
     });
+    /**
+     * Callback for when any configuration option changes.
+     * @param propertyName - The name of the option that changed.
+     * @param newValue - The new value of the option.
+     * @param oldValue - The previous value of the option.
+     */
+    __publicField(this, "onOptsChange", () => {
+    });
     __publicField(this, "document", new NVDocument());
     __publicField(this, "mediaUrlMap", /* @__PURE__ */ new Map());
     __publicField(this, "initialized", false);
@@ -34915,6 +35068,9 @@ var Niivue = class {
       this.thumbnailVisible = true;
     }
     log.setLogLevel(this.opts.logLevel);
+    this.document.setOptsChangeCallback((propertyName, newValue, oldValue) => {
+      this.onOptsChange(propertyName, newValue, oldValue);
+    });
   }
   /** Get the current scene configuration. */
   get scene() {
@@ -34982,6 +35138,7 @@ var Niivue = class {
       this.canvas.removeEventListener("keyup", this.keyUpListener.bind(this));
       this.canvas.removeEventListener("keydown", this.keyDownListener.bind(this));
     }
+    this.document.removeOptsChangeCallback();
   }
   get volumes() {
     return this.document.volumes;
@@ -36885,6 +37042,29 @@ var Niivue = class {
     this.opts.forceDevicePixelRatio = forceDevicePixelRatio;
     this.resizeListener();
     this.drawScene();
+  }
+  /**
+   * Start watching for changes to configuration options.
+   * This is a convenience method that sets up the onOptsChange callback.
+   * @param callback - Function to call when any option changes
+   * @example
+   * niivue.watchOptsChanges((propertyName, newValue, oldValue) => {
+   *   console.log(`Option ${propertyName} changed from ${oldValue} to ${newValue}`)
+   * })
+   * @see {@link https://niivue.com/demos/ | live demo usage}
+   */
+  watchOptsChanges(callback) {
+    this.onOptsChange = callback;
+  }
+  /**
+   * Stop watching for changes to configuration options.
+   * This removes the current onOptsChange callback.
+   * @example niivue.unwatchOptsChanges()
+   * @see {@link https://niivue.com/demos/ | live demo usage}
+   */
+  unwatchOptsChanges() {
+    this.onOptsChange = () => {
+    };
   }
   /**
    * add a new volume to the canvas

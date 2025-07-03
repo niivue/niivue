@@ -805,6 +805,8 @@ declare class NVDocument {
     drawBitmap: Uint8Array | null;
     imageOptionsMap: Map<any, any>;
     meshOptionsMap: Map<any, any>;
+    private _optsProxy;
+    private _optsChangeCallback;
     constructor();
     /**
      * Title of the document
@@ -915,6 +917,18 @@ declare class NVDocument {
      * Factory method to return an instance of NVDocument from JSON
      */
     static oldloadFromJSON(data: DocumentData): NVDocument;
+    /**
+     * Sets the callback function to be called when opts properties change
+     */
+    setOptsChangeCallback(callback: (propertyName: keyof NVConfigOptions, newValue: NVConfigOptions[keyof NVConfigOptions], oldValue: NVConfigOptions[keyof NVConfigOptions]) => void): void;
+    /**
+     * Removes the opts change callback
+     */
+    removeOptsChangeCallback(): void;
+    /**
+     * Creates a Proxy wrapper around the opts object to detect changes
+     */
+    private _createOptsProxy;
 }
 
 type NiftiHeader = {
@@ -1888,6 +1902,13 @@ declare class Niivue {
      * }
      */
     onDocumentLoaded: (document: NVDocument) => void;
+    /**
+     * Callback for when any configuration option changes.
+     * @param propertyName - The name of the option that changed.
+     * @param newValue - The new value of the option.
+     * @param oldValue - The previous value of the option.
+     */
+    onOptsChange: (propertyName: keyof NVConfigOptions, newValue: NVConfigOptions[keyof NVConfigOptions], oldValue: NVConfigOptions[keyof NVConfigOptions]) => void;
     document: NVDocument;
     /** Get the current scene configuration. */
     get scene(): Scene;
@@ -2442,6 +2463,24 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/sync.mesh.html | live demo usage}
      */
     setHighResolutionCapable(forceDevicePixelRatio: number | boolean): void;
+    /**
+     * Start watching for changes to configuration options.
+     * This is a convenience method that sets up the onOptsChange callback.
+     * @param callback - Function to call when any option changes
+     * @example
+     * niivue.watchOptsChanges((propertyName, newValue, oldValue) => {
+     *   console.log(`Option ${propertyName} changed from ${oldValue} to ${newValue}`)
+     * })
+     * @see {@link https://niivue.com/demos/ | live demo usage}
+     */
+    watchOptsChanges(callback: (propertyName: keyof NVConfigOptions, newValue: NVConfigOptions[keyof NVConfigOptions], oldValue: NVConfigOptions[keyof NVConfigOptions]) => void): void;
+    /**
+     * Stop watching for changes to configuration options.
+     * This removes the current onOptsChange callback.
+     * @example niivue.unwatchOptsChanges()
+     * @see {@link https://niivue.com/demos/ | live demo usage}
+     */
+    unwatchOptsChanges(): void;
     /**
      * add a new volume to the canvas
      * @param volume - the new volume to add to the canvas

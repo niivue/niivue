@@ -4,4 +4,4 @@
 type DicomLoaderInput = ArrayBuffer | ArrayBuffer[] | File[];
 ```
 
-Defined in: [niivue/index.ts:341](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L341)
+Defined in: [niivue/index.ts:342](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L342)
