@@ -1,4 +1,4 @@
-# API v0.58.0
+# API v0.59.0
 
 ## Modules
 
