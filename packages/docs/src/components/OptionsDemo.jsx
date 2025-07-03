@@ -89,6 +89,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.crosshairWidth = value;
+      niivueRef.current.updateGLVolume();
     }
   }, []);
 
@@ -99,6 +100,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.textHeight = value;
+      niivueRef.current.drawScene();
     }
   }, []);
 
@@ -109,6 +111,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.isColorbar = checked;
+      niivueRef.current.drawScene();
     }
   }, []);
 
@@ -120,6 +123,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.backColor = newBackColor;
+      niivueRef.current.drawScene();
     }
   }, [backColor]);
 
@@ -131,6 +135,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.crosshairColor = newCrosshairColor;
+      niivueRef.current.drawScene();
     }
   }, [crosshairColor]);
 
@@ -141,6 +146,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.isRuler = checked;
+      niivueRef.current.drawScene();
     }
   }, []);
 
@@ -151,6 +157,7 @@ export const OptionsDemo = ({
     
     if (niivueRef.current) {
       niivueRef.current.opts.isRadiologicalConvention = checked;
+      niivueRef.current.drawScene();
     }
   }, []);
 
