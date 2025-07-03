@@ -27,10 +27,10 @@ export async function readNifti(nvImage: NVImage, buffer: ArrayBuffer): Promise<
     }
 
     nvImage.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer)
-    if(hasExtension(nvImage.hdr)) {
+    if (hasExtension(nvImage.hdr)) {
       nvImage.extensions = nvImage.hdr.extensions
     }
-    
+
     if (nvImage.hdr === null) {
       throw new Error(`Failed to read NIfTI header: ${nvImage.name}`)
     }

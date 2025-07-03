@@ -148,10 +148,7 @@ export function toUint8Array(nvImage: NVImage, drawingBytes: Uint8Array | null =
   }
 
   const headerSize = 348 // nifti-1 standard
-  hdrCopy.vox_offset = Math.max(
-    352,
-    headerSize + extFlag.length + extensionsData.length
-  )
+  hdrCopy.vox_offset = Math.max(352, headerSize + extFlag.length + extensionsData.length)
 
   // If saving a drawing, ensure output header reflects drawing data type (UINT8) and resets scaling
   if (isDrawing) {
