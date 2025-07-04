@@ -17467,7 +17467,7 @@ var NVUtilities = class _NVUtilities {
       }
       return new Float64Array(byteArray.buffer);
     }
-    function readTag() {
+    function readTag2() {
       const mtype = reader.getUint32(pos, true);
       const mrows = reader.getUint32(pos + 4, true);
       const ncols = reader.getUint32(pos + 8, true);
@@ -17506,7 +17506,7 @@ var NVUtilities = class _NVUtilities {
       pos = posEnd;
     }
     while (pos + 20 < len4) {
-      readTag();
+      readTag2();
     }
     return mat;
   }
@@ -25790,35 +25790,131 @@ function setVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0],
 // src/nvimage/ImageReaders/mgh.ts
 var mgh_exports = {};
 __export(mgh_exports, {
+  isFreeSurferLabelImage: () => isFreeSurferLabelImage,
+  optimizeFreeSurferLabels: () => optimizeFreeSurferLabels,
   readMgh: () => readMgh
 });
-function readFirstTag1String(view, offset, footerLength) {
+function readTag(view, offset, footerLength, tagToRead = 1) {
   const end = offset + footerLength;
   let pos = offset;
+  const results = [];
   while (pos + 12 <= end) {
     const tag = view.getInt32(pos, false);
     const length4 = view.getInt32(pos + 8, false);
     pos += 12;
-    if (tag !== 1) {
+    if (length4 <= 0 || pos + length4 > end) {
+      break;
+    }
+    if (tag !== tagToRead) {
       pos += length4;
       continue;
     }
-    if (pos + 4 > end) {
-      return "";
+    let strLen = length4;
+    let contentPos = pos;
+    if (tagToRead === 1) {
+      if (pos + 4 > end) {
+        break;
+      }
+      strLen = view.getInt32(pos, false);
+      contentPos += 4;
     }
-    const strLen = view.getInt32(pos, false);
-    pos += 4;
-    if (strLen <= 1 || pos + strLen > end) {
-      return "";
+    if (strLen > 1 && contentPos + strLen <= end) {
+      const raw = new Uint8Array(view.buffer, contentPos, strLen);
+      const str6 = new TextDecoder("utf-8").decode(raw.slice(0, -1));
+      results.push(str6);
     }
-    const raw = new Uint8Array(view.buffer, pos, strLen);
-    return new TextDecoder("utf-8").decode(raw.slice(0, -1));
+    pos += length4;
   }
-  return "";
+  return results.join("\n\n");
+}
+function optimizeFreeSurferLabels(hdr, imgRaw) {
+  hdr.intent_code = 1002;
+  if (hdr.datatypeCode !== 16 /* DT_FLOAT32 */ && hdr.datatypeCode !== 8 /* DT_INT32 */) {
+    return imgRaw;
+  }
+  let img = new Float32Array(imgRaw);
+  if (hdr.datatypeCode === 8 /* DT_INT32 */) {
+    img = new Int32Array(imgRaw);
+  }
+  if (isPlatformLittleEndian()) {
+    const u32 = new Uint32Array(imgRaw);
+    for (let i = 0; i < u32.length; i++) {
+      const val = u32[i];
+      u32[i] = (val & 255) << 24 | (val & 65280) << 8 | (val & 16711680) >>> 8 | (val & 4278190080) >>> 24;
+    }
+  }
+  hdr.littleEndian = isPlatformLittleEndian();
+  let isInteger = true;
+  let mn = Infinity;
+  let mx = -Infinity;
+  for (let i = 0; i < img.length; i++) {
+    const v = img[i];
+    if (!Number.isFinite(v)) {
+      continue;
+    }
+    if (!Number.isInteger(v)) {
+      isInteger = false;
+    }
+    if (v < mn) {
+      mn = v;
+    }
+    if (v > mx) {
+      mx = v;
+    }
+  }
+  if (!isInteger || mn < 0 || mx > 2147483647) {
+    log.warn(`FreeSurfer Labels must be integers in INT32 range. range ${mn}..${mx}`);
+    return imgRaw;
+  }
+  if (mx > 32767) {
+    hdr.datatypeCode = 8 /* DT_INT32 */;
+    const out = new Int32Array(img.length);
+    for (let i = 0; i < img.length; i++) {
+      out[i] = Math.trunc(img[i]);
+    }
+    return out.buffer;
+  } else if (mx > 255) {
+    hdr.datatypeCode = 4 /* DT_INT16 */;
+    hdr.numBitsPerVoxel = 16;
+    const out = new Int16Array(img.length);
+    for (let i = 0; i < img.length; i++) {
+      out[i] = Math.trunc(img[i]);
+    }
+    return out.buffer;
+  } else {
+    hdr.datatypeCode = 2 /* DT_UINT8 */;
+    hdr.numBitsPerVoxel = 8;
+    const out = new Uint8Array(img.length);
+    for (let i = 0; i < img.length; i++) {
+      out[i] = Math.trunc(img[i]);
+    }
+    return out.buffer;
+  }
+}
+function isFreeSurferLabelImage(raw, hdr, expectedBytes) {
+  const remainingBytes = raw.byteLength - hdr.vox_offset;
+  if (remainingBytes < expectedBytes) {
+    log.error(`MGH image data size mismatch: expected ${expectedBytes}, found ${remainingBytes}`);
+    return false;
+  }
+  if (remainingBytes === expectedBytes) {
+    return false;
+  }
+  const footerStart = hdr.vox_offset + expectedBytes + 20;
+  const footerLength = raw.byteLength - footerStart;
+  if (footerLength <= 12) {
+    return false;
+  }
+  const tag1 = readTag(new DataView(raw), footerStart, footerLength);
+  if (tag1.toLowerCase().endsWith("lut.txt")) {
+    return true;
+  }
+  const tag3 = readTag(new DataView(raw), footerStart, footerLength, 3);
+  return tag3.includes("mri_label2vol");
 }
 async function readMgh(nvImage, buffer) {
   if (!nvImage.hdr) {
-    log.warn("readMgh called before nvImage.hdr was initialized. Creating default.");
+    log.debug("readMgh called before nvImage.hdr was initialized. Creating default.");
     nvImage.hdr = new NIFTI1();
   }
   const hdr = nvImage.hdr;
@@ -25931,24 +26027,10 @@ async function readMgh(nvImage, buffer) {
   const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
   const nVoxels = width * height * depth * hdr.dims[4];
   const expectedBytes = nVoxels * nBytesPerVoxel;
-  const remainingBytes = raw.byteLength - hdr.vox_offset;
-  if (remainingBytes < expectedBytes) {
-    log.error(`MGH image data size mismatch: expected ${expectedBytes}, found ${remainingBytes}`);
-    return null;
-  } else if (remainingBytes > expectedBytes) {
-    log.warn(`MGH file has extra ${remainingBytes - expectedBytes} bytes after image data. Truncating.`);
-    const footerStart = hdr.vox_offset + expectedBytes + 20;
-    const footerLength = raw.byteLength - footerStart;
-    if (footerLength > 12) {
-      const firstTag1String = readFirstTag1String(reader, footerStart, footerLength);
-      const isLUT = firstTag1String.toLowerCase().endsWith("lut.txt");
-      if (isLUT) {
-        hdr.intent_code = 1002;
-      }
-      log.debug(`First tag 1 string: ${firstTag1String} isLUT: ${isLUT}`);
-    }
-  }
   const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes);
+  if (isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
+    return optimizeFreeSurferLabels(hdr, imgRaw);
+  }
   return imgRaw;
 }
 
@@ -40649,6 +40731,7 @@ var Niivue = class {
       gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3);
     }
+    gl.enable(gl.CULL_FACE);
     gl.deleteFramebuffer(fb);
     gl.deleteTexture(tempTex3D);
     gl.deleteBuffer(vbo2);

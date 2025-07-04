@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="alphaSlider">Opacity</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="164"
+        class="slider"
+        id="alphaSlider"
+      />
+      <label for="atlasOutlineSelect">Atlas Outline</label>
+      <select id="atlasOutlineSelect">
+        <option value="0" selected>None</option>
+        <option value="0.01">Gap</option>
+        <option value="1">Opaque</option>
+        <option value="-1">Black</option>
+      </select>
+      &nbsp; &nbsp;
+      <label for="renderMode">Render Mode</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0" selected>matte</option>
+        <option value="0.3">low</option>
+        <option value="0.6">medium</option>
+        <option value="1.0">high</option>
+      </select>
+      <button id="aboutBtn">About</button>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="location">&nbsp;</footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      var volumeList1 = [
+        {url: "../images/norm.mgz"},
+        {url: "../images/aparc.a2009s+aseg.mgz", opacity: 0.5},
+      ]
+      let activeIdx = - 1
+      function handleLocationChange(data) {
+        document.getElementById("location").innerHTML = data.string
+        let idx = data.values[1].value
+        if ((isFinite(idx)) && (idx !== activeIdx)) {
+          activeIdx = idx
+          nv1.opts.atlasActiveIndex = activeIdx
+          nv1.updateGLVolume()
+        }
+      }
+      aboutBtn.onclick = function () {
+        window.alert(
+          "This demo demonstrates loading FreeSurfer labels, detected using the undocumented footer."
+        )
+      }
+      alphaSlider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255)
+        nv1.updateGLVolume()
+      }
+      atlasOutlineSelect.onchange = function () {
+        nv1.setAtlasOutline(parseFloat(this.value))
+      }
+      renderMode.onchange = function () {
+        nv1.setVolumeRenderIllumination(this.value)
+      }
+      var nv1 = new niivue.Niivue({show3Dcrosshair: true, onLocationChange: handleLocationChange })
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+      nv1.opts.dragMode = nv1.dragModes.pan
+      nv1.opts.yoke3Dto2DZoom = true
+      await nv1.attachTo("gl1")
+      await nv1.loadVolumes(volumeList1)
+      nv1.updateGLVolume()
+      alphaSlider.oninput()
+      atlasOutlineSelect.onchange()
+      renderMode.onchange()
+      console.log(nv1.volumes)
+    </script>
+  </body>
+</html>
