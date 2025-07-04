@@ -7229,7 +7229,7 @@ export class Niivue {
       gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
     }
-
+    gl.enable(gl.CULL_FACE)
     gl.deleteFramebuffer(fb)
     gl.deleteTexture(tempTex3D)
     gl.deleteBuffer(vbo2)
