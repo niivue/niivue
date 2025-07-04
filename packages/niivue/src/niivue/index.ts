@@ -1,5 +1,5 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
-import { version } from '../../package.json'
+import packageJson from '../../package.json' with { type: 'json' }
 import { Shader } from '../shader.js'
 import { log } from '../logger.js'
 import {
@@ -127,6 +127,7 @@ import {
   unpackFloatFromVec4i,
   readFileAsDataURL
 } from './utils.js'
+const { version } = packageJson
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
 export { ColorTables as colortables, cmapper } from '../colortables.js'
 
@@ -323,6 +324,9 @@ type UIData = {
   max3D?: number
   windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
   windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
+  // angle measurement state
+  angleFirstLine: number[] // [x1, y1, x2, y2] for first line
+  angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
 }
 
 type SaveImageOptions = {
@@ -489,7 +493,9 @@ export class Niivue {
     lastTwoTouchDistance: 0,
     multiTouchGesture: false,
     windowX: 0,
-    windowY: 0
+    windowY: 0,
+    angleFirstLine: [0.0, 0.0, 0.0, 0.0],
+    angleState: 'none'
   }
 
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -602,6 +608,7 @@ export class Niivue {
   dragModes = {
     contrast: DRAG_MODE.contrast,
     measurement: DRAG_MODE.measurement,
+    angle: DRAG_MODE.angle,
     none: DRAG_MODE.none,
     pan: DRAG_MODE.pan,
     slicer3D: DRAG_MODE.slicer3D,
@@ -808,6 +815,18 @@ export class Niivue {
    */
   onDocumentLoaded: (document: NVDocument) => void = () => {}
 
+  /**
+   * Callback for when any configuration option changes.
+   * @param propertyName - The name of the option that changed.
+   * @param newValue - The new value of the option.
+   * @param oldValue - The previous value of the option.
+   */
+  onOptsChange: (
+    propertyName: keyof NVConfigOptions,
+    newValue: NVConfigOptions[keyof NVConfigOptions],
+    oldValue: NVConfigOptions[keyof NVConfigOptions]
+  ) => void = () => {}
+
   document = new NVDocument()
 
   /** Get the current scene configuration. */
@@ -884,6 +903,11 @@ export class Niivue {
     }
 
     log.setLogLevel(this.opts.logLevel)
+
+    // Set up opts change watching
+    this.document.setOptsChangeCallback((propertyName, newValue, oldValue) => {
+      this.onOptsChange(propertyName, newValue, oldValue)
+    })
   }
 
   /**
@@ -937,6 +961,9 @@ export class Niivue {
       this.canvas.removeEventListener('keyup', this.keyUpListener.bind(this))
       this.canvas.removeEventListener('keydown', this.keyDownListener.bind(this))
     }
+
+    // Clean up opts change callback
+    this.document.removeOptsChangeCallback()
 
     // Todo: other cleanup tasks could be added here
   }
@@ -1422,9 +1449,11 @@ export class Niivue {
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.uiData.mousedown = true
-    // reset drag positions used previously.
-    this.setDragStart(0, 0)
-    this.setDragEnd(0, 0)
+    // reset drag positions used previously (but not during angle measurement second line)
+    if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
+      this.setDragStart(0, 0)
+      this.setDragEnd(0, 0)
+    }
     log.debug('mouse down')
     log.debug(e)
     // record tile where mouse clicked
@@ -1527,6 +1556,23 @@ export class Niivue {
     if (this.opts.dragMode === DRAG_MODE.none) {
       return
     }
+
+    // Initialize angle measurement
+    if (this.opts.dragMode === DRAG_MODE.angle) {
+      if (this.uiData.angleState === 'none') {
+        this.uiData.angleState = 'drawing_first_line'
+      } else if (this.uiData.angleState === 'drawing_second_line') {
+        // Handle final click for angle measurement - complete the angle
+        this.uiData.angleState = 'complete'
+        this.drawScene()
+        return
+      } else if (this.uiData.angleState === 'complete') {
+        // Reset angle measurement if clicking again
+        this.resetAngleMeasurement()
+        this.uiData.angleState = 'drawing_first_line'
+      }
+    }
+
     this.setDragStart(pos!.x, pos!.y)
     if (!this.uiData.isDragging) {
       this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
@@ -1689,6 +1735,30 @@ export class Niivue {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false
+
+      // Handle angle measurement workflow
+      if (this.opts.dragMode === DRAG_MODE.angle) {
+        if (this.uiData.angleState === 'drawing_first_line') {
+          // First line completed, save it and start drawing second line
+          this.uiData.angleFirstLine = [
+            this.uiData.dragStart[0],
+            this.uiData.dragStart[1],
+            this.uiData.dragEnd[0],
+            this.uiData.dragEnd[1]
+          ]
+          this.uiData.angleState = 'drawing_second_line'
+          // Continue tracking mouse for second line
+          this.uiData.isDragging = true
+          this.drawScene()
+          return
+        } else if (this.uiData.angleState === 'drawing_second_line') {
+          // Second line completed, finish angle measurement
+          this.uiData.angleState = 'complete'
+          this.drawScene()
+          return
+        }
+      }
+
       if (this.opts.dragMode === DRAG_MODE.callbackOnly) {
         this.drawScene()
       } // hide selectionbox
@@ -1927,6 +1997,14 @@ export class Niivue {
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
+    } else if (this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line') {
+      // Handle angle measurement second line tracking
+      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+      if (!pos) {
+        return
+      }
+      this.setDragEnd(pos.x, pos.y)
+      this.drawScene()
     } else if (!this.uiData.mousedown && this.opts.clickToSegment) {
       // Handle clickToSegment preview OUTSIDE the mousedown block
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
@@ -3147,6 +3225,36 @@ export class Niivue {
     this.opts.forceDevicePixelRatio = forceDevicePixelRatio
     this.resizeListener()
     this.drawScene()
+  }
+
+  /**
+   * Start watching for changes to configuration options.
+   * This is a convenience method that sets up the onOptsChange callback.
+   * @param callback - Function to call when any option changes
+   * @example
+   * niivue.watchOptsChanges((propertyName, newValue, oldValue) => {
+   *   console.log(`Option ${propertyName} changed from ${oldValue} to ${newValue}`)
+   * })
+   * @see {@link https://niivue.com/demos/ | live demo usage}
+   */
+  watchOptsChanges(
+    callback: (
+      propertyName: keyof NVConfigOptions,
+      newValue: NVConfigOptions[keyof NVConfigOptions],
+      oldValue: NVConfigOptions[keyof NVConfigOptions]
+    ) => void
+  ): void {
+    this.onOptsChange = callback
+  }
+
+  /**
+   * Stop watching for changes to configuration options.
+   * This removes the current onOptsChange callback.
+   * @example niivue.unwatchOptsChanges()
+   * @see {@link https://niivue.com/demos/ | live demo usage}
+   */
+  unwatchOptsChanges(): void {
+    this.onOptsChange = (): void => {}
   }
 
   /**
@@ -9907,7 +10015,7 @@ export class Niivue {
    * Draw a measurement line with end caps and length text on a 2D tile.
    * @internal
    */
-  drawMeasurementTool(startXYendXY: number[]): void {
+  drawMeasurementTool(startXYendXY: number[], isDrawText: boolean = true): void {
     function extendTo(
       x0: number,
       y0: number,
@@ -10000,14 +10108,176 @@ export class Niivue {
           textCoords = startXYendXY
           break
       }
-      this.drawTextBetween(
-        textCoords,
-        stringMM,
-        this.opts.measureTextHeight / 0.06, // <- TODO measureFontPx
-        this.opts.measureTextColor
-      )
+      if (isDrawText) {
+        this.drawTextBetween(
+          textCoords,
+          stringMM,
+          this.opts.measureTextHeight / 0.06, // <- TODO measureFontPx
+          this.opts.measureTextColor
+        )
+      }
     }
     gl.bindVertexArray(this.unusedVAO) // set vertex attributes
+  }
+
+  /**
+   * Draw angle measurement tool with two lines and angle display.
+   * @internal
+   */
+  drawAngleMeasurementTool(): void {
+    if (this.uiData.angleState === 'drawing_first_line') {
+      // Draw the first line being dragged
+      this.drawMeasurementTool(
+        [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]],
+        false
+      )
+    } else if (this.uiData.angleState === 'drawing_second_line') {
+      // Draw the first line (completed)
+      this.drawMeasurementTool(this.uiData.angleFirstLine, false)
+
+      // Draw the second line being positioned
+      this.drawMeasurementTool(
+        [
+          this.uiData.angleFirstLine[2], // start from end of first line
+          this.uiData.angleFirstLine[3],
+          this.uiData.dragEnd[0], // to current mouse position
+          this.uiData.dragEnd[1]
+        ],
+        false
+      )
+
+      // Calculate and display angle
+      this.drawAngleText()
+    } else if (this.uiData.angleState === 'complete') {
+      // Draw both completed lines
+      this.drawMeasurementTool(this.uiData.angleFirstLine, false)
+
+      // Draw the second line (completed)
+      const secondLine = [
+        this.uiData.angleFirstLine[2], // start from end of first line
+        this.uiData.angleFirstLine[3],
+        this.uiData.dragEnd[0], // to final position
+        this.uiData.dragEnd[1]
+      ]
+      this.drawMeasurementTool(secondLine, false)
+
+      // Calculate and display angle
+      this.drawAngleText()
+    }
+  }
+
+  /**
+   * Calculate and draw angle text at the intersection of two lines.
+   * @internal
+   */
+  drawAngleText(): void {
+    const line1 = this.uiData.angleFirstLine
+    const line2 = [
+      this.uiData.angleFirstLine[2], // start from end of first line
+      this.uiData.angleFirstLine[3],
+      this.uiData.dragEnd[0], // to current mouse position
+      this.uiData.dragEnd[1]
+    ]
+
+    // Calculate angle between the two lines
+    const angle = this.calculateAngleBetweenLines(line1, line2)
+
+    // Display angle at intersection point
+    const intersectionX = this.uiData.angleFirstLine[2]
+    const intersectionY = this.uiData.angleFirstLine[3]
+
+    const angleText = `${angle.toFixed(1)}°`
+
+    // Draw angle text at intersection
+    this.drawTextBetween(
+      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
+      angleText,
+      this.opts.measureTextHeight / 0.06,
+      this.opts.measureTextColor
+    )
+  }
+
+  /**
+   * Calculate angle between two lines in degrees.
+   * @internal
+   */
+  calculateAngleBetweenLines(line1: number[], line2: number[]): number {
+    // For angle measurement, we need to calculate vectors from the intersection point
+    // The intersection point is the end of line1 (which is the start of line2)
+    const intersectionX = line1[2]
+    const intersectionY = line1[3]
+    const v1x = line1[0] - intersectionX
+    const v1y = line1[1] - intersectionY
+    const v2x = line2[2] - intersectionX
+    const v2y = line2[3] - intersectionY
+    const dot = v1x * v2x + v1y * v2y
+    const mag1 = Math.sqrt(v1x * v1x + v1y * v1y)
+    const mag2 = Math.sqrt(v2x * v2x + v2y * v2y)
+    // Avoid division by zero
+    if (mag1 === 0 || mag2 === 0) {
+      return 0
+    }
+    // Calculate angle in radians
+    const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)))
+    const angleRad = Math.acos(cosAngle)
+    // Convert to degrees
+    const angleDeg = angleRad * (180 / Math.PI)
+    return angleDeg
+  }
+
+  /**
+   * Reset the angle measurement state.
+   * @internal
+   */
+  resetAngleMeasurement(): void {
+    this.uiData.angleState = 'none'
+    this.uiData.angleFirstLine = [0.0, 0.0, 0.0, 0.0]
+  }
+
+  /**
+   * Set the drag mode for mouse interactions.
+   * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
+   */
+  setDragMode(mode: string | DRAG_MODE): void {
+    if (typeof mode === 'string') {
+      // Convert string to DRAG_MODE enum
+      switch (mode) {
+        case 'none':
+          this.opts.dragMode = DRAG_MODE.none
+          break
+        case 'contrast':
+          this.opts.dragMode = DRAG_MODE.contrast
+          break
+        case 'measurement':
+          this.opts.dragMode = DRAG_MODE.measurement
+          break
+        case 'angle':
+          this.opts.dragMode = DRAG_MODE.angle
+          break
+        case 'pan':
+          this.opts.dragMode = DRAG_MODE.pan
+          break
+        case 'slicer3D':
+          this.opts.dragMode = DRAG_MODE.slicer3D
+          break
+        case 'callbackOnly':
+          this.opts.dragMode = DRAG_MODE.callbackOnly
+          break
+        case 'roiSelection':
+          this.opts.dragMode = DRAG_MODE.roiSelection
+          break
+        default:
+          console.warn(`Unknown drag mode: ${mode}`)
+          return
+      }
+    } else {
+      this.opts.dragMode = mode
+    }
+
+    // Reset angle measurement state when changing drag modes
+    if (this.opts.dragMode !== DRAG_MODE.angle) {
+      this.resetAngleMeasurement()
+    }
   }
 
   /**
@@ -13821,6 +14091,10 @@ export class Niivue {
           this.uiData.dragEnd[0],
           this.uiData.dragEnd[1]
         ])
+        return
+      }
+      if (this.opts.dragMode === DRAG_MODE.angle) {
+        this.drawAngleMeasurementTool()
         return
       }
       const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])

@@ -81,6 +81,7 @@ export class NVImage {
   mm2ortho?: mat4
 
   hdr: NIFTI1 | NIFTI2 | null = null
+  extensions?: NIFTIEXTENSION[]
   imageType?: ImageType
   img?: TypedVoxelArray
   imaginary?: Float32Array // only for complex data
