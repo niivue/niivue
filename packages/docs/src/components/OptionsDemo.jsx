@@ -220,9 +220,8 @@ export const OptionsDemo = ({
           border: '1px solid #e0e0e0', 
           borderRadius: '8px', 
           padding: '16px',
-          backgroundColor: '#ffffff'
         }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#333' }}>Crosshair</h4>
+          <h4 style={{ margin: '0 0 16px 0', }}>Crosshair</h4>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
               Width: {crosshairWidth}
@@ -276,9 +275,8 @@ export const OptionsDemo = ({
           border: '1px solid #e0e0e0', 
           borderRadius: '8px', 
           padding: '16px',
-          backgroundColor: '#ffffff'
         }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#333' }}>Background</h4>
+          <h4 style={{ margin: '0 0 16px 0' }}>Background</h4>
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
               Color (RGB):
@@ -315,9 +313,8 @@ export const OptionsDemo = ({
           border: '1px solid #e0e0e0', 
           borderRadius: '8px', 
           padding: '16px',
-          backgroundColor: '#ffffff'
         }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#333' }}>Display Options</h4>
+          <h4 style={{ margin: '0 0 16px 0' }}>Display Options</h4>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
               Text Height: {textHeight.toFixed(3)}
@@ -394,9 +391,8 @@ export const OptionsDemo = ({
           border: '1px solid #e0e0e0', 
           borderRadius: '8px', 
           padding: '16px',
-          backgroundColor: '#ffffff'
         }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#333' }}>Demo Actions</h4>
+          <h4 style={{ margin: '0 0 16px 0' }}>Demo Actions</h4>
           <button
             onClick={handleRandomChanges}
             style={{
@@ -418,7 +414,6 @@ export const OptionsDemo = ({
           </button>
           <div style={{ 
             fontSize: '12px', 
-            color: '#666', 
             marginTop: '12px',
             textAlign: 'center',
             lineHeight: '1.4'
@@ -430,7 +425,6 @@ export const OptionsDemo = ({
 
       {/* Change Log */}
       <div style={{
-        backgroundColor: '#f8f9fa',
         borderRadius: '4px',
         padding: '16px'
       }}>
@@ -438,13 +432,12 @@ export const OptionsDemo = ({
         <div style={{
           maxHeight: '200px',
           overflowY: 'auto',
-          backgroundColor: '#ffffff',
           border: '1px solid #ddd',
           borderRadius: '4px',
           padding: '8px'
         }}>
           {changeLog.length === 0 ? (
-            <div style={{ color: '#666', fontStyle: 'italic' }}>
+            <div style={{  fontStyle: 'italic' }}>
               No changes yet. Interact with the controls above to see option change events.
             </div>
           ) : (
