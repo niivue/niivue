@@ -69,7 +69,7 @@ function readTag(view: DataView, offset: number, footerLength: number, tagToRead
  * @param imgRaw - The raw image data as an ArrayBuffer.
  * @returns A possibly transformed ArrayBuffer, or the original buffer if optimization is not possible.
  */
-export function optimizeFreeSurferLabels(hdr: NiiHeader, imgRaw: ArrayBuffer): ArrayBuffer {
+export function optimizeFreeSurferLabels(hdr: NIFTI1, imgRaw: ArrayBuffer): ArrayBuffer {
   hdr.intent_code = 1002
   if (hdr.datatypeCode !== NiiDataType.DT_FLOAT32 && hdr.datatypeCode !== NiiDataType.DT_INT32) {
     return imgRaw
