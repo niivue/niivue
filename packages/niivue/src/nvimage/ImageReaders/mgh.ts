@@ -1,4 +1,4 @@
-import { NIFTI1 } from 'nifti-reader-js'
+import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
 import { mat4, vec4, vec3 } from 'gl-matrix'
 import { log } from '../../logger.js'
 import { NVUtilities } from '../../nvutilities.js'
