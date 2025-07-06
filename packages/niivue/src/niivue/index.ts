@@ -7161,23 +7161,14 @@ export class Niivue {
    */
   gradientGL(hdr: NiftiHeader): void {
     const gl = this.gl
-    const faceStrip = [0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0]
-    const vao2 = gl.createVertexArray()
-    gl.bindVertexArray(vao2)
-    const vbo2 = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo2)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faceStrip), gl.STATIC_DRAW)
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+    gl.bindVertexArray(this.genericVAO)
     const fb = gl.createFramebuffer()
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
-    gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
     const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
     const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
-
     gl.activeTexture(TEXTURE0_BACK_VOL)
     gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
     const blurRadius = 0.7
@@ -7185,19 +7176,17 @@ export class Niivue {
     gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
     gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2])
     gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3])
-    gl.bindVertexArray(vao2)
     for (let i = 0; i < hdr.dims[3] - 1; i++) {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i)
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error('framebuffer status: ', status)
+        log.error('blur shader: ', status)
       }
       gl.clear(gl.DEPTH_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
-
     const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
@@ -7213,7 +7202,6 @@ export class Niivue {
       gl.uniform1f(sobelShader.uniforms.dZ2, (2.0 * sobelRadius) / hdr.dims[3])
     }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
-    gl.bindVertexArray(vao2)
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture)
     }
@@ -7224,16 +7212,15 @@ export class Niivue {
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i)
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error('framebuffer status: ', status)
+        log.error('sobel shader: ', status)
       }
       gl.clear(gl.DEPTH_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
-    gl.enable(gl.CULL_FACE)
     gl.deleteFramebuffer(fb)
     gl.deleteTexture(tempTex3D)
-    gl.deleteBuffer(vbo2)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    this.gl.bindVertexArray(this.unusedVAO)
   }
 
   /**
@@ -8254,6 +8241,7 @@ export class Niivue {
       this.volumeTexture = outTexture
       if (this.gradientTextureAmount > 0.0 && !this.useCustomGradientTexture) {
         this.gradientGL(hdr)
+        this.gl.bindVertexArray(this.genericVAO)
       } else if (this.gradientTextureAmount <= 0.0) {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture)
