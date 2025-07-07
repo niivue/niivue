@@ -15,14 +15,14 @@
         type="range"
         min="1"
         max="255"
-        value="48"
+        value="164"
         class="slider"
         id="alphaSlider"
       />
       <label for="atlasOutlineSelect">Atlas Outline</label>
       <select id="atlasOutlineSelect">
-        <option value="0">None</option>
-        <option value="0.01" selected>Gap</option>
+        <option value="0" selected>None</option>
+        <option value="0.01">Gap</option>
         <option value="1">Opaque</option>
         <option value="-1">Black</option>
       </select>
@@ -35,7 +35,7 @@
         <option value="0.6">medium</option>
         <option value="1.0">high</option>
       </select>
-      <button id="about">About</button>
+      <button id="aboutBtn">About</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -44,8 +44,8 @@
     <script type="module" async>
       import * as niivue from "../dist/index.js"
       var volumeList1 = [
-        {url: "../images/inia19-t1-brain.nii.gz"},
-        {url: "../images/inia19-NeuroMaps.nii.gz", opacity: 0.5},
+        {url: "../images/norm.mgz"},
+        {url: "../images/aparc.a2009s+aseg.mgz", opacity: 0.5},
       ]
       let activeIdx = - 1
       function handleLocationChange(data) {
@@ -57,8 +57,14 @@
           nv1.updateGLVolume()
         }
       }
+      aboutBtn.onclick = function () {
+        window.alert(
+          "This demo demonstrates loading FreeSurfer labels, detected using the undocumented footer."
+        )
+      }
       alphaSlider.oninput = function () {
         nv1.setOpacity(1, this.value / 255)
+        nv1.updateGLVolume()
       }
       atlasOutlineSelect.onchange = function () {
         nv1.setAtlasOutline(parseFloat(this.value))
@@ -72,18 +78,11 @@
       nv1.opts.yoke3Dto2DZoom = true
       await nv1.attachTo("gl1")
       await nv1.loadVolumes(volumeList1)
-      await nv1.volumes[1].setColormapLabelFromUrl("../images/inia19-NeuroMaps.json")
       nv1.updateGLVolume()
-
       alphaSlider.oninput()
       atlasOutlineSelect.onchange()
       renderMode.onchange()
-      document.getElementById("about").addEventListener("click", doAbout)
-      function doAbout() {
-        window.alert(
-          "This demo demonstrates sparse labeling. The inia19 atlas has 1004 labels in the range 0..1606 ."
-        )
-      }
+      console.log(nv1.volumes)
     </script>
   </body>
 </html>
