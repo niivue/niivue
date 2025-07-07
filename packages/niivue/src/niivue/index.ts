@@ -7171,6 +7171,8 @@ export class Niivue {
     blurShader.use(gl)
     gl.activeTexture(TEXTURE0_BACK_VOL)
     gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     const blurRadius = 0.7
     gl.uniform1i(blurShader.uniforms.intensityVol, 0)
     gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
@@ -7191,6 +7193,8 @@ export class Niivue {
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.uniform1i(sobelShader.uniforms.intensityVol, 8) // TEXTURE8_GRADIENT_TEMP
     const sobelRadius = 0.7
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
