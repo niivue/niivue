@@ -12,7 +12,10 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      outDir: 'out/preload'
+  }
   },
   renderer: {
     server: {
@@ -33,7 +36,8 @@ export default defineConfig({
       },
       rollupOptions: {
         external: ['zlib', 'pako', 'node:zlib', 'module']
-      }
+      },
+      outDir: 'out/renderer'
     },
     resolve: {
       alias: {

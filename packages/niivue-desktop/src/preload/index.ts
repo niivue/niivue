@@ -1,11 +1,12 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
   ...electronAPI,
   startTabDrag: (fileName: string, jsonStr: string): void => {
     ipcRenderer.send('start-tab-drag', { fileName, jsonStr })
-  }
+  },
+  setZoomFactor: (factor: number): void => webFrame.setZoomFactor(factor)
 }
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
