@@ -8261,7 +8261,6 @@ export class Niivue {
     const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
     const vox = slicescl.vox
     const volScale = slicescl.volScale
-
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
     this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)

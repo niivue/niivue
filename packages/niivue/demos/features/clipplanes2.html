@@ -136,7 +136,7 @@
         nv1.setClipPlaneThick(this.value / 100)
       }
       renderMode.onchange = function () {
-        nv1.setVolumeRenderIllumination(this.value)
+        nv1.setVolumeRenderIllumination(parseFloat(this.value))
       }
       crosshairCheck.onchange = function () {
         nv1.setCrosshairWidth(this.checked ? 1 : 0)
