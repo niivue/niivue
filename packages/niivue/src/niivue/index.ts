@@ -12047,7 +12047,7 @@ export class Niivue {
       // gl.activeTexture(TEXTURE7_DRAW)
       // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
       gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-      if ((this.gradientTextureAmount > 0.0) && (shader.uniforms.normMtx) && (this.gradientTexture)) {
+      if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
         gl.activeTexture(TEXTURE6_GRADIENT)
         gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
         const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
