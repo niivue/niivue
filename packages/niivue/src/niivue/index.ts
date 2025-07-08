@@ -4522,6 +4522,7 @@ export class Niivue {
         this.renderShader = this.renderSliceShader
       }
     }
+    await this.refreshLayers(this.volumes[0], 0)
     this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
@@ -4533,7 +4534,6 @@ export class Niivue {
     if (this.volumes.length < 1) {
       return
     } // issue1158
-    this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
   }
 
@@ -8261,8 +8261,8 @@ export class Niivue {
     const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
     const vox = slicescl.vox
     const volScale = slicescl.volScale
-    // @ts-expect-error FIXME assigning this.overlays to a number field
-    this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays)
+
+    this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
     this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)
     this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
