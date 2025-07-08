@@ -562,7 +562,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         ...createSliceTypeSubmenu(win),
         // separator
         { type: 'separator' },
-        // TODO(cdrake): reenable menu
+        // TODO(cdrake): re-enable menu
         // {
         //   label: 'Layout',
         //   submenu: createLayoutSubmenu(win)
