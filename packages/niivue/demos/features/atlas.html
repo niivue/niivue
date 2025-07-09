@@ -109,7 +109,7 @@
         nv1.setInterpolation(this.checked)
       }
       renderMode.onchange = function () {
-        nv1.setVolumeRenderIllumination(this.value)
+        nv1.setVolumeRenderIllumination(parseFloat(this.value))
       }
       var nv1 = new niivue.Niivue({show3Dcrosshair: true, backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange })
       await nv1.attachTo("gl1")

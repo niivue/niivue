@@ -6,6 +6,48 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>NiiVue Demos</title>
     <style>
+      header {
+        background-color: #000;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        margin-bottom: 1rem;
+      }
+      .ribbon {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        max-width: 960px;
+        margin: 0 auto;
+        background-color: #000;
+      }
+      .logo {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #58a6ff;
+        text-decoration: none;
+        margin-right: 1rem;
+      }
+      .nav-left {
+        display: flex;
+        gap: 1.5rem;
+        flex-grow: 1;
+      }
+      .nav-right {
+        display: flex;
+      }
+      .nav-left a,
+      .nav-right a {
+        color: #58a6ff;
+        text-decoration: none;
+        font-size: 1rem;
+      }
+      .nav-left a:hover,
+      .nav-right a:hover {
+        text-decoration: underline;
+      }
+      .nav-left  a.active {
+        font-weight: bold;
+        text-decoration: underline;
+      }
       body {
         font-family: system-ui, -apple-system, sans-serif;
         background: #333;
@@ -43,8 +85,20 @@
     </style>
   </head>
   <body>
+<header>
+  <div class="ribbon">
+    <a href="https://niivue.com/" class="logo">NiiVue</a>
+    <div class="nav-left">
+      <a href="https://niivue.com/gallery">Gallery</a>
+      <a href="./" class="active">Demos</a>
+      <a href="https://niivue.com/docs">Docs</a>
+    </div>
+    <div class="nav-right">
+      <a href="https://github.com/niivue/niivue" target="_blank">GitHub</a>
+    </div>
+  </div>
+</header>
     <main>
-      <h1><a href="https://niivue.com/">NiiVue Demo Recipes</a></h1>
       <ul>
 <li><a href="./features/basic.multiplanar.html" target="_blank" rel="noopener noreferrer">Basic multiplanar</a></li>
 <li><a href="./features/sync.mesh.html" target="_blank" rel="noopener noreferrer">Sync mesh</a></li>

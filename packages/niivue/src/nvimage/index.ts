@@ -1936,13 +1936,14 @@ export class NVImage {
     if (len < 20) {
       throw new Error('File too small to be MIF: bytes = ' + len)
     }
-    const bytes = new Uint8Array(buffer)
+    let bytes = new Uint8Array(buffer)
     if (bytes[0] === 31 && bytes[1] === 139) {
       log.debug('MIF with GZ decompression')
       // const raw = decompressSync(new Uint8Array(buffer))
       // buffer = raw.buffer
       buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer))
       len = buffer.byteLength
+      bytes = new Uint8Array(buffer)
     }
     let pos = 0
     function readStr(): string {
