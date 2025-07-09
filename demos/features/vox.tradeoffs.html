@@ -79,7 +79,7 @@
     nv1.setHighResolutionCapable(this.checked)
   }
   renderMode.onchange = function () {
-    nv1.setVolumeRenderIllumination(this.value)
+    nv1.setVolumeRenderIllumination(parseFloat(this.value))
   }
   atlasSlider.oninput = function () {
     nv1.setOpacity(1, this.value / 255.0)

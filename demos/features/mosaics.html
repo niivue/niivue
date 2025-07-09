@@ -56,7 +56,7 @@
       import * as niivue from "../dist/index.js"
       // value="H 0.3 A -20 50 60 H 0.4 70 H 0.25 C -10 H 0.1 -20 -50 S R X 0 R X -0"
       renderMode.onchange = function () {
-        nv1.setVolumeRenderIllumination(this.value)
+        nv1.setVolumeRenderIllumination(parseFloat(this.value))
       }
       aboutBtn.onclick = function () {
         window.alert(
