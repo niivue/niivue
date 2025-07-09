@@ -1,7 +1,7 @@
 import { app, Menu, dialog, systemPreferences } from 'electron'
 import { sliceTypeMap } from '../../common/sliceTypes.js'
-import { layouts } from '../../common/layouts.js'
-import { orientationLabelMap } from '../../common/orientationLabels.js'
+// import { layouts } from '../../common/layouts.js'
+// import { orientationLabelMap } from '../../common/orientationLabels.js'
 import { dragModeMap } from '../../common/dragMode.js'
 import { DEFAULT_OPTIONS } from '@niivue/niivue'
 import { store } from './appStore.js'
@@ -85,50 +85,50 @@ const createSliceTypeSubmenu = (
   })
 }
 
-const createLayoutSubmenu = (
-  win: Electron.BrowserWindow
-): Electron.MenuItemConstructorOptions[] => {
-  return Object.keys(layouts).map((layoutKey) => {
-    return {
-      label: layoutKey,
-      id: layoutKey,
-      type: 'radio',
-      checked: layoutKey === viewState.layout,
-      click: (): void => {
-        // get the layout value from the layouts object
-        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layoutKey)
-        const state = menuItem ? menuItem.checked : false
-        win.webContents.send('setLayout', state ? layoutKey : 'Auto')
-      }
-    }
-  })
-}
+// const createLayoutSubmenu = (
+//   win: Electron.BrowserWindow
+// ): Electron.MenuItemConstructorOptions[] => {
+//   return Object.keys(layouts).map((layoutKey) => {
+//     return {
+//       label: layoutKey,
+//       id: layoutKey,
+//       type: 'radio',
+//       checked: layoutKey === viewState.layout,
+//       click: (): void => {
+//         // get the layout value from the layouts object
+//         const menuItem = Menu.getApplicationMenu()?.getMenuItemById(layoutKey)
+//         const state = menuItem ? menuItem.checked : false
+//         win.webContents.send('setLayout', state ? layoutKey : 'Auto')
+//       }
+//     }
+//   })
+// }
 
-const createOrientationLabelHeightSubmenu = (
-  win: Electron.BrowserWindow
-): Electron.MenuItemConstructorOptions[] => {
-  return Object.keys(orientationLabelMap).map((orientationLabel) => {
-    return {
-      label: orientationLabel,
-      id: `labelHeight_${orientationLabel}`,
-      type: 'radio',
-      checked:
-        orientationLabel ===
-        Object.keys(orientationLabelMap).find(
-          (key) => orientationLabelMap[key] === DEFAULT_OPTIONS.textHeight
-        ),
-      click: (): void => {
-        // get the orientation label value from the orientationLabelMap object
-        const menuItem = Menu.getApplicationMenu()?.getMenuItemById(
-          `labelHeight_${orientationLabel}`
-        )
-        const state = menuItem ? menuItem.checked : false
-        console.log('orientationLabel', orientationLabel)
-        win.webContents.send('setOrientationLabelsHeight', state ? orientationLabel : 'small')
-      }
-    }
-  })
-}
+// const createOrientationLabelHeightSubmenu = (
+//   win: Electron.BrowserWindow
+// ): Electron.MenuItemConstructorOptions[] => {
+//   return Object.keys(orientationLabelMap).map((orientationLabel) => {
+//     return {
+//       label: orientationLabel,
+//       id: `labelHeight_${orientationLabel}`,
+//       type: 'radio',
+//       checked:
+//         orientationLabel ===
+//         Object.keys(orientationLabelMap).find(
+//           (key) => orientationLabelMap[key] === DEFAULT_OPTIONS.textHeight
+//         ),
+//       click: (): void => {
+//         // get the orientation label value from the orientationLabelMap object
+//         const menuItem = Menu.getApplicationMenu()?.getMenuItemById(
+//           `labelHeight_${orientationLabel}`
+//         )
+//         const state = menuItem ? menuItem.checked : false
+//         console.log('orientationLabel', orientationLabel)
+//         win.webContents.send('setOrientationLabelsHeight', state ? orientationLabel : 'small')
+//       }
+//     }
+//   })
+// }
 
 export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
   const template = [
@@ -562,124 +562,125 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         ...createSliceTypeSubmenu(win),
         // separator
         { type: 'separator' },
-        {
-          label: 'Layout',
-          submenu: createLayoutSubmenu(win)
-        },
+        // TODO(cdrake): re-enable menu
+        // {
+        //   label: 'Layout',
+        //   submenu: createLayoutSubmenu(win)
+        // },
         // separator
-        { type: 'separator' },
-        {
-          label: 'Show crosshair',
-          type: 'checkbox',
-          id: 'crosshair',
-          accelerator: 'Shift+CommandOrControl+X',
-          checked: true,
-          click: (): void => {
-            // get the current state of this menu item checkbox and send it to the renderer.
-            // Note that getApplicationMenu() is executed after the menu is built and attached to the window.
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('crosshair')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setCrosshair', state)
-          }
-        },
-        {
-          label: 'Show 3D crosshair',
-          type: 'checkbox',
-          id: 'crosshair3D',
-          checked: DEFAULT_OPTIONS.show3Dcrosshair,
-          click: (): void => {
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('crosshair3D')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setCrosshair3D', state)
-          }
-        },
-        {
-          label: 'Show 3D orientation cube',
-          type: 'checkbox',
-          id: 'orientationCube',
-          checked: DEFAULT_OPTIONS.isOrientCube,
-          click: (): void => {
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientationCube')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setOrientationCube', state)
-          }
-        },
-        {
-          label: 'Orientation label size',
-          submenu: createOrientationLabelHeightSubmenu(win)
-        },
-        {
-          label: 'Orientation label position',
-          submenu: [
-            {
-              label: 'Corner',
-              type: 'radio',
-              id: 'orientLabelCorner',
-              checked: DEFAULT_OPTIONS.isCornerOrientationText,
-              click: (): void => {
-                const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCorner')
-                const state = menuItem ? menuItem.checked : false
-                win.webContents.send('setOrientationLabelsPosition', state ? 'corner' : 'centered')
-              }
-            },
-            {
-              label: 'Centered',
-              type: 'radio',
-              id: 'orientLabelCentered',
-              checked: !DEFAULT_OPTIONS.isCornerOrientationText,
-              click: (): void => {
-                const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCentered')
-                const state = menuItem ? menuItem.checked : false
-                win.webContents.send('setOrientationLabelsPosition', state ? 'centered' : 'corner')
-              }
-            }
-          ]
-        },
-        {
-          label: 'Orientation Labels in Margin',
-          type: 'checkbox',
-          id: 'orientLabelsInMargin',
-          checked: true,
-          click: (): void => {
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelsInMargin')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setOrientationLabelsInMargin', state)
-          }
-        },
-        // equal size tiles
-        {
-          label: 'Equal size tiles (multiplanar)',
-          type: 'checkbox',
-          id: 'multiplanarEqualSize',
-          checked: true,
-          click: (): void => {
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('multiplanarEqualSize')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setMultiplanarEqualSize', state)
-          }
-        },
-        {
-          label: 'Show colorbar',
-          type: 'checkbox',
-          id: 'colorbar',
-          checked: DEFAULT_OPTIONS.isColorbar,
-          click: (): void => {
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('colorbar')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setColorbar', state)
-          }
-        },
-        {
-          label: 'Show ruler',
-          type: 'checkbox',
-          id: 'ruler',
-          checked: DEFAULT_OPTIONS.isRuler,
-          click: (): void => {
-            const menuItem = Menu.getApplicationMenu()?.getMenuItemById('ruler')
-            const state = menuItem ? menuItem.checked : false
-            win.webContents.send('setRuler', state)
-          }
-        }
+        // { type: 'separator' },
+        // {
+        //   label: 'Show crosshair',
+        //   type: 'checkbox',
+        //   id: 'crosshair',
+        //   accelerator: 'Shift+CommandOrControl+X',
+        //   checked: true,
+        //   click: (): void => {
+        //     // get the current state of this menu item checkbox and send it to the renderer.
+        //     // Note that getApplicationMenu() is executed after the menu is built and attached to the window.
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('crosshair')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setCrosshair', state)
+        //   }
+        // },
+        // {
+        //   label: 'Show 3D crosshair',
+        //   type: 'checkbox',
+        //   id: 'crosshair3D',
+        //   checked: DEFAULT_OPTIONS.show3Dcrosshair,
+        //   click: (): void => {
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('crosshair3D')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setCrosshair3D', state)
+        //   }
+        // },
+        // {
+        //   label: 'Show 3D orientation cube',
+        //   type: 'checkbox',
+        //   id: 'orientationCube',
+        //   checked: DEFAULT_OPTIONS.isOrientCube,
+        //   click: (): void => {
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientationCube')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setOrientationCube', state)
+        //   }
+        // },
+        // {
+        //   label: 'Orientation label size',
+        //   submenu: createOrientationLabelHeightSubmenu(win)
+        // },
+        // {
+        //   label: 'Orientation label position',
+        //   submenu: [
+        //     {
+        //       label: 'Corner',
+        //       type: 'radio',
+        //       id: 'orientLabelCorner',
+        //       checked: DEFAULT_OPTIONS.isCornerOrientationText,
+        //       click: (): void => {
+        //         const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCorner')
+        //         const state = menuItem ? menuItem.checked : false
+        //         win.webContents.send('setOrientationLabelsPosition', state ? 'corner' : 'centered')
+        //       }
+        //     },
+        //     {
+        //       label: 'Centered',
+        //       type: 'radio',
+        //       id: 'orientLabelCentered',
+        //       checked: !DEFAULT_OPTIONS.isCornerOrientationText,
+        //       click: (): void => {
+        //         const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelCentered')
+        //         const state = menuItem ? menuItem.checked : false
+        //         win.webContents.send('setOrientationLabelsPosition', state ? 'centered' : 'corner')
+        //       }
+        //     }
+        //   ]
+        // },
+        // {
+        //   label: 'Orientation Labels in Margin',
+        //   type: 'checkbox',
+        //   id: 'orientLabelsInMargin',
+        //   checked: true,
+        //   click: (): void => {
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('orientLabelsInMargin')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setOrientationLabelsInMargin', state)
+        //   }
+        // },
+        // // equal size tiles
+        // {
+        //   label: 'Equal size tiles (multiplanar)',
+        //   type: 'checkbox',
+        //   id: 'multiplanarEqualSize',
+        //   checked: true,
+        //   click: (): void => {
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('multiplanarEqualSize')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setMultiplanarEqualSize', state)
+        //   }
+        // },
+        // {
+        //   label: 'Show colorbar',
+        //   type: 'checkbox',
+        //   id: 'colorbar',
+        //   checked: DEFAULT_OPTIONS.isColorbar,
+        //   click: (): void => {
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('colorbar')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setColorbar', state)
+        //   }
+        // },
+        // {
+        //   label: 'Show ruler',
+        //   type: 'checkbox',
+        //   id: 'ruler',
+        //   checked: DEFAULT_OPTIONS.isRuler,
+        //   click: (): void => {
+        //     const menuItem = Menu.getApplicationMenu()?.getMenuItemById('ruler')
+        //     const state = menuItem ? menuItem.checked : false
+        //     win.webContents.send('setRuler', state)
+        //   }
+        // }
       ]
     },
     // { role: 'labelMenu' }

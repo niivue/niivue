@@ -17,40 +17,13 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
+    "prebuild": "node ./scripts/prebuild-clean-helpers.cjs",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux"
-  },
-  "build": {
-    "appId": "com.niivue.niivue-desktop",
-    "mac": {
-      "icon": "resources/icons/app_icon.icns",
-      "hardenedRuntime": true,
-      "entitlements": "build/entitlements.mac.plist"
-    },
-    "directories": {
-      "output": "dist",
-      "buildResources": "assets"
-    },
-    "files": [
-      "out/**/*",
-      "resources/icons/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "resources/icons/",
-        "to": "icons",
-        "filter": [
-          "*.png",
-          "!icon.icns"
-        ]
-      }
-    ]
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -63,7 +36,8 @@
     "@radix-ui/themes": "^3.1.6",
     "electron-store": "^10.0.1",
     "electron-updater": "^6.1.7",
-    "react-beautiful-dnd": "^13.1.1"
+    "react-beautiful-dnd": "^13.1.1",
+    "fflate": "^0.8.2"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
@@ -78,6 +52,7 @@
     "dmg-builder": "^24.13.3",
     "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
+    "electron-osx-sign": "^0.6.0",
     "electron-vite": "^2.3.0",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.3",
