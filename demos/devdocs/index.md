@@ -1,4 +1,4 @@
-# API v0.60.0
+# API v0.61.0
 
 ## Modules
 
