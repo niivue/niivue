@@ -8,18 +8,20 @@ import { Vec4, Color, Vec2 } from '../types'
 export interface UIKSliderConfig {
   /** Bounding rectangle [x, y, width, height] */
   bounds: Vec4
-  /** Current value (0.0 to 1.0) */
+  /** Current slider value */
   value: number
   /** Minimum value */
-  min?: number
+  min: number
   /** Maximum value */
-  max?: number
-  /** Step size for discrete values */
-  step?: number
+  max: number
   /** Label text to display */
   label?: string
   /** Font for text rendering */
   font?: UIKFont
+  /** Whether to show current value */
+  showValue?: boolean
+  /** Custom value formatter */
+  valueFormat?: (value: number) => string
   /** Callback when value changes */
   onValueChange?: (value: number) => void
   /** Callback when dragging starts */
@@ -30,10 +32,12 @@ export interface UIKSliderConfig {
   style?: UIKSliderStyle
   /** Whether slider is enabled */
   enabled?: boolean
-  /** Whether to show value text */
-  showValue?: boolean
-  /** Number format for value display */
-  valueFormat?: (value: number) => string
+  /** Step size for value increments */
+  step?: number
+  /** Label offset from slider position (default: -75) */
+  labelOffset?: number
+  /** Value text offset from slider position (default: 8) */
+  valueOffset?: number
   /** Orientation: 'horizontal' or 'vertical' */
   orientation?: 'horizontal' | 'vertical'
 }
@@ -60,6 +64,8 @@ export interface UIKSliderStyle {
   trackThickness?: number
   /** Thumb size */
   thumbSize?: number
+  /** Text scale for labels and values */
+  textScale?: number
 }
 
 /**
@@ -93,17 +99,18 @@ export class UIKSlider {
     disabledColor: [0.5, 0.5, 0.5, 0.5],
     hoverColor: [0.3, 0.7, 1.0, 1.0],
     trackThickness: 6,
-    thumbSize: 16
+    thumbSize: 16,
+    textScale: 0.025
   }
 
   constructor(renderer: UIKRenderer, config: UIKSliderConfig) {
     this.renderer = renderer
     this.config = {
-      min: 0,
-      max: 1,
-      step: 0.01,
       enabled: true,
       showValue: true,
+      step: 0.01,
+      labelOffset: -75,
+      valueOffset: 8,
       orientation: 'horizontal',
       valueFormat: (value: number) => value.toFixed(2),
       ...config
@@ -370,23 +377,25 @@ export class UIKSlider {
     // Draw label and value
     if (this.config.font) {
       if (this.config.label) {
+        // Position label to the left of the slider track with better spacing
         this.renderer.drawRotatedText({
           font: this.config.font,
-          xy: [x, y - 20],
+          xy: [x + this.config.labelOffset!, y + height / 2 + 1], // Align with slider track center
           str: this.config.label,
           color: textColor,
-          scale: 0.8
+          scale: style.textScale!
         })
       }
       
       if (this.config.showValue) {
         const valueText = this.config.valueFormat!(this.config.value)
+        // Position value to the right of the slider track
         this.renderer.drawRotatedText({
           font: this.config.font,
-          xy: [x + width - 50, y - 20],
+          xy: [x + width + this.config.valueOffset!, y + height / 2 + 1], // Align with slider track center
           str: valueText,
           color: textColor,
-          scale: 0.8
+          scale: style.textScale!
         })
       }
     }
@@ -435,10 +444,10 @@ export class UIKSlider {
       if (this.config.label) {
         this.renderer.drawRotatedText({
           font: this.config.font,
-          xy: [x + width + 10, y],
+          xy: [x + width + 10, y - 15],
           str: this.config.label,
           color: textColor,
-          scale: 0.8,
+          scale: style.textScale!,
           rotation: Math.PI / 2
         })
       }
@@ -447,10 +456,10 @@ export class UIKSlider {
         const valueText = this.config.valueFormat!(this.config.value)
         this.renderer.drawRotatedText({
           font: this.config.font,
-          xy: [x + width + 10, y + height - 20],
+          xy: [x + width + 10, y + height + 15],
           str: valueText,
           color: textColor,
-          scale: 0.8
+          scale: style.textScale!
         })
       }
     }

@@ -14,6 +14,20 @@ export interface UIKColormapSelectorOptions {
         hoverColor?: Color
         textColor?: Color
         borderColor?: Color
+        /** Text scaling factor for colormap names */
+        textScale?: number
+        /** Width of gradient preview bars */
+        gradientWidth?: number
+        /** Height of gradient preview bars */
+        gradientHeight?: number
+        /** Padding around items */
+        itemPadding?: number
+        /** Spacing between gradient and text */
+        textSpacing?: number
+        /** Text vertical offset for alignment */
+        textVerticalOffset?: number
+        /** Number of gradient segments for smoothness */
+        gradientSegments?: number
     }
 }
 
@@ -30,6 +44,13 @@ export class UIKColormapSelector {
         hoverColor: Color
         textColor: Color
         borderColor: Color
+        textScale: number
+        gradientWidth: number
+        gradientHeight: number
+        itemPadding: number
+        textSpacing: number
+        textVerticalOffset: number
+        gradientSegments: number
     }
     private hoveredIndex: number = -1
     private selectedIndex: number = 0
@@ -48,7 +69,14 @@ export class UIKColormapSelector {
             selectedColor: options.style?.selectedColor || [0.2, 0.7, 1.0, 1.0],
             hoverColor: options.style?.hoverColor || [0.25, 0.28, 0.32, 1.0],
             textColor: options.style?.textColor || [1.0, 1.0, 1.0, 1.0],
-            borderColor: options.style?.borderColor || [0.4, 0.4, 0.4, 1.0]
+            borderColor: options.style?.borderColor || [0.4, 0.4, 0.4, 1.0],
+            textScale: options.style?.textScale || 0.018, // Default text scale
+            gradientWidth: options.style?.gradientWidth || 60, // Default gradient width
+            gradientHeight: options.style?.gradientHeight || 10, // Default gradient height
+            itemPadding: options.style?.itemPadding || 2, // Default item padding
+            textSpacing: options.style?.textSpacing || 8, // Default text spacing
+            textVerticalOffset: options.style?.textVerticalOffset || 0, // Default text vertical offset
+            gradientSegments: options.style?.gradientSegments || 20 // Default gradient segments
         }
 
         // Find selected index
@@ -102,23 +130,27 @@ export class UIKColormapSelector {
             this.drawRectangle(x + 2, itemY + 1, width - 4, itemHeight - 2, itemColor)
 
             // Draw colormap preview (gradient bar)
-            const gradientWidth = 60
-            const gradientHeight = itemHeight - 8
-            const gradientX = x + 5
-            const gradientY = itemY + 4
+            const gradientWidth = this.style.gradientWidth
+            const gradientHeight = this.style.gradientHeight
+            const gradientX = x + this.style.itemPadding + 3
+            const gradientY = itemY + (itemHeight - gradientHeight) / 2
 
             // Draw gradient preview for each colormap
             this.drawColormapPreview(gradientX, gradientY, gradientWidth, gradientHeight, this.colormaps[i])
 
             // Draw colormap name
-            const textX = gradientX + gradientWidth + 10
-            const textY = itemY + (itemHeight / 2) - 6
+            const textX = gradientX + gradientWidth + this.style.textSpacing
+            const textY = itemY + (itemHeight / 2) + this.style.textVerticalOffset + 5
+            
+            // Capitalize first letter of colormap name
+            const colormapName = this.colormaps[i]
+            const capitalizedName = colormapName.charAt(0).toUpperCase() + colormapName.slice(1)
             
             this.renderer.drawRotatedText({
                 font: this.font,
                 xy: [textX, textY],
-                str: this.colormaps[i],
-                scale: 0.4,
+                str: capitalizedName, // Use capitalized name
+                scale: this.style.textScale, // Use textScale from style
                 color: this.style.textColor
             })
         }
@@ -147,7 +179,7 @@ export class UIKColormapSelector {
         }
 
         const colors = colormapColors[colormap.toLowerCase()] || colormapColors['gray']
-        const segments = 20 // More segments for smoother gradients
+        const segments = this.style.gradientSegments // Use gradientSegments from style
 
         // Draw gradient with smooth transitions
         for (let i = 0; i < segments; i++) {

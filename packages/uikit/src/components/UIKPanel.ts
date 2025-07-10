@@ -28,6 +28,10 @@ export interface UIKPanelConfig {
   layout?: 'vertical' | 'horizontal' | 'grid'
   /** Spacing between child components */
   spacing?: number
+  /** Title bar height (configurable) */
+  titleBarHeight?: number
+  /** Animation speed for collapse/expand */
+  animationSpeed?: number
 }
 
 /**
@@ -52,6 +56,12 @@ export interface UIKPanelStyle {
   shadowOffset?: [number, number]
   /** Background opacity */
   backgroundOpacity?: number
+  /** Text scaling factor for title */
+  titleTextScale?: number
+  /** Title text padding from left edge */
+  titleTextPadding?: number
+  /** Title text vertical offset */
+  titleTextVerticalOffset?: number
 }
 
 /**
@@ -86,10 +96,10 @@ export class UIKPanel {
   private config: UIKPanelConfig
   private state: UIKPanelState = UIKPanelState.NORMAL
   private children: UIKPanelChild[] = []
-  private titleBarHeight: number = 30
+  private titleBarHeight: number
   private animationProgress: number = 1 // 1 = expanded, 0 = collapsed
   private targetProgress: number = 1
-  private animationSpeed: number = 0.2
+  private animationSpeed: number
   
   // Default styling
   private defaultStyle: UIKPanelStyle = {
@@ -101,7 +111,10 @@ export class UIKPanel {
     cornerRadius: 6,
     shadowColor: [0.0, 0.0, 0.0, 0.3],
     shadowOffset: [2, 2],
-    backgroundOpacity: 0.9
+    backgroundOpacity: 0.9,
+    titleTextScale: 0.025,
+    titleTextPadding: 10,
+    titleTextVerticalOffset: -6
   }
 
   constructor(renderer: UIKRenderer, config: UIKPanelConfig) {
@@ -113,6 +126,8 @@ export class UIKPanel {
       padding: [10, 10, 10, 10],
       layout: 'vertical',
       spacing: 8,
+      titleBarHeight: 30, // Default to 30
+      animationSpeed: 0.2, // Default to 0.2
       ...config
     }
     
@@ -122,6 +137,8 @@ export class UIKPanel {
     // Initialize animation state
     this.targetProgress = this.config.collapsed ? 0 : 1
     this.animationProgress = this.targetProgress
+    this.titleBarHeight = this.config.titleBarHeight!
+    this.animationSpeed = this.config.animationSpeed!
   }
 
   /**
@@ -450,10 +467,10 @@ export class UIKPanel {
     // Draw title text
     this.renderer.drawRotatedText({
       font: this.config.font,
-      xy: [titleX + 10, titleY + titleHeight / 2 - 6],
+      xy: [titleX + (style.titleTextPadding ?? 10), titleY + titleHeight / 2 + (style.titleTextVerticalOffset ?? -6)],
       str: this.config.title,
       color: style.titleTextColor!,
-      scale: 0.9
+      scale: style.titleTextScale ?? 0.025
     })
     
     // Draw collapse indicator if collapsible

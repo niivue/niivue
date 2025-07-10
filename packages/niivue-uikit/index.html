@@ -256,9 +256,233 @@
             log(`Status: ${text}`)
         }
 
-        // Global variables
-        let nv = null
-        let medicalParams = {
+        // ===============================
+        // LAYOUT CONFIGURATION SYSTEM
+        // ===============================
+        // Centralized configuration to make the demo flexible and robust
+        const LAYOUT_CONFIG = {
+            // Main panel configuration
+            panel: {
+                width: 330,
+                rightMargin: 350, // Distance from right edge of canvas
+                topMargin: 20,
+                backgroundColor: [0.12, 0.12, 0.12, 0.95],
+                gradientEnd: [0.16, 0.16, 0.16, 0.95],
+                borderColor: [0.27, 0.27, 0.27, 1.0],
+                shadowOffset: 5,
+                shadowAlpha: 0.5
+            },
+            
+            // Blue section panels
+            sections: {
+                backgroundColor: [0.18, 0.22, 0.28, 0.9],
+                borderColor: [0.29, 0.33, 0.41, 1.0],
+                titleColor: [0.41, 0.83, 0.57, 1.0],
+                cornerRadius: 8,
+                borderThickness: 1,
+                gap: 15, // Gap between sections
+                
+                // Individual section heights
+                medicalControls: { height: 240 },
+                viewControls: { height: 160 },
+                advancedControls: { height: 240 },
+                actions: { height: 160 }
+            },
+            
+            // Content margins within blue panels
+            content: {
+                marginLeft: 15,
+                marginRight: 15,
+                marginTop: 30,
+                marginBottom: 15
+            },
+            
+            // Component spacing and sizing
+            components: {
+                // Slider configuration
+                sliders: {
+                    width: 170,
+                    height: 16,
+                    spacing: 32,
+                    labelOffset: 75, // Distance of label from slider
+                    showValues: false,
+                    textScale: 0.016
+                },
+                
+                // Toggle configuration
+                toggles: {
+                    height: 22,
+                    spacing: 28,
+                    labelAreaWidth: 180, // Space reserved for labels
+                    switchWidth: 60,
+                    marginFromEdge: 10
+                },
+                
+                // Button configuration - Enhanced with new robust properties
+                buttons: {
+                    height: 30,
+                    gap: 10,
+                    rowSpacing: 40,
+                    textColor: [0.0, 0.0, 0.0, 1.0], // Black text
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: [4, 4],
+                    // New robust button properties
+                    textScale: 0.025,
+                    charWidthMultiplier: 7,
+                    textHeight: 14,
+                    textVerticalOffset: 4
+                },
+                
+                // Selector configuration - Enhanced with new robust properties
+                selectors: {
+                    colormap: {
+                        height: 120,
+                        margin: 10,
+                        // New robust colormap selector properties
+                        textScale: 0.018,
+                        gradientWidth: 60,
+                        gradientHeight: 10,
+                        itemPadding: 2,
+                        textSpacing: 8,
+                        textVerticalOffset: 0,
+                        gradientSegments: 20
+                    },
+                    viewMode: {
+                        height: 45,
+                        bottomMargin: 15,
+                        // New robust view mode selector properties
+                        textScale: 0.016,
+                        buttonPadding: 4,
+                        textVerticalOffset: 0,
+                        charWidthMultiplier: 1.8
+                    }
+                }
+            },
+            
+            // Text styling
+            text: {
+                titleScale: 0.02,
+                componentScale: 0.025,
+                titleMargins: {
+                    medicalControls: 20,
+                    viewControls: 18,
+                    advancedControls: 18,
+                    actions: 18
+                }
+            }
+        }
+
+        // ===============================
+        // LAYOUT CALCULATION FUNCTIONS
+        // ===============================
+        
+        /**
+         * Calculate panel dimensions and positions based on canvas size
+         */
+        function calculatePanelLayout(canvasWidth, canvasHeight) {
+            const config = LAYOUT_CONFIG
+            
+            return {
+                // Main panel
+                panelX: canvasWidth - config.panel.rightMargin,
+                panelY: config.panel.topMargin,
+                panelWidth: config.panel.width,
+                
+                // Blue panels
+                bluePanelX: (canvasWidth - config.panel.rightMargin) + 5,
+                bluePanelWidth: config.panel.width - 10,
+                
+                // Content area within blue panels
+                contentX: (canvasWidth - config.panel.rightMargin) + 5 + config.content.marginLeft,
+                contentWidth: config.panel.width - 10 - config.content.marginLeft - config.content.marginRight,
+                
+                // Section positions
+                sections: {
+                    medical: {
+                        y: config.panel.topMargin,
+                        height: config.sections.medicalControls.height
+                    },
+                    view: {
+                        y: config.panel.topMargin + config.sections.medicalControls.height + config.sections.gap,
+                        height: config.sections.viewControls.height
+                    },
+                    advanced: {
+                        y: config.panel.topMargin + config.sections.medicalControls.height + config.sections.gap + 
+                           config.sections.viewControls.height + config.sections.gap,
+                        height: config.sections.advancedControls.height
+                    },
+                    actions: {
+                        y: config.panel.topMargin + config.sections.medicalControls.height + config.sections.gap + 
+                           config.sections.viewControls.height + config.sections.gap + 
+                           config.sections.advancedControls.height + config.sections.gap,
+                        height: config.sections.actions.height
+                    }
+                },
+                
+                // Total panel height
+                totalHeight: config.sections.medicalControls.height + config.sections.viewControls.height + 
+                            config.sections.advancedControls.height + config.sections.actions.height + 
+                            (config.sections.gap * 3) + config.content.marginBottom
+            }
+        }
+
+        /**
+         * Calculate component positions within sections
+         */
+        function calculateComponentPositions(layout) {
+            const config = LAYOUT_CONFIG
+            
+            return {
+                // Slider positions (accounting for label offset)
+                sliders: {
+                    x: layout.contentX + config.components.sliders.labelOffset,
+                    width: config.components.sliders.width,
+                    height: config.components.sliders.height,
+                    spacing: config.components.sliders.spacing,
+                    startY: layout.sections.medical.y + config.content.marginTop + 10
+                },
+                
+                // Toggle positions
+                toggles: {
+                    x: layout.contentX,
+                    width: layout.contentWidth - 20,
+                    height: config.components.toggles.height,
+                    spacing: config.components.toggles.spacing,
+                    startY: layout.sections.view.y + config.content.marginTop
+                },
+                
+                // Button positions
+                buttons: {
+                    x: layout.contentX + 10,
+                    width: (layout.contentWidth - 30) / 2,
+                    height: config.components.buttons.height,
+                    gap: config.components.buttons.gap,
+                    rowSpacing: config.components.buttons.rowSpacing,
+                    startY: layout.sections.actions.y + config.content.marginTop
+                },
+                
+                // Selector positions
+                selectors: {
+                    colormap: {
+                        x: layout.contentX + config.components.selectors.colormap.margin,
+                        y: layout.sections.advanced.y + config.content.marginTop,
+                        width: layout.contentWidth - 20,
+                        height: config.components.selectors.colormap.height
+                    },
+                    viewMode: {
+                        x: layout.contentX + config.components.selectors.colormap.margin,
+                        y: layout.sections.advanced.y + layout.sections.advanced.height - 
+                           config.components.selectors.viewMode.height - config.components.selectors.viewMode.bottomMargin,
+                        width: layout.contentWidth - 20,
+                        height: config.components.selectors.viewMode.height
+                    }
+                }
+            }
+        }
+
+        // Medical imaging parameters
+        const medicalParams = {
             brightness: 0.5,
             contrast: 0.5,
             zoom: 1.0,
@@ -294,7 +518,8 @@
         // Medical imaging state
         let currentBackground = 'dark' // dark, light
 
-        // Global UIKit variables for single canvas approach
+        // Global variables - declare all at the top
+        let nv = null // Niivue instance
         let uikitRenderer = null
         let uikitFont = null
 
@@ -332,7 +557,20 @@
         // Initialize Niivue with medical image and UIKit integration
         async function initializeNiivue() {
             try {
+                log('Starting Niivue initialization...', 'info')
                 updateStatus('Creating Niivue instance...')
+                
+                // Check if required modules are available
+                if (!niivue) {
+                    throw new Error('Niivue module not loaded')
+                }
+                if (!UIKRenderer) {
+                    throw new Error('UIKRenderer not available')
+                }
+                if (!UIKFont) {
+                    throw new Error('UIKFont not available')
+                }
+                log('All required modules loaded successfully', 'info')
                 
                 // Create Niivue with medical imaging optimized settings
                 nv = new niivue.Niivue({
@@ -342,6 +580,8 @@
                     dragAndDropEnabled: true
                 })
                 
+                log('Niivue instance created successfully', 'info')
+                
                 // Configure for medical imaging
                 nv.opts.isColorbar = true
                 nv.setRadiologicalConvention(false)
@@ -349,21 +589,48 @@
                 updateStatus('Attaching to canvas...')
                 await nv.attachTo('gl1')
                 
+                log('Niivue attached to canvas successfully', 'info')
+                
                 // Check WebGL status
                 const gl = nv.gl
-                if (gl) {
-                    document.getElementById('webgl-status').textContent = 'WebGL2 Ready'
-                    log('WebGL2 context created successfully', 'info')
-                } else {
+                if (!gl) {
                     throw new Error('Failed to create WebGL context')
                 }
+                
+                log(`WebGL context created: ${gl.constructor.name}`, 'info')
+                document.getElementById('webgl-status').textContent = 'WebGL2 Ready'
                 
                 updateStatus('Initializing UIKit on main canvas...')
                 
                 // Initialize UIKit renderer using the same WebGL context as Niivue
                 uikitRenderer = new UIKRenderer(gl)
                 uikitFont = new UIKFont(gl, [1, 1, 1, 1])
-                await uikitFont.loadDefaultFont()
+                
+                log('UIKit renderer and font instances created', 'info')
+                
+                // Load font using the working approach from previous version
+                try {
+                    // Dynamic imports for font files - use font files from uikit package
+                    const { default: defaultFontPNG } = await import('../uikit/src/fonts/Roboto-Regular.png')
+                    const { default: defaultFontJSON } = await import('../uikit/src/fonts/Roboto-Regular.json')
+                    
+                    const fontTexture = await uikitFont.loadFontTexture(defaultFontPNG)
+                    if (!fontTexture) {
+                        throw new Error(`Failed to load font texture`)
+                    }
+                    uikitFont.loadFromRawData(defaultFontJSON)
+                    log('UIKit font loaded successfully using dynamic imports from uikit package', 'info')
+                } catch (fontError) {
+                    log(`Font loading failed: ${fontError.message}`, 'warn')
+                    log('Falling back to default font system', 'info')
+                    try {
+                        await uikitFont.loadDefaultFont()
+                        log('Default UIKit font loaded as fallback', 'info')
+                    } catch (fallbackError) {
+                        log(`Fallback font loading also failed: ${fallbackError.message}`, 'error')
+                        log('Proceeding with basic font fallback', 'info')
+                    }
+                }
                 
                 log('UIKit renderer and font initialized on main canvas', 'info')
                 
@@ -454,32 +721,29 @@
                 const canvasWidth = canvas.width
                 const canvasHeight = canvas.height
                 
-                // Define styled panel layout matching the original sidebar design
-                const panelX = canvasWidth - 350 // Reduced panel width to 350px
-                const panelY = 20 // 20px from top
-                const panelWidth = 330 // Reduced panel width
-                const sliderWidth = 180 // Reduced slider width to fit better
-                const sliderHeight = 20 // Slightly reduced height
-                
-                // Section positioning to match the renderUIKitOverlay function
-                let sectionY = panelY + 0
+                // Calculate layout based on canvas size
+                const layout = calculatePanelLayout(canvasWidth, canvasHeight)
+                const componentPositions = calculateComponentPositions(layout)
                 
                 // SECTION 1: Medical Imaging Controls (Sliders)
-                const section1Y = sectionY + 30 // Account for section title
-                let currentY = section1Y
+                // Position sliders within blue panel bounds with proper spacing like other sections
+                let currentY = componentPositions.sliders.startY
+                const sliderConfig = LAYOUT_CONFIG.components.sliders
                 
-                // Create brightness slider as overlay
+                // Create brightness slider
                 uikitComponents.brightnessSlider = new UIKSlider(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, sliderWidth, sliderHeight],
+                    bounds: [componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height],
                             value: medicalParams.brightness,
                             min: 0,
                             max: 1,
                     label: 'Brightness',
+                    showValue: sliderConfig.showValues,
                     style: {
-                        trackColor: [0.4, 0.4, 0.4, 1], // Darker track for better contrast
-                            fillColor: [0.0, 0.8, 0.0, 1], // Green theme
-                        thumbColor: [1.0, 1.0, 1.0, 1], // White thumb
-                        textColor: [1.0, 1.0, 1.0, 1]
+                        trackColor: [0.4, 0.4, 0.4, 1],
+                        fillColor: [0.0, 0.8, 0.0, 1],
+                        thumbColor: [1.0, 1.0, 1.0, 1],
+                        textColor: [1.0, 1.0, 1.0, 1],
+                        textScale: sliderConfig.textScale
                     },
                     font: uikitFont,
                             onValueChange: (value) => {
@@ -490,20 +754,22 @@
                                 log(`Brightness adjusted to ${Math.round(value * 100)}%`, 'event')
                             }
                         })
-                currentY += 35
+                currentY += sliderConfig.spacing
                 
-                // Create contrast slider as overlay
+                // Create contrast slider
                 uikitComponents.contrastSlider = new UIKSlider(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, sliderWidth, sliderHeight],
+                    bounds: [componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height],
                             value: medicalParams.contrast,
                             min: 0,
                             max: 1,
                     label: 'Contrast',
+                    showValue: sliderConfig.showValues,
                     style: {
-                        trackColor: [0.4, 0.4, 0.4, 1], // Darker track
-                            fillColor: [1.0, 0.6, 0.0, 1], // Orange theme
-                        thumbColor: [1.0, 1.0, 1.0, 1], // White thumb
-                        textColor: [1.0, 1.0, 1.0, 1]
+                        trackColor: [0.4, 0.4, 0.4, 1],
+                        fillColor: [1.0, 0.6, 0.0, 1],
+                        thumbColor: [1.0, 1.0, 1.0, 1],
+                        textColor: [1.0, 1.0, 1.0, 1],
+                        textScale: sliderConfig.textScale
                     },
                     font: uikitFont,
                             onValueChange: (value) => {
@@ -514,20 +780,22 @@
                                 log(`Contrast adjusted to ${Math.round(value * 100)}%`, 'event')
                             }
                         })
-                currentY += 35
+                currentY += sliderConfig.spacing
                 
-                // Create zoom slider as overlay
+                // Create zoom slider
                 uikitComponents.zoomSlider = new UIKSlider(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, sliderWidth, sliderHeight],
+                    bounds: [componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height],
                             value: medicalParams.zoom,
                             min: 0.1,
                             max: 5.0,
                     label: 'Zoom',
+                    showValue: sliderConfig.showValues,
                     style: {
-                        trackColor: [0.4, 0.4, 0.4, 1], // Darker track
-                            fillColor: [0.0, 0.6, 1.0, 1], // Blue theme
-                        thumbColor: [1.0, 1.0, 1.0, 1], // White thumb
-                        textColor: [1.0, 1.0, 1.0, 1]
+                        trackColor: [0.4, 0.4, 0.4, 1],
+                        fillColor: [0.0, 0.6, 1.0, 1],
+                        thumbColor: [1.0, 1.0, 1.0, 1],
+                        textColor: [1.0, 1.0, 1.0, 1],
+                        textScale: sliderConfig.textScale
                     },
                     font: uikitFont,
                             onValueChange: (value) => {
@@ -538,20 +806,22 @@
                                 log(`Zoom adjusted to ${Math.round(value * 100)}%`, 'event')
                             }
                         })
-                currentY += 35
+                currentY += sliderConfig.spacing
                 
-                // Create opacity slider as overlay
+                // Create opacity slider
                 uikitComponents.opacitySlider = new UIKSlider(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, sliderWidth, sliderHeight],
+                    bounds: [componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height],
                             value: medicalParams.opacity,
                             min: 0,
                             max: 1,
                     label: 'Opacity',
+                    showValue: sliderConfig.showValues,
                     style: {
-                        trackColor: [0.4, 0.4, 0.4, 1], // Darker track
-                            fillColor: [0.8, 0.0, 0.8, 1], // Purple theme
-                        thumbColor: [1.0, 1.0, 1.0, 1], // White thumb
-                        textColor: [1.0, 1.0, 1.0, 1]
+                        trackColor: [0.4, 0.4, 0.4, 1],
+                        fillColor: [0.8, 0.0, 0.8, 1],
+                        thumbColor: [1.0, 1.0, 1.0, 1],
+                        textColor: [1.0, 1.0, 1.0, 1],
+                        textScale: sliderConfig.textScale
                     },
                     font: uikitFont,
                             onValueChange: (value) => {
@@ -562,20 +832,22 @@
                                 log(`Opacity adjusted to ${Math.round(value * 100)}%`, 'event')
                             }
                         })
-                currentY += 35
+                currentY += sliderConfig.spacing
                 
-                // Create slice position slider as overlay
+                // Create slice position slider
                 uikitComponents.sliceSlider = new UIKSlider(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, sliderWidth, sliderHeight],
+                    bounds: [componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height],
                             value: medicalParams.slice,
                             min: 0,
                             max: 1,
-                    label: 'Slice Position',
+                    label: 'SlicePosition',
+                    showValue: sliderConfig.showValues,
                     style: {
-                        trackColor: [0.4, 0.4, 0.4, 1], // Darker track
-                            fillColor: [1.0, 1.0, 0.0, 1], // Yellow theme
-                        thumbColor: [1.0, 1.0, 1.0, 1], // White thumb
-                        textColor: [1.0, 1.0, 1.0, 1]
+                        trackColor: [0.4, 0.4, 0.4, 1],
+                        fillColor: [1.0, 1.0, 0.0, 1],
+                        thumbColor: [1.0, 1.0, 1.0, 1],
+                        textColor: [1.0, 1.0, 1.0, 1],
+                        textScale: sliderConfig.textScale
                     },
                     font: uikitFont,
                             onValueChange: (value) => {
@@ -588,16 +860,17 @@
                         })
                         
                 // SECTION 2: View Controls (Toggles)
-                sectionY += 240 + 15 // Move to next section
-                const section2Y = sectionY + 30 // Account for section title
-                currentY = section2Y
+                // Position toggles within blue panel bounds to match Advanced Controls alignment
+                currentY = componentPositions.toggles.startY
+                const toggleConfig = LAYOUT_CONFIG.components.toggles
                 
-                // Create crosshair toggle as overlay
+                // Create crosshair toggle
                 uikitComponents.crosshairToggle = new UIKToggle(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, 120, 20], // Increased width for better label visibility
+                    bounds: [componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height],
                             checked: medicalParams.crosshair,
                             type: 'switch',
                     label: 'Crosshair',
+                    labelPosition: 'left',
                     font: uikitFont,
                             onToggle: (checked) => {
                                 medicalParams.crosshair = checked
@@ -607,14 +880,15 @@
                                 log(`Crosshair ${checked ? 'enabled' : 'disabled'}`, 'event')
                             }
                         })
-                currentY += 30
+                currentY += toggleConfig.spacing
                 
-                // Create colorbar toggle as overlay
+                // Create colorbar toggle
                 uikitComponents.colorbarToggle = new UIKToggle(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, 120, 20],
+                    bounds: [componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height],
                             checked: medicalParams.colorbar,
                             type: 'switch',
                     label: 'Colorbar',
+                    labelPosition: 'left',
                     font: uikitFont,
                             onToggle: (checked) => {
                                 medicalParams.colorbar = checked
@@ -624,14 +898,15 @@
                                 log(`Colorbar ${checked ? 'shown' : 'hidden'}`, 'event')
                             }
                         })
-                currentY += 30
+                currentY += toggleConfig.spacing
                 
-                // Create radiological toggle as overlay
+                // Create radiological toggle
                 uikitComponents.radiologicalToggle = new UIKToggle(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, 120, 20],
+                    bounds: [componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height],
                             checked: medicalParams.radiological,
                             type: 'switch',
                     label: 'Radiological',
+                    labelPosition: 'left',
                     font: uikitFont,
                             onToggle: (checked) => {
                                 medicalParams.radiological = checked
@@ -641,14 +916,15 @@
                                 log(`Radiological convention ${checked ? 'enabled' : 'disabled'}`, 'event')
                             }
                         })
-                currentY += 30
+                currentY += toggleConfig.spacing
                 
-                // Create interpolation toggle as overlay
+                // Create interpolation toggle
                 uikitComponents.interpolationToggle = new UIKToggle(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, 120, 20],
+                    bounds: [componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height],
                             checked: medicalParams.interpolation,
                             type: 'switch',
                     label: 'Interpolation',
+                    labelPosition: 'left',
                     font: uikitFont,
                             onToggle: (checked) => {
                                 medicalParams.interpolation = checked
@@ -659,60 +935,71 @@
                         })
                         
                 // SECTION 3: Advanced Controls
-                sectionY += 160 + 15 // Move to next section
-                const section3Y = sectionY + 30 // Account for section title
-                currentY = section3Y
+                // Position selectors within blue panel bounds
+                currentY = componentPositions.selectors.colormap.y
+                const selectorConfig = LAYOUT_CONFIG.components.selectors
                 
-                // Create colormap selector as overlay
+                // Create colormap selector with larger size and thicker rows
                 uikitComponents.colormapSelector = new UIKColormapSelector(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, 280, 60], // Reduced height to fit better
+                    bounds: [componentPositions.selectors.colormap.x + 10, currentY, componentPositions.selectors.colormap.width, selectorConfig.colormap.height],
                         selectedColormap: medicalParams.colormap,
                         colormaps: ['gray', 'plasma', 'viridis', 'inferno', 'hot', 'cool'],
                     font: uikitFont,
-                        onColormapChange: updateColormap
-                    })
-                currentY += 80
+                    onColormapChange: updateColormap,
+                    style: {
+                        textScale: selectorConfig.colormap.textScale,
+                        gradientWidth: selectorConfig.colormap.gradientWidth,
+                        gradientHeight: selectorConfig.colormap.gradientHeight,
+                        itemPadding: selectorConfig.colormap.itemPadding,
+                        textSpacing: selectorConfig.colormap.textSpacing,
+                        textVerticalOffset: selectorConfig.colormap.textVerticalOffset,
+                        gradientSegments: selectorConfig.colormap.gradientSegments
+                    }
+                })
+                    
+                // Calculate position for view mode selector at bottom of Advanced Controls section
+                const viewModeSelectorY = componentPositions.selectors.viewMode.y
                 
-                // Create view mode selector as overlay
+                // Create view mode selector positioned at bottom
                 uikitComponents.viewModeSelector = new UIKViewModeSelector(uikitRenderer, {
-                    bounds: [panelX + 20, currentY, 280, 50], // Reduced height to fit better
+                    bounds: [componentPositions.selectors.viewMode.x + 10, viewModeSelectorY, componentPositions.selectors.viewMode.width, selectorConfig.viewMode.height],
                         selectedMode: medicalParams.viewMode,
                         modes: ['Axial', 'Sagittal', 'Coronal', 'MultiPlanar'],
                     font: uikitFont,
-                        onModeChange: updateViewMode
-                    })
+                    onModeChange: updateViewMode,
+                    style: {
+                        textScale: selectorConfig.viewMode.textScale,
+                        buttonPadding: selectorConfig.viewMode.buttonPadding,
+                        textVerticalOffset: selectorConfig.viewMode.textVerticalOffset,
+                        charWidthMultiplier: selectorConfig.viewMode.charWidthMultiplier
+                    }
+                })
                     
                 // SECTION 4: Action Buttons
-                sectionY += 180 + 15 // Move to next section
-                const section4Y = sectionY + 30 // Account for section title
-                currentY = section4Y
+                // Center buttons vertically within the blue panel
+                const buttonConfig = LAYOUT_CONFIG.components.buttons
+                const buttonWidth = componentPositions.buttons.width
+                const buttonHeight = buttonConfig.height
+                const buttonGap = buttonConfig.gap
+                const buttonRowSpacing = buttonConfig.rowSpacing
                 
-                // Create action buttons in 2x2 grid layout
-                const buttonWidth = 120 // Button width
-                const buttonHeight = 35 // Increased height for better appearance
-                const buttonGap = 10 // Gap between buttons
-                const buttonsPerRow = 2
-                
-                // Calculate grid positions
-                const gridStartX = panelX + 20
-                const gridStartY = currentY
+                // Calculate vertical centering within the Actions section
+                const totalButtonsHeight = (buttonHeight * 2) + buttonRowSpacing
+                const availableVerticalSpace = layout.sections.actions.height - LAYOUT_CONFIG.content.marginTop - LAYOUT_CONFIG.content.marginBottom
+                const verticalOffset = (availableVerticalSpace - totalButtonsHeight) / 2 + 15
+                currentY = layout.sections.actions.y + LAYOUT_CONFIG.content.marginTop + verticalOffset
                 
                 // Row 1: Screenshot and Background buttons
-                // Screenshot Button (top-left)
                 uikitComponents.screenshotButton = new UIKButton(uikitRenderer, {
-                    bounds: [gridStartX, gridStartY, buttonWidth, buttonHeight],
+                    bounds: [componentPositions.buttons.x, currentY, buttonWidth, buttonHeight],
                     text: '📷 Save',
                     font: uikitFont,
                     onClick: () => {
                         if (nv) {
-                            // Force a complete render cycle to ensure UIKit overlay is visible
                             nv.drawScene()
                             renderUIKitOverlay()
-                            
-                            // Force WebGL to finish all operations
                             nv.gl.finish()
                             
-                            // Take screenshot directly using canvas.toBlob for better control
                             const canvas = document.getElementById('gl1')
                             canvas.toBlob((blob) => {
                                 if (!blob) {
@@ -736,32 +1023,34 @@
                             }
                         },
                         style: {
-                            backgroundColor: [0.15, 0.6, 0.95, 1.0],
-                            hoverColor: [0.2, 0.7, 1.0, 1.0],
-                            activeColor: [0.1, 0.5, 0.85, 1.0],
-                            borderColor: [0.3, 0.8, 1.0, 1.0],
-                            textColor: [1, 1, 1, 1],
-                            borderWidth: 1,
-                            borderRadius: 3,
-                        padding: [12, 6],
-                            shadowColor: [0, 0, 0, 0.3],
-                            shadowOffset: [0, 2]
-                        }
-                    })
-                    
-                // Background Toggle Button (top-right)
+                        backgroundColor: [0.2, 0.6, 0.9, 1.0],
+                        hoverColor: [0.3, 0.7, 1.0, 1.0],
+                        activeColor: [0.1, 0.5, 0.8, 1.0],
+                        borderColor: [0.4, 0.8, 1.0, 1.0],
+                        textColor: buttonConfig.textColor,
+                        borderWidth: buttonConfig.borderWidth,
+                        borderRadius: buttonConfig.borderRadius,
+                        padding: buttonConfig.padding,
+                        textScale: buttonConfig.textScale,
+                        charWidthMultiplier: buttonConfig.charWidthMultiplier,
+                        textHeight: buttonConfig.textHeight,
+                        textVerticalOffset: buttonConfig.textVerticalOffset
+                    }
+                })
+                
+                // Background Toggle Button
                 uikitComponents.backgroundButton = new UIKButton(uikitRenderer, {
-                    bounds: [gridStartX + buttonWidth + buttonGap, gridStartY, buttonWidth, buttonHeight],
+                    bounds: [componentPositions.buttons.x + buttonWidth + buttonGap, currentY, buttonWidth, buttonHeight],
                         text: '🌙 Dark',
                     font: uikitFont,
                         onClick: () => {
                             if (nv) {
                                 if (currentBackground === 'dark') {
-                                    nv.opts.backColor = [1, 1, 1, 1] // White background
+                                nv.opts.backColor = [1, 1, 1, 1]
                                     currentBackground = 'light'
                                     uikitComponents.backgroundButton.setText('☀️ Light')
                                 } else {
-                                    nv.opts.backColor = [0.1, 0.1, 0.1, 1] // Dark background
+                                nv.opts.backColor = [0.1, 0.1, 0.1, 1]
                                     currentBackground = 'dark'
                                     uikitComponents.backgroundButton.setText('🌙 Dark')
                                 }
@@ -770,63 +1059,118 @@
                             }
                         },
                         style: {
-                            backgroundColor: [0.6, 0.3, 0.9, 1.0],
-                            hoverColor: [0.7, 0.4, 1.0, 1.0],
-                            activeColor: [0.5, 0.2, 0.8, 1.0],
-                            borderColor: [0.8, 0.5, 1.0, 1.0],
-                            textColor: [1, 1, 1, 1],
-                            borderWidth: 1,
-                            borderRadius: 3,
-                        padding: [12, 6],
-                            shadowColor: [0, 0, 0, 0.3],
-                            shadowOffset: [0, 2]
-                        }
-                    })
+                        backgroundColor: [0.6, 0.4, 0.9, 1.0],
+                        hoverColor: [0.7, 0.5, 1.0, 1.0],
+                        activeColor: [0.5, 0.3, 0.8, 1.0],
+                        borderColor: [0.8, 0.6, 1.0, 1.0],
+                        textColor: buttonConfig.textColor,
+                        borderWidth: buttonConfig.borderWidth,
+                        borderRadius: buttonConfig.borderRadius,
+                        padding: buttonConfig.padding
+                    }
+                })
                     
                 // Row 2: Logs and Reset buttons
-                // Logs Button (bottom-left)
+                currentY += buttonRowSpacing
                 uikitComponents.logsButton = new UIKButton(uikitRenderer, {
-                    bounds: [gridStartX, gridStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight],
+                    bounds: [componentPositions.buttons.x, currentY, buttonWidth, buttonHeight],
                         text: '📋 Logs',
                     font: uikitFont,
                         onClick: () => {
-                            toggleLogs()
+                        const logPanel = document.getElementById('log-panel')
+                        if (logPanel.style.display === 'none') {
+                            logPanel.style.display = 'block'
+                            uikitComponents.logsButton.setText('📋 Hide')
+                            log('Log panel opened', 'info')
+                        } else {
+                            logPanel.style.display = 'none'
+                            uikitComponents.logsButton.setText('📋 Logs')
+                            log('Log panel closed', 'info')
+                        }
                         },
                         style: {
-                            backgroundColor: [0.95, 0.6, 0.2, 1.0],
+                        backgroundColor: [0.9, 0.6, 0.2, 1.0],
                             hoverColor: [1.0, 0.7, 0.3, 1.0],
-                            activeColor: [0.85, 0.5, 0.15, 1.0],
+                        activeColor: [0.8, 0.5, 0.1, 1.0],
                             borderColor: [1.0, 0.8, 0.4, 1.0],
-                            textColor: [1, 1, 1, 1],
-                            borderWidth: 1,
-                            borderRadius: 3,
-                        padding: [12, 6],
-                            shadowColor: [0, 0, 0, 0.3],
-                            shadowOffset: [0, 2]
-                        }
-                    })
-                    
-                // Reset All Button (bottom-right)
+                        textColor: buttonConfig.textColor,
+                        borderWidth: buttonConfig.borderWidth,
+                        borderRadius: buttonConfig.borderRadius,
+                        padding: buttonConfig.padding
+                    }
+                })
+                
+                // Reset All Button
                 uikitComponents.resetButton = new UIKButton(uikitRenderer, {
-                    bounds: [gridStartX + buttonWidth + buttonGap, gridStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight],
-                        text: '🔄 Reset',
+                    bounds: [componentPositions.buttons.x + buttonWidth + buttonGap, currentY, buttonWidth, buttonHeight],
+                    text: '🔄 Reset',
                     font: uikitFont,
-                        onClick: () => {
-                            document.getElementById('reset-btn').click()
+                    onClick: () => {
+                        const initialParams = {
+                            brightness: 0.5,
+                            contrast: 0.5,
+                            zoom: 1.0,
+                            opacity: 1.0,
+                            slice: 0.5,
+                            crosshair: true,
+                            colorbar: true,
+                            radiological: false,
+                            interpolation: true,
+                            colormap: 'gray',
+                            viewMode: 'MultiPlanar'
+                        }
+                        
+                        Object.assign(medicalParams, initialParams)
+                        
+                        if (nv) {
+                            nv.setSliceType(nv.sliceTypeMultiplanar)
+                            nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                            
+                            if (nv.volumes.length > 0) {
+                                nv.volumes[0].cal_min = (1 - initialParams.brightness) * 100
+                                nv.volumes[0].cal_max = 100 + ((1 - initialParams.contrast) * 200)
+                                nv.volumes[0].opacity = initialParams.opacity
+                                nv.volumes[0].colormap = initialParams.colormap
+                            }
+                            
+                            nv.scene.volScaleMultiplier = initialParams.zoom
+                            nv.scene.sagittalPos = initialParams.slice
+                            nv.scene.coronalPos = initialParams.slice
+                            nv.scene.axialPos = initialParams.slice
+                            
+                            nv.opts.show3Dcrosshair = initialParams.crosshair
+                            nv.opts.isColorbar = initialParams.colorbar
+                            nv.setRadiologicalConvention(initialParams.radiological)
+                            nv.setInterpolation(initialParams.interpolation)
+                            
+                            nv.updateGLVolume()
+                            nv.drawScene()
+                        }
+                        
+                        if (uikitComponents.brightnessSlider) uikitComponents.brightnessSlider.setValue(initialParams.brightness)
+                        if (uikitComponents.contrastSlider) uikitComponents.contrastSlider.setValue(initialParams.contrast)
+                        if (uikitComponents.zoomSlider) uikitComponents.zoomSlider.setValue(initialParams.zoom)
+                        if (uikitComponents.opacitySlider) uikitComponents.opacitySlider.setValue(initialParams.opacity)
+                        if (uikitComponents.sliceSlider) uikitComponents.sliceSlider.setValue(initialParams.slice)
+                        if (uikitComponents.crosshairToggle) uikitComponents.crosshairToggle.setChecked(initialParams.crosshair)
+                        if (uikitComponents.colorbarToggle) uikitComponents.colorbarToggle.setChecked(initialParams.colorbar)
+                        if (uikitComponents.radiologicalToggle) uikitComponents.radiologicalToggle.setChecked(initialParams.radiological)
+                        if (uikitComponents.interpolationToggle) uikitComponents.interpolationToggle.setChecked(initialParams.interpolation)
+                        if (uikitComponents.viewModeSelector) uikitComponents.viewModeSelector.setSelectedMode(initialParams.viewMode)
+                        
+                        log('All parameters reset to defaults', 'info')
                         },
                         style: {
-                            backgroundColor: [0.9, 0.3, 0.3, 1.0],
-                            hoverColor: [1.0, 0.4, 0.4, 1.0],
-                            activeColor: [0.8, 0.2, 0.2, 1.0],
-                            borderColor: [1.0, 0.5, 0.5, 1.0],
-                            textColor: [1, 1, 1, 1],
-                            borderWidth: 1,
-                            borderRadius: 3,
-                        padding: [12, 6],
-                            shadowColor: [0, 0, 0, 0.3],
-                            shadowOffset: [0, 2]
-                        }
-                    })
+                        backgroundColor: [0.9, 0.2, 0.2, 1.0],
+                        hoverColor: [1.0, 0.3, 0.3, 1.0],
+                        activeColor: [0.8, 0.1, 0.1, 1.0],
+                        borderColor: [1.0, 0.4, 0.4, 1.0],
+                        textColor: buttonConfig.textColor,
+                        borderWidth: buttonConfig.borderWidth,
+                        borderRadius: buttonConfig.borderRadius,
+                        padding: buttonConfig.padding
+                    }
+                })
                     
                 log('All UIKit overlay components created successfully on main canvas', 'info')
                 
@@ -1066,7 +1410,17 @@
             const panelX = canvas.width - 350
             const panelY = 20
             const panelWidth = 330
-            const panelHeight = canvas.height - 40
+            
+            // Calculate required height based on all sections
+            const section1Height = 240  // Medical Imaging Controls
+            const section2Height = 160  // View Controls  
+            const section3Height = 240  // Advanced Controls
+            const section4Height = 160  // Actions
+            const sectionGap = 15        // Gap between sections
+            const bottomMargin = 20      // Bottom margin
+            
+            const panelHeight = section1Height + sectionGap + section2Height + sectionGap + 
+                               section3Height + sectionGap + section4Height + bottomMargin
             
             // Draw main panel background with gradient effect
             const backgroundColor = [0.12, 0.12, 0.12, 0.95]
@@ -1111,7 +1465,6 @@
             
             // SECTION 1: Medical Imaging Controls
             const section1Y = panelY
-            const section1Height = 240
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section1Y, panelWidth - 10, section1Height],
                 fillColor: sectionBgColor,
@@ -1122,7 +1475,6 @@
             
             // SECTION 2: View Controls
             const section2Y = section1Y + section1Height + 15
-            const section2Height = 160
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section2Y, panelWidth - 10, section2Height],
                 fillColor: sectionBgColor,
@@ -1133,7 +1485,6 @@
             
             // SECTION 3: Advanced Controls
             const section3Y = section2Y + section2Height + 15
-            const section3Height = 180
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section3Y, panelWidth - 10, section3Height],
                 fillColor: sectionBgColor,
@@ -1144,7 +1495,6 @@
             
             // SECTION 4: Actions
             const section4Y = section3Y + section3Height + 15
-            const section4Height = 200
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section4Y, panelWidth - 10, section4Height],
                 fillColor: sectionBgColor,
@@ -1153,37 +1503,52 @@
                 thickness: 1
             })
             
-            // Draw section titles
+            // Draw section titles - properly centered within each blue panel with better top margin
             if (uikitFont && uikitFont.isFontLoaded) {
+                const titleScale = 0.02 // Text scale for headers
+                const panelCenterX = panelX + (panelWidth / 2)
+                
+                // MEDICAL IMAGING CONTROLS title (centered with better top margin)
+                const title1 = 'MEDICAL IMAGING CONTROLS' // Already has proper spacing
+                const title1Width = title1.length * 5 // Approximate character width for centering
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelX + 15, section1Y + 18],
-                    str: '⚡ MEDICAL IMAGING CONTROLS',
-                    scale: 0.7,
+                    xy: [panelCenterX - title1Width, section1Y + 20], // Increased top margin from 15 to 20
+                    str: title1,
+                    scale: titleScale,
                     color: titleColor
                 })
                 
+                // VIEW CONTROLS title (centered with better top margin)
+                const title2 = 'VIEW CONTROLS' // Already has proper spacing
+                const title2Width = title2.length * 5
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelX + 15, section2Y + 18],
-                    str: '👁 VIEW CONTROLS',
-                    scale: 0.7,
+                    xy: [panelCenterX - title2Width, section2Y + 18], // Increased top margin from 12 to 18
+                    str: title2,
+                    scale: titleScale,
                     color: titleColor
                 })
                 
+                // ADVANCED CONTROLS title (centered with better top margin)
+                const title3 = 'ADVANCED CONTROLS' // Already has proper spacing
+                const title3Width = title3.length * 5
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelX + 15, section3Y + 18],
-                    str: '🔧 ADVANCED CONTROLS',
-                    scale: 0.7,
+                    xy: [panelCenterX - title3Width, section3Y + 18], // Increased top margin from 12 to 18
+                    str: title3,
+                    scale: titleScale,
                     color: titleColor
                 })
                 
+                // ACTIONS title (centered with better top margin)
+                const title4 = 'ACTIONS' // Single word, no spacing needed
+                const title4Width = title4.length * 5
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelX + 15, section4Y + 18],
-                    str: '⚙️ ACTIONS',
-                    scale: 0.7,
+                    xy: [panelCenterX - title4Width, section4Y + 18], // Increased top margin from 12 to 18
+                    str: title4,
+                    scale: titleScale,
                     color: titleColor
                 })
             }
