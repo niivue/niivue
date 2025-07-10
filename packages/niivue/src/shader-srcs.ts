@@ -589,10 +589,26 @@ out vec4 color;` +
   kDrawFunc +
   `
 float easeAlpha(float alpha) {
-  if (alpha < 0.5) {
-    return 4.0 * alpha * alpha;  // rises steeply
+  // t are alpha transitions
+  // <t0 -> y0
+  // t0..t1  -> mix between y0..y1
+  // t1..t2 -> mix between y1..y2
+  // >t2 -> y2
+  const float t0 = 0.5;
+  const float t1 = 0.7;
+  const float t2 = 0.8;
+  const float y0 = 0.0;
+  const float y1 = 1.0;
+  const float y2 = 0.25;
+
+  if (alpha <= t0) {
+    return y0;
+  } else if (alpha <= t1) {
+    return mix(y0, y1, (alpha - t0) / (t1 - t0)); // LERP 0.0 → 1.0
+  } else if (alpha <= t2) {
+    return mix(y1, y2, (alpha - t1) / (t2 - t1)); // LERP 1.0 → 0.2
   } else {
-    return 1.0 - 3.0 * (alpha - 0.5) * (alpha - 0.5);  // falls gently
+    return y2;
   }
 }
   void main() {
