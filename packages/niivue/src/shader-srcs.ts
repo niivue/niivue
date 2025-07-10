@@ -587,7 +587,15 @@ uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;` +
   kDrawFunc +
-  `void main() {
+  `
+float easeAlpha(float alpha) {
+  if (alpha < 0.5) {
+    return 4.0 * alpha * alpha;  // rises steeply
+  } else {
+    return 1.0 - 3.0 * (alpha - 0.5) * (alpha - 0.5);  // falls gently
+  }
+}
+  void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -596,6 +604,7 @@ out vec4 color;` +
 	float overlayAlpha = overlayAlphaShader;
 	if (overlays > 0.0) {
 		ocolor = texture(overlay, texPos);
+		ocolor.a = easeAlpha(ocolor.a);
 		//dFdx for "boxing" issue 435 has aliasing on some implementations (coarse vs fine)
 		//however, this only identifies 50% of the edges due to aliasing effects
 		// http://www.aclockworkberry.com/shader-derivative-functions/
