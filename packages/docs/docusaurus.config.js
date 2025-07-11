@@ -102,7 +102,7 @@ const config = {
             items: [
               {
                 label: "Gallery",
-                href: "./gallery",
+                href: "/gallery",
               },
             ],
           },
