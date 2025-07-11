@@ -198,6 +198,7 @@
           <a class="viewBtn divider dropdown-item-checked" id="DrawFilled" accesskey="f">Fill Outline ^F</a>
           <a class="viewBtn dropdown-item-checked" id="DrawOverwrite" accesskey="o">Pen Overwrites Existing ^O</a>
           <a class="viewBtn dropdown-item-checked" id="Translucent" accesskey="t">Translucent ^T</a>
+          <a class="viewBtn dropdown-item-checked" id="ThinPen">Thin Pen</a>
           <a class="viewBtn" id="Growcut">Grow Cut</a>
           <a class="viewBtn" id="DrawOtsu">Otsu</a>
         </div>
@@ -238,7 +239,7 @@
     nv1.closeDrawing()
     document.getElementById('@Off')?.click()
   }
-  function handleIntensityChange(data) {
+  function handleIntensityChange(data, event) {
     document.getElementById('intensity').innerHTML = '  ' + data.string
   }
   var nv1 = new niivue.Niivue({
@@ -292,6 +293,7 @@
     updateCheckmark('DrawFilled', isFilled)
     updateCheckmark('DrawOverwrite', nv1.drawFillOverwrites)
     updateCheckmark('Translucent', nv1.drawOpacity < 1.0)
+    updateCheckmark('ThinPen', nv1.opts.penSize < 2)
     updateCheckmark('ClickToSegment2D', nv1.opts.clickToSegmentIs2D) // Set initial state for 2D/3D toggle
 
     if (nv1.opts.sliceType === nv1.sliceTypeAxial) toggleGroup('|Axial')
@@ -363,7 +365,7 @@
     }
 
     toggleGroup('_FLAIR') // Assuming FLAIR is the default loaded one
-
+    toggleGroup('{$thinpen')
     toggleGroup('{$itksnap')
   }
 
@@ -504,7 +506,6 @@
         nv1.drawScene()
         handled = true
         break
-
       // Draw Menu
       case 'Translucent':
         if (nv1.drawOpacity > 0.75) nv1.drawOpacity = 0.5
@@ -513,6 +514,14 @@
         nv1.drawScene()
         handled = true
         break
+      case 'ThinPen':
+        if (nv1.opts.penSize > 1) nv1.opts.penSize = 1
+        else nv1.opts.penSize = 3
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
+
       case 'Growcut':
         nv1.drawGrowCut()
         handled = true
