@@ -8771,11 +8771,11 @@ export class Niivue {
         return [src_min, scale]
       }
     }
-    const img = volume.img!
+    let img = volume.img!
     const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
     if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
       const srcimg = volume.img!
-      const img = new Float32Array(volume.img!.length)
+      img = new Float32Array(volume.img!.length)
       for (let i = 0; i < voxnum; i++) {
         img[i] = srcimg[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
       }
