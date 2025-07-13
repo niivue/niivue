@@ -64,8 +64,13 @@ export function getValue(
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`)
       return 0 // Or throw? Return 0 for safety.
     }
+    if (nvImage.hdr.intent_code === 1002) {
+      // SPARQ: issue1369
+      return nvImage.img[vx]
+    }
     // convert rgb to luminance Y = 0.2126 R + 0.7152 G + 0.0722 B (Rec. 709)
     const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722
+
     return Math.round(lum)
   }
   if (nvImage.hdr.datatypeCode === NiiDataType.DT_RGB24) {

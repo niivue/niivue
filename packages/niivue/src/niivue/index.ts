@@ -38,6 +38,7 @@ import {
   fragOrientShader,
   fragOrientShaderAtlas,
   fragRGBOrientShader,
+  fragSPARQOrientShader,
   vertMeshShader,
   fragMeshShader,
   fragMeshToonShader,
@@ -412,6 +413,7 @@ export class Niivue {
   pickingMeshShader?: Shader
   pickingImageShader?: Shader
   colorbarShader?: Shader
+  customSliceShader: Shader | null = null
   fontShader: Shader | null = null
   fiberShader?: Shader
   fontTexture: WebGLTexture | null = null
@@ -428,6 +430,7 @@ export class Niivue {
   orientShaderI: Shader | null = null
   orientShaderF: Shader | null = null
   orientShaderRGBU: Shader | null = null
+  orientShaderSPARQ: Shader | null = null
   surfaceShader: Shader | null = null
   blurShader: Shader | null = null
   sobelBlurShader: Shader | null = null
@@ -6909,6 +6912,40 @@ export class Niivue {
   }
 
   /**
+   * Install a special shader for 2D slice views
+   * @param fragmentShaderText - custom fragment shader.
+   * @if not text is provided, the default shader will be used
+   * @internal
+   */
+  setCustomSliceShader(fragmentShaderText: string = ''): void {
+    const gl = this.gl
+
+    // If there's an existing custom shader, delete it
+    if (this.customSliceShader) {
+      gl.deleteProgram(this.customSliceShader.program)
+      this.customSliceShader = null
+    }
+
+    // If empty string, fall back to default shader
+    if (!fragmentShaderText) {
+      this.updateGLVolume()
+      return
+    }
+
+    // Create new custom shader
+    const shader = new Shader(gl, vertSliceMMShader, fragmentShaderText)
+    shader.use(gl)
+    gl.uniform1i(shader.uniforms.volume, 0)
+    gl.uniform1i(shader.uniforms.colormap, 1)
+    gl.uniform1i(shader.uniforms.overlay, 2)
+    gl.uniform1i(shader.uniforms.drawing, 7)
+    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
+
+    this.customSliceShader = shader
+    this.updateGLVolume()
+  }
+
+  /**
    * Define a new GLSL shader program to influence mesh coloration
    * @param fragmentShaderText - the GLSL source code for the custom fragment shader
    * @param name - a descriptive label for the shader (used in menus or debugging)
@@ -7121,6 +7158,7 @@ export class Niivue {
     this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader))
     this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader))
     this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader))
+    this.orientShaderSPARQ = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragSPARQOrientShader))
     // 3D crosshair cylinder
     this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader)
     this.surfaceShader.use(gl)
@@ -7964,6 +8002,9 @@ export class Niivue {
       )
     } else if (hdr.datatypeCode === NiiDataType.DT_RGBA32) {
       orientShader = this.orientShaderRGBU!
+      if (overlayItem.colormapLabel) {
+        orientShader = this.orientShaderSPARQ!
+      }
       orientShader.use(this.gl)
       this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1)
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -8287,6 +8328,9 @@ export class Niivue {
     }
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader
+    }
+    if (this.customSliceShader) {
+      shader = this.customSliceShader
     }
     if (!shader) {
       throw new Error('slice shader undefined')
@@ -11353,6 +11397,9 @@ export class Niivue {
       }
       if (this.opts.isV1SliceShader) {
         shader = this.sliceV1Shader
+      }
+      if (this.customSliceShader) {
+        shader = this.customSliceShader
       }
       if (!shader) {
         throw new Error('slice Shader undefined')
