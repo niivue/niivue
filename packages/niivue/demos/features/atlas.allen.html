@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Allen Human Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      <label for="atlasAlphaSlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="48"
+        class="slider"
+        id="atlasAlphaSlider"
+      />
+      &nbsp;
+      <button id="clipBtn">Clip</button>
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">&nbsp; </label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  atlasAlphaSlider.oninput = function () {
+    nv1.setOpacity(1, this.value / 255)
+  }
+  clipBtn.onclick = function() {
+    const depth = nv1.scene.clipPlaneDepthAziElev[0]
+    if (depth >= 1.0) {
+      nv1.setClipPlane([-0.15, 180, 30])
+    } else {
+      nv1.setClipPlane([2, 180, 30])
+    }
+  }
+  aboutBtn.onclick = function () {
+        window.alert("Allen Human Reference Atlas PMID: 27418273")
+  }
+  var volumeList1 = [
+    { url: "https://niivue.github.io/niivue-demo-images/Allen/ICBM2009sym.nii.gz"},
+    { url: "https://niivue.github.io/niivue-demo-images/Allen/AllenAtlas.nii.gz"},
+  ]
+  let activeIdx = - 1
+  function handleLocationChange(data) {
+    statusBar.innerHTML = data.string
+    let idx = data.values[1].value
+    if ((isFinite(idx)) && (idx !== activeIdx)) {
+      activeIdx = idx
+      nv1.opts.atlasActiveIndex = activeIdx
+      nv1.updateGLVolume()
+    }
+  }
+  let defaults = {
+    show3Dcrosshair: true,
+    onLocationChange: handleLocationChange,
+    backColor: [0.1, 0.1, 0.2, 1],
+  }
+  var nv1 = new niivue.Niivue(defaults)
+  await nv1.attachToCanvas(gl1)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  await nv1.loadVolumes(volumeList1)
+  async function fetchJSON(fnm) {
+    const response = await fetch(fnm)
+    const js = await response.json()
+    return js
+  }
+  let cmap = await fetchJSON("https://niivue.github.io/niivue-demo-images/Allen/AllenAtlas.json")
+  nv1.volumes[1].setColormapLabel(cmap)
+  nv1.opts.yoke3Dto2DZoom = true
+  nv1.opts.dragMode = nv1.dragModes.pan
+  await nv1.setVolumeRenderIllumination(0.6)
+  atlasAlphaSlider.oninput()
+  nv1.updateGLVolume()
+</script>
