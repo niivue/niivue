@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>BigBrain Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      <label for="atlasAlphaSlider">Atlas Opacity</label>
+      <input
+        type="range"
+        min="1"
+        max="255"
+        value="64"
+        class="slider"
+        id="atlasAlphaSlider"
+      />
+      <label for="meshSelect">Mesh</label>
+      <select id="meshSelect">
+        <option selected>Transparent</option>
+        <option>Rim</option>
+        <option>Outline</option>
+        <option>Matcap</option>
+      </select>&nbsp;
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">&nbsp; </label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  atlasAlphaSlider.oninput = function () {
+    nv1.setOpacity(1, this.value / 255)
+  }
+  meshSelect.onchange = function () {
+    const index = this.selectedIndex
+    nv1.setMeshProperty(0, 'visible', index > 0)
+    if (index === 1) {
+      nv1.setMeshShader(nv1.meshes[0].id, "Rim")
+    } else if (index === 2) {
+      nv1.setMeshShader(nv1.meshes[0].id, "Outline")
+    } else if (index === 3) {
+      nv1.setMeshShader(nv1.meshes[0].id, "Matcap")
+    }
+  }
+  aboutBtn.onclick = function () {
+        window.alert("BigBrain subcortical atlas from Xiao et al (2019) PMID: 31624250")
+  }
+  var volumeList1 = [
+    { url: "https://niivue.github.io/niivue-demo-images/BigBrain/ICBM2009asym.nii.gz"},
+    { url: "https://niivue.github.io/niivue-demo-images/BigBrain/bigbrain.nii.gz"},
+  ]
+  let activeIdx = - 1
+  function handleLocationChange(data) {
+    statusBar.innerHTML = data.string
+    let idx = data.values[1].value
+    if ((isFinite(idx)) && (idx !== activeIdx)) {
+      activeIdx = idx
+      nv1.opts.atlasActiveIndex = activeIdx
+      nv1.updateGLVolume()
+    }
+  }
+  let defaults = {
+    show3Dcrosshair: true,
+    onLocationChange: handleLocationChange,
+  }
+  var nv1 = new niivue.Niivue(defaults)
+  await nv1.attachToCanvas(gl1)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  await nv1.loadVolumes(volumeList1)
+  async function fetchJSON(fnm) {
+    const response = await fetch(fnm)
+    const js = await response.json()
+    return js
+  }
+  let cmap = await fetchJSON("https://niivue.github.io/niivue-demo-images/BigBrain/bigbrain.json")
+  nv1.volumes[1].setColormapLabel(cmap)
+  await nv1.setVolumeRenderIllumination(0.5)
+  nv1.updateGLVolume()
+  nv1.setClipPlane([-0.1, 0, 130])
+  await nv1.loadMeshes([{ url: "https://niivue.github.io/niivue-demo-images/BigBrain/bigbrain.mz3" }])
+  meshSelect.onchange()
+  atlasAlphaSlider.oninput()
+</script>
+

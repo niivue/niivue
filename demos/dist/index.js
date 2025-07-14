@@ -6445,7 +6445,7 @@ uniform highp isampler3D intensityVol;
 var fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
 `;
-var fragOrientShaderAtlas = `#line 636
+var fragOrientShaderAtlas = `#line 1042
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -6459,35 +6459,48 @@ uniform float opacity;
 uniform uint activeIndex;
 uniform vec4 xyzaFrac;
 uniform mat4 mtx;
+float textureWidth;
+float nlayer;
+float layerY;
+
+vec4 scalar2color(uint idx) {
+	float fx = (float(idx) + 0.5) / textureWidth;
+	vec4 clr = texture(colormap, vec2(fx, layerY)).rgba;
+	if (clr.a > 0.0)
+		clr.a = 1.0;
+	clr.a *= opacity;
+	return clr;
+}
 void main(void) {
 	vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
 	uint idx = uint(texture(intensityVol, vx.xyz).r);
-	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-	if (idx == uint(0))
+	if (idx == uint(0)) {
+		if (layer < 1.0) {
+			FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			return;
+		}
+		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 		return;
+	}
+	textureWidth = float(textureSize(colormap, 0).x);
+	nlayer = float(textureSize(colormap, 0).y);
+	layerY = ((2.0 * layer) + 1.5) / nlayer;
 	//idx = ((idx - uint(1)) % uint(100))+uint(1);
-	float textureWidth = float(textureSize(colormap, 0).x);
-	float fx = (float(idx)+0.5) / textureWidth;
-	float nlayer = float(textureSize(colormap, 0).y);
-	float y = ((2.0 * layer) + 1.5)/nlayer;
-	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	if (FragColor.a > 0.0)
-		FragColor.a = 1.0;
-	FragColor.a *= opacity;
+	FragColor = scalar2color(idx);
 	bool isBorder = false;
+	vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+	uint R = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x-xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+	uint L = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y+xyzaFrac.y, coordZ, 1.0) * mtx;
+	uint A = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y-xyzaFrac.y, coordZ, 1.0) * mtx;
+	uint P = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzaFrac.z, 1.0) * mtx;
+	uint S = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
+	uint I = uint(texture(intensityVol, vx.xyz).r);
 	if (xyzaFrac.a != 0.0) { //outline
-		vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint R = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x-xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint L = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y+xyzaFrac.y, coordZ, 1.0) * mtx;
-		uint A = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y-xyzaFrac.y, coordZ, 1.0) * mtx;
-		uint P = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzaFrac.z, 1.0) * mtx;
-		uint S = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
-		uint I = uint(texture(intensityVol, vx.xyz).r);
 		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
 			isBorder = true;
 			if (xyzaFrac.a > 0.0)
@@ -6496,8 +6509,16 @@ void main(void) {
 				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		}
 	}
+	vec4 centerColor = FragColor;
+	FragColor.a += scalar2color(R).a;
+	FragColor.a += scalar2color(L).a;
+	FragColor.a += scalar2color(A).a;
+	FragColor.a += scalar2color(P).a;
+	FragColor.a += scalar2color(S).a;
+	FragColor.a += scalar2color(I).a;
+	FragColor.a /= 7.0;
 	if ((!isBorder) &&(idx == activeIndex)) {
-		if (FragColor.a > 0.5)
+		if (centerColor.a > 0.5)
 			FragColor.a *= 0.4;
 		else
 			FragColor.a =0.8;
@@ -6610,6 +6631,77 @@ void main(void) {
 		FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
 	FragColor.a = aout;
 }`;
+var fragSPARQOrientShader = `#line 773
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float layer;
+uniform float scl_slope;
+uniform float scl_inter;
+uniform float cal_max;
+uniform float cal_min;
+uniform highp sampler2D colormap;
+uniform lowp sampler3D blend3D;
+uniform float opacity;
+uniform mat4 mtx;
+uniform bool hasAlpha;
+uniform int modulation;
+uniform highp sampler3D modulationVol;
+float textureWidth;
+float nlayer;
+float layerY;
+
+vec4 scalar2color(uint idx) {
+	float fx = (float(idx) + 0.5) / textureWidth;
+	vec4 clr = texture(colormap, vec2(fx, layerY)).rgba;
+	if (clr.a > 0.0)
+		clr.a = 1.0;
+	clr.a *= opacity;
+	return clr;
+}
+
+vec4 sparq2color(uvec4 rgba) {
+  // sparc r: max prob index, g: 2nd index, b: max prob a: 2nd prob
+  float prob1 = float(rgba.b)/255.0;
+  float prob2 = float(rgba.a)/255.0;
+  vec4 clr1 = scalar2color(rgba.r);
+  vec4 clr2 = scalar2color(rgba.g);
+  float total = prob1 + prob2;
+  vec4 clr = vec4(clr1.rgb, total);
+  // vec4 clr = vec4(clr1.rgb, prob1);
+  if (total > 0.0) {
+    clr.rgb = mix(clr2.rgb, clr1.rgb, prob1 / total);
+  }
+  return clr;
+}
+void main(void) {
+	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	ivec3 voxelCoord = ivec3(vx.xyz * vec3(textureSize(intensityVol, 0)));
+	uvec4 rgba = texelFetch(intensityVol, voxelCoord, 0);
+	if (rgba.r == uint(0)) {
+		if (layer < 1.0) {
+			FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			return;
+		}
+		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+		return;
+	}
+	textureWidth = float(textureSize(colormap, 0).x);
+	nlayer = float(textureSize(colormap, 0).y);
+	layerY = ((2.0 * layer) + 1.5) / nlayer;
+	FragColor = sparq2color(rgba);
+	FragColor.a *= opacity;
+	if (layer < 1.0) return;
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+	// https://en.wikipedia.org/wiki/Alpha_compositing
+	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+	if (aout <= 0.0) return;
+	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	FragColor.a = aout;
+
+}`;
 var fragRGBOrientShader = `#line 773
 precision highp int;
 precision highp float;
@@ -6642,6 +6734,13 @@ void main(void) {
 	if (modulation == 2)
 		FragColor.a = texture(modulationVol, vx.xyz).r;
 	FragColor.a *= opacity;
+	if (layer < 1.0) return;
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+	// https://en.wikipedia.org/wiki/Alpha_compositing
+	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+	if (aout <= 0.0) return;
+	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	FragColor.a = aout;
 }`;
 var vertGrowCutShader = `#version 300 es
 #line 808
@@ -25600,6 +25699,9 @@ function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`);
       return 0;
     }
+    if (nvImage.hdr.intent_code === 1002) {
+      return nvImage.img[vx];
+    }
     const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722;
     return Math.round(lum);
   }
@@ -34759,6 +34861,7 @@ var Niivue = class {
     __publicField(this, "pickingMeshShader");
     __publicField(this, "pickingImageShader");
     __publicField(this, "colorbarShader");
+    __publicField(this, "customSliceShader", null);
     __publicField(this, "fontShader", null);
     __publicField(this, "fiberShader");
     __publicField(this, "fontTexture", null);
@@ -34777,6 +34880,7 @@ var Niivue = class {
     __publicField(this, "orientShaderI", null);
     __publicField(this, "orientShaderF", null);
     __publicField(this, "orientShaderRGBU", null);
+    __publicField(this, "orientShaderSPARQ", null);
     __publicField(this, "surfaceShader", null);
     __publicField(this, "blurShader", null);
     __publicField(this, "sobelBlurShader", null);
@@ -40449,6 +40553,32 @@ var Niivue = class {
     };
   }
   /**
+   * Install a special shader for 2D slice views
+   * @param fragmentShaderText - custom fragment shader.
+   * @if not text is provided, the default shader will be used
+   * @internal
+   */
+  setCustomSliceShader(fragmentShaderText = "") {
+    const gl = this.gl;
+    if (this.customSliceShader) {
+      gl.deleteProgram(this.customSliceShader.program);
+      this.customSliceShader = null;
+    }
+    if (!fragmentShaderText) {
+      this.updateGLVolume();
+      return;
+    }
+    const shader = new Shader(gl, vertSliceMMShader, fragmentShaderText);
+    shader.use(gl);
+    gl.uniform1i(shader.uniforms.volume, 0);
+    gl.uniform1i(shader.uniforms.colormap, 1);
+    gl.uniform1i(shader.uniforms.overlay, 2);
+    gl.uniform1i(shader.uniforms.drawing, 7);
+    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
+    this.customSliceShader = shader;
+    this.updateGLVolume();
+  }
+  /**
    * Define a new GLSL shader program to influence mesh coloration
    * @param fragmentShaderText - the GLSL source code for the custom fragment shader
    * @param name - a descriptive label for the shader (used in menus or debugging)
@@ -40631,6 +40761,7 @@ var Niivue = class {
     this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
     this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
     this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
+    this.orientShaderSPARQ = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragSPARQOrientShader));
     this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader);
     this.surfaceShader.use(gl);
     this.fiberShader = new Shader(gl, vertFiberShader, fragFiberShader);
@@ -41347,6 +41478,9 @@ var Niivue = class {
       );
     } else if (hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
       orientShader = this.orientShaderRGBU;
+      if (overlayItem.colormapLabel) {
+        orientShader = this.orientShaderSPARQ;
+      }
       orientShader.use(this.gl);
       this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1);
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
@@ -41635,6 +41769,9 @@ var Niivue = class {
     }
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader;
+    }
+    if (this.customSliceShader) {
+      shader = this.customSliceShader;
     }
     if (!shader) {
       throw new Error("slice shader undefined");
@@ -42062,13 +42199,13 @@ var Niivue = class {
         return [src_min, scale7];
       }
     }
-    const img = volume.img;
+    let img = volume.img;
     const voxnum = volume.hdr.dims[1] * volume.hdr.dims[2] * volume.hdr.dims[3];
     if (volume.hdr.scl_slope !== 1 || volume.hdr.scl_inter !== 0) {
       const srcimg = volume.img;
-      const img2 = new Float32Array(volume.img.length);
+      img = new Float32Array(volume.img.length);
       for (let i = 0; i < voxnum; i++) {
-        img2[i] = srcimg[i] * volume.hdr.scl_slope + volume.hdr.scl_inter;
+        img[i] = srcimg[i] * volume.hdr.scl_slope + volume.hdr.scl_inter;
       }
     }
     if (src_min < 0) {
@@ -44331,6 +44468,9 @@ var Niivue = class {
       }
       if (this.opts.isV1SliceShader) {
         shader = this.sliceV1Shader;
+      }
+      if (this.customSliceShader) {
+        shader = this.customSliceShader;
       }
       if (!shader) {
         throw new Error("slice Shader undefined");

@@ -1641,6 +1641,7 @@ declare class Niivue {
     pickingMeshShader?: Shader;
     pickingImageShader?: Shader;
     colorbarShader?: Shader;
+    customSliceShader: Shader | null;
     fontShader: Shader | null;
     fiberShader?: Shader;
     fontTexture: WebGLTexture | null;
@@ -1657,6 +1658,7 @@ declare class Niivue {
     orientShaderI: Shader | null;
     orientShaderF: Shader | null;
     orientShaderRGBU: Shader | null;
+    orientShaderSPARQ: Shader | null;
     surfaceShader: Shader | null;
     blurShader: Shader | null;
     sobelBlurShader: Shader | null;
@@ -3289,6 +3291,13 @@ declare class Niivue {
         Frag: string;
         shader: Shader;
     };
+    /**
+     * Install a special shader for 2D slice views
+     * @param fragmentShaderText - custom fragment shader.
+     * @if not text is provided, the default shader will be used
+     * @internal
+     */
+    setCustomSliceShader(fragmentShaderText?: string): void;
     /**
      * Define a new GLSL shader program to influence mesh coloration
      * @param fragmentShaderText - the GLSL source code for the custom fragment shader
