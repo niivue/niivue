@@ -67,6 +67,21 @@ export enum DRAG_MODE_PRIMARY {
   windowing = 1
 }
 
+export interface MouseEventConfig {
+  leftButton: {
+    primary: DRAG_MODE_PRIMARY | DRAG_MODE
+    withShift?: DRAG_MODE_PRIMARY | DRAG_MODE
+    withCtrl?: DRAG_MODE_PRIMARY | DRAG_MODE
+  }
+  rightButton: DRAG_MODE_PRIMARY | DRAG_MODE
+  centerButton: DRAG_MODE_PRIMARY | DRAG_MODE
+}
+
+export interface TouchEventConfig {
+  singleTouch: DRAG_MODE_PRIMARY | DRAG_MODE
+  doubleTouch: DRAG_MODE_PRIMARY | DRAG_MODE
+}
+
 export enum COLORMAP_TYPE {
   MIN_TO_MAX = 0,
   ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
@@ -135,6 +150,8 @@ export type NVConfigOptions = {
   meshThicknessOn2D: number | string
   dragMode: DRAG_MODE | DRAG_MODE_SECONDARY
   dragModePrimary: DRAG_MODE_PRIMARY
+  mouseEventConfig?: MouseEventConfig
+  touchEventConfig?: TouchEventConfig
   yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
@@ -252,6 +269,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   meshThicknessOn2D: Infinity,
   dragMode: DRAG_MODE_SECONDARY.contrast,
   dragModePrimary: DRAG_MODE_PRIMARY.crosshair,
+  mouseEventConfig: undefined,
+  touchEventConfig: undefined,
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
