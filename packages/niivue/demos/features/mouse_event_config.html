@@ -46,11 +46,19 @@
         <p>Right Button: <span id="rightButtonDisplay">Contrast adjustment</span></p>
         <p>Middle Button: Pan/Zoom (fixed)</p>
       </div>
+      <div id="testInstructions">
+        <h4>Testing Instructions:</h4>
+        <ul>
+          <li><strong>Contrast Mode:</strong> Right-click and drag to draw selection box, release to calculate contrast</li>
+          <li><strong>Callback Only Mode:</strong> Right-click and drag - should NOT draw selection box</li>
+          <li><strong>Windowing Mode:</strong> Click and drag for real-time brightness/contrast adjustment</li>
+        </ul>
+      </div>
     </footer>
   </body>
 
 <script type="module" async>
-  import { Niivue, NVImage, DRAG_MODE, DRAG_MODE_PRIMARY } from '../dist/index.js'
+  import { Niivue, NVImage, DRAG_MODE } from '../dist/index.js'
   
   const nv = new Niivue()
   await nv.attachTo('gl')
@@ -68,8 +76,8 @@
   
   // Map select values to drag modes
   const dragModeMap = {
-    crosshair: DRAG_MODE_PRIMARY.crosshair,
-    windowing: DRAG_MODE_PRIMARY.windowing,
+    crosshair: DRAG_MODE.crosshair,
+    windowing: DRAG_MODE.windowing,
     contrast: DRAG_MODE.contrast,
     pan: DRAG_MODE.pan,
     measurement: DRAG_MODE.measurement,

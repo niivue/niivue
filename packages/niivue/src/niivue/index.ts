@@ -81,8 +81,7 @@ import {
   Scene,
   SLICE_TYPE,
   SHOW_RENDER,
-  DRAG_MODE, // DRAG_MODE_SECONDARY is the same as DRAG_MODE. DRAG_MODE may be deprecated.
-  DRAG_MODE_PRIMARY,
+  DRAG_MODE,
   COLORMAP_TYPE,
   MULTIPLANAR_TYPE,
   DEFAULT_OPTIONS,
@@ -326,9 +325,9 @@ type UIData = {
   dpr?: number
   max2D?: number
   max3D?: number
-  windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
-  windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
-  activeDragMode: DRAG_MODE_PRIMARY | DRAG_MODE | null // currently active drag mode during interaction
+  windowX: number // used to track mouse position for DRAG_MODE.windowing
+  windowY: number // used to track mouse position for DRAG_MODE.windowing
+  activeDragMode: DRAG_MODE | null // currently active drag mode during interaction
   activeDragButton: number | null // mouse button that initiated the current drag
   // angle measurement state
   angleFirstLine: number[] // [x1, y1, x2, y2] for first line
@@ -1530,7 +1529,7 @@ export class Niivue {
    * Gets the appropriate drag mode for a mouse button based on configuration.
    * @internal
    */
-  getMouseButtonDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): DRAG_MODE_PRIMARY | DRAG_MODE {
+  getMouseButtonDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): DRAG_MODE {
     const mouseConfig = this.opts.mouseEventConfig
 
     if (button === LEFT_MOUSE_BUTTON) {
@@ -1544,19 +1543,19 @@ export class Niivue {
         return mouseConfig.leftButton.primary
       }
       // Fallback to current behavior
-      return ctrlKey ? DRAG_MODE_PRIMARY.crosshair : this.opts.dragModePrimary
+      return ctrlKey ? DRAG_MODE.crosshair : this.opts.dragModePrimary
     } else if (button === RIGHT_MOUSE_BUTTON) {
       if (mouseConfig?.rightButton !== undefined) {
         return mouseConfig.rightButton
       }
-      // Fallback to current behavior - cast to DRAG_MODE for compatibility
-      return this.opts.dragMode as DRAG_MODE
+      // Fallback to current behavior
+      return this.opts.dragMode
     } else if (button === CENTER_MOUSE_BUTTON) {
       if (mouseConfig?.centerButton !== undefined) {
         return mouseConfig.centerButton
       }
-      // Fallback to current behavior - cast to DRAG_MODE for compatibility
-      return this.opts.dragMode as DRAG_MODE
+      // Fallback to current behavior
+      return this.opts.dragMode
     }
 
     return this.opts.dragMode as DRAG_MODE
@@ -1566,11 +1565,11 @@ export class Niivue {
    * Gets the appropriate drag mode for touch events based on configuration.
    * @internal
    */
-  getTouchDragMode(isDoubleTouch: boolean): DRAG_MODE_PRIMARY | DRAG_MODE {
+  getTouchDragMode(isDoubleTouch: boolean): DRAG_MODE {
     const touchConfig = this.opts.touchEventConfig
 
     if (isDoubleTouch) {
-      return touchConfig?.doubleTouch ?? (this.opts.dragMode as DRAG_MODE)
+      return touchConfig?.doubleTouch ?? this.opts.dragMode
     }
 
     return touchConfig?.singleTouch ?? this.opts.dragModePrimary
@@ -1589,12 +1588,12 @@ export class Niivue {
    * Gets the currently active drag mode, or falls back to configured defaults.
    * @internal
    */
-  getCurrentDragMode(): DRAG_MODE_PRIMARY | DRAG_MODE {
+  getCurrentDragMode(): DRAG_MODE {
     if (this.uiData.activeDragMode !== null) {
       return this.uiData.activeDragMode
     }
     // Fallback to right-click mode for backward compatibility
-    return this.opts.dragMode as DRAG_MODE
+    return this.opts.dragMode
   }
 
   /**
@@ -1610,15 +1609,15 @@ export class Niivue {
    * Unified handler for mouse actions based on drag mode.
    * @internal
    */
-  handleMouseAction(dragMode: DRAG_MODE_PRIMARY | DRAG_MODE, e: MouseEvent, pos: { x: number; y: number }): void {
-    if (dragMode === DRAG_MODE_PRIMARY.crosshair) {
+  handleMouseAction(dragMode: DRAG_MODE, e: MouseEvent, pos: { x: number; y: number }): void {
+    if (dragMode === DRAG_MODE.crosshair) {
       this.mouseDown(pos.x, pos.y)
       this.mouseClick(pos.x, pos.y)
-    } else if (dragMode === DRAG_MODE_PRIMARY.windowing) {
+    } else if (dragMode === DRAG_MODE.windowing) {
       this.uiData.windowX = e.x
       this.uiData.windowY = e.y
     } else {
-      // Handle secondary drag modes (contrast, measurement, pan, etc.)
+      // Handle all other drag modes (contrast, measurement, pan, etc.)
       this.mousePos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
 
       if (dragMode === DRAG_MODE.none) {
@@ -1850,7 +1849,10 @@ export class Niivue {
           this.clearActiveDragMode()
           return
         }
-        if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+        if (
+          this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
+          this.uiData.dragStart[1] === this.uiData.dragEnd[1]
+        ) {
           this.clearActiveDragMode()
           return
         }
@@ -2062,13 +2064,13 @@ export class Niivue {
       // Use the active drag mode to determine how to handle mouse movement
       const activeDragMode = this.getCurrentDragMode()
 
-      if (activeDragMode === DRAG_MODE_PRIMARY.crosshair) {
+      if (activeDragMode === DRAG_MODE.crosshair) {
         this.mouseMove(pos.x, pos.y)
         this.mouseClick(pos.x, pos.y)
-      } else if (activeDragMode === DRAG_MODE_PRIMARY.windowing) {
-        this.windowingHandler(e.x, e.y)
+      } else if (activeDragMode === DRAG_MODE.windowing) {
+        this.windowingHandler(pos.x, pos.y)
       } else {
-        // Handle all secondary drag modes that need drag tracking
+        // Handle all other drag modes that need drag tracking
         this.setDragEnd(pos.x, pos.y)
       }
 
@@ -2214,10 +2216,10 @@ export class Niivue {
         return
       }
       const dragMode = this.getTouchDragMode(false)
-      if (dragMode === DRAG_MODE_PRIMARY.crosshair) {
+      if (dragMode === DRAG_MODE.crosshair) {
         this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
         this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
-      } else if (dragMode === DRAG_MODE_PRIMARY.windowing) {
+      } else if (dragMode === DRAG_MODE.windowing) {
         this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY)
         this.drawScene()
       }
@@ -10441,11 +10443,11 @@ export class Niivue {
    * ```js
    * nv.setMouseEventConfig({
    *   leftButton: {
-   *     primary: DRAG_MODE_PRIMARY.windowing,
+   *     primary: DRAG_MODE.windowing,
    *     withShift: DRAG_MODE.measurement,
-   *     withCtrl: DRAG_MODE_PRIMARY.crosshair
+   *     withCtrl: DRAG_MODE.crosshair
    *   },
-   *   rightButton: DRAG_MODE_PRIMARY.crosshair,
+   *   rightButton: DRAG_MODE.crosshair,
    *   centerButton: DRAG_MODE.pan
    * })
    * ```
@@ -10462,7 +10464,7 @@ export class Niivue {
    * @example
    * ```js
    * nv.setTouchEventConfig({
-   *   singleTouch: DRAG_MODE_PRIMARY.windowing,
+   *   singleTouch: DRAG_MODE.windowing,
    *   doubleTouch: DRAG_MODE.pan
    * })
    * ```
@@ -14332,11 +14334,8 @@ export class Niivue {
         return
       }
       // Only draw selection box for specific drag modes that need it
-      if (
-        this.getCurrentDragMode() === DRAG_MODE.contrast ||
-        this.getCurrentDragMode() === DRAG_MODE.roiSelection ||
-        this.getCurrentDragMode() === DRAG_MODE.callbackOnly
-      ) {
+      const currentDragMode = this.getCurrentDragMode()
+      if (currentDragMode === DRAG_MODE.contrast || currentDragMode === DRAG_MODE.roiSelection) {
         const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
         const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
         this.drawSelectionBox([
