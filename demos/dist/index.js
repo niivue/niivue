@@ -45195,7 +45195,7 @@ var Niivue = class {
         deci = 3;
         if (this.volumes[i].colormapLabel !== null) {
           const v = Math.round(flt2);
-          if (v >= 0 && v < this.volumes[i].colormapLabel.labels.length) {
+          if (v >= 0 && this.volumes[i].colormapLabel.labels && v < this.volumes[i].colormapLabel.labels.length) {
             valStr += this.volumes[i].colormapLabel.labels[v];
           } else {
             valStr += "undefined(" + flt2str(flt2, deci) + ")";
