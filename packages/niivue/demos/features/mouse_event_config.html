@@ -29,6 +29,10 @@
           <option value="pan">Pan</option>
           <option value="measurement">Measurement</option>
           <option value="angle">Angle measurement</option>
+          <option value="slicer3D">3D Slicer</option>
+          <option value="callbackOnly">Callback Only</option>
+          <option value="roiSelection">ROI Selection</option>
+          <option value="none">None</option>
         </select>
       </div>
     </header>
@@ -69,7 +73,11 @@
     contrast: DRAG_MODE.contrast,
     pan: DRAG_MODE.pan,
     measurement: DRAG_MODE.measurement,
-    angle: DRAG_MODE.angle
+    angle: DRAG_MODE.angle,
+    slicer3D: DRAG_MODE.slicer3D,
+    callbackOnly: DRAG_MODE.callbackOnly,
+    roiSelection: DRAG_MODE.roiSelection,
+    none: DRAG_MODE.none
   }
   
   // Map drag modes to display names
@@ -79,7 +87,11 @@
     contrast: 'Contrast adjustment',
     pan: 'Pan',
     measurement: 'Measurement',
-    angle: 'Angle measurement'
+    angle: 'Angle measurement',
+    slicer3D: '3D Slicer',
+    callbackOnly: 'Callback Only',
+    roiSelection: 'ROI Selection',
+    none: 'None'
   }
   
   function updateConfiguration() {

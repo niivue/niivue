@@ -1790,7 +1790,10 @@ export class Niivue {
     const wasCenterDown = this.uiData.mouseButtonCenterDown
     this.uiData.mouseButtonCenterDown = false
     this.uiData.mouseButtonLeftDown = false
-    this.clearActiveDragMode()
+    
+    // Save current drag mode for logic that depends on it
+    const currentDragMode = this.getCurrentDragMode()
+    
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
     }
@@ -1803,7 +1806,7 @@ export class Niivue {
       this.uiData.isDragging = false
 
       // Handle angle measurement workflow
-      if (this.getCurrentDragMode() === DRAG_MODE.angle) {
+      if (currentDragMode === DRAG_MODE.angle) {
         if (this.uiData.angleState === 'drawing_first_line') {
           // First line completed, save it and start drawing second line
           this.uiData.angleFirstLine = [
@@ -1820,34 +1823,40 @@ export class Niivue {
         } else if (this.uiData.angleState === 'drawing_second_line') {
           // Second line completed, finish angle measurement
           this.uiData.angleState = 'complete'
+          this.clearActiveDragMode()
           this.drawScene()
           return
         }
       }
 
-      if (this.getCurrentDragMode() === DRAG_MODE.callbackOnly) {
+      if (currentDragMode === DRAG_MODE.callbackOnly) {
         this.drawScene()
       } // hide selectionbox
       const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
       const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
       this.generateMouseUpCallback(fracStart, fracEnd)
       // if roiSelection drag mode
-      if (this.getCurrentDragMode() === DRAG_MODE.roiSelection) {
+      if (currentDragMode === DRAG_MODE.roiSelection) {
         // do not call drawScene so that the selection box remains visible
+        this.clearActiveDragMode()
         return
       }
-      if (this.getCurrentDragMode() !== DRAG_MODE.contrast) {
+      if (currentDragMode !== DRAG_MODE.contrast) {
+        this.clearActiveDragMode()
         return
       }
       if (wasCenterDown) {
+        this.clearActiveDragMode()
         return
       }
       if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+        this.clearActiveDragMode()
         return
       }
       this.calculateNewRange({ volIdx: 0 })
       this.refreshLayers(this.volumes[0], 0)
     }
+    this.clearActiveDragMode()
     this.drawScene()
   }
 
