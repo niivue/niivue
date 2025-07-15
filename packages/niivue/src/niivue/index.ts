@@ -332,6 +332,15 @@ type UIData = {
   // angle measurement state
   angleFirstLine: number[] // [x1, y1, x2, y2] for first line
   angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
+  // persistent measurement and angle state
+  completedMeasurements: Array<{ line: number[]; sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number }> // array of measurement lines with slice info
+  completedAngles: Array<{
+    firstLine: number[]
+    secondLine: number[]
+    sliceIndex: number
+    sliceType: SLICE_TYPE
+    slicePosition: number
+  }> // array of completed angles with slice info
 }
 
 type SaveImageOptions = {
@@ -506,7 +515,9 @@ export class Niivue {
     activeDragMode: null,
     activeDragButton: null,
     angleFirstLine: [0.0, 0.0, 0.0, 0.0],
-    angleState: 'none'
+    angleState: 'none',
+    completedMeasurements: [],
+    completedAngles: []
   }
 
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -1598,8 +1609,15 @@ export class Niivue {
    * @internal
    */
   clearActiveDragMode(): void {
+    console.log('DEBUG: clearActiveDragMode called')
+    console.log('DEBUG: activeDragMode before clear:', this.uiData.activeDragMode)
+    console.log('DEBUG: angleState at clearActiveDragMode:', this.uiData.angleState)
+    console.log('DEBUG: completedAngles length at clearActiveDragMode:', this.uiData.completedAngles.length)
+
     this.uiData.activeDragMode = null
     this.uiData.activeDragButton = null
+
+    console.log('DEBUG: activeDragMode after clear:', this.uiData.activeDragMode)
   }
 
   /**
@@ -1626,7 +1644,66 @@ export class Niivue {
         if (this.uiData.angleState === 'none') {
           this.uiData.angleState = 'drawing_first_line'
         } else if (this.uiData.angleState === 'drawing_second_line') {
+          // Final click - save completed angle with slice info
+          console.log('DEBUG: Final angle click - angleState is drawing_second_line')
+          console.log('DEBUG: dragEnd position:', this.uiData.dragEnd)
+          console.log('DEBUG: angleFirstLine:', this.uiData.angleFirstLine)
+          console.log('DEBUG: current click position:', pos.x, pos.y)
+
+          // Use current click position instead of dragEnd for final position
+          const finalClickPos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
+          console.log('DEBUG: finalClickPos:', finalClickPos)
+
+          // Get slice info using the current click position
+          const tileIdx = this.tileIndex(finalClickPos[0], finalClickPos[1])
+          console.log('DEBUG: tileIdx for final click:', tileIdx)
+
+          let sliceInfo = { sliceIndex: -1, sliceType: SLICE_TYPE.AXIAL, slicePosition: 0 }
+          if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+            const sliceType = this.screenSlices[tileIdx].axCorSag
+            let slicePosition = 0
+
+            // Get the current slice position based on the crosshair position
+            if (sliceType === SLICE_TYPE.AXIAL) {
+              slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+            } else if (sliceType === SLICE_TYPE.CORONAL) {
+              slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+            } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+              slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+            }
+
+            sliceInfo = {
+              sliceIndex: tileIdx,
+              sliceType,
+              slicePosition
+            }
+          }
+          console.log('DEBUG: sliceInfo:', sliceInfo)
+
+          const secondLine = [
+            this.uiData.angleFirstLine[2], // start from end of first line
+            this.uiData.angleFirstLine[3],
+            finalClickPos[0], // to final click position
+            finalClickPos[1]
+          ]
+          console.log('DEBUG: secondLine calculated:', secondLine)
+
+          const angleToSave = {
+            firstLine: [...this.uiData.angleFirstLine],
+            secondLine,
+            sliceIndex: sliceInfo.sliceIndex,
+            sliceType: sliceInfo.sliceType,
+            slicePosition: sliceInfo.slicePosition
+          }
+          console.log('DEBUG: angleToSave:', angleToSave)
+
+          this.uiData.completedAngles.push(angleToSave)
+          console.log('DEBUG: completedAngles length after push:', this.uiData.completedAngles.length)
+          console.log('DEBUG: completedAngles array:', this.uiData.completedAngles)
+
+          this.resetAngleMeasurement()
           this.uiData.angleState = 'complete'
+          console.log('DEBUG: angleState set to complete, calling drawScene')
           this.drawScene()
           return
         } else if (this.uiData.angleState === 'complete') {
@@ -1771,6 +1848,12 @@ export class Niivue {
    * @internal
    */
   mouseUpListener(): void {
+    console.log('DEBUG: mouseUpListener called')
+    console.log('DEBUG: angleState at mouseUpListener:', this.uiData.angleState)
+    console.log('DEBUG: isDragging at mouseUpListener:', this.uiData.isDragging)
+    console.log('DEBUG: activeDragMode at mouseUpListener:', this.uiData.activeDragMode)
+    console.log('DEBUG: completedAngles length at mouseUpListener:', this.uiData.completedAngles.length)
+
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
@@ -1821,7 +1904,7 @@ export class Niivue {
           this.drawScene()
           return
         } else if (this.uiData.angleState === 'drawing_second_line') {
-          // Second line completed, finish angle measurement
+          // Second line completed, but angle will be saved in mouseDownListener
           this.uiData.angleState = 'complete'
           this.clearActiveDragMode()
           this.drawScene()
@@ -1855,6 +1938,19 @@ export class Niivue {
         }
         this.calculateNewRange({ volIdx: 0 })
         this.refreshLayers(this.volumes[0], 0)
+      }
+      if (currentDragMode === DRAG_MODE.measurement) {
+        // Save completed measurement line with slice info
+        const sliceInfo = this.getCurrentSliceInfo()
+        this.uiData.completedMeasurements.push({
+          line: [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]],
+          sliceIndex: sliceInfo.sliceIndex,
+          sliceType: sliceInfo.sliceType,
+          slicePosition: sliceInfo.slicePosition
+        })
+        this.clearActiveDragMode()
+        this.drawScene()
+        return
       }
     }
     this.clearActiveDragMode()
@@ -10299,21 +10395,6 @@ export class Niivue {
 
       // Calculate and display angle
       this.drawAngleText()
-    } else if (this.uiData.angleState === 'complete') {
-      // Draw both completed lines
-      this.drawMeasurementTool(this.uiData.angleFirstLine, false)
-
-      // Draw the second line (completed)
-      const secondLine = [
-        this.uiData.angleFirstLine[2], // start from end of first line
-        this.uiData.angleFirstLine[3],
-        this.uiData.dragEnd[0], // to final position
-        this.uiData.dragEnd[1]
-      ]
-      this.drawMeasurementTool(secondLine, false)
-
-      // Calculate and display angle
-      this.drawAngleText()
     }
   }
 
@@ -10338,6 +10419,34 @@ export class Niivue {
     const intersectionY = this.uiData.angleFirstLine[3]
 
     const angleText = `${angle.toFixed(1)}°`
+
+    // Draw angle text at intersection
+    this.drawTextBetween(
+      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
+      angleText,
+      this.opts.measureTextHeight / 0.06,
+      this.opts.measureTextColor
+    )
+  }
+
+  /**
+   * Calculate and draw angle text for a completed angle.
+   * @internal
+   */
+  drawAngleTextForAngle(angle: {
+    firstLine: number[]
+    secondLine: number[]
+    sliceIndex: number
+    sliceType: SLICE_TYPE
+    slicePosition: number
+  }): void {
+    const angle_degrees = this.calculateAngleBetweenLines(angle.firstLine, angle.secondLine)
+
+    // Display angle at intersection point
+    const intersectionX = angle.firstLine[2]
+    const intersectionY = angle.firstLine[3]
+
+    const angleText = `${angle_degrees.toFixed(1)}°`
 
     // Draw angle text at intersection
     this.drawTextBetween(
@@ -10381,8 +10490,138 @@ export class Niivue {
    * @internal
    */
   resetAngleMeasurement(): void {
+    console.log('DEBUG: resetAngleMeasurement called')
+    console.log('DEBUG: angleState before reset:', this.uiData.angleState)
+    console.log('DEBUG: completedAngles length before reset:', this.uiData.completedAngles.length)
+
     this.uiData.angleState = 'none'
     this.uiData.angleFirstLine = [0.0, 0.0, 0.0, 0.0]
+
+    console.log('DEBUG: angleState after reset:', this.uiData.angleState)
+    console.log('DEBUG: completedAngles length after reset:', this.uiData.completedAngles.length)
+  }
+
+  /**
+   * Get slice information for the current measurement/angle.
+   * @internal
+   */
+  getCurrentSliceInfo(): { sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number } {
+    const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
+    if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+      const sliceType = this.screenSlices[tileIdx].axCorSag
+      let slicePosition = 0
+
+      // Get the current slice position based on the crosshair position
+      if (sliceType === SLICE_TYPE.AXIAL) {
+        slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+      } else if (sliceType === SLICE_TYPE.CORONAL) {
+        slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+      } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+        slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+      }
+
+      return {
+        sliceIndex: tileIdx,
+        sliceType,
+        slicePosition
+      }
+    }
+    return { sliceIndex: -1, sliceType: SLICE_TYPE.AXIAL, slicePosition: 0 }
+  }
+
+  /**
+   * Check if a measurement/angle should be drawn on the current slice.
+   * @internal
+   */
+  shouldDrawOnCurrentSlice(sliceIndex: number, sliceType: SLICE_TYPE, slicePosition: number): boolean {
+    console.log('DEBUG: shouldDrawOnCurrentSlice called with:', { sliceIndex, sliceType, slicePosition })
+    console.log('DEBUG: current opts.sliceType:', this.opts.sliceType)
+    console.log('DEBUG: current scene.crosshairPos:', this.scene.crosshairPos)
+
+    // First check if the measurement is on the same tile/slice type
+    if (this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
+      // If sliceIndex is -1, try to find the corresponding tile by slice type
+      if (sliceIndex < 0) {
+        console.log('DEBUG: sliceIndex is -1, searching for tile by slice type')
+        let foundTile = false
+        for (let i = 0; i < this.screenSlices.length; i++) {
+          if (this.screenSlices[i].axCorSag === sliceType) {
+            console.log('DEBUG: Found tile', i, 'with slice type', sliceType)
+            foundTile = true
+            break
+          }
+        }
+        if (!foundTile) {
+          console.log('DEBUG: No tile found with slice type', sliceType)
+          return false
+        }
+      } else if (sliceIndex >= this.screenSlices.length || this.screenSlices[sliceIndex].axCorSag !== sliceType) {
+        console.log('DEBUG: Returning false - tile/slice type mismatch in multiplanar')
+        return false
+      }
+    } else if (this.opts.sliceType !== sliceType) {
+      console.log('DEBUG: Returning false - slice type mismatch in single slice')
+      return false
+    }
+
+    // Now check if we're on the same slice position
+    let currentSlicePosition = 0
+    if (sliceType === SLICE_TYPE.AXIAL) {
+      currentSlicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+    } else if (sliceType === SLICE_TYPE.CORONAL) {
+      currentSlicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+    } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+      currentSlicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+    }
+
+    console.log('DEBUG: currentSlicePosition:', currentSlicePosition)
+    console.log('DEBUG: saved slicePosition:', slicePosition)
+
+    // Use a small tolerance for floating point comparison
+    const tolerance = 0.001
+    const difference = Math.abs(currentSlicePosition - slicePosition)
+    console.log('DEBUG: position difference:', difference)
+    const result = difference < tolerance
+    console.log('DEBUG: shouldDrawOnCurrentSlice result:', result)
+
+    return result
+  }
+
+  /**
+   * Clear all persistent measurement lines from the canvas.
+   * @example
+   * ```js
+   * nv.clearMeasurements()
+   * ```
+   */
+  clearMeasurements(): void {
+    this.uiData.completedMeasurements = []
+    this.drawScene()
+  }
+
+  /**
+   * Clear all persistent angle measurements from the canvas.
+   * @example
+   * ```js
+   * nv.clearAngles()
+   * ```
+   */
+  clearAngles(): void {
+    this.uiData.completedAngles = []
+    this.drawScene()
+  }
+
+  /**
+   * Clear all persistent measurements and angles from the canvas.
+   * @example
+   * ```js
+   * nv.clearAllMeasurements()
+   * ```
+   */
+  clearAllMeasurements(): void {
+    this.uiData.completedMeasurements = []
+    this.uiData.completedAngles = []
+    this.drawScene()
   }
 
   /**
@@ -14324,11 +14563,11 @@ export class Niivue {
           this.uiData.dragEnd[0],
           this.uiData.dragEnd[1]
         ])
-        return
+        // return
       }
       if (this.getCurrentDragMode() === DRAG_MODE.angle) {
         this.drawAngleMeasurementTool()
-        return
+        // return
       }
       // Only draw selection box for specific drag modes that need it
       const currentDragMode = this.getCurrentDragMode()
@@ -14342,7 +14581,34 @@ export class Niivue {
           height
         ])
       }
-      return
+      // return
+    }
+
+    // Draw persistent completed measurements for current slice
+    for (const measurement of this.uiData.completedMeasurements) {
+      if (this.shouldDrawOnCurrentSlice(measurement.sliceIndex, measurement.sliceType, measurement.slicePosition)) {
+        this.drawMeasurementTool(measurement.line)
+      }
+    }
+
+    // Draw persistent completed angles for current slice
+    console.log('DEBUG: Drawing angles, completedAngles length:', this.uiData.completedAngles.length)
+    for (let i = 0; i < this.uiData.completedAngles.length; i++) {
+      const angle = this.uiData.completedAngles[i]
+      console.log(`DEBUG: Checking angle ${i}:`, angle)
+
+      const shouldDraw = this.shouldDrawOnCurrentSlice(angle.sliceIndex, angle.sliceType, angle.slicePosition)
+      console.log(`DEBUG: shouldDrawOnCurrentSlice result for angle ${i}:`, shouldDraw)
+
+      if (shouldDraw) {
+        console.log(`DEBUG: Drawing angle ${i}`)
+        this.drawMeasurementTool(angle.firstLine, false)
+        this.drawMeasurementTool(angle.secondLine, false)
+        // Draw angle text
+        this.drawAngleTextForAngle(angle)
+      } else {
+        console.log(`DEBUG: Skipping angle ${i} - not on current slice`)
+      }
     }
 
     // draw circle at mouse position if clickToSegment is enabled
