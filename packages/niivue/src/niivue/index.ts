@@ -1526,14 +1526,13 @@ export class Niivue {
     }
   }
 
-
   /**
    * Gets the appropriate drag mode for a mouse button based on configuration.
    * @internal
    */
   getMouseButtonDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): DRAG_MODE_PRIMARY | DRAG_MODE {
     const mouseConfig = this.opts.mouseEventConfig
-    
+
     if (button === LEFT_MOUSE_BUTTON) {
       if (mouseConfig?.leftButton) {
         if (shiftKey && mouseConfig.leftButton.withShift !== undefined) {
@@ -1559,7 +1558,7 @@ export class Niivue {
       // Fallback to current behavior - cast to DRAG_MODE for compatibility
       return this.opts.dragMode as DRAG_MODE
     }
-    
+
     return this.opts.dragMode as DRAG_MODE
   }
 
@@ -1569,11 +1568,11 @@ export class Niivue {
    */
   getTouchDragMode(isDoubleTouch: boolean): DRAG_MODE_PRIMARY | DRAG_MODE {
     const touchConfig = this.opts.touchEventConfig
-    
+
     if (isDoubleTouch) {
       return touchConfig?.doubleTouch ?? (this.opts.dragMode as DRAG_MODE)
     }
-    
+
     return touchConfig?.singleTouch ?? this.opts.dragModePrimary
   }
 
@@ -1621,7 +1620,7 @@ export class Niivue {
     } else {
       // Handle secondary drag modes (contrast, measurement, pan, etc.)
       this.mousePos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
-      
+
       if (dragMode === DRAG_MODE.none) {
         return
       }
@@ -1793,10 +1792,10 @@ export class Niivue {
     const wasCenterDown = this.uiData.mouseButtonCenterDown
     this.uiData.mouseButtonCenterDown = false
     this.uiData.mouseButtonLeftDown = false
-    
+
     // Save current drag mode for logic that depends on it
     const currentDragMode = this.getCurrentDragMode()
-    
+
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
     } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
@@ -1846,20 +1845,18 @@ export class Niivue {
         this.clearActiveDragMode()
         return
       }
-      if (currentDragMode !== DRAG_MODE.contrast) {
-        this.clearActiveDragMode()
-        return
+      if (currentDragMode === DRAG_MODE.contrast) {
+        if (wasCenterDown) {
+          this.clearActiveDragMode()
+          return
+        }
+        if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+          this.clearActiveDragMode()
+          return
+        }
+        this.calculateNewRange({ volIdx: 0 })
+        this.refreshLayers(this.volumes[0], 0)
       }
-      if (wasCenterDown) {
-        this.clearActiveDragMode()
-        return
-      }
-      if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
-        this.clearActiveDragMode()
-        return
-      }
-      this.calculateNewRange({ volIdx: 0 })
-      this.refreshLayers(this.volumes[0], 0)
     }
     this.clearActiveDragMode()
     this.drawScene()
@@ -2061,10 +2058,10 @@ export class Niivue {
       if (tile !== this.uiData.clickedTile) {
         return
       }
-      
+
       // Use the active drag mode to determine how to handle mouse movement
       const activeDragMode = this.getCurrentDragMode()
-      
+
       if (activeDragMode === DRAG_MODE_PRIMARY.crosshair) {
         this.mouseMove(pos.x, pos.y)
         this.mouseClick(pos.x, pos.y)
@@ -2074,7 +2071,7 @@ export class Niivue {
         // Handle all secondary drag modes that need drag tracking
         this.setDragEnd(pos.x, pos.y)
       }
-      
+
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
@@ -2437,7 +2434,10 @@ export class Niivue {
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    if (this.getCurrentDragMode() === DRAG_MODE.pan && this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1) {
+    if (
+      this.getCurrentDragMode() === DRAG_MODE.pan &&
+      this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1
+    ) {
       // Zoom
       const zoomDirection = scrollAmount < 0 ? 1 : -1
       let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (0.01 * zoomDirection))
@@ -14331,14 +14331,21 @@ export class Niivue {
         this.drawAngleMeasurementTool()
         return
       }
-      const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
-      const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
-      this.drawSelectionBox([
-        Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
-        Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
-        width,
-        height
-      ])
+      // Only draw selection box for specific drag modes that need it
+      if (
+        this.getCurrentDragMode() === DRAG_MODE.contrast ||
+        this.getCurrentDragMode() === DRAG_MODE.roiSelection ||
+        this.getCurrentDragMode() === DRAG_MODE.callbackOnly
+      ) {
+        const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
+        const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
+        this.drawSelectionBox([
+          Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
+          Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
+          width,
+          height
+        ])
+      }
       return
     }
 
