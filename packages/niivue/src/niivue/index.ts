@@ -1539,19 +1539,16 @@ export class Niivue {
         }
         return mouseConfig.leftButton.primary
       }
-      // Fallback to current behavior
       return ctrlKey ? DRAG_MODE.crosshair : this.opts.dragModePrimary
     } else if (button === RIGHT_MOUSE_BUTTON) {
       if (mouseConfig?.rightButton !== undefined) {
         return mouseConfig.rightButton
       }
-      // Fallback to current behavior
       return this.opts.dragMode
     } else if (button === CENTER_MOUSE_BUTTON) {
       if (mouseConfig?.centerButton !== undefined) {
         return mouseConfig.centerButton
       }
-      // Fallback to current behavior
       return this.opts.dragMode
     }
 
