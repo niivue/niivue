@@ -11,6 +11,7 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 import { fmriEvents, getColorForTrialType } from './types/events.js'
 import { loadDroppedFiles } from './utils/dragAndDrop.js'
 import { layouts } from '../../common/layouts.js'
+import { NiimathToolbar } from './components/NiimathToolbar.js'
 
 const electron = window.electron
 
@@ -43,6 +44,8 @@ function MainApp(): JSX.Element {
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const selected = useSelectedInstance()
+  const nv = selected?.nvRef.current
+  const niimath = niimathRef.current
 
   // Create the first document on mount
   useEffect((): void => {
@@ -440,6 +443,7 @@ function MainApp(): JSX.Element {
   return (
     <>
       {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
+      <NiimathToolbar nv={nv!} niimath={niimath} />
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar
           onRemoveMesh={handleRemoveMesh}
