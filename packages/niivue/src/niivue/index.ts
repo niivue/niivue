@@ -333,10 +333,16 @@ type UIData = {
   angleFirstLine: number[] // [x1, y1, x2, y2] for first line
   angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
   // persistent measurement and angle state
-  completedMeasurements: Array<{ line: number[]; sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number }> // array of measurement lines with slice info
+  completedMeasurements: Array<{
+    startMM: vec3 // World coordinates in mm for start point
+    endMM: vec3 // World coordinates in mm for end point
+    sliceIndex: number
+    sliceType: SLICE_TYPE
+    slicePosition: number
+  }> // array of measurement lines with slice info
   completedAngles: Array<{
-    firstLine: number[]
-    secondLine: number[]
+    firstLineMM: { start: vec3; end: vec3 } // World coordinates in mm for first line
+    secondLineMM: { start: vec3; end: vec3 } // World coordinates in mm for second line
     sliceIndex: number
     sliceType: SLICE_TYPE
     slicePosition: number
@@ -1688,16 +1694,40 @@ export class Niivue {
           ]
           console.log('DEBUG: secondLine calculated:', secondLine)
 
-          const angleToSave = {
-            firstLine: [...this.uiData.angleFirstLine],
-            secondLine,
-            sliceIndex: sliceInfo.sliceIndex,
-            sliceType: sliceInfo.sliceType,
-            slicePosition: sliceInfo.slicePosition
-          }
-          console.log('DEBUG: angleToSave:', angleToSave)
+          // Convert canvas coordinates to world coordinates
+          const firstLineStartFrac = this.canvasPos2frac([this.uiData.angleFirstLine[0], this.uiData.angleFirstLine[1]])
+          const firstLineEndFrac = this.canvasPos2frac([this.uiData.angleFirstLine[2], this.uiData.angleFirstLine[3]])
+          const secondLineStartFrac = this.canvasPos2frac([secondLine[0], secondLine[1]])
+          const secondLineEndFrac = this.canvasPos2frac([secondLine[2], secondLine[3]])
 
-          this.uiData.completedAngles.push(angleToSave)
+          if (
+            firstLineStartFrac[0] >= 0 &&
+            firstLineEndFrac[0] >= 0 &&
+            secondLineStartFrac[0] >= 0 &&
+            secondLineEndFrac[0] >= 0
+          ) {
+            const firstLineStartMM = this.frac2mm(firstLineStartFrac)
+            const firstLineEndMM = this.frac2mm(firstLineEndFrac)
+            const secondLineStartMM = this.frac2mm(secondLineStartFrac)
+            const secondLineEndMM = this.frac2mm(secondLineEndFrac)
+
+            const angleToSave = {
+              firstLineMM: {
+                start: vec3.fromValues(firstLineStartMM[0], firstLineStartMM[1], firstLineStartMM[2]),
+                end: vec3.fromValues(firstLineEndMM[0], firstLineEndMM[1], firstLineEndMM[2])
+              },
+              secondLineMM: {
+                start: vec3.fromValues(secondLineStartMM[0], secondLineStartMM[1], secondLineStartMM[2]),
+                end: vec3.fromValues(secondLineEndMM[0], secondLineEndMM[1], secondLineEndMM[2])
+              },
+              sliceIndex: sliceInfo.sliceIndex,
+              sliceType: sliceInfo.sliceType,
+              slicePosition: sliceInfo.slicePosition
+            }
+            console.log('DEBUG: angleToSave:', angleToSave)
+
+            this.uiData.completedAngles.push(angleToSave)
+          }
           console.log('DEBUG: completedAngles length after push:', this.uiData.completedAngles.length)
           console.log('DEBUG: completedAngles array:', this.uiData.completedAngles)
 
@@ -1942,12 +1972,24 @@ export class Niivue {
       if (currentDragMode === DRAG_MODE.measurement) {
         // Save completed measurement line with slice info
         const sliceInfo = this.getCurrentSliceInfo()
-        this.uiData.completedMeasurements.push({
-          line: [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]],
-          sliceIndex: sliceInfo.sliceIndex,
-          sliceType: sliceInfo.sliceType,
-          slicePosition: sliceInfo.slicePosition
-        })
+
+        // Convert canvas coordinates to world coordinates
+        const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
+        const endFrac = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
+
+        if (startFrac[0] >= 0 && endFrac[0] >= 0) {
+          const startMM = this.frac2mm(startFrac)
+          const endMM = this.frac2mm(endFrac)
+
+          this.uiData.completedMeasurements.push({
+            startMM: vec3.fromValues(startMM[0], startMM[1], startMM[2]),
+            endMM: vec3.fromValues(endMM[0], endMM[1], endMM[2]),
+            sliceIndex: sliceInfo.sliceIndex,
+            sliceType: sliceInfo.sliceType,
+            slicePosition: sliceInfo.slicePosition
+          })
+        }
+
         this.clearActiveDragMode()
         this.drawScene()
         return
@@ -10507,6 +10549,8 @@ export class Niivue {
    */
   getCurrentSliceInfo(): { sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number } {
     const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
+    console.log('DEBUG: getCurrentSliceInfo - tileIdx:', tileIdx, 'screenSlices.length:', this.screenSlices.length)
+
     if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
       const sliceType = this.screenSlices[tileIdx].axCorSag
       let slicePosition = 0
@@ -10520,13 +10564,44 @@ export class Niivue {
         slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
       }
 
+      console.log('DEBUG: getCurrentSliceInfo - valid tile found:', { sliceIndex: tileIdx, sliceType, slicePosition })
       return {
         sliceIndex: tileIdx,
         sliceType,
         slicePosition
       }
     }
-    return { sliceIndex: -1, sliceType: SLICE_TYPE.AXIAL, slicePosition: 0 }
+
+    // Fallback: use current slice type and crosshair position when tileIndex fails
+    console.log('DEBUG: getCurrentSliceInfo - falling back to current slice state')
+    const currentSliceType = this.opts.sliceType
+    let slicePosition = 0
+
+    // Get the current slice position based on the crosshair position and current slice type
+    if (currentSliceType === SLICE_TYPE.AXIAL) {
+      slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+    } else if (currentSliceType === SLICE_TYPE.CORONAL) {
+      slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+    } else if (currentSliceType === SLICE_TYPE.SAGITTAL) {
+      slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+    } else if (currentSliceType === SLICE_TYPE.MULTIPLANAR) {
+      // In multiplanar mode, try to determine the slice type from the mouse position
+      // by checking if we can convert the canvas position to fractional coordinates
+      const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
+      if (startFrac[0] >= 0) {
+        // If we can convert to fractional coordinates, use the current crosshair position
+        // but we need to determine which slice type this measurement is most likely for
+        // For now, default to axial in multiplanar mode
+        slicePosition = this.scene.crosshairPos[2]
+      }
+    }
+
+    console.log('DEBUG: getCurrentSliceInfo - fallback result:', {
+      sliceIndex: -1,
+      sliceType: currentSliceType,
+      slicePosition
+    })
+    return { sliceIndex: -1, sliceType: currentSliceType, slicePosition }
   }
 
   /**
@@ -10538,11 +10613,20 @@ export class Niivue {
     console.log('DEBUG: current opts.sliceType:', this.opts.sliceType)
     console.log('DEBUG: current scene.crosshairPos:', this.scene.crosshairPos)
 
-    // First check if the measurement is on the same tile/slice type
+    // Enhanced logic to handle sliceIndex: -1 cases more robustly
+    // Focus on slice type and position comparison rather than tile matching
+
+    // Check if the measurement slice type is compatible with current view
     if (this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
-      // If sliceIndex is -1, try to find the corresponding tile by slice type
+      // In multiplanar mode, check if the slice type can be displayed
       if (sliceIndex < 0) {
-        console.log('DEBUG: sliceIndex is -1, searching for tile by slice type')
+        console.log('DEBUG: sliceIndex is -1, checking if slice type is compatible with multiplanar view')
+        // For sliceIndex -1, we should still check if the slice type is valid 2D type
+        if (sliceType > SLICE_TYPE.SAGITTAL) {
+          console.log('DEBUG: Invalid slice type for multiplanar view:', sliceType)
+          return false
+        }
+        // Try to find if this slice type is currently visible in multiplanar mode
         let foundTile = false
         for (let i = 0; i < this.screenSlices.length; i++) {
           if (this.screenSlices[i].axCorSag === sliceType) {
@@ -10551,9 +10635,11 @@ export class Niivue {
             break
           }
         }
+        // If no tile is found, it might be because screenSlices is not populated yet
+        // In this case, we should still allow the measurement to be drawn if the slice type is valid
         if (!foundTile) {
-          console.log('DEBUG: No tile found with slice type', sliceType)
-          return false
+          console.log('DEBUG: No tile found with slice type', sliceType, 'but allowing display since sliceIndex is -1')
+          // Continue to position check instead of returning false
         }
       } else if (sliceIndex >= this.screenSlices.length || this.screenSlices[sliceIndex].axCorSag !== sliceType) {
         console.log('DEBUG: Returning false - tile/slice type mismatch in multiplanar')
@@ -10577,12 +10663,22 @@ export class Niivue {
     console.log('DEBUG: currentSlicePosition:', currentSlicePosition)
     console.log('DEBUG: saved slicePosition:', slicePosition)
 
-    // Use a small tolerance for floating point comparison
-    const tolerance = 0.001
+    // Use a more generous tolerance for floating point comparison
+    // Based on observed scroll increments (0.001953125 ≈ 1/512), we need a larger tolerance
+    // This accommodates normal slice scrolling while still being precise enough for slice matching
+    const tolerance = 0.01 // Increased from 0.001 to 0.01 to handle normal scroll increments
     const difference = Math.abs(currentSlicePosition - slicePosition)
-    console.log('DEBUG: position difference:', difference)
+    console.log('DEBUG: position difference:', difference, 'tolerance:', tolerance)
     const result = difference < tolerance
-    console.log('DEBUG: shouldDrawOnCurrentSlice result:', result)
+    console.log(
+      'DEBUG: shouldDrawOnCurrentSlice result:',
+      result,
+      '(difference < tolerance:',
+      difference,
+      '<',
+      tolerance,
+      ')'
+    )
 
     return result
   }
@@ -13547,6 +13643,86 @@ export class Niivue {
   }
 
   /**
+   * Convert fractional volume coordinates to canvas pixel coordinates.
+   * Returns the first valid screen slice that contains the fractional coordinates.
+   * @internal
+   */
+  frac2canvasPos(frac: vec3): number[] | null {
+    // Convert fractional coordinates to world coordinates
+    const worldMM = this.frac2mm(frac)
+
+    // Try to find a screen slice that can display this world coordinate
+    for (let i = 0; i < this.screenSlices.length; i++) {
+      const axCorSag = this.screenSlices[i].axCorSag
+
+      // Only handle 2D slices (axial, coronal, sagittal)
+      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+        continue
+      }
+
+      // Check if slice has valid transformation data
+      if (this.screenSlices[i].AxyzMxy.length < 4) {
+        continue
+      }
+
+      // Start with world coordinates
+      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
+
+      // Apply inverse coordinate swizzling based on slice orientation
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
+      }
+
+      // Check if this point lies on the slice plane
+      const v = this.screenSlices[i].AxyzMxy
+      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
+
+      // Allow small tolerance for floating point errors
+      const tolerance = 0.1
+      if (Math.abs(xyzMM[2] - expectedZ) > tolerance) {
+        continue
+      }
+
+      // Convert world coordinates to normalized slice coordinates
+      const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
+      const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
+
+      // Check if coordinates are within valid slice bounds
+      if (fracX < 0.0 || fracX > 1.0 || fracY < 0.0 || fracY > 1.0) {
+        continue
+      }
+
+      // Convert normalized slice coordinates to screen coordinates
+      const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+      let isMirror = false
+
+      // Handle mirrored/flipped display
+      if (ltwh[2] < 0) {
+        isMirror = true
+        ltwh[0] += ltwh[2]
+        ltwh[2] = -ltwh[2]
+      }
+
+      let screenFracX = fracX
+      if (isMirror) {
+        screenFracX = 1.0 - fracX
+      }
+      const screenFracY = 1.0 - fracY
+
+      // Convert to screen pixel coordinates
+      const screenX = ltwh[0] + screenFracX * ltwh[2]
+      const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+      return [screenX, screenY]
+    }
+
+    return null // no valid screen slice found
+  }
+
+  /**
    * Calculates scaled slice dimensions and position within the canvas.
    * n.b. beware of similarly named `sliceScale` method.
    * @internal
@@ -14587,7 +14763,15 @@ export class Niivue {
     // Draw persistent completed measurements for current slice
     for (const measurement of this.uiData.completedMeasurements) {
       if (this.shouldDrawOnCurrentSlice(measurement.sliceIndex, measurement.sliceType, measurement.slicePosition)) {
-        this.drawMeasurementTool(measurement.line)
+        // Convert world coordinates back to canvas coordinates for rendering
+        const startFrac = this.mm2frac(measurement.startMM)
+        const endFrac = this.mm2frac(measurement.endMM)
+        const startCanvas = this.frac2canvasPos(startFrac)
+        const endCanvas = this.frac2canvasPos(endFrac)
+
+        if (startCanvas && endCanvas) {
+          this.drawMeasurementTool([startCanvas[0], startCanvas[1], endCanvas[0], endCanvas[1]])
+        }
       }
     }
 
@@ -14602,10 +14786,43 @@ export class Niivue {
 
       if (shouldDraw) {
         console.log(`DEBUG: Drawing angle ${i}`)
-        this.drawMeasurementTool(angle.firstLine, false)
-        this.drawMeasurementTool(angle.secondLine, false)
-        // Draw angle text
-        this.drawAngleTextForAngle(angle)
+
+        // Convert world coordinates back to canvas coordinates for rendering
+        const firstLineStartFrac = this.mm2frac(angle.firstLineMM.start)
+        const firstLineEndFrac = this.mm2frac(angle.firstLineMM.end)
+        const secondLineStartFrac = this.mm2frac(angle.secondLineMM.start)
+        const secondLineEndFrac = this.mm2frac(angle.secondLineMM.end)
+
+        const firstLineStartCanvas = this.frac2canvasPos(firstLineStartFrac)
+        const firstLineEndCanvas = this.frac2canvasPos(firstLineEndFrac)
+        const secondLineStartCanvas = this.frac2canvasPos(secondLineStartFrac)
+        const secondLineEndCanvas = this.frac2canvasPos(secondLineEndFrac)
+
+        if (firstLineStartCanvas && firstLineEndCanvas && secondLineStartCanvas && secondLineEndCanvas) {
+          this.drawMeasurementTool(
+            [firstLineStartCanvas[0], firstLineStartCanvas[1], firstLineEndCanvas[0], firstLineEndCanvas[1]],
+            false
+          )
+          this.drawMeasurementTool(
+            [secondLineStartCanvas[0], secondLineStartCanvas[1], secondLineEndCanvas[0], secondLineEndCanvas[1]],
+            false
+          )
+
+          // Draw angle text - need to convert back to old format for the existing function
+          const angleForText = {
+            firstLine: [firstLineStartCanvas[0], firstLineStartCanvas[1], firstLineEndCanvas[0], firstLineEndCanvas[1]],
+            secondLine: [
+              secondLineStartCanvas[0],
+              secondLineStartCanvas[1],
+              secondLineEndCanvas[0],
+              secondLineEndCanvas[1]
+            ],
+            sliceIndex: angle.sliceIndex,
+            sliceType: angle.sliceType,
+            slicePosition: angle.slicePosition
+          }
+          this.drawAngleTextForAngle(angleForText)
+        }
       } else {
         console.log(`DEBUG: Skipping angle ${i} - not on current slice`)
       }
