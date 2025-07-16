@@ -1,9 +1,9 @@
 // src/components/MosaicControls.tsx
 
 import React, { useEffect, useState } from 'react'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 import { Button, TextField, Switch } from '@radix-ui/themes'
-import { calculateMosaic, SliceOrientation } from '../utils/mosaics'
+import { calculateMosaic, SliceOrientation } from '../utils/mosaics.js'
 
 function shiftToken(token: string, delta: number): string {
   const match = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)

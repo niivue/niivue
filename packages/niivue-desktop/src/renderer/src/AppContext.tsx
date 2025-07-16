@@ -1,7 +1,7 @@
 // src/AppContext.tsx
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import type { NVImage, NVMesh, Niivue, SLICE_TYPE } from '@niivue/niivue'
-import { layouts } from '../../common/layouts'
+import { layouts } from '../../common/layouts.js'
 
 export type NiivueInstanceContext = {
   id: string

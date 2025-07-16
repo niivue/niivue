@@ -1,12 +1,13 @@
 import { Niivue, NVImage, NVMesh } from '@niivue/niivue'
-import { registerLoadStandardHandler } from './loadStandard'
-import { registerLoadRecentFileHandler } from './loadRecentFiles'
-import { registerSliceTypeHandler } from './menuHandlers'
-import { registerLabelManagerDialogHandler } from './menuHandlers'
-import { registerLoadMeshHandler } from './loadMesh'
-import { registerLoadVolumeHandler } from './loadVolume'
-import { LoadDocumentHandlerProps, registerLoadDocumentHandler } from './loadDocument'
-import { registerResetPreferencesHandler } from './menuHandlers'
+import { registerLoadStandardHandler } from './loadStandard.js'
+import { registerLoadRecentFileHandler } from './loadRecentFiles.js'
+import { registerSliceTypeHandler } from './menuHandlers.js'
+import { registerLabelManagerDialogHandler } from './menuHandlers.js'
+import { registerLoadMeshHandler } from './loadMesh.js'
+import { registerLoadVolumeHandler } from './loadVolume.js'
+import { LoadDocumentHandlerProps, registerLoadDocumentHandler } from './loadDocument.js'
+import { registerResetPreferencesHandler } from './menuHandlers.js'
+import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
 
 const electron = window.electron
 
@@ -27,6 +28,7 @@ export const registerAllIpcHandlers = (
   electron.ipcRenderer.removeAllListeners('loadMesh')
   electron.ipcRenderer.removeAllListeners('loadDocument')
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
+  electron.ipcRenderer.removeAllListeners('convertDICOM')
 
   registerLoadStandardHandler({ nv, setVolumes, setMeshes })
   console.log('[Renderer] registered loadStandard handler')
@@ -45,4 +47,5 @@ export const registerAllIpcHandlers = (
     onDocumentLoaded
   } as LoadDocumentHandlerProps)
   registerResetPreferencesHandler()
+  registerLoadDicomFolderHandler({ nv, setVolumes })
 }

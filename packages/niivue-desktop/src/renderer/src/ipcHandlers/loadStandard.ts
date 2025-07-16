@@ -1,6 +1,6 @@
 import { NVImage, NVMesh, Niivue } from '@niivue/niivue'
 import React from 'react'
-import { MESH_EXTENSIONS } from '../../../common/extensions'
+import { MESH_EXTENSIONS } from '../../../common/extensions.js'
 
 const electron = window.electron
 

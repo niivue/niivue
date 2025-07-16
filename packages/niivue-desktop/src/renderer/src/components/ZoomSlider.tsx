@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Slider, Text, Button, Checkbox } from '@radix-ui/themes'
 import { INITIAL_SCENE_DATA } from '@niivue/niivue'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 
 export const ZoomSlider = (): JSX.Element => {
   const instance = useSelectedInstance()

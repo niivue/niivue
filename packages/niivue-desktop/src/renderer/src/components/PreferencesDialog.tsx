@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { Preferences } from './Preferences'
+import { Preferences } from './Preferences.js'
 import { Cross2Icon } from '@radix-ui/react-icons'
-import { registerPreferencesDialogHandler } from '../ipcHandlers/menuHandlers'
+import { registerPreferencesDialogHandler } from '../ipcHandlers/menuHandlers.js'
 import { Theme } from '@radix-ui/themes'
 
 export const PreferencesDialog: React.FC = () => {

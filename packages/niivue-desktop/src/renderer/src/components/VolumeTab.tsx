@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
-import { useSelectedInstance } from '../AppContext'
-import { loadFMRIEvents } from '@renderer/types/events'
-import { MosaicControls } from './MosaicControls'
+import { useSelectedInstance } from '../AppContext.js'
+import { loadFMRIEvents } from '@renderer/types/events.js'
+import { MosaicControls } from './MosaicControls.js'
 
 const electron = window.electron
 

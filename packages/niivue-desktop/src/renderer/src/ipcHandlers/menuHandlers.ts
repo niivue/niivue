@@ -1,7 +1,7 @@
 import { Niivue } from '@niivue/niivue'
-import { sliceTypeMap } from '../../../common/sliceTypes'
-import { layouts } from '../../../common/layouts'
-import { orientationLabelMap } from '../../../common/orientationLabels'
+import { sliceTypeMap } from '../../../common/sliceTypes.js'
+import { layouts } from '../../../common/layouts.js'
+import { orientationLabelMap } from '../../../common/orientationLabels.js'
 
 const electron = window.electron
 

@@ -4,7 +4,7 @@ import {
   base64ToJson,
   decompressGzipBase64ToJson,
   isProbablyGzip
-} from '@renderer/utils/base64ToJSON'
+} from '@renderer/utils/base64ToJSON.js'
 import type { IpcRendererEvent } from 'electron'
 
 const electron = window.electron

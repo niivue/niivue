@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { ScrollArea, Text } from '@radix-ui/themes'
-import { SceneTabs } from './SceneTabs'
-import { VolumeImageCard } from './VolumeImageCard'
-import { MeshImageCard } from './MeshImageCard'
+import { SceneTabs } from './SceneTabs.js'
+import { VolumeImageCard } from './VolumeImageCard.js'
+import { MeshImageCard } from './MeshImageCard.js'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { NVImage, NVMesh } from '@niivue/niivue'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 
 interface SidebarProps {
   onRemoveVolume: (volume: NVImage) => void

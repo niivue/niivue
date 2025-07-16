@@ -95,4 +95,52 @@ export const registerIpcHandlers = (): void => {
       }
     }
   )
+
+  /**
+   * Prompt user to select a directory
+   * Returns the selected folder path as string, or null if cancelled
+   */
+  ipcMain.handle('select-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select DICOM Folder',
+      properties: ['openDirectory']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
+
+  /**
+   * Read all file names in a directory
+   * arg: dirPath (string)
+   * returns: string[]
+   */
+  ipcMain.handle('read-dir', async (_event, dirPath) => {
+    try {
+      return fs.readdirSync(dirPath)
+    } catch (err) {
+      console.error('read-dir error:', err)
+      return []
+    }
+  })
+
+  /**
+   * Read a single file as a Buffer
+   * arg: filePath (string)
+   * returns: Buffer
+   */
+  ipcMain.handle('read-file-as-buffer', async (_event, filePath) => {
+    try {
+      return fs.readFileSync(filePath)
+    } catch (err) {
+      console.error('read-file-as-buffer error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('read-file-as-base64', async (_event, path) => {
+    const buffer = fs.readFileSync(path)
+    return buffer.toString('base64')
+  })
 }

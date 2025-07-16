@@ -11,8 +11,8 @@ import {
   Dialog
 } from '@radix-ui/themes'
 import { NVImage } from '@niivue/niivue'
-import { baseName } from '../utils/baseName'
-import { useSelectedInstance } from '../AppContext' //
+import { baseName } from '../utils/baseName.js'
+import { useSelectedInstance } from '../AppContext.js' //
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 interface VolumeImageCardProps {

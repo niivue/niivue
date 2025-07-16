@@ -1,11 +1,11 @@
 import { NVImage, NVMesh, Niivue, NVDocument, DocumentData } from '@niivue/niivue'
 import React from 'react'
-import { MESH_EXTENSIONS } from '../../../common/extensions'
+import { MESH_EXTENSIONS } from '../../../common/extensions.js'
 import {
   base64ToJson,
   decompressGzipBase64ToJson,
   isProbablyGzip
-} from '@renderer/utils/base64ToJSON'
+} from '@renderer/utils/base64ToJSON.js'
 
 const electron = window.electron
 

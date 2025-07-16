@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { NiivueInstanceContext } from '../AppContext'
-import { loadDroppedFiles } from '../utils/dragAndDrop'
-import { registerViewSync } from '@renderer/utils/viewSync'
+import { NiivueInstanceContext } from '../AppContext.js'
+import { loadDroppedFiles } from '../utils/dragAndDrop.js'
+import { registerViewSync } from '@renderer/utils/viewSync.js'
 
 type ViewerProps = {
   doc: NiivueInstanceContext

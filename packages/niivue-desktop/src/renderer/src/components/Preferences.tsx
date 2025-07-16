@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Switch, Slider, Button } from '@radix-ui/themes'
-import { useSelectedInstance } from '../AppContext'
-import { groupedConfigMeta } from '../utils/configMeta'
-import { ColorPicker } from './ColorPicker'
-import { EnumSelect } from './EnumSelect'
-import { hexToRgba10 } from '../utils/colors'
-import { filterEnum } from '../utils/config'
+import { useSelectedInstance } from '../AppContext.js'
+import { groupedConfigMeta } from '../utils/configMeta.js'
+import { ColorPicker } from './ColorPicker.js'
+import { EnumSelect } from './EnumSelect.js'
+import { hexToRgba10 } from '../utils/colors.js'
+import { filterEnum } from '../utils/config.js'
 
 type ConfigValue = boolean | number | string | number[] | string[]
 

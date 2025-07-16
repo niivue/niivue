@@ -358,7 +358,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               })
               .then((result) => {
                 if (!result.canceled && result.filePaths.length > 0) {
-                  // TODO: implement this
+                  console.log('sending convertDICOM to renderer')
                   win.webContents.send('convertDICOM', result.filePaths[0])
                 }
               })
