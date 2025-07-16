@@ -14,6 +14,14 @@ export interface UIKViewModeSelectorOptions {
         hoverColor?: Color
         textColor?: Color
         borderColor?: Color
+        /** Text scaling factor for mode labels */
+        textScale?: number
+        /** Padding inside buttons */
+        buttonPadding?: number
+        /** Text vertical offset for alignment */
+        textVerticalOffset?: number
+        /** Character width multiplier for text centering */
+        charWidthMultiplier?: number
     }
 }
 
@@ -30,6 +38,10 @@ export class UIKViewModeSelector {
         hoverColor: Color
         textColor: Color
         borderColor: Color
+        textScale: number
+        buttonPadding: number
+        textVerticalOffset: number
+        charWidthMultiplier: number
     }
     private hoveredIndex: number = -1
     private selectedIndex: number = 0
@@ -48,7 +60,11 @@ export class UIKViewModeSelector {
             selectedColor: options.style?.selectedColor || [0.2, 0.7, 1.0, 1.0], // Bright blue for selection
             hoverColor: options.style?.hoverColor || [0.25, 0.28, 0.32, 1.0], // Subtle hover effect
             textColor: options.style?.textColor || [1.0, 1.0, 1.0, 1.0],
-            borderColor: options.style?.borderColor || [0.4, 0.4, 0.4, 1.0] // Lighter border for better contrast
+            borderColor: options.style?.borderColor || [0.4, 0.4, 0.4, 1.0], // Lighter border for better contrast
+            textScale: options.style?.textScale || 0.016, // Default text scaling
+            buttonPadding: options.style?.buttonPadding || 4, // Default button padding
+            textVerticalOffset: options.style?.textVerticalOffset || 0, // Default text vertical offset
+            charWidthMultiplier: options.style?.charWidthMultiplier || 1.8 // Default character width multiplier
         }
 
         // Find selected index
@@ -99,7 +115,8 @@ export class UIKViewModeSelector {
                 buttonColor = this.style.hoverColor
             }
 
-            this.drawRectangle(buttonX + 2, y + 2, buttonWidth - 4, height - 4, buttonColor)
+            this.drawRectangle(buttonX + this.style.buttonPadding / 2, y + this.style.buttonPadding / 2, 
+                             buttonWidth - this.style.buttonPadding, height - this.style.buttonPadding, buttonColor)
 
             // Draw button border
             if (i > 0) {
@@ -112,22 +129,28 @@ export class UIKViewModeSelector {
 
             // Draw mode text with visual indicators
             const modeLabels: { [key: string]: string } = {
-                'Axial': '⬌ Axial',
-                'Sagittal': '⬍ Sagittal', 
-                'Coronal': '⬆ Coronal',
-                'MultiPlanar': '⊞ Multi'
+                'Axial': 'Axial',
+                'Sagittal': 'Sagittal', 
+                'Coronal': 'Coronal',
+                'MultiPlanar': 'Multi'
             }
             
             const displayText = modeLabels[this.modes[i]] || this.modes[i]
-            const textWidth = this.font.getTextWidth(displayText, 0.35)
+            
+            // Much more accurate centering for small buttons
+            // At scale 0.016, each character is approximately 1.8 pixels wide
+            const charWidth = this.style.charWidthMultiplier
+            const textWidth = displayText.length * charWidth
+            
+            // Ensure text stays well within button bounds
             const textX = buttonX + (buttonWidth / 2) - (textWidth / 2)
-            const textY = y + (height / 2) - 6
+            const textY = y + (height / 2) + this.style.textVerticalOffset // Simple vertical centering
             
             this.renderer.drawRotatedText({
                 font: this.font,
                 xy: [textX, textY],
                 str: displayText,
-                scale: 0.35, // Slightly smaller to fit better
+                scale: this.style.textScale, // Keep the small scale for fitting in small buttons
                 color: this.style.textColor
             })
         }

@@ -27,6 +27,14 @@ export interface UIKButtonStyle {
   padding: [number, number] // [horizontal, vertical]
   shadowColor?: Color
   shadowOffset?: [number, number]
+  /** Text scaling factor for button text */
+  textScale?: number
+  /** Character width multiplier for text width calculation */
+  charWidthMultiplier?: number
+  /** Text height for vertical centering */
+  textHeight?: number
+  /** Vertical text offset for fine-tuning text position */
+  textVerticalOffset?: number
 }
 
 /**
@@ -62,7 +70,11 @@ const DEFAULT_STYLES: Record<UIKButtonState, UIKButtonStyle> = {
     textColor: [1.0, 1.0, 1.0, 1.0],
     borderWidth: 1,
     borderRadius: 2,
-    padding: [12, 8]
+    padding: [12, 8],
+    textScale: 0.025,
+    charWidthMultiplier: 7,
+    textHeight: 14,
+    textVerticalOffset: 4
   },
   [UIKButtonState.HOVER]: {
     backgroundColor: [0.35, 0.35, 0.35, 1.0],
@@ -70,7 +82,11 @@ const DEFAULT_STYLES: Record<UIKButtonState, UIKButtonStyle> = {
     textColor: [1.0, 1.0, 1.0, 1.0],
     borderWidth: 1,
     borderRadius: 2,
-    padding: [12, 8]
+    padding: [12, 8],
+    textScale: 0.025,
+    charWidthMultiplier: 7,
+    textHeight: 14,
+    textVerticalOffset: 4
   },
   [UIKButtonState.ACTIVE]: {
     backgroundColor: [0.15, 0.15, 0.15, 1.0],
@@ -78,7 +94,11 @@ const DEFAULT_STYLES: Record<UIKButtonState, UIKButtonStyle> = {
     textColor: [1.0, 1.0, 1.0, 1.0],
     borderWidth: 2,
     borderRadius: 2,
-    padding: [12, 8]
+    padding: [12, 8],
+    textScale: 0.025,
+    charWidthMultiplier: 7,
+    textHeight: 14,
+    textVerticalOffset: 4
   },
   [UIKButtonState.DISABLED]: {
     backgroundColor: [0.1, 0.1, 0.1, 0.5],
@@ -86,7 +106,11 @@ const DEFAULT_STYLES: Record<UIKButtonState, UIKButtonStyle> = {
     textColor: [0.5, 0.5, 0.5, 0.5],
     borderWidth: 1,
     borderRadius: 2,
-    padding: [12, 8]
+    padding: [12, 8],
+    textScale: 0.025,
+    charWidthMultiplier: 7,
+    textHeight: 14,
+    textVerticalOffset: 4
   }
 }
 
@@ -146,15 +170,24 @@ export class UIKButton {
   private drawButtonShadow(x: number, y: number, width: number, height: number): void {
     if (this.state === UIKButtonState.ACTIVE) return // No shadow when pressed
     
-    const shadowOffset = 2
-    const shadowColor: Color = [0, 0, 0, 0.2]
+    const shadowOffset = this.getCurrentStyle().shadowOffset || [2, 3]
+    const shadowColor = this.getCurrentStyle().shadowColor || [0, 0, 0, 0.3]
     
-    // Draw shadow rectangle slightly offset
-    for (let i = 0; i < 3; i++) {
+    // Draw multiple shadow layers for better depth
+    for (let i = 0; i < 4; i++) {
+      const offset = i + 1
+      const alpha = shadowColor[3] * (1 - i * 0.2)
       this.renderer.drawLine({
-        startEnd: [x + shadowOffset, y + height + i, x + width + shadowOffset, y + height + i],
+        startEnd: [x + shadowOffset[0], y + height + offset, x + width + shadowOffset[0], y + height + offset],
         thickness: 1,
-        color: [shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3] * (1 - i * 0.3)]
+        color: [shadowColor[0], shadowColor[1], shadowColor[2], alpha]
+      })
+      
+      // Side shadow
+      this.renderer.drawLine({
+        startEnd: [x + width + offset, y + shadowOffset[1], x + width + offset, y + height + shadowOffset[1]],
+        thickness: 1,
+        color: [shadowColor[0], shadowColor[1], shadowColor[2], alpha * 0.7]
       })
     }
   }
@@ -248,35 +281,35 @@ export class UIKButton {
     
     const cornerRadius = Math.min(radius, Math.min(width, height) / 4)
     
-    // Simple corner rounding by drawing small diagonal lines
+    // Enhanced corner rounding with smoother transitions
     for (let i = 0; i < cornerRadius; i++) {
-      const alpha = 1 - (i / cornerRadius)
+      const alpha = 1 - (i / cornerRadius) * 0.5 // Smoother fade
       const cornerColor: Color = [color[0], color[1], color[2], color[3] * alpha]
       
-      // Top-left corner
+      // Top-left corner - smoother curve
       this.renderer.drawLine({
-        startEnd: [x + i, y + cornerRadius - i, x + i + 1, y + cornerRadius - i],
+        startEnd: [x + i, y + cornerRadius - i, x + i + 2, y + cornerRadius - i],
         thickness: 1,
         color: cornerColor
       })
       
       // Top-right corner
       this.renderer.drawLine({
-        startEnd: [x + width - i - 1, y + cornerRadius - i, x + width - i, y + cornerRadius - i],
+        startEnd: [x + width - i - 2, y + cornerRadius - i, x + width - i, y + cornerRadius - i],
         thickness: 1,
         color: cornerColor
       })
       
       // Bottom-left corner
       this.renderer.drawLine({
-        startEnd: [x + i, y + height - cornerRadius + i, x + i + 1, y + height - cornerRadius + i],
+        startEnd: [x + i, y + height - cornerRadius + i, x + i + 2, y + height - cornerRadius + i],
         thickness: 1,
         color: cornerColor
       })
       
       // Bottom-right corner
       this.renderer.drawLine({
-        startEnd: [x + width - i - 1, y + height - cornerRadius + i, x + width - i, y + height - cornerRadius + i],
+        startEnd: [x + width - i - 2, y + height - cornerRadius + i, x + width - i, y + height - cornerRadius + i],
         thickness: 1,
         color: cornerColor
       })
@@ -482,7 +515,11 @@ export class UIKButton {
       borderRadius: userStyle.borderRadius ?? baseStyle.borderRadius,
       padding: userStyle.padding || baseStyle.padding,
       shadowColor: userStyle.shadowColor,
-      shadowOffset: userStyle.shadowOffset
+      shadowOffset: userStyle.shadowOffset,
+      textScale: userStyle.textScale ?? baseStyle.textScale,
+      charWidthMultiplier: userStyle.charWidthMultiplier ?? baseStyle.charWidthMultiplier,
+      textHeight: userStyle.textHeight ?? baseStyle.textHeight,
+      textVerticalOffset: userStyle.textVerticalOffset ?? baseStyle.textVerticalOffset
     }
   }
 
@@ -495,20 +532,20 @@ export class UIKButton {
     const [x, y, width, height] = this.config.bounds
     const [padX, padY] = style.padding
     
-    // Calculate text dimensions
-    const textWidth = this.config.font.getTextWidth(this.config.text, 1.0)
-    const textHeight = this.config.font.getTextHeight(this.config.text, 1.0)
+    // More accurate text centering calculation
+    const textWidth = this.config.text.length * (style.charWidthMultiplier ?? 7)
+    const textHeight = style.textHeight ?? 14
     
-    // Center text within button bounds (accounting for padding)
+    // Center text within button bounds with proper padding consideration
     const textX = x + (width - textWidth) / 2
-    const textY = y + (height - textHeight) / 2 + textHeight * 0.3 // Adjust for baseline
+    const textY = y + (height / 2) + (style.textVerticalOffset ?? 4)
     
     this.renderer.drawRotatedText({
       font: this.config.font,
       xy: vec2.fromValues(textX, textY),
       str: this.config.text,
       color: style.textColor,
-      scale: 1.0,
+      scale: style.textScale ?? 0.025,
       rotation: 0
     })
   }
