@@ -1094,15 +1094,6 @@ void main(void) {
 	uint S = uint(texture(intensityVol, vx.xyz).r);
 	vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
 	uint I = uint(texture(intensityVol, vx.xyz).r);
-	if (xyzaFrac.a != 0.0) { //outline
-		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
-			isBorder = true;
-			if (xyzaFrac.a > 0.0)
-				FragColor.a = xyzaFrac.a;
-			else
-				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-		}
-	}
 	vec4 centerColor = FragColor;
 	FragColor.a += scalar2color(R).a;
 	FragColor.a += scalar2color(L).a;
@@ -1116,6 +1107,15 @@ void main(void) {
 			FragColor.a *= 0.4;
 		else
 			FragColor.a =0.8;
+	}
+	if (xyzaFrac.a != 0.0) { //outline
+		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
+			isBorder = true;
+			if (xyzaFrac.a > 0.0)
+				FragColor.a = xyzaFrac.a;
+			else
+				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		}
 	}
 	if (layer < 1.0) return;
 		vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
