@@ -3772,7 +3772,6 @@ export class NVImage {
     return VolumeUtils.getValue(this, x, y, z, frame4D, isReadImaginary)
   }
 
-
   /**
    * Returns voxel intensities at specific native coordinates.
    * Delegates to VolumeUtils.getValue.
