@@ -3772,6 +3772,15 @@ export class NVImage {
     return VolumeUtils.getValue(this, x, y, z, frame4D, isReadImaginary)
   }
 
+
+  /**
+   * Returns voxel intensities at specific native coordinates.
+   * Delegates to VolumeUtils.getValue.
+   */
+  getValues(x: number, y: number, z: number, frame4D = 0, isReadImaginary = false): number[] {
+    return VolumeUtils.getValues(this, x, y, z, frame4D, isReadImaginary)
+  }
+
   /**
    * Update options for image
    */

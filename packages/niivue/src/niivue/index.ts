@@ -12206,7 +12206,18 @@ export class Niivue {
         deci = 3
         if (this.volumes[i].colormapLabel !== null) {
           const v = Math.round(flt)
-          if (v >= 0 && this.volumes[i].colormapLabel!.labels && v < this.volumes[i].colormapLabel!.labels!.length) {
+          if ((this.volumes[i].hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) && (this.volumes[i].hdr.datatypeCode === NiiDataType.DT_RGBA32)) {
+            const vals = this.volumes[i].getValues(vox[0], vox[1], vox[2], this.volumes[i].frame4D)
+            // SPARQ vals: [0] max idx, [1] 2nd idx [2] max prob [3] 2nd prob
+            if (vals[2] > 2) {
+              const pct1 = Math.round(100 * vals[2]/255)
+              valStr += this.volumes[i].colormapLabel!.labels![vals[0]] + ` (${pct1}%)`
+              if (vals[3] > 2) {
+                const pct2 = Math.round(100 * vals[3]/255)
+                valStr += ` ` + this.volumes[i].colormapLabel!.labels![vals[1]] + ` (${pct2}%)`
+              }
+            }
+          } else if (v >= 0 && this.volumes[i].colormapLabel!.labels && v < this.volumes[i].colormapLabel!.labels!.length) {
             valStr += this.volumes[i].colormapLabel!.labels![v]
           } else {
             valStr += 'undefined(' + flt2str(flt, deci) + ')'
