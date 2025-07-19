@@ -1730,6 +1730,8 @@ export class Niivue {
     this.uiData.mouseButtonLeftDown = false
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
+    } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
+      this.drawAddUndoBitmap()
     }
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
