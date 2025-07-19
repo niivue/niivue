@@ -4,23 +4,28 @@ import { NiiDataType } from './utils.js'
 import type { NVImage, TypedVoxelArray } from './index.js'
 
 /**
- * Returns voxel intensity at specified coordinates.
- * @param nvImage - The NVImage instance
- * @param x - X coordinate (0-indexed)
- * @param y - Y coordinate (0-indexed)
- * @param z - Z coordinate (0-indexed)
- * @param frame4D - 4D frame index (0-indexed)
- * @param isReadImaginary - Flag to read from imaginary data array if complex
- * @returns Scaled voxel intensity
+ * Returns all voxel channel values at the specified coordinates.
+ * For scalar images, this will return a single-value array [value].
+ * For multi-channel images (e.g., RGBA), this will return an array with multiple values.
+ *
+ * @param nvImage - The NVImage instance.
+ * @param x - X coordinate (0-indexed).
+ * @param y - Y coordinate (0-indexed).
+ * @param z - Z coordinate (0-indexed).
+ * @param frame4D - Optional 4D frame index (default is 0).
+ * @param isReadImaginary - If true, returns data from the imaginary component (if present).
+ * @returns An array of one or more voxel values at the specified location.
+ *
+ * @see https://niivue.com/demos/features/voxel.html
  */
-export function getValue(
+export function getValues(
   nvImage: NVImage,
   x: number,
   y: number,
   z: number,
   frame4D = 0,
   isReadImaginary = false
-): number {
+): number[] {
   if (!nvImage.hdr) {
     throw new Error('getValue: NVImage header is not defined.')
   }
@@ -29,7 +34,7 @@ export function getValue(
   }
   if (isReadImaginary && !nvImage.imaginary) {
     log.warn('getValue: Attempted to read imaginary data, but none exists.')
-    return 0
+    return [0]
   }
 
   const nx = nvImage.hdr.dims[1]
@@ -56,34 +61,26 @@ export function getValue(
   // Handle RGB(A) data - calculate luminance
   if (nvImage.hdr.datatypeCode === NiiDataType.DT_RGBA32) {
     if (!nvImage.img) {
-      return 0
+      return [0]
     }
     vx *= 4 // 4 bytes per voxel
     // Check bounds for RGBA index access
-    if (vx + 2 >= nvImage.img.length) {
+    if (vx + 3 >= nvImage.img.length) {
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`)
-      return 0 // Or throw? Return 0 for safety.
+      return [0] // Or throw? Return 0 for safety.
     }
-    if (nvImage.hdr.intent_code === 1002) {
-      // SPARQ: issue1369
-      return nvImage.img[vx]
-    }
-    // convert rgb to luminance Y = 0.2126 R + 0.7152 G + 0.0722 B (Rec. 709)
-    const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722
-
-    return Math.round(lum)
+    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2], nvImage.img[vx + 3]]
   }
   if (nvImage.hdr.datatypeCode === NiiDataType.DT_RGB24) {
     if (!nvImage.img) {
-      return 0
+      return [0]
     }
     vx *= 3 // 3 bytes per voxel
     if (vx + 2 >= nvImage.img.length) {
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGB data.`)
-      return 0
+      return [0]
     }
-    const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722
-    return Math.round(lum)
+    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2]]
   }
 
   // Calculate offset for 4D frame
@@ -96,7 +93,7 @@ export function getValue(
 
   // Check final index bounds
   if (finalVxIndex < 0 || finalVxIndex >= dataArray.length) {
-    return 0
+    return [0]
   }
 
   const rawValue = dataArray[finalVxIndex]
@@ -106,7 +103,34 @@ export function getValue(
   const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1.0 : nvImage.hdr.scl_slope
   const inter = isNaN(nvImage.hdr.scl_inter) ? 0.0 : nvImage.hdr.scl_inter
 
-  return slope * rawValue + inter
+  return [slope * rawValue + inter]
+}
+
+/**
+ * Returns voxel intensity at specified coordinates.
+ * @param nvImage - The NVImage instance
+ * @param x - X coordinate (0-indexed)
+ * @param y - Y coordinate (0-indexed)
+ * @param z - Z coordinate (0-indexed)
+ * @param frame4D - 4D frame index (0-indexed)
+ * @param isReadImaginary - Flag to read from imaginary data array if complex
+ * @returns Scaled voxel intensity
+ */
+export function getValue(
+  nvImage: NVImage,
+  x: number,
+  y: number,
+  z: number,
+  frame4D = 0,
+  isReadImaginary = false
+): number {
+  const vals = getValues(nvImage, x, y, z, frame4D, isReadImaginary)
+  if (vals.length < 3) {
+    return vals[0]
+  }
+  // convert RGB to luminance Y = 0.2126 R + 0.7152 G + 0.0722 B (Rec. 709)
+  const lum = vals[0] * 0.2126 + vals[1] * 0.7152 + vals[2] * 0.0722
+  return lum
 }
 
 /**

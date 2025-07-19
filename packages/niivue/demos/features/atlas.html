@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Atlas</title>
+    <title>AAL Atlas</title>
     <link rel="stylesheet" href="niivue.css" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
@@ -13,7 +13,7 @@
     <header>
       <label for="interpCheck">Jagged</label>
       <input type="checkbox" id="interpCheck" checked />
-      &nbsp; &nbsp;
+      &nbsp;
       <label for="statAlphaSlider">Stats Opacity</label>
       <input
         type="range"
@@ -23,7 +23,7 @@
         class="slider"
         id="statAlphaSlider"
       />
-      &nbsp; &nbsp;
+      &nbsp;
       <label for="atlasAlphaSlider">Atlas Opacity</label>
       <input
         type="range"
@@ -33,6 +33,7 @@
         class="slider"
         id="atlasAlphaSlider"
       />
+      &nbsp;
       <label for="atlasOutlineSelect">Atlas Outline</label>
       <select id="atlasOutlineSelect">
         <option value="0">None</option>
@@ -40,7 +41,7 @@
         <option value="1">Opaque</option>
         <option value="-1">Black</option>
       </select>
-      &nbsp; &nbsp;
+      &nbsp;
       <label for="padSlider">Padding</label>
       <input
         type="range"
@@ -50,7 +51,7 @@
         class="slider"
         id="padSlider"
       />
-      &nbsp; &nbsp;
+      &nbsp;
       <label for="gapSlider">Crosshair Gap</label>
       <input
         type="range"
@@ -69,6 +70,8 @@
         <option value="0.6">medium</option>
         <option value="1.0">high</option>
       </select>
+      &nbsp;
+      <button id="aboutBtn">About</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
@@ -110,6 +113,9 @@
       }
       renderMode.onchange = function () {
         nv1.setVolumeRenderIllumination(parseFloat(this.value))
+      }
+      aboutBtn.onclick = function () {
+         window.alert("Automated anatomical labelling (AAL) atlas PMID: 31521825")
       }
       var nv1 = new niivue.Niivue({show3Dcrosshair: true, backColor: [0.5, 0.5, 0.5, 1], onLocationChange: handleLocationChange })
       await nv1.attachTo("gl1")

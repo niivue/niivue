@@ -28,6 +28,7 @@ npm run dev
 - FMRIB's Software Library (FSL) uses NiiVue for cloud tools and [documentation](https://fsl.fmrib.ox.ac.uk/fsl/docs/#/structural/bet/)
 - [fideus](https://fideus.io/) has developed the [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/) plugins.
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
+- [Galaxy](https://github.com/galaxyproject/galaxy) is a web platform for research that embeds [NiiVue](https://github.com/galaxyproject/galaxy/pull/19995)
 - [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
 - [NeuroFLAME](https://github.com/NeuroFlame/NeuroFLAME) uses federated learning to train models across locations while keeping data securely on-site.
