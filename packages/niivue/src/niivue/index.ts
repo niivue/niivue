@@ -38,7 +38,7 @@ import {
   fragOrientShader,
   fragOrientShaderAtlas,
   fragRGBOrientShader,
-  fragSPARQOrientShader,
+  fragPAQDOrientShader,
   vertMeshShader,
   fragMeshShader,
   fragMeshToonShader,
@@ -287,6 +287,7 @@ const TEXTURE4_THUMBNAIL = 33988
 const TEXTURE5_MATCAP = 33989
 const TEXTURE6_GRADIENT = 33990
 const TEXTURE7_DRAW = 33991
+const TEXTURE8_PAQD = 33992
 // subsequent textures only used transiently
 const TEXTURE8_GRADIENT_TEMP = 33992
 const TEXTURE9_ORIENT = 33993
@@ -381,6 +382,7 @@ export class Niivue {
   useCustomGradientTexture = false // flag to indicate if a custom gradient texture is used
   renderGradientValues = false
   drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
+  paqdTexture: WebGLTexture | null = null // the GPU memory storage of the probabilistic atlas
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
@@ -430,7 +432,7 @@ export class Niivue {
   orientShaderI: Shader | null = null
   orientShaderF: Shader | null = null
   orientShaderRGBU: Shader | null = null
-  orientShaderSPARQ: Shader | null = null
+  orientShaderPAQD: Shader | null = null
   surfaceShader: Shader | null = null
   blurShader: Shader | null = null
   sobelBlurShader: Shader | null = null
@@ -2839,6 +2841,7 @@ export class Niivue {
           this.meshes = []
         }
         this.closeDrawing()
+        this.closePAQD()
         for (const item of Array.from(items)) {
           const entry = item.webkitGetAsEntry() as FileSystemFileEntry
           log.debug(entry)
@@ -5062,6 +5065,7 @@ export class Niivue {
     this.volumes = []
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    this.closePAQD()
     // if more than one volume, then fetch them all simultaneously
     // using addVolumesFromUrl (note the "s" in "Volumes")
     // if (volumeList.length > 1) {
@@ -6323,7 +6327,7 @@ export class Niivue {
    */
   closeDrawing(): void {
     this.drawClearAllUndoBitmaps()
-    this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
+    this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
     this.drawBitmap = null
     this.clickToSegmentGrowingBitmap = null
     this.drawScene()
@@ -6431,6 +6435,15 @@ export class Niivue {
     if (isForceRedraw) {
       this.drawScene()
     }
+  }
+
+  /**
+   * close probabilistic atlas texture
+   * @example niivue.closePAQD();
+   * @internal
+   */
+  closePAQD(): void {
+    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true)
   }
 
   /**
@@ -6941,6 +6954,7 @@ export class Niivue {
     gl.uniform1i(shader.uniforms.colormap, 1)
     gl.uniform1i(shader.uniforms.overlay, 2)
     gl.uniform1i(shader.uniforms.drawing, 7)
+    gl.uniform1i(shader.uniforms.paqd, 8) // TEXTURE8_PAQD
     gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
 
     this.customSliceShader = shader
@@ -6987,6 +7001,7 @@ export class Niivue {
     this.gl.uniform1i(shader.uniforms.colormap, 1)
     this.gl.uniform1i(shader.uniforms.overlay, 2)
     this.gl.uniform1i(shader.uniforms.drawing, 7)
+    this.gl.uniform1i(shader.uniforms.paqd, 8) // TEXTURE8_PAQD
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
     this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette)
@@ -7032,7 +7047,7 @@ export class Niivue {
     this.volumeTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, [2, 2, 2, 2], true)
     this.overlayTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, [2, 2, 2, 2], true)
     this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true)
-
+    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true)
     const rectStrip = [
       1,
       1,
@@ -7160,7 +7175,7 @@ export class Niivue {
     this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader))
     this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader))
     this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader))
-    this.orientShaderSPARQ = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragSPARQOrientShader))
+    this.orientShaderPAQD = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragPAQDOrientShader))
     // 3D crosshair cylinder
     this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader)
     this.surfaceShader.use(gl)
@@ -7264,6 +7279,8 @@ export class Niivue {
     gl.deleteFramebuffer(fb)
     gl.deleteTexture(tempTex3D)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    gl.activeTexture(TEXTURE8_PAQD)
+    gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture) // input texture
     this.gl.bindVertexArray(this.unusedVAO)
   }
 
@@ -7452,6 +7469,7 @@ export class Niivue {
     const numLayers = this.volumes.length
     // loop through loading volumes in this.volume
     this.refreshColormaps()
+    this.closePAQD()
     for (let i = 0; i < numLayers; i++) {
       // avoid trying to refresh a volume that isn't ready
       if (!this.volumes[i].toRAS) {
@@ -8005,7 +8023,23 @@ export class Niivue {
     } else if (hdr.datatypeCode === NiiDataType.DT_RGBA32) {
       orientShader = this.orientShaderRGBU!
       if (overlayItem.colormapLabel) {
-        orientShader = this.orientShaderSPARQ!
+        orientShader = this.orientShaderPAQD!
+        let firstPAQD = true
+        for (let l = 0; l < layer; l++) {
+          const isRGBA = this.volumes[l].hdr.datatypeCode === NiiDataType.DT_RGBA32
+          const isLabel = !!this.volumes[l].colormapLabel
+          if (isRGBA && isLabel) {
+            firstPAQD = false
+          }
+        }
+        if (firstPAQD) {
+          this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, this.back!.dims!)
+        } else {
+          // n.b. do-able, but requires blend buffer copies
+          log.warn(`Current version only one probabilistic atlas (PAQD) at a time`)
+        }
+        outTexture = this.paqdTexture
+        this.gl.activeTexture(TEXTURE9_ORIENT) // Temporary 3D Texture TEXTURE9_ORIENT
       }
       orientShader.use(this.gl)
       this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1)
@@ -8354,7 +8388,12 @@ export class Niivue {
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
     }
+    this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
+    this.gl.uniform1i(shader.uniforms.paqd, 8)
+    this.gl.activeTexture(TEXTURE8_PAQD)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture)
     this.updateInterpolation(layer)
+
     //
     // this.createEmptyDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
     // this.createRandomDrawing(); //DO NOT DO THIS ON EVERY CALL TO REFRESH LAYERS!!!!
@@ -12094,6 +12133,8 @@ export class Niivue {
       // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
       // gl.activeTexture(TEXTURE7_DRAW)
       // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
+      // gl.activeTexture(TEXTURE8_PAQD)
+      // gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture)
       gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
       if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
         gl.activeTexture(TEXTURE6_GRADIENT)
@@ -12110,6 +12151,7 @@ export class Niivue {
       } else {
         gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
       }
+      this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
       gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back!.matRAS!)
       gl.uniform3fv(shader.uniforms.rayDir, rayDir)
@@ -12213,7 +12255,7 @@ export class Niivue {
             this.volumes[i].hdr.datatypeCode === NiiDataType.DT_RGBA32
           ) {
             const vals = this.volumes[i].getValues(vox[0], vox[1], vox[2], this.volumes[i].frame4D)
-            // SPARQ vals: [0] max idx, [1] 2nd idx [2] max prob [3] 2nd prob
+            // PAQD vals: [0] max idx, [1] 2nd idx [2] max prob [3] 2nd prob
             if (vals[2] > 2) {
               const pct1 = Math.round((100 * vals[2]) / 255)
               valStr += this.volumes[i].colormapLabel!.labels![vals[0]] + ` (${pct1}%)`
