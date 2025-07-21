@@ -70,7 +70,7 @@
         nv1.setAtlasOutline(parseFloat(this.value))
       }
       renderMode.onchange = function () {
-        nv1.setVolumeRenderIllumination(this.value)
+        nv1.setVolumeRenderIllumination(parseFloat(this.value))
       }
       var nv1 = new niivue.Niivue({show3Dcrosshair: true, onLocationChange: handleLocationChange })
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
@@ -82,7 +82,6 @@
       alphaSlider.oninput()
       atlasOutlineSelect.onchange()
       renderMode.onchange()
-      console.log(nv1.volumes)
     </script>
   </body>
 </html>

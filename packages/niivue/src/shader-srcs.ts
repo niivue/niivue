@@ -1039,7 +1039,7 @@ export const fragOrientShaderF = `#version 300 es
 uniform highp sampler3D intensityVol;
 `
 
-export const fragOrientShaderAtlas = `#line 636
+export const fragOrientShaderAtlas = `#line 1042
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -1053,35 +1053,48 @@ uniform float opacity;
 uniform uint activeIndex;
 uniform vec4 xyzaFrac;
 uniform mat4 mtx;
+float textureWidth;
+float nlayer;
+float layerY;
+
+vec4 scalar2color(uint idx) {
+	float fx = (float(idx) + 0.5) / textureWidth;
+	vec4 clr = texture(colormap, vec2(fx, layerY)).rgba;
+	if (clr.a > 0.0)
+		clr.a = 1.0;
+	clr.a *= opacity;
+	return clr;
+}
 void main(void) {
 	vec4 vx = vec4(TexCoord.x, TexCoord.y, coordZ, 1.0) * mtx;
 	uint idx = uint(texture(intensityVol, vx.xyz).r);
-	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-	if (idx == uint(0))
+	if (idx == uint(0)) {
+		if (layer < 1.0) {
+			FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			return;
+		}
+		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 		return;
+	}
+	textureWidth = float(textureSize(colormap, 0).x);
+	nlayer = float(textureSize(colormap, 0).y);
+	layerY = ((2.0 * layer) + 1.5) / nlayer;
 	//idx = ((idx - uint(1)) % uint(100))+uint(1);
-	float textureWidth = float(textureSize(colormap, 0).x);
-	float fx = (float(idx)+0.5) / textureWidth;
-	float nlayer = float(textureSize(colormap, 0).y);
-	float y = ((2.0 * layer) + 1.5)/nlayer;
-	FragColor = texture(colormap, vec2(fx, y)).rgba;
-	if (FragColor.a > 0.0)
-		FragColor.a = 1.0;
-	FragColor.a *= opacity;
+	FragColor = scalar2color(idx);
 	bool isBorder = false;
+	vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+	uint R = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x-xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
+	uint L = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y+xyzaFrac.y, coordZ, 1.0) * mtx;
+	uint A = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y-xyzaFrac.y, coordZ, 1.0) * mtx;
+	uint P = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzaFrac.z, 1.0) * mtx;
+	uint S = uint(texture(intensityVol, vx.xyz).r);
+	vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
+	uint I = uint(texture(intensityVol, vx.xyz).r);
 	if (xyzaFrac.a != 0.0) { //outline
-		vx = vec4(TexCoord.x+xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint R = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x-xyzaFrac.x, TexCoord.y, coordZ, 1.0) * mtx;
-		uint L = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y+xyzaFrac.y, coordZ, 1.0) * mtx;
-		uint A = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y-xyzaFrac.y, coordZ, 1.0) * mtx;
-		uint P = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y, coordZ+xyzaFrac.z, 1.0) * mtx;
-		uint S = uint(texture(intensityVol, vx.xyz).r);
-		vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
-		uint I = uint(texture(intensityVol, vx.xyz).r);
 		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
 			isBorder = true;
 			if (xyzaFrac.a > 0.0)
@@ -1090,8 +1103,16 @@ void main(void) {
 				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
 		}
 	}
+	vec4 centerColor = FragColor;
+	FragColor.a += scalar2color(R).a;
+	FragColor.a += scalar2color(L).a;
+	FragColor.a += scalar2color(A).a;
+	FragColor.a += scalar2color(P).a;
+	FragColor.a += scalar2color(S).a;
+	FragColor.a += scalar2color(I).a;
+	FragColor.a /= 7.0;
 	if ((!isBorder) &&(idx == activeIndex)) {
-		if (FragColor.a > 0.5)
+		if (centerColor.a > 0.5)
 			FragColor.a *= 0.4;
 		else
 			FragColor.a =0.8;
@@ -1206,6 +1227,77 @@ void main(void) {
 	FragColor.a = aout;
 }`
 
+export const fragSPARQOrientShader = `#line 773
+precision highp int;
+precision highp float;
+in vec2 TexCoord;
+out vec4 FragColor;
+uniform float coordZ;
+uniform float layer;
+uniform float scl_slope;
+uniform float scl_inter;
+uniform float cal_max;
+uniform float cal_min;
+uniform highp sampler2D colormap;
+uniform lowp sampler3D blend3D;
+uniform float opacity;
+uniform mat4 mtx;
+uniform bool hasAlpha;
+uniform int modulation;
+uniform highp sampler3D modulationVol;
+float textureWidth;
+float nlayer;
+float layerY;
+
+vec4 scalar2color(uint idx) {
+	float fx = (float(idx) + 0.5) / textureWidth;
+	vec4 clr = texture(colormap, vec2(fx, layerY)).rgba;
+	if (clr.a > 0.0)
+		clr.a = 1.0;
+	clr.a *= opacity;
+	return clr;
+}
+
+vec4 sparq2color(uvec4 rgba) {
+  // sparc r: max prob index, g: 2nd index, b: max prob a: 2nd prob
+  float prob1 = float(rgba.b)/255.0;
+  float prob2 = float(rgba.a)/255.0;
+  vec4 clr1 = scalar2color(rgba.r);
+  vec4 clr2 = scalar2color(rgba.g);
+  float total = prob1 + prob2;
+  vec4 clr = vec4(clr1.rgb, total);
+  // vec4 clr = vec4(clr1.rgb, prob1);
+  if (total > 0.0) {
+    clr.rgb = mix(clr2.rgb, clr1.rgb, prob1 / total);
+  }
+  return clr;
+}
+void main(void) {
+	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
+	ivec3 voxelCoord = ivec3(vx.xyz * vec3(textureSize(intensityVol, 0)));
+	uvec4 rgba = texelFetch(intensityVol, voxelCoord, 0);
+	if (rgba.r == uint(0)) {
+		if (layer < 1.0) {
+			FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+			return;
+		}
+		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+		return;
+	}
+	textureWidth = float(textureSize(colormap, 0).x);
+	nlayer = float(textureSize(colormap, 0).y);
+	layerY = ((2.0 * layer) + 1.5) / nlayer;
+	FragColor = sparq2color(rgba);
+	FragColor.a *= opacity;
+	if (layer < 1.0) return;
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+	// https://en.wikipedia.org/wiki/Alpha_compositing
+	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+	if (aout <= 0.0) return;
+	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	FragColor.a = aout;
+
+}`
 export const fragRGBOrientShader = `#line 773
 precision highp int;
 precision highp float;
@@ -1238,6 +1330,13 @@ void main(void) {
 	if (modulation == 2)
 		FragColor.a = texture(modulationVol, vx.xyz).r;
 	FragColor.a *= opacity;
+	if (layer < 1.0) return;
+	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+	// https://en.wikipedia.org/wiki/Alpha_compositing
+	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
+	if (aout <= 0.0) return;
+	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
+	FragColor.a = aout;
 }`
 
 export const vertGrowCutShader = `#version 300 es

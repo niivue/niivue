@@ -83,7 +83,7 @@
         nv1.setScale(this.value / 100)
       }
       renderMode.onchange = function () {
-        nv1.setVolumeRenderIllumination(this.value)
+        nv1.setVolumeRenderIllumination(parseFloat(this.value))
       }
       matCaps.onchange = function () {
         let matCapName = document.getElementById("matCaps").value

@@ -127,7 +127,7 @@
       nv1.opts.isOrientCube = true
       var volumeList1 = [{ url: "../images/mni152.nii.gz" }]
       await nv1.loadVolumes(volumeList1)
-      await nv1.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
+      await nv1.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3",  rgba255: [212, 212, 255, 255] }])
       nv1.setMeshShader(0, "Outline")
       nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv1.setSliceType(nv1.sliceTypeMultiplanar)
@@ -142,7 +142,7 @@
       await nv2.attachTo("gl2")
       nv2.setHighResolutionCapable(true)
       await nv2.loadVolumes(volumeList1)
-      await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
+      await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3", rgba255: [222, 255, 222, 255] }])
       nv2.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
       nv2.setSliceType(nv2.sliceTypeMultiplanar)
       nv2.setSliceMM(true)

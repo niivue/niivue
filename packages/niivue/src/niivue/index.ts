@@ -38,6 +38,7 @@ import {
   fragOrientShader,
   fragOrientShaderAtlas,
   fragRGBOrientShader,
+  fragSPARQOrientShader,
   vertMeshShader,
   fragMeshShader,
   fragMeshToonShader,
@@ -412,6 +413,7 @@ export class Niivue {
   pickingMeshShader?: Shader
   pickingImageShader?: Shader
   colorbarShader?: Shader
+  customSliceShader: Shader | null = null
   fontShader: Shader | null = null
   fiberShader?: Shader
   fontTexture: WebGLTexture | null = null
@@ -428,6 +430,7 @@ export class Niivue {
   orientShaderI: Shader | null = null
   orientShaderF: Shader | null = null
   orientShaderRGBU: Shader | null = null
+  orientShaderSPARQ: Shader | null = null
   surfaceShader: Shader | null = null
   blurShader: Shader | null = null
   sobelBlurShader: Shader | null = null
@@ -4522,6 +4525,7 @@ export class Niivue {
         this.renderShader = this.renderSliceShader
       }
     }
+    await this.refreshLayers(this.volumes[0], 0)
     this.initRenderShader(this.renderShader!, gradientAmount)
     this.renderShader!.use(this.gl)
     this.setClipPlaneColor(this.opts.clipPlaneColor)
@@ -4533,7 +4537,6 @@ export class Niivue {
     if (this.volumes.length < 1) {
       return
     } // issue1158
-    this.refreshLayers(this.volumes[0], 0)
     this.drawScene()
   }
 
@@ -6909,6 +6912,40 @@ export class Niivue {
   }
 
   /**
+   * Install a special shader for 2D slice views
+   * @param fragmentShaderText - custom fragment shader.
+   * @if not text is provided, the default shader will be used
+   * @internal
+   */
+  setCustomSliceShader(fragmentShaderText: string = ''): void {
+    const gl = this.gl
+
+    // If there's an existing custom shader, delete it
+    if (this.customSliceShader) {
+      gl.deleteProgram(this.customSliceShader.program)
+      this.customSliceShader = null
+    }
+
+    // If empty string, fall back to default shader
+    if (!fragmentShaderText) {
+      this.updateGLVolume()
+      return
+    }
+
+    // Create new custom shader
+    const shader = new Shader(gl, vertSliceMMShader, fragmentShaderText)
+    shader.use(gl)
+    gl.uniform1i(shader.uniforms.volume, 0)
+    gl.uniform1i(shader.uniforms.colormap, 1)
+    gl.uniform1i(shader.uniforms.overlay, 2)
+    gl.uniform1i(shader.uniforms.drawing, 7)
+    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
+
+    this.customSliceShader = shader
+    this.updateGLVolume()
+  }
+
+  /**
    * Define a new GLSL shader program to influence mesh coloration
    * @param fragmentShaderText - the GLSL source code for the custom fragment shader
    * @param name - a descriptive label for the shader (used in menus or debugging)
@@ -7121,6 +7158,7 @@ export class Niivue {
     this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader))
     this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader))
     this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader))
+    this.orientShaderSPARQ = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragSPARQOrientShader))
     // 3D crosshair cylinder
     this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader)
     this.surfaceShader.use(gl)
@@ -7161,47 +7199,40 @@ export class Niivue {
    */
   gradientGL(hdr: NiftiHeader): void {
     const gl = this.gl
-    const faceStrip = [0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0]
-    const vao2 = gl.createVertexArray()
-    gl.bindVertexArray(vao2)
-    const vbo2 = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo2)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faceStrip), gl.STATIC_DRAW)
-    gl.enableVertexAttribArray(0)
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
+    gl.bindVertexArray(this.genericVAO)
     const fb = gl.createFramebuffer()
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
-    gl.disable(gl.CULL_FACE)
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
     const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
     const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
     blurShader.use(gl)
-
     gl.activeTexture(TEXTURE0_BACK_VOL)
     gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     const blurRadius = 0.7
     gl.uniform1i(blurShader.uniforms.intensityVol, 0)
     gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
     gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2])
     gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3])
-    gl.bindVertexArray(vao2)
     for (let i = 0; i < hdr.dims[3] - 1; i++) {
       const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
       gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i)
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error('framebuffer status: ', status)
+        log.error('blur shader: ', status)
       }
       gl.clear(gl.DEPTH_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
-
     const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
     sobelShader.use(gl)
     gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
     gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.uniform1i(sobelShader.uniforms.intensityVol, 8) // TEXTURE8_GRADIENT_TEMP
     const sobelRadius = 0.7
     gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
@@ -7213,7 +7244,6 @@ export class Niivue {
       gl.uniform1f(sobelShader.uniforms.dZ2, (2.0 * sobelRadius) / hdr.dims[3])
     }
     gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
-    gl.bindVertexArray(vao2)
     if (this.gradientTexture !== null) {
       gl.deleteTexture(this.gradientTexture)
     }
@@ -7224,16 +7254,15 @@ export class Niivue {
       gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i)
       const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error('framebuffer status: ', status)
+        log.error('sobel shader: ', status)
       }
       gl.clear(gl.DEPTH_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, faceStrip.length / 3)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
-    gl.enable(gl.CULL_FACE)
     gl.deleteFramebuffer(fb)
     gl.deleteTexture(tempTex3D)
-    gl.deleteBuffer(vbo2)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    this.gl.bindVertexArray(this.unusedVAO)
   }
 
   /**
@@ -7973,6 +8002,9 @@ export class Niivue {
       )
     } else if (hdr.datatypeCode === NiiDataType.DT_RGBA32) {
       orientShader = this.orientShaderRGBU!
+      if (overlayItem.colormapLabel) {
+        orientShader = this.orientShaderSPARQ!
+      }
       orientShader.use(this.gl)
       this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1)
       this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
@@ -8254,6 +8286,7 @@ export class Niivue {
       this.volumeTexture = outTexture
       if (this.gradientTextureAmount > 0.0 && !this.useCustomGradientTexture) {
         this.gradientGL(hdr)
+        this.gl.bindVertexArray(this.genericVAO)
       } else if (this.gradientTextureAmount <= 0.0) {
         if (this.gradientTexture !== null) {
           this.gl.deleteTexture(this.gradientTexture)
@@ -8269,8 +8302,7 @@ export class Niivue {
     const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
     const vox = slicescl.vox
     const volScale = slicescl.volScale
-    // @ts-expect-error FIXME assigning this.overlays to a number field
-    this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays)
+    this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
     this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)
     this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
@@ -8296,6 +8328,9 @@ export class Niivue {
     }
     if (this.opts.isV1SliceShader) {
       shader = this.sliceV1Shader
+    }
+    if (this.customSliceShader) {
+      shader = this.customSliceShader
     }
     if (!shader) {
       throw new Error('slice shader undefined')
@@ -8780,11 +8815,11 @@ export class Niivue {
         return [src_min, scale]
       }
     }
-    const img = volume.img!
+    let img = volume.img!
     const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
     if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
       const srcimg = volume.img!
-      const img = new Float32Array(volume.img!.length)
+      img = new Float32Array(volume.img!.length)
       for (let i = 0; i < voxnum; i++) {
         img[i] = srcimg[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
       }
@@ -11363,6 +11398,9 @@ export class Niivue {
       if (this.opts.isV1SliceShader) {
         shader = this.sliceV1Shader
       }
+      if (this.customSliceShader) {
+        shader = this.customSliceShader
+      }
       if (!shader) {
         throw new Error('slice Shader undefined')
       }
@@ -12055,7 +12093,7 @@ export class Niivue {
       // gl.activeTexture(TEXTURE7_DRAW)
       // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
       gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-      if (this.gradientTextureAmount > 0.0) {
+      if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
         gl.activeTexture(TEXTURE6_GRADIENT)
         gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
         const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
@@ -12168,7 +12206,7 @@ export class Niivue {
         deci = 3
         if (this.volumes[i].colormapLabel !== null) {
           const v = Math.round(flt)
-          if (v >= 0 && v < this.volumes[i].colormapLabel!.labels!.length) {
+          if (v >= 0 && this.volumes[i].colormapLabel!.labels && v < this.volumes[i].colormapLabel!.labels!.length) {
             valStr += this.volumes[i].colormapLabel!.labels![v]
           } else {
             valStr += 'undefined(' + flt2str(flt, deci) + ')'

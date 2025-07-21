@@ -1,15 +1,20 @@
 appId: com.electron.app
 productName: niivue-desktop
+afterPack: ./scripts/clean-xattrs-afterpack.js
+afterSign: ./scripts/afterSign-clean.cjs
 directories:
   buildResources: build
 files:
+  - 'out/main/**'
+  - 'out/preload/**'
+  - 'out/renderer/**'
+  - 'resources/**'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - 'resources/icons/**'
 fileAssociations:
   - ext: nvd
     name: NiiVue Document
@@ -26,14 +31,17 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
-  icon: resources/icons/app_icon.icns  # 👈 Path to your app icon
+  icon: resources/icons/app_icon.icns
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     NSCameraUsageDescription: Application requests access to the device's camera.
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  notarize: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
@@ -52,3 +60,6 @@ publish:
   url: https://example.com/auto-updates
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+extraResources:
+  - from: resources/icons
+    to: icons

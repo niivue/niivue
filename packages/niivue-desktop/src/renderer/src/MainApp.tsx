@@ -46,6 +46,7 @@ function MainApp(): JSX.Element {
 
   // Create the first document on mount
   useEffect((): void => {
+    window.electron.setZoomFactor(1)
     if (documents.length === 0) {
       createNewDocument().catch(console.error)
     }
