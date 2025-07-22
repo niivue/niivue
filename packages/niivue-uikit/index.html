@@ -165,6 +165,60 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #45a049;
         }
+        
+        /* Navbar Toggle (Hamburger Menu) */
+        .navbar-toggle {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            padding: 2px;
+            border-radius: 4px;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .navbar-toggle:hover {
+            background: rgba(76, 175, 80, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .hamburger-line {
+            width: 20px;
+            height: 2px;
+            background-color: #4CAF50;
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-toggle:hover .hamburger-line {
+            background-color: #45a049;
+        }
+        
+        /* Animation for active state */
+        .navbar-toggle.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .navbar-toggle.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .navbar-toggle.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+        
+        /* Components panel visibility control */
+        .components-hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -172,6 +226,11 @@
         <div class="status-item">UIKit Components Test - Medical Imaging</div>
         <div class="status-item">Status: <span class="status-value" id="status-text">Initializing...</span></div>
         <div class="status-item">WebGL: <span class="status-value" id="webgl-status">Checking...</span></div>
+        <div id="navbar-toggle" class="navbar-toggle" title="Toggle Components Panel">
+            <div class="hamburger-line"></div>
+            <div class="hamburger-line"></div>
+            <div class="hamburger-line"></div>
+        </div>
     </div>
 
     <div id="container">
@@ -273,27 +332,44 @@
                 shadowAlpha: 0.5
             },
             
-            // Blue section panels
+            // Blue section panels with individual attractive colors
             sections: {
+                // Default colors (kept for backwards compatibility)
                 backgroundColor: [0.18, 0.22, 0.28, 0.9],
                 borderColor: [0.29, 0.33, 0.41, 1.0],
-                titleColor: [0.41, 0.83, 0.57, 1.0],
+                titleColor: [0.0, 0.0, 0.0, 1.0], // Black color for better contrast
                 cornerRadius: 8,
                 borderThickness: 1,
                 gap: 15, // Gap between sections
                 
-                // Individual section heights
-                medicalControls: { height: 240 },
-                viewControls: { height: 160 },
-                advancedControls: { height: 240 },
-                actions: { height: 160 }
+                // Individual section heights and attractive colors
+                medicalControls: { 
+                    height: 240,
+                    backgroundColor: [0.15, 0.25, 0.35, 0.9], // Deep blue - medical precision
+                    borderColor: [0.25, 0.35, 0.45, 1.0]
+                },
+                viewControls: { 
+                    height: 160,
+                    backgroundColor: [0.25, 0.15, 0.35, 0.9], // Purple - view settings
+                    borderColor: [0.35, 0.25, 0.45, 1.0]
+                },
+                advancedControls: { 
+                    height: 240,
+                    backgroundColor: [0.15, 0.35, 0.25, 0.9], // Teal - advanced features
+                    borderColor: [0.25, 0.45, 0.35, 1.0]
+                },
+                actions: { 
+                    height: 160,
+                    backgroundColor: [0.35, 0.25, 0.15, 0.9], // Warm brown - action controls
+                    borderColor: [0.45, 0.35, 0.25, 1.0]
+                }
             },
             
             // Content margins within blue panels
             content: {
                 marginLeft: 15,
                 marginRight: 15,
-                marginTop: 30,
+                marginTop: 40, // Increased from 30 to 40 to accommodate larger title margins (28)
                 marginBottom: 15
             },
             
@@ -304,9 +380,12 @@
                     width: 170,
                     height: 16,
                     spacing: 32,
-                    labelOffset: 75, // Distance of label from slider
+                    labelOffset: 110, // Further increased distance for clear separation between labels and sliders
+                    marginLeft: 10,
+                    marginRight: 10,
+                    topOffset: 25, // Configurable vertical offset from section title for better centering
                     showValues: false,
-                    textScale: 0.016
+                    textScale: 0.02 // Match View Controls text scale
                 },
                 
                 // Toggle configuration
@@ -338,7 +417,8 @@
                 selectors: {
                     colormap: {
                         height: 120,
-                        margin: 10,
+                        marginLeft: 10,
+                        marginRight: 10,
                         // New robust colormap selector properties
                         textScale: 0.018,
                         gradientWidth: 60,
@@ -351,6 +431,8 @@
                     viewMode: {
                         height: 45,
                         bottomMargin: 15,
+                        marginLeft: 10,
+                        marginRight: 10,
                         // New robust view mode selector properties
                         textScale: 0.016,
                         buttonPadding: 4,
@@ -365,10 +447,10 @@
                 titleScale: 0.02,
                 componentScale: 0.025,
                 titleMargins: {
-                    medicalControls: 20,
-                    viewControls: 18,
-                    advancedControls: 18,
-                    actions: 18
+                    medicalControls: 28,  // Increased from 18 to 28 for better spacing
+                    viewControls: 28,     // Increased from 18 to 28 for better spacing
+                    advancedControls: 28, // Increased from 18 to 28 for better spacing
+                    actions: 28           // Increased from 18 to 28 for better spacing
                 }
             }
         }
@@ -436,11 +518,12 @@
             return {
                 // Slider positions (accounting for label offset)
                 sliders: {
-                    x: layout.contentX + config.components.sliders.labelOffset,
+                    x: layout.contentX + config.components.sliders.marginLeft + config.components.sliders.labelOffset,
                     width: config.components.sliders.width,
                     height: config.components.sliders.height,
                     spacing: config.components.sliders.spacing,
-                    startY: layout.sections.medical.y + config.content.marginTop + 10
+                    startY: layout.sections.medical.y + config.content.marginTop + config.components.sliders.topOffset,
+                    labelX: layout.contentX + config.components.sliders.marginLeft
                 },
                 
                 // Toggle positions
@@ -465,16 +548,16 @@
                 // Selector positions
                 selectors: {
                     colormap: {
-                        x: layout.contentX + config.components.selectors.colormap.margin,
+                        x: layout.contentX + config.components.selectors.colormap.marginLeft,
                         y: layout.sections.advanced.y + config.content.marginTop,
-                        width: layout.contentWidth - 20,
+                        width: layout.contentWidth - config.components.selectors.colormap.marginLeft - config.components.selectors.colormap.marginRight,
                         height: config.components.selectors.colormap.height
                     },
                     viewMode: {
-                        x: layout.contentX + config.components.selectors.colormap.margin,
+                        x: layout.contentX + config.components.selectors.viewMode.marginLeft,
                         y: layout.sections.advanced.y + layout.sections.advanced.height - 
                            config.components.selectors.viewMode.height - config.components.selectors.viewMode.bottomMargin,
-                        width: layout.contentWidth - 20,
+                        width: layout.contentWidth - config.components.selectors.viewMode.marginLeft - config.components.selectors.viewMode.marginRight,
                         height: config.components.selectors.viewMode.height
                     }
                 }
@@ -495,6 +578,9 @@
             colormap: 'gray',
             viewMode: 'MultiPlanar'
         }
+
+        // Component panel visibility state
+        let componentsVisible = true
 
         // UIKit component instances
         let uikitComponents = {
@@ -737,6 +823,7 @@
                             min: 0,
                             max: 1,
                     label: 'Brightness',
+                    labelOffset: -sliderConfig.labelOffset, // Position label to the left of slider
                     showValue: sliderConfig.showValues,
                     style: {
                         trackColor: [0.4, 0.4, 0.4, 1],
@@ -763,6 +850,7 @@
                             min: 0,
                             max: 1,
                     label: 'Contrast',
+                    labelOffset: -sliderConfig.labelOffset, // Position label to the left of slider
                     showValue: sliderConfig.showValues,
                     style: {
                         trackColor: [0.4, 0.4, 0.4, 1],
@@ -789,6 +877,7 @@
                             min: 0.1,
                             max: 5.0,
                     label: 'Zoom',
+                    labelOffset: -sliderConfig.labelOffset, // Position label to the left of slider
                     showValue: sliderConfig.showValues,
                     style: {
                         trackColor: [0.4, 0.4, 0.4, 1],
@@ -815,6 +904,7 @@
                             min: 0,
                             max: 1,
                     label: 'Opacity',
+                    labelOffset: -sliderConfig.labelOffset, // Position label to the left of slider
                     showValue: sliderConfig.showValues,
                     style: {
                         trackColor: [0.4, 0.4, 0.4, 1],
@@ -840,7 +930,8 @@
                             value: medicalParams.slice,
                             min: 0,
                             max: 1,
-                    label: 'SlicePosition',
+                    label: 'Slice Position',
+                    labelOffset: -sliderConfig.labelOffset, // Position label to the left of slider
                     showValue: sliderConfig.showValues,
                     style: {
                         trackColor: [0.4, 0.4, 0.4, 1],
@@ -941,7 +1032,7 @@
                 
                 // Create colormap selector with larger size and thicker rows
                 uikitComponents.colormapSelector = new UIKColormapSelector(uikitRenderer, {
-                    bounds: [componentPositions.selectors.colormap.x + 10, currentY, componentPositions.selectors.colormap.width, selectorConfig.colormap.height],
+                    bounds: [componentPositions.selectors.colormap.x, currentY, componentPositions.selectors.colormap.width, selectorConfig.colormap.height],
                         selectedColormap: medicalParams.colormap,
                         colormaps: ['gray', 'plasma', 'viridis', 'inferno', 'hot', 'cool'],
                     font: uikitFont,
@@ -962,7 +1053,7 @@
                 
                 // Create view mode selector positioned at bottom
                 uikitComponents.viewModeSelector = new UIKViewModeSelector(uikitRenderer, {
-                    bounds: [componentPositions.selectors.viewMode.x + 10, viewModeSelectorY, componentPositions.selectors.viewMode.width, selectorConfig.viewMode.height],
+                    bounds: [componentPositions.selectors.viewMode.x, viewModeSelectorY, componentPositions.selectors.viewMode.width, selectorConfig.viewMode.height],
                         selectedMode: medicalParams.viewMode,
                         modes: ['Axial', 'Sagittal', 'Coronal', 'MultiPlanar'],
                     font: uikitFont,
@@ -992,7 +1083,7 @@
                 // Row 1: Screenshot and Background buttons
                 uikitComponents.screenshotButton = new UIKButton(uikitRenderer, {
                     bounds: [componentPositions.buttons.x, currentY, buttonWidth, buttonHeight],
-                    text: '📷 Save',
+                    text: 'Save',
                     font: uikitFont,
                     onClick: () => {
                         if (nv) {
@@ -1041,7 +1132,7 @@
                 // Background Toggle Button
                 uikitComponents.backgroundButton = new UIKButton(uikitRenderer, {
                     bounds: [componentPositions.buttons.x + buttonWidth + buttonGap, currentY, buttonWidth, buttonHeight],
-                        text: '🌙 Dark',
+                        text: 'Dark',
                     font: uikitFont,
                         onClick: () => {
                             if (nv) {
@@ -1074,7 +1165,7 @@
                 currentY += buttonRowSpacing
                 uikitComponents.logsButton = new UIKButton(uikitRenderer, {
                     bounds: [componentPositions.buttons.x, currentY, buttonWidth, buttonHeight],
-                        text: '📋 Logs',
+                        text: 'Logs',
                     font: uikitFont,
                         onClick: () => {
                         const logPanel = document.getElementById('log-panel')
@@ -1103,7 +1194,7 @@
                 // Reset All Button
                 uikitComponents.resetButton = new UIKButton(uikitRenderer, {
                     bounds: [componentPositions.buttons.x + buttonWidth + buttonGap, currentY, buttonWidth, buttonHeight],
-                    text: '🔄 Reset',
+                    text: 'Reset',
                     font: uikitFont,
                     onClick: () => {
                         const initialParams = {
@@ -1395,6 +1486,9 @@
         function renderUIKitOverlay() {
             if (!uikitRenderer || !uikitFont) return
             
+            // Check if components panel is visible
+            if (!componentsVisible) return
+            
             // Get WebGL context and save current state
             const gl = nv.gl
             const canvas = document.getElementById('gl1')
@@ -1458,98 +1552,96 @@
                 color: [0.27, 0.27, 0.27, 1.0]
             })
             
-            // Section styling
-            const sectionBgColor = [0.18, 0.22, 0.28, 0.9]
-            const sectionBorderColor = [0.29, 0.33, 0.41, 1.0]
-            const titleColor = [0.41, 0.83, 0.57, 1.0]
+            // Section styling - use individual attractive colors for each section
             
-            // SECTION 1: Medical Imaging Controls
+            // SECTION 1: Medical Imaging Controls - Deep Blue
             const section1Y = panelY
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section1Y, panelWidth - 10, section1Height],
-                fillColor: sectionBgColor,
-                outlineColor: sectionBorderColor,
+                fillColor: LAYOUT_CONFIG.sections.medicalControls.backgroundColor,
+                outlineColor: LAYOUT_CONFIG.sections.medicalControls.borderColor,
                 cornerRadius: 8,
                 thickness: 1
             })
             
-            // SECTION 2: View Controls
+            // SECTION 2: View Controls - Purple
             const section2Y = section1Y + section1Height + 15
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section2Y, panelWidth - 10, section2Height],
-                fillColor: sectionBgColor,
-                outlineColor: sectionBorderColor,
+                fillColor: LAYOUT_CONFIG.sections.viewControls.backgroundColor,
+                outlineColor: LAYOUT_CONFIG.sections.viewControls.borderColor,
                 cornerRadius: 8,
                 thickness: 1
             })
             
-            // SECTION 3: Advanced Controls
+            // SECTION 3: Advanced Controls - Teal
             const section3Y = section2Y + section2Height + 15
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section3Y, panelWidth - 10, section3Height],
-                fillColor: sectionBgColor,
-                outlineColor: sectionBorderColor,
+                fillColor: LAYOUT_CONFIG.sections.advancedControls.backgroundColor,
+                outlineColor: LAYOUT_CONFIG.sections.advancedControls.borderColor,
                 cornerRadius: 8,
                 thickness: 1
             })
             
-            // SECTION 4: Actions
+            // SECTION 4: Actions - Warm Brown
             const section4Y = section3Y + section3Height + 15
             uikitRenderer.drawRoundedRect({
                 bounds: [panelX + 5, section4Y, panelWidth - 10, section4Height],
-                fillColor: sectionBgColor,
-                outlineColor: sectionBorderColor,
+                fillColor: LAYOUT_CONFIG.sections.actions.backgroundColor,
+                outlineColor: LAYOUT_CONFIG.sections.actions.borderColor,
                 cornerRadius: 8,
                 thickness: 1
             })
             
-            // Draw section titles - properly centered within each blue panel with better top margin
+            // Draw section titles - properly centered within each blue panel with configurable top margin
             if (uikitFont && uikitFont.isFontLoaded) {
-                const titleScale = 0.02 // Text scale for headers
+                const titleScale = LAYOUT_CONFIG.text.titleScale // Use configuration for text scale
+                const titleMargins = LAYOUT_CONFIG.text.titleMargins // Use configuration for margins
                 const panelCenterX = panelX + (panelWidth / 2)
                 
-                // MEDICAL IMAGING CONTROLS title (centered with better top margin)
-                const title1 = 'MEDICAL IMAGING CONTROLS' // Already has proper spacing
+                // MEDICAL IMAGING CONTROLS title (centered with configurable top margin)
+                const title1 = 'MEDICAL IMAGING CONTROLS'
                 const title1Width = title1.length * 5 // Approximate character width for centering
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelCenterX - title1Width, section1Y + 20], // Increased top margin from 15 to 20
+                    xy: [panelCenterX - title1Width, section1Y + titleMargins.medicalControls], // Use configuration margin
                     str: title1,
                     scale: titleScale,
-                    color: titleColor
+                    color: LAYOUT_CONFIG.sections.titleColor // Use configuration color
                 })
                 
-                // VIEW CONTROLS title (centered with better top margin)
-                const title2 = 'VIEW CONTROLS' // Already has proper spacing
+                // VIEW CONTROLS title (centered with configurable top margin)
+                const title2 = 'VIEW CONTROLS'
                 const title2Width = title2.length * 5
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelCenterX - title2Width, section2Y + 18], // Increased top margin from 12 to 18
+                    xy: [panelCenterX - title2Width, section2Y + titleMargins.viewControls], // Use configuration margin
                     str: title2,
                     scale: titleScale,
-                    color: titleColor
+                    color: LAYOUT_CONFIG.sections.titleColor // Use configuration color
                 })
                 
-                // ADVANCED CONTROLS title (centered with better top margin)
-                const title3 = 'ADVANCED CONTROLS' // Already has proper spacing
+                // ADVANCED CONTROLS title (centered with configurable top margin)
+                const title3 = 'ADVANCED CONTROLS'
                 const title3Width = title3.length * 5
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelCenterX - title3Width, section3Y + 18], // Increased top margin from 12 to 18
+                    xy: [panelCenterX - title3Width, section3Y + titleMargins.advancedControls], // Use configuration margin
                     str: title3,
                     scale: titleScale,
-                    color: titleColor
+                    color: LAYOUT_CONFIG.sections.titleColor // Use configuration color
                 })
                 
-                // ACTIONS title (centered with better top margin)
-                const title4 = 'ACTIONS' // Single word, no spacing needed
+                // ACTIONS title (centered with configurable top margin)
+                const title4 = 'ACTIONS'
                 const title4Width = title4.length * 5
                 uikitRenderer.drawRotatedText({
                     font: uikitFont,
-                    xy: [panelCenterX - title4Width, section4Y + 18], // Increased top margin from 12 to 18
+                    xy: [panelCenterX - title4Width, section4Y + titleMargins.actions], // Use configuration margin
                     str: title4,
                     scale: titleScale,
-                    color: titleColor
+                    color: LAYOUT_CONFIG.sections.titleColor // Use configuration color
                 })
             }
             
@@ -1579,6 +1671,20 @@
             
             requestAnimationFrame(renderLoop)
         }
+
+        // Navbar toggle event handler
+        document.getElementById('navbar-toggle').addEventListener('click', () => {
+            componentsVisible = !componentsVisible
+            const toggleButton = document.getElementById('navbar-toggle')
+            
+            if (componentsVisible) {
+                toggleButton.classList.remove('active')
+                log('Components panel shown', 'info')
+            } else {
+                toggleButton.classList.add('active')
+                log('Components panel hidden', 'info')
+            }
+        })
 
         // Button event handlers
         document.getElementById('reset-btn').addEventListener('click', () => {
