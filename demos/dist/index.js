@@ -5647,8 +5647,16 @@ var kRenderInit = `void main() {
 	samplePos += deltaDir * ran; //jitter ray
 `;
 var kRenderTail = `
-	if (firstHit.a < len)
+	if (firstHit.a < len) {
 		gl_FragDepth = frac2ndc(firstHit.xyz);
+		vec4 paqdSample = texture(paqd, samplePos.xyz);
+		if (paqdSample.a > 0.0) {
+			//colAcc.rgb = paqdSample.rgb;
+			float a = max(abs(paqdUniforms[2]), abs(paqdUniforms[3]));
+			colAcc.rgb = mix(colAcc.rgb, paqdSample.rgb, 0.5 * paqdSample.a * a);
+		}
+		
+	}
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
 	//if (isClip) //CR
@@ -5782,6 +5790,8 @@ uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
+uniform highp sampler3D paqd;
+uniform vec4 paqdUniforms;
 uniform float overlays;
 uniform float clipThick;
 uniform vec3 clipLo;
@@ -5864,6 +5874,8 @@ uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
+uniform highp sampler3D paqd;
+uniform vec4 paqdUniforms;
 uniform float overlays;
 uniform float clipThick;
 uniform vec3 clipLo;
@@ -5904,6 +5916,8 @@ uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
+uniform highp sampler3D paqd;
+uniform vec4 paqdUniforms;
 uniform float overlays;
 uniform float clipThick;
 uniform vec3 clipLo;
@@ -6010,6 +6024,8 @@ var kFragSliceHead = `#version 300 es
 precision highp int;
 precision highp float;
 uniform highp sampler3D volume, overlay;
+uniform highp sampler3D paqd;
+uniform vec4 paqdUniforms;
 uniform int backgroundMasksOverlays;
 uniform float overlayOutlineWidth;
 uniform float overlayAlphaShader;
@@ -6021,7 +6037,37 @@ uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 in vec3 texPos;
-out vec4 color;` + kDrawFunc + `void main() {
+out vec4 color;
+` + kDrawFunc + `
+vec4 blendRGBA(vec4 foreground, vec4 background) {
+  float alphaOut = foreground.a + background.a * (1.0 - foreground.a);
+  vec3 colorOut = (foreground.rgb * foreground.a + background.rgb * background.a * (1.0 - foreground.a)) / alphaOut;
+  return vec4(colorOut, alphaOut);
+}
+float paqdEaseAlpha(float alpha) {
+  // t are alpha transitions
+  // <t0 -> y0
+  // t0..t1  -> mix between y0..y1
+  // t1..t2 -> mix between y1..y2
+  // >t2 -> y2
+  float t0 = paqdUniforms[0]; // 0.3;
+  float t1 = 0.5 * (paqdUniforms[0] + paqdUniforms[1]); // 0.4;
+  float t2 = paqdUniforms[1]; // 0.9;
+  float y0 = 0.0;
+  float y1 = abs(paqdUniforms[2]); // 1.0;
+  float y2 = abs(paqdUniforms[3]); //0.25;
+  if (alpha <= t0) {
+    return y0;
+  } else if (alpha <= t1) {
+    return mix(y0, y1, (alpha - t0) / (t1 - t0)); // LERP 0.0 \u2192 1.0
+  } else if (alpha <= t2) {
+    return mix(y1, y2, (alpha - t1) / (t2 - t1)); // LERP 1.0 \u2192 0.2
+  } else {
+    return y2;
+  }
+}
+
+void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos);
 	color = vec4(background.rgb, opacity);
@@ -6164,6 +6210,16 @@ var kFragSliceTail = `	ocolor.a *= overlayAlpha;
 	if (dcolor.a > 0.0) {
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
+	}
+	vec4 pcolor = texture(paqd, texPos);
+	if (pcolor.a > 0.0) {
+		pcolor.a = paqdEaseAlpha(pcolor.a);
+		if (pcolor.a > 0.0) {
+			if (paqdUniforms[3] < 0.0)
+				ocolor = blendRGBA(pcolor, ocolor);
+			else
+				ocolor = blendRGBA(ocolor, pcolor);
+		}
 	}
 	if ((backgroundMasksOverlays > 0) && (background.a == 0.0))
 		return;
@@ -6500,15 +6556,6 @@ void main(void) {
 	uint S = uint(texture(intensityVol, vx.xyz).r);
 	vx = vec4(TexCoord.x, TexCoord.y, coordZ-xyzaFrac.z, 1.0) * mtx;
 	uint I = uint(texture(intensityVol, vx.xyz).r);
-	if (xyzaFrac.a != 0.0) { //outline
-		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
-			isBorder = true;
-			if (xyzaFrac.a > 0.0)
-				FragColor.a = xyzaFrac.a;
-			else
-				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-		}
-	}
 	vec4 centerColor = FragColor;
 	FragColor.a += scalar2color(R).a;
 	FragColor.a += scalar2color(L).a;
@@ -6522,6 +6569,15 @@ void main(void) {
 			FragColor.a *= 0.4;
 		else
 			FragColor.a =0.8;
+	}
+	if (xyzaFrac.a != 0.0) { //outline
+		if ((idx != R) || (idx != L) || (idx != A) || (idx != P) || (idx != S) || (idx != I)) {
+			isBorder = true;
+			if (xyzaFrac.a > 0.0)
+				FragColor.a = xyzaFrac.a;
+			else
+				FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		}
 	}
 	if (layer < 1.0) return;
 		vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
@@ -6631,7 +6687,7 @@ void main(void) {
 		FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
 	FragColor.a = aout;
 }`;
-var fragSPARQOrientShader = `#line 773
+var fragPAQDOrientShader = `#line 773
 precision highp int;
 precision highp float;
 in vec2 TexCoord;
@@ -6662,8 +6718,8 @@ vec4 scalar2color(uint idx) {
 	return clr;
 }
 
-vec4 sparq2color(uvec4 rgba) {
-  // sparc r: max prob index, g: 2nd index, b: max prob a: 2nd prob
+vec4 paqd2color(uvec4 rgba) {
+  // paqd r: max prob index, g: 2nd index, b: max prob a: 2nd prob
   float prob1 = float(rgba.b)/255.0;
   float prob2 = float(rgba.a)/255.0;
   vec4 clr1 = scalar2color(rgba.r);
@@ -6680,27 +6736,16 @@ void main(void) {
 	vec4 vx = vec4(TexCoord.xy, coordZ, 1.0) * mtx;
 	ivec3 voxelCoord = ivec3(vx.xyz * vec3(textureSize(intensityVol, 0)));
 	uvec4 rgba = texelFetch(intensityVol, voxelCoord, 0);
-	if (rgba.r == uint(0)) {
-		if (layer < 1.0) {
-			FragColor = vec4(0.0, 0.0, 0.0, 0.0);
-			return;
-		}
-		FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
+	FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+	if (rgba.r > uint(0)) {
+		textureWidth = float(textureSize(colormap, 0).x);
+		nlayer = float(textureSize(colormap, 0).y);
+		layerY = ((2.0 * layer) + 1.5) / nlayer;
+		FragColor = paqd2color(rgba);
 		return;
 	}
-	textureWidth = float(textureSize(colormap, 0).x);
-	nlayer = float(textureSize(colormap, 0).y);
-	layerY = ((2.0 * layer) + 1.5) / nlayer;
-	FragColor = sparq2color(rgba);
-	FragColor.a *= opacity;
-	if (layer < 1.0) return;
-	vec4 prevColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
-	// https://en.wikipedia.org/wiki/Alpha_compositing
-	float aout = FragColor.a + (1.0 - FragColor.a) * prevColor.a;
-	if (aout <= 0.0) return;
-	FragColor.rgb = ((FragColor.rgb * FragColor.a) + (prevColor.rgb * prevColor.a * (1.0 - FragColor.a))) / aout;
-	FragColor.a = aout;
-
+	// if (layer > 2.0) return;
+	// FragColor = texture(blend3D, vec3(TexCoord.xy, coordZ));
 }`;
 var fragRGBOrientShader = `#line 773
 precision highp int;
@@ -7268,6 +7313,8 @@ uniform vec3 volScale;
 uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform highp sampler3D volume, overlay;
+uniform highp sampler3D paqd;
+uniform vec4 paqdUniforms;
 uniform float overlays;
 uniform float clipThick;
 uniform vec3 clipLo;
@@ -25663,7 +25710,7 @@ async function saveToDisk(nvImage, fnm = "", drawing8 = null) {
 }
 
 // src/nvimage/VolumeUtils.ts
-function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
+function getValues(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
   if (!nvImage.hdr) {
     throw new Error("getValue: NVImage header is not defined.");
   }
@@ -25672,7 +25719,7 @@ function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
   }
   if (isReadImaginary && !nvImage.imaginary) {
     log.warn("getValue: Attempted to read imaginary data, but none exists.");
-    return 0;
+    return [0];
   }
   const nx = nvImage.hdr.dims[1];
   const ny = nvImage.hdr.dims[2];
@@ -25692,42 +25739,45 @@ function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
   let vx = x + y * nx + z * nx * ny;
   if (nvImage.hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
     if (!nvImage.img) {
-      return 0;
+      return [0];
     }
     vx *= 4;
-    if (vx + 2 >= nvImage.img.length) {
+    if (vx + 3 >= nvImage.img.length) {
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`);
-      return 0;
+      return [0];
     }
-    if (nvImage.hdr.intent_code === 1002) {
-      return nvImage.img[vx];
-    }
-    const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722;
-    return Math.round(lum);
+    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2], nvImage.img[vx + 3]];
   }
   if (nvImage.hdr.datatypeCode === 128 /* DT_RGB24 */) {
     if (!nvImage.img) {
-      return 0;
+      return [0];
     }
     vx *= 3;
     if (vx + 2 >= nvImage.img.length) {
       log.warn(`getValue: Calculated index ${vx} out of bounds for RGB data.`);
-      return 0;
+      return [0];
     }
-    const lum = nvImage.img[vx] * 0.2126 + nvImage.img[vx + 1] * 0.7152 + nvImage.img[vx + 2] * 0.0722;
-    return Math.round(lum);
+    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2]];
   }
   const nVox3D = nx * ny * nz;
   const volOffset = frame4D * nVox3D;
   const finalVxIndex = vx + volOffset;
   const dataArray = isReadImaginary ? nvImage.imaginary : nvImage.img;
   if (finalVxIndex < 0 || finalVxIndex >= dataArray.length) {
-    return 0;
+    return [0];
   }
   const rawValue = dataArray[finalVxIndex];
   const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
   const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
-  return slope * rawValue + inter;
+  return [slope * rawValue + inter];
+}
+function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
+  const vals = getValues(nvImage, x, y, z, frame4D, isReadImaginary);
+  if (vals.length < 3) {
+    return vals[0];
+  }
+  const lum = vals[0] * 0.2126 + vals[1] * 0.7152 + vals[2] * 0.0722;
+  return lum;
 }
 function getVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], dataType = "same") {
   const defaultResult = [new Uint8Array(), [0, 0, 0]];
@@ -29794,6 +29844,13 @@ var NVImage = class _NVImage {
     return getValue(this, x, y, z, frame4D, isReadImaginary);
   }
   /**
+   * Returns voxel intensities at specific native coordinates.
+   * Delegates to VolumeUtils.getValue.
+   */
+  getValues(x, y, z, frame4D = 0, isReadImaginary = false) {
+    return getValues(this, x, y, z, frame4D, isReadImaginary);
+  }
+  /**
    * Update options for image
    */
   applyOptionsUpdate(options) {
@@ -29978,6 +30035,8 @@ var DEFAULT_OPTIONS = {
   fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  paqdUniforms: [0.3, 0.5, 0.5, 1],
+  // paqdUniforms: [0.3, 0.9, 1.0, 0.5],
   clipThick: 2,
   clipVolumeLow: [0, 0, 0],
   clipVolumeHigh: [1, 1, 1],
@@ -34768,6 +34827,7 @@ var TEXTURE4_THUMBNAIL = 33988;
 var TEXTURE5_MATCAP = 33989;
 var TEXTURE6_GRADIENT = 33990;
 var TEXTURE7_DRAW = 33991;
+var TEXTURE8_PAQD = 33992;
 var TEXTURE8_GRADIENT_TEMP = 33992;
 var TEXTURE9_ORIENT = 33993;
 var TEXTURE10_BLEND = 33994;
@@ -34819,6 +34879,8 @@ var Niivue = class {
     __publicField(this, "renderGradientValues", false);
     __publicField(this, "drawTexture", null);
     // the GPU memory storage of the drawing
+    __publicField(this, "paqdTexture", null);
+    // the GPU memory storage of the probabilistic atlas
     __publicField(this, "drawUndoBitmaps", []);
     // array of drawBitmaps for undo
     __publicField(this, "drawLut", cmapper.makeDrawLut("$itksnap"));
@@ -34880,7 +34942,7 @@ var Niivue = class {
     __publicField(this, "orientShaderI", null);
     __publicField(this, "orientShaderF", null);
     __publicField(this, "orientShaderRGBU", null);
-    __publicField(this, "orientShaderSPARQ", null);
+    __publicField(this, "orientShaderPAQD", null);
     __publicField(this, "surfaceShader", null);
     __publicField(this, "blurShader", null);
     __publicField(this, "sobelBlurShader", null);
@@ -36025,6 +36087,8 @@ var Niivue = class {
     this.uiData.mouseButtonLeftDown = false;
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled();
+    } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
+      this.drawAddUndoBitmap();
     }
     this.drawPenLocation = [NaN, NaN, NaN];
     this.drawPenAxCorSag = -1;
@@ -36959,6 +37023,7 @@ var Niivue = class {
           this.meshes = [];
         }
         this.closeDrawing();
+        this.closePAQD();
         for (const item of Array.from(items)) {
           const entry = item.webkitGetAsEntry();
           log.debug(entry);
@@ -38955,6 +39020,7 @@ var Niivue = class {
     this.volumes = [];
     this.gl.clearColor(0, 0, 0, 1);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    this.closePAQD();
     await this.addVolumesFromUrl(volumeList);
     return this;
   }
@@ -40021,7 +40087,7 @@ var Niivue = class {
    */
   closeDrawing() {
     this.drawClearAllUndoBitmaps();
-    this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true);
+    this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true);
     this.drawBitmap = null;
     this.clickToSegmentGrowingBitmap = null;
     this.drawScene();
@@ -40115,6 +40181,14 @@ var Niivue = class {
     if (isForceRedraw) {
       this.drawScene();
     }
+  }
+  /**
+   * close probabilistic atlas texture
+   * @example niivue.closePAQD();
+   * @internal
+   */
+  closePAQD() {
+    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true);
   }
   /**
    * Creates a 2D 1-component uint8 texture on the GPU with given dimensions.
@@ -40574,6 +40648,7 @@ var Niivue = class {
     gl.uniform1i(shader.uniforms.colormap, 1);
     gl.uniform1i(shader.uniforms.overlay, 2);
     gl.uniform1i(shader.uniforms.drawing, 7);
+    gl.uniform1i(shader.uniforms.paqd, 8);
     gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
     this.customSliceShader = shader;
     this.updateGLVolume();
@@ -40615,6 +40690,7 @@ var Niivue = class {
     this.gl.uniform1i(shader.uniforms.colormap, 1);
     this.gl.uniform1i(shader.uniforms.overlay, 2);
     this.gl.uniform1i(shader.uniforms.drawing, 7);
+    this.gl.uniform1i(shader.uniforms.paqd, 8);
     this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1]);
     this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
     this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette);
@@ -40654,6 +40730,7 @@ var Niivue = class {
     this.volumeTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, [2, 2, 2, 2], true);
     this.overlayTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, [2, 2, 2, 2], true);
     this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true);
+    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true);
     const rectStrip = [
       1,
       1,
@@ -40761,7 +40838,7 @@ var Niivue = class {
     this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
     this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
     this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
-    this.orientShaderSPARQ = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragSPARQOrientShader));
+    this.orientShaderPAQD = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragPAQDOrientShader));
     this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader);
     this.surfaceShader.use(gl);
     this.fiberShader = new Shader(gl, vertFiberShader, fragFiberShader);
@@ -40860,6 +40937,8 @@ var Niivue = class {
     gl.deleteFramebuffer(fb);
     gl.deleteTexture(tempTex3D);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.activeTexture(TEXTURE8_PAQD);
+    gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture);
     this.gl.bindVertexArray(this.unusedVAO);
   }
   /**
@@ -41004,6 +41083,7 @@ var Niivue = class {
     let visibleLayers = 0;
     const numLayers = this.volumes.length;
     this.refreshColormaps();
+    this.closePAQD();
     for (let i = 0; i < numLayers; i++) {
       if (!this.volumes[i].toRAS) {
         continue;
@@ -41479,7 +41559,22 @@ var Niivue = class {
     } else if (hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
       orientShader = this.orientShaderRGBU;
       if (overlayItem.colormapLabel) {
-        orientShader = this.orientShaderSPARQ;
+        orientShader = this.orientShaderPAQD;
+        let firstPAQD = true;
+        for (let l = 0; l < layer; l++) {
+          const isRGBA = this.volumes[l].hdr.datatypeCode === 2304 /* DT_RGBA32 */;
+          const isLabel = !!this.volumes[l].colormapLabel;
+          if (isRGBA && isLabel) {
+            firstPAQD = false;
+          }
+        }
+        if (firstPAQD) {
+          this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, this.back.dims);
+        } else {
+          log.warn(`Current version only one probabilistic atlas (PAQD) at a time`);
+        }
+        outTexture = this.paqdTexture;
+        this.gl.activeTexture(TEXTURE9_ORIENT);
       }
       orientShader.use(this.gl);
       this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1);
@@ -41791,6 +41886,10 @@ var Niivue = class {
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
     }
+    this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms);
+    this.gl.uniform1i(shader.uniforms.paqd, 8);
+    this.gl.activeTexture(TEXTURE8_PAQD);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture);
     this.updateInterpolation(layer);
   }
   /**
@@ -45108,6 +45207,7 @@ var Niivue = class {
       } else {
         gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0);
       }
+      this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms);
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix);
       gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back.matRAS);
       gl.uniform3fv(shader.uniforms.rayDir, rayDir);
@@ -45195,7 +45295,17 @@ var Niivue = class {
         deci = 3;
         if (this.volumes[i].colormapLabel !== null) {
           const v = Math.round(flt2);
-          if (v >= 0 && this.volumes[i].colormapLabel.labels && v < this.volumes[i].colormapLabel.labels.length) {
+          if (this.volumes[i].hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */ && this.volumes[i].hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
+            const vals = this.volumes[i].getValues(vox[0], vox[1], vox[2], this.volumes[i].frame4D);
+            if (vals[2] > 2) {
+              const pct1 = Math.round(100 * vals[2] / 255);
+              valStr += this.volumes[i].colormapLabel.labels[vals[0]] + ` (${pct1}%)`;
+              if (vals[3] > 2) {
+                const pct2 = Math.round(100 * vals[3] / 255);
+                valStr += ` ` + this.volumes[i].colormapLabel.labels[vals[1]] + ` (${pct2}%)`;
+              }
+            }
+          } else if (v >= 0 && this.volumes[i].colormapLabel.labels && v < this.volumes[i].colormapLabel.labels.length) {
             valStr += this.volumes[i].colormapLabel.labels[v];
           } else {
             valStr += "undefined(" + flt2str(flt2, deci) + ")";

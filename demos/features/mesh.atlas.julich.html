@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Julich-Brain Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      <select id="hemiSelect">
+        <option>Left</option>
+        <option>Right</option>
+        <option selected>Both</option>
+      </select>
+      &nbsp;
+      <select id="meshSelect">
+        <option>Matcap</option>
+        <option>Matte</option>
+        <option>Outline</option>
+        <option selected>Rim</option>
+        <option>Silhouette</option>
+        <option>Toon</option>
+      </select>&nbsp;
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">&nbsp; </label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  hemiSelect.onchange = function () {
+    const index = this.selectedIndex
+    nv1.setMeshProperty(0, 'visible', index !== 0)
+    nv1.setMeshProperty(1, 'visible', index !== 1)
+    
+  }
+  meshSelect.onchange = function () {
+    nv1.setMeshShader(nv1.meshes[0].id, this.value)
+    nv1.setMeshShader(nv1.meshes[1].id, this.value)
+  }
+  aboutBtn.onclick = function () {
+        window.alert("Julich-Brain Atlas v3.1 2024-06-23 DOI: 10.25493/KNSN-XB4")
+  }
+  var volumeList1 = [
+    { url: "https://niivue.github.io/niivue-demo-images/BigBrain/ICBM2009asym.nii.gz"},
+    { url: "https://niivue.github.io/niivue-demo-images/BigBrain/bigbrain.nii.gz"},
+  ]
+  let defaults = {
+    show3Dcrosshair: true,
+    backColor: [1, 1, 1, 1]
+  }
+  var nv1 = new niivue.Niivue(defaults)
+  nv1.opts.showLegend = false
+  await nv1.attachToCanvas(gl1)
+  await nv1.loadMeshes([
+    { url: "https://niivue.github.io/niivue-demo-images/Juelich31/JulichBrainAtlas31_LH.mz3" },
+    { url: "https://niivue.github.io/niivue-demo-images/Juelich31/JulichBrainAtlas31_RH.mz3" }
+  ])
+  meshSelect.onchange()
+</script>
+

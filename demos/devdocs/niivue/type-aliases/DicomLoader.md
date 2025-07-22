@@ -4,7 +4,7 @@
 type DicomLoader = object;
 ```
 
-Defined in: [niivue/index.ts:348](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L348)
+Defined in: [niivue/index.ts:349](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L349)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [niivue/index.ts:348](https://github.com/niivue/niivue/blob/main/pac
 loader: (data: DicomLoaderInput) => Promise<object[]>;
 ```
 
-Defined in: [niivue/index.ts:349](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L349)
+Defined in: [niivue/index.ts:350](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L350)
 
 #### Parameters
 
@@ -34,4 +34,4 @@ Defined in: [niivue/index.ts:349](https://github.com/niivue/niivue/blob/main/pac
 toExt: string;
 ```
 
-Defined in: [niivue/index.ts:350](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L350)
+Defined in: [niivue/index.ts:351](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L351)

@@ -19,7 +19,6 @@
         id="atlasAlphaSlider"
       />
       &nbsp;
-      <button id="clipBtn">Clip</button>
       <button id="aboutBtn">About</button>
     </header>
     <main id="canvas-container">
@@ -35,14 +34,6 @@
   import * as niivue from "../dist/index.js"
   atlasAlphaSlider.oninput = function () {
     nv1.setOpacity(1, this.value / 255)
-  }
-  clipBtn.onclick = function() {
-    const depth = nv1.scene.clipPlaneDepthAziElev[0]
-    if (depth >= 1.0) {
-      nv1.setClipPlane([-0.15, 180, 30])
-    } else {
-      nv1.setClipPlane([2, 180, 30])
-    }
   }
   aboutBtn.onclick = function () {
         window.alert("Allen Human Reference Atlas PMID: 27418273")

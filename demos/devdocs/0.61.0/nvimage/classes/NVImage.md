@@ -240,7 +240,7 @@ Defined in: [nvimage/index.ts:2641](https://github.com/niivue/niivue/blob/main/p
 applyOptionsUpdate(options: ImageFromUrlOptions): void;
 ```
 
-Defined in: [nvimage/index.ts:3778](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3778)
+Defined in: [nvimage/index.ts:3786](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3786)
 
 Update options for image
 
@@ -383,7 +383,7 @@ Defined in: [nvimage/index.ts:608](https://github.com/niivue/niivue/blob/main/pa
 convertFrac2MM(frac: vec3, isForceSliceMM: boolean): vec4;
 ```
 
-Defined in: [nvimage/index.ts:3838](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3838)
+Defined in: [nvimage/index.ts:3846](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3846)
 
 #### Parameters
 
@@ -404,7 +404,7 @@ Defined in: [nvimage/index.ts:3838](https://github.com/niivue/niivue/blob/main/p
 convertFrac2Vox(frac: vec3): vec3;
 ```
 
-Defined in: [nvimage/index.ts:3828](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3828)
+Defined in: [nvimage/index.ts:3836](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3836)
 
 #### Parameters
 
@@ -427,7 +427,7 @@ convertMM2Frac(mm:
   | [number, number, number], isForceSliceMM: boolean): vec3;
 ```
 
-Defined in: [nvimage/index.ts:3849](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3849)
+Defined in: [nvimage/index.ts:3857](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3857)
 
 #### Parameters
 
@@ -448,7 +448,7 @@ Defined in: [nvimage/index.ts:3849](https://github.com/niivue/niivue/blob/main/p
 convertVox2Frac(vox: vec3): vec3;
 ```
 
-Defined in: [nvimage/index.ts:3816](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3816)
+Defined in: [nvimage/index.ts:3824](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3824)
 
 #### Parameters
 
@@ -504,7 +504,7 @@ get nifti specific metadata about the image
 getImageOptions(): ImageFromUrlOptions;
 ```
 
-Defined in: [nvimage/index.ts:3784](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3784)
+Defined in: [nvimage/index.ts:3792](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3792)
 
 #### Returns
 
@@ -541,6 +541,38 @@ Delegates to VolumeUtils.getValue.
 #### Returns
 
 `number`
+
+---
+
+### getValues()
+
+```ts
+getValues(
+   x: number,
+   y: number,
+   z: number,
+   frame4D: number,
+   isReadImaginary: boolean): number[];
+```
+
+Defined in: [nvimage/index.ts:3779](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3779)
+
+Returns voxel intensities at specific native coordinates.
+Delegates to VolumeUtils.getValue.
+
+#### Parameters
+
+| Parameter         | Type      | Default value |
+| ----------------- | --------- | ------------- |
+| `x`               | `number`  | `undefined`   |
+| `y`               | `number`  | `undefined`   |
+| `z`               | `number`  | `undefined`   |
+| `frame4D`         | `number`  | `0`           |
+| `isReadImaginary` | `boolean` | `false`       |
+
+#### Returns
+
+`number`[]
 
 ---
 
@@ -1203,7 +1235,7 @@ Defined in: [nvimage/index.ts:794](https://github.com/niivue/niivue/blob/main/pa
 toUint8Array(drawingBytes: Uint8Array): Uint8Array;
 ```
 
-Defined in: [nvimage/index.ts:3810](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3810)
+Defined in: [nvimage/index.ts:3818](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3818)
 
 Converts NVImage to NIfTI compliant byte array.
 Handles potential re-orientation of drawing data.

@@ -506,6 +506,11 @@ declare class NVImage {
      */
     getValue(x: number, y: number, z: number, frame4D?: number, isReadImaginary?: boolean): number;
     /**
+     * Returns voxel intensities at specific native coordinates.
+     * Delegates to VolumeUtils.getValue.
+     */
+    getValues(x: number, y: number, z: number, frame4D?: number, isReadImaginary?: boolean): number[];
+    /**
      * Update options for image
      */
     applyOptionsUpdate(options: ImageFromUrlOptions): void;
@@ -640,6 +645,7 @@ type NVConfigOptions = {
     fontColor: Float32List;
     selectionBoxColor: number[];
     clipPlaneColor: number[];
+    paqdUniforms: number[];
     clipThick: number;
     clipVolumeLow: number[];
     clipVolumeHigh: number[];
@@ -1609,6 +1615,7 @@ declare class Niivue {
     useCustomGradientTexture: boolean;
     renderGradientValues: boolean;
     drawTexture: WebGLTexture | null;
+    paqdTexture: WebGLTexture | null;
     drawUndoBitmaps: Uint8Array[];
     drawLut: LUT;
     drawOpacity: number;
@@ -1658,7 +1665,7 @@ declare class Niivue {
     orientShaderI: Shader | null;
     orientShaderF: Shader | null;
     orientShaderRGBU: Shader | null;
-    orientShaderSPARQ: Shader | null;
+    orientShaderPAQD: Shader | null;
     surfaceShader: Shader | null;
     blurShader: Shader | null;
     sobelBlurShader: Shader | null;
@@ -3141,6 +3148,12 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
      */
     refreshDrawing(isForceRedraw?: boolean, useClickToSegmentBitmap?: boolean): void;
+    /**
+     * close probabilistic atlas texture
+     * @example niivue.closePAQD();
+     * @internal
+     */
+    closePAQD(): void;
     /**
      * Creates a 2D 1-component uint8 texture on the GPU with given dimensions.
      * @internal
