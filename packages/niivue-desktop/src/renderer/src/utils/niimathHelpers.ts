@@ -65,7 +65,7 @@ export async function applyNiimathCommand(
   let outBlob: Blob
   // listen for uncaught errors from the WebAssembly worker
   const workerErrors: string[] = []
-  const handler = (ev: ErrorEvent) => {
+  const handler = (ev: ErrorEvent): void => {
     ev.preventDefault()
     const info = ev.error?.message ?? ev.message
     workerErrors.push(info)

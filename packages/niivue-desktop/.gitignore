@@ -1,5 +1,15 @@
+# dependencies
 node_modules
+
+# build outputs
 dist
 out
+
+# macOS
 .DS_Store
+
+# logs
 *.log*
+
+# downloaded niimath binaries
+native-binaries/

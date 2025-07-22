@@ -1,5 +1,6 @@
 {
   "name": "niivue-desktop",
+  "productName": "NiiVue Desktop",
   "version": "1.0.0",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
@@ -23,7 +24,14 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "niimath:latest-tag": "curl -s https://api.github.com/repos/rordenlab/niimath/releases/latest | grep '\"tag_name\"' | sed -E 's/.*\"([^\"]+)\".*/\\1/'",
+    "fetch-niimath:win":   "mkdir -p native-binaries/win32 && LATEST=$(npm run --silent niimath:latest-tag) && curl -sL https://github.com/rordenlab/niimath/releases/download/$LATEST/niimath_win.zip -o native-binaries/niimath-win.zip && unzip -j native-binaries/niimath-win.zip -d native-binaries/win32 && rm native-binaries/niimath-win.zip",
+    "fetch-niimath:mac":   "mkdir -p native-binaries/darwin && LATEST=$(npm run --silent niimath:latest-tag) && curl -sL https://github.com/rordenlab/niimath/releases/download/$LATEST/niimath_macos.zip -o native-binaries/niimath-mac.zip && unzip -j native-binaries/niimath-mac.zip -d native-binaries/darwin && rm native-binaries/niimath-mac.zip",
+    "fetch-niimath:linux": "mkdir -p native-binaries/linux && LATEST=$(npm run --silent niimath:latest-tag) && curl -sL https://github.com/rordenlab/niimath/releases/download/$LATEST/niimath_lnx.zip -o native-binaries/niimath-linux.zip && unzip -j native-binaries/niimath-linux.zip -d native-binaries/linux && rm native-binaries/niimath-linux.zip",
+    "build-release:win":   "npm run fetch-niimath:win   && npm run build:win",
+    "build-release:mac":   "npm run fetch-niimath:mac   && npm run build:mac",
+    "build-release:linux": "npm run fetch-niimath:linux && npm run build:linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
