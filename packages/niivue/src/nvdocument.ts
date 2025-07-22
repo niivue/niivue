@@ -102,6 +102,7 @@ export type NVConfigOptions = {
   fontColor: Float32List
   selectionBoxColor: number[]
   clipPlaneColor: number[]
+  paqdUniforms: number[]
   clipThick: number
   clipVolumeLow: number[]
   clipVolumeHigh: number[]
@@ -224,6 +225,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  paqdUniforms: [0.3, 0.5, 0.5, 1.0],
+  // paqdUniforms: [0.3, 0.9, 1.0, 0.5],
   clipThick: 2,
   clipVolumeLow: [0, 0, 0],
   clipVolumeHigh: [1.0, 1.0, 1.0],

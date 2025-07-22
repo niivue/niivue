@@ -9,18 +9,13 @@
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
     <header>
-      <label for="atlasAlphaSlider">Opacity</label>
-      <input
-        type="range"
-        min="0"
-        max="255"
-        value="255"
-        class="slider"
-        id="atlasAlphaSlider"
-      />
-      &nbsp;
-      <label for="shaderCheck">Outline</label>
-      <input type="checkbox" id="shaderCheck" unchecked />
+      <label for="paqdSelect">Voxel</label>
+      <select id="paqdSelect">
+        <option>Transparent</option>
+        <option selected>Rim</option>
+        <option>Opaque</option>
+        <option>Translucent</option>
+      </select>
       &nbsp;
       <button id="clipBtn">Clip</button>
       &nbsp;
@@ -36,64 +31,19 @@
     </footer>
 </html>
 <script type="module" async>
-
-const customSliceShader = 
-`#version 300 es
-precision highp int;
-precision highp float;
-uniform highp sampler3D volume, overlay;
-uniform float opacity;
-uniform float overlayAlphaShader;
-uniform float overlays;
-in vec3 texPos;
-out vec4 color;
-float easeAlpha(float alpha) {
-  // t are alpha transitions
-  // <t0 -> y0
-  // t0..t1  -> mix between y0..y1
-  // t1..t2 -> mix between y1..y2
-  // >t2 -> y2
-  const float t0 = 0.3;
-  const float t1 = 0.4;
-  const float t2 = 0.9;
-  const float y0 = 0.0;
-  const float y1 = 1.0;
-  const float y2 = 0.25;
-
-  if (alpha <= t0) {
-    return y0;
-  } else if (alpha <= t1) {
-    return mix(y0, y1, (alpha - t0) / (t1 - t0)); // LERP 0.0 → 1.0
-  } else if (alpha <= t2) {
-    return mix(y1, y2, (alpha - t1) / (t2 - t1)); // LERP 1.0 → 0.2
-  } else {
-    return y2;
-  }
-}
-void main() {
-  vec4 background = texture(volume, texPos);
-  color = vec4(background.rgb, opacity);
-  if (overlays > 0.0) {
-    vec4 ocolor = texture(overlay, texPos);
-    ocolor.a = easeAlpha(ocolor.a);
-    ocolor.a *= overlayAlphaShader;
-    float a = color.a + ocolor.a * (1.0 - color.a); // premultiplied alpha
-    if (a == 0.0) return;
-    color.rgb = mix(color.rgb, ocolor.rgb, ocolor.a / a);
-    color.a = a;
-  }
-}
-`
   import * as niivue from "../dist/index.js"
-  atlasAlphaSlider.oninput = function () {
-    nv1.setOpacity(1, this.value / 255)
-  }
-  shaderCheck.onchange = function () {
-    if (this.checked) {
-      nv1.setCustomSliceShader(customSliceShader)
-    } else {
-      nv1.setCustomSliceShader('')
-    }
+  paqdSelect.onchange = function () {
+    const index = this.selectedIndex
+    // 2 default opaque
+    let paqdUniforms =[0.3, 0.6, 0.5, 1.0]
+    if (index % 4 === 0) //transparent
+      paqdUniforms = [0.5, 0.9, 0.0, 0.0]
+    if (index % 4 === 1) //rim
+      paqdUniforms = [0.5, 0.9, 1.0, 0.2]
+    if (index % 4 === 3) //translucent
+      paqdUniforms = [0.3, 0.5, 0.25, 0.4]
+    nv1.opts.paqdUniforms = paqdUniforms
+    nv1.updateGLVolume()
   }
   aboutBtn.onclick = function () {
      window.alert("Najdenovska probabilistic atlas of thalamic nuclei PMID: 30480664")
@@ -108,7 +58,7 @@ void main() {
   }
   var volumeList1 = [
     { url: "https://niivue.github.io/niivue-demo-images/Thalamus/ICBM2009asym.nii.gz" },
-    { url: "https://niivue.github.io/niivue-demo-images/Thalamus/Thalamus_Nuclei-HCP-4DSPAMs_sparq.nii.gz" },
+    { url: "https://niivue.github.io/niivue-demo-images/Thalamus/Thalamus_Nuclei-HCP-4DSPAMs_paqd.nii.gz" },
   ]
   const onLocationChange = (data) => {
     statusBar.innerHTML = data.string
@@ -132,6 +82,6 @@ void main() {
   nv1.volumes[1].setColormapLabel(cmap)
   nv1.opts.yoke3Dto2DZoom = true
   nv1.opts.dragMode = nv1.dragModes.pan
-  atlasAlphaSlider.oninput()
+  paqdSelect.onchange()
 </script>
 
