@@ -35,6 +35,10 @@ export interface UIKButtonStyle {
   textHeight?: number
   /** Vertical text offset for fine-tuning text position */
   textVerticalOffset?: number
+  /** Text outline color for better readability */
+  textOutlineColor?: Color
+  /** Text outline thickness */
+  textOutlineThickness?: number
 }
 
 /**
@@ -69,48 +73,56 @@ const DEFAULT_STYLES: Record<UIKButtonState, UIKButtonStyle> = {
     borderColor: [0.5, 0.5, 0.5, 1.0],
     textColor: [1.0, 1.0, 1.0, 1.0],
     borderWidth: 1,
-    borderRadius: 2,
+    borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
     charWidthMultiplier: 7,
     textHeight: 14,
-    textVerticalOffset: 4
+    textVerticalOffset: 4,
+    textOutlineColor: [0.0, 0.0, 0.0, 1.0],
+    textOutlineThickness: 3
   },
   [UIKButtonState.HOVER]: {
     backgroundColor: [0.35, 0.35, 0.35, 1.0],
     borderColor: [0.7, 0.7, 0.7, 1.0],
     textColor: [1.0, 1.0, 1.0, 1.0],
     borderWidth: 1,
-    borderRadius: 2,
+    borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
     charWidthMultiplier: 7,
     textHeight: 14,
-    textVerticalOffset: 4
+    textVerticalOffset: 4,
+    textOutlineColor: [0.0, 0.0, 0.0, 1.0],
+    textOutlineThickness: 3
   },
   [UIKButtonState.ACTIVE]: {
     backgroundColor: [0.15, 0.15, 0.15, 1.0],
     borderColor: [0.8, 0.8, 0.8, 1.0],
     textColor: [1.0, 1.0, 1.0, 1.0],
     borderWidth: 2,
-    borderRadius: 2,
+    borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
     charWidthMultiplier: 7,
     textHeight: 14,
-    textVerticalOffset: 4
+    textVerticalOffset: 4,
+    textOutlineColor: [0.0, 0.0, 0.0, 1.0],
+    textOutlineThickness: 4
   },
   [UIKButtonState.DISABLED]: {
     backgroundColor: [0.1, 0.1, 0.1, 0.5],
     borderColor: [0.2, 0.2, 0.2, 0.5],
     textColor: [0.5, 0.5, 0.5, 0.5],
     borderWidth: 1,
-    borderRadius: 2,
+    borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
     charWidthMultiplier: 7,
     textHeight: 14,
-    textVerticalOffset: 4
+    textVerticalOffset: 4,
+    textOutlineColor: [0.0, 0.0, 0.0, 0.6],
+    textOutlineThickness: 2
   }
 }
 
@@ -199,122 +211,64 @@ export class UIKButton {
     const isPressed = this.state === UIKButtonState.ACTIVE
     const baseColor = style.backgroundColor
     
-    // Create gradient effect by drawing horizontal lines with varying colors
-    for (let i = 0; i < height; i++) {
-      const progress = i / height
-      
-      let gradientColor: Color
-      if (isPressed) {
-        // Inverted gradient when pressed
-        gradientColor = [
-          Math.max(baseColor[0] - progress * 0.1, 0),
-          Math.max(baseColor[1] - progress * 0.1, 0),
-          Math.max(baseColor[2] - progress * 0.1, 0),
-          baseColor[3]
-        ]
-      } else {
-        // Normal gradient (lighter at top, darker at bottom)
-        gradientColor = [
-          Math.min(baseColor[0] + (1 - progress) * 0.15, 1),
-          Math.min(baseColor[1] + (1 - progress) * 0.15, 1),
-          Math.min(baseColor[2] + (1 - progress) * 0.15, 1),
-          baseColor[3]
-        ]
-      }
-      
-      this.renderer.drawLine({
-        startEnd: [x, y + i, x + width, y + i],
-        thickness: 1,
-        color: gradientColor
-      })
+    // Create gradient colors for top and bottom
+    let topColor: Color
+    let bottomColor: Color
+    
+    if (isPressed) {
+      // Inverted gradient when pressed (darker at top)
+      topColor = [
+        Math.max(baseColor[0] - 0.1, 0),
+        Math.max(baseColor[1] - 0.1, 0),
+        Math.max(baseColor[2] - 0.1, 0),
+        baseColor[3]
+      ]
+      bottomColor = baseColor
+    } else {
+      // Normal gradient (lighter at top, darker at bottom)
+      topColor = [
+        Math.min(baseColor[0] + 0.15, 1),
+        Math.min(baseColor[1] + 0.15, 1),
+        Math.min(baseColor[2] + 0.15, 1),
+        baseColor[3]
+      ]
+      bottomColor = [
+        Math.max(baseColor[0] - 0.05, 0),
+        Math.max(baseColor[1] - 0.05, 0),
+        Math.max(baseColor[2] - 0.05, 0),
+        baseColor[3]
+      ]
     }
+    
+    // Use rounded rectangle with gradient
+    this.renderer.drawRoundedRect({
+      bounds: [x, y, width, height],
+      fillColor: topColor,
+      bottomColor: bottomColor,
+      outlineColor: [0, 0, 0, 0], // Transparent outline for background
+      cornerRadius: style.borderRadius,
+      thickness: 0
+    })
   }
 
   /**
-   * Draw stylish border with rounded corners effect
+   * Draw stylish border using rounded rectangles
    */
   private drawStylishBorder(bounds: Vec4, style: UIKButtonStyle): void {
     const [x, y, width, height] = bounds
     const borderColor = style.borderColor
     const borderWidth = style.borderWidth
     
-    // Draw main border lines
-    for (let i = 0; i < borderWidth; i++) {
-      // Top border
-      this.renderer.drawLine({
-        startEnd: [x + i, y + i, x + width - i, y + i],
-        thickness: 1,
-        color: borderColor
-      })
-      
-      // Right border
-      this.renderer.drawLine({
-        startEnd: [x + width - i, y + i, x + width - i, y + height - i],
-        thickness: 1,
-        color: borderColor
-      })
-      
-      // Bottom border
-      this.renderer.drawLine({
-        startEnd: [x + width - i, y + height - i, x + i, y + height - i],
-        thickness: 1,
-        color: borderColor
-      })
-      
-      // Left border
-      this.renderer.drawLine({
-        startEnd: [x + i, y + height - i, x + i, y + i],
-        thickness: 1,
-        color: borderColor
-      })
-    }
-    
-    // Add corner rounding effect
-    this.drawRoundedCorners(x, y, width, height, style.borderRadius, borderColor)
+    // Use rounded rectangle for border
+    this.renderer.drawRoundedRect({
+      bounds: [x, y, width, height],
+      fillColor: [0, 0, 0, 0], // Transparent fill for border-only
+      outlineColor: borderColor,
+      cornerRadius: style.borderRadius,
+      thickness: borderWidth
+    })
   }
 
-  /**
-   * Draw rounded corners for modern button appearance
-   */
-  private drawRoundedCorners(x: number, y: number, width: number, height: number, radius: number, color: Color): void {
-    if (radius <= 0) return
-    
-    const cornerRadius = Math.min(radius, Math.min(width, height) / 4)
-    
-    // Enhanced corner rounding with smoother transitions
-    for (let i = 0; i < cornerRadius; i++) {
-      const alpha = 1 - (i / cornerRadius) * 0.5 // Smoother fade
-      const cornerColor: Color = [color[0], color[1], color[2], color[3] * alpha]
-      
-      // Top-left corner - smoother curve
-      this.renderer.drawLine({
-        startEnd: [x + i, y + cornerRadius - i, x + i + 2, y + cornerRadius - i],
-        thickness: 1,
-        color: cornerColor
-      })
-      
-      // Top-right corner
-      this.renderer.drawLine({
-        startEnd: [x + width - i - 2, y + cornerRadius - i, x + width - i, y + cornerRadius - i],
-        thickness: 1,
-        color: cornerColor
-      })
-      
-      // Bottom-left corner
-      this.renderer.drawLine({
-        startEnd: [x + i, y + height - cornerRadius + i, x + i + 2, y + height - cornerRadius + i],
-        thickness: 1,
-        color: cornerColor
-      })
-      
-      // Bottom-right corner
-      this.renderer.drawLine({
-        startEnd: [x + width - i - 2, y + height - cornerRadius + i, x + width - i, y + height - cornerRadius + i],
-        thickness: 1,
-        color: cornerColor
-      })
-    }
-  }
 
   /**
    * Draw modern button effects (highlights, inner shadows)
@@ -327,31 +281,22 @@ export class UIKButton {
     if (!isPressed) {
       // Top highlight for 3D effect
       const highlightColor: Color = [1, 1, 1, 0.3]
-      this.renderer.drawLine({
-        startEnd: [x + 2, y + 1, x + width - 2, y + 1],
-        thickness: 1,
-        color: highlightColor
-      })
-      
-      // Inner highlight
-      this.renderer.drawLine({
-        startEnd: [x + 3, y + 2, x + width - 3, y + 2],
-        thickness: 1,
-        color: [highlightColor[0], highlightColor[1], highlightColor[2], highlightColor[3] * 0.5]
+      this.renderer.drawRoundedRect({
+        bounds: [x + 1, y + 1, width - 2, 2],
+        fillColor: highlightColor,
+        outlineColor: [0, 0, 0, 0],
+        cornerRadius: Math.max(1, style.borderRadius - 1),
+        thickness: 0
       })
     } else {
       // Inner shadow when pressed
       const shadowColor: Color = [0, 0, 0, 0.4]
-      this.renderer.drawLine({
-        startEnd: [x + 1, y + 1, x + width - 1, y + 1],
-        thickness: 1,
-        color: shadowColor
-      })
-      
-      this.renderer.drawLine({
-        startEnd: [x + 1, y + 1, x + 1, y + height - 1],
-        thickness: 1,
-        color: shadowColor
+      this.renderer.drawRoundedRect({
+        bounds: [x + 1, y + 1, width - 2, 2],
+        fillColor: shadowColor,
+        outlineColor: [0, 0, 0, 0],
+        cornerRadius: Math.max(1, style.borderRadius - 1),
+        thickness: 0
       })
     }
     
@@ -366,45 +311,17 @@ export class UIKButton {
       
       // Outer glow
       for (let i = 1; i <= 2; i++) {
-        this.drawBorder([x - i, y - i, width + 2*i, height + 2*i], glowColor, 1)
+        this.renderer.drawRoundedRect({
+          bounds: [x - i, y - i, width + 2*i, height + 2*i],
+          fillColor: [0, 0, 0, 0],
+          outlineColor: glowColor,
+          cornerRadius: style.borderRadius + i,
+          thickness: 1
+        })
       }
     }
   }
 
-  /**
-   * Draw border using lines (helper method for effects)
-   */
-  private drawBorder(bounds: Vec4, borderColor: Color, borderWidth: number): void {
-    const [x, y, width, height] = bounds
-    
-    // Top border
-    this.renderer.drawLine({
-      startEnd: [x, y, x + width, y],
-      thickness: borderWidth,
-      color: borderColor
-    })
-    
-    // Right border
-    this.renderer.drawLine({
-      startEnd: [x + width, y, x + width, y + height],
-      thickness: borderWidth,
-      color: borderColor
-    })
-    
-    // Bottom border
-    this.renderer.drawLine({
-      startEnd: [x + width, y + height, x, y + height],
-      thickness: borderWidth,
-      color: borderColor
-    })
-    
-    // Left border
-    this.renderer.drawLine({
-      startEnd: [x, y + height, x, y],
-      thickness: borderWidth,
-      color: borderColor
-    })
-  }
 
   /**
    * Handle mouse events for interaction
@@ -519,7 +436,9 @@ export class UIKButton {
       textScale: userStyle.textScale ?? baseStyle.textScale,
       charWidthMultiplier: userStyle.charWidthMultiplier ?? baseStyle.charWidthMultiplier,
       textHeight: userStyle.textHeight ?? baseStyle.textHeight,
-      textVerticalOffset: userStyle.textVerticalOffset ?? baseStyle.textVerticalOffset
+      textVerticalOffset: userStyle.textVerticalOffset ?? baseStyle.textVerticalOffset,
+      textOutlineColor: userStyle.textOutlineColor || baseStyle.textOutlineColor,
+      textOutlineThickness: userStyle.textOutlineThickness ?? baseStyle.textOutlineThickness
     }
   }
 
@@ -546,7 +465,9 @@ export class UIKButton {
       str: this.config.text,
       color: style.textColor,
       scale: style.textScale ?? 0.025,
-      rotation: 0
+      rotation: 0,
+      outlineColor: style.textOutlineColor ?? [0.0, 0.0, 0.0, 1.0],
+      outlineThickness: style.textOutlineThickness ?? 3
     })
   }
 
