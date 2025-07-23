@@ -40188,6 +40188,9 @@ var Niivue = class {
    * @internal
    */
   closePAQD() {
+    if (!this.gl || !this.paqdTexture) {
+      return;
+    }
     this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true);
   }
   /**
