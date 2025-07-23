@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Probabilistic Cerebellar Atlas</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      <label for="statAlphaSlider">Opacity</label>
+      <input
+        type="range"
+        min="0"
+        max="255"
+        value="255"
+        class="slider"
+        id="statAlphaSlider"
+      />
+      &nbsp;
+      <select id="paqdSelect">
+        <option>Opaque</option>
+        <option selected>Translucent</option>
+        <option>Rim</option>
+        <option>Opaque Front</option>
+        <option>Translucent Front</option>
+        <option >Rim Front</option>
+      </select>
+      &nbsp;
+      <button id="clipBtn">Clip</button>
+      &nbsp;
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">&nbsp; </label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  statAlphaSlider.oninput = function () {
+    nv1.setOpacity(2, this.value / 255)
+  }
+  paqdSelect.onchange = function () {
+    const index = this.selectedIndex
+    let paqdUniforms =[0.01, 0.5, 0.5, 1.0]
+    if (index % 3 === 1) //translucent
+      paqdUniforms = [0.01, 0.5, 0.25, 0.4]
+    if (index % 3 === 2) //rim
+      paqdUniforms = [0.4, 0.6, 1.0, 0.2]
+    if (index > 2)
+      paqdUniforms[3] = -paqdUniforms[3]
+    nv1.opts.paqdUniforms = paqdUniforms
+    nv1.updateGLVolume()
+  }
+  aboutBtn.onclick = function () {
+     window.alert("Probabilistic atlas of the cerebellum PMID: 19457380 DOI: 10.1016/j.neuroimage.2009.01.045")
+  }
+  clipBtn.onclick = function() {
+    const depth = nv1.scene.clipPlaneDepthAziElev[0]
+    if (depth >= 1.0) {
+      nv1.setClipPlane([0.0, 180, 30])
+    } else {
+      nv1.setClipPlane([2, 180, 30])
+    }
+  }
+  var volumeList1 = [
+    { url: "https://niivue.github.io/niivue-demo-images/Cerebellum/MNI152NLin6AsymC.nii.gz" },
+    { url: "https://niivue.github.io/niivue-demo-images/Cerebellum/atl-Anatom.nii.gz" },
+    {
+      url: "../images/spmMotor.nii.gz",
+      colormap: "warm",
+      cal_min: 4,
+      cal_max: 8,
+    },
+  ]
+  const onLocationChange = (data) => {
+    statusBar.innerHTML = data.string
+  }
+  let defaults = {
+    show3Dcrosshair: true,
+    onLocationChange: onLocationChange,
+    backColor: [0.1, 0.1, 0.2, 1],
+  }
+  var nv1 = new niivue.Niivue(defaults)
+  nv1.opts.multiplanarForceRender = true
+  await nv1.attachToCanvas(gl1)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  await nv1.loadVolumes(volumeList1)
+  nv1.setVolumeRenderIllumination(0.4)
+  async function fetchJSON(fnm) {
+    const response = await fetch(fnm)
+    const js = await response.json()
+    return js
+  }
+  let cmap = await fetchJSON("https://niivue.github.io/niivue-demo-images/Cerebellum/atl-Anatom.json")
+  nv1.volumes[1].setColormapLabel(cmap)
+  nv1.opts.yoke3Dto2DZoom = true
+  nv1.opts.dragMode = nv1.dragModes.pan
+  nv1.opts.isColorbar = true
+  nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
+  nv1.volumes[1].colorbarVisible = false //hide colorbar for atlas
+  paqdSelect.onchange()
+</script>
