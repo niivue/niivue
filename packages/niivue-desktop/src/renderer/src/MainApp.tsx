@@ -45,7 +45,7 @@ function MainApp(): JSX.Element {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
-  const modeMap = useRef(new Map<string, 'replace'|'overlay'>()).current
+  const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
 
   // Create the first document on mount
@@ -453,20 +453,37 @@ function MainApp(): JSX.Element {
   }
 
   return (
-    <>
-      {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
-      <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />
-      <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
-        <Sidebar
-          onRemoveMesh={handleRemoveMesh}
-          onRemoveVolume={handleRemoveVolume}
-          onMoveVolumeUp={handleMoveVolumeUp}
-          onMoveVolumeDown={handleMoveVolumeDown}
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-        {selected && <Viewer doc={selected} collapsed={sidebarCollapsed} />}
+    <div className="h-screen w-screen flex flex-col overflow-hidden">
+      {/* 1) Tabs bar */}
+      <div className="flex-none">
+        {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
       </div>
+
+      {/* 2) Toolbar full width */}
+      <div className="flex-none">
+        {selected && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
+      </div>
+
+      {/* 3) Main content: sidebar & viewer */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar (left) */}
+        <div className="flex-shrink-0 overflow-auto">
+          <Sidebar
+            onRemoveMesh={handleRemoveMesh}
+            onRemoveVolume={handleRemoveVolume}
+            onMoveVolumeUp={handleMoveVolumeUp}
+            onMoveVolumeDown={handleMoveVolumeDown}
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        </div>
+        {/* Viewer (right) */}
+        <div className="flex-1 overflow-auto">
+          {selected && <Viewer doc={selected} collapsed={sidebarCollapsed} />}
+        </div>
+      </div>
+
+      {/* Dialogs (overlay) */}
       <PreferencesDialog />
       <LabelManagerDialog
         open={labelDialogOpen}
@@ -474,7 +491,7 @@ function MainApp(): JSX.Element {
         editMode={labelEditMode}
         setEditMode={setLabelEditMode}
       />
-    </>
+    </div>
   )
 }
 
