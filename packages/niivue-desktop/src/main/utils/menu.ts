@@ -1,4 +1,4 @@
-import { app, Menu, dialog, systemPreferences } from 'electron'
+import { app, Menu, dialog, nativeImage, systemPreferences } from 'electron'
 import { sliceTypeMap } from '../../common/sliceTypes.js'
 // import { layouts } from '../../common/layouts.js'
 // import { orientationLabelMap } from '../../common/orientationLabels.js'
@@ -7,6 +7,8 @@ import { DEFAULT_OPTIONS } from '@niivue/niivue'
 import { store } from './appStore.js'
 import { getMainWindow } from '../index.js'
 import fs from 'fs' // ✅ Works in ES Module mode
+import { runNiimath } from './runNiimath.js'
+import { join } from 'path'
 
 export const viewState = {
   layout: /** default */ 'Auto',
@@ -15,6 +17,13 @@ export const viewState = {
   crosshair: true,
   crosshair3D: DEFAULT_OPTIONS.show3Dcrosshair
   // …etc for any other checkbox/radios you sync…
+}
+
+// point at your bundled icon in Resources (macOS) or resources/ (dev)
+const getAppIcon = (): Electron.NativeImage => {
+  const base = app.isPackaged ? process.resourcesPath : join(__dirname, '..', '..', 'resources')
+  // we ship a png at resources/icons/app_icon.png
+  return nativeImage.createFromPath(join(base, 'icons', 'app_icon.png'))
 }
 
 const isMac = process.platform === 'darwin'
@@ -139,6 +148,34 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             label: app.name,
             submenu: [
               { role: 'about' },
+              {
+                label: 'Niimath Version',
+                click: async (): Promise<void> => {
+                  const icon = getAppIcon()
+                  try {
+                    const { stdout, stderr, code } = await runNiimath(['--version'])
+                    if (code === 0) {
+                      const firstLine = stdout.trim().split('\n')[0]
+                      dialog.showMessageBox({
+                        type: 'info',
+                        title: 'Niimath Version',
+                        message: firstLine,
+                        icon
+                      })
+                    } else {
+                      dialog.showErrorBox(
+                        'Niimath Error',
+                        `Exited with code ${code}:\n${stderr.trim()}`
+                      )
+                    }
+                  } catch (err) {
+                    dialog.showErrorBox(
+                      'Niimath Launch Failed',
+                      err instanceof Error ? err.message : String(err)
+                    )
+                  }
+                }
+              },
               {
                 label: 'Preferences...',
                 accelerator: 'CmdOrCtrl+,',
@@ -561,7 +598,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       submenu: [
         ...createSliceTypeSubmenu(win),
         // separator
-        { type: 'separator' },
+        { type: 'separator' }
         // TODO(cdrake): re-enable menu
         // {
         //   label: 'Layout',

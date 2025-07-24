@@ -43,9 +43,10 @@ function MainApp(): JSX.Element {
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
-  const nv = selected?.nvRef.current
-  const niimath = niimathRef.current
+  const modeMap = useRef(new Map<string, 'replace'|'overlay'>()).current
+  const indexMap = useRef(new Map<string, number>()).current
 
   // Create the first document on mount
   useEffect((): void => {
@@ -89,7 +90,16 @@ function MainApp(): JSX.Element {
     }
     // Restore mosaic string
     nv.setSliceMosaicString(selected.opts.sliceMosaicString || '')
+
+    nv.updateGLVolume()
+
     nv.drawScene()
+    if (lastSyncedDoc.current !== selected.id) {
+      // seed your React state with the current volumes & meshes
+      selected.setVolumes([...nv.volumes])
+      selected.setMeshes([...nv.meshes])
+      lastSyncedDoc.current = selected.id
+    }
 
     registerAllIpcHandlers(
       nv,
@@ -97,6 +107,8 @@ function MainApp(): JSX.Element {
       selected.setMeshes,
       setLabelDialogOpen,
       setLabelEditMode,
+      modeMap,
+      indexMap,
       (newTitle: string) => {
         updateDocument(selected.id, { title: newTitle })
       }
@@ -443,7 +455,7 @@ function MainApp(): JSX.Element {
   return (
     <>
       {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
-      <NiimathToolbar nv={nv!} niimath={niimath} />
+      <NiimathToolbar modeMap={modeMap}  indexMap={indexMap}/>
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar
           onRemoveMesh={handleRemoveMesh}

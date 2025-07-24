@@ -1,33 +1,58 @@
 // src/components/NiimathToolbar.tsx
 import { useState } from 'react'
-import { Niivue, NVImage } from '@niivue/niivue'
-import { Niimath } from '@niivue/niimath'
-import { applyNiimathCommand } from '@renderer/utils/niimathHelpers.js'
+import { NVImage } from '@niivue/niivue'
+import { v4 as uuidv4 } from 'uuid'
 import { useSelectedInstance } from '../AppContext.js'
 
-export function NiimathToolbar({ nv, niimath }: { nv: Niivue; niimath: Niimath }): JSX.Element {
+interface NiimathToolbarProps {
+  modeMap: Map<string, 'replace' | 'overlay'>
+  indexMap: Map<string, number>
+}
+
+export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.Element {
   const selected = useSelectedInstance()
   const currentVolume: NVImage | null = selected?.selectedImage ?? selected?.volumes[0] ?? null
 
-  const [cmd, setCmd] = useState<string>('')
+  const [cmd, setCmd] = useState<string>('-dehaze 5 -dog 2 3.2')
+  const [mode, setMode] = useState<'replace' | 'overlay'>('overlay')
   const [busy, setBusy] = useState<boolean>(false)
-  const [error, setError] = useState<string | undefined>()
+  const [error, setError] = useState<string>()
 
   const handleApply = async (): Promise<void> => {
     if (!currentVolume) {
       setError('No volume selected')
       return
     }
+    if (!cmd.trim()) {
+      setError('Please enter a command')
+      return
+    }
+
     setError(undefined)
     setBusy(true)
+
+    const requestId = uuidv4()
+
     try {
-      await applyNiimathCommand(nv, niimath, cmd, currentVolume, { asOverlay: false })
-    } catch (e: any) {
-      console.error('Full Niimath error:', e) // <— inspect this in DevTools
-      // ensure we turn it into a string
-      const msg = e instanceof Error ? e.message : JSON.stringify(e, Object.getOwnPropertyNames(e))
-      setError(msg)
-    } finally {
+      // 1) Extract raw bytes and convert to Base64
+      const uint8 = currentVolume.toUint8Array()
+      const inputB64 = Buffer.from(uint8).toString('base64')
+
+      // 2) Build CLI args: flags + output path
+      const args = cmd.trim().split(/\s+/)
+
+      // 3) Track insertion mode & index
+      modeMap.set(requestId, mode)
+      indexMap.set(requestId, selected?.volumes.indexOf(currentVolume) ?? 0)
+
+      // 4) Send to main: requestId, args, and input Base64
+      window.electron.ipcRenderer.invoke('niimath:start', requestId, args, {
+        base64: inputB64,
+        name: currentVolume.name
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(`Failed to encode volume: ${msg}`)
       setBusy(false)
     }
   }
@@ -37,13 +62,25 @@ export function NiimathToolbar({ nv, niimath }: { nv: Niivue; niimath: Niimath }
       <input
         type="text"
         className="flex-1 px-2 py-1 border rounded"
-        placeholder="e.g. -uthr 180"
         value={cmd}
         onChange={(e) => setCmd(e.target.value)}
         disabled={busy || !currentVolume}
       />
+
+      <select
+        className="px-2 py-1 border rounded"
+        value={mode}
+        onChange={(e) => setMode(e.target.value as 'replace' | 'overlay')}
+        disabled={busy || !currentVolume}
+      >
+        <option value="replace">Replace</option>
+        <option value="overlay">Overlay</option>
+      </select>
+
       <button
-        className={`px-3 py-1 rounded ${busy || !currentVolume ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-500'} text-white`}
+        className={`px-3 py-1 rounded ${
+          busy || !cmd.trim() || !currentVolume ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-500'
+        } text-white`}
         onClick={handleApply}
         disabled={busy || !cmd.trim() || !currentVolume}
       >

@@ -8,6 +8,7 @@ import { registerLoadVolumeHandler } from './loadVolume.js'
 import { LoadDocumentHandlerProps, registerLoadDocumentHandler } from './loadDocument.js'
 import { registerResetPreferencesHandler } from './menuHandlers.js'
 import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
+import { registerRunNiimathHandler } from './runNiimathCommand.js'
 
 const electron = window.electron
 
@@ -17,6 +18,8 @@ export const registerAllIpcHandlers = (
   setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>,
   setLabelDialogOpen: (v: boolean) => void,
   setLabelEditMode: (v: boolean) => void,
+  modeMap: Map<string, 'replace' | 'overlay'>,
+  indexMap: Map<string, number>,
   onDocumentLoaded: (title: string) => void
 ): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
@@ -48,4 +51,5 @@ export const registerAllIpcHandlers = (
   } as LoadDocumentHandlerProps)
   registerResetPreferencesHandler()
   registerLoadDicomFolderHandler({ nv, setVolumes })
+  registerRunNiimathHandler(nv, setVolumes, modeMap, indexMap)
 }

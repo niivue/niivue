@@ -2,6 +2,7 @@ import { loadFromFileHandler } from './loadFromFile.js'
 import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
 import { saveCompressedNVDHandler } from './saveFile.js'
+import { runNiimath, startNiimathJob } from './runNiimath.js'
 import { app, dialog, ipcMain, nativeImage } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
@@ -143,4 +144,42 @@ export const registerIpcHandlers = (): void => {
     const buffer = fs.readFileSync(path)
     return buffer.toString('base64')
   })
+
+  // run niimath CLI
+  ipcMain.handle('niimath:run', async (_evt, args: string[]) => {
+    try {
+      const result = await runNiimath(args)
+      return { success: true, ...result }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  /**
+   * Begin a Niimath job when renderer sends 'niimath:start'.
+   * Expects (requestId: string, args: string[]).
+   */
+  ipcMain.handle(
+    'niimath:start',
+    async (
+      event,
+      requestId: string,
+      cmdArgs: string[],
+      input: { base64: string; name: string }
+    ) => {
+      try {
+        // 1) actually run the job and wait for it to finish
+        const { base64 } = await startNiimathJob(requestId, cmdArgs, input)
+
+        // 2) notify renderer “complete” with the Base64 payload
+        event.sender.send('niimath:complete', requestId, base64)
+
+        return { success: true }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        event.sender.send('niimath:error', requestId, msg)
+        return { success: false, error: msg }
+      }
+    }
+  )
 }
