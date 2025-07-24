@@ -337,7 +337,7 @@
                 // Default colors (kept for backwards compatibility)
                 backgroundColor: [0.18, 0.22, 0.28, 0.9],
                 borderColor: [0.29, 0.33, 0.41, 1.0],
-                titleColor: [0.0, 0.0, 0.0, 1.0], // Black color for better contrast
+                titleColor: [0.408, 0.827, 0.569, 1], 
                 cornerRadius: 8,
                 borderThickness: 1,
                 gap: 15, // Gap between sections
@@ -345,22 +345,22 @@
                 // Individual section heights and attractive colors
                 medicalControls: { 
                     height: 240,
-                    backgroundColor: [0.15, 0.25, 0.35, 0.9], // Deep blue - medical precision
+                    backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.25, 0.35, 0.45, 1.0]
                 },
                 viewControls: { 
                     height: 160,
-                    backgroundColor: [0.25, 0.15, 0.35, 0.9], // Purple - view settings
+                    backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.35, 0.25, 0.45, 1.0]
                 },
                 advancedControls: { 
                     height: 240,
-                    backgroundColor: [0.15, 0.35, 0.25, 0.9], // Teal - advanced features
+                    backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.25, 0.45, 0.35, 1.0]
                 },
                 actions: { 
                     height: 160,
-                    backgroundColor: [0.35, 0.25, 0.15, 0.9], // Warm brown - action controls
+                    backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.45, 0.35, 0.25, 1.0]
                 }
             },
@@ -1139,11 +1139,11 @@
                                 if (currentBackground === 'dark') {
                                 nv.opts.backColor = [1, 1, 1, 1]
                                     currentBackground = 'light'
-                                    uikitComponents.backgroundButton.setText('☀️ Light')
+                                    uikitComponents.backgroundButton.setText('Light')
                                 } else {
                                 nv.opts.backColor = [0.1, 0.1, 0.1, 1]
                                     currentBackground = 'dark'
-                                    uikitComponents.backgroundButton.setText('🌙 Dark')
+                                    uikitComponents.backgroundButton.setText('Dark')
                                 }
                                 nv.drawScene()
                                 log(`Background changed to ${currentBackground}`, 'event')
@@ -1157,7 +1157,11 @@
                         textColor: buttonConfig.textColor,
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
-                        padding: buttonConfig.padding
+                        padding: buttonConfig.padding,
+                        textScale: buttonConfig.textScale,
+                        charWidthMultiplier: buttonConfig.charWidthMultiplier,
+                        textHeight: buttonConfig.textHeight,
+                        textVerticalOffset: buttonConfig.textVerticalOffset
                     }
                 })
                     
@@ -1171,11 +1175,11 @@
                         const logPanel = document.getElementById('log-panel')
                         if (logPanel.style.display === 'none') {
                             logPanel.style.display = 'block'
-                            uikitComponents.logsButton.setText('📋 Hide')
+                            uikitComponents.logsButton.setText('Hide')
                             log('Log panel opened', 'info')
                         } else {
                             logPanel.style.display = 'none'
-                            uikitComponents.logsButton.setText('📋 Logs')
+                            uikitComponents.logsButton.setText('Logs')
                             log('Log panel closed', 'info')
                         }
                         },
@@ -1187,7 +1191,11 @@
                         textColor: buttonConfig.textColor,
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
-                        padding: buttonConfig.padding
+                        padding: buttonConfig.padding,
+                        textScale: buttonConfig.textScale,
+                        charWidthMultiplier: buttonConfig.charWidthMultiplier,
+                        textHeight: buttonConfig.textHeight,
+                        textVerticalOffset: buttonConfig.textVerticalOffset
                     }
                 })
                 
@@ -1259,7 +1267,11 @@
                         textColor: buttonConfig.textColor,
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
-                        padding: buttonConfig.padding
+                        padding: buttonConfig.padding,
+                        textScale: buttonConfig.textScale,
+                        charWidthMultiplier: buttonConfig.charWidthMultiplier,
+                        textHeight: buttonConfig.textHeight,
+                        textVerticalOffset: buttonConfig.textVerticalOffset
                     }
                 })
                     

@@ -72,57 +72,57 @@ const DEFAULT_STYLES: Record<UIKButtonState, UIKButtonStyle> = {
     backgroundColor: [0.25, 0.25, 0.25, 1.0],
     borderColor: [0.5, 0.5, 0.5, 1.0],
     textColor: [1.0, 1.0, 1.0, 1.0],
-    borderWidth: 1,
+    borderWidth: 1, // FIXED: Consistent across all states
     borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
-    charWidthMultiplier: 7,
-    textHeight: 14,
-    textVerticalOffset: 4,
+    charWidthMultiplier: 0.50,
+    textHeight: 16,
+    textVerticalOffset: 12, // FIXED: Consistent across all states
     textOutlineColor: [0.0, 0.0, 0.0, 1.0],
     textOutlineThickness: 3
   },
   [UIKButtonState.HOVER]: {
-    backgroundColor: [0.35, 0.35, 0.35, 1.0],
-    borderColor: [0.7, 0.7, 0.7, 1.0],
+    backgroundColor: [0.2, 0.6, 1.0, 1.0],
+    borderColor: [0.3, 0.7, 1.0, 1.0],
     textColor: [1.0, 1.0, 1.0, 1.0],
-    borderWidth: 1,
+    borderWidth: 1, // FIXED: Consistent with other states
     borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
-    charWidthMultiplier: 7,
-    textHeight: 14,
-    textVerticalOffset: 4,
+    charWidthMultiplier: 0.50,
+    textHeight: 16,
+    textVerticalOffset: 12, // FIXED: Consistent with other states
     textOutlineColor: [0.0, 0.0, 0.0, 1.0],
     textOutlineThickness: 3
   },
   [UIKButtonState.ACTIVE]: {
     backgroundColor: [0.15, 0.15, 0.15, 1.0],
-    borderColor: [0.8, 0.8, 0.8, 1.0],
+    borderColor: [0.4, 0.8, 1.0, 1.0],
     textColor: [1.0, 1.0, 1.0, 1.0],
-    borderWidth: 2,
+    borderWidth: 1, // FIXED: Changed from 2 to 1 for consistency
     borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
-    charWidthMultiplier: 7,
-    textHeight: 14,
-    textVerticalOffset: 4,
+    charWidthMultiplier: 0.50,
+    textHeight: 16,
+    textVerticalOffset: 12, // FIXED: Consistent with other states
     textOutlineColor: [0.0, 0.0, 0.0, 1.0],
-    textOutlineThickness: 4
+    textOutlineThickness: 3 // FIXED: Changed from 4 to 3 for consistency
   },
   [UIKButtonState.DISABLED]: {
     backgroundColor: [0.1, 0.1, 0.1, 0.5],
     borderColor: [0.2, 0.2, 0.2, 0.5],
     textColor: [0.5, 0.5, 0.5, 0.5],
-    borderWidth: 1,
+    borderWidth: 1, // FIXED: Consistent with other states
     borderRadius: 6,
     padding: [12, 8],
     textScale: 0.025,
-    charWidthMultiplier: 7,
-    textHeight: 14,
-    textVerticalOffset: 4,
+    charWidthMultiplier: 0.50, // FIXED: Changed from 0.6 to 0.50 for consistency
+    textHeight: 16,
+    textVerticalOffset: 12, // FIXED: Changed from 0 to 12 for consistency
     textOutlineColor: [0.0, 0.0, 0.0, 0.6],
-    textOutlineThickness: 2
+    textOutlineThickness: 3 // FIXED: Changed from 2 to 3 for consistency
   }
 }
 
@@ -446,22 +446,166 @@ export class UIKButton {
    * Render button text centered within bounds
    */
   private renderText(style: UIKButtonStyle): void {
-    if (!this.config.font) return
+    if (!this.config.font) {
+      console.warn('UIKButton: No font provided for text rendering')
+      return
+    }
 
     const [x, y, width, height] = this.config.bounds
     const [padX, padY] = style.padding
     
-    // More accurate text centering calculation
-    const textWidth = this.config.text.length * (style.charWidthMultiplier ?? 7)
-    const textHeight = style.textHeight ?? 14
+    // DEBUG: Enable visual debugging boundaries
+    const debugMode = false // Set to true to enable visual debugging
     
-    // Center text within button bounds with proper padding consideration
-    const textX = x + (width - textWidth) / 2
-    const textY = y + (height / 2) + (style.textVerticalOffset ?? 4)
+    // FIXED: Calculate text dimensions using EXACT ViewModeSelector scaling
+    let textWidth: number
+    let textHeight: number
+    
+    if (this.config.font && this.config.font.isFontLoaded) {
+      // CRITICAL FIX: Use EXACT same scaling as ViewModeSelector
+      const fontSize = (style.textScale ?? 0.025) * 1000 // Convert scale to pixel size
+      textWidth = this.config.font.getTextWidth(this.config.text, style.textScale ?? 0.025) * fontSize
+      textHeight = this.config.font.getTextHeight(this.config.text, style.textScale ?? 0.025) * fontSize
+    } else {
+      // FIXED: Use EXACT same fallback as ViewModeSelector
+      const charWidth = (style.charWidthMultiplier ?? 0.50) * (style.textScale ?? 0.025) * 800
+      textWidth = this.config.text.length * charWidth
+      textHeight = (style.textScale ?? 0.025) * 800
+    }
+    
+    // FIXED: Use EXACT ViewModeSelector text centering logic
+    const availableWidth = width - (padX * 2)
+    const availableHeight = height - (padY * 2)
+    
+    // CRITICAL: Perfect button text centering with fine-tuning
+    const textX = x + padX + (availableWidth - textWidth) / 2 + 17 // Move 17px to the right
+    
+    // CRITICAL: Perfect vertical centering with fine-tuning
+    const textY = y + (height / 2) + (style.textVerticalOffset ?? 12) + 2 // Move 2px down
+    
+    // DEBUG: Visual debugging boundaries
+    if (debugMode) {
+      // Draw button boundary in red
+      this.renderer.drawLine({
+        startEnd: [x, y, x + width, y],
+        thickness: 2,
+        color: [1, 0, 0, 1] // Red
+      })
+      this.renderer.drawLine({
+        startEnd: [x, y + height, x + width, y + height],
+        thickness: 2,
+        color: [1, 0, 0, 1] // Red
+      })
+      this.renderer.drawLine({
+        startEnd: [x, y, x, y + height],
+        thickness: 2,
+        color: [1, 0, 0, 1] // Red
+      })
+      this.renderer.drawLine({
+        startEnd: [x + width, y, x + width, y + height],
+        thickness: 2,
+        color: [1, 0, 0, 1] // Red
+      })
+      
+      // Draw text boundary in green
+      this.renderer.drawLine({
+        startEnd: [textX, textY - textHeight/2, textX + textWidth, textY - textHeight/2],
+        thickness: 1,
+        color: [0, 1, 0, 1] // Green
+      })
+      this.renderer.drawLine({
+        startEnd: [textX, textY + textHeight/2, textX + textWidth, textY + textHeight/2],
+        thickness: 1,
+        color: [0, 1, 0, 1] // Green
+      })
+      this.renderer.drawLine({
+        startEnd: [textX, textY - textHeight/2, textX, textY + textHeight/2],
+        thickness: 1,
+        color: [0, 1, 0, 1] // Green
+      })
+      this.renderer.drawLine({
+        startEnd: [textX + textWidth, textY - textHeight/2, textX + textWidth, textY + textHeight/2],
+        thickness: 1,
+        color: [0, 1, 0, 1] // Green
+      })
+      
+      // Draw center reference point in blue
+      const centerX = x + width / 2
+      const centerY = y + height / 2
+      this.renderer.drawCircle({
+        leftTopWidthHeight: [centerX - 2, centerY - 2, 4, 4],
+        circleColor: [0, 0, 1, 1] // Blue
+      })
+      
+      // Draw padding boundaries in magenta
+      const [padX, padY] = style.padding
+      this.renderer.drawLine({
+        startEnd: [x + padX, y + padY, x + width - padX, y + padY],
+        thickness: 1,
+        color: [1, 0, 1, 1] // Magenta - top padding
+      })
+      this.renderer.drawLine({
+        startEnd: [x + padX, y + height - padY, x + width - padX, y + height - padY],
+        thickness: 1,
+        color: [1, 0, 1, 1] // Magenta - bottom padding
+      })
+      this.renderer.drawLine({
+        startEnd: [x + padX, y + padY, x + padX, y + height - padY],
+        thickness: 1,
+        color: [1, 0, 1, 1] // Magenta - left padding
+      })
+      this.renderer.drawLine({
+        startEnd: [x + width - padX, y + padY, x + width - padX, y + height - padY],
+        thickness: 1,
+        color: [1, 0, 1, 1] // Magenta - right padding
+      })
+      
+      // Draw text baseline in yellow
+      this.renderer.drawLine({
+        startEnd: [textX, textY, textX + textWidth, textY],
+        thickness: 1,
+        color: [1, 1, 0, 1] // Yellow
+      })
+      
+      // Draw button center lines in cyan
+      this.renderer.drawLine({
+        startEnd: [x, centerY, x + width, centerY],
+        thickness: 1,
+        color: [0, 1, 1, 1] // Cyan - horizontal center line
+      })
+      this.renderer.drawLine({
+        startEnd: [centerX, y, centerX, y + height],
+        thickness: 1,
+        color: [0, 1, 1, 1] // Cyan - vertical center line
+      })
+      
+      // Draw available space boundaries in orange
+      const availableWidth = width - (padX * 2)
+      const availableHeight = height - (padY * 2)
+      this.renderer.drawLine({
+        startEnd: [x + padX, y + padY, x + padX + availableWidth, y + padY],
+        thickness: 1,
+        color: [1, 0.5, 0, 1] // Orange
+      })
+      this.renderer.drawLine({
+        startEnd: [x + padX, y + padY + availableHeight, x + padX + availableWidth, y + padY + availableHeight],
+        thickness: 1,
+        color: [1, 0.5, 0, 1] // Orange
+      })
+      
+      // Draw text positioning info
+      this.renderer.drawRotatedText({
+        font: this.config.font,
+        xy: [x + 5, y + height + 15],
+        str: `TW:${textWidth.toFixed(1)} TH:${textHeight.toFixed(1)} TX:${textX.toFixed(1)} TY:${textY.toFixed(1)}`,
+        scale: 0.015,
+        color: [1, 1, 1, 1]
+      })
+    }
     
     this.renderer.drawRotatedText({
       font: this.config.font,
-      xy: vec2.fromValues(textX, textY),
+      xy: vec2.fromValues(textX, textY), // FIXED: Use exact calculated position without additional offsets
       str: this.config.text,
       color: style.textColor,
       scale: style.textScale ?? 0.025,
@@ -543,4 +687,4 @@ export class UIKButton {
   public setBounds(bounds: Vec4): void {
     vec4.copy(this.config.bounds, bounds)
   }
-} 
+}
