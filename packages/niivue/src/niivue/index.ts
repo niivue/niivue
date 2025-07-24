@@ -386,6 +386,7 @@ export class Niivue {
   drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
   drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
   drawOpacity = 0.8 // opacity of drawing (default)
+  drawRimOpacity = -1.0 // opacity of pixels at edge of drawing (negative value to use drawOpacity)
   clickToSegmentIsGrowing = false // flag to indicate if the clickToSegment flood fill growing is in progress with left mouse down + drag
   clickToSegmentGrowingBitmap: Uint8Array | null = null // the bitmap of the growing flood fill
   clickToSegmentXY = [0, 0] // the x,y location of the clickToSegment flood fill
@@ -11454,6 +11455,7 @@ export class Niivue {
       gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0)
       gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
       gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
+      gl.uniform1f(shader.uniforms.drawRimOpacity, this.drawRimOpacity)
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
       gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity)
