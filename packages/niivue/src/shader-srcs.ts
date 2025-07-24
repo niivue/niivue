@@ -597,6 +597,7 @@ uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform float drawRimOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
@@ -777,8 +778,21 @@ out vec4 color;` +
 }`
 
 export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
-	vec4 dcolor = drawColor(texture(drawing, texPos).r, drawOpacity);
+	float drawV = texture(drawing, texPos).r;
+	vec4 dcolor = drawColor(drawV, drawOpacity);
 	if (dcolor.a > 0.0) {
+		if (drawRimOpacity >= 0.0) {
+			vec3 vx = 1.0 / vec3(textureSize(drawing, 0));
+			//6 voxel neighbors that share a face
+			vec3 offsetX = dFdx(texPos); // left-right spacing
+			vec3 offsetY = dFdy(texPos); // up-down spacing
+			float L = texture(drawing, texPos - offsetX).r;
+			float R = texture(drawing, texPos + offsetX).r;
+			float T = texture(drawing, texPos - offsetY).r;
+			float B = texture(drawing, texPos + offsetY).r;
+			if (L != drawV || R != drawV || T != drawV || B != drawV)
+				dcolor.a = drawRimOpacity;
+		}
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
 	}
