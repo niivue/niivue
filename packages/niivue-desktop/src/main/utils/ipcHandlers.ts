@@ -173,7 +173,7 @@ export const registerIpcHandlers = (): void => {
 
         // 2) notify renderer “complete” with the Base64 payload
         event.sender.send('niimath:complete', requestId, base64)
-
+        event.sender.send('niimath:toolbar-complete', requestId)
         return { success: true }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)

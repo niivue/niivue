@@ -455,7 +455,7 @@ function MainApp(): JSX.Element {
   return (
     <>
       {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
-      <NiimathToolbar modeMap={modeMap}  indexMap={indexMap}/>
+      <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />
       <div className="flex flex-row size-full" onDrop={handleDrop} onDragOver={handleDragOver}>
         <Sidebar
           onRemoveMesh={handleRemoveMesh}

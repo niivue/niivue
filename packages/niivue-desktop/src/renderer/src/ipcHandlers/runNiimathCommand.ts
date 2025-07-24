@@ -16,8 +16,6 @@ export function registerRunNiimathHandler(
   indexMap: Map<string, number>
 ): void {
   window.electron.ipcRenderer.removeAllListeners('niimath:complete')
-  window.electron.ipcRenderer.removeAllListeners('niimath:error')
-
   // Handle successful completion
   window.electron.ipcRenderer.on(
     'niimath:complete',
@@ -31,7 +29,7 @@ export function registerRunNiimathHandler(
         modeMap.delete(requestId)
         indexMap.delete(requestId)
 
-         // Determine base name from original volume
+        // Determine base name from original volume
         const original = nv.volumes[idx]
         const baseName = original?.name || requestId
         const uniqueName = `${baseName}-${requestId}`
@@ -78,10 +76,4 @@ export function registerRunNiimathHandler(
       }
     }
   )
-
-  // Handle errors
-  window.electron.ipcRenderer.on('niimath:error', (_evt, requestId: string, message: string) => {
-    console.error(`Niimath job ${requestId} error:`, message)
-    // TODO: propagate error to UI
-  })
 }

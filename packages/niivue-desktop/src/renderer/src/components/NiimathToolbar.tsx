@@ -1,5 +1,5 @@
 // src/components/NiimathToolbar.tsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NVImage } from '@niivue/niivue'
 import { v4 as uuidv4 } from 'uuid'
 import { useSelectedInstance } from '../AppContext.js'
@@ -17,6 +17,25 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
   const [mode, setMode] = useState<'replace' | 'overlay'>('overlay')
   const [busy, setBusy] = useState<boolean>(false)
   const [error, setError] = useState<string>()
+
+  // Listen for completion / error to clear busy state
+  useEffect(() => {
+    const onComplete = (): void => {
+      console.log('niimath complete called')
+      setBusy(false)
+    }
+    const onError = (_e: unknown, _id: string, msg: string): void => {
+      setBusy(false)
+      setError(msg)
+    }
+
+    window.electron.ipcRenderer.on('niimath:toolbar-complete', onComplete)
+    window.electron.ipcRenderer.on('niimath:error', onError)
+    return (): void => {
+      window.electron.ipcRenderer.removeListener('niimath:complete', onComplete)
+      window.electron.ipcRenderer.removeListener('niimath:error', onError)
+    }
+  }, [])
 
   const handleApply = async (): Promise<void> => {
     if (!currentVolume) {
