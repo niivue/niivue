@@ -1619,6 +1619,7 @@ declare class Niivue {
     drawUndoBitmaps: Uint8Array[];
     drawLut: LUT;
     drawOpacity: number;
+    drawRimOpacity: number;
     clickToSegmentIsGrowing: boolean;
     clickToSegmentGrowingBitmap: Uint8Array | null;
     clickToSegmentXY: number[];

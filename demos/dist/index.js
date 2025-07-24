@@ -6033,6 +6033,7 @@ uniform int axCorSag;
 uniform float overlays;
 uniform float opacity;
 uniform float drawOpacity;
+uniform float drawRimOpacity;
 uniform bool isAlphaClipDark;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
@@ -6206,8 +6207,21 @@ out vec4 color;` + kDrawFunc + `void main() {
 	}
 }`;
 var kFragSliceTail = `	ocolor.a *= overlayAlpha;
-	vec4 dcolor = drawColor(texture(drawing, texPos).r, drawOpacity);
+	float drawV = texture(drawing, texPos).r;
+	vec4 dcolor = drawColor(drawV, drawOpacity);
 	if (dcolor.a > 0.0) {
+		if (drawRimOpacity >= 0.0) {
+			vec3 vx = 1.0 / vec3(textureSize(drawing, 0));
+			//6 voxel neighbors that share a face
+			vec3 offsetX = dFdx(texPos); // left-right spacing
+			vec3 offsetY = dFdy(texPos); // up-down spacing
+			float L = texture(drawing, texPos - offsetX).r;
+			float R = texture(drawing, texPos + offsetX).r;
+			float T = texture(drawing, texPos - offsetY).r;
+			float B = texture(drawing, texPos + offsetY).r;
+			if (L != drawV || R != drawV || T != drawV || B != drawV)
+				dcolor.a = drawRimOpacity;
+		}
 		color.rgb = mix(color.rgb, dcolor.rgb, dcolor.a);
 		color.a = max(drawOpacity, color.a);
 	}
@@ -34887,6 +34901,8 @@ var Niivue = class {
     // the color lookup table for drawing
     __publicField(this, "drawOpacity", 0.8);
     // opacity of drawing (default)
+    __publicField(this, "drawRimOpacity", -1);
+    // opacity of pixels at edge of drawing (negative value to use drawOpacity)
     __publicField(this, "clickToSegmentIsGrowing", false);
     // flag to indicate if the clickToSegment flood fill growing is in progress with left mouse down + drag
     __publicField(this, "clickToSegmentGrowingBitmap", null);
@@ -44583,6 +44599,7 @@ var Niivue = class {
       gl.uniform1i(shader.uniforms.isAlphaClipDark, this.isAlphaClipDark ? 1 : 0);
       gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays);
       gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
+      gl.uniform1f(shader.uniforms.drawRimOpacity, this.drawRimOpacity);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       gl.uniform1f(shader.uniforms.opacity, this.volumes[0].opacity);
