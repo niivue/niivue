@@ -606,32 +606,46 @@ export class UIKRenderer {
 
     for (const char of chars) {
       const metrics = font.fontMetrics.mets[char]
-      if (!metrics) continue
+      
+      // Handle missing character metrics with proper fallback
+      if (!metrics) {
+        // Use default advance for missing characters (especially spaces)
+        const defaultAdvance = char === ' ' ? 0.25 : 0.5
+        const advanceX = Math.cos(rotation) * defaultAdvance * size
+        const advanceY = Math.sin(rotation) * defaultAdvance * size
+        x += advanceX
+        y += advanceY
+        continue
+      }
 
-      const modelMatrix = mat4.create()
-      mat4.translate(modelMatrix, modelMatrix, [
-        x + Math.sin(rotation) * metrics.lbwh[1] * size,
-        y - Math.cos(rotation) * metrics.lbwh[1] * size,
-        0.0,
-      ])
-      mat4.rotateZ(modelMatrix, modelMatrix, rotation)
-      mat4.scale(modelMatrix, modelMatrix, [
-        metrics.lbwh[2] * size,
-        -metrics.lbwh[3] * size,
-        1.0,
-      ])
+      // Only render visible characters (width > 0)
+      if (metrics.lbwh[2] > 0 && metrics.lbwh[3] > 0) {
+        const modelMatrix = mat4.create()
+        mat4.translate(modelMatrix, modelMatrix, [
+          x + Math.sin(rotation) * metrics.lbwh[1] * size,
+          y - Math.cos(rotation) * metrics.lbwh[1] * size,
+          0.0,
+        ])
+        mat4.rotateZ(modelMatrix, modelMatrix, rotation)
+        mat4.scale(modelMatrix, modelMatrix, [
+          metrics.lbwh[2] * size,
+          -metrics.lbwh[3] * size,
+          1.0,
+        ])
 
-      const mvpMatrix = mat4.create()
-      mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
+        const mvpMatrix = mat4.create()
+        mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
 
-      gl.uniformMatrix4fv(
-        shader.uniforms.modelViewProjectionMatrix,
-        false,
-        mvpMatrix
-      )
-      gl.uniform4fv(shader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.uniformMatrix4fv(
+          shader.uniforms.modelViewProjectionMatrix,
+          false,
+          mvpMatrix
+        )
+        gl.uniform4fv(shader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+      }
 
+      // Always advance cursor position, even for spaces
       const advanceX = Math.cos(rotation) * metrics.xadv * size
       const advanceY = Math.sin(rotation) * metrics.xadv * size
       x += advanceX
