@@ -48,23 +48,24 @@ export enum DRAG_MODE {
   slicer3D = 4,
   callbackOnly = 5,
   roiSelection = 6,
-  angle = 7
+  angle = 7,
+  crosshair = 8,
+  windowing = 9
 }
 
-export enum DRAG_MODE_SECONDARY {
-  none = 0,
-  contrast = 1,
-  measurement = 2,
-  pan = 3,
-  slicer3D = 4,
-  callbackOnly = 5,
-  roiSelection = 6,
-  angle = 7
+export interface MouseEventConfig {
+  leftButton: {
+    primary: DRAG_MODE
+    withShift?: DRAG_MODE
+    withCtrl?: DRAG_MODE
+  }
+  rightButton: DRAG_MODE
+  centerButton: DRAG_MODE
 }
 
-export enum DRAG_MODE_PRIMARY {
-  crosshair = 0,
-  windowing = 1
+export interface TouchEventConfig {
+  singleTouch: DRAG_MODE
+  doubleTouch: DRAG_MODE
 }
 
 export enum COLORMAP_TYPE {
@@ -134,8 +135,10 @@ export type NVConfigOptions = {
   isRadiologicalConvention: boolean
   // string to allow infinity
   meshThicknessOn2D: number | string
-  dragMode: DRAG_MODE | DRAG_MODE_SECONDARY
-  dragModePrimary: DRAG_MODE_PRIMARY
+  dragMode: DRAG_MODE
+  dragModePrimary: DRAG_MODE
+  mouseEventConfig?: MouseEventConfig
+  touchEventConfig?: TouchEventConfig
   yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
@@ -253,8 +256,10 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   multiplanarShowRender: SHOW_RENDER.AUTO, // auto is the same behaviour as multiplanarForceRender: false
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
-  dragMode: DRAG_MODE_SECONDARY.contrast,
-  dragModePrimary: DRAG_MODE_PRIMARY.crosshair,
+  dragMode: DRAG_MODE.contrast,
+  dragModePrimary: DRAG_MODE.crosshair,
+  mouseEventConfig: undefined,
+  touchEventConfig: undefined,
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,

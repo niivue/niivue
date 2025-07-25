@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Custom Mouse Event Configuration</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <h3>Mouse Button Configuration:</h3>
+      <div>
+        <label for="leftButtonSelect">Left Button:</label>
+        <select id="leftButtonSelect">
+          <option value="crosshair">Crosshair positioning</option>
+          <option value="windowing">Window/Level adjustment</option>
+          <option value="contrast">Contrast adjustment</option>
+          <option value="pan">Pan</option>
+          <option value="measurement">Measurement</option>
+          <option value="angle">Angle measurement</option>
+          <option value="slicer3D">3D Slicer</option>
+          <option value="callbackOnly">Callback Only</option>
+          <option value="roiSelection">ROI Selection</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+      <div>
+        <label for="rightButtonSelect">Right Button:</label>
+        <select id="rightButtonSelect">
+          <option value="contrast">Contrast adjustment</option>
+          <option value="windowing">Window/Level adjustment</option>
+          <option value="crosshair">Crosshair positioning</option>
+          <option value="pan">Pan</option>
+          <option value="measurement">Measurement</option>
+          <option value="angle">Angle measurement</option>
+          <option value="slicer3D">3D Slicer</option>
+          <option value="callbackOnly">Callback Only</option>
+          <option value="roiSelection">ROI Selection</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+    </header>
+    <main id="container">
+      <canvas id="gl"></canvas>
+    </main>
+    <footer id="configInfo">
+      <h4>Current Configuration:</h4>
+      <div id="configDisplay">
+        <p>Left Button: <span id="leftButtonDisplay">Crosshair positioning</span></p>
+        <p>Right Button: <span id="rightButtonDisplay">Contrast adjustment</span></p>
+        <p>Middle Button: Pan/Zoom (fixed)</p>
+      </div>
+      <div id="testInstructions">
+        <h4>Testing Instructions:</h4>
+        <ul>
+          <li><strong>Contrast Mode:</strong> Right-click and drag to draw selection box, release to calculate contrast</li>
+          <li><strong>Callback Only Mode:</strong> Right-click and drag - should NOT draw selection box</li>
+          <li><strong>Windowing Mode:</strong> Click and drag for real-time brightness/contrast adjustment</li>
+        </ul>
+      </div>
+    </footer>
+  </body>
+
+<script type="module" async>
+  import { Niivue, NVImage, DRAG_MODE } from '../dist/index.js'
+  
+  const nv = new Niivue()
+  await nv.attachTo('gl')
+  
+  // Load a sample image
+  const imageUrl = 'https://niivue.com/demos/images/mni152.nii.gz'
+  const volume = await NVImage.loadFromUrl({ url: imageUrl })
+  await nv.addVolume(volume)
+  
+  // Get select elements
+  const leftButtonSelect = document.getElementById('leftButtonSelect')
+  const rightButtonSelect = document.getElementById('rightButtonSelect')
+  const leftButtonDisplay = document.getElementById('leftButtonDisplay')
+  const rightButtonDisplay = document.getElementById('rightButtonDisplay')
+  
+  // Map select values to drag modes
+  const dragModeMap = {
+    crosshair: DRAG_MODE.crosshair,
+    windowing: DRAG_MODE.windowing,
+    contrast: DRAG_MODE.contrast,
+    pan: DRAG_MODE.pan,
+    measurement: DRAG_MODE.measurement,
+    angle: DRAG_MODE.angle,
+    slicer3D: DRAG_MODE.slicer3D,
+    callbackOnly: DRAG_MODE.callbackOnly,
+    roiSelection: DRAG_MODE.roiSelection,
+    none: DRAG_MODE.none
+  }
+  
+  // Map drag modes to display names
+  const displayNameMap = {
+    crosshair: 'Crosshair positioning',
+    windowing: 'Window/Level adjustment',
+    contrast: 'Contrast adjustment',
+    pan: 'Pan',
+    measurement: 'Measurement',
+    angle: 'Angle measurement',
+    slicer3D: '3D Slicer',
+    callbackOnly: 'Callback Only',
+    roiSelection: 'ROI Selection',
+    none: 'None'
+  }
+  
+  function updateConfiguration() {
+    const leftValue = leftButtonSelect.value
+    const rightValue = rightButtonSelect.value
+    
+    // Update display
+    leftButtonDisplay.textContent = displayNameMap[leftValue]
+    rightButtonDisplay.textContent = displayNameMap[rightValue]
+    
+    // Apply configuration to NiiVue
+    nv.setMouseEventConfig({
+      leftButton: {
+        primary: dragModeMap[leftValue]
+      },
+      rightButton: dragModeMap[rightValue],
+      centerButton: DRAG_MODE.pan
+    })
+  }
+  
+  // Add event listeners for select changes
+  leftButtonSelect.addEventListener('change', updateConfiguration)
+  rightButtonSelect.addEventListener('change', updateConfiguration)
+  
+  // Initialize with default configuration
+  updateConfiguration()
+</script>
+</body>
+</html>
