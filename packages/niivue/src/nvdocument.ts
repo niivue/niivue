@@ -840,7 +840,7 @@ export class NVDocument {
             alphaThreshold: false,
             cal_minNeg: volume?.cal_minNeg ?? NaN,
             cal_maxNeg: volume?.cal_maxNeg ?? NaN,
-            colorbarVisible: volume?.colorbarVisible ??true
+            colorbarVisible: volume?.colorbarVisible ?? true
           }
         } else {
           if (!('imageType' in imageOptions)) {
