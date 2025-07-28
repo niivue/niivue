@@ -9,6 +9,8 @@
     "src/types",
   ],
   "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
     "composite": true,
     "jsx": "react-jsx",
     "baseUrl": ".",

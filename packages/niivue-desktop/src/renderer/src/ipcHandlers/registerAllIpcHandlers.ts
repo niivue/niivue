@@ -1,19 +1,25 @@
+// src/ipcHandlers/registerAllIpcHandlers.ts
 import { Niivue, NVImage, NVMesh } from '@niivue/niivue'
 import { registerLoadStandardHandler } from './loadStandard.js'
 import { registerLoadRecentFileHandler } from './loadRecentFiles.js'
-import { registerSliceTypeHandler } from './menuHandlers.js'
-import { registerLabelManagerDialogHandler } from './menuHandlers.js'
+import {
+  registerSliceTypeHandler,
+  registerLabelManagerDialogHandler,
+  registerResetPreferencesHandler
+} from './menuHandlers.js'
 import { registerLoadMeshHandler } from './loadMesh.js'
 import { registerLoadVolumeHandler } from './loadVolume.js'
 import { LoadDocumentHandlerProps, registerLoadDocumentHandler } from './loadDocument.js'
-import { registerResetPreferencesHandler } from './menuHandlers.js'
 import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
 import { registerRunNiimathHandler } from './runNiimathCommand.js'
+import { registerSaveHTMLHandler } from './saveHTML.js' // ← new import
 
 const electron = window.electron
 
 export const registerAllIpcHandlers = (
   nv: Niivue,
+  docId: string, // ← new parameter
+  getTitle: () => string, // ← new parameter
   setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>,
   setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>,
   setLabelDialogOpen: (v: boolean) => void,
@@ -24,7 +30,7 @@ export const registerAllIpcHandlers = (
 ): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
-  // 🧹 Clear previously registered listeners to avoid duplicates
+  // 🧹 Remove all existing listeners
   electron.ipcRenderer.removeAllListeners('loadStandard')
   electron.ipcRenderer.removeAllListeners('loadRecentFile')
   electron.ipcRenderer.removeAllListeners('loadVolume')
@@ -32,13 +38,12 @@ export const registerAllIpcHandlers = (
   electron.ipcRenderer.removeAllListeners('loadDocument')
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
   electron.ipcRenderer.removeAllListeners('convertDICOM')
+  electron.ipcRenderer.removeAllListeners('runNiimath')
+  electron.ipcRenderer.removeAllListeners('saveHTML') // ← clear out old saveHTML
 
+  // 🔌 Register all the handlers you already had
   registerLoadStandardHandler({ nv, setVolumes, setMeshes })
-  console.log('[Renderer] registered loadStandard handler')
-
   registerLoadRecentFileHandler({ nv, setVolumes, setMeshes, onDocumentLoaded })
-  console.log('[Renderer] registered loadRecentFile handler')
-
   registerSliceTypeHandler(nv)
   registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
   registerLoadMeshHandler({ nv, setMeshes })
@@ -52,4 +57,8 @@ export const registerAllIpcHandlers = (
   registerResetPreferencesHandler()
   registerLoadDicomFolderHandler({ nv, setVolumes })
   registerRunNiimathHandler(nv, setVolumes, modeMap, indexMap)
+
+  // 💾 Finally, wire up Save→HTML
+  registerSaveHTMLHandler(nv, docId, getTitle)
+  console.log('[Renderer] registered saveHTML handler')
 }

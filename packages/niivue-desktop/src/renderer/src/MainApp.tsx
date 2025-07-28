@@ -9,7 +9,7 @@ import { LabelManagerDialog } from './components/LabelManagerDialog.js'
 import { NiivueInstanceContext, useSelectedInstance, useAppContext } from './AppContext.js'
 import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 import { fmriEvents, getColorForTrialType } from './types/events.js'
-import { loadDroppedFiles } from './utils/dragAndDrop.js'
+// import { loadDroppedFiles } from './utils/dragAndDrop.js'
 import { layouts } from '../../common/layouts.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
 
@@ -92,8 +92,8 @@ function MainApp(): JSX.Element {
     nv.setSliceMosaicString(selected.opts.sliceMosaicString || '')
 
     nv.updateGLVolume()
-
     nv.drawScene()
+
     if (lastSyncedDoc.current !== selected.id) {
       // seed your React state with the current volumes & meshes
       selected.setVolumes([...nv.volumes])
@@ -103,6 +103,8 @@ function MainApp(): JSX.Element {
 
     registerAllIpcHandlers(
       nv,
+      selected.id, // ← new docId argument
+      () => selected.title || selected.id, // ← new getTitle() callback
       selected.setVolumes,
       selected.setMeshes,
       setLabelDialogOpen,
@@ -324,18 +326,18 @@ function MainApp(): JSX.Element {
     nv.drawScene()
   }
 
-  // Sidebar drag/drop handlers
-  function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
-    e.preventDefault()
-  }
-  function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
-    if (!selected) return
-    const nv = selected.nvRef.current
-    nv.volumes = []
-    nv.meshes = []
-    nv.updateGLVolume()
-    loadDroppedFiles(e, selected.setVolumes, selected.setMeshes, nv.gl)
-  }
+  // // Sidebar drag/drop handlers
+  // function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
+  //   e.preventDefault()
+  // }
+  // function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
+  //   if (!selected) return
+  //   const nv = selected.nvRef.current
+  //   nv.volumes = []
+  //   nv.meshes = []
+  //   nv.updateGLVolume()
+  //   loadDroppedFiles(e, selected.setVolumes, selected.setMeshes, nv.gl)
+  // }
 
   // Sidebar remove/move
   function handleRemoveMesh(mesh: NVMesh): void {
