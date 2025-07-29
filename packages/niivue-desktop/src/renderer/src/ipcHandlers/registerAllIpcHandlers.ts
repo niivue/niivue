@@ -14,6 +14,7 @@ import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
 import { registerRunNiimathHandler } from './runNiimathCommand.js'
 import { registerSaveHTMLHandler } from './saveHTML.js' // ← new import
 import { registerLoadOverlayHandler } from './loadOvewrlay.js'
+import { registerDrawHandler } from './draw.js'
 
 const electron = window.electron
 
@@ -63,4 +64,5 @@ export const registerAllIpcHandlers = (
   // 💾 Finally, wire up Save→HTML
   registerSaveHTMLHandler(nv, docId, getTitle)
   registerLoadOverlayHandler(nv, setVolumes)
+  registerDrawHandler(nv)
 }

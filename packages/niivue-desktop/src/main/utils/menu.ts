@@ -94,6 +94,46 @@ const createSliceTypeSubmenu = (
   })
 }
 
+/**
+ * Returns the “Draw” submenu items for the application menu.
+ * @param win  The BrowserWindow to which draw commands will be sent.
+ */
+export function createDrawSubmenu(
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] {
+  const send = (cmd: string): void => {
+    if (win) win.webContents.send('draw-command', cmd)
+  }
+
+  return [
+    { label: 'Off', accelerator: '0', click: () => send('Off') },
+    { type: 'separator' },
+    { label: 'Undo', accelerator: 'CmdOrCtrl+Z', click: () => send('Undo') },
+    { type: 'separator' },
+    { label: 'Red', accelerator: '1', click: () => send('Red') },
+    { label: 'Green', accelerator: '2', click: () => send('Green') },
+    { label: 'Blue', accelerator: '3', click: () => send('Blue') },
+    { label: 'Yellow', accelerator: '4', click: () => send('Yellow') },
+    { label: 'Cyan', accelerator: '5', click: () => send('Cyan') },
+    { label: 'Purple', accelerator: '6', click: () => send('Purple') },
+    { label: 'Erase', accelerator: '7', click: () => send('Erase') },
+    { label: 'Cluster', accelerator: '8', click: () => send('Cluster') },
+    { type: 'separator' },
+    { label: 'Grow Cluster Dark', click: () => send('GrowCluster') },
+    { label: 'Grow Cluster Bright', click: () => send('GrowClusterBright') },
+    { type: 'separator' },
+    { label: 'Click To Segment (Auto)', click: () => send('ClickToSegmentAuto') },
+    { label: 'Click To Segment 2D', click: () => send('ClickToSegment2D') },
+    { type: 'separator' },
+    { label: 'Fill Outline', accelerator: 'F', click: () => send('DrawFilled') },
+    { label: 'Pen Overwrites', accelerator: 'O', click: () => send('DrawOverwrite') },
+    { label: 'Translucent', accelerator: 'T', click: () => send('Translucent') },
+    { label: 'Thin Pen', click: () => send('ThinPen') },
+    { label: 'Grow Cut', click: () => send('Growcut') },
+    { label: 'Otsu...', click: () => send('DrawOtsu') }
+  ]
+}
+
 // const createLayoutSubmenu = (
 //   win: Electron.BrowserWindow
 // ): Electron.MenuItemConstructorOptions[] => {
@@ -464,160 +504,8 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         // Draw menu
         {
           label: 'Draw',
-          submenu: [
-            // open drawing
-            {
-              label: 'Open Drawing',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Open Drawing',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // save drawing
-            {
-              label: 'Save Drawing',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Save Drawing',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // Close drawing
-            {
-              label: 'Close Drawing',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Close Drawing',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // separator
-            { type: 'separator' },
-            // undo draw
-            {
-              label: 'Undo',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Undo',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // transparency
-            {
-              label: 'Transparency',
-              submenu: [
-                {
-                  label: '0%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: '25%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: '50%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: '90%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                }
-              ]
-            },
-            // Draw color
-            {
-              label: 'Color',
-              submenu: [
-                {
-                  label: 'Red',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Green',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Blue',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Yellow',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                }
-              ]
-            },
-            // Draw pen
-            {
-              label: 'Pen',
-              submenu: [
-                {
-                  label: 'Filled',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Pen',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Overwrite existing colors',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Pen',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        { type: 'separator' }
+          submenu: createDrawSubmenu(win)
+        }
       ]
     },
     // { role: 'viewMenu' }
