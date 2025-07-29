@@ -47,6 +47,41 @@ export function VolumeImageCard({
   const nv = instance?.nvRef.current
   if (!nv) return <></>
 
+  // ——— Drag & Drop Handlers ———
+
+  // Show copy cursor when dragging over
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  // On drop, load each file as NVImage and add to Niivue + React state
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>): Promise<void> => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!e.dataTransfer) return
+
+    const files = Array.from(e.dataTransfer.files)
+    for (const file of files) {
+      // Skip mesh files
+      if (nv.isMeshExt(file.name)) {
+        continue
+      }
+
+      // Otherwise treat as volume (NIfTI, etc.)
+      const base64 = await window.electron.ipcRenderer.invoke('loadFromFile', file.path)
+      const vol = await NVImage.loadFromBase64({ base64, name: file.name })
+
+      // 1) Add into Niivue
+      nv.addVolume(vol)
+      // 2) Push into React state
+      instance.setVolumes(nv.volumes)
+    }
+    nv.updateGLVolume()
+    nv.drawScene()
+  }
+
   // Update the display name when image.name changes
   useEffect(() => {
     setDisplayName(baseName(image.name))
@@ -141,7 +176,11 @@ export function VolumeImageCard({
   }
 
   return (
-    <Card className="flex flex-col p-2 my-1 gap-2 bg-white">
+    <Card
+      className="flex flex-col p-2 my-1 gap-2 bg-white"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
           <ContextMenu.Trigger>
