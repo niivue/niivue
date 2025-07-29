@@ -247,6 +247,25 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               })
           }
         },
+        // Add Volume Overlay
+        {
+          label: 'Add Overlay Image…',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Add Overlay Image',
+                properties: ['openFile', 'multiSelections'],
+                filters: [{ name: 'Volume', extensions: ['nii', 'nii.gz'] }]
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  // send one or more paths to the renderer
+                  win.webContents.send('loadOverlay', result.filePaths)
+                }
+              })
+          }
+        },
         // Open Mesh Image
         {
           label: 'Open Mesh Image',

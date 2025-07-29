@@ -13,6 +13,7 @@ import { LoadDocumentHandlerProps, registerLoadDocumentHandler } from './loadDoc
 import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
 import { registerRunNiimathHandler } from './runNiimathCommand.js'
 import { registerSaveHTMLHandler } from './saveHTML.js' // ← new import
+import { registerLoadOverlayHandler } from './loadOvewrlay.js'
 
 const electron = window.electron
 
@@ -39,7 +40,8 @@ export const registerAllIpcHandlers = (
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
   electron.ipcRenderer.removeAllListeners('convertDICOM')
   electron.ipcRenderer.removeAllListeners('runNiimath')
-  electron.ipcRenderer.removeAllListeners('saveHTML') // ← clear out old saveHTML
+  electron.ipcRenderer.removeAllListeners('saveHTML')
+  electron.ipcRenderer.removeAllListeners('loadOverlay')
 
   // 🔌 Register all the handlers you already had
   registerLoadStandardHandler({ nv, setVolumes, setMeshes })
@@ -60,5 +62,5 @@ export const registerAllIpcHandlers = (
 
   // 💾 Finally, wire up Save→HTML
   registerSaveHTMLHandler(nv, docId, getTitle)
-  console.log('[Renderer] registered saveHTML handler')
+  registerLoadOverlayHandler(nv, setVolumes)
 }
