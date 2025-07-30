@@ -340,45 +340,45 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             }
           ]
         },
-        // Open FSL
-        {
-          label: 'Open FSL',
-          submenu: [
-            {
-              label: 'mni152 1mm',
-              click: (): void => {
-                // TODO: implement this
-                win.webContents.send('loadFSL', 'mni152_1mm')
-              }
-            }
-          ]
-        },
-        // Open AFNI
-        {
-          label: 'Open AFNI',
-          submenu: [
-            {
-              label: 'mni152',
-              click: (): void => {
-                // TODO: implement this
-                win.webContents.send('loadAFNI', 'mni152')
-              }
-            }
-          ]
-        },
-        // Add atlas
-        {
-          label: 'Add Atlas',
-          submenu: [
-            {
-              label: 'aal',
-              click: (): void => {
-                // TODO: implement this
-                win.webContents.send('loadAtlas', 'aal')
-              }
-            }
-          ]
-        },
+        // // Open FSL
+        // {
+        //   label: 'Open FSL',
+        //   submenu: [
+        //     {
+        //       label: 'mni152 1mm',
+        //       click: (): void => {
+        //         // TODO: implement this
+        //         win.webContents.send('loadFSL', 'mni152_1mm')
+        //       }
+        //     }
+        //   ]
+        // },
+        // // Open AFNI
+        // {
+        //   label: 'Open AFNI',
+        //   submenu: [
+        //     {
+        //       label: 'mni152',
+        //       click: (): void => {
+        //         // TODO: implement this
+        //         win.webContents.send('loadAFNI', 'mni152')
+        //       }
+        //     }
+        //   ]
+        // },
+        // // Add atlas
+        // {
+        //   label: 'Add Atlas',
+        //   submenu: [
+        //     {
+        //       label: 'aal',
+        //       click: (): void => {
+        //         // TODO: implement this
+        //         win.webContents.send('loadAtlas', 'aal')
+        //       }
+        //     }
+        //   ]
+        // },
         {
           label: 'Save Document',
           accelerator: 'CmdOrCtrl+Shift+S',
