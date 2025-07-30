@@ -146,6 +146,18 @@ export class UIKColormapSelector {
             const colormapName = this.colormaps[i]
             const capitalizedName = colormapName.charAt(0).toUpperCase() + colormapName.slice(1)
             
+            // Configure font outline for enhanced medical readability
+            if (this.font) {
+                this.font.setOutlineConfig({
+                    enabled: true,
+                    width: 0.18,                    // Moderate outline width for colormap names
+                    color: [0.0, 0.0, 0.0, 0.85],  // Semi-transparent black for subtlety
+                    style: 'solid',                 // Clean solid outline
+                    softness: 0.15,                 // Slight softness for smooth appearance
+                    offset: [0, 0]                  // No offset for clean look
+                })
+            }
+            
             this.renderer.drawRotatedText({
                 font: this.font,
                 xy: [textX, textY],

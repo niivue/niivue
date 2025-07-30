@@ -373,12 +373,26 @@ export class UIKToggle {
       labelX = toggleX + toggleWidth + 12 // More space from toggle
     }
     
+    // Configure font outline for enhanced medical readability
+    if (this.config.font) {
+      // Use medical imaging optimized outline for toggle labels
+      this.config.font.setOutlineConfig({
+        enabled: true,
+        width: 0.2,                     // Moderate outline width
+        color: [0.0, 0.0, 0.0, 0.85],  // Semi-transparent black
+        style: 'solid',                 // Clean solid outline
+        softness: 0.15,                 // Slight softness for smooth edges
+        offset: [0, 0]                  // No offset for clean look
+      })
+    }
+    
     this.renderer.drawRotatedText({
       font: this.config.font,
       xy: [labelX, labelY],
       str: this.config.label,
       color: textColor,
       scale: 0.025,
+      // Legacy parameters for backward compatibility (handled by font config now)
       outlineColor: this.config.style?.textOutlineColor ?? this.defaultStyle.textOutlineColor!,
       outlineThickness: this.config.style?.textOutlineThickness ?? this.defaultStyle.textOutlineThickness!
     })

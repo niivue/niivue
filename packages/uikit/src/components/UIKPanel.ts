@@ -464,6 +464,18 @@ export class UIKPanel {
     
     this.drawPanelBackground(titleX, titleY, titleWidth, titleHeight, titleBarColor, null)
     
+    // Configure font outline for enhanced medical readability
+    if (this.config.font) {
+      this.config.font.setOutlineConfig({
+        enabled: true,
+        width: 0.28,                    // Slightly wider outline for panel titles
+        color: [0.0, 0.0, 0.0, 0.9],   // Strong black outline for maximum readability
+        style: 'solid',                 // Clean solid outline for professional appearance
+        softness: 0.1,                  // Minimal softness for crisp edges
+        offset: [0, 0]                  // No offset for clean look
+      })
+    }
+    
     // Draw title text
     this.renderer.drawRotatedText({
       font: this.config.font,

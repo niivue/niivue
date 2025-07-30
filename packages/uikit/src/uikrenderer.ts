@@ -576,12 +576,40 @@ export class UIKRenderer {
     gl.disable(gl.DEPTH_TEST)
     gl.disable(gl.CULL_FACE)
 
-    // Uniforms
+    // Get outline configuration from font (prioritize font config over parameters)
+    const outlineConfig = font.getOutlineConfig()
+    const finalOutlineColor = outlineConfig.enabled ? outlineConfig.color : outlineColor
+    const finalOutlineThickness = outlineConfig.enabled ? outlineConfig.width * 10 : outlineThickness
+
+    // Basic uniforms
     gl.uniform4fv(shader.uniforms.fontColor, color as Float32List)
-    gl.uniform4fv(shader.uniforms.outlineColor, outlineColor as Float32List)
-    gl.uniform1f(shader.uniforms.outlineThickness, outlineThickness)
+    gl.uniform4fv(shader.uniforms.outlineColor, finalOutlineColor as Float32List)
+    gl.uniform1f(shader.uniforms.outlineThickness, finalOutlineThickness)
     gl.uniform1i(shader.uniforms.fontTexture, 0)
-    gl.uniform1i(shader.uniforms.u_isMTSDF, font.isMTSDF ? 1 : 0)
+    gl.uniform1i(shader.uniforms.isMTSDF, font.isMTSDF ? 1 : 0)
+
+    // Enhanced outline uniforms (with fallback for older shaders)
+    const canvasWidthHeight = [gl.canvas.width, gl.canvas.height]
+    gl.uniform2fv(shader.uniforms.canvasWidthHeight, canvasWidthHeight)
+    
+    // Set enhanced outline configuration uniforms if available
+    if (shader.uniforms.outlineEnabled !== undefined) {
+      gl.uniform1i(shader.uniforms.outlineEnabled, outlineConfig.enabled ? 1 : 0)
+    }
+    if (shader.uniforms.outlineWidth !== undefined) {
+      gl.uniform1f(shader.uniforms.outlineWidth, outlineConfig.width)
+    }
+    if (shader.uniforms.outlineSoftness !== undefined) {
+      gl.uniform1f(shader.uniforms.outlineSoftness, outlineConfig.softness)
+    }
+    if (shader.uniforms.outlineStyle !== undefined) {
+      // Convert style string to integer for shader
+      const styleMap = { 'solid': 0, 'glow': 1, 'inner': 2, 'outer': 3 }
+      gl.uniform1i(shader.uniforms.outlineStyle, styleMap[outlineConfig.style] || 0)
+    }
+    if (shader.uniforms.outlineOffset !== undefined) {
+      gl.uniform2fv(shader.uniforms.outlineOffset, outlineConfig.offset)
+    }
 
     // Calculate screenPxRange based on scale and font metrics
     const canvasSize = Math.min(gl.canvas.width, gl.canvas.height)

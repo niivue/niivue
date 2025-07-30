@@ -337,7 +337,7 @@
                 // Default colors (kept for backwards compatibility)
                 backgroundColor: [0.18, 0.22, 0.28, 0.9],
                 borderColor: [0.29, 0.33, 0.41, 1.0],
-                titleColor: [0.408, 0.827, 0.569, 1], 
+                titleColor: [0.68, 0.96, 0.78, 1],  // ENHANCED: Brighter, more prominent green for bold section headers 
                 cornerRadius: 8,
                 borderThickness: 1,
                 gap: 15, // Gap between sections
@@ -444,13 +444,22 @@
             
             // Text styling
             text: {
-                titleScale: 0.02,
-                componentScale: 0.025,
+                titleScale: 0.02,   // FIXED: Reverted to original size - boldness comes from outline, not size
+                componentScale: 0.090,
                 titleMargins: {
                     medicalControls: 28,  // Increased from 18 to 28 for better spacing
                     viewControls: 28,     // Increased from 18 to 28 for better spacing
                     advancedControls: 28, // Increased from 18 to 28 for better spacing
                     actions: 28           // Increased from 18 to 28 for better spacing
+                },
+                // ENHANCED: Bold outline configuration for section headers
+                titleOutline: {
+                    enabled: true,
+                    width: 0.35,                    // Strong outline width for maximum prominence
+                    color: [0.0, 0.0, 0.0, 1.0],   // Solid black outline for maximum contrast
+                    style: 'solid',                 // Clean solid outline style
+                    softness: 0.08,                 // Minimal softness for crisp edges
+                    offset: [0, 0]                  // No offset for clean appearance
                 }
             }
         }
@@ -717,6 +726,17 @@
                         log('Proceeding with basic font fallback', 'info')
                     }
                 }
+                
+                // CRITICAL FIX: Enable medical imaging optimized outline defaults globally
+                UIKFont.setGlobalOutlineDefaults({
+                    enabled: true,
+                    width: 0.25,                    // Medical grade outline width
+                    color: [0.0, 0.0, 0.0, 0.9],   // Strong black outline for maximum contrast
+                    style: 'solid',                 // Clean solid outline for medical readability
+                    softness: 0.12,                 // Slight softness for smooth edges
+                    offset: [0, 0]                  // No offset for clean appearance
+                })
+                log('Medical imaging outline defaults applied globally', 'info')
                 
                 log('UIKit renderer and font initialized on main canvas', 'info')
                 
@@ -1062,7 +1082,16 @@
                         textScale: selectorConfig.viewMode.textScale,
                         buttonPadding: selectorConfig.viewMode.buttonPadding,
                         textVerticalOffset: selectorConfig.viewMode.textVerticalOffset,
-                        charWidthMultiplier: selectorConfig.viewMode.charWidthMultiplier
+                        charWidthMultiplier: selectorConfig.viewMode.charWidthMultiplier,
+                        // EXAMPLE: Enhanced outline for view mode text readability
+                        textOutline: {
+                            enabled: true,
+                            width: 0.2,                     // Moderate outline width
+                            color: [0.0, 0.0, 0.0, 0.85],  // Semi-transparent black
+                            style: 'solid',                 // Clean solid outline
+                            softness: 0.12,                 // Slight softness for smooth edges
+                            offset: [0, 0]                  // No offset for clean look
+                        }
                     }
                 })
                     
@@ -1125,7 +1154,16 @@
                         textScale: buttonConfig.textScale,
                         charWidthMultiplier: buttonConfig.charWidthMultiplier,
                         textHeight: buttonConfig.textHeight,
-                        textVerticalOffset: buttonConfig.textVerticalOffset
+                        textVerticalOffset: buttonConfig.textVerticalOffset,
+                        // EXAMPLE: Enhanced outline for medical imaging readability
+                        textOutline: {
+                            enabled: true,
+                            width: 0.25,                    // Outline width (0.0-1.0)
+                            color: [0.0, 0.0, 0.0, 0.9],   // Strong black outline
+                            style: 'solid',                 // 'solid', 'glow', 'inner', 'outer'
+                            softness: 0.15,                 // Edge softness (0.0-1.0)
+                            offset: [0, 0]                  // X,Y offset for drop-shadow
+                        }
                     }
                 })
                 
@@ -1161,7 +1199,16 @@
                         textScale: buttonConfig.textScale,
                         charWidthMultiplier: buttonConfig.charWidthMultiplier,
                         textHeight: buttonConfig.textHeight,
-                        textVerticalOffset: buttonConfig.textVerticalOffset
+                        textVerticalOffset: buttonConfig.textVerticalOffset,
+                        // Enhanced outline for medical imaging readability - Background button
+                        textOutline: {
+                            enabled: true,
+                            width: 0.3,                     // Slightly wider for glow effect
+                            color: [0.2, 0.0, 0.5, 0.7],   // Purple glow matching button theme
+                            style: 'glow',                  // Glow style for attractive effect
+                            softness: 0.4,                  // Higher softness for glow
+                            offset: [0, 0]
+                        }
                     }
                 })
                     
@@ -1195,7 +1242,16 @@
                         textScale: buttonConfig.textScale,
                         charWidthMultiplier: buttonConfig.charWidthMultiplier,
                         textHeight: buttonConfig.textHeight,
-                        textVerticalOffset: buttonConfig.textVerticalOffset
+                        textVerticalOffset: buttonConfig.textVerticalOffset,
+                        // FIXED: Enhanced outline for medical imaging readability - Logs button
+                        textOutline: {
+                            enabled: true,
+                            width: 0.25,                    // Consistent with Screenshot button
+                            color: [0.0, 0.0, 0.0, 0.9],   // Semi-transparent black like other buttons
+                            style: 'solid',                 // FIXED: Changed from 'outer' to 'solid' to remove black overlay
+                            softness: 0.15,                 // Consistent softness for clean appearance
+                            offset: [0, 0]                  // No offset for clean look
+                        }
                     }
                 })
                 
@@ -1271,7 +1327,16 @@
                         textScale: buttonConfig.textScale,
                         charWidthMultiplier: buttonConfig.charWidthMultiplier,
                         textHeight: buttonConfig.textHeight,
-                        textVerticalOffset: buttonConfig.textVerticalOffset
+                        textVerticalOffset: buttonConfig.textVerticalOffset,
+                        // Enhanced outline for medical imaging readability - Reset button
+                        textOutline: {
+                            enabled: true,
+                            width: 0.15,                    // Subtle outline width
+                            color: [0.0, 0.0, 0.0, 0.8],   // Semi-transparent black
+                            style: 'solid',                 // Clean solid outline
+                            softness: 0.2,                  // Softness for drop shadow effect
+                            offset: [2, 2]                  // Drop shadow offset for depth
+                        }
                     }
                 })
                     
@@ -1610,7 +1675,18 @@
             if (uikitFont && uikitFont.isFontLoaded) {
                 const titleScale = LAYOUT_CONFIG.text.titleScale // Use configuration for text scale
                 const titleMargins = LAYOUT_CONFIG.text.titleMargins // Use configuration for margins
+                const titleOutline = LAYOUT_CONFIG.text.titleOutline // ENHANCED: Use outline configuration
                 const panelCenterX = panelX + (panelWidth / 2)
+                
+                // ENHANCED: Configure font outline for bold, prominent section headers
+                uikitFont.setOutlineConfig({
+                    enabled: titleOutline.enabled,
+                    width: titleOutline.width,
+                    color: titleOutline.color,
+                    style: titleOutline.style,
+                    softness: titleOutline.softness,
+                    offset: titleOutline.offset
+                })
                 
                 // MEDICAL IMAGING CONTROLS title (centered with configurable top margin)
                 const title1 = 'MEDICAL IMAGING CONTROLS'
@@ -1856,6 +1932,8 @@
                 log('Window resized, adjusting layout', 'info')
             }
         })
+
+
 
     </script>
 </body>

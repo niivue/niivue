@@ -1,5 +1,5 @@
 import { UIKRenderer } from '../uikrenderer'
-import { UIKFont } from '../assets/uikfont'
+import { UIKFont, UIKFontOutlineConfig, UIKFontOutlineStyle } from '../assets/uikfont'
 import { Vec4, Color, Vec2 } from '../types'
 import { vec2, vec4 } from 'gl-matrix'
 
@@ -14,7 +14,7 @@ export enum UIKButtonState {
 }
 
 /**
- * Button style configuration
+ * Button style configuration with enhanced outline support
  */
 export interface UIKButtonStyle {
   backgroundColor: Color
@@ -35,9 +35,13 @@ export interface UIKButtonStyle {
   textHeight?: number
   /** Vertical text offset for fine-tuning text position */
   textVerticalOffset?: number
-  /** Text outline color for better readability */
+  
+  // Enhanced outline configuration (backward compatible with legacy properties)
+  /** Comprehensive text outline configuration for enhanced readability */
+  textOutline?: Partial<UIKFontOutlineConfig>
+  /** @deprecated Use textOutline.color instead - Text outline color for better readability */
   textOutlineColor?: Color
-  /** Text outline thickness */
+  /** @deprecated Use textOutline.width instead - Text outline thickness */
   textOutlineThickness?: number
 }
 
@@ -215,17 +219,17 @@ export class UIKButton {
     let topColor: Color
     let bottomColor: Color
     
-    if (isPressed) {
+      if (isPressed) {
       // Inverted gradient when pressed (darker at top)
       topColor = [
         Math.max(baseColor[0] - 0.1, 0),
         Math.max(baseColor[1] - 0.1, 0),
         Math.max(baseColor[2] - 0.1, 0),
-        baseColor[3]
-      ]
+          baseColor[3]
+        ]
       bottomColor = baseColor
-    } else {
-      // Normal gradient (lighter at top, darker at bottom)
+      } else {
+        // Normal gradient (lighter at top, darker at bottom)
       topColor = [
         Math.min(baseColor[0] + 0.15, 1),
         Math.min(baseColor[1] + 0.15, 1),
@@ -236,10 +240,10 @@ export class UIKButton {
         Math.max(baseColor[0] - 0.05, 0),
         Math.max(baseColor[1] - 0.05, 0),
         Math.max(baseColor[2] - 0.05, 0),
-        baseColor[3]
-      ]
-    }
-    
+          baseColor[3]
+        ]
+      }
+      
     // Use rounded rectangle with gradient
     this.renderer.drawRoundedRect({
       bounds: [x, y, width, height],
@@ -437,6 +441,7 @@ export class UIKButton {
       charWidthMultiplier: userStyle.charWidthMultiplier ?? baseStyle.charWidthMultiplier,
       textHeight: userStyle.textHeight ?? baseStyle.textHeight,
       textVerticalOffset: userStyle.textVerticalOffset ?? baseStyle.textVerticalOffset,
+      textOutline: userStyle.textOutline,
       textOutlineColor: userStyle.textOutlineColor || baseStyle.textOutlineColor,
       textOutlineThickness: userStyle.textOutlineThickness ?? baseStyle.textOutlineThickness
     }
@@ -603,6 +608,41 @@ export class UIKButton {
       })
     }
     
+    // Configure font outline based on style configuration
+    if (this.config.font) {
+      // Use enhanced outline configuration if provided, otherwise fall back to legacy properties
+      if (style.textOutline) {
+        this.config.font.setOutlineConfig({
+          enabled: true,
+          width: style.textOutline.width ?? 0.25,
+          color: style.textOutline.color ?? [0.0, 0.0, 0.0, 1.0],
+          style: style.textOutline.style ?? 'solid',
+          softness: style.textOutline.softness ?? 0.15,
+          offset: style.textOutline.offset ?? [0, 0]
+        })
+      } else if (style.textOutlineColor || style.textOutlineThickness) {
+        // Legacy outline configuration for backward compatibility
+        this.config.font.setOutlineConfig({
+          enabled: true,
+          width: (style.textOutlineThickness ?? 3) * 0.05, // Convert legacy thickness to width
+          color: style.textOutlineColor ?? [0.0, 0.0, 0.0, 1.0],
+          style: 'solid',
+          softness: 0.15,
+          offset: [0, 0]
+        })
+      } else {
+        // Use font's default outline configuration or disable if not specified
+        this.config.font.setOutlineConfig({
+          enabled: false,
+          width: 0,
+          color: [0, 0, 0, 1],
+          style: 'solid',
+          softness: 0.1,
+          offset: [0, 0]
+        })
+      }
+    }
+    
     this.renderer.drawRotatedText({
       font: this.config.font,
       xy: vec2.fromValues(textX, textY), // FIXED: Use exact calculated position without additional offsets
@@ -610,6 +650,7 @@ export class UIKButton {
       color: style.textColor,
       scale: style.textScale ?? 0.025,
       rotation: 0,
+      // Legacy parameters are now handled by font outline configuration
       outlineColor: style.textOutlineColor ?? [0.0, 0.0, 0.0, 1.0],
       outlineThickness: style.textOutlineThickness ?? 3
     })
@@ -687,4 +728,4 @@ export class UIKButton {
   public setBounds(bounds: Vec4): void {
     vec4.copy(this.config.bounds, bounds)
   }
-}
+} 

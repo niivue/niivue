@@ -376,6 +376,16 @@ export class UIKSlider {
     
     // Draw label and value
     if (this.config.font) {
+      // Configure font outline for enhanced medical readability
+      this.config.font.setOutlineConfig({
+        enabled: true,
+        width: 0.22,                    // Moderate outline width for slider labels
+        color: [0.0, 0.0, 0.0, 0.9],   // Strong black outline for contrast
+        style: 'solid',                 // Clean solid outline for readability
+        softness: 0.12,                 // Slight softness for smooth edges
+        offset: [0, 0]                  // No offset for clean appearance
+      })
+      
       if (this.config.label) {
         // Position label to the left of the slider track with better spacing
         this.renderer.drawRotatedText({

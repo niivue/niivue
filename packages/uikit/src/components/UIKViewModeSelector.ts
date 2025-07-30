@@ -1,6 +1,7 @@
-import { UIKRenderer } from '../uikrenderer.js'
-import { UIKFont } from '../assets/uikfont.js'
-import { Vec4, Color } from '../types.js'
+import { UIKRenderer } from '../uikrenderer'
+import { UIKFont, UIKFontOutlineConfig } from '../assets/uikfont'
+import { Vec4, Color } from '../types'
+import { vec2 } from 'gl-matrix'
 
 export interface UIKViewModeSelectorOptions {
     bounds: Vec4
@@ -22,6 +23,8 @@ export interface UIKViewModeSelectorOptions {
         textVerticalOffset?: number
         /** Character width multiplier for text centering */
         charWidthMultiplier?: number
+        /** Enhanced text outline configuration for better readability */
+        textOutline?: Partial<UIKFontOutlineConfig>
     }
 }
 
@@ -42,6 +45,7 @@ export class UIKViewModeSelector {
         buttonPadding: number
         textVerticalOffset: number
         charWidthMultiplier: number
+        textOutline?: Partial<UIKFontOutlineConfig>
     }
     private hoveredIndex: number = -1
     private selectedIndex: number = 0
@@ -64,7 +68,8 @@ export class UIKViewModeSelector {
             textScale: options.style?.textScale || 0.020, // FIXED: Coordinated with multiplier
             buttonPadding: options.style?.buttonPadding || 4, // Default button padding
             textVerticalOffset: options.style?.textVerticalOffset || 2, // FIXED: Slight downward adjustment for better centering
-            charWidthMultiplier: options.style?.charWidthMultiplier || 0.50 // FIXED: Reduced for better horizontal centering
+            charWidthMultiplier: options.style?.charWidthMultiplier || 0.50, // FIXED: Reduced for better horizontal centering
+            textOutline: options.style?.textOutline
         }
 
         // Find selected index
@@ -233,6 +238,28 @@ export class UIKViewModeSelector {
                     str: `W:${textWidth.toFixed(1)} H:${textHeight.toFixed(1)} X:${textX.toFixed(1)}`,
                     scale: 0.015,
                     color: [1, 1, 1, 1]
+                })
+            }
+            
+            // Configure font outline for enhanced readability
+            if (this.font && this.style.textOutline) {
+                this.font.setOutlineConfig({
+                    enabled: true,
+                    width: this.style.textOutline.width ?? 0.25,
+                    color: this.style.textOutline.color ?? [0.0, 0.0, 0.0, 1.0],
+                    style: this.style.textOutline.style ?? 'solid',
+                    softness: this.style.textOutline.softness ?? 0.15,
+                    offset: this.style.textOutline.offset ?? [0, 0]
+                })
+            } else if (this.font) {
+                // Use medical imaging optimized defaults
+                this.font.setOutlineConfig({
+                    enabled: true,
+                    width: 0.2,
+                    color: [0.0, 0.0, 0.0, 0.8],
+                    style: 'solid',
+                    softness: 0.15,
+                    offset: [0, 0]
                 })
             }
             
