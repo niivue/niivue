@@ -57,8 +57,6 @@ export const saveHTMLHandler = async (
     // write the HTML string
     await writeFile(filePath, htmlStr, 'utf8')
 
-    // optionally add to recent‑files & refresh your menu
-    store.addRecentFile(filePath)
     refreshMenu()
 
     return path.basename(filePath)
