@@ -1,3 +1,6 @@
+I'll help you resolve the sidebar layout issues by increasing the panel width and improving the icon-text alignment. Here's the solution:
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,12 +25,12 @@
         #container {
             display: block;
             height: 100vh;
-            padding-top: 40px;
+            padding-top: 20px;
         }
         
         #canvas-container {
             width: 100%;
-            height: calc(100vh - 40px);
+            height: calc(100vh - 20px);
             position: relative;
             background: #000;
         }
@@ -281,7 +284,8 @@
             UIKPanel,
             UIKColormapSelector,
             UIKViewModeSelector,
-            UIKButton
+            UIKButton,
+            UIKSVG
         } from '../uikit/dist/index.es.js'
 
         // Logging system
@@ -322,8 +326,8 @@
         const LAYOUT_CONFIG = {
             // Main panel configuration
             panel: {
-                width: 330,
-                rightMargin: 350, // Distance from right edge of canvas
+                width: 380,  // Increased from 330 to 380
+                rightMargin: 400,  // Increased from 350 to 400
                 topMargin: 20,
                 backgroundColor: [0.12, 0.12, 0.12, 0.95],
                 gradientEnd: [0.16, 0.16, 0.16, 0.95],
@@ -344,12 +348,12 @@
                 
                 // Individual section heights and attractive colors
                 medicalControls: { 
-                    height: 240,
+                    height: 230,  // Increased from 240 to 265
                     backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.25, 0.35, 0.45, 1.0]
                 },
                 viewControls: { 
-                    height: 160,
+                    height: 180,
                     backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.35, 0.25, 0.45, 1.0]
                 },
@@ -359,7 +363,7 @@
                     borderColor: [0.25, 0.45, 0.35, 1.0]
                 },
                 actions: { 
-                    height: 160,
+                    height: 170,
                     backgroundColor: [0.176, 0.216, 0.282, 0.8], 
                     borderColor: [0.45, 0.35, 0.25, 1.0]
                 }
@@ -369,7 +373,7 @@
             content: {
                 marginLeft: 15,
                 marginRight: 15,
-                marginTop: 40, // Increased from 30 to 40 to accommodate larger title margins (28)
+                marginTop: 55, // Increased from 30 to 40 to accommodate larger title margins (28)
                 marginBottom: 15
             },
             
@@ -377,10 +381,10 @@
             components: {
                 // Slider configuration
                 sliders: {
-                    width: 170,
+                    width: 180,  // Increased from 170 to 180
                     height: 16,
-                    spacing: 32,
-                    labelOffset: 110, // Further increased distance for clear separation between labels and sliders
+                    spacing: 30,  // Increased from 32 to 40
+                    labelOffset: 150,  // Increased from 110 to 130
                     marginLeft: 10,
                     marginRight: 10,
                     topOffset: 25, // Configurable vertical offset from section title for better centering
@@ -392,16 +396,16 @@
                 toggles: {
                     height: 22,
                     spacing: 28,
-                    labelAreaWidth: 180, // Space reserved for labels
+                    labelAreaWidth: 200,  // Increased from 180 to 200
                     switchWidth: 60,
                     marginFromEdge: 10
                 },
                 
                 // Button configuration - Enhanced with new robust properties
                 buttons: {
-                    height: 30,
-                    gap: 10,
-                    rowSpacing: 40,
+                    height: 35,
+                    gap: 15,
+                    rowSpacing: 45,
                     textColor: [0.0, 0.0, 0.0, 1.0], // Black text
                     borderWidth: 1,
                     borderRadius: 4,
@@ -430,7 +434,7 @@
                     },
                     viewMode: {
                         height: 45,
-                        bottomMargin: 15,
+                        bottomMargin: 10,
                         marginLeft: 10,
                         marginRight: 10,
                         // New robust view mode selector properties
@@ -617,6 +621,7 @@
         let nv = null // Niivue instance
         let uikitRenderer = null
         let uikitFont = null
+        let svgIcons = {}
 
         // WebGL state management functions
         function saveGLState(gl) {
@@ -737,6 +742,216 @@
                     offset: [0, 0]                  // No offset for clean appearance
                 })
                 log('Medical imaging outline defaults applied globally', 'info')
+                
+                // Initialize SVG icons for action buttons
+                svgIcons = {}
+                
+                try {
+                    log('Starting SVG icon initialization...', 'info')
+                    
+                    // Create SVG icon for Save/Screenshot button
+                    const saveIcon = new UIKSVG(gl)
+                    await saveIcon.loadSVGFromString(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H11.81C11.93 20.68 12.13 20.38 12.38 20.14L19.41 13.1C19.73 12.78 20.1 12.5 20.5 12.29V5C20.5 3.9 19.6 3 18.5 3H17ZM15 9H5V7H15V9ZM12 13H5V11H12V13Z" fill="#4A90E2"/>
+                            <path d="M21.7 13.35L20.7 14.35L18.65 12.3L19.65 11.3C19.86 11.09 20.21 11.09 20.42 11.3L21.7 12.58C21.91 12.79 21.91 13.14 21.7 13.35ZM18.1 12.85L20.15 14.9L14.1 20.95H12.05V18.9L18.1 12.85Z" fill="#2E6BC9"/>
+                        </svg>
+                    `)
+                    svgIcons.save = saveIcon
+                    log(`Save icon loaded: ${saveIcon.getWidth()}x${saveIcon.getHeight()}`, 'info')
+                    
+                    // Create SVG icon for Background button  
+                    const backgroundIcon = new UIKSVG(gl)
+                    await backgroundIcon.loadSVGFromString(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="12" cy="16" rx="10" ry="6" fill="#E0E0E0" stroke="#B0B0B0"/>
+                            <circle cx="8" cy="8" r="3" fill="#FF6B6B"/>
+                            <circle cx="16" cy="8" r="3" fill="#4ECDC4"/>
+                            <circle cx="12" cy="12" r="3" fill="#45B7D1"/>
+                            <circle cx="6" cy="14" r="2" fill="#96CEB4"/>
+                            <circle cx="18" cy="14" r="2" fill="#FFEAA7"/>
+                            <circle cx="12" cy="18" r="2" fill="#DDA0DD"/>
+                        </svg>
+                    `)
+                    svgIcons.background = backgroundIcon
+                    log(`Background icon loaded: ${backgroundIcon.getWidth()}x${backgroundIcon.getHeight()}`, 'info')
+                    
+                    // Create SVG icon for Logs button
+                    const logsIcon = new UIKSVG(gl)
+                    await logsIcon.loadSVGFromString(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM18 20H6V4H13V9H18V20Z" fill="#FF8C42"/>
+                            <path d="M14 2L20 8H15C14.45 8 14 7.55 14 7V2Z" fill="#E55A2B"/>
+                            <path d="M8 12H16V14H8V12Z" fill="white"/>
+                            <path d="M8 16H13V18H8V16Z" fill="white"/>
+                            <path d="M8 10H11V11H8V10Z" fill="white"/>
+                        </svg>
+                    `)
+                    svgIcons.logs = logsIcon
+                    log(`Logs icon loaded: ${logsIcon.getWidth()}x${logsIcon.getHeight()}`, 'info')
+                    
+                    // Create SVG icon for Reset button
+                    const resetIcon = new UIKSVG(gl)
+                    await resetIcon.loadSVGFromString(`
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V1L7 6L12 11V7C15.31 7 18 9.69 18 13S15.31 19 12 19 6 16.31 6 13H4C4 17.42 7.58 21 12 21S20 17.42 20 13 16.42 5 12 5Z" fill="#4CAF50"/>
+                            <circle cx="12" cy="13" r="6" stroke="#388E3C" stroke-width="1.5" fill="none"/>
+                        </svg>
+                    `)
+                    svgIcons.reset = resetIcon
+                    log(`Reset icon loaded: ${resetIcon.getWidth()}x${resetIcon.getHeight()}`, 'info')
+                    
+                    // Create SVG icons for sliders
+                    const brightnessIcon = new UIKSVG(gl)
+                    await brightnessIcon.loadSVGFromString(`
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="5" fill="#FFD700"/>
+                            <path d="M12 2V4M12 20V22M4.93 4.93L6.34 6.34M17.66 17.66L19.07 19.07M2 12H4M20 12H22M6.34 17.66L4.93 19.07M19.07 4.93L17.66 6.34" stroke="#FFA500" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    `)
+                    svgIcons.brightness = brightnessIcon
+                    
+                    const contrastIcon = new UIKSVG(gl)
+                    await contrastIcon.loadSVGFromString(`
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="9" stroke="#666" stroke-width="1.5"/>
+                            <path d="M12 3C16.97 3 21 7.03 21 12S16.97 21 12 21V3Z" fill="#2C2C2C"/>
+                            <path d="M12 3C7.03 3 3 7.03 3 12S7.03 21 12 21V3Z" fill="#F0F0F0"/>
+                        </svg>
+                    `)
+                    svgIcons.contrast = contrastIcon
+                    
+                    const zoomIcon = new UIKSVG(gl)
+                    await zoomIcon.loadSVGFromString(`
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="11" cy="11" r="8" stroke="#2196F3" stroke-width="2" fill="#E3F2FD"/>
+                            <path d="M21 21L16.65 16.65" stroke="#1976D2" stroke-width="3" stroke-linecap="round"/>
+                            <path d="M11 8V14M8 11H14" stroke="#1976D2" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    `)
+                    svgIcons.zoom = zoomIcon
+                    
+                    const opacityIcon = new UIKSVG(gl)
+                    await opacityIcon.loadSVGFromString(`
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="#9C27B0" stroke-width="2" fill="#F3E5F5"/>
+                            <circle cx="12" cy="12" r="3" stroke="#7B1FA2" stroke-width="2" fill="#E1BEE7"/>
+                            <circle cx="12" cy="12" r="1.5" fill="#4A148C"/>
+                        </svg>
+                    `)
+                    svgIcons.opacity = opacityIcon
+                    
+                    const sliceIcon = new UIKSVG(gl)
+                    await sliceIcon.loadSVGFromString(`
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="5" width="18" height="2" fill="#FF5722"/>
+                            <rect x="3" y="9" width="18" height="2" fill="#FF9800"/>
+                            <rect x="3" y="13" width="18" height="2" fill="#FFC107"/>
+                            <rect x="3" y="17" width="18" height="2" fill="#FFEB3B"/>
+                        </svg>
+                    `)
+                    svgIcons.slice = sliceIcon
+                    
+                    // Create SVG icons for toggles
+                    const crosshairIcon = new UIKSVG(gl)
+                    await crosshairIcon.loadSVGFromString(`
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="9" stroke="#F44336" stroke-width="2" fill="#FFEBEE"/>
+                            <path d="M12 6V18M6 12H18" stroke="#D32F2F" stroke-width="2"/>
+                        </svg>
+                    `)
+                    svgIcons.crosshair = crosshairIcon
+                    
+                    const colorbarIcon = new UIKSVG(gl)
+                    await colorbarIcon.loadSVGFromString(`
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="4" width="3" height="16" fill="#FF0000"/>
+                            <rect x="8" y="6" width="3" height="12" fill="#00FF00"/>
+                            <rect x="12" y="8" width="3" height="8" fill="#0000FF"/>
+                            <rect x="16" y="10" width="3" height="4" fill="#FFFF00"/>
+                            <rect x="3" y="3" width="18" height="18" stroke="#444" stroke-width="1" fill="none"/>
+                        </svg>
+                    `)
+                    svgIcons.colorbar = colorbarIcon
+                    
+                    const radiologicalIcon = new UIKSVG(gl)
+                    await radiologicalIcon.loadSVGFromString(`
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 12L12 8L16 12" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="6" cy="16" r="3" fill="#E3F2FD" stroke="#1976D2"/>
+                            <circle cx="18" cy="16" r="3" fill="#E3F2FD" stroke="#1976D2"/>
+                            <text x="5" y="18" fill="#1976D2" font-size="8" font-family="Arial" font-weight="bold">L</text>
+                            <text x="16.5" y="18" fill="#1976D2" font-size="8" font-family="Arial" font-weight="bold">R</text>
+                        </svg>
+                    `)
+                    svgIcons.radiological = radiologicalIcon
+                    
+                    const interpolationIcon = new UIKSVG(gl)
+                    await interpolationIcon.loadSVGFromString(`
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="6" cy="6" r="2" fill="#4CAF50"/>
+                            <circle cx="18" cy="6" r="2" fill="#4CAF50"/>
+                            <circle cx="6" cy="18" r="2" fill="#4CAF50"/>
+                            <circle cx="18" cy="18" r="2" fill="#4CAF50"/>
+                            <path d="M6 6C10 8 14 8 18 6M6 18C10 16 14 16 18 18" stroke="#388E3C" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M6 6C8 10 8 14 6 18M18 6C16 10 16 14 18 18" stroke="#66BB6A" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    `)
+                    svgIcons.interpolation = interpolationIcon
+                    
+                    // Create SVG icons for view modes
+                    const axialIcon = new UIKSVG(gl)
+                    await axialIcon.loadSVGFromString(`
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="12" cy="12" rx="9" ry="6" stroke="#2196F3" stroke-width="2" fill="#E3F2FD"/>
+                            <path d="M12 6V18" stroke="#1976D2" stroke-width="1.5"/>
+                            <path d="M6 12H18" stroke="#1976D2" stroke-width="1.5"/>
+                        </svg>
+                    `)
+                    svgIcons.axial = axialIcon
+                    
+                    const sagittalIcon = new UIKSVG(gl)
+                    await sagittalIcon.loadSVGFromString(`
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="4" width="16" height="16" rx="2" stroke="#4CAF50" stroke-width="2" fill="#E8F5E8"/>
+                            <path d="M12 4V20" stroke="#388E3C" stroke-width="2"/>
+                            <path d="M8 8L16 16M16 8L8 16" stroke="#66BB6A" stroke-width="1.5"/>
+                        </svg>
+                    `)
+                    svgIcons.sagittal = sagittalIcon
+                    
+                    const coronalIcon = new UIKSVG(gl)
+                    await coronalIcon.loadSVGFromString(`
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="4" width="16" height="16" rx="2" stroke="#FF9800" stroke-width="2" fill="#FFF3E0"/>
+                            <path d="M4 12H20" stroke="#F57C00" stroke-width="2"/>
+                            <circle cx="8" cy="8" r="1.5" fill="#E65100"/>
+                            <circle cx="16" cy="8" r="1.5" fill="#E65100"/>
+                        </svg>
+                    `)
+                    svgIcons.coronal = coronalIcon
+                    
+                    const multiIcon = new UIKSVG(gl)
+                    await multiIcon.loadSVGFromString(`
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="2" width="9" height="9" rx="1" stroke="#9C27B0" stroke-width="1.5" fill="#F3E5F5"/>
+                            <rect x="13" y="2" width="9" height="9" rx="1" stroke="#9C27B0" stroke-width="1.5" fill="#F3E5F5"/>
+                            <rect x="2" y="13" width="9" height="9" rx="1" stroke="#9C27B0" stroke-width="1.5" fill="#F3E5F5"/>
+                            <rect x="13" y="13" width="9" height="9" rx="1" stroke="#9C27B0" stroke-width="1.5" fill="#F3E5F5"/>
+                            <circle cx="6.5" cy="6.5" r="1" fill="#7B1FA2"/>
+                            <circle cx="17.5" cy="6.5" r="1" fill="#7B1FA2"/>
+                            <circle cx="6.5" cy="17.5" r="1" fill="#7B1FA2"/>
+                            <circle cx="17.5" cy="17.5" r="1" fill="#7B1FA2"/>
+                        </svg>
+                    `)
+                    svgIcons.multi = multiIcon
+                    
+                    log(`SVG icons loaded successfully: ${Object.keys(svgIcons).length} icons`, 'info')
+                } catch (svgError) {
+                    log(`SVG icons loading failed: ${svgError.message}`, 'error')
+                    log(`SVG error stack: ${svgError.stack}`, 'error')
+                    log('Proceeding without SVG icons', 'info')
+                }
                 
                 log('UIKit renderer and font initialized on main canvas', 'info')
                 
@@ -1086,11 +1301,11 @@
                         // EXAMPLE: Enhanced outline for view mode text readability
                         textOutline: {
                             enabled: true,
-                            width: 0.2,                     // Moderate outline width
-                            color: [0.0, 0.0, 0.0, 0.85],  // Semi-transparent black
-                            style: 'solid',                 // Clean solid outline
+                            width: 0.2,                     // Moderate outline width for maximum prominence
+                            color: [0.0, 0.0, 0.0, 0.85],   // Semi-transparent black outline for maximum contrast
+                            style: 'solid',                 // Clean solid outline style
                             softness: 0.12,                 // Slight softness for smooth edges
-                            offset: [0, 0]                  // No offset for clean look
+                            offset: [0, 0]                  // No offset for clean appearance
                         }
                     }
                 })
@@ -1143,11 +1358,11 @@
                             }
                         },
                         style: {
-                        backgroundColor: [0.2, 0.6, 0.9, 1.0],
-                        hoverColor: [0.3, 0.7, 1.0, 1.0],
-                        activeColor: [0.1, 0.5, 0.8, 1.0],
-                        borderColor: [0.4, 0.8, 1.0, 1.0],
-                        textColor: buttonConfig.textColor,
+                        backgroundColor: [0.15, 0.15, 0.15, 1.0],
+                        hoverColor: [0.25, 0.25, 0.25, 1.0],
+                        activeColor: [0.1, 0.1, 0.1, 1.0],
+                        borderColor: [0.4, 0.4, 0.4, 1.0],
+                        textColor: [1.0, 1.0, 1.0, 1.0],
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
                         padding: buttonConfig.padding,
@@ -1188,11 +1403,11 @@
                             }
                         },
                         style: {
-                        backgroundColor: [0.6, 0.4, 0.9, 1.0],
-                        hoverColor: [0.7, 0.5, 1.0, 1.0],
-                        activeColor: [0.5, 0.3, 0.8, 1.0],
-                        borderColor: [0.8, 0.6, 1.0, 1.0],
-                        textColor: buttonConfig.textColor,
+                        backgroundColor: [0.15, 0.15, 0.15, 1.0],
+                        hoverColor: [0.25, 0.25, 0.25, 1.0],
+                        activeColor: [0.1, 0.1, 0.1, 1.0],
+                        borderColor: [0.4, 0.4, 0.4, 1.0],
+                        textColor: [1.0, 1.0, 1.0, 1.0],
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
                         padding: buttonConfig.padding,
@@ -1231,11 +1446,11 @@
                         }
                         },
                         style: {
-                        backgroundColor: [0.9, 0.6, 0.2, 1.0],
-                            hoverColor: [1.0, 0.7, 0.3, 1.0],
-                        activeColor: [0.8, 0.5, 0.1, 1.0],
-                            borderColor: [1.0, 0.8, 0.4, 1.0],
-                        textColor: buttonConfig.textColor,
+                        backgroundColor: [0.15, 0.15, 0.15, 1.0],
+                        hoverColor: [0.25, 0.25, 0.25, 1.0],
+                        activeColor: [0.1, 0.1, 0.1, 1.0],
+                        borderColor: [0.4, 0.4, 0.4, 1.0],
+                        textColor: [1.0, 1.0, 1.0, 1.0],
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
                         padding: buttonConfig.padding,
@@ -1316,11 +1531,11 @@
                         log('All parameters reset to defaults', 'info')
                         },
                         style: {
-                        backgroundColor: [0.9, 0.2, 0.2, 1.0],
-                        hoverColor: [1.0, 0.3, 0.3, 1.0],
-                        activeColor: [0.8, 0.1, 0.1, 1.0],
-                        borderColor: [1.0, 0.4, 0.4, 1.0],
-                        textColor: buttonConfig.textColor,
+                        backgroundColor: [0.15, 0.15, 0.15, 1.0],
+                        hoverColor: [0.25, 0.25, 0.25, 1.0],
+                        activeColor: [0.1, 0.1, 0.1, 1.0],
+                        borderColor: [0.4, 0.4, 0.4, 1.0],
+                        textColor: [1.0, 1.0, 1.0, 1.0],
                         borderWidth: buttonConfig.borderWidth,
                         borderRadius: buttonConfig.borderRadius,
                         padding: buttonConfig.padding,
@@ -1578,15 +1793,15 @@
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
             
             // Define UI panel dimensions and position
-            const panelX = canvas.width - 350
-            const panelY = 20
-            const panelWidth = 330
+            const panelX = canvas.width - 400  // Updated to 400
+            const panelY = 30
+            const panelWidth = 380  // Updated to 380
             
             // Calculate required height based on all sections
-            const section1Height = 240  // Medical Imaging Controls
-            const section2Height = 160  // View Controls  
+            const section1Height = 230  // Medical Imaging Controls (increased)
+            const section2Height = 180  // View Controls  
             const section3Height = 240  // Advanced Controls
-            const section4Height = 160  // Actions
+            const section4Height = 170  // Actions
             const sectionGap = 15        // Gap between sections
             const bottomMargin = 20      // Bottom margin
             
@@ -1742,6 +1957,238 @@
                 component.render()
                 }
             })
+            
+            // Render SVG icons on all UI components if available
+            if (svgIcons && Object.keys(svgIcons).length > 0) {
+                
+                // === ACTION BUTTON ICONS ===
+                const buttonIconSize = 20
+                const buttonIconOffset = 8
+                
+                // Save icon for Screenshot button
+                if (svgIcons.save && uikitComponents.screenshotButton) {
+                    const buttonBounds = uikitComponents.screenshotButton.bounds
+                    const iconX = buttonBounds[0] + buttonIconOffset
+                    const iconY = buttonBounds[1] + (buttonBounds[3] - buttonIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.save,
+                            bounds: [iconX, iconY, buttonIconSize, buttonIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing save icon:', error)
+                    }
+                }
+                
+                // Background icon for Background button
+                if (svgIcons.background && uikitComponents.backgroundButton) {
+                    const buttonBounds = uikitComponents.backgroundButton.bounds
+                    const iconX = buttonBounds[0] + buttonIconOffset
+                    const iconY = buttonBounds[1] + (buttonBounds[3] - buttonIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.background,
+                            bounds: [iconX, iconY, buttonIconSize, buttonIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing background icon:', error)
+                    }
+                }
+                
+                // Logs icon for Logs button
+                if (svgIcons.logs && uikitComponents.logsButton) {
+                    const buttonBounds = uikitComponents.logsButton.bounds
+                    const iconX = buttonBounds[0] + buttonIconOffset
+                    const iconY = buttonBounds[1] + (buttonBounds[3] - buttonIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.logs,
+                            bounds: [iconX, iconY, buttonIconSize, buttonIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing logs icon:', error)
+                    }
+                }
+                
+                // Reset icon for Reset button
+                if (svgIcons.reset && uikitComponents.resetButton) {
+                    const buttonBounds = uikitComponents.resetButton.bounds
+                    const iconX = buttonBounds[0] + buttonIconOffset
+                    const iconY = buttonBounds[1] + (buttonBounds[3] - buttonIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.reset,
+                            bounds: [iconX, iconY, buttonIconSize, buttonIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing reset icon:', error)
+                    }
+                }
+                
+                // === SLIDER ICONS ===
+                const sliderIconSize = 18
+                const sliderIconOffset = -30  // Increased from -25 to -30 for better spacing
+                
+                // Brightness slider icon
+                if (svgIcons.brightness && uikitComponents.brightnessSlider) {
+                    const sliderBounds = uikitComponents.brightnessSlider.getBounds()
+                    const iconX = sliderBounds[0] + sliderIconOffset
+                    const iconY = sliderBounds[1] + (sliderBounds[3] - sliderIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.brightness,
+                            bounds: [iconX, iconY, sliderIconSize, sliderIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing brightness icon:', error)
+                    }
+                }
+                
+                // Contrast slider icon
+                if (svgIcons.contrast && uikitComponents.contrastSlider) {
+                    const sliderBounds = uikitComponents.contrastSlider.getBounds()
+                    const iconX = sliderBounds[0] + sliderIconOffset
+                    const iconY = sliderBounds[1] + (sliderBounds[3] - sliderIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.contrast,
+                            bounds: [iconX, iconY, sliderIconSize, sliderIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing contrast icon:', error)
+                    }
+                }
+                
+                // Zoom slider icon
+                if (svgIcons.zoom && uikitComponents.zoomSlider) {
+                    const sliderBounds = uikitComponents.zoomSlider.getBounds()
+                    const iconX = sliderBounds[0] + sliderIconOffset
+                    const iconY = sliderBounds[1] + (sliderBounds[3] - sliderIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.zoom,
+                            bounds: [iconX, iconY, sliderIconSize, sliderIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing zoom icon:', error)
+                    }
+                }
+                
+                // Opacity slider icon
+                if (svgIcons.opacity && uikitComponents.opacitySlider) {
+                    const sliderBounds = uikitComponents.opacitySlider.getBounds()
+                    const iconX = sliderBounds[0] + sliderIconOffset
+                    const iconY = sliderBounds[1] + (sliderBounds[3] - sliderIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.opacity,
+                            bounds: [iconX, iconY, sliderIconSize, sliderIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing opacity icon:', error)
+                    }
+                }
+                
+                // Slice slider icon
+                if (svgIcons.slice && uikitComponents.sliceSlider) {
+                    const sliderBounds = uikitComponents.sliceSlider.getBounds()
+                    const iconX = sliderBounds[0] + sliderIconOffset
+                    const iconY = sliderBounds[1] + (sliderBounds[3] - sliderIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.slice,
+                            bounds: [iconX, iconY, sliderIconSize, sliderIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing slice icon:', error)
+                    }
+                }
+                
+                // === TOGGLE ICONS ===
+                const toggleIconSize = 16
+                const toggleIconOffset = 160  // Position AFTER the label text, before the toggle switch
+                
+                // Crosshair toggle icon
+                if (svgIcons.crosshair && uikitComponents.crosshairToggle) {
+                    const toggleBounds = uikitComponents.crosshairToggle.getBounds()
+                    const iconX = toggleBounds[0] + toggleIconOffset
+                    const iconY = toggleBounds[1] + (toggleBounds[3] - toggleIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.crosshair,
+                            bounds: [iconX, iconY, toggleIconSize, toggleIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing crosshair icon:', error)
+                    }
+                }
+                
+                // Colorbar toggle icon
+                if (svgIcons.colorbar && uikitComponents.colorbarToggle) {
+                    const toggleBounds = uikitComponents.colorbarToggle.getBounds()
+                    const iconX = toggleBounds[0] + toggleIconOffset
+                    const iconY = toggleBounds[1] + (toggleBounds[3] - toggleIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.colorbar,
+                            bounds: [iconX, iconY, toggleIconSize, toggleIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing colorbar icon:', error)
+                    }
+                }
+                
+                // Radiological toggle icon
+                if (svgIcons.radiological && uikitComponents.radiologicalToggle) {
+                    const toggleBounds = uikitComponents.radiologicalToggle.getBounds()
+                    const iconX = toggleBounds[0] + toggleIconOffset
+                    const iconY = toggleBounds[1] + (toggleBounds[3] - toggleIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.radiological,
+                            bounds: [iconX, iconY, toggleIconSize, toggleIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing radiological icon:', error)
+                    }
+                }
+                
+                // Interpolation toggle icon
+                if (svgIcons.interpolation && uikitComponents.interpolationToggle) {
+                    const toggleBounds = uikitComponents.interpolationToggle.getBounds()
+                    const iconX = toggleBounds[0] + toggleIconOffset
+                    const iconY = toggleBounds[1] + (toggleBounds[3] - toggleIconSize) / 2
+                    
+                    try {
+                        uikitRenderer.drawSVG({
+                            svgAsset: svgIcons.interpolation,
+                            bounds: [iconX, iconY, toggleIconSize, toggleIconSize]
+                        })
+                    } catch (error) {
+                        console.warn('Error drawing interpolation icon:', error)
+                    }
+                }
+                
+                // View mode selector icons removed for cleaner appearance
+                
+            } else {
+                // Debug log if no SVG icons are available
+                if (Object.keys(svgIcons).length === 0) {
+                    console.warn('No SVG icons loaded for rendering')
+                }
+            }
             
             // Restore WebGL state
             restoreGLState(gl, state)
@@ -1932,9 +2379,7 @@
                 log('Window resized, adjusting layout', 'info')
             }
         })
-
-
-
+        
     </script>
 </body>
 </html> 

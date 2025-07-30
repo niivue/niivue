@@ -15,6 +15,8 @@ import triangleVert from "./shaders/vert/triangle.vert.glsl"
 import triangleFrag from "./shaders/frag/triangle.frag.glsl"
 import rotatedFontVert from "./shaders/vert/rotated-font.vert.glsl"
 import rotatedFontFrag from "./shaders/frag/rotated-font.frag.glsl"
+import bitmapVert from "./shaders/vert/bitmap.vert.glsl"
+import bitmapFrag from "./shaders/frag/bitmap.frag.glsl"
 import { Vec4, Color, LineTerminator, LineStyle, Vec2, RoundedRectConfig } from "./types.js"
 import { UIKFont } from "./assets/uikfont.js"
 
@@ -29,6 +31,7 @@ export class UIKRenderer {
   private colorbarShader: UIKShader
   private projectedLineShader: UIKShader
   private ellipticalFillShader: UIKShader
+  private bitmapShader: UIKShader
   private genericVAO: WebGLVertexArrayObject
   private triangleVertexBuffer: WebGLBuffer
 
@@ -45,6 +48,7 @@ export class UIKRenderer {
     this.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
     this.projectedLineShader = new UIKShader(gl, projectedLineVert, solidColorFrag)
     this.ellipticalFillShader = new UIKShader(gl, ellipseVert, ellipseFrag)
+    this.bitmapShader = new UIKShader(gl, bitmapVert, bitmapFrag)
 
     // Create VAO for this specific WebGL context
       const rectStrip = [
@@ -76,7 +80,7 @@ export class UIKRenderer {
       gl.enableVertexAttribArray(0)
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
 
-      gl.bindVertexArray(null)
+      // CRITICAL FIX: Set up texture coordinates WHILE VAO is still bound
       const texCoordData = [
         1.0,
         1.0, // Top-right
@@ -96,7 +100,7 @@ export class UIKRenderer {
         gl.STATIC_DRAW
       )
 
-      // Assign a_texcoord (location = 1)
+      // Assign a_texcoord (location = 1) - WHILE VAO IS BOUND
       gl.enableVertexAttribArray(1)
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0)
 
@@ -897,5 +901,70 @@ export class UIKRenderer {
         color: lineColor,
       })
     }
+  }
+
+  /**
+   * Draw a bitmap/image texture on the canvas
+   * Used for rendering loaded images, SVGs converted to textures, etc.
+   */
+  public drawBitmap({
+    texture,
+    bounds
+  }: {
+    texture: WebGLTexture
+    bounds: Vec4 // [x, y, width, height]
+  }): void {
+    if (!this.bitmapShader) {
+      console.warn('UIKRenderer: Bitmap shader not available')
+      return
+    }
+
+    const [x, y, width, height] = bounds
+    const gl = this.gl
+
+    // Enable blending for transparency support
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    this.bitmapShader.use(gl)
+    
+    // Set uniforms
+    this.bitmapShader.setUniform(gl, 'canvasWidthHeight', [gl.canvas.width, gl.canvas.height])
+    this.bitmapShader.setUniform(gl, 'leftTopWidthHeight', [x, y, width, height])
+
+    // Bind texture
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    this.bitmapShader.setUniform(gl, 'u_texture', 0)
+
+    // Bind VAO and draw
+    gl.bindVertexArray(this.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.bindVertexArray(null)
+
+    gl.disable(gl.BLEND)
+  }
+
+  /**
+   * Draw an SVG asset using the bitmap rendering system
+   * This is a convenience method for rendering UIKSVG instances
+   */
+  public drawSVG({
+    svgAsset,
+    bounds
+  }: {
+    svgAsset: any // UIKSVG type - avoiding import cycle
+    bounds: Vec4 // [x, y, width, height]
+  }): void {
+    const texture = svgAsset.getTexture()
+    if (!texture) {
+      console.warn('UIKRenderer: SVG asset has no texture loaded')
+      return
+    }
+
+    this.drawBitmap({
+      texture,
+      bounds
+    })
   }
 }
