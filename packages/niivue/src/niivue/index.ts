@@ -335,6 +335,7 @@ type UIData = {
   completedMeasurements: Array<{
     startMM: vec3 // World coordinates in mm for start point
     endMM: vec3 // World coordinates in mm for end point
+    distance: number
     sliceIndex: number
     sliceType: SLICE_TYPE
     slicePosition: number
@@ -342,6 +343,7 @@ type UIData = {
   completedAngles: Array<{
     firstLineMM: { start: vec3; end: vec3 } // World coordinates in mm for first line
     secondLineMM: { start: vec3; end: vec3 } // World coordinates in mm for second line
+    angle: number
     sliceIndex: number
     sliceType: SLICE_TYPE
     slicePosition: number
@@ -1612,15 +1614,8 @@ export class Niivue {
    * @internal
    */
   clearActiveDragMode(): void {
-    console.log('DEBUG: clearActiveDragMode called')
-    console.log('DEBUG: activeDragMode before clear:', this.uiData.activeDragMode)
-    console.log('DEBUG: angleState at clearActiveDragMode:', this.uiData.angleState)
-    console.log('DEBUG: completedAngles length at clearActiveDragMode:', this.uiData.completedAngles.length)
-
     this.uiData.activeDragMode = null
     this.uiData.activeDragButton = null
-
-    console.log('DEBUG: activeDragMode after clear:', this.uiData.activeDragMode)
   }
 
   /**
@@ -1648,18 +1643,11 @@ export class Niivue {
           this.uiData.angleState = 'drawing_first_line'
         } else if (this.uiData.angleState === 'drawing_second_line') {
           // Final click - save completed angle with slice info
-          console.log('DEBUG: Final angle click - angleState is drawing_second_line')
-          console.log('DEBUG: dragEnd position:', this.uiData.dragEnd)
-          console.log('DEBUG: angleFirstLine:', this.uiData.angleFirstLine)
-          console.log('DEBUG: current click position:', pos.x, pos.y)
-
           // Use current click position instead of dragEnd for final position
           const finalClickPos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
-          console.log('DEBUG: finalClickPos:', finalClickPos)
 
           // Get slice info using the current click position
           const tileIdx = this.tileIndex(finalClickPos[0], finalClickPos[1])
-          console.log('DEBUG: tileIdx for final click:', tileIdx)
 
           let sliceInfo = { sliceIndex: -1, sliceType: SLICE_TYPE.AXIAL, slicePosition: 0 }
           if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
@@ -1681,7 +1669,6 @@ export class Niivue {
               slicePosition
             }
           }
-          console.log('DEBUG: sliceInfo:', sliceInfo)
 
           const secondLine = [
             this.uiData.angleFirstLine[2], // start from end of first line
@@ -1689,7 +1676,6 @@ export class Niivue {
             finalClickPos[0], // to final click position
             finalClickPos[1]
           ]
-          console.log('DEBUG: secondLine calculated:', secondLine)
 
           // Convert canvas coordinates to world coordinates
           const firstLineStartFrac = this.canvasPos2frac([this.uiData.angleFirstLine[0], this.uiData.angleFirstLine[1]])
@@ -1719,18 +1705,15 @@ export class Niivue {
               },
               sliceIndex: sliceInfo.sliceIndex,
               sliceType: sliceInfo.sliceType,
-              slicePosition: sliceInfo.slicePosition
+              slicePosition: sliceInfo.slicePosition,
+              angle: this.calculateAngleBetweenLines(this.uiData.angleFirstLine, secondLine)
             }
-            console.log('DEBUG: angleToSave:', angleToSave)
 
             this.uiData.completedAngles.push(angleToSave)
           }
-          console.log('DEBUG: completedAngles length after push:', this.uiData.completedAngles.length)
-          console.log('DEBUG: completedAngles array:', this.uiData.completedAngles)
 
           this.resetAngleMeasurement()
           this.uiData.angleState = 'complete'
-          console.log('DEBUG: angleState set to complete, calling drawScene')
           this.drawScene()
           return
         } else if (this.uiData.angleState === 'complete') {
@@ -1875,12 +1858,6 @@ export class Niivue {
    * @internal
    */
   mouseUpListener(): void {
-    console.log('DEBUG: mouseUpListener called')
-    console.log('DEBUG: angleState at mouseUpListener:', this.uiData.angleState)
-    console.log('DEBUG: isDragging at mouseUpListener:', this.uiData.isDragging)
-    console.log('DEBUG: activeDragMode at mouseUpListener:', this.uiData.activeDragMode)
-    console.log('DEBUG: completedAngles length at mouseUpListener:', this.uiData.completedAngles.length)
-
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
@@ -1981,7 +1958,11 @@ export class Niivue {
             endMM: vec3.fromValues(endMM[0], endMM[1], endMM[2]),
             sliceIndex: sliceInfo.sliceIndex,
             sliceType: sliceInfo.sliceType,
-            slicePosition: sliceInfo.slicePosition
+            slicePosition: sliceInfo.slicePosition,
+            distance: vec3.distance(
+              vec3.fromValues(startMM[0], startMM[1], startMM[2]),
+              vec3.fromValues(endMM[0], endMM[1], endMM[2])
+            )
           })
         }
 
@@ -2855,7 +2836,6 @@ export class Niivue {
       }
       for (let i = 0; i < fileSystemEntries.length; i++) {
         allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
-        console.log(allFileObects)
       }
       return allFileObects
     }
@@ -2866,9 +2846,7 @@ export class Niivue {
           readEntries()
         } else {
           getFileObjects(allEntiresInDir)
-            .then(async (allFileObjects) => {
-              console.log(allFileObjects)
-            })
+            .then(async (allFileObjects) => {})
             .catch((e) => {
               throw e
             })
@@ -3161,7 +3139,6 @@ export class Niivue {
                 }
                 loader(files)
                   .then(async (fileArrayBuffers) => {
-                    console.log(fileArrayBuffers)
                     const promises = fileArrayBuffers.map((loaderImage) =>
                       NVImage.loadFromUrl({
                         url: loaderImage.data,
@@ -3171,8 +3148,6 @@ export class Niivue {
                     )
                     Promise.all(promises)
                       .then(async (loadedNvImages) => {
-                        console.log('from dicom loader')
-                        console.log(loadedNvImages)
                         await this.onDicomLoaderFinishedWithImages(loadedNvImages)
                       })
                       .catch((e) => {
@@ -5232,7 +5207,6 @@ export class Niivue {
       }
       const dicomLoader = this.getDicomLoader().loader
       const convertedArrayBuffer = await dicomLoader(dicomData)
-      console.log(convertedArrayBuffer)
       const name = convertedArrayBuffer[0].name
       const data = convertedArrayBuffer[0].data
       const image = await NVImage.loadFromUrl({ url: data, name })
@@ -9020,7 +8994,6 @@ export class Niivue {
         src_max = volume.cal_max!
         const scale = (dst_max - dst_min) / (src_max - src_min)
         log.info(' Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
-        console.log('Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
         return [src_min, scale]
       }
     }
@@ -10487,15 +10460,8 @@ export class Niivue {
    * @internal
    */
   resetAngleMeasurement(): void {
-    console.log('DEBUG: resetAngleMeasurement called')
-    console.log('DEBUG: angleState before reset:', this.uiData.angleState)
-    console.log('DEBUG: completedAngles length before reset:', this.uiData.completedAngles.length)
-
     this.uiData.angleState = 'none'
     this.uiData.angleFirstLine = [0.0, 0.0, 0.0, 0.0]
-
-    console.log('DEBUG: angleState after reset:', this.uiData.angleState)
-    console.log('DEBUG: completedAngles length after reset:', this.uiData.completedAngles.length)
   }
 
   /**
@@ -10504,7 +10470,6 @@ export class Niivue {
    */
   getCurrentSliceInfo(): { sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number } {
     const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
-    console.log('DEBUG: getCurrentSliceInfo - tileIdx:', tileIdx, 'screenSlices.length:', this.screenSlices.length)
 
     if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
       const sliceType = this.screenSlices[tileIdx].axCorSag
@@ -10519,7 +10484,6 @@ export class Niivue {
         slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
       }
 
-      console.log('DEBUG: getCurrentSliceInfo - valid tile found:', { sliceIndex: tileIdx, sliceType, slicePosition })
       return {
         sliceIndex: tileIdx,
         sliceType,
@@ -10528,7 +10492,6 @@ export class Niivue {
     }
 
     // Fallback: use current slice type and crosshair position when tileIndex fails
-    console.log('DEBUG: getCurrentSliceInfo - falling back to current slice state')
     const currentSliceType = this.opts.sliceType
     let slicePosition = 0
 
@@ -10551,11 +10514,6 @@ export class Niivue {
       }
     }
 
-    console.log('DEBUG: getCurrentSliceInfo - fallback result:', {
-      sliceIndex: -1,
-      sliceType: currentSliceType,
-      slicePosition
-    })
     return { sliceIndex: -1, sliceType: currentSliceType, slicePosition }
   }
 
@@ -10579,15 +10537,10 @@ export class Niivue {
    * @internal
    */
   shouldDrawOnCurrentSlice(sliceIndex: number, sliceType: SLICE_TYPE, slicePosition: number): boolean {
-    console.log('DEBUG: shouldDrawOnCurrentSlice called with:', { sliceIndex, sliceType, slicePosition })
-    console.log('DEBUG: current opts.sliceType:', this.opts.sliceType)
-    console.log('DEBUG: current scene.crosshairPos:', this.scene.crosshairPos)
-
     // In multiplanar mode, we need to check if the measurement can be displayed on any of the visible tiles
     if (this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
       // Check if this is a valid 2D slice type
       if (sliceType > SLICE_TYPE.SAGITTAL) {
-        console.log('DEBUG: Invalid slice type for multiplanar view:', sliceType)
         return false
       }
 
@@ -10596,52 +10549,32 @@ export class Niivue {
 
       for (let i = 0; i < this.screenSlices.length; i++) {
         if (this.screenSlices[i].axCorSag === sliceType) {
-          console.log('DEBUG: Found tile', i, 'with matching slice type', sliceType)
           matchingTileFound = true
 
           // Check if the position matches (within tolerance)
           const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
           const tolerance = 0.001 // Tolerance for position matching
           const difference = Math.abs(currentSlicePosition - slicePosition)
-          console.log('DEBUG: position difference:', difference, 'tolerance:', tolerance)
 
           if (difference < tolerance) {
-            console.log('DEBUG: Position matches within tolerance')
             return true
           }
         }
       }
 
       if (!matchingTileFound) {
-        console.log('DEBUG: No tile found with slice type', sliceType, 'in multiplanar view')
       }
       return false
     } else if (this.opts.sliceType !== sliceType) {
-      console.log('DEBUG: Returning false - slice type mismatch in single slice mode')
       return false
     }
 
     // For single slice view, just check the position
     const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
-    console.log('DEBUG: currentSlicePosition:', currentSlicePosition)
-    console.log('DEBUG: saved slicePosition:', slicePosition)
 
-    // Use a more generous tolerance for floating point comparison
-    // Based on observed scroll increments (0.001953125 ≈ 1/512), we need a larger tolerance
-    // This accommodates normal slice scrolling while still being precise enough for slice matching
     const tolerance = 0.001 // Increased from 0.001 to 0.01 to handle normal scroll increments
     const difference = Math.abs(currentSlicePosition - slicePosition)
-    console.log('DEBUG: position difference:', difference, 'tolerance:', tolerance)
     const result = difference < tolerance
-    console.log(
-      'DEBUG: shouldDrawOnCurrentSlice result:',
-      result,
-      '(difference < tolerance:',
-      difference,
-      '<',
-      tolerance,
-      ')'
-    )
 
     return result
   }
@@ -13600,7 +13533,7 @@ export class Niivue {
     // Try to find a screen slice that can display this world coordinate
     // First pass: look for exact matches, prioritizing preferred slice type
     let bestMatch = { index: -1, distance: Infinity }
-    
+
     for (let i = 0; i < this.screenSlices.length; i++) {
       const axCorSag = this.screenSlices[i].axCorSag
 
@@ -13636,15 +13569,15 @@ export class Niivue {
 
       // Calculate distance from the slice plane
       const distance = Math.abs(xyzMM[2] - expectedZ)
-      
+
       // Allow larger tolerance for multiplanar mode where slices might not align perfectly
       const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
-      
+
       // Keep track of the best matching slice
       if (distance < bestMatch.distance) {
         bestMatch = { index: i, distance }
       }
-      
+
       // If within tolerance, try to use this slice
       if (distance <= tolerance) {
         // Convert world coordinates to normalized slice coordinates
@@ -13678,7 +13611,7 @@ export class Niivue {
         }
       }
     }
-    
+
     return null // no valid screen slice found
   }
 
@@ -14867,26 +14800,26 @@ export class Niivue {
         const endFrac = this.mm2frac(measurement.endMM)
         const startCanvasResult = this.frac2canvasPosWithTile(startFrac, measurement.sliceType)
         const endCanvasResult = this.frac2canvasPosWithTile(endFrac, measurement.sliceType)
-        
+
         // Only draw if both points are on the same tile to prevent diagonal lines across slices
         if (startCanvasResult && endCanvasResult && startCanvasResult.tileIndex === endCanvasResult.tileIndex) {
-          this.drawMeasurementTool([startCanvasResult.pos[0], startCanvasResult.pos[1], endCanvasResult.pos[0], endCanvasResult.pos[1]])
+          this.drawMeasurementTool([
+            startCanvasResult.pos[0],
+            startCanvasResult.pos[1],
+            endCanvasResult.pos[0],
+            endCanvasResult.pos[1]
+          ])
         }
       }
     }
 
     // Draw persistent completed angles for current slice
-    console.log('DEBUG: Drawing angles, completedAngles length:', this.uiData.completedAngles.length)
     for (let i = 0; i < this.uiData.completedAngles.length; i++) {
       const angle = this.uiData.completedAngles[i]
-      console.log(`DEBUG: Checking angle ${i}:`, angle)
 
       const shouldDraw = this.shouldDrawOnCurrentSlice(angle.sliceIndex, angle.sliceType, angle.slicePosition)
-      console.log(`DEBUG: shouldDrawOnCurrentSlice result for angle ${i}:`, shouldDraw)
 
       if (shouldDraw) {
-        console.log(`DEBUG: Drawing angle ${i}`)
-
         // Convert world coordinates back to canvas coordinates for rendering
         const firstLineStartFrac = this.mm2frac(angle.firstLineMM.start)
         const firstLineEndFrac = this.mm2frac(angle.firstLineMM.end)
@@ -14899,23 +14832,42 @@ export class Niivue {
         const secondLineEndCanvasResult = this.frac2canvasPosWithTile(secondLineEndFrac, angle.sliceType)
 
         // Only draw if all points are on the same tile to prevent diagonal lines across slices
-        if (firstLineStartCanvasResult && firstLineEndCanvasResult && secondLineStartCanvasResult && secondLineEndCanvasResult &&
-            firstLineStartCanvasResult.tileIndex === firstLineEndCanvasResult.tileIndex &&
-            firstLineStartCanvasResult.tileIndex === secondLineStartCanvasResult.tileIndex &&
-            firstLineStartCanvasResult.tileIndex === secondLineEndCanvasResult.tileIndex) {
-          
+        if (
+          firstLineStartCanvasResult &&
+          firstLineEndCanvasResult &&
+          secondLineStartCanvasResult &&
+          secondLineEndCanvasResult &&
+          firstLineStartCanvasResult.tileIndex === firstLineEndCanvasResult.tileIndex &&
+          firstLineStartCanvasResult.tileIndex === secondLineStartCanvasResult.tileIndex &&
+          firstLineStartCanvasResult.tileIndex === secondLineEndCanvasResult.tileIndex
+        ) {
           this.drawMeasurementTool(
-            [firstLineStartCanvasResult.pos[0], firstLineStartCanvasResult.pos[1], firstLineEndCanvasResult.pos[0], firstLineEndCanvasResult.pos[1]],
+            [
+              firstLineStartCanvasResult.pos[0],
+              firstLineStartCanvasResult.pos[1],
+              firstLineEndCanvasResult.pos[0],
+              firstLineEndCanvasResult.pos[1]
+            ],
             false
           )
           this.drawMeasurementTool(
-            [secondLineStartCanvasResult.pos[0], secondLineStartCanvasResult.pos[1], secondLineEndCanvasResult.pos[0], secondLineEndCanvasResult.pos[1]],
+            [
+              secondLineStartCanvasResult.pos[0],
+              secondLineStartCanvasResult.pos[1],
+              secondLineEndCanvasResult.pos[0],
+              secondLineEndCanvasResult.pos[1]
+            ],
             false
           )
 
           // Draw angle text - need to convert back to old format for the existing function
           const angleForText = {
-            firstLine: [firstLineStartCanvasResult.pos[0], firstLineStartCanvasResult.pos[1], firstLineEndCanvasResult.pos[0], firstLineEndCanvasResult.pos[1]],
+            firstLine: [
+              firstLineStartCanvasResult.pos[0],
+              firstLineStartCanvasResult.pos[1],
+              firstLineEndCanvasResult.pos[0],
+              firstLineEndCanvasResult.pos[1]
+            ],
             secondLine: [
               secondLineStartCanvasResult.pos[0],
               secondLineStartCanvasResult.pos[1],
@@ -14928,8 +14880,6 @@ export class Niivue {
           }
           this.drawAngleTextForAngle(angleForText)
         }
-      } else {
-        console.log(`DEBUG: Skipping angle ${i} - not on current slice`)
       }
     }
 
