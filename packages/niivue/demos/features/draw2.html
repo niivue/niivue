@@ -6,15 +6,16 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Drawing</title>
     <link rel="stylesheet" href="light.css" />
+    <link rel="icon" href="data:,">
   </head>
   <body>
     <noscript>
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-      <label for="drawPen">Draw color:</label>
-      <select name="drawPen" id="drawPen">
-        <option value="-1">Off</option>
+      <label for="penSelect">Draw color:</label>
+      <select id="penSelect">
+        <option value="-1" selected>Off</option>
         <option value="0">Erase</option>
         <option value="1">Red</option>
         <option value="2">Green</option>
@@ -25,40 +26,43 @@
         <option value="11">Filled Blue</option>
         <option value="12">Erase Selected Cluster</option>
       </select>
-      <button id="left">left</button>
-      <button id="right">right</button>
-      <button id="posterior">posterior</button>
-      <button id="anterior">anterior</button>
-      <button id="inferior">inferior</button>
-      <button id="superior">superior</button>
-      <button id="info">info</button>
-      <button id="save">save drawing</button>
-      <button id="undo">undo</button>
-      <button id="growcut">grow cut</button>
-      <label for="drawOpacity">drawing opacity</label>
+      <button id="leftBtn">left</button>
+      <button id="rightBtn">right</button>
+      <button id="posteriorBtn">posterior</button>
+      <button id="anteriorBtn">anterior</button>
+      <button id="inferiorBtn">inferior</button>
+      <button id="superiorBtn">superior</button>
+      <button id="infoBtn">info</button>
+      <button id="saveBtn">save drawing</button>
+      <button id="undoBtn">undo</button>
+      <button id="growcutBtn">grow cut</button>
+      <label for="opacitySlider">drawing opacity</label>
       <input
         type="range"
         min="0"
         max="100"
-        value="80"
+        value="50"
         class="slider"
-        id="drawOpacity"
+        id="opacitySlider"
       />
       &nbsp;
-      <label for="check1">fill pen overwrites</label>
-      <input type="checkbox" id="check1" name="check1" checked />
+      <label for="rimCheck">rim opaque</label>
+      <input type="checkbox" id="rimCheck" checked />
       &nbsp;
-      <label for="check2">Radiological</label>
-      <input type="checkbox" id="check2" name="check2" unchecked />
+      <label for="overwriteCheck">fill pen overwrites</label>
+      <input type="checkbox" id="overwriteCheck" checked />
       &nbsp;
-      <label for="check3">World space</label>
-      <input type="checkbox" id="check3" name="check3" unchecked />
+      <label for="radiologicalCheck">Radiological</label>
+      <input type="checkbox" id="radiologicalCheck" unchecked />
       &nbsp;
-      <label for="check9">Linear Interpolation</label>
-      <input type="checkbox" id="check9" name="check9" checked />
+      <label for="worldCheck">World space</label>
+      <input type="checkbox" id="worldCheck" unchecked />
       &nbsp;
-      <label for="check10">HighDPI</label>
-      <input type="checkbox" id="check10" name="check10" checked />
+      <label for="interpCheck">Linear Interpolation</label>
+      <input type="checkbox" id="interpCheck" checked />
+      &nbsp;
+      <label for="dpiCheck">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" checked />
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -67,115 +71,103 @@
       <label id="location"></label>
       <p>
       <textarea id="scriptText" name="customText" rows="8" cols="60">let cmap = {&#10; R: [0, 255, 22, 127],&#10; G: [0, 20, 192, 187],&#10; B: [0, 152, 80, 255],&#10; labels: ["clear", "pink","lime","sky"],&#10;};</textarea>
-      &nbsp;<button id="custom">Apply</button>&nbsp;
+      &nbsp;<button id="customBtn">Apply</button>&nbsp;
     </footer>
   </body>
 </html>
 <script type="module" async>
-  import * as niivue from "../dist/index.js";
-  
-  document
-    .getElementById("drawOpacity")
-    .addEventListener("change", doDrawOpacity);
-  function doDrawOpacity() {
-    nv1.setDrawOpacity(this.value * 0.01);
+  import * as niivue from '../dist/index.js'
+  opacitySlider.oninput = function () {
+    nv1.setDrawOpacity(this.value * 0.01)
   }
-  document.getElementById("drawPen").addEventListener("change", doDrawPen);
-  function doDrawPen() {
-    const mode = parseInt(document.getElementById("drawPen").value);
-    nv1.setDrawingEnabled(mode >= 0);
-    if (mode >= 0) nv1.setPenValue(mode & 7, mode > 7);
+  rimCheck.onchange = function () {
+    if (this.checked)
+      nv1.drawRimOpacity = 1
+    else
+      nv1.drawRimOpacity = -1
+    nv1.drawScene()
+  }
+  penSelect.onchange = function () {
+    const mode = parseInt(this.value)
+    nv1.setDrawingEnabled(mode >= 0)
+    if (mode >= 0) nv1.setPenValue(mode & 7, mode > 7)
     if (mode === 12)
       //erase selected cluster
-      nv1.setPenValue(-0);
+      nv1.setPenValue(-0)
   }
-  document.getElementById("left").addEventListener("click", doLeft);
-  function doLeft() {
-    nv1.moveCrosshairInVox(-1, 0, 0);
+  leftBtn.onclick = function () {
+    nv1.moveCrosshairInVox(-1, 0, 0)
   }
-  document.getElementById("right").addEventListener("click", doRight);
-  function doRight() {
-    nv1.moveCrosshairInVox(1, 0, 0);
+  rightBtn.onclick = function () {
+    nv1.moveCrosshairInVox(1, 0, 0)
   }
-  document.getElementById("posterior").addEventListener("click", doPosterior);
-  function doPosterior() {
-    nv1.moveCrosshairInVox(0, -1, 0);
+  posteriorBtn.onclick = function () {
+    nv1.moveCrosshairInVox(0, -1, 0)
   }
-  document.getElementById("anterior").addEventListener("click", doAnterior);
-  function doAnterior() {
-    nv1.moveCrosshairInVox(0, 1, 0);
+  anteriorBtn.onclick = function () {
+    nv1.moveCrosshairInVox(0, 1, 0)
   }
-  document.getElementById("inferior").addEventListener("click", doInferior);
-  function doInferior() {
-    nv1.moveCrosshairInVox(0, 0, -1);
+  inferiorBtn.onclick = function () {
+    nv1.moveCrosshairInVox(0, 0, -1)
   }
-  document.getElementById("info").addEventListener("click", doInfo);
-  function doInfo() {
-    let obj = nv1.getDescriptives(0, [], true);
+  infoBtn.onclick = function () {
+    let obj = nv1.getDescriptives(0, [], true)
     let str = JSON.stringify(obj, null, 2)
-    alert(str);
+    alert(str)
   }
-  document.getElementById("superior").addEventListener("click", doSuperior);
-  function doSuperior() {
-    nv1.moveCrosshairInVox(0, 0, 1);
+  superiorBtn.onclick = function () {
+    nv1.moveCrosshairInVox(0, 0, 1)
   }
-  document.getElementById("undo").addEventListener("click", doUndo);
-  function doUndo() {
-    nv1.drawUndo();
+  undoBtn.onclick = function () {
+    nv1.drawUndo()
   }
-  document.getElementById("growcut").addEventListener("click", doGrowCut);
-  function doGrowCut() {
-    nv1.drawGrowCut();
+  growcutBtn.onclick = function () {
+    nv1.drawGrowCut()
   }
-  document.getElementById("save").addEventListener("click", doSave);
-  function doSave() {
+  saveBtn.onclick = function () {
     nv1.saveImage({ filename: 'test.nii', isSaveDrawing: true})
   }
-  document.getElementById("check1").addEventListener("change", doCheckClick);
-  function doCheckClick() {
-    nv1.drawFillOverwrites = this.checked;
+  overwriteCheck.onchange = function () {
+    nv1.drawFillOverwrites = this.checked
   }
-  document.getElementById("check2").addEventListener("change", doCheck2Click);
-  function doCheck2Click() {
-    nv1.setRadiologicalConvention(this.checked);
+  radiologicalCheck.onchange = function () {
+    nv1.setRadiologicalConvention(this.checked)
   }
-  document.getElementById("check3").addEventListener("change", doCheck3Click);
-  function doCheck3Click() {
-    nv1.setSliceMM(this.checked);
+  worldCheck.onchange = function () {
+    nv1.setSliceMM(this.checked)
   }
-  document.getElementById("check9").addEventListener("change", doCheck9Click);
-  function doCheck9Click() {
-    nv1.setInterpolation(!this.checked);
+  interpCheck.onchange = function () {
+    nv1.setInterpolation(!this.checked)
   }
-  document.getElementById("check10").addEventListener("change", doCheck10Click);
-  function doCheck10Click() {
-    nv1.setHighResolutionCapable(this.checked);
+  dpiCheck.onchange = function () {
+    nv1.setHighResolutionCapable(this.checked)
   }
-  var btn = document.getElementById("custom");
-  btn.onclick = function (event) {
-    var val = document.getElementById("scriptText").value;
-    val += ';nv1.setDrawColormap(cmap);';
-    val && eval(val);
+  customBtn.onclick = function () {
+    var val = document.getElementById("scriptText").value
+    val += ';nv1.setDrawColormap(cmap);'
+    val && eval(val)
   }
   function handleLocationChange(data) {
     document.getElementById("location").innerHTML =
-      "&nbsp;&nbsp;" + data.string;
+      "&nbsp;&nbsp;" + data.string
   }
   async function handleImageLoaded(data) {
     nv1.closeDrawing()
     nv1.setDrawingEnabled(false)
-    drawPen.selectedIndex = 0
   }
-  var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }];
+  var volumeList1 = [{ url: "../images/FLAIR.nii.gz" }]
   var nv1 = new niivue.Niivue({
     backColor: [1, 1, 1, 1],
     onLocationChange: handleLocationChange,
     onImageLoaded: handleImageLoaded,
-  });
-  nv1.setRadiologicalConvention(false);
-  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
-  await nv1.attachTo("gl1");
-  await nv1.loadVolumes(volumeList1);
-  nv1.setSliceType(nv1.sliceTypeMultiplanar);
-  await nv1.loadDrawingFromUrl("../images/lesion.nii.gz");
+  })
+  nv1.setRadiologicalConvention(false)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  await nv1.attachTo("gl1")
+  await nv1.loadVolumes(volumeList1)
+  nv1.opts.dragMode = nv1.dragModes.pan
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  await nv1.loadDrawingFromUrl("../images/lesion.nii.gz")
+  opacitySlider.oninput()
+  rimCheck.onchange()
 </script>

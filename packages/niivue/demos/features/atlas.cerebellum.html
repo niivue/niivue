@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Julich Probabilistic Brain Atlas</title>
+    <title>Probabilistic Cerebellar Atlas</title>
     <link rel="stylesheet" href="niivue.css" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
@@ -48,18 +48,18 @@
   }
   paqdSelect.onchange = function () {
     const index = this.selectedIndex
-    let paqdUniforms =[0.3, 0.6, 0.5, 1.0]
+    let paqdUniforms =[0.01, 0.5, 0.5, 1.0]
     if (index % 3 === 1) //translucent
-      paqdUniforms = [0.3, 0.5, 0.25, 0.4]
+      paqdUniforms = [0.01, 0.5, 0.25, 0.4]
     if (index % 3 === 2) //rim
-      paqdUniforms = [0.5, 0.9, 1.0, 0.2]
+      paqdUniforms = [0.4, 0.6, 1.0, 0.2]
     if (index > 2)
       paqdUniforms[3] = -paqdUniforms[3]
     nv1.opts.paqdUniforms = paqdUniforms
     nv1.updateGLVolume()
   }
   aboutBtn.onclick = function () {
-     window.alert("Probabilistic Julich-Brain Atlas v3.1 2024-06-23 DOI: 10.25493/KNSN-XB4")
+     window.alert("Probabilistic atlas of the cerebellum PMID: 19457380 DOI: 10.1016/j.neuroimage.2009.01.045")
   }
   clipBtn.onclick = function() {
     const depth = nv1.scene.clipPlaneDepthAziElev[0]
@@ -70,13 +70,12 @@
     }
   }
   var volumeList1 = [
-    { url: "https://niivue.github.io/niivue-demo-images/Juelich31/ICBM2009asym.nii.gz" },
-    { url: "https://niivue.github.io/niivue-demo-images/Juelich31/JulichBrainAtlas31_p207RH.nii.gz" },
-    //JulichBrainAtlas31_p207RH.nii.gz
+    { url: "https://niivue.github.io/niivue-demo-images/Cerebellum/MNI152NLin6AsymC.nii.gz" },
+    { url: "https://niivue.github.io/niivue-demo-images/Cerebellum/atl-Anatom.nii.gz" },
     {
       url: "../images/spmMotor.nii.gz",
       colormap: "warm",
-      cal_min: 3,
+      cal_min: 4,
       cal_max: 8,
     },
   ]
@@ -99,10 +98,12 @@
     const js = await response.json()
     return js
   }
-  let cmap = await fetchJSON("https://niivue.github.io/niivue-demo-images/Juelich31/Julich.json")
+  let cmap = await fetchJSON("https://niivue.github.io/niivue-demo-images/Cerebellum/atl-Anatom.json")
   nv1.volumes[1].setColormapLabel(cmap)
   nv1.opts.yoke3Dto2DZoom = true
   nv1.opts.dragMode = nv1.dragModes.pan
+  nv1.opts.isColorbar = true
+  nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
+  nv1.volumes[1].colorbarVisible = false //hide colorbar for atlas
   paqdSelect.onchange()
-  nv1.setRenderAzimuthElevation(275, 5);
 </script>

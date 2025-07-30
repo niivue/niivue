@@ -6,17 +6,40 @@ sidebar_position: 11
 import { Niivue } from '@niivue/niivue';
 import { AtlasDemo } from '../src/components/AtlasDemo';
 import { AtlasMeshDemo } from '../src/components/AtlasMeshDemo';
+import { AtlasProbDemo } from '../src/components/AtlasProbDemo';
 
 import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
 
-NiiVue supports voxel-based atlases, where each location in the brain volume is associated with a labeled region. In the embedded image below, you can see an example of this functionality. The opacity of the atlas can be adjusted using the slider, allowing you to view it in context with other data. Additionally, clicking on different locations will display the parcel name and its coordinates in the status area.
+Atlases partition images into discrete regions, which may be defined by structural features, functional activity, arterial territories, or connectivity patterns. Some atlases are tailored to specific populations, such as pediatric or disease-specific cohorts. NiiVue supports a wide variety of atlas formats and types.
+
+## Voxel-based Atlases
+
+NiiVue supports discrete voxel-based atlases, where each location in the brain volume is associated with a labeled region. In the embedded image below, you can see an example of this functionality. The opacity of the atlas can be adjusted using the slider, allowing you to view it in context with other data. Additionally, clicking on different locations will display the parcel name and its coordinates in the status area.
 
 <NiivueBrowserWrapper>
   <AtlasDemo />
 </NiivueBrowserWrapper>
+
+## Mesh-based Atlases
 
 Furthermore, NiiVue can load atlases onto meshes, providing similar functionality. This is illustrated in the below.
 
 <NiivueBrowserWrapper>
   <AtlasMeshDemo />
 </NiivueBrowserWrapper>
+
+## Probabilistic Voxel-based Atlases
+
+While many atlases are discrete (assigning each voxel exclusively to a single region) others are probabilistic, allowing a voxel to represent a mixture of regions. Probabilistic atlases are particularly useful for capturing variability across individuals, as seen in population-based studies where regional boundaries may vary from person to person.
+
+However, storing and visualizing probabilistic data can be computationally demanding. For example, version 3.1 of the [Julich-Brain Atlas](https://search.kg.ebrains.eu/instances/f1fe19e8-99bd-44bc-9616-a52850680777) includes 207 regions and, when uncompressed in MNI space, requires 7575 MB of memory. To address this challenge, NiiVue uses the PAQD format (described [here](https://github.com/niivue/niivue-demo-images/tree/main/Thalamus)), which stores only the two most probable regions per voxel. This approach reduces the memory footprint dramatically—in this case, to just 8 MB—while retaining meaningful information for visualization.
+
+The interactive graphic below demonstrates this format. When you click on a border area, the two most probable regions and their respective probabilities are shown in the status bar.
+
+<NiivueBrowserWrapper>
+  <AtlasProbDemo />
+</NiivueBrowserWrapper>
+
+Additionally, a drop-down menu allows you to select different easing functions that convert regional probabilities into transparency values. For example, the `Rim` function renders border regions opaque and high-probability areas more translucent, whereas the `Translucent` function makes opacity increase with probability. These easing functions are governed by four parameters—`p0`, `p1`, `t0`, and `t1`—illustrated in the figure below. The horizontal axis represents probability, and the vertical axis represents transparency. Voxels with a probability below `p0` are fully transparent. Voxels with a probability midway between `p0` and `p1` are assigned transparency `t0`, and those above `p1` are assigned transparency `t1`. Transparency values between `p0` and `p1` are linearly interpolated.
+
+![atlas easing function](/img/pages/atlas.png)
