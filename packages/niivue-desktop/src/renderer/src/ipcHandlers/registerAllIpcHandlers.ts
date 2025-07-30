@@ -5,7 +5,8 @@ import { registerLoadRecentFileHandler } from './loadRecentFiles.js'
 import {
   registerSliceTypeHandler,
   registerLabelManagerDialogHandler,
-  registerResetPreferencesHandler
+  registerResetPreferencesHandler,
+  registerDragModeHandler
 } from './menuHandlers.js'
 import { registerLoadMeshHandler } from './loadMesh.js'
 import { registerLoadVolumeHandler } from './loadVolume.js'
@@ -30,21 +31,6 @@ export const registerAllIpcHandlers = (
   modeMap: Map<string, 'replace' | 'overlay'>,
   indexMap: Map<string, number>,
   onDocumentLoaded: (title: string) => void
-  // updateDocument: (
-  //   id: string,
-  //   patch: Partial<{
-  //     title: string
-  //     filePath: string | null
-  //     isDirty: boolean
-  //     opts: Partial<Niivue['opts']>
-  //     volumes: NVImage[]
-  //     meshes: NVMesh[]
-  //     sliceType: SLICE_TYPE | null
-  //     layout: keyof typeof layouts
-  //     mosaicOrientation: 'A' | 'C' | 'S'
-  //     selectedImage: NVImage | null
-  //   }>
-  // ) => void
 ): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
@@ -60,6 +46,7 @@ export const registerAllIpcHandlers = (
   electron.ipcRenderer.removeAllListeners('saveHTML')
   electron.ipcRenderer.removeAllListeners('loadOverlay')
   electron.ipcRenderer.removeAllListeners('draw-command')
+  electron.ipcRenderer.removeAllListeners('setDragMode')
 
   // 🔌 Register core handlers
   registerLoadStandardHandler({ nv, setVolumes, setMeshes })
@@ -86,4 +73,5 @@ export const registerAllIpcHandlers = (
 
   // ✍️ Drawing commands → updateDocument(opts)
   registerDrawHandler(nv)
+  registerDragModeHandler(nv)
 }

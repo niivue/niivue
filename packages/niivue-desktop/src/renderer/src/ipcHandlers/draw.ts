@@ -1,6 +1,5 @@
 // src/ipcHandlers/draw.ts
 import { Niivue } from '@niivue/niivue'
-// import type { UpdateDocument } from '../AppContext.js'
 
 const electron = window.electron
 
@@ -10,7 +9,7 @@ const electron = window.electron
  * the updated opts back into your AppContext.
  */
 export function registerDrawHandler(
-  nv: Niivue,
+  nv: Niivue
   // docId: string,
   // updateDocument: UpdateDocument
 ): void {
@@ -103,13 +102,6 @@ export function registerDrawHandler(
         console.warn(`Unrecognized draw command: ${cmd}`)
     }
 
-    // 2) Redraw
     nv.drawScene()
-
-    // 3) Persist only the updated opts + mark dirty
-    // updateDocument(docId, {
-    //   opts: { ...nv.opts },
-    //   isDirty: true
-    // })
   })
 }

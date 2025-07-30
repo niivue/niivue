@@ -123,12 +123,6 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }
 
   const savePreferences = async (): Promise<void> => {
-    // for (const entries of Object.values(groupedConfigMeta)) {
-    //   for (const entry of entries) {
-    //     const [key] = entry as [string, any]
-    //     electron.ipcRenderer.invoke('setPreference', key, nv.opts[key])
-    //   }
-    // }
     for (const [key, value] of Object.entries(modifiedPrefs)) {
       await window.electron.ipcRenderer.invoke('setPreference', key, value)
     }
