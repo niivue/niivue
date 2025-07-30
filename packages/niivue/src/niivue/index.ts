@@ -10560,6 +10560,21 @@ export class Niivue {
   }
 
   /**
+   * Get the current slice position based on slice type.
+   * @internal
+   */
+  getCurrentSlicePosition(sliceType: SLICE_TYPE): number {
+    if (sliceType === SLICE_TYPE.AXIAL) {
+      return this.scene.crosshairPos[2] // Z coordinate for axial slices
+    } else if (sliceType === SLICE_TYPE.CORONAL) {
+      return this.scene.crosshairPos[1] // Y coordinate for coronal slices
+    } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+      return this.scene.crosshairPos[0] // X coordinate for sagittal slices
+    }
+    return 0
+  }
+
+  /**
    * Check if a measurement/angle should be drawn on the current slice.
    * @internal
    */
@@ -10568,60 +10583,53 @@ export class Niivue {
     console.log('DEBUG: current opts.sliceType:', this.opts.sliceType)
     console.log('DEBUG: current scene.crosshairPos:', this.scene.crosshairPos)
 
-    // Enhanced logic to handle sliceIndex: -1 cases more robustly
-    // Focus on slice type and position comparison rather than tile matching
-
-    // Check if the measurement slice type is compatible with current view
+    // In multiplanar mode, we need to check if the measurement can be displayed on any of the visible tiles
     if (this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
-      // In multiplanar mode, check if the slice type can be displayed
-      if (sliceIndex < 0) {
-        console.log('DEBUG: sliceIndex is -1, checking if slice type is compatible with multiplanar view')
-        // For sliceIndex -1, we should still check if the slice type is valid 2D type
-        if (sliceType > SLICE_TYPE.SAGITTAL) {
-          console.log('DEBUG: Invalid slice type for multiplanar view:', sliceType)
-          return false
-        }
-        // Try to find if this slice type is currently visible in multiplanar mode
-        let foundTile = false
-        for (let i = 0; i < this.screenSlices.length; i++) {
-          if (this.screenSlices[i].axCorSag === sliceType) {
-            console.log('DEBUG: Found tile', i, 'with slice type', sliceType)
-            foundTile = true
-            break
-          }
-        }
-        // If no tile is found, it might be because screenSlices is not populated yet
-        // In this case, we should still allow the measurement to be drawn if the slice type is valid
-        if (!foundTile) {
-          console.log('DEBUG: No tile found with slice type', sliceType, 'but allowing display since sliceIndex is -1')
-          // Continue to position check instead of returning false
-        }
-      } else if (sliceIndex >= this.screenSlices.length || this.screenSlices[sliceIndex].axCorSag !== sliceType) {
-        console.log('DEBUG: Returning false - tile/slice type mismatch in multiplanar')
+      // Check if this is a valid 2D slice type
+      if (sliceType > SLICE_TYPE.SAGITTAL) {
+        console.log('DEBUG: Invalid slice type for multiplanar view:', sliceType)
         return false
       }
+
+      // Find a tile with the matching slice type in the current multiplanar view
+      let matchingTileFound = false
+
+      for (let i = 0; i < this.screenSlices.length; i++) {
+        if (this.screenSlices[i].axCorSag === sliceType) {
+          console.log('DEBUG: Found tile', i, 'with matching slice type', sliceType)
+          matchingTileFound = true
+
+          // Check if the position matches (within tolerance)
+          const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
+          const tolerance = 0.001 // Tolerance for position matching
+          const difference = Math.abs(currentSlicePosition - slicePosition)
+          console.log('DEBUG: position difference:', difference, 'tolerance:', tolerance)
+
+          if (difference < tolerance) {
+            console.log('DEBUG: Position matches within tolerance')
+            return true
+          }
+        }
+      }
+
+      if (!matchingTileFound) {
+        console.log('DEBUG: No tile found with slice type', sliceType, 'in multiplanar view')
+      }
+      return false
     } else if (this.opts.sliceType !== sliceType) {
-      console.log('DEBUG: Returning false - slice type mismatch in single slice')
+      console.log('DEBUG: Returning false - slice type mismatch in single slice mode')
       return false
     }
 
-    // Now check if we're on the same slice position
-    let currentSlicePosition = 0
-    if (sliceType === SLICE_TYPE.AXIAL) {
-      currentSlicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
-    } else if (sliceType === SLICE_TYPE.CORONAL) {
-      currentSlicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
-    } else if (sliceType === SLICE_TYPE.SAGITTAL) {
-      currentSlicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
-    }
-
+    // For single slice view, just check the position
+    const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
     console.log('DEBUG: currentSlicePosition:', currentSlicePosition)
     console.log('DEBUG: saved slicePosition:', slicePosition)
 
     // Use a more generous tolerance for floating point comparison
     // Based on observed scroll increments (0.001953125 ≈ 1/512), we need a larger tolerance
     // This accommodates normal slice scrolling while still being precise enough for slice matching
-    const tolerance = 0.01 // Increased from 0.001 to 0.01 to handle normal scroll increments
+    const tolerance = 0.001 // Increased from 0.001 to 0.01 to handle normal scroll increments
     const difference = Math.abs(currentSlicePosition - slicePosition)
     console.log('DEBUG: position difference:', difference, 'tolerance:', tolerance)
     const result = difference < tolerance
@@ -13580,11 +13588,108 @@ export class Niivue {
    * Returns the first valid screen slice that contains the fractional coordinates.
    * @internal
    */
+  /**
+   * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
+   * Returns both canvas position and the tile index for validation.
+   * @internal
+   */
+  frac2canvasPosWithTile(frac: vec3, preferredSliceType?: SLICE_TYPE): { pos: number[]; tileIndex: number } | null {
+    // Convert fractional coordinates to world coordinates
+    const worldMM = this.frac2mm(frac)
+
+    // Try to find a screen slice that can display this world coordinate
+    // First pass: look for exact matches, prioritizing preferred slice type
+    let bestMatch = { index: -1, distance: Infinity }
+    
+    for (let i = 0; i < this.screenSlices.length; i++) {
+      const axCorSag = this.screenSlices[i].axCorSag
+
+      // Only handle 2D slices (axial, coronal, sagittal)
+      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+        continue
+      }
+
+      // Check if slice has valid transformation data
+      if (this.screenSlices[i].AxyzMxy.length < 4) {
+        continue
+      }
+
+      // Prioritize preferred slice type if specified
+      if (preferredSliceType !== undefined && axCorSag !== preferredSliceType) {
+        continue
+      }
+
+      // Start with world coordinates
+      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
+
+      // Apply inverse coordinate swizzling based on slice orientation
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
+      }
+
+      // Check if this point lies on the slice plane
+      const v = this.screenSlices[i].AxyzMxy
+      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
+
+      // Calculate distance from the slice plane
+      const distance = Math.abs(xyzMM[2] - expectedZ)
+      
+      // Allow larger tolerance for multiplanar mode where slices might not align perfectly
+      const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
+      
+      // Keep track of the best matching slice
+      if (distance < bestMatch.distance) {
+        bestMatch = { index: i, distance }
+      }
+      
+      // If within tolerance, try to use this slice
+      if (distance <= tolerance) {
+        // Convert world coordinates to normalized slice coordinates
+        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
+        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
+
+        // Check if coordinates are within valid slice bounds
+        if (fracX >= 0.0 && fracX <= 1.0 && fracY >= 0.0 && fracY <= 1.0) {
+          // Convert normalized slice coordinates to screen coordinates
+          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+          let isMirror = false
+
+          // Handle mirrored/flipped display
+          if (ltwh[2] < 0) {
+            isMirror = true
+            ltwh[0] += ltwh[2]
+            ltwh[2] = -ltwh[2]
+          }
+
+          let screenFracX = fracX
+          if (isMirror) {
+            screenFracX = 1.0 - fracX
+          }
+          const screenFracY = 1.0 - fracY
+
+          // Convert to screen pixel coordinates
+          const screenX = ltwh[0] + screenFracX * ltwh[2]
+          const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+          return { pos: [screenX, screenY], tileIndex: i }
+        }
+      }
+    }
+    
+    return null // no valid screen slice found
+  }
+
   frac2canvasPos(frac: vec3): number[] | null {
     // Convert fractional coordinates to world coordinates
     const worldMM = this.frac2mm(frac)
 
     // Try to find a screen slice that can display this world coordinate
+    // First pass: look for exact matches
+    let bestMatch = { index: -1, distance: Infinity }
+
     for (let i = 0; i < this.screenSlices.length; i++) {
       const axCorSag = this.screenSlices[i].axCorSag
 
@@ -13613,43 +13718,104 @@ export class Niivue {
       const v = this.screenSlices[i].AxyzMxy
       const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
 
-      // Allow small tolerance for floating point errors
-      const tolerance = 0.1
-      if (Math.abs(xyzMM[2] - expectedZ) > tolerance) {
-        continue
+      // Calculate distance from the slice plane
+      const distance = Math.abs(xyzMM[2] - expectedZ)
+
+      // Allow larger tolerance for multiplanar mode where slices might not align perfectly
+      const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
+
+      // Keep track of the best matching slice
+      if (distance < bestMatch.distance) {
+        bestMatch = { index: i, distance }
       }
+
+      // If within tolerance, try to use this slice
+      if (distance <= tolerance) {
+        // Convert world coordinates to normalized slice coordinates
+        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
+        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
+
+        // Check if coordinates are within valid slice bounds
+        if (fracX >= 0.0 && fracX <= 1.0 && fracY >= 0.0 && fracY <= 1.0) {
+          // Convert normalized slice coordinates to screen coordinates
+          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+          let isMirror = false
+
+          // Handle mirrored/flipped display
+          if (ltwh[2] < 0) {
+            isMirror = true
+            ltwh[0] += ltwh[2]
+            ltwh[2] = -ltwh[2]
+          }
+
+          let screenFracX = fracX
+          if (isMirror) {
+            screenFracX = 1.0 - fracX
+          }
+          const screenFracY = 1.0 - fracY
+
+          // Convert to screen pixel coordinates
+          const screenX = ltwh[0] + screenFracX * ltwh[2]
+          const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+          return [screenX, screenY]
+        }
+      }
+    }
+
+    // If no slice was within tolerance but we have a best match, try to project onto it
+    if (bestMatch.index >= 0 && bestMatch.distance < 2.0) {
+      const i = bestMatch.index
+      const axCorSag = this.screenSlices[i].axCorSag
+
+      // Start with world coordinates
+      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
+
+      // Apply inverse coordinate swizzling based on slice orientation
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
+      }
+
+      // Project the point onto the slice plane
+      const v = this.screenSlices[i].AxyzMxy
+      xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
 
       // Convert world coordinates to normalized slice coordinates
       const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
       const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
 
-      // Check if coordinates are within valid slice bounds
-      if (fracX < 0.0 || fracX > 1.0 || fracY < 0.0 || fracY > 1.0) {
-        continue
+      // Check if coordinates are within valid slice bounds (with small margin)
+      if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
+        // Clamp to valid range
+        const clampedFracX = Math.max(0, Math.min(1, fracX))
+        const clampedFracY = Math.max(0, Math.min(1, fracY))
+
+        // Convert normalized slice coordinates to screen coordinates
+        const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+        let isMirror = false
+
+        // Handle mirrored/flipped display
+        if (ltwh[2] < 0) {
+          isMirror = true
+          ltwh[0] += ltwh[2]
+          ltwh[2] = -ltwh[2]
+        }
+
+        let screenFracX = clampedFracX
+        if (isMirror) {
+          screenFracX = 1.0 - clampedFracX
+        }
+        const screenFracY = 1.0 - clampedFracY
+
+        // Convert to screen pixel coordinates
+        const screenX = ltwh[0] + screenFracX * ltwh[2]
+        const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+        return [screenX, screenY]
       }
-
-      // Convert normalized slice coordinates to screen coordinates
-      const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
-      let isMirror = false
-
-      // Handle mirrored/flipped display
-      if (ltwh[2] < 0) {
-        isMirror = true
-        ltwh[0] += ltwh[2]
-        ltwh[2] = -ltwh[2]
-      }
-
-      let screenFracX = fracX
-      if (isMirror) {
-        screenFracX = 1.0 - fracX
-      }
-      const screenFracY = 1.0 - fracY
-
-      // Convert to screen pixel coordinates
-      const screenX = ltwh[0] + screenFracX * ltwh[2]
-      const screenY = ltwh[1] + screenFracY * ltwh[3]
-
-      return [screenX, screenY]
     }
 
     return null // no valid screen slice found
@@ -14699,11 +14865,12 @@ export class Niivue {
         // Convert world coordinates back to canvas coordinates for rendering
         const startFrac = this.mm2frac(measurement.startMM)
         const endFrac = this.mm2frac(measurement.endMM)
-        const startCanvas = this.frac2canvasPos(startFrac)
-        const endCanvas = this.frac2canvasPos(endFrac)
-
-        if (startCanvas && endCanvas) {
-          this.drawMeasurementTool([startCanvas[0], startCanvas[1], endCanvas[0], endCanvas[1]])
+        const startCanvasResult = this.frac2canvasPosWithTile(startFrac, measurement.sliceType)
+        const endCanvasResult = this.frac2canvasPosWithTile(endFrac, measurement.sliceType)
+        
+        // Only draw if both points are on the same tile to prevent diagonal lines across slices
+        if (startCanvasResult && endCanvasResult && startCanvasResult.tileIndex === endCanvasResult.tileIndex) {
+          this.drawMeasurementTool([startCanvasResult.pos[0], startCanvasResult.pos[1], endCanvasResult.pos[0], endCanvasResult.pos[1]])
         }
       }
     }
@@ -14726,29 +14893,34 @@ export class Niivue {
         const secondLineStartFrac = this.mm2frac(angle.secondLineMM.start)
         const secondLineEndFrac = this.mm2frac(angle.secondLineMM.end)
 
-        const firstLineStartCanvas = this.frac2canvasPos(firstLineStartFrac)
-        const firstLineEndCanvas = this.frac2canvasPos(firstLineEndFrac)
-        const secondLineStartCanvas = this.frac2canvasPos(secondLineStartFrac)
-        const secondLineEndCanvas = this.frac2canvasPos(secondLineEndFrac)
+        const firstLineStartCanvasResult = this.frac2canvasPosWithTile(firstLineStartFrac, angle.sliceType)
+        const firstLineEndCanvasResult = this.frac2canvasPosWithTile(firstLineEndFrac, angle.sliceType)
+        const secondLineStartCanvasResult = this.frac2canvasPosWithTile(secondLineStartFrac, angle.sliceType)
+        const secondLineEndCanvasResult = this.frac2canvasPosWithTile(secondLineEndFrac, angle.sliceType)
 
-        if (firstLineStartCanvas && firstLineEndCanvas && secondLineStartCanvas && secondLineEndCanvas) {
+        // Only draw if all points are on the same tile to prevent diagonal lines across slices
+        if (firstLineStartCanvasResult && firstLineEndCanvasResult && secondLineStartCanvasResult && secondLineEndCanvasResult &&
+            firstLineStartCanvasResult.tileIndex === firstLineEndCanvasResult.tileIndex &&
+            firstLineStartCanvasResult.tileIndex === secondLineStartCanvasResult.tileIndex &&
+            firstLineStartCanvasResult.tileIndex === secondLineEndCanvasResult.tileIndex) {
+          
           this.drawMeasurementTool(
-            [firstLineStartCanvas[0], firstLineStartCanvas[1], firstLineEndCanvas[0], firstLineEndCanvas[1]],
+            [firstLineStartCanvasResult.pos[0], firstLineStartCanvasResult.pos[1], firstLineEndCanvasResult.pos[0], firstLineEndCanvasResult.pos[1]],
             false
           )
           this.drawMeasurementTool(
-            [secondLineStartCanvas[0], secondLineStartCanvas[1], secondLineEndCanvas[0], secondLineEndCanvas[1]],
+            [secondLineStartCanvasResult.pos[0], secondLineStartCanvasResult.pos[1], secondLineEndCanvasResult.pos[0], secondLineEndCanvasResult.pos[1]],
             false
           )
 
           // Draw angle text - need to convert back to old format for the existing function
           const angleForText = {
-            firstLine: [firstLineStartCanvas[0], firstLineStartCanvas[1], firstLineEndCanvas[0], firstLineEndCanvas[1]],
+            firstLine: [firstLineStartCanvasResult.pos[0], firstLineStartCanvasResult.pos[1], firstLineEndCanvasResult.pos[0], firstLineEndCanvasResult.pos[1]],
             secondLine: [
-              secondLineStartCanvas[0],
-              secondLineStartCanvas[1],
-              secondLineEndCanvas[0],
-              secondLineEndCanvas[1]
+              secondLineStartCanvasResult.pos[0],
+              secondLineStartCanvasResult.pos[1],
+              secondLineEndCanvasResult.pos[0],
+              secondLineEndCanvasResult.pos[1]
             ],
             sliceIndex: angle.sliceIndex,
             sliceType: angle.sliceType,
