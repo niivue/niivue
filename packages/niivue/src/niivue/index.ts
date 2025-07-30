@@ -88,7 +88,9 @@ import {
   ExportDocumentData,
   INITIAL_SCENE_DATA,
   MouseEventConfig,
-  TouchEventConfig
+  TouchEventConfig,
+  CompletedMeasurement,
+  CompletedAngle
 } from '../nvdocument.js'
 
 import {
@@ -332,23 +334,6 @@ type UIData = {
   // angle measurement state
   angleFirstLine: number[] // [x1, y1, x2, y2] for first line
   angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
-  // persistent measurement and angle state
-  completedMeasurements: Array<{
-    startMM: vec3 // World coordinates in mm for start point
-    endMM: vec3 // World coordinates in mm for end point
-    distance: number
-    sliceIndex: number
-    sliceType: SLICE_TYPE
-    slicePosition: number
-  }> // array of measurement lines with slice info
-  completedAngles: Array<{
-    firstLineMM: { start: vec3; end: vec3 } // World coordinates in mm for first line
-    secondLineMM: { start: vec3; end: vec3 } // World coordinates in mm for second line
-    angle: number
-    sliceIndex: number
-    sliceType: SLICE_TYPE
-    slicePosition: number
-  }> // array of completed angles with slice info
 }
 
 type SaveImageOptions = {
@@ -523,9 +508,7 @@ export class Niivue {
     activeDragMode: null,
     activeDragButton: null,
     angleFirstLine: [0.0, 0.0, 0.0, 0.0],
-    angleState: 'none',
-    completedMeasurements: [],
-    completedAngles: []
+    angleState: 'none'
   }
 
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
@@ -1712,7 +1695,7 @@ export class Niivue {
               angle: this.calculateAngleBetweenLines(this.uiData.angleFirstLine, secondLine)
             }
 
-            this.uiData.completedAngles.push(angleToSave)
+            this.document.completedAngles.push(angleToSave)
           }
 
           this.resetAngleMeasurement()
@@ -1958,7 +1941,7 @@ export class Niivue {
           const startMM = this.frac2mm(startFrac)
           const endMM = this.frac2mm(endFrac)
 
-          this.uiData.completedMeasurements.push({
+          this.document.completedMeasurements.push({
             startMM: vec3.fromValues(startMM[0], startMM[1], startMM[2]),
             endMM: vec3.fromValues(endMM[0], endMM[1], endMM[2]),
             sliceIndex: sliceInfo.sliceIndex,
@@ -10632,7 +10615,7 @@ export class Niivue {
    * ```
    */
   clearMeasurements(): void {
-    this.uiData.completedMeasurements = []
+    this.document.completedMeasurements = []
     this.drawScene()
   }
 
@@ -10644,7 +10627,7 @@ export class Niivue {
    * ```
    */
   clearAngles(): void {
-    this.uiData.completedAngles = []
+    this.document.completedAngles = []
     this.drawScene()
   }
 
@@ -10656,8 +10639,8 @@ export class Niivue {
    * ```
    */
   clearAllMeasurements(): void {
-    this.uiData.completedMeasurements = []
-    this.uiData.completedAngles = []
+    this.document.completedMeasurements = []
+    this.document.completedAngles = []
     this.drawScene()
   }
 
@@ -14860,7 +14843,7 @@ export class Niivue {
     }
 
     // Draw persistent completed measurements for current slice
-    for (const measurement of this.uiData.completedMeasurements) {
+    for (const measurement of this.document.completedMeasurements) {
       if (this.shouldDrawOnCurrentSlice(measurement.sliceIndex, measurement.sliceType, measurement.slicePosition)) {
         // Convert world coordinates back to canvas coordinates for rendering
         const startFrac = this.mm2frac(measurement.startMM)
@@ -14881,8 +14864,8 @@ export class Niivue {
     }
 
     // Draw persistent completed angles for current slice
-    for (let i = 0; i < this.uiData.completedAngles.length; i++) {
-      const angle = this.uiData.completedAngles[i]
+    for (let i = 0; i < this.document.completedAngles.length; i++) {
+      const angle = this.document.completedAngles[i]
 
       const shouldDraw = this.shouldDrawOnCurrentSlice(angle.sliceIndex, angle.sliceType, angle.slicePosition)
 

@@ -8,6 +8,30 @@ import { NVConnectome } from './nvconnectome.js'
 import { log } from './logger.js'
 
 /**
+ * Represents a completed measurement between two points
+ */
+export interface CompletedMeasurement {
+  startMM: vec3 // World coordinates in mm for start point
+  endMM: vec3 // World coordinates in mm for end point
+  distance: number // Distance between points in mm
+  sliceIndex: number
+  sliceType: SLICE_TYPE
+  slicePosition: number
+}
+
+/**
+ * Represents a completed angle measurement between two lines
+ */
+export interface CompletedAngle {
+  firstLineMM: { start: vec3; end: vec3 } // World coordinates in mm for first line
+  secondLineMM: { start: vec3; end: vec3 } // World coordinates in mm for second line
+  angle: number // Angle in degrees
+  sliceIndex: number
+  sliceType: SLICE_TYPE
+  slicePosition: number
+}
+
+/**
  * Slice Type
  * @ignore
  */
@@ -381,6 +405,8 @@ export type DocumentData = {
   sceneData?: Partial<SceneData>
   connectomes?: string[]
   customData?: string
+  completedMeasurements?: CompletedMeasurement[]
+  completedAngles?: CompletedAngle[]
 }
 
 export type ExportDocumentData = {
@@ -404,6 +430,8 @@ export type ExportDocumentData = {
   labels: NVLabel3D[]
   connectomes: string[]
   customData: string
+  completedMeasurements: CompletedMeasurement[]
+  completedAngles: CompletedAngle[]
 }
 
 /**
@@ -457,6 +485,8 @@ export class NVDocument {
   drawBitmap: Uint8Array | null = null
   imageOptionsMap = new Map()
   meshOptionsMap = new Map()
+  completedMeasurements: CompletedMeasurement[] = []
+  completedAngles: CompletedAngle[] = []
 
   private _optsProxy: NVConfigOptions | null = null
   private _optsChangeCallback:
@@ -775,6 +805,10 @@ export class NVDocument {
 
     data.customData = this.customData
 
+    // Serialize completedMeasurements and completedAngles
+    data.completedMeasurements = [...this.completedMeasurements]
+    data.completedAngles = [...this.completedAngles]
+
     // volumes
     // TODO move this to a per-volume export function in NVImage?
     if (this.volumes.length) {
@@ -1035,7 +1069,29 @@ export class NVDocument {
       ...(data.sceneData || {})
     }
 
-    // 5. finally, if there was a meshesString, deserialize it
+    // 5. Load completedMeasurements and completedAngles if they exist
+    if (data.completedMeasurements) {
+      document.completedMeasurements = data.completedMeasurements.map(m => ({
+        ...m,
+        startMM: vec3.clone(m.startMM),
+        endMM: vec3.clone(m.endMM)
+      }))
+    }
+    if (data.completedAngles) {
+      document.completedAngles = data.completedAngles.map(a => ({
+        ...a,
+        firstLineMM: {
+          start: vec3.clone(a.firstLineMM.start),
+          end: vec3.clone(a.firstLineMM.end)
+        },
+        secondLineMM: {
+          start: vec3.clone(a.secondLineMM.start),
+          end: vec3.clone(a.secondLineMM.end)
+        }
+      }))
+    }
+
+    // 6. finally, if there was a meshesString, deserialize it
     if (document.data.meshesString) {
       NVDocument.deserializeMeshDataObjects(document)
     }
