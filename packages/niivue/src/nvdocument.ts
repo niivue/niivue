@@ -795,9 +795,8 @@ export class NVDocument {
             imageType: volume?.imageType ?? NVIMAGE_TYPE.NII,
             frame4D: volume?.frame4D ?? 0,
             limitFrames4D: volume?.limitFrames4D ?? NaN,
-            // PW: Assuming url/urlImageData should be none when embedImages is true(?)
-            url: embedImages ? '' : (volume?.url ?? ''),
-            urlImageData: embedImages ? '' : (volume?.urlImgData ?? ''),
+            url: volume?.url ?? '',
+            urlImageData: volume?.urlImgData ?? '',
             alphaThreshold: false,
             cal_minNeg: volume?.cal_minNeg ?? NaN,
             cal_maxNeg: volume?.cal_maxNeg ?? NaN,
