@@ -1,16 +1,25 @@
 // src/ipcHandlers/draw.ts
 import { Niivue } from '@niivue/niivue'
+// import type { UpdateDocument } from '../AppContext.js'
 
 const electron = window.electron
 
 /**
- * Listens for 'draw-command' and invokes the corresponding Niivue draw APIs.
+ * Listen for 'draw-command' from the main menu,
+ * execute it on the current Niivue instance, then persist
+ * the updated opts back into your AppContext.
  */
-export function registerDrawHandler(nv: Niivue): void {
-  // Clean up any existing listener
+export function registerDrawHandler(
+  nv: Niivue,
+  // docId: string,
+  // updateDocument: UpdateDocument
+): void {
+  // clean up any old handler
   electron.ipcRenderer.removeAllListeners('draw-command')
 
-  electron.ipcRenderer.on('draw-command', async (_evt, cmd: string) => {
+  // add the new one
+  electron.ipcRenderer.on('draw-command', (_evt, cmd: string) => {
+    // 1) Execute the draw command
     switch (cmd) {
       case 'Off':
         nv.setDrawingEnabled(false)
@@ -83,17 +92,24 @@ export function registerDrawHandler(nv: Niivue): void {
       case 'Growcut':
         nv.drawGrowCut()
         break
-      case 'DrawOtsu': {
-        const input = prompt('Segmentation classes (2–4)', '3')
-        const levels = input ? parseInt(input, 10) : NaN
-        if (!isNaN(levels)) nv.drawOtsu(levels)
+      case 'DrawOtsu':
+        {
+          const input = prompt('Segmentation classes (2–4)', '3')
+          const levels = input ? parseInt(input, 10) : NaN
+          if (!isNaN(levels)) nv.drawOtsu(levels)
+        }
         break
-      }
       default:
         console.warn(`Unrecognized draw command: ${cmd}`)
     }
 
-    // Always re-draw after a draw command
+    // 2) Redraw
     nv.drawScene()
+
+    // 3) Persist only the updated opts + mark dirty
+    // updateDocument(docId, {
+    //   opts: { ...nv.opts },
+    //   isDirty: true
+    // })
   })
 }

@@ -47,7 +47,6 @@ function MainApp(): JSX.Element {
   const selected = useSelectedInstance()
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
-  const drawingBuffers = useRef<Record<string, Uint8Array>>({})
 
   // Create the first document on mount
   useEffect((): void => {
@@ -74,45 +73,35 @@ function MainApp(): JSX.Element {
   }, [updateDocument])
 
   // When the selected document changes, restore its state and re-register IPC
+  // inside MainApp()
+  // inside MainApp.tsx
   useEffect(() => {
     if (!selected) return
-
     const nv = selected.nvRef.current
 
-    // ─────────────── MOUNT (setup) ───────────────
-
-    // 1) Restore this doc’s drawing buffer if we have one
-    const buf = drawingBuffers.current[selected.id]
-    if (buf && buf.length > 0) {
-      // @ts-ignore: drawBitmap isn’t exposed in TS defs
-      nv.drawBitmap = buf
-      nv.setDrawingEnabled(true)
-      nv.updateGLVolume()
-      nv.drawScene()
-    }
-
-    // 2) Restore viewer options
+    // Restore viewer prefs
     Object.assign(nv.opts, selected.opts)
-    if (selected.sliceType) {
-      nv.setSliceType(selected.sliceType)
-    }
-    const layoutValue = layouts[selected.layout]
-    if (layoutValue) {
-      nv.setMultiplanarLayout(layoutValue)
-    }
-    nv.setSliceMosaicString(selected.opts.sliceMosaicString || '')
+    if (selected.sliceType) nv.setSliceType(selected.sliceType)
+    const layoutVal = layouts[selected.layout]
+    if (layoutVal) nv.setMultiplanarLayout(layoutVal)
+    nv.setSliceMosaicString(selected.opts.sliceMosaicString ?? '')
 
+    // Re-draw everything
     nv.updateGLVolume()
     nv.drawScene()
 
-    // 3) Seed React state from Niivue volumes/meshes on first sync
+    // Seed React state on first sync
     if (lastSyncedDoc.current !== selected.id) {
       selected.setVolumes([...nv.volumes])
       selected.setMeshes([...nv.meshes])
+      // restore selectedImage
+      const prev = selected.selectedImage
+      const found = prev ? nv.volumes.find((v) => v.id === prev.id) : undefined
+      selected.setSelectedImage(found ?? nv.volumes[0] ?? null)
       lastSyncedDoc.current = selected.id
     }
 
-    // 4) Register all your IPC handlers, including draw
+    // Re‑register all your IPC handlers
     registerAllIpcHandlers(
       nv,
       selected.id,
@@ -123,21 +112,8 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       modeMap,
       indexMap,
-      (newTitle: string) => {
-        updateDocument(selected.id, { title: newTitle })
-      }
+      (newTitle) => updateDocument(selected.id, { title: newTitle, isDirty: true })
     )
-
-    // ─────────────── UNMOUNT (teardown) ───────────────
-    // Capture this doc’s drawBitmap just before we switch away
-    const leavingId = selected.id
-    const leavingNv = nv
-    return (): void => {
-      // store the raw Uint8Array for later restore
-      if (leavingNv.drawBitmap) {
-        drawingBuffers.current[leavingId] = leavingNv.drawBitmap.slice()
-      }
-    }
   }, [selected])
 
   // Open Label Manager from menu
@@ -301,14 +277,6 @@ function MainApp(): JSX.Element {
       updateDocument(docId, { mosaicOrientation: nextOri, isDirty: true })
     }
 
-    const setDrawing: React.Dispatch<React.SetStateAction<Uint8Array>> = (next) => {
-      const buf =
-        typeof next === 'function'
-          ? next(new Uint8Array()) // no prior, so start empty
-          : next
-      updateDocument(docId, { drawing: buf, isDirty: true })
-    }
-
     const doc: NiivueInstanceContext = {
       id: docId,
       nvRef: { current: nv },
@@ -333,9 +301,6 @@ function MainApp(): JSX.Element {
 
       mosaicOrientation: 'A',
       setMosaicOrientation,
-
-      drawing: new Uint8Array(),
-      setDrawing,
 
       title: 'Untitled',
 
@@ -514,8 +479,16 @@ function MainApp(): JSX.Element {
           />
         </div>
         {/* Viewer (right) */}
-        <div className="flex-1 overflow-auto">
-          {selected && <Viewer doc={selected} collapsed={sidebarCollapsed} />}
+        <div className="flex-1 relative overflow-hidden">
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="absolute inset-0"
+              style={{ display: doc.id === selectedDocId ? 'block' : 'none' }}
+            >
+              <Viewer doc={doc} collapsed={sidebarCollapsed} />
+            </div>
+          ))}
         </div>
       </div>
 
