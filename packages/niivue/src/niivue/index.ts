@@ -1871,7 +1871,11 @@ export class Niivue {
       this.drawPenFilled()
     } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
       this.drawAddUndoBitmap()
-    } else if (this.opts.drawingEnabled && !isNaN(this.drawShapeStartLocation[0]) && (this.opts.penType === 'rectangle' || this.opts.penType === 'ellipse')) {
+    } else if (
+      this.opts.drawingEnabled &&
+      !isNaN(this.drawShapeStartLocation[0]) &&
+      (this.opts.penType === 'rectangle' || this.opts.penType === 'ellipse')
+    ) {
       // Finalize rectangle or ellipse drawing
       this.drawAddUndoBitmap()
     }
@@ -5862,7 +5866,7 @@ export class Niivue {
     const dx = this.back.dims[1]
     const dy = this.back.dims[2]
     const dz = this.back.dims[3]
-    
+
     // Get bounds of rectangle
     const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
     const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
@@ -5870,7 +5874,7 @@ export class Niivue {
     const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
     const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
     const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
-    
+
     // Fill the rectangle
     for (let z = z1; z <= z2; z++) {
       for (let y = y1; y <= y2; y++) {
@@ -5892,7 +5896,7 @@ export class Niivue {
     const dx = this.back.dims[1]
     const dy = this.back.dims[2]
     const dz = this.back.dims[3]
-    
+
     // Get bounds of ellipse
     const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
     const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
@@ -5900,7 +5904,7 @@ export class Niivue {
     const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
     const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
     const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
-    
+
     // Calculate center and radii
     const centerX = (x1 + x2) / 2
     const centerY = (y1 + y2) / 2
@@ -5908,13 +5912,13 @@ export class Niivue {
     const radiusX = Math.abs(x2 - x1) / 2
     const radiusY = Math.abs(y2 - y1) / 2
     const radiusZ = Math.abs(z2 - z1) / 2
-    
+
     // Draw ellipse using the standard ellipse equation
     for (let z = z1; z <= z2; z++) {
       for (let y = y1; y <= y2; y++) {
         for (let x = x1; x <= x2; x++) {
           const distX = (x - centerX) / (radiusX + 0.5)
-          const distY = (y - centerY) / (radiusY + 0.5) 
+          const distY = (y - centerY) / (radiusY + 0.5)
           const distZ = (z - centerZ) / (radiusZ + 0.5)
           // Check if point is inside ellipse
           if (distX * distX + distY * distY + distZ * distZ <= 1.0) {
