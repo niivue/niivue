@@ -931,8 +931,9 @@ declare class NVDocument {
      *
      * @param embedImages  If false, encodedImageBlobs is left empty
      *                     (imageOptionsArray still records the URL / name).
+     * @param embedDrawing  If false, encodedDrawingBlob is left empty
      */
-    json(embedImages?: boolean): ExportDocumentData;
+    json(embedImages?: boolean, embedDrawing?: boolean): ExportDocumentData;
     download(fileName: string, compress: boolean, opts?: {
         embedImages: boolean;
     }): Promise<void>;

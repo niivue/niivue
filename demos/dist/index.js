@@ -30430,8 +30430,9 @@ var NVDocument = class _NVDocument {
    *
    * @param embedImages  If false, encodedImageBlobs is left empty
    *                     (imageOptionsArray still records the URL / name).
+   * @param embedDrawing  If false, encodedDrawingBlob is left empty
    */
-  json(embedImages = true) {
+  json(embedImages = true, embedDrawing = true) {
     const data = {
       encodedImageBlobs: [],
       previewImageDataURL: this.data.previewImageDataURL,
@@ -30458,30 +30459,29 @@ var NVDocument = class _NVDocument {
         const volume = this.volumes[i];
         let imageOptions = this.getImageOptions(volume);
         if (imageOptions === null) {
-          log.warn("no options found for image, using default");
+          log.warn("no options found for image, using options from the volume directly");
           imageOptions = {
-            name: "",
-            colormap: "gray",
-            opacity: 1,
+            name: volume?.name ?? "",
+            colormap: volume?._colormap ?? "gray",
+            opacity: volume?._opacity ?? 1,
             pairedImgData: null,
-            cal_min: NaN,
-            cal_max: NaN,
-            trustCalMinMax: true,
-            percentileFrac: 0.02,
-            ignoreZeroVoxels: false,
-            useQFormNotSForm: false,
-            colormapNegative: "",
-            colormapLabel: null,
-            imageType: NVIMAGE_TYPE.NII,
-            frame4D: 0,
-            limitFrames4D: NaN,
-            // TODO the following were missing
-            url: "",
-            urlImageData: "",
+            cal_min: volume?.cal_min ?? NaN,
+            cal_max: volume?.cal_max ?? NaN,
+            trustCalMinMax: volume?.trustCalMinMax ?? true,
+            percentileFrac: volume?.percentileFrac ?? 0.02,
+            ignoreZeroVoxels: volume?.ignoreZeroVoxels ?? false,
+            useQFormNotSForm: volume?.useQFormNotSForm ?? false,
+            colormapNegative: volume?.colormapNegative ?? "",
+            colormapLabel: volume?.colormapLabel ?? null,
+            imageType: volume?.imageType ?? NVIMAGE_TYPE.NII,
+            frame4D: volume?.frame4D ?? 0,
+            limitFrames4D: volume?.limitFrames4D ?? NaN,
+            url: volume?.url ?? "",
+            urlImageData: volume?.urlImgData ?? "",
             alphaThreshold: false,
-            cal_minNeg: NaN,
-            cal_maxNeg: NaN,
-            colorbarVisible: true
+            cal_minNeg: volume?.cal_minNeg ?? NaN,
+            cal_maxNeg: volume?.cal_maxNeg ?? NaN,
+            colorbarVisible: volume?.colorbarVisible ?? true
           };
         } else {
           if (!("imageType" in imageOptions)) {
@@ -30491,8 +30491,8 @@ var NVDocument = class _NVDocument {
         imageOptions.colormap = volume.colormap;
         imageOptions.colormapLabel = volume.colormapLabel;
         imageOptions.opacity = volume.opacity;
-        imageOptions.cal_max = volume.cal_max || NaN;
-        imageOptions.cal_min = volume.cal_min || NaN;
+        imageOptions.cal_max = volume.cal_max ?? NaN;
+        imageOptions.cal_min = volume.cal_min ?? NaN;
         imageOptionsArray.push(imageOptions);
         if (embedImages) {
           const blob = NVUtilities.uint8tob64(volume.toUint8Array());
@@ -30564,7 +30564,7 @@ var NVDocument = class _NVDocument {
       meshes.push(copyMesh);
     }
     data.meshesString = JSON.stringify(serialize(meshes));
-    if (this.drawBitmap) {
+    if (embedDrawing && this.drawBitmap) {
       data.encodedDrawingBlob = NVUtilities.uint8tob64(this.drawBitmap);
     }
     return data;
