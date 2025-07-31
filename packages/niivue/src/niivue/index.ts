@@ -399,6 +399,8 @@ export class Niivue {
   drawPenAxCorSag = -1 // do not allow pen to drag between Sagittal/Coronal/Axial
   drawFillOverwrites = true // if true, fill overwrites existing drawing
   drawPenFillPts: number[][] = [] // store mouse points for filled pen
+  drawShapeStartLocation = [NaN, NaN, NaN] // start location for rectangle/ellipse drawing
+  drawShapePreviewBitmap: Uint8Array | null = null // preview bitmap for shape drawing
   overlayTexture: WebGLTexture | null = null
   overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
@@ -1459,6 +1461,7 @@ export class Niivue {
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
+    this.drawShapeStartLocation = [NaN, NaN, NaN] // Reset shape start location
     this.uiData.mousedown = true
     // reset drag positions used previously (but not during angle measurement second line)
     if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
@@ -1867,9 +1870,19 @@ export class Niivue {
       this.drawPenFilled()
     } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
       this.drawAddUndoBitmap()
+    } else if (this.opts.drawingEnabled && !isNaN(this.drawShapeStartLocation[0]) && (this.opts.penType === 'rectangle' || this.opts.penType === 'ellipse')) {
+      // Finalize rectangle or ellipse drawing
+      this.drawAddUndoBitmap()
     }
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
+    this.drawShapeStartLocation = [NaN, NaN, NaN]
+    // Restore main drawing bitmap if we were previewing a shape
+    if (this.drawShapePreviewBitmap) {
+      this.drawBitmap = this.drawShapePreviewBitmap
+      this.drawShapePreviewBitmap = null
+      this.refreshDrawing(true, false)
+    }
     if (isFunction(this.onMouseUp)) {
       this.onMouseUp(uiData)
     }
@@ -2124,6 +2137,18 @@ export class Niivue {
       this.drawPenLocation = [NaN, NaN, NaN]
       this.drawPenAxCorSag = -1
       this.drawPenFillPts = []
+    }
+
+    // Reset shape drawing state if drawing was in progress
+    if (this.opts.drawingEnabled && !isNaN(this.drawShapeStartLocation[0])) {
+      log.debug('Mouse left canvas during shape drawing, resetting shape state.')
+      this.drawShapeStartLocation = [NaN, NaN, NaN]
+      // Restore main drawing bitmap if we were previewing a shape
+      if (this.drawShapePreviewBitmap) {
+        this.drawBitmap = this.drawShapePreviewBitmap
+        this.drawShapePreviewBitmap = null
+        this.refreshDrawing(true, false)
+      }
     }
 
     // Reset drag state if mouse leaves during drag
@@ -4506,6 +4531,12 @@ export class Niivue {
       this.drawPenLocation = [NaN, NaN, NaN]
       this.drawPenAxCorSag = -1
       this.drawPenFillPts = []
+      // Reset shape state
+      this.drawShapeStartLocation = [NaN, NaN, NaN]
+      if (this.drawShapePreviewBitmap) {
+        this.drawBitmap = this.drawShapePreviewBitmap
+        this.drawShapePreviewBitmap = null
+      }
     }
     this.drawScene() // Redraw needed in both cases
   }
@@ -5805,6 +5836,80 @@ export class Niivue {
         p1 += 2 * dy
         p2 += 2 * dx
         this.drawPt(x1, y1, z1, penValue)
+      }
+    }
+  }
+
+  /**
+   * Draw a rectangle from point A to point B
+   * @internal
+   */
+  drawRectangle(ptA: number[], ptB: number[], penValue: number): void {
+    if (!this.back?.dims) {
+      throw new Error('back.dims not set')
+    }
+    const dx = this.back.dims[1]
+    const dy = this.back.dims[2]
+    const dz = this.back.dims[3]
+    
+    // Get bounds of rectangle
+    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
+    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
+    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1)
+    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
+    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
+    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
+    
+    // Fill the rectangle
+    for (let z = z1; z <= z2; z++) {
+      for (let y = y1; y <= y2; y++) {
+        for (let x = x1; x <= x2; x++) {
+          this.drawPt(x, y, z, penValue)
+        }
+      }
+    }
+  }
+
+  /**
+   * Draw an ellipse from point A to point B (treating them as opposite corners of bounding box)
+   * @internal
+   */
+  drawEllipse(ptA: number[], ptB: number[], penValue: number): void {
+    if (!this.back?.dims) {
+      throw new Error('back.dims not set')
+    }
+    const dx = this.back.dims[1]
+    const dy = this.back.dims[2]
+    const dz = this.back.dims[3]
+    
+    // Get bounds of ellipse
+    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
+    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
+    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1)
+    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
+    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
+    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
+    
+    // Calculate center and radii
+    const centerX = (x1 + x2) / 2
+    const centerY = (y1 + y2) / 2
+    const centerZ = (z1 + z2) / 2
+    const radiusX = Math.abs(x2 - x1) / 2
+    const radiusY = Math.abs(y2 - y1) / 2
+    const radiusZ = Math.abs(z2 - z1) / 2
+    
+    // Draw ellipse using the standard ellipse equation
+    for (let z = z1; z <= z2; z++) {
+      for (let y = y1; y <= y2; y++) {
+        for (let x = x1; x <= x2; x++) {
+          const distX = (x - centerX) / (radiusX + 0.5)
+          const distY = (y - centerY) / (radiusY + 0.5) 
+          const distZ = (z - centerZ) / (radiusZ + 0.5)
+          // Check if point is inside ellipse
+          if (distX * distX + distY * distY + distZ * distZ <= 1.0) {
+            this.drawPt(x, y, z, penValue)
+          }
+        }
       }
     }
   }
@@ -10073,28 +10178,55 @@ export class Niivue {
 
         // Standard Pen Drawing (if not flood fill and not clickToSegment)
         else {
-          if (isNaN(this.drawPenLocation[0])) {
-            this.drawPenAxCorSag = axCorSag
-            this.drawPenFillPts = []
-            this.drawPt(...pt, this.opts.penValue)
-          } else {
-            if (
-              pt[0] === this.drawPenLocation[0] &&
-              pt[1] === this.drawPenLocation[1] &&
-              pt[2] === this.drawPenLocation[2]
-            ) {
-              // No drawing needed, but still redraw scene and update location
-              this.drawScene()
-              this.createOnLocationChange(axCorSag)
-              return
+          if (this.opts.penType === 'pen') {
+            // Traditional pen drawing
+            if (isNaN(this.drawPenLocation[0])) {
+              this.drawPenAxCorSag = axCorSag
+              this.drawPenFillPts = []
+              this.drawPt(...pt, this.opts.penValue)
+            } else {
+              if (
+                pt[0] === this.drawPenLocation[0] &&
+                pt[1] === this.drawPenLocation[1] &&
+                pt[2] === this.drawPenLocation[2]
+              ) {
+                // No drawing needed, but still redraw scene and update location
+                this.drawScene()
+                this.createOnLocationChange(axCorSag)
+                return
+              }
+              this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
             }
-            this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
+            this.drawPenLocation = pt
+            if (this.opts.isFilledPen) {
+              this.drawPenFillPts.push(pt)
+            }
+            this.refreshDrawing(false, false) // Update GPU texture
+          } else if (this.opts.penType === 'rectangle' || this.opts.penType === 'ellipse') {
+            // Rectangle or ellipse drawing
+            if (isNaN(this.drawShapeStartLocation[0])) {
+              // First click - set start position
+              this.drawPenAxCorSag = axCorSag
+              this.drawShapeStartLocation = [...pt]
+              // Store current drawing bitmap for preview
+              if (this.drawBitmap) {
+                this.drawShapePreviewBitmap = this.drawBitmap.slice()
+              }
+            } else {
+              // Drawing preview of shape
+              if (this.drawShapePreviewBitmap && this.drawBitmap) {
+                // Restore original bitmap
+                this.drawBitmap.set(this.drawShapePreviewBitmap)
+                // Draw shape preview
+                if (this.opts.penType === 'rectangle') {
+                  this.drawRectangle(this.drawShapeStartLocation, pt, this.opts.penValue)
+                } else if (this.opts.penType === 'ellipse') {
+                  this.drawEllipse(this.drawShapeStartLocation, pt, this.opts.penValue)
+                }
+                this.refreshDrawing(false, false) // Update GPU texture
+              }
+            }
           }
-          this.drawPenLocation = pt
-          if (this.opts.isFilledPen) {
-            this.drawPenFillPts.push(pt)
-          }
-          this.refreshDrawing(false, false) // Update GPU texture
         }
       } // end if(drawingEnabled)
 

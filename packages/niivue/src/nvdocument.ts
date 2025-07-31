@@ -183,6 +183,8 @@ export type NVConfigOptions = {
   drawingEnabled: boolean
   // sets drawing color. see "drawPt"
   penValue: number
+  // pen drawing type: 'pen' for freehand, 'rectangle' for rectangular masks, 'ellipse' for elliptical masks
+  penType: 'pen' | 'rectangle' | 'ellipse'
   // does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors
   floodFillNeighbors: number
   isFilledPen: boolean
@@ -300,6 +302,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   dragAndDropEnabled: true,
   drawingEnabled: false,
   penValue: 1,
+  penType: 'pen' as 'pen' | 'rectangle' | 'ellipse',
   floodFillNeighbors: 6,
   isFilledPen: false,
   thumbnail: '',
