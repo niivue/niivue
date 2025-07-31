@@ -11661,7 +11661,7 @@ export class Niivue {
     if (axCorSag === SLICE_TYPE.AXIAL) {
       bottomText = 'P' // opposite of 'A' (Anterior -> Posterior)
     }
-    
+
     let rightText = this.opts.isRadiologicalConvention ? 'L' : 'R' // opposite of left
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
       rightText = this.opts.sagittalNoseLeft ? 'P' : 'A' // opposite of left
@@ -11673,9 +11673,9 @@ export class Niivue {
     }
     let drawBelow = true
     let drawRight = true
-    let drawAbove = this.opts.showAllOrientationMarkers
-    let drawLeft = this.opts.showAllOrientationMarkers
-    
+    const drawAbove = this.opts.showAllOrientationMarkers
+    const drawLeft = this.opts.showAllOrientationMarkers
+
     if (!isNaN(padLeftTop[0])) {
       const ht = this.fontPx + 2
       if (padLeftTop[1] > ht) {
@@ -11700,13 +11700,19 @@ export class Niivue {
     if (drawRight) {
       this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText)
     }
-    
+
     // Draw additional markers when all markers are enabled
     if (drawAbove) {
-      this.drawTextAbove([leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]], bottomText)
+      this.drawTextAbove(
+        [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]],
+        bottomText
+      )
     }
     if (drawLeft) {
-      this.drawTextLeft([leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], rightText)
+      this.drawTextLeft(
+        [leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5],
+        rightText
+      )
     }
   }
 
