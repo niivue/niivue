@@ -20,6 +20,8 @@ export type NiivueInstanceContext = {
   setLayout: (layout: keyof typeof layouts) => void
   mosaicOrientation: 'A' | 'C' | 'S'
   setMosaicOrientation: (orient: 'A' | 'C' | 'S') => void
+  sliceMosaicString: string
+  setSliceMosaicString: React.Dispatch<React.SetStateAction<string>>
   title: string
   filePath: string | null // ✅ NEW: Full path to .nvd file or null if unsaved
   isDirty: boolean // ✅ NEW: True if unsaved changes exist

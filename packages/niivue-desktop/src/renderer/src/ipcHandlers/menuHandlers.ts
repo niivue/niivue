@@ -5,7 +5,10 @@ import { orientationLabelMap } from '../../../common/orientationLabels.js'
 
 const electron = window.electron
 
-export const registerSliceTypeHandler = (nv: Niivue): void => {
+export const registerSliceTypeHandler = (
+  nv: Niivue,
+  onMosaicStringChange?: (sliceMosaicString: string) => void
+): void => {
   electron.ipcRenderer.on('setSliceType', (_, sliceTypeName: string) => {
     // get sliceType object from the name property
     const sliceType = Object.values(sliceTypeMap).find(
@@ -18,11 +21,15 @@ export const registerSliceTypeHandler = (nv: Niivue): void => {
     nv.opts.multiplanarShowRender = sliceType.showRender
     if (sliceTypeName === 'mosaic') {
       nv.setSliceMosaicString('A 0 1 2')
+      console.log('n slice mosaic string', nv.sliceMosaicString)
       return
     }
     // issue1134: unset mosaic string for non-mosaic views
     nv.setSliceMosaicString('')
     nv.setSliceType(sliceType.sliceType)
+    if (onMosaicStringChange) {
+      onMosaicStringChange(nv.sliceMosaicString)
+    }
   })
 }
 

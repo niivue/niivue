@@ -30,7 +30,8 @@ export const registerAllIpcHandlers = (
   setLabelEditMode: (v: boolean) => void,
   modeMap: Map<string, 'replace' | 'overlay'>,
   indexMap: Map<string, number>,
-  onDocumentLoaded: (title: string) => void
+  onDocumentLoaded: (title: string) => void,
+  onMosaicStringChange?: (sliceMosaicString: string) => void
 ): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
@@ -51,7 +52,7 @@ export const registerAllIpcHandlers = (
   // 🔌 Register core handlers
   registerLoadStandardHandler({ nv, setVolumes, setMeshes })
   registerLoadRecentFileHandler({ nv, setVolumes, setMeshes, onDocumentLoaded })
-  registerSliceTypeHandler(nv)
+  registerSliceTypeHandler(nv, onMosaicStringChange)
   registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
   registerLoadMeshHandler({ nv, setMeshes })
   registerLoadVolumeHandler({ nv, setVolumes })

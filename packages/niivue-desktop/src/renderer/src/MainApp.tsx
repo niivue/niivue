@@ -114,7 +114,8 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       modeMap,
       indexMap,
-      (newTitle) => updateDocument(selected.id, { title: newTitle, isDirty: true })
+      (newTitle) => updateDocument(selected.id, { title: newTitle, isDirty: true }),
+      selected.setSliceMosaicString
     )
   }, [selected])
 
@@ -239,6 +240,15 @@ function MainApp(): JSX.Element {
       updateDocument(docId, { sliceType: next, isDirty: true })
     }
 
+    const setSliceMosaicString: React.Dispatch<React.SetStateAction<string>> = (action) => {
+      const prev = getCurrent('sliceMosaicString')
+      const next =
+        typeof action === 'function' ? (action as (prev: string) => string)(prev!) : action
+      nv.setSliceMosaicString(next)
+
+      updateDocument(docId, { sliceMosaicString: next, isDirty: true })
+    }
+
     const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> = (action) => {
       // 1. Grab the previous opts from your context
       const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
@@ -303,6 +313,9 @@ function MainApp(): JSX.Element {
 
       mosaicOrientation: 'A',
       setMosaicOrientation,
+
+      sliceMosaicString: '',
+      setSliceMosaicString,
 
       title: 'Untitled',
 
