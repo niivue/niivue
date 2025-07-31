@@ -198,6 +198,9 @@
           <a class="viewBtn divider dropdown-item-checked" id="DrawFilled" accesskey="f">Fill Outline ^F</a>
           <a class="viewBtn dropdown-item-checked" id="DrawOverwrite" accesskey="o">Pen Overwrites Existing ^O</a>
           <a class="viewBtn dropdown-item-checked" id="Translucent" accesskey="t">Translucent ^T</a>
+          <a class="viewBtn divider dropdown-item-checked" id="PenType-pen" accesskey="p">Pen Tool ^P</a>
+          <a class="viewBtn" id="PenType-rectangle" accesskey="r">Rectangle Tool ^R</a>
+          <a class="viewBtn" id="PenType-ellipse" accesskey="e">Ellipse Tool ^E</a>
           <a class="viewBtn dropdown-item-checked" id="ThinPen">Thin Pen</a>
           <a class="viewBtn" id="Growcut">Grow Cut</a>
           <a class="viewBtn" id="DrawOtsu">Otsu</a>
@@ -302,6 +305,9 @@
     updateCheckmark('Translucent', nv1.drawOpacity < 1.0)
     updateCheckmark('ThinPen', nv1.opts.penSize < 2)
     updateCheckmark('ClickToSegment2D', nv1.opts.clickToSegmentIs2D) // Set initial state for 2D/3D toggle
+    
+    // Set initial pen type
+    toggleGroup('PenType-' + nv1.document.opts.penType)
 
     if (nv1.opts.sliceType === nv1.sliceTypeAxial) toggleGroup('|Axial')
     else if (nv1.opts.sliceType === nv1.sliceTypeCoronal) toggleGroup('|Coronal')
@@ -692,6 +698,21 @@
       case 'DrawOverwrite':
         nv1.drawFillOverwrites = !nv1.drawFillOverwrites
         buttonElement.classList.toggle('dropdown-item-checked')
+        handled = true
+        break
+      case 'PenType-pen':
+        nv1.document.opts.penType = 'pen'
+        toggleGroup('PenType-pen')
+        handled = true
+        break
+      case 'PenType-rectangle':
+        nv1.document.opts.penType = 'rectangle'
+        toggleGroup('PenType-rectangle')
+        handled = true
+        break
+      case 'PenType-ellipse':
+        nv1.document.opts.penType = 'ellipse'
+        toggleGroup('PenType-ellipse')
         handled = true
         break
       case 'ClickToSegment2D': // New Toggle

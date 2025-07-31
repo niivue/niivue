@@ -129,3 +129,30 @@ test('showAllOrientationMarkers set by setShowAllOrientationMarkers is tracked i
   nv.setShowAllOrientationMarkers(false)
   expect(nv.document.opts.showAllOrientationMarkers).toBe(false)
 })
+
+test('penType defaults to pen', () => {
+  const nv = new Niivue()
+  expect(nv.document.opts.penType).toBe('pen')
+})
+
+test('penType can be set to rectangle', () => {
+  const nv = new Niivue()
+  nv.document.opts.penType = 'rectangle'
+  expect(nv.document.opts.penType).toBe('rectangle')
+})
+
+test('penType can be set to ellipse', () => {
+  const nv = new Niivue()
+  nv.document.opts.penType = 'ellipse'
+  expect(nv.document.opts.penType).toBe('ellipse')
+})
+
+test('drawRectangle method exists', () => {
+  const nv = new Niivue()
+  expect(typeof nv.drawRectangle).toBe('function')
+})
+
+test('drawEllipse method exists', () => {
+  const nv = new Niivue()
+  expect(typeof nv.drawEllipse).toBe('function')
+})
