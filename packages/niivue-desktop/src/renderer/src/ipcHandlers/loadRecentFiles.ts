@@ -19,7 +19,7 @@ export interface HandlerProps {
     id: string
   }>
   /** Called when an .nvd document is successfully loaded */
-  onDocumentLoaded?: (title: string) => void
+  onDocumentLoaded?: (title: string, targetId: string) => void
 }
 
 console.log('[Renderer] registering loadRecentFile handler')
@@ -33,7 +33,7 @@ export const registerLoadRecentFileHandler = ({
     console.log('[Renderer] loadRecentFile received for path:', filePath)
 
     // Determine the target Niivue instance (create new doc if needed)
-    const { nvRef, setVolumes, setMeshes } = await getTarget()
+    const { nvRef, setVolumes, setMeshes, id } = await getTarget()
     const nv = nvRef.current!
 
     // Load file data
@@ -56,7 +56,7 @@ export const registerLoadRecentFileHandler = ({
       if (onDocumentLoaded) {
         const fileName = filePath.split('/').pop()!
         const friendly = fileName.replace(/\.nvd(\.gz)?$/i, '')
-        onDocumentLoaded(friendly)
+        onDocumentLoaded(friendly, id)
       }
     } else if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
       // Mesh case

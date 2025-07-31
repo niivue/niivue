@@ -36,7 +36,7 @@ export interface IpcHandlerProps {
   getTitle: () => string
   setLabelDialogOpen: (v: boolean) => void
   setLabelEditMode: (v: boolean) => void
-  onDocumentLoaded: (title: string) => void
+  onDocumentLoaded: (title: string, targetId: string) => void
   onMosaicStringChange?: (sliceMosaicString: string) => void
 }
 

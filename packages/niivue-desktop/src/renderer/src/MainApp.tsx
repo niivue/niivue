@@ -126,8 +126,8 @@ function MainApp(): JSX.Element {
       getTitle: () => selected.title || selected.id,
       setLabelDialogOpen,
       setLabelEditMode,
-      onDocumentLoaded: (newTitle: string) =>
-        updateDocument(selected.id, { title: newTitle, isDirty: true }),
+      onDocumentLoaded: (newTitle: string, targetId: string) =>
+        updateDocument(targetId, { title: newTitle, isDirty: true }),
       onMosaicStringChange: selected.setSliceMosaicString
     })
   }, [selected])

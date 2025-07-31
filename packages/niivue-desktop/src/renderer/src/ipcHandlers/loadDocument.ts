@@ -1,25 +1,29 @@
 // src/ipcHandlers/loadDocument.ts
 import React from 'react'
+import type { IpcRendererEvent } from 'electron'
 import { DocumentData, NVDocument, NVImage, NVMesh, Niivue } from '@niivue/niivue'
 import {
   base64ToJson,
   decompressGzipBase64ToJson,
   isProbablyGzip
 } from '@renderer/utils/base64ToJSON.js'
-import type { IpcRendererEvent } from 'electron'
 
 const electron = window.electron
 
 export interface HandlerProps {
-  /** returns the proper Niivue instance or creates a new doc if it’s non-empty */
+  /**
+   * Returns the proper Niivue instance or creates a new doc if it’s non-empty
+   */
   getTarget: () => Promise<{
+    id: string
     nvRef: React.RefObject<Niivue>
     setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
     setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
-    id: string
   }>
-  /** Called when an .nvd document is successfully loaded */
-  onDocumentLoaded?: (title: string) => void
+  /**
+   * Called when an .nvd document is successfully loaded into the given document
+   */
+  onDocumentLoaded?: (title: string, targetId: string) => void
 }
 
 console.log('[Renderer] registering loadDocument handler')
@@ -28,39 +32,40 @@ export const registerLoadDocumentHandler = ({
   getTarget,
   onDocumentLoaded
 }: HandlerProps): void => {
+  // Clear any existing listener
   electron.ipcRenderer.removeAllListeners('loadDocument')
-  electron.ipcRenderer.on('loadDocument', async (_: IpcRendererEvent, filePath: string) => {
+
+  electron.ipcRenderer.on('loadDocument', async (_evt: IpcRendererEvent, filePath: string) => {
     console.log('[Renderer] loadDocument received for path:', filePath)
 
-    // Determine the target Niivue instance (create new document if needed)
-    const { nvRef, setVolumes, setMeshes } = await getTarget()
+    // 1️⃣ Pick or create the Niivue instance
+    const { id, nvRef, setVolumes, setMeshes } = await getTarget()
     const nv = nvRef.current!
 
-    // 1️⃣ Read and parse document JSON
+    // 2️⃣ Read & parse the .nvd JSON (gzip‐aware)
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', filePath)
-    const json = isProbablyGzip(base64)
-      ? ((await decompressGzipBase64ToJson(base64)) as DocumentData)
+    const json: DocumentData = isProbablyGzip(base64)
+      ? await decompressGzipBase64ToJson(base64)
       : (base64ToJson(base64) as DocumentData)
     if (!json) throw new Error('Invalid .nvd content')
 
-    // 2️⃣ Load into Niivue
+    // 3️⃣ Load into Niivue
     const doc = NVDocument.loadFromJSON(json)
     await nv.loadDocument(doc)
 
-    // 3️⃣ Sync volumes & meshes state
+    // 4️⃣ Sync React state
     if (nv.volumes.length) setVolumes(nv.volumes)
     if (nv.meshes.length) setMeshes(nv.meshes)
 
-    // 4️⃣ Determine friendly title
-    let newTitle = json.title as string | undefined
-    if (!newTitle || newTitle === 'Untitled') {
-      const fname = filePath.split('/').pop() || ''
-      newTitle = fname.replace(/\.nvd(\.gz)?$/i, '')
+    // 5️⃣ Compute friendly title & notify
+    if (onDocumentLoaded) {
+      let title = json.title ?? ''
+      if (!title || title === 'Untitled') {
+        const fname = filePath.split('/').pop() || ''
+        title = fname.replace(/\.nvd(\.gz)?$/i, '')
+      }
+      onDocumentLoaded(title, id)
     }
-    console.log('newTitle', newTitle)
-
-    // 5️⃣ Notify caller
-    onDocumentLoaded?.(newTitle)
 
     // 6️⃣ Redraw scene
     nv.drawScene()
