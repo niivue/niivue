@@ -3211,6 +3211,16 @@ export class Niivue {
   }
 
   /**
+   * Show or hide all four orientation labels (e.g., L/R, A/P, S/I) in 2D slice views
+   * @param showAllOrientationMarkers - whether all four orientation markers should be displayed
+   * @example niivue.setShowAllOrientationMarkers(true)
+   */
+  setShowAllOrientationMarkers(showAllOrientationMarkers: boolean): void {
+    this.opts.showAllOrientationMarkers = showAllOrientationMarkers
+    this.drawScene()
+  }
+
+  /**
    * determine proportion of screen real estate devoted to rendering in multiplanar view.
    * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
    * @example niivue.setHeroImage(0.5)
@@ -11367,6 +11377,32 @@ export class Niivue {
   }
 
   /**
+   * Draw text horizontally centered above the given coordinates.
+   * @internal
+   */
+  drawTextAbove(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
+    // horizontally centered on x, above y
+    if (this.fontPx <= 0) {
+      return
+    }
+    if (!this.canvas) {
+      throw new Error('canvas undefined')
+    }
+    let size = this.fontPx * scale
+    let width = this.textWidth(size, str)
+    if (width > this.canvas.width) {
+      scale *= (this.canvas.width - 2) / width
+      size = this.fontPx * scale
+      width = this.textWidth(size, str)
+    }
+    xy[0] -= 0.5 * this.textWidth(size, str)
+    xy[0] = Math.max(xy[0], 1) // clamp left edge of canvas
+    xy[0] = Math.min(xy[0], this.canvas.width - width - 1) // clamp right edge of canvas
+    xy[1] -= size // position above the y coordinate
+    this.drawText(xy, str, scale, color)
+  }
+
+  /**
    * Update texture interpolation mode (nearest or linear) for background or overlay layer.
    * @internal
    */
@@ -11619,12 +11655,27 @@ export class Niivue {
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
       leftText = this.opts.sagittalNoseLeft ? 'A' : 'P'
     }
+
+    // Calculate opposite orientations for all-marker mode
+    let bottomText = 'I' // opposite of 'S' (Superior -> Inferior)
+    if (axCorSag === SLICE_TYPE.AXIAL) {
+      bottomText = 'P' // opposite of 'A' (Anterior -> Posterior)
+    }
+    
+    let rightText = this.opts.isRadiologicalConvention ? 'L' : 'R' // opposite of left
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
+      rightText = this.opts.sagittalNoseLeft ? 'P' : 'A' // opposite of left
+    }
+
     if (this.opts.isCornerOrientationText) {
       this.drawTextRightBelow([leftTopWidthHeight[0], leftTopWidthHeight[1]], leftText + topText)
       return
     }
     let drawBelow = true
     let drawRight = true
+    let drawAbove = this.opts.showAllOrientationMarkers
+    let drawLeft = this.opts.showAllOrientationMarkers
+    
     if (!isNaN(padLeftTop[0])) {
       const ht = this.fontPx + 2
       if (padLeftTop[1] > ht) {
@@ -11648,6 +11699,14 @@ export class Niivue {
     }
     if (drawRight) {
       this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText)
+    }
+    
+    // Draw additional markers when all markers are enabled
+    if (drawAbove) {
+      this.drawTextAbove([leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]], bottomText)
+    }
+    if (drawLeft) {
+      this.drawTextLeft([leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], rightText)
     }
   }
 
