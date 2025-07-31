@@ -33,6 +33,18 @@ Renames and re-exports [ColorTables](../colortables/classes/ColorTables.md)
 
 ---
 
+### CompletedAngle
+
+Re-exports [CompletedAngle](../nvdocument/interfaces/CompletedAngle.md)
+
+---
+
+### CompletedMeasurement
+
+Re-exports [CompletedMeasurement](../nvdocument/interfaces/CompletedMeasurement.md)
+
+---
+
 ### Connectome
 
 Re-exports [Connectome](../types/type-aliases/Connectome.md)
@@ -54,18 +66,6 @@ Re-exports [DEFAULT_OPTIONS](../nvdocument/variables/DEFAULT_OPTIONS.md)
 ### DocumentData
 
 Re-exports [DocumentData](../nvdocument/type-aliases/DocumentData.md)
-
----
-
-### DRAG_MODE_PRIMARY
-
-Re-exports [DRAG_MODE_PRIMARY](../nvdocument/enumerations/DRAG_MODE_PRIMARY.md)
-
----
-
-### DRAG_MODE_SECONDARY
-
-Re-exports [DRAG_MODE_SECONDARY](../nvdocument/enumerations/DRAG_MODE_SECONDARY.md)
 
 ---
 
@@ -114,6 +114,12 @@ Re-exports [LegacyConnectome](../types/type-aliases/LegacyConnectome.md)
 ### LegacyNodes
 
 Re-exports [LegacyNodes](../types/type-aliases/LegacyNodes.md)
+
+---
+
+### MouseEventConfig
+
+Re-exports [MouseEventConfig](../nvdocument/interfaces/MouseEventConfig.md)
 
 ---
 
@@ -204,6 +210,12 @@ Re-exports [SHOW_RENDER](../nvdocument/enumerations/SHOW_RENDER.md)
 ### SyncOpts
 
 Re-exports [SyncOpts](../types/type-aliases/SyncOpts.md)
+
+---
+
+### TouchEventConfig
+
+Re-exports [TouchEventConfig](../nvdocument/interfaces/TouchEventConfig.md)
 
 ---
 

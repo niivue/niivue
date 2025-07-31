@@ -30006,24 +30006,10 @@ var DRAG_MODE = /* @__PURE__ */ ((DRAG_MODE2) => {
   DRAG_MODE2[DRAG_MODE2["callbackOnly"] = 5] = "callbackOnly";
   DRAG_MODE2[DRAG_MODE2["roiSelection"] = 6] = "roiSelection";
   DRAG_MODE2[DRAG_MODE2["angle"] = 7] = "angle";
+  DRAG_MODE2[DRAG_MODE2["crosshair"] = 8] = "crosshair";
+  DRAG_MODE2[DRAG_MODE2["windowing"] = 9] = "windowing";
   return DRAG_MODE2;
 })(DRAG_MODE || {});
-var DRAG_MODE_SECONDARY = /* @__PURE__ */ ((DRAG_MODE_SECONDARY2) => {
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["none"] = 0] = "none";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["contrast"] = 1] = "contrast";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["measurement"] = 2] = "measurement";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["pan"] = 3] = "pan";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["slicer3D"] = 4] = "slicer3D";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["callbackOnly"] = 5] = "callbackOnly";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["roiSelection"] = 6] = "roiSelection";
-  DRAG_MODE_SECONDARY2[DRAG_MODE_SECONDARY2["angle"] = 7] = "angle";
-  return DRAG_MODE_SECONDARY2;
-})(DRAG_MODE_SECONDARY || {});
-var DRAG_MODE_PRIMARY = /* @__PURE__ */ ((DRAG_MODE_PRIMARY2) => {
-  DRAG_MODE_PRIMARY2[DRAG_MODE_PRIMARY2["crosshair"] = 0] = "crosshair";
-  DRAG_MODE_PRIMARY2[DRAG_MODE_PRIMARY2["windowing"] = 1] = "windowing";
-  return DRAG_MODE_PRIMARY2;
-})(DRAG_MODE_PRIMARY || {});
 var COLORMAP_TYPE = /* @__PURE__ */ ((COLORMAP_TYPE2) => {
   COLORMAP_TYPE2[COLORMAP_TYPE2["MIN_TO_MAX"] = 0] = "MIN_TO_MAX";
   COLORMAP_TYPE2[COLORMAP_TYPE2["ZERO_TO_MAX_TRANSPARENT_BELOW_MIN"] = 1] = "ZERO_TO_MAX_TRANSPARENT_BELOW_MIN";
@@ -30079,7 +30065,9 @@ var DEFAULT_OPTIONS = {
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
   dragMode: 1 /* contrast */,
-  dragModePrimary: 0 /* crosshair */,
+  dragModePrimary: 8 /* crosshair */,
+  mouseEventConfig: void 0,
+  touchEventConfig: void 0,
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
@@ -30198,6 +30186,8 @@ var NVDocument = class _NVDocument {
     __publicField(this, "drawBitmap", null);
     __publicField(this, "imageOptionsMap", /* @__PURE__ */ new Map());
     __publicField(this, "meshOptionsMap", /* @__PURE__ */ new Map());
+    __publicField(this, "completedMeasurements", []);
+    __publicField(this, "completedAngles", []);
     __publicField(this, "_optsProxy", null);
     __publicField(this, "_optsChangeCallback", null);
     this.scene = {
@@ -30461,6 +30451,8 @@ var NVDocument = class _NVDocument {
       delete label.onClick;
     }
     data.customData = this.customData;
+    data.completedMeasurements = [...this.completedMeasurements];
+    data.completedAngles = [...this.completedAngles];
     if (this.volumes.length) {
       for (let i = 0; i < this.volumes.length; i++) {
         const volume = this.volumes[i];
@@ -30681,6 +30673,26 @@ var NVDocument = class _NVDocument {
       ...INITIAL_SCENE_DATA,
       ...data.sceneData || {}
     };
+    if (data.completedMeasurements) {
+      document2.completedMeasurements = data.completedMeasurements.map((m) => ({
+        ...m,
+        startMM: vec3_exports.clone(m.startMM),
+        endMM: vec3_exports.clone(m.endMM)
+      }));
+    }
+    if (data.completedAngles) {
+      document2.completedAngles = data.completedAngles.map((a) => ({
+        ...a,
+        firstLineMM: {
+          start: vec3_exports.clone(a.firstLineMM.start),
+          end: vec3_exports.clone(a.firstLineMM.end)
+        },
+        secondLineMM: {
+          start: vec3_exports.clone(a.secondLineMM.start),
+          end: vec3_exports.clone(a.secondLineMM.end)
+        }
+      }));
+    }
     if (document2.data.meshesString) {
       _NVDocument.deserializeMeshDataObjects(document2);
     }
@@ -35029,6 +35041,8 @@ var Niivue = class {
       multiTouchGesture: false,
       windowX: 0,
       windowY: 0,
+      activeDragMode: null,
+      activeDragButton: null,
       angleFirstLine: [0, 0, 0, 0],
       angleState: "none"
     });
@@ -35897,77 +35911,177 @@ var Niivue = class {
     this.uiData.clickedTile = this.tileIndex(x, y);
     if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
       this.uiData.mouseButtonCenterDown = true;
-      this.mouseCenterButtonHandler(e);
+      this.setActiveDragMode(LEFT_MOUSE_BUTTON, true, e.ctrlKey);
+      this.handleMouseAction(this.uiData.activeDragMode, e, pos);
     } else if (e.button === LEFT_MOUSE_BUTTON) {
       this.uiData.mouseButtonLeftDown = true;
-      this.mouseLeftButtonHandler(e);
+      this.setActiveDragMode(LEFT_MOUSE_BUTTON, false, e.ctrlKey);
+      this.handleMouseAction(this.uiData.activeDragMode, e, pos);
     } else if (e.button === RIGHT_MOUSE_BUTTON) {
       this.uiData.mouseButtonRightDown = true;
-      this.mouseRightButtonHandler(e);
+      this.setActiveDragMode(RIGHT_MOUSE_BUTTON, e.shiftKey, e.ctrlKey);
+      this.handleMouseAction(this.uiData.activeDragMode, e, pos);
     } else if (e.button === CENTER_MOUSE_BUTTON) {
       this.uiData.mouseButtonCenterDown = true;
-      this.mouseCenterButtonHandler(e);
+      this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey);
+      this.handleMouseAction(this.uiData.activeDragMode, e, pos);
     }
   }
   /**
-   * Handles left mouse button actions for crosshair or windowing mode.
+   * Gets the appropriate drag mode for a mouse button based on configuration.
    * @internal
    */
-  mouseLeftButtonHandler(e) {
-    if (e.ctrlKey || this.opts.dragModePrimary === 0 /* crosshair */) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+  getMouseButtonDragMode(button, shiftKey, ctrlKey) {
+    const mouseConfig = this.opts.mouseEventConfig;
+    if (button === LEFT_MOUSE_BUTTON) {
+      if (mouseConfig?.leftButton) {
+        if (shiftKey && mouseConfig.leftButton.withShift !== void 0) {
+          return mouseConfig.leftButton.withShift;
+        }
+        if (ctrlKey && mouseConfig.leftButton.withCtrl !== void 0) {
+          return mouseConfig.leftButton.withCtrl;
+        }
+        return mouseConfig.leftButton.primary;
+      }
+      return ctrlKey ? 8 /* crosshair */ : this.opts.dragModePrimary;
+    } else if (button === RIGHT_MOUSE_BUTTON) {
+      if (mouseConfig?.rightButton !== void 0) {
+        return mouseConfig.rightButton;
+      }
+      return this.opts.dragMode;
+    } else if (button === CENTER_MOUSE_BUTTON) {
+      if (mouseConfig?.centerButton !== void 0) {
+        return mouseConfig.centerButton;
+      }
+      return this.opts.dragMode;
+    }
+    return this.opts.dragMode;
+  }
+  /**
+   * Gets the appropriate drag mode for touch events based on configuration.
+   * @internal
+   */
+  getTouchDragMode(isDoubleTouch) {
+    const touchConfig = this.opts.touchEventConfig;
+    if (isDoubleTouch) {
+      return touchConfig?.doubleTouch ?? this.opts.dragMode;
+    }
+    return touchConfig?.singleTouch ?? this.opts.dragModePrimary;
+  }
+  /**
+   * Sets the active drag mode for the current interaction.
+   * @internal
+   */
+  setActiveDragMode(button, shiftKey, ctrlKey) {
+    this.uiData.activeDragMode = this.getMouseButtonDragMode(button, shiftKey, ctrlKey);
+    this.uiData.activeDragButton = button;
+  }
+  /**
+   * Gets the currently active drag mode, or falls back to configured defaults.
+   * @internal
+   */
+  getCurrentDragMode() {
+    if (this.uiData.activeDragMode !== null) {
+      return this.uiData.activeDragMode;
+    }
+    return this.opts.dragMode;
+  }
+  /**
+   * Clears the active drag mode.
+   * @internal
+   */
+  clearActiveDragMode() {
+    this.uiData.activeDragMode = null;
+    this.uiData.activeDragButton = null;
+  }
+  /**
+   * Unified handler for mouse actions based on drag mode.
+   * @internal
+   */
+  handleMouseAction(dragMode, e, pos) {
+    if (dragMode === 8 /* crosshair */) {
       this.mouseDown(pos.x, pos.y);
       this.mouseClick(pos.x, pos.y);
-    } else if (this.opts.dragModePrimary === 1 /* windowing */) {
+    } else if (dragMode === 9 /* windowing */) {
       this.uiData.windowX = e.x;
       this.uiData.windowY = e.y;
-    }
-  }
-  /**
-   * Handles center mouse button drag to initiate 2D panning or clip plane adjustment.
-   * @internal
-   */
-  mouseCenterButtonHandler(e) {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
-    if (this.opts.dragMode === 0 /* none */) {
-      return;
-    }
-    this.setDragStart(pos.x, pos.y);
-    if (!this.uiData.isDragging) {
-      this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
-    }
-    this.uiData.isDragging = true;
-    this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
-  }
-  /**
-   * Handles right mouse button drag to enable 2D panning or clip plane control.
-   * @internal
-   */
-  mouseRightButtonHandler(e) {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-    this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
-    if (this.opts.dragMode === 0 /* none */) {
-      return;
-    }
-    if (this.opts.dragMode === 7 /* angle */) {
-      if (this.uiData.angleState === "none") {
-        this.uiData.angleState = "drawing_first_line";
-      } else if (this.uiData.angleState === "drawing_second_line") {
-        this.uiData.angleState = "complete";
-        this.drawScene();
+    } else {
+      this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+      if (dragMode === 0 /* none */) {
         return;
-      } else if (this.uiData.angleState === "complete") {
-        this.resetAngleMeasurement();
-        this.uiData.angleState = "drawing_first_line";
       }
+      if (dragMode === 7 /* angle */) {
+        if (this.uiData.angleState === "none") {
+          this.uiData.angleState = "drawing_first_line";
+        } else if (this.uiData.angleState === "drawing_second_line") {
+          const finalClickPos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
+          const tileIdx = this.tileIndex(finalClickPos[0], finalClickPos[1]);
+          let sliceInfo = { sliceIndex: -1, sliceType: 0 /* AXIAL */, slicePosition: 0 };
+          if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+            const sliceType = this.screenSlices[tileIdx].axCorSag;
+            let slicePosition = 0;
+            if (sliceType === 0 /* AXIAL */) {
+              slicePosition = this.scene.crosshairPos[2];
+            } else if (sliceType === 1 /* CORONAL */) {
+              slicePosition = this.scene.crosshairPos[1];
+            } else if (sliceType === 2 /* SAGITTAL */) {
+              slicePosition = this.scene.crosshairPos[0];
+            }
+            sliceInfo = {
+              sliceIndex: tileIdx,
+              sliceType,
+              slicePosition
+            };
+          }
+          const secondLine = [
+            this.uiData.angleFirstLine[2],
+            // start from end of first line
+            this.uiData.angleFirstLine[3],
+            finalClickPos[0],
+            // to final click position
+            finalClickPos[1]
+          ];
+          const firstLineStartFrac = this.canvasPos2frac([this.uiData.angleFirstLine[0], this.uiData.angleFirstLine[1]]);
+          const firstLineEndFrac = this.canvasPos2frac([this.uiData.angleFirstLine[2], this.uiData.angleFirstLine[3]]);
+          const secondLineStartFrac = this.canvasPos2frac([secondLine[0], secondLine[1]]);
+          const secondLineEndFrac = this.canvasPos2frac([secondLine[2], secondLine[3]]);
+          if (firstLineStartFrac[0] >= 0 && firstLineEndFrac[0] >= 0 && secondLineStartFrac[0] >= 0 && secondLineEndFrac[0] >= 0) {
+            const firstLineStartMM = this.frac2mm(firstLineStartFrac);
+            const firstLineEndMM = this.frac2mm(firstLineEndFrac);
+            const secondLineStartMM = this.frac2mm(secondLineStartFrac);
+            const secondLineEndMM = this.frac2mm(secondLineEndFrac);
+            const angleToSave = {
+              firstLineMM: {
+                start: vec3_exports.fromValues(firstLineStartMM[0], firstLineStartMM[1], firstLineStartMM[2]),
+                end: vec3_exports.fromValues(firstLineEndMM[0], firstLineEndMM[1], firstLineEndMM[2])
+              },
+              secondLineMM: {
+                start: vec3_exports.fromValues(secondLineStartMM[0], secondLineStartMM[1], secondLineStartMM[2]),
+                end: vec3_exports.fromValues(secondLineEndMM[0], secondLineEndMM[1], secondLineEndMM[2])
+              },
+              sliceIndex: sliceInfo.sliceIndex,
+              sliceType: sliceInfo.sliceType,
+              slicePosition: sliceInfo.slicePosition,
+              angle: this.calculateAngleBetweenLines(this.uiData.angleFirstLine, secondLine)
+            };
+            this.document.completedAngles.push(angleToSave);
+          }
+          this.resetAngleMeasurement();
+          this.uiData.angleState = "complete";
+          this.drawScene();
+          return;
+        } else if (this.uiData.angleState === "complete") {
+          this.resetAngleMeasurement();
+          this.uiData.angleState = "drawing_first_line";
+        }
+      }
+      this.setDragStart(pos.x, pos.y);
+      if (!this.uiData.isDragging) {
+        this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
+      }
+      this.uiData.isDragging = true;
+      this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
     }
-    this.setDragStart(pos.x, pos.y);
-    if (!this.uiData.isDragging) {
-      this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
-    }
-    this.uiData.isDragging = true;
-    this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
   }
   /**
    * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
@@ -36101,6 +36215,7 @@ var Niivue = class {
     const wasCenterDown = this.uiData.mouseButtonCenterDown;
     this.uiData.mouseButtonCenterDown = false;
     this.uiData.mouseButtonLeftDown = false;
+    const currentDragMode = this.getCurrentDragMode();
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled();
     } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
@@ -36113,7 +36228,7 @@ var Niivue = class {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false;
-      if (this.opts.dragMode === 7 /* angle */) {
+      if (currentDragMode === 7 /* angle */) {
         if (this.uiData.angleState === "drawing_first_line") {
           this.uiData.angleFirstLine = [
             this.uiData.dragStart[0],
@@ -36127,31 +36242,58 @@ var Niivue = class {
           return;
         } else if (this.uiData.angleState === "drawing_second_line") {
           this.uiData.angleState = "complete";
+          this.clearActiveDragMode();
           this.drawScene();
           return;
         }
       }
-      if (this.opts.dragMode === 5 /* callbackOnly */) {
+      if (currentDragMode === 5 /* callbackOnly */) {
         this.drawScene();
       }
       const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]]);
       const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
       this.generateMouseUpCallback(fracStart, fracEnd);
-      if (this.opts.dragMode === 6 /* roiSelection */) {
+      if (currentDragMode === 6 /* roiSelection */) {
+        this.clearActiveDragMode();
         return;
       }
-      if (this.opts.dragMode !== 1 /* contrast */) {
+      if (currentDragMode === 1 /* contrast */) {
+        if (wasCenterDown) {
+          this.clearActiveDragMode();
+          return;
+        }
+        if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+          this.clearActiveDragMode();
+          return;
+        }
+        this.calculateNewRange({ volIdx: 0 });
+        this.refreshLayers(this.volumes[0], 0);
+      }
+      if (currentDragMode === 2 /* measurement */) {
+        const sliceInfo = this.getCurrentSliceInfo();
+        const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]]);
+        const endFrac = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
+        if (startFrac[0] >= 0 && endFrac[0] >= 0) {
+          const startMM = this.frac2mm(startFrac);
+          const endMM = this.frac2mm(endFrac);
+          this.document.completedMeasurements.push({
+            startMM: vec3_exports.fromValues(startMM[0], startMM[1], startMM[2]),
+            endMM: vec3_exports.fromValues(endMM[0], endMM[1], endMM[2]),
+            sliceIndex: sliceInfo.sliceIndex,
+            sliceType: sliceInfo.sliceType,
+            slicePosition: sliceInfo.slicePosition,
+            distance: vec3_exports.distance(
+              vec3_exports.fromValues(startMM[0], startMM[1], startMM[2]),
+              vec3_exports.fromValues(endMM[0], endMM[1], endMM[2])
+            )
+          });
+        }
+        this.clearActiveDragMode();
+        this.drawScene();
         return;
       }
-      if (wasCenterDown) {
-        return;
-      }
-      if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
-        return;
-      }
-      this.calculateNewRange({ volIdx: 0 });
-      this.refreshLayers(this.volumes[0], 0);
     }
+    this.clearActiveDragMode();
     this.drawScene();
   }
   /**
@@ -36216,7 +36358,7 @@ var Niivue = class {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false;
-      if (this.opts.dragMode === 1 /* contrast */) {
+      if (this.getCurrentDragMode() === 1 /* contrast */) {
         this.calculateNewRange();
         this.refreshLayers(this.volumes[0], 0);
       }
@@ -36311,23 +36453,27 @@ var Niivue = class {
       if (tile !== this.uiData.clickedTile) {
         return;
       }
-      if (this.uiData.mouseButtonLeftDown) {
-        const isCrosshairMode = this.opts.dragModePrimary === 0 /* crosshair */;
-        const isWindowingMode = this.opts.dragModePrimary === 1 /* windowing */;
-        const ctrlKey = e.ctrlKey;
-        if (ctrlKey || isCrosshairMode) {
-          this.mouseMove(pos.x, pos.y);
-          this.mouseClick(pos.x, pos.y);
-        } else if (isWindowingMode) {
-          this.windowingHandler(e.x, e.y);
-        }
-      } else if (this.uiData.mouseButtonRightDown || this.uiData.mouseButtonCenterDown) {
+      const activeDragMode = this.getCurrentDragMode();
+      if (activeDragMode === 8 /* crosshair */) {
+        this.mouseMove(pos.x, pos.y);
+        this.mouseClick(pos.x, pos.y);
+        this.drawScene();
+        this.uiData.prevX = this.uiData.currX;
+        this.uiData.prevY = this.uiData.currY;
+        return;
+      } else if (activeDragMode === 9 /* windowing */) {
+        this.windowingHandler(pos.x, pos.y);
+        this.drawScene();
+        this.uiData.prevX = this.uiData.currX;
+        this.uiData.prevY = this.uiData.currY;
+        return;
+      } else {
         this.setDragEnd(pos.x, pos.y);
       }
       this.drawScene();
       this.uiData.prevX = this.uiData.currX;
       this.uiData.prevY = this.uiData.currY;
-    } else if (this.opts.dragMode === 7 /* angle */ && this.uiData.angleState === "drawing_second_line") {
+    } else if (this.getCurrentDragMode() === 7 /* angle */ && this.uiData.angleState === "drawing_second_line") {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
       if (!pos) {
         return;
@@ -36393,7 +36539,7 @@ var Niivue = class {
       this.drawScene();
       return;
     }
-    if (this.opts.dragMode === 4 /* slicer3D */) {
+    if (this.getCurrentDragMode() === 4 /* slicer3D */) {
       return;
     }
     if (this.volumes.length < 1) {
@@ -36447,12 +36593,11 @@ var Niivue = class {
         this.drawScene();
         return;
       }
-      const isCrosshairMode = this.opts.dragModePrimary === 0 /* crosshair */;
-      const isWindowingMode = this.opts.dragModePrimary === 1 /* windowing */;
-      if (isCrosshairMode) {
+      const dragMode = this.getTouchDragMode(false);
+      if (dragMode === 8 /* crosshair */) {
         this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
         this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-      } else if (isWindowingMode) {
+      } else if (dragMode === 9 /* windowing */) {
         this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY);
         this.drawScene();
       }
@@ -36577,7 +36722,7 @@ var Niivue = class {
     const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0);
     const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0);
     const validDrag = dragStartSum > 0 && dragEndSum > 0;
-    if (this.opts.dragMode === 6 /* roiSelection */ && validDrag) {
+    if (this.getCurrentDragMode() === 6 /* roiSelection */ && validDrag) {
       const delta = e.deltaY > 0 ? 1 : -1;
       if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
         this.uiData.dragStart[0] -= delta;
@@ -36632,7 +36777,7 @@ var Niivue = class {
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (this.opts.dragMode === 3 /* pan */ && this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1) {
+    if (this.getCurrentDragMode() === 3 /* pan */ && this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1) {
       const zoomDirection = scrollAmount < 0 ? 1 : -1;
       let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * (0.01 * zoomDirection));
       zoom = Math.round(zoom * 10) / 10;
@@ -36863,7 +37008,6 @@ var Niivue = class {
       };
       for (let i = 0; i < fileSystemEntries.length; i++) {
         allFileObects.push(await getFile(fileSystemEntries[i]));
-        console.log(allFileObects);
       }
       return allFileObects;
     };
@@ -36873,8 +37017,7 @@ var Niivue = class {
           allEntiresInDir = allEntiresInDir.concat(entries);
           readEntries();
         } else {
-          getFileObjects(allEntiresInDir).then(async (allFileObjects) => {
-            console.log(allFileObjects);
+          getFileObjects(allEntiresInDir).then(async () => {
           }).catch((e) => {
             throw e;
           });
@@ -37157,7 +37300,6 @@ var Niivue = class {
                 throw new Error("No loader for DICOM files");
               }
               loader(files2).then(async (fileArrayBuffers) => {
-                console.log(fileArrayBuffers);
                 const promises = fileArrayBuffers.map(
                   (loaderImage) => NVImage.loadFromUrl({
                     url: loaderImage.data,
@@ -37166,8 +37308,6 @@ var Niivue = class {
                   })
                 );
                 Promise.all(promises).then(async (loadedNvImages) => {
-                  console.log("from dicom loader");
-                  console.log(loadedNvImages);
                   await this.onDicomLoaderFinishedWithImages(loadedNvImages);
                 }).catch((e2) => {
                   throw e2;
@@ -39004,7 +39144,6 @@ var Niivue = class {
       }
       const dicomLoader = this.getDicomLoader().loader;
       const convertedArrayBuffer = await dicomLoader(dicomData);
-      console.log(convertedArrayBuffer);
       const name = convertedArrayBuffer[0].name;
       const data = convertedArrayBuffer[0].data;
       const image = await NVImage.loadFromUrl({ url: data, name });
@@ -42313,7 +42452,6 @@ var Niivue = class {
         src_max = volume.cal_max;
         const scale7 = (dst_max - dst_min) / (src_max - src_min);
         log.info(" Robust Rescale:  min: " + src_min + "  max: " + src_max + " scale: " + scale7);
-        console.log("Robust Rescale:  min: " + src_min + "  max: " + src_max + " scale: " + scale7);
         return [src_min, scale7];
       }
     }
@@ -43525,18 +43663,6 @@ var Niivue = class {
         false
       );
       this.drawAngleText();
-    } else if (this.uiData.angleState === "complete") {
-      this.drawMeasurementTool(this.uiData.angleFirstLine, false);
-      const secondLine = [
-        this.uiData.angleFirstLine[2],
-        // start from end of first line
-        this.uiData.angleFirstLine[3],
-        this.uiData.dragEnd[0],
-        // to final position
-        this.uiData.dragEnd[1]
-      ];
-      this.drawMeasurementTool(secondLine, false);
-      this.drawAngleText();
     }
   }
   /**
@@ -43557,6 +43683,22 @@ var Niivue = class {
     const intersectionX = this.uiData.angleFirstLine[2];
     const intersectionY = this.uiData.angleFirstLine[3];
     const angleText = `${angle3.toFixed(1)}\xB0`;
+    this.drawTextBetween(
+      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
+      angleText,
+      this.opts.measureTextHeight / 0.06,
+      this.opts.measureTextColor
+    );
+  }
+  /**
+   * Calculate and draw angle text for a completed angle.
+   * @internal
+   */
+  drawAngleTextForAngle(angle3) {
+    const angle_degrees = this.calculateAngleBetweenLines(angle3.firstLine, angle3.secondLine);
+    const intersectionX = angle3.firstLine[2];
+    const intersectionY = angle3.firstLine[3];
+    const angleText = `${angle_degrees.toFixed(1)}\xB0`;
     this.drawTextBetween(
       [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
       angleText,
@@ -43593,6 +43735,121 @@ var Niivue = class {
   resetAngleMeasurement() {
     this.uiData.angleState = "none";
     this.uiData.angleFirstLine = [0, 0, 0, 0];
+  }
+  /**
+   * Get slice information for the current measurement/angle.
+   * @internal
+   */
+  getCurrentSliceInfo() {
+    const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1]);
+    if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+      const sliceType = this.screenSlices[tileIdx].axCorSag;
+      let slicePosition2 = 0;
+      if (sliceType === 0 /* AXIAL */) {
+        slicePosition2 = this.scene.crosshairPos[2];
+      } else if (sliceType === 1 /* CORONAL */) {
+        slicePosition2 = this.scene.crosshairPos[1];
+      } else if (sliceType === 2 /* SAGITTAL */) {
+        slicePosition2 = this.scene.crosshairPos[0];
+      }
+      return {
+        sliceIndex: tileIdx,
+        sliceType,
+        slicePosition: slicePosition2
+      };
+    }
+    const currentSliceType = this.opts.sliceType;
+    let slicePosition = 0;
+    if (currentSliceType === 0 /* AXIAL */) {
+      slicePosition = this.scene.crosshairPos[2];
+    } else if (currentSliceType === 1 /* CORONAL */) {
+      slicePosition = this.scene.crosshairPos[1];
+    } else if (currentSliceType === 2 /* SAGITTAL */) {
+      slicePosition = this.scene.crosshairPos[0];
+    } else if (currentSliceType === 3 /* MULTIPLANAR */) {
+      const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]]);
+      if (startFrac[0] >= 0) {
+        slicePosition = this.scene.crosshairPos[2];
+      }
+    }
+    return { sliceIndex: -1, sliceType: currentSliceType, slicePosition };
+  }
+  /**
+   * Get the current slice position based on slice type.
+   * @internal
+   */
+  getCurrentSlicePosition(sliceType) {
+    if (sliceType === 0 /* AXIAL */) {
+      return this.scene.crosshairPos[2];
+    } else if (sliceType === 1 /* CORONAL */) {
+      return this.scene.crosshairPos[1];
+    } else if (sliceType === 2 /* SAGITTAL */) {
+      return this.scene.crosshairPos[0];
+    }
+    return 0;
+  }
+  /**
+   * Check if a measurement/angle should be drawn on the current slice.
+   * @internal
+   */
+  shouldDrawOnCurrentSlice(sliceIndex, sliceType, slicePosition) {
+    if (this.opts.sliceType === 3 /* MULTIPLANAR */) {
+      if (sliceType > 2 /* SAGITTAL */) {
+        return false;
+      }
+      for (let i = 0; i < this.screenSlices.length; i++) {
+        if (this.screenSlices[i].axCorSag === sliceType) {
+          const currentSlicePosition2 = this.getCurrentSlicePosition(sliceType);
+          const tolerance2 = 1e-3;
+          const difference2 = Math.abs(currentSlicePosition2 - slicePosition);
+          if (difference2 < tolerance2) {
+            return true;
+          }
+        }
+      }
+      return false;
+    } else if (this.opts.sliceType !== sliceType) {
+      return false;
+    }
+    const currentSlicePosition = this.getCurrentSlicePosition(sliceType);
+    const tolerance = 1e-3;
+    const difference = Math.abs(currentSlicePosition - slicePosition);
+    const result = difference < tolerance;
+    return result;
+  }
+  /**
+   * Clear all persistent measurement lines from the canvas.
+   * @example
+   * ```js
+   * nv.clearMeasurements()
+   * ```
+   */
+  clearMeasurements() {
+    this.document.completedMeasurements = [];
+    this.drawScene();
+  }
+  /**
+   * Clear all persistent angle measurements from the canvas.
+   * @example
+   * ```js
+   * nv.clearAngles()
+   * ```
+   */
+  clearAngles() {
+    this.document.completedAngles = [];
+    this.drawScene();
+  }
+  /**
+   * Clear all persistent measurements and angles from the canvas.
+   * @example
+   * ```js
+   * nv.clearAllMeasurements()
+   * ```
+   */
+  clearAllMeasurements() {
+    this.document.completedMeasurements = [];
+    this.document.completedAngles = [];
+    this.drawScene();
   }
   /**
    * Set the drag mode for mouse interactions.
@@ -43635,6 +43892,56 @@ var Niivue = class {
     if (this.opts.dragMode !== 7 /* angle */) {
       this.resetAngleMeasurement();
     }
+    this.clearActiveDragMode();
+  }
+  /**
+   * Set custom mouse event configuration for button mappings.
+   * @param config - Mouse event configuration object
+   * @example
+   * ```js
+   * nv.setMouseEventConfig({
+   *   leftButton: {
+   *     primary: DRAG_MODE.windowing,
+   *     withShift: DRAG_MODE.measurement,
+   *     withCtrl: DRAG_MODE.crosshair
+   *   },
+   *   rightButton: DRAG_MODE.crosshair,
+   *   centerButton: DRAG_MODE.pan
+   * })
+   * ```
+   */
+  setMouseEventConfig(config) {
+    this.opts.mouseEventConfig = config;
+    this.clearActiveDragMode();
+  }
+  /**
+   * Set custom touch event configuration for touch gesture mappings.
+   * @param config - Touch event configuration object
+   * @example
+   * ```js
+   * nv.setTouchEventConfig({
+   *   singleTouch: DRAG_MODE.windowing,
+   *   doubleTouch: DRAG_MODE.pan
+   * })
+   * ```
+   */
+  setTouchEventConfig(config) {
+    this.opts.touchEventConfig = config;
+    this.clearActiveDragMode();
+  }
+  /**
+   * Get current mouse event configuration.
+   * @returns Current mouse event configuration or undefined if using defaults
+   */
+  getMouseEventConfig() {
+    return this.opts.mouseEventConfig;
+  }
+  /**
+   * Get current touch event configuration.
+   * @returns Current touch event configuration or undefined if using defaults
+   */
+  getTouchEventConfig() {
+    return this.opts.touchEventConfig;
   }
   /**
    * Draw a rectangle or outline at given position with specified color or default crosshair color.
@@ -43714,7 +44021,7 @@ var Niivue = class {
    * @internal
    */
   drawSelectionBox(leftTopWidthHeight) {
-    if (this.opts.dragMode === 6 /* roiSelection */) {
+    if (this.getCurrentDragMode() === 6 /* roiSelection */) {
       this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1);
       return;
     }
@@ -46068,6 +46375,151 @@ var Niivue = class {
     return [-1, -1, -1];
   }
   /**
+   * Convert fractional volume coordinates to canvas pixel coordinates.
+   * Returns the first valid screen slice that contains the fractional coordinates.
+   * @internal
+   */
+  /**
+   * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
+   * Returns both canvas position and the tile index for validation.
+   * @internal
+   */
+  frac2canvasPosWithTile(frac, preferredSliceType) {
+    const worldMM = this.frac2mm(frac);
+    let bestMatch = { index: -1, distance: Infinity };
+    for (let i = 0; i < this.screenSlices.length; i++) {
+      const axCorSag = this.screenSlices[i].axCorSag;
+      if (axCorSag > 2 /* SAGITTAL */) {
+        continue;
+      }
+      if (this.screenSlices[i].AxyzMxy.length < 4) {
+        continue;
+      }
+      if (preferredSliceType !== void 0 && axCorSag !== preferredSliceType) {
+        continue;
+      }
+      let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+      if (axCorSag === 1 /* CORONAL */) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+      }
+      if (axCorSag === 2 /* SAGITTAL */) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+      }
+      const v = this.screenSlices[i].AxyzMxy;
+      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+      const distance4 = Math.abs(xyzMM[2] - expectedZ);
+      const tolerance = this.opts.sliceType === 3 /* MULTIPLANAR */ ? 1 : 0.1;
+      if (distance4 < bestMatch.distance) {
+        bestMatch = { index: i, distance: distance4 };
+      }
+      if (distance4 <= tolerance) {
+        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0];
+        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1];
+        if (fracX >= 0 && fracX <= 1 && fracY >= 0 && fracY <= 1) {
+          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
+          let isMirror = false;
+          if (ltwh[2] < 0) {
+            isMirror = true;
+            ltwh[0] += ltwh[2];
+            ltwh[2] = -ltwh[2];
+          }
+          let screenFracX = fracX;
+          if (isMirror) {
+            screenFracX = 1 - fracX;
+          }
+          const screenFracY = 1 - fracY;
+          const screenX = ltwh[0] + screenFracX * ltwh[2];
+          const screenY = ltwh[1] + screenFracY * ltwh[3];
+          return { pos: [screenX, screenY], tileIndex: i };
+        }
+      }
+    }
+    return null;
+  }
+  frac2canvasPos(frac) {
+    const worldMM = this.frac2mm(frac);
+    let bestMatch = { index: -1, distance: Infinity };
+    for (let i = 0; i < this.screenSlices.length; i++) {
+      const axCorSag = this.screenSlices[i].axCorSag;
+      if (axCorSag > 2 /* SAGITTAL */) {
+        continue;
+      }
+      if (this.screenSlices[i].AxyzMxy.length < 4) {
+        continue;
+      }
+      let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+      if (axCorSag === 1 /* CORONAL */) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+      }
+      if (axCorSag === 2 /* SAGITTAL */) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+      }
+      const v = this.screenSlices[i].AxyzMxy;
+      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+      const distance4 = Math.abs(xyzMM[2] - expectedZ);
+      const tolerance = this.opts.sliceType === 3 /* MULTIPLANAR */ ? 1 : 0.1;
+      if (distance4 < bestMatch.distance) {
+        bestMatch = { index: i, distance: distance4 };
+      }
+      if (distance4 <= tolerance) {
+        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0];
+        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1];
+        if (fracX >= 0 && fracX <= 1 && fracY >= 0 && fracY <= 1) {
+          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
+          let isMirror = false;
+          if (ltwh[2] < 0) {
+            isMirror = true;
+            ltwh[0] += ltwh[2];
+            ltwh[2] = -ltwh[2];
+          }
+          let screenFracX = fracX;
+          if (isMirror) {
+            screenFracX = 1 - fracX;
+          }
+          const screenFracY = 1 - fracY;
+          const screenX = ltwh[0] + screenFracX * ltwh[2];
+          const screenY = ltwh[1] + screenFracY * ltwh[3];
+          return [screenX, screenY];
+        }
+      }
+    }
+    if (bestMatch.index >= 0 && bestMatch.distance < 2) {
+      const i = bestMatch.index;
+      const axCorSag = this.screenSlices[i].axCorSag;
+      let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+      if (axCorSag === 1 /* CORONAL */) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+      }
+      if (axCorSag === 2 /* SAGITTAL */) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+      }
+      const v = this.screenSlices[i].AxyzMxy;
+      xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+      const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0];
+      const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1];
+      if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
+        const clampedFracX = Math.max(0, Math.min(1, fracX));
+        const clampedFracY = Math.max(0, Math.min(1, fracY));
+        const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
+        let isMirror = false;
+        if (ltwh[2] < 0) {
+          isMirror = true;
+          ltwh[0] += ltwh[2];
+          ltwh[2] = -ltwh[2];
+        }
+        let screenFracX = clampedFracX;
+        if (isMirror) {
+          screenFracX = 1 - clampedFracX;
+        }
+        const screenFracY = 1 - clampedFracY;
+        const screenX = ltwh[0] + screenFracX * ltwh[2];
+        const screenY = ltwh[1] + screenFracY * ltwh[3];
+        return [screenX, screenY];
+      }
+    }
+    return null;
+  }
+  /**
    * Calculates scaled slice dimensions and position within the canvas.
    * n.b. beware of similarly named `sliceScale` method.
    * @internal
@@ -46881,7 +47333,7 @@ var Niivue = class {
         ]);
         return;
       }
-      if (this.opts.dragMode === 4 /* slicer3D */) {
+      if (this.getCurrentDragMode() === 4 /* slicer3D */) {
         this.dragForSlicer3D([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
@@ -46890,7 +47342,7 @@ var Niivue = class {
         ]);
         return;
       }
-      if (this.opts.dragMode === 3 /* pan */) {
+      if (this.getCurrentDragMode() === 3 /* pan */) {
         this.dragForPanZoom([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
@@ -46902,28 +47354,96 @@ var Niivue = class {
       if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
         return;
       }
-      if (this.opts.dragMode === 2 /* measurement */) {
+      if (this.getCurrentDragMode() === 2 /* measurement */) {
         this.drawMeasurementTool([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
           this.uiData.dragEnd[0],
           this.uiData.dragEnd[1]
         ]);
-        return;
       }
-      if (this.opts.dragMode === 7 /* angle */) {
+      if (this.getCurrentDragMode() === 7 /* angle */) {
         this.drawAngleMeasurementTool();
-        return;
       }
-      const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);
-      const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1]);
-      this.drawSelectionBox([
-        Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
-        Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
-        width,
-        height
-      ]);
-      return;
+      const currentDragMode = this.getCurrentDragMode();
+      if (currentDragMode === 1 /* contrast */ || currentDragMode === 6 /* roiSelection */) {
+        const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);
+        const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1]);
+        this.drawSelectionBox([
+          Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
+          Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
+          width,
+          height
+        ]);
+      }
+    }
+    for (const measurement of this.document.completedMeasurements) {
+      if (this.shouldDrawOnCurrentSlice(measurement.sliceIndex, measurement.sliceType, measurement.slicePosition)) {
+        const startFrac = this.mm2frac(measurement.startMM);
+        const endFrac = this.mm2frac(measurement.endMM);
+        const startCanvasResult = this.frac2canvasPosWithTile(startFrac, measurement.sliceType);
+        const endCanvasResult = this.frac2canvasPosWithTile(endFrac, measurement.sliceType);
+        if (startCanvasResult && endCanvasResult && startCanvasResult.tileIndex === endCanvasResult.tileIndex) {
+          this.drawMeasurementTool([
+            startCanvasResult.pos[0],
+            startCanvasResult.pos[1],
+            endCanvasResult.pos[0],
+            endCanvasResult.pos[1]
+          ]);
+        }
+      }
+    }
+    for (let i = 0; i < this.document.completedAngles.length; i++) {
+      const angle3 = this.document.completedAngles[i];
+      const shouldDraw = this.shouldDrawOnCurrentSlice(angle3.sliceIndex, angle3.sliceType, angle3.slicePosition);
+      if (shouldDraw) {
+        const firstLineStartFrac = this.mm2frac(angle3.firstLineMM.start);
+        const firstLineEndFrac = this.mm2frac(angle3.firstLineMM.end);
+        const secondLineStartFrac = this.mm2frac(angle3.secondLineMM.start);
+        const secondLineEndFrac = this.mm2frac(angle3.secondLineMM.end);
+        const firstLineStartCanvasResult = this.frac2canvasPosWithTile(firstLineStartFrac, angle3.sliceType);
+        const firstLineEndCanvasResult = this.frac2canvasPosWithTile(firstLineEndFrac, angle3.sliceType);
+        const secondLineStartCanvasResult = this.frac2canvasPosWithTile(secondLineStartFrac, angle3.sliceType);
+        const secondLineEndCanvasResult = this.frac2canvasPosWithTile(secondLineEndFrac, angle3.sliceType);
+        if (firstLineStartCanvasResult && firstLineEndCanvasResult && secondLineStartCanvasResult && secondLineEndCanvasResult && firstLineStartCanvasResult.tileIndex === firstLineEndCanvasResult.tileIndex && firstLineStartCanvasResult.tileIndex === secondLineStartCanvasResult.tileIndex && firstLineStartCanvasResult.tileIndex === secondLineEndCanvasResult.tileIndex) {
+          this.drawMeasurementTool(
+            [
+              firstLineStartCanvasResult.pos[0],
+              firstLineStartCanvasResult.pos[1],
+              firstLineEndCanvasResult.pos[0],
+              firstLineEndCanvasResult.pos[1]
+            ],
+            false
+          );
+          this.drawMeasurementTool(
+            [
+              secondLineStartCanvasResult.pos[0],
+              secondLineStartCanvasResult.pos[1],
+              secondLineEndCanvasResult.pos[0],
+              secondLineEndCanvasResult.pos[1]
+            ],
+            false
+          );
+          const angleForText = {
+            firstLine: [
+              firstLineStartCanvasResult.pos[0],
+              firstLineStartCanvasResult.pos[1],
+              firstLineEndCanvasResult.pos[0],
+              firstLineEndCanvasResult.pos[1]
+            ],
+            secondLine: [
+              secondLineStartCanvasResult.pos[0],
+              secondLineStartCanvasResult.pos[1],
+              secondLineEndCanvasResult.pos[0],
+              secondLineEndCanvasResult.pos[1]
+            ],
+            sliceIndex: angle3.sliceIndex,
+            sliceType: angle3.sliceType,
+            slicePosition: angle3.slicePosition
+          };
+          this.drawAngleTextForAngle(angleForText);
+        }
+      }
     }
     const pos = this.frac2mm([this.scene.crosshairPos[0], this.scene.crosshairPos[1], this.scene.crosshairPos[2]]);
     posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
@@ -46974,8 +47494,6 @@ export {
   COLORMAP_TYPE,
   DEFAULT_OPTIONS,
   DRAG_MODE,
-  DRAG_MODE_PRIMARY,
-  DRAG_MODE_SECONDARY,
   INITIAL_SCENE_DATA,
   LabelAnchorPoint,
   LabelLineTerminator,

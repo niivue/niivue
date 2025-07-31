@@ -4,7 +4,7 @@
 type Scene = object;
 ```
 
-Defined in: [nvdocument.ts:350](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L350)
+Defined in: [nvdocument.ts:379](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L379)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvdocument.ts:350](https://github.com/niivue/niivue/blob/main/packa
 optional _azimuth: number;
 ```
 
-Defined in: [nvdocument.ts:362](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L362)
+Defined in: [nvdocument.ts:391](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L391)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvdocument.ts:362](https://github.com/niivue/niivue/blob/main/packa
 optional _elevation: number;
 ```
 
-Defined in: [nvdocument.ts:361](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L361)
+Defined in: [nvdocument.ts:390](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L390)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvdocument.ts:361](https://github.com/niivue/niivue/blob/main/packa
 clipPlane: number[];
 ```
 
-Defined in: [nvdocument.ts:358](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L358)
+Defined in: [nvdocument.ts:387](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L387)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvdocument.ts:358](https://github.com/niivue/niivue/blob/main/packa
 clipPlaneDepthAziElev: number[];
 ```
 
-Defined in: [nvdocument.ts:359](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L359)
+Defined in: [nvdocument.ts:388](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L388)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvdocument.ts:359](https://github.com/niivue/niivue/blob/main/packa
 crosshairPos: vec3;
 ```
 
-Defined in: [nvdocument.ts:357](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L357)
+Defined in: [nvdocument.ts:386](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L386)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvdocument.ts:357](https://github.com/niivue/niivue/blob/main/packa
 optional gamma: number;
 ```
 
-Defined in: [nvdocument.ts:363](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L363)
+Defined in: [nvdocument.ts:392](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L392)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [nvdocument.ts:363](https://github.com/niivue/niivue/blob/main/packa
 onAzimuthElevationChange: (azimuth: number, elevation: number) => void;
 ```
 
-Defined in: [nvdocument.ts:351](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L351)
+Defined in: [nvdocument.ts:380](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L380)
 
 #### Parameters
 
@@ -95,7 +95,7 @@ Defined in: [nvdocument.ts:351](https://github.com/niivue/niivue/blob/main/packa
 onZoom3DChange: (scale: number) => void;
 ```
 
-Defined in: [nvdocument.ts:352](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L352)
+Defined in: [nvdocument.ts:381](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L381)
 
 #### Parameters
 
@@ -115,7 +115,7 @@ Defined in: [nvdocument.ts:352](https://github.com/niivue/niivue/blob/main/packa
 pan2Dxyzmm: vec4;
 ```
 
-Defined in: [nvdocument.ts:360](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L360)
+Defined in: [nvdocument.ts:389](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L389)
 
 ---
 
@@ -125,7 +125,7 @@ Defined in: [nvdocument.ts:360](https://github.com/niivue/niivue/blob/main/packa
 renderAzimuth: number;
 ```
 
-Defined in: [nvdocument.ts:354](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L354)
+Defined in: [nvdocument.ts:383](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L383)
 
 ---
 
@@ -135,7 +135,7 @@ Defined in: [nvdocument.ts:354](https://github.com/niivue/niivue/blob/main/packa
 renderElevation: number;
 ```
 
-Defined in: [nvdocument.ts:355](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L355)
+Defined in: [nvdocument.ts:384](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L384)
 
 ---
 
@@ -145,7 +145,7 @@ Defined in: [nvdocument.ts:355](https://github.com/niivue/niivue/blob/main/packa
 sceneData: SceneData;
 ```
 
-Defined in: [nvdocument.ts:353](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L353)
+Defined in: [nvdocument.ts:382](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L382)
 
 ---
 
@@ -155,4 +155,4 @@ Defined in: [nvdocument.ts:353](https://github.com/niivue/niivue/blob/main/packa
 volScaleMultiplier: number;
 ```
 
-Defined in: [nvdocument.ts:356](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L356)
+Defined in: [nvdocument.ts:385](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L385)

@@ -2,12 +2,19 @@
 
 ## Enumerations
 
-| Enumeration                                                | Description |
-| ---------------------------------------------------------- | ----------- |
-| [COLORMAP_TYPE](enumerations/COLORMAP_TYPE.md)             | -           |
-| [DRAG_MODE_PRIMARY](enumerations/DRAG_MODE_PRIMARY.md)     | -           |
-| [DRAG_MODE_SECONDARY](enumerations/DRAG_MODE_SECONDARY.md) | -           |
-| [SHOW_RENDER](enumerations/SHOW_RENDER.md)                 | -           |
+| Enumeration                                    | Description |
+| ---------------------------------------------- | ----------- |
+| [COLORMAP_TYPE](enumerations/COLORMAP_TYPE.md) | -           |
+| [SHOW_RENDER](enumerations/SHOW_RENDER.md)     | -           |
+
+## Interfaces
+
+| Interface                                                  | Description                                                |
+| ---------------------------------------------------------- | ---------------------------------------------------------- |
+| [CompletedAngle](interfaces/CompletedAngle.md)             | Represents a completed angle measurement between two lines |
+| [CompletedMeasurement](interfaces/CompletedMeasurement.md) | Represents a completed measurement between two points      |
+| [MouseEventConfig](interfaces/MouseEventConfig.md)         | -                                                          |
+| [TouchEventConfig](interfaces/TouchEventConfig.md)         | -                                                          |
 
 ## Type Aliases
 

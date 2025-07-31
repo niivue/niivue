@@ -567,6 +567,34 @@ declare class NVConnectome extends NVMesh {
 }
 
 /**
+ * Represents a completed measurement between two points
+ */
+interface CompletedMeasurement {
+    startMM: vec3;
+    endMM: vec3;
+    distance: number;
+    sliceIndex: number;
+    sliceType: SLICE_TYPE;
+    slicePosition: number;
+}
+/**
+ * Represents a completed angle measurement between two lines
+ */
+interface CompletedAngle {
+    firstLineMM: {
+        start: vec3;
+        end: vec3;
+    };
+    secondLineMM: {
+        start: vec3;
+        end: vec3;
+    };
+    angle: number;
+    sliceIndex: number;
+    sliceType: SLICE_TYPE;
+    slicePosition: number;
+}
+/**
  * Slice Type
  * @ignore
  */
@@ -604,21 +632,22 @@ declare enum DRAG_MODE {
     slicer3D = 4,
     callbackOnly = 5,
     roiSelection = 6,
-    angle = 7
+    angle = 7,
+    crosshair = 8,
+    windowing = 9
 }
-declare enum DRAG_MODE_SECONDARY {
-    none = 0,
-    contrast = 1,
-    measurement = 2,
-    pan = 3,
-    slicer3D = 4,
-    callbackOnly = 5,
-    roiSelection = 6,
-    angle = 7
+interface MouseEventConfig {
+    leftButton: {
+        primary: DRAG_MODE;
+        withShift?: DRAG_MODE;
+        withCtrl?: DRAG_MODE;
+    };
+    rightButton: DRAG_MODE;
+    centerButton: DRAG_MODE;
 }
-declare enum DRAG_MODE_PRIMARY {
-    crosshair = 0,
-    windowing = 1
+interface TouchEventConfig {
+    singleTouch: DRAG_MODE;
+    doubleTouch: DRAG_MODE;
 }
 declare enum COLORMAP_TYPE {
     MIN_TO_MAX = 0,
@@ -670,8 +699,10 @@ type NVConfigOptions = {
     multiplanarShowRender: SHOW_RENDER;
     isRadiologicalConvention: boolean;
     meshThicknessOn2D: number | string;
-    dragMode: DRAG_MODE | DRAG_MODE_SECONDARY;
-    dragModePrimary: DRAG_MODE_PRIMARY;
+    dragMode: DRAG_MODE;
+    dragModePrimary: DRAG_MODE;
+    mouseEventConfig?: MouseEventConfig;
+    touchEventConfig?: TouchEventConfig;
     yoke3Dto2DZoom: boolean;
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
@@ -787,6 +818,8 @@ type DocumentData = {
     sceneData?: Partial<SceneData>;
     connectomes?: string[];
     customData?: string;
+    completedMeasurements?: CompletedMeasurement[];
+    completedAngles?: CompletedAngle[];
 };
 type ExportDocumentData = {
     encodedImageBlobs: string[];
@@ -800,6 +833,8 @@ type ExportDocumentData = {
     labels: NVLabel3D[];
     connectomes: string[];
     customData: string;
+    completedMeasurements: CompletedMeasurement[];
+    completedAngles: CompletedAngle[];
 };
 /**
  * Creates and instance of NVDocument
@@ -814,6 +849,8 @@ declare class NVDocument {
     drawBitmap: Uint8Array | null;
     imageOptionsMap: Map<any, any>;
     meshOptionsMap: Map<any, any>;
+    completedMeasurements: CompletedMeasurement[];
+    completedAngles: CompletedAngle[];
     private _optsProxy;
     private _optsChangeCallback;
     constructor();
@@ -1577,6 +1614,8 @@ type UIData = {
     max3D?: number;
     windowX: number;
     windowY: number;
+    activeDragMode: DRAG_MODE | null;
+    activeDragButton: number | null;
     angleFirstLine: number[];
     angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete';
 };
@@ -2123,20 +2162,38 @@ declare class Niivue {
      */
     mouseDownListener(e: MouseEvent): void;
     /**
-     * Handles left mouse button actions for crosshair or windowing mode.
+     * Gets the appropriate drag mode for a mouse button based on configuration.
      * @internal
      */
-    mouseLeftButtonHandler(e: MouseEvent): void;
+    getMouseButtonDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): DRAG_MODE;
     /**
-     * Handles center mouse button drag to initiate 2D panning or clip plane adjustment.
+     * Gets the appropriate drag mode for touch events based on configuration.
      * @internal
      */
-    mouseCenterButtonHandler(e: MouseEvent): void;
+    getTouchDragMode(isDoubleTouch: boolean): DRAG_MODE;
     /**
-     * Handles right mouse button drag to enable 2D panning or clip plane control.
+     * Sets the active drag mode for the current interaction.
      * @internal
      */
-    mouseRightButtonHandler(e: MouseEvent): void;
+    setActiveDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): void;
+    /**
+     * Gets the currently active drag mode, or falls back to configured defaults.
+     * @internal
+     */
+    getCurrentDragMode(): DRAG_MODE;
+    /**
+     * Clears the active drag mode.
+     * @internal
+     */
+    clearActiveDragMode(): void;
+    /**
+     * Unified handler for mouse actions based on drag mode.
+     * @internal
+     */
+    handleMouseAction(dragMode: DRAG_MODE, e: MouseEvent, pos: {
+        x: number;
+        y: number;
+    }): void;
     /**
      * calculate the the min and max voxel indices from an array of two values (used in selecting intensities with the selection box)
      * @internal
@@ -3737,6 +3794,17 @@ declare class Niivue {
      */
     drawAngleText(): void;
     /**
+     * Calculate and draw angle text for a completed angle.
+     * @internal
+     */
+    drawAngleTextForAngle(angle: {
+        firstLine: number[];
+        secondLine: number[];
+        sliceIndex: number;
+        sliceType: SLICE_TYPE;
+        slicePosition: number;
+    }): void;
+    /**
      * Calculate angle between two lines in degrees.
      * @internal
      */
@@ -3747,10 +3815,92 @@ declare class Niivue {
      */
     resetAngleMeasurement(): void;
     /**
+     * Get slice information for the current measurement/angle.
+     * @internal
+     */
+    getCurrentSliceInfo(): {
+        sliceIndex: number;
+        sliceType: SLICE_TYPE;
+        slicePosition: number;
+    };
+    /**
+     * Get the current slice position based on slice type.
+     * @internal
+     */
+    getCurrentSlicePosition(sliceType: SLICE_TYPE): number;
+    /**
+     * Check if a measurement/angle should be drawn on the current slice.
+     * @internal
+     */
+    shouldDrawOnCurrentSlice(sliceIndex: number, sliceType: SLICE_TYPE, slicePosition: number): boolean;
+    /**
+     * Clear all persistent measurement lines from the canvas.
+     * @example
+     * ```js
+     * nv.clearMeasurements()
+     * ```
+     */
+    clearMeasurements(): void;
+    /**
+     * Clear all persistent angle measurements from the canvas.
+     * @example
+     * ```js
+     * nv.clearAngles()
+     * ```
+     */
+    clearAngles(): void;
+    /**
+     * Clear all persistent measurements and angles from the canvas.
+     * @example
+     * ```js
+     * nv.clearAllMeasurements()
+     * ```
+     */
+    clearAllMeasurements(): void;
+    /**
      * Set the drag mode for mouse interactions.
      * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
      */
     setDragMode(mode: string | DRAG_MODE): void;
+    /**
+     * Set custom mouse event configuration for button mappings.
+     * @param config - Mouse event configuration object
+     * @example
+     * ```js
+     * nv.setMouseEventConfig({
+     *   leftButton: {
+     *     primary: DRAG_MODE.windowing,
+     *     withShift: DRAG_MODE.measurement,
+     *     withCtrl: DRAG_MODE.crosshair
+     *   },
+     *   rightButton: DRAG_MODE.crosshair,
+     *   centerButton: DRAG_MODE.pan
+     * })
+     * ```
+     */
+    setMouseEventConfig(config: MouseEventConfig): void;
+    /**
+     * Set custom touch event configuration for touch gesture mappings.
+     * @param config - Touch event configuration object
+     * @example
+     * ```js
+     * nv.setTouchEventConfig({
+     *   singleTouch: DRAG_MODE.windowing,
+     *   doubleTouch: DRAG_MODE.pan
+     * })
+     * ```
+     */
+    setTouchEventConfig(config: TouchEventConfig): void;
+    /**
+     * Get current mouse event configuration.
+     * @returns Current mouse event configuration or undefined if using defaults
+     */
+    getMouseEventConfig(): MouseEventConfig | undefined;
+    /**
+     * Get current touch event configuration.
+     * @returns Current touch event configuration or undefined if using defaults
+     */
+    getTouchEventConfig(): TouchEventConfig | undefined;
     /**
      * Draw a rectangle or outline at given position with specified color or default crosshair color.
      * @internal
@@ -4099,6 +4249,21 @@ declare class Niivue {
      */
     canvasPos2frac(canvasPos: number[]): vec3;
     /**
+     * Convert fractional volume coordinates to canvas pixel coordinates.
+     * Returns the first valid screen slice that contains the fractional coordinates.
+     * @internal
+     */
+    /**
+     * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
+     * Returns both canvas position and the tile index for validation.
+     * @internal
+     */
+    frac2canvasPosWithTile(frac: vec3, preferredSliceType?: SLICE_TYPE): {
+        pos: number[];
+        tileIndex: number;
+    } | null;
+    frac2canvasPos(frac: vec3): number[] | null;
+    /**
      * Calculates scaled slice dimensions and position within the canvas.
      * n.b. beware of similarly named `sliceScale` method.
      * @internal
@@ -4176,4 +4341,4 @@ declare class Niivue {
     set gl(gl: WebGL2RenderingContext | null);
 }
 
-export { COLORMAP_TYPE, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, DRAG_MODE_PRIMARY, DRAG_MODE_SECONDARY, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type Volume, cmapper, ColorTables as colortables };
+export { COLORMAP_TYPE, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type MouseEventConfig, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type TouchEventConfig, type Volume, cmapper, ColorTables as colortables };

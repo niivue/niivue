@@ -4,9 +4,29 @@
 type DocumentData = object;
 ```
 
-Defined in: [nvdocument.ts:366](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L366)
+Defined in: [nvdocument.ts:395](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L395)
 
 ## Properties
+
+### completedAngles?
+
+```ts
+optional completedAngles: CompletedAngle[];
+```
+
+Defined in: [nvdocument.ts:409](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L409)
+
+---
+
+### completedMeasurements?
+
+```ts
+optional completedMeasurements: CompletedMeasurement[];
+```
+
+Defined in: [nvdocument.ts:408](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L408)
+
+---
 
 ### connectomes?
 
@@ -14,7 +34,7 @@ Defined in: [nvdocument.ts:366](https://github.com/niivue/niivue/blob/main/packa
 optional connectomes: string[];
 ```
 
-Defined in: [nvdocument.ts:377](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L377)
+Defined in: [nvdocument.ts:406](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L406)
 
 ---
 
@@ -24,7 +44,7 @@ Defined in: [nvdocument.ts:377](https://github.com/niivue/niivue/blob/main/packa
 optional customData: string;
 ```
 
-Defined in: [nvdocument.ts:378](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L378)
+Defined in: [nvdocument.ts:407](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L407)
 
 ---
 
@@ -34,7 +54,7 @@ Defined in: [nvdocument.ts:378](https://github.com/niivue/niivue/blob/main/packa
 optional encodedDrawingBlob: string;
 ```
 
-Defined in: [nvdocument.ts:374](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L374)
+Defined in: [nvdocument.ts:403](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L403)
 
 ---
 
@@ -44,7 +64,7 @@ Defined in: [nvdocument.ts:374](https://github.com/niivue/niivue/blob/main/packa
 optional encodedImageBlobs: string[];
 ```
 
-Defined in: [nvdocument.ts:373](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L373)
+Defined in: [nvdocument.ts:402](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L402)
 
 ---
 
@@ -54,7 +74,7 @@ Defined in: [nvdocument.ts:373](https://github.com/niivue/niivue/blob/main/packa
 optional imageOptionsArray: ImageFromUrlOptions[];
 ```
 
-Defined in: [nvdocument.ts:368](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L368)
+Defined in: [nvdocument.ts:397](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L397)
 
 ---
 
@@ -64,7 +84,7 @@ Defined in: [nvdocument.ts:368](https://github.com/niivue/niivue/blob/main/packa
 optional labels: NVLabel3D[];
 ```
 
-Defined in: [nvdocument.ts:372](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L372)
+Defined in: [nvdocument.ts:401](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L401)
 
 ---
 
@@ -74,7 +94,7 @@ Defined in: [nvdocument.ts:372](https://github.com/niivue/niivue/blob/main/packa
 optional meshesString: string;
 ```
 
-Defined in: [nvdocument.ts:375](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L375)
+Defined in: [nvdocument.ts:404](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L404)
 
 ---
 
@@ -84,7 +104,7 @@ Defined in: [nvdocument.ts:375](https://github.com/niivue/niivue/blob/main/packa
 optional meshOptionsArray: unknown[];
 ```
 
-Defined in: [nvdocument.ts:369](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L369)
+Defined in: [nvdocument.ts:398](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L398)
 
 ---
 
@@ -94,7 +114,7 @@ Defined in: [nvdocument.ts:369](https://github.com/niivue/niivue/blob/main/packa
 optional opts: Partial<NVConfigOptions>;
 ```
 
-Defined in: [nvdocument.ts:370](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L370)
+Defined in: [nvdocument.ts:399](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L399)
 
 ---
 
@@ -104,7 +124,7 @@ Defined in: [nvdocument.ts:370](https://github.com/niivue/niivue/blob/main/packa
 optional previewImageDataURL: string;
 ```
 
-Defined in: [nvdocument.ts:371](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L371)
+Defined in: [nvdocument.ts:400](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L400)
 
 ---
 
@@ -114,7 +134,7 @@ Defined in: [nvdocument.ts:371](https://github.com/niivue/niivue/blob/main/packa
 optional sceneData: Partial<SceneData>;
 ```
 
-Defined in: [nvdocument.ts:376](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L376)
+Defined in: [nvdocument.ts:405](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L405)
 
 ---
 
@@ -124,4 +144,4 @@ Defined in: [nvdocument.ts:376](https://github.com/niivue/niivue/blob/main/packa
 optional title: string;
 ```
 
-Defined in: [nvdocument.ts:367](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L367)
+Defined in: [nvdocument.ts:396](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L396)
