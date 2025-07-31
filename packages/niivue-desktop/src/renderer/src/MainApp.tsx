@@ -352,11 +352,13 @@ function MainApp(): JSX.Element {
     if (!selected) return
     const nv = selected.nvRef.current
     nv.removeVolume(vol)
-    selected.setVolumes((prev) => {
-      updateDocument(selected.id, { isDirty: true })
-      return prev.filter((v) => v.id !== vol.id)
-    })
+    const remainingImages = nv.volumes.filter((v) => v.id !== vol.id)
+    selected.setVolumes(remainingImages)
+    updateDocument(selected.id, { isDirty: true })
+    selected.setVolumes(remainingImages)
+    updateDocument(selected.id, { isDirty: true })
   }
+
   function handleMoveVolumeUp(vol: NVImage): void {
     if (!selected) return
     const nv = selected.nvRef.current
