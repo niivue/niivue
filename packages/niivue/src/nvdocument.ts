@@ -1068,14 +1068,14 @@ export class NVDocument {
 
     // 5. Load completedMeasurements and completedAngles if they exist
     if (data.completedMeasurements) {
-      document.completedMeasurements = data.completedMeasurements.map(m => ({
+      document.completedMeasurements = data.completedMeasurements.map((m) => ({
         ...m,
         startMM: vec3.clone(m.startMM),
         endMM: vec3.clone(m.endMM)
       }))
     }
     if (data.completedAngles) {
-      document.completedAngles = data.completedAngles.map(a => ({
+      document.completedAngles = data.completedAngles.map((a) => ({
         ...a,
         firstLineMM: {
           start: vec3.clone(a.firstLineMM.start),
