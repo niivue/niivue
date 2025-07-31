@@ -2161,13 +2161,20 @@ export class Niivue {
       if (activeDragMode === DRAG_MODE.crosshair) {
         this.mouseMove(pos.x, pos.y)
         this.mouseClick(pos.x, pos.y)
+        this.drawScene()
+        this.uiData.prevX = this.uiData.currX
+        this.uiData.prevY = this.uiData.currY
+        return
       } else if (activeDragMode === DRAG_MODE.windowing) {
         this.windowingHandler(pos.x, pos.y)
+        this.drawScene()
+        this.uiData.prevX = this.uiData.currX
+        this.uiData.prevY = this.uiData.currY
+        return
       } else {
         // Handle all other drag modes that need drag tracking
         this.setDragEnd(pos.x, pos.y)
       }
-
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
@@ -14772,7 +14779,6 @@ export class Niivue {
           height
         ])
       }
-      // return
     }
 
     // Draw persistent completed measurements for current slice
