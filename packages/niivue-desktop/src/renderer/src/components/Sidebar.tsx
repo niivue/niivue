@@ -59,12 +59,12 @@ export function Sidebar({
   if (!instance) return <></>
 
   return (
-    <div
+    <aside
       className={
         `flex flex-col bg-gray-100 px-2 h-full relative transition-all duration-200 ` +
         (collapsed
-          ? 'w-[60px] basis-[60px] min-w-[40px] max-w-[40px]'
-          : 'w-1/3 basis-1/3 min-w-[300px] max-w-[500px]')
+          ? 'w-[60px] min-w-[40px]'
+          : 'w-80 min-w-[300px]')
       }
     >
       {/* toggle button */}
@@ -132,6 +132,6 @@ export function Sidebar({
           <SceneTabs />
         </DragDropContext>
       )}
-    </div>
+    </aside>
   )
 }
