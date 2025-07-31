@@ -88,9 +88,7 @@ import {
   ExportDocumentData,
   INITIAL_SCENE_DATA,
   MouseEventConfig,
-  TouchEventConfig,
-  CompletedMeasurement,
-  CompletedAngle
+  TouchEventConfig
 } from '../nvdocument.js'
 
 import {
@@ -2836,7 +2834,7 @@ export class Niivue {
           readEntries()
         } else {
           getFileObjects(allEntiresInDir)
-            .then(async (allFileObjects) => {})
+            .then(async () => {})
             .catch((e) => {
               throw e
             })
@@ -10534,13 +10532,8 @@ export class Niivue {
         return false
       }
 
-      // Find a tile with the matching slice type in the current multiplanar view
-      let matchingTileFound = false
-
       for (let i = 0; i < this.screenSlices.length; i++) {
         if (this.screenSlices[i].axCorSag === sliceType) {
-          matchingTileFound = true
-
           // Check if the position matches (within tolerance)
           const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
           const tolerance = 0.001 // Tolerance for position matching
@@ -10550,9 +10543,6 @@ export class Niivue {
             return true
           }
         }
-      }
-
-      if (!matchingTileFound) {
       }
       return false
     } else if (this.opts.sliceType !== sliceType) {
