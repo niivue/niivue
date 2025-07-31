@@ -38,7 +38,10 @@ export const groupedConfigMeta = {
   ],
 
   Hero: [
-    ['heroSliceType', { type: 'enum', enum: SLICE_TYPE, requiresDraw: true }],
+    [
+      'heroSliceType',
+      { type: 'enum', enum: SLICE_TYPE, exclude: ['multiplanar'], requiresDraw: true }
+    ],
     ['heroImageFraction', { type: 'slider', min: 0, max: 1, step: 0.1, requiresDraw: true }]
   ]
 } as const

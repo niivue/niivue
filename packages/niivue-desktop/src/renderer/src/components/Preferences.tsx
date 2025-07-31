@@ -115,6 +115,7 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <EnumSelect
             value={value.toString()}
             options={filterEnum(meta.enum)}
+            exclude={meta.exclude ?? []}
             onChange={(val: string) =>
               updateOption(key, parseInt(val), meta.requiresDraw, meta.requiresUpdateGLVolume)
             }
