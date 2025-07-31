@@ -1,14 +1,12 @@
 import React, { useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
-import { ScrollArea, Text, Switch, Slider } from '@radix-ui/themes'
+import { ScrollArea, Text, Switch } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider.js'
 import { SliceSelection } from './SliceSelection.js'
 import { useAppContext, useSelectedInstance } from '../AppContext.js'
 import { ColorPicker } from './ColorPicker.js'
 import { hexToRgba10 } from '../utils/colors.js'
-import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
-import { filterEnum } from '@renderer/utils/config.js'
-import { EnumSelect } from './EnumSelect.js'
+import { NVConfigOptions } from '@niivue/niivue'
 
 export const GeneralTab: React.FC = (): JSX.Element => {
   const instance = useSelectedInstance()
@@ -18,10 +16,7 @@ export const GeneralTab: React.FC = (): JSX.Element => {
   const [show3Dcrosshair, setShow3Dcrosshair] = useState<boolean>(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState<number[]>(Array.from(nv.opts.crosshairColor))
 
-  // State for heroSliceType and heroImageFraction
-  const [heroSliceType, setHeroSliceType] = useState<string>(nv.opts.heroSliceType.toString())
-  const [heroImageFraction, setHeroImageFraction] = useState<number>(nv.opts.heroImageFraction)
-
+  
   const { showNiimathToolbar, setShowNiimathToolbar } = useAppContext()
 
   const updateOption = <K extends keyof NVConfigOptions>(
@@ -32,28 +27,18 @@ export const GeneralTab: React.FC = (): JSX.Element => {
     nv.drawScene()
   }
 
-  const handleEnumChange =
-    (
-      optionKey: keyof NVConfigOptions,
-      setter: React.Dispatch<React.SetStateAction<string>>
-    ): ((value: string) => void) =>
-    (value: string): void => {
-      setter(value)
-      updateOption(optionKey, parseInt(value, 10))
-    }
-
   return (
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>
       <Accordion.Root type="multiple" defaultValue={[]} className="w-full">
         {/* Crosshair Settings */}
         <Accordion.Item value="crosshair-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
                 Crosshair Settings
               </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
+              <span className="transform transition-transform duration-200 rotate-0 group-data-[state=open]:rotate-90">
+                ▶
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
@@ -83,68 +68,15 @@ export const GeneralTab: React.FC = (): JSX.Element => {
           </Accordion.Content>
         </Accordion.Item>
 
-        {/* Hero Settings */}
-        <Accordion.Item value="hero-settings" className="border-b border-gray-200">
-          <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
-              <Text size="2" weight="bold">
-                Hero Settings
-              </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
-              </span>
-            </Accordion.Trigger>
-          </Accordion.Header>
-          <Accordion.Content className="px-4 py-2">
-            {/* Hero Slice Type Dropdown */}
-            <div className="mb-4">
-              <Text size="2" weight="bold" className="mb-1">
-                Hero Slice Type
-              </Text>
-              <EnumSelect
-                value={heroSliceType}
-                onChange={handleEnumChange('heroSliceType', setHeroSliceType)}
-                options={filterEnum(SLICE_TYPE)}
-              />
-            </div>
-
-            {/* Hero Image Fraction Slider */}
-            <div className="mb-4">
-              <Text size="2" weight="bold" className="mb-1">
-                Hero Image Fraction
-              </Text>
-              <Text size="2" weight="bold" className="mb-1">
-                Hero Image Fraction
-              </Text>
-              {/* slider for volume alpha */}
-              <div className="flex gap-1 items-center">
-                <Slider
-                  size="1"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  defaultValue={[1.0]}
-                  value={[heroImageFraction]}
-                  onValueChange={(newValue) => {
-                    setHeroImageFraction(newValue[0])
-                    updateOption('heroImageFraction', newValue[0])
-                  }}
-                />
-                <div className="text-center text-sm mt-1">{heroImageFraction.toFixed(2)}</div>
-              </div>
-            </div>
-          </Accordion.Content>
-        </Accordion.Item>
-
         {/* Zoom Settings */}
         <Accordion.Item value="zoom-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
                 Zoom Settings
               </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
+              <span className="transform transition-transform duration-200 rotate-0 group-data-[state=open]:rotate-90">
+                ▶
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
@@ -156,12 +88,12 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         {/* Controls Settings */}
         <Accordion.Item value="controls-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
                 Niimath
               </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
+              <span className="transform transition-transform duration-200 rotate-0 group-data-[state=open]:rotate-90">
+                ▶
               </span>
             </Accordion.Trigger>
           </Accordion.Header>

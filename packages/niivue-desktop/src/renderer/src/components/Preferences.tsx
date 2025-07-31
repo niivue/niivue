@@ -157,11 +157,20 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             return (
               <Accordion.Item key={category} value={category} className="border-b">
                 <Accordion.Header>
-                  <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+                  <Accordion.Trigger className="flex justify-between items-center w-full py-2 px-4 group">
                     <Text size="2" weight="bold">
                       {category}
                     </Text>
-                    <span className="transition-transform data-[state=open]:rotate-180">▼</span>
+                    <span
+                      className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                      aria-hidden
+                    >
+                      ▶
+                    </span>
                   </Accordion.Trigger>
                 </Accordion.Header>
                 <Accordion.Content className="px-4 pb-2">
@@ -190,7 +199,6 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         &nbsp;
         <Button onClick={applyToDocument}>Apply to Document</Button>
       </div>
-
     </div>
   )
 }
