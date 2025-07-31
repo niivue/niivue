@@ -1,3 +1,5 @@
+import { SLICE_TYPE } from "@niivue/niivue";
+
 export const groupedConfigMeta = {
   Text: [
     ['isOrientationTextVisible', { type: 'boolean', requiresDraw: true }],
@@ -33,5 +35,10 @@ export const groupedConfigMeta = {
     ['rulerWidth', { type: 'slider', min: 1, max: 10, step: 1, requiresDraw: true }],
     ['isRuler', { type: 'boolean', requiresDraw: true }],
     ['showMeasureUnits', { type: 'boolean', requiresDraw: true }]
+  ],
+
+  Hero: [
+    ['heroSliceType', { type: 'enum', enum: SLICE_TYPE, requiresDraw: true }],
+    ['heroImageFraction', { type: 'slider', min: 0, max: 1, step: 0.1, requiresDraw: true }]
   ]
 } as const

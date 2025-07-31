@@ -17,8 +17,6 @@ export const GeneralTab: React.FC = (): JSX.Element => {
 
   const [show3Dcrosshair, setShow3Dcrosshair] = useState<boolean>(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState<number[]>(Array.from(nv.opts.crosshairColor))
-  const [backgroundColor, setBackgroundColor] = useState<number[]>(Array.from(nv.opts.backColor))
-  const [isAlphaClipDark, setIsAlphaClipDark] = useState<boolean>(nv.opts.isAlphaClipDark)
 
   // State for heroSliceType and heroImageFraction
   const [heroSliceType, setHeroSliceType] = useState<string>(nv.opts.heroSliceType.toString())
@@ -134,43 +132,6 @@ export const GeneralTab: React.FC = (): JSX.Element => {
                 />
                 <div className="text-center text-sm mt-1">{heroImageFraction.toFixed(2)}</div>
               </div>
-            </div>
-          </Accordion.Content>
-        </Accordion.Item>
-
-        {/* Background Settings */}
-        <Accordion.Item value="background-settings" className="border-b border-gray-200">
-          <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
-              <Text size="2" weight="bold">
-                Background Settings
-              </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
-              </span>
-            </Accordion.Trigger>
-          </Accordion.Header>
-          <Accordion.Content className="px-4 py-2">
-            <ColorPicker
-              label="Background Color"
-              colorRGBA10={backgroundColor}
-              onChange={(e) => {
-                const rgba = hexToRgba10(e.target.value)
-                setBackgroundColor(rgba)
-                updateOption('backColor', rgba)
-              }}
-            />
-            <div className="flex items-center mt-4">
-              <Text size="2" weight="bold" className="mr-2">
-                Alpha Clip Dark
-              </Text>
-              <Switch
-                checked={isAlphaClipDark}
-                onCheckedChange={(checked) => {
-                  setIsAlphaClipDark(checked)
-                  updateOption('isAlphaClipDark', checked)
-                }}
-              />
             </div>
           </Accordion.Content>
         </Accordion.Item>
