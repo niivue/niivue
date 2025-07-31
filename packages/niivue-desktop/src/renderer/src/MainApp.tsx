@@ -39,7 +39,8 @@ function overrideDrawGraph(nv: Niivue): void {
 
 function MainApp(): JSX.Element {
   const niimathRef = useRef(new Niimath())
-  const { documents, selectedDocId, addDocument, selectDocument, updateDocument } = useAppContext()
+  const { documents, selectedDocId, addDocument, selectDocument, updateDocument, removeDocument } =
+    useAppContext()
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -387,6 +388,38 @@ function MainApp(): JSX.Element {
   }
 
   // Tab strip
+  const handleCloseTab = async (e: React.MouseEvent, doc: NiivueInstanceContext): Promise<void> => {
+    e.stopPropagation()
+    if (doc.isDirty) {
+      const save = window.confirm(`Save changes to “${doc.title}”?`)
+      if (save) {
+        const { id, nvRef, title } = doc
+        const nv = nvRef.current
+        const jsonStr = JSON.stringify(nv.document.json())
+        const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
+        const suggestedName = `${base}.nvd`
+        const savedPath = await window.electron.ipcRenderer.invoke(
+          'saveCompressedNVD',
+          jsonStr,
+          suggestedName
+        )
+        if (savedPath) {
+          const raw = savedPath.split('/').pop() || suggestedName
+          const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
+          updateDocument(id, {
+            title: newTitle,
+            filePath: savedPath,
+            isDirty: false
+          })
+        }
+      } else {
+        const discard = window.confirm(`Discard changes to “${doc.title}”?`)
+        if (!discard) return
+      }
+    }
+    removeDocument(doc.id)
+  }
+
   function renderTabs(nv: Niivue): JSX.Element {
     return (
       <div className="flex flex-row bg-gray-800 text-white px-2">
@@ -395,7 +428,7 @@ function MainApp(): JSX.Element {
           return (
             <div
               key={doc.id}
-              className={`px-4 py-2 cursor-pointer ${
+              className={`group relative px-4 py-2 cursor-pointer ${
                 doc.id === selectedDocId ? 'bg-gray-700' : ''
               }`}
               onClick={() => {
@@ -441,10 +474,16 @@ function MainApp(): JSX.Element {
                   {(doc.title || doc.id) + (doc.isDirty ? ' *' : '')}
                 </span>
               )}
+              <button
+                onClick={(e) => handleCloseTab(e, doc)}
+                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+                aria-label="Close tab"
+              >
+                ✕
+              </button>
             </div>
           )
         })}
-
         <div
           className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
           onClick={() => void createNewDocument()}
