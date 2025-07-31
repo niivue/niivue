@@ -26,7 +26,10 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     nv.opts[key] = value
     setModifiedPrefs((prev) => ({ ...prev, [key]: value }))
     if (requiresUpdateGLVolume) nv.updateGLVolume()
-    else if (requiresDraw) nv.drawScene()
+    else if (requiresDraw) {
+      nv.drawScene()
+      nv.resizeListener()
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
