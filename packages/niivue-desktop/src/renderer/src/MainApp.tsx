@@ -82,11 +82,11 @@ function MainApp(): JSX.Element {
     const nv = selected.nvRef.current
 
     // Restore viewer prefs
-    Object.assign(nv.opts, selected.opts)
-    if (selected.sliceType) nv.setSliceType(selected.sliceType)
-    const layoutVal = layouts[selected.layout]
-    if (layoutVal) nv.setMultiplanarLayout(layoutVal)
-    nv.setSliceMosaicString(selected.opts.sliceMosaicString ?? '')
+    // Object.assign(nv.opts, selected.opts)
+    // if (selected.sliceType) nv.setSliceType(selected.sliceType)
+    // const layoutVal = layouts[selected.layout]
+    // if (layoutVal) nv.setMultiplanarLayout(layoutVal)
+    // nv.setSliceMosaicString(selected.opts.sliceMosaicString ?? '')
 
     // Re-draw everything
     nv.updateGLVolume()

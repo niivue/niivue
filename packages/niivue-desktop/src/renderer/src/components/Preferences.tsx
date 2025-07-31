@@ -133,6 +133,10 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     onClose()
   }
 
+  const applyToDocument = async (): Promise<void> => {
+    onClose()
+  }
+
   return (
     <div className="flex flex-col h-full">
       <ScrollArea style={{ flex: 1, paddingRight: '10px' }}>
@@ -182,7 +186,10 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Save Preferences Button */}
       <div className="p-4 border-t flex justify-end">
         <Button onClick={savePreferences}>Save Preferences</Button>
+        &nbsp;
+        <Button onClick={applyToDocument}>Apply to Document</Button>
       </div>
+
     </div>
   )
 }
