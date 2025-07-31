@@ -1,46 +1,51 @@
 // src/MainApp.tsx
 import React, { useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, SLICE_TYPE, Niivue } from '@niivue/niivue'
-import { Niimath } from '@niivue/niimath'
+import { NVImage, NVMesh, Niivue } from '@niivue/niivue'
 import { Sidebar } from './components/Sidebar.js'
 import { Viewer } from './components/Viewer.js'
 import { PreferencesDialog } from './components/PreferencesDialog.js'
 import { LabelManagerDialog } from './components/LabelManagerDialog.js'
 import { NiivueInstanceContext, useSelectedInstance, useAppContext } from './AppContext.js'
 import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
-import { fmriEvents, getColorForTrialType } from './types/events.js'
+// import { fmriEvents, getColorForTrialType } from './types/events.js'
 // import { loadDroppedFiles } from './utils/dragAndDrop.js'
-import { layouts } from '../../common/layouts.js'
+// import { layouts } from '../../common/layouts.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
 
 const electron = window.electron
 
-function overrideDrawGraph(nv: Niivue): void {
-  const originalDrawGraph = nv.drawGraph.bind(nv)
-  nv.drawGraph = (): void => {
-    originalDrawGraph()
-    if (!nv.graph.plotLTWH || !fmriEvents.length) return
-    const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
-    const numFrames = nv.graph.lines?.[0]?.length || 0
-    if (numFrames === 0) return
-    const hdr = nv.volumes[0]?.hdr
-    const TR = hdr?.pixDims?.[4] ?? 1
-    const scaleW = plotW / numFrames
-    for (const ev of fmriEvents) {
-      const startFrame = ev.onset / TR
-      const endFrame = (ev.onset + ev.duration) / TR
-      const x0 = plotX + startFrame * scaleW
-      const x1 = plotX + endFrame * scaleW
-      const color = getColorForTrialType(ev.trial_type)
-      nv.drawRect([x0, plotY, x1 - x0, plotH], color)
-    }
-  }
-}
+// function overrideDrawGraph(nv: Niivue): void {
+//   const originalDrawGraph = nv.drawGraph.bind(nv)
+//   nv.drawGraph = (): void => {
+//     originalDrawGraph()
+//     if (!nv.graph.plotLTWH || !fmriEvents.length) return
+//     const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
+//     const numFrames = nv.graph.lines?.[0]?.length || 0
+//     if (numFrames === 0) return
+//     const hdr = nv.volumes[0]?.hdr
+//     const TR = hdr?.pixDims?.[4] ?? 1
+//     const scaleW = plotW / numFrames
+//     for (const ev of fmriEvents) {
+//       const startFrame = ev.onset / TR
+//       const endFrame = (ev.onset + ev.duration) / TR
+//       const x0 = plotX + startFrame * scaleW
+//       const x1 = plotX + endFrame * scaleW
+//       const color = getColorForTrialType(ev.trial_type)
+//       nv.drawRect([x0, plotY, x1 - x0, plotH], color)
+//     }
+//   }
+// }
 
 function MainApp(): JSX.Element {
-  const niimathRef = useRef(new Niimath())
-  const { documents, selectedDocId, addDocument, selectDocument, updateDocument, removeDocument } =
-    useAppContext()
+  const {
+    documents,
+    selectedDocId,
+    // addDocument,
+    selectDocument,
+    updateDocument,
+    removeDocument,
+    createDocument
+  } = useAppContext()
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -50,11 +55,18 @@ function MainApp(): JSX.Element {
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
 
+  const getTarget = async (): Promise<NiivueInstanceContext> => {
+    if (!selected) throw new Error('no document!')
+    const hasContent = selected.volumes.length > 0 || selected.meshes.length > 0
+    if (!hasContent) return selected
+    return createDocument()
+  }
+
   // Create the first document on mount
   useEffect((): void => {
     window.electron.setZoomFactor(1)
     if (documents.length === 0) {
-      createNewDocument().catch(console.error)
+      createDocument().catch(console.error)
     }
   }, [documents.length])
 
@@ -104,19 +116,20 @@ function MainApp(): JSX.Element {
     }
 
     // Re‑register all your IPC handlers
-    registerAllIpcHandlers(
-      nv,
-      selected.id,
-      () => selected.title || selected.id,
-      selected.setVolumes,
-      selected.setMeshes,
-      setLabelDialogOpen,
-      setLabelEditMode,
+    registerAllIpcHandlers({
       modeMap,
       indexMap,
-      (newTitle) => updateDocument(selected.id, { title: newTitle, isDirty: true }),
-      selected.setSliceMosaicString
-    )
+      nv: selected.nvRef.current!, // raw Niivue instance for menu handlers
+      docId: selected.id,
+      setVolumes: selected.setVolumes,
+      getTarget,
+      getTitle: () => selected.title || selected.id,
+      setLabelDialogOpen,
+      setLabelEditMode,
+      onDocumentLoaded: (newTitle: string) =>
+        updateDocument(selected.id, { title: newTitle, isDirty: true }),
+      onMosaicStringChange: selected.setSliceMosaicString
+    })
   }, [selected])
 
   // Open Label Manager from menu
@@ -191,154 +204,154 @@ function MainApp(): JSX.Element {
     }
   }, [selected, updateDocument])
 
-  /**
-   * Create a brand‐new Niivue document instance,
-   * wire up its IPC & state setters, then add to context.
-   */
-  async function createNewDocument(): Promise<void> {
-    const nv = new Niivue({ dragAndDropEnabled: false })
-    // const nvRef = { current: nv }
-    const docId = `doc-${documents.length + 1}`
+  // /**
+  //  * Create a brand‐new Niivue document instance,
+  //  * wire up its IPC & state setters, then add to context.
+  //  */
+  // async function createNewDocument(): Promise<void> {
+  //   const nv = new Niivue({ dragAndDropEnabled: false })
+  //   // const nvRef = { current: nv }
+  //   const docId = `doc-${documents.length + 1}`
 
-    function getCurrent<T extends keyof NiivueInstanceContext>(
-      field: T
-    ): NiivueInstanceContext[T] | undefined {
-      const d = documents.find((d) => d.id === docId)
-      return d?.[field]
-    }
+  //   function getCurrent<T extends keyof NiivueInstanceContext>(
+  //     field: T
+  //   ): NiivueInstanceContext[T] | undefined {
+  //     const d = documents.find((d) => d.id === docId)
+  //     return d?.[field]
+  //   }
 
-    const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
-      const prev = (getCurrent('volumes') as NVImage[]) ?? []
-      const next =
-        typeof action === 'function' ? (action as (prev: NVImage[]) => NVImage[])(prev) : action
-      updateDocument(docId, { volumes: next, isDirty: true })
-    }
+  //   const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
+  //     const prev = (getCurrent('volumes') as NVImage[]) ?? []
+  //     const next =
+  //       typeof action === 'function' ? (action as (prev: NVImage[]) => NVImage[])(prev) : action
+  //     updateDocument(docId, { volumes: next, isDirty: true })
+  //   }
 
-    const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
-      const prev = (getCurrent('meshes') as NVMesh[]) ?? []
-      const next =
-        typeof action === 'function' ? (action as (prev: NVMesh[]) => NVMesh[])(prev) : action
-      updateDocument(docId, { meshes: next, isDirty: true })
-    }
+  //   const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
+  //     const prev = (getCurrent('meshes') as NVMesh[]) ?? []
+  //     const next =
+  //       typeof action === 'function' ? (action as (prev: NVMesh[]) => NVMesh[])(prev) : action
+  //     updateDocument(docId, { meshes: next, isDirty: true })
+  //   }
 
-    const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage | null>> = (action) => {
-      const prev = getCurrent('selectedImage') as NVImage | null
-      const next =
-        typeof action === 'function'
-          ? (action as (prev: NVImage | null) => NVImage | null)(prev)
-          : action
-      updateDocument(docId, { selectedImage: next, isDirty: true })
-    }
+  //   const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage | null>> = (action) => {
+  //     const prev = getCurrent('selectedImage') as NVImage | null
+  //     const next =
+  //       typeof action === 'function'
+  //         ? (action as (prev: NVImage | null) => NVImage | null)(prev)
+  //         : action
+  //     updateDocument(docId, { selectedImage: next, isDirty: true })
+  //   }
 
-    const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE | null>> = (action) => {
-      const prev = getCurrent('sliceType') as SLICE_TYPE | null
-      const next =
-        typeof action === 'function'
-          ? (action as (prev: SLICE_TYPE | null) => SLICE_TYPE | null)(prev)
-          : action
-      if (next !== null) nv.setSliceType(next)
-      updateDocument(docId, { sliceType: next, isDirty: true })
-    }
+  //   const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE | null>> = (action) => {
+  //     const prev = getCurrent('sliceType') as SLICE_TYPE | null
+  //     const next =
+  //       typeof action === 'function'
+  //         ? (action as (prev: SLICE_TYPE | null) => SLICE_TYPE | null)(prev)
+  //         : action
+  //     if (next !== null) nv.setSliceType(next)
+  //     updateDocument(docId, { sliceType: next, isDirty: true })
+  //   }
 
-    const setSliceMosaicString: React.Dispatch<React.SetStateAction<string>> = (action) => {
-      const prev = getCurrent('sliceMosaicString')
-      const next =
-        typeof action === 'function' ? (action as (prev: string) => string)(prev!) : action
-      nv.setSliceMosaicString(next)
+  //   const setSliceMosaicString: React.Dispatch<React.SetStateAction<string>> = (action) => {
+  //     const prev = getCurrent('sliceMosaicString')
+  //     const next =
+  //       typeof action === 'function' ? (action as (prev: string) => string)(prev!) : action
+  //     nv.setSliceMosaicString(next)
 
-      updateDocument(docId, { sliceMosaicString: next, isDirty: true })
-    }
+  //     updateDocument(docId, { sliceMosaicString: next, isDirty: true })
+  //   }
 
-    const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> = (action) => {
-      // 1. Grab the previous opts from your context
-      const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
+  //   const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> = (action) => {
+  //     // 1. Grab the previous opts from your context
+  //     const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
 
-      // 2. Compute the “next” opts, whether action is a value or updater fn
-      const nextOpts =
-        typeof action === 'function'
-          ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
-          : action
+  //     // 2. Compute the “next” opts, whether action is a value or updater fn
+  //     const nextOpts =
+  //       typeof action === 'function'
+  //         ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
+  //         : action
 
-      // 3. Apply to Niivue instance and push into your document state
-      Object.assign(nv.opts, nextOpts)
-      updateDocument(docId, { opts: { ...nv.opts }, isDirty: true })
-    }
+  //     // 3. Apply to Niivue instance and push into your document state
+  //     Object.assign(nv.opts, nextOpts)
+  //     updateDocument(docId, { opts: { ...nv.opts }, isDirty: true })
+  //   }
 
-    const setLayout: React.Dispatch<React.SetStateAction<keyof typeof layouts>> = (action) => {
-      const prevLayout = getCurrent('layout') as keyof typeof layouts
-      const nextLayout =
-        typeof action === 'function'
-          ? (action as (prev: keyof typeof layouts) => keyof typeof layouts)(prevLayout)
-          : action
+  //   const setLayout: React.Dispatch<React.SetStateAction<keyof typeof layouts>> = (action) => {
+  //     const prevLayout = getCurrent('layout') as keyof typeof layouts
+  //     const nextLayout =
+  //       typeof action === 'function'
+  //         ? (action as (prev: keyof typeof layouts) => keyof typeof layouts)(prevLayout)
+  //         : action
 
-      const layoutValue = layouts[nextLayout]
-      if (layoutValue) nv.setMultiplanarLayout(layoutValue)
-      updateDocument(docId, { layout: nextLayout, isDirty: true })
-    }
+  //     const layoutValue = layouts[nextLayout]
+  //     if (layoutValue) nv.setMultiplanarLayout(layoutValue)
+  //     updateDocument(docId, { layout: nextLayout, isDirty: true })
+  //   }
 
-    // 2) Mosaic orientation setter
-    type Ori = 'A' | 'C' | 'S'
-    const setMosaicOrientation: React.Dispatch<React.SetStateAction<Ori>> = (action) => {
-      const prevOri = getCurrent('mosaicOrientation') as Ori
-      const nextOri =
-        typeof action === 'function' ? (action as (prev: Ori) => Ori)(prevOri) : action
+  //   // 2) Mosaic orientation setter
+  //   type Ori = 'A' | 'C' | 'S'
+  //   const setMosaicOrientation: React.Dispatch<React.SetStateAction<Ori>> = (action) => {
+  //     const prevOri = getCurrent('mosaicOrientation') as Ori
+  //     const nextOri =
+  //       typeof action === 'function' ? (action as (prev: Ori) => Ori)(prevOri) : action
 
-      // if you need to drive Niivue itself:
-      // nv.setSliceMosaicOrientation?.(nextOri)
+  //     // if you need to drive Niivue itself:
+  //     // nv.setSliceMosaicOrientation?.(nextOri)
 
-      updateDocument(docId, { mosaicOrientation: nextOri, isDirty: true })
-    }
+  //     updateDocument(docId, { mosaicOrientation: nextOri, isDirty: true })
+  //   }
 
-    const doc: NiivueInstanceContext = {
-      id: docId,
-      nvRef: { current: nv },
+  //   const doc: NiivueInstanceContext = {
+  //     id: docId,
+  //     nvRef: { current: nv },
 
-      volumes: [],
-      setVolumes,
+  //     volumes: [],
+  //     setVolumes,
 
-      meshes: [],
-      setMeshes,
+  //     meshes: [],
+  //     setMeshes,
 
-      selectedImage: null,
-      setSelectedImage,
+  //     selectedImage: null,
+  //     setSelectedImage,
 
-      sliceType: null,
-      setSliceType,
+  //     sliceType: null,
+  //     setSliceType,
 
-      opts: { ...nv.opts },
-      setOpts,
+  //     opts: { ...nv.opts },
+  //     setOpts,
 
-      layout: 'Row',
-      setLayout,
+  //     layout: 'Row',
+  //     setLayout,
 
-      mosaicOrientation: 'A',
-      setMosaicOrientation,
+  //     mosaicOrientation: 'A',
+  //     setMosaicOrientation,
 
-      sliceMosaicString: '',
-      setSliceMosaicString,
+  //     sliceMosaicString: '',
+  //     setSliceMosaicString,
 
-      title: 'Untitled',
+  //     title: 'Untitled',
 
-      filePath: null,
-      isDirty: false
-    }
+  //     filePath: null,
+  //     isDirty: false
+  //   }
 
-    addDocument(doc)
+  //   addDocument(doc)
 
-    // load persisted prefs
-    const prefs = await electron.ipcRenderer.invoke('getPreferences')
-    Object.entries(prefs ?? {}).forEach(([key, value]) => {
-      if (key in nv.opts) {
-        nv.opts[key] = value
-      }
-    })
+  //   // load persisted prefs
+  //   const prefs = await electron.ipcRenderer.invoke('getPreferences')
+  //   Object.entries(prefs ?? {}).forEach(([key, value]) => {
+  //     if (key in nv.opts) {
+  //       nv.opts[key] = value
+  //     }
+  //   })
 
-    nv.setSliceType(nv.sliceTypeMultiplanar)
-    overrideDrawGraph(nv)
-    await niimathRef.current.init()
+  //   nv.setSliceType(nv.sliceTypeMultiplanar)
+  //   overrideDrawGraph(nv)
+  //   await niimathRef.current.init()
 
-    nv.drawScene()
-  }
+  //   nv.drawScene()
+  // }
 
   // // Sidebar drag/drop handlers
   // function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
@@ -499,7 +512,7 @@ function MainApp(): JSX.Element {
         })}
         <div
           className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
-          onClick={() => void createNewDocument()}
+          onClick={() => void createDocument()}
         >
           +
         </div>
