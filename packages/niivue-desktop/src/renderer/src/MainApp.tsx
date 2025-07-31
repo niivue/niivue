@@ -43,6 +43,7 @@ function MainApp(): JSX.Element {
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const { showNiimathToolbar } = useAppContext()
   const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
@@ -348,13 +349,12 @@ function MainApp(): JSX.Element {
       return prev.filter((m) => m.id !== mesh.id)
     })
   }
+
   function handleRemoveVolume(vol: NVImage): void {
     if (!selected) return
     const nv = selected.nvRef.current
     nv.removeVolume(vol)
     const remainingImages = nv.volumes.filter((v) => v.id !== vol.id)
-    selected.setVolumes(remainingImages)
-    updateDocument(selected.id, { isDirty: true })
     selected.setVolumes(remainingImages)
     updateDocument(selected.id, { isDirty: true })
   }
@@ -464,7 +464,7 @@ function MainApp(): JSX.Element {
 
       {/* 2) Toolbar full width */}
       <div className="flex-none">
-        {selected && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
+        {selected && showNiimathToolbar && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
       </div>
 
       {/* 3) Main content: sidebar & viewer */}

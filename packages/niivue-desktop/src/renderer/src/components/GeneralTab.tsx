@@ -3,7 +3,7 @@ import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Switch, Slider } from '@radix-ui/themes'
 import { ZoomSlider } from './ZoomSlider.js'
 import { SliceSelection } from './SliceSelection.js'
-import { useSelectedInstance } from '../AppContext.js'
+import { useAppContext, useSelectedInstance } from '../AppContext.js'
 import { ColorPicker } from './ColorPicker.js'
 import { hexToRgba10 } from '../utils/colors.js'
 import { NVConfigOptions, SLICE_TYPE } from '@niivue/niivue'
@@ -24,6 +24,8 @@ export const GeneralTab: React.FC = (): JSX.Element => {
   // State for heroSliceType and heroImageFraction
   const [heroSliceType, setHeroSliceType] = useState<string>(nv.opts.heroSliceType.toString())
   const [heroImageFraction, setHeroImageFraction] = useState<number>(nv.opts.heroImageFraction)
+
+  const { showNiimathToolbar, setShowNiimathToolbar } = useAppContext()
 
   const updateOption = <K extends keyof NVConfigOptions>(
     optionKey: K,
@@ -213,6 +215,33 @@ export const GeneralTab: React.FC = (): JSX.Element => {
           </Accordion.Header>
           <Accordion.Content className="px-4 py-2">
             <ZoomSlider />
+          </Accordion.Content>
+        </Accordion.Item>
+
+        {/* Controls Settings */}
+        <Accordion.Item value="controls-settings" className="border-b border-gray-200">
+          <Accordion.Header>
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Text size="2" weight="bold">
+                Niimath
+              </Text>
+              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
+                ▼
+              </span>
+            </Accordion.Trigger>
+          </Accordion.Header>
+          <Accordion.Content className="px-4 py-2">
+            <div className="flex items-center mb-2">
+              <Text size="2" weight="bold" className="mr-2">
+                Show Niimath Toolbar
+              </Text>
+              <Switch
+                checked={showNiimathToolbar}
+                onCheckedChange={(checked) => {
+                  setShowNiimathToolbar(checked)
+                }}
+              />
+            </div>
           </Accordion.Content>
         </Accordion.Item>
       </Accordion.Root>
