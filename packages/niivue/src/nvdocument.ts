@@ -43,6 +43,12 @@ export enum SLICE_TYPE {
   RENDER = 4
 }
 
+export enum PEN_TYPE {
+  PEN = 0,
+  RECTANGLE = 1,
+  ELLIPSE = 2
+}
+
 export enum SHOW_RENDER {
   NEVER = 0,
   ALWAYS = 1,
@@ -185,7 +191,7 @@ export type NVConfigOptions = {
   // sets drawing color. see "drawPt"
   penValue: number
   // pen drawing type: 'pen' for freehand, 'rectangle' for rectangular masks, 'ellipse' for elliptical masks
-  penType: 'pen' | 'rectangle' | 'ellipse'
+  penType: PEN_TYPE
   // does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors
   floodFillNeighbors: number
   isFilledPen: boolean
@@ -304,7 +310,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   dragAndDropEnabled: true,
   drawingEnabled: false,
   penValue: 1,
-  penType: 'pen' as 'pen' | 'rectangle' | 'ellipse',
+  penType: PEN_TYPE.PEN,
   floodFillNeighbors: 6,
   isFilledPen: false,
   thumbnail: '',

@@ -80,6 +80,7 @@ import {
   NVConfigOptions,
   Scene,
   SLICE_TYPE,
+  PEN_TYPE,
   SHOW_RENDER,
   DRAG_MODE,
   COLORMAP_TYPE,
@@ -1874,15 +1875,17 @@ export class Niivue {
     } else if (
       this.opts.drawingEnabled &&
       !isNaN(this.drawShapeStartLocation[0]) &&
-      (this.opts.penType === 'rectangle' || this.opts.penType === 'ellipse')
+      (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE)
     ) {
-      // Finalize rectangle or ellipse drawing
+      // Finalize rectangle or ellipse drawing - the shape is already drawn in drawBitmap
       this.drawAddUndoBitmap()
+      // Clean up preview bitmap since we're keeping the final drawing
+      this.drawShapePreviewBitmap = null
     }
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.drawShapeStartLocation = [NaN, NaN, NaN]
-    // Restore main drawing bitmap if we were previewing a shape
+    // Only restore preview bitmap if we didn't finalize a shape drawing
     if (this.drawShapePreviewBitmap) {
       this.drawBitmap = this.drawShapePreviewBitmap
       this.drawShapePreviewBitmap = null
@@ -5859,7 +5862,7 @@ export class Niivue {
    * Draw a rectangle from point A to point B
    * @internal
    */
-  drawRectangle(ptA: number[], ptB: number[], penValue: number): void {
+  drawRectangleMask(ptA: number[], ptB: number[], penValue: number): void {
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
@@ -5889,7 +5892,7 @@ export class Niivue {
    * Draw an ellipse from point A to point B (treating them as opposite corners of bounding box)
    * @internal
    */
-  drawEllipse(ptA: number[], ptB: number[], penValue: number): void {
+  drawEllipseMask(ptA: number[], ptB: number[], penValue: number): void {
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
@@ -10193,7 +10196,7 @@ export class Niivue {
 
         // Standard Pen Drawing (if not flood fill and not clickToSegment)
         else {
-          if (this.opts.penType === 'pen') {
+          if (this.opts.penType === PEN_TYPE.PEN) {
             // Traditional pen drawing
             if (isNaN(this.drawPenLocation[0])) {
               this.drawPenAxCorSag = axCorSag
@@ -10217,7 +10220,7 @@ export class Niivue {
               this.drawPenFillPts.push(pt)
             }
             this.refreshDrawing(false, false) // Update GPU texture
-          } else if (this.opts.penType === 'rectangle' || this.opts.penType === 'ellipse') {
+          } else if (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE) {
             // Rectangle or ellipse drawing
             if (isNaN(this.drawShapeStartLocation[0])) {
               // First click - set start position
@@ -10233,10 +10236,10 @@ export class Niivue {
                 // Restore original bitmap
                 this.drawBitmap.set(this.drawShapePreviewBitmap)
                 // Draw shape preview
-                if (this.opts.penType === 'rectangle') {
-                  this.drawRectangle(this.drawShapeStartLocation, pt, this.opts.penValue)
-                } else if (this.opts.penType === 'ellipse') {
-                  this.drawEllipse(this.drawShapeStartLocation, pt, this.opts.penValue)
+                if (this.opts.penType === PEN_TYPE.RECTANGLE) {
+                  this.drawRectangleMask(this.drawShapeStartLocation, pt, this.opts.penValue)
+                } else if (this.opts.penType === PEN_TYPE.ELLIPSE) {
+                  this.drawEllipseMask(this.drawShapeStartLocation, pt, this.opts.penValue)
                 }
                 this.refreshDrawing(false, false) // Update GPU texture
               }
