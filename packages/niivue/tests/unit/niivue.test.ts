@@ -118,6 +118,19 @@ test('multiplanarPadPixels set by setMultiplanarPadPixels is tracked in document
   expect(nv.document.opts.multiplanarPadPixels).toBe(multiplanarPadPixels)
 })
 
+
+test('showAllOrientationMarkers set by setShowAllOrientationMarkers is tracked in document', () => {
+  const nv = new Niivue()
+  // Default should be false
+  expect(nv.document.opts.showAllOrientationMarkers).toBe(false)
+  
+  nv.setShowAllOrientationMarkers(true)
+  expect(nv.document.opts.showAllOrientationMarkers).toBe(true)
+  
+  nv.setShowAllOrientationMarkers(false)
+  expect(nv.document.opts.showAllOrientationMarkers).toBe(false)
+})
+
 test('penType defaults to pen', () => {
   const nv = new Niivue()
   expect(nv.document.opts.penType).toBe(PEN_TYPE.PEN)
