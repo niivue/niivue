@@ -1,5 +1,5 @@
 import { expect, test, vi, beforeAll } from 'vitest'
-import { Niivue, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
+import { Niivue, PEN_TYPE, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
 import { vec4 } from 'gl-matrix'
 
 // Mock WebGL-dependent methods
@@ -118,6 +118,7 @@ test('multiplanarPadPixels set by setMultiplanarPadPixels is tracked in document
   expect(nv.document.opts.multiplanarPadPixels).toBe(multiplanarPadPixels)
 })
 
+
 test('showAllOrientationMarkers set by setShowAllOrientationMarkers is tracked in document', () => {
   const nv = new Niivue()
   // Default should be false
@@ -128,4 +129,21 @@ test('showAllOrientationMarkers set by setShowAllOrientationMarkers is tracked i
   
   nv.setShowAllOrientationMarkers(false)
   expect(nv.document.opts.showAllOrientationMarkers).toBe(false)
+})
+
+test('penType defaults to pen', () => {
+  const nv = new Niivue()
+  expect(nv.document.opts.penType).toBe(PEN_TYPE.PEN)
+})
+
+test('penType can be set to rectangle', () => {
+  const nv = new Niivue()
+  nv.document.opts.penType = PEN_TYPE.RECTANGLE
+  expect(nv.document.opts.penType).toBe(PEN_TYPE.RECTANGLE)
+})
+
+test('penType can be set to ellipse', () => {
+  const nv = new Niivue()
+  nv.document.opts.penType = PEN_TYPE.ELLIPSE
+  expect(nv.document.opts.penType).toBe(PEN_TYPE.ELLIPSE)
 })

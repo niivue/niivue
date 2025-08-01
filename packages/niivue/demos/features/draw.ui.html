@@ -198,9 +198,18 @@
           <a class="viewBtn divider dropdown-item-checked" id="DrawFilled" accesskey="f">Fill Outline ^F</a>
           <a class="viewBtn dropdown-item-checked" id="DrawOverwrite" accesskey="o">Pen Overwrites Existing ^O</a>
           <a class="viewBtn dropdown-item-checked" id="Translucent" accesskey="t">Translucent ^T</a>
+          <a class="viewBtn divider dropdown-item-checked" id="PenType-pen" accesskey="p">Pen Tool ^P</a>
+          <a class="viewBtn" id="PenType-rectangle" accesskey="r">Rectangle Tool ^R</a>
+          <a class="viewBtn" id="PenType-ellipse" accesskey="e">Ellipse Tool ^E</a>
           <a class="viewBtn dropdown-item-checked" id="ThinPen">Thin Pen</a>
           <a class="viewBtn" id="Growcut">Grow Cut</a>
           <a class="viewBtn" id="DrawOtsu">Otsu</a>
+          <a class="viewBtn divider" id="InterpolateMaskGeometricAxial">Interpolate Mask (Simple) Axial</a>
+          <a class="viewBtn" id="InterpolateMaskGeometricCoronal">Interpolate Mask (Simple) Coronal</a>
+          <a class="viewBtn" id="InterpolateMaskGeometricSagittal">Interpolate Mask (Simple) Sagittal</a>
+          <a class="viewBtn divider" id="InterpolateMaskIntensityAxial">Interpolate Mask (Intensity-Guided) Axial</a>
+          <a class="viewBtn" id="InterpolateMaskIntensityCoronal">Interpolate Mask (Intensity-Guided) Coronal</a>
+          <a class="viewBtn" id="InterpolateMaskIntensitySagittal">Interpolate Mask (Intensity-Guided) Sagittal</a>
         </div>
       </div>
       <div class="dropdown">
@@ -265,7 +274,8 @@
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
   nv1.graph.autoSizeMultiplanar = true
   nv1.graph.opacity = 1.0
-  nv1.drawOpacity = 0.5
+  nv1.drawOpacity = 0.3
+  nv1.drawRimOpacity = 1.0
   var volumeList1 = [{ url: '../images/FLAIR.nii.gz' }]
   await nv1.loadVolumes(volumeList1)
 
@@ -295,6 +305,9 @@
     updateCheckmark('Translucent', nv1.drawOpacity < 1.0)
     updateCheckmark('ThinPen', nv1.opts.penSize < 2)
     updateCheckmark('ClickToSegment2D', nv1.opts.clickToSegmentIs2D) // Set initial state for 2D/3D toggle
+    
+    // Set initial pen type
+    toggleGroup('PenType-' + nv1.document.opts.penType)
 
     if (nv1.opts.sliceType === nv1.sliceTypeAxial) toggleGroup('|Axial')
     else if (nv1.opts.sliceType === nv1.sliceTypeCoronal) toggleGroup('|Coronal')
@@ -382,6 +395,77 @@
     let button = document.getElementById(id)
     if (button) button.classList.add('dropdown-item-checked')
   } // toggleGroup()
+
+  function performMaskInterpolation(useIntensityGuided, sliceType) {
+    if (!nv1.drawBitmap) {
+      return { success: false, message: 'No drawing mask available. Please create a drawing first.' }
+    }
+
+    if (!nv1.back || !nv1.back.dims) {
+      return { success: false, message: 'No background image loaded.' }
+    }
+
+    // Use drawPenAxCorSag to determine the last drawing plane
+    let axis
+    
+    // If drawPenAxCorSag is not set or invalid, try to use current slice type
+    if (sliceType < 0 || sliceType === undefined) {
+      if (nv1.opts.sliceType === nv1.sliceTypeRender) {
+        return { success: false, message: 'Mask interpolation does not work in render mode.' }
+      } else if (nv1.opts.sliceType === nv1.sliceTypeMultiplanar) {
+        // In multiplanar mode without a known drawing plane
+        return { success: false, message: 'Please draw on a specific pane first to determine interpolation axis.' }
+      }
+      // Single slice mode - use the current slice type
+      sliceType = nv1.opts.sliceType
+    }
+    
+    // Determine axis based on slice type
+    if (sliceType === niivue.SLICE_TYPE.AXIAL) {
+      axis = 'axial'
+    } else if (sliceType === niivue.SLICE_TYPE.CORONAL) {
+      axis = 'coronal'
+    } else if (sliceType === niivue.SLICE_TYPE.SAGITTAL) {
+      axis = 'sagittal'
+    } else {
+      return { success: false, message: 'Invalid slice type for interpolation.' }
+    }
+
+    // Find first and last slices with drawing data using the new Niivue method
+    const boundarySlices = nv1.findDrawingBoundarySlices(sliceType)
+    
+    if (!boundarySlices) {
+      return { success: false, message: 'No drawing data found in any slices.' }
+    }
+
+    if (boundarySlices.first === boundarySlices.last) {
+      return { success: false, message: 'Drawing data found in only one slice. Need at least two slices with data for interpolation.' }
+    }
+
+    const firstSliceWithData = boundarySlices.first
+    const lastSliceWithData = boundarySlices.last
+
+    // Perform interpolation using the existing method
+    try {
+      nv1.interpolateMaskSlices(firstSliceWithData, lastSliceWithData, {
+        useIntensityGuided: useIntensityGuided,
+        intensityWeight: 0.7,
+        binaryThreshold: 0.375,
+        intensitySigma: 0.1,
+        applySmoothingToSlices: true,
+        sliceType: sliceType
+      })
+      
+      return { 
+        success: true, 
+        sliceLow: firstSliceWithData, 
+        sliceHigh: lastSliceWithData,
+        axis: axis
+      }
+    } catch (error) {
+      return { success: false, message: `Error during interpolation: ${error.message}` }
+    }
+  }
 
   async function onButtonClick(event) {
     const id = event.target.id
@@ -533,6 +617,78 @@
         }
         handled = true
         break
+      case 'InterpolateMaskGeometricAxial':
+        {
+          const sliceType = nv1.sliceTypeAxial
+          const result = performMaskInterpolation(false, sliceType)
+          if (result.success) {
+            console.log(`Geometric interpolation completed between slices ${result.sliceLow} and ${result.sliceHigh} (${result.axis} axis)`)
+          } else {
+            alert(result.message)
+          }
+        }
+        handled = true
+        break
+      case 'InterpolateMaskGeometricCoronal':
+        {
+          const sliceType = nv1.sliceTypeCoronal
+          const result = performMaskInterpolation(false, sliceType)
+          if (result.success) {
+            console.log(`Geometric interpolation completed between slices ${result.sliceLow} and ${result.sliceHigh} (${result.axis} axis)`)
+          } else {
+            alert(result.message)
+          }
+        }
+        handled = true
+        break
+      case 'InterpolateMaskGeometricSagittal':
+        {
+          const sliceType = nv1.sliceTypeSagittal
+          const result = performMaskInterpolation(false, sliceType)
+          if (result.success) {
+            console.log(`Geometric interpolation completed between slices ${result.sliceLow} and ${result.sliceHigh} (${result.axis} axis)`)
+          } else {
+            alert(result.message)
+          }
+        }
+        handled = true
+        break
+      case 'InterpolateMaskIntensityAxial':
+        {
+          const sliceType = nv1.sliceTypeAxial
+          const result = performMaskInterpolation(true, sliceType)
+          if (result.success) {
+            console.log(`Intensity-guided interpolation completed between slices ${result.sliceLow} and ${result.sliceHigh} (${result.axis} axis)`)
+          } else {
+            alert(result.message)
+          }
+        }
+        handled = true
+        break
+      case 'InterpolateMaskIntensityCoronal':
+        {
+          const sliceType = nv1.sliceTypeCoronal
+          const result = performMaskInterpolation(true, sliceType)
+          if (result.success) {
+            console.log(`Intensity-guided interpolation completed between slices ${result.sliceLow} and ${result.sliceHigh} (${result.axis} axis)`)
+          } else {
+            alert(result.message)
+          }
+        }
+        handled = true
+        break
+      case 'InterpolateMaskIntensitySagittal':
+        {
+          const sliceType = nv1.sliceTypeSagittal
+          const result = performMaskInterpolation(true, sliceType)
+          if (result.success) {
+            console.log(`Intensity-guided interpolation completed between slices ${result.sliceLow} and ${result.sliceHigh} (${result.axis} axis)`)
+          } else {
+            alert(result.message)
+          }
+        }
+        handled = true
+        break
       case 'DrawFilled':
         isFilled = !isFilled
         nv1.setPenValue(nv1.opts.penValue, isFilled)
@@ -542,6 +698,21 @@
       case 'DrawOverwrite':
         nv1.drawFillOverwrites = !nv1.drawFillOverwrites
         buttonElement.classList.toggle('dropdown-item-checked')
+        handled = true
+        break
+      case 'PenType-pen':
+        nv1.document.opts.penType = niivue.PEN_TYPE.PEN
+        toggleGroup('PenType-pen')
+        handled = true
+        break
+      case 'PenType-rectangle':
+        nv1.document.opts.penType = niivue.PEN_TYPE.RECTANGLE
+        toggleGroup('PenType-rectangle')
+        handled = true
+        break
+      case 'PenType-ellipse':
+        nv1.document.opts.penType = niivue.PEN_TYPE.ELLIPSE
+        toggleGroup('PenType-ellipse')
         handled = true
         break
       case 'ClickToSegment2D': // New Toggle
