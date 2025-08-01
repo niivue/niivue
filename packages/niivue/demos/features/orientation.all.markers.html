@@ -21,6 +21,9 @@
       </select>
       <button id="toggleOrientation">Hide Orientation Text</button>
       <button id="toggleAllMarkers">Show All Markers (4)</button>
+      <button id="toggleRadiological">Radiological</button>
+      <button id="toggleCornerText">Hide Corner Text</button>
+      <button id="toggleSliceMM">World Space</button>
     </header>
     <main id="container">
       <canvas id="gl1"></canvas>
@@ -63,9 +66,14 @@
   
   let orientationVisible = true
   let allMarkersVisible = false
+  let radiologicalConvention = false
+  let cornerTextVisible = true
+  let sliceMM = false
   
   nv1.setIsOrientationTextVisible(orientationVisible)
   nv1.setShowAllOrientationMarkers(allMarkersVisible)
+  nv1.setRadiologicalConvention(radiologicalConvention)
+  nv1.setSliceMM(sliceMM)
   
   const toggleBtn = document.getElementById('toggleOrientation')
   toggleBtn.addEventListener('click', () => {
@@ -79,5 +87,27 @@
     allMarkersVisible = !allMarkersVisible
     nv1.setShowAllOrientationMarkers(allMarkersVisible)
     toggleAllBtn.textContent = allMarkersVisible ? 'Show Normal Markers (2)' : 'Show All Markers (4)'
+  })
+  
+  const toggleRadiologicalBtn = document.getElementById('toggleRadiological')
+  toggleRadiologicalBtn.addEventListener('click', () => {
+    radiologicalConvention = !radiologicalConvention
+    nv1.setRadiologicalConvention(radiologicalConvention)
+    toggleRadiologicalBtn.textContent = radiologicalConvention ? 'Neurological' : 'Radiological'
+  })
+  
+  const toggleCornerTextBtn = document.getElementById('toggleCornerText')
+  toggleCornerTextBtn.addEventListener('click', () => {
+    cornerTextVisible = !cornerTextVisible
+    nv1.opts.isCornerOrientationText = cornerTextVisible
+    nv1.drawScene()
+    toggleCornerTextBtn.textContent = cornerTextVisible ? 'Hide Corner Text' : 'Show Corner Text'
+  })
+  
+  const toggleSliceMMBtn = document.getElementById('toggleSliceMM')
+  toggleSliceMMBtn.addEventListener('click', () => {
+    sliceMM = !sliceMM
+    nv1.setSliceMM(sliceMM)
+    toggleSliceMMBtn.textContent = sliceMM ? 'Voxel Space' : 'World Space'
   })
 </script>
