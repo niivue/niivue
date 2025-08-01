@@ -136,7 +136,7 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
       meshes: [],
       selectedImage: null,
       sliceType: null,
-      sliceMosaicString: '',
+      sliceMosaicString: nv.opts.sliceMosaicString || '',
       opts: { ...nv.opts },
       layout: 'Row',
       mosaicOrientation: 'A',

@@ -22,14 +22,14 @@ export const registerSliceTypeHandler = (
     if (sliceTypeName === 'mosaic') {
       nv.setSliceMosaicString('A 0 1 2')
       console.log('n slice mosaic string', nv.sliceMosaicString)
+      if (onMosaicStringChange) {
+        onMosaicStringChange(nv.sliceMosaicString)
+      }
       return
     }
     // issue1134: unset mosaic string for non-mosaic views
     nv.setSliceMosaicString('')
     nv.setSliceType(sliceType.sliceType)
-    if (onMosaicStringChange) {
-      onMosaicStringChange(nv.sliceMosaicString)
-    }
   })
 }
 

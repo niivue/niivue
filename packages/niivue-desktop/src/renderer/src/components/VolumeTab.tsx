@@ -19,14 +19,12 @@ export const VolumeTab = (): JSX.Element => {
   const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
   const [showColorMaps, setShowColorMaps] = useState<boolean>(nv.opts.isColorbar)
-  const [mosaicStr, setMosaicStr] = useState(() => instance.opts.sliceMosaicString ?? '')
 
   useEffect((): void => {
     nv.graph.autoSizeMultiplanar = true
     setGraphVisible(nv.graph.opacity > 0)
     setNormalizeGraph(nv.graph.normalizeValues)
     setShowColorMaps(nv.opts.isColorbar)
-    setMosaicStr(nv.opts.sliceMosaicString ?? '')
   }, [nv, nv.opts.sliceMosaicString])
 
   const toggleGraphVisibility = (visible: boolean): void => {
@@ -145,10 +143,10 @@ export const VolumeTab = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Mosaic Settings */}
-        {mosaicStr.trim() !== '' && (
+        {instance.sliceMosaicString.trim() !== '' && (
           <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
             <Accordion.Header>
-              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left gropp">
+              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
                 <Text size="2" weight="bold">
                   Mosaic Settings
                 </Text>
