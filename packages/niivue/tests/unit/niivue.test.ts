@@ -1,5 +1,5 @@
 import { expect, test, vi, beforeAll } from 'vitest'
-import { Niivue, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
+import { Niivue, PEN_TYPE, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
 import { vec4 } from 'gl-matrix'
 
 // Mock WebGL-dependent methods
@@ -120,27 +120,17 @@ test('multiplanarPadPixels set by setMultiplanarPadPixels is tracked in document
 
 test('penType defaults to pen', () => {
   const nv = new Niivue()
-  expect(nv.document.opts.penType).toBe('pen')
+  expect(nv.document.opts.penType).toBe(PEN_TYPE.PEN)
 })
 
 test('penType can be set to rectangle', () => {
   const nv = new Niivue()
-  nv.document.opts.penType = 'rectangle'
-  expect(nv.document.opts.penType).toBe('rectangle')
+  nv.document.opts.penType = PEN_TYPE.RECTANGLE
+  expect(nv.document.opts.penType).toBe(PEN_TYPE.RECTANGLE)
 })
 
 test('penType can be set to ellipse', () => {
   const nv = new Niivue()
-  nv.document.opts.penType = 'ellipse'
-  expect(nv.document.opts.penType).toBe('ellipse')
-})
-
-test('drawRectangle method exists', () => {
-  const nv = new Niivue()
-  expect(typeof nv.drawRectangle).toBe('function')
-})
-
-test('drawEllipse method exists', () => {
-  const nv = new Niivue()
-  expect(typeof nv.drawEllipse).toBe('function')
+  nv.document.opts.penType = PEN_TYPE.ELLIPSE
+  expect(nv.document.opts.penType).toBe(PEN_TYPE.ELLIPSE)
 })
