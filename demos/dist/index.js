@@ -30078,6 +30078,7 @@ var DEFAULT_OPTIONS = {
   isDepthPickMesh: false,
   isCornerOrientationText: false,
   isOrientationTextVisible: true,
+  showAllOrientationMarkers: false,
   heroImageFraction: 0,
   heroSliceType: 4 /* RENDER */,
   sagittalNoseLeft: false,
@@ -37718,6 +37719,15 @@ var Niivue = class {
     this.drawScene();
   }
   /**
+   * Show or hide all four orientation labels (e.g., L/R, A/P, S/I) in 2D slice views
+   * @param showAllOrientationMarkers - whether all four orientation markers should be displayed
+   * @example niivue.setShowAllOrientationMarkers(true)
+   */
+  setShowAllOrientationMarkers(showAllOrientationMarkers) {
+    this.opts.showAllOrientationMarkers = showAllOrientationMarkers;
+    this.drawScene();
+  }
+  /**
    * determine proportion of screen real estate devoted to rendering in multiplanar view.
    * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
    * @example niivue.setHeroImage(0.5)
@@ -44921,6 +44931,30 @@ var Niivue = class {
     this.drawText(xy, str6, scale6, color);
   }
   /**
+   * Draw text horizontally centered above the given coordinates.
+   * @internal
+   */
+  drawTextAbove(xy, str6, scale6 = 1, color = null) {
+    if (this.fontPx <= 0) {
+      return;
+    }
+    if (!this.canvas) {
+      throw new Error("canvas undefined");
+    }
+    let size = this.fontPx * scale6;
+    let width = this.textWidth(size, str6);
+    if (width > this.canvas.width) {
+      scale6 *= (this.canvas.width - 2) / width;
+      size = this.fontPx * scale6;
+      width = this.textWidth(size, str6);
+    }
+    xy[0] -= 0.5 * this.textWidth(size, str6);
+    xy[0] = Math.max(xy[0], 1);
+    xy[0] = Math.min(xy[0], this.canvas.width - width - 1);
+    xy[1] -= size;
+    this.drawText(xy, str6, scale6, color);
+  }
+  /**
    * Update texture interpolation mode (nearest or linear) for background or overlay layer.
    * @internal
    */
@@ -45136,12 +45170,22 @@ var Niivue = class {
     if (axCorSag === 2 /* SAGITTAL */) {
       leftText = this.opts.sagittalNoseLeft ? "A" : "P";
     }
+    let bottomText = "I";
+    if (axCorSag === 0 /* AXIAL */) {
+      bottomText = "P";
+    }
+    let rightText = this.opts.isRadiologicalConvention ? "L" : "R";
+    if (axCorSag === 2 /* SAGITTAL */) {
+      rightText = this.opts.sagittalNoseLeft ? "P" : "A";
+    }
     if (this.opts.isCornerOrientationText) {
       this.drawTextRightBelow([leftTopWidthHeight[0], leftTopWidthHeight[1]], leftText + topText);
       return;
     }
     let drawBelow = true;
     let drawRight = true;
+    const drawAbove = this.opts.showAllOrientationMarkers;
+    const drawLeft = this.opts.showAllOrientationMarkers;
     if (!isNaN(padLeftTop[0])) {
       const ht = this.fontPx + 2;
       if (padLeftTop[1] > ht) {
@@ -45165,6 +45209,18 @@ var Niivue = class {
     }
     if (drawRight) {
       this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText);
+    }
+    if (drawAbove) {
+      this.drawTextAbove(
+        [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]],
+        bottomText
+      );
+    }
+    if (drawLeft) {
+      this.drawTextLeft(
+        [leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5],
+        rightText
+      );
     }
   }
   /**

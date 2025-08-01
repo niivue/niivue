@@ -712,6 +712,7 @@ type NVConfigOptions = {
     isDepthPickMesh: boolean;
     isCornerOrientationText: boolean;
     isOrientationTextVisible: boolean;
+    showAllOrientationMarkers: boolean;
     heroImageFraction: number;
     heroSliceType: SLICE_TYPE;
     sagittalNoseLeft: boolean;
@@ -2439,6 +2440,12 @@ declare class Niivue {
      */
     setIsOrientationTextVisible(isOrientationTextVisible: boolean): void;
     /**
+     * Show or hide all four orientation labels (e.g., L/R, A/P, S/I) in 2D slice views
+     * @param showAllOrientationMarkers - whether all four orientation markers should be displayed
+     * @example niivue.setShowAllOrientationMarkers(true)
+     */
+    setShowAllOrientationMarkers(showAllOrientationMarkers: boolean): void;
+    /**
      * determine proportion of screen real estate devoted to rendering in multiplanar view.
      * @param fraction - proportion of screen devoted to primary (hero) image (0 to disable)
      * @example niivue.setHeroImage(0.5)
@@ -4036,6 +4043,11 @@ declare class Niivue {
      * @internal
      */
     drawTextBelow(xy: number[], str: string, scale?: number, color?: number[] | null): void;
+    /**
+     * Draw text horizontally centered above the given coordinates.
+     * @internal
+     */
+    drawTextAbove(xy: number[], str: string, scale?: number, color?: number[] | null): void;
     /**
      * Update texture interpolation mode (nearest or linear) for background or overlay layer.
      * @internal
