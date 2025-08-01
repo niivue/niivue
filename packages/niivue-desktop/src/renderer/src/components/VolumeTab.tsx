@@ -66,12 +66,19 @@ export const VolumeTab = (): JSX.Element => {
         {hasTimeSeries && (
           <Accordion.Item value="graph-settings" className="border-b border-gray-200">
             <Accordion.Header>
-              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
                 <Text size="2" weight="bold">
                   Graph Settings
                 </Text>
-                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                  ▼
+                <span
+                  className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                  aria-hidden
+                >
+                  ▶
                 </span>
               </Accordion.Trigger>
             </Accordion.Header>
@@ -111,12 +118,19 @@ export const VolumeTab = (): JSX.Element => {
         {/* Color Map Display */}
         <Accordion.Item value="colormap-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
                 Color Map Display
               </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
+              <span
+                className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                aria-hidden
+              >
+                ▶
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
@@ -134,12 +148,19 @@ export const VolumeTab = (): JSX.Element => {
         {mosaicStr.trim() !== '' && (
           <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
             <Accordion.Header>
-              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left gropp">
                 <Text size="2" weight="bold">
                   Mosaic Settings
                 </Text>
-                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                  ▼
+                <span
+                  className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                  aria-hidden
+                >
+                  ▶
                 </span>
               </Accordion.Trigger>
             </Accordion.Header>
