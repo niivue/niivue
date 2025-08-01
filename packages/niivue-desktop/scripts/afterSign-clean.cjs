@@ -15,6 +15,11 @@ function cleanWithDitto(filePath) {
 }
 
 module.exports = async function (context) {
+  if (process.platform !== 'darwin') {
+    console.log('skip clean-xattrs (not mac):', process.platform)
+    process.exit(0)
+  }
+  
   const appPath = context.appOutDir
   const appBundle = path.join(appPath, 'niivue-desktop.app')
 
