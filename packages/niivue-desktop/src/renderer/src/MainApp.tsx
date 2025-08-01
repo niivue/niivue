@@ -122,6 +122,7 @@ function MainApp(): JSX.Element {
       nv: selected.nvRef.current!, // raw Niivue instance for menu handlers
       docId: selected.id,
       setVolumes: selected.setVolumes,
+      setMeshes: selected.setMeshes,
       getTarget,
       getTitle: () => selected.title || selected.id,
       setLabelDialogOpen,

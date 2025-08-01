@@ -324,6 +324,24 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               })
           }
         },
+        // Add Mesh
+        {
+          label: 'Add Mesh…',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          id: 'addMesh',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Open Mesh Image',
+                properties: ['openFile']
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  win.webContents.send('addMesh', result.filePaths[0])
+                }
+              })
+          }
+        },
         // Open standard images with submenu
         {
           label: 'Open Standard',

@@ -17,6 +17,7 @@ import { registerRunNiimathHandler } from './runNiimathCommand.js'
 import { registerSaveHTMLHandler } from './saveHTML.js'
 import { registerLoadOverlayHandler } from './loadOverlay.js'
 import { registerDrawHandler } from './draw.js'
+import { registerAddMeshHandler } from './addMesh.js'
 
 const electron = window.electron
 
@@ -26,6 +27,7 @@ export interface IpcHandlerProps {
   nv: Niivue
   docId: string
   setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
+  setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   /** returns the proper Niivue instance or creates a new doc if it’s non-empty */
   getTarget: () => Promise<{
     nvRef: React.RefObject<Niivue>
@@ -46,6 +48,7 @@ export const registerAllIpcHandlers = ({
   nv,
   docId,
   setVolumes,
+  setMeshes,
   getTarget,
   getTitle,
   setLabelDialogOpen,
@@ -60,6 +63,7 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('loadRecentFile')
   electron.ipcRenderer.removeAllListeners('loadVolume')
   electron.ipcRenderer.removeAllListeners('loadMesh')
+  electron.ipcRenderer.removeAllListeners('addMesh')
   electron.ipcRenderer.removeAllListeners('loadDocument')
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
   electron.ipcRenderer.removeAllListeners('convertDICOM')
@@ -76,6 +80,7 @@ export const registerAllIpcHandlers = ({
   registerLoadVolumeHandler({ getTarget })
   registerLoadDocumentHandler({ getTarget, onDocumentLoaded })
   registerLoadDicomFolderHandler({ getTarget })
+  registerAddMeshHandler({ nv, setMeshes })
 
   // menu & misc
   registerSliceTypeHandler(nv, onMosaicStringChange)
