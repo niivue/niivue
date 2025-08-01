@@ -136,3 +136,9 @@ test('nvdocument can be initialized from minimal JSON input', () => {
   expect(doc.data.opts).toEqual(DEFAULT_OPTIONS)
   expect(doc.scene.sceneData).toEqual(INITIAL_SCENE_DATA)
 })
+
+test('nvdocument penType defaults to pen', () => {
+  const doc = new NVDocument()
+  expect(doc.opts.penType).toBe(0)
+  expect(DEFAULT_OPTIONS.penType).toBe(0)
+})
