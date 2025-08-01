@@ -114,6 +114,7 @@ import {
   SyncOpts
 } from '../types.js'
 import { toNiivueObject3D } from '../nvimage/RenderingUtils.js'
+import { findBoundarySlices, interpolateMaskSlices } from '../drawing/drawing.js'
 import {
   clamp,
   decodeRLE,
@@ -15011,5 +15012,50 @@ export class Niivue {
    */
   set gl(gl: WebGL2RenderingContext | null) {
     this._gl = gl
+  }
+
+  /**
+   * Find the first and last slices containing drawing data along a given axis
+   * @param sliceType - The slice orientation (AXIAL, CORONAL, or SAGITTAL)
+   * @returns Object containing first and last slice indices, or null if no data found
+   */
+  findDrawingBoundarySlices(sliceType: SLICE_TYPE): { first: number; last: number } | null {
+    if (!this.back || !this.back.dims || !this.drawBitmap) {
+      return null
+    }
+
+    const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] }
+    return findBoundarySlices(sliceType, this.drawBitmap, dims)
+  }
+
+  /**
+   * Interpolate between mask slices using geometric or intensity-guided methods
+   * @param sliceIndexLow - Lower slice index (optional, will auto-detect if not provided)
+   * @param sliceIndexHigh - Higher slice index (optional, will auto-detect if not provided)
+   * @param options - Interpolation options
+   */
+  interpolateMaskSlices(
+    sliceIndexLow?: number,
+    sliceIndexHigh?: number,
+    options: {
+      intensityWeight?: number
+      binaryThreshold?: number
+      intensitySigma?: number
+      applySmoothingToSlices?: boolean
+      useIntensityGuided?: boolean
+      sliceType?: SLICE_TYPE
+    } = {}
+  ): void {
+    if (!this.back || !this.back.dims || !this.drawBitmap) {
+      throw new Error('Background image and drawing bitmap must be loaded')
+    }
+
+    const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] }
+    const imageData = this.back.img
+    const maxVal = this.back.global_max
+
+    interpolateMaskSlices(this.drawBitmap, dims, imageData, maxVal, sliceIndexLow, sliceIndexHigh, options, () =>
+      this.refreshDrawing(true)
+    )
   }
 }
