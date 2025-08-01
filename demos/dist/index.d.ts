@@ -4340,6 +4340,29 @@ declare class Niivue {
      * @internal
      */
     set gl(gl: WebGL2RenderingContext | null);
+    /**
+     * Find the first and last slices containing drawing data along a given axis
+     * @param sliceType - The slice orientation (AXIAL, CORONAL, or SAGITTAL)
+     * @returns Object containing first and last slice indices, or null if no data found
+     */
+    findDrawingBoundarySlices(sliceType: SLICE_TYPE): {
+        first: number;
+        last: number;
+    } | null;
+    /**
+     * Interpolate between mask slices using geometric or intensity-guided methods
+     * @param sliceIndexLow - Lower slice index (optional, will auto-detect if not provided)
+     * @param sliceIndexHigh - Higher slice index (optional, will auto-detect if not provided)
+     * @param options - Interpolation options
+     */
+    interpolateMaskSlices(sliceIndexLow?: number, sliceIndexHigh?: number, options?: {
+        intensityWeight?: number;
+        binaryThreshold?: number;
+        intensitySigma?: number;
+        applySmoothingToSlices?: boolean;
+        useIntensityGuided?: boolean;
+        sliceType?: SLICE_TYPE;
+    }): void;
 }
 
 export { COLORMAP_TYPE, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type MouseEventConfig, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type TouchEventConfig, type Volume, cmapper, ColorTables as colortables };

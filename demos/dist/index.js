@@ -34536,6 +34536,326 @@ function toNiivueObject3D(nvImage, id, gl) {
   return obj3D;
 }
 
+// src/drawing/drawing.ts
+function findBoundarySlices(sliceType, drawBitmap, dims) {
+  const { dimX, dimY, dimZ } = dims;
+  let axisSize;
+  if (sliceType === 0 /* AXIAL */) {
+    axisSize = dimZ;
+  } else if (sliceType === 1 /* CORONAL */) {
+    axisSize = dimY;
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    axisSize = dimX;
+  } else {
+    return null;
+  }
+  let firstSliceWithData = -1;
+  let lastSliceWithData = -1;
+  for (let slice2 = 0; slice2 < axisSize; slice2++) {
+    let hasData = false;
+    if (sliceType === 0 /* AXIAL */) {
+      const offset = slice2 * dimX * dimY;
+      for (let i = 0; i < dimX * dimY; i++) {
+        if (drawBitmap[offset + i] > 0) {
+          hasData = true;
+          break;
+        }
+      }
+    } else if (sliceType === 1 /* CORONAL */) {
+      for (let z = 0; z < dimZ; z++) {
+        for (let x = 0; x < dimX; x++) {
+          const idx = x + slice2 * dimX + z * dimX * dimY;
+          if (drawBitmap[idx] > 0) {
+            hasData = true;
+            break;
+          }
+        }
+        if (hasData) {
+          break;
+        }
+      }
+    } else if (sliceType === 2 /* SAGITTAL */) {
+      for (let z = 0; z < dimZ; z++) {
+        for (let y = 0; y < dimY; y++) {
+          const idx = slice2 + y * dimX + z * dimX * dimY;
+          if (drawBitmap[idx] > 0) {
+            hasData = true;
+            break;
+          }
+        }
+        if (hasData) {
+          break;
+        }
+      }
+    }
+    if (hasData) {
+      if (firstSliceWithData === -1) {
+        firstSliceWithData = slice2;
+      }
+      lastSliceWithData = slice2;
+    }
+  }
+  if (firstSliceWithData === -1 || lastSliceWithData === -1) {
+    return null;
+  }
+  return { first: firstSliceWithData, last: lastSliceWithData };
+}
+function extractSlice(sliceIndex, sliceType, drawBitmap, dims) {
+  const { dimX, dimY, dimZ } = dims;
+  let sliceData;
+  if (sliceType === 0 /* AXIAL */) {
+    sliceData = new Float32Array(dimX * dimY);
+    const offset = sliceIndex * dimX * dimY;
+    for (let i = 0; i < dimX * dimY; i++) {
+      sliceData[i] = drawBitmap[offset + i];
+    }
+  } else if (sliceType === 1 /* CORONAL */) {
+    sliceData = new Float32Array(dimX * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let x = 0; x < dimX; x++) {
+        const srcIdx = x + sliceIndex * dimX + z * dimX * dimY;
+        const dstIdx = x + z * dimX;
+        sliceData[dstIdx] = drawBitmap[srcIdx];
+      }
+    }
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    sliceData = new Float32Array(dimY * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let y = 0; y < dimY; y++) {
+        const srcIdx = sliceIndex + y * dimX + z * dimX * dimY;
+        const dstIdx = y + z * dimY;
+        sliceData[dstIdx] = drawBitmap[srcIdx];
+      }
+    }
+  } else {
+    throw new Error("Invalid slice type");
+  }
+  return sliceData;
+}
+function extractIntensitySlice(sliceIndex, sliceType, imageData, dims, maxVal) {
+  const { dimX, dimY, dimZ } = dims;
+  let sliceData;
+  if (sliceType === 0 /* AXIAL */) {
+    sliceData = new Float32Array(dimX * dimY);
+    const offset = sliceIndex * dimX * dimY;
+    for (let i = 0; i < dimX * dimY; i++) {
+      sliceData[i] = imageData[offset + i] / maxVal;
+    }
+  } else if (sliceType === 1 /* CORONAL */) {
+    sliceData = new Float32Array(dimX * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let x = 0; x < dimX; x++) {
+        const srcIdx = x + sliceIndex * dimX + z * dimX * dimY;
+        const dstIdx = x + z * dimX;
+        sliceData[dstIdx] = imageData[srcIdx] / maxVal;
+      }
+    }
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    sliceData = new Float32Array(dimY * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let y = 0; y < dimY; y++) {
+        const srcIdx = sliceIndex + y * dimX + z * dimX * dimY;
+        const dstIdx = y + z * dimY;
+        sliceData[dstIdx] = imageData[srcIdx] / maxVal;
+      }
+    }
+  } else {
+    throw new Error("Invalid slice type");
+  }
+  return sliceData;
+}
+function insertColorMask(mask, sliceIndex, sliceType, drawBitmap, dims, binaryThreshold, color) {
+  const { dimX, dimY, dimZ } = dims;
+  if (sliceType === 0 /* AXIAL */) {
+    const offset = sliceIndex * dimX * dimY;
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] >= binaryThreshold) {
+        drawBitmap[offset + i] = color;
+      }
+    }
+  } else if (sliceType === 1 /* CORONAL */) {
+    for (let z = 0; z < dimZ; z++) {
+      for (let x = 0; x < dimX; x++) {
+        const srcIdx = x + z * dimX;
+        const dstIdx = x + sliceIndex * dimX + z * dimX * dimY;
+        if (mask[srcIdx] >= binaryThreshold) {
+          drawBitmap[dstIdx] = color;
+        }
+      }
+    }
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    for (let z = 0; z < dimZ; z++) {
+      for (let y = 0; y < dimY; y++) {
+        const srcIdx = y + z * dimY;
+        const dstIdx = sliceIndex + y * dimX + z * dimX * dimY;
+        if (mask[srcIdx] >= binaryThreshold) {
+          drawBitmap[dstIdx] = color;
+        }
+      }
+    }
+  } else {
+    throw new Error("Invalid slice type");
+  }
+}
+function smoothSlice(slice2, width, height) {
+  if (width < 3 || height < 3) {
+    return;
+  }
+  const temp = new Float32Array(slice2.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = x + y * width;
+      if (x === 0 || x === width - 1) {
+        temp[idx] = slice2[idx];
+      } else {
+        temp[idx] = (slice2[idx - 1] + 2 * slice2[idx] + slice2[idx + 1]) * 0.25;
+      }
+    }
+  }
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = x + y * width;
+      if (y === 0 || y === height - 1) {
+        slice2[idx] = temp[idx];
+      } else {
+        slice2[idx] = (temp[idx - width] + 2 * temp[idx] + temp[idx + width]) * 0.25;
+      }
+    }
+  }
+}
+function calculateIntensityWeight(intensity1, intensity2, targetIntensity, intensitySigma) {
+  const diff1 = Math.abs(targetIntensity - intensity1);
+  const diff2 = Math.abs(targetIntensity - intensity2);
+  const weight1 = Math.exp(-diff1 * diff1 / (2 * intensitySigma * intensitySigma));
+  const weight2 = Math.exp(-diff2 * diff2 / (2 * intensitySigma * intensitySigma));
+  const totalWeight = weight1 + weight2;
+  if (totalWeight < 1e-6) {
+    return 0.5;
+  }
+  return weight1 / totalWeight;
+}
+function doGeometricInterpolation(sliceLow, sliceHigh, z, sliceIndexLow, sliceIndexHigh, interpolatedSlice) {
+  const fracHigh = (z - sliceIndexLow) / (sliceIndexHigh - sliceIndexLow);
+  const fracLow = 1 - fracHigh;
+  for (let i = 0; i < sliceLow.length; i++) {
+    interpolatedSlice[i] = sliceLow[i] * fracLow + sliceHigh[i] * fracHigh;
+  }
+}
+function doIntensityGuidedInterpolation(sliceLow, sliceHigh, z, sliceIndexLow, sliceIndexHigh, interpolatedSlice, opts, intensityLow, intensityHigh, targetIntensity) {
+  const baseFracHigh = (z - sliceIndexLow) / (sliceIndexHigh - sliceIndexLow);
+  const baseFracLow = 1 - baseFracHigh;
+  for (let i = 0; i < sliceLow.length; i++) {
+    if (sliceLow[i] > 0 || sliceHigh[i] > 0) {
+      const intensityWeight = calculateIntensityWeight(
+        intensityLow[i],
+        intensityHigh[i],
+        targetIntensity[i],
+        opts.intensitySigma
+      );
+      const alpha = opts.intensityWeight;
+      const combinedWeightLow = alpha * intensityWeight + (1 - alpha) * baseFracLow;
+      const combinedWeightHigh = 1 - combinedWeightLow;
+      interpolatedSlice[i] = sliceLow[i] * combinedWeightLow + sliceHigh[i] * combinedWeightHigh;
+    } else {
+      interpolatedSlice[i] = sliceLow[i] * baseFracLow + sliceHigh[i] * baseFracHigh;
+    }
+  }
+}
+function interpolateMaskSlices(drawBitmap, dims, imageData, maxVal, sliceIndexLow, sliceIndexHigh, options, refreshDrawingCallback) {
+  const { dimX, dimY, dimZ } = dims;
+  const sliceType = options.sliceType ?? 0 /* AXIAL */;
+  let sliceWidth, sliceHeight, maxSliceIndex;
+  if (sliceType === 0 /* AXIAL */) {
+    sliceWidth = dimX;
+    sliceHeight = dimY;
+    maxSliceIndex = dimZ - 1;
+  } else if (sliceType === 1 /* CORONAL */) {
+    sliceWidth = dimX;
+    sliceHeight = dimZ;
+    maxSliceIndex = dimY - 1;
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    sliceWidth = dimY;
+    sliceHeight = dimZ;
+    maxSliceIndex = dimX - 1;
+  } else {
+    throw new Error("Invalid slice type. Must be AXIAL, CORONAL, or SAGITTAL");
+  }
+  const opts = {
+    intensityWeight: options.intensityWeight ?? 0.7,
+    binaryThreshold: options.binaryThreshold ?? 0.375,
+    intensitySigma: options.intensitySigma ?? 0.1,
+    applySmoothingToSlices: options.applySmoothingToSlices ?? true,
+    useIntensityGuided: options.useIntensityGuided ?? true
+  };
+  if (sliceIndexLow !== void 0 && sliceIndexHigh !== void 0) {
+    if (sliceIndexLow >= sliceIndexHigh) {
+      throw new Error("Low slice index must be less than high slice index");
+    }
+    if (sliceIndexLow < 0 || sliceIndexHigh > maxSliceIndex) {
+      throw new Error(`Slice indices out of bounds [0, ${maxSliceIndex}]`);
+    }
+  }
+  const colorRanges = /* @__PURE__ */ new Map();
+  for (let sliceIdx = 0; sliceIdx <= maxSliceIndex; sliceIdx++) {
+    const slice2 = extractSlice(sliceIdx, sliceType, drawBitmap, dims);
+    for (let i = 0; i < slice2.length; i++) {
+      const color = slice2[i];
+      if (color > 0) {
+        if (!colorRanges.has(color)) {
+          colorRanges.set(color, { min: sliceIdx, max: sliceIdx });
+        } else {
+          const range2 = colorRanges.get(color);
+          range2.min = Math.min(range2.min, sliceIdx);
+          range2.max = Math.max(range2.max, sliceIdx);
+        }
+      }
+    }
+  }
+  for (const [color, range2] of colorRanges) {
+    const colorSliceLow = sliceIndexLow !== void 0 ? Math.max(sliceIndexLow, range2.min) : range2.min;
+    const colorSliceHigh = sliceIndexHigh !== void 0 ? Math.min(sliceIndexHigh, range2.max) : range2.max;
+    if (colorSliceLow >= colorSliceHigh || colorSliceHigh - colorSliceLow < 2) {
+      continue;
+    }
+    const sliceLow = extractSlice(colorSliceLow, sliceType, drawBitmap, dims);
+    const sliceHigh = extractSlice(colorSliceHigh, sliceType, drawBitmap, dims);
+    const colorMaskLow = new Float32Array(sliceLow.length);
+    const colorMaskHigh = new Float32Array(sliceHigh.length);
+    for (let i = 0; i < sliceLow.length; i++) {
+      colorMaskLow[i] = sliceLow[i] === color ? 1 : 0;
+      colorMaskHigh[i] = sliceHigh[i] === color ? 1 : 0;
+    }
+    if (opts.applySmoothingToSlices) {
+      smoothSlice(colorMaskLow, sliceWidth, sliceHeight);
+      smoothSlice(colorMaskHigh, sliceWidth, sliceHeight);
+    }
+    for (let z = colorSliceLow + 1; z < colorSliceHigh; z++) {
+      const colorInterpolated = new Float32Array(sliceWidth * sliceHeight);
+      if (opts.useIntensityGuided && imageData) {
+        const intensityLow = extractIntensitySlice(colorSliceLow, sliceType, imageData, dims, maxVal);
+        const intensityHigh = extractIntensitySlice(colorSliceHigh, sliceType, imageData, dims, maxVal);
+        const targetIntensity = extractIntensitySlice(z, sliceType, imageData, dims, maxVal);
+        doIntensityGuidedInterpolation(
+          colorMaskLow,
+          colorMaskHigh,
+          z,
+          colorSliceLow,
+          colorSliceHigh,
+          colorInterpolated,
+          opts,
+          intensityLow,
+          intensityHigh,
+          targetIntensity
+        );
+      } else {
+        doGeometricInterpolation(colorMaskLow, colorMaskHigh, z, colorSliceLow, colorSliceHigh, colorInterpolated);
+      }
+      insertColorMask(colorInterpolated, z, sliceType, drawBitmap, dims, opts.binaryThreshold, color);
+    }
+  }
+  refreshDrawingCallback();
+}
+
 // src/niivue/utils.ts
 function readFileAsDataURL(input) {
   return new Promise((resolve2, reject) => {
@@ -47488,6 +47808,42 @@ var Niivue = class {
    */
   set gl(gl) {
     this._gl = gl;
+  }
+  /**
+   * Find the first and last slices containing drawing data along a given axis
+   * @param sliceType - The slice orientation (AXIAL, CORONAL, or SAGITTAL)
+   * @returns Object containing first and last slice indices, or null if no data found
+   */
+  findDrawingBoundarySlices(sliceType) {
+    if (!this.back || !this.back.dims || !this.drawBitmap) {
+      return null;
+    }
+    const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] };
+    return findBoundarySlices(sliceType, this.drawBitmap, dims);
+  }
+  /**
+   * Interpolate between mask slices using geometric or intensity-guided methods
+   * @param sliceIndexLow - Lower slice index (optional, will auto-detect if not provided)
+   * @param sliceIndexHigh - Higher slice index (optional, will auto-detect if not provided)
+   * @param options - Interpolation options
+   */
+  interpolateMaskSlices(sliceIndexLow, sliceIndexHigh, options = {}) {
+    if (!this.back || !this.back.dims || !this.drawBitmap) {
+      throw new Error("Background image and drawing bitmap must be loaded");
+    }
+    const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] };
+    const imageData = this.back.img;
+    const maxVal = this.back.global_max;
+    interpolateMaskSlices(
+      this.drawBitmap,
+      dims,
+      imageData,
+      maxVal,
+      sliceIndexLow,
+      sliceIndexHigh,
+      options,
+      () => this.refreshDrawing(true)
+    );
   }
 };
 export {
