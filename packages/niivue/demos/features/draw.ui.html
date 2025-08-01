@@ -271,7 +271,8 @@
   nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
   nv1.graph.autoSizeMultiplanar = true
   nv1.graph.opacity = 1.0
-  nv1.drawOpacity = 0.5
+  nv1.drawOpacity = 0.3
+  nv1.drawRimOpacity = 1.0
   var volumeList1 = [{ url: '../images/FLAIR.nii.gz' }]
   await nv1.loadVolumes(volumeList1)
 
@@ -440,7 +441,7 @@
 
     // Perform interpolation using the existing method
     try {
-      nv1.interpolateBetweenMaskSlices(firstSliceWithData, lastSliceWithData, {
+      nv1.interpolateMaskSlices(firstSliceWithData, lastSliceWithData, {
         useIntensityGuided: useIntensityGuided,
         intensityWeight: 0.7,
         binaryThreshold: 0.375,
