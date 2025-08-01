@@ -291,6 +291,8 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         {
           label: 'Add Overlay Image…',
           accelerator: 'CmdOrCtrl+Shift+O',
+          id: 'addOverlay',
+          enabled: false,
           click: (): void => {
             dialog
               .showOpenDialog(win, {

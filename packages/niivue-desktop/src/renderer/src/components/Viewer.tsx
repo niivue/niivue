@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react'
 import { registerViewSync } from '../utils/viewSync.js'
 import type { NiivueInstanceContext } from '../AppContext.js'
 
+const electron = window.electron
+
 interface ViewerProps {
   doc: NiivueInstanceContext
   collapsed: boolean
@@ -13,6 +15,15 @@ export function Viewer({ doc, collapsed }: ViewerProps): JSX.Element {
   const nv = doc.nvRef.current
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hasInit = useRef(false)
+
+  useEffect(() => {
+    const hasBase = doc.volumes.length > 0
+    if (hasBase) {
+      electron.ipcRenderer.send('base-image-loaded')
+    } else {
+      electron.ipcRenderer.send('base-image-removed')
+    }
+  }, [doc.volumes])
 
   useEffect(() => {
     const c = canvasRef.current!
