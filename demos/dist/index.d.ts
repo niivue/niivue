@@ -605,6 +605,11 @@ declare enum SLICE_TYPE {
     MULTIPLANAR = 3,
     RENDER = 4
 }
+declare enum PEN_TYPE {
+    PEN = 0,
+    RECTANGLE = 1,
+    ELLIPSE = 2
+}
 declare enum SHOW_RENDER {
     NEVER = 0,
     ALWAYS = 1,
@@ -719,6 +724,7 @@ type NVConfigOptions = {
     dragAndDropEnabled: boolean;
     drawingEnabled: boolean;
     penValue: number;
+    penType: PEN_TYPE;
     floodFillNeighbors: number;
     isFilledPen: boolean;
     thumbnail: string;
@@ -1669,6 +1675,8 @@ declare class Niivue {
     drawPenAxCorSag: number;
     drawFillOverwrites: boolean;
     drawPenFillPts: number[][];
+    drawShapeStartLocation: number[];
+    drawShapePreviewBitmap: Uint8Array | null;
     overlayTexture: WebGLTexture | null;
     overlayTextureID: WebGLTexture | null;
     sliceMMShader?: Shader;
@@ -3166,6 +3174,16 @@ declare class Niivue {
      */
     drawPenLine(ptA: number[], ptB: number[], penValue: number): void;
     /**
+     * Draw a rectangle from point A to point B
+     * @internal
+     */
+    drawRectangleMask(ptA: number[], ptB: number[], penValue: number): void;
+    /**
+     * Draw an ellipse from point A to point B (treating them as opposite corners of bounding box)
+     * @internal
+     */
+    drawEllipseMask(ptA: number[], ptB: number[], penValue: number): void;
+    /**
      * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
      *
      * @param seedXYZ -  voxel index of the seed voxel in the mask array.
@@ -4365,4 +4383,4 @@ declare class Niivue {
     }): void;
 }
 
-export { COLORMAP_TYPE, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type MouseEventConfig, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type TouchEventConfig, type Volume, cmapper, ColorTables as colortables };
+export { COLORMAP_TYPE, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type MouseEventConfig, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type TouchEventConfig, type Volume, cmapper, ColorTables as colortables };

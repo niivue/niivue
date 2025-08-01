@@ -5,6 +5,7 @@
 | Enumeration                                    | Description |
 | ---------------------------------------------- | ----------- |
 | [COLORMAP_TYPE](enumerations/COLORMAP_TYPE.md) | -           |
+| [PEN_TYPE](enumerations/PEN_TYPE.md)           | -           |
 | [SHOW_RENDER](enumerations/SHOW_RENDER.md)     | -           |
 
 ## Interfaces

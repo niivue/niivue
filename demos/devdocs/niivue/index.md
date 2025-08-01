@@ -189,6 +189,12 @@ Re-exports [NVUtilities](../nvutilities/classes/NVUtilities.md)
 
 ---
 
+### PEN_TYPE
+
+Re-exports [PEN_TYPE](../nvdocument/enumerations/PEN_TYPE.md)
+
+---
+
 ### Point
 
 Re-exports [Point](../types/type-aliases/Point.md)
