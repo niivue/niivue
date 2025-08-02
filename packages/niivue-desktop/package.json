@@ -17,7 +17,7 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
-    "ensure-niimath": "sh -c \"PLAT=$(uname | tr '[:upper:]' '[:lower:]'); case \\\"$PLAT\\\" in darwin) [ -f native-binaries/darwin/niimath ] || npm run fetch-niimath:mac ;; linux) [ -f native-binaries/linux/niimath ] || npm run fetch-niimath:linux ;; msys*|mingw*) [ -f native-binaries/win32/niimath.exe ] || npm run fetch-niimath:win ;; *) echo \\\"Unknown platform '$PLAT', skipping niimath fetch.\\\" ;; esac\"",
+    "ensure-niimath": "node scripts/ensure-niimath.cjs",
     "dev": "npm run ensure-niimath && electron-vite dev",
     "prebuild": "node ./scripts/prebuild-clean-helpers.cjs",
     "build": "npm run typecheck && electron-vite build",
@@ -30,9 +30,9 @@
     "fetch-niimath:win": "mkdir -p native-binaries/win32 && LATEST=$(npm run --silent niimath:latest-tag) && curl -sL https://github.com/rordenlab/niimath/releases/latest/download/niimath_win.zip -o native-binaries/niimath-win.zip && unzip -j native-binaries/niimath-win.zip -d native-binaries/win32 && rm native-binaries/niimath-win.zip",
     "fetch-niimath:mac": "mkdir -p native-binaries/darwin && LATEST=$(npm run --silent niimath:latest-tag) && curl -sL https://github.com/rordenlab/niimath/releases/latest/download/niimath_macos.zip -o native-binaries/niimath-mac.zip && unzip -j native-binaries/niimath-mac.zip -d native-binaries/darwin && rm native-binaries/niimath-mac.zip",
     "fetch-niimath:linux": "mkdir -p native-binaries/linux && LATEST=$(npm run --silent niimath:latest-tag) && curl -sL https://github.com/rordenlab/niimath/releases/latest/download/niimath_lnx.zip -o native-binaries/niimath-linux.zip && unzip -j native-binaries/niimath-linux.zip -d native-binaries/linux && rm native-binaries/niimath-linux.zip",
-    "build-release:win": "npm run fetch-niimath:win && npm run build:win",
-    "build-release:mac": "npm run fetch-niimath:mac && npm run build:mac",
-    "build-release:linux": "npm run fetch-niimath:linux && npm run build:linux"
+    "build-release:win": "npm run ensure-niimath && npm run build:win",
+    "build-release:mac": "npm run ensure-niimath && npm run build:mac",
+    "build-release:linux": "npm run ensure-niimath && npm run build:linux"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -47,7 +47,8 @@
     "electron-updater": "^6.1.7",
     "fflate": "^0.8.2",
     "react-beautiful-dnd": "^13.1.1",
-    "react-draggable": "^4.5.0"
+    "react-draggable": "^4.5.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
@@ -58,6 +59,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "adm-zip": "^0.5.16",
     "autoprefixer": "^10.4.20",
     "dmg-builder": "^24.13.3",
     "electron": "^31.0.2",
