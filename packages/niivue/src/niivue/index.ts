@@ -116,11 +116,10 @@ import {
 } from '../types.js'
 import { toNiivueObject3D } from '../nvimage/RenderingUtils.js'
 import { findBoundarySlices, interpolateMaskSlices } from '../drawing/drawing.js'
+import { drawUndo, encodeRLE, decodeRLE } from '../drawing/index.js'
 import {
   clamp,
-  decodeRLE,
   deg2rad,
-  encodeRLE,
   img2ras16,
   intensityRaw2Scaled,
   isRadiological,
@@ -3570,22 +3569,13 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   drawUndo(): void {
-    if (this.drawUndoBitmaps.length < 1) {
-      log.debug('undo bitmaps not loaded')
-      return
-    }
-    this.currentDrawUndoBitmap--
-    if (this.currentDrawUndoBitmap < 0) {
-      this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1
-    }
-    if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length) {
-      this.currentDrawUndoBitmap = 0
-    }
-    if (this.drawUndoBitmaps[this.currentDrawUndoBitmap].length < 2) {
-      log.debug('drawUndo is misbehaving')
-      return
-    }
-    this.drawBitmap = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], this.drawBitmap!.length)
+    const { drawBitmap, currentDrawUndoBitmap } = drawUndo({
+      drawUndoBitmaps: this.drawUndoBitmaps,
+      currentDrawUndoBitmap: this.currentDrawUndoBitmap,
+      drawBitmap: this.drawBitmap
+    })
+    this.drawBitmap = drawBitmap
+    this.currentDrawUndoBitmap = currentDrawUndoBitmap
     this.refreshDrawing(true)
   }
 
@@ -15016,18 +15006,15 @@ export class Niivue {
         return
       }
       if (this.getCurrentDragMode() === DRAG_MODE.measurement) {
-        // if (this.opts.isDragShowsMeasurementTool) {
         this.drawMeasurementTool([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
           this.uiData.dragEnd[0],
           this.uiData.dragEnd[1]
         ])
-        // return
       }
       if (this.getCurrentDragMode() === DRAG_MODE.angle) {
         this.drawAngleMeasurementTool()
-        // return
       }
       // Only draw selection box for specific drag modes that need it
       const currentDragMode = this.getCurrentDragMode()
