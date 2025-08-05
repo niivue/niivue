@@ -1,7 +1,7 @@
 import { isCompressed, decompressAsync, readHeaderAsync, readImage, hasExtension } from 'nifti-reader-js'
-import { log } from '../../logger.js'
-import type { NVImage } from '../index.js'
-import { NiiDataType } from '../utils.js'
+import { log } from '@/logger'
+import type { NVImage } from '@/nvimage'
+import { NiiDataType } from '@/nvimage/utils'
 
 /**
  * Reads NIfTI format image (.nii, .nii.gz), modifying the provided NVImage header

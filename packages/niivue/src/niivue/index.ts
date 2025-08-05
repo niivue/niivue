@@ -1,7 +1,53 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import packageJson from '../../package.json' with { type: 'json' }
-import { Shader } from '../shader.js'
-import { log } from '../logger.js'
+import { orientCube } from '@/orientCube'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '@/nvmesh'
+import defaultMatCap from '@/matcaps/Shiny.jpg'
+import defaultFontPNG from '@/fonts/Roboto-Regular.png'
+import defaultFontMetrics from '@/fonts/Roboto-Regular.json' with { type: 'json' }
+import { ColorMap, cmapper } from '@/colortables'
+import {
+  NVDocument,
+  NVConfigOptions,
+  Scene,
+  SLICE_TYPE,
+  PEN_TYPE,
+  SHOW_RENDER,
+  DRAG_MODE,
+  COLORMAP_TYPE,
+  MULTIPLANAR_TYPE,
+  DEFAULT_OPTIONS,
+  ExportDocumentData,
+  INITIAL_SCENE_DATA,
+  MouseEventConfig,
+  TouchEventConfig
+} from '@/nvdocument'
+
+import {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3D,
+  NVLabel3DStyle,
+  LabelAnchorPoint,
+  LabelAnchorFlag
+} from '@/nvlabel'
+import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
+import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
+import { NVUtilities } from '@/nvutilities'
+import { NVMeshUtilities } from '@/nvmesh-utilities'
+import {
+  Connectome,
+  LegacyConnectome,
+  NVConnectomeNode,
+  NiftiHeader,
+  DragReleaseParams,
+  NiiVueLocation,
+  NiiVueLocationValue,
+  SyncOpts
+} from '@/types'
+import { toNiivueObject3D } from '@/nvimage/RenderingUtils'
+import { findBoundarySlices, interpolateMaskSlices, drawUndo, encodeRLE, decodeRLE } from '@/drawing'
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -67,56 +113,9 @@ import {
   sobelFirstOrderFragShader,
   sobelSecondOrderFragShader,
   gradientOpacityLutCount
-} from '../shader-srcs.js'
-import { orientCube } from '../orientCube.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
-import defaultMatCap from '../matcaps/Shiny.jpg'
-import defaultFontPNG from '../fonts/Roboto-Regular.png'
-import defaultFontMetrics from '../fonts/Roboto-Regular.json' with { type: 'json' }
-import { ColorMap, cmapper } from '../colortables.js'
-import {
-  NVDocument,
-  NVConfigOptions,
-  Scene,
-  SLICE_TYPE,
-  PEN_TYPE,
-  SHOW_RENDER,
-  DRAG_MODE,
-  COLORMAP_TYPE,
-  MULTIPLANAR_TYPE,
-  DEFAULT_OPTIONS,
-  ExportDocumentData,
-  INITIAL_SCENE_DATA,
-  MouseEventConfig,
-  TouchEventConfig
-} from '../nvdocument.js'
-
-import {
-  LabelTextAlignment,
-  LabelLineTerminator,
-  NVLabel3D,
-  NVLabel3DStyle,
-  LabelAnchorPoint,
-  LabelAnchorFlag
-} from '../nvlabel.js'
-import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
-import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '../nvimage/index.js'
-import { NVUtilities } from '../nvutilities.js'
-import { NVMeshUtilities } from '../nvmesh-utilities.js'
-import {
-  Connectome,
-  LegacyConnectome,
-  NVConnectomeNode,
-  NiftiHeader,
-  DragReleaseParams,
-  NiiVueLocation,
-  NiiVueLocationValue,
-  SyncOpts
-} from '../types.js'
-import { toNiivueObject3D } from '../nvimage/RenderingUtils.js'
-import { findBoundarySlices, interpolateMaskSlices } from '../drawing/drawing.js'
-import { drawUndo, encodeRLE, decodeRLE } from '../drawing/index.js'
+} from '@/shader-srcs'
+import { Shader } from '@/shader'
+import { log } from '@/logger'
 import {
   clamp,
   deg2rad,
@@ -129,23 +128,23 @@ import {
   unProject,
   unpackFloatFromVec4i,
   readFileAsDataURL
-} from './utils.js'
+} from '@/utils'
 const { version } = packageJson
-export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
-export { ColorTables as colortables, cmapper } from '../colortables.js'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
+export { ColorTables as colortables, cmapper } from '@/colortables'
 
-export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
-// export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.js'
+export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
+// export { NVDocument, SLICE_TYPE, DocumentData } from '@/nvdocument'
 // address rollup error - https://github.com/rollup/plugins/issues/71
-export * from '../nvdocument.js'
-export { NVUtilities } from '../nvutilities.js'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel.js'
-export { NVMeshLoaders } from '../nvmesh-loaders.js'
-export { NVMeshUtilities } from '../nvmesh-utilities.js'
+export * from '@/nvdocument'
+export { NVUtilities } from '@/nvutilities'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '@/nvlabel'
+export { NVMeshLoaders } from '@/nvmesh-loaders'
+export { NVMeshUtilities } from '@/nvmesh-utilities'
 
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
-export * from '../types.js'
+export * from '@/types'
 
 type FontMetrics = {
   distanceRange: number

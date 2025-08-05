@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { expect, test } from 'vitest'
-import { NVImage } from '../../src/niivue/index.js' // note the js extension
 import { readFileSync } from 'node:fs'
 import path from 'path'
+import { expect, test } from 'vitest'
 import { vec3 } from 'gl-matrix'
+import { NVImage } from '../../src/niivue/index.js' // note the js extension
 
 test('nvimage convertVox2Frac', async () => {
   const name = 'mni152.nii.gz'

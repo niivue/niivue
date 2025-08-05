@@ -1,11 +1,11 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
 import { vec3, vec4 } from 'gl-matrix'
-import { NVUtilities } from './nvutilities.js'
-import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvimage/index.js'
-import { MeshType, NVMesh } from './nvmesh.js'
-import { NVLabel3D } from './nvlabel.js'
-import { NVConnectome } from './nvconnectome.js'
-import { log } from './logger.js'
+import { NVUtilities } from '@/nvutilities'
+import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from '@/nvimage'
+import { MeshType, NVMesh } from '@/nvmesh'
+import { NVLabel3D } from '@/nvlabel'
+import { NVConnectome } from '@/nvconnectome'
+import { log } from '@/logger'
 
 /**
  * Represents a completed measurement between two points

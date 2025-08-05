@@ -1,6 +1,12 @@
+import { resolve } from 'path'
 import { defineConfig, coverageConfigDefaults } from 'vitest/config'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
   test: {
     coverage: {
       provider: 'v8',

@@ -1,9 +1,8 @@
-// src/nvimage/ImageWriter.ts
 import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
-import { log } from '../logger.js'
-import { NVUtilities } from '../nvutilities.js'
-import { hdrToArrayBuffer, NiiDataType } from './utils.js'
-import type { NVImage, TypedVoxelArray } from './index.js'
+import { log } from '@/logger'
+import { NVUtilities } from '@/nvutilities'
+import { hdrToArrayBuffer, NiiDataType } from '@/nvimage/utils'
+import type { NVImage, TypedVoxelArray } from '@/nvimage'
 /**
  * Creates a NIFTI1 header object with basic properties.
  */
