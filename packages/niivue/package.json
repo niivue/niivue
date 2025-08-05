@@ -16,6 +16,10 @@
       "import": "./build/drawing/index.js",
       "types": "./build/drawing/index.d.ts"
     },
+    "./utils": {
+      "import": "./build/utils/index.js",
+      "types": "./build/utils/index.d.ts"
+    },
     "./min": {
       "import": "./build/index.min.js"
     }
