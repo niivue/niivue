@@ -1,5 +1,5 @@
 import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
-import { ImageType } from '../utils.js'
+import { ImageType } from '@/nvimage/utils'
 
 export interface ParsedVolumeData {
   hdr: NIFTI1 | NIFTI2 | null
@@ -8,6 +8,6 @@ export interface ParsedVolumeData {
   error?: string
 }
 
-export * as Mgh from './mgh.js'
-export * as Nii from './nii.js'
-export * as Nrrd from './nrrd.js'
+export * as Mgh from '@/nvimage/ImageReaders/mgh'
+export * as Nii from '@/nvimage/ImageReaders/nii'
+export * as Nrrd from '@/nvimage/ImageReaders/nrrd'

@@ -1,4 +1,4 @@
-import { log } from '../logger.js'
+import { log } from '@/logger'
 // Internal function to compress drawing using run length encoding
 // inputs
 // data: Uint8Array to compress

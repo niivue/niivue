@@ -1,5 +1,6 @@
-import { log } from '../logger.js'
-import { decodeRLE } from './rle.js'
+import { log } from '@/logger'
+import { decodeRLE } from '@/drawing/rle'
+
 interface DrawUndoArgs {
   drawUndoBitmaps: Uint8Array[]
   currentDrawUndoBitmap: number

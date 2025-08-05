@@ -1,9 +1,9 @@
 import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
 import { mat4, vec4, vec3 } from 'gl-matrix'
-import { log } from '../../logger.js'
-import { NVUtilities } from '../../nvutilities.js'
-import type { NVImage } from '../index.js'
-import { isPlatformLittleEndian, NiiDataType } from '../utils.js'
+import { log } from '@/logger'
+import { NVUtilities } from '@/nvutilities'
+import type { NVImage } from '@/nvimage'
+import { isPlatformLittleEndian, NiiDataType } from '@/nvimage/utils'
 
 /**
  * @internal
