@@ -15,7 +15,11 @@ export default defineConfig({
         'dist_intermediate/**',
         'bundle.js',
         '**/*.config.*',
-        'server.js'
+        'server.js',
+        'bundleForDemos.js',
+        'preplaywrighttest.cjs',
+        'vite.config_inject.js',
+        'index.min.js'
       ]
     },
     dir: 'tests/unit',
