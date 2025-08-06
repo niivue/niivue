@@ -1,13 +1,13 @@
 import { vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
-import { log } from './logger.js'
-import { NiivueObject3D } from './niivue-object3D.js' // n.b. used by connectome
-import { ColorMap, LUT, cmapper } from './colortables.js'
-import { NVMeshUtilities } from './nvmesh-utilities.js'
-import { NVMeshLoaders } from './nvmesh-loaders.js'
-import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from './nvlabel.js'
+import { log } from '@/logger'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { ColorMap, LUT, cmapper } from '@/colortables'
+import { NVMeshUtilities } from '@/nvmesh-utilities'
+import { NVMeshLoaders } from '@/nvmesh-loaders'
+import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from '@/nvlabel'
 
-import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from './types.js'
+import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from '@/types'
 import {
   DefaultMeshType,
   GII,
@@ -21,8 +21,8 @@ import {
   ValuesArray,
   X3D,
   AnyNumberArray
-} from './nvmesh-types.js'
-import { COLORMAP_TYPE } from './nvdocument.js'
+} from '@/nvmesh-types'
+import { COLORMAP_TYPE } from '@/nvdocument'
 
 /** Enum for text alignment
  */

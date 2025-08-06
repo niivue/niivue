@@ -1,4 +1,4 @@
-import { log } from './logger.js'
+import { log } from '@/logger'
 // shader.js is taken from github user Twinklebear: https://github.com/Twinklebear/webgl-util
 
 // Compile and link the shaders vert and frag. vert and frag should contain

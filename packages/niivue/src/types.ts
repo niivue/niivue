@@ -1,6 +1,6 @@
 import { vec3, vec4 } from 'gl-matrix'
-import { NVLabel3D } from './nvlabel.js'
-import { SLICE_TYPE } from './nvdocument.js'
+import { NVLabel3D } from '@/nvlabel'
+import { SLICE_TYPE } from '@/nvdocument'
 
 export type NiftiHeader = {
   littleEndian: boolean

@@ -1,9 +1,9 @@
 import { NIFTI1 } from 'nifti-reader-js'
 import { mat3, mat4, vec3 } from 'gl-matrix'
-import { log } from '../../logger.js'
-import { NVUtilities } from '../../nvutilities.js'
-import type { NVImage } from '../index.js'
-import { NiiDataType } from '../utils.js'
+import { log } from '@/logger'
+import { NVUtilities } from '@/nvutilities'
+import type { NVImage } from '@/nvimage'
+import { NiiDataType } from '@/nvimage/utils'
 
 /**
  * Reads NRRD/NHDR format image, modifying the provided NVImage header

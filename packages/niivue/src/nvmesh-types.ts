@@ -1,5 +1,5 @@
 import { vec3 } from 'gl-matrix'
-import { LUT } from './colortables.js'
+import { LUT } from '@/colortables'
 
 export type ValuesArray = Array<{
   id: string

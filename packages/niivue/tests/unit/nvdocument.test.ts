@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import { assert, expect, test } from 'vitest'
-import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js' // note the js extension
+import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js'
 import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
 
 test('loadFromFile loads a valid document', async () => {

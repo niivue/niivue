@@ -2,14 +2,23 @@
   "name": "@niivue/niivue",
   "version": "0.62.0",
   "description": "minimal webgl2 nifti image viewer",
-  "types": "./build/index.d.ts",
-  "main": "./build/index.js",
+  "types": "./build/niivue/index.d.ts",
+  "main": "./build/niivue/index.js",
   "type": "module",
   "unpkg": "./dist/index.min.js",
-  "module": "./build/index.js",
+  "module": "./build/niivue/index.js",
   "exports": {
     ".": {
-      "import": "./build/index.js"
+      "import": "./build/niivue/index.js",
+      "types": "./build/niivue/index.d.ts"
+    },
+    "./drawing": {
+      "import": "./build/drawing/index.js",
+      "types": "./build/drawing/index.d.ts"
+    },
+    "./utils": {
+      "import": "./build/utils/index.js",
+      "types": "./build/utils/index.d.ts"
     },
     "./min": {
       "import": "./build/index.min.js"

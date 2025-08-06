@@ -1,5 +1,5 @@
-import { SLICE_TYPE } from '../nvdocument.js'
-import { TypedVoxelArray } from '../nvimage/index.js'
+import { SLICE_TYPE } from '@/nvdocument'
+import { TypedVoxelArray } from '@/nvimage'
 
 interface DrawingDimensions {
   dimX: number
