@@ -5,7 +5,7 @@ import fs from 'fs'
 export default async function (context) {
   if (process.platform !== 'darwin') {
     console.log('skip clean-xattrs (not mac):', process.platform)
-    process.exit(0)
+    return
   }
   
   const gpuHelperBinary = path.join(

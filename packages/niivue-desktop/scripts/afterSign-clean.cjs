@@ -16,8 +16,8 @@ function cleanWithDitto(filePath) {
 
 module.exports = async function (context) {
   if (process.platform !== 'darwin') {
-    console.log('skip clean-xattrs (not mac):', process.platform)
-    process.exit(0)
+    console.log('skip afterSign-clean (not mac):', process.platform)
+    return
   }
   
   const appPath = context.appOutDir

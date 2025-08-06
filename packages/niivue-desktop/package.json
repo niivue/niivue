@@ -23,7 +23,7 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
+    "build:win": "electron-vite build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
     "niimath:latest-tag": "curl -s https://api.github.com/repos/rordenlab/niimath/releases/latest | grep '\"tag_name\"' | sed -E 's/.*\"([^\"]+)\".*/\\1/'",

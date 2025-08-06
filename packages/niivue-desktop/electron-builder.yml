@@ -32,6 +32,14 @@ asarUnpack:
 win:
   icon: resources/icons/app_icon.ico
   executableName: niivue-desktop
+  target:
+    - nsis
+    - portable
+  forceCodeSigning: false
+  
+portable:
+  unicode: false # Set to true if your app requires unicode support in the portable executable
+  artifactName: ${name}-Portable-${version}.${ext} # Customizes the output filename
 
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
