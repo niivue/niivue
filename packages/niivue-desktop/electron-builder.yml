@@ -27,7 +27,9 @@ fileAssociations:
 
 asarUnpack:
   - 'resources/**'
-  - 'native-binaries/**'          # ← leave binaries unpacked
+  - 'native-binaries/**'
+  - '**/*.nii'
+  - '**/*.nii.gz'
 
 win:
   icon: resources/icons/app_icon.ico
@@ -97,3 +99,8 @@ extraResources:
 
   - from: native-binaries/linux/niimath
     to: native/niimath-linux
+  
+  - from: resources/images/
+    to: images
+    filter:
+      - "**/*.nii*"

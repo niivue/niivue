@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { spawn } from 'child_process'
-import { extname, join, resolve } from 'path'
+import { basename, extname, join, resolve } from 'path'
 import fs from 'fs'
 import os from 'os'
 
@@ -83,6 +83,22 @@ export function runNiimath(args: string[]): Promise<{
 }
 
 /**
+ * Given any filename (possibly a full path), returns:
+ *  - ext:    either ".nii" or ".nii.gz"
+ *  - name:   the pure basename, without directories or that extension
+ */
+function getExtAndBase(filePath: string): { ext: string; name: string } {
+  const lower = filePath.toLowerCase()
+  const ext = lower.endsWith('.nii.gz')
+    ? '.nii.gz'
+    : extname(filePath) || '.nii'     // fallback to .nii if no ext
+
+  // strip off that extension, even if it's double-wide
+  const name = basename(filePath, ext)
+  return { ext, name }
+}
+
+/**
  * Start a Niimath job, writing the Base64‐encoded input to disk,
  * streaming logs back to the renderer, and sending the Base64‐encoded output.
  *
@@ -104,23 +120,34 @@ export async function startNiimathJob(
 }> {
   console.log(`Starting Niimath job ${requestId}`)
 
-  // 1) Write input to temp file
   const tempDir = os.tmpdir()
-  // preserve .nii.gz if present
-  const inExt = input.name.toLowerCase().endsWith('.nii.gz')
-    ? '.nii.gz'
-    : extname(input.name) || '.nii'
-  const baseName = input.name.replace(/.*[/]/, '')
+  const { ext: inExt, name: baseName } = getExtAndBase(input.name)
+
   const inputFilename = `${baseName}-${requestId}${inExt}`
-  const inputPath = join(tempDir, inputFilename)
+  const inputPath     = join(tempDir, inputFilename)
+
   fs.writeFileSync(inputPath, Buffer.from(input.base64, 'base64'))
 
+  // optional sanity-check log
+  const { size } = fs.statSync(inputPath)
+  console.log(`[Niimath] Wrote ${inputFilename} (${size} bytes) to ${inputPath}`)
+
+  // verify file exists
+  try {
+    const stats = fs.statSync(inputPath)
+    console.log(`[Niimath] input file written to ${inputPath} — ${stats.size} bytes`)
+  } catch (err) {
+    console.error(`[Niimath] FAILED to write input file at ${inputPath}:`, err)
+    throw err  // re-throw so upstream knows something went wrong
+  }
+
   // 2) Prepare output path
-  const outputFilename = `niimath-out-${requestId}${inExt}`
+  // const outputFilename = `niimath-out-${requestId}${inExt}`
+  const outputFilename = `niimath-out-${requestId}.nii`
   const outputPath = join(tempDir, outputFilename)
 
   // 3) Build args
-  const args = [inputPath, ...cmdArgs, outputPath]
+  const args = [inputPath, ...cmdArgs, '-gz', '0', outputPath]
   console.log('niimath args', args)
 
   // 4) Run process
