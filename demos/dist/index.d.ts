@@ -37,14 +37,6 @@ declare class ColorTables {
 }
 declare const cmapper: ColorTables;
 
-declare class Shader {
-    program: WebGLProgram;
-    uniforms: Record<string, WebGLUniformLocation | null>;
-    isMatcap?: boolean;
-    constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string);
-    use(gl: WebGL2RenderingContext): void;
-}
-
 type Geometry = {
     vertexBuffer: WebGLBuffer;
     indexBuffer: WebGLBuffer;
@@ -1405,6 +1397,14 @@ declare class NVMesh {
      * load and return a new NVMesh instance from a base64 encoded string
      */
     loadFromBase64({ base64, gl, name, opacity, rgba255, visible, layers }?: Partial<LoadFromBase64Params>): Promise<NVMesh>;
+}
+
+declare class Shader {
+    program: WebGLProgram;
+    uniforms: Record<string, WebGLUniformLocation | null>;
+    isMatcap?: boolean;
+    constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string);
+    use(gl: WebGL2RenderingContext): void;
 }
 
 type TypedNumberArray = Float64Array | Float32Array | Uint32Array | Uint16Array | Uint8Array | Int32Array | Int16Array | Int8Array;
