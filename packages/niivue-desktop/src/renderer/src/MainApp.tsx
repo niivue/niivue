@@ -11,6 +11,7 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { loadDroppedFiles } from './utils/dragAndDrop.js'
 // import { layouts } from '../../common/layouts.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
+import { StatusBar } from './components/StatusBar.js'
 
 const electron = window.electron
 
@@ -49,7 +50,8 @@ function MainApp(): JSX.Element {
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const { showNiimathToolbar } = useAppContext()
+  const { showNiimathToolbar, showStatusBar } = useAppContext()
+  const [cursorLocation, setCursorLocation] = useState<string>('')
   const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
@@ -92,6 +94,14 @@ function MainApp(): JSX.Element {
   useEffect(() => {
     if (!selected) return
     const nv = selected.nvRef.current
+    nv.onLocationChange = (location: unknown): void => {
+      if (typeof location === 'object' && location !== null && 'string' in location) {
+        const loc = location as { string?: string }
+        setCursorLocation(loc.string ?? '')
+      } else {
+        setCursorLocation('')
+      }
+    }
 
     // Restore viewer prefs
     // Object.assign(nv.opts, selected.opts)
@@ -597,7 +607,8 @@ function MainApp(): JSX.Element {
           ))}
         </div>
       </div>
-
+      {/* Status bar (optional footer) */}
+      {showStatusBar && <StatusBar location={cursorLocation} />}
       {/* Dialogs (overlay) */}
       <PreferencesDialog />
       <LabelManagerDialog
