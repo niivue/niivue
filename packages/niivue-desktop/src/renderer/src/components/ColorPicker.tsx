@@ -1,6 +1,6 @@
 import { Text } from '@radix-ui/themes'
 import React from 'react'
-import { rgba10ToHex } from '../utils/colors'
+import { rgba10ToHex } from '../utils/colors.js'
 
 interface ColorPickerProps {
   label?: string // Optional label

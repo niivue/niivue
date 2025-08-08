@@ -7,6 +7,9 @@ import { createMenu } from './utils/menu.js'
 import { getPlatformIcon } from './utils/getPlatformIcon.js'
 
 let mainWindow: BrowserWindow | null = null // Global variable to store the window instance
+if (process.platform === 'darwin') {
+  app.setName('NiiVue Desktop')
+}
 
 function createWindow(): void {
   // Create the browser window.

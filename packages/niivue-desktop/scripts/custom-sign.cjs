@@ -2,6 +2,10 @@
 const { sign } = require('electron-osx-sign')
 
 module.exports = async function (context) {
+  if (process.platform !== 'darwin') {
+    console.log('skip custom-sign (not mac):', process.platform)
+    return
+  }
   console.log('✅ Custom signing script running...')
   const { appOutDir } = context
 

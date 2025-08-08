@@ -1,5 +1,5 @@
-import { AppProvider } from './AppContext'
-import MainApp from './MainApp'
+import { AppProvider } from './AppContext.js'
+import MainApp from './MainApp.js'
 
 export default function App(): JSX.Element {
   return (
