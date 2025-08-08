@@ -50,8 +50,6 @@ nsis:
   createDesktopShortcut: always
 
 mac:
-  target:
-    -mas
   icon: resources/icons/app_icon.icns
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
@@ -66,9 +64,6 @@ mac:
 
 dmg:
   artifactName: ${name}-${version}.${ext}
-
-mas:
-  provisioningProfile: build/embedded.provisionprofile
 
 linux:
   icon: resources/icons/app_icon.png

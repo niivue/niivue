@@ -65,9 +65,7 @@ export function Sidebar({
     <aside
       className={
         `flex flex-col bg-gray-100 px-2 h-full relative transition-all duration-200 ` +
-        (collapsed
-          ? 'w-[60px] min-w-[40px]'
-          : 'w-80 min-w-[300px]')
+        (collapsed ? 'w-[60px] min-w-[40px]' : 'w-80 min-w-[300px]')
       }
     >
       {/* toggle button */}
