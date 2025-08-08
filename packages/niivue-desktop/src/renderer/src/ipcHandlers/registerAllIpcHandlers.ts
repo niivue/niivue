@@ -74,7 +74,7 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('setDragMode')
 
   // 🔌 Register core handlers (now all driven by getTarget)
-  registerLoadStandardHandler({ getTarget })
+  registerLoadStandardHandler({ getTarget, onDocumentLoaded })
   registerLoadRecentFileHandler({ getTarget, onDocumentLoaded })
   registerLoadMeshHandler({ getTarget })
   registerLoadVolumeHandler({ getTarget })

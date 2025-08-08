@@ -357,6 +357,12 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               click: (): void => {
                 win.webContents.send('loadStandard', 'aal.mz3')
               }
+            },
+            {
+              label: 'Motor Overlay',
+              click: (): void => {
+                win.webContents.send('loadStandard', 'Motor_Overlay.nvd')
+              }
             }
           ]
         },

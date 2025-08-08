@@ -16,8 +16,8 @@ export const GeneralTab: React.FC = (): JSX.Element => {
   const [show3Dcrosshair, setShow3Dcrosshair] = useState<boolean>(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState<number[]>(Array.from(nv.opts.crosshairColor))
 
-  
-  const { showNiimathToolbar, setShowNiimathToolbar, showStatusBar, setShowStatusBar } = useAppContext()
+  const { showNiimathToolbar, setShowNiimathToolbar, showStatusBar, setShowStatusBar } =
+    useAppContext()
 
   const updateOption = <K extends keyof NVConfigOptions>(
     optionKey: K,
