@@ -39,7 +39,15 @@ export function VolumeImageCard({
   const [colormap, setColormap] = useState<string>(
     typeof image.colormap === 'string' ? image.colormap : 'gray'
   )
+  const [colormapNeg, setColormapNeg] = useState<string>(
+    typeof image.colormapNegative === 'string' ? image.colormapNegative : 'none'
+  )
   const [intensity, setIntensity] = useState<number[]>([image.cal_min!, image.cal_max!])
+  const [intensityNeg, setIntensityNeg] = useState<number[]>([
+    isFinite(image.cal_minNeg) ? image.cal_minNeg : image.global_min!,
+    isFinite(image.cal_maxNeg) ? image.cal_maxNeg : Math.min(0, image.global_max!)
+  ])
+
   const [opacity, setOpacity] = useState<number>(1.0)
   const [colormaps, setColormaps] = useState<string[]>([])
   const [visible, setVisible] = useState<boolean>(true)
@@ -107,6 +115,14 @@ export function VolumeImageCard({
     return (): void => clearInterval(id)
   }, [image])
 
+  useEffect(() => {
+    setColormapNeg(
+      typeof image.colormapNegative === 'string' && image.colormapNegative !== ''
+        ? image.colormapNegative
+        : 'none'
+    )
+  }, [image.colormapNegative])
+
   const handleColormapChange = (value: string): void => {
     const id = image.id
     setColormap(value)
@@ -152,6 +168,31 @@ export function VolumeImageCard({
       nv.setOpacity(volIdx, value)
       nv.updateGLVolume()
     })
+  }
+
+  const handleIntensityNegChange = (value: number[]): void => {
+    setIntensityNeg(value)
+  }
+
+  const handleIntensityNegCommit = (value: number[]): void => {
+    const [min, max] = value
+    image.cal_minNeg = min
+    image.cal_maxNeg = max
+    nv.updateGLVolume()
+  }
+
+  const handleMinNegChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = parseFloat(e.target.value)
+    const updated = [value, intensityNeg[1]]
+    setIntensityNeg(updated)
+    handleIntensityNegCommit(updated)
+  }
+
+  const handleMaxNegChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = parseFloat(e.target.value)
+    const updated = [intensityNeg[0], value]
+    setIntensityNeg(updated)
+    handleIntensityNegCommit(updated)
   }
 
   const handleVisibilityToggle = (): void => {
@@ -286,20 +327,82 @@ export function VolumeImageCard({
                   value={intensity[1]}
                 />
               </div>
-
-              <Text size="1">Opacity</Text>
-              <div className="flex gap-1 items-center">
-                <Slider
-                  size="1"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  defaultValue={[1.0]}
-                  value={[opacity]}
-                  onValueChange={handleOpacityChange}
-                  disabled={isOpacityDisabled}
-                />
-              </div>
+            </div>
+            {image.global_min && image.global_min < 0 && (
+              <>
+                <Text size="1">Negative values colormap</Text>
+                <div className="flex gap-1 items-center">
+                  <Select.Root
+                    size="1"
+                    value={colormapNeg}
+                    onValueChange={(value) => {
+                      setColormapNeg(value)
+                      if (value === 'none') {
+                        image.colormapNegative = ''
+                        image.cal_minNeg = NaN
+                        image.cal_maxNeg = NaN
+                      } else {
+                        image.colormapNegative = value
+                        image.cal_minNeg = image.global_min!
+                        image.cal_maxNeg = Math.min(0, image.global_max!)
+                      }
+                      nv.updateGLVolume()
+                    }}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  >
+                    <Select.Trigger className="truncate w-3/4 min-w-3/4" />
+                    <Select.Content className="truncate">
+                      <Select.Item value="none">None</Select.Item>
+                      {colormaps.map((cmap, idx) => (
+                        <Select.Item key={idx} value={cmap}>
+                          {cmap}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+                <Text size="1">Negative intensity range</Text>
+                <div className="flex gap-1 items-center">
+                  <TextField.Root
+                    onChange={handleMinNegChange}
+                    type="number"
+                    size="1"
+                    value={intensityNeg[0].toFixed(2)}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  />
+                  <Slider
+                    size="1"
+                    color="gray"
+                    min={image.global_min}
+                    max={Math.min(0, image.global_max!)}
+                    step={intensityNeg[1] > 10 ? 1 : 0.1}
+                    value={intensityNeg}
+                    onValueChange={handleIntensityNegChange}
+                    onValueCommit={handleIntensityNegCommit}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  />
+                  <TextField.Root
+                    onChange={handleMaxNegChange}
+                    type="number"
+                    size="1"
+                    value={intensityNeg[1].toFixed(2)}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  />
+                </div>
+              </>
+            )}
+            <Text size="1">Opacity</Text>
+            <div className="flex gap-1 items-center">
+              <Slider
+                size="1"
+                min={0}
+                max={1}
+                step={0.1}
+                defaultValue={[1.0]}
+                value={[opacity]}
+                onValueChange={handleOpacityChange}
+                disabled={isOpacityDisabled}
+              />
             </div>
           </Popover.Content>
         </Popover.Root>
