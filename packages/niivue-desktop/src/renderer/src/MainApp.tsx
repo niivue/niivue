@@ -12,6 +12,7 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { layouts } from '../../common/layouts.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
 import { StatusBar } from './components/StatusBar.js'
+import { getCurrentCursorLocation } from './utils/cursor.js'
 
 const electron = window.electron
 
@@ -88,19 +89,21 @@ function MainApp(): JSX.Element {
     }
   }, [updateDocument])
 
+  useEffect(() => {
+    if (showStatusBar && selected?.nvRef.current) {
+      console.log('calling get current cursor location')
+      getCurrentCursorLocation(selected.nvRef.current, selected.selectedImage, setCursorLocation)
+    }
+  }, [showStatusBar, selected])
+
   // When the selected document changes, restore its state and re-register IPC
   // inside MainApp()
   // inside MainApp.tsx
   useEffect(() => {
     if (!selected) return
     const nv = selected.nvRef.current
-    nv.onLocationChange = (location: unknown): void => {
-      if (typeof location === 'object' && location !== null && 'string' in location) {
-        const loc = location as { string?: string }
-        setCursorLocation(loc.string ?? '')
-      } else {
-        setCursorLocation('')
-      }
+    nv.onLocationChange = (): void => {
+      getCurrentCursorLocation(nv, selected.selectedImage, setCursorLocation)
     }
 
     // Restore viewer prefs
