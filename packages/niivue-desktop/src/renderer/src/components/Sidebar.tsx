@@ -12,6 +12,7 @@ interface SidebarProps {
   onRemoveMesh: (mesh: NVMesh) => void
   onMoveVolumeUp: (volume: NVImage) => void
   onMoveVolumeDown: (volume: NVImage) => void
+  onReplaceVolume: (volume: NVImage) => void
   collapsed: boolean
   onToggle: () => void
 }
@@ -21,6 +22,7 @@ export function Sidebar({
   onRemoveVolume,
   onMoveVolumeUp,
   onMoveVolumeDown,
+  onReplaceVolume,
   collapsed,
   onToggle
 }: SidebarProps): JSX.Element {
@@ -112,6 +114,7 @@ export function Sidebar({
                           <VolumeImageCard
                             image={volume}
                             onRemoveVolume={onRemoveVolume}
+                            onReplaceVolume={onReplaceVolume}
                             onMoveVolumeUp={onMoveVolumeUp}
                             onMoveVolumeDown={onMoveVolumeDown}
                           />

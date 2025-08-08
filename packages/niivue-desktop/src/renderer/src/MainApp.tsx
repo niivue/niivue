@@ -387,6 +387,43 @@ function MainApp(): JSX.Element {
     updateDocument(selected.id, { isDirty: true })
   }
 
+  function handleReplaceVolume(vol: NVImage): void {
+    if (!selected) return
+    const nv = selected.nvRef.current
+
+    const index = nv.volumes.findIndex((v) => v.id === vol.id)
+    if (index === -1) return
+
+    // Listen for dialog result
+    window.electron.ipcRenderer.once(
+      'replaceVolumeFileDialogResult',
+      async (_e, { index, path }) => {
+        if (!path) return
+
+        try {
+          const base64 = await window.electron.ipcRenderer.invoke('loadFromFile', path)
+          const newVol = await NVImage.loadFromBase64({ base64, name: path })
+          const vol = nv.volumes[index]
+
+          nv.setVolume(newVol, index)
+          newVol.colorMap = vol.colorMap
+          newVol.opacity = vol.opacity
+
+          selected.setVolumes([...nv.volumes])
+          selected.setSelectedImage(newVol)
+          nv.updateGLVolume()
+          updateDocument(selected.id, { isDirty: true })
+        } catch (err) {
+          console.error('Failed to replace volume:', err)
+          window.alert('Failed to load replacement volume.')
+        }
+      }
+    )
+
+    // Trigger the dialog with index
+    window.electron.ipcRenderer.invoke('openReplaceVolumeFileDialog', index)
+  }
+
   function handleMoveVolumeUp(vol: NVImage): void {
     if (!selected) return
     const nv = selected.nvRef.current
@@ -542,6 +579,7 @@ function MainApp(): JSX.Element {
             onRemoveVolume={handleRemoveVolume}
             onMoveVolumeUp={handleMoveVolumeUp}
             onMoveVolumeDown={handleMoveVolumeDown}
+            onReplaceVolume={handleReplaceVolume}
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           />

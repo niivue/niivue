@@ -11,6 +11,7 @@ import { sliceTypeMap } from '../../common/sliceTypes.js'
 import { layouts } from '../../common/layouts.js'
 import fs from 'fs'
 import path from 'path'
+import { openReplaceVolumeFileDialog } from './openReplaceVolumeFileDialog.js'
 
 const isDev = !app.isPackaged
 const RESOURCES_DIR = isDev
@@ -193,4 +194,9 @@ export const registerIpcHandlers = (): void => {
     const item = Menu.getApplicationMenu()?.getMenuItemById('addOverlay')
     if (item) item.enabled = false
   })
+
+  ipcMain.handle('openReplaceVolumeFileDialog', (_event, index: number) => {
+    openReplaceVolumeFileDialog(index)
+  })
+
 }
