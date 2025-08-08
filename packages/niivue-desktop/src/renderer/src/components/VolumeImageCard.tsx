@@ -17,6 +17,8 @@ import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 interface VolumeImageCardProps {
   image: NVImage
+  isSelected: boolean
+  onSelect: (volume: NVImage) => void
   onRemoveVolume: (volume: NVImage) => void
   onMoveVolumeUp: (volume: NVImage) => void
   onMoveVolumeDown: (volume: NVImage) => void
@@ -25,6 +27,8 @@ interface VolumeImageCardProps {
 
 export function VolumeImageCard({
   image,
+  isSelected,
+  onSelect,
   onRemoveVolume,
   onMoveVolumeUp,
   onMoveVolumeDown,
@@ -179,11 +183,14 @@ export function VolumeImageCard({
 
   return (
     <Card
-      className="flex flex-col p-2 my-1 gap-2 bg-white"
+      className={`flex flex-col p-2 my-1 gap-2 bg-white border ${
+        isSelected ? 'bg-blue-100 border-blue-500 border-2 font-semibold' : 'border-gray-300'
+      }`}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      onDoubleClick={() => onSelect(image)}
     >
-      <div className="flex flex-row gap-2 items-center">
+      <div className={`flex flex-row gap-2 items-center`}>
         <ContextMenu.Root>
           <ContextMenu.Trigger>
             <div className="flex items-center gap-2">

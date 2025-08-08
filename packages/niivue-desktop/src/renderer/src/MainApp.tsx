@@ -1,6 +1,6 @@
 // src/MainApp.tsx
 import React, { useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, Niivue } from '@niivue/niivue'
+import { NVImage, NVMesh, NiiVueLocation, Niivue } from '@niivue/niivue'
 import { Sidebar } from './components/Sidebar.js'
 import { Viewer } from './components/Viewer.js'
 import { PreferencesDialog } from './components/PreferencesDialog.js'
@@ -12,7 +12,6 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { layouts } from '../../common/layouts.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
 import { StatusBar } from './components/StatusBar.js'
-import { getCurrentCursorLocation } from './utils/cursor.js'
 
 const electron = window.electron
 
@@ -92,7 +91,7 @@ function MainApp(): JSX.Element {
   useEffect(() => {
     if (showStatusBar && selected?.nvRef.current) {
       console.log('calling get current cursor location')
-      getCurrentCursorLocation(selected.nvRef.current, selected.selectedImage, setCursorLocation)
+      selected.nvRef.current.createOnLocationChange()
     }
   }, [showStatusBar, selected])
 
@@ -102,8 +101,13 @@ function MainApp(): JSX.Element {
   useEffect(() => {
     if (!selected) return
     const nv = selected.nvRef.current
-    nv.onLocationChange = (): void => {
-      getCurrentCursorLocation(nv, selected.selectedImage, setCursorLocation)
+    nv.onLocationChange = (location: unknown): void => {
+      if (typeof location === 'object' && location !== null && 'string' in location) {
+        const loc = location as NiiVueLocation
+        setCursorLocation(loc.string ?? '')
+      } else {
+        setCursorLocation('')
+      }
     }
 
     // Restore viewer prefs

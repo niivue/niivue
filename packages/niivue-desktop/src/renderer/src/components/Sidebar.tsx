@@ -27,6 +27,7 @@ export function Sidebar({
   onToggle
 }: SidebarProps): JSX.Element {
   const instance = useSelectedInstance()
+  const selectedImage = instance?.selectedImage ?? null
   const volumes = instance?.volumes ?? []
   const meshes = instance?.meshes ?? []
   const [orderedVolumes, setOrderedVolumes] = useState<NVImage[]>([])
@@ -117,6 +118,8 @@ export function Sidebar({
                             onReplaceVolume={onReplaceVolume}
                             onMoveVolumeUp={onMoveVolumeUp}
                             onMoveVolumeDown={onMoveVolumeDown}
+                            isSelected={selectedImage?.id === volume.id}
+                            onSelect={() => instance.setSelectedImage(volume)}
                           />
                         </div>
                       )}
