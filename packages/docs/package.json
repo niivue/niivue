@@ -20,6 +20,7 @@
     "@docusaurus/core": "^3.5.2",
     "@docusaurus/faster": "^3.7.0",
     "@docusaurus/preset-classic": "^3.5.2",
+    "@easyops-cn/docusaurus-search-local": "^0.52.1",
     "@mdx-js/react": "^3.0.0",
     "@niivue/niivue": "*",
     "clsx": "^2.0.0",

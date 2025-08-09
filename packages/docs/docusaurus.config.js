@@ -36,7 +36,18 @@ const config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-  plugins: [require.resolve("./niivuePlugin")],
+  plugins: [
+    require.resolve("./niivuePlugin"),
+    [
+      "@easyops-cn/docusaurus-search-local",
+      {
+        hashed: true,
+        highlightSearchTermsOnTargetPage: true,
+        searchResultLimits: 8,
+        searchResultContextMaxLength: 50,
+      },
+    ],
+  ],
   presets: [
     [
       "classic",
