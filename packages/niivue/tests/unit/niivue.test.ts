@@ -118,7 +118,6 @@ test('multiplanarPadPixels set by setMultiplanarPadPixels is tracked in document
   expect(nv.document.opts.multiplanarPadPixels).toBe(multiplanarPadPixels)
 })
 
-
 test('showAllOrientationMarkers set by setShowAllOrientationMarkers is tracked in document', () => {
   const nv = new Niivue()
   // Default should be false

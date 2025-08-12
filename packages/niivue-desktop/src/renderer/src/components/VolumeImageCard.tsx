@@ -11,29 +11,43 @@ import {
   Dialog
 } from '@radix-ui/themes'
 import { NVImage } from '@niivue/niivue'
-import { baseName } from '../utils/baseName'
-import { useSelectedInstance } from '../AppContext' //
+import { baseName } from '../utils/baseName.js'
+import { useSelectedInstance } from '../AppContext.js' //
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 interface VolumeImageCardProps {
   image: NVImage
+  isSelected: boolean
+  onSelect: (volume: NVImage) => void
   onRemoveVolume: (volume: NVImage) => void
   onMoveVolumeUp: (volume: NVImage) => void
   onMoveVolumeDown: (volume: NVImage) => void
+  onReplaceVolume: (volume: NVImage) => void
 }
 
 export function VolumeImageCard({
   image,
+  isSelected,
+  onSelect,
   onRemoveVolume,
   onMoveVolumeUp,
-  onMoveVolumeDown
+  onMoveVolumeDown,
+  onReplaceVolume
 }: VolumeImageCardProps): JSX.Element {
   // Local state based on image properties and UI controls
   const [displayName, setDisplayName] = useState<string>(image.name)
   const [colormap, setColormap] = useState<string>(
     typeof image.colormap === 'string' ? image.colormap : 'gray'
   )
+  const [colormapNeg, setColormapNeg] = useState<string>(
+    typeof image.colormapNegative === 'string' ? image.colormapNegative : 'none'
+  )
   const [intensity, setIntensity] = useState<number[]>([image.cal_min!, image.cal_max!])
+  const [intensityNeg, setIntensityNeg] = useState<number[]>([
+    isFinite(image.cal_minNeg) ? image.cal_minNeg : image.global_min!,
+    isFinite(image.cal_maxNeg) ? image.cal_maxNeg : Math.min(0, image.global_max!)
+  ])
+
   const [opacity, setOpacity] = useState<number>(1.0)
   const [colormaps, setColormaps] = useState<string[]>([])
   const [visible, setVisible] = useState<boolean>(true)
@@ -46,6 +60,41 @@ export function VolumeImageCard({
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
   if (!nv) return <></>
+
+  // ——— Drag & Drop Handlers ———
+
+  // Show copy cursor when dragging over
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  // On drop, load each file as NVImage and add to Niivue + React state
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>): Promise<void> => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!e.dataTransfer) return
+
+    const files = Array.from(e.dataTransfer.files)
+    for (const file of files) {
+      // Skip mesh files
+      if (nv.isMeshExt(file.name)) {
+        continue
+      }
+
+      // Otherwise treat as volume (NIfTI, etc.)
+      const base64 = await window.electron.ipcRenderer.invoke('loadFromFile', file.path)
+      const vol = await NVImage.loadFromBase64({ base64, name: file.name })
+
+      // 1) Add into Niivue
+      nv.addVolume(vol)
+      // 2) Push into React state
+      instance.setVolumes(nv.volumes)
+    }
+    nv.updateGLVolume()
+    nv.drawScene()
+  }
 
   // Update the display name when image.name changes
   useEffect(() => {
@@ -65,6 +114,14 @@ export function VolumeImageCard({
     }, 100)
     return (): void => clearInterval(id)
   }, [image])
+
+  useEffect(() => {
+    setColormapNeg(
+      typeof image.colormapNegative === 'string' && image.colormapNegative !== ''
+        ? image.colormapNegative
+        : 'none'
+    )
+  }, [image.colormapNegative])
 
   const handleColormapChange = (value: string): void => {
     const id = image.id
@@ -113,6 +170,31 @@ export function VolumeImageCard({
     })
   }
 
+  const handleIntensityNegChange = (value: number[]): void => {
+    setIntensityNeg(value)
+  }
+
+  const handleIntensityNegCommit = (value: number[]): void => {
+    const [min, max] = value
+    image.cal_minNeg = min
+    image.cal_maxNeg = max
+    nv.updateGLVolume()
+  }
+
+  const handleMinNegChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = parseFloat(e.target.value)
+    const updated = [value, intensityNeg[1]]
+    setIntensityNeg(updated)
+    handleIntensityNegCommit(updated)
+  }
+
+  const handleMaxNegChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = parseFloat(e.target.value)
+    const updated = [intensityNeg[0], value]
+    setIntensityNeg(updated)
+    handleIntensityNegCommit(updated)
+  }
+
   const handleVisibilityToggle = (): void => {
     const id = image.id
     const volIdx = nv.getVolumeIndexByID(id)
@@ -141,8 +223,15 @@ export function VolumeImageCard({
   }
 
   return (
-    <Card className="flex flex-col p-2 my-1 gap-2 bg-white">
-      <div className="flex flex-row gap-2 items-center">
+    <Card
+      className={`flex flex-col p-2 my-1 gap-2 bg-white border ${
+        isSelected ? 'bg-blue-100 border-blue-500 border-2 font-semibold' : 'border-gray-300'
+      }`}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDoubleClick={() => onSelect(image)}
+    >
+      <div className={`flex flex-row gap-2 items-center`}>
         <ContextMenu.Root>
           <ContextMenu.Trigger>
             <div className="flex items-center gap-2">
@@ -168,6 +257,7 @@ export function VolumeImageCard({
           </ContextMenu.Trigger>
           <ContextMenu.Content>
             <ContextMenu.Item onClick={() => onRemoveVolume(image)}>Remove</ContextMenu.Item>
+            <ContextMenu.Item onClick={() => onReplaceVolume(image)}>Replace</ContextMenu.Item>
             <ContextMenu.Item onClick={() => onMoveVolumeUp(image)}>Move Up</ContextMenu.Item>
             <ContextMenu.Item onClick={() => onMoveVolumeDown(image)}>Move Down</ContextMenu.Item>
             <ContextMenu.Item onClick={() => setHeaderDialogOpen(true)}>
@@ -237,20 +327,82 @@ export function VolumeImageCard({
                   value={intensity[1]}
                 />
               </div>
-
-              <Text size="1">Opacity</Text>
-              <div className="flex gap-1 items-center">
-                <Slider
-                  size="1"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  defaultValue={[1.0]}
-                  value={[opacity]}
-                  onValueChange={handleOpacityChange}
-                  disabled={isOpacityDisabled}
-                />
-              </div>
+            </div>
+            {image.global_min && image.global_min < 0 && (
+              <>
+                <Text size="1">Negative values colormap</Text>
+                <div className="flex gap-1 items-center">
+                  <Select.Root
+                    size="1"
+                    value={colormapNeg}
+                    onValueChange={(value) => {
+                      setColormapNeg(value)
+                      if (value === 'none') {
+                        image.colormapNegative = ''
+                        image.cal_minNeg = NaN
+                        image.cal_maxNeg = NaN
+                      } else {
+                        image.colormapNegative = value
+                        image.cal_minNeg = image.global_min!
+                        image.cal_maxNeg = Math.min(0, image.global_max!)
+                      }
+                      nv.updateGLVolume()
+                    }}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  >
+                    <Select.Trigger className="truncate w-3/4 min-w-3/4" />
+                    <Select.Content className="truncate">
+                      <Select.Item value="none">None</Select.Item>
+                      {colormaps.map((cmap, idx) => (
+                        <Select.Item key={idx} value={cmap}>
+                          {cmap}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+                <Text size="1">Negative intensity range</Text>
+                <div className="flex gap-1 items-center">
+                  <TextField.Root
+                    onChange={handleMinNegChange}
+                    type="number"
+                    size="1"
+                    value={intensityNeg && intensityNeg[0] ? intensityNeg[0].toFixed(2) : 0}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  />
+                  <Slider
+                    size="1"
+                    color="gray"
+                    min={image.global_min}
+                    max={Math.min(0, image.global_max!)}
+                    step={intensityNeg[1] > 10 ? 1 : 0.1}
+                    value={intensityNeg}
+                    onValueChange={handleIntensityNegChange}
+                    onValueCommit={handleIntensityNegCommit}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  />
+                  <TextField.Root
+                    onChange={handleMaxNegChange}
+                    type="number"
+                    size="1"
+                    value={intensityNeg && intensityNeg[1] ? intensityNeg[1].toFixed(2) : 0}
+                    disabled={intensity[0] < 0 || image.global_min >= 0}
+                  />
+                </div>
+              </>
+            )}
+            <Text size="1">Opacity</Text>
+            <div className="flex gap-1 items-center">
+              <Slider
+                size="1"
+                min={0}
+                max={1}
+                step={0.1}
+                defaultValue={[1.0]}
+                value={[opacity]}
+                onValueChange={handleOpacityChange}
+                disabled={isOpacityDisabled}
+              />
             </div>
           </Popover.Content>
         </Popover.Root>

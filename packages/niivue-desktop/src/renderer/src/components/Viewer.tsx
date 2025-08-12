@@ -1,79 +1,64 @@
+// src/components/Viewer.tsx
 import { useEffect, useRef } from 'react'
-import { NiivueInstanceContext } from '../AppContext'
-import { loadDroppedFiles } from '../utils/dragAndDrop'
-import { registerViewSync } from '@renderer/utils/viewSync'
+import { registerViewSync } from '../utils/viewSync.js'
+import type { NiivueInstanceContext } from '../AppContext.js'
 
-type ViewerProps = {
+const electron = window.electron
+
+interface ViewerProps {
   doc: NiivueInstanceContext
   collapsed: boolean
 }
 
+// src/components/Viewer.tsx
 export function Viewer({ doc, collapsed }: ViewerProps): JSX.Element {
   const nv = doc.nvRef.current
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
-  const handleDragOver = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const handleDrop = (e: React.DragEvent<HTMLCanvasElement> | DragEvent): void => {
-    if (!e.dataTransfer || !nv) return
-    e.preventDefault()
-    e.stopPropagation()
-    nv.volumes = []
-    nv.meshes = []
-    nv.updateGLVolume()
-    loadDroppedFiles(e, doc.setVolumes, doc.setMeshes, nv.gl)
-  }
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const hasInit = useRef(false)
 
   useEffect(() => {
-    if (!canvasRef.current || !nv) return
-
-    nv.attachToCanvas(canvasRef.current)
-    registerViewSync(nv)
-
-    canvasRef.current.addEventListener('dragover', handleDragOver)
-    canvasRef.current.addEventListener('drop', handleDrop)
-
-    return (): void => {
-      canvasRef.current?.removeEventListener('dragover', handleDragOver)
-      canvasRef.current?.removeEventListener('drop', handleDrop)
+    const hasBase = doc.volumes.length > 0
+    if (hasBase) {
+      electron.ipcRenderer.send('base-image-loaded')
+    } else {
+      electron.ipcRenderer.send('base-image-removed')
     }
-  }, [nv])
-
-  useEffect(() => {
-    if (!nv || !canvasRef.current) return
-    nv.volumes = []
-    doc.volumes.forEach((v) => nv.addVolume(v))
   }, [doc.volumes])
 
   useEffect(() => {
-    if (!nv || !canvasRef.current) return
-    nv.meshes = []
-    doc.meshes.forEach((m) => nv.addMesh(m))
-  }, [doc.meshes])
+    const c = canvasRef.current!
+    const ro = new ResizeObserver(([{ contentRect }]) => {
+      const { width, height } = contentRect
+      if (!width || !height) return
+
+      if (!hasInit.current) {
+        nv.attachToCanvas(c)
+        registerViewSync(nv)
+        nv.createEmptyDrawing() // one‐time allocate drawing texture
+        nv.updateGLVolume()
+        nv.drawScene()
+        hasInit.current = true
+      } else {
+        nv.gl!.viewport(0, 0, width, height)
+        nv.drawScene()
+      }
+    })
+
+    ro.observe(c)
+    return (): void => {
+      ro.disconnect()
+      hasInit.current = false
+    }
+  }, [doc.id, collapsed, nv])
 
   return (
-    <div
-      className={
-        `flex flex-col bg-black h-full grow relative transition-all duration-200 ` +
-        (collapsed
-          ? 'basis-5/6' // when sidebar is collapsed, viewer takes more space
-          : 'basis-2/3') // when sidebar is open
-      }
-    >
-      <div className="flex flex-row h-12 bg-black" />
-      <div className="w-full h-[calc(100%-48px)]">
-        <canvas
-          id={`gl-canvas-${doc.id}`}
-          className="w-full h-full block outline-none"
-          ref={canvasRef}
-          tabIndex={0}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        />
-      </div>
+    <div className={`flex flex-col bg-black h-full ${collapsed ? 'basis-5/6' : 'basis-2/3'}`}>
+      <div className="h-12 bg-black" />
+      <canvas
+        id={`gl-canvas-${doc.id}`}
+        ref={canvasRef}
+        className="w-full h-[calc(100%-48px)] block outline-none"
+      />
     </div>
   )
 }

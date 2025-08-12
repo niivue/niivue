@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 import { NVMesh } from '@niivue/niivue'
-import { baseName } from '../utils/baseName'
-import { useSelectedInstance } from '../AppContext'
-import { NVMeshLayer } from '@renderer/types/MeshLayer'
+import { baseName } from '../utils/baseName.js'
+import { useSelectedInstance } from '../AppContext.js'
+import { NVMeshLayer } from '@renderer/types/MeshLayer.js'
 
 interface MeshImageCardProps {
   image: NVMeshLayer // TODO: export NVMeshLayer type from Niivue

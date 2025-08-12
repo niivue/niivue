@@ -15,6 +15,11 @@ function cleanWithDitto(filePath) {
 }
 
 module.exports = async function (context) {
+  if (process.platform !== 'darwin') {
+    console.log('skip afterSign-clean (not mac):', process.platform)
+    return
+  }
+  
   const appPath = context.appOutDir
   const appBundle = path.join(appPath, 'niivue-desktop.app')
 

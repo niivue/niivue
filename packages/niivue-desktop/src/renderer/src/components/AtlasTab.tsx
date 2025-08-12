@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 import { NVImage, NVMesh } from '@niivue/niivue'
-import { MESH_EXTENSIONS } from '../../../common/extensions'
-import { base64ToString } from '@renderer/utils/base64ToJSON'
+import { MESH_EXTENSIONS } from '../../../common/extensions.js'
+import { base64ToString } from '@renderer/utils/base64ToJSON.js'
 
 const electron = window.electron
 type LocationChangeEvent = {

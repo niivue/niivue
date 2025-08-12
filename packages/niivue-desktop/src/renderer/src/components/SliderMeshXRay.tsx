@@ -1,6 +1,6 @@
 import { Text, Slider } from '@radix-ui/themes'
 import { useState } from 'react'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 
 export const SliderMeshXRay = (): JSX.Element => {
   const instance = useSelectedInstance()
