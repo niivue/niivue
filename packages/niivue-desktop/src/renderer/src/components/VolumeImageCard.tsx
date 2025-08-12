@@ -367,7 +367,7 @@ export function VolumeImageCard({
                     onChange={handleMinNegChange}
                     type="number"
                     size="1"
-                    value={intensityNeg[0].toFixed(2)}
+                    value={intensityNeg && intensityNeg[0] ? intensityNeg[0].toFixed(2) : 0}
                     disabled={intensity[0] < 0 || image.global_min >= 0}
                   />
                   <Slider
@@ -385,7 +385,7 @@ export function VolumeImageCard({
                     onChange={handleMaxNegChange}
                     type="number"
                     size="1"
-                    value={intensityNeg[1].toFixed(2)}
+                    value={intensityNeg && intensityNeg[1] ? intensityNeg[1].toFixed(2) : 0}
                     disabled={intensity[0] < 0 || image.global_min >= 0}
                   />
                 </div>
