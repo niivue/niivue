@@ -12,6 +12,7 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { layouts } from '../../common/layouts.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
 import { StatusBar } from './components/StatusBar.js'
+import { DicomImportDialog } from './components/DicomImportDialog.js'
 
 const electron = window.electron
 
@@ -624,6 +625,7 @@ function MainApp(): JSX.Element {
         editMode={labelEditMode}
         setEditMode={setLabelEditMode}
       />
+      <DicomImportDialog />
     </div>
   )
 }

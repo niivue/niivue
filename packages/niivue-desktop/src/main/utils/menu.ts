@@ -9,6 +9,8 @@ import { getMainWindow } from '../index.js'
 import fs from 'fs' // ✅ Works in ES Module mode
 import { runNiimath } from './runNiimath.js'
 import { join } from 'path'
+import { SeriesListEventPayload } from '../../common/dcm2niixTypes.js'
+import { listDicomSeries } from './runDcm2niix.js'
 
 export const viewState = {
   layout: /** default */ 'Auto',
@@ -481,18 +483,25 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       submenu: [
         {
           label: 'Convert DICOM to NIfTI',
-          click: (): void => {
-            dialog
-              .showOpenDialog(win, {
-                title: 'Select DICOM directory',
-                properties: ['openDirectory']
-              })
-              .then((result) => {
-                if (!result.canceled && result.filePaths.length > 0) {
-                  console.log('sending convertDICOM to renderer')
-                  win.webContents.send('convertDICOM', result.filePaths[0])
-                }
-              })
+          click: async (): Promise<void> => {
+            const result = await dialog.showOpenDialog(win, {
+              title: 'Select DICOM directory',
+              properties: ['openDirectory']
+            })
+            if (result.canceled || result.filePaths.length === 0) return
+
+            const folderPath = result.filePaths[0]
+            try {
+              const series = await listDicomSeries(folderPath) // uses -n -1 -f %f_%p_%t_%s
+              const payload: SeriesListEventPayload = { folderPath, series }
+              console.log('sending payload to renderer')
+              win.webContents.send('dcm2niix:series-list', payload)
+            } catch (err) {
+              dialog.showErrorBox(
+                'DICOM Enumeration Failed',
+                err instanceof Error ? err.message : String(err)
+              )
+            }
           }
         }
       ]

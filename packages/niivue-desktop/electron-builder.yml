@@ -100,6 +100,15 @@ extraResources:
   - from: native-binaries/linux/niimath
     to: native/niimath-linux
   
+   # ─── dcm2niix binaries ──────────────────────────────────────────────────────
+  - from: native-binaries/win32/dcm2niix.exe
+    to: native/dcm2niix.exe
+  - from: native-binaries/darwin/dcm2niix
+    to: native/dcm2niix-macos
+  - from: native-binaries/linux/dcm2niix
+    to: native/dcm2niix-linux
+
+  #  ─── images ───────────────────────────────────────────────────────
   - from: resources/images/
     to: images
     filter:

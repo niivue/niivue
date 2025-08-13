@@ -11,6 +11,8 @@ import { sliceTypeMap } from '../../common/sliceTypes.js'
 import { layouts } from '../../common/layouts.js'
 import fs from 'fs'
 import path from 'path'
+import { convertSeriesByNumber } from './runDcm2niix.js'
+import type { ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
 import { openReplaceVolumeFileDialog } from './openReplaceVolumeFileDialog.js'
 
 const isDev = !app.isPackaged
@@ -199,4 +201,46 @@ export const registerIpcHandlers = (): void => {
     openReplaceVolumeFileDialog(index)
   })
 
+  ipcMain.handle(
+    'dcm2niix:convert-series',
+    async (
+      evt,
+      payload: {
+        dicomDir: string
+        seriesNumbers: number[]
+        options?: ConvertSeriesOptions
+      }
+    ) => {
+      try {
+        for (const seriesNumber of payload.seriesNumbers) {
+          const res = await convertSeriesByNumber(payload.dicomDir, seriesNumber, {
+            pattern: '%f_%p_%t_%s', // MRIcroGL-style filenames
+            bids: 'y',
+            compress: 'y',
+            merge: 2,
+            verbose: 2,
+            ...payload.options
+          })
+
+          // Send each produced NIfTI to the existing renderer 'loadVolume' handler by PATH
+          const files = fs
+            .readdirSync(res.outDir)
+            .filter((f) => !f.startsWith('.'))
+            .filter((f) => {
+              const fl = f.toLowerCase()
+              return fl.endsWith('.nii') || fl.endsWith('.nii.gz')
+            })
+
+          for (const f of files) {
+            const full = path.join(res.outDir, f)
+            evt.sender.send('loadVolume', full)
+          }
+        }
+        return { success: true }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { success: false, error: msg }
+      }
+    }
+  )
 }
