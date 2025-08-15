@@ -55,7 +55,7 @@ export function encodeRLE(data: Uint8Array): Uint8Array {
       rp++
     }
   }
-  log.info('PackBits ' + dl + ' -> ' + rp + ' bytes (x' + dl / rp + ')')
+  log.debug('PackBits ' + dl + ' -> ' + rp + ' bytes (x' + dl / rp + ')')
   return r.slice(0, rp)
 }
 

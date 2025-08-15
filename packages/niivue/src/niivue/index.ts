@@ -2394,9 +2394,6 @@ export class Niivue {
    */
   keyUpListener(e: KeyboardEvent): void {
     if (e.code === this.opts.clipPlaneHotKey) {
-      /* if (this.opts.sliceType!= SLICE_TYPE.RENDER) {
-      return;
-    } */ // bravo
       const now = new Date().getTime()
       const elapsed = now - this.lastCalled
       if (elapsed > this.opts.keyDebounceTime) {
@@ -6411,6 +6408,98 @@ export class Niivue {
   }
 
   /**
+   * Fills exterior regions of a 2D bitmap using the even–odd rule, marking outside voxels with 2
+   * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
+   * uses crossing number algorithm (aka even–odd rule)
+   * @internal
+   */
+  floodFillSectionEvenOdd(
+    img2D: Uint8Array,
+    dims2D: readonly number[],
+    minPt: readonly number[],
+    maxPt: readonly number[]
+  ): void {
+    const w = dims2D[0]
+    const [minX, minY] = [minPt[0], minPt[1]]
+    const [maxX, maxY] = [maxPt[0], maxPt[1]]
+    for (let y = minY; y <= maxY; y++) {
+      let outside = true
+      let x = minX
+      while (x <= maxX) {
+        const idx = x + y * w
+        const v = img2D[idx]
+        if (v === 1) {
+          // crossing: toggle once per contiguous border run
+          outside = !outside
+          // skip the rest of this border run
+          do {
+            x++
+          } while (x <= maxX && img2D[x + y * w] === 1)
+          continue
+        }
+        if (v === 0 && outside) {
+          img2D[idx] = 2
+        }
+        x++
+      }
+    }
+  }
+
+  /**
+   * Fills exterior regions of a 2D bitmap using the even–odd rule, marking outside voxels with 2
+   * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
+   * uses  first-in, first out queue for storage
+   * @internal
+   */
+  /*
+ CODE TO BE REMOVED: only maintained to allow regression testing
+  floodFillSectionFIFO(
+    img2D: Uint8Array,
+    dims2D: [number, number],
+    minPt: [number, number],
+    maxPt: [number, number]
+  ): void {
+    const seeds: number[][] = []
+  
+    function setSeed(pt: number[]): void {
+      if (
+        pt[0] < minPt[0] ||
+        pt[1] < minPt[1] ||
+        pt[0] > maxPt[0] ||
+        pt[1] > maxPt[1]
+      ) {
+        return
+      }
+      const pxl = pt[0] + pt[1] * dims2D[0]
+      if (img2D[pxl] !== 0) {
+        return // not blank
+      }
+      seeds.push(pt)
+      img2D[pxl] = 2
+    }
+  
+    // first seed all edges
+    for (let x = minPt[0]; x <= maxPt[0]; x++) {
+      setSeed([x, minPt[1]])
+      setSeed([x, maxPt[1]])
+    }
+    for (let y = minPt[1] + 1; y <= maxPt[1] - 1; y++) {
+      setSeed([minPt[0], y])
+      setSeed([maxPt[0], y])
+    }
+  
+    // retire first in first out
+    while (seeds.length > 0) {
+      const seed = seeds.shift()!
+      setSeed([seed[0] - 1, seed[1]])
+      setSeed([seed[0] + 1, seed[1]])
+      setSeed([seed[0], seed[1] - 1])
+      setSeed([seed[0], seed[1] + 1])
+    }
+  }
+  */
+
+  /**
    * Connects and fills the interior of drawn line segments in 2D slice space.
    * @internal
    */
@@ -6521,37 +6610,10 @@ export class Niivue {
         img2D[pxl] = 2
       }
     }
-    // flood fill
-    const seeds: number[][] = []
-    function setSeed(pt: number[]): void {
-      if (pt[0] < minPt[0] || pt[1] < minPt[1] || pt[0] > maxPt[0] || pt[1] > maxPt[1]) {
-        return
-      }
-      const pxl = pt[0] + pt[1] * dims2D[0]
-      if (img2D[pxl] !== 0) {
-        return
-      } // not blank
-      seeds.push(pt)
-      img2D[pxl] = 2
-    }
-    // https://en.wikipedia.org/wiki/Flood_fill
-    // first seed all edges
-    for (let x = minPt[0]; x <= maxPt[0]; x++) {
-      setSeed([x, minPt[1]])
-      setSeed([x, maxPt[1]])
-    }
-    for (let y = minPt[1] + 1; y <= maxPt[1] - 1; y++) {
-      setSeed([minPt[0], y])
-      setSeed([maxPt[0], y])
-    }
-    // now retire first in first out
-    while (seeds.length > 0) {
-      const seed = seeds.shift()!
-      setSeed([seed[0] - 1, seed[1]])
-      setSeed([seed[0] + 1, seed[1]])
-      setSeed([seed[0], seed[1] - 1])
-      setSeed([seed[0], seed[1] + 1])
-    }
+    const startTime = Date.now()
+    // this.floodFillSectionFIFO( img2D, dims2D, minPt, maxPt)
+    this.floodFillSectionEvenOdd(img2D, dims2D, minPt, maxPt)
+    log.debug(`FloodFill ${Date.now() - startTime}`)
     // all voxels with value of zero have no path to edges
     // insert surviving pixels from 2D bitmap into 3D bitmap
     pen = this.opts.penValue
