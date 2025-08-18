@@ -2791,6 +2791,10 @@ export class NVImage {
     nZero += nNan
     const n2pct = Math.round((nVox3D - 0 - nZero) * this.percentileFrac)
     if (n2pct < 1 || mn === mx) {
+      if (isBorder) {
+        // central region has no variability: explore entire image
+        return this.calMinMax(vol, false)
+      }
       log.debug('no variability in image intensity?')
       this.cal_min = mnScale
       this.cal_max = mxScale
