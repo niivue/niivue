@@ -7999,9 +7999,9 @@ export class Niivue {
         }
       }
       // calculate the area based on the number of voxels in the mask
-      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
-      const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
-      area = numMaskedVoxels * voxelArea
+      // const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
+      // const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
+      // area = numMaskedVoxels * voxelArea
 
       // perhaps better to calculate the area using the ellipse area formula
       const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1]
@@ -8050,7 +8050,7 @@ export class Niivue {
       SNot0 = SNot0 + (x - MNot0) * (x - Mnext)
       MNot0 = Mnext
 
-      mn = Math.min(x, mx)
+      mn = Math.min(x, mn)
       mx = Math.max(x, mx)
     }
     const stdev = Math.sqrt(S / (k - 1))
@@ -8059,7 +8059,7 @@ export class Niivue {
     const mxNot0 = mx
     if (k !== kNot0) {
       // some voxels are equal to zero
-      mn = Math.min(0, mx)
+      mn = Math.min(0, mn)
       mx = Math.max(0, mx)
     }
 
