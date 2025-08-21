@@ -1,6 +1,3 @@
-I'll help you resolve the sidebar layout issues by increasing the panel width and improving the icon-text alignment. Here's the solution:
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -328,7 +325,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             panel: {
                 width: 240,  // Further reduced for 20% UI area
                 rightMargin: 260,  // Further reduced for 20% UI area
-                topMargin: 20,
+                topMargin: 25,
                 backgroundColor: [0.12, 0.12, 0.12, 0.95],
                 gradientEnd: [0.16, 0.16, 0.16, 0.95],
                 borderColor: [0.27, 0.27, 0.27, 1.0],
@@ -373,7 +370,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             content: {
                 marginLeft: 15,
                 marginRight: 15,
-                marginTop: 55, // Increased from 30 to 40 to accommodate larger title margins (28)
+                marginTop: 50, // Increased from 30 to 40 to accommodate larger title margins (28)
                 marginBottom: 15
             },
             
@@ -382,21 +379,21 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                 // Slider configuration
                 sliders: {
                     width: 120,  // Further reduced for 20% UI area
-                    height: 16,
-                    spacing: 30,
-                    labelOffset: 90,  // Further reduced for 20% UI area
+                    height: 14,
+                    spacing: 32,  // FIXED: Increased from 30 to 32 for better vertical spacing between sliders
+                    labelOffset: 135,  // FIXED: Increased from 90 to 110 to prevent overlap with icons at -25
                     marginLeft: 8,
                     marginRight: 8,
-                    topOffset: 25,
+                    topOffset: 10,
                     showValues: false,
-                    textScale: 0.016 // Smaller text for compact layout
+                    textScale: 0.018 // Smaller text for compact layout
                 },
                 
                 // Toggle configuration
                 toggles: {
                     height: 22,
                     spacing: 28,
-                    labelAreaWidth: 140,  // Further reduced for 20% UI area
+                    labelAreaWidth: 160,  // Further reduced for 20% UI area
                     switchWidth: 45,     // Further reduced for 20% UI area
                     marginFromEdge: 8
                 },
@@ -1829,16 +1826,15 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             const panelY = layout.panelY
             const panelWidth = layout.panelWidth
             
-            // Calculate required height based on all sections
-            const section1Height = 230  // Medical Imaging Controls (increased)
-            const section2Height = 180  // View Controls  
-            const section3Height = 240  // Advanced Controls
-            const section4Height = 170  // Actions
-            const sectionGap = 15        // Gap between sections
-            const bottomMargin = 20      // Bottom margin
+            // Use dynamically calculated height from layout (fixes panel compression on tab switch)
+            const panelHeight = layout.totalHeight
             
-            const panelHeight = section1Height + sectionGap + section2Height + sectionGap + 
-                               section3Height + sectionGap + section4Height + bottomMargin
+            // Get section dimensions for rendering (use calculated values from layout)
+            const section1Height = layout.sections.medical.height  // Medical Imaging Controls
+            const section2Height = layout.sections.view.height     // View Controls  
+            const section3Height = layout.sections.advanced.height // Advanced Controls
+            const section4Height = layout.sections.actions.height  // Actions
+            const sectionGap = LAYOUT_CONFIG.sections.gap           // Gap between sections
             
             // Draw main panel background with gradient effect
             const backgroundColor = [0.12, 0.12, 0.12, 0.95]
@@ -2063,7 +2059,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                 
                 // === SLIDER ICONS ===
                 const sliderIconSize = 18
-                const sliderIconOffset = -30  // Increased from -25 to -30 for better spacing
+                const sliderIconOffset = -25  // FIXED: Reduced from -30 to -25 to be closer to slider, further from labels
                 
                 // Brightness slider icon
                 if (svgIcons.brightness && uikitComponents.brightnessSlider) {
@@ -2239,6 +2235,50 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             requestAnimationFrame(renderLoop)
         }
 
+        // Periodic layout validation (every 2 seconds when tab is visible)
+        let layoutValidationInterval = null
+
+        function startLayoutValidation() {
+            if (layoutValidationInterval) return
+
+            layoutValidationInterval = setInterval(() => {
+                if (!document.hidden && nv && uikitComponents) {
+                    const canvas = document.getElementById('gl1')
+                    
+                    // Check for invalid canvas dimensions
+                    if (canvas && (canvas.width === 0 || canvas.height === 0)) {
+                        log('Detected invalid canvas dimensions, recalculating layout', 'warn')
+                        recalculateLayout('Periodic validation - invalid dimensions')
+                    }
+                    
+                    // Check for missing critical components
+                    if (!uikitComponents.brightnessSlider || !uikitComponents.contrastSlider) {
+                        log('Detected missing critical components during validation', 'warn')
+                        recalculateLayout('Periodic validation - missing components')
+                    }
+                }
+            }, 2000) // Check every 2 seconds
+        }
+
+        function stopLayoutValidation() {
+            if (layoutValidationInterval) {
+                clearInterval(layoutValidationInterval)
+                layoutValidationInterval = null
+            }
+        }
+
+        // Start/stop validation based on tab visibility - REMOVED DUPLICATE
+        // This functionality is now handled in the comprehensive visibility handler below
+
+        // Handle window focus events for additional safety
+        window.addEventListener('focus', () => {
+            if (nv) {
+                setTimeout(() => {
+                    recalculateLayout('Window focus')
+                }, 50)
+            }
+        })
+
         // Navbar toggle event handler
         document.getElementById('navbar-toggle').addEventListener('click', () => {
             componentsVisible = !componentsVisible
@@ -2408,15 +2448,288 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             await initializeNiivue()
             setupMouseEventHandling()
             renderLoop()
+            
+            // Start layout validation after initialization
+            startLayoutValidation()
+            log('Layout validation started', 'info')
         })
 
         // Handle window resize
         window.addEventListener('resize', () => {
             if (nv) {
                 nv.resizeListener()
+                // Recalculate layout with new dimensions
+                recalculateLayout('Window resize')
                 log('Window resized, adjusting layout', 'info')
             }
         })
+
+        // Handle visibility changes (tab switching) - COMPREHENSIVE HANDLER
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Tab became hidden - stop layout validation to save resources
+                stopLayoutValidation()
+                log('Tab hidden - stopping layout validation', 'info')
+            } else {
+                // Tab became visible again - start validation and fix layout immediately
+                startLayoutValidation()
+                
+                if (nv && uikitComponents) {
+                    setTimeout(() => {
+                        // Force NiiVue to recalculate its dimensions
+                        if (nv.resizeListener) {
+                            nv.resizeListener()
+                        }
+                        recalculateLayout('Tab visibility change')
+                        // Force a redraw
+                        if (nv.drawScene) {
+                            nv.drawScene()
+                        }
+                        log('Tab became visible - layout validation started, layout recalculated', 'info')
+                    }, 100) // Small delay to ensure canvas is properly sized
+                } else {
+                    log('Tab became visible but components not ready - starting validation only', 'warn')
+                }
+            }
+        })
+
+        // Canvas dimension validation and layout recalculation
+        function recalculateLayout(reason = 'Manual') {
+            if (!nv || !uikitComponents) {
+                log(`Recalculate layout skipped - missing dependencies (${reason})`, 'warn')
+                return
+            }
+
+            const canvas = document.getElementById('gl1')
+            if (!canvas) {
+                log(`Recalculate layout failed - canvas not found (${reason})`, 'error')
+                return
+            }
+
+            // Validate and update canvas dimensions
+            const clientWidth = canvas.clientWidth
+            const clientHeight = canvas.clientHeight
+
+            // Ensure canvas has proper dimensions
+            if (clientWidth > 0 && clientHeight > 0) {
+                const oldWidth = canvas.width
+                const oldHeight = canvas.height
+                
+                // Only update if dimensions actually changed or are invalid
+                if (canvas.width !== clientWidth || canvas.height !== clientHeight || canvas.width === 0 || canvas.height === 0) {
+                    canvas.width = clientWidth
+                    canvas.height = clientHeight
+                    
+                    log(`Canvas dimensions updated (${reason}): ${oldWidth}x${oldHeight} → ${canvas.width}x${canvas.height}`, 'info')
+                    
+                    // If dimensions changed significantly, update NiiVue
+                    if (Math.abs(oldWidth - clientWidth) > 10 || Math.abs(oldHeight - clientHeight) > 10) {
+                        if (nv.resizeListener) {
+                            nv.resizeListener()
+                        }
+                        // Force NiiVue to redraw with new dimensions
+                        setTimeout(() => {
+                            if (nv.drawScene) {
+                                nv.drawScene()
+                            }
+                        }, 10)
+                    }
+                    
+                    // Recalculate all component positions with new dimensions
+                    updateComponentPositions()
+                    
+                    // Force a complete redraw to apply new layout
+                    setTimeout(() => {
+                        if (nv && nv.drawScene) {
+                            nv.drawScene()
+                            log(`Layout recalculation complete, scene redrawn (${reason})`, 'info')
+                        }
+                    }, 10)
+                }
+            } else {
+                log(`Warning: Invalid canvas dimensions (${reason}): ${clientWidth}x${clientHeight}`, 'warn')
+                
+                // Try to recover by forcing a layout update after a short delay
+                setTimeout(() => {
+                    if (!document.hidden) {
+                        recalculateLayout(`${reason} - recovery attempt`)
+                    }
+                }, 200)
+            }
+        }
+
+        // Update all UIKit component positions
+        function updateComponentPositions() {
+            if (!uikitComponents || !nv) {
+                log('Update component positions skipped - missing dependencies', 'warn')
+                return
+            }
+
+            const canvas = document.getElementById('gl1')
+            if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                log(`Update component positions failed - invalid canvas: ${canvas?.width || 'null'}x${canvas?.height || 'null'}`, 'warn')
+                return
+            }
+
+            // Recalculate layout with current canvas dimensions
+            const layout = calculatePanelLayout(canvas.width, canvas.height)
+            const componentPositions = calculateComponentPositions(layout)
+
+            try {
+                // Update slider positions
+                const sliderConfig = LAYOUT_CONFIG.components.sliders
+                let currentY = componentPositions.sliders.startY
+
+                if (uikitComponents.brightnessSlider) {
+                    uikitComponents.brightnessSlider.setBounds([componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height])
+                    currentY += sliderConfig.spacing
+                }
+
+                if (uikitComponents.contrastSlider) {
+                    uikitComponents.contrastSlider.setBounds([componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height])
+                    currentY += sliderConfig.spacing
+                }
+
+                if (uikitComponents.zoomSlider) {
+                    uikitComponents.zoomSlider.setBounds([componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height])
+                    currentY += sliderConfig.spacing
+                }
+
+                if (uikitComponents.opacitySlider) {
+                    uikitComponents.opacitySlider.setBounds([componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height])
+                    currentY += sliderConfig.spacing
+                }
+
+                if (uikitComponents.sliceSlider) {
+                    uikitComponents.sliceSlider.setBounds([componentPositions.sliders.x, currentY, sliderConfig.width, sliderConfig.height])
+                }
+
+                // Update toggle positions
+                const toggleConfig = LAYOUT_CONFIG.components.toggles
+                currentY = componentPositions.toggles.startY
+
+                if (uikitComponents.crosshairToggle) {
+                    uikitComponents.crosshairToggle.setBounds([componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height])
+                    currentY += toggleConfig.spacing
+                }
+
+                if (uikitComponents.colorbarToggle) {
+                    uikitComponents.colorbarToggle.setBounds([componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height])
+                    currentY += toggleConfig.spacing
+                }
+
+                if (uikitComponents.radiologicalToggle) {
+                    uikitComponents.radiologicalToggle.setBounds([componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height])
+                    currentY += toggleConfig.spacing
+                }
+
+                if (uikitComponents.interpolationToggle) {
+                    uikitComponents.interpolationToggle.setBounds([componentPositions.toggles.x, currentY, componentPositions.toggles.width, toggleConfig.height])
+                }
+
+                // Update selector positions - recreate them since they don't have setBounds
+                if (uikitComponents.colormapSelector) {
+                    const selectorConfig = LAYOUT_CONFIG.components.selectors
+                    const currentColormap = uikitComponents.colormapSelector.getSelectedColormap()
+                    
+                    // Recreate colormap selector with new position
+                    uikitComponents.colormapSelector = new UIKColormapSelector(uikitRenderer, {
+                        bounds: [
+                            componentPositions.selectors.colormap.x,
+                            componentPositions.selectors.colormap.y,
+                            componentPositions.selectors.colormap.width,
+                            selectorConfig.colormap.height
+                        ],
+                        selectedColormap: currentColormap,
+                        colormaps: ['gray', 'plasma', 'viridis', 'inferno', 'hot', 'cool'],
+                        font: uikitFont,
+                        onColormapChange: updateColormap,
+                        style: {
+                            textScale: selectorConfig.colormap.textScale,
+                            gradientWidth: selectorConfig.colormap.gradientWidth,
+                            gradientHeight: selectorConfig.colormap.gradientHeight,
+                            itemPadding: selectorConfig.colormap.itemPadding,
+                            textSpacing: selectorConfig.colormap.textSpacing,
+                            textVerticalOffset: selectorConfig.colormap.textVerticalOffset,
+                            gradientSegments: selectorConfig.colormap.gradientSegments
+                        }
+                    })
+                    log('Colormap selector recreated with new position', 'info')
+                }
+
+                if (uikitComponents.viewModeSelector) {
+                    const selectorConfig = LAYOUT_CONFIG.components.selectors
+                    const currentViewMode = uikitComponents.viewModeSelector.getSelectedMode()
+                    
+                    // Recreate view mode selector with new position
+                    uikitComponents.viewModeSelector = new UIKViewModeSelector(uikitRenderer, {
+                        bounds: [
+                            componentPositions.selectors.viewMode.x,
+                            componentPositions.selectors.viewMode.y,
+                            componentPositions.selectors.viewMode.width,
+                            selectorConfig.viewMode.height
+                        ],
+                        selectedMode: currentViewMode,
+                        modes: ['Axial', 'Sagittal', 'Coronal', 'MultiPlanar'],
+                        font: uikitFont,
+                        onModeChange: updateViewMode,
+                        style: {
+                            textScale: selectorConfig.viewMode.textScale,
+                            buttonPadding: selectorConfig.viewMode.buttonPadding,
+                            textVerticalOffset: selectorConfig.viewMode.textVerticalOffset,
+                            charWidthMultiplier: selectorConfig.viewMode.charWidthMultiplier,
+                            textOutline: {
+                                enabled: true,
+                                width: 0.2,
+                                color: [0.0, 0.0, 0.0, 0.85],
+                                style: 'solid',
+                                softness: 0.12,
+                                offset: [0, 0]
+                            }
+                        }
+                    })
+                    log('View mode selector recreated with new position', 'info')
+                }
+
+                // Update button positions
+                const buttonConfig = LAYOUT_CONFIG.components.buttons
+                const buttonWidth = componentPositions.buttons.width
+                const buttonHeight = buttonConfig.height
+                const buttonGap = buttonConfig.gap
+                const buttonRowSpacing = buttonConfig.rowSpacing
+
+                // Calculate vertical centering within the Actions section
+                const totalButtonsHeight = (buttonHeight * 2) + buttonRowSpacing
+                const availableVerticalSpace = layout.sections.actions.height - LAYOUT_CONFIG.content.marginTop - LAYOUT_CONFIG.content.marginBottom
+                const verticalOffset = (availableVerticalSpace - totalButtonsHeight) / 2 + 15
+                currentY = layout.sections.actions.y + LAYOUT_CONFIG.content.marginTop + verticalOffset
+
+                // Row 1: Screenshot and Background buttons
+                if (uikitComponents.screenshotButton) {
+                    uikitComponents.screenshotButton.setBounds([componentPositions.buttons.x, currentY, buttonWidth, buttonHeight])
+                }
+
+                if (uikitComponents.backgroundButton) {
+                    uikitComponents.backgroundButton.setBounds([componentPositions.buttons.x + buttonWidth + buttonGap, currentY, buttonWidth, buttonHeight])
+                }
+
+                // Row 2: Logs and Reset buttons
+                currentY += buttonRowSpacing
+
+                if (uikitComponents.logsButton) {
+                    uikitComponents.logsButton.setBounds([componentPositions.buttons.x, currentY, buttonWidth, buttonHeight])
+                }
+
+                if (uikitComponents.resetButton) {
+                    uikitComponents.resetButton.setBounds([componentPositions.buttons.x + buttonWidth + buttonGap, currentY, buttonWidth, buttonHeight])
+                }
+
+                log('Component positions updated successfully', 'info')
+
+            } catch (error) {
+                log(`Error updating component positions: ${error.message}`, 'error')
+            }
+        }
         
     </script>
 </body>
