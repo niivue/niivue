@@ -41891,9 +41891,6 @@ var Niivue = class {
           }
         }
       }
-      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1];
-      const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0);
-      area = numMaskedVoxels * voxelArea;
       const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1];
       const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1];
       const areaEllipse = Math.PI * radiusX_mm * radiusY_mm;
@@ -41923,7 +41920,7 @@ var Niivue = class {
       Mnext = MNot0 + (x - MNot0) / kNot0;
       SNot0 = SNot0 + (x - MNot0) * (x - Mnext);
       MNot0 = Mnext;
-      mn = Math.min(x, mx);
+      mn = Math.min(x, mn);
       mx = Math.max(x, mx);
     }
     const stdev = Math.sqrt(S / (k - 1));
@@ -41931,7 +41928,7 @@ var Niivue = class {
     const mnNot0 = mn;
     const mxNot0 = mx;
     if (k !== kNot0) {
-      mn = Math.min(0, mx);
+      mn = Math.min(0, mn);
       mx = Math.max(0, mx);
     }
     return {
