@@ -2601,7 +2601,7 @@ declare class Niivue {
      * Uses a circular buffer to limit undo memory usage.
      * @internal
      */
-    drawAddUndoBitmap(): void;
+    drawAddUndoBitmap(drawFillOverwrites?: boolean): void;
     /**
      * Clears all stored drawing undo bitmaps and resets the undo index.
      * @internal
@@ -3215,18 +3215,12 @@ declare class Niivue {
      */
     drawFloodFill(seedXYZ: number[], newColor?: number, growSelectedCluster?: number, forceMin?: number, forceMax?: number, neighbors?: number, maxDistanceMM?: number, is2D?: boolean, targetBitmap?: Uint8Array | null, isGrowClusterTool?: boolean): void;
     /**
-     * Fills exterior regions of a 2D bitmap using the even–odd rule, marking outside voxels with 2
+     * Fills exterior regions of a 2D bitmap, marking outside voxels with 2
      * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
-     * uses crossing number algorithm (aka even–odd rule)
+     * uses first-in, first out queue for storage
      * @internal
      */
-    floodFillSectionEvenOdd(img2D: Uint8Array, dims2D: readonly number[], minPt: readonly number[], maxPt: readonly number[]): void;
-    /**
-     * Fills exterior regions of a 2D bitmap using the even–odd rule, marking outside voxels with 2
-     * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
-     * uses  first-in, first out queue for storage
-     * @internal
-     */
+    floodFillSectionFIFO(img2D: Uint8Array, dims2D: readonly number[], minPt: readonly number[], maxPt: readonly number[]): void;
     /**
      * Connects and fills the interior of drawn line segments in 2D slice space.
      * @internal
