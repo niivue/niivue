@@ -46,7 +46,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             display: block !important;
             border: 2px solid #333 !important;
             border-radius: 6px !important;
-            background: #1a1a1a !important;
+            background: #000000 !important;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
             transition: all 0.2s ease !important;
         }
@@ -324,10 +324,10 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
         // ===============================
         // Centralized configuration to make the demo flexible and robust
         const LAYOUT_CONFIG = {
-            // Main panel configuration
+            // Main panel configuration - adjusted for 20% UI area
             panel: {
-                width: 380,  // Increased from 330 to 380
-                rightMargin: 400,  // Increased from 350 to 400
+                width: 240,  // Further reduced for 20% UI area
+                rightMargin: 260,  // Further reduced for 20% UI area
                 topMargin: 20,
                 backgroundColor: [0.12, 0.12, 0.12, 0.95],
                 gradientEnd: [0.16, 0.16, 0.16, 0.95],
@@ -377,44 +377,44 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                 marginBottom: 15
             },
             
-            // Component spacing and sizing
+            // Component spacing and sizing - adjusted for smaller UI area
             components: {
                 // Slider configuration
                 sliders: {
-                    width: 180,  // Increased from 170 to 180
+                    width: 120,  // Further reduced for 20% UI area
                     height: 16,
-                    spacing: 30,  // Increased from 32 to 40
-                    labelOffset: 150,  // Increased from 110 to 130
-                    marginLeft: 10,
-                    marginRight: 10,
-                    topOffset: 25, // Configurable vertical offset from section title for better centering
+                    spacing: 30,
+                    labelOffset: 90,  // Further reduced for 20% UI area
+                    marginLeft: 8,
+                    marginRight: 8,
+                    topOffset: 25,
                     showValues: false,
-                    textScale: 0.02 // Match View Controls text scale
+                    textScale: 0.016 // Smaller text for compact layout
                 },
                 
                 // Toggle configuration
                 toggles: {
                     height: 22,
                     spacing: 28,
-                    labelAreaWidth: 200,  // Increased from 180 to 200
-                    switchWidth: 60,
-                    marginFromEdge: 10
+                    labelAreaWidth: 140,  // Further reduced for 20% UI area
+                    switchWidth: 45,     // Further reduced for 20% UI area
+                    marginFromEdge: 8
                 },
                 
                 // Button configuration - Enhanced with new robust properties
                 buttons: {
-                    height: 35,
-                    gap: 15,
-                    rowSpacing: 45,
+                    height: 32,  // Slightly smaller for 20% UI area
+                    gap: 6,      // Further reduced gap for 20% UI area
+                    rowSpacing: 40,  // Reduced row spacing
                     textColor: [0.0, 0.0, 0.0, 1.0], // Black text
                     borderWidth: 1,
                     borderRadius: 4,
-                    padding: [4, 4],
+                    padding: [3, 3],  // Reduced padding
                     // New robust button properties
-                    textScale: 0.025,
-                    charWidthMultiplier: 7,
-                    textHeight: 14,
-                    textVerticalOffset: 4
+                    textScale: 0.022,  // Slightly smaller text
+                    charWidthMultiplier: 6,  // Adjusted for smaller text
+                    textHeight: 12,  // Reduced text height
+                    textVerticalOffset: 3
                 },
                 
                 // Selector configuration - Enhanced with new robust properties
@@ -474,23 +474,28 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
         
         /**
          * Calculate panel dimensions and positions based on canvas size
+         * Updated to use custom layout: UI area starts at 80% of canvas width
          */
         function calculatePanelLayout(canvasWidth, canvasHeight) {
             const config = LAYOUT_CONFIG
             
+            // UI area starts at 80% of canvas width (dedicated UI space)
+            const uiAreaStart = canvasWidth * 0.80
+            const uiAreaWidth = canvasWidth * 0.20
+            
             return {
-                // Main panel
-                panelX: canvasWidth - config.panel.rightMargin,
+                // Main panel - positioned in dedicated UI area
+                panelX: uiAreaStart + 10, // Small margin from image area
                 panelY: config.panel.topMargin,
-                panelWidth: config.panel.width,
+                panelWidth: uiAreaWidth - 20, // Leave margins on both sides
                 
-                // Blue panels
-                bluePanelX: (canvasWidth - config.panel.rightMargin) + 5,
-                bluePanelWidth: config.panel.width - 10,
+                // Blue panels - within dedicated UI area
+                bluePanelX: uiAreaStart + 15,
+                bluePanelWidth: uiAreaWidth - 30, // Account for margins
                 
                 // Content area within blue panels
-                contentX: (canvasWidth - config.panel.rightMargin) + 5 + config.content.marginLeft,
-                contentWidth: config.panel.width - 10 - config.content.marginLeft - config.content.marginRight,
+                contentX: uiAreaStart + 15 + config.content.marginLeft,
+                contentWidth: uiAreaWidth - 30 - config.content.marginLeft - config.content.marginRight,
                 
                 // Section positions
                 sections: {
@@ -674,7 +679,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                 
                 // Create Niivue with medical imaging optimized settings
                 nv = new niivue.Niivue({
-                    backColor: [0.1, 0.1, 0.1, 1],
+                    backColor: [0.0, 0.0, 0.0, 1],
                     show3Dcrosshair: true,
                     onLocationChange: handleLocationChange,
                     dragAndDropEnabled: true
@@ -970,6 +975,20 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                     log(`Medical image loaded: ${volumeList[0].url}`, 'info')
                     log(`Volume dimensions: ${nv.volumes[0].dims}`, 'info')
                     
+                    // CUSTOM LAYOUT IMPLEMENTATION
+                    // Configure custom layout: 80% for medical image (horizontal), 20% for UIKit controls
+                    // All views uniform square-like dimensions, centered vertically like typical medical imaging
+                    const customLayout = [
+                        // All four views with square-like dimensions (19.5% width, 38% height, centered vertically)
+                        { sliceType: nv.sliceTypeAxial, position: [0.0, 0.32, 0.195, 0.50] },        // View 1: Axial
+                        { sliceType: nv.sliceTypeCoronal, position: [0.2, 0.32, 0.195, 0.50] },      // View 2: Coronal  
+                        { sliceType: nv.sliceTypeSagittal, position: [0.4, 0.32, 0.195, 0.50] },     // View 3: Sagittal
+                        { sliceType: nv.sliceTypeRender, position: [0.6, 0.32, 0.195, 0.50] }        // View 4: 3D Render
+                    ]
+                    
+                    log('Setting custom layout: 4 square medical views horizontally aligned + UI controls (20%)', 'info')
+                    nv.setCustomLayout(customLayout)
+                    
                     // Set optimal view for medical imaging
                     nv.setSliceType(nv.sliceTypeMultiplanar)
                     nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
@@ -986,6 +1005,8 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                     
                     // Update the volume rendering
                     nv.updateGLVolume()
+                    
+                    log('Custom layout applied successfully - 4 uniform square views with black background', 'info')
                     
                 } catch (imageError) {
                     log(`Failed to load medical image: ${imageError.message}`, 'error')
@@ -1394,7 +1415,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                                     currentBackground = 'light'
                                     uikitComponents.backgroundButton.setText('Light')
                                 } else {
-                                nv.opts.backColor = [0.1, 0.1, 0.1, 1]
+                                nv.opts.backColor = [0.0, 0.0, 0.0, 1]
                                     currentBackground = 'dark'
                                     uikitComponents.backgroundButton.setText('Dark')
                                 }
@@ -1563,39 +1584,49 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             }
         }
 
-        // Handle mouse events for UIKit overlay components on main canvas
-        function handleUIKitMouseEvents(event) {
+        // Enhanced mouse event handling for separated image and UI regions
+        function handleMouseEvents(event) {
             if (!uikitRenderer) return false
 
             // Get canvas bounds for proper mouse coordinate calculation
             const canvas = document.getElementById('gl1')
-                const rect = canvas.getBoundingClientRect()
+            const rect = canvas.getBoundingClientRect()
             
             // Calculate proper mouse coordinates relative to canvas
             const mouseX = event.clientX - rect.left
             const mouseY = event.clientY - rect.top
             
-            // Create a proper mouse event with correct coordinates
+            // Determine if mouse is in UI area (80%-100% of canvas width)
+            const uiAreaStart = canvas.width * 0.80
+            const isInUIArea = mouseX >= uiAreaStart
+            
+            // If mouse is in the image area (0%-80%), let NiiVue handle it
+            if (!isInUIArea) {
+                // Allow NiiVue to handle image interaction (crosshair, slice navigation, etc.)
+                return false
+            }
+            
+            // Mouse is in UI area - handle with UIKit components
             const mouseEvent = {
                 type: event.type,
                 offsetX: mouseX,
                 offsetY: mouseY,
                 clientX: event.clientX,
                 clientY: event.clientY,
-                    target: canvas,
+                target: canvas,
                 preventDefault: () => event.preventDefault(),
                 stopPropagation: () => event.stopPropagation()
             }
 
             let handled = false
             
-            // Check each overlay component for mouse interaction
+            // Check each UIKit component for mouse interaction
             for (const [name, component] of Object.entries(uikitComponents)) {
                 if (component && component.handleMouseEvent) {
                     try {
                         if (component.handleMouseEvent(mouseEvent)) {
                             handled = true
-                            log(`Mouse event handled by ${name}`, 'event')
+                            log(`Mouse event handled by ${name} in UI area`, 'event')
                             break
                         }
                     } catch (error) {
@@ -1792,10 +1823,11 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             gl.enable(gl.BLEND)
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
             
-            // Define UI panel dimensions and position
-            const panelX = canvas.width - 400  // Updated to 400
-            const panelY = 30
-            const panelWidth = 380  // Updated to 380
+            // Calculate UI panel dimensions and position using dedicated UI area
+            const layout = calculatePanelLayout(canvas.width, canvas.height)
+            const panelX = layout.panelX
+            const panelY = layout.panelY
+            const panelWidth = layout.panelWidth
             
             // Calculate required height based on all sections
             const section1Height = 230  // Medical Imaging Controls (increased)
@@ -1847,9 +1879,9 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             // Section styling - use individual attractive colors for each section
             
             // SECTION 1: Medical Imaging Controls - Deep Blue
-            const section1Y = panelY
+            const section1Y = layout.sections.medical.y
             uikitRenderer.drawRoundedRect({
-                bounds: [panelX + 5, section1Y, panelWidth - 10, section1Height],
+                bounds: [layout.bluePanelX, section1Y, layout.bluePanelWidth, section1Height],
                 fillColor: LAYOUT_CONFIG.sections.medicalControls.backgroundColor,
                 outlineColor: LAYOUT_CONFIG.sections.medicalControls.borderColor,
                 cornerRadius: 8,
@@ -1857,9 +1889,9 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             })
             
             // SECTION 2: View Controls - Purple
-            const section2Y = section1Y + section1Height + 15
+            const section2Y = layout.sections.view.y
             uikitRenderer.drawRoundedRect({
-                bounds: [panelX + 5, section2Y, panelWidth - 10, section2Height],
+                bounds: [layout.bluePanelX, section2Y, layout.bluePanelWidth, section2Height],
                 fillColor: LAYOUT_CONFIG.sections.viewControls.backgroundColor,
                 outlineColor: LAYOUT_CONFIG.sections.viewControls.borderColor,
                 cornerRadius: 8,
@@ -1867,9 +1899,9 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             })
             
             // SECTION 3: Advanced Controls - Teal
-            const section3Y = section2Y + section2Height + 15
+            const section3Y = layout.sections.advanced.y
             uikitRenderer.drawRoundedRect({
-                bounds: [panelX + 5, section3Y, panelWidth - 10, section3Height],
+                bounds: [layout.bluePanelX, section3Y, layout.bluePanelWidth, section3Height],
                 fillColor: LAYOUT_CONFIG.sections.advancedControls.backgroundColor,
                 outlineColor: LAYOUT_CONFIG.sections.advancedControls.borderColor,
                 cornerRadius: 8,
@@ -1877,9 +1909,9 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             })
             
             // SECTION 4: Actions - Warm Brown
-            const section4Y = section3Y + section3Height + 15
+            const section4Y = layout.sections.actions.y
             uikitRenderer.drawRoundedRect({
-                bounds: [panelX + 5, section4Y, panelWidth - 10, section4Height],
+                bounds: [layout.bluePanelX, section4Y, layout.bluePanelWidth, section4Height],
                 fillColor: LAYOUT_CONFIG.sections.actions.backgroundColor,
                 outlineColor: LAYOUT_CONFIG.sections.actions.borderColor,
                 cornerRadius: 8,
@@ -1891,7 +1923,7 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
                 const titleScale = LAYOUT_CONFIG.text.titleScale // Use configuration for text scale
                 const titleMargins = LAYOUT_CONFIG.text.titleMargins // Use configuration for margins
                 const titleOutline = LAYOUT_CONFIG.text.titleOutline // ENHANCED: Use outline configuration
-                const panelCenterX = panelX + (panelWidth / 2)
+                const panelCenterX = layout.bluePanelX + (layout.bluePanelWidth / 2)
                 
                 // ENHANCED: Configure font outline for bold, prominent section headers
                 uikitFont.setOutlineConfig({
@@ -2327,41 +2359,47 @@ I'll help you resolve the sidebar layout issues by increasing the panel width an
             }
         })
 
-        // Set up mouse event handling for UIKit components
+        // Set up mouse event handling for separated image and UI regions
         function setupMouseEventHandling() {
             const canvas = document.getElementById('gl1')
             
             canvas.addEventListener('mousedown', (event) => {
-                const handled = handleUIKitMouseEvents(event)
+                const handled = handleMouseEvents(event)
                 if (handled) {
                     event.preventDefault()
                     event.stopPropagation()
                 }
+                // If not handled, NiiVue will process the event for image interaction
             })
             
             canvas.addEventListener('mousemove', (event) => {
-                const handled = handleUIKitMouseEvents(event)
+                const handled = handleMouseEvents(event)
                 if (handled) {
                     event.preventDefault()
                     event.stopPropagation()
                 }
+                // If not handled, NiiVue will process the event for image interaction
             })
             
             canvas.addEventListener('mouseup', (event) => {
-                const handled = handleUIKitMouseEvents(event)
+                const handled = handleMouseEvents(event)
                 if (handled) {
                     event.preventDefault()
                     event.stopPropagation()
                 }
+                // If not handled, NiiVue will process the event for image interaction
             })
             
             canvas.addEventListener('click', (event) => {
-                const handled = handleUIKitMouseEvents(event)
+                const handled = handleMouseEvents(event)
                 if (handled) {
                     event.preventDefault()
                     event.stopPropagation()
                 }
+                // If not handled, NiiVue will process the event for image interaction
             })
+            
+            log('Mouse event handling configured for separated image and UI regions', 'info')
         }
 
         // Initialize everything
