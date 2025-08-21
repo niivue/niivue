@@ -1876,7 +1876,12 @@ export class Niivue {
       (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE)
     ) {
       // Finalize rectangle or ellipse drawing - the shape is already drawn in drawBitmap
-      this.drawAddUndoBitmap()
+      if (this.opts.penValue === 0) {
+        this.drawAddUndoBitmap()
+      } else {
+        // issue1409
+        this.drawAddUndoBitmap(this.drawFillOverwrites)
+      }
       // Clean up preview bitmap since we're keeping the final drawing
       this.drawShapePreviewBitmap = null
     }
@@ -3531,10 +3536,20 @@ export class Niivue {
    * Uses a circular buffer to limit undo memory usage.
    * @internal
    */
-  drawAddUndoBitmap(): void {
+  drawAddUndoBitmap(drawFillOverwrites: boolean = true): void {
     if (!this.drawBitmap || this.drawBitmap.length < 1) {
       log.debug('drawAddUndoBitmap error: No drawing open')
       return
+    }
+    if (!drawFillOverwrites && this.drawUndoBitmaps.length > 0) {
+      const len = this.drawBitmap.length
+      const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], len)
+      for (let i = 0; i < len; i++) {
+        if (bmp[i] > 0) {
+          this.drawBitmap[i] = bmp[i]
+        }
+      }
+      this.refreshDrawing(false)
     }
     // let rle = encodeRLE(this.drawBitmap);
     // the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
