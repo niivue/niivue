@@ -1,9 +1,9 @@
 import { mat4, vec4, vec3 } from 'gl-matrix'
-import { log } from './logger.js'
-import { NVUtilities, Zip } from './nvutilities.js'
-import { ColorMap, LUT, cmapper } from './colortables.js'
-import { NiivueObject3D } from './niivue-object3D.js'
-import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from './nvmesh.js'
+import { log } from '@/logger'
+import { NVUtilities, Zip } from '@/nvutilities'
+import { ColorMap, LUT, cmapper } from '@/colortables'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { NVMesh, NVMeshLayer, NVMeshLayerDefaults } from '@/nvmesh'
 import {
   ANNOT,
   DefaultMeshType,
@@ -21,7 +21,7 @@ import {
   X3D,
   XmlTag,
   AnyNumberArray
-} from './nvmesh-types.js'
+} from '@/nvmesh-types'
 
 const utiltiesLogger = log
 

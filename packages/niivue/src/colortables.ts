@@ -1,5 +1,5 @@
-import * as cmaps from './cmaps/index.js'
-import { log } from './logger.js'
+import * as cmaps from '@/cmaps'
+import { log } from '@/logger'
 
 export type ColorMap = {
   R: number[]

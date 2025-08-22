@@ -1,7 +1,7 @@
 import { vec4 } from 'gl-matrix'
-import { log } from '../logger.js'
-import { NiiDataType } from './utils.js'
-import type { NVImage, TypedVoxelArray } from './index.js'
+import { log } from '@/logger'
+import { NiiDataType } from '@/nvimage/utils'
+import type { NVImage, TypedVoxelArray } from '@/nvimage'
 
 /**
  * Returns all voxel channel values at the specified coordinates.

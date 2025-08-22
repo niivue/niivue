@@ -1,11 +1,35 @@
 import { serialize, deserialize } from '@ungap/structured-clone'
 import { vec3, vec4 } from 'gl-matrix'
-import { NVUtilities } from './nvutilities.js'
-import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from './nvimage/index.js'
-import { MeshType, NVMesh } from './nvmesh.js'
-import { NVLabel3D } from './nvlabel.js'
-import { NVConnectome } from './nvconnectome.js'
-import { log } from './logger.js'
+import { NVUtilities } from '@/nvutilities'
+import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from '@/nvimage'
+import { MeshType, NVMesh } from '@/nvmesh'
+import { NVLabel3D } from '@/nvlabel'
+import { NVConnectome } from '@/nvconnectome'
+import { log } from '@/logger'
+
+/**
+ * Represents a completed measurement between two points
+ */
+export interface CompletedMeasurement {
+  startMM: vec3 // World coordinates in mm for start point
+  endMM: vec3 // World coordinates in mm for end point
+  distance: number // Distance between points in mm
+  sliceIndex: number
+  sliceType: SLICE_TYPE
+  slicePosition: number
+}
+
+/**
+ * Represents a completed angle measurement between two lines
+ */
+export interface CompletedAngle {
+  firstLineMM: { start: vec3; end: vec3 } // World coordinates in mm for first line
+  secondLineMM: { start: vec3; end: vec3 } // World coordinates in mm for second line
+  angle: number // Angle in degrees
+  sliceIndex: number
+  sliceType: SLICE_TYPE
+  slicePosition: number
+}
 
 /**
  * Slice Type
@@ -17,6 +41,12 @@ export enum SLICE_TYPE {
   SAGITTAL = 2,
   MULTIPLANAR = 3,
   RENDER = 4
+}
+
+export enum PEN_TYPE {
+  PEN = 0,
+  RECTANGLE = 1,
+  ELLIPSE = 2
 }
 
 export enum SHOW_RENDER {
@@ -48,23 +78,24 @@ export enum DRAG_MODE {
   slicer3D = 4,
   callbackOnly = 5,
   roiSelection = 6,
-  angle = 7
+  angle = 7,
+  crosshair = 8,
+  windowing = 9
 }
 
-export enum DRAG_MODE_SECONDARY {
-  none = 0,
-  contrast = 1,
-  measurement = 2,
-  pan = 3,
-  slicer3D = 4,
-  callbackOnly = 5,
-  roiSelection = 6,
-  angle = 7
+export interface MouseEventConfig {
+  leftButton: {
+    primary: DRAG_MODE
+    withShift?: DRAG_MODE
+    withCtrl?: DRAG_MODE
+  }
+  rightButton: DRAG_MODE
+  centerButton: DRAG_MODE
 }
 
-export enum DRAG_MODE_PRIMARY {
-  crosshair = 0,
-  windowing = 1
+export interface TouchEventConfig {
+  singleTouch: DRAG_MODE
+  doubleTouch: DRAG_MODE
 }
 
 export enum COLORMAP_TYPE {
@@ -134,12 +165,15 @@ export type NVConfigOptions = {
   isRadiologicalConvention: boolean
   // string to allow infinity
   meshThicknessOn2D: number | string
-  dragMode: DRAG_MODE | DRAG_MODE_SECONDARY
-  dragModePrimary: DRAG_MODE_PRIMARY
+  dragMode: DRAG_MODE
+  dragModePrimary: DRAG_MODE
+  mouseEventConfig?: MouseEventConfig
+  touchEventConfig?: TouchEventConfig
   yoke3Dto2DZoom: boolean
   isDepthPickMesh: boolean
   isCornerOrientationText: boolean
   isOrientationTextVisible: boolean
+  showAllOrientationMarkers: boolean
   heroImageFraction: number
   heroSliceType: SLICE_TYPE
   // sagittal slices can have Y+ going left or right
@@ -156,6 +190,8 @@ export type NVConfigOptions = {
   drawingEnabled: boolean
   // sets drawing color. see "drawPt"
   penValue: number
+  // pen drawing type: 'pen' for freehand, 'rectangle' for rectangular masks, 'ellipse' for elliptical masks
+  penType: PEN_TYPE
   // does a voxel have 6 (face), 18 (edge) or 26 (corner) neighbors
   floodFillNeighbors: number
   isFilledPen: boolean
@@ -253,12 +289,15 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   multiplanarShowRender: SHOW_RENDER.AUTO, // auto is the same behaviour as multiplanarForceRender: false
   isRadiologicalConvention: false,
   meshThicknessOn2D: Infinity,
-  dragMode: DRAG_MODE_SECONDARY.contrast,
-  dragModePrimary: DRAG_MODE_PRIMARY.crosshair,
+  dragMode: DRAG_MODE.contrast,
+  dragModePrimary: DRAG_MODE.crosshair,
+  mouseEventConfig: undefined,
+  touchEventConfig: undefined,
   yoke3Dto2DZoom: false,
   isDepthPickMesh: false,
   isCornerOrientationText: false,
   isOrientationTextVisible: true,
+  showAllOrientationMarkers: false,
   heroImageFraction: 0,
   heroSliceType: SLICE_TYPE.RENDER,
   sagittalNoseLeft: false,
@@ -271,6 +310,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   dragAndDropEnabled: true,
   drawingEnabled: false,
   penValue: 1,
+  penType: PEN_TYPE.PEN,
   floodFillNeighbors: 6,
   isFilledPen: false,
   thumbnail: '',
@@ -376,6 +416,8 @@ export type DocumentData = {
   sceneData?: Partial<SceneData>
   connectomes?: string[]
   customData?: string
+  completedMeasurements?: CompletedMeasurement[]
+  completedAngles?: CompletedAngle[]
 }
 
 export type ExportDocumentData = {
@@ -399,6 +441,8 @@ export type ExportDocumentData = {
   labels: NVLabel3D[]
   connectomes: string[]
   customData: string
+  completedMeasurements: CompletedMeasurement[]
+  completedAngles: CompletedAngle[]
 }
 
 /**
@@ -452,6 +496,8 @@ export class NVDocument {
   drawBitmap: Uint8Array | null = null
   imageOptionsMap = new Map()
   meshOptionsMap = new Map()
+  completedMeasurements: CompletedMeasurement[] = []
+  completedAngles: CompletedAngle[] = []
 
   private _optsProxy: NVConfigOptions | null = null
   private _optsChangeCallback:
@@ -741,8 +787,9 @@ export class NVDocument {
    *
    * @param embedImages  If false, encodedImageBlobs is left empty
    *                     (imageOptionsArray still records the URL / name).
+   * @param embedDrawing  If false, encodedDrawingBlob is left empty
    */
-  json(embedImages = true): ExportDocumentData {
+  json(embedImages = true, embedDrawing = true): ExportDocumentData {
     const data: Partial<ExportDocumentData> = {
       encodedImageBlobs: [],
       previewImageDataURL: this.data.previewImageDataURL,
@@ -770,38 +817,40 @@ export class NVDocument {
 
     data.customData = this.customData
 
+    // Serialize completedMeasurements and completedAngles
+    data.completedMeasurements = [...this.completedMeasurements]
+    data.completedAngles = [...this.completedAngles]
+
     // volumes
     // TODO move this to a per-volume export function in NVImage?
     if (this.volumes.length) {
       for (let i = 0; i < this.volumes.length; i++) {
         const volume = this.volumes[i]
         let imageOptions = this.getImageOptions(volume)
-
         if (imageOptions === null) {
-          log.warn('no options found for image, using default')
+          log.warn('no options found for image, using options from the volume directly')
           imageOptions = {
-            name: '',
-            colormap: 'gray',
-            opacity: 1.0,
+            name: volume?.name ?? '',
+            colormap: volume?._colormap ?? 'gray',
+            opacity: volume?._opacity ?? 1.0,
             pairedImgData: null,
-            cal_min: NaN,
-            cal_max: NaN,
-            trustCalMinMax: true,
-            percentileFrac: 0.02,
-            ignoreZeroVoxels: false,
-            useQFormNotSForm: false,
-            colormapNegative: '',
-            colormapLabel: null,
-            imageType: NVIMAGE_TYPE.NII,
-            frame4D: 0,
-            limitFrames4D: NaN,
-            // TODO the following were missing
-            url: '',
-            urlImageData: '',
+            cal_min: volume?.cal_min ?? NaN,
+            cal_max: volume?.cal_max ?? NaN,
+            trustCalMinMax: volume?.trustCalMinMax ?? true,
+            percentileFrac: volume?.percentileFrac ?? 0.02,
+            ignoreZeroVoxels: volume?.ignoreZeroVoxels ?? false,
+            useQFormNotSForm: volume?.useQFormNotSForm ?? false,
+            colormapNegative: volume?.colormapNegative ?? '',
+            colormapLabel: volume?.colormapLabel ?? null,
+            imageType: volume?.imageType ?? NVIMAGE_TYPE.NII,
+            frame4D: volume?.frame4D ?? 0,
+            limitFrames4D: volume?.limitFrames4D ?? NaN,
+            url: volume?.url ?? '',
+            urlImageData: volume?.urlImgData ?? '',
             alphaThreshold: false,
-            cal_minNeg: NaN,
-            cal_maxNeg: NaN,
-            colorbarVisible: true
+            cal_minNeg: volume?.cal_minNeg ?? NaN,
+            cal_maxNeg: volume?.cal_maxNeg ?? NaN,
+            colorbarVisible: volume?.colorbarVisible ?? true
           }
         } else {
           if (!('imageType' in imageOptions)) {
@@ -812,8 +861,8 @@ export class NVDocument {
         imageOptions.colormap = volume.colormap
         imageOptions.colormapLabel = volume.colormapLabel
         imageOptions.opacity = volume.opacity
-        imageOptions.cal_max = volume.cal_max || NaN
-        imageOptions.cal_min = volume.cal_min || NaN
+        imageOptions.cal_max = volume.cal_max ?? NaN
+        imageOptions.cal_min = volume.cal_min ?? NaN
 
         imageOptionsArray.push(imageOptions)
 
@@ -891,7 +940,7 @@ export class NVDocument {
     }
     data.meshesString = JSON.stringify(serialize(meshes))
     // Serialize drawBitmap
-    if (this.drawBitmap) {
+    if (embedDrawing && this.drawBitmap) {
       data.encodedDrawingBlob = NVUtilities.uint8tob64(this.drawBitmap)
     }
 
@@ -1030,7 +1079,29 @@ export class NVDocument {
       ...(data.sceneData || {})
     }
 
-    // 5. finally, if there was a meshesString, deserialize it
+    // 5. Load completedMeasurements and completedAngles if they exist
+    if (data.completedMeasurements) {
+      document.completedMeasurements = data.completedMeasurements.map((m) => ({
+        ...m,
+        startMM: vec3.clone(m.startMM),
+        endMM: vec3.clone(m.endMM)
+      }))
+    }
+    if (data.completedAngles) {
+      document.completedAngles = data.completedAngles.map((a) => ({
+        ...a,
+        firstLineMM: {
+          start: vec3.clone(a.firstLineMM.start),
+          end: vec3.clone(a.firstLineMM.end)
+        },
+        secondLineMM: {
+          start: vec3.clone(a.secondLineMM.start),
+          end: vec3.clone(a.secondLineMM.end)
+        }
+      }))
+    }
+
+    // 6. finally, if there was a meshesString, deserialize it
     if (document.data.meshesString) {
       NVDocument.deserializeMeshDataObjects(document)
     }

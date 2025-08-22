@@ -1,12 +1,12 @@
 import { vec3 } from 'gl-matrix'
-import { NVMesh, MeshType } from './nvmesh.js'
-import { NVUtilities } from './nvutilities.js'
-import { NiivueObject3D } from './niivue-object3D.js'
-import { NVMeshUtilities } from './nvmesh-utilities.js'
-import { cmapper } from './colortables.js'
-import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from './nvlabel.js'
-import { Connectome, ConnectomeOptions, LegacyConnectome, NVConnectomeEdge, NVConnectomeNode } from './types.js'
-import { log } from './logger.js'
+import { NVMesh, MeshType } from '@/nvmesh'
+import { NVUtilities } from '@/nvutilities'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { NVMeshUtilities } from '@/nvmesh-utilities'
+import { cmapper } from '@/colortables'
+import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from '@/nvlabel'
+import { Connectome, ConnectomeOptions, LegacyConnectome, NVConnectomeEdge, NVConnectomeNode } from '@/types'
+import { log } from '@/logger'
 
 const defaultOptions: ConnectomeOptions = {
   name: 'untitled connectome',

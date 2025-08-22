@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import { assert, expect, test } from 'vitest'
-import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js' // note the js extension
+import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js'
 import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
 
 test('loadFromFile loads a valid document', async () => {
@@ -135,4 +135,10 @@ test('nvdocument can be initialized from minimal JSON input', () => {
   expect(doc.data.customData).toBe('')
   expect(doc.data.opts).toEqual(DEFAULT_OPTIONS)
   expect(doc.scene.sceneData).toEqual(INITIAL_SCENE_DATA)
+})
+
+test('nvdocument penType defaults to pen', () => {
+  const doc = new NVDocument()
+  expect(doc.opts.penType).toBe(0)
+  expect(DEFAULT_OPTIONS.penType).toBe(0)
 })

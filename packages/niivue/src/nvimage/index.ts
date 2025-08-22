@@ -3,9 +3,9 @@ import * as zarr from 'zarrita'
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { Gunzip } from 'fflate'
-import { ColorMap, LUT, cmapper } from '../colortables.js'
-import { log } from '../logger.js'
-import { NVUtilities, Zip } from '../nvutilities.js'
+import { ColorMap, LUT, cmapper } from '@/colortables'
+import { log } from '@/logger'
+import { NVUtilities, Zip } from '@/nvutilities'
 import {
   ImageFromBase64,
   ImageFromFileOptions,
@@ -20,12 +20,12 @@ import {
   isAffineOK,
   isPlatformLittleEndian,
   uncompressStream
-} from './utils.js'
-import * as ImageWriter from './ImageWriter.js'
-import * as VolumeUtils from './VolumeUtils.js'
-import * as ImageReaders from './ImageReaders/index.js'
+} from '@/nvimage/utils'
+import * as ImageWriter from '@/nvimage/ImageWriter'
+import * as VolumeUtils from '@/nvimage/VolumeUtils'
+import * as ImageReaders from '@/nvimage/ImageReaders'
 
-export * from './utils.js'
+export * from '@/nvimage/utils'
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
 
 /**
@@ -2791,6 +2791,10 @@ export class NVImage {
     nZero += nNan
     const n2pct = Math.round((nVox3D - 0 - nZero) * this.percentileFrac)
     if (n2pct < 1 || mn === mx) {
+      if (isBorder) {
+        // central region has no variability: explore entire image
+        return this.calMinMax(vol, false)
+      }
       log.debug('no variability in image intensity?')
       this.cal_min = mnScale
       this.cal_max = mxScale

@@ -8,6 +8,11 @@ export default defineConfig({
   },
   publicDir: process.env.NODE_ENV !== 'production',
   root: '.',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
   server: {
     open: '/src/index.html',
     fs: {

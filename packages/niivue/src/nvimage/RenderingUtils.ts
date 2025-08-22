@@ -1,7 +1,7 @@
 import { mat4, vec3 } from 'gl-matrix'
-import { NiivueObject3D } from '../niivue-object3D.js'
-import { getExtents } from './utils.js'
-import type { NVImage } from './index.js'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { getExtents } from '@/nvimage/utils'
+import type { NVImage } from '@/nvimage'
 
 /**
  * Creates a NiivueObject3D representation for WebGL rendering from an NVImage.

@@ -1,7 +1,53 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import packageJson from '../../package.json' with { type: 'json' }
-import { Shader } from '../shader.js'
-import { log } from '../logger.js'
+import { orientCube } from '@/orientCube'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '@/nvmesh'
+import defaultMatCap from '@/matcaps/Shiny.jpg'
+import defaultFontPNG from '@/fonts/Roboto-Regular.png'
+import defaultFontMetrics from '@/fonts/Roboto-Regular.json' with { type: 'json' }
+import { ColorMap, cmapper } from '@/colortables'
+import {
+  NVDocument,
+  NVConfigOptions,
+  Scene,
+  SLICE_TYPE,
+  PEN_TYPE,
+  SHOW_RENDER,
+  DRAG_MODE,
+  COLORMAP_TYPE,
+  MULTIPLANAR_TYPE,
+  DEFAULT_OPTIONS,
+  ExportDocumentData,
+  INITIAL_SCENE_DATA,
+  MouseEventConfig,
+  TouchEventConfig
+} from '@/nvdocument'
+
+import {
+  LabelTextAlignment,
+  LabelLineTerminator,
+  NVLabel3D,
+  NVLabel3DStyle,
+  LabelAnchorPoint,
+  LabelAnchorFlag
+} from '@/nvlabel'
+import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
+import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
+import { NVUtilities } from '@/nvutilities'
+import { NVMeshUtilities } from '@/nvmesh-utilities'
+import {
+  Connectome,
+  LegacyConnectome,
+  NVConnectomeNode,
+  NiftiHeader,
+  DragReleaseParams,
+  NiiVueLocation,
+  NiiVueLocationValue,
+  SyncOpts
+} from '@/types'
+import { toNiivueObject3D } from '@/nvimage/RenderingUtils'
+import { findBoundarySlices, interpolateMaskSlices, drawUndo, encodeRLE, decodeRLE } from '@/drawing'
 import {
   vertOrientCubeShader,
   fragOrientCubeShader,
@@ -67,57 +113,12 @@ import {
   sobelFirstOrderFragShader,
   sobelSecondOrderFragShader,
   gradientOpacityLutCount
-} from '../shader-srcs.js'
-import { orientCube } from '../orientCube.js'
-import { NiivueObject3D } from '../niivue-object3D.js'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '../nvmesh.js'
-import defaultMatCap from '../matcaps/Shiny.jpg'
-import defaultFontPNG from '../fonts/Roboto-Regular.png'
-import defaultFontMetrics from '../fonts/Roboto-Regular.json' with { type: 'json' }
-import { ColorMap, cmapper } from '../colortables.js'
-import {
-  NVDocument,
-  NVConfigOptions,
-  Scene,
-  SLICE_TYPE,
-  SHOW_RENDER,
-  DRAG_MODE, // DRAG_MODE_SECONDARY is the same as DRAG_MODE. DRAG_MODE may be deprecated.
-  DRAG_MODE_PRIMARY,
-  COLORMAP_TYPE,
-  MULTIPLANAR_TYPE,
-  DEFAULT_OPTIONS,
-  ExportDocumentData,
-  INITIAL_SCENE_DATA
-} from '../nvdocument.js'
-
-import {
-  LabelTextAlignment,
-  LabelLineTerminator,
-  NVLabel3D,
-  NVLabel3DStyle,
-  LabelAnchorPoint,
-  LabelAnchorFlag
-} from '../nvlabel.js'
-import { FreeSurferConnectome, NVConnectome } from '../nvconnectome.js'
-import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '../nvimage/index.js'
-import { NVUtilities } from '../nvutilities.js'
-import { NVMeshUtilities } from '../nvmesh-utilities.js'
-import {
-  Connectome,
-  LegacyConnectome,
-  NVConnectomeNode,
-  NiftiHeader,
-  DragReleaseParams,
-  NiiVueLocation,
-  NiiVueLocationValue,
-  SyncOpts
-} from '../types.js'
-import { toNiivueObject3D } from '../nvimage/RenderingUtils.js'
+} from '@/shader-srcs'
+import { Shader } from '@/shader'
+import { log } from '@/logger'
 import {
   clamp,
-  decodeRLE,
   deg2rad,
-  encodeRLE,
   img2ras16,
   intensityRaw2Scaled,
   isRadiological,
@@ -127,23 +128,23 @@ import {
   unProject,
   unpackFloatFromVec4i,
   readFileAsDataURL
-} from './utils.js'
+} from '@/utils'
 const { version } = packageJson
-export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '../nvmesh.js'
-export { ColorTables as colortables, cmapper } from '../colortables.js'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
+export { ColorTables as colortables, cmapper } from '@/colortables'
 
-export { NVImage, NVImageFromUrlOptions } from '../nvimage/index.js'
-// export { NVDocument, SLICE_TYPE, DocumentData } from '../nvdocument.js'
+export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
+// export { NVDocument, SLICE_TYPE, DocumentData } from '@/nvdocument'
 // address rollup error - https://github.com/rollup/plugins/issues/71
-export * from '../nvdocument.js'
-export { NVUtilities } from '../nvutilities.js'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '../nvlabel.js'
-export { NVMeshLoaders } from '../nvmesh-loaders.js'
-export { NVMeshUtilities } from '../nvmesh-utilities.js'
+export * from '@/nvdocument'
+export { NVUtilities } from '@/nvutilities'
+export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '@/nvlabel'
+export { NVMeshLoaders } from '@/nvmesh-loaders'
+export { NVMeshUtilities } from '@/nvmesh-utilities'
 
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
-export * from '../types.js'
+export * from '@/types'
 
 type FontMetrics = {
   distanceRange: number
@@ -324,8 +325,10 @@ type UIData = {
   dpr?: number
   max2D?: number
   max3D?: number
-  windowX: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
-  windowY: number // used to track mouse position for DRAG_MODE_PRIMARY.windowing
+  windowX: number // used to track mouse position for DRAG_MODE.windowing
+  windowY: number // used to track mouse position for DRAG_MODE.windowing
+  activeDragMode: DRAG_MODE | null // currently active drag mode during interaction
+  activeDragButton: number | null // mouse button that initiated the current drag
   // angle measurement state
   angleFirstLine: number[] // [x1, y1, x2, y2] for first line
   angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
@@ -396,6 +399,8 @@ export class Niivue {
   drawPenAxCorSag = -1 // do not allow pen to drag between Sagittal/Coronal/Axial
   drawFillOverwrites = true // if true, fill overwrites existing drawing
   drawPenFillPts: number[][] = [] // store mouse points for filled pen
+  drawShapeStartLocation = [NaN, NaN, NaN] // start location for rectangle/ellipse drawing
+  drawShapePreviewBitmap: Uint8Array | null = null // preview bitmap for shape drawing
   overlayTexture: WebGLTexture | null = null
   overlayTextureID: WebGLTexture | null = null
   sliceMMShader?: Shader
@@ -500,6 +505,8 @@ export class Niivue {
     multiTouchGesture: false,
     windowX: 0,
     windowY: 0,
+    activeDragMode: null,
+    activeDragButton: null,
     angleFirstLine: [0.0, 0.0, 0.0, 0.0],
     angleState: 'none'
   }
@@ -1454,6 +1461,7 @@ export class Niivue {
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
+    this.drawShapeStartLocation = [NaN, NaN, NaN] // Reset shape start location
     this.uiData.mousedown = true
     // reset drag positions used previously (but not during angle measurement second line)
     if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
@@ -1503,88 +1511,211 @@ export class Niivue {
     // respond to different types of mouse clicks
     if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
       this.uiData.mouseButtonCenterDown = true
-      this.mouseCenterButtonHandler(e)
+      this.setActiveDragMode(LEFT_MOUSE_BUTTON, true, e.ctrlKey)
+      this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     } else if (e.button === LEFT_MOUSE_BUTTON) {
       this.uiData.mouseButtonLeftDown = true
-      this.mouseLeftButtonHandler(e)
+      this.setActiveDragMode(LEFT_MOUSE_BUTTON, false, e.ctrlKey)
+      this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     } else if (e.button === RIGHT_MOUSE_BUTTON) {
       this.uiData.mouseButtonRightDown = true
-      this.mouseRightButtonHandler(e)
+      this.setActiveDragMode(RIGHT_MOUSE_BUTTON, e.shiftKey, e.ctrlKey)
+      this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     } else if (e.button === CENTER_MOUSE_BUTTON) {
       this.uiData.mouseButtonCenterDown = true
-      this.mouseCenterButtonHandler(e)
+      this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey)
+      this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     }
   }
 
   /**
-   * Handles left mouse button actions for crosshair or windowing mode.
+   * Gets the appropriate drag mode for a mouse button based on configuration.
    * @internal
    */
-  mouseLeftButtonHandler(e: MouseEvent): void {
-    // need to check for control key here in case the user want to override the drag mode
-    if (e.ctrlKey || this.opts.dragModePrimary === DRAG_MODE_PRIMARY.crosshair) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-      this.mouseDown(pos!.x, pos!.y)
-      this.mouseClick(pos!.x, pos!.y)
-    } else if (this.opts.dragModePrimary === DRAG_MODE_PRIMARY.windowing) {
-      // save the state of the x and y mouse coordinates for the next comparison on mouse move
+  getMouseButtonDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): DRAG_MODE {
+    const mouseConfig = this.opts.mouseEventConfig
+
+    if (button === LEFT_MOUSE_BUTTON) {
+      if (mouseConfig?.leftButton) {
+        if (shiftKey && mouseConfig.leftButton.withShift !== undefined) {
+          return mouseConfig.leftButton.withShift
+        }
+        if (ctrlKey && mouseConfig.leftButton.withCtrl !== undefined) {
+          return mouseConfig.leftButton.withCtrl
+        }
+        return mouseConfig.leftButton.primary
+      }
+      return ctrlKey ? DRAG_MODE.crosshair : this.opts.dragModePrimary
+    } else if (button === RIGHT_MOUSE_BUTTON) {
+      if (mouseConfig?.rightButton !== undefined) {
+        return mouseConfig.rightButton
+      }
+      return this.opts.dragMode
+    } else if (button === CENTER_MOUSE_BUTTON) {
+      if (mouseConfig?.centerButton !== undefined) {
+        return mouseConfig.centerButton
+      }
+      return this.opts.dragMode
+    }
+
+    return this.opts.dragMode as DRAG_MODE
+  }
+
+  /**
+   * Gets the appropriate drag mode for touch events based on configuration.
+   * @internal
+   */
+  getTouchDragMode(isDoubleTouch: boolean): DRAG_MODE {
+    const touchConfig = this.opts.touchEventConfig
+
+    if (isDoubleTouch) {
+      return touchConfig?.doubleTouch ?? this.opts.dragMode
+    }
+
+    return touchConfig?.singleTouch ?? this.opts.dragModePrimary
+  }
+
+  /**
+   * Sets the active drag mode for the current interaction.
+   * @internal
+   */
+  setActiveDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): void {
+    this.uiData.activeDragMode = this.getMouseButtonDragMode(button, shiftKey, ctrlKey)
+    this.uiData.activeDragButton = button
+  }
+
+  /**
+   * Gets the currently active drag mode, or falls back to configured defaults.
+   * @internal
+   */
+  getCurrentDragMode(): DRAG_MODE {
+    if (this.uiData.activeDragMode !== null) {
+      return this.uiData.activeDragMode
+    }
+    // Fallback to right-click mode for backward compatibility
+    return this.opts.dragMode
+  }
+
+  /**
+   * Clears the active drag mode.
+   * @internal
+   */
+  clearActiveDragMode(): void {
+    this.uiData.activeDragMode = null
+    this.uiData.activeDragButton = null
+  }
+
+  /**
+   * Unified handler for mouse actions based on drag mode.
+   * @internal
+   */
+  handleMouseAction(dragMode: DRAG_MODE, e: MouseEvent, pos: { x: number; y: number }): void {
+    if (dragMode === DRAG_MODE.crosshair) {
+      this.mouseDown(pos.x, pos.y)
+      this.mouseClick(pos.x, pos.y)
+    } else if (dragMode === DRAG_MODE.windowing) {
       this.uiData.windowX = e.x
       this.uiData.windowY = e.y
-    }
-  }
+    } else {
+      // Handle all other drag modes (contrast, measurement, pan, etc.)
+      this.mousePos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
 
-  /**
-   * Handles center mouse button drag to initiate 2D panning or clip plane adjustment.
-   * @internal
-   */
-  mouseCenterButtonHandler(e: MouseEvent): void {
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-    this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
-    if (this.opts.dragMode === DRAG_MODE.none) {
-      return
-    }
-    this.setDragStart(pos!.x, pos!.y)
-    if (!this.uiData.isDragging) {
-      this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
-    }
-    this.uiData.isDragging = true
-    this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
-  }
-
-  /**
-   * Handles right mouse button drag to enable 2D panning or clip plane control.
-   * @internal
-   */
-  mouseRightButtonHandler(e: MouseEvent): void {
-    // this.uiData.isDragging = true;
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-    this.mousePos = [pos!.x * this.uiData.dpr!, pos!.y * this.uiData.dpr!]
-    if (this.opts.dragMode === DRAG_MODE.none) {
-      return
-    }
-
-    // Initialize angle measurement
-    if (this.opts.dragMode === DRAG_MODE.angle) {
-      if (this.uiData.angleState === 'none') {
-        this.uiData.angleState = 'drawing_first_line'
-      } else if (this.uiData.angleState === 'drawing_second_line') {
-        // Handle final click for angle measurement - complete the angle
-        this.uiData.angleState = 'complete'
-        this.drawScene()
+      if (dragMode === DRAG_MODE.none) {
         return
-      } else if (this.uiData.angleState === 'complete') {
-        // Reset angle measurement if clicking again
-        this.resetAngleMeasurement()
-        this.uiData.angleState = 'drawing_first_line'
       }
-    }
 
-    this.setDragStart(pos!.x, pos!.y)
-    if (!this.uiData.isDragging) {
-      this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
+      // Initialize angle measurement
+      if (dragMode === DRAG_MODE.angle) {
+        if (this.uiData.angleState === 'none') {
+          this.uiData.angleState = 'drawing_first_line'
+        } else if (this.uiData.angleState === 'drawing_second_line') {
+          // Final click - save completed angle with slice info
+          // Use current click position instead of dragEnd for final position
+          const finalClickPos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
+
+          // Get slice info using the current click position
+          const tileIdx = this.tileIndex(finalClickPos[0], finalClickPos[1])
+
+          let sliceInfo = { sliceIndex: -1, sliceType: SLICE_TYPE.AXIAL, slicePosition: 0 }
+          if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+            const sliceType = this.screenSlices[tileIdx].axCorSag
+            let slicePosition = 0
+
+            // Get the current slice position based on the crosshair position
+            if (sliceType === SLICE_TYPE.AXIAL) {
+              slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+            } else if (sliceType === SLICE_TYPE.CORONAL) {
+              slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+            } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+              slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+            }
+
+            sliceInfo = {
+              sliceIndex: tileIdx,
+              sliceType,
+              slicePosition
+            }
+          }
+
+          const secondLine = [
+            this.uiData.angleFirstLine[2], // start from end of first line
+            this.uiData.angleFirstLine[3],
+            finalClickPos[0], // to final click position
+            finalClickPos[1]
+          ]
+
+          // Convert canvas coordinates to world coordinates
+          const firstLineStartFrac = this.canvasPos2frac([this.uiData.angleFirstLine[0], this.uiData.angleFirstLine[1]])
+          const firstLineEndFrac = this.canvasPos2frac([this.uiData.angleFirstLine[2], this.uiData.angleFirstLine[3]])
+          const secondLineStartFrac = this.canvasPos2frac([secondLine[0], secondLine[1]])
+          const secondLineEndFrac = this.canvasPos2frac([secondLine[2], secondLine[3]])
+
+          if (
+            firstLineStartFrac[0] >= 0 &&
+            firstLineEndFrac[0] >= 0 &&
+            secondLineStartFrac[0] >= 0 &&
+            secondLineEndFrac[0] >= 0
+          ) {
+            const firstLineStartMM = this.frac2mm(firstLineStartFrac)
+            const firstLineEndMM = this.frac2mm(firstLineEndFrac)
+            const secondLineStartMM = this.frac2mm(secondLineStartFrac)
+            const secondLineEndMM = this.frac2mm(secondLineEndFrac)
+
+            const angleToSave = {
+              firstLineMM: {
+                start: vec3.fromValues(firstLineStartMM[0], firstLineStartMM[1], firstLineStartMM[2]),
+                end: vec3.fromValues(firstLineEndMM[0], firstLineEndMM[1], firstLineEndMM[2])
+              },
+              secondLineMM: {
+                start: vec3.fromValues(secondLineStartMM[0], secondLineStartMM[1], secondLineStartMM[2]),
+                end: vec3.fromValues(secondLineEndMM[0], secondLineEndMM[1], secondLineEndMM[2])
+              },
+              sliceIndex: sliceInfo.sliceIndex,
+              sliceType: sliceInfo.sliceType,
+              slicePosition: sliceInfo.slicePosition,
+              angle: this.calculateAngleBetweenLines(this.uiData.angleFirstLine, secondLine)
+            }
+
+            this.document.completedAngles.push(angleToSave)
+          }
+
+          this.resetAngleMeasurement()
+          this.uiData.angleState = 'complete'
+          this.drawScene()
+          return
+        } else if (this.uiData.angleState === 'complete') {
+          this.resetAngleMeasurement()
+          this.uiData.angleState = 'drawing_first_line'
+        }
+      }
+
+      this.setDragStart(pos.x, pos.y)
+      if (!this.uiData.isDragging) {
+        this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
+      }
+      this.uiData.isDragging = true
+      this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
     }
-    this.uiData.isDragging = true
-    this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
   }
 
   /**
@@ -1731,13 +1862,38 @@ export class Niivue {
     const wasCenterDown = this.uiData.mouseButtonCenterDown
     this.uiData.mouseButtonCenterDown = false
     this.uiData.mouseButtonLeftDown = false
+
+    // Save current drag mode for logic that depends on it
+    const currentDragMode = this.getCurrentDragMode()
+
     if (this.drawPenFillPts.length > 0) {
       this.drawPenFilled()
     } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
       this.drawAddUndoBitmap()
+    } else if (
+      this.opts.drawingEnabled &&
+      !isNaN(this.drawShapeStartLocation[0]) &&
+      (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE)
+    ) {
+      // Finalize rectangle or ellipse drawing - the shape is already drawn in drawBitmap
+      if (this.opts.penValue === 0) {
+        this.drawAddUndoBitmap()
+      } else {
+        // issue1409
+        this.drawAddUndoBitmap(this.drawFillOverwrites)
+      }
+      // Clean up preview bitmap since we're keeping the final drawing
+      this.drawShapePreviewBitmap = null
     }
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
+    this.drawShapeStartLocation = [NaN, NaN, NaN]
+    // Only restore preview bitmap if we didn't finalize a shape drawing
+    if (this.drawShapePreviewBitmap) {
+      this.drawBitmap = this.drawShapePreviewBitmap
+      this.drawShapePreviewBitmap = null
+      this.refreshDrawing(true, false)
+    }
     if (isFunction(this.onMouseUp)) {
       this.onMouseUp(uiData)
     }
@@ -1745,7 +1901,7 @@ export class Niivue {
       this.uiData.isDragging = false
 
       // Handle angle measurement workflow
-      if (this.opts.dragMode === DRAG_MODE.angle) {
+      if (currentDragMode === DRAG_MODE.angle) {
         if (this.uiData.angleState === 'drawing_first_line') {
           // First line completed, save it and start drawing second line
           this.uiData.angleFirstLine = [
@@ -1760,36 +1916,72 @@ export class Niivue {
           this.drawScene()
           return
         } else if (this.uiData.angleState === 'drawing_second_line') {
-          // Second line completed, finish angle measurement
+          // Second line completed, but angle will be saved in mouseDownListener
           this.uiData.angleState = 'complete'
+          this.clearActiveDragMode()
           this.drawScene()
           return
         }
       }
 
-      if (this.opts.dragMode === DRAG_MODE.callbackOnly) {
+      if (currentDragMode === DRAG_MODE.callbackOnly) {
         this.drawScene()
       } // hide selectionbox
       const fracStart = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
       const fracEnd = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
       this.generateMouseUpCallback(fracStart, fracEnd)
       // if roiSelection drag mode
-      if (this.opts.dragMode === DRAG_MODE.roiSelection) {
+      if (currentDragMode === DRAG_MODE.roiSelection) {
         // do not call drawScene so that the selection box remains visible
+        this.clearActiveDragMode()
         return
       }
-      if (this.opts.dragMode !== DRAG_MODE.contrast) {
+      if (currentDragMode === DRAG_MODE.contrast) {
+        if (wasCenterDown) {
+          this.clearActiveDragMode()
+          return
+        }
+        if (
+          this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
+          this.uiData.dragStart[1] === this.uiData.dragEnd[1]
+        ) {
+          this.clearActiveDragMode()
+          return
+        }
+        this.calculateNewRange({ volIdx: 0 })
+        this.refreshLayers(this.volumes[0], 0)
+      }
+      if (currentDragMode === DRAG_MODE.measurement) {
+        // Save completed measurement line with slice info
+        const sliceInfo = this.getCurrentSliceInfo()
+
+        // Convert canvas coordinates to world coordinates
+        const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
+        const endFrac = this.canvasPos2frac([this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
+
+        if (startFrac[0] >= 0 && endFrac[0] >= 0) {
+          const startMM = this.frac2mm(startFrac)
+          const endMM = this.frac2mm(endFrac)
+
+          this.document.completedMeasurements.push({
+            startMM: vec3.fromValues(startMM[0], startMM[1], startMM[2]),
+            endMM: vec3.fromValues(endMM[0], endMM[1], endMM[2]),
+            sliceIndex: sliceInfo.sliceIndex,
+            sliceType: sliceInfo.sliceType,
+            slicePosition: sliceInfo.slicePosition,
+            distance: vec3.distance(
+              vec3.fromValues(startMM[0], startMM[1], startMM[2]),
+              vec3.fromValues(endMM[0], endMM[1], endMM[2])
+            )
+          })
+        }
+
+        this.clearActiveDragMode()
+        this.drawScene()
         return
       }
-      if (wasCenterDown) {
-        return
-      }
-      if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
-        return
-      }
-      this.calculateNewRange({ volIdx: 0 })
-      this.refreshLayers(this.volumes[0], 0)
     }
+    this.clearActiveDragMode()
     this.drawScene()
   }
 
@@ -1861,7 +2053,7 @@ export class Niivue {
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false
       // if drag mode is contrast, and the user double taps and drags...
-      if (this.opts.dragMode === DRAG_MODE.contrast) {
+      if (this.getCurrentDragMode() === DRAG_MODE.contrast) {
         this.calculateNewRange()
         this.refreshLayers(this.volumes[0], 0)
       }
@@ -1958,6 +2150,18 @@ export class Niivue {
       this.drawPenFillPts = []
     }
 
+    // Reset shape drawing state if drawing was in progress
+    if (this.opts.drawingEnabled && !isNaN(this.drawShapeStartLocation[0])) {
+      log.debug('Mouse left canvas during shape drawing, resetting shape state.')
+      this.drawShapeStartLocation = [NaN, NaN, NaN]
+      // Restore main drawing bitmap if we were previewing a shape
+      if (this.drawShapePreviewBitmap) {
+        this.drawBitmap = this.drawShapePreviewBitmap
+        this.drawShapePreviewBitmap = null
+        this.refreshDrawing(true, false)
+      }
+    }
+
     // Reset drag state if mouse leaves during drag
     if (this.uiData.isDragging) {
       log.debug('Mouse left canvas during drag, resetting drag state.')
@@ -1989,23 +2193,31 @@ export class Niivue {
       if (tile !== this.uiData.clickedTile) {
         return
       }
-      if (this.uiData.mouseButtonLeftDown) {
-        const isCrosshairMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.crosshair
-        const isWindowingMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.windowing
-        const ctrlKey = e.ctrlKey
-        if (ctrlKey || isCrosshairMode) {
-          this.mouseMove(pos.x, pos.y)
-          this.mouseClick(pos.x, pos.y)
-        } else if (isWindowingMode) {
-          this.windowingHandler(e.x, e.y)
-        }
-      } else if (this.uiData.mouseButtonRightDown || this.uiData.mouseButtonCenterDown) {
+
+      // Use the active drag mode to determine how to handle mouse movement
+      const activeDragMode = this.getCurrentDragMode()
+
+      if (activeDragMode === DRAG_MODE.crosshair) {
+        this.mouseMove(pos.x, pos.y)
+        this.mouseClick(pos.x, pos.y)
+        this.drawScene()
+        this.uiData.prevX = this.uiData.currX
+        this.uiData.prevY = this.uiData.currY
+        return
+      } else if (activeDragMode === DRAG_MODE.windowing) {
+        this.windowingHandler(pos.x, pos.y)
+        this.drawScene()
+        this.uiData.prevX = this.uiData.currX
+        this.uiData.prevY = this.uiData.currY
+        return
+      } else {
+        // Handle all other drag modes that need drag tracking
         this.setDragEnd(pos.x, pos.y)
       }
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
-    } else if (this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line') {
+    } else if (this.getCurrentDragMode() === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line') {
       // Handle angle measurement second line tracking
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
       if (!pos) {
@@ -2086,7 +2298,7 @@ export class Niivue {
       this.drawScene() // this duplicate drawScene is necessary for depth picking. DO NOT REMOVE
       return
     }
-    if (this.opts.dragMode === DRAG_MODE.slicer3D) {
+    if (this.getCurrentDragMode() === DRAG_MODE.slicer3D) {
       return
     }
     if (this.volumes.length < 1) {
@@ -2143,12 +2355,11 @@ export class Niivue {
         this.drawScene()
         return
       }
-      const isCrosshairMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.crosshair
-      const isWindowingMode = this.opts.dragModePrimary === DRAG_MODE_PRIMARY.windowing
-      if (isCrosshairMode) {
+      const dragMode = this.getTouchDragMode(false)
+      if (dragMode === DRAG_MODE.crosshair) {
         this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
         this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
-      } else if (isWindowingMode) {
+      } else if (dragMode === DRAG_MODE.windowing) {
         this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY)
         this.drawScene()
       }
@@ -2188,9 +2399,6 @@ export class Niivue {
    */
   keyUpListener(e: KeyboardEvent): void {
     if (e.code === this.opts.clipPlaneHotKey) {
-      /* if (this.opts.sliceType!= SLICE_TYPE.RENDER) {
-      return;
-    } */ // bravo
       const now = new Date().getTime()
       const elapsed = now - this.lastCalled
       if (elapsed > this.opts.keyDebounceTime) {
@@ -2293,7 +2501,7 @@ export class Niivue {
     const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
     const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0)
     const validDrag = dragStartSum > 0 && dragEndSum > 0
-    if (this.opts.dragMode === DRAG_MODE.roiSelection && validDrag) {
+    if (this.getCurrentDragMode() === DRAG_MODE.roiSelection && validDrag) {
       const delta = e.deltaY > 0 ? 1 : -1
       // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
       if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
@@ -2365,7 +2573,10 @@ export class Niivue {
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    if (this.opts.dragMode === DRAG_MODE.pan && this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1) {
+    if (
+      this.getCurrentDragMode() === DRAG_MODE.pan &&
+      this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1
+    ) {
       // Zoom
       const zoomDirection = scrollAmount < 0 ? 1 : -1
       let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (0.01 * zoomDirection))
@@ -2651,7 +2862,6 @@ export class Niivue {
       }
       for (let i = 0; i < fileSystemEntries.length; i++) {
         allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
-        console.log(allFileObects)
       }
       return allFileObects
     }
@@ -2662,9 +2872,7 @@ export class Niivue {
           readEntries()
         } else {
           getFileObjects(allEntiresInDir)
-            .then(async (allFileObjects) => {
-              console.log(allFileObjects)
-            })
+            .then(async () => {})
             .catch((e) => {
               throw e
             })
@@ -2958,7 +3166,6 @@ export class Niivue {
                 }
                 loader(files)
                   .then(async (fileArrayBuffers) => {
-                    console.log(fileArrayBuffers)
                     const promises = fileArrayBuffers.map((loaderImage) =>
                       NVImage.loadFromUrl({
                         url: loaderImage.data,
@@ -2968,8 +3175,6 @@ export class Niivue {
                     )
                     Promise.all(promises)
                       .then(async (loadedNvImages) => {
-                        console.log('from dicom loader')
-                        console.log(loadedNvImages)
                         await this.onDicomLoaderFinishedWithImages(loadedNvImages)
                       })
                       .catch((e) => {
@@ -3035,6 +3240,16 @@ export class Niivue {
    */
   setIsOrientationTextVisible(isOrientationTextVisible: boolean): void {
     this.opts.isOrientationTextVisible = isOrientationTextVisible
+    this.drawScene()
+  }
+
+  /**
+   * Show or hide all four orientation labels (e.g., L/R, A/P, S/I) in 2D slice views
+   * @param showAllOrientationMarkers - whether all four orientation markers should be displayed
+   * @example niivue.setShowAllOrientationMarkers(true)
+   */
+  setShowAllOrientationMarkers(showAllOrientationMarkers: boolean): void {
+    this.opts.showAllOrientationMarkers = showAllOrientationMarkers
     this.drawScene()
   }
 
@@ -3321,10 +3536,20 @@ export class Niivue {
    * Uses a circular buffer to limit undo memory usage.
    * @internal
    */
-  drawAddUndoBitmap(): void {
+  drawAddUndoBitmap(drawFillOverwrites: boolean = true): void {
     if (!this.drawBitmap || this.drawBitmap.length < 1) {
       log.debug('drawAddUndoBitmap error: No drawing open')
       return
+    }
+    if (!drawFillOverwrites && this.drawUndoBitmaps.length > 0) {
+      const len = this.drawBitmap.length
+      const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], len)
+      for (let i = 0; i < len; i++) {
+        if (bmp[i] > 0) {
+          this.drawBitmap[i] = bmp[i]
+        }
+      }
+      this.refreshDrawing(false)
     }
     // let rle = encodeRLE(this.drawBitmap);
     // the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
@@ -3355,22 +3580,13 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
    */
   drawUndo(): void {
-    if (this.drawUndoBitmaps.length < 1) {
-      log.debug('undo bitmaps not loaded')
-      return
-    }
-    this.currentDrawUndoBitmap--
-    if (this.currentDrawUndoBitmap < 0) {
-      this.currentDrawUndoBitmap = this.drawUndoBitmaps.length - 1
-    }
-    if (this.currentDrawUndoBitmap >= this.drawUndoBitmaps.length) {
-      this.currentDrawUndoBitmap = 0
-    }
-    if (this.drawUndoBitmaps[this.currentDrawUndoBitmap].length < 2) {
-      log.debug('drawUndo is misbehaving')
-      return
-    }
-    this.drawBitmap = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], this.drawBitmap!.length)
+    const { drawBitmap, currentDrawUndoBitmap } = drawUndo({
+      drawUndoBitmaps: this.drawUndoBitmaps,
+      currentDrawUndoBitmap: this.currentDrawUndoBitmap,
+      drawBitmap: this.drawBitmap
+    })
+    this.drawBitmap = drawBitmap
+    this.currentDrawUndoBitmap = currentDrawUndoBitmap
     this.refreshDrawing(true)
   }
 
@@ -4334,6 +4550,12 @@ export class Niivue {
       this.drawPenLocation = [NaN, NaN, NaN]
       this.drawPenAxCorSag = -1
       this.drawPenFillPts = []
+      // Reset shape state
+      this.drawShapeStartLocation = [NaN, NaN, NaN]
+      if (this.drawShapePreviewBitmap) {
+        this.drawBitmap = this.drawShapePreviewBitmap
+        this.drawShapePreviewBitmap = null
+      }
     }
     this.drawScene() // Redraw needed in both cases
   }
@@ -5029,7 +5251,6 @@ export class Niivue {
       }
       const dicomLoader = this.getDicomLoader().loader
       const convertedArrayBuffer = await dicomLoader(dicomData)
-      console.log(convertedArrayBuffer)
       const name = convertedArrayBuffer[0].name
       const data = convertedArrayBuffer[0].data
       const image = await NVImage.loadFromUrl({ url: data, name })
@@ -5639,6 +5860,80 @@ export class Niivue {
   }
 
   /**
+   * Draw a rectangle from point A to point B
+   * @internal
+   */
+  drawRectangleMask(ptA: number[], ptB: number[], penValue: number): void {
+    if (!this.back?.dims) {
+      throw new Error('back.dims not set')
+    }
+    const dx = this.back.dims[1]
+    const dy = this.back.dims[2]
+    const dz = this.back.dims[3]
+
+    // Get bounds of rectangle
+    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
+    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
+    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1)
+    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
+    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
+    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
+
+    // Fill the rectangle
+    for (let z = z1; z <= z2; z++) {
+      for (let y = y1; y <= y2; y++) {
+        for (let x = x1; x <= x2; x++) {
+          this.drawPt(x, y, z, penValue)
+        }
+      }
+    }
+  }
+
+  /**
+   * Draw an ellipse from point A to point B (treating them as opposite corners of bounding box)
+   * @internal
+   */
+  drawEllipseMask(ptA: number[], ptB: number[], penValue: number): void {
+    if (!this.back?.dims) {
+      throw new Error('back.dims not set')
+    }
+    const dx = this.back.dims[1]
+    const dy = this.back.dims[2]
+    const dz = this.back.dims[3]
+
+    // Get bounds of ellipse
+    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
+    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
+    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1)
+    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
+    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
+    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
+
+    // Calculate center and radii
+    const centerX = (x1 + x2) / 2
+    const centerY = (y1 + y2) / 2
+    const centerZ = (z1 + z2) / 2
+    const radiusX = Math.abs(x2 - x1) / 2
+    const radiusY = Math.abs(y2 - y1) / 2
+    const radiusZ = Math.abs(z2 - z1) / 2
+
+    // Draw ellipse using the standard ellipse equation
+    for (let z = z1; z <= z2; z++) {
+      for (let y = y1; y <= y2; y++) {
+        for (let x = x1; x <= x2; x++) {
+          const distX = (x - centerX) / (radiusX + 0.5)
+          const distY = (y - centerY) / (radiusY + 0.5)
+          const distZ = (z - centerZ) / (radiusZ + 0.5)
+          // Check if point is inside ellipse
+          if (distX * distX + distY * distY + distZ * distZ <= 1.0) {
+            this.drawPt(x, y, z, penValue)
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
    *
    * @param seedXYZ -  voxel index of the seed voxel in the mask array.
@@ -6128,6 +6423,77 @@ export class Niivue {
   }
 
   /**
+   * Fills exterior regions of a 2D bitmap, marking outside voxels with 2
+   * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
+   * uses first-in, first out queue for storage
+   * @internal
+   */
+  floodFillSectionFIFO(
+    img2D: Uint8Array,
+    dims2D: readonly number[],
+    minPt: readonly number[],
+    maxPt: readonly number[]
+  ): void {
+    const w = dims2D[0]
+    const [minX, minY] = minPt
+    const [maxX, maxY] = maxPt
+    // Worst-case buffer size = bounding box area
+    // const capacity = (maxX - minX + 1) * (maxY - minY + 1);
+    // Likely worst case: we retire perimeter and move concentrically inward
+    // const capacity = 2 * (maxX - minX + maxY - minY + 2);
+    // Lets over allocate as I am unsure about edge cases
+    const capacity = 4 * (maxX - minX + maxY - minY + 2)
+    const queue = new Int32Array(capacity * 2) // store x,y pairs
+    let head = 0
+    let tail = 0
+
+    function enqueue(x: number, y: number): void {
+      if (x < minX || x > maxX || y < minY || y > maxY) {
+        return
+      }
+      const idx = x + y * w
+      if (img2D[idx] !== 0) {
+        return
+      }
+      img2D[idx] = 2 // mark visited/outside
+
+      queue[tail] = x
+      queue[tail + 1] = y
+      tail = (tail + 2) % queue.length
+    }
+
+    function dequeue(): [number, number] | null {
+      if (head === tail) {
+        return null
+      }
+      const x = queue[head]
+      const y = queue[head + 1]
+      head = (head + 2) % queue.length
+      return [x, y]
+    }
+
+    // seed all edges
+    for (let x = minX; x <= maxX; x++) {
+      enqueue(x, minY)
+      enqueue(x, maxY)
+    }
+    for (let y = minY + 1; y <= maxY - 1; y++) {
+      enqueue(minX, y)
+      enqueue(maxX, y)
+    }
+
+    // flood fill
+    let pt: [number, number] | null
+    while ((pt = dequeue()) !== null) {
+      const [x, y] = pt
+      enqueue(x - 1, y)
+      enqueue(x + 1, y)
+      enqueue(x, y - 1)
+      enqueue(x, y + 1)
+    }
+  }
+
+  /**
    * Connects and fills the interior of drawn line segments in 2D slice space.
    * @internal
    */
@@ -6238,37 +6604,9 @@ export class Niivue {
         img2D[pxl] = 2
       }
     }
-    // flood fill
-    const seeds: number[][] = []
-    function setSeed(pt: number[]): void {
-      if (pt[0] < minPt[0] || pt[1] < minPt[1] || pt[0] > maxPt[0] || pt[1] > maxPt[1]) {
-        return
-      }
-      const pxl = pt[0] + pt[1] * dims2D[0]
-      if (img2D[pxl] !== 0) {
-        return
-      } // not blank
-      seeds.push(pt)
-      img2D[pxl] = 2
-    }
-    // https://en.wikipedia.org/wiki/Flood_fill
-    // first seed all edges
-    for (let x = minPt[0]; x <= maxPt[0]; x++) {
-      setSeed([x, minPt[1]])
-      setSeed([x, maxPt[1]])
-    }
-    for (let y = minPt[1] + 1; y <= maxPt[1] - 1; y++) {
-      setSeed([minPt[0], y])
-      setSeed([maxPt[0], y])
-    }
-    // now retire first in first out
-    while (seeds.length > 0) {
-      const seed = seeds.shift()!
-      setSeed([seed[0] - 1, seed[1]])
-      setSeed([seed[0] + 1, seed[1]])
-      setSeed([seed[0], seed[1] - 1])
-      setSeed([seed[0], seed[1] + 1])
-    }
+    const startTime = Date.now()
+    this.floodFillSectionFIFO(img2D, dims2D, minPt, maxPt)
+    log.debug(`FloodFill ${Date.now() - startTime}`)
     // all voxels with value of zero have no path to edges
     // insert surviving pixels from 2D bitmap into 3D bitmap
     pen = this.opts.penValue
@@ -7654,9 +7992,9 @@ export class Niivue {
         }
       }
       // calculate the area based on the number of voxels in the mask
-      const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
-      const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
-      area = numMaskedVoxels * voxelArea
+      // const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
+      // const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
+      // area = numMaskedVoxels * voxelArea
 
       // perhaps better to calculate the area using the ellipse area formula
       const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1]
@@ -7705,7 +8043,7 @@ export class Niivue {
       SNot0 = SNot0 + (x - MNot0) * (x - Mnext)
       MNot0 = Mnext
 
-      mn = Math.min(x, mx)
+      mn = Math.min(x, mn)
       mx = Math.max(x, mx)
     }
     const stdev = Math.sqrt(S / (k - 1))
@@ -7714,7 +8052,7 @@ export class Niivue {
     const mxNot0 = mx
     if (k !== kNot0) {
       // some voxels are equal to zero
-      mn = Math.min(0, mx)
+      mn = Math.min(0, mn)
       mx = Math.max(0, mx)
     }
 
@@ -8856,7 +9194,6 @@ export class Niivue {
         src_max = volume.cal_max!
         const scale = (dst_max - dst_min) / (src_max - src_min)
         log.info(' Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
-        console.log('Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
         return [src_min, scale]
       }
     }
@@ -9903,28 +10240,55 @@ export class Niivue {
 
         // Standard Pen Drawing (if not flood fill and not clickToSegment)
         else {
-          if (isNaN(this.drawPenLocation[0])) {
-            this.drawPenAxCorSag = axCorSag
-            this.drawPenFillPts = []
-            this.drawPt(...pt, this.opts.penValue)
-          } else {
-            if (
-              pt[0] === this.drawPenLocation[0] &&
-              pt[1] === this.drawPenLocation[1] &&
-              pt[2] === this.drawPenLocation[2]
-            ) {
-              // No drawing needed, but still redraw scene and update location
-              this.drawScene()
-              this.createOnLocationChange(axCorSag)
-              return
+          if (this.opts.penType === PEN_TYPE.PEN) {
+            // Traditional pen drawing
+            if (isNaN(this.drawPenLocation[0])) {
+              this.drawPenAxCorSag = axCorSag
+              this.drawPenFillPts = []
+              this.drawPt(...pt, this.opts.penValue)
+            } else {
+              if (
+                pt[0] === this.drawPenLocation[0] &&
+                pt[1] === this.drawPenLocation[1] &&
+                pt[2] === this.drawPenLocation[2]
+              ) {
+                // No drawing needed, but still redraw scene and update location
+                this.drawScene()
+                this.createOnLocationChange(axCorSag)
+                return
+              }
+              this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
             }
-            this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
+            this.drawPenLocation = pt
+            if (this.opts.isFilledPen) {
+              this.drawPenFillPts.push(pt)
+            }
+            this.refreshDrawing(false, false) // Update GPU texture
+          } else if (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE) {
+            // Rectangle or ellipse drawing
+            if (isNaN(this.drawShapeStartLocation[0])) {
+              // First click - set start position
+              this.drawPenAxCorSag = axCorSag
+              this.drawShapeStartLocation = [...pt]
+              // Store current drawing bitmap for preview
+              if (this.drawBitmap) {
+                this.drawShapePreviewBitmap = this.drawBitmap.slice()
+              }
+            } else {
+              // Drawing preview of shape
+              if (this.drawShapePreviewBitmap && this.drawBitmap) {
+                // Restore original bitmap
+                this.drawBitmap.set(this.drawShapePreviewBitmap)
+                // Draw shape preview
+                if (this.opts.penType === PEN_TYPE.RECTANGLE) {
+                  this.drawRectangleMask(this.drawShapeStartLocation, pt, this.opts.penValue)
+                } else if (this.opts.penType === PEN_TYPE.ELLIPSE) {
+                  this.drawEllipseMask(this.drawShapeStartLocation, pt, this.opts.penValue)
+                }
+                this.refreshDrawing(false, false) // Update GPU texture
+              }
+            }
           }
-          this.drawPenLocation = pt
-          if (this.opts.isFilledPen) {
-            this.drawPenFillPts.push(pt)
-          }
-          this.refreshDrawing(false, false) // Update GPU texture
         }
       } // end if(drawingEnabled)
 
@@ -10228,21 +10592,6 @@ export class Niivue {
 
       // Calculate and display angle
       this.drawAngleText()
-    } else if (this.uiData.angleState === 'complete') {
-      // Draw both completed lines
-      this.drawMeasurementTool(this.uiData.angleFirstLine, false)
-
-      // Draw the second line (completed)
-      const secondLine = [
-        this.uiData.angleFirstLine[2], // start from end of first line
-        this.uiData.angleFirstLine[3],
-        this.uiData.dragEnd[0], // to final position
-        this.uiData.dragEnd[1]
-      ]
-      this.drawMeasurementTool(secondLine, false)
-
-      // Calculate and display angle
-      this.drawAngleText()
     }
   }
 
@@ -10267,6 +10616,34 @@ export class Niivue {
     const intersectionY = this.uiData.angleFirstLine[3]
 
     const angleText = `${angle.toFixed(1)}°`
+
+    // Draw angle text at intersection
+    this.drawTextBetween(
+      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
+      angleText,
+      this.opts.measureTextHeight / 0.06,
+      this.opts.measureTextColor
+    )
+  }
+
+  /**
+   * Calculate and draw angle text for a completed angle.
+   * @internal
+   */
+  drawAngleTextForAngle(angle: {
+    firstLine: number[]
+    secondLine: number[]
+    sliceIndex: number
+    sliceType: SLICE_TYPE
+    slicePosition: number
+  }): void {
+    const angle_degrees = this.calculateAngleBetweenLines(angle.firstLine, angle.secondLine)
+
+    // Display angle at intersection point
+    const intersectionX = angle.firstLine[2]
+    const intersectionY = angle.firstLine[3]
+
+    const angleText = `${angle_degrees.toFixed(1)}°`
 
     // Draw angle text at intersection
     this.drawTextBetween(
@@ -10315,6 +10692,150 @@ export class Niivue {
   }
 
   /**
+   * Get slice information for the current measurement/angle.
+   * @internal
+   */
+  getCurrentSliceInfo(): { sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number } {
+    const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
+
+    if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+      const sliceType = this.screenSlices[tileIdx].axCorSag
+      let slicePosition = 0
+
+      // Get the current slice position based on the crosshair position
+      if (sliceType === SLICE_TYPE.AXIAL) {
+        slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+      } else if (sliceType === SLICE_TYPE.CORONAL) {
+        slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+      } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+        slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+      }
+
+      return {
+        sliceIndex: tileIdx,
+        sliceType,
+        slicePosition
+      }
+    }
+
+    // Fallback: use current slice type and crosshair position when tileIndex fails
+    const currentSliceType = this.opts.sliceType
+    let slicePosition = 0
+
+    // Get the current slice position based on the crosshair position and current slice type
+    if (currentSliceType === SLICE_TYPE.AXIAL) {
+      slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
+    } else if (currentSliceType === SLICE_TYPE.CORONAL) {
+      slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
+    } else if (currentSliceType === SLICE_TYPE.SAGITTAL) {
+      slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
+    } else if (currentSliceType === SLICE_TYPE.MULTIPLANAR) {
+      // In multiplanar mode, try to determine the slice type from the mouse position
+      // by checking if we can convert the canvas position to fractional coordinates
+      const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
+      if (startFrac[0] >= 0) {
+        // If we can convert to fractional coordinates, use the current crosshair position
+        // but we need to determine which slice type this measurement is most likely for
+        // For now, default to axial in multiplanar mode
+        slicePosition = this.scene.crosshairPos[2]
+      }
+    }
+
+    return { sliceIndex: -1, sliceType: currentSliceType, slicePosition }
+  }
+
+  /**
+   * Get the current slice position based on slice type.
+   * @internal
+   */
+  getCurrentSlicePosition(sliceType: SLICE_TYPE): number {
+    if (sliceType === SLICE_TYPE.AXIAL) {
+      return this.scene.crosshairPos[2] // Z coordinate for axial slices
+    } else if (sliceType === SLICE_TYPE.CORONAL) {
+      return this.scene.crosshairPos[1] // Y coordinate for coronal slices
+    } else if (sliceType === SLICE_TYPE.SAGITTAL) {
+      return this.scene.crosshairPos[0] // X coordinate for sagittal slices
+    }
+    return 0
+  }
+
+  /**
+   * Check if a measurement/angle should be drawn on the current slice.
+   * @internal
+   */
+  shouldDrawOnCurrentSlice(sliceIndex: number, sliceType: SLICE_TYPE, slicePosition: number): boolean {
+    // In multiplanar mode, we need to check if the measurement can be displayed on any of the visible tiles
+    if (this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
+      // Check if this is a valid 2D slice type
+      if (sliceType > SLICE_TYPE.SAGITTAL) {
+        return false
+      }
+
+      for (let i = 0; i < this.screenSlices.length; i++) {
+        if (this.screenSlices[i].axCorSag === sliceType) {
+          // Check if the position matches (within tolerance)
+          const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
+          const tolerance = 0.001 // Tolerance for position matching
+          const difference = Math.abs(currentSlicePosition - slicePosition)
+
+          if (difference < tolerance) {
+            return true
+          }
+        }
+      }
+      return false
+    } else if (this.opts.sliceType !== sliceType) {
+      return false
+    }
+
+    // For single slice view, just check the position
+    const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
+
+    const tolerance = 0.001 // Increased from 0.001 to 0.01 to handle normal scroll increments
+    const difference = Math.abs(currentSlicePosition - slicePosition)
+    const result = difference < tolerance
+
+    return result
+  }
+
+  /**
+   * Clear all persistent measurement lines from the canvas.
+   * @example
+   * ```js
+   * nv.clearMeasurements()
+   * ```
+   */
+  clearMeasurements(): void {
+    this.document.completedMeasurements = []
+    this.drawScene()
+  }
+
+  /**
+   * Clear all persistent angle measurements from the canvas.
+   * @example
+   * ```js
+   * nv.clearAngles()
+   * ```
+   */
+  clearAngles(): void {
+    this.document.completedAngles = []
+    this.drawScene()
+  }
+
+  /**
+   * Clear all persistent measurements and angles from the canvas.
+   * @example
+   * ```js
+   * nv.clearAllMeasurements()
+   * ```
+   */
+  clearAllMeasurements(): void {
+    this.document.completedMeasurements = []
+    this.document.completedAngles = []
+    this.drawScene()
+  }
+
+  /**
    * Set the drag mode for mouse interactions.
    * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
    */
@@ -10358,6 +10879,63 @@ export class Niivue {
     if (this.opts.dragMode !== DRAG_MODE.angle) {
       this.resetAngleMeasurement()
     }
+    // Clear active drag mode since we're changing the configuration
+    this.clearActiveDragMode()
+  }
+
+  /**
+   * Set custom mouse event configuration for button mappings.
+   * @param config - Mouse event configuration object
+   * @example
+   * ```js
+   * nv.setMouseEventConfig({
+   *   leftButton: {
+   *     primary: DRAG_MODE.windowing,
+   *     withShift: DRAG_MODE.measurement,
+   *     withCtrl: DRAG_MODE.crosshair
+   *   },
+   *   rightButton: DRAG_MODE.crosshair,
+   *   centerButton: DRAG_MODE.pan
+   * })
+   * ```
+   */
+  setMouseEventConfig(config: MouseEventConfig): void {
+    this.opts.mouseEventConfig = config
+    // Clear active drag mode since we're changing the configuration
+    this.clearActiveDragMode()
+  }
+
+  /**
+   * Set custom touch event configuration for touch gesture mappings.
+   * @param config - Touch event configuration object
+   * @example
+   * ```js
+   * nv.setTouchEventConfig({
+   *   singleTouch: DRAG_MODE.windowing,
+   *   doubleTouch: DRAG_MODE.pan
+   * })
+   * ```
+   */
+  setTouchEventConfig(config: TouchEventConfig): void {
+    this.opts.touchEventConfig = config
+    // Clear active drag mode since we're changing the configuration
+    this.clearActiveDragMode()
+  }
+
+  /**
+   * Get current mouse event configuration.
+   * @returns Current mouse event configuration or undefined if using defaults
+   */
+  getMouseEventConfig(): MouseEventConfig | undefined {
+    return this.opts.mouseEventConfig
+  }
+
+  /**
+   * Get current touch event configuration.
+   * @returns Current touch event configuration or undefined if using defaults
+   */
+  getTouchEventConfig(): TouchEventConfig | undefined {
+    return this.opts.touchEventConfig
   }
 
   /**
@@ -10442,7 +11020,7 @@ export class Niivue {
    * @internal
    */
   drawSelectionBox(leftTopWidthHeight: number[]): void {
-    if (this.opts.dragMode === DRAG_MODE.roiSelection) {
+    if (this.getCurrentDragMode() === DRAG_MODE.roiSelection) {
       this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1)
       return
     }
@@ -10983,6 +11561,32 @@ export class Niivue {
   }
 
   /**
+   * Draw text horizontally centered above the given coordinates.
+   * @internal
+   */
+  drawTextAbove(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
+    // horizontally centered on x, above y
+    if (this.fontPx <= 0) {
+      return
+    }
+    if (!this.canvas) {
+      throw new Error('canvas undefined')
+    }
+    let size = this.fontPx * scale
+    let width = this.textWidth(size, str)
+    if (width > this.canvas.width) {
+      scale *= (this.canvas.width - 2) / width
+      size = this.fontPx * scale
+      width = this.textWidth(size, str)
+    }
+    xy[0] -= 0.5 * this.textWidth(size, str)
+    xy[0] = Math.max(xy[0], 1) // clamp left edge of canvas
+    xy[0] = Math.min(xy[0], this.canvas.width - width - 1) // clamp right edge of canvas
+    xy[1] -= size // position above the y coordinate
+    this.drawText(xy, str, scale, color)
+  }
+
+  /**
    * Update texture interpolation mode (nearest or linear) for background or overlay layer.
    * @internal
    */
@@ -11235,12 +11839,27 @@ export class Niivue {
     if (axCorSag === SLICE_TYPE.SAGITTAL) {
       leftText = this.opts.sagittalNoseLeft ? 'A' : 'P'
     }
+
+    // Calculate opposite orientations for all-marker mode
+    let bottomText = 'I' // opposite of 'S' (Superior -> Inferior)
+    if (axCorSag === SLICE_TYPE.AXIAL) {
+      bottomText = 'P' // opposite of 'A' (Anterior -> Posterior)
+    }
+
+    let rightText = this.opts.isRadiologicalConvention ? 'L' : 'R' // opposite of left
+    if (axCorSag === SLICE_TYPE.SAGITTAL) {
+      rightText = this.opts.sagittalNoseLeft ? 'P' : 'A' // opposite of left
+    }
+
     if (this.opts.isCornerOrientationText) {
       this.drawTextRightBelow([leftTopWidthHeight[0], leftTopWidthHeight[1]], leftText + topText)
       return
     }
     let drawBelow = true
     let drawRight = true
+    const drawAbove = this.opts.showAllOrientationMarkers
+    const drawLeft = this.opts.showAllOrientationMarkers
+
     if (!isNaN(padLeftTop[0])) {
       const ht = this.fontPx + 2
       if (padLeftTop[1] > ht) {
@@ -11264,6 +11883,20 @@ export class Niivue {
     }
     if (drawRight) {
       this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText)
+    }
+
+    // Draw additional markers when all markers are enabled
+    if (drawAbove) {
+      this.drawTextAbove(
+        [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]],
+        bottomText
+      )
+    }
+    if (drawLeft) {
+      this.drawTextLeft(
+        [leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5],
+        rightText
+      )
     }
   }
 
@@ -13180,6 +13813,244 @@ export class Niivue {
   }
 
   /**
+   * Convert fractional volume coordinates to canvas pixel coordinates.
+   * Returns the first valid screen slice that contains the fractional coordinates.
+   * @internal
+   */
+  /**
+   * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
+   * Returns both canvas position and the tile index for validation.
+   * @internal
+   */
+  frac2canvasPosWithTile(frac: vec3, preferredSliceType?: SLICE_TYPE): { pos: number[]; tileIndex: number } | null {
+    // Convert fractional coordinates to world coordinates
+    const worldMM = this.frac2mm(frac)
+
+    // Try to find a screen slice that can display this world coordinate
+    // First pass: look for exact matches, prioritizing preferred slice type
+    let bestMatch = { index: -1, distance: Infinity }
+
+    for (let i = 0; i < this.screenSlices.length; i++) {
+      const axCorSag = this.screenSlices[i].axCorSag
+
+      // Only handle 2D slices (axial, coronal, sagittal)
+      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+        continue
+      }
+
+      // Check if slice has valid transformation data
+      if (this.screenSlices[i].AxyzMxy.length < 4) {
+        continue
+      }
+
+      // Prioritize preferred slice type if specified
+      if (preferredSliceType !== undefined && axCorSag !== preferredSliceType) {
+        continue
+      }
+
+      // Start with world coordinates
+      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
+
+      // Apply inverse coordinate swizzling based on slice orientation
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
+      }
+
+      // Check if this point lies on the slice plane
+      const v = this.screenSlices[i].AxyzMxy
+      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
+
+      // Calculate distance from the slice plane
+      const distance = Math.abs(xyzMM[2] - expectedZ)
+
+      // Allow larger tolerance for multiplanar mode where slices might not align perfectly
+      const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
+
+      // Keep track of the best matching slice
+      if (distance < bestMatch.distance) {
+        bestMatch = { index: i, distance }
+      }
+
+      // If within tolerance, try to use this slice
+      if (distance <= tolerance) {
+        // Convert world coordinates to normalized slice coordinates
+        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
+        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
+
+        // Check if coordinates are within valid slice bounds
+        if (fracX >= 0.0 && fracX <= 1.0 && fracY >= 0.0 && fracY <= 1.0) {
+          // Convert normalized slice coordinates to screen coordinates
+          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+          let isMirror = false
+
+          // Handle mirrored/flipped display
+          if (ltwh[2] < 0) {
+            isMirror = true
+            ltwh[0] += ltwh[2]
+            ltwh[2] = -ltwh[2]
+          }
+
+          let screenFracX = fracX
+          if (isMirror) {
+            screenFracX = 1.0 - fracX
+          }
+          const screenFracY = 1.0 - fracY
+
+          // Convert to screen pixel coordinates
+          const screenX = ltwh[0] + screenFracX * ltwh[2]
+          const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+          return { pos: [screenX, screenY], tileIndex: i }
+        }
+      }
+    }
+
+    return null // no valid screen slice found
+  }
+
+  frac2canvasPos(frac: vec3): number[] | null {
+    // Convert fractional coordinates to world coordinates
+    const worldMM = this.frac2mm(frac)
+
+    // Try to find a screen slice that can display this world coordinate
+    // First pass: look for exact matches
+    let bestMatch = { index: -1, distance: Infinity }
+
+    for (let i = 0; i < this.screenSlices.length; i++) {
+      const axCorSag = this.screenSlices[i].axCorSag
+
+      // Only handle 2D slices (axial, coronal, sagittal)
+      if (axCorSag > SLICE_TYPE.SAGITTAL) {
+        continue
+      }
+
+      // Check if slice has valid transformation data
+      if (this.screenSlices[i].AxyzMxy.length < 4) {
+        continue
+      }
+
+      // Start with world coordinates
+      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
+
+      // Apply inverse coordinate swizzling based on slice orientation
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
+      }
+
+      // Check if this point lies on the slice plane
+      const v = this.screenSlices[i].AxyzMxy
+      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
+
+      // Calculate distance from the slice plane
+      const distance = Math.abs(xyzMM[2] - expectedZ)
+
+      // Allow larger tolerance for multiplanar mode where slices might not align perfectly
+      const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
+
+      // Keep track of the best matching slice
+      if (distance < bestMatch.distance) {
+        bestMatch = { index: i, distance }
+      }
+
+      // If within tolerance, try to use this slice
+      if (distance <= tolerance) {
+        // Convert world coordinates to normalized slice coordinates
+        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
+        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
+
+        // Check if coordinates are within valid slice bounds
+        if (fracX >= 0.0 && fracX <= 1.0 && fracY >= 0.0 && fracY <= 1.0) {
+          // Convert normalized slice coordinates to screen coordinates
+          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+          let isMirror = false
+
+          // Handle mirrored/flipped display
+          if (ltwh[2] < 0) {
+            isMirror = true
+            ltwh[0] += ltwh[2]
+            ltwh[2] = -ltwh[2]
+          }
+
+          let screenFracX = fracX
+          if (isMirror) {
+            screenFracX = 1.0 - fracX
+          }
+          const screenFracY = 1.0 - fracY
+
+          // Convert to screen pixel coordinates
+          const screenX = ltwh[0] + screenFracX * ltwh[2]
+          const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+          return [screenX, screenY]
+        }
+      }
+    }
+
+    // If no slice was within tolerance but we have a best match, try to project onto it
+    if (bestMatch.index >= 0 && bestMatch.distance < 2.0) {
+      const i = bestMatch.index
+      const axCorSag = this.screenSlices[i].axCorSag
+
+      // Start with world coordinates
+      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
+
+      // Apply inverse coordinate swizzling based on slice orientation
+      if (axCorSag === SLICE_TYPE.CORONAL) {
+        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
+      }
+      if (axCorSag === SLICE_TYPE.SAGITTAL) {
+        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
+      }
+
+      // Project the point onto the slice plane
+      const v = this.screenSlices[i].AxyzMxy
+      xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
+
+      // Convert world coordinates to normalized slice coordinates
+      const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
+      const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
+
+      // Check if coordinates are within valid slice bounds (with small margin)
+      if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
+        // Clamp to valid range
+        const clampedFracX = Math.max(0, Math.min(1, fracX))
+        const clampedFracY = Math.max(0, Math.min(1, fracY))
+
+        // Convert normalized slice coordinates to screen coordinates
+        const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
+        let isMirror = false
+
+        // Handle mirrored/flipped display
+        if (ltwh[2] < 0) {
+          isMirror = true
+          ltwh[0] += ltwh[2]
+          ltwh[2] = -ltwh[2]
+        }
+
+        let screenFracX = clampedFracX
+        if (isMirror) {
+          screenFracX = 1.0 - clampedFracX
+        }
+        const screenFracY = 1.0 - clampedFracY
+
+        // Convert to screen pixel coordinates
+        const screenX = ltwh[0] + screenFracX * ltwh[2]
+        const screenY = ltwh[1] + screenFracY * ltwh[3]
+
+        return [screenX, screenY]
+      }
+    }
+
+    return null // no valid screen slice found
+  }
+
+  /**
    * Calculates scaled slice dimensions and position within the canvas.
    * n.b. beware of similarly named `sliceScale` method.
    * @internal
@@ -14167,7 +15038,7 @@ export class Niivue {
         ])
         return
       }
-      if (this.opts.dragMode === DRAG_MODE.slicer3D) {
+      if (this.getCurrentDragMode() === DRAG_MODE.slicer3D) {
         this.dragForSlicer3D([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
@@ -14176,7 +15047,7 @@ export class Niivue {
         ])
         return
       }
-      if (this.opts.dragMode === DRAG_MODE.pan) {
+      if (this.getCurrentDragMode() === DRAG_MODE.pan) {
         this.dragForPanZoom([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
@@ -14188,29 +15059,120 @@ export class Niivue {
       if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
         return
       }
-      if (this.opts.dragMode === DRAG_MODE.measurement) {
-        // if (this.opts.isDragShowsMeasurementTool) {
+      if (this.getCurrentDragMode() === DRAG_MODE.measurement) {
         this.drawMeasurementTool([
           this.uiData.dragStart[0],
           this.uiData.dragStart[1],
           this.uiData.dragEnd[0],
           this.uiData.dragEnd[1]
         ])
-        return
       }
-      if (this.opts.dragMode === DRAG_MODE.angle) {
+      if (this.getCurrentDragMode() === DRAG_MODE.angle) {
         this.drawAngleMeasurementTool()
-        return
       }
-      const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
-      const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
-      this.drawSelectionBox([
-        Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
-        Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
-        width,
-        height
-      ])
-      return
+      // Only draw selection box for specific drag modes that need it
+      const currentDragMode = this.getCurrentDragMode()
+      if (currentDragMode === DRAG_MODE.contrast || currentDragMode === DRAG_MODE.roiSelection) {
+        const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0])
+        const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1])
+        this.drawSelectionBox([
+          Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
+          Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
+          width,
+          height
+        ])
+      }
+    }
+
+    // Draw persistent completed measurements for current slice
+    for (const measurement of this.document.completedMeasurements) {
+      if (this.shouldDrawOnCurrentSlice(measurement.sliceIndex, measurement.sliceType, measurement.slicePosition)) {
+        // Convert world coordinates back to canvas coordinates for rendering
+        const startFrac = this.mm2frac(measurement.startMM)
+        const endFrac = this.mm2frac(measurement.endMM)
+        const startCanvasResult = this.frac2canvasPosWithTile(startFrac, measurement.sliceType)
+        const endCanvasResult = this.frac2canvasPosWithTile(endFrac, measurement.sliceType)
+
+        // Only draw if both points are on the same tile to prevent diagonal lines across slices
+        if (startCanvasResult && endCanvasResult && startCanvasResult.tileIndex === endCanvasResult.tileIndex) {
+          this.drawMeasurementTool([
+            startCanvasResult.pos[0],
+            startCanvasResult.pos[1],
+            endCanvasResult.pos[0],
+            endCanvasResult.pos[1]
+          ])
+        }
+      }
+    }
+
+    // Draw persistent completed angles for current slice
+    for (let i = 0; i < this.document.completedAngles.length; i++) {
+      const angle = this.document.completedAngles[i]
+
+      const shouldDraw = this.shouldDrawOnCurrentSlice(angle.sliceIndex, angle.sliceType, angle.slicePosition)
+
+      if (shouldDraw) {
+        // Convert world coordinates back to canvas coordinates for rendering
+        const firstLineStartFrac = this.mm2frac(angle.firstLineMM.start)
+        const firstLineEndFrac = this.mm2frac(angle.firstLineMM.end)
+        const secondLineStartFrac = this.mm2frac(angle.secondLineMM.start)
+        const secondLineEndFrac = this.mm2frac(angle.secondLineMM.end)
+
+        const firstLineStartCanvasResult = this.frac2canvasPosWithTile(firstLineStartFrac, angle.sliceType)
+        const firstLineEndCanvasResult = this.frac2canvasPosWithTile(firstLineEndFrac, angle.sliceType)
+        const secondLineStartCanvasResult = this.frac2canvasPosWithTile(secondLineStartFrac, angle.sliceType)
+        const secondLineEndCanvasResult = this.frac2canvasPosWithTile(secondLineEndFrac, angle.sliceType)
+
+        // Only draw if all points are on the same tile to prevent diagonal lines across slices
+        if (
+          firstLineStartCanvasResult &&
+          firstLineEndCanvasResult &&
+          secondLineStartCanvasResult &&
+          secondLineEndCanvasResult &&
+          firstLineStartCanvasResult.tileIndex === firstLineEndCanvasResult.tileIndex &&
+          firstLineStartCanvasResult.tileIndex === secondLineStartCanvasResult.tileIndex &&
+          firstLineStartCanvasResult.tileIndex === secondLineEndCanvasResult.tileIndex
+        ) {
+          this.drawMeasurementTool(
+            [
+              firstLineStartCanvasResult.pos[0],
+              firstLineStartCanvasResult.pos[1],
+              firstLineEndCanvasResult.pos[0],
+              firstLineEndCanvasResult.pos[1]
+            ],
+            false
+          )
+          this.drawMeasurementTool(
+            [
+              secondLineStartCanvasResult.pos[0],
+              secondLineStartCanvasResult.pos[1],
+              secondLineEndCanvasResult.pos[0],
+              secondLineEndCanvasResult.pos[1]
+            ],
+            false
+          )
+
+          // Draw angle text - need to convert back to old format for the existing function
+          const angleForText = {
+            firstLine: [
+              firstLineStartCanvasResult.pos[0],
+              firstLineStartCanvasResult.pos[1],
+              firstLineEndCanvasResult.pos[0],
+              firstLineEndCanvasResult.pos[1]
+            ],
+            secondLine: [
+              secondLineStartCanvasResult.pos[0],
+              secondLineStartCanvasResult.pos[1],
+              secondLineEndCanvasResult.pos[0],
+              secondLineEndCanvasResult.pos[1]
+            ],
+            sliceIndex: angle.sliceIndex,
+            sliceType: angle.sliceType,
+            slicePosition: angle.slicePosition
+          }
+          this.drawAngleTextForAngle(angleForText)
+        }
+      }
     }
 
     // draw circle at mouse position if clickToSegment is enabled
@@ -14295,5 +15257,50 @@ export class Niivue {
    */
   set gl(gl: WebGL2RenderingContext | null) {
     this._gl = gl
+  }
+
+  /**
+   * Find the first and last slices containing drawing data along a given axis
+   * @param sliceType - The slice orientation (AXIAL, CORONAL, or SAGITTAL)
+   * @returns Object containing first and last slice indices, or null if no data found
+   */
+  findDrawingBoundarySlices(sliceType: SLICE_TYPE): { first: number; last: number } | null {
+    if (!this.back || !this.back.dims || !this.drawBitmap) {
+      return null
+    }
+
+    const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] }
+    return findBoundarySlices(sliceType, this.drawBitmap, dims)
+  }
+
+  /**
+   * Interpolate between mask slices using geometric or intensity-guided methods
+   * @param sliceIndexLow - Lower slice index (optional, will auto-detect if not provided)
+   * @param sliceIndexHigh - Higher slice index (optional, will auto-detect if not provided)
+   * @param options - Interpolation options
+   */
+  interpolateMaskSlices(
+    sliceIndexLow?: number,
+    sliceIndexHigh?: number,
+    options: {
+      intensityWeight?: number
+      binaryThreshold?: number
+      intensitySigma?: number
+      applySmoothingToSlices?: boolean
+      useIntensityGuided?: boolean
+      sliceType?: SLICE_TYPE
+    } = {}
+  ): void {
+    if (!this.back || !this.back.dims || !this.drawBitmap) {
+      throw new Error('Background image and drawing bitmap must be loaded')
+    }
+
+    const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] }
+    const imageData = this.back.img
+    const maxVal = this.back.global_max
+
+    interpolateMaskSlices(this.drawBitmap, dims, imageData, maxVal, sliceIndexLow, sliceIndexHigh, options, () =>
+      this.refreshDrawing(true)
+    )
   }
 }

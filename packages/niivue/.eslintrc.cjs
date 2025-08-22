@@ -35,7 +35,8 @@ module.exports = {
     {
       files: ['src/**/*.ts'],
       parserOptions: {
-        project: ['./tsconfig.json']
+        project: ['./tsconfig.json'],
+        tsconfigRootDir: __dirname
       },
       rules: {
         '@typescript-eslint/explicit-function-return-type': 'error',

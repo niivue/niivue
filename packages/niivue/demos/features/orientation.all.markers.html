@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>All Orientation Markers</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+    <header>
+      <select id="sliceType">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>A+C+S+R</option>
+      </select>
+      <button id="toggleOrientation">Hide Orientation Text</button>
+      <button id="toggleAllMarkers">Show All Markers (4)</button>
+      <button id="toggleRadiological">Radiological</button>
+      <button id="toggleCornerText">Hide Corner Text</button>
+      <button id="toggleSliceMM">World Space</button>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from '../dist/index.js'
+  var drop = document.getElementById('sliceType')
+  drop.onchange = function () {
+    let st = parseInt(document.getElementById('sliceType').value)
+    nv1.setSliceType(st)
+  }
+  function handleIntensityChange(data) {
+    document.getElementById('intensity').innerHTML = '&nbsp;&nbsp;' + data.string
+    console.log(data)
+  }
+  var volumeList1 = [
+    {
+      url: '../images/mni152.nii.gz',
+      colormap: 'gray',
+      visible: true,
+      opacity: 1
+    },
+    {
+      url: '../images/hippo.nii.gz',
+      colormap: 'red',
+      visible: true,
+      opacity: 1
+    }
+  ]
+  var nv1 = new niivue.Niivue({
+    dragAndDropEnabled: true,
+    onLocationChange: handleIntensityChange
+  })
+  await nv1.attachTo('gl1')
+  await nv1.loadVolumes(volumeList1)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  
+  let orientationVisible = true
+  let allMarkersVisible = false
+  let radiologicalConvention = false
+  let cornerTextVisible = true
+  let sliceMM = false
+  
+  nv1.setIsOrientationTextVisible(orientationVisible)
+  nv1.setShowAllOrientationMarkers(allMarkersVisible)
+  nv1.setRadiologicalConvention(radiologicalConvention)
+  nv1.setSliceMM(sliceMM)
+  
+  const toggleBtn = document.getElementById('toggleOrientation')
+  toggleBtn.addEventListener('click', () => {
+    orientationVisible = !orientationVisible
+    nv1.setIsOrientationTextVisible(orientationVisible)
+    toggleBtn.textContent = orientationVisible ? 'Hide Orientation Text' : 'Show Orientation Text'
+  })
+  
+  const toggleAllBtn = document.getElementById('toggleAllMarkers')
+  toggleAllBtn.addEventListener('click', () => {
+    allMarkersVisible = !allMarkersVisible
+    nv1.setShowAllOrientationMarkers(allMarkersVisible)
+    toggleAllBtn.textContent = allMarkersVisible ? 'Show Normal Markers (2)' : 'Show All Markers (4)'
+  })
+  
+  const toggleRadiologicalBtn = document.getElementById('toggleRadiological')
+  toggleRadiologicalBtn.addEventListener('click', () => {
+    radiologicalConvention = !radiologicalConvention
+    nv1.setRadiologicalConvention(radiologicalConvention)
+    toggleRadiologicalBtn.textContent = radiologicalConvention ? 'Neurological' : 'Radiological'
+  })
+  
+  const toggleCornerTextBtn = document.getElementById('toggleCornerText')
+  toggleCornerTextBtn.addEventListener('click', () => {
+    cornerTextVisible = !cornerTextVisible
+    nv1.opts.isCornerOrientationText = cornerTextVisible
+    nv1.drawScene()
+    toggleCornerTextBtn.textContent = cornerTextVisible ? 'Hide Corner Text' : 'Show Corner Text'
+  })
+  
+  const toggleSliceMMBtn = document.getElementById('toggleSliceMM')
+  toggleSliceMMBtn.addEventListener('click', () => {
+    sliceMM = !sliceMM
+    nv1.setSliceMM(sliceMM)
+    toggleSliceMMBtn.textContent = sliceMM ? 'Voxel Space' : 'World Space'
+  })
+</script>

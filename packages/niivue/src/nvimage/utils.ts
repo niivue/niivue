@@ -1,7 +1,7 @@
 import { vec3 } from 'gl-matrix'
-import { log } from '../logger.js'
-import { NiftiHeader } from '../types.js'
-import { LUT } from '../colortables.js'
+import { log } from '@/logger'
+import { NiftiHeader } from '@/types'
+import { LUT } from '@/colortables'
 
 export const isPlatformLittleEndian = (): boolean => {
   // inspired by https://github.com/rii-mango/Papaya

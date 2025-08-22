@@ -4,16 +4,20 @@
     // This doesn't do anything, as we don't compile using tsc.
     // It needs to be set so that ts linting doesn't complain about overwriting input files.
     "outDir": "ts-build",
-    "module": "NodeNext",
+    "module": "ESNext",
     "target": "esnext",
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "bundler",
     "strict": false,
     "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src", "types.d.ts"]
 }
