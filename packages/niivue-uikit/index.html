@@ -46,6 +46,8 @@
             background: #000000 !important;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
             transition: all 0.2s ease !important;
+            /* CRITICAL FIX: Add touch-action for proper pointer event handling */
+            touch-action: none !important;
         }
         
         #gl1:hover {
@@ -285,10 +287,18 @@
             UIKSVG
         } from '../uikit/dist/index.es.js'
 
+        // Clean event routing system (instrumentation removed)
+
         // Logging system
         let logsVisible = false
+        let eventLoggingEnabled = false // ADDED: Reduce event logging noise
         
         function log(message, type = 'info') {
+            // Filter out noisy event logs unless explicitly enabled
+            if (type === 'event' && !eventLoggingEnabled) {
+                return
+            }
+            
             const logPanel = document.getElementById('log-panel')
             const entry = document.createElement('div')
             entry.className = `log-entry log-${type}`
@@ -693,6 +703,8 @@
                 
                 log('Niivue attached to canvas successfully', 'info')
                 
+                // Canvas attached successfully
+                
                 // Check WebGL status
                 const gl = nv.gl
                 if (!gl) {
@@ -972,10 +984,10 @@
                     log(`Medical image loaded: ${volumeList[0].url}`, 'info')
                     log(`Volume dimensions: ${nv.volumes[0].dims}`, 'info')
                     
-                    // CUSTOM LAYOUT IMPLEMENTATION
+                                    // CUSTOM LAYOUT IMPLEMENTATION
                     // Configure custom layout: 80% for medical image (horizontal), 20% for UIKit controls
                     // All views uniform square-like dimensions, centered vertically like typical medical imaging
-                    const customLayout = [
+                const customLayout = [
                         // All four views with square-like dimensions (19.5% width, 38% height, centered vertically)
                         { sliceType: nv.sliceTypeAxial, position: [0.0, 0.32, 0.195, 0.50] },        // View 1: Axial
                         { sliceType: nv.sliceTypeCoronal, position: [0.2, 0.32, 0.195, 0.50] },      // View 2: Coronal  
@@ -984,25 +996,25 @@
                     ]
                     
                     log('Setting custom layout: 4 square medical views horizontally aligned + UI controls (20%)', 'info')
-                    nv.setCustomLayout(customLayout)
-                    
-                    // Set optimal view for medical imaging
+                nv.setCustomLayout(customLayout)
+                
+                // Set optimal view for medical imaging
                     nv.setSliceType(nv.sliceTypeMultiplanar)
-                    nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
-                    nv.setRenderAzimuthElevation(120, 10)
-                    
-                    // Set rendering parameters for better visualization
-                    nv.setInterpolation(true) // Smoother display
-                    nv.opts.isColorbar = true
-                    
-                    // Configure slice positions for all three views
-                    nv.scene.sagittalPos = 0.5
-                    nv.scene.coronalPos = 0.5
-                    nv.scene.axialPos = 0.5
-                    
-                    // Update the volume rendering
-                    nv.updateGLVolume()
-                    
+                nv.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+                nv.setRenderAzimuthElevation(120, 10)
+                
+                // Set rendering parameters for better visualization
+                nv.setInterpolation(true) // Smoother display
+                nv.opts.isColorbar = true
+                
+                // Configure slice positions for all three views
+                nv.scene.sagittalPos = 0.5
+                nv.scene.coronalPos = 0.5
+                nv.scene.axialPos = 0.5
+                
+                // Update the volume rendering
+                nv.updateGLVolume()
+                
                     log('Custom layout applied successfully - 4 uniform square views with black background', 'info')
                     
                 } catch (imageError) {
@@ -1581,59 +1593,8 @@
             }
         }
 
-        // Enhanced mouse event handling for separated image and UI regions
-        function handleMouseEvents(event) {
-            if (!uikitRenderer) return false
-
-            // Get canvas bounds for proper mouse coordinate calculation
-            const canvas = document.getElementById('gl1')
-            const rect = canvas.getBoundingClientRect()
-            
-            // Calculate proper mouse coordinates relative to canvas
-            const mouseX = event.clientX - rect.left
-            const mouseY = event.clientY - rect.top
-            
-            // Determine if mouse is in UI area (80%-100% of canvas width)
-            const uiAreaStart = canvas.width * 0.80
-            const isInUIArea = mouseX >= uiAreaStart
-            
-            // If mouse is in the image area (0%-80%), let NiiVue handle it
-            if (!isInUIArea) {
-                // Allow NiiVue to handle image interaction (crosshair, slice navigation, etc.)
-                return false
-            }
-            
-            // Mouse is in UI area - handle with UIKit components
-            const mouseEvent = {
-                type: event.type,
-                offsetX: mouseX,
-                offsetY: mouseY,
-                clientX: event.clientX,
-                clientY: event.clientY,
-                target: canvas,
-                preventDefault: () => event.preventDefault(),
-                stopPropagation: () => event.stopPropagation()
-            }
-
-            let handled = false
-            
-            // Check each UIKit component for mouse interaction
-            for (const [name, component] of Object.entries(uikitComponents)) {
-                if (component && component.handleMouseEvent) {
-                    try {
-                        if (component.handleMouseEvent(mouseEvent)) {
-                            handled = true
-                            log(`Mouse event handled by ${name} in UI area`, 'event')
-                            break
-                        }
-                    } catch (error) {
-                        log(`Error in ${name} mouse handler: ${error.message}`, 'error')
-                    }
-                }
-            }
-            
-            return handled
-        }
+        // Event delegation helper function - no longer needed with new architecture
+        // Removed to prevent confusion
 
         // Medical imaging parameter update functions
         function updateBrightness(value) {
@@ -2275,6 +2236,8 @@
             if (nv) {
                 setTimeout(() => {
                     recalculateLayout('Window focus')
+                    // CRITICAL FIX: Re-establish event delegation after window focus
+                    setupEventDelegation()
                 }, 50)
             }
         })
@@ -2399,54 +2362,110 @@
             }
         })
 
-        // Set up mouse event handling for separated image and UI regions
-        function setupMouseEventHandling() {
+        // COMPLETELY REWRITTEN: Proper event delegation using capture phase
+        // UIKit captures events first, then conditionally allows them to bubble to NiiVue
+        let eventDelegationSetup = false
+        function setupEventDelegation() {
             const canvas = document.getElementById('gl1')
+            if (!canvas) {
+                log('Cannot set up event delegation - canvas not found', 'error')
+                return
+            }
             
-            canvas.addEventListener('mousedown', (event) => {
-                const handled = handleMouseEvents(event)
+            // Prevent duplicate setup
+            if (eventDelegationSetup) {
+                log('Event delegation already configured, skipping duplicate setup', 'info')
+                return
+            }
+            
+            // CRITICAL FIX: Use capture phase to ensure UIKit gets events BEFORE NiiVue
+            // This prevents the event listener conflict issue entirely
+            
+            function delegateEvent(event) {
+                if (!uikitRenderer || !uikitComponents) {
+                    // UIKit not ready, let event bubble to NiiVue
+                    return
+                }
+
+                const rect = canvas.getBoundingClientRect()
+                const mouseX = event.clientX - rect.left
+                const mouseY = event.clientY - rect.top
+                
+                // Determine if mouse is in UI area (80%-100% of canvas width)
+                const uiAreaStart = canvas.width * 0.80
+                const isInUIArea = mouseX >= uiAreaStart
+                
+                if (!isInUIArea) {
+                    // Mouse in image area (0%-80%) - let event bubble to NiiVue naturally
+                    log(`Event in image area (${mouseX.toFixed(0)}, ${mouseY.toFixed(0)}) - allowing NiiVue to handle`, 'event')
+                    return
+                }
+                
+                // Mouse in UI area (80%-100%) - handle with UIKit and stop propagation
+                log(`Event in UI area (${mouseX.toFixed(0)}, ${mouseY.toFixed(0)}) - routing to UIKit`, 'event')
+                
+                const mouseEvent = {
+                    type: event.type,
+                    offsetX: mouseX,
+                    offsetY: mouseY,
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    target: canvas,
+                    preventDefault: () => event.preventDefault(),
+                    stopPropagation: () => event.stopPropagation()
+                }
+
+                let handled = false
+                
+                // Check each UIKit component for mouse interaction
+                for (const [name, component] of Object.entries(uikitComponents)) {
+                    if (component && component.handleMouseEvent) {
+                        try {
+                            if (component.handleMouseEvent(mouseEvent)) {
+                                handled = true
+                                log(`Mouse event handled by ${name} in UI area`, 'event')
+                                break
+                            }
+                        } catch (error) {
+                            log(`Error in ${name} mouse handler: ${error.message}`, 'error')
+                        }
+                    }
+                }
+                
                 if (handled) {
+                    // UIKit handled the event - prevent it from reaching NiiVue
                     event.preventDefault()
                     event.stopPropagation()
+                } else {
+                    // UIKit didn't handle it - let it bubble to NiiVue
+                    log('UIKit components did not handle event in UI area, allowing NiiVue fallback', 'event')
                 }
-                // If not handled, NiiVue will process the event for image interaction
-            })
+            }
             
-            canvas.addEventListener('mousemove', (event) => {
-                const handled = handleMouseEvents(event)
-                if (handled) {
-                    event.preventDefault()
-                    event.stopPropagation()
-                }
-                // If not handled, NiiVue will process the event for image interaction
-            })
+            // CRITICAL: Use capture phase (true) to ensure UIKit gets events BEFORE NiiVue
+            canvas.addEventListener('mousedown', delegateEvent, true)
+            canvas.addEventListener('mousemove', delegateEvent, true)
+            canvas.addEventListener('mouseup', delegateEvent, true)
+            canvas.addEventListener('click', delegateEvent, true)
             
-            canvas.addEventListener('mouseup', (event) => {
-                const handled = handleMouseEvents(event)
-                if (handled) {
-                    event.preventDefault()
-                    event.stopPropagation()
-                }
-                // If not handled, NiiVue will process the event for image interaction
-            })
+            // Also handle touch events for mobile compatibility
+            canvas.addEventListener('touchstart', delegateEvent, true)
+            canvas.addEventListener('touchmove', delegateEvent, true) 
+            canvas.addEventListener('touchend', delegateEvent, true)
             
-            canvas.addEventListener('click', (event) => {
-                const handled = handleMouseEvents(event)
-                if (handled) {
-                    event.preventDefault()
-                    event.stopPropagation()
-                }
-                // If not handled, NiiVue will process the event for image interaction
-            })
-            
-            log('Mouse event handling configured for separated image and UI regions', 'info')
+            // Mark delegation as set up
+            eventDelegationSetup = true
+            log('Event delegation configured using capture phase - UIKit → NiiVue routing established', 'info')
         }
 
         // Initialize everything
         window.addEventListener('load', async () => {
             log('Page loaded, starting initialization...', 'info')
             await initializeNiivue()
-            setupMouseEventHandling()
+            
+            // CRITICAL FIX: Set up proper event delegation using capture phase
+            setupEventDelegation()
+            
             renderLoop()
             
             // Start layout validation after initialization
@@ -2476,16 +2495,31 @@
                 
                 if (nv && uikitComponents) {
                     setTimeout(() => {
+                        // CRITICAL FIX: Force canvas dimension reset before any calculations
+                        const canvas = document.getElementById('gl1')
+                        if (canvas) {
+                            // Reset canvas dimensions to prevent corruption
+                            const rect = canvas.getBoundingClientRect()
+                            canvas.width = rect.width
+                            canvas.height = rect.height
+                            log(`Force reset canvas dimensions on tab return: ${canvas.width}x${canvas.height}`, 'info')
+                        }
+                        
                         // Force NiiVue to recalculate its dimensions
                         if (nv.resizeListener) {
                             nv.resizeListener()
                         }
                         recalculateLayout('Tab visibility change')
+                        
+                        // CRITICAL FIX: Re-establish event delegation after tab switch
+                        setupEventDelegation()
+                        
                         // Force a redraw
                         if (nv.drawScene) {
                             nv.drawScene()
                         }
-                        log('Tab became visible - layout validation started, layout recalculated', 'info')
+                        
+                        log('Tab became visible - layout recalculated and event delegation restored', 'info')
                     }, 100) // Small delay to ensure canvas is properly sized
                 } else {
                     log('Tab became visible but components not ready - starting validation only', 'warn')
@@ -2506,24 +2540,35 @@
                 return
             }
 
-            // Validate and update canvas dimensions
+            // CRITICAL FIX: Validate and update canvas dimensions with corruption detection
             const clientWidth = canvas.clientWidth
             const clientHeight = canvas.clientHeight
 
+            // CRITICAL: Detect dimension corruption (doubled values after tab switch)
+            let correctedWidth = clientWidth
+            let correctedHeight = clientHeight
+            
+            // If dimensions seem doubled (common after tab switch), halve them
+            if (clientWidth > 2500 && clientHeight > 1000) {
+                correctedWidth = clientWidth / 2
+                correctedHeight = clientHeight / 2
+                log(`Canvas dimension corruption detected: ${clientWidth}x${clientHeight} → ${correctedWidth}x${correctedHeight}`, 'warn')
+            }
+
             // Ensure canvas has proper dimensions
-            if (clientWidth > 0 && clientHeight > 0) {
+            if (correctedWidth > 0 && correctedHeight > 0) {
                 const oldWidth = canvas.width
                 const oldHeight = canvas.height
                 
                 // Only update if dimensions actually changed or are invalid
-                if (canvas.width !== clientWidth || canvas.height !== clientHeight || canvas.width === 0 || canvas.height === 0) {
-                    canvas.width = clientWidth
-                    canvas.height = clientHeight
+                if (canvas.width !== correctedWidth || canvas.height !== correctedHeight || canvas.width === 0 || canvas.height === 0) {
+                    canvas.width = correctedWidth
+                    canvas.height = correctedHeight
                     
                     log(`Canvas dimensions updated (${reason}): ${oldWidth}x${oldHeight} → ${canvas.width}x${canvas.height}`, 'info')
                     
                     // If dimensions changed significantly, update NiiVue
-                    if (Math.abs(oldWidth - clientWidth) > 10 || Math.abs(oldHeight - clientHeight) > 10) {
+                    if (Math.abs(oldWidth - correctedWidth) > 10 || Math.abs(oldHeight - correctedHeight) > 10) {
                         if (nv.resizeListener) {
                             nv.resizeListener()
                         }
@@ -2547,7 +2592,7 @@
                     }, 10)
                 }
             } else {
-                log(`Warning: Invalid canvas dimensions (${reason}): ${clientWidth}x${clientHeight}`, 'warn')
+                log(`Warning: Invalid canvas dimensions (${reason}): ${correctedWidth}x${correctedHeight}`, 'warn')
                 
                 // Try to recover by forcing a layout update after a short delay
                 setTimeout(() => {
