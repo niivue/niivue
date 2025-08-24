@@ -1,4 +1,4 @@
-import { sliceTypeMap } from '../../../common/sliceTypes'
+import { sliceTypeMap } from '../../../common/sliceTypes.js'
 import { layouts } from '../../../common/layouts.js'
 import { SHOW_RENDER, type Niivue, type SLICE_TYPE } from '@niivue/niivue'
 

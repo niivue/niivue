@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 import { TextField, Button } from '@radix-ui/themes'
 
 export const CrosshairSize = (): JSX.Element => {
