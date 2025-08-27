@@ -1,5 +1,5 @@
 'use client'
-
+// Ported from https://github.com/niivue/fullstack-niivue-demo/blob/thuy-dev/frontend/src/components/niimath-config.tsx
 import { useState } from 'react'
 import { Box, Flex, Text, Button, Select, Card, Badge, Tooltip, IconButton } from '@radix-ui/themes'
 import { Cross2Icon, PlusIcon, InfoCircledIcon } from '@radix-ui/react-icons'
