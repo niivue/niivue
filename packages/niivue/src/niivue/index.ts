@@ -1457,6 +1457,10 @@ export class Niivue {
    * @internal
    */
   mouseDownListener(e: MouseEvent): void {
+    if (!this.eventInBounds(e)) {
+      this.drawScene()
+      return
+    }
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
@@ -1475,10 +1479,10 @@ export class Niivue {
     if (!pos) {
       return
     }
-    if (!this.eventInBounds(e)) {
-      // Click was outside this instance's bounds → ignore
-      return
-    }
+    // if (!this.eventInBounds(e)) {
+    //   // Click was outside this instance's bounds → ignore
+    //   return
+    // }
 
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
 
@@ -1850,13 +1854,10 @@ export class Niivue {
    * @internal
    */
   mouseUpListener(e?: MouseEvent): void {
-    if (e && !this.eventInBounds(e)) {
-      return
-    }
-
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
+
     // let fracPos = this.canvasPos2frac(this.mousePos);
     const uiData = {
       mouseButtonRightDown: this.uiData.mouseButtonRightDown,
@@ -1990,7 +1991,11 @@ export class Niivue {
         return
       }
     }
+
     this.clearActiveDragMode()
+    // if (e && !this.eventInBounds(e)) {
+    //   return
+    // }
     this.drawScene()
   }
 
@@ -2188,9 +2193,9 @@ export class Niivue {
    * @internal
    */
   mouseMoveListener(e: MouseEvent): void {
-    if (!this.eventInBounds(e)) {
-      return
-    }
+    // if (!this.eventInBounds(e)) {
+    //   return
+    // }
 
     // move crosshair and change slices if mouse click and move
     if (this.uiData.mousedown) {
@@ -14976,6 +14981,12 @@ export class Niivue {
   clearBounds(mask: number = this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT): void {
     const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
     const gl = this.gl
+    // You could also set clearDepth if depth bit is included
+    if (mask & gl.DEPTH_BUFFER_BIT) {
+      gl.clearDepth(0.0)
+      gl.clear(gl.DEPTH_BUFFER_BIT)
+    }
+
     gl.enable(gl.SCISSOR_TEST)
     gl.scissor(vpX, vpY, vpW, vpH)
 
@@ -14983,16 +14994,11 @@ export class Niivue {
     console.log('canvas', gl.canvas.width, gl.canvas.height)
     // Only set clearColor if color bit is included
     if (mask & gl.COLOR_BUFFER_BIT) {
-      // this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
-      this.gl.clearColor(1.0, this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
-    }
-    this.gl.clearColor(1.0, this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
-    // You could also set clearDepth if depth bit is included
-    if (mask & gl.DEPTH_BUFFER_BIT) {
-      gl.clearDepth(0.0)
+      this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
+      // this.gl.clearColor(1.0, this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
+      gl.clear(gl.COLOR_BUFFER_BIT)
     }
 
-    // gl.clear(mask)
     gl.disable(this.gl.SCISSOR_TEST)
   }
 
