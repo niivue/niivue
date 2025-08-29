@@ -2193,11 +2193,11 @@ export class Niivue {
    * @internal
    */
   mouseMoveListener(e: MouseEvent): void {
-    // if (!this.eventInBounds(e)) {
-    //   return
-    // }
-
     // move crosshair and change slices if mouse click and move
+    
+    // we need to do this when we have multiple instances
+    this.drawScene()
+
     if (this.uiData.mousedown) {
       const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
       // ignore if mouse moves outside of tile of initial click
