@@ -13,7 +13,7 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-      <label for="broadcastCheck">Broadcast nv1 → nv2</label>
+      <label for="broadcastCheck">Bidirectional Sync nv1 ↔ nv2</label>
       <input type="checkbox" id="broadcastCheck" checked />
     </header>
     <main id="canvas-container">
@@ -38,9 +38,11 @@
 
       function updateBroadcast() {
         if (broadcastCheck.checked) {
-          nv1.broadcastTo([nv2], { "3d": true, "2d": true })
+           nv1.broadcastTo([nv2], { "3d": true, "2d": true })
+           nv2.broadcastTo([nv1], { "3d": true, "2d": true })
         } else {
           nv1.broadcastTo([], { "3d": false, "2d": false }) // clear targets
+          nv2.broadcastTo([], { "3d": false, "2d": false })
         }
       }
 
