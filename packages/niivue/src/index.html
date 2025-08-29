@@ -13,56 +13,8 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
-      <button id="openBtn">Choose an image or mesh with a dialog</button>
-      <label for="fiberRadius">Radius</label>
-      <input type="range" min="0" max="20" value="5" class="slider" id="fiberRadius" />
-      <label for="fiberDitherSlider">Dither</label>
-      <input type="range" min="0" max="10" value="0" class="slider" id="fiberDitherSlider" />
-      <label for="fiberColor">Fiber color</label>
-      <select id="fiberColor">
-        <option value="Global">Global direction</option>
-        <option value="Local">Local direction</option>
-        <option value="Fixed">Fixed</option>
-        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
-      </select>
-      <label for="fiberColormap">Colormap</label>
-      <select id="fiberColormap">
-        <option value="actc">ACTC</option>
-        <option value="inferno" selected>Inferno</option>
-        <option value="plasma">Plasma</option>
-        <option value="warm">Warm</option>
-        <option value="winter">Winter</option>
-      </select>
-      <label for="fiberCalMin">Color Minimum</label>
-      <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
-      <label for="layoutSelect">Layout</label>
-      <select id="layoutSelect">
-        <option value="0" selected>Auto</option>
-        <option value="1">Column</option>
-        <option value="2">Grid</option>
-        <option value="3">Row</option>
-      </select>
-      <label for="renderingSelect">MultiplanarRendering</label>
-      <select id="renderingSelect">
-        <option value="0">Never</option>
-        <option value="1">Always</option>
-        <option value="2" selected>Auto</option>
-      </select>
-      <select id="sliceType">
-        <option value="0">Axial</option>
-        <option value="1">Coronal</option>
-        <option value="2">Sagittal</option>
-        <option value="4">Render</option>
-        <option value="3" selected>Multiplanar</option>
-      </select>
-      <label for="equalCheck">EqualSize</label>
-      <input type="checkbox" id="equalCheck" checked />
-      <label for="cornerCheck">CornerText</label>
-      <input type="checkbox" id="cornerCheck" unchecked />
-      <label for="marginCheck">TileMargin</label>
-      <input type="checkbox" id="marginCheck" unchecked />
-      <label for="heroSlider">Hero Image</label>
-      <input type="range" min="0" max="9" value="0" class="slider" id="heroSlider" />
+      <label for="broadcastCheck">Broadcast nv1 → nv2</label>
+      <input type="checkbox" id="broadcastCheck" checked />
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
@@ -74,12 +26,23 @@
     </footer>
     <script type="module" async>
       import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
+
+
+
       const volGray = [
         { url: '../demos/images/mni152.nii.gz', colormap: 'gray', visible: true, opacity: 1 }
       ]
       const volHot = [
         { url: '../demos/images/mni152.nii.gz', colormap: 'hot', visible: true, opacity: 1 }
       ]
+
+      function updateBroadcast() {
+        if (broadcastCheck.checked) {
+          nv1.broadcastTo([nv2], { "3d": true, "2d": true })
+        } else {
+          nv1.broadcastTo([], { "3d": false, "2d": false }) // clear targets
+        }
+      }
 
       // First instance top-left quarter
       const nv1 = new Niivue({
@@ -98,14 +61,14 @@
       await nv2.attachTo('gl1')
       await nv2.loadVolumes(volHot)
       nv2.setSliceType(nv2.sliceTypeMultiplanar)
+      nv1.broadcastTo([nv2], { "3d": true, "2d": true })
+      nv2.broadcastTo([nv1], { "3d": true, "2d": true })
+      
+      // Initialize
+      updateBroadcast()
 
-      // nv1.onLocationChange = () => {
-      //   nv2.drawScene()
-      // }
-
-      // nv2.onLocationChange = () => {
-      //   nv1.drawScene()
-      // }
+      // Listen for changes
+      broadcastCheck.addEventListener('change', updateBroadcast)
     </script>
   </body>
 </html>

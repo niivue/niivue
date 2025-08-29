@@ -1318,7 +1318,10 @@ export class Niivue {
       if (this.syncOpts['3d']) {
         this.doSync3d(this.otherNV[i])
       }
-      this.otherNV[i].drawScene()
+      // do not redraw for other instances on the same canvas
+      if (this.otherNV[i].canvas !== this.canvas) {
+        this.otherNV[i].drawScene()
+      }
       this.otherNV[i].createOnLocationChange()
     }
   }
