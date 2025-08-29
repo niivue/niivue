@@ -2186,7 +2186,7 @@ export class Niivue {
       this.uiData.mousedown = false
       this.drawScene()
     }
-    // prevent phantom focus
+    // Mark cursor as off-canvas so cursorInBounds() always returns false
     this.mousePos = [-1, -1]
   }
 
@@ -14942,6 +14942,9 @@ export class Niivue {
    * @internal
    */
   private cursorInBounds(): boolean {
+    if (this.mousePos[0] < 0 || this.mousePos[1] < 0) {
+      return false
+    }
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
     const [mx, my] = this.mousePos // already tracked in device pixels
 
