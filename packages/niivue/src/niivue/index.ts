@@ -12216,7 +12216,8 @@ export class Niivue {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // draw the slice
     gl.disable(gl.BLEND)
-    gl.depthFunc(gl.GREATER)
+    // gl.depthFunc(gl.GREATER)
+    gl.depthFunc(gl.ALWAYS)
     gl.disable(gl.CULL_FACE) // show front and back faces
     if (this.volumes.length > 0) {
       let shader = this.sliceMMShader
@@ -12264,6 +12265,8 @@ export class Niivue {
         fovMM: obj.fovMM
       })
     }
+    gl.depthMask(true)
+    gl.depthFunc(gl.LEQUAL)
     if (isNaN(customMM)) {
       // draw crosshairs
       this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
@@ -13591,8 +13594,9 @@ export class Niivue {
         leftTopMM: [],
         fovMM: [isRadiological(modelMatrix!), 0]
       })
-      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
+
+    leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
 
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
@@ -15035,7 +15039,7 @@ export class Niivue {
     const gl = this.gl
     // You could also set clearDepth if depth bit is included
     if (mask & gl.DEPTH_BUFFER_BIT) {
-      gl.clearDepth(0.0)
+      gl.clearDepth(1.0)
       gl.clear(gl.DEPTH_BUFFER_BIT)
     }
 
@@ -15133,7 +15137,8 @@ export class Niivue {
         this.reserveColorbarPanel()
       }
       this.screenSlices = []
-      this.draw3D([vpX, vpY, vpW, vpH]) // use bounds region
+      // this.draw3D([vpX, vpY, vpW, vpH]) // use bounds region
+      this.draw3D()
       if (this.opts.isColorbar) {
         this.drawColorbar()
       }
