@@ -1457,6 +1457,8 @@ export class Niivue {
    * @internal
    */
   mouseDownListener(e: MouseEvent): void {
+    this.uiData.mousedown = true
+
     if (!this.eventInBounds(e)) {
       this.drawScene()
       return
@@ -1466,7 +1468,7 @@ export class Niivue {
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.drawShapeStartLocation = [NaN, NaN, NaN] // Reset shape start location
-    this.uiData.mousedown = true
+    
     // reset drag positions used previously (but not during angle measurement second line)
     if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
       this.setDragStart(0, 0)
@@ -1854,6 +1856,7 @@ export class Niivue {
    * @internal
    */
   mouseUpListener(e?: MouseEvent): void {
+    this.uiData.mousedown = false
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
@@ -1867,7 +1870,6 @@ export class Niivue {
       fracPos: this.canvasPos2frac(this.mousePos)
       // xyzMM: this.frac2mm(fracPos),
     }
-    this.uiData.mousedown = false
     this.uiData.mouseButtonRightDown = false
     const wasCenterDown = this.uiData.mouseButtonCenterDown
     this.uiData.mouseButtonCenterDown = false
@@ -2198,7 +2200,9 @@ export class Niivue {
     // move crosshair and change slices if mouse click and move
 
     // we need to do this when we have multiple instances
-    this.drawScene()
+    if (this.uiData.mousedown) {
+      this.drawScene()
+    }
 
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     // ignore if mouse moves outside of tile of initial click
