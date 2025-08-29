@@ -2194,17 +2194,17 @@ export class Niivue {
    */
   mouseMoveListener(e: MouseEvent): void {
     // move crosshair and change slices if mouse click and move
-    
+
     // we need to do this when we have multiple instances
     this.drawScene()
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+    // ignore if mouse moves outside of tile of initial click
+    if (!pos) {
+      return
+    }
+    this.updateMousePos(pos.x, pos.y)
 
     if (this.uiData.mousedown) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-      // ignore if mouse moves outside of tile of initial click
-      if (!pos) {
-        return
-      }
-
       const x = pos.x * this.uiData.dpr!
       const y = pos.y * this.uiData.dpr!
       const tile = this.tileIndex(x, y)
@@ -2416,6 +2416,12 @@ export class Niivue {
    * @internal
    */
   keyUpListener(e: KeyboardEvent): void {
+    // only handle keyboard events in region
+    if (!this.cursorInBounds()) {
+      console.log('cursor not in bounds')
+      this.drawScene()
+      return
+    }
     if (e.code === this.opts.clipPlaneHotKey) {
       const now = new Date().getTime()
       const elapsed = now - this.lastCalled
@@ -2463,6 +2469,12 @@ export class Niivue {
    * @internal
    */
   keyDownListener(e: KeyboardEvent): void {
+    // only handle keyboard events in bounds
+    if (!this.cursorInBounds()) {
+      this.drawScene()
+      return
+    }
+
     if (e.code === 'KeyH' && this.opts.sliceType === SLICE_TYPE.RENDER) {
       this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation)
     } else if (e.code === 'KeyL' && this.opts.sliceType === SLICE_TYPE.RENDER) {
@@ -4431,18 +4443,27 @@ export class Niivue {
   }
 
   /**
-   * Updates mouse position and modifies 3D render view if the pointer is in the render tile.
+   * Updates mouse position
+   * @internal
+   */
+  updateMousePos(x: number, y: number): [number, number] {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
+
+    this.mousePos = [x, y]
+    return [x, y]
+  }
+
+  /**
+   *  and modifies 3D render view if the pointer is in the render tile.
    *
    * @internal
    */
   mouseMove(x: number, y: number): void {
-    x *= this.uiData.dpr!
-    y *= this.uiData.dpr!
-    const dx = (x - this.mousePos[0]) / this.uiData.dpr!
-    const dy = (y - this.mousePos[1]) / this.uiData.dpr!
-    this.mousePos = [x, y]
-
-    if (this.inRenderTile(x, y) < 0) {
+    const [pixelX, pixelY] = this.updateMousePos(x, y)
+    const dx = (pixelX - this.mousePos[0]) / this.uiData.dpr!
+    const dy = (pixelY - this.mousePos[1]) / this.uiData.dpr!
+    if (this.inRenderTile(pixelX, pixelY) < 0) {
       return
     }
 
@@ -14907,6 +14928,22 @@ export class Niivue {
     const cssY = evt.clientY - rect.top
     const [bx, by, bw, bh] = this.getBoundsRegionCSS()
     return cssX >= bx && cssX <= bx + bw && cssY >= by && cssY <= by + bh
+  }
+
+  /**
+   * Check whether the last known mouse cursor position is inside this instance's bounds.
+   *
+   * Used to filter keyboard events so they are only handled by the Niivue instance
+   * whose bounds currently contain the cursor.
+   *
+   * @returns true if the cursor is inside this.opts.bounds, false otherwise.
+   * @internal
+   */
+  private cursorInBounds(): boolean {
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+    const [mx, my] = this.mousePos // already tracked in device pixels
+
+    return mx >= regionX && mx <= regionX + regionW && my >= regionY && my <= regionY + regionH
   }
 
   /**
