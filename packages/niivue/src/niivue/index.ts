@@ -2512,6 +2512,12 @@ export class Niivue {
       return
     }
 
+    // for multiple instances
+    if (!this.eventInBounds(e)) {
+      this.drawScene()
+      return
+    }
+
     e.preventDefault()
     e.stopPropagation()
 
