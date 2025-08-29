@@ -2199,13 +2199,16 @@ export class Niivue {
 
     // we need to do this when we have multiple instances
     this.drawScene()
+
     const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
     // ignore if mouse moves outside of tile of initial click
     if (!pos) {
       return
     }
-    this.updateMousePos(pos.x, pos.y)
-
+    if (!this.eventInBounds(e)) {
+      this.updateMousePos(pos.x, pos.y)
+      return
+    }
     if (this.uiData.mousedown) {
       const x = pos.x * this.uiData.dpr!
       const y = pos.y * this.uiData.dpr!
@@ -4462,10 +4465,12 @@ export class Niivue {
    * @internal
    */
   mouseMove(x: number, y: number): void {
-    const [pixelX, pixelY] = this.updateMousePos(x, y)
-    const dx = (pixelX - this.mousePos[0]) / this.uiData.dpr!
-    const dy = (pixelY - this.mousePos[1]) / this.uiData.dpr!
-    if (this.inRenderTile(pixelX, pixelY) < 0) {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
+    const dx = (x - this.mousePos[0]) / this.uiData.dpr!
+    const dy = (y - this.mousePos[1]) / this.uiData.dpr!
+    this.mousePos = [x, y]
+    if (this.inRenderTile(x, y) < 0) {
       return
     }
 
@@ -14969,7 +14974,6 @@ export class Niivue {
     const regionH = yBot - yTop
     const regionY = gl.canvas.height - yBot // flip to GL origin
     const bounds = [regionX, regionY, regionW, regionH]
-    console.log('canvas bounds', bounds)
     return bounds as [number, number, number, number]
   }
 
@@ -14978,12 +14982,12 @@ export class Niivue {
    */
   inBounds(x: number, y: number): boolean {
     const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
-    console.log('x, y', x, y)
+    // console.log('x, y', x, y)
     // Convert from CSS (top origin, unscaled) → GL pixels (bottom origin)
     const glX = x * this.uiData.dpr!
     const glY = this.gl.canvas.height - y * this.uiData.dpr!
-    console.log('glX, glY', glX, glY)
-    console.log('canvas width, height', this.gl.canvas.width, this.gl.canvas.height)
+    // console.log('glX, glY', glX, glY)
+    // console.log('canvas width, height', this.gl.canvas.width, this.gl.canvas.height)
     return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH
   }
 
@@ -15038,8 +15042,8 @@ export class Niivue {
     gl.enable(gl.SCISSOR_TEST)
     gl.scissor(vpX, vpY, vpW, vpH)
 
-    console.log('vpX, vpY, vpW, vpH', vpX, vpY, vpW, vpH)
-    console.log('canvas', gl.canvas.width, gl.canvas.height)
+    // console.log('vpX, vpY, vpW, vpH', vpX, vpY, vpW, vpH)
+    // console.log('canvas', gl.canvas.width, gl.canvas.height)
     // Only set clearColor if color bit is included
     if (mask & gl.COLOR_BUFFER_BIT) {
       this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
