@@ -13570,22 +13570,39 @@ export class Niivue {
 
     let relativeLTWH = [...leftTopWidthHeight]
 
+    // if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
+    //   // Default full canvas case → use bounds region instead
+    //   leftTopWidthHeight = [regionX, regionY, regionW, regionH]
+    //   relativeLTWH = [...leftTopWidthHeight]
+    //   this.screenSlices.push({
+    //     leftTopWidthHeight,
+    //     axCorSag: SLICE_TYPE.RENDER,
+    //     sliceFrac: 0,
+    //     AxyzMxy: [],
+    //     leftTopMM: [],
+    //     fovMM: [isRadiological(modelMatrix!), 0]
+    //   })
+    // } else {
+    //   // Offset into region
+    //   leftTopWidthHeight[0] += regionX
+    //   leftTopWidthHeight[1] += regionY
+    //   this.screenSlices.push({
+    //     leftTopWidthHeight: leftTopWidthHeight.slice(),
+    //     axCorSag: SLICE_TYPE.RENDER,
+    //     sliceFrac: 0,
+    //     AxyzMxy: [],
+    //     leftTopMM: [],
+    //     fovMM: [isRadiological(modelMatrix!), 0]
+    //   })
+    // }
+
+    // leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // Default full canvas case → use bounds region instead
       leftTopWidthHeight = [regionX, regionY, regionW, regionH]
       relativeLTWH = [...leftTopWidthHeight]
-      this.screenSlices.push({
-        leftTopWidthHeight,
-        axCorSag: SLICE_TYPE.RENDER,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix!), 0]
-      })
-    } else {
-      // Offset into region
-      leftTopWidthHeight[0] += regionX
-      leftTopWidthHeight[1] += regionY
+
+      // push BEFORE Y-flip → stored in canvas coords for mouse picking
       this.screenSlices.push({
         leftTopWidthHeight: leftTopWidthHeight.slice(),
         axCorSag: SLICE_TYPE.RENDER,
@@ -13594,9 +13611,27 @@ export class Niivue {
         leftTopMM: [],
         fovMM: [isRadiological(modelMatrix!), 0]
       })
-    }
 
-    leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
+      // then flip for GL viewport
+      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
+    } else {
+      // Offset into region
+      leftTopWidthHeight[0] += regionX
+      leftTopWidthHeight[1] += regionY
+
+      // push BEFORE Y-flip → stored in canvas coords for mouse picking
+      this.screenSlices.push({
+        leftTopWidthHeight: leftTopWidthHeight.slice(),
+        axCorSag: SLICE_TYPE.RENDER,
+        sliceFrac: 0,
+        AxyzMxy: [],
+        leftTopMM: [],
+        fovMM: [isRadiological(modelMatrix!), 0]
+      })
+
+      // then flip for GL viewport
+      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
+    }
 
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
