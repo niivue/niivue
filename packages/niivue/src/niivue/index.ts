@@ -2186,6 +2186,8 @@ export class Niivue {
       this.uiData.mousedown = false
       this.drawScene()
     }
+    // prevent phantom focus
+    this.mousePos = [-1, -1]
   }
 
   /**
