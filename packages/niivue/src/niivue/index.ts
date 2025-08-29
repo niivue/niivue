@@ -3055,6 +3055,10 @@ export class Niivue {
    * @internal
    */
   async dropListener(e: DragEvent): Promise<void> {
+    // only respond to drop events in bounds
+    if (!this.eventInBounds(e)) {
+      return
+    }
     e.stopPropagation()
     e.preventDefault()
     // don't do anything if drag and drop has been turned off
