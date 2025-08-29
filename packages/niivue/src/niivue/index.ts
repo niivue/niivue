@@ -1471,7 +1471,7 @@ export class Niivue {
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.drawShapeStartLocation = [NaN, NaN, NaN] // Reset shape start location
-    
+
     // reset drag positions used previously (but not during angle measurement second line)
     if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
       this.setDragStart(0, 0)
@@ -15246,12 +15246,25 @@ export class Niivue {
             this.draw2D(leftTopWidthHeight, sliceType, sliceMM ?? NaN, actualDimensions)
           }
         }
-      } else if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
-        this.draw2D([0, 0, 0, 0], SLICE_TYPE.AXIAL)
-      } else if (this.opts.sliceType === SLICE_TYPE.CORONAL) {
-        this.draw2D([0, 0, 0, 0], SLICE_TYPE.CORONAL)
-      } else if (this.opts.sliceType === SLICE_TYPE.SAGITTAL) {
-        this.draw2D([0, 0, 0, 0], SLICE_TYPE.SAGITTAL)
+      } else if (
+        this.opts.sliceType === SLICE_TYPE.AXIAL ||
+        this.opts.sliceType === SLICE_TYPE.CORONAL ||
+        this.opts.sliceType === SLICE_TYPE.SAGITTAL
+      ) {
+        const { volScale } = this.sliceScale()
+
+        // full available region
+        const leftTopWidthHeight = [vpX, vpY, vpW, vpH]
+
+        // preserve mm aspect ratio
+        const actualDimensions = this.calculateWidthHeight(
+          this.opts.sliceType,
+          volScale,
+          leftTopWidthHeight[2],
+          leftTopWidthHeight[3]
+        )
+
+        this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN, actualDimensions)
       } else {
         // sliceTypeMultiplanar
         let isShowRender = false
