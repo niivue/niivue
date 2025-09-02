@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue 25 Instances Demo</title>
+    <link rel="stylesheet" href="light.css" />
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      header, footer {
+        padding: 0.5rem;
+        background: #f0f0f0;
+      }
+      main {
+        flex: 1;
+        display: flex;
+      }
+      canvas {
+        flex: 1;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
+
+    <header>
+      <label for="broadcastCheck">Bidirectional Sync All ⇄ All</label>
+      <input type="checkbox" id="broadcastCheck" checked />
+    </header>
+
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+
+    <footer>
+      <label id="status">25 Instances, 1 WebGL Context</label>
+    </footer>
+
+    <script type="module" async>
+      import * as niivue from '../dist/index.js'
+
+      function redrawInstances() {
+        console.log('redraw called')
+        for(const nv of instances) {
+          nv.drawScene()
+        }
+      }
+
+      const vol = { url: '../images/mni152.nii.gz', colormap: 'gray', visible: true, opacity: 1 }
+
+      const instances = []
+      const gridSize = 5 // 4x4 = 16 instances
+
+      // generate unique colormaps to differentiate views
+      const cmaps = ['gray', 'hot', 'winter', 'plasma', 'actc', 'inferno', 'warm', 'cividis']
+
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          const x1 = col / gridSize
+          const y1 = row / gridSize
+          const x2 = (col + 1) / gridSize
+          const y2 = (row + 1) / gridSize
+
+          const cmap = cmaps[(row * gridSize + col) % cmaps.length]
+
+          const nv = new niivue.Niivue({
+            bounds: [[x1, y1], [x2, y2]],
+            backColor: [0, 0, 0, 1]
+          })
+          await nv.attachTo('gl1')
+          await nv.loadVolumes([{ ...vol, colormap: cmap }])
+          nv.setSliceType(nv.sliceTypeMultiplanar)
+          nv.onImageLoaded = () => { redrawInstances() }
+          nv.onMeshAdded = () => { redrawInstances() }
+          instances.push(nv)
+        }
+      }
+
+      // Broadcast sync across all
+      const broadcastCheck = document.getElementById('broadcastCheck')
+      function updateBroadcast() {
+        if (broadcastCheck.checked) {
+          for (let i = 0; i < instances.length; i++) {
+            const others = instances.filter((_, j) => j !== i)
+            instances[i].broadcastTo(others, { "3d": true, "2d": true })
+          }
+        } else {
+          for (const nv of instances) {
+            nv.broadcastTo([], { "3d": false, "2d": false })
+          }
+        }
+      }
+      broadcastCheck.addEventListener('change', updateBroadcast)
+      updateBroadcast()
+      redrawInstances()
+    </script>
+  </body>
+</html>

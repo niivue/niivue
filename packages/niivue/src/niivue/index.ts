@@ -1484,10 +1484,6 @@ export class Niivue {
     if (!pos) {
       return
     }
-    // if (!this.eventInBounds(e)) {
-    //   // Click was outside this instance's bounds → ignore
-    //   return
-    // }
 
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
 
@@ -2299,6 +2295,10 @@ export class Niivue {
     if (this.uiData.isDragging) {
       return
     }
+    if (!this.eventInBounds(msg)) {
+      return
+    }
+
     let isRender = false
     if (this.opts.sliceType === SLICE_TYPE.RENDER) {
       isRender = true
@@ -14979,10 +14979,32 @@ export class Niivue {
   /**
    * Returns true if a mouse/touch event happened inside this instance’s bounds.
    */
-  public eventInBounds(evt: MouseEvent | Touch): boolean {
+  public eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean {
     const rect = (this.gl.canvas as HTMLCanvasElement).getBoundingClientRect()
-    const cssX = evt.clientX - rect.left
-    const cssY = evt.clientY - rect.top
+
+    let clientX: number
+    let clientY: number
+
+    if (evt instanceof MouseEvent) {
+      clientX = evt.clientX
+      clientY = evt.clientY
+    } else if (evt instanceof TouchEvent) {
+      // Prefer the first touch if active, else changedTouches
+      const touch = evt.touches[0] ?? evt.changedTouches[0]
+      if (!touch) {
+        return false
+      }
+      clientX = touch.clientX
+      clientY = touch.clientY
+    } else {
+      // direct Touch
+      clientX = evt.clientX
+      clientY = evt.clientY
+    }
+
+    const cssX = clientX - rect.left
+    const cssY = clientY - rect.top
+
     const [bx, by, bw, bh] = this.getBoundsRegionCSS()
     return cssX >= bx && cssX <= bx + bw && cssY >= by && cssY <= by + bh
   }
