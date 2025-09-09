@@ -2430,7 +2430,6 @@ export class Niivue {
   keyUpListener(e: KeyboardEvent): void {
     // only handle keyboard events in region
     if (!this.cursorInBounds()) {
-      console.log('cursor not in bounds')
       this.drawScene()
       return
     }
@@ -7648,7 +7647,6 @@ export class Niivue {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error('blur shader: ', status)
       }
-      // gl.clear(gl.DEPTH_BUFFER_BIT)
       this.clearBounds(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
@@ -7681,7 +7679,6 @@ export class Niivue {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error('sobel shader: ', status)
       }
-      // gl.clear(gl.DEPTH_BUFFER_BIT)
       this.clearBounds(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
@@ -12190,8 +12187,20 @@ export class Niivue {
       sliceFrac = frac[sliceDim]
     }
     const sliceMM = mm[sliceDim]
-    gl.clear(gl.DEPTH_BUFFER_BIT) // is replaced by below
-    // this.clearBounds(this.gl.DEPTH_BUFFER_BIT)
+    const flippedY = gl.canvas.height - leftTopWidthHeight[1] - leftTopWidthHeight[3]
+    const glLTWH: [number, number, number, number] = [
+      leftTopWidthHeight[0],
+      flippedY,
+      leftTopWidthHeight[2],
+      leftTopWidthHeight[3]
+    ]
+
+    // Clear only depth inside this rect
+    this.clearBounds(gl.DEPTH_BUFFER_BIT, glLTWH)
+
+    // Set viewport to this rect
+    gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3])
+
     let obj = this.calculateMvpMatrix2D(
       leftTopWidthHeight,
       screen.mnMM,
@@ -13636,7 +13645,7 @@ export class Niivue {
     gl.depthMask(true)
 
     // Depth-only clear *inside the rect*
-    this.clearBounds(gl.DEPTH_BUFFER_BIT, leftTopWidthHeight as [number, number, number, number])
+    // this.clearBounds(gl.DEPTH_BUFFER_BIT, leftTopWidthHeight as [number, number, number, number])
 
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
@@ -15140,12 +15149,15 @@ export class Niivue {
     const gl = this.gl
     const [vpX, vpY, vpW, vpH] = ltwh ?? this.getBoundsRegion()
 
+    // Flip Y for scissor (WebGL expects bottom-left origin)
+    const flippedY = gl.canvas.height - vpY - vpH
+
     if (mask & gl.DEPTH_BUFFER_BIT) {
-      gl.clearDepth(1.0) // standard: pairs with gl.depthFunc(gl.LEQUAL)
+      gl.clearDepth(1.0) // standard for use with gl.depthFunc(gl.LEQUAL)
     }
 
     gl.enable(gl.SCISSOR_TEST)
-    gl.scissor(vpX, vpY, vpW, vpH)
+    gl.scissor(vpX, flippedY, vpW, vpH)
 
     if (mask & gl.COLOR_BUFFER_BIT) {
       gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
@@ -15169,6 +15181,7 @@ export class Niivue {
 
     // --- Set viewport for all subsequent drawing
     const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
+
     this.gl.viewport(vpX, vpY, vpW, vpH)
     this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     // rebind all of our textures (we may be sharing our gl context with another component)
