@@ -12227,7 +12227,6 @@ export class Niivue {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // draw the slice
     gl.disable(gl.BLEND)
-    // gl.depthFunc(gl.GREATER)
     gl.depthFunc(gl.ALWAYS)
     gl.disable(gl.CULL_FACE) // show front and back faces
     if (this.volumes.length > 0) {
@@ -12330,19 +12329,19 @@ export class Niivue {
   ): void {
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
-    // Copy so we don’t mutate caller
-    const ltwh = leftTopWidthHeight.slice()
-
-    // If this draw call is "full canvas" ([0,0,0,0]), expand to bounds region
-    if (ltwh[2] === 0 && ltwh[3] === 0) {
-      ltwh[0] = regionX
-      ltwh[1] = regionY
-      ltwh[2] = regionW
-      ltwh[3] = regionH
+    // Decide which rect to use
+    let ltwh: number[]
+    if (leftTopWidthHeight[2] === 0 && leftTopWidthHeight[3] === 0) {
+      if (!this.opts.bounds) {
+        // Case 1: no bounds, no rect → full canvas
+        ltwh = [0, 0, this.gl.canvas.width, this.gl.canvas.height]
+      } else {
+        // Case 2: bounds present, no rect → full bounds region
+        ltwh = [regionX, regionY, regionW, regionH]
+      }
     } else {
-      // Otherwise offset tile into bounds region
-      ltwh[0] += regionX
-      ltwh[1] += regionY
+      // Case 3: rect provided (multiplanar) → already offset into bounds
+      ltwh = leftTopWidthHeight.slice()
     }
 
     const padLeftTop = [NaN, NaN]
@@ -12383,54 +12382,76 @@ export class Niivue {
   }
 
   /**
-   * Computes 3D model-view-projection matrices based on view angles and canvas size.
-   * @internal
+   * Build MVP, Model, and Normal matrices for rendering.
+   * @param _unused - reserved
+   * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
+   * @param azimuth - azimuth rotation in degrees
+   * @param elevation - elevation rotation in degrees
+   * @param flipX - whether to mirror the X axis (default true for radiological convention)
    */
-  calculateMvpMatrix(_unused: unknown, leftTopWidthHeight = [0, 0, 0, 0], azimuth: number, elevation: number): mat4[] {
+  calculateMvpMatrix(
+    _unused: unknown,
+    leftTopWidthHeight = [0, 0, 0, 0],
+    azimuth: number,
+    elevation: number,
+    flipX = true
+  ): mat4[] {
+    const gl = this.gl
+
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // use full canvas
-      leftTopWidthHeight = [0, 0, this.gl.canvas.width, this.gl.canvas.height]
+      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height]
     }
+
     const whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3]
-    // let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
     // pivot from center of objects
-    // let scale = this.furthestVertexFromOrigin;
-    // let origin = [0,0,0];
     let scale = this.furthestFromPivot
     const origin = this.pivot3D
     const projectionMatrix = mat4.create()
-    scale = (0.8 * scale) / this.scene.volScaleMultiplier // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+
+    // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+    scale = (0.8 * scale) / this.scene.volScaleMultiplier
+
     if (whratio < 1) {
       // tall window: "portrait" mode, width constrains
       mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 0.01, scale * 8.0)
-    }
-    // Wide window: "landscape" mode, height constrains
-    else {
+    } else {
+      // wide window: "landscape" mode, height constrains
       mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
     }
 
     const modelMatrix = mat4.create()
-    modelMatrix[0] = -1 // mirror X coordinate
+
+    if (flipX) {
+      modelMatrix[0] = -1 // mirror X coordinate (radiological convention)
+    }
+
     // push the model away from the camera so camera not inside model
     const translateVec3 = vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
     mat4.translate(modelMatrix, modelMatrix, translateVec3)
+
     if (this.position) {
       mat4.translate(modelMatrix, modelMatrix, this.position)
     }
+
     // apply elevation
     mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
     mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
 
+    // translate to pivot
     mat4.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]])
 
-    //
+    // build normal matrix
     const iModelMatrix = mat4.create()
     mat4.invert(iModelMatrix, modelMatrix)
     const normalMatrix = mat4.create()
     mat4.transpose(normalMatrix, iModelMatrix)
+
+    // combine into MVP
     const modelViewProjectionMatrix = mat4.create()
     mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
+
     return [modelViewProjectionMatrix, modelMatrix, normalMatrix]
   }
 
@@ -13464,7 +13485,7 @@ export class Niivue {
 
     if (!secondPass) {
       gl.disable(gl.BLEND)
-      gl.depthFunc(gl.GREATER)
+      gl.depthFunc(gl.LEQUAL)
     }
 
     for (const label of labels) {
@@ -13565,7 +13586,24 @@ export class Niivue {
     azimuth: number | null = null,
     elevation = 0
   ): string | undefined {
+    const gl = this.gl
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // Case 1: full canvas, no bounds, no rect → clear everything
+    if (!this.opts.bounds && (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)) {
+      this.clearBounds(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, [0, 0, this.gl.canvas.width, this.gl.canvas.height])
+    }
+    // Case 2: full render panel inside bounds → clear the bounds region
+    else if (this.opts.bounds && (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)) {
+      this.clearBounds(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, this.getBoundsRegion())
+    }
+    // Case 3: multiplanar sub-panel → clear the given rect
+    else {
+      this.clearBounds(
+        gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT,
+        leftTopWidthHeight as [number, number, number, number]
+      )
+    }
 
     const isMosaic = azimuth !== null
     this.setPivot3D()
@@ -13573,7 +13611,6 @@ export class Niivue {
       azimuth = this.scene.renderAzimuth
       elevation = this.scene.renderElevation
     }
-    const gl = this.gl
 
     if (mvpMatrix === null) {
       ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth!, elevation)
@@ -13581,39 +13618,11 @@ export class Niivue {
 
     let relativeLTWH = [...leftTopWidthHeight]
 
-    // if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-    //   // Default full canvas case → use bounds region instead
-    //   leftTopWidthHeight = [regionX, regionY, regionW, regionH]
-    //   relativeLTWH = [...leftTopWidthHeight]
-    //   this.screenSlices.push({
-    //     leftTopWidthHeight,
-    //     axCorSag: SLICE_TYPE.RENDER,
-    //     sliceFrac: 0,
-    //     AxyzMxy: [],
-    //     leftTopMM: [],
-    //     fovMM: [isRadiological(modelMatrix!), 0]
-    //   })
-    // } else {
-    //   // Offset into region
-    //   leftTopWidthHeight[0] += regionX
-    //   leftTopWidthHeight[1] += regionY
-    //   this.screenSlices.push({
-    //     leftTopWidthHeight: leftTopWidthHeight.slice(),
-    //     axCorSag: SLICE_TYPE.RENDER,
-    //     sliceFrac: 0,
-    //     AxyzMxy: [],
-    //     leftTopMM: [],
-    //     fovMM: [isRadiological(modelMatrix!), 0]
-    //   })
-    // }
-
-    // leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // Default full canvas case → use bounds region instead
       leftTopWidthHeight = [regionX, regionY, regionW, regionH]
       relativeLTWH = [...leftTopWidthHeight]
 
-      // push BEFORE Y-flip → stored in canvas coords for mouse picking
       this.screenSlices.push({
         leftTopWidthHeight: leftTopWidthHeight.slice(),
         axCorSag: SLICE_TYPE.RENDER,
@@ -13623,14 +13632,13 @@ export class Niivue {
         fovMM: [isRadiological(modelMatrix!), 0]
       })
 
-      // then flip for GL viewport
+      // flip for GL viewport
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     } else {
       // Offset into region
       leftTopWidthHeight[0] += regionX
       leftTopWidthHeight[1] += regionY
 
-      // push BEFORE Y-flip → stored in canvas coords for mouse picking
       this.screenSlices.push({
         leftTopWidthHeight: leftTopWidthHeight.slice(),
         axCorSag: SLICE_TYPE.RENDER,
@@ -13640,15 +13648,17 @@ export class Niivue {
         fovMM: [isRadiological(modelMatrix!), 0]
       })
 
-      // then flip for GL viewport
+      // flip for GL viewport
       leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
     }
 
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
-    // gl.clearDepth(0.0) // replaced by below
-    this.clearBounds(this.gl.DEPTH_BUFFER_BIT)
+
+    // Depth-only clear *inside the rect*
+    this.clearBounds(gl.DEPTH_BUFFER_BIT, leftTopWidthHeight as [number, number, number, number])
+
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     // restrict viewport to tile/bounds
@@ -13682,7 +13692,7 @@ export class Niivue {
       this.drawCrosshairs3D(false, 0.15, mvpMatrix)
     }
 
-    // Reset viewport to whole bounds region (not entire canvas)
+    // Reset viewport to whole bounds region
     gl.viewport(regionX, regionY, regionW, regionH)
     this.drawOrientationCube(leftTopWidthHeight, azimuth!, elevation)
 
@@ -13705,117 +13715,142 @@ export class Niivue {
       return
     }
     const gl = this.gl
-    // let m, modelMtx, normMtx;
+
     if (!m) {
-      // FIXME this was calculateMvpMatrix(object3d, azimuth, elevation) -- i.e. elevation got assigned to azimuth etc.
       ;[m, modelMtx, normMtx] = this.calculateMvpMatrix(
         this.volumeObject3D,
         undefined,
         this.scene.renderAzimuth,
-        this.scene.renderElevation
+        this.scene.renderElevation,
+        false // no flipX for meshes
       )
     }
+
     gl.enable(gl.DEPTH_TEST)
+
+    // Use inverted depth convention (matches current MVP math)
+    if (isDepthTest) {
+      gl.clearDepth(0.0) // reset depth to nearest=0
+      gl.clear(gl.DEPTH_BUFFER_BIT)
+      gl.depthFunc(gl.GREATER) // farther depth wins
+    } else {
+      gl.depthFunc(gl.ALWAYS)
+    }
+
+    gl.enable(gl.CULL_FACE)
+    gl.cullFace(gl.BACK) // back-face culling
+    gl.frontFace(gl.CCW) // CCW winding = front
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-    gl.disable(gl.BLEND)
-    gl.depthFunc(gl.GREATER)
-    gl.disable(gl.CULL_FACE)
-    if (isDepthTest) {
-      gl.depthFunc(gl.GREATER)
-    } else {
-      gl.enable(gl.BLEND)
-      gl.depthFunc(gl.ALWAYS)
-      gl.enable(gl.CULL_FACE) // issue700
-    }
-    gl.cullFace(gl.BACK) // CR: issue700
-    // show front and back face for mesh clipping https://niivue.com/demos/features/worldspace2.html
-    // if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
-    // else gl.enable(gl.CULL_FACE); //issue700: only show front faces
-    // gl.frontFace(gl.CCW); //issue700: we now require CCW
-    // Draw the mesh
-    let shader: Shader = this.meshShaders[0].shader!
-    // this.meshShaderIndex
     let hasFibers = false
-    for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false || this.meshes[i].opacity <= 0.0) {
+
+    // -----------------------
+    // Pass 1: Main mesh draw
+    // -----------------------
+    for (const mesh of this.meshes) {
+      if (!mesh.visible || mesh.opacity <= 0.0 || mesh.indexCount! < 3) {
         continue
       }
-      let meshAlpha = alpha
-      // gl.depthMask(false)
-      if (isDepthTest) {
-        meshAlpha = this.meshes[i].opacity
-        gl.depthFunc(gl.GREATER)
-        gl.depthMask(true)
-        if (meshAlpha < 1.0) {
-          // crude Z-fighting artifacts
-          gl.depthMask(false) // Prevent this object from writing to the depth buffer
-          gl.enable(gl.DEPTH_TEST)
-          // gl.disable(gl.DEPTH_TEST)
-          gl.enable(gl.BLEND)
-          gl.cullFace(gl.BACK)
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        } else {
-          gl.enable(gl.DEPTH_TEST)
-          gl.disable(gl.BLEND)
-        }
-      }
-      shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader!
+
+      const meshAlpha = mesh.opacity * alpha
+
+      // Select shader
+      let shader = this.meshShaders[mesh.meshShaderIndex].shader!
       if (this.uiData.mouseDepthPicker) {
         shader = this.pickingMeshShader!
       }
-      shader.use(this.gl) // set Shader
-      // set shader uniforms
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
-      // gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
-      // gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
-      // gl.uniform1f(shader.uniforms["opacity"], alpha);
+      shader.use(gl)
+
+      // Set uniforms
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
       gl.uniform1f(shader.uniforms.opacity, meshAlpha)
-      if (this.meshes[i].indexCount! < 3) {
-        continue
+
+      // Depth + blending per mesh
+      if (meshAlpha >= 1.0) {
+        // Opaque
+        gl.disable(gl.BLEND)
+        gl.depthMask(true)
+      } else {
+        // Transparent
+        gl.enable(gl.BLEND)
+        gl.depthMask(false)
       }
 
-      if (this.meshes[i].offsetPt0 && (this.meshes[i].fiberSides < 3 || this.meshes[i].fiberRadius <= 0)) {
-        // if fibers has less than 3 sides, render as line not cylinder mesh
+      // Fiber meshes drawn later
+      if (mesh.offsetPt0 && (mesh.fiberSides < 3 || mesh.fiberRadius <= 0)) {
         hasFibers = true
         continue
       }
+
       if (shader.isMatcap) {
         gl.activeTexture(TEXTURE5_MATCAP)
         gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture)
       }
-      gl.bindVertexArray(this.meshes[i].vao)
-      gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
+
+      // Draw mesh
+      gl.bindVertexArray(mesh.vao)
+      gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
+
+    // Restore defaults
     gl.depthMask(true)
-    // draw fibers
-    if (!hasFibers) {
+    gl.disable(gl.BLEND)
+
+    // -----------------------
+    // Pass 2: X-Ray overlay
+    // -----------------------
+    if (this.opts.meshXRay > 0.0) {
       gl.enable(gl.BLEND)
-      gl.depthFunc(gl.ALWAYS)
-      return
+      gl.depthMask(false)
+      gl.depthFunc(gl.ALWAYS) // ignore depth for x-ray
+
+      for (const mesh of this.meshes) {
+        if (!mesh.visible || mesh.indexCount! < 3) {
+          continue
+        }
+
+        const shader = this.meshShaders[mesh.meshShaderIndex].shader!
+        shader.use(gl)
+
+        gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
+        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
+        gl.uniform1f(shader.uniforms.opacity, mesh.opacity * alpha * this.opts.meshXRay)
+
+        gl.bindVertexArray(mesh.vao)
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
+        gl.bindVertexArray(this.unusedVAO)
+      }
+
+      gl.depthMask(true)
+      gl.depthFunc(gl.GREATER) // restore inverted depthFunc
+      gl.disable(gl.BLEND)
     }
-    shader = this.fiberShader!
-    shader.use(this.gl)
-    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
-    gl.uniform1f(shader.uniforms.opacity, alpha)
-    for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].indexCount! < 3) {
-        continue
+
+    // -----------------------
+    // Pass 3: Fibers
+    // -----------------------
+    if (hasFibers) {
+      const shader = this.fiberShader!
+      shader.use(gl)
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
+      gl.uniform1f(shader.uniforms.opacity, alpha)
+
+      for (const mesh of this.meshes) {
+        if (!mesh.offsetPt0) {
+          continue
+        }
+        if (mesh.fiberSides >= 3 && mesh.fiberRadius > 0) {
+          continue
+        } // cylinders already drawn
+
+        gl.bindVertexArray(mesh.vaoFiber)
+        gl.drawElements(gl.LINE_STRIP, mesh.indexCount!, gl.UNSIGNED_INT, 0)
+        gl.bindVertexArray(this.unusedVAO)
       }
-      if (!this.meshes[i].offsetPt0) {
-        continue
-      }
-      if (this.meshes[i].fiberSides >= 3 && this.meshes[i].fiberRadius > 0) {
-        continue // rendered as mesh cylinder, not line strip
-      }
-      gl.bindVertexArray(this.meshes[i].vaoFiber)
-      gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
-      gl.bindVertexArray(this.unusedVAO)
     }
-    gl.enable(gl.BLEND)
-    gl.depthFunc(gl.ALWAYS)
+
     this.readyForSync = true
   }
 
@@ -13893,7 +13928,7 @@ export class Niivue {
     if (isDepthTest) {
       gl.disable(gl.BLEND)
       // gl.depthFunc(gl.LESS); //pass if LESS than incoming value
-      gl.depthFunc(gl.GREATER)
+      gl.depthFunc(gl.LEQUAL)
     } else {
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
@@ -15030,23 +15065,40 @@ export class Niivue {
 
   /**
    * Compute the current drawing region from opts.bounds.
-   * Returns [x, y, width, height] in pixels, in WebGL (bottom-left) coordinates.
-   * If no bounds set, returns full canvas.
+   * Returns [x, y, width, height] in device pixels, bottom-left origin.
    */
   private getBoundsRegion(): [number, number, number, number] {
     const gl = this.gl
+    const dpr = this.uiData?.dpr || window.devicePixelRatio || 1
+
+    const canvas = gl.canvas as HTMLCanvasElement
+    const cssW = canvas.clientWidth
+    const cssH = canvas.clientHeight
+
     if (!this.opts.bounds) {
       return [0, 0, gl.canvas.width, gl.canvas.height]
     }
+
     const [[x1, y1], [x2, y2]] = this.opts.bounds
-    const regionX = Math.round(x1 * gl.canvas.width)
-    const regionW = Math.round((x2 - x1) * gl.canvas.width)
-    const yTop = Math.round(y1 * gl.canvas.height)
-    const yBot = Math.round(y2 * gl.canvas.height)
-    const regionH = yBot - yTop
-    const regionY = gl.canvas.height - yBot // flip to GL origin
-    const bounds = [regionX, regionY, regionW, regionH]
-    return bounds as [number, number, number, number]
+
+    // Convert normalized CSS fractions → device px
+    const regionX = Math.floor(x1 * cssW * dpr)
+    const regionW = Math.ceil((x2 - x1) * cssW * dpr)
+
+    // Y: flip CSS top-origin → GL bottom-origin
+    let regionY = Math.floor((1.0 - y2) * cssH * dpr)
+    let regionH = Math.ceil((y2 - y1) * cssH * dpr)
+
+    // Clamp so region is always within canvas
+    if (regionY < 0) {
+      regionH += regionY // shrink height
+      regionY = 0
+    }
+    if (regionY + regionH > gl.canvas.height) {
+      regionH = gl.canvas.height - regionY
+    }
+
+    return [regionX, regionY, regionW, regionH]
   }
 
   /**
@@ -15095,35 +15147,33 @@ export class Niivue {
   }
 
   /**
-   * Clear the current instance's bounds region.
+   * Clear a rectangular region of this instance's canvas.
+   *
    * @param mask - bitmask of buffers to clear (default: color+depth).
-   *   Examples:
-   *     gl.COLOR_BUFFER_BIT
-   *     gl.DEPTH_BUFFER_BIT
-   *     gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT
+   * @param ltwh - optional [x, y, w, h] region in *device px* (GL coords, bottom-left).
+   *   If not provided, clears the full instance bounds (getBoundsRegion).
+   *   For multiplanar panels, pass the panel’s own [x,y,w,h].
    */
-  clearBounds(mask: number = this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT): void {
-    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
+  clearBounds(
+    mask: number = this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT,
+    ltwh?: [number, number, number, number]
+  ): void {
     const gl = this.gl
-    // You could also set clearDepth if depth bit is included
+    const [vpX, vpY, vpW, vpH] = ltwh ?? this.getBoundsRegion()
+
     if (mask & gl.DEPTH_BUFFER_BIT) {
-      gl.clearDepth(1.0)
-      gl.clear(gl.DEPTH_BUFFER_BIT)
+      gl.clearDepth(1.0) // standard: pairs with gl.depthFunc(gl.LEQUAL)
     }
 
     gl.enable(gl.SCISSOR_TEST)
     gl.scissor(vpX, vpY, vpW, vpH)
 
-    // console.log('vpX, vpY, vpW, vpH', vpX, vpY, vpW, vpH)
-    // console.log('canvas', gl.canvas.width, gl.canvas.height)
-    // Only set clearColor if color bit is included
     if (mask & gl.COLOR_BUFFER_BIT) {
-      this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
-      // this.gl.clearColor(1.0, this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
-      gl.clear(gl.COLOR_BUFFER_BIT)
+      gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
     }
 
-    gl.disable(this.gl.SCISSOR_TEST)
+    gl.clear(mask)
+    gl.disable(gl.SCISSOR_TEST)
   }
 
   /**
@@ -15136,13 +15186,12 @@ export class Niivue {
     }
 
     // --- Clear only inside region
-    // this.clearBounds()
     this.colorbarHeight = 0
 
     // --- Set viewport for all subsequent drawing
     const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
     this.gl.viewport(vpX, vpY, vpW, vpH)
-
+    this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     // rebind all of our textures (we may be sharing our gl context with another component)
     this.bindTextures()
 
@@ -15343,6 +15392,10 @@ export class Niivue {
         function padPixelsWH(cols: number, rows: number): [number, number] {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]
         }
+        // Get this instance's bounds
+        const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+        // Layout constrained to this instance's bounds
         let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
         if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {
           isShowRender = false
