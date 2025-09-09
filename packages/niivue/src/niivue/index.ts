@@ -1854,7 +1854,7 @@ export class Niivue {
    * Handles mouse up events, finalizing drag actions, invoking callbacks, and updating contrast if needed.
    * @internal
    */
-  mouseUpListener(e?: MouseEvent): void {
+  mouseUpListener(): void {
     this.uiData.mousedown = false
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
