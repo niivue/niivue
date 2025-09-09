@@ -13589,21 +13589,15 @@ export class Niivue {
     const gl = this.gl
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
-    // Case 1: full canvas, no bounds, no rect → clear everything
-    if (!this.opts.bounds && (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)) {
-      this.clearBounds(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, [0, 0, this.gl.canvas.width, this.gl.canvas.height])
+    // Case 1: no rect specified → full canvas (or full bounds if bounds set)
+    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
+      leftTopWidthHeight = this.opts.bounds
+        ? [regionX, regionY, regionW, regionH]
+        : [0, 0, gl.canvas.width, gl.canvas.height]
     }
-    // Case 2: full render panel inside bounds → clear the bounds region
-    else if (this.opts.bounds && (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0)) {
-      this.clearBounds(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, this.getBoundsRegion())
-    }
-    // Case 3: multiplanar sub-panel → clear the given rect
-    else {
-      this.clearBounds(
-        gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT,
-        leftTopWidthHeight as [number, number, number, number]
-      )
-    }
+
+    // Clear only inside the rect
+    this.clearBounds(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, leftTopWidthHeight as [number, number, number, number])
 
     const isMosaic = azimuth !== null
     this.setPivot3D()
@@ -13616,41 +13610,26 @@ export class Niivue {
       ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth!, elevation)
     }
 
-    let relativeLTWH = [...leftTopWidthHeight]
+    const relativeLTWH = [...leftTopWidthHeight]
 
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      // Default full canvas case → use bounds region instead
-      leftTopWidthHeight = [regionX, regionY, regionW, regionH]
-      relativeLTWH = [...leftTopWidthHeight]
-
-      this.screenSlices.push({
-        leftTopWidthHeight: leftTopWidthHeight.slice(),
-        axCorSag: SLICE_TYPE.RENDER,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix!), 0]
-      })
-
-      // flip for GL viewport
-      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
-    } else {
-      // Offset into region
-      leftTopWidthHeight[0] += regionX
-      leftTopWidthHeight[1] += regionY
-
-      this.screenSlices.push({
-        leftTopWidthHeight: leftTopWidthHeight.slice(),
-        axCorSag: SLICE_TYPE.RENDER,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix!), 0]
-      })
-
-      // flip for GL viewport
-      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
+      // Fallback: no rect provided → expand to full canvas or full bounds
+      leftTopWidthHeight = this.opts.bounds
+        ? [regionX, regionY, regionW, regionH]
+        : [0, 0, gl.canvas.width, gl.canvas.height]
     }
+
+    this.screenSlices.push({
+      leftTopWidthHeight: leftTopWidthHeight.slice(),
+      axCorSag: SLICE_TYPE.RENDER,
+      sliceFrac: 0,
+      AxyzMxy: [],
+      leftTopMM: [],
+      fovMM: [isRadiological(modelMatrix!), 0]
+    })
+
+    // Flip for GL viewport
+    leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
 
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
@@ -15393,10 +15372,12 @@ export class Niivue {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]
         }
         // Get this instance's bounds
+        // Get this instance's bounds
         const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
-        // Layout constrained to this instance's bounds
+        // Layout constrained to this instance's bounds, minus legend/colorbar space
         let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
+
         if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {
           isShowRender = false
           isHeroImage = true
@@ -15409,6 +15390,7 @@ export class Niivue {
           }
           canvasWH = [canvasWH[0] - heroImageWH[0], canvasWH[1] - heroImageWH[1]]
         }
+
         // size for 2 rows, 2 columns
         const ltwh2x2 = this.scaleSlice(
           volScale[0] + volScale[1],
@@ -15435,6 +15417,7 @@ export class Niivue {
         const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], padPixelsWH(1, 3), canvasWH)
         // size for 1 column * 4 rows
         const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, padPixelsWH(1, 4), canvasWH)
+
         let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph)
         let isDrawColumn = false
         let isDrawGrid = false
@@ -15455,6 +15438,7 @@ export class Niivue {
             isDrawGrid = true
           }
         }
+
         let ltwh = ltwh2x2
         if (isDrawColumn) {
           ltwh = ltwh1x3
@@ -15477,83 +15461,87 @@ export class Niivue {
             isDraw3D = false
           }
         }
+
         if (isHeroImage) {
           // issue1082 draw hero image
-          const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0]
-          const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1]
-          //
+          const heroW = heroImageWH[0] === 0 ? regionW : heroImageWH[0]
+          const heroH = heroImageWH[1] === 0 ? regionH : heroImageWH[1]
           if (
             this.opts?.heroSliceType === SLICE_TYPE.AXIAL ||
             this.opts?.heroSliceType === SLICE_TYPE.CORONAL ||
             this.opts?.heroSliceType === SLICE_TYPE.SAGITTAL
           ) {
-            this.draw2D([0, 0, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity])
+            this.draw2D([regionX, regionY, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity])
           } else {
-            // let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
             const ltwh2 = ltwh.slice()
-            const canvasW = this.effectiveCanvasWidth()
-            // console.log(`L ${ltwh[0]} T ${ltwh[1]} W ${heroW} H ${heroH} canvas ${canvasW}`)
-            if (heroW === canvasW) {
+            if (heroW === regionW) {
               ltwh2[0] = 0
             }
-            // console.log(`isWide ${heroW > heroH} L ${ltwh[0]} -> ${ltwh2[0]}`)
-            // this.draw3D([heroLTWH[0], heroLTWH[1], heroW, heroH])
-            this.draw3D([ltwh2[0], 0, heroW, heroH])
+            this.draw3D([regionX + ltwh2[0], regionY, heroW, heroH])
           }
-          // this.draw3D([0, 0, heroW, heroH])
           ltwh[0] += heroImageWH[0]
           ltwh[1] += heroImageWH[1]
           isDraw3D = false
         }
+
+        // panel sizes
         const sX = volScale[0] * ltwh[4] + innerPad
         const sY = volScale[1] * ltwh[4] + innerPad
         const sZ = volScale[2] * ltwh[4] + innerPad
         const actualX = actualScale[0] * ltwh[4]
         const actualY = actualScale[1] * ltwh[4]
         const actualZ = actualScale[2] * ltwh[4]
+
+        // ✅ All draw calls offset by regionX/regionY
         if (isDrawColumn) {
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY])
-          // draw coronal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1, NaN, [actualX, actualZ])
-          // draw sagittal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2, NaN, [actualY, actualZ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], SLICE_TYPE.AXIAL, NaN, [actualX, actualY])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad, sX, sZ], SLICE_TYPE.CORONAL, NaN, [
+            actualX,
+            actualZ
+          ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad + sZ + pad, sY, sZ], SLICE_TYPE.SAGITTAL, NaN, [
+            actualY,
+            actualZ
+          ])
           if (isDraw3D) {
             const sMx = mx * ltwh[4]
-            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
+            this.draw3D([regionX + ltwh[0], regionY + ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
           }
         } else if (isDrawRow) {
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY])
-          // draw coronal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ])
-          // draw sagittal
-          this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], SLICE_TYPE.AXIAL, NaN, [actualX, actualY])
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sX, sZ], SLICE_TYPE.CORONAL, NaN, [
+            actualX,
+            actualZ
+          ])
+          this.draw2D([regionX + ltwh[0] + sX + sX + pad * 2, regionY + ltwh[1], sY, sZ], SLICE_TYPE.SAGITTAL, NaN, [
+            actualY,
+            actualZ
+          ])
           if (isDraw3D) {
             const sMx = mx * ltwh[4]
-            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], sMx, sMx])
+            this.draw3D([regionX + ltwh[0] + sX + sX + sY + pad * 3, regionY + ltwh[1], sMx, sMx])
           }
         } else if (isDrawGrid) {
-          // did the user turn off 3D render view in multiplanar?
           if (!isShowRender) {
             isDraw3D = false
           }
-          // however, check if the user asked for auto
           if (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO) {
             isDraw3D = true
           }
-          // however, hero image is a rendering
           if (isHeroImage) {
             isDraw3D = false
           }
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0, NaN, [actualX, actualY])
-          // draw coronal
-          this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ])
-          // draw sagittal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sZ + pad, sX, sY], SLICE_TYPE.AXIAL, NaN, [
+            actualX,
+            actualY
+          ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sZ], SLICE_TYPE.CORONAL, NaN, [actualX, actualZ])
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sY, sZ], SLICE_TYPE.SAGITTAL, NaN, [
+            actualY,
+            actualZ
+          ])
           if (isDraw3D) {
-            this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY])
+            this.draw3D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1] + sZ + pad, sY, sY])
           }
         }
       }
