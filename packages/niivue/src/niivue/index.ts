@@ -10412,21 +10412,7 @@ export class Niivue {
     }
 
     // --- Bounds region (normalized → pixels)
-    let regionX = 0
-    let regionY = 0
-    let regionW = this.gl.canvas.width
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[x1, y1], [x2, y2]] = this.opts.bounds
-      regionX = Math.round(x1 * this.gl.canvas.width)
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-      regionY = this.gl.canvas.height - yBot // flip for GL origin
-    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
     // --- Compute ruler geometry
     const frac10cm = 100.0 / fovMM[0]
@@ -11333,21 +11319,7 @@ export class Niivue {
     }
 
     // Derive drawing region from bounds (normalized → pixels)
-    let regionX = 0
-    let regionY = 0
-    let regionW = this.gl.canvas.width
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[x1, y1], [x2, y2]] = this.opts.bounds
-      regionX = Math.round(x1 * this.gl.canvas.width)
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-      regionY = this.gl.canvas.height - yBot // flip to GL's origin
-    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
     // Calculate width as a percentage of region width
     const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1.0
@@ -11590,21 +11562,7 @@ export class Niivue {
     }
 
     // Compute drawing region from bounds (normalized → pixels)
-    let regionX = 0
-    let regionY = 0
-    let regionW = this.gl.canvas.width
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[x1, y1], [x2, y2]] = this.opts.bounds
-      regionX = Math.round(x1 * this.gl.canvas.width)
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-      regionY = this.gl.canvas.height - yBot // flip to GL origin
-    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
     // Restrict drawing to region
     this.gl.viewport(regionX, regionY, regionW, regionH)
@@ -12662,21 +12620,7 @@ export class Niivue {
     const graph = this.graph
 
     // --- Bounds region (normalized → pixels)
-    let regionX = 0
-    let regionY = 0
-    let regionW = this.gl.canvas.width
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[x1, y1], [x2, y2]] = this.opts.bounds
-      regionX = Math.round(x1 * this.gl.canvas.width)
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-      regionY = this.gl.canvas.height - yBot // flip for GL origin
-    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
     // --- Auto-place graph in multiplanar layout
     let axialTop = 0
@@ -14397,21 +14341,7 @@ export class Niivue {
     this.bmpShader.use(this.gl)
 
     // Determine drawing region from bounds (normalized → pixels)
-    let regionX = 0
-    let regionY = 0
-    let regionW = this.gl.canvas.width
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[x1, y1], [x2, y2]] = this.opts.bounds
-      regionX = Math.round(x1 * this.gl.canvas.width)
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-      regionY = this.gl.canvas.height - yBot // GL bottom-left origin
-    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
     // Set shader canvas size to the region instead of full canvas
     this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, regionW, regionH)
@@ -14775,21 +14705,7 @@ export class Niivue {
     this.screenSlices = []
 
     // Determine drawing region from bounds (normalized → pixels)
-    let regionX = 0
-    let regionY = 0
-    let regionW = this.gl.canvas.width
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[x1, y1], [x2, y2]] = this.opts.bounds
-      regionX = Math.round(x1 * this.gl.canvas.width)
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-      regionY = this.gl.canvas.height - yBot // flip for GL origin
-    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
     // render always in world space
     const fovRenderMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL, true)
