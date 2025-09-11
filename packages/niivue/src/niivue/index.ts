@@ -4659,6 +4659,31 @@ export class Niivue {
   }
 
   /**
+   * Update the drawing bounds for this Niivue instance.
+   *
+   * @param bounds - [x1, y1, x2, y2] in normalized (0–1) coordinates.
+   *
+   * Example:
+   *   nv.setBounds([0,0,0.5,0.5])   // top-left quarter
+   *   nv.setBounds([0.5,0.5,1,1])   // bottom-right quarter
+   */
+  public setBounds(bounds: [number, number, number, number]): void {
+    if (!Array.isArray(bounds) || bounds.length !== 4) {
+      throw new Error('setBounds: expected [x1,y1,x2,y2] array')
+    }
+
+    this.opts.bounds = [
+      [bounds[0], bounds[1]],
+      [bounds[2], bounds[3]]
+    ]
+
+    // Trigger redraw if GL is active
+    if (this.gl) {
+      this.drawScene()
+    }
+  }
+
+  /**
    * Handles mouse wheel or trackpad scroll to change slices, zoom, or frame depending on context.
    * @internal
    */
