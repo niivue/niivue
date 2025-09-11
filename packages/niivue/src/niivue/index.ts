@@ -13666,7 +13666,8 @@ export class Niivue {
     if (this.uiData.mouseDepthPicker) {
       this.depthPicker(leftTopWidthHeight, mvpMatrix)
       this.createOnLocationChange()
-      this.draw3D(leftTopWidthHeight, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
+      // we use relativeLTWH instead of leftTopWidthHeight to avoid double flipping the Y coordinate
+      this.draw3D(relativeLTWH, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
       return
     }
     if (this.opts.meshXRay > 0.0) {
