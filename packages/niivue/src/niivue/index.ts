@@ -1463,8 +1463,11 @@ export class Niivue {
     this.uiData.mousedown = true
 
     if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false
       this.drawScene()
       return
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
     }
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
@@ -1994,9 +1997,6 @@ export class Niivue {
     }
 
     this.clearActiveDragMode()
-    // if (e && !this.eventInBounds(e)) {
-    //   return
-    // }
     this.drawScene()
   }
 
@@ -2296,6 +2296,7 @@ export class Niivue {
       return
     }
     if (!this.eventInBounds(msg)) {
+      this.opts.showBoundsBorder = false
       return
     }
 
@@ -2430,6 +2431,7 @@ export class Niivue {
   keyUpListener(e: KeyboardEvent): void {
     // only handle keyboard events in region
     if (!this.cursorInBounds()) {
+      this.opts.showBoundsBorder = false
       this.drawScene()
       return
     }
@@ -2482,6 +2484,7 @@ export class Niivue {
   keyDownListener(e: KeyboardEvent): void {
     // only handle keyboard events in bounds
     if (!this.cursorInBounds()) {
+      this.opts.showBoundsBorder = false
       this.drawScene()
       return
     }
@@ -2537,8 +2540,11 @@ export class Niivue {
 
     // for multiple instances
     if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false
       this.drawScene()
       return
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
     }
 
     e.preventDefault()
@@ -3056,7 +3062,10 @@ export class Niivue {
   async dropListener(e: DragEvent): Promise<void> {
     // only respond to drop events in bounds
     if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false
       return
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
     }
     e.stopPropagation()
     e.preventDefault()
@@ -5322,7 +5331,7 @@ export class Niivue {
     this.volumes = []
     // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    this.clearBounds(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     const promises = dicomList.map(async (dicom) => {
       let dicomData = null
       if (dicom.isManifest) {
@@ -5375,7 +5384,7 @@ export class Niivue {
     this.volumes = []
     // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    this.clearBounds(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     this.closePAQD()
     // if more than one volume, then fetch them all simultaneously
     // using addVolumesFromUrl (note the "s" in "Volumes")
@@ -5506,7 +5515,7 @@ export class Niivue {
     this.meshes = []
     // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    this.clearBounds(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     // if more than one mesh, then fetch them all simultaneously
     // using addMeshesFromUrl (note the "s" in "Meshes")
     // if (meshList.length > 1) {
@@ -5618,7 +5627,7 @@ export class Niivue {
     this.meshes = []
     // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
     // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    this.clearBounds(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     const mesh = this.loadConnectomeAsMesh(json)
     this.addMesh(mesh)
     this.drawScene()
@@ -7672,7 +7681,7 @@ export class Niivue {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error('blur shader: ', status)
       }
-      this.clearBounds(gl.DEPTH_BUFFER_BIT)
+      // this.clearBounds(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
     const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
@@ -7704,7 +7713,7 @@ export class Niivue {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error('sobel shader: ', status)
       }
-      this.clearBounds(gl.DEPTH_BUFFER_BIT)
+      // this.clearBounds(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
     gl.deleteFramebuffer(fb)
@@ -11099,6 +11108,32 @@ export class Niivue {
     }
   }
 
+  private drawBoundsBox(leftTopWidthHeight: number[], color: number[], thickness = 2): void {
+    if (!this.rectOutlineShader) {
+      throw new Error('rectOutlineShader undefined')
+    }
+
+    const gl = this.gl
+    const [x, y, w, h] = leftTopWidthHeight
+
+    // Always use the full canvas viewport for the border
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+
+    this.rectOutlineShader.use(gl)
+    gl.enable(gl.BLEND)
+
+    gl.uniform1f(this.rectOutlineShader.uniforms.thickness, thickness)
+    gl.uniform4fv(this.rectOutlineShader.uniforms.lineColor, color)
+    gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+
+    // Pass canvas-space rect directly
+    gl.uniform4f(this.rectOutlineShader.uniforms.leftTopWidthHeight, x, y, w, h)
+
+    gl.bindVertexArray(this.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.bindVertexArray(this.unusedVAO)
+  }
+
   /**
    * Draw a circle or outline at given position with specified color or default crosshair color.
    * @internal
@@ -13567,15 +13602,13 @@ export class Niivue {
     const gl = this.gl
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
 
-    // Case 1: no rect specified → full canvas (or full bounds if bounds set)
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      leftTopWidthHeight = this.opts.bounds
-        ? [regionX, regionY, regionW, regionH]
-        : [0, 0, gl.canvas.width, gl.canvas.height]
-    }
+    // Always work with a copy so we don’t mutate caller input
+    let ltwh = [...leftTopWidthHeight]
 
-    // Clear only inside the rect
-    this.clearBounds(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT, leftTopWidthHeight as [number, number, number, number])
+    // Case 1: no rect specified → full canvas (or full bounds if bounds set)
+    if (ltwh[2] === 0 || ltwh[3] === 0) {
+      ltwh = this.opts.bounds ? [regionX, regionY, regionW, regionH] : [0, 0, gl.canvas.width, gl.canvas.height]
+    }
 
     const isMosaic = azimuth !== null
     this.setPivot3D()
@@ -13585,20 +13618,14 @@ export class Niivue {
     }
 
     if (mvpMatrix === null) {
-      ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth!, elevation)
+      ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, ltwh, azimuth!, elevation)
     }
 
-    const relativeLTWH = [...leftTopWidthHeight]
+    const relativeLTWH = [...ltwh]
 
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      // Fallback: no rect provided → expand to full canvas or full bounds
-      leftTopWidthHeight = this.opts.bounds
-        ? [regionX, regionY, regionW, regionH]
-        : [0, 0, gl.canvas.width, gl.canvas.height]
-    }
-
+    // Store the unmodified rect for borders / picking
     this.screenSlices.push({
-      leftTopWidthHeight: leftTopWidthHeight.slice(),
+      leftTopWidthHeight: ltwh.slice(), // canvas-space
       axCorSag: SLICE_TYPE.RENDER,
       sliceFrac: 0,
       AxyzMxy: [],
@@ -13606,20 +13633,20 @@ export class Niivue {
       fovMM: [isRadiological(modelMatrix!), 0]
     })
 
-    // Flip for GL viewport
-    leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
+    // Flip Y only for GL viewport
+    const glLTWH: [number, number, number, number] = [ltwh[0], gl.canvas.height - ltwh[3] - ltwh[1], ltwh[2], ltwh[3]]
+
+    // Flip Y for GL viewport
+    ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
 
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
 
-    // Depth-only clear *inside the rect*
-    // this.clearBounds(gl.DEPTH_BUFFER_BIT, leftTopWidthHeight as [number, number, number, number])
-
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
     // restrict viewport to tile/bounds
-    gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
+    this.gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3])
 
     if (this.volumes.length > 0) {
       this.updateInterpolation(0, true)
@@ -13633,9 +13660,9 @@ export class Niivue {
     }
     this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix!, normalMatrix!)
     if (this.uiData.mouseDepthPicker) {
-      this.depthPicker(leftTopWidthHeight, mvpMatrix)
+      this.depthPicker(ltwh, mvpMatrix)
       this.createOnLocationChange()
-      // we use relativeLTWH instead of leftTopWidthHeight to avoid double flipping the Y coordinate
+      // Avoid double flipping by reusing relativeLTWH
       this.draw3D(relativeLTWH, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
       return
     }
@@ -13645,14 +13672,14 @@ export class Niivue {
 
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
-    gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
+    gl.viewport(ltwh[0], ltwh[1], ltwh[2], ltwh[3])
     if (!isMosaic) {
       this.drawCrosshairs3D(false, 0.15, mvpMatrix)
     }
 
     // Reset viewport to whole bounds region
     gl.viewport(regionX, regionY, regionW, regionH)
-    this.drawOrientationCube(leftTopWidthHeight, azimuth!, elevation)
+    this.drawOrientationCube(ltwh, azimuth!, elevation)
 
     const posString =
       'azimuth: ' + this.scene.renderAzimuth.toFixed(0) + ' elevation: ' + this.scene.renderElevation.toFixed(0)
@@ -15036,12 +15063,9 @@ export class Niivue {
    */
   inBounds(x: number, y: number): boolean {
     const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
-    // console.log('x, y', x, y)
     // Convert from CSS (top origin, unscaled) → GL pixels (bottom origin)
     const glX = x * this.uiData.dpr!
     const glY = this.gl.canvas.height - y * this.uiData.dpr!
-    // console.log('glX, glY', glX, glY)
-    // console.log('canvas width, height', this.gl.canvas.width, this.gl.canvas.height)
     return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH
   }
 
@@ -15109,6 +15133,14 @@ export class Niivue {
     gl.disable(gl.SCISSOR_TEST)
   }
 
+  private drawBoundsBorder(): void {
+    if (!this.opts.showBoundsBorder) {
+      return
+    }
+    const [x, y, w, h] = this.getBoundsRegion()
+    this.drawBoundsBox([x, y, w, h], this.opts.boundsBorderColor, this.opts.selectionBoxLineThickness)
+  }
+
   /**
    * Core function to draw the entire scene including volumes, meshes, slices, overlays, colorbars, graphs, and handle user interaction like dragging.
    * @internal
@@ -15125,7 +15157,7 @@ export class Niivue {
     const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
 
     this.gl.viewport(vpX, vpY, vpW, vpH)
-    this.clearBounds(this.gl.COLOR_BUFFER_BIT)
+    this.clearBounds(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
     // rebind all of our textures (we may be sharing our gl context with another component)
     this.bindTextures()
 
@@ -15693,6 +15725,7 @@ export class Niivue {
     this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
     this.sync()
     this.drawAnchoredLabels()
+    this.drawBoundsBorder()
     return posString
   }
 
