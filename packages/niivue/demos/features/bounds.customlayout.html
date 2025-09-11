@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Niivue Bounds + Custom Layout Demo</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      <label for="nv1Bounds">Instance 1 Bounds:</label>
+      <select id="nv1Bounds">
+        <option value="0,0.5,0.5,1">Top-left</option>
+        <option value="0.5,0.5,1,1">Top-right</option>
+        <option value="0,0,0.5,0.5" selected>Bottom-left</option>
+        <option value="0.5,0,1,0.5">Bottom-right</option>
+        <option value="0,0,1,1">Full canvas</option>
+      </select>
+
+      <label for="nv2Bounds">Instance 2 Bounds:</label>
+      <select id="nv2Bounds">
+        <option value="0,0.5,0.5,1">Top-left</option>
+        <option value="0.5,0.5,1,1" selected>Top-right</option>
+        <option value="0,0,0.5,0.5">Bottom-left</option>
+        <option value="0.5,0,1,0.5">Bottom-right</option>
+        <option value="0,0,1,1">Full canvas</option>
+      </select>
+    </footer>
+
+    <script type="module">
+      import * as niivue from '../dist/index.js'
+
+      const volGray = [
+        { url: '../images/mni152.nii.gz', colormap: 'gray', visible: true, opacity: 1 }
+      ]
+      const volHot = [
+        { url: '../images/mni152.nii.gz', colormap: 'hot', visible: true, opacity: 1 }
+      ]
+
+      // First instance
+      const nv1 = new niivue.Niivue({
+        bounds: [[0.0, 0.0], [0.5, 0.5]],
+        backColor: [0, 0, 0, 1]
+      })
+      await nv1.attachTo('gl1')
+      await nv1.loadVolumes(volGray)
+
+      // Custom layout: Axial left, Coronal right
+      nv1.setCustomLayout([
+        { sliceType: niivue.SLICE_TYPE.AXIAL, position: [0, 0, 0.5, 1] },
+        { sliceType: niivue.SLICE_TYPE.CORONAL, position: [0.5, 0, 0.5, 1] }
+      ])
+
+      // Second instance
+      const nv2 = new niivue.Niivue({
+        bounds: [[0.5, 0.5], [1.0, 1.0]],
+        backColor: [0, 0, 0, 1]
+      })
+      await nv2.attachTo('gl1')
+      await nv2.loadVolumes(volHot)
+
+      // Custom layout: Sagittal top, Render bottom
+      nv2.setCustomLayout([
+        { sliceType: niivue.SLICE_TYPE.SAGITTAL, position: [0, 0.5, 1, 0.5] },
+        { sliceType: niivue.SLICE_TYPE.RENDER, position: [0, 0, 1, 0.5] }
+      ])
+
+      const instances = [nv1, nv2]
+
+      function applyBounds(nv, value) {
+        const parts = value.split(',').map(parseFloat)
+        nv.setBounds(parts)
+
+        // Redraw all instances (shared canvas)
+        for (const inst of instances) {
+            if(inst === nv) {
+                continue
+            }
+          inst.drawScene()
+        }
+      }
+
+      document.getElementById('nv1Bounds').addEventListener('change', e => {
+        applyBounds(nv1, e.target.value)
+      })
+
+      document.getElementById('nv2Bounds').addEventListener('change', e => {
+        applyBounds(nv2, e.target.value)
+      })
+
+      // Initial draw
+      for (const inst of instances) {
+        inst.drawScene()
+      }
+    </script>
+  </body>
+</html>

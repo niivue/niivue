@@ -15219,30 +15219,30 @@ export class Niivue {
       if (this.customLayout && this.customLayout.length > 0) {
         this.screenSlices = []
         const { volScale } = this.sliceScale()
-        const canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
 
+        // Use vpX, vpY, vpW, vpH from getBoundsRegion earlier
         for (const view of this.customLayout) {
           const { sliceType, position, sliceMM } = view
-          const leftTopWidthHeight = position.slice() as [number, number, number, number]
 
-          if (position[0] >= 0 && position[0] <= 1 && position[2] <= 1) {
-            leftTopWidthHeight[0] = position[0] * canvasWH[0]
-            leftTopWidthHeight[2] = position[2] * canvasWH[0]
-          }
-          if (position[1] >= 0 && position[1] <= 1 && position[3] <= 1) {
-            leftTopWidthHeight[1] = position[1] * canvasWH[1]
-            leftTopWidthHeight[3] = position[3] * canvasWH[1]
-          }
+          // position = [x, y, w, h] fractions relative to this instance’s bounds
+          const leftTopWidthHeight: [number, number, number, number] = [
+            vpX + position[0] * vpW,
+            vpY + position[1] * vpH,
+            position[2] * vpW,
+            position[3] * vpH
+          ]
 
-          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > canvasWH[0]) {
+          // Clamp so the slice doesn’t overflow its bounds
+          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > vpX + vpW) {
             log.warn('adjusting slice width because it would have been clipped')
-            leftTopWidthHeight[2] = canvasWH[0] - leftTopWidthHeight[0]
+            leftTopWidthHeight[2] = vpX + vpW - leftTopWidthHeight[0]
           }
-          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > canvasWH[1]) {
+          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > vpY + vpH) {
             log.warn('adjusting slice height because it would have been clipped')
-            leftTopWidthHeight[3] = canvasWH[1] - leftTopWidthHeight[1]
+            leftTopWidthHeight[3] = vpY + vpH - leftTopWidthHeight[1]
           }
 
+          // Render
           if (sliceType === SLICE_TYPE.RENDER) {
             this.draw3D(leftTopWidthHeight)
           } else {
