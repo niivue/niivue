@@ -1,0 +1,110 @@
+---
+title: Bounds
+sidebar_position: 7
+---
+
+import { BoundsDemo } from '../src/components/BoundsDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+# Bounds
+
+NiiVue supports rendering multiple independent instances into a single shared `<canvas>` by constraining each instance to a **normalized bounds rectangle**. Bounds are specified in **fractions of the canvas**, with `[0,0]` as the bottom-left corner and `[1,1]` as the top-right corner.
+
+---
+
+## Setting bounds
+
+Bounds are defined as a 4-element array:
+
+```ts
+nv.setBounds([x1, y1, x2, y2])
+```
+
+- `x1, y1` = lower-left corner (fractions of width/height)  
+- `x2, y2` = upper-right corner (fractions of width/height)
+
+For example:
+
+```ts
+// Bottom-left quarter of the canvas
+nv.setBounds([0.0, 0.0, 0.5, 0.5])
+
+// Top-right quarter
+nv.setBounds([0.5, 0.5, 1.0, 1.0])
+
+// Full canvas
+nv.setBounds([0.0, 0.0, 1.0, 1.0])
+```
+
+---
+
+## Configuring at initialization
+
+You can also set bounds directly when constructing a `Niivue` instance:
+
+```ts
+const nv1 = new Niivue({
+  bounds: [[0.0, 0.0], [0.5, 0.5]], // bottom-left quarter
+})
+
+const nv2 = new Niivue({
+  bounds: [[0.5, 0.5], [1.0, 1.0]], // top-right quarter
+})
+```
+
+Note: the object form `[[x1, y1], [x2, y2]]` is supported for options, but when calling `setBounds` you must pass `[x1, y1, x2, y2]`.
+
+---
+
+## Interactive demo
+
+Below you can try adjusting the bounds of two NiiVue instances that share a single canvas. Use the dropdowns to reposition each instance.
+
+<NiivueBrowserWrapper>
+  <BoundsDemo />
+</NiivueBrowserWrapper>
+
+---
+
+## Bounds border
+
+Each instance can optionally show a border rectangle to visualize its bounds. The border is white by default and can be configured via:
+
+```ts
+nv.opts.showBoundsBorder = true
+nv.opts.boundsBorderColor = [1, 0, 0, 1] // RGBA red
+nv.opts.boundsBorderThickness = 2        // in pixels
+```
+
+This is useful for debugging or when overlaying multiple synchronized views in a single canvas.
+
+---
+
+## Bounds and layouts
+
+When `customLayout` or multiplanar layouts are active, the layout tiles are constrained inside the instance’s bounds region. That means:
+
+- Layout positions are relative **within the instance’s bounds**, not the full canvas.  
+- You can safely combine multiple instances with bounds and each one will handle its own multiplanar/custom layout internally.
+
+---
+
+## Example: Two instances
+
+```ts
+// First instance: bottom-left quarter
+const nv1 = new Niivue({ bounds: [[0.0, 0.0], [0.5, 0.5]] })
+await nv1.attachTo('gl1')
+await nv1.loadVolumes([{ url: './images/mni152.nii.gz', colormap: 'gray' }])
+nv1.setSliceType(SLICE_TYPE.MULTIPLANAR)
+
+// Second instance: top-right quarter
+const nv2 = new Niivue({ bounds: [[0.5, 0.5], [1.0, 1.0]] })
+await nv2.attachTo('gl1')
+await nv2.loadVolumes([{ url: './images/mni152.nii.gz', colormap: 'hot' }])
+nv2.setSliceType(SLICE_TYPE.MULTIPLANAR)
+```
+
+---
+
+With bounds, you can partition a single WebGL canvas into multiple independent NiiVue viewports, each synchronized or controlled individually.
