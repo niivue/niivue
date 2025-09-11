@@ -243,6 +243,8 @@ export type NVConfigOptions = {
   invertScrollDirection: boolean
   is2DSliceShader: boolean
   bounds: [[number, number], [number, number]] | null
+  showBoundsBorder?: boolean
+  boundsBorderColor?: number[] // [r,g,b,a]
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -358,7 +360,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   gradientAmount: 0.0,
   invertScrollDirection: false,
   is2DSliceShader: false,
-  bounds: null
+  bounds: null,
+  showBoundsBorder: false,
+  boundsBorderColor: [1, 1, 1, 1] // white border by default
 }
 
 type SceneData = {
