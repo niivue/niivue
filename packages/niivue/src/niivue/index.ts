@@ -1915,7 +1915,8 @@ export class Niivue {
           this.uiData.isDragging = true
           this.drawScene()
           return
-        } else if (this.uiData.angleState === 'drawing_second_line') {
+        }
+        if (this.uiData.angleState === 'drawing_second_line') {
           // Second line completed, but angle will be saved in mouseDownListener
           this.uiData.angleState = 'complete'
           this.clearActiveDragMode()
@@ -2204,16 +2205,17 @@ export class Niivue {
         this.uiData.prevX = this.uiData.currX
         this.uiData.prevY = this.uiData.currY
         return
-      } else if (activeDragMode === DRAG_MODE.windowing) {
+      }
+      if (activeDragMode === DRAG_MODE.windowing) {
         this.windowingHandler(pos.x, pos.y)
         this.drawScene()
         this.uiData.prevX = this.uiData.currX
         this.uiData.prevY = this.uiData.currY
         return
-      } else {
-        // Handle all other drag modes that need drag tracking
-        this.setDragEnd(pos.x, pos.y)
       }
+      // Handle all other drag modes that need drag tracking
+      this.setDragEnd(pos.x, pos.y)
+
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
