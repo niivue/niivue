@@ -2182,7 +2182,7 @@ export class Niivue {
     }
 
     // Reset drag state if mouse leaves during drag
-    if (this.uiData.isDragging) {
+    if (this.uiData.isDragging || this.uiData.mousedown) {
       log.debug('Mouse left canvas during drag, resetting drag state.')
       this.uiData.isDragging = false
       this.uiData.mouseButtonLeftDown = false
@@ -2244,7 +2244,6 @@ export class Niivue {
       }
       // Handle all other drag modes that need drag tracking
       this.setDragEnd(pos.x, pos.y)
-
       this.drawScene()
       this.uiData.prevX = this.uiData.currX
       this.uiData.prevY = this.uiData.currY
