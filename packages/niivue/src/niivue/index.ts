@@ -511,6 +511,8 @@ export class Niivue {
     angleState: 'none'
   }
 
+  #eventsController: AbortController | null = null
+
   back: NVImage | null = null // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
   overlays: NVImage[] = [] // layers added on top of base image (e.g. masks or stat maps). Essentially everything after this.volumes[0] is an overlay. So is necessary?
   deferredVolumes: ImageFromUrlOptions[] = []
@@ -949,30 +951,9 @@ export class Niivue {
     }
 
     // Remove all interaction event listeners
-    if (this.canvas && this.opts.interactive) {
-      // Mouse events
-      this.canvas.removeEventListener('mousedown', this.mouseDownListener.bind(this))
-      this.canvas.removeEventListener('mouseup', this.mouseUpListener.bind(this))
-      this.canvas.removeEventListener('mousemove', this.mouseMoveListener.bind(this))
-
-      // Touch events
-      this.canvas.removeEventListener('touchstart', this.touchStartListener.bind(this))
-      this.canvas.removeEventListener('touchend', this.touchEndListener.bind(this))
-      this.canvas.removeEventListener('touchmove', this.touchMoveListener.bind(this))
-
-      // Other events
-      this.canvas.removeEventListener('wheel', this.wheelListener.bind(this))
-      this.canvas.removeEventListener('contextmenu', this.mouseContextMenuListener.bind(this))
-      this.canvas.removeEventListener('dblclick', this.resetBriCon.bind(this))
-
-      // Drag and drop
-      this.canvas.removeEventListener('dragenter', this.dragEnterListener.bind(this))
-      this.canvas.removeEventListener('dragover', this.dragOverListener.bind(this))
-      this.canvas.removeEventListener('drop', this.dropListener.bind(this))
-
-      // Keyboard events
-      this.canvas.removeEventListener('keyup', this.keyUpListener.bind(this))
-      this.canvas.removeEventListener('keydown', this.keyDownListener.bind(this))
+    if (this.#eventsController) {
+      this.#eventsController.abort()
+      this.#eventsController = null
     }
 
     // Clean up opts change callback
@@ -2613,47 +2594,49 @@ export class Niivue {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
+    this.#eventsController = new AbortController()
+    const { signal } = this.#eventsController
     // add mousedown
-    this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this))
+    this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this), { signal })
     // add mouseup
-    this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this))
+    this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this), { signal })
     // add mouse move
-    this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this))
+    this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this), { signal })
     // add mouse leave listener
-    this.canvas.addEventListener('mouseleave', this.mouseLeaveListener.bind(this))
+    this.canvas.addEventListener('mouseleave', this.mouseLeaveListener.bind(this), { signal })
 
     // add touchstart
-    this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this))
+    this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this), { signal })
     // add touchend
-    this.canvas.addEventListener('touchend', this.touchEndListener.bind(this))
+    this.canvas.addEventListener('touchend', this.touchEndListener.bind(this), { signal })
     // add touchmove
-    this.canvas.addEventListener('touchmove', this.touchMoveListener.bind(this))
+    this.canvas.addEventListener('touchmove', this.touchMoveListener.bind(this), { signal })
 
     // add scroll wheel
-    this.canvas.addEventListener('wheel', this.wheelListener.bind(this))
+    this.canvas.addEventListener('wheel', this.wheelListener.bind(this), { signal })
     // add context event disabler
-    this.canvas.addEventListener('contextmenu', this.mouseContextMenuListener.bind(this))
+    this.canvas.addEventListener('contextmenu', this.mouseContextMenuListener.bind(this), { signal })
 
     // add double click
-    this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this))
+    this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this), { signal })
 
     //  drag and drop support
-    this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), false)
-    this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), false)
+    this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), { signal })
+    this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), { signal })
     this.canvas.addEventListener(
       'drop',
       (event) => {
         this.dropListener(event).catch(console.error)
       },
-      false
+      { signal }
     )
 
     // add keyup
     this.canvas.setAttribute('tabindex', '0')
-    this.canvas.addEventListener('keyup', this.keyUpListener.bind(this), false)
+    this.canvas.addEventListener('keyup', this.keyUpListener.bind(this), { signal })
 
     // keydown
-    this.canvas.addEventListener('keydown', this.keyDownListener.bind(this), false)
+    this.canvas.addEventListener('keydown', this.keyDownListener.bind(this), { signal })
   }
 
   /**
