@@ -1507,7 +1507,7 @@ export class Niivue {
             const [x, y, z] = label.points as [number, number, number]
             this.scene.crosshairPos = this.mm2frac([x, y, z])
             this.updateGLVolume()
-            this.drawScene()
+            // this.drawScene()
           }
           continue
         }
@@ -1515,7 +1515,7 @@ export class Niivue {
           if (node.label === label) {
             this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z])
             this.updateGLVolume()
-            this.drawScene()
+            // this.drawScene()
           }
         }
       }
@@ -1539,6 +1539,8 @@ export class Niivue {
       this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey)
       this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     }
+
+    this.drawScene()
   }
 
   /**
@@ -2524,6 +2526,7 @@ export class Niivue {
     } else if (e.code === 'Slash' && e.shiftKey) {
       alert(`NIIVUE VERSION: ${version}`)
     }
+    this.drawScene()
   }
 
   /**
@@ -13913,7 +13916,7 @@ export class Niivue {
     if (isDepthTest) {
       gl.disable(gl.BLEND)
       // gl.depthFunc(gl.LESS); //pass if LESS than incoming value
-      gl.depthFunc(gl.LEQUAL)
+      gl.depthFunc(gl.GREATER)
     } else {
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
