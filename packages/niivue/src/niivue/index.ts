@@ -2477,6 +2477,7 @@ export class Niivue {
         this.lastCalled = now
       }
     }
+    this.drawScene()
   }
 
   /**
