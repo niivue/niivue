@@ -1540,7 +1540,10 @@ export class Niivue {
       this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     }
 
-    this.drawScene()
+    if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
+      this.drawScene()
+    }
   }
 
   /**
