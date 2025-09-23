@@ -1475,15 +1475,17 @@ export class Niivue {
     this.drawPenAxCorSag = -1
     this.drawShapeStartLocation = [NaN, NaN, NaN] // Reset shape start location
 
+    // record tile where mouse clicked
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+
     // reset drag positions used previously (but not during angle measurement second line)
     if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
-      this.setDragStart(0, 0)
-      this.setDragEnd(0, 0)
+      this.setDragStart(pos.x, pos.y)
+      this.setDragEnd(pos.x, pos.y)
     }
     log.debug('mouse down')
     log.debug(e)
-    // record tile where mouse clicked
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+
     if (!pos) {
       return
     }
