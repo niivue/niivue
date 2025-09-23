@@ -1539,11 +1539,6 @@ export class Niivue {
       this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey)
       this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     }
-
-    if (this.opts.bounds) {
-      this.opts.showBoundsBorder = true
-      this.drawScene()
-    }
   }
 
   /**
@@ -10612,6 +10607,7 @@ export class Niivue {
     }
 
     const gl = this.gl
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
     gl.bindVertexArray(this.genericVAO)
 
     gl.depthFunc(gl.ALWAYS)
@@ -11172,6 +11168,7 @@ export class Niivue {
    * @internal
    */
   drawSelectionBox(leftTopWidthHeight: number[]): void {
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     if (this.getCurrentDragMode() === DRAG_MODE.roiSelection) {
       this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1)
       return
