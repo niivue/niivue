@@ -1541,6 +1541,7 @@ export class Niivue {
       this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey)
       this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     }
+    this.drawScene()
   }
 
   /**
