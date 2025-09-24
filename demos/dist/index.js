@@ -35247,6 +35247,7 @@ var defaultSaveImageOptions = {
   isSaveDrawing: false,
   volumeByIndex: 0
 };
+var _eventsController;
 var Niivue = class {
   /**
    * @param options  - options object to set modifiable Niivue properties
@@ -35430,6 +35431,7 @@ var Niivue = class {
       angleFirstLine: [0, 0, 0, 0],
       angleState: "none"
     });
+    __privateAdd(this, _eventsController, null);
     __publicField(this, "back", null);
     // base layer; defines image space to work in. Defined as this.volumes[0] in Niivue.loadVolumes
     __publicField(this, "overlays", []);
@@ -35829,21 +35831,9 @@ var Niivue = class {
       this.canvasObserver.disconnect();
       this.canvasObserver = null;
     }
-    if (this.canvas && this.opts.interactive) {
-      this.canvas.removeEventListener("mousedown", this.mouseDownListener.bind(this));
-      this.canvas.removeEventListener("mouseup", this.mouseUpListener.bind(this));
-      this.canvas.removeEventListener("mousemove", this.mouseMoveListener.bind(this));
-      this.canvas.removeEventListener("touchstart", this.touchStartListener.bind(this));
-      this.canvas.removeEventListener("touchend", this.touchEndListener.bind(this));
-      this.canvas.removeEventListener("touchmove", this.touchMoveListener.bind(this));
-      this.canvas.removeEventListener("wheel", this.wheelListener.bind(this));
-      this.canvas.removeEventListener("contextmenu", this.mouseContextMenuListener.bind(this));
-      this.canvas.removeEventListener("dblclick", this.resetBriCon.bind(this));
-      this.canvas.removeEventListener("dragenter", this.dragEnterListener.bind(this));
-      this.canvas.removeEventListener("dragover", this.dragOverListener.bind(this));
-      this.canvas.removeEventListener("drop", this.dropListener.bind(this));
-      this.canvas.removeEventListener("keyup", this.keyUpListener.bind(this));
-      this.canvas.removeEventListener("keydown", this.keyDownListener.bind(this));
+    if (__privateGet(this, _eventsController)) {
+      __privateGet(this, _eventsController).abort();
+      __privateSet(this, _eventsController, null);
     }
     this.document.removeOptsChangeCallback();
   }
@@ -37253,28 +37243,30 @@ var Niivue = class {
     if (!this.canvas) {
       throw new Error("canvas undefined");
     }
-    this.canvas.addEventListener("mousedown", this.mouseDownListener.bind(this));
-    this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this));
-    this.canvas.addEventListener("mousemove", this.mouseMoveListener.bind(this));
-    this.canvas.addEventListener("mouseleave", this.mouseLeaveListener.bind(this));
-    this.canvas.addEventListener("touchstart", this.touchStartListener.bind(this));
-    this.canvas.addEventListener("touchend", this.touchEndListener.bind(this));
-    this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this));
-    this.canvas.addEventListener("wheel", this.wheelListener.bind(this));
-    this.canvas.addEventListener("contextmenu", this.mouseContextMenuListener.bind(this));
-    this.canvas.addEventListener("dblclick", this.resetBriCon.bind(this));
-    this.canvas.addEventListener("dragenter", this.dragEnterListener.bind(this), false);
-    this.canvas.addEventListener("dragover", this.dragOverListener.bind(this), false);
+    __privateSet(this, _eventsController, new AbortController());
+    const { signal } = __privateGet(this, _eventsController);
+    this.canvas.addEventListener("mousedown", this.mouseDownListener.bind(this), { signal });
+    this.canvas.addEventListener("mouseup", this.mouseUpListener.bind(this), { signal });
+    this.canvas.addEventListener("mousemove", this.mouseMoveListener.bind(this), { signal });
+    this.canvas.addEventListener("mouseleave", this.mouseLeaveListener.bind(this), { signal });
+    this.canvas.addEventListener("touchstart", this.touchStartListener.bind(this), { signal });
+    this.canvas.addEventListener("touchend", this.touchEndListener.bind(this), { signal });
+    this.canvas.addEventListener("touchmove", this.touchMoveListener.bind(this), { signal });
+    this.canvas.addEventListener("wheel", this.wheelListener.bind(this), { signal });
+    this.canvas.addEventListener("contextmenu", this.mouseContextMenuListener.bind(this), { signal });
+    this.canvas.addEventListener("dblclick", this.resetBriCon.bind(this), { signal });
+    this.canvas.addEventListener("dragenter", this.dragEnterListener.bind(this), { signal });
+    this.canvas.addEventListener("dragover", this.dragOverListener.bind(this), { signal });
     this.canvas.addEventListener(
       "drop",
       (event) => {
         this.dropListener(event).catch(console.error);
       },
-      false
+      { signal }
     );
     this.canvas.setAttribute("tabindex", "0");
-    this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), false);
-    this.canvas.addEventListener("keydown", this.keyDownListener.bind(this), false);
+    this.canvas.addEventListener("keyup", this.keyUpListener.bind(this), { signal });
+    this.canvas.addEventListener("keydown", this.keyDownListener.bind(this), { signal });
   }
   /**
    * Prevents default behavior when a dragged item enters the canvas.
@@ -48403,6 +48395,7 @@ var Niivue = class {
     );
   }
 };
+_eventsController = new WeakMap();
 export {
   COLORMAP_TYPE,
   DEFAULT_OPTIONS,

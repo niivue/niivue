@@ -1651,6 +1651,7 @@ type DicomLoader = {
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 declare class Niivue {
+    #private;
     loaders: {};
     dicomLoader: DicomLoader | null;
     canvas: HTMLCanvasElement | null;
