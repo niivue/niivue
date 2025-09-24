@@ -36646,7 +36646,8 @@ var Niivue = class {
           this.uiData.isDragging = true;
           this.drawScene();
           return;
-        } else if (this.uiData.angleState === "drawing_second_line") {
+        }
+        if (this.uiData.angleState === "drawing_second_line") {
           this.uiData.angleState = "complete";
           this.clearActiveDragMode();
           this.drawScene();
@@ -36842,7 +36843,7 @@ var Niivue = class {
         this.refreshDrawing(true, false);
       }
     }
-    if (this.uiData.isDragging) {
+    if (this.uiData.isDragging || this.uiData.mousedown) {
       log.debug("Mouse left canvas during drag, resetting drag state.");
       this.uiData.isDragging = false;
       this.uiData.mouseButtonLeftDown = false;
@@ -36884,15 +36885,15 @@ var Niivue = class {
         this.uiData.prevX = this.uiData.currX;
         this.uiData.prevY = this.uiData.currY;
         return;
-      } else if (activeDragMode === 9 /* windowing */) {
+      }
+      if (activeDragMode === 9 /* windowing */) {
         this.windowingHandler(pos.x, pos.y);
         this.drawScene();
         this.uiData.prevX = this.uiData.currX;
         this.uiData.prevY = this.uiData.currY;
         return;
-      } else {
-        this.setDragEnd(pos.x, pos.y);
       }
+      this.setDragEnd(pos.x, pos.y);
       this.drawScene();
       this.uiData.prevX = this.uiData.currX;
       this.uiData.prevY = this.uiData.currY;
