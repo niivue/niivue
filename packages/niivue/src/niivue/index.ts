@@ -1318,7 +1318,10 @@ export class Niivue {
       if (this.syncOpts['3d']) {
         this.doSync3d(this.otherNV[i])
       }
-      this.otherNV[i].drawScene()
+      // do not redraw for other instances on the same canvas
+      if (this.otherNV[i].canvas !== this.canvas) {
+        this.otherNV[i].drawScene()
+      }
       this.otherNV[i].createOnLocationChange()
     }
   }
@@ -1457,26 +1460,38 @@ export class Niivue {
    * @internal
    */
   mouseDownListener(e: MouseEvent): void {
+    this.uiData.mousedown = true
+
+    if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false
+      this.drawScene()
+      return
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
+    }
     e.preventDefault()
     // var rect = this.canvas.getBoundingClientRect();
     this.drawPenLocation = [NaN, NaN, NaN]
     this.drawPenAxCorSag = -1
     this.drawShapeStartLocation = [NaN, NaN, NaN] // Reset shape start location
-    this.uiData.mousedown = true
+
+    // record tile where mouse clicked
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+
     // reset drag positions used previously (but not during angle measurement second line)
     if (!(this.opts.dragMode === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line')) {
-      this.setDragStart(0, 0)
-      this.setDragEnd(0, 0)
+      this.setDragStart(pos.x, pos.y)
+      this.setDragEnd(pos.x, pos.y)
     }
     log.debug('mouse down')
     log.debug(e)
-    // record tile where mouse clicked
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+
     if (!pos) {
       return
     }
 
     const [x, y] = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
+
     if (this.opts.clickToSegment) {
       this.clickToSegmentXY = [x, y]
     }
@@ -1494,7 +1509,7 @@ export class Niivue {
             const [x, y, z] = label.points as [number, number, number]
             this.scene.crosshairPos = this.mm2frac([x, y, z])
             this.updateGLVolume()
-            this.drawScene()
+            // this.drawScene()
           }
           continue
         }
@@ -1502,7 +1517,7 @@ export class Niivue {
           if (node.label === label) {
             this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z])
             this.updateGLVolume()
-            this.drawScene()
+            // this.drawScene()
           }
         }
       }
@@ -1526,6 +1541,7 @@ export class Niivue {
       this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey)
       this.handleMouseAction(this.uiData.activeDragMode!, e, pos)
     }
+    this.drawScene()
   }
 
   /**
@@ -1845,9 +1861,11 @@ export class Niivue {
    * @internal
    */
   mouseUpListener(): void {
+    this.uiData.mousedown = false
     function isFunction(test: unknown): boolean {
       return Object.prototype.toString.call(test).indexOf('Function') > -1
     }
+
     // let fracPos = this.canvasPos2frac(this.mousePos);
     const uiData = {
       mouseButtonRightDown: this.uiData.mouseButtonRightDown,
@@ -1857,7 +1875,6 @@ export class Niivue {
       fracPos: this.canvasPos2frac(this.mousePos)
       // xyzMM: this.frac2mm(fracPos),
     }
-    this.uiData.mousedown = false
     this.uiData.mouseButtonRightDown = false
     const wasCenterDown = this.uiData.mouseButtonCenterDown
     this.uiData.mouseButtonCenterDown = false
@@ -1981,6 +1998,7 @@ export class Niivue {
         return
       }
     }
+
     this.clearActiveDragMode()
     this.drawScene()
   }
@@ -2172,6 +2190,8 @@ export class Niivue {
       this.uiData.mousedown = false
       this.drawScene()
     }
+    // Mark cursor as off-canvas so cursorInBounds() always returns false
+    this.mousePos = [-1, -1]
   }
 
   /**
@@ -2180,13 +2200,22 @@ export class Niivue {
    */
   mouseMoveListener(e: MouseEvent): void {
     // move crosshair and change slices if mouse click and move
-    if (this.uiData.mousedown) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
-      // ignore if mouse moves outside of tile of initial click
-      if (!pos) {
-        return
-      }
 
+    // we need to do this when we have multiple instances
+    if (this.uiData.mousedown) {
+      this.drawScene()
+    }
+
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
+    // ignore if mouse moves outside of tile of initial click
+    if (!pos) {
+      return
+    }
+    if (!this.eventInBounds(e)) {
+      this.updateMousePos(pos.x, pos.y)
+      return
+    }
+    if (this.uiData.mousedown) {
       const x = pos.x * this.uiData.dpr!
       const y = pos.y * this.uiData.dpr!
       const tile = this.tileIndex(x, y)
@@ -2269,6 +2298,11 @@ export class Niivue {
     if (this.uiData.isDragging) {
       return
     }
+    if (!this.eventInBounds(msg)) {
+      this.opts.showBoundsBorder = false
+      return
+    }
+
     let isRender = false
     if (this.opts.sliceType === SLICE_TYPE.RENDER) {
       isRender = true
@@ -2398,6 +2432,12 @@ export class Niivue {
    * @internal
    */
   keyUpListener(e: KeyboardEvent): void {
+    // only handle keyboard events in region
+    if (!this.cursorInBounds()) {
+      this.opts.showBoundsBorder = false
+      this.drawScene()
+      return
+    }
     if (e.code === this.opts.clipPlaneHotKey) {
       const now = new Date().getTime()
       const elapsed = now - this.lastCalled
@@ -2438,6 +2478,7 @@ export class Niivue {
         this.lastCalled = now
       }
     }
+    this.drawScene()
   }
 
   /**
@@ -2445,6 +2486,13 @@ export class Niivue {
    * @internal
    */
   keyDownListener(e: KeyboardEvent): void {
+    // only handle keyboard events in bounds
+    if (!this.cursorInBounds()) {
+      this.opts.showBoundsBorder = false
+      this.drawScene()
+      return
+    }
+
     if (e.code === 'KeyH' && this.opts.sliceType === SLICE_TYPE.RENDER) {
       this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation)
     } else if (e.code === 'KeyL' && this.opts.sliceType === SLICE_TYPE.RENDER) {
@@ -2480,6 +2528,7 @@ export class Niivue {
     } else if (e.code === 'Slash' && e.shiftKey) {
       alert(`NIIVUE VERSION: ${version}`)
     }
+    this.drawScene()
   }
 
   /**
@@ -2492,6 +2541,15 @@ export class Niivue {
     }
     if (this.opts.sliceMosaicString.length > 0) {
       return
+    }
+
+    // for multiple instances
+    if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false
+      this.drawScene()
+      return
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
     }
 
     e.preventDefault()
@@ -3007,6 +3065,13 @@ export class Niivue {
    * @internal
    */
   async dropListener(e: DragEvent): Promise<void> {
+    // only respond to drop events in bounds
+    if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false
+      return
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true
+    }
     e.stopPropagation()
     e.preventDefault()
     // don't do anything if drag and drop has been turned off
@@ -4407,7 +4472,19 @@ export class Niivue {
   }
 
   /**
-   * Updates mouse position and modifies 3D render view if the pointer is in the render tile.
+   * Updates mouse position
+   * @internal
+   */
+  updateMousePos(x: number, y: number): [number, number] {
+    x *= this.uiData.dpr!
+    y *= this.uiData.dpr!
+
+    this.mousePos = [x, y]
+    return [x, y]
+  }
+
+  /**
+   *  and modifies 3D render view if the pointer is in the render tile.
    *
    * @internal
    */
@@ -4417,7 +4494,6 @@ export class Niivue {
     const dx = (x - this.mousePos[0]) / this.uiData.dpr!
     const dy = (y - this.mousePos[1]) / this.uiData.dpr!
     this.mousePos = [x, y]
-
     if (this.inRenderTile(x, y) < 0) {
       return
     }
@@ -4594,6 +4670,31 @@ export class Niivue {
    */
   setSelectionBoxColor(color: number[]): void {
     this.opts.selectionBoxColor = color
+  }
+
+  /**
+   * Update the drawing bounds for this Niivue instance.
+   *
+   * @param bounds - [x1, y1, x2, y2] in normalized (0–1) coordinates.
+   *
+   * Example:
+   *   nv.setBounds([0,0,0.5,0.5])   // top-left quarter
+   *   nv.setBounds([0.5,0.5,1,1])   // bottom-right quarter
+   */
+  public setBounds(bounds: [number, number, number, number]): void {
+    if (!Array.isArray(bounds) || bounds.length !== 4) {
+      throw new Error('setBounds: expected [x1,y1,x2,y2] array')
+    }
+
+    this.opts.bounds = [
+      [bounds[0], bounds[1]],
+      [bounds[2], bounds[3]]
+    ]
+
+    // Trigger redraw if GL is active
+    if (this.gl) {
+      this.drawScene()
+    }
   }
 
   /**
@@ -5233,8 +5334,9 @@ export class Niivue {
     }
     this.drawScene()
     this.volumes = []
-    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     const promises = dicomList.map(async (dicom) => {
       let dicomData = null
       if (dicom.isManifest) {
@@ -5285,8 +5387,9 @@ export class Niivue {
       return this
     }
     this.volumes = []
-    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     this.closePAQD()
     // if more than one volume, then fetch them all simultaneously
     // using addVolumesFromUrl (note the "s" in "Volumes")
@@ -5415,9 +5518,9 @@ export class Niivue {
       // await this.init();
     }
     this.meshes = []
-    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-
+    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     // if more than one mesh, then fetch them all simultaneously
     // using addMeshesFromUrl (note the "s" in "Meshes")
     // if (meshList.length > 1) {
@@ -5527,9 +5630,9 @@ export class Niivue {
   loadConnectome(json: Connectome | LegacyConnectome): this {
     this.drawScene()
     this.meshes = []
-    this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-
+    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
+    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
+    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     const mesh = this.loadConnectomeAsMesh(json)
     this.addMesh(mesh)
     this.drawScene()
@@ -7379,7 +7482,7 @@ export class Niivue {
     // firefox masks vendor and renderer for privacy
     const glInfo = this.gl.getParameter(this.gl.RENDERER)
     log.info('firefox renderer: ', glInfo) // Useful with firefox "Intel(R) HD Graphics" useless in Chrome and Safari "WebKit WebGL"
-    this.gl.clearDepth(0.0)
+    // this.gl.clearDepth(0.0)
     this.gl.enable(this.gl.CULL_FACE)
     this.gl.cullFace(this.gl.FRONT)
     this.gl.enable(this.gl.BLEND)
@@ -7583,7 +7686,7 @@ export class Niivue {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error('blur shader: ', status)
       }
-      gl.clear(gl.DEPTH_BUFFER_BIT)
+      // this.clearBounds(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
     const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
@@ -7615,7 +7718,7 @@ export class Niivue {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error('sobel shader: ', status)
       }
-      gl.clear(gl.DEPTH_BUFFER_BIT)
+      // this.clearBounds(gl.DEPTH_BUFFER_BIT)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     }
     gl.deleteFramebuffer(fb)
@@ -10307,11 +10410,11 @@ export class Niivue {
   drawRuler(): void {
     let fovMM: number[] = []
     let ltwh: number[] = []
+
     for (let i = 0; i < this.screenSlices.length; i++) {
       if (this.screenSlices[i].axCorSag === SLICE_TYPE.RENDER) {
         continue
       }
-      // let ltwh = this.screenSlices[i].leftTopWidthHeight;
       if (this.screenSlices[i].fovMM.length > 1) {
         ltwh = this.screenSlices[i].leftTopWidthHeight
         fovMM = this.screenSlices[i].fovMM
@@ -10321,17 +10424,38 @@ export class Niivue {
     if (ltwh.length < 4) {
       return
     }
+
+    // --- Bounds region (normalized → pixels)
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // --- Compute ruler geometry
     const frac10cm = 100.0 / fovMM[0]
     const pix10cm = frac10cm * ltwh[2]
     const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2)
-    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm)
     const thick = Number(this.opts.rulerWidth)
+
+    // position ruler horizontally centered in slice, at bottom of slice
+    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm)
     const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * thick
-    const startXYendXY = [pixLeft, pixTop, pixLeft + pix10cm, pixTop]
-    let outlineColor = [0, 0, 0, 1]
+
+    // Clip to bounds region
+    const clippedLeft = Math.max(regionX, pixLeft)
+    const clippedRight = Math.min(regionX + regionW, pixLeft + pix10cm)
+    const clippedY = Math.min(regionY + regionH, pixTop)
+
+    if (clippedRight <= clippedLeft) {
+      return // fully clipped out
+    }
+
+    const startXYendXY: [number, number, number, number] = [clippedLeft, clippedY, clippedRight, clippedY]
+
+    // --- Colors
+    let outlineColor: number[] = [0, 0, 0, 1]
     if (this.opts.rulerColor[0] + this.opts.rulerColor[1] + this.opts.rulerColor[2] < 0.8) {
       outlineColor = [1, 1, 1, 1]
     }
+
+    // --- Draw ruler
     this.drawRuler10cm(startXYendXY, outlineColor, thick + 1)
     this.drawRuler10cm(startXYendXY, this.opts.rulerColor, thick)
   }
@@ -10486,6 +10610,7 @@ export class Niivue {
     }
 
     const gl = this.gl
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
     gl.bindVertexArray(this.genericVAO)
 
     gl.depthFunc(gl.ALWAYS)
@@ -10989,6 +11114,32 @@ export class Niivue {
     }
   }
 
+  private drawBoundsBox(leftTopWidthHeight: number[], color: number[], thickness = 2): void {
+    if (!this.rectOutlineShader) {
+      throw new Error('rectOutlineShader undefined')
+    }
+
+    const gl = this.gl
+    const [x, y, w, h] = leftTopWidthHeight
+
+    // Always use the full canvas viewport for the border
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+
+    this.rectOutlineShader.use(gl)
+    gl.enable(gl.BLEND)
+
+    gl.uniform1f(this.rectOutlineShader.uniforms.thickness, thickness)
+    gl.uniform4fv(this.rectOutlineShader.uniforms.lineColor, color)
+    gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
+
+    // Pass canvas-space rect directly
+    gl.uniform4f(this.rectOutlineShader.uniforms.leftTopWidthHeight, x, y, w, h)
+
+    gl.bindVertexArray(this.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.bindVertexArray(this.unusedVAO)
+  }
+
   /**
    * Draw a circle or outline at given position with specified color or default crosshair color.
    * @internal
@@ -11020,6 +11171,7 @@ export class Niivue {
    * @internal
    */
   drawSelectionBox(leftTopWidthHeight: number[]): void {
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     if (this.getCurrentDragMode() === DRAG_MODE.roiSelection) {
       this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1)
       return
@@ -11033,8 +11185,17 @@ export class Niivue {
    * @internal
    */
   effectiveCanvasHeight(): number {
-    // available canvas height differs from actual height if bottom colorbar is shown
-    return this.gl.canvas.height - this.colorbarHeight
+    let regionH = this.gl.canvas.height
+
+    if (this.opts.bounds) {
+      const [[, y1], [, y2]] = this.opts.bounds
+      const yTop = Math.round(y1 * this.gl.canvas.height)
+      const yBot = Math.round(y2 * this.gl.canvas.height)
+      regionH = yBot - yTop
+    }
+
+    // Subtract colorbar height only within region
+    return regionH - this.colorbarHeight
   }
 
   /**
@@ -11042,7 +11203,15 @@ export class Niivue {
    * @internal
    */
   effectiveCanvasWidth(): number {
-    return this.gl.canvas.width - this.getLegendPanelWidth()
+    let regionW = this.gl.canvas.width
+
+    if (this.opts.bounds) {
+      const [[x1], [x2]] = this.opts.bounds
+      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
+    }
+
+    // Subtract legend panel width only within region
+    return regionW - this.getLegendPanelWidth()
   }
 
   /**
@@ -11181,7 +11350,8 @@ export class Niivue {
   }
 
   /**
-   * Calculate and reserve canvas area for colorbar panel.
+   * Calculate and reserve canvas area for colorbar panel,
+   * respecting opts.bounds if defined.
    * @internal
    */
   reserveColorbarPanel(): number[] {
@@ -11190,15 +11360,18 @@ export class Niivue {
       return [0, 0, 0, 0]
     }
 
-    // Calculate width as a percentage of canvas width
-    // If colorbarWidth is not set (0) or invalid, use full width
+    // Derive drawing region from bounds (normalized → pixels)
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // Calculate width as a percentage of region width
     const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1.0
 
-    const width = widthPercentage * this.gl.canvas.width
+    const width = widthPercentage * regionW
 
-    const leftTopWidthHeight = [
-      (this.gl.canvas.width - width) / 2, // Center the colorbar horizontally
-      this.gl.canvas.height - fullHt,
+    // Position at bottom of the region (so it doesn’t overlap content)
+    const leftTopWidthHeight: [number, number, number, number] = [
+      regionX + (regionW - width) / 2, // center within region
+      regionY + regionH - fullHt, // top within region
       width,
       fullHt
     ]
@@ -11429,10 +11602,19 @@ export class Niivue {
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+
+    // Compute drawing region from bounds (normalized → pixels)
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // Restrict drawing to region
+    this.gl.viewport(regionX, regionY, regionW, regionH)
     this.gl.enable(this.gl.CULL_FACE)
     this.gl.enable(this.gl.BLEND)
-    this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3)
+
+    // Center text in region
+    const cx = regionX + regionW / 2
+    const cy = regionY + regionH / 2
+    this.drawTextBelow([cx, cy], text, 3)
   }
 
   /**
@@ -12030,7 +12212,20 @@ export class Niivue {
       sliceFrac = frac[sliceDim]
     }
     const sliceMM = mm[sliceDim]
-    gl.clear(gl.DEPTH_BUFFER_BIT)
+    const flippedY = gl.canvas.height - leftTopWidthHeight[1] - leftTopWidthHeight[3]
+    const glLTWH: [number, number, number, number] = [
+      leftTopWidthHeight[0],
+      flippedY,
+      leftTopWidthHeight[2],
+      leftTopWidthHeight[3]
+    ]
+
+    // Clear only depth inside this rect
+    this.clearBounds(gl.DEPTH_BUFFER_BIT, glLTWH)
+
+    // Set viewport to this rect
+    gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3])
+
     let obj = this.calculateMvpMatrix2D(
       leftTopWidthHeight,
       screen.mnMM,
@@ -12066,7 +12261,7 @@ export class Niivue {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     // draw the slice
     gl.disable(gl.BLEND)
-    gl.depthFunc(gl.GREATER)
+    gl.depthFunc(gl.ALWAYS)
     gl.disable(gl.CULL_FACE) // show front and back faces
     if (this.volumes.length > 0) {
       let shader = this.sliceMMShader
@@ -12114,6 +12309,8 @@ export class Niivue {
         fovMM: obj.fovMM
       })
     }
+    gl.depthMask(true)
+    gl.depthFunc(gl.LEQUAL)
     if (isNaN(customMM)) {
       // draw crosshairs
       this.drawCrosshairs3D(true, 1.0, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM)
@@ -12164,24 +12361,42 @@ export class Niivue {
     customMM = NaN,
     imageWidthHeight: number[] = [NaN, NaN]
   ): void {
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // Decide which rect to use
+    let ltwh: number[]
+    if (leftTopWidthHeight[2] === 0 && leftTopWidthHeight[3] === 0) {
+      if (!this.opts.bounds) {
+        // Case 1: no bounds, no rect → full canvas
+        ltwh = [0, 0, this.gl.canvas.width, this.gl.canvas.height]
+      } else {
+        // Case 2: bounds present, no rect → full bounds region
+        ltwh = [regionX, regionY, regionW, regionH]
+      }
+    } else {
+      // Case 3: rect provided (multiplanar) → already offset into bounds
+      ltwh = leftTopWidthHeight.slice()
+    }
+
     const padLeftTop = [NaN, NaN]
+
     if (imageWidthHeight[0] === Infinity) {
       const volScale = this.sliceScale().volScale
-      let scale = this.scaleSlice(volScale[0], volScale[1], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+      let scale = this.scaleSlice(volScale[0], volScale[1], [0, 0], [ltwh[2], ltwh[3]])
       if (axCorSag === SLICE_TYPE.CORONAL) {
-        scale = this.scaleSlice(volScale[0], volScale[2], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+        scale = this.scaleSlice(volScale[0], volScale[2], [0, 0], [ltwh[2], ltwh[3]])
       }
       if (axCorSag === SLICE_TYPE.SAGITTAL) {
-        scale = this.scaleSlice(volScale[1], volScale[2], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]])
+        scale = this.scaleSlice(volScale[1], volScale[2], [0, 0], [ltwh[2], ltwh[3]])
       }
       imageWidthHeight[0] = scale[2]
       imageWidthHeight[1] = scale[3]
     }
+
     if (isNaN(imageWidthHeight[0])) {
-      this.draw2DMain(leftTopWidthHeight, axCorSag, customMM)
+      this.draw2DMain(ltwh, axCorSag, customMM)
     } else {
       // inset as padded in tile
-      const ltwh = leftTopWidthHeight.slice()
       padLeftTop[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]))
       padLeftTop[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]))
       ltwh[0] += padLeftTop[0]
@@ -12190,64 +12405,87 @@ export class Niivue {
       ltwh[3] = imageWidthHeight[1]
       this.draw2DMain(ltwh, axCorSag, customMM)
     }
+
     if (customMM === Infinity || customMM === -Infinity || axCorSag === SLICE_TYPE.RENDER) {
       return
     }
-    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0 && this.opts.isOrientationTextVisible) {
-      // issue1065
-      this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop)
+
+    if (ltwh[2] !== 0 && ltwh[3] !== 0 && this.opts.isOrientationTextVisible) {
+      this.drawSliceOrientationText(ltwh, axCorSag, padLeftTop)
     }
   }
 
   /**
-   * Computes 3D model-view-projection matrices based on view angles and canvas size.
-   * @internal
+   * Build MVP, Model, and Normal matrices for rendering.
+   * @param _unused - reserved
+   * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
+   * @param azimuth - azimuth rotation in degrees
+   * @param elevation - elevation rotation in degrees
+   * @param flipX - whether to mirror the X axis (default true for radiological convention)
    */
-  calculateMvpMatrix(_unused: unknown, leftTopWidthHeight = [0, 0, 0, 0], azimuth: number, elevation: number): mat4[] {
+  calculateMvpMatrix(
+    _unused: unknown,
+    leftTopWidthHeight = [0, 0, 0, 0],
+    azimuth: number,
+    elevation: number,
+    flipX = true
+  ): mat4[] {
+    const gl = this.gl
+
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       // use full canvas
-      leftTopWidthHeight = [0, 0, this.gl.canvas.width, this.gl.canvas.height]
+      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height]
     }
+
     const whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3]
-    // let whratio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
     // pivot from center of objects
-    // let scale = this.furthestVertexFromOrigin;
-    // let origin = [0,0,0];
     let scale = this.furthestFromPivot
     const origin = this.pivot3D
     const projectionMatrix = mat4.create()
-    scale = (0.8 * scale) / this.scene.volScaleMultiplier // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+
+    // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
+    scale = (0.8 * scale) / this.scene.volScaleMultiplier
+
     if (whratio < 1) {
       // tall window: "portrait" mode, width constrains
       mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 0.01, scale * 8.0)
-    }
-    // Wide window: "landscape" mode, height constrains
-    else {
+    } else {
+      // wide window: "landscape" mode, height constrains
       mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
     }
 
     const modelMatrix = mat4.create()
-    modelMatrix[0] = -1 // mirror X coordinate
+
+    if (flipX) {
+      modelMatrix[0] = -1 // mirror X coordinate (radiological convention)
+    }
+
     // push the model away from the camera so camera not inside model
     const translateVec3 = vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
     mat4.translate(modelMatrix, modelMatrix, translateVec3)
+
     if (this.position) {
       mat4.translate(modelMatrix, modelMatrix, this.position)
     }
+
     // apply elevation
     mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
     // apply azimuth
     mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
 
+    // translate to pivot
     mat4.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]])
 
-    //
+    // build normal matrix
     const iModelMatrix = mat4.create()
     mat4.invert(iModelMatrix, modelMatrix)
     const normalMatrix = mat4.create()
     mat4.transpose(normalMatrix, iModelMatrix)
+
+    // combine into MVP
     const modelViewProjectionMatrix = mat4.create()
     mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
+
     return [modelViewProjectionMatrix, modelMatrix, normalMatrix]
   }
 
@@ -12422,8 +12660,13 @@ export class Niivue {
       return
     }
     const graph = this.graph
+
+    // --- Bounds region (normalized → pixels)
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // --- Auto-place graph in multiplanar layout
     let axialTop = 0
-    if (this.graph.autoSizeMultiplanar && this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
+    if (graph.autoSizeMultiplanar && this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
       for (let i = 0; i < this.screenSlices.length; i++) {
         const axCorSag = this.screenSlices[i].axCorSag
         if (axCorSag === SLICE_TYPE.AXIAL) {
@@ -12444,16 +12687,24 @@ export class Niivue {
         graph.LTWH[3] = ltwh[2]
       }
     }
-    if (graph.opacity <= 0.0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
+
+    // --- Clip LTWH into region
+    graph.LTWH[0] = Math.max(regionX, graph.LTWH[0])
+    graph.LTWH[1] = Math.max(regionY, graph.LTWH[1])
+    graph.LTWH[2] = Math.min(regionW, graph.LTWH[2])
+    graph.LTWH[3] = Math.min(regionH, graph.LTWH[3])
+
+    if (
+      graph.opacity <= 0.0 ||
+      graph.LTWH[2] <= 5 ||
+      graph.LTWH[3] <= 5 ||
+      Math.floor(graph.LTWH[0] + graph.LTWH[2]) > regionX + regionW ||
+      Math.floor(graph.LTWH[1] + graph.LTWH[3]) > regionY + regionH
+    ) {
       return
     }
-    if (Math.floor(graph.LTWH[0] + graph.LTWH[2]) > this.gl.canvas.width) {
-      return // issue 930
-    }
-    // issue1073 add "floor" for rounding errors (211.792+392.207 > 604)
-    if (Math.floor(graph.LTWH[1] + graph.LTWH[3]) > this.gl.canvas.height) {
-      return // issue 930
-    }
+
+    // --- Background colors based on backColor brightness
     graph.backColor = [0.15, 0.15, 0.15, graph.opacity]
     graph.lineColor = [1, 1, 1, 1]
     if (this.opts.backColor[0] + this.opts.backColor[1] + this.opts.backColor[2] > 1.5) {
@@ -12469,7 +12720,9 @@ export class Niivue {
     graph.gridLineThickness = 1
     graph.lineAlpha = 1
     graph.lines = []
-    const vols = []
+
+    // --- Collect volumes to plot
+    const vols: number[] = []
     if (graph.vols.length < 1) {
       if (this.volumes[0] != null) {
         vols.push(0)
@@ -12490,12 +12743,14 @@ export class Niivue {
     if (vols.length < 1) {
       return
     }
+
     const maxVols = this.volumes[vols[0]].nFrame4D!
     this.graph.selectedColumn = this.volumes[vols[0]].frame4D
     if (maxVols < 2) {
       log.debug('Unable to generate a graph: Selected volume is 3D not 4D')
       return
     }
+
     for (let i = 0; i < vols.length; i++) {
       graph.lines[i] = []
       const vox = this.frac2vox(this.scene.crosshairPos)
@@ -12517,7 +12772,8 @@ export class Niivue {
       [0.6, 0.6, 0.6],
       [0, 0, 0]
     ]
-    // find min, max, range for all lines
+
+    // --- find min/max
     let mn = graph.lines[0][0]
     let mx = graph.lines[0][0]
     for (let j = 0; j < graph.lines.length; j++) {
@@ -12547,21 +12803,22 @@ export class Niivue {
     if (mn >= mx) {
       mx = mn + 1.0
     }
+
+    // --- Draw graph frame
     this.drawRect(graph.LTWH, graph.backColor)
     const [spacing, ticMin, ticMax] = tickSpacing(mn, mx)
     const digits = Math.max(0, -1 * Math.floor(Math.log(spacing) / Math.log(10)))
     mn = Math.min(ticMin, mn)
     mx = Math.max(ticMax, mx)
-    // determine font size
+
+    // --- Font scaling based on region size
     function humanize(x: number): string {
-      // drop trailing zeros from numerical string
       return x.toFixed(6).replace(/\.?0*$/, '')
     }
     let fntSize = this.fontPx * 0.7
-    const screenWidthPts = this.gl.canvas.width / this.uiData.dpr
-    const screenHeightPts = this.gl.canvas.height / this.uiData.dpr
+    const screenWidthPts = regionW / this.uiData.dpr
+    const screenHeightPts = regionH / this.uiData.dpr
     const screenAreaPts = screenWidthPts * screenHeightPts
-    // Reference canvas area in points (800×600)
     const refAreaPts = 800 * 600
     if (screenAreaPts < refAreaPts) {
       fntSize = 0
@@ -13248,7 +13505,7 @@ export class Niivue {
 
     if (!secondPass) {
       gl.disable(gl.BLEND)
-      gl.depthFunc(gl.GREATER)
+      gl.depthFunc(gl.LEQUAL)
     }
 
     for (const label of labels) {
@@ -13349,85 +13606,91 @@ export class Niivue {
     azimuth: number | null = null,
     elevation = 0
   ): string | undefined {
+    const gl = this.gl
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // Always work with a copy so we don’t mutate caller input
+    let ltwh = [...leftTopWidthHeight]
+
+    // Case 1: no rect specified → full canvas (or full bounds if bounds set)
+    if (ltwh[2] === 0 || ltwh[3] === 0) {
+      ltwh = this.opts.bounds ? [regionX, regionY, regionW, regionH] : [0, 0, gl.canvas.width, gl.canvas.height]
+    }
+
     const isMosaic = azimuth !== null
     this.setPivot3D()
     if (!isMosaic) {
       azimuth = this.scene.renderAzimuth
       elevation = this.scene.renderElevation
     }
-    const gl = this.gl
+
     if (mvpMatrix === null) {
-      ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth!, elevation)
+      ;[mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, ltwh, azimuth!, elevation)
     }
 
-    let relativeLTWH = [...leftTopWidthHeight]
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      // use full canvas
-      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height]
-      relativeLTWH = [...leftTopWidthHeight]
-      this.screenSlices.push({
-        leftTopWidthHeight,
-        axCorSag: SLICE_TYPE.RENDER,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix!), 0]
-      })
-    } else {
-      this.screenSlices.push({
-        leftTopWidthHeight: leftTopWidthHeight.slice(),
-        axCorSag: SLICE_TYPE.RENDER,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix!), 0]
-      })
-      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1]
-    }
+    const relativeLTWH = [...ltwh]
+
+    // Store the unmodified rect for borders / picking
+    this.screenSlices.push({
+      leftTopWidthHeight: ltwh.slice(), // canvas-space
+      axCorSag: SLICE_TYPE.RENDER,
+      sliceFrac: 0,
+      AxyzMxy: [],
+      leftTopMM: [],
+      fovMM: [isRadiological(modelMatrix!), 0]
+    })
+
+    // Flip Y only for GL viewport
+    const glLTWH: [number, number, number, number] = [ltwh[0], gl.canvas.height - ltwh[3] - ltwh[1], ltwh[2], ltwh[3]]
+
+    // Flip Y for GL viewport
+    ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
+
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
-    gl.clearDepth(0.0)
+
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
-    gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
+    // restrict viewport to tile/bounds
+    this.gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3])
 
     if (this.volumes.length > 0) {
-      this.updateInterpolation(0, true) // force background interpolation
-      this.updateInterpolation(1, true) // force overlay interpolation
+      this.updateInterpolation(0, true)
+      this.updateInterpolation(1, true)
       this.drawImage3D(mvpMatrix, azimuth!, elevation)
     }
-    this.updateInterpolation(0) // use default background interpolation for 2D slices
-    this.updateInterpolation(1) // use default overlay interpolation for 2D slices
+    this.updateInterpolation(0)
+    this.updateInterpolation(1)
     if (!isMosaic) {
       this.drawCrosshairs3D(true, 1.0, mvpMatrix)
     }
     this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix!, normalMatrix!)
     if (this.uiData.mouseDepthPicker) {
-      this.depthPicker(leftTopWidthHeight, mvpMatrix)
+      this.depthPicker(ltwh, mvpMatrix)
       this.createOnLocationChange()
-      // redraw with render shader
-      this.draw3D(leftTopWidthHeight, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
+      // Avoid double flipping by reusing relativeLTWH
+      this.draw3D(relativeLTWH, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
       return
     }
     if (this.opts.meshXRay > 0.0) {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
     }
 
-    //
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
-    gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3])
-    //
+    gl.viewport(ltwh[0], ltwh[1], ltwh[2], ltwh[3])
     if (!isMosaic) {
       this.drawCrosshairs3D(false, 0.15, mvpMatrix)
     }
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
-    this.drawOrientationCube(leftTopWidthHeight, azimuth!, elevation)
+
+    // Reset viewport to whole bounds region
+    gl.viewport(regionX, regionY, regionW, regionH)
+    this.drawOrientationCube(ltwh, azimuth!, elevation)
+
     const posString =
       'azimuth: ' + this.scene.renderAzimuth.toFixed(0) + ' elevation: ' + this.scene.renderElevation.toFixed(0)
-    // this.drawGraph();
-    // bus.$emit('crosshair-pos-change', posString);
+
     this.readyForSync = true
     this.sync()
     this.draw3DLabels(mvpMatrix, relativeLTWH, true)
@@ -13444,117 +13707,142 @@ export class Niivue {
       return
     }
     const gl = this.gl
-    // let m, modelMtx, normMtx;
+
     if (!m) {
-      // FIXME this was calculateMvpMatrix(object3d, azimuth, elevation) -- i.e. elevation got assigned to azimuth etc.
       ;[m, modelMtx, normMtx] = this.calculateMvpMatrix(
         this.volumeObject3D,
         undefined,
         this.scene.renderAzimuth,
-        this.scene.renderElevation
+        this.scene.renderElevation,
+        false // no flipX for meshes
       )
     }
+
     gl.enable(gl.DEPTH_TEST)
+
+    // Use inverted depth convention (matches current MVP math)
+    if (isDepthTest) {
+      gl.clearDepth(0.0) // reset depth to nearest=0
+      gl.clear(gl.DEPTH_BUFFER_BIT)
+      gl.depthFunc(gl.GREATER) // farther depth wins
+    } else {
+      gl.depthFunc(gl.ALWAYS)
+    }
+
+    gl.enable(gl.CULL_FACE)
+    gl.cullFace(gl.BACK) // back-face culling
+    gl.frontFace(gl.CCW) // CCW winding = front
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
-    gl.disable(gl.BLEND)
-    gl.depthFunc(gl.GREATER)
-    gl.disable(gl.CULL_FACE)
-    if (isDepthTest) {
-      gl.depthFunc(gl.GREATER)
-    } else {
-      gl.enable(gl.BLEND)
-      gl.depthFunc(gl.ALWAYS)
-      gl.enable(gl.CULL_FACE) // issue700
-    }
-    gl.cullFace(gl.BACK) // CR: issue700
-    // show front and back face for mesh clipping https://niivue.com/demos/features/worldspace2.html
-    // if (this.opts.meshThicknessOn2D !== Infinity) gl.disable(gl.CULL_FACE);
-    // else gl.enable(gl.CULL_FACE); //issue700: only show front faces
-    // gl.frontFace(gl.CCW); //issue700: we now require CCW
-    // Draw the mesh
-    let shader: Shader = this.meshShaders[0].shader!
-    // this.meshShaderIndex
     let hasFibers = false
-    for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false || this.meshes[i].opacity <= 0.0) {
+
+    // -----------------------
+    // Pass 1: Main mesh draw
+    // -----------------------
+    for (const mesh of this.meshes) {
+      if (!mesh.visible || mesh.opacity <= 0.0 || mesh.indexCount! < 3) {
         continue
       }
-      let meshAlpha = alpha
-      // gl.depthMask(false)
-      if (isDepthTest) {
-        meshAlpha = this.meshes[i].opacity
-        gl.depthFunc(gl.GREATER)
-        gl.depthMask(true)
-        if (meshAlpha < 1.0) {
-          // crude Z-fighting artifacts
-          gl.depthMask(false) // Prevent this object from writing to the depth buffer
-          gl.enable(gl.DEPTH_TEST)
-          // gl.disable(gl.DEPTH_TEST)
-          gl.enable(gl.BLEND)
-          gl.cullFace(gl.BACK)
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-        } else {
-          gl.enable(gl.DEPTH_TEST)
-          gl.disable(gl.BLEND)
-        }
-      }
-      shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader!
+
+      const meshAlpha = mesh.opacity * alpha
+
+      // Select shader
+      let shader = this.meshShaders[mesh.meshShaderIndex].shader!
       if (this.uiData.mouseDepthPicker) {
         shader = this.pickingMeshShader!
       }
-      shader.use(this.gl) // set Shader
-      // set shader uniforms
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
-      // gl.uniformMatrix4fv(shader.uniforms["modelMtx"], false, modelMtx);
-      // gl.uniformMatrix4fv(shader.uniforms["normMtx"], false, normMtx);
-      // gl.uniform1f(shader.uniforms["opacity"], alpha);
+      shader.use(gl)
+
+      // Set uniforms
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
       gl.uniform1f(shader.uniforms.opacity, meshAlpha)
-      if (this.meshes[i].indexCount! < 3) {
-        continue
+
+      // Depth + blending per mesh
+      if (meshAlpha >= 1.0) {
+        // Opaque
+        gl.disable(gl.BLEND)
+        gl.depthMask(true)
+      } else {
+        // Transparent
+        gl.enable(gl.BLEND)
+        gl.depthMask(false)
       }
 
-      if (this.meshes[i].offsetPt0 && (this.meshes[i].fiberSides < 3 || this.meshes[i].fiberRadius <= 0)) {
-        // if fibers has less than 3 sides, render as line not cylinder mesh
+      // Fiber meshes drawn later
+      if (mesh.offsetPt0 && (mesh.fiberSides < 3 || mesh.fiberRadius <= 0)) {
         hasFibers = true
         continue
       }
+
       if (shader.isMatcap) {
         gl.activeTexture(TEXTURE5_MATCAP)
         gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture)
       }
-      gl.bindVertexArray(this.meshes[i].vao)
-      gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
+
+      // Draw mesh
+      gl.bindVertexArray(mesh.vao)
+      gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
+
+    // Restore defaults
     gl.depthMask(true)
-    // draw fibers
-    if (!hasFibers) {
+    gl.disable(gl.BLEND)
+
+    // -----------------------
+    // Pass 2: X-Ray overlay
+    // -----------------------
+    if (this.opts.meshXRay > 0.0) {
       gl.enable(gl.BLEND)
-      gl.depthFunc(gl.ALWAYS)
-      return
+      gl.depthMask(false)
+      gl.depthFunc(gl.ALWAYS) // ignore depth for x-ray
+
+      for (const mesh of this.meshes) {
+        if (!mesh.visible || mesh.indexCount! < 3) {
+          continue
+        }
+
+        const shader = this.meshShaders[mesh.meshShaderIndex].shader!
+        shader.use(gl)
+
+        gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
+        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
+        gl.uniform1f(shader.uniforms.opacity, mesh.opacity * alpha * this.opts.meshXRay)
+
+        gl.bindVertexArray(mesh.vao)
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
+        gl.bindVertexArray(this.unusedVAO)
+      }
+
+      gl.depthMask(true)
+      gl.depthFunc(gl.GREATER) // restore inverted depthFunc
+      gl.disable(gl.BLEND)
     }
-    shader = this.fiberShader!
-    shader.use(this.gl)
-    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m)
-    gl.uniform1f(shader.uniforms.opacity, alpha)
-    for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].indexCount! < 3) {
-        continue
+
+    // -----------------------
+    // Pass 3: Fibers
+    // -----------------------
+    if (hasFibers) {
+      const shader = this.fiberShader!
+      shader.use(gl)
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
+      gl.uniform1f(shader.uniforms.opacity, alpha)
+
+      for (const mesh of this.meshes) {
+        if (!mesh.offsetPt0) {
+          continue
+        }
+        if (mesh.fiberSides >= 3 && mesh.fiberRadius > 0) {
+          continue
+        } // cylinders already drawn
+
+        gl.bindVertexArray(mesh.vaoFiber)
+        gl.drawElements(gl.LINE_STRIP, mesh.indexCount!, gl.UNSIGNED_INT, 0)
+        gl.bindVertexArray(this.unusedVAO)
       }
-      if (!this.meshes[i].offsetPt0) {
-        continue
-      }
-      if (this.meshes[i].fiberSides >= 3 && this.meshes[i].fiberRadius > 0) {
-        continue // rendered as mesh cylinder, not line strip
-      }
-      gl.bindVertexArray(this.meshes[i].vaoFiber)
-      gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount!, gl.UNSIGNED_INT, 0)
-      gl.bindVertexArray(this.unusedVAO)
     }
-    gl.enable(gl.BLEND)
-    gl.depthFunc(gl.ALWAYS)
+
     this.readyForSync = true
   }
 
@@ -14085,18 +14373,28 @@ export class Niivue {
       throw new Error('bmpShader undefined')
     }
     this.bmpShader.use(this.gl)
-    this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height)
-    let h = this.gl.canvas.height
-    let w = this.gl.canvas.height * this.bmpTextureWH
-    if (w > this.gl.canvas.width) {
+
+    // Determine drawing region from bounds (normalized → pixels)
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+    // Set shader canvas size to the region instead of full canvas
+    this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, regionW, regionH)
+
+    // Compute thumbnail width/height constrained by region
+    let h = regionH
+    let w = regionH * this.bmpTextureWH
+    if (w > regionW) {
       // constrained by width
-      h = this.gl.canvas.width / this.bmpTextureWH
-      w = this.gl.canvas.width
+      h = regionW / this.bmpTextureWH
+      w = regionW
     }
-    // Calculate offsets to center the image
-    const left = (this.gl.canvas.width - w) / 2
-    const top = (this.gl.canvas.height - h) / 2
+
+    // Center thumbnail inside the region
+    const left = regionX + (regionW - w) / 2
+    const top = regionY + (regionH - h) / 2
+
     this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, w, h)
+
     this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
@@ -14439,32 +14737,31 @@ export class Niivue {
    */
   drawMosaic(mosaicStr: string): void {
     this.screenSlices = []
+
+    // Determine drawing region from bounds (normalized → pixels)
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
     // render always in world space
     const fovRenderMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL, true)
-    // 2d slices might be in world space or voxel space
     const fovSliceMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL)
-    // fovRender and fovSlice will only be different if scans are oblique and shown in voxel space
-    // let mosaicStr = 'A -52 -12 C 8 ; S 28 48 66'
 
     mosaicStr = mosaicStr.replaceAll(';', ' ;').trim()
-    const axiMM = []
-    const corMM = []
-    const sagMM = []
+    const axiMM: number[] = []
+    const corMM: number[] = []
+    const sagMM: number[] = []
     const items = mosaicStr.split(/\s+/)
-    let scale = 1.0 // e.g. if 1.0 1mm per pixel
+    let scale = 1.0
     const labelSize = this.fontPx
-    // let isCrossLinesUsed = false;
     let marginLeft = 0
     let marginTop = 0
     let tileGap = 0
     if (!this.volumes[0]?.dims) {
       tileGap = Math.ceil(this.opts.tileMargin * 0.3)
     }
+
     for (let pass = 0; pass < 2; pass++) {
-      // two pass: first calculate dimensions to determine scale, second draw items
       let isRender = false
       let isCrossLines = false
-      isRender = false
       let rowHt = 0
       let left = 0
       let top = 0
@@ -14474,6 +14771,7 @@ export class Niivue {
       let horizontalOverlap = 0
       let prevW = 0
       let w = 0
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
         if (item.includes('X')) {
@@ -14485,13 +14783,12 @@ export class Niivue {
           continue
         }
         if (item.includes('H')) {
-          i++ // detect horizontal overlap
-          horizontalOverlap = Math.max(0, Math.min(1, parseFloat(items[i])))
-          horizontalOverlap = Math.abs(horizontalOverlap)
+          i++
+          horizontalOverlap = Math.abs(Math.max(0, Math.min(1, parseFloat(items[i]))))
           continue
         }
         if (item.includes('V')) {
-          i++ // skip numeric value for vertical overlap
+          i++
           continue
         }
         if (item.includes('A')) {
@@ -14511,7 +14808,6 @@ export class Niivue {
           continue
         }
         if (item.includes(';')) {
-          // EOLN
           top += rowHt
           mxRowWid = Math.max(mxRowWid, left + prevW)
           rowHt = 0
@@ -14519,11 +14815,11 @@ export class Niivue {
           prevW = 0
           continue
         }
+
         w = prevW
         if (horizontalOverlap > 0 && !isRender) {
           w = Math.round(w * (1.0 - horizontalOverlap))
         }
-        log.debug(`item ${i} width with overlap ${w} pixels`)
         left += w
         w = 0
         const sliceMM = parseFloat(item)
@@ -14536,7 +14832,7 @@ export class Niivue {
         if (isRender) {
           fov = fovRenderMM
         }
-        // draw the slice
+
         if (axCorSag === SLICE_TYPE.SAGITTAL) {
           w = fov[1]
         } else {
@@ -14547,8 +14843,8 @@ export class Niivue {
         } else {
           h = fov[2]
         }
+
         if (pass === 0) {
-          // 1st pass: record slice locations in world space
           if (!isRender) {
             if (axCorSag === SLICE_TYPE.AXIAL) {
               axiMM.push(sliceMM)
@@ -14561,22 +14857,27 @@ export class Niivue {
             }
           }
         } else {
-          // 2nd pass draw
-          const ltwh = [marginLeft + scale * left, marginTop + scale * top, scale * w, scale * h]
+          // Apply margins relative to regionX/regionY
+          const ltwh = [
+            regionX + marginLeft + scale * left,
+            regionY + marginTop + scale * top,
+            scale * w,
+            scale * h
+          ] as [number, number, number, number]
           this.fontPx = isLabel ? labelSize : 0
 
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity
             if (Object.is(sliceMM, -0)) {
               inf = -Infinity
-            } // catch negative zero
+            }
             this.draw2D(ltwh, axCorSag, inf)
           } else {
             this.draw2D(ltwh, axCorSag, sliceMM)
           }
+
           if (isCrossLines) {
             this.drawCrossLines(this.screenSlices.length - 1, axCorSag, axiMM, corMM, sagMM)
-            // isCrossLinesUsed = true;
           }
           isRender = false
           isCrossLines = false
@@ -14585,17 +14886,20 @@ export class Niivue {
         left += tileGap
         rowHt = Math.max(rowHt, h)
       }
+
       top += rowHt
       mxRowWid = Math.max(mxRowWid, left + prevW)
       if (mxRowWid <= 0 || top <= 0) {
         break
       }
-      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin - tileGap) / mxRowWid
-      const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top
+
+      const scaleW = (regionW - 2 * this.opts.tileMargin - tileGap) / mxRowWid
+      const scaleH = (regionH - 2 * this.opts.tileMargin) / top
       scale = Math.min(scaleW, scaleH)
+
       if (this.opts.centerMosaic) {
-        marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale))
-        marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale))
+        marginLeft = Math.floor(0.5 * (regionW - mxRowWid * scale))
+        marginTop = Math.floor(0.5 * (regionH - top * scale))
       } else {
         marginLeft = this.opts.tileMargin
         marginTop = this.opts.tileMargin
@@ -14653,6 +14957,198 @@ export class Niivue {
   }
 
   /**
+   * Convert opts.bounds into CSS pixel coordinates (for hit testing).
+   * @returns [x, y, width, height] in CSS pixels
+   */
+  private getBoundsRegionCSS(): [number, number, number, number] {
+    const rect = (this.gl.canvas as HTMLCanvasElement).getBoundingClientRect()
+    if (!this.opts.bounds) {
+      return [0, 0, rect.width, rect.height]
+    }
+    const [[x1, y1], [x2, y2]] = this.opts.bounds
+    const regionX = Math.round(x1 * rect.width)
+    const regionW = Math.round((x2 - x1) * rect.width)
+    const yTop = Math.round(y1 * rect.height)
+    const yBot = Math.round(y2 * rect.height)
+    const regionH = yBot - yTop
+    const regionY = rect.height - yBot
+    return [regionX, regionY, regionW, regionH]
+  }
+
+  /**
+   * Returns true if a mouse/touch event happened inside this instance’s bounds.
+   */
+  public eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean {
+    const rect = (this.gl.canvas as HTMLCanvasElement).getBoundingClientRect()
+
+    let clientX: number
+    let clientY: number
+
+    if (evt instanceof MouseEvent) {
+      clientX = evt.clientX
+      clientY = evt.clientY
+    } else if (evt instanceof TouchEvent) {
+      // Prefer the first touch if active, else changedTouches
+      const touch = evt.touches[0] ?? evt.changedTouches[0]
+      if (!touch) {
+        return false
+      }
+      clientX = touch.clientX
+      clientY = touch.clientY
+    } else {
+      // direct Touch
+      clientX = evt.clientX
+      clientY = evt.clientY
+    }
+
+    const cssX = clientX - rect.left
+    const cssY = clientY - rect.top
+
+    const [bx, by, bw, bh] = this.getBoundsRegionCSS()
+    return cssX >= bx && cssX <= bx + bw && cssY >= by && cssY <= by + bh
+  }
+
+  /**
+   * Check whether the last known mouse cursor position is inside this instance's bounds.
+   *
+   * Used to filter keyboard events so they are only handled by the Niivue instance
+   * whose bounds currently contain the cursor.
+   *
+   * @returns true if the cursor is inside this.opts.bounds, false otherwise.
+   * @internal
+   */
+  private cursorInBounds(): boolean {
+    if (this.mousePos[0] < 0 || this.mousePos[1] < 0) {
+      return false
+    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+    const [mx, my] = this.mousePos // already tracked in device pixels
+
+    return mx >= regionX && mx <= regionX + regionW && my >= regionY && my <= regionY + regionH
+  }
+
+  /**
+   * Compute the current drawing region from opts.bounds.
+   * Returns [x, y, width, height] in device pixels, bottom-left origin.
+   */
+  private getBoundsRegion(): [number, number, number, number] {
+    const gl = this.gl
+    const dpr = this.uiData?.dpr || window.devicePixelRatio || 1
+
+    const canvas = gl.canvas as HTMLCanvasElement
+    const cssW = canvas.clientWidth
+    const cssH = canvas.clientHeight
+
+    if (!this.opts.bounds) {
+      return [0, 0, gl.canvas.width, gl.canvas.height]
+    }
+
+    const [[x1, y1], [x2, y2]] = this.opts.bounds
+
+    // Convert normalized CSS fractions → device px
+    const regionX = Math.floor(x1 * cssW * dpr)
+    const regionW = Math.ceil((x2 - x1) * cssW * dpr)
+
+    // Y: flip CSS top-origin → GL bottom-origin
+    let regionY = Math.floor((1.0 - y2) * cssH * dpr)
+    let regionH = Math.ceil((y2 - y1) * cssH * dpr)
+
+    // Clamp so region is always within canvas
+    if (regionY < 0) {
+      regionH += regionY // shrink height
+      regionY = 0
+    }
+    if (regionY + regionH > gl.canvas.height) {
+      regionH = gl.canvas.height - regionY
+    }
+
+    return [regionX, regionY, regionW, regionH]
+  }
+
+  /**
+   * Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
+   */
+  inBounds(x: number, y: number): boolean {
+    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
+    // Convert from CSS (top origin, unscaled) → GL pixels (bottom origin)
+    const glX = x * this.uiData.dpr!
+    const glY = this.gl.canvas.height - y * this.uiData.dpr!
+    return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH
+  }
+
+  /**
+   * Rebind all textures for this instance.
+   * Call this at the start of every draw pass if multiple instances share a GL context.
+   */
+  private bindTextures(): void {
+    // Volume (3D texture)
+    this.gl.activeTexture(TEXTURE0_BACK_VOL) // == gl.TEXTURE0
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
+
+    // Overlay (3D texture)
+    this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // == gl.TEXTURE2
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture)
+
+    // PAQD (2D or 3D depending on how you created it — in Niivue it’s 2D)
+    this.gl.activeTexture(TEXTURE8_PAQD) // == gl.TEXTURE8
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture)
+
+    // Font atlas (2D texture)
+    this.gl.activeTexture(TEXTURE3_FONT) // == gl.TEXTURE3
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.fontTexture)
+
+    this.gl.activeTexture(TEXTURE1_COLORMAPS)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
+
+    this.gl.activeTexture(TEXTURE5_MATCAP)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.matCapTexture)
+
+    this.gl.activeTexture(TEXTURE6_GRADIENT)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.gradientTexture)
+  }
+
+  /**
+   * Clear a rectangular region of this instance's canvas.
+   *
+   * @param mask - bitmask of buffers to clear (default: color+depth).
+   * @param ltwh - optional [x, y, w, h] region in *device px* (GL coords, bottom-left).
+   *   If not provided, clears the full instance bounds (getBoundsRegion).
+   *   For multiplanar panels, pass the panel’s own [x,y,w,h].
+   */
+  clearBounds(
+    mask: number = this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT,
+    ltwh?: [number, number, number, number]
+  ): void {
+    const gl = this.gl
+    const [vpX, vpY, vpW, vpH] = ltwh ?? this.getBoundsRegion()
+
+    // Flip Y for scissor (WebGL expects bottom-left origin)
+    const flippedY = gl.canvas.height - vpY - vpH
+
+    if (mask & gl.DEPTH_BUFFER_BIT) {
+      gl.clearDepth(1.0) // standard for use with gl.depthFunc(gl.LEQUAL)
+    }
+
+    gl.enable(gl.SCISSOR_TEST)
+    gl.scissor(vpX, flippedY, vpW, vpH)
+
+    if (mask & gl.COLOR_BUFFER_BIT) {
+      gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
+    }
+
+    gl.clear(mask)
+    gl.disable(gl.SCISSOR_TEST)
+  }
+
+  private drawBoundsBorder(): void {
+    if (!this.opts.showBoundsBorder) {
+      return
+    }
+    const [x, y, w, h] = this.getBoundsRegion()
+    this.drawBoundsBox([x, y, w, h], this.opts.boundsBorderColor, this.opts.selectionBoxLineThickness)
+  }
+
+  /**
    * Core function to draw the entire scene including volumes, meshes, slices, overlays, colorbars, graphs, and handle user interaction like dragging.
    * @internal
    */
@@ -14660,16 +15156,27 @@ export class Niivue {
     if (!this.initialized) {
       return // do not do anything until we are initialized (init will call drawScene).
     }
+
+    // --- Clear only inside region
     this.colorbarHeight = 0
-    this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3])
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
-    // this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+    // --- Set viewport for all subsequent drawing
+    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
+
+    this.gl.viewport(vpX, vpY, vpW, vpH)
+    this.clearBounds(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+    // rebind all of our textures (we may be sharing our gl context with another component)
+    this.bindTextures()
+
+    // --- Thumbnail pass
     if (this.bmpTexture && this.thumbnailVisible) {
-      // draw the thumbnail image and exit
       this.drawThumbnail()
       return
     }
+
     let posString = ''
+
+    // --- No volumes loaded
     if (this.volumes.length === 0 || typeof this.volumes[0].dims === 'undefined') {
       if (this.meshes.length > 0) {
         if (this.sliceMosaicString.length > 0) {
@@ -14682,9 +15189,8 @@ export class Niivue {
           }
           return
         }
-        this.screenSlices = [] // empty array
-        // this.opts.sliceType = SLICE_TYPE.RENDER // only meshes loaded: we must use 3D render mode
-        this.draw3D() // meshes loaded but no volume
+        this.screenSlices = []
+        this.draw3D([vpX, vpY, vpW, vpH]) // use bounds region
         if (this.opts.isColorbar) {
           this.drawColorbar()
         }
@@ -14693,12 +15199,13 @@ export class Niivue {
       this.drawLoadingText(this.opts.loadingText)
       return
     }
+
+    // --- Dragging clip plane over 3D rendering
     if (
       this.uiData.isDragging &&
       this.scene.clipPlaneDepthAziElev[0] < 1.8 &&
       this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
     ) {
-      // user dragging over a 3D rendering
       const x = this.uiData.dragStart[0] - this.uiData.dragEnd[0]
       const y = this.uiData.dragStart[1] - this.uiData.dragEnd[1]
       const depthAziElev = this.uiData.dragClipPlaneStartDepthAziElev.slice()
@@ -14713,20 +15220,25 @@ export class Niivue {
         return this.setClipPlane(this.scene.clipPlaneDepthAziElev)
       }
     }
+
+    // --- Single render mode
     if (this.sliceMosaicString.length < 1 && this.opts.sliceType === SLICE_TYPE.RENDER) {
       if (this.opts.isColorbar) {
         this.reserveColorbarPanel()
       }
-      this.screenSlices = [] // empty array
+      this.screenSlices = []
+      // this.draw3D([vpX, vpY, vpW, vpH]) // use bounds region
       this.draw3D()
       if (this.opts.isColorbar) {
         this.drawColorbar()
       }
       return
     }
+
     if (this.opts.isColorbar) {
       this.reserveColorbarPanel()
     }
+
     const maxVols = this.getMaxVols()
     const isDrawGraph =
       this.opts.sliceType === SLICE_TYPE.MULTIPLANAR &&
@@ -14734,77 +15246,73 @@ export class Niivue {
       this.graph.autoSizeMultiplanar &&
       this.graph.opacity > 0
 
+    // --- Mosaic string layout
     if (this.sliceMosaicString.length > 0) {
       this.drawMosaic(this.sliceMosaicString)
     } else {
-      // issue56 is use mm else use voxel
+      // Standard 2D/3D layouts
       const heroImageWH = [0, 0]
       let isHeroImage = false
-      this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
-      this.screenSlices = [] // empty array
-      // Check if we have a custom layout to use
-      if (this.customLayout && this.customLayout.length > 0) {
-        this.screenSlices = [] // empty array
-        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+      this.screenSlices = []
 
-        // Get volume scale information, as done in multiplanar section
+      if (this.customLayout && this.customLayout.length > 0) {
+        this.screenSlices = []
         const { volScale } = this.sliceScale()
-        const canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
-        // Process each view in the custom layout
+
+        // Use vpX, vpY, vpW, vpH from getBoundsRegion earlier
         for (const view of this.customLayout) {
           const { sliceType, position, sliceMM } = view
 
-          // Convert relative positions (0-1) to absolute pixels if needed
-          const leftTopWidthHeight = position.slice() as [number, number, number, number]
+          // position = [x, y, w, h] fractions relative to this instance’s bounds
+          const leftTopWidthHeight: [number, number, number, number] = [
+            vpX + position[0] * vpW,
+            vpY + position[1] * vpH,
+            position[2] * vpW,
+            position[3] * vpH
+          ]
 
-          // If positions are relative (between 0-1), convert to absolute pixels
-          if (position[0] >= 0 && position[0] <= 1 && position[2] <= 1) {
-            leftTopWidthHeight[0] = position[0] * canvasWH[0]
-            leftTopWidthHeight[2] = position[2] * canvasWH[0]
-          }
-
-          if (position[1] >= 0 && position[1] <= 1 && position[3] <= 1) {
-            leftTopWidthHeight[1] = position[1] * canvasWH[1]
-            leftTopWidthHeight[3] = position[3] * canvasWH[1]
-          }
-
-          // check if the slice will be clipped because it was requested to extend past the canvas bounds
-          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > canvasWH[0]) {
+          // Clamp so the slice doesn’t overflow its bounds
+          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > vpX + vpW) {
             log.warn('adjusting slice width because it would have been clipped')
-            leftTopWidthHeight[2] = canvasWH[0] - leftTopWidthHeight[0]
+            leftTopWidthHeight[2] = vpX + vpW - leftTopWidthHeight[0]
           }
-          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > canvasWH[1]) {
+          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > vpY + vpH) {
             log.warn('adjusting slice height because it would have been clipped')
-            leftTopWidthHeight[3] = canvasWH[1] - leftTopWidthHeight[1]
+            leftTopWidthHeight[3] = vpY + vpH - leftTopWidthHeight[1]
           }
 
-          // Draw the appropriate view type
+          // Render
           if (sliceType === SLICE_TYPE.RENDER) {
             this.draw3D(leftTopWidthHeight)
-          } else if (
-            sliceType === SLICE_TYPE.AXIAL ||
-            sliceType === SLICE_TYPE.CORONAL ||
-            sliceType === SLICE_TYPE.SAGITTAL
-          ) {
-            // Calculate actual dimensions for preserving aspect ratio
+          } else {
             const actualDimensions = this.calculateWidthHeight(
               sliceType,
               volScale,
               leftTopWidthHeight[2],
               leftTopWidthHeight[3]
             )
-
             this.draw2D(leftTopWidthHeight, sliceType, sliceMM ?? NaN, actualDimensions)
           }
         }
-      }
-      // If no custom layout, check for other known layouts
-      else if (this.opts.sliceType === SLICE_TYPE.AXIAL) {
-        this.draw2D([0, 0, 0, 0], 0)
-      } else if (this.opts.sliceType === SLICE_TYPE.CORONAL) {
-        this.draw2D([0, 0, 0, 0], 1)
-      } else if (this.opts.sliceType === SLICE_TYPE.SAGITTAL) {
-        this.draw2D([0, 0, 0, 0], 2)
+      } else if (
+        this.opts.sliceType === SLICE_TYPE.AXIAL ||
+        this.opts.sliceType === SLICE_TYPE.CORONAL ||
+        this.opts.sliceType === SLICE_TYPE.SAGITTAL
+      ) {
+        const { volScale } = this.sliceScale()
+
+        // full available region
+        const leftTopWidthHeight = [vpX, vpY, vpW, vpH]
+
+        // preserve mm aspect ratio
+        const actualDimensions = this.calculateWidthHeight(
+          this.opts.sliceType,
+          volScale,
+          leftTopWidthHeight[2],
+          leftTopWidthHeight[3]
+        )
+
+        this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN, actualDimensions)
       } else {
         // sliceTypeMultiplanar
         let isShowRender = false
@@ -14857,7 +15365,13 @@ export class Niivue {
         function padPixelsWH(cols: number, rows: number): [number, number] {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]
         }
+        // Get this instance's bounds
+        // Get this instance's bounds
+        const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+        // Layout constrained to this instance's bounds, minus legend/colorbar space
         let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
+
         if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {
           isShowRender = false
           isHeroImage = true
@@ -14870,6 +15384,7 @@ export class Niivue {
           }
           canvasWH = [canvasWH[0] - heroImageWH[0], canvasWH[1] - heroImageWH[1]]
         }
+
         // size for 2 rows, 2 columns
         const ltwh2x2 = this.scaleSlice(
           volScale[0] + volScale[1],
@@ -14896,6 +15411,7 @@ export class Niivue {
         const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], padPixelsWH(1, 3), canvasWH)
         // size for 1 column * 4 rows
         const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, padPixelsWH(1, 4), canvasWH)
+
         let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph)
         let isDrawColumn = false
         let isDrawGrid = false
@@ -14916,6 +15432,7 @@ export class Niivue {
             isDrawGrid = true
           }
         }
+
         let ltwh = ltwh2x2
         if (isDrawColumn) {
           ltwh = ltwh1x3
@@ -14938,83 +15455,87 @@ export class Niivue {
             isDraw3D = false
           }
         }
+
         if (isHeroImage) {
           // issue1082 draw hero image
-          const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0]
-          const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1]
-          //
+          const heroW = heroImageWH[0] === 0 ? regionW : heroImageWH[0]
+          const heroH = heroImageWH[1] === 0 ? regionH : heroImageWH[1]
           if (
             this.opts?.heroSliceType === SLICE_TYPE.AXIAL ||
             this.opts?.heroSliceType === SLICE_TYPE.CORONAL ||
             this.opts?.heroSliceType === SLICE_TYPE.SAGITTAL
           ) {
-            this.draw2D([0, 0, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity])
+            this.draw2D([regionX, regionY, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity])
           } else {
-            // let canvasWH: [number, number] = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()]
             const ltwh2 = ltwh.slice()
-            const canvasW = this.effectiveCanvasWidth()
-            // console.log(`L ${ltwh[0]} T ${ltwh[1]} W ${heroW} H ${heroH} canvas ${canvasW}`)
-            if (heroW === canvasW) {
+            if (heroW === regionW) {
               ltwh2[0] = 0
             }
-            // console.log(`isWide ${heroW > heroH} L ${ltwh[0]} -> ${ltwh2[0]}`)
-            // this.draw3D([heroLTWH[0], heroLTWH[1], heroW, heroH])
-            this.draw3D([ltwh2[0], 0, heroW, heroH])
+            this.draw3D([regionX + ltwh2[0], regionY, heroW, heroH])
           }
-          // this.draw3D([0, 0, heroW, heroH])
           ltwh[0] += heroImageWH[0]
           ltwh[1] += heroImageWH[1]
           isDraw3D = false
         }
+
+        // panel sizes
         const sX = volScale[0] * ltwh[4] + innerPad
         const sY = volScale[1] * ltwh[4] + innerPad
         const sZ = volScale[2] * ltwh[4] + innerPad
         const actualX = actualScale[0] * ltwh[4]
         const actualY = actualScale[1] * ltwh[4]
         const actualZ = actualScale[2] * ltwh[4]
+
+        // ✅ All draw calls offset by regionX/regionY
         if (isDrawColumn) {
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY])
-          // draw coronal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1, NaN, [actualX, actualZ])
-          // draw sagittal
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2, NaN, [actualY, actualZ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], SLICE_TYPE.AXIAL, NaN, [actualX, actualY])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad, sX, sZ], SLICE_TYPE.CORONAL, NaN, [
+            actualX,
+            actualZ
+          ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad + sZ + pad, sY, sZ], SLICE_TYPE.SAGITTAL, NaN, [
+            actualY,
+            actualZ
+          ])
           if (isDraw3D) {
             const sMx = mx * ltwh[4]
-            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
+            this.draw3D([regionX + ltwh[0], regionY + ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx])
           }
         } else if (isDrawRow) {
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY])
-          // draw coronal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ])
-          // draw sagittal
-          this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], SLICE_TYPE.AXIAL, NaN, [actualX, actualY])
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sX, sZ], SLICE_TYPE.CORONAL, NaN, [
+            actualX,
+            actualZ
+          ])
+          this.draw2D([regionX + ltwh[0] + sX + sX + pad * 2, regionY + ltwh[1], sY, sZ], SLICE_TYPE.SAGITTAL, NaN, [
+            actualY,
+            actualZ
+          ])
           if (isDraw3D) {
             const sMx = mx * ltwh[4]
-            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], sMx, sMx])
+            this.draw3D([regionX + ltwh[0] + sX + sX + sY + pad * 3, regionY + ltwh[1], sMx, sMx])
           }
         } else if (isDrawGrid) {
-          // did the user turn off 3D render view in multiplanar?
           if (!isShowRender) {
             isDraw3D = false
           }
-          // however, check if the user asked for auto
           if (this.opts.multiplanarShowRender === SHOW_RENDER.AUTO) {
             isDraw3D = true
           }
-          // however, hero image is a rendering
           if (isHeroImage) {
             isDraw3D = false
           }
-          // draw axial
-          this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0, NaN, [actualX, actualY])
-          // draw coronal
-          this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ])
-          // draw sagittal
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sZ + pad, sX, sY], SLICE_TYPE.AXIAL, NaN, [
+            actualX,
+            actualY
+          ])
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sZ], SLICE_TYPE.CORONAL, NaN, [actualX, actualZ])
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sY, sZ], SLICE_TYPE.SAGITTAL, NaN, [
+            actualY,
+            actualZ
+          ])
           if (isDraw3D) {
-            this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY])
+            this.draw3D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1] + sZ + pad, sY, sY])
           }
         }
       }
@@ -15211,6 +15732,7 @@ export class Niivue {
     this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
     this.sync()
     this.drawAnchoredLabels()
+    this.drawBoundsBorder()
     return posString
   }
 

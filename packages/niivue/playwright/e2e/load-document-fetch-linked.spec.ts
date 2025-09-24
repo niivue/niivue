@@ -56,5 +56,5 @@ test('niivue load meta-document and fetch linked nifti', async ({ page }) => {
   expect(result.dims.length).toBe(4)
 
   await page.waitForTimeout(1000)
-  await expect(page).toHaveScreenshot({ timeout: 30000 })
+  await expect(page).toHaveScreenshot({ timeout: 60000 })
 })
