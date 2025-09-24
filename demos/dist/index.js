@@ -27969,7 +27969,11 @@ var DEFAULT_OPTIONS = {
   renderSilhouette: 0,
   gradientAmount: 0,
   invertScrollDirection: false,
-  is2DSliceShader: false
+  is2DSliceShader: false,
+  bounds: null,
+  showBoundsBorder: false,
+  boundsBorderColor: [1, 1, 1, 1]
+  // white border by default
 };
 var INITIAL_SCENE_DATA = {
   gamma: 1,
@@ -36127,7 +36131,9 @@ var Niivue = class {
       if (this.syncOpts["3d"]) {
         this.doSync3d(this.otherNV[i]);
       }
-      this.otherNV[i].drawScene();
+      if (this.otherNV[i].canvas !== this.canvas) {
+        this.otherNV[i].drawScene();
+      }
       this.otherNV[i].createOnLocationChange();
     }
   }
@@ -36245,18 +36251,25 @@ var Niivue = class {
    * @internal
    */
   mouseDownListener(e) {
+    this.uiData.mousedown = true;
+    if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false;
+      this.drawScene();
+      return;
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true;
+    }
     e.preventDefault();
     this.drawPenLocation = [NaN, NaN, NaN];
     this.drawPenAxCorSag = -1;
     this.drawShapeStartLocation = [NaN, NaN, NaN];
-    this.uiData.mousedown = true;
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
     if (!(this.opts.dragMode === 7 /* angle */ && this.uiData.angleState === "drawing_second_line")) {
-      this.setDragStart(0, 0);
-      this.setDragEnd(0, 0);
+      this.setDragStart(pos.x, pos.y);
+      this.setDragEnd(pos.x, pos.y);
     }
     log.debug("mouse down");
     log.debug(e);
-    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
     if (!pos) {
       return;
     }
@@ -36276,7 +36289,6 @@ var Niivue = class {
             const [x2, y2, z] = label.points;
             this.scene.crosshairPos = this.mm2frac([x2, y2, z]);
             this.updateGLVolume();
-            this.drawScene();
           }
           continue;
         }
@@ -36284,7 +36296,6 @@ var Niivue = class {
           if (node.label === label) {
             this.scene.crosshairPos = this.mm2frac([node.x, node.y, node.z]);
             this.updateGLVolume();
-            this.drawScene();
           }
         }
       }
@@ -36307,6 +36318,7 @@ var Niivue = class {
       this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey);
       this.handleMouseAction(this.uiData.activeDragMode, e, pos);
     }
+    this.drawScene();
   }
   /**
    * Gets the appropriate drag mode for a mouse button based on configuration.
@@ -36580,6 +36592,7 @@ var Niivue = class {
    * @internal
    */
   mouseUpListener() {
+    this.uiData.mousedown = false;
     function isFunction(test) {
       return Object.prototype.toString.call(test).indexOf("Function") > -1;
     }
@@ -36591,7 +36604,6 @@ var Niivue = class {
       fracPos: this.canvasPos2frac(this.mousePos)
       // xyzMM: this.frac2mm(fracPos),
     };
-    this.uiData.mousedown = false;
     this.uiData.mouseButtonRightDown = false;
     const wasCenterDown = this.uiData.mouseButtonCenterDown;
     this.uiData.mouseButtonCenterDown = false;
@@ -36839,6 +36851,7 @@ var Niivue = class {
       this.uiData.mousedown = false;
       this.drawScene();
     }
+    this.mousePos = [-1, -1];
   }
   /**
    * Handles mouse move events for dragging, crosshair movement, windowing, and click-to-segment preview.
@@ -36846,10 +36859,17 @@ var Niivue = class {
    */
   mouseMoveListener(e) {
     if (this.uiData.mousedown) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-      if (!pos) {
-        return;
-      }
+      this.drawScene();
+    }
+    const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+    if (!pos) {
+      return;
+    }
+    if (!this.eventInBounds(e)) {
+      this.updateMousePos(pos.x, pos.y);
+      return;
+    }
+    if (this.uiData.mousedown) {
       const x = pos.x * this.uiData.dpr;
       const y = pos.y * this.uiData.dpr;
       const tile = this.tileIndex(x, y);
@@ -36877,19 +36897,19 @@ var Niivue = class {
       this.uiData.prevX = this.uiData.currX;
       this.uiData.prevY = this.uiData.currY;
     } else if (this.getCurrentDragMode() === 7 /* angle */ && this.uiData.angleState === "drawing_second_line") {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-      if (!pos) {
+      const pos2 = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+      if (!pos2) {
         return;
       }
-      this.setDragEnd(pos.x, pos.y);
+      this.setDragEnd(pos2.x, pos2.y);
       this.drawScene();
     } else if (!this.uiData.mousedown && this.opts.clickToSegment) {
-      const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
-      if (!pos) {
+      const pos2 = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas);
+      if (!pos2) {
         return;
       }
-      const x = pos.x * this.uiData.dpr;
-      const y = pos.y * this.uiData.dpr;
+      const x = pos2.x * this.uiData.dpr;
+      const y = pos2.y * this.uiData.dpr;
       this.mousePos = [x, y];
       const tileIdx = this.tileIndex(x, y);
       if (tileIdx >= 0 && this.opts.drawingEnabled) {
@@ -36914,6 +36934,10 @@ var Niivue = class {
    */
   resetBriCon(msg = null) {
     if (this.uiData.isDragging) {
+      return;
+    }
+    if (!this.eventInBounds(msg)) {
+      this.opts.showBoundsBorder = false;
       return;
     }
     let isRender = false;
@@ -37030,6 +37054,11 @@ var Niivue = class {
    * @internal
    */
   keyUpListener(e) {
+    if (!this.cursorInBounds()) {
+      this.opts.showBoundsBorder = false;
+      this.drawScene();
+      return;
+    }
     if (e.code === this.opts.clipPlaneHotKey) {
       const now = (/* @__PURE__ */ new Date()).getTime();
       const elapsed = now - this.lastCalled;
@@ -37069,12 +37098,18 @@ var Niivue = class {
         this.lastCalled = now;
       }
     }
+    this.drawScene();
   }
   /**
    * Handles key down events for navigation, rendering controls, slice movement, and mode switching.
    * @internal
    */
   keyDownListener(e) {
+    if (!this.cursorInBounds()) {
+      this.opts.showBoundsBorder = false;
+      this.drawScene();
+      return;
+    }
     if (e.code === "KeyH" && this.opts.sliceType === 4 /* RENDER */) {
       this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation);
     } else if (e.code === "KeyL" && this.opts.sliceType === 4 /* RENDER */) {
@@ -37108,6 +37143,7 @@ var Niivue = class {
     } else if (e.code === "Slash" && e.shiftKey) {
       alert(`NIIVUE VERSION: ${version}`);
     }
+    this.drawScene();
   }
   /**
    * Handles scroll wheel events for slice scrolling, ROI box resizing, zooming, or segmentation thresholding.
@@ -37119,6 +37155,13 @@ var Niivue = class {
     }
     if (this.opts.sliceMosaicString.length > 0) {
       return;
+    }
+    if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false;
+      this.drawScene();
+      return;
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true;
     }
     e.preventDefault();
     e.stopPropagation();
@@ -37545,6 +37588,12 @@ var Niivue = class {
    * @internal
    */
   async dropListener(e) {
+    if (!this.eventInBounds(e)) {
+      this.opts.showBoundsBorder = false;
+      return;
+    } else if (this.opts.bounds) {
+      this.opts.showBoundsBorder = true;
+    }
     e.stopPropagation();
     e.preventDefault();
     if (!this.opts.dragAndDropEnabled) {
@@ -38816,7 +38865,17 @@ var Niivue = class {
     this.mousePos = [x, y];
   }
   /**
-   * Updates mouse position and modifies 3D render view if the pointer is in the render tile.
+   * Updates mouse position
+   * @internal
+   */
+  updateMousePos(x, y) {
+    x *= this.uiData.dpr;
+    y *= this.uiData.dpr;
+    this.mousePos = [x, y];
+    return [x, y];
+  }
+  /**
+   *  and modifies 3D render view if the pointer is in the render tile.
    *
    * @internal
    */
@@ -38978,6 +39037,27 @@ var Niivue = class {
    */
   setSelectionBoxColor(color) {
     this.opts.selectionBoxColor = color;
+  }
+  /**
+   * Update the drawing bounds for this Niivue instance.
+   *
+   * @param bounds - [x1, y1, x2, y2] in normalized (0–1) coordinates.
+   *
+   * Example:
+   *   nv.setBounds([0,0,0.5,0.5])   // top-left quarter
+   *   nv.setBounds([0.5,0.5,1,1])   // bottom-right quarter
+   */
+  setBounds(bounds) {
+    if (!Array.isArray(bounds) || bounds.length !== 4) {
+      throw new Error("setBounds: expected [x1,y1,x2,y2] array");
+    }
+    this.opts.bounds = [
+      [bounds[0], bounds[1]],
+      [bounds[2], bounds[3]]
+    ];
+    if (this.gl) {
+      this.drawScene();
+    }
   }
   /**
    * Handles mouse wheel or trackpad scroll to change slices, zoom, or frame depending on context.
@@ -39544,8 +39624,6 @@ var Niivue = class {
     }
     this.drawScene();
     this.volumes = [];
-    this.gl.clearColor(0, 0, 0, 1);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     const promises = dicomList.map(async (dicom) => {
       let dicomData = null;
       if (dicom.isManifest) {
@@ -39591,8 +39669,6 @@ var Niivue = class {
       return this;
     }
     this.volumes = [];
-    this.gl.clearColor(0, 0, 0, 1);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     this.closePAQD();
     await this.addVolumesFromUrl(volumeList);
     return this;
@@ -39682,8 +39758,6 @@ var Niivue = class {
     if (!this.initialized) {
     }
     this.meshes = [];
-    this.gl.clearColor(0, 0, 0, 1);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     await this.addMeshesFromUrl(meshList);
     this.updateGLVolume();
     this.drawScene();
@@ -39777,8 +39851,6 @@ var Niivue = class {
   loadConnectome(json) {
     this.drawScene();
     this.meshes = [];
-    this.gl.clearColor(0, 0, 0, 1);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     const mesh = this.loadConnectomeAsMesh(json);
     this.addMesh(mesh);
     this.drawScene();
@@ -41388,7 +41460,6 @@ var Niivue = class {
     }
     const glInfo = this.gl.getParameter(this.gl.RENDERER);
     log.info("firefox renderer: ", glInfo);
-    this.gl.clearDepth(0);
     this.gl.enable(this.gl.CULL_FACE);
     this.gl.cullFace(this.gl.FRONT);
     this.gl.enable(this.gl.BLEND);
@@ -41565,7 +41636,6 @@ var Niivue = class {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error("blur shader: ", status);
       }
-      gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader : this.sobelFirstOrderShader;
@@ -41597,7 +41667,6 @@ var Niivue = class {
       if (status !== gl.FRAMEBUFFER_COMPLETE) {
         log.error("sobel shader: ", status);
       }
-      gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     gl.deleteFramebuffer(fb);
@@ -43946,13 +44015,20 @@ var Niivue = class {
     if (ltwh.length < 4) {
       return;
     }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
     const frac10cm = 100 / fovMM[0];
     const pix10cm = frac10cm * ltwh[2];
     const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2);
-    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm);
     const thick = Number(this.opts.rulerWidth);
+    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm);
     const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * thick;
-    const startXYendXY = [pixLeft, pixTop, pixLeft + pix10cm, pixTop];
+    const clippedLeft = Math.max(regionX, pixLeft);
+    const clippedRight = Math.min(regionX + regionW, pixLeft + pix10cm);
+    const clippedY = Math.min(regionY + regionH, pixTop);
+    if (clippedRight <= clippedLeft) {
+      return;
+    }
+    const startXYendXY = [clippedLeft, clippedY, clippedRight, clippedY];
     let outlineColor = [0, 0, 0, 1];
     if (this.opts.rulerColor[0] + this.opts.rulerColor[1] + this.opts.rulerColor[2] < 0.8) {
       outlineColor = [1, 1, 1, 1];
@@ -44093,6 +44169,7 @@ var Niivue = class {
       };
     }
     const gl = this.gl;
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.bindVertexArray(this.genericVAO);
     gl.depthFunc(gl.ALWAYS);
     gl.enable(gl.BLEND);
@@ -44516,6 +44593,23 @@ var Niivue = class {
       this.gl.bindVertexArray(this.unusedVAO);
     }
   }
+  drawBoundsBox(leftTopWidthHeight, color, thickness = 2) {
+    if (!this.rectOutlineShader) {
+      throw new Error("rectOutlineShader undefined");
+    }
+    const gl = this.gl;
+    const [x, y, w, h] = leftTopWidthHeight;
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    this.rectOutlineShader.use(gl);
+    gl.enable(gl.BLEND);
+    gl.uniform1f(this.rectOutlineShader.uniforms.thickness, thickness);
+    gl.uniform4fv(this.rectOutlineShader.uniforms.lineColor, color);
+    gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height]);
+    gl.uniform4f(this.rectOutlineShader.uniforms.leftTopWidthHeight, x, y, w, h);
+    gl.bindVertexArray(this.genericVAO);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.bindVertexArray(this.unusedVAO);
+  }
   /**
    * Draw a circle or outline at given position with specified color or default crosshair color.
    * @internal
@@ -44546,6 +44640,7 @@ var Niivue = class {
    * @internal
    */
   drawSelectionBox(leftTopWidthHeight) {
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
     if (this.getCurrentDragMode() === 6 /* roiSelection */) {
       this.drawCircle(leftTopWidthHeight, this.opts.selectionBoxColor, 0.1);
       return;
@@ -44557,14 +44652,26 @@ var Niivue = class {
    * @internal
    */
   effectiveCanvasHeight() {
-    return this.gl.canvas.height - this.colorbarHeight;
+    let regionH = this.gl.canvas.height;
+    if (this.opts.bounds) {
+      const [[, y1], [, y2]] = this.opts.bounds;
+      const yTop = Math.round(y1 * this.gl.canvas.height);
+      const yBot = Math.round(y2 * this.gl.canvas.height);
+      regionH = yBot - yTop;
+    }
+    return regionH - this.colorbarHeight;
   }
   /**
    * Get canvas width available for tiles (excludes legend panel).
    * @internal
    */
   effectiveCanvasWidth() {
-    return this.gl.canvas.width - this.getLegendPanelWidth();
+    let regionW = this.gl.canvas.width;
+    if (this.opts.bounds) {
+      const [[x1], [x2]] = this.opts.bounds;
+      regionW = Math.round((x2 - x1) * this.gl.canvas.width);
+    }
+    return regionW - this.getLegendPanelWidth();
   }
   /**
    * Get all 3D labels from document and connectome meshes.
@@ -44676,7 +44783,8 @@ var Niivue = class {
     return height;
   }
   /**
-   * Calculate and reserve canvas area for colorbar panel.
+   * Calculate and reserve canvas area for colorbar panel,
+   * respecting opts.bounds if defined.
    * @internal
    */
   reserveColorbarPanel() {
@@ -44684,12 +44792,14 @@ var Niivue = class {
     if (fullHt < 0) {
       return [0, 0, 0, 0];
     }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
     const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1;
-    const width = widthPercentage * this.gl.canvas.width;
+    const width = widthPercentage * regionW;
     const leftTopWidthHeight = [
-      (this.gl.canvas.width - width) / 2,
-      // Center the colorbar horizontally
-      this.gl.canvas.height - fullHt,
+      regionX + (regionW - width) / 2,
+      // center within region
+      regionY + regionH - fullHt,
+      // top within region
       width,
       fullHt
     ];
@@ -44892,10 +45002,13 @@ var Niivue = class {
     if (!this.canvas) {
       throw new Error("canvas undefined");
     }
-    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
+    this.gl.viewport(regionX, regionY, regionW, regionH);
     this.gl.enable(this.gl.CULL_FACE);
     this.gl.enable(this.gl.BLEND);
-    this.drawTextBelow([this.canvas.width / 2, this.canvas.height / 2], text, 3);
+    const cx = regionX + regionW / 2;
+    const cy = regionY + regionH / 2;
+    this.drawTextBelow([cx, cy], text, 3);
   }
   /**
    * Render a string of text at specified canvas coordinates with scaling and optional color.
@@ -45422,7 +45535,15 @@ var Niivue = class {
       sliceFrac = frac[sliceDim];
     }
     const sliceMM = mm[sliceDim];
-    gl.clear(gl.DEPTH_BUFFER_BIT);
+    const flippedY = gl.canvas.height - leftTopWidthHeight[1] - leftTopWidthHeight[3];
+    const glLTWH = [
+      leftTopWidthHeight[0],
+      flippedY,
+      leftTopWidthHeight[2],
+      leftTopWidthHeight[3]
+    ];
+    this.clearBounds(gl.DEPTH_BUFFER_BIT, glLTWH);
+    gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3]);
     let obj = this.calculateMvpMatrix2D(
       leftTopWidthHeight,
       screen.mnMM,
@@ -45455,7 +45576,7 @@ var Niivue = class {
     gl.enable(gl.DEPTH_TEST);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    gl.depthFunc(gl.GREATER);
+    gl.depthFunc(gl.ALWAYS);
     gl.disable(gl.CULL_FACE);
     if (this.volumes.length > 0) {
       let shader = this.sliceMMShader;
@@ -45503,6 +45624,8 @@ var Niivue = class {
         fovMM: obj.fovMM
       });
     }
+    gl.depthMask(true);
+    gl.depthFunc(gl.LEQUAL);
     if (isNaN(customMM)) {
       this.drawCrosshairs3D(true, 1, obj.modelViewProjectionMatrix, true, this.opts.isSliceMM);
     }
@@ -45543,23 +45666,33 @@ var Niivue = class {
    * @internal
    */
   draw2D(leftTopWidthHeight, axCorSag, customMM = NaN, imageWidthHeight = [NaN, NaN]) {
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
+    let ltwh;
+    if (leftTopWidthHeight[2] === 0 && leftTopWidthHeight[3] === 0) {
+      if (!this.opts.bounds) {
+        ltwh = [0, 0, this.gl.canvas.width, this.gl.canvas.height];
+      } else {
+        ltwh = [regionX, regionY, regionW, regionH];
+      }
+    } else {
+      ltwh = leftTopWidthHeight.slice();
+    }
     const padLeftTop = [NaN, NaN];
     if (imageWidthHeight[0] === Infinity) {
       const volScale = this.sliceScale().volScale;
-      let scale6 = this.scaleSlice(volScale[0], volScale[1], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]]);
+      let scale6 = this.scaleSlice(volScale[0], volScale[1], [0, 0], [ltwh[2], ltwh[3]]);
       if (axCorSag === 1 /* CORONAL */) {
-        scale6 = this.scaleSlice(volScale[0], volScale[2], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]]);
+        scale6 = this.scaleSlice(volScale[0], volScale[2], [0, 0], [ltwh[2], ltwh[3]]);
       }
       if (axCorSag === 2 /* SAGITTAL */) {
-        scale6 = this.scaleSlice(volScale[1], volScale[2], [0, 0], [leftTopWidthHeight[2], leftTopWidthHeight[3]]);
+        scale6 = this.scaleSlice(volScale[1], volScale[2], [0, 0], [ltwh[2], ltwh[3]]);
       }
       imageWidthHeight[0] = scale6[2];
       imageWidthHeight[1] = scale6[3];
     }
     if (isNaN(imageWidthHeight[0])) {
-      this.draw2DMain(leftTopWidthHeight, axCorSag, customMM);
+      this.draw2DMain(ltwh, axCorSag, customMM);
     } else {
-      const ltwh = leftTopWidthHeight.slice();
       padLeftTop[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]));
       padLeftTop[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]));
       ltwh[0] += padLeftTop[0];
@@ -45571,17 +45704,22 @@ var Niivue = class {
     if (customMM === Infinity || customMM === -Infinity || axCorSag === 4 /* RENDER */) {
       return;
     }
-    if (leftTopWidthHeight[2] !== 0 && leftTopWidthHeight[3] !== 0 && this.opts.isOrientationTextVisible) {
-      this.drawSliceOrientationText(leftTopWidthHeight, axCorSag, padLeftTop);
+    if (ltwh[2] !== 0 && ltwh[3] !== 0 && this.opts.isOrientationTextVisible) {
+      this.drawSliceOrientationText(ltwh, axCorSag, padLeftTop);
     }
   }
   /**
-   * Computes 3D model-view-projection matrices based on view angles and canvas size.
-   * @internal
+   * Build MVP, Model, and Normal matrices for rendering.
+   * @param _unused - reserved
+   * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
+   * @param azimuth - azimuth rotation in degrees
+   * @param elevation - elevation rotation in degrees
+   * @param flipX - whether to mirror the X axis (default true for radiological convention)
    */
-  calculateMvpMatrix(_unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation) {
+  calculateMvpMatrix(_unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation, flipX = true) {
+    const gl = this.gl;
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      leftTopWidthHeight = [0, 0, this.gl.canvas.width, this.gl.canvas.height];
+      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
     }
     const whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3];
     let scale6 = this.furthestFromPivot;
@@ -45594,7 +45732,9 @@ var Niivue = class {
       mat4_exports.ortho(projectionMatrix, -scale6 * whratio, scale6 * whratio, -scale6, scale6, scale6 * 0.01, scale6 * 8);
     }
     const modelMatrix = mat4_exports.create();
-    modelMatrix[0] = -1;
+    if (flipX) {
+      modelMatrix[0] = -1;
+    }
     const translateVec3 = vec3_exports.fromValues(0, 0, -scale6 * 1.8);
     mat4_exports.translate(modelMatrix, modelMatrix, translateVec3);
     if (this.position) {
@@ -45767,8 +45907,9 @@ var Niivue = class {
       return;
     }
     const graph = this.graph;
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
     let axialTop = 0;
-    if (this.graph.autoSizeMultiplanar && this.opts.sliceType === 3 /* MULTIPLANAR */) {
+    if (graph.autoSizeMultiplanar && this.opts.sliceType === 3 /* MULTIPLANAR */) {
       for (let i = 0; i < this.screenSlices.length; i++) {
         const axCorSag = this.screenSlices[i].axCorSag;
         if (axCorSag === 0 /* AXIAL */) {
@@ -45789,13 +45930,11 @@ var Niivue = class {
         graph.LTWH[3] = ltwh[2];
       }
     }
-    if (graph.opacity <= 0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5) {
-      return;
-    }
-    if (Math.floor(graph.LTWH[0] + graph.LTWH[2]) > this.gl.canvas.width) {
-      return;
-    }
-    if (Math.floor(graph.LTWH[1] + graph.LTWH[3]) > this.gl.canvas.height) {
+    graph.LTWH[0] = Math.max(regionX, graph.LTWH[0]);
+    graph.LTWH[1] = Math.max(regionY, graph.LTWH[1]);
+    graph.LTWH[2] = Math.min(regionW, graph.LTWH[2]);
+    graph.LTWH[3] = Math.min(regionH, graph.LTWH[3]);
+    if (graph.opacity <= 0 || graph.LTWH[2] <= 5 || graph.LTWH[3] <= 5 || Math.floor(graph.LTWH[0] + graph.LTWH[2]) > regionX + regionW || Math.floor(graph.LTWH[1] + graph.LTWH[3]) > regionY + regionH) {
       return;
     }
     graph.backColor = [0.15, 0.15, 0.15, graph.opacity];
@@ -45899,8 +46038,8 @@ var Niivue = class {
       return x.toFixed(6).replace(/\.?0*$/, "");
     }
     let fntSize = this.fontPx * 0.7;
-    const screenWidthPts = this.gl.canvas.width / this.uiData.dpr;
-    const screenHeightPts = this.gl.canvas.height / this.uiData.dpr;
+    const screenWidthPts = regionW / this.uiData.dpr;
+    const screenHeightPts = regionH / this.uiData.dpr;
     const screenAreaPts = screenWidthPts * screenHeightPts;
     const refAreaPts = 800 * 600;
     if (screenAreaPts < refAreaPts) {
@@ -46464,7 +46603,7 @@ var Niivue = class {
     const depthFunc = gl.getParameter(gl.DEPTH_FUNC);
     if (!secondPass) {
       gl.disable(gl.BLEND);
-      gl.depthFunc(gl.GREATER);
+      gl.depthFunc(gl.LEQUAL);
     }
     for (const label of labels) {
       this.draw3DLabel(
@@ -46543,46 +46682,39 @@ var Niivue = class {
    * @internal
    */
   draw3D(leftTopWidthHeight = [0, 0, 0, 0], mvpMatrix = null, modelMatrix = null, normalMatrix = null, azimuth = null, elevation = 0) {
+    const gl = this.gl;
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
+    let ltwh = [...leftTopWidthHeight];
+    if (ltwh[2] === 0 || ltwh[3] === 0) {
+      ltwh = this.opts.bounds ? [regionX, regionY, regionW, regionH] : [0, 0, gl.canvas.width, gl.canvas.height];
+    }
     const isMosaic = azimuth !== null;
     this.setPivot3D();
     if (!isMosaic) {
       azimuth = this.scene.renderAzimuth;
       elevation = this.scene.renderElevation;
     }
-    const gl = this.gl;
     if (mvpMatrix === null) {
       ;
-      [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, leftTopWidthHeight, azimuth, elevation);
+      [mvpMatrix, modelMatrix, normalMatrix] = this.calculateMvpMatrix(null, ltwh, azimuth, elevation);
     }
-    let relativeLTWH = [...leftTopWidthHeight];
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
-      relativeLTWH = [...leftTopWidthHeight];
-      this.screenSlices.push({
-        leftTopWidthHeight,
-        axCorSag: 4 /* RENDER */,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix), 0]
-      });
-    } else {
-      this.screenSlices.push({
-        leftTopWidthHeight: leftTopWidthHeight.slice(),
-        axCorSag: 4 /* RENDER */,
-        sliceFrac: 0,
-        AxyzMxy: [],
-        leftTopMM: [],
-        fovMM: [isRadiological(modelMatrix), 0]
-      });
-      leftTopWidthHeight[1] = gl.canvas.height - leftTopWidthHeight[3] - leftTopWidthHeight[1];
-    }
+    const relativeLTWH = [...ltwh];
+    this.screenSlices.push({
+      leftTopWidthHeight: ltwh.slice(),
+      // canvas-space
+      axCorSag: 4 /* RENDER */,
+      sliceFrac: 0,
+      AxyzMxy: [],
+      leftTopMM: [],
+      fovMM: [isRadiological(modelMatrix), 0]
+    });
+    const glLTWH = [ltwh[0], gl.canvas.height - ltwh[3] - ltwh[1], ltwh[2], ltwh[3]];
+    ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1];
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.ALWAYS);
     gl.depthMask(true);
-    gl.clearDepth(0);
     this.draw3DLabels(mvpMatrix, relativeLTWH, false);
-    gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+    this.gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3]);
     if (this.volumes.length > 0) {
       this.updateInterpolation(0, true);
       this.updateInterpolation(1, true);
@@ -46595,21 +46727,21 @@ var Niivue = class {
     }
     this.drawMesh3D(true, 1, mvpMatrix, modelMatrix, normalMatrix);
     if (this.uiData.mouseDepthPicker) {
-      this.depthPicker(leftTopWidthHeight, mvpMatrix);
+      this.depthPicker(ltwh, mvpMatrix);
       this.createOnLocationChange();
-      this.draw3D(leftTopWidthHeight, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation);
+      this.draw3D(relativeLTWH, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation);
       return;
     }
     if (this.opts.meshXRay > 0) {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix, normalMatrix);
     }
     this.draw3DLabels(mvpMatrix, relativeLTWH, false);
-    gl.viewport(leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
+    gl.viewport(ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
     if (!isMosaic) {
       this.drawCrosshairs3D(false, 0.15, mvpMatrix);
     }
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    this.drawOrientationCube(leftTopWidthHeight, azimuth, elevation);
+    gl.viewport(regionX, regionY, regionW, regionH);
+    this.drawOrientationCube(ltwh, azimuth, elevation);
     const posString = "azimuth: " + this.scene.renderAzimuth.toFixed(0) + " elevation: " + this.scene.renderElevation.toFixed(0);
     this.readyForSync = true;
     this.sync();
@@ -46631,56 +46763,45 @@ var Niivue = class {
         this.volumeObject3D,
         void 0,
         this.scene.renderAzimuth,
-        this.scene.renderElevation
+        this.scene.renderElevation,
+        false
+        // no flipX for meshes
       );
     }
     gl.enable(gl.DEPTH_TEST);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.disable(gl.BLEND);
-    gl.depthFunc(gl.GREATER);
-    gl.disable(gl.CULL_FACE);
     if (isDepthTest) {
+      gl.clearDepth(0);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.depthFunc(gl.GREATER);
     } else {
-      gl.enable(gl.BLEND);
       gl.depthFunc(gl.ALWAYS);
-      gl.enable(gl.CULL_FACE);
     }
+    gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
-    let shader = this.meshShaders[0].shader;
+    gl.frontFace(gl.CCW);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     let hasFibers = false;
-    for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].visible === false || this.meshes[i].opacity <= 0) {
+    for (const mesh of this.meshes) {
+      if (!mesh.visible || mesh.opacity <= 0 || mesh.indexCount < 3) {
         continue;
       }
-      let meshAlpha = alpha;
-      if (isDepthTest) {
-        meshAlpha = this.meshes[i].opacity;
-        gl.depthFunc(gl.GREATER);
-        gl.depthMask(true);
-        if (meshAlpha < 1) {
-          gl.depthMask(false);
-          gl.enable(gl.DEPTH_TEST);
-          gl.enable(gl.BLEND);
-          gl.cullFace(gl.BACK);
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        } else {
-          gl.enable(gl.DEPTH_TEST);
-          gl.disable(gl.BLEND);
-        }
-      }
-      shader = this.meshShaders[this.meshes[i].meshShaderIndex].shader;
+      const meshAlpha = mesh.opacity * alpha;
+      let shader = this.meshShaders[mesh.meshShaderIndex].shader;
       if (this.uiData.mouseDepthPicker) {
         shader = this.pickingMeshShader;
       }
-      shader.use(this.gl);
+      shader.use(gl);
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
       gl.uniform1f(shader.uniforms.opacity, meshAlpha);
-      if (this.meshes[i].indexCount < 3) {
-        continue;
+      if (meshAlpha >= 1) {
+        gl.disable(gl.BLEND);
+        gl.depthMask(true);
+      } else {
+        gl.enable(gl.BLEND);
+        gl.depthMask(false);
       }
-      if (this.meshes[i].offsetPt0 && (this.meshes[i].fiberSides < 3 || this.meshes[i].fiberRadius <= 0)) {
+      if (mesh.offsetPt0 && (mesh.fiberSides < 3 || mesh.fiberRadius <= 0)) {
         hasFibers = true;
         continue;
       }
@@ -46688,36 +46809,50 @@ var Niivue = class {
         gl.activeTexture(TEXTURE5_MATCAP);
         gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture);
       }
-      gl.bindVertexArray(this.meshes[i].vao);
-      gl.drawElements(gl.TRIANGLES, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
+      gl.bindVertexArray(mesh.vao);
+      gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
       gl.bindVertexArray(this.unusedVAO);
     }
     gl.depthMask(true);
-    if (!hasFibers) {
+    gl.disable(gl.BLEND);
+    if (this.opts.meshXRay > 0) {
       gl.enable(gl.BLEND);
+      gl.depthMask(false);
       gl.depthFunc(gl.ALWAYS);
-      return;
+      for (const mesh of this.meshes) {
+        if (!mesh.visible || mesh.indexCount < 3) {
+          continue;
+        }
+        const shader = this.meshShaders[mesh.meshShaderIndex].shader;
+        shader.use(gl);
+        gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
+        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
+        gl.uniform1f(shader.uniforms.opacity, mesh.opacity * alpha * this.opts.meshXRay);
+        gl.bindVertexArray(mesh.vao);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
+        gl.bindVertexArray(this.unusedVAO);
+      }
+      gl.depthMask(true);
+      gl.depthFunc(gl.GREATER);
+      gl.disable(gl.BLEND);
     }
-    shader = this.fiberShader;
-    shader.use(this.gl);
-    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
-    gl.uniform1f(shader.uniforms.opacity, alpha);
-    for (let i = 0; i < this.meshes.length; i++) {
-      if (this.meshes[i].indexCount < 3) {
-        continue;
+    if (hasFibers) {
+      const shader = this.fiberShader;
+      shader.use(gl);
+      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
+      gl.uniform1f(shader.uniforms.opacity, alpha);
+      for (const mesh of this.meshes) {
+        if (!mesh.offsetPt0) {
+          continue;
+        }
+        if (mesh.fiberSides >= 3 && mesh.fiberRadius > 0) {
+          continue;
+        }
+        gl.bindVertexArray(mesh.vaoFiber);
+        gl.drawElements(gl.LINE_STRIP, mesh.indexCount, gl.UNSIGNED_INT, 0);
+        gl.bindVertexArray(this.unusedVAO);
       }
-      if (!this.meshes[i].offsetPt0) {
-        continue;
-      }
-      if (this.meshes[i].fiberSides >= 3 && this.meshes[i].fiberRadius > 0) {
-        continue;
-      }
-      gl.bindVertexArray(this.meshes[i].vaoFiber);
-      gl.drawElements(gl.LINE_STRIP, this.meshes[i].indexCount, gl.UNSIGNED_INT, 0);
-      gl.bindVertexArray(this.unusedVAO);
     }
-    gl.enable(gl.BLEND);
-    gl.depthFunc(gl.ALWAYS);
     this.readyForSync = true;
   }
   /**
@@ -47116,15 +47251,16 @@ var Niivue = class {
       throw new Error("bmpShader undefined");
     }
     this.bmpShader.use(this.gl);
-    this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, this.gl.canvas.width, this.gl.canvas.height);
-    let h = this.gl.canvas.height;
-    let w = this.gl.canvas.height * this.bmpTextureWH;
-    if (w > this.gl.canvas.width) {
-      h = this.gl.canvas.width / this.bmpTextureWH;
-      w = this.gl.canvas.width;
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
+    this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, regionW, regionH);
+    let h = regionH;
+    let w = regionH * this.bmpTextureWH;
+    if (w > regionW) {
+      h = regionW / this.bmpTextureWH;
+      w = regionW;
     }
-    const left = (this.gl.canvas.width - w) / 2;
-    const top = (this.gl.canvas.height - h) / 2;
+    const left = regionX + (regionW - w) / 2;
+    const top = regionY + (regionH - h) / 2;
     this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, w, h);
     this.gl.bindVertexArray(this.genericVAO);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
@@ -47427,6 +47563,7 @@ var Niivue = class {
    */
   drawMosaic(mosaicStr) {
     this.screenSlices = [];
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
     const fovRenderMM = this.screenFieldOfViewMM(0 /* AXIAL */, true);
     const fovSliceMM = this.screenFieldOfViewMM(0 /* AXIAL */);
     mosaicStr = mosaicStr.replaceAll(";", " ;").trim();
@@ -47445,7 +47582,6 @@ var Niivue = class {
     for (let pass = 0; pass < 2; pass++) {
       let isRender = false;
       let isCrossLines = false;
-      isRender = false;
       let rowHt = 0;
       let left = 0;
       let top = 0;
@@ -47467,8 +47603,7 @@ var Niivue = class {
         }
         if (item.includes("H")) {
           i++;
-          horizontalOverlap = Math.max(0, Math.min(1, parseFloat(items[i])));
-          horizontalOverlap = Math.abs(horizontalOverlap);
+          horizontalOverlap = Math.abs(Math.max(0, Math.min(1, parseFloat(items[i]))));
           continue;
         }
         if (item.includes("V")) {
@@ -47503,7 +47638,6 @@ var Niivue = class {
         if (horizontalOverlap > 0 && !isRender) {
           w = Math.round(w * (1 - horizontalOverlap));
         }
-        log.debug(`item ${i} width with overlap ${w} pixels`);
         left += w;
         w = 0;
         const sliceMM = parseFloat(item);
@@ -47538,7 +47672,12 @@ var Niivue = class {
             }
           }
         } else {
-          const ltwh = [marginLeft + scale6 * left, marginTop + scale6 * top, scale6 * w, scale6 * h];
+          const ltwh = [
+            regionX + marginLeft + scale6 * left,
+            regionY + marginTop + scale6 * top,
+            scale6 * w,
+            scale6 * h
+          ];
           this.fontPx = isLabel ? labelSize : 0;
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity;
@@ -47564,12 +47703,12 @@ var Niivue = class {
       if (mxRowWid <= 0 || top <= 0) {
         break;
       }
-      const scaleW = (this.gl.canvas.width - 2 * this.opts.tileMargin - tileGap) / mxRowWid;
-      const scaleH = (this.effectiveCanvasHeight() - 2 * this.opts.tileMargin) / top;
+      const scaleW = (regionW - 2 * this.opts.tileMargin - tileGap) / mxRowWid;
+      const scaleH = (regionH - 2 * this.opts.tileMargin) / top;
       scale6 = Math.min(scaleW, scaleH);
       if (this.opts.centerMosaic) {
-        marginLeft = Math.floor(0.5 * (this.gl.canvas.width - mxRowWid * scale6));
-        marginTop = Math.floor(0.5 * (this.effectiveCanvasHeight() - top * scale6));
+        marginLeft = Math.floor(0.5 * (regionW - mxRowWid * scale6));
+        marginTop = Math.floor(0.5 * (regionH - top * scale6));
       } else {
         marginLeft = this.opts.tileMargin;
         marginTop = this.opts.tileMargin;
@@ -47612,6 +47751,153 @@ var Niivue = class {
     return [actualWidth, actualHeight];
   }
   /**
+   * Convert opts.bounds into CSS pixel coordinates (for hit testing).
+   * @returns [x, y, width, height] in CSS pixels
+   */
+  getBoundsRegionCSS() {
+    const rect = this.gl.canvas.getBoundingClientRect();
+    if (!this.opts.bounds) {
+      return [0, 0, rect.width, rect.height];
+    }
+    const [[x1, y1], [x2, y2]] = this.opts.bounds;
+    const regionX = Math.round(x1 * rect.width);
+    const regionW = Math.round((x2 - x1) * rect.width);
+    const yTop = Math.round(y1 * rect.height);
+    const yBot = Math.round(y2 * rect.height);
+    const regionH = yBot - yTop;
+    const regionY = rect.height - yBot;
+    return [regionX, regionY, regionW, regionH];
+  }
+  /**
+   * Returns true if a mouse/touch event happened inside this instance’s bounds.
+   */
+  eventInBounds(evt) {
+    const rect = this.gl.canvas.getBoundingClientRect();
+    let clientX;
+    let clientY;
+    if (evt instanceof MouseEvent) {
+      clientX = evt.clientX;
+      clientY = evt.clientY;
+    } else if (evt instanceof TouchEvent) {
+      const touch = evt.touches[0] ?? evt.changedTouches[0];
+      if (!touch) {
+        return false;
+      }
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = evt.clientX;
+      clientY = evt.clientY;
+    }
+    const cssX = clientX - rect.left;
+    const cssY = clientY - rect.top;
+    const [bx, by, bw, bh] = this.getBoundsRegionCSS();
+    return cssX >= bx && cssX <= bx + bw && cssY >= by && cssY <= by + bh;
+  }
+  /**
+   * Check whether the last known mouse cursor position is inside this instance's bounds.
+   *
+   * Used to filter keyboard events so they are only handled by the Niivue instance
+   * whose bounds currently contain the cursor.
+   *
+   * @returns true if the cursor is inside this.opts.bounds, false otherwise.
+   * @internal
+   */
+  cursorInBounds() {
+    if (this.mousePos[0] < 0 || this.mousePos[1] < 0) {
+      return false;
+    }
+    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
+    const [mx, my] = this.mousePos;
+    return mx >= regionX && mx <= regionX + regionW && my >= regionY && my <= regionY + regionH;
+  }
+  /**
+   * Compute the current drawing region from opts.bounds.
+   * Returns [x, y, width, height] in device pixels, bottom-left origin.
+   */
+  getBoundsRegion() {
+    const gl = this.gl;
+    const dpr = this.uiData?.dpr || window.devicePixelRatio || 1;
+    const canvas = gl.canvas;
+    const cssW = canvas.clientWidth;
+    const cssH = canvas.clientHeight;
+    if (!this.opts.bounds) {
+      return [0, 0, gl.canvas.width, gl.canvas.height];
+    }
+    const [[x1, y1], [x2, y2]] = this.opts.bounds;
+    const regionX = Math.floor(x1 * cssW * dpr);
+    const regionW = Math.ceil((x2 - x1) * cssW * dpr);
+    let regionY = Math.floor((1 - y2) * cssH * dpr);
+    let regionH = Math.ceil((y2 - y1) * cssH * dpr);
+    if (regionY < 0) {
+      regionH += regionY;
+      regionY = 0;
+    }
+    if (regionY + regionH > gl.canvas.height) {
+      regionH = gl.canvas.height - regionY;
+    }
+    return [regionX, regionY, regionW, regionH];
+  }
+  /**
+   * Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
+   */
+  inBounds(x, y) {
+    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion();
+    const glX = x * this.uiData.dpr;
+    const glY = this.gl.canvas.height - y * this.uiData.dpr;
+    return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH;
+  }
+  /**
+   * Rebind all textures for this instance.
+   * Call this at the start of every draw pass if multiple instances share a GL context.
+   */
+  bindTextures() {
+    this.gl.activeTexture(TEXTURE0_BACK_VOL);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+    this.gl.activeTexture(TEXTURE2_OVERLAY_VOL);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
+    this.gl.activeTexture(TEXTURE8_PAQD);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture);
+    this.gl.activeTexture(TEXTURE3_FONT);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.fontTexture);
+    this.gl.activeTexture(TEXTURE1_COLORMAPS);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
+    this.gl.activeTexture(TEXTURE5_MATCAP);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.matCapTexture);
+    this.gl.activeTexture(TEXTURE6_GRADIENT);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.gradientTexture);
+  }
+  /**
+   * Clear a rectangular region of this instance's canvas.
+   *
+   * @param mask - bitmask of buffers to clear (default: color+depth).
+   * @param ltwh - optional [x, y, w, h] region in *device px* (GL coords, bottom-left).
+   *   If not provided, clears the full instance bounds (getBoundsRegion).
+   *   For multiplanar panels, pass the panel’s own [x,y,w,h].
+   */
+  clearBounds(mask = this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT, ltwh) {
+    const gl = this.gl;
+    const [vpX, vpY, vpW, vpH] = ltwh ?? this.getBoundsRegion();
+    const flippedY = gl.canvas.height - vpY - vpH;
+    if (mask & gl.DEPTH_BUFFER_BIT) {
+      gl.clearDepth(1);
+    }
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(vpX, flippedY, vpW, vpH);
+    if (mask & gl.COLOR_BUFFER_BIT) {
+      gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3]);
+    }
+    gl.clear(mask);
+    gl.disable(gl.SCISSOR_TEST);
+  }
+  drawBoundsBorder() {
+    if (!this.opts.showBoundsBorder) {
+      return;
+    }
+    const [x, y, w, h] = this.getBoundsRegion();
+    this.drawBoundsBox([x, y, w, h], this.opts.boundsBorderColor, this.opts.selectionBoxLineThickness);
+  }
+  /**
    * Core function to draw the entire scene including volumes, meshes, slices, overlays, colorbars, graphs, and handle user interaction like dragging.
    * @internal
    */
@@ -47620,8 +47906,10 @@ var Niivue = class {
       return;
     }
     this.colorbarHeight = 0;
-    this.gl.clearColor(this.opts.backColor[0], this.opts.backColor[1], this.opts.backColor[2], this.opts.backColor[3]);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion();
+    this.gl.viewport(vpX, vpY, vpW, vpH);
+    this.clearBounds(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+    this.bindTextures();
     if (this.bmpTexture && this.thumbnailVisible) {
       this.drawThumbnail();
       return;
@@ -47640,7 +47928,7 @@ var Niivue = class {
           return;
         }
         this.screenSlices = [];
-        this.draw3D();
+        this.draw3D([vpX, vpY, vpW, vpH]);
         if (this.opts.isColorbar) {
           this.drawColorbar();
         }
@@ -47682,35 +47970,29 @@ var Niivue = class {
     } else {
       const heroImageWH = [0, 0];
       let isHeroImage = false;
-      this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
       this.screenSlices = [];
       if (this.customLayout && this.customLayout.length > 0) {
         this.screenSlices = [];
-        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
         const { volScale } = this.sliceScale();
-        const canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()];
         for (const view of this.customLayout) {
           const { sliceType, position, sliceMM } = view;
-          const leftTopWidthHeight = position.slice();
-          if (position[0] >= 0 && position[0] <= 1 && position[2] <= 1) {
-            leftTopWidthHeight[0] = position[0] * canvasWH[0];
-            leftTopWidthHeight[2] = position[2] * canvasWH[0];
-          }
-          if (position[1] >= 0 && position[1] <= 1 && position[3] <= 1) {
-            leftTopWidthHeight[1] = position[1] * canvasWH[1];
-            leftTopWidthHeight[3] = position[3] * canvasWH[1];
-          }
-          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > canvasWH[0]) {
+          const leftTopWidthHeight = [
+            vpX + position[0] * vpW,
+            vpY + position[1] * vpH,
+            position[2] * vpW,
+            position[3] * vpH
+          ];
+          if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > vpX + vpW) {
             log.warn("adjusting slice width because it would have been clipped");
-            leftTopWidthHeight[2] = canvasWH[0] - leftTopWidthHeight[0];
+            leftTopWidthHeight[2] = vpX + vpW - leftTopWidthHeight[0];
           }
-          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > canvasWH[1]) {
+          if (leftTopWidthHeight[1] + leftTopWidthHeight[3] > vpY + vpH) {
             log.warn("adjusting slice height because it would have been clipped");
-            leftTopWidthHeight[3] = canvasWH[1] - leftTopWidthHeight[1];
+            leftTopWidthHeight[3] = vpY + vpH - leftTopWidthHeight[1];
           }
           if (sliceType === 4 /* RENDER */) {
             this.draw3D(leftTopWidthHeight);
-          } else if (sliceType === 0 /* AXIAL */ || sliceType === 1 /* CORONAL */ || sliceType === 2 /* SAGITTAL */) {
+          } else {
             const actualDimensions = this.calculateWidthHeight(
               sliceType,
               volScale,
@@ -47720,12 +48002,16 @@ var Niivue = class {
             this.draw2D(leftTopWidthHeight, sliceType, sliceMM ?? NaN, actualDimensions);
           }
         }
-      } else if (this.opts.sliceType === 0 /* AXIAL */) {
-        this.draw2D([0, 0, 0, 0], 0);
-      } else if (this.opts.sliceType === 1 /* CORONAL */) {
-        this.draw2D([0, 0, 0, 0], 1);
-      } else if (this.opts.sliceType === 2 /* SAGITTAL */) {
-        this.draw2D([0, 0, 0, 0], 2);
+      } else if (this.opts.sliceType === 0 /* AXIAL */ || this.opts.sliceType === 1 /* CORONAL */ || this.opts.sliceType === 2 /* SAGITTAL */) {
+        const { volScale } = this.sliceScale();
+        const leftTopWidthHeight = [vpX, vpY, vpW, vpH];
+        const actualDimensions = this.calculateWidthHeight(
+          this.opts.sliceType,
+          volScale,
+          leftTopWidthHeight[2],
+          leftTopWidthHeight[3]
+        );
+        this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN, actualDimensions);
       } else {
         let padPixelsWH = function(cols, rows) {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad];
@@ -47760,6 +48046,7 @@ var Niivue = class {
         if (innerPad < 0) {
           innerPad = 2 * (2 + Math.ceil(this.fontPx));
         }
+        const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
         let canvasWH = [this.effectiveCanvasWidth(), this.effectiveCanvasHeight()];
         if (this.opts.heroImageFraction > 0 && this.opts.heroImageFraction < 1) {
           isShowRender = false;
@@ -47828,17 +48115,16 @@ var Niivue = class {
           }
         }
         if (isHeroImage) {
-          const heroW = heroImageWH[0] === 0 ? this.effectiveCanvasWidth() : heroImageWH[0];
-          const heroH = heroImageWH[1] === 0 ? this.effectiveCanvasHeight() : heroImageWH[1];
+          const heroW = heroImageWH[0] === 0 ? regionW : heroImageWH[0];
+          const heroH = heroImageWH[1] === 0 ? regionH : heroImageWH[1];
           if (this.opts?.heroSliceType === 0 /* AXIAL */ || this.opts?.heroSliceType === 1 /* CORONAL */ || this.opts?.heroSliceType === 2 /* SAGITTAL */) {
-            this.draw2D([0, 0, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity]);
+            this.draw2D([regionX, regionY, heroW, heroH], this.opts.heroSliceType, NaN, [Infinity, Infinity]);
           } else {
             const ltwh2 = ltwh.slice();
-            const canvasW = this.effectiveCanvasWidth();
-            if (heroW === canvasW) {
+            if (heroW === regionW) {
               ltwh2[0] = 0;
             }
-            this.draw3D([ltwh2[0], 0, heroW, heroH]);
+            this.draw3D([regionX + ltwh2[0], regionY, heroW, heroH]);
           }
           ltwh[0] += heroImageWH[0];
           ltwh[1] += heroImageWH[1];
@@ -47851,20 +48137,32 @@ var Niivue = class {
         const actualY = actualScale[1] * ltwh[4];
         const actualZ = actualScale[2] * ltwh[4];
         if (isDrawColumn) {
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY]);
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad, sX, sZ], 1, NaN, [actualX, actualZ]);
-          this.draw2D([ltwh[0], ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2, NaN, [actualY, actualZ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], 0 /* AXIAL */, NaN, [actualX, actualY]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad, sX, sZ], 1 /* CORONAL */, NaN, [
+            actualX,
+            actualZ
+          ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2 /* SAGITTAL */, NaN, [
+            actualY,
+            actualZ
+          ]);
           if (isDraw3D) {
             const sMx = mx * ltwh[4];
-            this.draw3D([ltwh[0], ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx]);
+            this.draw3D([regionX + ltwh[0], regionY + ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx]);
           }
         } else if (isDrawRow) {
-          this.draw2D([ltwh[0], ltwh[1], sX, sY], 0, NaN, [actualX, actualY]);
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ]);
-          this.draw2D([ltwh[0] + sX + sX + pad * 2, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], 0 /* AXIAL */, NaN, [actualX, actualY]);
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sX, sZ], 1 /* CORONAL */, NaN, [
+            actualX,
+            actualZ
+          ]);
+          this.draw2D([regionX + ltwh[0] + sX + sX + pad * 2, regionY + ltwh[1], sY, sZ], 2 /* SAGITTAL */, NaN, [
+            actualY,
+            actualZ
+          ]);
           if (isDraw3D) {
             const sMx = mx * ltwh[4];
-            this.draw3D([ltwh[0] + sX + sX + sY + pad * 3, ltwh[1], sMx, sMx]);
+            this.draw3D([regionX + ltwh[0] + sX + sX + sY + pad * 3, regionY + ltwh[1], sMx, sMx]);
           }
         } else if (isDrawGrid) {
           if (!isShowRender) {
@@ -47876,11 +48174,17 @@ var Niivue = class {
           if (isHeroImage) {
             isDraw3D = false;
           }
-          this.draw2D([ltwh[0], ltwh[1] + sZ + pad, sX, sY], 0, NaN, [actualX, actualY]);
-          this.draw2D([ltwh[0], ltwh[1], sX, sZ], 1, NaN, [actualX, actualZ]);
-          this.draw2D([ltwh[0] + sX + pad, ltwh[1], sY, sZ], 2, NaN, [actualY, actualZ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sZ + pad, sX, sY], 0 /* AXIAL */, NaN, [
+            actualX,
+            actualY
+          ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sZ], 1 /* CORONAL */, NaN, [actualX, actualZ]);
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sY, sZ], 2 /* SAGITTAL */, NaN, [
+            actualY,
+            actualZ
+          ]);
           if (isDraw3D) {
-            this.draw3D([ltwh[0] + sX + pad, ltwh[1] + sZ + pad, sY, sY]);
+            this.draw3D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1] + sZ + pad, sY, sY]);
           }
         }
       }
@@ -48021,6 +48325,7 @@ var Niivue = class {
     this.readyForSync = true;
     this.sync();
     this.drawAnchoredLabels();
+    this.drawBoundsBorder();
     return posString;
   }
   /**

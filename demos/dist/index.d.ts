@@ -761,6 +761,9 @@ type NVConfigOptions = {
     gradientAmount: number;
     invertScrollDirection: boolean;
     is2DSliceShader: boolean;
+    bounds: [[number, number], [number, number]] | null;
+    showBoundsBorder?: boolean;
+    boundsBorderColor?: number[];
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type SceneData = {
@@ -2835,7 +2838,12 @@ declare class Niivue {
      */
     mouseDown(x: number, y: number): void;
     /**
-     * Updates mouse position and modifies 3D render view if the pointer is in the render tile.
+     * Updates mouse position
+     * @internal
+     */
+    updateMousePos(x: number, y: number): [number, number];
+    /**
+     *  and modifies 3D render view if the pointer is in the render tile.
      *
      * @internal
      */
@@ -2909,6 +2917,16 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
      */
     setSelectionBoxColor(color: number[]): void;
+    /**
+     * Update the drawing bounds for this Niivue instance.
+     *
+     * @param bounds - [x1, y1, x2, y2] in normalized (0–1) coordinates.
+     *
+     * Example:
+     *   nv.setBounds([0,0,0.5,0.5])   // top-left quarter
+     *   nv.setBounds([0.5,0.5,1,1])   // bottom-right quarter
+     */
+    setBounds(bounds: [number, number, number, number]): void;
     /**
      * Handles mouse wheel or trackpad scroll to change slices, zoom, or frame depending on context.
      * @internal
@@ -3939,6 +3957,7 @@ declare class Niivue {
      * @internal
      */
     drawRect(leftTopWidthHeight: number[], lineColor?: number[]): void;
+    private drawBoundsBox;
     /**
      * Draw a circle or outline at given position with specified color or default crosshair color.
      * @internal
@@ -3986,7 +4005,8 @@ declare class Niivue {
      */
     getLegendPanelHeight(panelScale?: number): number;
     /**
-     * Calculate and reserve canvas area for colorbar panel.
+     * Calculate and reserve canvas area for colorbar panel,
+     * respecting opts.bounds if defined.
      * @internal
      */
     reserveColorbarPanel(): number[];
@@ -4125,10 +4145,14 @@ declare class Niivue {
      */
     draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number, imageWidthHeight?: number[]): void;
     /**
-     * Computes 3D model-view-projection matrices based on view angles and canvas size.
-     * @internal
+     * Build MVP, Model, and Normal matrices for rendering.
+     * @param _unused - reserved
+     * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
+     * @param azimuth - azimuth rotation in degrees
+     * @param elevation - elevation rotation in degrees
+     * @param flipX - whether to mirror the X axis (default true for radiological convention)
      */
-    calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number): mat4[];
+    calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number, flipX?: boolean): mat4[];
     /**
      * Computes the model transformation matrix for the given azimuth and elevation.
      * Applies optional oblique RAS rotation if available.
@@ -4357,6 +4381,49 @@ declare class Niivue {
      * @internal
      */
     calculateWidthHeight(sliceType: number, volScale: number[], containerWidth: number, containerHeight: number): [number, number];
+    /**
+     * Convert opts.bounds into CSS pixel coordinates (for hit testing).
+     * @returns [x, y, width, height] in CSS pixels
+     */
+    private getBoundsRegionCSS;
+    /**
+     * Returns true if a mouse/touch event happened inside this instance’s bounds.
+     */
+    eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean;
+    /**
+     * Check whether the last known mouse cursor position is inside this instance's bounds.
+     *
+     * Used to filter keyboard events so they are only handled by the Niivue instance
+     * whose bounds currently contain the cursor.
+     *
+     * @returns true if the cursor is inside this.opts.bounds, false otherwise.
+     * @internal
+     */
+    private cursorInBounds;
+    /**
+     * Compute the current drawing region from opts.bounds.
+     * Returns [x, y, width, height] in device pixels, bottom-left origin.
+     */
+    private getBoundsRegion;
+    /**
+     * Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
+     */
+    inBounds(x: number, y: number): boolean;
+    /**
+     * Rebind all textures for this instance.
+     * Call this at the start of every draw pass if multiple instances share a GL context.
+     */
+    private bindTextures;
+    /**
+     * Clear a rectangular region of this instance's canvas.
+     *
+     * @param mask - bitmask of buffers to clear (default: color+depth).
+     * @param ltwh - optional [x, y, w, h] region in *device px* (GL coords, bottom-left).
+     *   If not provided, clears the full instance bounds (getBoundsRegion).
+     *   For multiplanar panels, pass the panel’s own [x,y,w,h].
+     */
+    clearBounds(mask?: number, ltwh?: [number, number, number, number]): void;
+    private drawBoundsBorder;
     /**
      * Core function to draw the entire scene including volumes, meshes, slices, overlays, colorbars, graphs, and handle user interaction like dragging.
      * @internal

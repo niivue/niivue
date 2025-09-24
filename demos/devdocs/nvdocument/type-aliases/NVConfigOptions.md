@@ -40,6 +40,29 @@ Defined in: [nvdocument.ts:131](https://github.com/niivue/niivue/blob/main/packa
 
 ---
 
+### bounds
+
+```ts
+bounds: [
+  [number, number],
+  [number, number],
+] | null;
+```
+
+Defined in: [nvdocument.ts:245](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L245)
+
+---
+
+### boundsBorderColor?
+
+```ts
+optional boundsBorderColor: number[];
+```
+
+Defined in: [nvdocument.ts:247](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L247)
+
+---
+
 ### centerMosaic
 
 ```ts
@@ -947,6 +970,16 @@ showAllOrientationMarkers: boolean;
 ```
 
 Defined in: [nvdocument.ts:176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L176)
+
+---
+
+### showBoundsBorder?
+
+```ts
+optional showBoundsBorder: boolean;
+```
+
+Defined in: [nvdocument.ts:246](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L246)
 
 ---
 
