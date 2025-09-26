@@ -1,9 +1,47 @@
 import { UIKAsset } from "./uikasset.js"
+import { Color } from '../types'
 
 export type GlyphMetrics = {
   xadv: number
   uv_lbwh: [number, number, number, number]
   lbwh: [number, number, number, number]
+}
+
+/**
+ * Outline style options for enhanced text readability
+ */
+export type UIKFontOutlineStyle = 'solid' | 'glow' | 'inner' | 'outer'
+
+/**
+ * Comprehensive outline configuration for UIKFont
+ */
+export interface UIKFontOutlineConfig {
+  /** Enable/disable outline rendering */
+  enabled: boolean
+  /** Outline width (0.0 - 1.0, relative to font size) */
+  width: number
+  /** Outline color (RGBA) */
+  color: Color
+  /** Outline rendering style */
+  style: UIKFontOutlineStyle
+  /** Edge softness for smooth transitions (0.0 - 1.0) */
+  softness: number
+  /** X,Y offset for drop-shadow style outlines */
+  offset: [number, number]
+}
+
+/**
+ * Outline metrics for text measurement calculations
+ */
+export interface UIKFontOutlineMetrics {
+  /** Additional width added by outline */
+  additionalWidth: number
+  /** Additional height added by outline */
+  additionalHeight: number
+  /** X offset for positioning */
+  xOffset: number
+  /** Y offset for positioning */
+  yOffset: number
 }
 
 export interface FontMetrics {
@@ -75,11 +113,174 @@ export class UIKFont extends UIKAsset {
   public style = ""
   public color: number[] = [1, 1, 1, 1] // Default white color
 
+  // Enhanced outline configuration properties
+  public outlineConfig: UIKFontOutlineConfig = {
+    enabled: false,
+    width: 0.2,
+    color: [0, 0, 0, 1],
+    style: 'solid',
+    softness: 0.1,
+    offset: [0, 0]
+  }
+
+  // Global default outline configuration for medical imaging
+  private static globalOutlineDefaults: UIKFontOutlineConfig = {
+    enabled: true,
+    width: 0.25,
+    color: [0, 0, 0, 0.8],
+    style: 'solid',
+    softness: 0.15,
+    offset: [0, 0]
+  }
+
   constructor(gl: WebGL2RenderingContext, color?: number[]) {
     super(gl)
     if (color) {
       this.color = color
     }
+    // Apply global defaults for medical imaging
+    this.outlineConfig = { ...UIKFont.globalOutlineDefaults }
+  }
+
+  /**
+   * Set global default outline configuration for all UIKFont instances
+   * Optimized for medical imaging applications
+   */
+  public static setGlobalOutlineDefaults(config: Partial<UIKFontOutlineConfig>): void {
+    UIKFont.globalOutlineDefaults = {
+      ...UIKFont.globalOutlineDefaults,
+      ...config
+    }
+  }
+
+  /**
+   * Get current global outline defaults
+   */
+  public static getGlobalOutlineDefaults(): UIKFontOutlineConfig {
+    return { ...UIKFont.globalOutlineDefaults }
+  }
+
+  /**
+   * Configure outline settings for this font instance
+   */
+  public setOutlineConfig(config: Partial<UIKFontOutlineConfig>): void {
+    this.outlineConfig = {
+      ...this.outlineConfig,
+      ...config
+    }
+    
+    // Validate configuration
+    this.validateOutlineConfig()
+  }
+
+  /**
+   * Get current outline configuration
+   */
+  public getOutlineConfig(): UIKFontOutlineConfig {
+    return { ...this.outlineConfig }
+  }
+
+  /**
+   * Validate outline configuration parameters
+   */
+  private validateOutlineConfig(): void {
+    const config = this.outlineConfig
+    
+    // Clamp width to valid range
+    config.width = Math.max(0, Math.min(1, config.width))
+    
+    // Clamp softness to valid range
+    config.softness = Math.max(0, Math.min(1, config.softness))
+    
+    // Validate color format
+    if (config.color.length !== 4) {
+      console.warn('UIKFont: Invalid outline color format, using default black')
+      config.color = [0, 0, 0, 1]
+    }
+    
+    // Clamp color values
+    config.color = config.color.map(c => Math.max(0, Math.min(1, c))) as Color
+    
+    // Validate style
+    const validStyles: UIKFontOutlineStyle[] = ['solid', 'glow', 'inner', 'outer']
+    if (!validStyles.includes(config.style)) {
+      console.warn(`UIKFont: Invalid outline style '${config.style}', using 'solid'`)
+      config.style = 'solid'
+    }
+  }
+
+  /**
+   * Calculate outline metrics for text measurement
+   */
+  public getOutlineMetrics(text: string, scale: number = 1.0): UIKFontOutlineMetrics {
+    if (!this.outlineConfig.enabled || this.outlineConfig.width === 0) {
+      return {
+        additionalWidth: 0,
+        additionalHeight: 0,
+        xOffset: 0,
+        yOffset: 0
+      }
+    }
+    
+    const outlineSize = this.outlineConfig.width * scale * 10 // Convert to pixel units
+    const offsetX = this.outlineConfig.offset[0] * scale
+    const offsetY = this.outlineConfig.offset[1] * scale
+    
+    // Calculate additional dimensions based on outline style
+    let additionalWidth = 0
+    let additionalHeight = 0
+    
+    switch (this.outlineConfig.style) {
+      case 'outer':
+      case 'glow':
+        additionalWidth = outlineSize * 2
+        additionalHeight = outlineSize * 2
+        break
+      case 'solid':
+        additionalWidth = outlineSize
+        additionalHeight = outlineSize
+        break
+      case 'inner':
+        // Inner outlines don't add to dimensions
+        additionalWidth = 0
+        additionalHeight = 0
+        break
+    }
+    
+    return {
+      additionalWidth: additionalWidth + Math.abs(offsetX),
+      additionalHeight: additionalHeight + Math.abs(offsetY),
+      xOffset: Math.min(0, offsetX - outlineSize / 2),
+      yOffset: Math.min(0, offsetY - outlineSize / 2)
+    }
+  }
+
+  /**
+   * Enable outline with quick configuration for medical imaging
+   */
+  public enableMedicalOutline(style: UIKFontOutlineStyle = 'solid'): void {
+    this.setOutlineConfig({
+      enabled: true,
+      width: 0.25,
+      color: [0, 0, 0, 0.8],
+      style: style,
+      softness: 0.15,
+      offset: [0, 0]
+    })
+  }
+
+  /**
+   * Disable outline rendering
+   */
+  public disableOutline(): void {
+    this.setOutlineConfig({ enabled: false })
+  }
+
+  /**
+   * Check if outline is currently enabled
+   */
+  public isOutlineEnabled(): boolean {
+    return this.outlineConfig.enabled && this.outlineConfig.width > 0
   }
 
   public async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>  {
