@@ -33,179 +33,7 @@
     <script type="module">
       import { Niivue, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
 
-      function findAxisProblems(nv1) {
-        const planes = nv1.scene.clipPlanes || [];
-        const axisBuckets = { X: [], Y: [], Z: [], OTHER: [] };
-        planes.forEach((p,i) => {
-          const [nx,ny,nz,w] = p.map(v => +v.toFixed(6));
-          if (Math.abs(nx) > 0.9) axisBuckets.X.push({i,p});
-          else if (Math.abs(ny) > 0.9) axisBuckets.Y.push({i,p});
-          else if (Math.abs(nz) > 0.9) axisBuckets.Z.push({i,p});
-          else axisBuckets.OTHER.push({i,p});
-        });
-        console.log(axisBuckets);
-        for (const a of ['X','Y','Z']) {
-          if ((axisBuckets[a]||[]).length !== 2) console.warn(`${a} has ${(axisBuckets[a]||[]).length} planes`);
-          else {
-            const s = axisBuckets[a].map(x => Math.sign(x.p[[0,1,2].findIndex(v=>Math.abs(x.p[[0,1,2].findIndex(()=>0)]) )])); // skip; we'll just print
-            console.log(a, axisBuckets[a].map(x=>[x.i, x.p]));
-          }
-        }
-      }
-
-      // Auto-fix axis plane normals and w so each axis has opposing normals and center is inside.
-function autoFixAxisPlanes(nv1, eps = 1e-9) {
-  const planes = nv1.scene.clipPlanes || [];
-  if (planes.length < 6) {
-    console.warn('expected 6 planes, found', planes.length);
-    return;
-  }
-
-  // classify planes by axis
-  const buckets = { X: [], Y: [], Z: [], OTHER: [] };
-  planes.forEach((p, i) => {
-    const [nx, ny, nz] = p;
-    if (Math.abs(nx) > 0.9) buckets.X.push({ i, p: p.slice() });
-    else if (Math.abs(ny) > 0.9) buckets.Y.push({ i, p: p.slice() });
-    else if (Math.abs(nz) > 0.9) buckets.Z.push({ i, p: p.slice() });
-    else buckets.OTHER.push({ i, p: p.slice() });
-  });
-
-  console.log('Buckets', {
-    X: buckets.X.map(x => [x.i, x.p]),
-    Y: buckets.Y.map(x => [x.i, x.p]),
-    Z: buckets.Z.map(x => [x.i, x.p]),
-    OTHER: buckets.OTHER
-  });
-
-  function coordFromPlane(p) {
-    const [nx, ny, nz, w] = p;
-    if (Math.abs(nx) > 0.9) return 0.5 - w / nx;
-    if (Math.abs(ny) > 0.9) return 0.5 - w / ny;
-    if (Math.abs(nz) > 0.9) return 0.5 - w / nz;
-    return NaN;
-  }
-  function makePlaneForAxis(axis, n_axis, coord) {
-    let nx=0, ny=0, nz=0;
-    if (axis === 'X') nx = n_axis;
-    if (axis === 'Y') ny = n_axis;
-    if (axis === 'Z') nz = n_axis;
-    const w = - n_axis * (coord - 0.5);
-    return [nx, ny, nz, w];
-  }
-
-  // For each axis, ensure exactly two planes; compute coords and rewrite
-  ['X','Y','Z'].forEach(axis => {
-    const list = buckets[axis];
-    if (list.length !== 2) {
-      console.warn(`axis ${axis} has ${list.length} planes (expected 2). Skipping auto-fix for this axis.`);
-      return;
-    }
-    // compute current coords
-    const coords = list.map(o => ({ idx: o.i, coord: coordFromPlane(o.p) }));
-    // sort by coord
-    coords.sort((a,b) => a.coord - b.coord);
-    const min = coords[0], max = coords[1];
-    // build correct planes: min gets n=-1, max gets n=+1
-    const correctedMinPlane = makePlaneForAxis(axis, -1, min.coord);
-    const correctedMaxPlane = makePlaneForAxis(axis, +1, max.coord);
-
-    // install back into scene.clipPlanes preserving array order
-    nv1.scene.clipPlanes[min.idx] = correctedMinPlane;
-    nv1.scene.clipPlanes[max.idx] = correctedMaxPlane;
-
-    console.log(`Axis ${axis}: idx ${min.idx} -> coord ${min.coord.toFixed(4)} (min), idx ${max.idx} -> coord ${max.coord.toFixed(4)} (max)`);
-    console.log('  corrected min plane:', correctedMinPlane);
-    console.log('  corrected max plane:', correctedMaxPlane);
-  });
-
-  // install and redraw
-  nv1.scene.clipPlaneCount = nv1.scene.clipPlanes.length;
-  // also ensure opts mode is AND so behavior is intersection
-  nv1.opts.clipPlaneMode = 'and';
-  nv1.setClipPlaneMode('and'); // keeps API consistent (opts-only setter)
-  nv1.drawScene();
-
-  console.log('Auto-fix complete. New planes:', nv1.scene.clipPlanes);
-  return nv1.scene.clipPlanes;
-}
-
-function inspectPlanesAndCenter(nv1) {
-  (nv1.scene.clipPlanes || []).forEach((p,i) => {
-    const [nx,ny,nz,w] = p;
-    const axis = Math.abs(nx) > 0.9 ? 'X' : Math.abs(ny) > 0.9 ? 'Y' : Math.abs(nz) > 0.9 ? 'Z' : '?';
-    const n_axis = axis === 'X' ? nx : axis === 'Y' ? ny : nz;
-    const coord = (Math.abs(n_axis) > 0.9) ? (0.5 - w / n_axis) : NaN;
-    console.log(i, 'axis', axis, 'normal', [nx,ny,nz].map(v=>v.toFixed(4)), 'w', w.toFixed(6), 'coord', isFinite(coord) ? coord.toFixed(6) : 'NaN');
-  });
-  // test center inside
-  const centerInside = (function() {
-    for (let i=0;i<(nv1.scene.clipPlanes||[]).length;i++){
-      const p = nv1.scene.clipPlanes[i];
-      const n = [p[0],p[1],p[2]];
-      const w = p[3];
-      const dist = n[0]*(0.5-0.5)+n[1]*(0.5-0.5)+n[2]*(0.5-0.5) + w;
-      if (dist > 0) return false;
-    }
-    return true;
-  })();
-  console.log('centerInside?', centerInside);
-}
-
-function reorderAndNormalizePlanes(nv1, eps = 1e-9) {
-  const planes = (nv1.scene.clipPlanes || []).map(p => p.map(v => (Math.abs(v) < eps ? 0 : v)));
-  if (planes.length < 6) {
-    console.warn('expected 6 planes, found', planes.length);
-    return;
-  }
-
-  // helper coord extraction for axis-aligned plane
-  function coordFromPlane(p) {
-    const [nx,ny,nz,w] = p;
-    if (Math.abs(nx) > 0.9) return { axis:'X', coord: 0.5 - w / nx };
-    if (Math.abs(ny) > 0.9) return { axis:'Y', coord: 0.5 - w / ny };
-    if (Math.abs(nz) > 0.9) return { axis:'Z', coord: 0.5 - w / nz };
-    return { axis:'?', coord: NaN };
-  }
-
-  // collect axis groups
-  const groups = { X: [], Y: [], Z: [] };
-  planes.forEach((p,i)=> {
-    const d = coordFromPlane(p);
-    if (d.axis !== '?') groups[d.axis].push({ i, coord:d.coord, p: p.slice() });
-  });
-
-  // sanity check
-  ['X','Y','Z'].forEach(a => {
-    if (groups[a].length !== 2) console.warn(a, 'has', groups[a].length, 'planes (expected 2)');
-  });
-
-  // sort each axis by coord and build canonical planes [min(-1), max(+1)]
-  const ordered = [];
-  ['X','Y','Z'].forEach(a => {
-    const arr = groups[a].slice();
-    arr.sort((A,B)=>A.coord - B.coord);
-    const minCoord = arr[0].coord, maxCoord = arr[1].coord;
-    if (a === 'X') {
-      ordered.push([ -1, 0, 0, -(-1) * (minCoord - 0.5) ]); // Xmin
-      ordered.push([ +1, 0, 0, -(+1) * (maxCoord - 0.5) ]); // Xmax
-    } else if (a === 'Y') {
-      ordered.push([ 0, -1, 0, -(-1) * (minCoord - 0.5) ]); // Ymin
-      ordered.push([ 0, +1, 0, -(+1) * (maxCoord - 0.5) ]); // Ymax
-    } else {
-      ordered.push([ 0, 0, -1, -(-1) * (minCoord - 0.5) ]); // Zmin
-      ordered.push([ 0, 0, +1, -(+1) * (maxCoord - 0.5) ]); // Zmax
-    }
-  });
-
-  nv1.scene.clipPlanes = ordered;
-  nv1.scene.clipPlaneCount = ordered.length;
-  nv1.opts.clipPlaneMode = 'and';
-  nv1.setClipPlaneMode('and');
-  nv1.drawScene();
-  console.log('Reordered & normalized clipPlanes -> canonical order (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax):', ordered);
-  return ordered;
-}
+     
 
 
 
@@ -239,17 +67,9 @@ function reorderAndNormalizePlanes(nv1, eps = 1e-9) {
         [0.20,   0,  90]  // Z+  normal +Z (top)
       ];
 
-      nv1.setClipPlaneMode('and');     // opts-only update
+      nv1.setClipPlaneMode('slides');     // opts-only update
       nv1.setClipPlanes(boxPlanes);    // replaces scene.clipPlanes etc.
       
-      // sanitizePlanesAndReport(nv1);
-      // findAxisProblems(nv1);
-      // run it
-      // autoFixAxisPlanes(nv1);
-      // inspectPlanesAndCenter(nv1);
-      // Run it:
-      reorderAndNormalizePlanes(nv1);
-
 
 
 
@@ -319,7 +139,7 @@ function reorderAndNormalizePlanes(nv1, eps = 1e-9) {
       // load a demo volume
       await nv1.loadVolumes([{ url: '../demos/images/mni152.nii.gz' }]);
       nv1.setSliceType(nv1.sliceTypeRender);
-
+      nv1.setClipPlaneThick(1.0);
       // example planes (depth/azimuth/elevation triplets) — you can replace these
       const depthAziElevs = [
         [0.2, 270, 0],  // X min (left)
@@ -349,7 +169,7 @@ function reorderAndNormalizePlanes(nv1, eps = 1e-9) {
       // toggle between 'and' and 'corner'
       toggleModeBtn.onclick = () => {
         const cur = nv1.opts.clipPlaneMode || 'corner';
-        const next = (cur === 'and') ? 'corner' : 'and';
+        const next = (cur === 'slides') ? 'corner' : 'slides';
         if(next === 'corner') {
           const depthAziElevs = [
             [0.2, 270, 0],  // X min (left)

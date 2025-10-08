@@ -272,7 +272,7 @@ const MESH_EXTENSIONS = [
 ]
 
 // clip plane modes
-const modeMap: Record<string, number> = { and: 0, or: 1, corner: 2 }
+const modeMap: Record<string, number> = { and: 0, or: 1, corner: 2, slide: 3 }
 
 // mouse button codes
 const LEFT_MOUSE_BUTTON = 0

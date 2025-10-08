@@ -243,6 +243,41 @@ vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool
 
 		return samplePos;
 	}
+	else if (uClipPlaneMode == 3) {
+		 // The start is inside the intersection. Find the nearest forward intersection
+        // (smallest positive t) with any clip plane and advance the ray to that face.
+        float tClosest = 1.0e9;
+        bool found = false;
+
+        for (int i = 0; i < uClipPlaneCount; i++) {
+            vec4 plane = uClipPlanes[i];
+            vec3 n = plane.xyz;
+            float cdot = dot(dir, n);
+            if (abs(cdot) < 1e-6) continue; // parallel-ish
+
+            // compute t where start + dir * t intersects this plane
+            float numer = -(plane.w + dot(n, samplePos.xyz - vec3(0.5)));
+            float t = numer / cdot;
+
+            // choose smallest positive t (closest face in front of start)
+            if (t > 0.0 && t < tClosest) {
+                tClosest = t;
+                found = true;
+            }
+        }
+
+        if (found) {
+            // advance to closest face and clamp len so we only sample up to that face
+            samplePos = vec4(samplePos.xyz + dir * tClosest, tClosest);
+            len = min(len, tClosest);
+            isClip = true;
+        } else {
+            // No forward-facing intersection found — abort
+            len = 0.0;
+        }
+
+        return samplePos;
+	}
 
     return samplePos; // no clipping if mode invalid
 }

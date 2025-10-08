@@ -133,7 +133,7 @@ export type NVConfigOptions = {
   fontColor: Float32List
   selectionBoxColor: number[]
   clipPlaneColor: number[]
-  clipPlaneMode: 'and' | 'or' | 'corner'
+  clipPlaneMode: 'and' | 'or' | 'corner' | 'slides'
   paqdUniforms: number[]
   clipThick: number
   clipVolumeLow: number[]
