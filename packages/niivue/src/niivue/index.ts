@@ -4204,7 +4204,7 @@ export class Niivue {
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.com/demos/features/mesh.4D.html | live demo usage}
    */
-  async setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
+  async setMeshLayerProperty(mesh: number | string, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
@@ -7299,7 +7299,7 @@ export class Niivue {
    * @example niivue.setMeshShader('toon');
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
-  setMeshShader(id: number, meshShaderNameOrNumber = 2): void {
+  setMeshShader(id: number | string, meshShaderNameOrNumber: number | string = 2): void {
     let shaderIndex: number | undefined = 0
     if (typeof meshShaderNameOrNumber === 'number') {
       shaderIndex = meshShaderNameOrNumber
@@ -13629,7 +13629,8 @@ export class Niivue {
 
     // Flip Y for GL viewport
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
-
+    gl.clearDepth(0.0) // reset depth to nearest=0
+    gl.clear(gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
@@ -13698,7 +13699,7 @@ export class Niivue {
         undefined,
         this.scene.renderAzimuth,
         this.scene.renderElevation,
-        false // no flipX for meshes
+        true // no flipX for meshes
       )
     }
 
@@ -13706,8 +13707,6 @@ export class Niivue {
 
     // Use inverted depth convention (matches current MVP math)
     if (isDepthTest) {
-      gl.clearDepth(0.0) // reset depth to nearest=0
-      gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.depthFunc(gl.GREATER) // farther depth wins
     } else {
       gl.depthFunc(gl.ALWAYS)
