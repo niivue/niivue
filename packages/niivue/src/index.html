@@ -4,266 +4,368 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>NiiVue</title>
+    <title>NiiVue Clip Mode Demo</title>
     <link rel="stylesheet" href="niivue.css" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+      header { padding: 8px; display:flex; gap:10px; align-items:center; background:#1b415f; color:white; }
+      #controls { display:flex; gap:10px; align-items:center; }
+      #controls button { padding:6px 10px; font-size:14px; }
+      main { width:100vw; height:calc(100vh - 56px); }
+      canvas { width:100%; height:100%; display:block; }
+    </style>
   </head>
   <body>
-    <noscript>
-      <strong>niivue requires JavaScript.</strong>
-    </noscript>
     <header>
-      <button id="openBtn">Choose an image or mesh with a dialog</button>
-      <label for="fiberRadius">Radius</label>
-      <input type="range" min="0" max="20" value="5" class="slider" id="fiberRadius" />
-      <label for="fiberDitherSlider">Dither</label>
-      <input type="range" min="0" max="10" value="0" class="slider" id="fiberDitherSlider" />
-      <label for="fiberColor">Fiber color</label>
-      <select id="fiberColor">
-        <option value="Global">Global direction</option>
-        <option value="Local">Local direction</option>
-        <option value="Fixed">Fixed</option>
-        <option value="DPV0" selected>First Per Vertex Type (if available)</option>
-      </select>
-      <label for="fiberColormap">Colormap</label>
-      <select id="fiberColormap">
-        <option value="actc">ACTC</option>
-        <option value="inferno" selected>Inferno</option>
-        <option value="plasma">Plasma</option>
-        <option value="warm">Warm</option>
-        <option value="winter">Winter</option>
-      </select>
-      <label for="fiberCalMin">Color Minimum</label>
-      <input type="range" min="10" max="75" value="25" class="slider" id="fiberCalMin" />
-      <label for="layoutSelect">Layout</label>
-      <select id="layoutSelect">
-        <option value="0" selected>Auto</option>
-        <option value="1">Column</option>
-        <option value="2">Grid</option>
-        <option value="3">Row</option>
-      </select>
-      <label for="renderingSelect">MultiplanarRendering</label>
-      <select id="renderingSelect">
-        <option value="0">Never</option>
-        <option value="1">Always</option>
-        <option value="2" selected>Auto</option>
-      </select>
-      <select id="sliceType">
-        <option value="0">Axial</option>
-        <option value="1">Coronal</option>
-        <option value="2">Sagittal</option>
-        <option value="4">Render</option>
-        <option value="3" selected>Multiplanar</option>
-      </select>
-      <label for="equalCheck">EqualSize</label>
-      <input type="checkbox" id="equalCheck" checked />
-      <label for="cornerCheck">CornerText</label>
-      <input type="checkbox" id="cornerCheck" unchecked />
-      <label for="marginCheck">TileMargin</label>
-      <input type="checkbox" id="marginCheck" unchecked />
-      <label for="heroSlider">Hero Image</label>
-      <input type="range" min="0" max="9" value="0" class="slider" id="heroSlider" />
-    </header>
-    <main id="canvas-container">
-      <div style="display: flex; width: 100%; height: 100%">
-        <canvas id="gl1"></canvas>
+      <button id="openBtn">Open NIfTI</button>
+      <div id="controls">
+        <button id="toggleModeBtn">Mode: corner</button>
+        <button id="setBoxBtn">Set Box (example)</button>
       </div>
+      <div style="margin-left:auto; color:#cfe8ff; font-size:0.9rem">Simple demo: AND vs CORNER modes</div>
+    </header>
+
+    <main id="canvas-container">
+      <canvas id="gl1"></canvas>
     </main>
-    <footer>
-      <label id="shaders">Shaders: </label>
-    </footer>
-    <script type="module" async>
-      import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
-      async function addVolumeFromFiles(f) {
-        console.log('attempting to open ', f[0].name)
-        console.log('details', f[0])
-        nv1.loadFromFile(f[0])
-      }
-      openBtn.onclick = function () {
-        let input = document.createElement('input')
-        input.style.display = 'none'
-        input.type = 'file'
-        document.body.appendChild(input)
-        input.onchange = function (event) {
-          addVolumeFromFiles(event.target.files)
-        }
-        input.click()
-      }
-      fiberRadius.oninput = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberRadius', this.value * 0.1)
-        nv1.updateGLVolume()
-      }
-      fiberColor.onchange = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', this.value)
-      }
-      fiberColormap.onchange = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'colormap', this.value)
-      }
 
-      fiberDitherSlider.oninput = function () {
-        nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', this.value * 0.1)
-      }
-      fiberCalMin.oninput = function () {
-        nv1.meshes[0].dpv[0].cal_min = this.value * 1 //*1 converts string to number
-        nv1.setMeshProperty(nv1.meshes[0].id, 'colormap', fiberColormap.value)
-      }
-      layoutSelect.onchange = function () {
-        nv1.setMultiplanarLayout(Number(this.value))
-      }
-      renderingSelect.onchange = function () {
-        nv1.opts.multiplanarShowRender = Number(this.value)
-        nv1.drawScene()
-      }
-      equalCheck.onchange = function () {
-        nv1.opts.multiplanarEqualSize = this.checked
-        nv1.drawScene()
-      }
-      marginCheck.onchange = function () {
-        nv1.opts.tileMargin = this.checked ? -1 : 0
-        nv1.drawScene()
-      }
-      cornerCheck.onchange = function () {
-        //nv1.opts.isCornerOrientationText = this.checked\
-        nv1.setCornerOrientationText(this.checked)
-      }
-      heroSlider.oninput = function () {
-        nv1.setHeroImage(this.value * 0.1)
-      }
-      sliceType.onchange = function () {
-        let st = parseInt(document.getElementById('sliceType').value)
-        nv1.setSliceType(st)
-      }
-      var volumeList1 = [{ url: '../demos/images/mni152.nii.gz' }]
+    <script type="module">
+      import { Niivue, SHOW_RENDER, DRAG_MODE } from './niivue/index.ts'
 
-      // with roiSelect, show the stats from the ROI in a temporary div
-      const onDragRelease = (data) => {
-        // if there is a div with the id dragReleaseDiv, remove it
-        const divToRemove = document.getElementById('dragReleaseDiv')
-        if (divToRemove) {
-          divToRemove.remove()
-        }
-
-        console.log('drag release', data)
-        let obj = nv1.getDescriptives({
-          layer: 0,
-          startVox: data.voxStart,
-          endVox: data.voxEnd,
-          roiIsMask: true
-        })
-        console.log(obj)
-        // get dpr
-        const dpr = window.devicePixelRatio
-        // get mouse x,y. Divide by dpr to get the correct position
-        const x = nv1.uiData.dragEnd[0] / dpr
-        const y = nv1.uiData.dragEnd[1] / dpr
-        console.log(x, y)
-        const pad = 1
-        const div = document.createElement('div')
-        // set id for removal on the next pass
-        div.id = 'dragReleaseDiv'
-        div.style.color = 'red'
-        div.style.position = 'absolute'
-        div.style.backgroundColor = 'black'
-        div.style.opacity = 0.8
-        div.style.padding = '5px'
-        // set z-index to be well above the canvas
-        div.style.zIndex = 1000
-        div.innerHTML = `Mean: ${obj.mean}<br>Area: ${obj.area}<br>Stdev: ${obj.stdev}`
-        // set position to be at the mouse x,y relative to the canvas
-        div.style.left = x + pad + 'px'
-        div.style.top = y + pad + 'px'
-        // get the canvas element reference from niivue
-        const canvas = nv1.gl.canvas
-        // niivue should always be in a container, so get the parent of the canvas
-        const parentDiv = canvas.parentElement
-        parentDiv.appendChild(div)
-      }
-
-      const onLocationChange = (data) => {
-        // remove the stats div if it exists when the user clicks away
-        const divToRemove = document.getElementById('dragReleaseDiv')
-        if (divToRemove) {
-          divToRemove.remove()
+      function findAxisProblems(nv1) {
+        const planes = nv1.scene.clipPlanes || [];
+        const axisBuckets = { X: [], Y: [], Z: [], OTHER: [] };
+        planes.forEach((p,i) => {
+          const [nx,ny,nz,w] = p.map(v => +v.toFixed(6));
+          if (Math.abs(nx) > 0.9) axisBuckets.X.push({i,p});
+          else if (Math.abs(ny) > 0.9) axisBuckets.Y.push({i,p});
+          else if (Math.abs(nz) > 0.9) axisBuckets.Z.push({i,p});
+          else axisBuckets.OTHER.push({i,p});
+        });
+        console.log(axisBuckets);
+        for (const a of ['X','Y','Z']) {
+          if ((axisBuckets[a]||[]).length !== 2) console.warn(`${a} has ${(axisBuckets[a]||[]).length} planes`);
+          else {
+            const s = axisBuckets[a].map(x => Math.sign(x.p[[0,1,2].findIndex(v=>Math.abs(x.p[[0,1,2].findIndex(()=>0)]) )])); // skip; we'll just print
+            console.log(a, axisBuckets[a].map(x=>[x.i, x.p]));
+          }
         }
       }
-      let defaults = {
-        // backColor: [0, 0.2, 0.4, 1],
-        backColor: [0, 0, 0, 1],
+
+      // Auto-fix axis plane normals and w so each axis has opposing normals and center is inside.
+function autoFixAxisPlanes(nv1, eps = 1e-9) {
+  const planes = nv1.scene.clipPlanes || [];
+  if (planes.length < 6) {
+    console.warn('expected 6 planes, found', planes.length);
+    return;
+  }
+
+  // classify planes by axis
+  const buckets = { X: [], Y: [], Z: [], OTHER: [] };
+  planes.forEach((p, i) => {
+    const [nx, ny, nz] = p;
+    if (Math.abs(nx) > 0.9) buckets.X.push({ i, p: p.slice() });
+    else if (Math.abs(ny) > 0.9) buckets.Y.push({ i, p: p.slice() });
+    else if (Math.abs(nz) > 0.9) buckets.Z.push({ i, p: p.slice() });
+    else buckets.OTHER.push({ i, p: p.slice() });
+  });
+
+  console.log('Buckets', {
+    X: buckets.X.map(x => [x.i, x.p]),
+    Y: buckets.Y.map(x => [x.i, x.p]),
+    Z: buckets.Z.map(x => [x.i, x.p]),
+    OTHER: buckets.OTHER
+  });
+
+  function coordFromPlane(p) {
+    const [nx, ny, nz, w] = p;
+    if (Math.abs(nx) > 0.9) return 0.5 - w / nx;
+    if (Math.abs(ny) > 0.9) return 0.5 - w / ny;
+    if (Math.abs(nz) > 0.9) return 0.5 - w / nz;
+    return NaN;
+  }
+  function makePlaneForAxis(axis, n_axis, coord) {
+    let nx=0, ny=0, nz=0;
+    if (axis === 'X') nx = n_axis;
+    if (axis === 'Y') ny = n_axis;
+    if (axis === 'Z') nz = n_axis;
+    const w = - n_axis * (coord - 0.5);
+    return [nx, ny, nz, w];
+  }
+
+  // For each axis, ensure exactly two planes; compute coords and rewrite
+  ['X','Y','Z'].forEach(axis => {
+    const list = buckets[axis];
+    if (list.length !== 2) {
+      console.warn(`axis ${axis} has ${list.length} planes (expected 2). Skipping auto-fix for this axis.`);
+      return;
+    }
+    // compute current coords
+    const coords = list.map(o => ({ idx: o.i, coord: coordFromPlane(o.p) }));
+    // sort by coord
+    coords.sort((a,b) => a.coord - b.coord);
+    const min = coords[0], max = coords[1];
+    // build correct planes: min gets n=-1, max gets n=+1
+    const correctedMinPlane = makePlaneForAxis(axis, -1, min.coord);
+    const correctedMaxPlane = makePlaneForAxis(axis, +1, max.coord);
+
+    // install back into scene.clipPlanes preserving array order
+    nv1.scene.clipPlanes[min.idx] = correctedMinPlane;
+    nv1.scene.clipPlanes[max.idx] = correctedMaxPlane;
+
+    console.log(`Axis ${axis}: idx ${min.idx} -> coord ${min.coord.toFixed(4)} (min), idx ${max.idx} -> coord ${max.coord.toFixed(4)} (max)`);
+    console.log('  corrected min plane:', correctedMinPlane);
+    console.log('  corrected max plane:', correctedMaxPlane);
+  });
+
+  // install and redraw
+  nv1.scene.clipPlaneCount = nv1.scene.clipPlanes.length;
+  // also ensure opts mode is AND so behavior is intersection
+  nv1.opts.clipPlaneMode = 'and';
+  nv1.setClipPlaneMode('and'); // keeps API consistent (opts-only setter)
+  nv1.drawScene();
+
+  console.log('Auto-fix complete. New planes:', nv1.scene.clipPlanes);
+  return nv1.scene.clipPlanes;
+}
+
+function inspectPlanesAndCenter(nv1) {
+  (nv1.scene.clipPlanes || []).forEach((p,i) => {
+    const [nx,ny,nz,w] = p;
+    const axis = Math.abs(nx) > 0.9 ? 'X' : Math.abs(ny) > 0.9 ? 'Y' : Math.abs(nz) > 0.9 ? 'Z' : '?';
+    const n_axis = axis === 'X' ? nx : axis === 'Y' ? ny : nz;
+    const coord = (Math.abs(n_axis) > 0.9) ? (0.5 - w / n_axis) : NaN;
+    console.log(i, 'axis', axis, 'normal', [nx,ny,nz].map(v=>v.toFixed(4)), 'w', w.toFixed(6), 'coord', isFinite(coord) ? coord.toFixed(6) : 'NaN');
+  });
+  // test center inside
+  const centerInside = (function() {
+    for (let i=0;i<(nv1.scene.clipPlanes||[]).length;i++){
+      const p = nv1.scene.clipPlanes[i];
+      const n = [p[0],p[1],p[2]];
+      const w = p[3];
+      const dist = n[0]*(0.5-0.5)+n[1]*(0.5-0.5)+n[2]*(0.5-0.5) + w;
+      if (dist > 0) return false;
+    }
+    return true;
+  })();
+  console.log('centerInside?', centerInside);
+}
+
+function reorderAndNormalizePlanes(nv1, eps = 1e-9) {
+  const planes = (nv1.scene.clipPlanes || []).map(p => p.map(v => (Math.abs(v) < eps ? 0 : v)));
+  if (planes.length < 6) {
+    console.warn('expected 6 planes, found', planes.length);
+    return;
+  }
+
+  // helper coord extraction for axis-aligned plane
+  function coordFromPlane(p) {
+    const [nx,ny,nz,w] = p;
+    if (Math.abs(nx) > 0.9) return { axis:'X', coord: 0.5 - w / nx };
+    if (Math.abs(ny) > 0.9) return { axis:'Y', coord: 0.5 - w / ny };
+    if (Math.abs(nz) > 0.9) return { axis:'Z', coord: 0.5 - w / nz };
+    return { axis:'?', coord: NaN };
+  }
+
+  // collect axis groups
+  const groups = { X: [], Y: [], Z: [] };
+  planes.forEach((p,i)=> {
+    const d = coordFromPlane(p);
+    if (d.axis !== '?') groups[d.axis].push({ i, coord:d.coord, p: p.slice() });
+  });
+
+  // sanity check
+  ['X','Y','Z'].forEach(a => {
+    if (groups[a].length !== 2) console.warn(a, 'has', groups[a].length, 'planes (expected 2)');
+  });
+
+  // sort each axis by coord and build canonical planes [min(-1), max(+1)]
+  const ordered = [];
+  ['X','Y','Z'].forEach(a => {
+    const arr = groups[a].slice();
+    arr.sort((A,B)=>A.coord - B.coord);
+    const minCoord = arr[0].coord, maxCoord = arr[1].coord;
+    if (a === 'X') {
+      ordered.push([ -1, 0, 0, -(-1) * (minCoord - 0.5) ]); // Xmin
+      ordered.push([ +1, 0, 0, -(+1) * (maxCoord - 0.5) ]); // Xmax
+    } else if (a === 'Y') {
+      ordered.push([ 0, -1, 0, -(-1) * (minCoord - 0.5) ]); // Ymin
+      ordered.push([ 0, +1, 0, -(+1) * (maxCoord - 0.5) ]); // Ymax
+    } else {
+      ordered.push([ 0, 0, -1, -(-1) * (minCoord - 0.5) ]); // Zmin
+      ordered.push([ 0, 0, +1, -(+1) * (maxCoord - 0.5) ]); // Zmax
+    }
+  });
+
+  nv1.scene.clipPlanes = ordered;
+  nv1.scene.clipPlaneCount = ordered.length;
+  nv1.opts.clipPlaneMode = 'and';
+  nv1.setClipPlaneMode('and');
+  nv1.drawScene();
+  console.log('Reordered & normalized clipPlanes -> canonical order (Xmin,Xmax,Ymin,Ymax,Zmin,Zmax):', ordered);
+  return ordered;
+}
+
+
+
+
+
+      /**
+     * Set six axis-aligned clip planes forming a box from min..max in sample space.
+     * min, max: numbers in sample space (0..1)
+     * nv1: your Niivue instance
+     */
+    function setBoxClipPlanes(nv1, min = 0.0, max = 1.0) {
+      // compute depth distances from center (0.5)
+      const depthLeft   = 0.5 - min; // +X face (keep X >= min)
+      const depthRight  = max - 0.5; // -X face (keep X <= max)
+      const depthBack   = 0.5 - min; // +Y face (keep Y >= min / posterior)
+      const depthFront  = max - 0.5; // -Y face (keep Y <= max / anterior)
+      const depthBottom = 0.5 - min; // +Z face (keep Z >= min / inferior)
+      const depthTop    = max - 0.5; // -Z face (keep Z <= max / superior)
+
+      const boxPlanes = [
+        // Y axis (posterior ↔ anterior)
+        [0.25, 270,  0], // Y−  normal −Y (posterior)
+        [0.15,  90,  0], // Y+  normal +Y (anterior)
+
+        // X axis (left ↔ right)
+        [0.15,   0,  0], // X−  normal −X (left)
+        [0.20, 180,  0], // X+  normal +X (right)
+
+        // Z axis (inferior ↔ superior)
+        [0.40,   0, -90], // Z−  normal −Z (bottom)
+        [0.20,   0,  90]  // Z+  normal +Z (top)
+      ];
+
+      nv1.setClipPlaneMode('and');     // opts-only update
+      nv1.setClipPlanes(boxPlanes);    // replaces scene.clipPlanes etc.
+      
+      // sanitizePlanesAndReport(nv1);
+      // findAxisProblems(nv1);
+      // run it
+      // autoFixAxisPlanes(nv1);
+      // inspectPlanesAndCenter(nv1);
+      // Run it:
+      reorderAndNormalizePlanes(nv1);
+
+
+
+
+      nv1.drawScene();
+    }
+
+    function planeCoord(p) {
+      const [nx,ny,nz,w] = p;
+      if (Math.abs(nx) > 0.9) return { axis:'X', coord: 0.5 - w / nx };
+      if (Math.abs(ny) > 0.9) return { axis:'Y', coord: 0.5 - w / ny };
+      if (Math.abs(nz) > 0.9) return { axis:'Z', coord: 0.5 - w / nz };
+      return { axis:'?', coord: NaN };
+    }
+
+    function sanitizePlanesAndReport(nv1, eps = 1e-6) {
+      let planes = (nv1.scene.clipPlanes || []).map(p => p.map(v => (Math.abs(v) < eps ? 0 : v)));
+      // flip any with w > 0 so center is inside
+      planes = planes.map(p => (p[3] > 0 ? p.map(v => -v) : p));
+      // assign to axes
+      const axisMap = { X: [], Y: [], Z: [], OTHER: [] };
+      planes.forEach((p,i) => {
+        const [nx,ny,nz] = p;
+        if (Math.abs(nx) > 0.9) axisMap.X.push({i,p});
+        else if (Math.abs(ny) > 0.9) axisMap.Y.push({i,p});
+        else if (Math.abs(nz) > 0.9) axisMap.Z.push({i,p});
+        else axisMap.OTHER.push({i,p});
+      });
+      console.log('axisMap', axisMap);
+      // compute coords
+      function coords(list) {
+        return list.map(o => ({ idx:o.i, ...planeCoord(o.p) }));
+      }
+      console.log('X coords', coords(axisMap.X));
+      console.log('Y coords', coords(axisMap.Y));
+      console.log('Z coords', coords(axisMap.Z));
+      // report if any axis lacks two opposing planes
+      ['X','Y','Z'].forEach(a=>{
+        if (axisMap[a].length !== 2) console.warn(`axis ${a} has ${axisMap[a].length} planes (expected 2).`);
+      });
+
+      // install flipped planes back
+      nv1.scene.clipPlanes = planes;
+      nv1.scene.clipPlaneCount = planes.length;
+      nv1.drawScene();
+      return { planes, axisMap };
+    }
+        
+
+
+      // basic defaults (no mesh/fiber code)
+      const defaults = {
+        backColor: [0, 0.2, 0.4, 1],
         show3Dcrosshair: true,
         loglevel: 'debug',
         isRuler: true,
         dragMode: DRAG_MODE.measurement,
-        // onDragRelease: onDragRelease,
-        onLocationChange: onLocationChange,
-        measureTextJustify: 'start',
-        showMeasureUnits: true,
-        measureTextColor: [0, 1, 0, 1],
-        measureLineColor: [1, 0, 0, 1],
-        measureTextHeight: 0.04,
-        isColorbar: true
+        isColorbar: true,
+        // start in 'corner' as your earlier default
+        clipPlaneMode: 'corner'
+      };
+
+      const nv1 = new Niivue(defaults);
+      await nv1.attachToCanvas(gl1);
+      nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO;
+      nv1.opts.yoke3Dto2DZoom = true;
+
+      // load a demo volume
+      await nv1.loadVolumes([{ url: '../demos/images/mni152.nii.gz' }]);
+      nv1.setSliceType(nv1.sliceTypeRender);
+
+      // example planes (depth/azimuth/elevation triplets) — you can replace these
+      const depthAziElevs = [
+        [0.2, 270, 0],  // X min (left)
+        [0.2,   0, 0],  // Y min (posterior)
+        [0.2,   0, 90]  // Z max (superior)
+      ];
+      nv1.setClipPlanes(depthAziElevs);
+
+      // ensure UI reflects starting mode
+      const toggleModeBtn = document.getElementById('toggleModeBtn');
+      function updateModeButtonText() {
+        toggleModeBtn.textContent = `Mode: ${nv1.opts.clipPlaneMode}`;
       }
-      var nv1 = new Niivue(defaults)
-      await nv1.attachToCanvas(gl1)
-      // multiplanarShowRender is the preferred option now,
-      // but multiplanarForceRender is still available for backwards compatibility
-      // previous use was: nv1.opts.multiplanarForceRender = true;
-      nv1.opts.multiplanarShowRender = SHOW_RENDER.AUTO
-      nv1.opts.yoke3Dto2DZoom = true
-      await nv1.loadVolumes(volumeList1)
-      var layerList = [{ url: '../demos/images/mni152.SLF1_R.tsf' }]
-      await nv1.loadMeshes([{ url: '../demos/images/tract.SLF1_R.tck', layers: layerList }])
-      nv1.setMeshProperty(nv1.meshes[0].id, 'fiberColor', 'DPV0')
-      nv1.setMeshProperty(nv1.meshes[0].id, 'fiberDither', 0)
-      nv1.setMeshProperty(nv1.meshes[0].id, 'fiberRadius', 0.5)
-      nv1.setMeshProperty(nv1.meshes[0].id, 'rgba255', [0, 255, 255, 255]) //color for fixed
-      nv1.setMeshShader(nv1.meshes[0].id, 'diffuse')
-      console.log('fiber vertex intensity range:', nv1.meshes[0].dpv[0].global_min, nv1.meshes[0].dpv[0].global_max)
-      nv1.setSelectionBoxColor([0, 1, 0, 0.5])
-      nv1.setClipPlane([0.2, 0, 120])
+      updateModeButtonText();
 
-      // Layout format: {sliceType: SLICE_TYPE, position: [left, top, width, height]}
-      // Units are relative (0-1) to canvas size
-      const customLayout = [
-        // Left 50% - Sag
-        { sliceType: SLICE_TYPE.SAGITTAL, position: [0, 0, 0.5, 1.0] },
-        // Top right - Cor
-        { sliceType: SLICE_TYPE.CORONAL, position: [0.5, 0, 0.5, 0.5] },
-        // Bottom right - Ax
-        { sliceType: SLICE_TYPE.AXIAL, position: [0.5, 0.5, 0.5, 0.5] }
-      ]
+      // open file dialog
+      openBtn.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.nii,.nii.gz';
+        input.onchange = (e) => {
+          if (e.target.files && e.target.files[0]) nv1.loadFromFile(e.target.files[0]);
+        };
+        input.click();
+      };
 
-      // Apply the custom layout
-      nv1.setCustomLayout(customLayout)
+      // toggle between 'and' and 'corner'
+      toggleModeBtn.onclick = () => {
+        const cur = nv1.opts.clipPlaneMode || 'corner';
+        const next = (cur === 'and') ? 'corner' : 'and';
+        nv1.setClipPlaneMode(next); // opts-only update per your design
+        updateModeButtonText();
+        nv1.drawScene();
+      };
 
-      // toggle button for custom layout
-      const layoutToggle = document.createElement('button')
-      layoutToggle.innerHTML = 'Toggle Custom Layout'
-      layoutToggle.style.margin = '0 5px'
-      let isCustomLayout = true
-      layoutToggle.onclick = function () {
-        if (isCustomLayout) {
-          nv1.clearCustomLayout()
-          nv1.setSliceType(3) // Set back to multiplanar
-          this.innerHTML = 'Use Custom Layout'
-        } else {
-          nv1.setCustomLayout(customLayout)
-          this.innerHTML = 'Use Standard Layout'
-        }
-        isCustomLayout = !isCustomLayout
-      }
-      document.getElementById('shaders').parentNode.insertBefore(layoutToggle, document.getElementById('shaders'))
+      // quick "set box" helper: sets 6 axis-aligned planes for AND mode (example)
+      setBoxBtn.onclick = () => {
+        // updates this.opts only per your design
+        setBoxClipPlanes(nv1, 0.2, 0.8);
+        nv1.drawScene();
+      };
 
-      let cmaps = nv1.meshShaderNames()
-      let cmapEl = document.getElementById('shaders')
-      for (let i = 0; i < cmaps.length; i++) {
-        let btn = document.createElement('button')
-        btn.innerHTML = cmaps[i]
-        btn.onclick = function () {
-          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
-        }
-        cmapEl.appendChild(btn)
-      }
-      equalCheck.onchange()
+
+      // initial draw
+      nv1.drawScene();
     </script>
   </body>
 </html>
+
