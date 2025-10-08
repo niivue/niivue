@@ -13799,6 +13799,8 @@ export class Niivue {
     // Flip Y for GL viewport
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
 
+    gl.clearDepth(0.0) // reset depth to nearest=0
+    gl.clear(gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
@@ -13867,7 +13869,7 @@ export class Niivue {
         undefined,
         this.scene.renderAzimuth,
         this.scene.renderElevation,
-        false // no flipX for meshes
+        true // no flipX for meshes
       )
     }
 
@@ -13875,9 +13877,8 @@ export class Niivue {
     if (isDepthTest) {
       // gl.enable(gl.DEPTH_TEST)
       // do not clear depth buffer or it will overwrite any volumes regardless of depth.
-      // gl.clearDepth(1.0) // reset depth to nearest=0
-      // gl.clear(gl.DEPTH_BUFFER_BIT)
-      gl.depthFunc(gl.LEQUAL) // farther depth wins
+     
+      gl.depthFunc(gl.GREATER) // farther depth wins
     } else {
       gl.depthFunc(gl.ALWAYS)
     }
@@ -13977,7 +13978,7 @@ export class Niivue {
     // Pass 3: Fibers
     // -----------------------
     if (hasFibers) {
-      gl.depthFunc(gl.GREATER)
+      // gl.depthFunc(gl.GREATER)
       const shader = this.fiberShader!
       shader.use(gl)
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
