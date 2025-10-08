@@ -2728,7 +2728,7 @@ declare class Niivue {
      * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
      * @see {@link https://niivue.com/demos/features/mesh.4D.html | live demo usage}
      */
-    setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): Promise<void>;
+    setMeshLayerProperty(mesh: number | string, layer: number, key: keyof NVMeshLayer, val: number): Promise<void>;
     /**
      * adjust offset position and scale of 2D sliceScale
      * @param xyzmmZoom - first three components are spatial, fourth is scaling
@@ -3402,7 +3402,7 @@ declare class Niivue {
      * @example niivue.setMeshShader('toon');
      * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
      */
-    setMeshShader(id: number, meshShaderNameOrNumber?: number): void;
+    setMeshShader(id: number | string, meshShaderNameOrNumber?: number | string): void;
     /**
      *
      * @param fragmentShaderText - custom fragment shader.

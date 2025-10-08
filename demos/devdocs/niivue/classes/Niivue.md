@@ -906,7 +906,7 @@ nv.clearAngles();
 clearBounds(mask: number, ltwh?: [number, number, number, number]): void;
 ```
 
-Defined in: [niivue/index.ts:15102](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15102)
+Defined in: [niivue/index.ts:15101](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15101)
 
 Clear a rectangular region of this instance's canvas.
 
@@ -1379,7 +1379,7 @@ Performs a 1-voxel binary dilation on a connected cluster within the drawing mas
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:14722](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14722)
+Defined in: [niivue/index.ts:14721](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14721)
 
 display a lightbox or montage view
 
@@ -1469,7 +1469,7 @@ niivue.drawUndo();
 eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean;
 ```
 
-Defined in: [niivue/index.ts:14965](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14965)
+Defined in: [niivue/index.ts:14964](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14964)
 
 Returns true if a mouse/touch event happened inside this instance’s bounds.
 
@@ -1491,7 +1491,7 @@ Returns true if a mouse/touch event happened inside this instance’s bounds.
 findDrawingBoundarySlices(sliceType: SLICE_TYPE): object;
 ```
 
-Defined in: [niivue/index.ts:15773](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15773)
+Defined in: [niivue/index.ts:15772](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15772)
 
 Find the first and last slices containing drawing data along a given axis
 
@@ -1509,8 +1509,8 @@ Object containing first and last slice indices, or null if no data found
 
 | Name    | Type     | Defined in                                                                                                     |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `first` | `number` | [niivue/index.ts:15773](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15773) |
-| `last`  | `number` | [niivue/index.ts:15773](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15773) |
+| `first` | `number` | [niivue/index.ts:15772](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15772) |
+| `last`  | `number` | [niivue/index.ts:15772](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15772) |
 
 ---
 
@@ -1520,7 +1520,7 @@ Object containing first and last slice indices, or null if no data found
 frac2canvasPos(frac: vec3): number[];
 ```
 
-Defined in: [niivue/index.ts:14186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14186)
+Defined in: [niivue/index.ts:14185](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14185)
 
 #### Parameters
 
@@ -1903,7 +1903,7 @@ niivue.getVolumeIndexByID(someVolume.id);
 inBounds(x: number, y: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:15055](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15055)
+Defined in: [niivue/index.ts:15054](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15054)
 
 Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
 
@@ -1970,7 +1970,7 @@ interpolateMaskSlices(
    options?: object): void;
 ```
 
-Defined in: [niivue/index.ts:15788](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15788)
+Defined in: [niivue/index.ts:15787](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15787)
 
 Interpolate between mask slices using geometric or intensity-guided methods
 
@@ -2590,7 +2590,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:13988](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13988)
+Defined in: [niivue/index.ts:13987](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L13987)
 
 move crosshair a fixed number of voxels (not mm)
 
@@ -4087,7 +4087,7 @@ Reorders a mesh within the internal mesh list.
 
 ```ts
 setMeshLayerProperty(
-   mesh: number,
+   mesh: string | number,
    layer: number,
    key: keyof NVMeshLayer,
 val: number): Promise<void>;
@@ -4101,7 +4101,7 @@ reverse triangle winding of mesh (swap front and back faces)
 
 | Parameter | Type                                                            | Description                                       |
 | --------- | --------------------------------------------------------------- | ------------------------------------------------- |
-| `mesh`    | `number`                                                        | identity of mesh to change                        |
+| `mesh`    | `string` \| `number`                                            | identity of mesh to change                        |
 | `layer`   | `number`                                                        | selects the mesh overlay (e.g. GIfTI or STC file) |
 | `key`     | keyof [`NVMeshLayer`](../../nvmesh/type-aliases/NVMeshLayer.md) | attribute to change                               |
 | `val`     | `number`                                                        | value for attribute                               |
@@ -4170,7 +4170,7 @@ niivue.setMeshProperty(niivue.meshes[0].id, "fiberLength", 42);
 ### setMeshShader()
 
 ```ts
-setMeshShader(id: number, meshShaderNameOrNumber: number): void;
+setMeshShader(id: string | number, meshShaderNameOrNumber: string | number): void;
 ```
 
 Defined in: [niivue/index.ts:7302](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7302)
@@ -4179,10 +4179,10 @@ select new shader for triangulated meshes and connectomes. Note that this functi
 
 #### Parameters
 
-| Parameter                | Type     | Default value | Description               |
-| ------------------------ | -------- | ------------- | ------------------------- |
-| `id`                     | `number` | `undefined`   | id of mesh to change      |
-| `meshShaderNameOrNumber` | `number` | `2`           | identify shader for usage |
+| Parameter                | Type                 | Default value | Description               |
+| ------------------------ | -------------------- | ------------- | ------------------------- |
+| `id`                     | `string` \| `number` | `undefined`   | id of mesh to change      |
+| `meshShaderNameOrNumber` | `string` \| `number` | `2`           | identify shader for usage |
 
 #### Returns
 

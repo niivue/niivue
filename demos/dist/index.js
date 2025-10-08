@@ -46703,6 +46703,8 @@ var Niivue = class {
     });
     const glLTWH = [ltwh[0], gl.canvas.height - ltwh[3] - ltwh[1], ltwh[2], ltwh[3]];
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1];
+    gl.clearDepth(0);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.ALWAYS);
     gl.depthMask(true);
@@ -46757,14 +46759,12 @@ var Niivue = class {
         void 0,
         this.scene.renderAzimuth,
         this.scene.renderElevation,
-        false
+        true
         // no flipX for meshes
       );
     }
     gl.enable(gl.DEPTH_TEST);
     if (isDepthTest) {
-      gl.clearDepth(0);
-      gl.clear(gl.DEPTH_BUFFER_BIT);
       gl.depthFunc(gl.GREATER);
     } else {
       gl.depthFunc(gl.ALWAYS);
