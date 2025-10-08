@@ -13706,8 +13706,9 @@ export class Niivue {
 
     // Use inverted depth convention (matches current MVP math)
     if (isDepthTest) {
-      gl.clearDepth(0.0) // reset depth to nearest=0
-      gl.clear(gl.DEPTH_BUFFER_BIT)
+      // do not ckear depth buffer or it will overwrite any volumes regardless of depth.
+      // gl.clearDepth(0.0) // reset depth to nearest=0
+      // gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.depthFunc(gl.GREATER) // farther depth wins
     } else {
       gl.depthFunc(gl.ALWAYS)
