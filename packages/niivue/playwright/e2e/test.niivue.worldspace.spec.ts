@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto(httpServerAddress)
 })
 
-test('niivue advanced world-space demo x-ray', async ({ page }) => {
+test('niivue advanced world-space demo', async ({ page }) => {
   // ensure the canvas exists before we try to attach
   await page.waitForSelector('#gl', { timeout: 5000 })
 

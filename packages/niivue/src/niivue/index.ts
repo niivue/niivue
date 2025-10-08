@@ -4244,7 +4244,7 @@ export class Niivue {
    * @example niivue.setMeshLayerProperty(niivue.meshes[0].id, 0, 'frame4D', 22)
    * @see {@link https://niivue.com/demos/features/mesh.4D.html | live demo usage}
    */
-  async setMeshLayerProperty(mesh: number, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
+  async setMeshLayerProperty(mesh: number | string, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
     const idx = this.getMeshIndexByID(mesh)
     if (idx < 0) {
       log.warn('setMeshLayerProperty() id not loaded', mesh)
@@ -7428,7 +7428,7 @@ export class Niivue {
    * @example niivue.setMeshShader('toon');
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
-  setMeshShader(id: number, meshShaderNameOrNumber = 2): void {
+  setMeshShader(id: number | string, meshShaderNameOrNumber: number | string = 2): void {
     let shaderIndex: number | undefined = 0
     if (typeof meshShaderNameOrNumber === 'number') {
       shaderIndex = meshShaderNameOrNumber
