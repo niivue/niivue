@@ -18,104 +18,328 @@ const kDrawFunc = `
 		return dcolor;
 }`
 
-const kRenderFunc =
-  `vec3 GetBackPosition(vec3 startPositionTex) {
-	vec3 startPosition = startPositionTex * volScale;
-	vec3 invR = 1.0 / rayDir;
-	vec3 tbot = invR * (vec3(0.0)-startPosition);
-	vec3 ttop = invR * (volScale-startPosition);
-	vec3 tmax = max(ttop, tbot);
-	vec2 t = min(tmax.xx, tmax.yz);
-	vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
-	//convert world position back to texture position:
-	endPosition = endPosition / volScale;
-	return endPosition;
-}
-
-vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
-	float cdot = dot(dir,clipPlane.xyz);
-	isClip = false;
-	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
-	bool frontface = (cdot > 0.0);
-	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	float thick = clipThick;
-	if (thick <= 0.0) thick = 2.0;
-	float  disBackFace = (-(clipPlane.a-thick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-		samplePos.a = len + 1.0;
-		return samplePos;
-	}
-	if (frontface) {
-		dis = max(0.0, dis);
-		samplePos = vec4(samplePos.xyz+dir * dis, dis);
-		if (dis > 0.0) isClip = true;
-		len = min(disBackFace, len);
-	}
-	if (!frontface) {
-		len = min(dis, len);
-		disBackFace = max(0.0, disBackFace);
-		if (len == dis) isClip = true;
-		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-	}
-	return samplePos;
+// Common GLSL helpers for both slice + volume rendering
+const kRenderCommon =
+  `
+vec3 GetBackPosition(vec3 startPositionTex) {
+  vec3 startPosition = startPositionTex * volScale;
+  vec3 invR = 1.0 / rayDir;
+  vec3 tbot = invR * (vec3(0.0)-startPosition);
+  vec3 ttop = invR * (volScale-startPosition);
+  vec3 tmax = max(ttop, tbot);
+  vec2 t = min(tmax.xx, tmax.yz);
+  vec3 endPosition = startPosition + (rayDir * min(t.x, t.y));
+  endPosition = endPosition / volScale;
+  return endPosition;
 }
 
 void clipVolume(inout vec3 startPos, inout vec3 backPos, int dim, float frac, bool isLo) {
-	vec3 dir = backPos - startPos;
-	float len = length(dir);
-	dir = normalize(dir);
-	// Discard if both startPos and backPos are outside the clipping plane
-	if (isLo && startPos[dim] < frac && backPos[dim] < frac) {
-		discard;
-	}
-	if (!isLo && startPos[dim] > frac && backPos[dim] > frac) {
-		discard;
-	}
-	vec4 plane = vec4(0.0, 0.0, 0.0, 0.5 - frac);
-	plane[dim] = 1.0;
-	float cdot = dot(dir, plane.xyz);
-	float dis = (-plane.w - dot(plane.xyz, startPos - vec3(0.5))) / cdot;
-	// Adjust startPos or backPos based on the intersection with the plane
-	bool isFrontFace = (cdot > 0.0);
-	if (!isLo)
-		isFrontFace = !isFrontFace;
-	if (dis > 0.0) {
-		if (isFrontFace) {
-				if (dis <= len) {
-					startPos = startPos + dir * dis;
-				}
-		} else {
-			if (dis < len) {
-				backPos = startPos + dir * dis;
-			}
-		}
-	}
+  vec3 dir = backPos - startPos;
+  float len = length(dir);
+  dir = normalize(dir);
+  if (isLo && startPos[dim] < frac && backPos[dim] < frac) {
+    discard;
+  }
+  if (!isLo && startPos[dim] > frac && backPos[dim] > frac) {
+    discard;
+  }
+  vec4 plane = vec4(0.0, 0.0, 0.0, 0.5 - frac);
+  plane[dim] = 1.0;
+  float cdot = dot(dir, plane.xyz);
+  float dis = (-plane.w - dot(plane.xyz, startPos - vec3(0.5))) / cdot;
+  bool isFrontFace = (cdot > 0.0);
+  if (!isLo)
+    isFrontFace = !isFrontFace;
+  if (dis > 0.0) {
+    if (isFrontFace) {
+      if (dis <= len) {
+        startPos = startPos + dir * dis;
+      }
+    } else {
+      if (dis < len) {
+        backPos = startPos + dir * dis;
+      }
+    }
+  }
 }
 
 void clipVolumeStart (inout vec3 startPos, inout vec3 backPos) {
-	// vec3 clipLo = vec3(0.1, 0.2, 0.4);
-	// vec3 clipHi = vec3(0.8, 0.7, 0.7);
-	for (int i = 0; i < 3; i++) {
-		if (clipLo[i] > 0.0)
-			clipVolume(startPos, backPos, i, clipLo[i], true);
-	}
-	for (int i = 0; i < 3; i++) {
-		if (clipHi[i] < 1.0)
-			clipVolume(startPos, backPos, i, clipHi[i], false);
-	}
+  for (int i = 0; i < 3; i++) {
+    if (clipLo[i] > 0.0)
+      clipVolume(startPos, backPos, i, clipLo[i], true);
+  }
+  for (int i = 0; i < 3; i++) {
+    if (clipHi[i] < 1.0)
+      clipVolume(startPos, backPos, i, clipHi[i], false);
+  }
 }
 
 float frac2ndc(vec3 frac) {
-//https://stackoverflow.com/questions/7777913/how-to-render-depth-linearly-in-modern-opengl-with-gl-fragcoord-z-in-fragment-sh
-	vec4 pos = vec4(frac.xyz, 1.0); //fraction
-	vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
-	pos = pos * dim;
-	vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
-	pos += shim;
-	vec4 mm = transpose(matRAS) * pos;
-	float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
-	return (z_ndc + 1.0) / 2.0;
-}` + kDrawFunc
+  vec4 pos = vec4(frac.xyz, 1.0);
+  vec4 dim = vec4(vec3(textureSize(volume, 0)), 1.0);
+  pos = pos * dim;
+  vec4 shim = vec4(-0.5, -0.5, -0.5, 0.0);
+  pos += shim;
+  vec4 mm = transpose(matRAS) * pos;
+  float z_ndc = (mvpMtx * vec4(mm.xyz, 1.0)).z;
+  return (z_ndc + 1.0) / 2.0;
+}
+` + kDrawFunc
+
+const kRenderFunc =
+  kRenderCommon +
+  `
+int skipPlanes[6];
+int skipCount;
+bool insideIntersection(vec3 p) {
+    for (int i = 0; i < uClipPlaneCount; i++) {
+        vec4 plane = uClipPlanes[i];
+        vec3 n = plane.xyz;
+
+        float dist = dot(n, p - vec3(0.5)) + plane.w;
+
+        // Flip if necessary: ensure "inside" means pointing inward
+        if (dist > 0.0) {
+            return false; // outside this plane
+        }
+    }
+    return true; // inside all
+}
+
+
+
+vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip, int skipPlanes[6], int skipCount) {
+    isClip = false; // default: no clipping
+
+    if (uClipPlaneMode == 0) {
+        // --- AND mode (intersection / box) ---
+        // If the ray start is not inside the intersection of the half-spaces,
+        // abort (nothing to render).
+        // if (!insideIntersection(samplePos.xyz)) {
+        //     len = 0.0;
+        //     return samplePos;
+        // }
+		if(uClipPlaneCount == 0 ) {
+			return samplePos;
+		}
+		
+		if(uClipPlaneCount < 6) {
+			vec4 plane = uClipPlanes[0];
+            vec3 n = plane.xyz;
+            float cdot = dot(dir, n);
+			if  ((plane.a > 1.0) || (cdot == 0.0)) return samplePos;
+			bool frontface = (cdot > 0.0);
+			float dis = (-plane.a - dot(plane.xyz, samplePos.xyz-0.5)) / cdot;
+			float thick = clipThick;
+			if (thick <= 0.0) thick = 2.0;
+			float  disBackFace = (-(plane.a-thick) - dot(plane.xyz, samplePos.xyz-0.5)) / cdot;
+			if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
+				samplePos.a = len + 1.0;
+				return samplePos;
+			}
+			if (frontface) {
+				dis = max(0.0, dis);
+				samplePos = vec4(samplePos.xyz+dir * dis, dis);
+				if (dis > 0.0) isClip = true;
+				len = min(disBackFace, len);
+			}
+			if (!frontface) {
+				len = min(dis, len);
+				disBackFace = max(0.0, disBackFace);
+				if (len == dis) isClip = true;
+				samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
+			}
+			return samplePos;
+		}
+
+        // The start is inside the intersection. Find the nearest forward intersection
+        // (smallest positive t) with any clip plane and advance the ray to that face.
+        float tClosest = 1.0e9;
+        bool found = false;
+
+        for (int i = 0; i < uClipPlaneCount; i++) {
+            vec4 plane = uClipPlanes[i];
+            vec3 n = plane.xyz;
+            float cdot = dot(dir, n);
+            if (abs(cdot) < 1e-6) continue; // parallel-ish
+
+            // compute t where start + dir * t intersects this plane
+            float numer = -(plane.w + dot(n, samplePos.xyz - vec3(0.5)));
+            float t = numer / cdot;
+
+            // choose smallest positive t (closest face in front of start)
+            if (t > 0.0 && t < tClosest) {
+                tClosest = t;
+                found = true;
+            }
+        }
+
+        if (found) {
+            // advance to closest face and clamp len so we only sample up to that face
+            samplePos = vec4(samplePos.xyz + dir * tClosest, tClosest);
+            len = min(len, tClosest);
+            isClip = true;
+        } else {
+            // No forward-facing intersection found — abort
+            len = 0.0;
+        }
+
+        return samplePos;
+    }
+
+    else if (uClipPlaneMode == 1) {
+        // --- OR mode (cutout by any plane: slabs) ---
+        for (int i = 0; i < uClipPlaneCount; i++) {
+            vec4 plane = uClipPlanes[i];
+            float cdot = dot(dir, plane.xyz);
+            if (abs(cdot) < 1e-6) continue;
+
+            float dis = (-plane.w - dot(plane.xyz, samplePos.xyz - 0.5)) / cdot;
+            if (dis > 0.0 && dis < len) {
+                samplePos = vec4(samplePos.xyz + dir * dis, dis);
+                len = dis;
+                isClip = true;
+                break; // first hit is enough
+            }
+        }
+        return samplePos;
+    }
+
+    else if (uClipPlaneMode == 2) {
+		float tEnter = 0.0;
+		float tExit  = len;
+
+		for (int i = 0; i < uClipPlaneCount; i++) {
+			// check if this plane should be skipped
+			bool skip = false;
+			for (int j = 0; j < skipCount; j++) {
+				if (i == skipPlanes[j]) { skip = true; break; }
+			}
+			if (skip) continue;
+
+			vec4 plane = uClipPlanes[i];
+			vec3 n = plane.xyz;
+			float cdot = dot(dir, n);
+			if (abs(cdot) < 1e-6) continue;
+
+			float numer = -(plane.w + dot(n, samplePos.xyz - vec3(0.5)));
+			float t = numer / cdot;
+
+			if (cdot < 0.0) {
+				tEnter = max(tEnter, t);
+			} else {
+				tExit = min(tExit, t);
+			}
+		}
+
+		if (tEnter < tExit && tExit > 0.0 && tEnter < len) {
+			if (samplePos.a < tEnter) {
+				len = min(len, tEnter);
+			} else if (samplePos.a >= tEnter && samplePos.a < tExit) {
+				samplePos = vec4(samplePos.xyz + dir * (tExit - samplePos.a), tExit);
+			}
+			isClip = true;
+		}
+
+		return samplePos;
+	}
+
+    return samplePos; // no clipping if mode invalid
+}
+
+vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
+    int dummy[6];
+    return applyClipPlanes(dir, samplePos, len, isClip, dummy, 0);
+}
+
+// uClipPlaneCount is max 6 so this is small + cheap
+void markSkipPlanes(vec4 samplePos, vec3 dir, float len, vec4 deltaDirFast,
+                    out int skipPlanes[6], out int skipCount) {
+
+    skipCount = 0;
+
+    for (int i = 0; i < uClipPlaneCount; i++) {
+        vec4 plane = uClipPlanes[i];
+        vec3 n = plane.xyz;
+        float cdot = dot(dir, n);
+        if (cdot >= 0.0) continue; // only back faces matter
+
+        float numer = -(plane.w + dot(n, samplePos.xyz - vec3(0.5)));
+        float t = numer / cdot;
+
+        if (t <= 0.0 || t >= len) continue;
+
+        // probe along ray until either we hit volume or reach plane
+        vec4 probePos = samplePos;
+        bool hitVolume = false;
+        while (probePos.a <= t) {
+            float val = texture(volume, probePos.xyz).a;
+            if (val > 0.01) {
+                hitVolume = true;
+                break;
+            }
+            probePos += deltaDirFast;
+        }
+
+        // If no volume before back face → mark this plane to skip
+        if (!hitVolume) {
+            skipPlanes[skipCount] = i;
+            skipCount++;
+        }
+    }
+}
+
+// helper: small front-to-back accumulation starting from samplePos
+// NOTE: this performs a *local* accumulate only (no clip-plane interval changes).
+// It returns a premultiplied color (rgb already multiplied by alpha) with alpha in .a
+vec4 accumulateAlongRayOnce(
+    vec4 sampleStart,    // .xyz = tex coords, .a = distance along ray
+    float lenLocal,      // current ray length (back distance)
+    vec4 deltaDirLocal,  // step vector (dir*stepSize, stepSize)
+    float opacityCorrectionLocal,
+    float earlyTerminationLocal
+) {
+    const int MAX_ACC_ITERS_LOCAL = 256; // keep small for performance
+    vec4 colAccLocal = vec4(0.0, 0.0, 0.0, 0.0);
+    int iterLocal = 0;
+
+    // local copy of sample position that we will advance here
+    vec4 p = sampleStart;
+
+    // accumulate
+    while (p.a <= lenLocal && iterLocal < MAX_ACC_ITERS_LOCAL) {
+        ++iterLocal;
+        vec4 colorSample = texture(volume, p.xyz);
+
+        // advance position for next iter (we advance after sampling)
+        p += deltaDirLocal;
+
+        if (colorSample.a >= 0.01) {
+            // opacity correction + premultiply
+            colorSample.a = 1.0 - pow((1.0 - colorSample.a), opacityCorrectionLocal);
+            colorSample.rgb *= colorSample.a;
+
+            colAccLocal = (1.0 - colAccLocal.a) * colorSample + colAccLocal;
+
+            if (colAccLocal.a > earlyTerminationLocal) {
+                break;
+            }
+        }
+    }
+
+    return colAccLocal;
+}
+
+// Construct a pair of orthonormal tangents (u,v) perpendicular to dir
+// Returns u in outParam u, v in outParam v.
+// dir must be normalized.
+void buildTangents(vec3 dir, out vec3 u, out vec3 v) {
+    // pick arbitrary vector not parallel to dir
+    vec3 up = abs(dir.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    u = normalize(cross(up, dir));
+    v = normalize(cross(dir, u));
+}
+`
 
 const kRenderInit = `void main() {
 	if (fColor.x > 2.0) {
@@ -132,30 +356,63 @@ const kRenderInit = `void main() {
 		clipPlaneColorX.a = 0.0;
 	}
 	//fColor = vec4(vColor.rgb, 1.0); return;
+	
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
+
+	// bool startInside = insideIntersection(start);
+	// bool backInside  = insideIntersection(backPosition);
+	// if(!startInside && !backInside && uClipPlaneCount == 6) {
+	// 	return;
+	// }
+
+
 	// fColor = vec4(backPosition, 1.0); return;
 	vec3 dir = normalize(backPosition - start);
 	clipVolumeStart(start, backPosition);
 	dir = normalize(dir);
 	float len = length(backPosition - start);
+	float totalLen = len;
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
 		return;
 	}
 	float sliceSize = len / lenVox; //e.g. if ray length is 1.0 and traverses 50 voxels, each voxel is 0.02 in unit cube
 	float stepSize = sliceSize; //quality: larger step is faster traversal, but fewer samples
+	float stepSizeFast = sliceSize * 1.9;
+
 	float opacityCorrection = stepSize/sliceSize;
 	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
+	
+	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
 	bool isClip = false;
-	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	
+	// pre-pass: mark clip planes to ignore
+	markSkipPlanes(samplePos, dir, len, deltaDir, skipPlanes, skipCount);
+
+	vec4 clipPos = applyClipPlanes(dir, samplePos, len, isClip, skipPlanes, skipCount);
+	// If we have a full box (six planes) and we're in AND mode, only render rays whose start
+	// point is inside the intersection of the BACK-face halfspaces. For reliability use
+	// insideIntersection() rather than isClip, because applyClipPlanes/isClip is ray-based.
+	if (uClipPlaneCount == 6 && uClipPlaneMode == 0) {
+		if (!isClip && !insideIntersection(start) && !insideIntersection(backPosition)) {
+			// outside intersection → nothing to render for AND-mode full box
+			return;
+		}
+	}
+	// if (insideIntersection(samplePos.xyz)) {
+	// 	fColor = vec4(1.0, 0.0, 0.0, 1.0); // red = inside
+	// } else {
+	// 	fColor = vec4(0.0, 1.0, 0.0, 1.0); // green = outside
+	// }
+	// return;
+
 	//if ((clipPos.a != samplePos.a) && (len < 3.0)) {
 	//start: OPTIONAL fast pass: rapid traversal until first hit
-	float stepSizeFast = sliceSize * 1.9;
-	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	
 	while (samplePos.a <= len) {
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01)
@@ -163,7 +420,7 @@ const kRenderInit = `void main() {
 		samplePos += deltaDirFast; //advance ray position
 	}
 	float drawOpacityA = renderDrawAmbientOcclusionXY.y;
-	if ((samplePos.a >= len) && (((overlays < 1.0) && (drawOpacityA <= 0.0) ) || (backgroundMasksOverlays > 0)))  {
+	if ((samplePos.a >= totalLen) && (((overlays < 1.0) && (drawOpacityA <= 0.0) ) || (backgroundMasksOverlays > 0)))  {
 		if (isClip)
 			fColor += clipPlaneColorX;
 		return;
@@ -171,6 +428,7 @@ const kRenderInit = `void main() {
 	fColor = vec4(1.0, 1.0, 1.0, 1.0);
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
 	samplePos -= deltaDirFast;
+	
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	//end: fast pass
@@ -193,12 +451,17 @@ const kRenderTail = `
 		}
 		
 	}
+	// colAcc.rgb = vec3(1.0,1.0,1.0);
+	// if (colAcc.a < earlyTermination) {
+		// colAcc.rbg *= 1.0 / colAcc.a;
+		// colAcc.a = 1.0;
+	// }
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
+	colAcc.rgb * (1.0/colAcc.a);
 	fColor = colAcc;
 	//if (isClip) //CR
-	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
-		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
-		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
+	// if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
+	// 	fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
 	float renderDrawAmbientOcclusionX = renderDrawAmbientOcclusionXY.x;
 	float drawOpacity = renderDrawAmbientOcclusionXY.y;
 	if ((overlays < 1.0) && (drawOpacity <= 0.0))
@@ -207,7 +470,7 @@ const kRenderTail = `
 	len = lenNoClip;
 	samplePos = vec4(start.xyz, 0.0); //ray position
 	//start: OPTIONAL fast pass: rapid traversal until first hit
-	stepSizeFast = sliceSize * 1.0;
+	stepSizeFast = sliceSize * 1.9;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
 		float val = texture(overlay, samplePos.xyz).a;
@@ -327,7 +590,7 @@ uniform vec3 rayDir;
 uniform vec3 texVox;
 uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
-uniform vec4 clipPlane;
+uniform vec4 uSlicePos; // (x, y, z, offset/thickness);
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
@@ -346,9 +609,8 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  `
-	void main() {
+  kRenderCommon +
+  `	void main() {
 	vec3 start = vColor;
 	gl_FragDepth = 0.0;
 	vec3 backPosition = GetBackPosition(start);
@@ -371,17 +633,17 @@ out vec4 fColor;
 	float backNearest = len; //assume no hit
 	float dis = len;
 	//check if axial plane is closest
-	vec4 aClip = vec4(0.0, 0.0, 1.0, (1.0- clipPlane.z) - 0.5);
+	vec4 aClip = vec4(0.0, 0.0, 1.0, (1.0- uSlicePos.z) - 0.5);
 	float adis = (-aClip.a - dot(aClip.xyz, samplePos.xyz-0.5)) / dot(dir,aClip.xyz);
 	if (adis > 0.0)
 		dis = min(adis, dis);
 	//check of coronal plane is closest
-	vec4 cClip = vec4(0.0, 1.0, 0.0, (1.0- clipPlane.y) - 0.5);
+	vec4 cClip = vec4(0.0, 1.0, 0.0, (1.0- uSlicePos.y) - 0.5);
 	float cdis = (-cClip.a - dot(cClip.xyz, samplePos.xyz-0.5)) / dot(dir,cClip.xyz);
 	if (cdis > 0.0)
 		dis = min(cdis, dis);
 	//check if coronal slice is closest
-	vec4 sClip = vec4(1.0, 0.0, 0.0, (1.0- clipPlane.x) - 0.5);
+	vec4 sClip = vec4(1.0, 0.0, 0.0, (1.0- uSlicePos.x) - 0.5);
 	float sdis = (-sClip.a - dot(sClip.xyz, samplePos.xyz-0.5)) / dot(dir,sClip.xyz);
 	if (sdis > 0.0)
 		dis = min(sdis, dis);
@@ -397,7 +659,7 @@ out vec4 fColor;
 	bool isColorPlaneInVolume = false;
 	float lenNoClip = len;
 	bool isClip = false;
-	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	vec4 clipPos = samplePos;
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	if (samplePos.a < 0.0)
@@ -410,13 +672,17 @@ out vec4 fColor;
 export const fragRenderShader =
   `#version 300 es
 #line 215
+#define MAX_CLIP_PLANES 6
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
 uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
-uniform vec4 clipPlane;
+uniform int uClipPlaneMode; // 0 = AND, 1 = OR
+uniform int uClipPlaneCount;
+uniform int uActiveClipPlane; // index of the active plane
+uniform vec4 uClipPlanes[MAX_CLIP_PLANES];
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
@@ -437,7 +703,9 @@ out vec4 fColor;
 ` +
   kRenderFunc +
   kRenderInit +
-  `while (samplePos.a <= len) {
+  `
+  	float startPos = samplePos.a;
+    while (samplePos.a <= len) {
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -451,6 +719,27 @@ out vec4 fColor;
 				break;
 		}
 	}
+	if ((colAcc.a < earlyTermination) && (samplePos.a < lenNoClip)) {
+		len = length(backPosition - start);
+        // samplePos += deltaDir * ran;
+        markSkipPlanes(samplePos, dir, len, deltaDirFast, skipPlanes, skipCount);
+
+        samplePos = applyClipPlanes(dir, samplePos, len, isClip, skipPlanes, skipCount);
+		while (samplePos.a <= len) {
+			vec4 colorSample = texture(volume, samplePos.xyz);
+			samplePos += deltaDir; //advance ray position
+			if (colorSample.a >= 0.01) {
+				backNearest = min(backNearest, samplePos.a);
+				colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+				colorSample.rgb *= colorSample.a;
+				colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+				if ( colAcc.a > earlyTermination )
+					break;
+				}
+			// fColor = mix(vec4(0.0, 0.0, 1.0, 1.0), colAcc, colAcc.a);
+		}
+		// return;
+	}
 ` +
   kRenderTail
 
@@ -458,13 +747,16 @@ export const gradientOpacityLutCount = 192
 
 const kFragRenderGradientDecl = `#version 300 es
 #line 215
+#define MAX_CLIP_PLANES 6
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 texVox;
 uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
-uniform vec4 clipPlane;
+uniform int uClipPlaneMode; // 0 = AND, 1 = OR
+uniform int uClipPlaneCount;
+uniform vec4 uClipPlanes[MAX_CLIP_PLANES];
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
@@ -1954,12 +2246,15 @@ void main() {
 export const fragVolumePickingShader =
   `#version 300 es
 #line 1260
+#define MAX_CLIP_PLANES 6
 //precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 volScale;
 uniform vec3 texVox;
-uniform vec4 clipPlane;
+uniform int uClipPlaneMode; // 0 = AND, 1 = OR
+uniform int uClipPlaneCount;
+uniform vec4 uClipPlanes[MAX_CLIP_PLANES];
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
@@ -1997,7 +2292,7 @@ void main() {
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float lenNoClip = len;
 	bool isClip = false;
-	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	vec4 clipPos = applyClipPlanes(dir, samplePos, len, isClip);
 	if (isClip) fColor = vec4(samplePos.xyz, 253.0 / 255.0); //assume no hit: ID = 0
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
