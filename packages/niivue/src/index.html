@@ -21,7 +21,7 @@
       <button id="openBtn">Open NIfTI</button>
       <div id="controls">
         <button id="toggleModeBtn">Mode: corner</button>
-        <button id="setBoxBtn">Set Box (example)</button>
+        <button id="setBoxBtn" style="display:none">Set Box (example)</button>
       </div>
       <div style="margin-left:auto; color:#cfe8ff; font-size:0.9rem">Simple demo: AND vs CORNER modes</div>
     </header>
@@ -350,6 +350,17 @@ function reorderAndNormalizePlanes(nv1, eps = 1e-9) {
       toggleModeBtn.onclick = () => {
         const cur = nv1.opts.clipPlaneMode || 'corner';
         const next = (cur === 'and') ? 'corner' : 'and';
+        if(next === 'corner') {
+          const depthAziElevs = [
+            [0.2, 270, 0],  // X min (left)
+            [0.2,   0, 0],  // Y min (posterior)
+            [0.2,   0, 90]  // Z max (superior)
+          ];
+          nv1.setClipPlanes(depthAziElevs);
+        }
+        else {
+          setBoxClipPlanes(nv1, 0.2, 0.8);
+        }
         nv1.setClipPlaneMode(next); // opts-only update per your design
         updateModeButtonText();
         nv1.drawScene();
