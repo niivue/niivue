@@ -13629,7 +13629,8 @@ export class Niivue {
 
     // Flip Y for GL viewport
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
-
+    gl.clearDepth(0.0) // reset depth to nearest=0
+    gl.clear(gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
@@ -13698,7 +13699,7 @@ export class Niivue {
         undefined,
         this.scene.renderAzimuth,
         this.scene.renderElevation,
-        false // no flipX for meshes
+        true // no flipX for meshes
       )
     }
 
@@ -13706,8 +13707,6 @@ export class Niivue {
 
     // Use inverted depth convention (matches current MVP math)
     if (isDepthTest) {
-      gl.clearDepth(0.0) // reset depth to nearest=0
-      gl.clear(gl.DEPTH_BUFFER_BIT)
       gl.depthFunc(gl.GREATER) // farther depth wins
     } else {
       gl.depthFunc(gl.ALWAYS)
