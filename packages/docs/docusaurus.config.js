@@ -5,6 +5,8 @@
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
 import { themes as prismThemes } from "prism-react-renderer";
+import 'dotenv/config';
+
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -45,6 +47,14 @@ const config = {
         highlightSearchTermsOnTargetPage: true,
         searchResultLimits: 8,
         searchResultContextMaxLength: 50,
+      },
+    ],
+    [
+      "posthog-docusaurus",
+      {
+        apiKey: process.env.PUBLIC_POSTHOG_KEY,
+        appUrl: process.env.PUBLIC_POSTHOG_HOST, // optional, defaults to "https://us.i.posthog.com"
+        enableInDevelopment: true
       },
     ],
   ],
