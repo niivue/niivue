@@ -31,8 +31,10 @@ jobs:
           cp -r packages/niivue/demos/* ghpages/demos/
 
       - name: Build Docusaurus docs
+        env:
+          PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
         run: |
-          npm ci
           npm run build:niivue
           npm run build:docusaurus
           mkdir -p packages/niivue/demos/docusaurus
