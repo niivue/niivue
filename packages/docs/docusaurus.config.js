@@ -7,10 +7,6 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import 'dotenv/config';
 
-// Log PostHog environment variables for debugging
-console.log('PUBLIC_POSTHOG_KEY is set:', !!process.env.PUBLIC_POSTHOG_KEY);
-console.log('PUBLIC_POSTHOG_HOST:', process.env.PUBLIC_POSTHOG_HOST);
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   // future: {

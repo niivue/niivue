@@ -97,6 +97,9 @@ jobs:
           cache: npm
           node-version: 20
       - name: Install and Build
+        env:
+          PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
         run: |
           npm ci
           npm run build:niivue
