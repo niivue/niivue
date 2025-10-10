@@ -35,11 +35,6 @@ jobs:
           PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
           PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
         run: |
-          echo "PUBLIC_POSTHOG_KEY is set: $([ -n "$PUBLIC_POSTHOG_KEY" ] && echo 'yes' || echo 'no')"
-          echo "PUBLIC_POSTHOG_HOST is set: $([ -n "$PUBLIC_POSTHOG_HOST" ] && echo 'yes' || echo 'no')"
-          echo "PUBLIC_POSTHOG_HOST value: $PUBLIC_POSTHOG_HOST"
-          export PUBLIC_POSTHOG_KEY="${PUBLIC_POSTHOG_KEY}"
-          export PUBLIC_POSTHOG_HOST="${PUBLIC_POSTHOG_HOST}"
           npm run build:niivue
           npm run build:docusaurus
           mkdir -p packages/niivue/demos/docusaurus
