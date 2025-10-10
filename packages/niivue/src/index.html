@@ -155,12 +155,35 @@
         let st = parseInt(document.getElementById('sliceType').value)
         nv1.setSliceType(st)
       }
-      transXp.onclick = () => { nv1.volumes[0].toRAS[3] += 0.005; nv1.updateGLVolume() }
-      transXn.onclick = () => { nv1.volumes[0].toRAS[3] -= 0.005; nv1.updateGLVolume() }
-      transYp.onclick = () => { nv1.volumes[0].toRAS[7] += 0.005; nv1.updateGLVolume() }
-      transYn.onclick = () => { nv1.volumes[0].toRAS[7] -= 0.005; nv1.updateGLVolume() }
-      transZp.onclick = () => { nv1.volumes[0].toRAS[11] += 0.005; nv1.updateGLVolume() }
-      transZn.onclick = () => { nv1.volumes[0].toRAS[11] -= 0.005; nv1.updateGLVolume() }
+      
+      const mult = (A, B) => {
+        const out = new Float32Array(16)
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0;j < 4; j++) {
+            out[j * 4 + i] = A[i] * B[j * 4] + A[4 + i] * B[j * 4 + 1] + A[2 * 4 + i] * B[j * 4 + 2] + A[3 * 4 + i] * B[j * 4 + 3]
+          }
+        }
+        return out
+      }
+
+      const applyTranslation = (axis, sign) => {
+        const vol = nv1.volumes[0]
+        const step = 0.005 * sign
+
+        let T
+        if (axis === 'x') T = [1,0,0,step, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+        if (axis === 'y') T = [1,0,0,0, 0,1,0,step, 0,0,1,0, 0,0,0,1]
+        if (axis === 'z') T = [1,0,0,0, 0,1,0,0, 0,0,1,step, 0,0,0,1]
+
+        vol.toRAS = mult(vol.toRAS, T)
+        nv1.updateGLVolume()
+      }
+      transXp.onclick = () => applyTranslation('x', 1)
+      transXn.onclick = () => applyTranslation('x', -1)
+      transYp.onclick = () => applyTranslation('y', 1)
+      transYn.onclick = () => applyTranslation('y', -1)
+      transZp.onclick = () => applyTranslation('z', 1)
+      transZn.onclick = () => applyTranslation('z', -1)
 
       const rotateAroundCenter = (axis, sign) => {
         const vol = nv1.volumes[0]
@@ -183,20 +206,11 @@
         const T1 = [1,0,0,0, 0,1,0,0, 0,0,1,0, -cx,-cy,-cz,1]
         const T2 = [1,0,0,0, 0,1,0,0, 0,0,1,0, cx,cy,cz,1]
 
-        const mult = (A, B) => {
-          const out = new Float32Array(16)
-          for (let i = 0; i < 4; i++) {
-            for (let j = 0;j < 4; j++) {
-              out[j * 4 + i] = A[i] * B[j * 4] + A[4 + i] * B[j * 4 + 1] + A[2 * 4 + i] * B[j * 4 + 2] + A[3 * 4 + i] * B[j * 4 + 3]
-            }
-          }
-          return out
-        }
-
         const M = mult(mult(mult(T2, R), T1), m)
         vol.toRAS.set(M)
         nv1.updateGLVolume()
       }
+
       rotXp.onclick = () => rotateAroundCenter('x', 1)
       rotXn.onclick = () => rotateAroundCenter('x', -1)
       rotYp.onclick = () => rotateAroundCenter('y', 1)
