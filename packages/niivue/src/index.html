@@ -63,6 +63,28 @@
       <input type="checkbox" id="marginCheck" unchecked />
       <label for="heroSlider">Hero Image</label>
       <input type="range" min="0" max="9" value="0" class="slider" id="heroSlider" />
+      <div style="display: flex; gap: 20px;">
+        <div style="display: grid; grid-template-rows: repeat(3, 1fr); gap: 5px;">
+          <button id="transXn">Trans -X</button>
+          <button id="transYn">Trans -Y</button>
+          <button id="transZn">Trans -Z</button>
+        </div>
+        <div style="display: grid; grid-template-rows: repeat(3, 1fr); gap: 5px;">
+          <button id="transXp">Trans +X</button>
+          <button id="transYp">Trans +Y</button>
+          <button id="transZp">Trans +Z</button>
+        </div>
+        <div style="display: grid; grid-template-rows: repeat(3, 1fr); gap: 5px;">
+          <button id="rotXn">Rot -X</button>
+          <button id="rotYn">Rot -Y</button>
+          <button id="rotZn">Rot -Z</button>
+        </div>
+        <div style="display: grid; grid-template-rows: repeat(3, 1fr); gap: 5px; margin-left: 20px;">
+          <button id="rotXp">Rot +X</button>
+          <button id="rotYp">Rot +Y</button>
+          <button id="rotZp">Rot +Z</button>
+        </div>
+      </div>
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
@@ -133,6 +155,55 @@
         let st = parseInt(document.getElementById('sliceType').value)
         nv1.setSliceType(st)
       }
+      transXp.onclick = () => { nv1.volumes[0].toRAS[3] += 0.005; nv1.updateGLVolume() }
+      transXn.onclick = () => { nv1.volumes[0].toRAS[3] -= 0.005; nv1.updateGLVolume() }
+      transYp.onclick = () => { nv1.volumes[0].toRAS[7] += 0.005; nv1.updateGLVolume() }
+      transYn.onclick = () => { nv1.volumes[0].toRAS[7] -= 0.005; nv1.updateGLVolume() }
+      transZp.onclick = () => { nv1.volumes[0].toRAS[11] += 0.005; nv1.updateGLVolume() }
+      transZn.onclick = () => { nv1.volumes[0].toRAS[11] -= 0.005; nv1.updateGLVolume() }
+
+      const rotateAroundCenter = (axis, sign) => {
+        const vol = nv1.volumes[0]
+        const m = new Float32Array(vol.toRAS)
+
+        const [sx, sy, sz] = vol.pixDimsRAS.slice(1)
+        const [nx, ny, nz] = vol.dimsRAS.slice(1)
+        const cx = (nx * sx) / 2
+        const cy = (ny * sy) / 2
+        const cz = (nz * sz) / 2
+
+        const step = 0.02 * sign
+        const c = Math.cos(step)
+        const s = Math.sin(step)
+        let R
+        if (axis === "x") R = [1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1]
+        if (axis === "y") R = [c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1]
+        if (axis === "z") R = [c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1]
+
+        const T1 = [1,0,0,0, 0,1,0,0, 0,0,1,0, -cx,-cy,-cz,1]
+        const T2 = [1,0,0,0, 0,1,0,0, 0,0,1,0, cx,cy,cz,1]
+
+        const mult = (A, B) => {
+          const out = new Float32Array(16)
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0;j < 4; j++) {
+              out[j * 4 + i] = A[i] * B[j * 4] + A[4 + i] * B[j * 4 + 1] + A[2 * 4 + i] * B[j * 4 + 2] + A[3 * 4 + i] * B[j * 4 + 3]
+            }
+          }
+          return out
+        }
+
+        const M = mult(mult(mult(T2, R), T1), m)
+        vol.toRAS.set(M)
+        nv1.updateGLVolume()
+      }
+      rotXp.onclick = () => rotateAroundCenter('x', 1)
+      rotXn.onclick = () => rotateAroundCenter('x', -1)
+      rotYp.onclick = () => rotateAroundCenter('y', 1)
+      rotYn.onclick = () => rotateAroundCenter('y', -1)
+      rotZp.onclick = () => rotateAroundCenter('z', 1)
+      rotZn.onclick = () => rotateAroundCenter('z', -1)
+
       var volumeList1 = [{ url: '../demos/images/mni152.nii.gz' }]
 
       // with roiSelect, show the stats from the ROI in a temporary div
@@ -203,6 +274,7 @@
         isColorbar: true
       }
       var nv1 = new Niivue(defaults)
+      window.nv = nv1
       await nv1.attachToCanvas(gl1)
       // multiplanarShowRender is the preferred option now,
       // but multiplanarForceRender is still available for backwards compatibility
