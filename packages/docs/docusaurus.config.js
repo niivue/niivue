@@ -7,6 +7,9 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import 'dotenv/config';
 
+// Log PostHog environment variables for debugging
+console.log('PUBLIC_POSTHOG_KEY is set:', !!process.env.PUBLIC_POSTHOG_KEY);
+console.log('PUBLIC_POSTHOG_HOST:', process.env.PUBLIC_POSTHOG_HOST);
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -49,14 +52,16 @@ const config = {
         searchResultContextMaxLength: 50,
       },
     ],
-    [
-      "posthog-docusaurus",
-      {
-        apiKey: process.env.PUBLIC_POSTHOG_KEY,
-        appUrl: process.env.PUBLIC_POSTHOG_HOST, // optional, defaults to "https://us.i.posthog.com"
-        enableInDevelopment: true
-      },
-    ],
+    ...(process.env.PUBLIC_POSTHOG_KEY ? [
+      [
+        "posthog-docusaurus",
+        {
+          apiKey: process.env.PUBLIC_POSTHOG_KEY,
+          appUrl: process.env.PUBLIC_POSTHOG_HOST, // optional, defaults to "https://us.i.posthog.com"
+          enableInDevelopment: true
+        },
+      ],
+    ] : []),
   ],
   presets: [
     [
