@@ -15,9 +15,10 @@ The core NiiVue module supports [many](./Loading%20images#supported-formats) vox
 
 Custom loaders must map incoming data to one of NiiVue’s core internal formats: NIfTI for voxel data and MZ3 for mesh data. These core formats impose certain constraints that loaders must accommodate. For example, the MZ3 format supports only triangulated meshes, so loaders handling polygonal formats must convert all faces to triangles to meet the expectations of modern low-level graphics APIs.
 
- - [cbor-loader](https://github.com/niivue/cbor-loader) meshes and voxels support [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/introduction/file_formats/index.html).
+ - [cbor-loader](https://github.com/niivue/cbor-loader) meshes and voxels support for [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/introduction/file_formats/index.html)'s native format.
  - [dicom-loader](https://github.com/niivue/niivue/tree/main/packages/dicom-loader) uses a WebAssembly copy of [dcm2niix](https://github.com/rordenlab/dcm2niix) to handle DICOM voxel-based images.
    - [Drag and drop live demo](https://niivue.github.io/niivue-dcm2niix/)
+ - [itkwasm-loader](https://github.com/niivue/itkwasm-loader) adds support for many image and mesh formats via [ITK-Wasm](https://wasm.itk.org).
  - [minc-loader](https://github.com/niivue/minc-loader) handles voxel-based [MINC](https://en.wikibooks.org/wiki/MINC/SoftwareDevelopment/MINC2.0_File_Format_Reference) images.
    - [Drag and drop live demo](https://niivue.github.io/minc-loader/)
  - [tiff-loader](https://github.com/niivue/tiff-loader) handles some Tagged Image File Format images, though note that a single TIFF file can store images with different resolutions (unlike NIfTI).
