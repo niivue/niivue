@@ -112,80 +112,69 @@ vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool
     isClip = false; // default: no clipping
 
     if (uClipPlaneMode == 0) {
-        // --- AND mode (intersection / box) ---
-        // If the ray start is not inside the intersection of the half-spaces,
-        // abort (nothing to render).
-        // if (!insideIntersection(samplePos.xyz)) {
-        //     len = 0.0;
-        //     return samplePos;
-        // }
-		if(uClipPlaneCount == 0 ) {
-			return samplePos;
-		}
-		
-		if(uClipPlaneCount < 6) {
-			vec4 plane = uClipPlanes[0];
-            vec3 n = plane.xyz;
-            float cdot = dot(dir, n);
-			if  ((plane.a > 1.0) || (cdot == 0.0)) return samplePos;
-			bool frontface = (cdot > 0.0);
-			float dis = (-plane.a - dot(plane.xyz, samplePos.xyz-0.5)) / cdot;
-			float thick = clipThick;
-			if (thick <= 0.0) thick = 2.0;
-			float  disBackFace = (-(plane.a-thick) - dot(plane.xyz, samplePos.xyz-0.5)) / cdot;
-			if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-				samplePos.a = len + 1.0;
-				return samplePos;
-			}
-			if (frontface) {
-				dis = max(0.0, dis);
-				samplePos = vec4(samplePos.xyz+dir * dis, dis);
-				if (dis > 0.0) isClip = true;
-				len = min(disBackFace, len);
-			}
-			if (!frontface) {
-				len = min(dis, len);
-				disBackFace = max(0.0, disBackFace);
-				if (len == dis) isClip = true;
-				samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-			}
-			return samplePos;
-		}
+    // --- AND mode (simple closest/furthest intersections) ---
+    float ts[MAX_CLIP_PLANES];
+    int tc = 0;
 
-        // The start is inside the intersection. Find the nearest forward intersection
-        // (smallest positive t) with any clip plane and advance the ray to that face.
-        float tClosest = 1.0e9;
-        bool found = false;
+    const float PARALLEL_EPS = 1e-6;
+    const float T_EPS = 1e-8;
 
-        for (int i = 0; i < uClipPlaneCount; i++) {
-            vec4 plane = uClipPlanes[i];
-            vec3 n = plane.xyz;
-            float cdot = dot(dir, n);
-            if (abs(cdot) < 1e-6) continue; // parallel-ish
+    // collect forward intersections that fall within the ray segment (samplePos.a, len)
+    for (int i = 0; i < uClipPlaneCount; ++i) {
+        vec4 plane = uClipPlanes[i];
+        vec3 n = plane.xyz;
+        float cdot = dot(dir, n);
+        if (abs(cdot) < PARALLEL_EPS) continue; // nearly parallel -> ignore
 
-            // compute t where start + dir * t intersects this plane
-            float numer = -(plane.w + dot(n, samplePos.xyz - vec3(0.5)));
-            float t = numer / cdot;
+        float d0 = dot(n, samplePos.xyz - vec3(0.5)) + plane.w;
+        float t = -d0 / cdot;
 
-            // choose smallest positive t (closest face in front of start)
-            if (t > 0.0 && t < tClosest) {
-                tClosest = t;
-                found = true;
-            }
+        if (t > samplePos.a + T_EPS && t < len - T_EPS) {
+            ts[tc] = t;
+            tc++;
+            if (tc >= MAX_CLIP_PLANES) break;
         }
+    }
 
-        if (found) {
-            // advance to closest face and clamp len so we only sample up to that face
-            samplePos = vec4(samplePos.xyz + dir * tClosest, tClosest);
-            len = min(len, tClosest);
-            isClip = true;
-        } else {
-            // No forward-facing intersection found — abort
-            len = 0.0;
-        }
-
+    // if we found no intersections, abort ray
+    if (tc == 0) {
+        len = 0.0;
         return samplePos;
     }
+
+    // sort ascending (small tc: bubble/insertion sort is fine)
+    for (int a = 0; a < tc - 1; ++a) {
+        for (int b = a + 1; b < tc; ++b) {
+            if (ts[b] < ts[a]) {
+                float tmp = ts[a]; ts[a] = ts[b]; ts[b] = tmp;
+            }
+        }
+    }
+
+    // choose closest and furthest intersections
+    float entryT = ts[0];
+    float exitT  = ts[tc - 1];
+
+    // defensive validation
+    if (!(entryT + T_EPS < exitT && exitT > samplePos.a + T_EPS)) {
+        // If there's only a single intersection, we still treat it as an update:
+        // advance to that t and clamp len to that t (degenerate zero-length segment).
+        // But if it's invalid for any reason, abort.
+        // Here we accept the degenerate case; if you prefer aborting when tc==1, change behavior.
+        // For safety, if exitT <= samplePos.a, abort.
+        if (exitT <= samplePos.a + T_EPS) {
+            len = 0.0;
+            return samplePos;
+        }
+    }
+
+    // advance to entry and clamp len to exit
+    samplePos = vec4(samplePos.xyz + dir * entryT, entryT);
+    len = min(len, exitT);
+    isClip = true;
+    return samplePos;
+}
+
 
     else if (uClipPlaneMode == 1) {
         // --- OR mode (cutout by any plane: slabs) ---
@@ -244,40 +233,80 @@ vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool
 		return samplePos;
 	}
 	else if (uClipPlaneMode == 3) {
-		 // The start is inside the intersection. Find the nearest forward intersection
-        // (smallest positive t) with any clip plane and advance the ray to that face.
-        float tClosest = 1.0e9;
-        bool found = false;
+		// SLIDES mode (multi-plane extension of single-plane applyClip behavior)
+		// Require start to be inside the intersection (otherwise abort)
+		if (!insideIntersection(samplePos.xyz)) {
+			len = 0.0;
+			return samplePos;
+		}
 
-        for (int i = 0; i < uClipPlaneCount; i++) {
-            vec4 plane = uClipPlanes[i];
-            vec3 n = plane.xyz;
-            float cdot = dot(dir, n);
-            if (abs(cdot) < 1e-6) continue; // parallel-ish
+		float bestEntry = 1.0e9;
+		float bestExit  = 0.0;
+		bool found = false;
 
-            // compute t where start + dir * t intersects this plane
-            float numer = -(plane.w + dot(n, samplePos.xyz - vec3(0.5)));
-            float t = numer / cdot;
+		// thickness fallback if zero/negative
+		float thick = clipThick;
+		if (thick <= 0.0) thick = 2.0;
 
-            // choose smallest positive t (closest face in front of start)
-            if (t > 0.0 && t < tClosest) {
-                tClosest = t;
-                found = true;
-            }
-        }
+		for (int i = 0; i < uClipPlaneCount; i++) {
+			vec4 plane = uClipPlanes[i];
+			vec3 n = plane.xyz;
+			float cdot = dot(dir, n);
+			if (abs(cdot) < 1e-6) continue; // nearly parallel -> skip
 
-        if (found) {
-            // advance to closest face and clamp len so we only sample up to that face
-            samplePos = vec4(samplePos.xyz + dir * tClosest, tClosest);
-            len = min(len, tClosest);
-            isClip = true;
-        } else {
-            // No forward-facing intersection found — abort
-            len = 0.0;
-        }
+			// intersection with nominal plane
+			float dis = (-(plane.w) - dot(plane.xyz, samplePos.xyz - vec3(0.5))) / cdot;
+			// intersection with back face moved by -thick (same formula as original single-plane)
+			float disBackFace = (-(plane.w - thick) - dot(plane.xyz, samplePos.xyz - vec3(0.5))) / cdot;
 
-        return samplePos;
+			float entryT;
+			float exitT;
+
+			if (cdot > 0.0) {
+				// frontface: entry is the plane, exit is the back face offset
+				entryT = max(0.0, dis);
+				exitT  = disBackFace;
+			} else {
+				// backface: entry is the back-face offset, exit is the plane
+				entryT = disBackFace;
+				exitT  = dis;
+			}
+
+			// Discard degenerate/non-forward slabs:
+			// If exitT <= 0, slab is behind start; if entryT >= len, slab is beyond ray extent
+			if (exitT <= 0.0) continue;
+			if (entryT >= len) continue;
+			if (entryT >= exitT) continue; // no thickness along ray
+
+			// choose the plane with the smallest forward entry (closest face)
+			if (entryT > 0.0 && entryT < bestEntry) {
+				bestEntry = entryT;
+				bestExit  = exitT;
+				found = true;
+			}
+			// if entryT == 0.0 (we're already at face), prefer that (closest)
+			if (entryT == 0.0 && !found) {
+				bestEntry = 0.0;
+				bestExit  = exitT;
+				found = true;
+			}
+		}
+
+		if (found) {
+			// Advance to entry and clamp len to exit (matching single-plane behavior)
+			samplePos = vec4(samplePos.xyz + dir * bestEntry, bestEntry);
+			// ensure we don't extend beyond original ray extent
+			len = min(len, bestExit);
+			isClip = true;
+		} else {
+			// no candidate → abort
+			len = 0.0;
+		}
+
+		return samplePos;
 	}
+
+
 
     return samplePos; // no clipping if mode invalid
 }

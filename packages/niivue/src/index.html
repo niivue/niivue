@@ -166,25 +166,45 @@
         input.click();
       };
 
-      // toggle between 'and' and 'corner'
+      // toggle between 'corner', 'and', and 'slides'
       toggleModeBtn.onclick = () => {
         const cur = nv1.opts.clipPlaneMode || 'corner';
-        const next = (cur === 'slides') ? 'corner' : 'slides';
-        if(next === 'corner') {
+        let next = 'corner';
+        if (cur === 'corner') next = 'and';
+        else if (cur === 'and') next = 'slides';
+        else next = 'corner';
+
+        if (next === 'corner') {
+          // restore simple triplet set (3 planes)
           const depthAziElevs = [
-            [0.2, 270, 0],  // X min (left)
-            [0.2,   0, 0],  // Y min (posterior)
-            [0.2,   0, 90]  // Z max (superior)
+            [0.2, 270, 0],
+            [0.2,   0, 0],
+            [0.2,   0, 90]
           ];
           nv1.setClipPlanes(depthAziElevs);
+        } else if (next === 'and' || next === 'slides') {
+          // install full 6-plane box
+          const min = 0.2, max = 0.8;
+          const dLeft = 0.5 - min, dRight = max - 0.5,
+                dBack = 0.5 - min, dFront = max - 0.5,
+                dBottom = 0.5 - min, dTop = max - 0.5;
+          const boxPlanes = [
+            [dBack, 270,  0],
+            [dFront, 90,  0],
+            [dLeft, 180,  0],
+            [dRight, 0,  0],
+            [dBottom, 0, -90],
+            [dTop, 0, 90]
+          ];
+          nv1.setClipPlanes(boxPlanes);
         }
-        else {
-          setBoxClipPlanes(nv1, 0.2, 0.8);
-        }
-        nv1.setClipPlaneMode(next); // opts-only update per your design
+
+        nv1.setClipPlaneMode(next);
         updateModeButtonText();
+        // updatePlaneVisualization(nv1);
         nv1.drawScene();
       };
+
 
       // quick "set box" helper: sets 6 axis-aligned planes for AND mode (example)
       setBoxBtn.onclick = () => {
