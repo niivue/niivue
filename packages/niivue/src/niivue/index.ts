@@ -4014,6 +4014,11 @@ export class Niivue {
         log.debug('No drawing open')
         return false
       }
+      const img = await this.volumes[0].saveToDisk(filename, this.drawBitmap) // createEmptyDrawing
+      return img
+      /*
+      // ImageWriter.ts toUint8Array() now handles perm()
+      // https://github.com/niivue/niivue/issues/1374
       const perm = this.volumes[0].permRAS!
       if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         log.debug('saving drawing')
@@ -4088,7 +4093,7 @@ export class Niivue {
         log.debug('saving drawing')
         const img = this.volumes[0].saveToDisk(filename, outVs)
         return img
-      }
+      } */
     }
     log.debug('saving image')
     const img = this.volumes[volumeByIndex].saveToDisk(filename)
