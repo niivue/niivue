@@ -93,6 +93,7 @@ import {
   fragMeshEdgeShader,
   fragMeshRimShader,
   fragMeshContourShader,
+  fragCrosscutMeshShader,
   fragMeshShaderCrevice,
   fragMeshDiffuseEdgeShader,
   fragMeshHemiShader,
@@ -616,6 +617,10 @@ export class Niivue {
     {
       Name: 'Silhouette',
       Frag: fragMeshContourShader
+    },
+    {
+      Name: 'Crosscut',
+      Frag: fragCrosscutMeshShader
     }
   ]
 
@@ -7626,6 +7631,7 @@ export class Niivue {
         m.shader = new Shader(gl, vertMeshShader, m.Frag)
       }
       m.shader.use(gl)
+      m.shader.isCrosscut = m.Name === 'Crosscut'
       m.shader.isMatcap = m.Name === 'Matcap'
       if (m.shader.isMatcap) {
         gl.uniform1i(m.shader.uniforms.matCap, 5)
@@ -13740,7 +13746,12 @@ export class Niivue {
         shader = this.pickingMeshShader!
       }
       shader.use(gl)
-
+      if (shader.isCrosscut) {
+        gl.disable(gl.DEPTH_TEST) // mork
+        gl.disable(gl.CULL_FACE) // mork
+        const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM)
+        this.gl.uniform3fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2]])
+      }
       // Set uniforms
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
@@ -13762,7 +13773,6 @@ export class Niivue {
         hasFibers = true
         continue
       }
-
       if (shader.isMatcap) {
         gl.activeTexture(TEXTURE5_MATCAP)
         gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture)
