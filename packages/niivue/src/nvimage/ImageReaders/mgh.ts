@@ -1,5 +1,5 @@
 import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
-import { mat4, vec4, vec3 } from 'gl-matrix'
+import { mat4 } from 'gl-matrix'
 import { log } from '@/logger'
 import { NVUtilities } from '@/nvutilities'
 import type { NVImage } from '@/nvimage'
@@ -282,6 +282,7 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
 
   hdr.sform_code = 1
   hdr.qform_code = 0
+  hdr.sform_code = 1
   const rot44 = mat4.fromValues(
     xr * hdr.pixDims[1],
     yr * hdr.pixDims[2],
@@ -300,16 +301,19 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     0,
     1
   )
+  const Pcrs = [hdr.dims[1] / 2.0, hdr.dims[2] / 2.0, hdr.dims[3] / 2.0, 1]
 
-  const PcrsVec = vec4.fromValues(hdr.dims[1] / 2.0, hdr.dims[2] / 2.0, hdr.dims[3] / 2.0, 1)
-  const PxyzOffsetVec = vec4.create()
-  vec4.transformMat4(PxyzOffsetVec, PcrsVec, rot44)
-  const translation = vec3.fromValues(cr - PxyzOffsetVec[0], ca - PxyzOffsetVec[1], cs - PxyzOffsetVec[2])
-
+  const PxyzOffset = [0, 0, 0, 0]
+  for (let i = 0; i < 3; i++) {
+    PxyzOffset[i] = 0
+    for (let j = 0; j < 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j]
+    }
+  }
   hdr.affine = [
-    [rot44[0], rot44[1], rot44[2], translation[0]],
-    [rot44[4], rot44[5], rot44[6], translation[1]],
-    [rot44[8], rot44[9], rot44[10], translation[2]],
+    [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
+    [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
+    [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
     [0, 0, 0, 1]
   ]
 
