@@ -367,6 +367,26 @@ export class NVMeshLoaders {
     }
   } // readTRX()
 
+  // issue1426 MRtrix data per streamline as ASCII text
+  static readTXT(buffer: ArrayBuffer, n_count = 0): Float32Array {
+    // Decode ASCII (or UTF-8) bytes into a string
+    const text = new TextDecoder('utf-8').decode(buffer)
+    // Split into lines, handling any line endings: \r\n, \r, or \n
+    const lines = text.split(/\r?\n|\r/).filter((l) => l.trim().length > 0)
+    // If n_count not specified, use number of lines
+    if (n_count <= 0) {
+      n_count = lines.length
+    }
+    const vals = new Float32Array(n_count)
+    // Parse each line into a float
+    for (let i = 0; i < n_count && i < lines.length; i++) {
+      const v = parseFloat(lines[i].trim())
+      vals[i] = Number.isFinite(v) ? v : 0.0
+    }
+
+    return vals
+  }
+
   // read mrtrix tsf format Track Scalar Files - these are are DPV
   // https://mrtrix.readthedocs.io/en/dev/getting_started/image_data.html#track-scalar-file-format-tsf
   static readTSF(buffer: ArrayBuffer, n_vert = 0): Float32Array {
@@ -866,10 +886,7 @@ export class NVMeshLoaders {
     }
     const n_vert = nvmesh.vertexCount / 3 // each vertex has XYZ component
     if (nvmesh.offsetPt0) {
-      if (ext !== 'TSF') {
-        throw new Error('readLayer for streamlines only supports TSF files.')
-      }
-      const npt = nvmesh.pts.length / 3
+      // for streamlines, we can only read .tsf and txt files
       // typescript hell commences for one liner
       // const tag = name.split('/')!.pop()!.split('.')!.slice(0, -1).join('.')!
       const splitResult = name.split('/')
@@ -880,6 +897,31 @@ export class NVMeshLoaders {
           tag = tag.split('.').slice(0, -1).join('.')
         }
       }
+      if (ext === 'TXT') {
+        const n_count = nvmesh.offsetPt0.length - 1
+        const vals = NVMeshLoaders.readTXT(buffer, n_count)
+        if (vals.length !== n_count) {
+          throw new Error(`TXT file has ${vals.length} items, expected one per streamline (${n_count}).`)
+        }
+        if (!nvmesh.dps) {
+          nvmesh.dps = []
+        }
+        const mn = vals.reduce((acc, current) => Math.min(acc, current))
+        const mx = vals.reduce((acc, current) => Math.max(acc, current))
+        nvmesh.dps.push({
+          id: tag,
+          vals: Float32Array.from(vals.slice()),
+          global_min: mn,
+          global_max: mx,
+          cal_min: mn,
+          cal_max: mx
+        })
+        return layer
+      }
+      if (ext !== 'TSF') {
+        throw new Error('readLayer for streamlines only supports TSF and TXT files.')
+      }
+      const npt = nvmesh.pts.length / 3
       // return to readable javascript
       const vals = NVMeshLoaders.readTSF(buffer, npt)
       if (!nvmesh.dpv) {

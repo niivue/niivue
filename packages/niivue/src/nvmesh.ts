@@ -920,16 +920,18 @@ export class NVMesh {
     }
     // issue 1426
     if (Number.isFinite(this.dpsThreshold) && this.dps) {
-      if (!dps) {//if color is not based on dps, threshold on first dps
+      if (!dps) {
+        // if color is not based on dps, threshold on first dps
         const n = 0
         if (this.dps[n].vals.length === n_count) {
-            dps = this.dps[n].vals
+          dps = this.dps[n].vals
         }
       }
       if (dps) {
         for (let i = 0; i < n_count; i++) {
-          if (dps[i] < this.dpsThreshold) 
-            streamlineVisible[i] = -1;
+          if (dps[i] < this.dpsThreshold) {
+            streamlineVisible[i] = -1
+          }
         }
       }
     }
