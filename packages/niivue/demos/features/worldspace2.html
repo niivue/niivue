@@ -52,6 +52,9 @@
     <main id="container">
       <canvas id="gl1"></canvas>
     </main>
+    <footer>
+      <label id="shaders">Shaders: </label>
+    </footer>
     <script type="module" async>
       import * as niivue from "../dist/index.js";
       
@@ -149,6 +152,16 @@
         backColor: [0.3, 0.2, 0.4, 1],
         show3Dcrosshair: true,
       });
+      let cmaps = nv1.meshShaderNames()
+      let cmapEl = document.getElementById('shaders')
+      for (let i = 0; i < cmaps.length; i++) {
+        let btn = document.createElement('button')
+        btn.innerHTML = cmaps[i]
+        btn.onclick = function () {
+          nv1.setMeshShader(nv1.meshes[0].id, cmaps[i])
+        }
+        cmapEl.appendChild(btn)
+      }
       nv1.setSliceMM(true);
       await nv1.attachTo("gl1");
       nv1.setClipPlane([-0.1, 270, 0]);

@@ -42,6 +42,7 @@ export class Shader {
   program: WebGLProgram
   uniforms: Record<string, WebGLUniformLocation | null> = {}
   isMatcap?: boolean
+  isCrosscut?: boolean
 
   constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string) {
     this.program = compileShader(gl, vertexSrc, fragmentSrc)

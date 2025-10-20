@@ -187,6 +187,7 @@ export class NVMesh {
   fiberRadius = 0 // in mm, e.g. 3 means 6mm diameter fibers, ignored if fiberSides < 3
   fiberOcclusion = 0 // value 0..1 to simulate ambient occlusion
   f32PerVertex = 5 // MUST be 5 or 7: number of float32s per vertex DEPRECATED, future releases will ALWAYS be 5
+  dpsThreshold = NaN
   fiberMask?: unknown[]
   colormap?: ColorMap | LegacyConnectome | string | null
   dpg?: ValuesArray | null
@@ -798,7 +799,6 @@ export class NVMesh {
         v4 += 4
       }
     } else if (dps) {
-      // color per streamline
       const lut = cmapper.colormap(this.colormap as string, this.colormapInvert)
       let mn = dps[0]
       let mx = dps[0]
@@ -915,6 +915,23 @@ export class NVMesh {
           let RGBA = posClrU32[j]
           RGBA = shadeRGBA(RGBA, frac)
           posClrU32[j] = RGBA
+        }
+      }
+    }
+    // issue 1426
+    if (Number.isFinite(this.dpsThreshold) && this.dps) {
+      if (!dps) {
+        // if color is not based on dps, threshold on first dps
+        const n = 0
+        if (this.dps[n].vals.length === n_count) {
+          dps = this.dps[n].vals
+        }
+      }
+      if (dps) {
+        for (let i = 0; i < n_count; i++) {
+          if (dps[i] < this.dpsThreshold) {
+            streamlineVisible[i] = -1
+          }
         }
       }
     }
