@@ -31,7 +31,7 @@ new NVMesh(
    anatomicalStructurePrimary: string): NVMesh;
 ```
 
-Defined in: [nvmesh.ts:236](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L236)
+Defined in: [nvmesh.ts:237](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L237)
 
 #### Parameters
 
@@ -61,19 +61,20 @@ Defined in: [nvmesh.ts:236](https://github.com/niivue/niivue/blob/main/packages/
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------- |
 | <a id="anatomicalstructureprimary"></a> `anatomicalStructurePrimary` | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:155](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L155) |
 | <a id="colorbarvisible"></a> `colorbarVisible`                       | `boolean`                                                                                                                                     | `undefined`     | [nvmesh.ts:156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L156) |
-| <a id="colormap"></a> `colormap?`                                    | \| `string` \| [`ColorMap`](../../colortables/type-aliases/ColorMap.md) \| [`LegacyConnectome`](../../types/type-aliases/LegacyConnectome.md) | `undefined`     | [nvmesh.ts:191](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L191) |
+| <a id="colormap"></a> `colormap?`                                    | \| `string` \| [`ColorMap`](../../colortables/type-aliases/ColorMap.md) \| [`LegacyConnectome`](../../types/type-aliases/LegacyConnectome.md) | `undefined`     | [nvmesh.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L192) |
 | <a id="colormapinvert"></a> `colormapInvert`                         | `boolean`                                                                                                                                     | `false`         | [nvmesh.ts:165](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L165) |
-| <a id="connectome"></a> `connectome?`                                | \| `string` \| [`LegacyConnectome`](../../types/type-aliases/LegacyConnectome.md)                                                             | `undefined`     | [nvmesh.ts:197](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L197) |
+| <a id="connectome"></a> `connectome?`                                | \| `string` \| [`LegacyConnectome`](../../types/type-aliases/LegacyConnectome.md)                                                             | `undefined`     | [nvmesh.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L198) |
 | <a id="data_type"></a> `data_type?`                                  | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L178) |
-| <a id="dpg"></a> `dpg?`                                              | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [nvmesh.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L192) |
-| <a id="dps"></a> `dps?`                                              | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [nvmesh.ts:193](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L193) |
-| <a id="dpv"></a> `dpv?`                                              | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [nvmesh.ts:194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L194) |
-| <a id="edgecolormap"></a> `edgeColormap`                             | `string`                                                                                                                                      | `'warm'`        | [nvmesh.ts:207](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L207) |
-| <a id="edgecolormapnegative"></a> `edgeColormapNegative?`            | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:209](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L209) |
-| <a id="edgemax"></a> `edgeMax?`                                      | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:213](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L213) |
-| <a id="edgemin"></a> `edgeMin?`                                      | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:212](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L212) |
-| <a id="edges"></a> `edges?`                                          | `number`[] \| `NVConnectomeEdge`[]                                                                                                            | `undefined`     | [nvmesh.ts:217](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L217) |
-| <a id="edgescale"></a> `edgeScale`                                   | `number`                                                                                                                                      | `1`             | [nvmesh.ts:203](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L203) |
+| <a id="dpg"></a> `dpg?`                                              | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [nvmesh.ts:193](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L193) |
+| <a id="dps"></a> `dps?`                                              | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [nvmesh.ts:194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L194) |
+| <a id="dpsthreshold"></a> `dpsThreshold`                             | `number`                                                                                                                                      | `NaN`           | [nvmesh.ts:190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L190) |
+| <a id="dpv"></a> `dpv?`                                              | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [nvmesh.ts:195](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L195) |
+| <a id="edgecolormap"></a> `edgeColormap`                             | `string`                                                                                                                                      | `'warm'`        | [nvmesh.ts:208](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L208) |
+| <a id="edgecolormapnegative"></a> `edgeColormapNegative?`            | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:210](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L210) |
+| <a id="edgemax"></a> `edgeMax?`                                      | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:214](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L214) |
+| <a id="edgemin"></a> `edgeMin?`                                      | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:213](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L213) |
+| <a id="edges"></a> `edges?`                                          | `number`[] \| `NVConnectomeEdge`[]                                                                                                            | `undefined`     | [nvmesh.ts:218](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L218) |
+| <a id="edgescale"></a> `edgeScale`                                   | `number`                                                                                                                                      | `1`             | [nvmesh.ts:204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L204) |
 | <a id="extentsmax"></a> `extentsMax`                                 | `number` \| `number`[]                                                                                                                        | `undefined`     | [nvmesh.ts:159](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L159) |
 | <a id="extentsmin"></a> `extentsMin`                                 | `number` \| `number`[]                                                                                                                        | `undefined`     | [nvmesh.ts:158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L158) |
 | <a id="f32pervertex"></a> `f32PerVertex`                             | `number`                                                                                                                                      | `5`             | [nvmesh.ts:189](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L189) |
@@ -84,37 +85,37 @@ Defined in: [nvmesh.ts:236](https://github.com/niivue/niivue/blob/main/packages/
 | <a id="fibergroupcolormap"></a> `fiberGroupColormap`                 | [`ColorMap`](../../colortables/type-aliases/ColorMap.md)                                                                                      | `null`          | [nvmesh.ts:166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L166) |
 | <a id="fiberlength"></a> `fiberLength?`                              | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:180](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L180) |
 | <a id="fiberlengths"></a> `fiberLengths?`                            | `Uint32Array`                                                                                                                                 | `undefined`     | [nvmesh.ts:181](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L181) |
-| <a id="fibermask"></a> `fiberMask?`                                  | `unknown`[]                                                                                                                                   | `undefined`     | [nvmesh.ts:190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L190) |
+| <a id="fibermask"></a> `fiberMask?`                                  | `unknown`[]                                                                                                                                   | `undefined`     | [nvmesh.ts:191](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L191) |
 | <a id="fiberocclusion"></a> `fiberOcclusion`                         | `number`                                                                                                                                      | `0`             | [nvmesh.ts:188](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L188) |
 | <a id="fiberradius"></a> `fiberRadius`                               | `number`                                                                                                                                      | `0`             | [nvmesh.ts:187](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L187) |
 | <a id="fibersides"></a> `fiberSides`                                 | `number`                                                                                                                                      | `5`             | [nvmesh.ts:186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L186) |
 | <a id="furthestvertexfromorigin"></a> `furthestVertexFromOrigin`     | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L157) |
-| <a id="hasconnectome"></a> `hasConnectome`                           | `boolean`                                                                                                                                     | `false`         | [nvmesh.ts:196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L196) |
+| <a id="hasconnectome"></a> `hasConnectome`                           | `boolean`                                                                                                                                     | `false`         | [nvmesh.ts:197](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L197) |
 | <a id="id"></a> `id`                                                 | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:153](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L153) |
 | <a id="indexbuffer"></a> `indexBuffer`                               | `WebGLBuffer`                                                                                                                                 | `undefined`     | [nvmesh.ts:168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L168) |
-| <a id="indexcount"></a> `indexCount?`                                | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:200](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L200) |
+| <a id="indexcount"></a> `indexCount?`                                | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L201) |
 | <a id="layers"></a> `layers`                                         | [`NVMeshLayer`](../type-aliases/NVMeshLayer.md)[]                                                                                             | `undefined`     | [nvmesh.ts:175](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L175) |
-| <a id="legendlinethickness"></a> `legendLineThickness`               | `number`                                                                                                                                      | `0`             | [nvmesh.ts:204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L204) |
+| <a id="legendlinethickness"></a> `legendLineThickness`               | `number`                                                                                                                                      | `0`             | [nvmesh.ts:205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L205) |
 | <a id="meshshaderindex"></a> `meshShaderIndex`                       | `number`                                                                                                                                      | `0`             | [nvmesh.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L162) |
 | <a id="name"></a> `name`                                             | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L154) |
-| <a id="nodecolormap"></a> `nodeColormap`                             | `string`                                                                                                                                      | `'warm'`        | [nvmesh.ts:206](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L206) |
-| <a id="nodecolormapnegative"></a> `nodeColormapNegative?`            | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:208](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L208) |
-| <a id="nodemaxcolor"></a> `nodeMaxColor?`                            | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:211](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L211) |
-| <a id="nodemincolor"></a> `nodeMinColor?`                            | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:210](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L210) |
-| <a id="nodes"></a> `nodes?`                                          | \| [`LegacyNodes`](../../types/type-aliases/LegacyNodes.md) \| `NVConnectomeNode`[]                                                           | `undefined`     | [nvmesh.ts:215](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L215) |
-| <a id="nodescale"></a> `nodeScale`                                   | `number`                                                                                                                                      | `4`             | [nvmesh.ts:202](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L202) |
+| <a id="nodecolormap"></a> `nodeColormap`                             | `string`                                                                                                                                      | `'warm'`        | [nvmesh.ts:207](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L207) |
+| <a id="nodecolormapnegative"></a> `nodeColormapNegative?`            | `string`                                                                                                                                      | `undefined`     | [nvmesh.ts:209](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L209) |
+| <a id="nodemaxcolor"></a> `nodeMaxColor?`                            | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:212](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L212) |
+| <a id="nodemincolor"></a> `nodeMinColor?`                            | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:211](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L211) |
+| <a id="nodes"></a> `nodes?`                                          | \| [`LegacyNodes`](../../types/type-aliases/LegacyNodes.md) \| `NVConnectomeNode`[]                                                           | `undefined`     | [nvmesh.ts:216](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L216) |
+| <a id="nodescale"></a> `nodeScale`                                   | `number`                                                                                                                                      | `4`             | [nvmesh.ts:203](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L203) |
 | <a id="offsetpt0"></a> `offsetPt0`                                   | `Uint32Array`                                                                                                                                 | `null`          | [nvmesh.ts:163](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L163) |
 | <a id="opacity"></a> `opacity`                                       | `number`                                                                                                                                      | `undefined`     | [nvmesh.ts:160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L160) |
-| <a id="points"></a> `points?`                                        | [`Point`](../../types/type-aliases/Point.md)[]                                                                                                | `undefined`     | [nvmesh.ts:219](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L219) |
+| <a id="points"></a> `points?`                                        | [`Point`](../../types/type-aliases/Point.md)[]                                                                                                | `undefined`     | [nvmesh.ts:220](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L220) |
 | <a id="pts"></a> `pts`                                               | `Float32Array`                                                                                                                                | `undefined`     | [nvmesh.ts:173](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L173) |
 | <a id="rgba255"></a> `rgba255`                                       | `Uint8Array`                                                                                                                                  | `undefined`     | [nvmesh.ts:179](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L179) |
-| <a id="showlegend"></a> `showLegend`                                 | `boolean`                                                                                                                                     | `true`          | [nvmesh.ts:205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L205) |
+| <a id="showlegend"></a> `showLegend`                                 | `boolean`                                                                                                                                     | `true`          | [nvmesh.ts:206](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L206) |
 | <a id="tris"></a> `tris?`                                            | `Uint32Array`                                                                                                                                 | `undefined`     | [nvmesh.ts:174](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L174) |
 | <a id="type"></a> `type`                                             | [`MeshType`](../enumerations/MeshType.md)                                                                                                     | `MeshType.MESH` | [nvmesh.ts:176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L176) |
 | <a id="vao"></a> `vao`                                               | `WebGLVertexArrayObject`                                                                                                                      | `undefined`     | [nvmesh.ts:170](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L170) |
 | <a id="vaofiber"></a> `vaoFiber`                                     | `WebGLVertexArrayObject`                                                                                                                      | `undefined`     | [nvmesh.ts:171](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L171) |
 | <a id="vertexbuffer"></a> `vertexBuffer`                             | `WebGLBuffer`                                                                                                                                 | `undefined`     | [nvmesh.ts:169](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L169) |
-| <a id="vertexcount"></a> `vertexCount`                               | `number`                                                                                                                                      | `1`             | [nvmesh.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L201) |
+| <a id="vertexcount"></a> `vertexCount`                               | `number`                                                                                                                                      | `1`             | [nvmesh.ts:202](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L202) |
 | <a id="visible"></a> `visible`                                       | `boolean`                                                                                                                                     | `undefined`     | [nvmesh.ts:161](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L161) |
 
 ## Methods
@@ -132,7 +133,7 @@ blendColormap(
    invert: boolean): void;
 ```
 
-Defined in: [nvmesh.ts:1076](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1076)
+Defined in: [nvmesh.ts:1093](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1093)
 
 #### Parameters
 
@@ -158,7 +159,7 @@ Defined in: [nvmesh.ts:1076](https://github.com/niivue/niivue/blob/main/packages
 createFiberDensityMap(): void;
 ```
 
-Defined in: [nvmesh.ts:530](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L530)
+Defined in: [nvmesh.ts:531](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L531)
 
 #### Returns
 
@@ -172,7 +173,7 @@ Defined in: [nvmesh.ts:530](https://github.com/niivue/niivue/blob/main/packages/
 decimateFaces(n: number, ntarget: number): void;
 ```
 
-Defined in: [nvmesh.ts:1527](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1527)
+Defined in: [nvmesh.ts:1544](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1544)
 
 #### Parameters
 
@@ -193,7 +194,7 @@ Defined in: [nvmesh.ts:1527](https://github.com/niivue/niivue/blob/main/packages
 decimateHierarchicalMesh(gl: WebGL2RenderingContext, order: number): boolean;
 ```
 
-Defined in: [nvmesh.ts:1561](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1561)
+Defined in: [nvmesh.ts:1578](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1578)
 
 #### Parameters
 
@@ -217,7 +218,7 @@ generatePosNormClr(
    rgba255: Uint8Array): Float32Array;
 ```
 
-Defined in: [nvmesh.ts:1644](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1644)
+Defined in: [nvmesh.ts:1661](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1661)
 
 #### Parameters
 
@@ -239,7 +240,7 @@ Defined in: [nvmesh.ts:1644](https://github.com/niivue/niivue/blob/main/packages
 hierarchicalOrder(): number;
 ```
 
-Defined in: [nvmesh.ts:1494](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1494)
+Defined in: [nvmesh.ts:1511](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1511)
 
 #### Returns
 
@@ -256,7 +257,7 @@ indexNearestXYZmm(
    Zmm: number): number[];
 ```
 
-Defined in: [nvmesh.ts:958](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L958)
+Defined in: [nvmesh.ts:975](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L975)
 
 #### Parameters
 
@@ -278,7 +279,7 @@ Defined in: [nvmesh.ts:958](https://github.com/niivue/niivue/blob/main/packages/
 initValuesArray(va: ValuesArray): ValuesArray;
 ```
 
-Defined in: [nvmesh.ts:350](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L350)
+Defined in: [nvmesh.ts:351](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L351)
 
 #### Parameters
 
@@ -301,7 +302,7 @@ linesToCylinders(
    indices: number[]): void;
 ```
 
-Defined in: [nvmesh.ts:363](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L363)
+Defined in: [nvmesh.ts:364](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L364)
 
 #### Parameters
 
@@ -323,7 +324,7 @@ Defined in: [nvmesh.ts:363](https://github.com/niivue/niivue/blob/main/packages/
 loadFromBase64(__namedParameters: Partial<LoadFromBase64Params>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:2083](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2083)
+Defined in: [nvmesh.ts:2100](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2100)
 
 load and return a new NVMesh instance from a base64 encoded string
 
@@ -345,7 +346,7 @@ load and return a new NVMesh instance from a base64 encoded string
 reverseFaces(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1478](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1478)
+Defined in: [nvmesh.ts:1495](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1495)
 
 #### Parameters
 
@@ -369,7 +370,7 @@ scalars2RGBA(
    isNegativeCmap: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [nvmesh.ts:1010](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1010)
+Defined in: [nvmesh.ts:1027](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1027)
 
 #### Parameters
 
@@ -396,7 +397,7 @@ setLayerProperty(
 gl: WebGL2RenderingContext): Promise<void>;
 ```
 
-Defined in: [nvmesh.ts:1592](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1592)
+Defined in: [nvmesh.ts:1609](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1609)
 
 #### Parameters
 
@@ -430,7 +431,7 @@ setProperty(
    gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1625](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1625)
+Defined in: [nvmesh.ts:1642](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1642)
 
 #### Parameters
 
@@ -452,7 +453,7 @@ Defined in: [nvmesh.ts:1625](https://github.com/niivue/niivue/blob/main/packages
 unloadMesh(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:979](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L979)
+Defined in: [nvmesh.ts:996](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L996)
 
 #### Parameters
 
@@ -472,7 +473,7 @@ Defined in: [nvmesh.ts:979](https://github.com/niivue/niivue/blob/main/packages/
 updateFibers(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:656](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L656)
+Defined in: [nvmesh.ts:657](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L657)
 
 #### Parameters
 
@@ -492,7 +493,7 @@ Defined in: [nvmesh.ts:656](https://github.com/niivue/niivue/blob/main/packages/
 updateMesh(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1176)
+Defined in: [nvmesh.ts:1193](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1193)
 
 #### Parameters
 
@@ -512,7 +513,7 @@ Defined in: [nvmesh.ts:1176](https://github.com/niivue/niivue/blob/main/packages
 static loadFromFile(__namedParameters: Partial<LoadFromFileParams>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:2048](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2048)
+Defined in: [nvmesh.ts:2065](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2065)
 
 factory function to load and return a new NVMesh instance from a file in the browser
 
@@ -536,7 +537,7 @@ NVMesh instance
 static loadFromUrl(__namedParameters: Partial<LoadFromUrlParams>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:1969](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1969)
+Defined in: [nvmesh.ts:1986](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1986)
 
 factory function to load and return a new NVMesh instance from a given URL
 
@@ -558,7 +559,7 @@ factory function to load and return a new NVMesh instance from a given URL
 static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
 ```
 
-Defined in: [nvmesh.ts:1872](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1872)
+Defined in: [nvmesh.ts:1889](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1889)
 
 #### Parameters
 
@@ -579,7 +580,7 @@ Defined in: [nvmesh.ts:1872](https://github.com/niivue/niivue/blob/main/packages
 static readFileAsync(file: Blob): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvmesh.ts:2029](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2029)
+Defined in: [nvmesh.ts:2046](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2046)
 
 #### Parameters
 
@@ -605,7 +606,7 @@ static readMesh(
 visible: boolean): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:1690](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1690)
+Defined in: [nvmesh.ts:1707](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1707)
 
 #### Parameters
 

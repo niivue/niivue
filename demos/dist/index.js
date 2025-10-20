@@ -16057,6 +16057,20 @@ var NVMeshLoaders = class _NVMeshLoaders {
     };
   }
   // readTRX()
+  // issue1426 MRtrix data per streamline as ASCII text
+  static readTXT(buffer, n_count = 0) {
+    const text = new TextDecoder("utf-8").decode(buffer);
+    const lines = text.split(/\r?\n|\r/).filter((l) => l.trim().length > 0);
+    if (n_count <= 0) {
+      n_count = lines.length;
+    }
+    const vals = new Float32Array(n_count);
+    for (let i = 0; i < n_count && i < lines.length; i++) {
+      const v = parseFloat(lines[i].trim());
+      vals[i] = Number.isFinite(v) ? v : 0;
+    }
+    return vals;
+  }
   // read mrtrix tsf format Track Scalar Files - these are are DPV
   // https://mrtrix.readthedocs.io/en/dev/getting_started/image_data.html#track-scalar-file-format-tsf
   static readTSF(buffer, n_vert = 0) {
@@ -16516,10 +16530,6 @@ var NVMeshLoaders = class _NVMeshLoaders {
     }
     const n_vert = nvmesh.vertexCount / 3;
     if (nvmesh.offsetPt0) {
-      if (ext !== "TSF") {
-        throw new Error("readLayer for streamlines only supports TSF files.");
-      }
-      const npt = nvmesh.pts.length / 3;
       const splitResult = name.split("/");
       let tag = "Unknown";
       if (splitResult.length > 1) {
@@ -16528,6 +16538,31 @@ var NVMeshLoaders = class _NVMeshLoaders {
           tag = tag.split(".").slice(0, -1).join(".");
         }
       }
+      if (ext === "TXT") {
+        const n_count = nvmesh.offsetPt0.length - 1;
+        const vals2 = _NVMeshLoaders.readTXT(buffer, n_count);
+        if (vals2.length !== n_count) {
+          throw new Error(`TXT file has ${vals2.length} items, expected one per streamline (${n_count}).`);
+        }
+        if (!nvmesh.dps) {
+          nvmesh.dps = [];
+        }
+        const mn3 = vals2.reduce((acc, current) => Math.min(acc, current));
+        const mx3 = vals2.reduce((acc, current) => Math.max(acc, current));
+        nvmesh.dps.push({
+          id: tag,
+          vals: Float32Array.from(vals2.slice()),
+          global_min: mn3,
+          global_max: mx3,
+          cal_min: mn3,
+          cal_max: mx3
+        });
+        return layer;
+      }
+      if (ext !== "TSF") {
+        throw new Error("readLayer for streamlines only supports TSF and TXT files.");
+      }
+      const npt = nvmesh.pts.length / 3;
       const vals = _NVMeshLoaders.readTSF(buffer, npt);
       if (!nvmesh.dpv) {
         nvmesh.dpv = [];
@@ -23978,6 +24013,7 @@ async function readMgh(nvImage, buffer) {
   hdr.pixDims[4] = 0;
   hdr.sform_code = 1;
   hdr.qform_code = 0;
+  hdr.sform_code = 1;
   const rot44 = mat4_exports.fromValues(
     xr * hdr.pixDims[1],
     yr * hdr.pixDims[2],
@@ -23996,14 +24032,18 @@ async function readMgh(nvImage, buffer) {
     0,
     1
   );
-  const PcrsVec = vec4_exports.fromValues(hdr.dims[1] / 2, hdr.dims[2] / 2, hdr.dims[3] / 2, 1);
-  const PxyzOffsetVec = vec4_exports.create();
-  vec4_exports.transformMat4(PxyzOffsetVec, PcrsVec, rot44);
-  const translation = vec3_exports.fromValues(cr - PxyzOffsetVec[0], ca - PxyzOffsetVec[1], cs - PxyzOffsetVec[2]);
+  const Pcrs = [hdr.dims[1] / 2, hdr.dims[2] / 2, hdr.dims[3] / 2, 1];
+  const PxyzOffset = [0, 0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    PxyzOffset[i] = 0;
+    for (let j = 0; j < 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j];
+    }
+  }
   hdr.affine = [
-    [rot44[0], rot44[1], rot44[2], translation[0]],
-    [rot44[4], rot44[5], rot44[6], translation[1]],
-    [rot44[8], rot44[9], rot44[10], translation[2]],
+    [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
+    [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
+    [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
     [0, 0, 0, 1]
   ];
   hdr.vox_offset = 284;
@@ -28672,6 +28712,7 @@ var NVMesh3 = class _NVMesh {
     // value 0..1 to simulate ambient occlusion
     __publicField(this, "f32PerVertex", 5);
     // MUST be 5 or 7: number of float32s per vertex DEPRECATED, future releases will ALWAYS be 5
+    __publicField(this, "dpsThreshold", NaN);
     __publicField(this, "fiberMask");
     __publicField(this, "colormap");
     __publicField(this, "dpg");
@@ -29266,6 +29307,21 @@ var NVMesh3 = class _NVMesh {
           let RGBA = posClrU32[j];
           RGBA = shadeRGBA(RGBA, frac);
           posClrU32[j] = RGBA;
+        }
+      }
+    }
+    if (Number.isFinite(this.dpsThreshold) && this.dps) {
+      if (!dps) {
+        const n = 0;
+        if (this.dps[n].vals.length === n_count) {
+          dps = this.dps[n].vals;
+        }
+      }
+      if (dps) {
+        for (let i = 0; i < n_count; i++) {
+          if (dps[i] < this.dpsThreshold) {
+            streamlineVisible[i] = -1;
+          }
         }
       }
     }
@@ -34465,6 +34521,38 @@ void main() {
 	float s = specular * pow(max(dot(reflect(l, n), r), 0.0), shininess);
 	color = vec4(a + d + s, opacity);
 }`;
+var fragCrosscutMeshShader = `#version 300 es
+precision highp int;
+precision highp float;
+uniform vec3 sliceMM;
+in vec4 vClr;
+in vec4 vP;  // vertex position in mm
+out vec4 color;
+void main() {
+	// Constants to tweak (later make them uniforms)
+	const vec3 PLANES = vec3(-20.0, 0.0, 0.0); // planes at X=10 mm, Y=30 mm, Z=40 mm
+	const float LINE_WIDTH_PX = 4.5;            // target thickness in pixels
+	const float TILT_STRENGTH = 2.0;            // >0 shrinks ribbon for oblique triangles
+	// --- signed distances to each orthogonal plane ---
+	vec3 d = vP.xyz - sliceMM;
+	vec3 ad = abs(d);
+	// --- derivatives to get pixel-consistent widths ---
+	vec3 fd = fwidth(d);
+	fd = max(fd, vec3(1e-6)); // avoid zeros
+	// --- estimate obliqueness using xy variation (same for all planes) ---
+	float tilt = length(vec2(fwidth(vP.x), fwidth(vP.y)));
+	float tiltFactor = 1.0 / (1.0 + TILT_STRENGTH * tilt);
+	tiltFactor = clamp(tiltFactor, 0.0, 1.0);
+	// --- half-widths for each plane ---
+	vec3 halfWidth = (LINE_WIDTH_PX * 0.5) * fd * tiltFactor;
+	// --- smooth alpha for each plane ---
+	vec3 edgeA = 1.0 - smoothstep(vec3(0.0), halfWidth, ad);
+	// combine planes (max of X,Y,Z ribbons)
+	float edgeAlpha = max(edgeA.x, max(edgeA.y, edgeA.z));
+	if (edgeAlpha <= 1e-4) discard; // outside ribbons
+	color = vec4(vClr.rgb, vClr.a * edgeAlpha);
+}
+`;
 var fragMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
@@ -34952,6 +35040,7 @@ var Shader = class {
     __publicField(this, "program");
     __publicField(this, "uniforms", {});
     __publicField(this, "isMatcap");
+    __publicField(this, "isCrosscut");
     this.program = compileShader(gl, vertexSrc, fragmentSrc);
     const regexUniform = /uniform[^;]+[ ](\w+);/g;
     const matchUniformName = /uniform[^;]+[ ](\w+);/;
@@ -35524,6 +35613,10 @@ var Niivue = class {
       {
         Name: "Silhouette",
         Frag: fragMeshContourShader
+      },
+      {
+        Name: "Crosscut",
+        Frag: fragCrosscutMeshShader
       }
     ]);
     // TODO just let users use DRAG_MODE instead
@@ -38455,75 +38548,8 @@ var Niivue = class {
         log.debug("No drawing open");
         return false;
       }
-      const perm = this.volumes[0].permRAS;
-      if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-        log.debug("saving drawing");
-        const img2 = await this.volumes[0].saveToDisk(filename, this.drawBitmap);
-        return img2;
-      } else {
-        log.debug("saving drawing");
-        const dims = this.volumes[0].hdr.dims;
-        const layout = [0, 0, 0];
-        for (let i = 0; i < 3; i++) {
-          for (let j2 = 0; j2 < 3; j2++) {
-            if (Math.abs(perm[i]) - 1 !== j2) {
-              continue;
-            }
-            layout[j2] = i * Math.sign(perm[i]);
-          }
-        }
-        let stride = 1;
-        const instride = [1, 1, 1];
-        const inflip = [false, false, false];
-        for (let i = 0; i < layout.length; i++) {
-          for (let j2 = 0; j2 < layout.length; j2++) {
-            const a = Math.abs(layout[j2]);
-            if (a !== i) {
-              continue;
-            }
-            instride[j2] = stride;
-            if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
-              inflip[j2] = true;
-            }
-            stride *= dims[j2 + 1];
-          }
-        }
-        let xlut = NVUtilities.range(0, dims[1] - 1, 1);
-        if (inflip[0]) {
-          xlut = NVUtilities.range(dims[1] - 1, 0, -1);
-        }
-        for (let i = 0; i < dims[1]; i++) {
-          xlut[i] *= instride[0];
-        }
-        let ylut = NVUtilities.range(0, dims[2] - 1, 1);
-        if (inflip[1]) {
-          ylut = NVUtilities.range(dims[2] - 1, 0, -1);
-        }
-        for (let i = 0; i < dims[2]; i++) {
-          ylut[i] *= instride[1];
-        }
-        let zlut = NVUtilities.range(0, dims[3] - 1, 1);
-        if (inflip[2]) {
-          zlut = NVUtilities.range(dims[3] - 1, 0, -1);
-        }
-        for (let i = 0; i < dims[3]; i++) {
-          zlut[i] *= instride[2];
-        }
-        const inVs = new Uint8Array(this.drawBitmap);
-        const outVs = new Uint8Array(dims[1] * dims[2] * dims[3]);
-        let j = 0;
-        for (let z = 0; z < dims[3]; z++) {
-          for (let y = 0; y < dims[2]; y++) {
-            for (let x = 0; x < dims[1]; x++) {
-              outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]];
-              j++;
-            }
-          }
-        }
-        log.debug("saving drawing");
-        const img2 = this.volumes[0].saveToDisk(filename, outVs);
-        return img2;
-      }
+      const img2 = await this.volumes[0].saveToDisk(filename, this.drawBitmap);
+      return img2;
     }
     log.debug("saving image");
     const img = this.volumes[volumeByIndex].saveToDisk(filename);
@@ -41581,6 +41607,7 @@ var Niivue = class {
         m.shader = new Shader(gl, vertMeshShader, m.Frag);
       }
       m.shader.use(gl);
+      m.shader.isCrosscut = m.Name === "Crosscut";
       m.shader.isMatcap = m.Name === "Matcap";
       if (m.shader.isMatcap) {
         gl.uniform1i(m.shader.uniforms.matCap, 5);
@@ -46784,6 +46811,12 @@ var Niivue = class {
         shader = this.pickingMeshShader;
       }
       shader.use(gl);
+      if (shader.isCrosscut) {
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+        const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM);
+        this.gl.uniform3fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2]]);
+      }
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
       gl.uniform1f(shader.uniforms.opacity, meshAlpha);

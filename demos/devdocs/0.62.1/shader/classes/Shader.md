@@ -13,7 +13,7 @@ new Shader(
    fragmentSrc: string): Shader;
 ```
 
-Defined in: [shader.ts:46](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L46)
+Defined in: [shader.ts:47](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L47)
 
 #### Parameters
 
@@ -29,11 +29,12 @@ Defined in: [shader.ts:46](https://github.com/niivue/niivue/blob/main/packages/n
 
 ## Properties
 
-| Property                          | Type                                                   | Default value | Defined in                                                                                   |
-| --------------------------------- | ------------------------------------------------------ | ------------- | -------------------------------------------------------------------------------------------- |
-| <a id="ismatcap"></a> `isMatcap?` | `boolean`                                              | `undefined`   | [shader.ts:44](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L44) |
-| <a id="program"></a> `program`    | `WebGLProgram`                                         | `undefined`   | [shader.ts:42](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L42) |
-| <a id="uniforms"></a> `uniforms`  | `Record`\<`string`, `WebGLUniformLocation` \| `null`\> | `{}`          | [shader.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L43) |
+| Property                              | Type                                                   | Default value | Defined in                                                                                   |
+| ------------------------------------- | ------------------------------------------------------ | ------------- | -------------------------------------------------------------------------------------------- |
+| <a id="iscrosscut"></a> `isCrosscut?` | `boolean`                                              | `undefined`   | [shader.ts:45](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L45) |
+| <a id="ismatcap"></a> `isMatcap?`     | `boolean`                                              | `undefined`   | [shader.ts:44](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L44) |
+| <a id="program"></a> `program`        | `WebGLProgram`                                         | `undefined`   | [shader.ts:42](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L42) |
+| <a id="uniforms"></a> `uniforms`      | `Record`\<`string`, `WebGLUniformLocation` \| `null`\> | `{}`          | [shader.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L43) |
 
 ## Methods
 
@@ -43,7 +44,7 @@ Defined in: [shader.ts:46](https://github.com/niivue/niivue/blob/main/packages/n
 use(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [shader.ts:73](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L73)
+Defined in: [shader.ts:74](https://github.com/niivue/niivue/blob/main/packages/niivue/src/shader.ts#L74)
 
 #### Parameters
 

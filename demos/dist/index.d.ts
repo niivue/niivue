@@ -1327,6 +1327,7 @@ declare class NVMesh {
     fiberRadius: number;
     fiberOcclusion: number;
     f32PerVertex: number;
+    dpsThreshold: number;
     fiberMask?: unknown[];
     colormap?: ColorMap | LegacyConnectome | string | null;
     dpg?: ValuesArray | null;
@@ -1406,6 +1407,7 @@ declare class Shader {
     program: WebGLProgram;
     uniforms: Record<string, WebGLUniformLocation | null>;
     isMatcap?: boolean;
+    isCrosscut?: boolean;
     constructor(gl: WebGL2RenderingContext, vertexSrc: string, fragmentSrc: string);
     use(gl: WebGL2RenderingContext): void;
 }
@@ -1473,6 +1475,7 @@ declare class NVMeshLoaders {
     static readTRACT(buffer: ArrayBuffer): TRACT;
     static readTT(buffer: ArrayBuffer): Promise<TT>;
     static readTRX(buffer: ArrayBuffer): Promise<TRX>;
+    static readTXT(buffer: ArrayBuffer, n_count?: number): Float32Array;
     static readTSF(buffer: ArrayBuffer, n_vert?: number): Float32Array;
     static readTCK(buffer: ArrayBuffer): TCK;
     static readTRK(buffer: ArrayBuffer): Promise<TRK>;
