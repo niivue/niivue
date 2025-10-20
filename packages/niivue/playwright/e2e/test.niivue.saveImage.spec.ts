@@ -1,10 +1,10 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { test, expect } from '@playwright/test'
+import * as nifti from 'nifti-reader-js'
 import { Niivue } from '../../dist/index.js'
 import { httpServerAddress } from './helpers.js'
 import { TEST_OPTIONS } from './test.types.js'
-import * as nifti from 'nifti-reader-js'
 
 function getFilesizeInBytes(filename) {
   const stats = fs.statSync(filename)
@@ -70,39 +70,39 @@ test('niivue save drawing LAS', async ({ page }) => {
   const downloadPath = path.resolve('./downloads')
   const filePath = path.join(downloadPath, download.suggestedFilename())
   await download.saveAs(filePath)
-  let correctImageBuffer = fs.readFileSync('./tests/images/LAS_drawing_correct.nii.gz')
+  const correctImageBuffer = fs.readFileSync('./tests/images/LAS_drawing_correct.nii.gz')
   let correctImage = correctImageBuffer.buffer.slice(
     correctImageBuffer.byteOffset,
     correctImageBuffer.byteOffset + correctImageBuffer.byteLength
-  )  
-  let incorrectImageBuffer = fs.readFileSync('./tests/images/LAS_drawing_incorrect.nii.gz')
+  )
+  const incorrectImageBuffer = fs.readFileSync('./tests/images/LAS_drawing_incorrect.nii.gz')
   let incorrectImage = incorrectImageBuffer.buffer.slice(
     incorrectImageBuffer.byteOffset,
     incorrectImageBuffer.byteOffset + incorrectImageBuffer.byteLength
-  )  
-  let downloadedImageBuffer = fs.readFileSync(filePath)
+  )
+  const downloadedImageBuffer = fs.readFileSync(filePath)
   let downloadedImage = downloadedImageBuffer.buffer.slice(
     downloadedImageBuffer.byteOffset,
     downloadedImageBuffer.byteOffset + downloadedImageBuffer.byteLength
   )
   if (nifti.isCompressed(downloadedImage as ArrayBuffer)) {
-    downloadedImage = nifti.decompress(downloadedImage as ArrayBuffer);
+    downloadedImage = nifti.decompress(downloadedImage as ArrayBuffer)
   }
   if (nifti.isCompressed(correctImage as ArrayBuffer)) {
-    correctImage = nifti.decompress(correctImage as ArrayBuffer);
+    correctImage = nifti.decompress(correctImage as ArrayBuffer)
   }
   if (nifti.isCompressed(incorrectImage as ArrayBuffer)) {
-    incorrectImage = nifti.decompress(incorrectImage as ArrayBuffer);
+    incorrectImage = nifti.decompress(incorrectImage as ArrayBuffer)
   }
 
   // compare the downloaded drawing to the correct and incorrect variants (regression test).
   // when loading an LAS drawing, we display it as RAS, but when saving it again, it should be in LAS (the original orientation)
-  let downloadedHeader = nifti.readHeader(downloadedImage as ArrayBuffer);
-  let correctHeader = nifti.readHeader(correctImage as ArrayBuffer);
-  let incorrectHeader = nifti.readHeader(incorrectImage as ArrayBuffer);
-  let downloadedImageData = nifti.readImage(downloadedHeader, downloadedImage as ArrayBuffer);
-  let correctImageData = nifti.readImage(correctHeader, correctImage as ArrayBuffer);
-  let incorrectImageData = nifti.readImage(incorrectHeader, incorrectImage as ArrayBuffer);
+  const downloadedHeader = nifti.readHeader(downloadedImage as ArrayBuffer)
+  const correctHeader = nifti.readHeader(correctImage as ArrayBuffer)
+  const incorrectHeader = nifti.readHeader(incorrectImage as ArrayBuffer)
+  const downloadedImageData = nifti.readImage(downloadedHeader, downloadedImage as ArrayBuffer)
+  const correctImageData = nifti.readImage(correctHeader, correctImage as ArrayBuffer)
+  const incorrectImageData = nifti.readImage(incorrectHeader, incorrectImage as ArrayBuffer)
   // expect the downloaded drawing to be equal to the correct drawing (LAS)
   expect(new Uint8Array(downloadedImageData)).toEqual(new Uint8Array(correctImageData))
   // expect the downloaded drawing to not be equal to the incorrect drawing (which has a double permutation)
