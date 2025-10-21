@@ -569,7 +569,7 @@ export class NVImage {
         imgRaw = await newImg.readZARR(dataBuffer as ArrayBuffer, zarrData)
         break
       case NVIMAGE_TYPE.NII:
-        imgRaw = await ImageReaders.Nii.readNifti(newImg, dataBuffer as ArrayBuffer)
+        imgRaw = await ImageReaders.Nii.readNifti(newImg, dataBuffer as ArrayBuffer, pairedImgData)
         if (imgRaw === null) {
           throw new Error(`Failed to parse NIfTI file ${name}.`)
         }
@@ -3331,12 +3331,19 @@ export class NVImage {
         urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + 'BRIK'
       }
     }
+
+    if (ext.toUpperCase() === 'HDR') {
+      if (urlImgData === '') {
+        urlImgData = url.substring(0, url.lastIndexOf('HDR')) + 'IMG'
+      }
+    }
+
     // Handle paired image data if necessary
     let pairedImgData = null
     if (urlImgData) {
       try {
         let response = await fetch(urlImgData, { headers })
-        if (response.status === 404 && urlImgData.includes('BRIK')) {
+        if (response.status === 404 && (urlImgData.includes('BRIK') || urlImgData.includes('IMG'))) {
           response = await fetch(`${urlImgData}.gz`, { headers })
         }
         if (response.ok && response.body) {
