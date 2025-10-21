@@ -240,7 +240,7 @@ Defined in: [nvimage/index.ts:2641](https://github.com/niivue/niivue/blob/main/p
 applyOptionsUpdate(options: ImageFromUrlOptions): void;
 ```
 
-Defined in: [nvimage/index.ts:3790](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3790)
+Defined in: [nvimage/index.ts:3797](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3797)
 
 Update options for image
 
@@ -340,7 +340,7 @@ volume brightness and returns array [pct2, pct98, mnScale, mxScale]
 clone(): NVImage;
 ```
 
-Defined in: [nvimage/index.ts:3700](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3700)
+Defined in: [nvimage/index.ts:3707](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3707)
 
 make a clone of a NVImage instance and return a new NVImage
 
@@ -383,7 +383,7 @@ Defined in: [nvimage/index.ts:608](https://github.com/niivue/niivue/blob/main/pa
 convertFrac2MM(frac: vec3, isForceSliceMM: boolean): vec4;
 ```
 
-Defined in: [nvimage/index.ts:3850](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3850)
+Defined in: [nvimage/index.ts:3857](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3857)
 
 #### Parameters
 
@@ -404,7 +404,7 @@ Defined in: [nvimage/index.ts:3850](https://github.com/niivue/niivue/blob/main/p
 convertFrac2Vox(frac: vec3): vec3;
 ```
 
-Defined in: [nvimage/index.ts:3840](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3840)
+Defined in: [nvimage/index.ts:3847](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3847)
 
 #### Parameters
 
@@ -427,7 +427,7 @@ convertMM2Frac(mm:
   | [number, number, number], isForceSliceMM: boolean): vec3;
 ```
 
-Defined in: [nvimage/index.ts:3861](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3861)
+Defined in: [nvimage/index.ts:3868](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3868)
 
 #### Parameters
 
@@ -448,7 +448,7 @@ Defined in: [nvimage/index.ts:3861](https://github.com/niivue/niivue/blob/main/p
 convertVox2Frac(vox: vec3): vec3;
 ```
 
-Defined in: [nvimage/index.ts:3828](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3828)
+Defined in: [nvimage/index.ts:3835](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3835)
 
 #### Parameters
 
@@ -488,7 +488,7 @@ Defined in: [nvimage/index.ts:627](https://github.com/niivue/niivue/blob/main/pa
 getImageMetadata(): ImageMetadata;
 ```
 
-Defined in: [nvimage/index.ts:3726](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3726)
+Defined in: [nvimage/index.ts:3733](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3733)
 
 get nifti specific metadata about the image
 
@@ -504,7 +504,7 @@ get nifti specific metadata about the image
 getImageOptions(): ImageFromUrlOptions;
 ```
 
-Defined in: [nvimage/index.ts:3796](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3796)
+Defined in: [nvimage/index.ts:3803](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3803)
 
 #### Returns
 
@@ -523,7 +523,7 @@ getValue(
    isReadImaginary: boolean): number;
 ```
 
-Defined in: [nvimage/index.ts:3775](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3775)
+Defined in: [nvimage/index.ts:3782](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3782)
 
 Returns voxel intensity at specific native coordinates.
 Delegates to VolumeUtils.getValue.
@@ -555,7 +555,7 @@ getValues(
    isReadImaginary: boolean): number[];
 ```
 
-Defined in: [nvimage/index.ts:3783](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3783)
+Defined in: [nvimage/index.ts:3790](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3790)
 
 Returns voxel intensities at specific native coordinates.
 Delegates to VolumeUtils.getValue.
@@ -585,7 +585,7 @@ getVolumeData(
    dataType: string): [TypedVoxelArray, number[]];
 ```
 
-Defined in: [nvimage/index.ts:3597](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3597)
+Defined in: [nvimage/index.ts:3604](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3604)
 
 read a 3D slab of voxels from a volume, specified in RAS coordinates.
 Delegates to VolumeUtils.getVolumeData.
@@ -1184,7 +1184,7 @@ setVolumeData(
    img: TypedVoxelArray): void;
 ```
 
-Defined in: [nvimage/index.ts:3615](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3615)
+Defined in: [nvimage/index.ts:3622](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3622)
 
 write a 3D slab of voxels from a volume, specified in RAS coordinates.
 Delegates to VolumeUtils.setVolumeData.
@@ -1235,7 +1235,7 @@ Defined in: [nvimage/index.ts:794](https://github.com/niivue/niivue/blob/main/pa
 toUint8Array(drawingBytes: Uint8Array): Uint8Array;
 ```
 
-Defined in: [nvimage/index.ts:3822](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3822)
+Defined in: [nvimage/index.ts:3829](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3829)
 
 Converts NVImage to NIfTI compliant byte array.
 Handles potential re-orientation of drawing data.
@@ -1280,7 +1280,7 @@ Defined in: [nvimage/index.ts:2562](https://github.com/niivue/niivue/blob/main/p
 zeroImage(): void;
 ```
 
-Defined in: [nvimage/index.ts:3719](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3719)
+Defined in: [nvimage/index.ts:3726](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3726)
 
 fill a NVImage instance with zeros for the image data
 
@@ -1308,7 +1308,7 @@ static createNiftiArray(
    img: TypedVoxelArray): Uint8Array;
 ```
 
-Defined in: [nvimage/index.ts:3565](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3565)
+Defined in: [nvimage/index.ts:3572](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3572)
 
 Creates a Uint8Array representing a NIFTI file (header + optional image data).
 Delegates to ImageWriter.createNiftiArray.
@@ -1339,7 +1339,7 @@ static createNiftiHeader(
    datatypeCode: NiiDataType): NIFTI1;
 ```
 
-Defined in: [nvimage/index.ts:3579](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3579)
+Defined in: [nvimage/index.ts:3586](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3586)
 
 Creates a NIFTI1 header object with basic properties.
 Delegates to ImageWriter.createNiftiHeader.
@@ -1406,7 +1406,7 @@ Defined in: [nvimage/index.ts:2934](https://github.com/niivue/niivue/blob/main/p
 static loadFromBase64(__namedParameters: ImageFromBase64): Promise<NVImage>;
 ```
 
-Defined in: [nvimage/index.ts:3628](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3628)
+Defined in: [nvimage/index.ts:3635](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3635)
 
 factory function to load and return a new NVImage instance from a base64 encoded string
 
@@ -1434,7 +1434,7 @@ myImage = NVImage.loadFromBase64("SomeBase64String");
 static loadFromFile(__namedParameters: ImageFromFileOptions): Promise<NVImage>;
 ```
 
-Defined in: [nvimage/index.ts:3470](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3470)
+Defined in: [nvimage/index.ts:3477](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3477)
 
 factory function to load and return a new NVImage instance from a file in the browser
 
@@ -1587,7 +1587,7 @@ Defined in: [nvimage/index.ts:469](https://github.com/niivue/niivue/blob/main/pa
 static readFileAsync(file: File, bytesToLoad: number): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvimage/index.ts:3417](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3417)
+Defined in: [nvimage/index.ts:3424](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3424)
 
 #### Parameters
 
@@ -1629,7 +1629,7 @@ Defined in: [nvimage/index.ts:2974](https://github.com/niivue/niivue/blob/main/p
 static zerosLike(nvImage: NVImage, dataType: string): NVImage;
 ```
 
-Defined in: [nvimage/index.ts:3753](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3753)
+Defined in: [nvimage/index.ts:3760](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L3760)
 
 a factory function to make a zero filled image given a NVImage as a reference
 

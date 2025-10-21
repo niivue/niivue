@@ -4,7 +4,7 @@
 type ImageFromFileOptions = object;
 ```
 
-Defined in: [nvimage/utils.ts:208](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L208)
+Defined in: [nvimage/utils.ts:210](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L210)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvimage/utils.ts:208](https://github.com/niivue/niivue/blob/main/pa
 optional cal_max: number;
 ```
 
-Defined in: [nvimage/utils.ts:222](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L222)
+Defined in: [nvimage/utils.ts:224](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L224)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvimage/utils.ts:222](https://github.com/niivue/niivue/blob/main/pa
 optional cal_min: number;
 ```
 
-Defined in: [nvimage/utils.ts:220](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L220)
+Defined in: [nvimage/utils.ts:222](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L222)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvimage/utils.ts:220](https://github.com/niivue/niivue/blob/main/pa
 optional colormap: string;
 ```
 
-Defined in: [nvimage/utils.ts:214](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L214)
+Defined in: [nvimage/utils.ts:216](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L216)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvimage/utils.ts:214](https://github.com/niivue/niivue/blob/main/pa
 optional colormapNegative: string;
 ```
 
-Defined in: [nvimage/utils.ts:232](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L232)
+Defined in: [nvimage/utils.ts:234](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L234)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvimage/utils.ts:232](https://github.com/niivue/niivue/blob/main/pa
 file: File | File[];
 ```
 
-Defined in: [nvimage/utils.ts:210](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L210)
+Defined in: [nvimage/utils.ts:212](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L212)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvimage/utils.ts:210](https://github.com/niivue/niivue/blob/main/pa
 optional frame4D: number;
 ```
 
-Defined in: [nvimage/utils.ts:235](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L235)
+Defined in: [nvimage/utils.ts:237](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L237)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [nvimage/utils.ts:235](https://github.com/niivue/niivue/blob/main/pa
 optional ignoreZeroVoxels: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:228](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L228)
+Defined in: [nvimage/utils.ts:230](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L230)
 
 ---
 
@@ -84,7 +84,7 @@ Defined in: [nvimage/utils.ts:228](https://github.com/niivue/niivue/blob/main/pa
 optional imageType: ImageType;
 ```
 
-Defined in: [nvimage/utils.ts:234](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L234)
+Defined in: [nvimage/utils.ts:236](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L236)
 
 ---
 
@@ -94,7 +94,7 @@ Defined in: [nvimage/utils.ts:234](https://github.com/niivue/niivue/blob/main/pa
 optional limitFrames4D: number;
 ```
 
-Defined in: [nvimage/utils.ts:236](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L236)
+Defined in: [nvimage/utils.ts:238](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L238)
 
 ---
 
@@ -104,7 +104,7 @@ Defined in: [nvimage/utils.ts:236](https://github.com/niivue/niivue/blob/main/pa
 optional name: string;
 ```
 
-Defined in: [nvimage/utils.ts:212](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L212)
+Defined in: [nvimage/utils.ts:214](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L214)
 
 ---
 
@@ -114,7 +114,7 @@ Defined in: [nvimage/utils.ts:212](https://github.com/niivue/niivue/blob/main/pa
 optional opacity: number;
 ```
 
-Defined in: [nvimage/utils.ts:216](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L216)
+Defined in: [nvimage/utils.ts:218](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L218)
 
 ---
 
@@ -124,7 +124,7 @@ Defined in: [nvimage/utils.ts:216](https://github.com/niivue/niivue/blob/main/pa
 optional percentileFrac: number;
 ```
 
-Defined in: [nvimage/utils.ts:226](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L226)
+Defined in: [nvimage/utils.ts:228](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L228)
 
 ---
 
@@ -134,7 +134,7 @@ Defined in: [nvimage/utils.ts:226](https://github.com/niivue/niivue/blob/main/pa
 optional trustCalMinMax: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:224](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L224)
+Defined in: [nvimage/utils.ts:226](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L226)
 
 ---
 
@@ -144,7 +144,7 @@ Defined in: [nvimage/utils.ts:224](https://github.com/niivue/niivue/blob/main/pa
 optional urlImgData: File | null | FileSystemEntry;
 ```
 
-Defined in: [nvimage/utils.ts:218](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L218)
+Defined in: [nvimage/utils.ts:220](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L220)
 
 ---
 
@@ -154,4 +154,4 @@ Defined in: [nvimage/utils.ts:218](https://github.com/niivue/niivue/blob/main/pa
 optional useQFormNotSForm: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:230](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L230)
+Defined in: [nvimage/utils.ts:232](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L232)

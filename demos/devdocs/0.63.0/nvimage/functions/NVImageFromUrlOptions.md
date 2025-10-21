@@ -24,7 +24,7 @@ function NVImageFromUrlOptions(
 ): ImageFromUrlOptions;
 ```
 
-Defined in: [nvimage/utils.ts:295](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L295)
+Defined in: [nvimage/utils.ts:297](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L297)
 
 ## Parameters
 

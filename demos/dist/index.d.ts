@@ -204,7 +204,8 @@ declare enum ImageType {
     BMP = 19,
     ZARR = 20,
     NPY = 21,
-    NPZ = 22
+    NPZ = 22,
+    HDR = 23
 }
 type ImageFromUrlOptions = {
     url: string;

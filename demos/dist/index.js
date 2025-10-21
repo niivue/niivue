@@ -23042,6 +23042,7 @@ var ImageType = /* @__PURE__ */ ((ImageType3) => {
   ImageType3[ImageType3["ZARR"] = 20] = "ZARR";
   ImageType3[ImageType3["NPY"] = 21] = "NPY";
   ImageType3[ImageType3["NPZ"] = 22] = "NPZ";
+  ImageType3[ImageType3["HDR"] = 23] = "HDR";
   return ImageType3;
 })(ImageType || {});
 var NVIMAGE_TYPE = Object.freeze({
@@ -23062,6 +23063,7 @@ var NVIMAGE_TYPE = Object.freeze({
       case "FIB":
         imageType = 18 /* FIB */;
         break;
+      case "HDR":
       case "NII":
         imageType = 1 /* NII */;
         break;
@@ -24063,7 +24065,7 @@ var nii_exports = {};
 __export(nii_exports, {
   readNifti: () => readNifti
 });
-async function readNifti(nvImage, buffer) {
+async function readNifti(nvImage, buffer, pairedImageData) {
   let dataBuffer = buffer;
   let imgRaw = null;
   try {
@@ -24075,7 +24077,10 @@ async function readNifti(nvImage, buffer) {
     if (!dataBuffer || dataBuffer.byteLength === 0) {
       throw new Error("Buffer became invalid after decompression attempt.");
     }
-    nvImage.hdr = await readHeaderAsync(dataBuffer);
+    if (!pairedImageData) {
+      console.log("paired image data is null");
+    }
+    nvImage.hdr = await readHeaderAsync(dataBuffer, pairedImageData != null);
     if (hasExtension(nvImage.hdr)) {
       nvImage.extensions = nvImage.hdr.extensions;
     }
@@ -24087,7 +24092,7 @@ async function readNifti(nvImage, buffer) {
       nvImage.hdr.cal_min = 0;
       nvImage.hdr.cal_max = 0;
     }
-    imgRaw = readImage(nvImage.hdr, dataBuffer);
+    imgRaw = pairedImageData ? readImage(nvImage.hdr, pairedImageData) : readImage(nvImage.hdr, dataBuffer);
     if (imgRaw === null) {
       throw new Error(`nifti-reader-js readImage returned null for ${nvImage.name}`);
     }
@@ -24835,7 +24840,7 @@ var NVImage = class _NVImage {
         imgRaw = await newImg.readZARR(dataBuffer, zarrData);
         break;
       case NVIMAGE_TYPE.NII:
-        imgRaw = await nii_exports.readNifti(newImg, dataBuffer);
+        imgRaw = await nii_exports.readNifti(newImg, dataBuffer, pairedImgData);
         if (imgRaw === null) {
           throw new Error(`Failed to parse NIfTI file ${name}.`);
         }
@@ -27338,11 +27343,16 @@ var NVImage = class _NVImage {
         urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
       }
     }
+    if (ext.toUpperCase() === "HDR") {
+      if (urlImgData === "") {
+        urlImgData = url.substring(0, url.lastIndexOf("HDR")) + "IMG";
+      }
+    }
     let pairedImgData = null;
     if (urlImgData) {
       try {
         let response = await fetch(urlImgData, { headers });
-        if (response.status === 404 && urlImgData.includes("BRIK")) {
+        if (response.status === 404 && (urlImgData.includes("BRIK") || urlImgData.includes("IMG"))) {
           response = await fetch(`${urlImgData}.gz`, { headers });
         }
         if (response.ok && response.body) {
@@ -37743,7 +37753,23 @@ var Niivue = class {
                 }
               }
             }
-            if (entry.name.lastIndexOf("BRIK") !== -1) {
+            if (entry.name.toUpperCase().lastIndexOf("HDR") !== -1) {
+              for (const pairedItem of Array.from(items)) {
+                const pairedEntry = pairedItem.webkitGetAsEntry();
+                if (!pairedEntry) {
+                  throw new Error("could not get paired entry");
+                }
+                const fileBaseName = entry.name.substring(0, entry.name.toUpperCase().lastIndexOf("HDR"));
+                const pairedItemBaseName = pairedEntry.name.substring(
+                  0,
+                  pairedEntry.name.toUpperCase().lastIndexOf("IMG")
+                );
+                if (fileBaseName === pairedItemBaseName) {
+                  pairedImageData = pairedEntry;
+                }
+              }
+            }
+            if (entry.name.lastIndexOf("BRIK") !== -1 || entry.name.toUpperCase().lastIndexOf("IMG") !== -1) {
               continue;
             }
             if (this.loaders[ext]) {

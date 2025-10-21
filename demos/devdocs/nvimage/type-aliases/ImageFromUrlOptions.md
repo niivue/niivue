@@ -4,7 +4,7 @@
 type ImageFromUrlOptions = object;
 ```
 
-Defined in: [nvimage/utils.ts:158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L158)
+Defined in: [nvimage/utils.ts:160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L160)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvimage/utils.ts:158](https://github.com/niivue/niivue/blob/main/pa
 optional alphaThreshold: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:184](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L184)
+Defined in: [nvimage/utils.ts:186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L186)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvimage/utils.ts:184](https://github.com/niivue/niivue/blob/main/pa
 optional buffer: ArrayBuffer;
 ```
 
-Defined in: [nvimage/utils.ts:204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L204)
+Defined in: [nvimage/utils.ts:206](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L206)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvimage/utils.ts:204](https://github.com/niivue/niivue/blob/main/pa
 optional cal_max: number;
 ```
 
-Defined in: [nvimage/utils.ts:176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L176)
+Defined in: [nvimage/utils.ts:178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L178)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvimage/utils.ts:176](https://github.com/niivue/niivue/blob/main/pa
 optional cal_maxNeg: number;
 ```
 
-Defined in: [nvimage/utils.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L192)
+Defined in: [nvimage/utils.ts:194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L194)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvimage/utils.ts:192](https://github.com/niivue/niivue/blob/main/pa
 optional cal_min: number;
 ```
 
-Defined in: [nvimage/utils.ts:174](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L174)
+Defined in: [nvimage/utils.ts:176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L176)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvimage/utils.ts:174](https://github.com/niivue/niivue/blob/main/pa
 optional cal_minNeg: number;
 ```
 
-Defined in: [nvimage/utils.ts:190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L190)
+Defined in: [nvimage/utils.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L192)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [nvimage/utils.ts:190](https://github.com/niivue/niivue/blob/main/pa
 optional colorbarVisible: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:194](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L194)
+Defined in: [nvimage/utils.ts:196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L196)
 
 ---
 
@@ -84,7 +84,7 @@ Defined in: [nvimage/utils.ts:194](https://github.com/niivue/niivue/blob/main/pa
 optional colormap: string;
 ```
 
-Defined in: [nvimage/utils.ts:170](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L170)
+Defined in: [nvimage/utils.ts:172](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L172)
 
 ---
 
@@ -94,7 +94,7 @@ Defined in: [nvimage/utils.ts:170](https://github.com/niivue/niivue/blob/main/pa
 optional colorMap: string;
 ```
 
-Defined in: [nvimage/utils.ts:168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L168)
+Defined in: [nvimage/utils.ts:170](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L170)
 
 ---
 
@@ -104,7 +104,7 @@ Defined in: [nvimage/utils.ts:168](https://github.com/niivue/niivue/blob/main/pa
 optional colormapLabel: LUT | null;
 ```
 
-Defined in: [nvimage/utils.ts:199](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L199)
+Defined in: [nvimage/utils.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L201)
 
 ---
 
@@ -114,7 +114,7 @@ Defined in: [nvimage/utils.ts:199](https://github.com/niivue/niivue/blob/main/pa
 optional colormapNegative: string;
 ```
 
-Defined in: [nvimage/utils.ts:186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L186)
+Defined in: [nvimage/utils.ts:188](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L188)
 
 ---
 
@@ -124,7 +124,7 @@ Defined in: [nvimage/utils.ts:186](https://github.com/niivue/niivue/blob/main/pa
 optional colorMapNegative: string;
 ```
 
-Defined in: [nvimage/utils.ts:188](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L188)
+Defined in: [nvimage/utils.ts:190](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L190)
 
 ---
 
@@ -134,7 +134,7 @@ Defined in: [nvimage/utils.ts:188](https://github.com/niivue/niivue/blob/main/pa
 optional frame4D: number;
 ```
 
-Defined in: [nvimage/utils.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L198)
+Defined in: [nvimage/utils.ts:200](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L200)
 
 ---
 
@@ -144,7 +144,7 @@ Defined in: [nvimage/utils.ts:198](https://github.com/niivue/niivue/blob/main/pa
 optional headers: Record<string, string>;
 ```
 
-Defined in: [nvimage/utils.ts:164](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L164)
+Defined in: [nvimage/utils.ts:166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L166)
 
 ---
 
@@ -154,7 +154,7 @@ Defined in: [nvimage/utils.ts:164](https://github.com/niivue/niivue/blob/main/pa
 optional ignoreZeroVoxels: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L196)
+Defined in: [nvimage/utils.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L198)
 
 ---
 
@@ -164,7 +164,7 @@ Defined in: [nvimage/utils.ts:196](https://github.com/niivue/niivue/blob/main/pa
 optional imageType: ImageType;
 ```
 
-Defined in: [nvimage/utils.ts:197](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L197)
+Defined in: [nvimage/utils.ts:199](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L199)
 
 ---
 
@@ -174,7 +174,7 @@ Defined in: [nvimage/utils.ts:197](https://github.com/niivue/niivue/blob/main/pa
 optional isManifest: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:202](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L202)
+Defined in: [nvimage/utils.ts:204](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L204)
 
 ---
 
@@ -184,7 +184,7 @@ Defined in: [nvimage/utils.ts:202](https://github.com/niivue/niivue/blob/main/pa
 optional limitFrames4D: number;
 ```
 
-Defined in: [nvimage/utils.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L201)
+Defined in: [nvimage/utils.ts:203](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L203)
 
 ---
 
@@ -194,7 +194,7 @@ Defined in: [nvimage/utils.ts:201](https://github.com/niivue/niivue/blob/main/pa
 optional name: string;
 ```
 
-Defined in: [nvimage/utils.ts:166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L166)
+Defined in: [nvimage/utils.ts:168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L168)
 
 ---
 
@@ -204,7 +204,7 @@ Defined in: [nvimage/utils.ts:166](https://github.com/niivue/niivue/blob/main/pa
 optional opacity: number;
 ```
 
-Defined in: [nvimage/utils.ts:172](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L172)
+Defined in: [nvimage/utils.ts:174](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L174)
 
 ---
 
@@ -214,7 +214,7 @@ Defined in: [nvimage/utils.ts:172](https://github.com/niivue/niivue/blob/main/pa
 optional pairedImgData: null;
 ```
 
-Defined in: [nvimage/utils.ts:200](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L200)
+Defined in: [nvimage/utils.ts:202](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L202)
 
 ---
 
@@ -224,7 +224,7 @@ Defined in: [nvimage/utils.ts:200](https://github.com/niivue/niivue/blob/main/pa
 optional percentileFrac: number;
 ```
 
-Defined in: [nvimage/utils.ts:180](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L180)
+Defined in: [nvimage/utils.ts:182](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L182)
 
 ---
 
@@ -234,7 +234,7 @@ Defined in: [nvimage/utils.ts:180](https://github.com/niivue/niivue/blob/main/pa
 optional trustCalMinMax: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L178)
+Defined in: [nvimage/utils.ts:180](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L180)
 
 ---
 
@@ -244,7 +244,7 @@ Defined in: [nvimage/utils.ts:178](https://github.com/niivue/niivue/blob/main/pa
 url: string;
 ```
 
-Defined in: [nvimage/utils.ts:160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L160)
+Defined in: [nvimage/utils.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L162)
 
 ---
 
@@ -254,7 +254,7 @@ Defined in: [nvimage/utils.ts:160](https://github.com/niivue/niivue/blob/main/pa
 optional urlImageData: string;
 ```
 
-Defined in: [nvimage/utils.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L162)
+Defined in: [nvimage/utils.ts:164](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L164)
 
 ---
 
@@ -264,7 +264,7 @@ Defined in: [nvimage/utils.ts:162](https://github.com/niivue/niivue/blob/main/pa
 optional urlImgData: string;
 ```
 
-Defined in: [nvimage/utils.ts:203](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L203)
+Defined in: [nvimage/utils.ts:205](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L205)
 
 ---
 
@@ -274,4 +274,4 @@ Defined in: [nvimage/utils.ts:203](https://github.com/niivue/niivue/blob/main/pa
 optional useQFormNotSForm: boolean;
 ```
 
-Defined in: [nvimage/utils.ts:182](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L182)
+Defined in: [nvimage/utils.ts:184](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L184)

@@ -13,6 +13,7 @@ Enum for supported image types (e.g. NII, NRRD, DICOM)
 | <a id="dcm_folder"></a> `DCM_FOLDER`     | `16`  | [nvimage/utils.ts:68](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L68) |
 | <a id="dcm_manifest"></a> `DCM_MANIFEST` | `3`   | [nvimage/utils.ts:55](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L55) |
 | <a id="fib"></a> `FIB`                   | `18`  | [nvimage/utils.ts:70](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L70) |
+| <a id="hdr"></a> `HDR`                   | `23`  | [nvimage/utils.ts:75](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L75) |
 | <a id="head"></a> `HEAD`                 | `15`  | [nvimage/utils.ts:67](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L67) |
 | <a id="mgh"></a> `MGH`                   | `10`  | [nvimage/utils.ts:62](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L62) |
 | <a id="mgz"></a> `MGZ`                   | `11`  | [nvimage/utils.ts:63](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L63) |

@@ -8,7 +8,7 @@ function getBestTransform(
 ): number[][];
 ```
 
-Defined in: [nvimage/utils.ts:342](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L342)
+Defined in: [nvimage/utils.ts:344](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L344)
 
 ## Parameters
 

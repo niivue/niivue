@@ -4,7 +4,7 @@
 type ImageMetadata = object;
 ```
 
-Defined in: [nvimage/utils.ts:269](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L269)
+Defined in: [nvimage/utils.ts:271](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L271)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvimage/utils.ts:269](https://github.com/niivue/niivue/blob/main/pa
 bpv: number;
 ```
 
-Defined in: [nvimage/utils.ts:292](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L292)
+Defined in: [nvimage/utils.ts:294](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L294)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvimage/utils.ts:292](https://github.com/niivue/niivue/blob/main/pa
 datatypeCode: number;
 ```
 
-Defined in: [nvimage/utils.ts:273](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L273)
+Defined in: [nvimage/utils.ts:275](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L275)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvimage/utils.ts:273](https://github.com/niivue/niivue/blob/main/pa
 dt: number;
 ```
 
-Defined in: [nvimage/utils.ts:289](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L289)
+Defined in: [nvimage/utils.ts:291](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L291)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvimage/utils.ts:289](https://github.com/niivue/niivue/blob/main/pa
 dx: number;
 ```
 
-Defined in: [nvimage/utils.ts:283](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L283)
+Defined in: [nvimage/utils.ts:285](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L285)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvimage/utils.ts:283](https://github.com/niivue/niivue/blob/main/pa
 dy: number;
 ```
 
-Defined in: [nvimage/utils.ts:285](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L285)
+Defined in: [nvimage/utils.ts:287](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L287)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvimage/utils.ts:285](https://github.com/niivue/niivue/blob/main/pa
 dz: number;
 ```
 
-Defined in: [nvimage/utils.ts:287](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L287)
+Defined in: [nvimage/utils.ts:289](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L289)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [nvimage/utils.ts:287](https://github.com/niivue/niivue/blob/main/pa
 id: string;
 ```
 
-Defined in: [nvimage/utils.ts:271](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L271)
+Defined in: [nvimage/utils.ts:273](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L273)
 
 ---
 
@@ -84,7 +84,7 @@ Defined in: [nvimage/utils.ts:271](https://github.com/niivue/niivue/blob/main/pa
 nt: number;
 ```
 
-Defined in: [nvimage/utils.ts:281](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L281)
+Defined in: [nvimage/utils.ts:283](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L283)
 
 ---
 
@@ -94,7 +94,7 @@ Defined in: [nvimage/utils.ts:281](https://github.com/niivue/niivue/blob/main/pa
 nx: number;
 ```
 
-Defined in: [nvimage/utils.ts:275](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L275)
+Defined in: [nvimage/utils.ts:277](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L277)
 
 ---
 
@@ -104,7 +104,7 @@ Defined in: [nvimage/utils.ts:275](https://github.com/niivue/niivue/blob/main/pa
 ny: number;
 ```
 
-Defined in: [nvimage/utils.ts:277](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L277)
+Defined in: [nvimage/utils.ts:279](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L279)
 
 ---
 
@@ -114,4 +114,4 @@ Defined in: [nvimage/utils.ts:277](https://github.com/niivue/niivue/blob/main/pa
 nz: number;
 ```
 
-Defined in: [nvimage/utils.ts:279](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L279)
+Defined in: [nvimage/utils.ts:281](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L281)

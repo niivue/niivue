@@ -4,7 +4,7 @@
 function isAffineOK(mtx: number[][]): boolean;
 ```
 
-Defined in: [nvimage/utils.ts:586](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L586)
+Defined in: [nvimage/utils.ts:588](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L588)
 
 ## Parameters
 

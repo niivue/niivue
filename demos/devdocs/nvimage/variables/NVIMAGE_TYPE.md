@@ -7,6 +7,7 @@ const NVIMAGE_TYPE: Readonly<{
   DCM_FOLDER: DCM_FOLDER;
   DCM_MANIFEST: DCM_MANIFEST;
   FIB: FIB;
+  HDR: HDR;
   HEAD: HEAD;
   MGH: MGH;
   MGZ: MGZ;
@@ -53,4 +54,4 @@ const NVIMAGE_TYPE: Readonly<{
 }>;
 ```
 
-Defined in: [nvimage/utils.ts:77](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L77)
+Defined in: [nvimage/utils.ts:78](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L78)
