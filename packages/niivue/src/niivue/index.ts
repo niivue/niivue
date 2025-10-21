@@ -3128,7 +3128,24 @@ export class Niivue {
                 }
               }
             }
-            if (entry.name.lastIndexOf('BRIK') !== -1) {
+            // check for HDR IMG pair
+            if (entry.name.toUpperCase().lastIndexOf('HDR') !== -1) {
+              for (const pairedItem of Array.from(items)) {
+                const pairedEntry = pairedItem.webkitGetAsEntry()
+                if (!pairedEntry) {
+                  throw new Error('could not get paired entry')
+                }
+                const fileBaseName = entry.name.substring(0, entry.name.toUpperCase().lastIndexOf('HDR'))
+                const pairedItemBaseName = pairedEntry.name.substring(
+                  0,
+                  pairedEntry.name.toUpperCase().lastIndexOf('IMG')
+                )
+                if (fileBaseName === pairedItemBaseName) {
+                  pairedImageData = pairedEntry
+                }
+              }
+            }
+            if (entry.name.lastIndexOf('BRIK') !== -1 || entry.name.toUpperCase().lastIndexOf('IMG') !== -1) {
               continue
             }
             if (this.loaders[ext]) {

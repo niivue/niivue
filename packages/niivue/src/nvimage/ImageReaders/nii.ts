@@ -10,7 +10,11 @@ import { NiiDataType } from '@/nvimage/utils'
  * @param buffer - ArrayBuffer containing the NIfTI file data.
  * @returns Promise resolving to the imgRaw ArrayBufferLike or null on critical error.
  */
-export async function readNifti(nvImage: NVImage, buffer: ArrayBuffer): Promise<ArrayBufferLike | null> {
+export async function readNifti(
+  nvImage: NVImage,
+  buffer: ArrayBuffer,
+  pairedImageData?: ArrayBuffer
+): Promise<ArrayBufferLike | null> {
   let dataBuffer = buffer // Work with a local variable
   let imgRaw: ArrayBufferLike | null = null
 
@@ -26,7 +30,11 @@ export async function readNifti(nvImage: NVImage, buffer: ArrayBuffer): Promise<
       throw new Error('Buffer became invalid after decompression attempt.')
     }
 
-    nvImage.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer)
+    if (!pairedImageData) {
+      console.log('paired image data is null')
+    }
+
+    nvImage.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer, pairedImageData != null)
     if (hasExtension(nvImage.hdr)) {
       nvImage.extensions = nvImage.hdr.extensions
     }
@@ -41,7 +49,9 @@ export async function readNifti(nvImage: NVImage, buffer: ArrayBuffer): Promise<
       nvImage.hdr.cal_max = 0.0
     }
 
-    imgRaw = readImage(nvImage.hdr, dataBuffer as ArrayBuffer)
+    imgRaw = pairedImageData
+      ? readImage(nvImage.hdr, pairedImageData)
+      : readImage(nvImage.hdr, dataBuffer as ArrayBuffer)
 
     if (imgRaw === null) {
       throw new Error(`nifti-reader-js readImage returned null for ${nvImage.name}`)

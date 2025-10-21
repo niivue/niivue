@@ -71,7 +71,8 @@ export enum ImageType {
   BMP = 19,
   ZARR = 20,
   NPY = 21,
-  NPZ = 22
+  NPZ = 22,
+  HDR = 23
 }
 
 export const NVIMAGE_TYPE = Object.freeze({
@@ -92,6 +93,7 @@ export const NVIMAGE_TYPE = Object.freeze({
       case 'FIB':
         imageType = ImageType.FIB
         break
+      case 'HDR':
       case 'NII':
         imageType = ImageType.NII
         break
