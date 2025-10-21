@@ -106,74 +106,130 @@ bool insideIntersection(vec3 p) {
     return true; // inside all
 }
 
+// EPS tuning
+const float INSIDE_EPS = 1e-6;
+const vec3 POLY_CENTER = vec3(0.5);
+
+const float NEG_EPS = 1e-6;
+
+// returns true if for all planes: dot(n, p - center) + w < 0
+bool insideAllNegative(vec3 p) {
+    for (int i = 0; i < uClipPlaneCount; ++i) {
+        vec4 pl = uClipPlanes[i];
+        float dist = dot(pl.xyz, p - POLY_CENTER) + pl.w;
+        if (dist >= -NEG_EPS) {
+            // non-negative (>= 0 within eps) -> outside or on-plane
+            return false;
+        }
+    }
+    return true;
+}
+
+// compute inside sign once per call (cheap: <=6 planes)
+float computeInsideSign() {
+    int nonNeg = 0;
+    for (int i = 0; i < uClipPlaneCount; ++i) {
+        vec4 pl = uClipPlanes[i];
+        // d(center) = dot(n, center-center) + w = w
+        if (pl.w >= 0.0) nonNeg++;
+    }
+    // if most w >= 0, inside = dist >= 0 => sign = +1; else sign = -1
+    return (nonNeg * 2 >= uClipPlaneCount) ? 1.0 : -1.0;
+}
+
+// unified inside check
+bool insideConvex(vec3 p) {
+    float sign = computeInsideSign();
+    for (int i = 0; i < uClipPlaneCount; ++i) {
+        vec4 pl = uClipPlanes[i];
+        float dist = dot(pl.xyz, p - POLY_CENTER) + pl.w;
+        // inside iff sign * dist >= -INSIDE_EPS
+        if (sign * dist < -INSIDE_EPS) return false;
+    }
+    return true;
+}
 
 
-vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip, int skipPlanes[6], int skipCount) {
+
+
+vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip, int skipPlanes[6], int skipCount, out int entryPlaneIdx) {
     isClip = false; // default: no clipping
+	entryPlaneIdx = -1; // default: no entry
 
     if (uClipPlaneMode == 0) {
-    // --- AND mode (simple closest/furthest intersections) ---
-    float ts[MAX_CLIP_PLANES];
-    int tc = 0;
+        // --- AND mode (simple closest/furthest intersections) ---
+        float ts[MAX_CLIP_PLANES];
+        int   planeIdx[MAX_CLIP_PLANES];
+        int   tc = 0;
 
-    const float PARALLEL_EPS = 1e-6;
-    const float T_EPS = 1e-8;
+        const float PARALLEL_EPS = 1e-6;
+        const float T_EPS = 1e-8;
 
-    // collect forward intersections that fall within the ray segment (samplePos.a, len)
-    for (int i = 0; i < uClipPlaneCount; ++i) {
-        vec4 plane = uClipPlanes[i];
-        vec3 n = plane.xyz;
-        float cdot = dot(dir, n);
-        if (abs(cdot) < PARALLEL_EPS) continue; // nearly parallel -> ignore
+        // collect forward intersections that fall within the ray segment (samplePos.a, len)
+        for (int i = 0; i < uClipPlaneCount; ++i) {
+            vec4 plane = uClipPlanes[i];
+            vec3 n = plane.xyz;
+            float cdot = dot(dir, n);
+            if (abs(cdot) < PARALLEL_EPS) continue; // nearly parallel -> ignore
 
-        float d0 = dot(n, samplePos.xyz - vec3(0.5)) + plane.w;
-        float t = -d0 / cdot;
+            float d0 = dot(n, samplePos.xyz - vec3(0.5)) + plane.w;
+            float t = -d0 / cdot;
 
-        if (t > samplePos.a + T_EPS && t < len - T_EPS) {
-            ts[tc] = t;
-            tc++;
-            if (tc >= MAX_CLIP_PLANES) break;
-        }
-    }
-
-    // if we found no intersections, abort ray
-    if (tc == 0) {
-        len = 0.0;
-        return samplePos;
-    }
-
-    // sort ascending (small tc: bubble/insertion sort is fine)
-    for (int a = 0; a < tc - 1; ++a) {
-        for (int b = a + 1; b < tc; ++b) {
-            if (ts[b] < ts[a]) {
-                float tmp = ts[a]; ts[a] = ts[b]; ts[b] = tmp;
+            if (t > samplePos.a + T_EPS && t < len - T_EPS) {
+                ts[tc] = t;
+                planeIdx[tc] = i; // remember which plane produced this t
+                tc++;
+                if (tc >= MAX_CLIP_PLANES) break;
             }
         }
-    }
 
-    // choose closest and furthest intersections
-    float entryT = ts[0];
-    float exitT  = ts[tc - 1];
-
-    // defensive validation
-    if (!(entryT + T_EPS < exitT && exitT > samplePos.a + T_EPS)) {
-        // If there's only a single intersection, we still treat it as an update:
-        // advance to that t and clamp len to that t (degenerate zero-length segment).
-        // But if it's invalid for any reason, abort.
-        // Here we accept the degenerate case; if you prefer aborting when tc==1, change behavior.
-        // For safety, if exitT <= samplePos.a, abort.
-        if (exitT <= samplePos.a + T_EPS) {
+        // if we found no intersections, abort ray
+        if (tc == 0) {
+            entryPlaneIdx = -1;
             len = 0.0;
             return samplePos;
         }
-    }
 
-    // advance to entry and clamp len to exit
-    samplePos = vec4(samplePos.xyz + dir * entryT, entryT);
-    len = min(len, exitT);
-    isClip = true;
-    return samplePos;
-}
+        // sort ascending (small tc: bubble/insertion sort is fine)
+        for (int a = 0; a < tc - 1; ++a) {
+            for (int b = a + 1; b < tc; ++b) {
+                if (ts[b] < ts[a]) {
+                    float tmpf = ts[a]; ts[a] = ts[b]; ts[b] = tmpf;
+                    int tmpi = planeIdx[a]; planeIdx[a] = planeIdx[b]; planeIdx[b] = tmpi;
+                }
+            }
+        }
+
+        // choose closest and furthest intersections
+        float entryT = ts[0];
+        float exitT  = ts[tc - 1];
+        int   entryIdx = planeIdx[0]; // plane index that produced the entryT
+
+        // defensive validation
+        if (!(entryT + T_EPS < exitT && exitT > samplePos.a + T_EPS)) {
+            // If there's only a single intersection, we still treat it as an update:
+            // advance to that t and clamp len to that t (degenerate zero-length segment).
+            // But if it's invalid for any reason, abort.
+            // Here we accept the degenerate case; if you prefer aborting when tc==1, change behavior.
+            // For safety, if exitT <= samplePos.a, abort.
+            if (exitT <= samplePos.a + T_EPS) {
+                entryPlaneIdx = -1;
+                len = 0.0;
+                return samplePos;
+            }
+        }
+
+        // advance to entry and clamp len to exit
+        samplePos = vec4(samplePos.xyz + dir * entryT, entryT);
+
+        // (optional) if you want to ensure entry point is inside convex region, you could check here:
+        // if (!insideConvex(samplePos.xyz)) { entryPlaneIdx = -1; len = 0.0; return samplePos; }
+
+        len = min(len, exitT);
+        isClip = true;
+        entryPlaneIdx = entryIdx;
+        return samplePos;
+    }
 
 
     else if (uClipPlaneMode == 1) {
@@ -313,7 +369,8 @@ vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool
 
 vec4 applyClipPlanes(vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
     int dummy[6];
-    return applyClipPlanes(dir, samplePos, len, isClip, dummy, 0);
+	int firstClipIndex = -1;
+    return applyClipPlanes(dir, samplePos, len, isClip, dummy, 0, firstClipIndex);
 }
 
 // uClipPlaneCount is max 6 so this is small + cheap
@@ -403,6 +460,167 @@ void buildTangents(vec3 dir, out vec3 u, out vec3 v) {
     u = normalize(cross(up, dir));
     v = normalize(cross(dir, u));
 }
+
+// --- helper: applyClipVolume for full-box AND-mode (uClipPlaneCount == 6) ---
+// dir: ray direction (same units as used by samplePos.a)
+// samplePos: inout (xyz, a) - start point and parameter a
+// len: inout - segment param upper bound
+// deltaDir: vec4 step to quickly advance probePos (must increment xyz and .a)
+// isClip: out boolean set true if we clipped
+// returns: updates samplePos/len and sets isClip; on failure sets len=0.0 and leaves samplePos unchanged
+void applyClipVolume(vec3 dir, inout vec4 samplePos, inout float len, vec4 deltaDir, out bool isClip) {
+    isClip = false;
+
+    const float PARALLEL_EPS = 1e-6;
+    const float T_EPS = 1e-8;
+    const int   MAX_STEPS = 16384;
+
+    // storage
+    float ts[MAX_CLIP_PLANES];
+    int   planeIdx[MAX_CLIP_PLANES];
+    bool  isFront[MAX_CLIP_PLANES];
+    int   sortedIdx[MAX_CLIP_PLANES];
+    int   tc = 0;
+
+    vec3 p0 = samplePos.xyz;
+    float t0 = samplePos.a;
+    float tMax = len;
+
+    // PASS 1: compute t for each plane (non-parallel) and record front/back
+    for (int i = 0; i < uClipPlaneCount; ++i) {
+        vec4 pl = uClipPlanes[i];
+        vec3 n = pl.xyz;
+        float cdot = dot(dir, n);
+        if (abs(cdot) < PARALLEL_EPS) continue; // nearly parallel -> no finite crossing
+
+        float d0 = dot(n, p0 - vec3(0.5)) + pl.w;
+        float t = -d0 / cdot;
+
+        // only consider intersections strictly within the ray segment (open interval)
+        if (t > t0 + T_EPS && t < tMax - T_EPS) {
+            ts[tc] = t;
+            planeIdx[tc] = i;
+            isFront[tc] = (cdot < 0.0);
+
+            // insert into sortedIdx[] by ascending t (insertion)
+            if (tc == 0) {
+                sortedIdx[0] = 0;
+            } else {
+                sortedIdx[tc] = tc;
+                for (int k = 0; k < tc; ++k) {
+                    if (ts[ sortedIdx[k] ] > t) {
+                        for (int m = tc; m > k; --m) sortedIdx[m] = sortedIdx[m - 1];
+                        sortedIdx[k] = tc;
+                        break;
+                    }
+                }
+            }
+
+            tc++;
+            if (tc >= MAX_CLIP_PLANES) break;
+        }
+    }
+
+    // nothing to do if no plane events
+    if (tc == 0) {
+        len = 0.0;
+        return;
+    }
+
+    // PASS 1.5 (fast probe): clone samplePos and advance until we find a point inside the convex volume
+    vec4 probePos = samplePos;
+    bool foundInside = false;
+    int steps = 0;
+    // If we start inside already, don't advance
+    if (insideConvex(probePos.xyz)) {
+        foundInside = true;
+    } else {
+        while (probePos.a < tMax && steps < MAX_STEPS) {
+            probePos += deltaDir;
+            // avoid overshoot
+            if (probePos.a > tMax) break;
+            if (insideConvex(probePos.xyz)) { foundInside = true; break; }
+            steps++;
+        }
+    }
+
+    if (!foundInside) {
+        // No point along the ray segment fell inside the convex polyhedron
+        len = 0.0;
+        return;
+    }
+
+    float probeT = probePos.a;
+
+    // PASS 3: choose entry = most recent front <= probeT; exit = next rear > entry
+    // find max t_i such that isFront[i] && t_i <= probeT
+    bool haveEntry = false;
+    float entryT = 0.0;
+    int entryPlane = -1;
+
+    for (int i = 0; i < tc; ++i) {
+        int sidx = sortedIdx[i];
+        float t = ts[sidx];
+        if (isFront[sidx] && t <= probeT + T_EPS) {
+            if (!haveEntry || t > entryT) {
+                entryT = t;
+                entryPlane = planeIdx[sidx];
+                haveEntry = true;
+            }
+        }
+    }
+
+    // If we didn't find any front <= probeT, but probePos is inside,
+    // it might mean we started inside before any front event — treat samplePos.a as entry if inside.
+    if (!haveEntry) {
+        if (insideConvex(samplePos.xyz)) {
+            entryT = t0;
+            haveEntry = true;
+            entryPlane = -1;
+        } else {
+            // no entry established
+            len = 0.0;
+            return;
+        }
+    }
+
+    // find exit: the smallest t > entryT where isFront == false
+    bool haveExit = false;
+    float exitT = 0.0;
+    int exitPlane = -1;
+    for (int i = 0; i < tc; ++i) {
+        int sidx = sortedIdx[i];
+        float t = ts[sidx];
+        if (!isFront[sidx] && t > entryT + T_EPS) {
+            if (!haveExit || t < exitT) {
+                exitT = t;
+                exitPlane = planeIdx[sidx];
+                haveExit = true;
+            }
+        }
+    }
+
+    if (!haveExit) {
+        // no exit found
+        len = 0.0;
+        return;
+    }
+
+    // Validate overlap with original ray segment
+    float segStart = max(t0, entryT);
+    float segEnd   = min(tMax, exitT);
+    if (!(segStart + T_EPS < segEnd)) {
+        len = 0.0;
+        return;
+    }
+
+    // Commit: advance to entry and clamp len to exit
+    samplePos = vec4(p0 + dir * segStart, segStart);
+    len = min(len, segEnd);
+    isClip = true;
+    return;
+}
+
 `
 
 const kRenderInit = `void main() {
@@ -456,17 +674,42 @@ const kRenderInit = `void main() {
 	
 	// pre-pass: mark clip planes to ignore
 	markSkipPlanes(samplePos, dir, len, deltaDir, skipPlanes, skipCount);
+	// palette: index 0 = none, 1..6 = plane 0..5
+	const vec3 PALETTE[7] = vec3[7](
+		vec3(0.0, 0.0, 0.0),   // 0 => none -> black
+		vec3(1.0, 0.0, 0.0),   // 1 => plane 0 -> red
+		vec3(0.0, 1.0, 0.0),   // 2 => plane 1 -> green
+		vec3(0.0, 0.0, 1.0),   // 3 => plane 2 -> blue
+		vec3(1.0, 1.0, 0.0),   // 4 => plane 3 -> yellow
+		vec3(1.0, 0.0, 1.0),   // 5 => plane 4 -> magenta
+		vec3(0.0, 1.0, 1.0)    // 6 => plane 5 -> cyan
+	);
+	
 
-	vec4 clipPos = applyClipPlanes(dir, samplePos, len, isClip, skipPlanes, skipCount);
+	int firstPlaneId = -1;
+	vec4 clipPos;
+	// if (uClipPlaneCount == 6 && uClipPlaneMode == 0) {
+	// 	applyClipVolume(dir, samplePos, len, deltaDir, isClip);
+	// 	clipPos = samplePos;
+	// }
+	// else { 
+		clipPos = applyClipPlanes(dir, samplePos, len, isClip, skipPlanes, skipCount, firstPlaneId);
+	// }
 	// If we have a full box (six planes) and we're in AND mode, only render rays whose start
 	// point is inside the intersection of the BACK-face halfspaces. For reliability use
 	// insideIntersection() rather than isClip, because applyClipPlanes/isClip is ray-based.
+	
+	// comment out to hide clip planes
 	if (uClipPlaneCount == 6 && uClipPlaneMode == 0) {
-		if (!isClip && !insideIntersection(start) && !insideIntersection(backPosition)) {
+		if ( !insideConvex(start) && !insideConvex(backPosition)) {
 			// outside intersection → nothing to render for AND-mode full box
+			int idx = (firstPlaneId < 0) ? 0 : (firstPlaneId + 1); // 0..6
+			vec3 outCol = PALETTE[idx];
+			fColor = vec4(outCol, 1.0);
 			return;
 		}
 	}
+	
 	// if (insideIntersection(samplePos.xyz)) {
 	// 	fColor = vec4(1.0, 0.0, 0.0, 1.0); // red = inside
 	// } else {
@@ -787,8 +1030,8 @@ out vec4 fColor;
 		len = length(backPosition - start);
         // samplePos += deltaDir * ran;
         markSkipPlanes(samplePos, dir, len, deltaDirFast, skipPlanes, skipCount);
-
-        samplePos = applyClipPlanes(dir, samplePos, len, isClip, skipPlanes, skipCount);
+		int firstClipIndex = -1;
+        samplePos = applyClipPlanes(dir, samplePos, len, isClip, skipPlanes, skipCount, firstClipIndex);
 		while (samplePos.a <= len) {
 			vec4 colorSample = texture(volume, samplePos.xyz);
 			samplePos += deltaDir; //advance ray position

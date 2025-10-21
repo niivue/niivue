@@ -116,6 +116,31 @@
       nv1.drawScene();
       return { planes, axisMap };
     }
+
+    function setBoxMode() {
+      // install full 6-plane box
+      const min = 0.2, max = 0.8;
+      const dLeft = 0.5 - min, dRight = max - 0.5,
+            dBack = 0.5 - min, dFront = max - 0.5,
+            dBottom = 0.5 - min, dTop = max - 0.5;
+      const boxPlanes = [
+        [dBack, 270,  0],
+        [dFront, 90,  0],
+        [dLeft, 180,  0],
+        [dRight, 0,  0],
+        [dBottom, 0, -90],
+        [dTop, 0, 90]
+      ];
+      nv1.setClipPlanes(boxPlanes);
+      console.log("clipPlanes (n.x,n.y,n.z,w) and normal length:");
+      nv1.scene.clipPlanes.forEach((pl,i)=> {
+        const n = [pl[0],pl[1],pl[2]];
+        const w = pl[3];
+        const nlen = Math.hypot(n[0],n[1],n[2]);
+        console.log(i, "n=", n.map(x=>x.toFixed(6)), "len=", nlen.toFixed(6), "w=", w.toFixed(6));
+      });
+      nv1.setClipPlaneMode("and");
+    }
         
 
 
@@ -183,20 +208,7 @@
           ];
           nv1.setClipPlanes(depthAziElevs);
         } else if (next === 'and' || next === 'slides') {
-          // install full 6-plane box
-          const min = 0.2, max = 0.8;
-          const dLeft = 0.5 - min, dRight = max - 0.5,
-                dBack = 0.5 - min, dFront = max - 0.5,
-                dBottom = 0.5 - min, dTop = max - 0.5;
-          const boxPlanes = [
-            [dBack, 270,  0],
-            [dFront, 90,  0],
-            [dLeft, 180,  0],
-            [dRight, 0,  0],
-            [dBottom, 0, -90],
-            [dTop, 0, 90]
-          ];
-          nv1.setClipPlanes(boxPlanes);
+          setBoxMode();
         }
 
         nv1.setClipPlaneMode(next);
@@ -213,7 +225,7 @@
         nv1.drawScene();
       };
 
-
+      setBoxMode();
       // initial draw
       nv1.drawScene();
     </script>
