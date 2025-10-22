@@ -1312,6 +1312,7 @@ export class NVImage {
 
   async readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<ArrayBufferLike> {
     let { width, height, depth = 1, data } = (zarrData ?? {}) as any
+    console.log('w,h,d', width, height, depth)
     let expectedLength = width * height * depth * 3
     let isRGB = expectedLength === data.length
     if (!isRGB) {
@@ -1327,7 +1328,7 @@ export class NVImage {
     }
     this.hdr = new NIFTI1()
     const hdr = this.hdr
-    hdr.dims = [3, width, height, depth, 1, 1, 1, 1]
+    hdr.dims = [3, depth, width, height , 1, 1, 1, 1]
     hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0]
 
     hdr.affine = [
@@ -1336,14 +1337,16 @@ export class NVImage {
       [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
       [0, 0, 0, 1]
     ]
+    console.log('isRGB', isRGB)
     if (!isRGB) {
-      hdr.numBitsPerVoxel = 8
-      hdr.datatypeCode = NiiDataType.DT_UINT8
+      hdr.numBitsPerVoxel = 16
+      hdr.datatypeCode = NiiDataType.DT_INT16
       // if data is a Uint8Array, convert to ArrayBuffer
       if (data instanceof Uint8Array) {
         const retBuffer = new ArrayBuffer(data.length)
         const retView = new Uint8Array(retBuffer)
         retView.set(data)
+        console.log('retBuffer', retBuffer)
         return retBuffer
       }
       return data
@@ -3248,13 +3251,22 @@ export class NVImage {
       const zarrUrl = url.split('?')[0]
       // if multiscale, must provide the full path to the zarr array data
       const store = new zarr.FetchStore(zarrUrl)
+      console.log('zarrUrl', zarrUrl)
+      console.log('store', store)
       const root = zarr.root(store)
+      console.log('root', root)
       let arr
       try {
         // TODO: probably remove this, since it's not needed
-        arr = await zarr.open(root.resolve(url), { kind: 'array' })
+        // arr = await zarr.open(root.resolve(url), { kind: 'array' })
+        arr = await zarr.open(store)
+        console.log('arr', arr)
+        // arr = await zarr.open(arr.resolve("channel_0"), { kind: 'array' })
+        console.log('arr2', arr)
       } catch (e) {
         arr = await zarr.open(root, { kind: 'array' })
+        console.log('catch', e)
+        console.log('arr', arr)
       }
       let view
       if (arr.shape.length === 4) {
@@ -3273,9 +3285,14 @@ export class NVImage {
           xRange[0] = xDim - 1
         }
         view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
+        console.log('view1')
       } else {
-        view = await zarr.get(arr, [xRange, yRange, zRange])
+        // view = await zarr.get(arr, [xRange, yRange, zRange])
+        view = await arr.getChunk([1,1,1])
+        console.log('view', view)
+        console.log('view2')
       }
+      console.log('view', view)
       dataBuffer = view.data
       const [height, width, zDim, cDim] = view.shape
       zarrData = {

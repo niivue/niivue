@@ -40,13 +40,13 @@
         <button id="nextBtn">Next Slice</button>
       &nbsp;&nbsp;&nbsp;
       <select id="drawSelect">
-        <option value="-1">Off</option>
+        <option value="-1" selected>Off</option>
         <option value="0">Erase</option>
         <option value="1">Red</option>
         <option value="2">Green</option>
         <option value="3">Blue</option>
         <option value="8">Filled Erase</option>
-        <option value="9" selected>Filled Red</option>
+        <option value="9">Filled Red</option>
         <option value="10">Filled Green</option>
         <option value="11">Filled Blue</option>
         <option value="12">Erase Selected Cluster</option>
@@ -104,9 +104,20 @@
           ],
           [
             {
-              url: 'http://localhost:5173/rgb.ome.zarr/scale0/image?z=1200',
-              name: 'example.zarr'
-            }
+              //url: 'http://localhost:5173/rgb.ome.zarr/scale0/image?z=1200',
+              // url: 'https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x0/neocortical_layer_1_axons.ome.zarr',
+              url: 'http://192.168.10.102:8080/channel_0/?x=100&y=100&z=1200',
+              name: 'neocortical_layer_1_axons.ome.zarr',
+              colormap: 'viridis'
+            },
+            // {
+            //   //url: 'http://localhost:5173/rgb.ome.zarr/scale0/image?z=1200',
+            //   // url: 'https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x0/neocortical_layer_1_axons.ome.zarr',
+            //   url: 'http://192.168.10.102:8080/channel_1/?x=100&y=100&z=1200',
+            //   name: 'neocortical_layer_1_axons.ome.zarr',
+            //   colormap: 'viridis',
+            //   opacity: 0.3
+            // }
           ],
           [
             {
