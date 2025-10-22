@@ -12,8 +12,8 @@ const platform = process.platform
 // Map each platform to its ZIP name and target executable
 const assetMap = {
   darwin: { dir: 'darwin', zip: 'niimath_macos.zip', exe: 'niimath' },
-  linux:  { dir: 'linux',   zip: 'niimath_lnx.zip',   exe: 'niimath' },
-  win32:  { dir: 'win32',   zip: 'niimath_win.zip',   exe: 'niimath.exe' },
+  linux: { dir: 'linux', zip: 'niimath_lnx.zip', exe: 'niimath' },
+  win32: { dir: 'win32', zip: 'niimath_win.zip', exe: 'niimath.exe' }
 }
 
 // Abort if unsupported
@@ -28,7 +28,7 @@ const zipPath = path.join(bins, zip)
 const exePath = path.join(platDir, exe)
 
 // Ensure directories exist
-;[bins, platDir].forEach(dirPath => {
+;[bins, platDir].forEach((dirPath) => {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true })
 })
 
@@ -44,19 +44,21 @@ console.log(`🛠  Downloading niimath (${platform})…`)
 function fetchUrl(url, options, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
     if (maxRedirects < 0) return reject(new Error('Too many redirects'))
-    https.get(url, options, res => {
-      const { statusCode, headers } = res
-      if (statusCode >= 300 && statusCode < 400 && headers.location) {
-        // follow redirect
-        res.resume()
-        return resolve(fetchUrl(headers.location, options, maxRedirects - 1))
-      }
-      if (statusCode !== 200) {
-        res.resume()
-        return reject(new Error(`Request Failed. Status Code: ${statusCode}`))
-      }
-      resolve(res)
-    }).on('error', reject)
+    https
+      .get(url, options, (res) => {
+        const { statusCode, headers } = res
+        if (statusCode >= 300 && statusCode < 400 && headers.location) {
+          // follow redirect
+          res.resume()
+          return resolve(fetchUrl(headers.location, options, maxRedirects - 1))
+        }
+        if (statusCode !== 200) {
+          res.resume()
+          return reject(new Error(`Request Failed. Status Code: ${statusCode}`))
+        }
+        resolve(res)
+      })
+      .on('error', reject)
   })
 }
 
@@ -65,12 +67,12 @@ async function getLatestTag() {
   const options = {
     hostname: 'api.github.com',
     path: '/repos/rordenlab/niimath/releases/latest',
-    headers: { 'User-Agent': 'node.js', 'Accept': 'application/vnd.github.v3+json' }
+    headers: { 'User-Agent': 'node.js', Accept: 'application/vnd.github.v3+json' }
   }
   const res = await fetchUrl(`https://${options.hostname}${options.path}`, options)
   return new Promise((resolve, reject) => {
     let data = ''
-    res.on('data', chunk => data += chunk)
+    res.on('data', (chunk) => (data += chunk))
     res.on('end', () => {
       try {
         resolve(JSON.parse(data).tag_name)

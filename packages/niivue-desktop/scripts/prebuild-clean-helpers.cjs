@@ -3,12 +3,7 @@ const path = require('path')
 const fs = require('fs')
 
 const electronPath = path.join('node_modules', 'electron', 'dist')
-const helperNames = [
-  'helper',
-  'helper (GPU)',
-  'helper (Renderer)',
-  'helper (Plugin)',
-]
+const helperNames = ['helper', 'helper (GPU)', 'helper (Renderer)', 'helper (Plugin)']
 
 for (const name of helperNames) {
   const binary = `Electron ${name}`

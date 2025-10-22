@@ -15,7 +15,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'out/preload'
-  }
+    }
   },
   renderer: {
     server: {
