@@ -35,3 +35,33 @@ export const saveCompressedNVDHandler = async (
     return undefined
   }
 }
+
+/**
+ * Save Scene as HTML
+ */
+export const saveHTMLHandler = async (
+  _evt,
+  htmlStr,
+  defaultName = 'scene'
+): Promise<string | undefined> => {
+  try {
+    // strip any .html out of the incoming name
+    const safeName = defaultName.replace(/\.html?$/i, '')
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Save Niivue Scene as HTML',
+      defaultPath: `${safeName}.html`,
+      filters: [{ name: 'HTML', extensions: ['html'] }]
+    })
+    if (canceled || !filePath) return
+
+    // write the HTML string
+    await writeFile(filePath, htmlStr, 'utf8')
+
+    refreshMenu()
+
+    return path.basename(filePath)
+  } catch (error) {
+    console.error('Failed to save HTML export:', error)
+    return undefined
+  }
+}

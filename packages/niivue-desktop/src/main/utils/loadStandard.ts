@@ -4,6 +4,8 @@ import meshaal from '../../../resources/images/standard/aal.mz3?asset'
 import volaal from '../../../resources/images/standard/aal.nii.gz?asset'
 import ICBM152LH from '../../../resources/images/standard/ICBM152.lh.mz3?asset'
 import ICBM152LHMotor from '../../../resources/images/standard/ICBM152.lh.motor.mz3?asset'
+import motorOverlay from '../../../resources/images/standard/Motor_Overlay.nvd?asset'
+
 // https://electron-vite.org/guide/assets#importing-json-file-as-file-path
 import jsonaal from '../../../resources/images/standard/aal.json?commonjs-external&asset'
 import { store } from './appStore.js'
@@ -29,6 +31,9 @@ export const readStandardFile = async (path: string): Promise<string> => {
       break
     case 'aal.json':
       standardFilePath = jsonaal
+      break
+    case 'Motor_Overlay.nvd':
+      standardFilePath = motorOverlay
       break
     default:
       break

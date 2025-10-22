@@ -1,4 +1,4 @@
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 import { Button } from '@radix-ui/themes'
 
 export const SliceSelection = (): JSX.Element => {

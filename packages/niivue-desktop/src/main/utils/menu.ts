@@ -1,4 +1,4 @@
-import { app, Menu, dialog, systemPreferences } from 'electron'
+import { app, Menu, dialog, nativeImage, systemPreferences } from 'electron'
 import { sliceTypeMap } from '../../common/sliceTypes.js'
 // import { layouts } from '../../common/layouts.js'
 // import { orientationLabelMap } from '../../common/orientationLabels.js'
@@ -7,6 +7,10 @@ import { DEFAULT_OPTIONS } from '@niivue/niivue'
 import { store } from './appStore.js'
 import { getMainWindow } from '../index.js'
 import fs from 'fs' // ✅ Works in ES Module mode
+import { runNiimath } from './runNiimath.js'
+import { join } from 'path'
+import { SeriesListEventPayload } from '../../common/dcm2niixTypes.js'
+import { listDicomSeries } from './runDcm2niix.js'
 
 export const viewState = {
   layout: /** default */ 'Auto',
@@ -15,6 +19,13 @@ export const viewState = {
   crosshair: true,
   crosshair3D: DEFAULT_OPTIONS.show3Dcrosshair
   // …etc for any other checkbox/radios you sync…
+}
+
+// point at your bundled icon in Resources (macOS) or resources/ (dev)
+const getAppIcon = (): Electron.NativeImage => {
+  const base = app.isPackaged ? process.resourcesPath : join(__dirname, '..', '..', 'resources')
+  // we ship a png at resources/icons/app_icon.png
+  return nativeImage.createFromPath(join(base, 'icons', 'app_icon.png'))
 }
 
 const isMac = process.platform === 'darwin'
@@ -85,6 +96,46 @@ const createSliceTypeSubmenu = (
   })
 }
 
+/**
+ * Returns the “Draw” submenu items for the application menu.
+ * @param win  The BrowserWindow to which draw commands will be sent.
+ */
+export function createDrawSubmenu(
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] {
+  const send = (cmd: string): void => {
+    if (win) win.webContents.send('draw-command', cmd)
+  }
+
+  return [
+    { label: 'Off', accelerator: '0', click: () => send('Off') },
+    { type: 'separator' },
+    { label: 'Undo', accelerator: 'CmdOrCtrl+Z', click: () => send('Undo') },
+    { type: 'separator' },
+    { label: 'Red', accelerator: '1', click: () => send('Red') },
+    { label: 'Green', accelerator: '2', click: () => send('Green') },
+    { label: 'Blue', accelerator: '3', click: () => send('Blue') },
+    { label: 'Yellow', accelerator: '4', click: () => send('Yellow') },
+    { label: 'Cyan', accelerator: '5', click: () => send('Cyan') },
+    { label: 'Purple', accelerator: '6', click: () => send('Purple') },
+    { label: 'Erase', accelerator: '7', click: () => send('Erase') },
+    { label: 'Cluster', accelerator: '8', click: () => send('Cluster') },
+    { type: 'separator' },
+    { label: 'Grow Cluster Dark', click: () => send('GrowCluster') },
+    { label: 'Grow Cluster Bright', click: () => send('GrowClusterBright') },
+    { type: 'separator' },
+    { label: 'Click To Segment (Auto)', click: () => send('ClickToSegmentAuto') },
+    { label: 'Click To Segment 2D', click: () => send('ClickToSegment2D') },
+    { type: 'separator' },
+    { label: 'Fill Outline', accelerator: 'F', click: () => send('DrawFilled') },
+    { label: 'Pen Overwrites', accelerator: 'O', click: () => send('DrawOverwrite') },
+    { label: 'Translucent', accelerator: 'T', click: () => send('Translucent') },
+    { label: 'Thin Pen', click: () => send('ThinPen') },
+    { label: 'Grow Cut', click: () => send('Growcut') },
+    { label: 'Otsu...', click: () => send('DrawOtsu') }
+  ]
+}
+
 // const createLayoutSubmenu = (
 //   win: Electron.BrowserWindow
 // ): Electron.MenuItemConstructorOptions[] => {
@@ -139,6 +190,34 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             label: app.name,
             submenu: [
               { role: 'about' },
+              {
+                label: 'Niimath Version',
+                click: async (): Promise<void> => {
+                  const icon = getAppIcon()
+                  try {
+                    const { stdout, stderr, code } = await runNiimath(['--version'])
+                    if (code === 0) {
+                      const firstLine = stdout.trim().split('\n')[0]
+                      dialog.showMessageBox({
+                        type: 'info',
+                        title: 'Niimath Version',
+                        message: firstLine,
+                        icon
+                      })
+                    } else {
+                      dialog.showErrorBox(
+                        'Niimath Error',
+                        `Exited with code ${code}:\n${stderr.trim()}`
+                      )
+                    }
+                  } catch (err) {
+                    dialog.showErrorBox(
+                      'Niimath Launch Failed',
+                      err instanceof Error ? err.message : String(err)
+                    )
+                  }
+                }
+              },
               {
                 label: 'Preferences...',
                 accelerator: 'CmdOrCtrl+,',
@@ -210,6 +289,27 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               })
           }
         },
+        // Add Volume Overlay
+        {
+          label: 'Add Overlay Image…',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          id: 'addOverlay',
+          enabled: false,
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Add Overlay Image',
+                properties: ['openFile', 'multiSelections'],
+                filters: [{ name: 'Volume', extensions: ['nii', 'nii.gz'] }]
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  // send one or more paths to the renderer
+                  win.webContents.send('loadOverlay', result.filePaths)
+                }
+              })
+          }
+        },
         // Open Mesh Image
         {
           label: 'Open Mesh Image',
@@ -222,6 +322,24 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               .then((result) => {
                 if (!result.canceled && result.filePaths.length > 0) {
                   win.webContents.send('loadMesh', result.filePaths[0])
+                }
+              })
+          }
+        },
+        // Add Mesh
+        {
+          label: 'Add Mesh…',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          id: 'addMesh',
+          click: (): void => {
+            dialog
+              .showOpenDialog(win, {
+                title: 'Open Mesh Image',
+                properties: ['openFile']
+              })
+              .then((result) => {
+                if (!result.canceled && result.filePaths.length > 0) {
+                  win.webContents.send('addMesh', result.filePaths[0])
                 }
               })
           }
@@ -241,53 +359,68 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               click: (): void => {
                 win.webContents.send('loadStandard', 'aal.mz3')
               }
-            }
-          ]
-        },
-        // Open FSL
-        {
-          label: 'Open FSL',
-          submenu: [
+            },
             {
-              label: 'mni152 1mm',
+              label: 'Motor Overlay',
               click: (): void => {
-                // TODO: implement this
-                win.webContents.send('loadFSL', 'mni152_1mm')
+                win.webContents.send('loadStandard', 'Motor_Overlay.nvd')
               }
             }
           ]
         },
-        // Open AFNI
-        {
-          label: 'Open AFNI',
-          submenu: [
-            {
-              label: 'mni152',
-              click: (): void => {
-                // TODO: implement this
-                win.webContents.send('loadAFNI', 'mni152')
-              }
-            }
-          ]
-        },
-        // Add atlas
-        {
-          label: 'Add Atlas',
-          submenu: [
-            {
-              label: 'aal',
-              click: (): void => {
-                // TODO: implement this
-                win.webContents.send('loadAtlas', 'aal')
-              }
-            }
-          ]
-        },
+        // // Open FSL
+        // {
+        //   label: 'Open FSL',
+        //   submenu: [
+        //     {
+        //       label: 'mni152 1mm',
+        //       click: (): void => {
+        //         // TODO: implement this
+        //         win.webContents.send('loadFSL', 'mni152_1mm')
+        //       }
+        //     }
+        //   ]
+        // },
+        // // Open AFNI
+        // {
+        //   label: 'Open AFNI',
+        //   submenu: [
+        //     {
+        //       label: 'mni152',
+        //       click: (): void => {
+        //         // TODO: implement this
+        //         win.webContents.send('loadAFNI', 'mni152')
+        //       }
+        //     }
+        //   ]
+        // },
+        // // Add atlas
+        // {
+        //   label: 'Add Atlas',
+        //   submenu: [
+        //     {
+        //       label: 'aal',
+        //       click: (): void => {
+        //         // TODO: implement this
+        //         win.webContents.send('loadAtlas', 'aal')
+        //       }
+        //     }
+        //   ]
+        // },
         {
           label: 'Save Document',
           accelerator: 'CmdOrCtrl+Shift+S',
           click: (): void => {
             win.webContents.send('saveCompressedDocument')
+          }
+        },
+        {
+          label: 'Save HTML…',
+          accelerator: 'CmdOrCtrl+Shift+H',
+          click: (): void => {
+            if (win) {
+              win.webContents.send('saveHTML')
+            }
           }
         },
         // Save screenshot
@@ -350,18 +483,25 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       submenu: [
         {
           label: 'Convert DICOM to NIfTI',
-          click: (): void => {
-            dialog
-              .showOpenDialog(win, {
-                title: 'Select DICOM directory',
-                properties: ['openDirectory']
-              })
-              .then((result) => {
-                if (!result.canceled && result.filePaths.length > 0) {
-                  // TODO: implement this
-                  win.webContents.send('convertDICOM', result.filePaths[0])
-                }
-              })
+          click: async (): Promise<void> => {
+            const result = await dialog.showOpenDialog(win, {
+              title: 'Select DICOM directory',
+              properties: ['openDirectory']
+            })
+            if (result.canceled || result.filePaths.length === 0) return
+
+            const folderPath = result.filePaths[0]
+            try {
+              const series = await listDicomSeries(folderPath) // uses -n -1 -f %f_%p_%t_%s
+              const payload: SeriesListEventPayload = { folderPath, series }
+              console.log('sending payload to renderer')
+              win.webContents.send('dcm2niix:series-list', payload)
+            } catch (err) {
+              dialog.showErrorBox(
+                'DICOM Enumeration Failed',
+                err instanceof Error ? err.message : String(err)
+              )
+            }
           }
         }
       ]
@@ -399,160 +539,8 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         // Draw menu
         {
           label: 'Draw',
-          submenu: [
-            // open drawing
-            {
-              label: 'Open Drawing',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Open Drawing',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // save drawing
-            {
-              label: 'Save Drawing',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Save Drawing',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // Close drawing
-            {
-              label: 'Close Drawing',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Close Drawing',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // separator
-            { type: 'separator' },
-            // undo draw
-            {
-              label: 'Undo',
-              click: (): void => {
-                dialog.showMessageBox(win, {
-                  title: 'Undo',
-                  message: 'This feature is not implemented yet.'
-                })
-              }
-            },
-            // transparency
-            {
-              label: 'Transparency',
-              submenu: [
-                {
-                  label: '0%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: '25%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: '50%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: '90%',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Transparency',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                }
-              ]
-            },
-            // Draw color
-            {
-              label: 'Color',
-              submenu: [
-                {
-                  label: 'Red',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Green',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Blue',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Yellow',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Color',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                }
-              ]
-            },
-            // Draw pen
-            {
-              label: 'Pen',
-              submenu: [
-                {
-                  label: 'Filled',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Pen',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                },
-                {
-                  label: 'Overwrite existing colors',
-                  click: (): void => {
-                    dialog.showMessageBox(win, {
-                      title: 'Pen',
-                      message: 'This feature is not implemented yet.'
-                    })
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        { type: 'separator' }
+          submenu: createDrawSubmenu(win)
+        }
       ]
     },
     // { role: 'viewMenu' }
@@ -561,7 +549,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       submenu: [
         ...createSliceTypeSubmenu(win),
         // separator
-        { type: 'separator' },
+        { type: 'separator' }
         // TODO(cdrake): re-enable menu
         // {
         //   label: 'Layout',

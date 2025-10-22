@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Switch, Slider, Button } from '@radix-ui/themes'
-import { useSelectedInstance } from '../AppContext'
-import { groupedConfigMeta } from '../utils/configMeta'
-import { ColorPicker } from './ColorPicker'
-import { EnumSelect } from './EnumSelect'
-import { hexToRgba10 } from '../utils/colors'
-import { filterEnum } from '../utils/config'
+import { useSelectedInstance } from '../AppContext.js'
+import { groupedConfigMeta } from '../utils/configMeta.js'
+import { ColorPicker } from './ColorPicker.js'
+import { EnumSelect } from './EnumSelect.js'
+import { hexToRgba10 } from '../utils/colors.js'
+import { filterEnum } from '../utils/config.js'
 
 type ConfigValue = boolean | number | string | number[] | string[]
 
@@ -26,7 +26,10 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     nv.opts[key] = value
     setModifiedPrefs((prev) => ({ ...prev, [key]: value }))
     if (requiresUpdateGLVolume) nv.updateGLVolume()
-    else if (requiresDraw) nv.drawScene()
+    else if (requiresDraw) {
+      nv.drawScene()
+      nv.resizeListener()
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,6 +115,7 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <EnumSelect
             value={value.toString()}
             options={filterEnum(meta.enum)}
+            exclude={meta.exclude ?? []}
             onChange={(val: string) =>
               updateOption(key, parseInt(val), meta.requiresDraw, meta.requiresUpdateGLVolume)
             }
@@ -123,16 +127,14 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }
 
   const savePreferences = async (): Promise<void> => {
-    // for (const entries of Object.values(groupedConfigMeta)) {
-    //   for (const entry of entries) {
-    //     const [key] = entry as [string, any]
-    //     electron.ipcRenderer.invoke('setPreference', key, nv.opts[key])
-    //   }
-    // }
     for (const [key, value] of Object.entries(modifiedPrefs)) {
       await window.electron.ipcRenderer.invoke('setPreference', key, value)
     }
     setModifiedPrefs({})
+    onClose()
+  }
+
+  const applyToDocument = async (): Promise<void> => {
     onClose()
   }
 
@@ -155,11 +157,20 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             return (
               <Accordion.Item key={category} value={category} className="border-b">
                 <Accordion.Header>
-                  <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+                  <Accordion.Trigger className="flex justify-between items-center w-full py-2 px-4 group">
                     <Text size="2" weight="bold">
                       {category}
                     </Text>
-                    <span className="transition-transform data-[state=open]:rotate-180">▼</span>
+                    <span
+                      className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                      aria-hidden
+                    >
+                      ▶
+                    </span>
                   </Accordion.Trigger>
                 </Accordion.Header>
                 <Accordion.Content className="px-4 pb-2">
@@ -185,6 +196,8 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Save Preferences Button */}
       <div className="p-4 border-t flex justify-end">
         <Button onClick={savePreferences}>Save Preferences</Button>
+        &nbsp;
+        <Button onClick={applyToDocument}>Apply to Document</Button>
       </div>
     </div>
   )

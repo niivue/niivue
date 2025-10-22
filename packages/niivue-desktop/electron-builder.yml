@@ -2,34 +2,53 @@ appId: com.electron.app
 productName: niivue-desktop
 afterPack: ./scripts/clean-xattrs-afterpack.js
 afterSign: ./scripts/afterSign-clean.cjs
+
 directories:
   buildResources: build
+
 files:
   - 'out/main/**'
   - 'out/preload/**'
   - 'out/renderer/**'
   - 'resources/**'
+  - 'native-binaries/**'          # ← include downloaded niimath binaries
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+
 fileAssociations:
   - ext: nvd
     name: NiiVue Document
     role: Editor
-    icon: resources/icons/file_icon.icns  # 👈 macOS uses .icns
+    icon: resources/icons/file_icon.icns
+
 asarUnpack:
-  - resources/**
+  - 'resources/**'
+  - 'native-binaries/**'
+  - '**/*.nii'
+  - '**/*.nii.gz'
+
 win:
   icon: resources/icons/app_icon.ico
   executableName: niivue-desktop
+  target:
+    - nsis
+    - portable
+  forceCodeSigning: false
+  
+portable:
+  unicode: false # Set to true if your app requires unicode support in the portable executable
+  artifactName: ${name}-Portable-${version}.${ext} # Customizes the output filename
+
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+
 mac:
   icon: resources/icons/app_icon.icns
   entitlements: build/entitlements.mac.plist
@@ -42,8 +61,10 @@ mac:
   notarize: true
   hardenedRuntime: true
   gatekeeperAssess: false
+
 dmg:
   artifactName: ${name}-${version}.${ext}
+
 linux:
   icon: resources/icons/app_icon.png
   target:
@@ -52,14 +73,43 @@ linux:
     - deb
   maintainer: electronjs.org
   category: Utility
+
 appImage:
   artifactName: ${name}-${version}.${ext}
+
 npmRebuild: false
+
 publish:
   provider: generic
   url: https://example.com/auto-updates
+
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+
 extraResources:
   - from: resources/icons
     to: icons
+
+  # ─── niimath binaries ───────────────────────────────────────────────────────
+  - from: native-binaries/win32/niimath.exe
+    to: native/niimath.exe
+
+  - from: native-binaries/darwin/niimath
+    to: native/niimath-macos
+
+  - from: native-binaries/linux/niimath
+    to: native/niimath-linux
+  
+   # ─── dcm2niix binaries ──────────────────────────────────────────────────────
+  - from: native-binaries/win32/dcm2niix.exe
+    to: native/dcm2niix.exe
+  - from: native-binaries/darwin/dcm2niix
+    to: native/dcm2niix-macos
+  - from: native-binaries/linux/dcm2niix
+    to: native/dcm2niix-linux
+
+  #  ─── images ───────────────────────────────────────────────────────
+  - from: resources/images/
+    to: images
+    filter:
+      - "**/*.nii*"

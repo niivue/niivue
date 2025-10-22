@@ -1,9 +1,9 @@
 // src/components/MosaicControls.tsx
 
 import React, { useEffect, useState } from 'react'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 import { Button, TextField, Switch } from '@radix-ui/themes'
-import { calculateMosaic, SliceOrientation } from '../utils/mosaics'
+import { calculateMosaic, SliceOrientation } from '../utils/mosaics.js'
 
 function shiftToken(token: string, delta: number): string {
   const match = token.match(/^([+-]?\d+(?:\.\d+)?)(.*)$/)
@@ -150,24 +150,44 @@ export function MosaicControls(): JSX.Element {
         padding: '0.5rem',
         background: 'rgba(255,255,255,0.9)',
         borderRadius: 4,
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        maxHeight: 'none',
+        overflow: 'visible'
       }}
       onWheel={handleWheel}
     >
       <h3 style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>Mosaic Settings</h3>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-        <Switch id="showAll" checked={showAllSlices} onCheckedChange={setShowAllSlices} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginBottom: '0.5rem',
+          justifyContent: 'space-between'
+        }}
+      >
         <label htmlFor="showAll" style={{ marginRight: '2rem' }}>
           Show all {axisNames[selectedOrientation]} slices
         </label>
+        <Switch id="showAll" checked={showAllSlices} onCheckedChange={setShowAllSlices} />
+      </div>
 
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}
+      >
+        <label htmlFor="centerMosaic">Center Mosaic</label>
         <Switch
           id="centerMosaic"
           checked={centerMosaic}
           onCheckedChange={(checked) => setCenterMosaic(checked as boolean)}
         />
-        <label htmlFor="centerMosaic">Center Mosaic</label>
       </div>
 
       <TextField.Root

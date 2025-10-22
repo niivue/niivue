@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { NVMesh, NVMeshLayerDefaults } from '@niivue/niivue'
-import { baseName } from '../utils/baseName'
-import { useSelectedInstance } from '../AppContext'
-import { MeshLayerCard } from './MeshLayerCard'
+import { baseName } from '../utils/baseName.js'
+import { useSelectedInstance } from '../AppContext.js'
+import { MeshLayerCard } from './MeshLayerCard.js'
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 
 const electron = window.electron
