@@ -1223,13 +1223,6 @@ export class NVMesh {
             minv = layer.colormapLabel.min
           }
           let lut = colormapLabel.lut
-          const opa255 = Math.round(layer.opacity * 255)
-          if (lut[3] > 0) {
-            lut[3] = opa255
-          }
-          for (let j = 7; j < lut.length; j += 4) {
-            lut[j] = opa255
-          }
           const nLabel = Math.floor(lut.length / 4)
           if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
             const atlasValues = layer.atlasValues
@@ -1356,7 +1349,7 @@ export class NVMesh {
             rgba8[k + 0] = lut[idx + 0]
             rgba8[k + 1] = lut[idx + 1]
             rgba8[k + 2] = lut[idx + 2]
-            rgba8[k + 3] = lut[idx + 3]
+            rgba8[k + 3] = Math.round((lut[idx + 3] / 255) * layer.opacity * 255)
             k += 4
           }
           let opaque = new Array(nvtx).fill(false)
