@@ -206,7 +206,7 @@ Defined in: [nvmesh.ts:531](https://github.com/niivue/niivue/blob/main/packages/
 decimateFaces(n: number, ntarget: number): void;
 ```
 
-Defined in: [nvmesh.ts:1544](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1544)
+Defined in: [nvmesh.ts:1537](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1537)
 
 #### Parameters
 
@@ -231,7 +231,7 @@ Defined in: [nvmesh.ts:1544](https://github.com/niivue/niivue/blob/main/packages
 decimateHierarchicalMesh(gl: WebGL2RenderingContext, order: number): boolean;
 ```
 
-Defined in: [nvmesh.ts:1578](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1578)
+Defined in: [nvmesh.ts:1571](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1571)
 
 #### Parameters
 
@@ -321,7 +321,7 @@ generatePosNormClr(
    rgba255: Uint8Array): Float32Array;
 ```
 
-Defined in: [nvmesh.ts:1661](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1661)
+Defined in: [nvmesh.ts:1654](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1654)
 
 #### Parameters
 
@@ -347,7 +347,7 @@ Defined in: [nvmesh.ts:1661](https://github.com/niivue/niivue/blob/main/packages
 hierarchicalOrder(): number;
 ```
 
-Defined in: [nvmesh.ts:1511](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1511)
+Defined in: [nvmesh.ts:1504](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1504)
 
 #### Returns
 
@@ -461,7 +461,7 @@ Defined in: [nvmesh.ts:364](https://github.com/niivue/niivue/blob/main/packages/
 loadFromBase64(__namedParameters: Partial<LoadFromBase64Params>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:2100](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2100)
+Defined in: [nvmesh.ts:2093](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2093)
 
 load and return a new NVMesh instance from a base64 encoded string
 
@@ -487,7 +487,7 @@ load and return a new NVMesh instance from a base64 encoded string
 reverseFaces(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1495](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1495)
+Defined in: [nvmesh.ts:1488](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1488)
 
 #### Parameters
 
@@ -546,7 +546,7 @@ setLayerProperty(
 gl: WebGL2RenderingContext): Promise<void>;
 ```
 
-Defined in: [nvmesh.ts:1609](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1609)
+Defined in: [nvmesh.ts:1602](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1602)
 
 #### Parameters
 
@@ -584,7 +584,7 @@ setProperty(
    gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1642](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1642)
+Defined in: [nvmesh.ts:1635](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1635)
 
 #### Parameters
 
@@ -822,7 +822,7 @@ Factory method to create connectome from options
 static loadFromFile(__namedParameters: Partial<LoadFromFileParams>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:2065](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2065)
+Defined in: [nvmesh.ts:2058](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2058)
 
 factory function to load and return a new NVMesh instance from a file in the browser
 
@@ -850,7 +850,7 @@ NVMesh instance
 static loadFromUrl(__namedParameters: Partial<LoadFromUrlParams>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:1986](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1986)
+Defined in: [nvmesh.ts:1979](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1979)
 
 factory function to load and return a new NVMesh instance from a given URL
 
@@ -876,7 +876,7 @@ factory function to load and return a new NVMesh instance from a given URL
 static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
 ```
 
-Defined in: [nvmesh.ts:1889](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1889)
+Defined in: [nvmesh.ts:1882](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1882)
 
 #### Parameters
 
@@ -901,7 +901,7 @@ Defined in: [nvmesh.ts:1889](https://github.com/niivue/niivue/blob/main/packages
 static readFileAsync(file: Blob): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvmesh.ts:2046](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2046)
+Defined in: [nvmesh.ts:2039](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2039)
 
 #### Parameters
 
@@ -931,7 +931,7 @@ static readMesh(
 visible: boolean): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:1707](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1707)
+Defined in: [nvmesh.ts:1700](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1700)
 
 #### Parameters
 

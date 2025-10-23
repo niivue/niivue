@@ -29606,13 +29606,6 @@ var NVMesh3 = class _NVMesh {
             minv = layer.colormapLabel.min;
           }
           let lut2 = colormapLabel.lut;
-          const opa255 = Math.round(layer.opacity * 255);
-          if (lut2[3] > 0) {
-            lut2[3] = opa255;
-          }
-          for (let j = 7; j < lut2.length; j += 4) {
-            lut2[j] = opa255;
-          }
           const nLabel = Math.floor(lut2.length / 4);
           if (layer.atlasValues && nLabel > 0 && nLabel === layer.atlasValues.length && layer.colormap) {
             const atlasValues = layer.atlasValues;
@@ -29728,7 +29721,7 @@ var NVMesh3 = class _NVMesh {
             rgba8[k + 0] = lut2[idx + 0];
             rgba8[k + 1] = lut2[idx + 1];
             rgba8[k + 2] = lut2[idx + 2];
-            rgba8[k + 3] = lut2[idx + 3];
+            rgba8[k + 3] = Math.round(lut2[idx + 3] / 255 * layer.opacity * 255);
             k += 4;
           }
           let opaque = new Array(nvtx).fill(false);
