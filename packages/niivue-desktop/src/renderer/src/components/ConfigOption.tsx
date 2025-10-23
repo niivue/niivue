@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Switch, Slider } from '@radix-ui/themes'
-import { hexToRgba10 } from '@renderer/utils/colors'
-import { filterEnum } from '@renderer/utils/config'
-import { ColorPicker } from './ColorPicker'
-import { EnumSelect } from './EnumSelect'
+import { hexToRgba10 } from '@renderer/utils/colors.js'
+import { filterEnum } from '@renderer/utils/config.js'
+import { ColorPicker } from './ColorPicker.js'
+import { EnumSelect } from './EnumSelect.js'
 
 type MetaType =
   | { type: 'boolean' }

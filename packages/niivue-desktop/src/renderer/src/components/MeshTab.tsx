@@ -1,6 +1,6 @@
 import { ScrollArea } from '@radix-ui/themes'
-import { SliderMeshDepth2D } from './SliderMeshDepth2D'
-import { SliderMeshXRay } from './SliderMeshXRay'
+import { SliderMeshDepth2D } from './SliderMeshDepth2D.js'
+import { SliderMeshXRay } from './SliderMeshXRay.js'
 
 export const MeshTab = (): JSX.Element => {
   return (

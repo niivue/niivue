@@ -1,8 +1,9 @@
 import { loadFromFileHandler } from './loadFromFile.js'
 import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
-import { saveCompressedNVDHandler } from './saveFile.js'
-import { app, dialog, ipcMain, nativeImage } from 'electron'
+import { saveCompressedNVDHandler, saveHTMLHandler } from './saveFile.js'
+import { runNiimath, startNiimathJob } from './runNiimath.js'
+import { app, dialog, ipcMain, Menu, nativeImage } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
 import { viewState, refreshMenu } from './menu.js'
@@ -10,6 +11,9 @@ import { sliceTypeMap } from '../../common/sliceTypes.js'
 import { layouts } from '../../common/layouts.js'
 import fs from 'fs'
 import path from 'path'
+import { convertSeriesByNumber } from './runDcm2niix.js'
+import type { ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
+import { openReplaceVolumeFileDialog } from './openReplaceVolumeFileDialog.js'
 
 const isDev = !app.isPackaged
 const RESOURCES_DIR = isDev
@@ -21,6 +25,7 @@ export const registerIpcHandlers = (): void => {
   ipcMain.handle('loadFromFile', loadFromFileHandler)
   ipcMain.handle('loadStandard', loadStandardHandler)
   ipcMain.handle('saveCompressedNVD', saveCompressedNVDHandler)
+  ipcMain.handle('saveHTML', saveHTMLHandler)
   ipcMain.handle('getPreferences', () => {
     console.log('preferences called')
     return store.getPreferences()
@@ -92,6 +97,149 @@ export const registerIpcHandlers = (): void => {
         })
       } catch (err) {
         console.error('[start-tab-drag] Failed:', err)
+      }
+    }
+  )
+
+  /**
+   * Prompt user to select a directory
+   * Returns the selected folder path as string, or null if cancelled
+   */
+  ipcMain.handle('select-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select DICOM Folder',
+      properties: ['openDirectory']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
+
+  /**
+   * Read all file names in a directory
+   * arg: dirPath (string)
+   * returns: string[]
+   */
+  ipcMain.handle('read-dir', async (_event, dirPath) => {
+    try {
+      return fs.readdirSync(dirPath)
+    } catch (err) {
+      console.error('read-dir error:', err)
+      return []
+    }
+  })
+
+  /**
+   * Read a single file as a Buffer
+   * arg: filePath (string)
+   * returns: Buffer
+   */
+  ipcMain.handle('read-file-as-buffer', async (_event, filePath) => {
+    try {
+      return fs.readFileSync(filePath)
+    } catch (err) {
+      console.error('read-file-as-buffer error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle('read-file-as-base64', async (_event, path) => {
+    const buffer = fs.readFileSync(path)
+    return buffer.toString('base64')
+  })
+
+  // run niimath CLI
+  ipcMain.handle('niimath:run', async (_evt, args: string[]) => {
+    try {
+      const result = await runNiimath(args)
+      return { success: true, ...result }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  /**
+   * Begin a Niimath job when renderer sends 'niimath:start'.
+   * Expects (requestId: string, args: string[]).
+   */
+  ipcMain.handle(
+    'niimath:start',
+    async (
+      event,
+      requestId: string,
+      cmdArgs: string[],
+      input: { base64: string; name: string }
+    ) => {
+      try {
+        // 1) actually run the job and wait for it to finish
+        const { base64 } = await startNiimathJob(requestId, cmdArgs, input)
+
+        // 2) notify renderer “complete” with the Base64 payload
+        event.sender.send('niimath:complete', requestId, base64)
+        event.sender.send('niimath:toolbar-complete', requestId)
+        return { success: true }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        event.sender.send('niimath:error', requestId, msg)
+        return { success: false, error: msg }
+      }
+    }
+  )
+
+  ipcMain.on('base-image-loaded', () => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById('addOverlay')
+    if (item) item.enabled = true
+  })
+
+  ipcMain.on('base-image-removed', () => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById('addOverlay')
+    if (item) item.enabled = false
+  })
+
+  ipcMain.handle('openReplaceVolumeFileDialog', (_event, index: number) => {
+    openReplaceVolumeFileDialog(index)
+  })
+
+  ipcMain.handle(
+    'dcm2niix:convert-series',
+    async (
+      evt,
+      payload: {
+        dicomDir: string
+        seriesNumbers: number[]
+        options?: ConvertSeriesOptions
+      }
+    ) => {
+      try {
+        for (const seriesNumber of payload.seriesNumbers) {
+          const res = await convertSeriesByNumber(payload.dicomDir, seriesNumber, {
+            pattern: '%f_%p_%t_%s', // MRIcroGL-style filenames
+            bids: 'y',
+            compress: 'y',
+            merge: 2,
+            verbose: 2,
+            ...payload.options
+          })
+
+          // Send each produced NIfTI to the existing renderer 'loadVolume' handler by PATH
+          const files = fs
+            .readdirSync(res.outDir)
+            .filter((f) => !f.startsWith('.'))
+            .filter((f) => {
+              const fl = f.toLowerCase()
+              return fl.endsWith('.nii') || fl.endsWith('.nii.gz')
+            })
+
+          for (const f of files) {
+            const full = path.join(res.outDir, f)
+            evt.sender.send('loadVolume', full)
+          }
+        }
+        return { success: true }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { success: false, error: msg }
       }
     }
   )

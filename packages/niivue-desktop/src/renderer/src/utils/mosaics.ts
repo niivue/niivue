@@ -152,7 +152,7 @@ export function calculateMosaic(
   }
 
   return {
-    mosaicString: mosaicRows.join(';'),
+    mosaicString: mosaicRows.join('; '),
     grid: { rows: bestRows, cols: bestCols }
   }
 }

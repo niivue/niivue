@@ -1,48 +1,100 @@
+// src/ipcHandlers/registerAllIpcHandlers.ts
+import React from 'react'
 import { Niivue, NVImage, NVMesh } from '@niivue/niivue'
-import { registerLoadStandardHandler } from './loadStandard'
-import { registerLoadRecentFileHandler } from './loadRecentFiles'
-import { registerSliceTypeHandler } from './menuHandlers'
-import { registerLabelManagerDialogHandler } from './menuHandlers'
-import { registerLoadMeshHandler } from './loadMesh'
-import { registerLoadVolumeHandler } from './loadVolume'
-import { LoadDocumentHandlerProps, registerLoadDocumentHandler } from './loadDocument'
-import { registerResetPreferencesHandler } from './menuHandlers'
+import { registerLoadStandardHandler } from './loadStandard.js'
+import { registerLoadRecentFileHandler } from './loadRecentFiles.js'
+import {
+  registerSliceTypeHandler,
+  registerLabelManagerDialogHandler,
+  registerResetPreferencesHandler,
+  registerDragModeHandler
+} from './menuHandlers.js'
+import { registerLoadMeshHandler } from './loadMesh.js'
+import { registerLoadVolumeHandler } from './loadVolume.js'
+import { registerLoadDocumentHandler } from './loadDocument.js'
+import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
+import { registerRunNiimathHandler } from './runNiimathCommand.js'
+import { registerSaveHTMLHandler } from './saveHTML.js'
+import { registerLoadOverlayHandler } from './loadOverlay.js'
+import { registerDrawHandler } from './draw.js'
+import { registerAddMeshHandler } from './addMesh.js'
 
 const electron = window.electron
 
-export const registerAllIpcHandlers = (
-  nv: Niivue,
-  setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>,
-  setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>,
-  setLabelDialogOpen: (v: boolean) => void,
-  setLabelEditMode: (v: boolean) => void,
-  onDocumentLoaded: (title: string) => void
-): void => {
+export interface IpcHandlerProps {
+  modeMap: Map<string, 'replace' | 'overlay'>
+  indexMap: Map<string, number>
+  nv: Niivue
+  docId: string
+  setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
+  setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
+  /** returns the proper Niivue instance or creates a new doc if it’s non-empty */
+  getTarget: () => Promise<{
+    nvRef: React.RefObject<Niivue>
+    setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
+    setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
+    id: string
+  }>
+  getTitle: () => string
+  setLabelDialogOpen: (v: boolean) => void
+  setLabelEditMode: (v: boolean) => void
+  onDocumentLoaded: (title: string, targetId: string) => void
+  onMosaicStringChange?: (sliceMosaicString: string) => void
+}
+
+export const registerAllIpcHandlers = ({
+  modeMap,
+  indexMap,
+  nv,
+  docId,
+  setVolumes,
+  setMeshes,
+  getTarget,
+  getTitle,
+  setLabelDialogOpen,
+  setLabelEditMode,
+  onDocumentLoaded,
+  onMosaicStringChange
+}: IpcHandlerProps): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
-  // 🧹 Clear previously registered listeners to avoid duplicates
+  // 🧹 Clear previous listeners
   electron.ipcRenderer.removeAllListeners('loadStandard')
   electron.ipcRenderer.removeAllListeners('loadRecentFile')
   electron.ipcRenderer.removeAllListeners('loadVolume')
   electron.ipcRenderer.removeAllListeners('loadMesh')
+  electron.ipcRenderer.removeAllListeners('addMesh')
   electron.ipcRenderer.removeAllListeners('loadDocument')
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
+  electron.ipcRenderer.removeAllListeners('convertDICOM')
+  electron.ipcRenderer.removeAllListeners('runNiimath')
+  electron.ipcRenderer.removeAllListeners('saveHTML')
+  electron.ipcRenderer.removeAllListeners('loadOverlay')
+  electron.ipcRenderer.removeAllListeners('draw-command')
+  electron.ipcRenderer.removeAllListeners('setDragMode')
 
-  registerLoadStandardHandler({ nv, setVolumes, setMeshes })
-  console.log('[Renderer] registered loadStandard handler')
+  // 🔌 Register core handlers (now all driven by getTarget)
+  registerLoadStandardHandler({ getTarget, onDocumentLoaded })
+  registerLoadRecentFileHandler({ getTarget, onDocumentLoaded })
+  registerLoadMeshHandler({ getTarget })
+  registerLoadVolumeHandler({ getTarget })
+  registerLoadDocumentHandler({ getTarget, onDocumentLoaded })
+  registerLoadDicomFolderHandler({ getTarget })
+  registerAddMeshHandler({ nv, setMeshes })
 
-  registerLoadRecentFileHandler({ nv, setVolumes, setMeshes, onDocumentLoaded })
-  console.log('[Renderer] registered loadRecentFile handler')
-
-  registerSliceTypeHandler(nv)
+  // menu & misc
+  registerSliceTypeHandler(nv, onMosaicStringChange)
   registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
-  registerLoadMeshHandler({ nv, setMeshes })
-  registerLoadVolumeHandler({ nv, setVolumes })
-  registerLoadDocumentHandler({
-    nv,
-    setVolumes,
-    setMeshes,
-    onDocumentLoaded
-  } as LoadDocumentHandlerProps)
   registerResetPreferencesHandler()
+  registerRunNiimathHandler(nv, setVolumes, modeMap, indexMap)
+
+  // 💾 Save → HTML
+  registerSaveHTMLHandler(nv, docId, getTitle)
+
+  // 📂 Load overlay (treat as additional volume)
+  registerLoadOverlayHandler(nv, setVolumes)
+
+  // ✍️ Drawing commands → updateDocument(opts)
+  registerDrawHandler(nv)
+  registerDragModeHandler(nv)
 }

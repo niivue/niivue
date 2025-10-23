@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { ScrollArea, Text } from '@radix-ui/themes'
-import { SceneTabs } from './SceneTabs'
-import { VolumeImageCard } from './VolumeImageCard'
-import { MeshImageCard } from './MeshImageCard'
+import { SceneTabs } from './SceneTabs.js'
+import { VolumeImageCard } from './VolumeImageCard.js'
+import { MeshImageCard } from './MeshImageCard.js'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
 import { NVImage, NVMesh } from '@niivue/niivue'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 
 interface SidebarProps {
   onRemoveVolume: (volume: NVImage) => void
   onRemoveMesh: (mesh: NVMesh) => void
   onMoveVolumeUp: (volume: NVImage) => void
   onMoveVolumeDown: (volume: NVImage) => void
+  onReplaceVolume: (volume: NVImage) => void
   collapsed: boolean
   onToggle: () => void
 }
@@ -21,10 +22,12 @@ export function Sidebar({
   onRemoveVolume,
   onMoveVolumeUp,
   onMoveVolumeDown,
+  onReplaceVolume,
   collapsed,
   onToggle
 }: SidebarProps): JSX.Element {
   const instance = useSelectedInstance()
+  const selectedImage = instance?.selectedImage ?? null
   const volumes = instance?.volumes ?? []
   const meshes = instance?.meshes ?? []
   const [orderedVolumes, setOrderedVolumes] = useState<NVImage[]>([])
@@ -59,12 +62,10 @@ export function Sidebar({
   if (!instance) return <></>
 
   return (
-    <div
+    <aside
       className={
         `flex flex-col bg-gray-100 px-2 h-full relative transition-all duration-200 ` +
-        (collapsed
-          ? 'w-[60px] basis-[60px] min-w-[40px] max-w-[40px]'
-          : 'w-1/3 basis-1/3 min-w-[300px] max-w-[500px]')
+        (collapsed ? 'w-[60px] min-w-[40px]' : 'w-80 min-w-[300px]')
       }
     >
       {/* toggle button */}
@@ -112,8 +113,11 @@ export function Sidebar({
                           <VolumeImageCard
                             image={volume}
                             onRemoveVolume={onRemoveVolume}
+                            onReplaceVolume={onReplaceVolume}
                             onMoveVolumeUp={onMoveVolumeUp}
                             onMoveVolumeDown={onMoveVolumeDown}
+                            isSelected={selectedImage?.id === volume.id}
+                            onSelect={() => instance.setSelectedImage(volume)}
                           />
                         </div>
                       )}
@@ -132,6 +136,6 @@ export function Sidebar({
           <SceneTabs />
         </DragDropContext>
       )}
-    </div>
+    </aside>
   )
 }

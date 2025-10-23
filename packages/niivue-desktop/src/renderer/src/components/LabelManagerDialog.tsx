@@ -4,7 +4,7 @@ import { Button, Flex } from '@radix-ui/themes'
 import { LabelTextAlignment, NVLabel3D, NVLabel3DStyle, LabelLineTerminator } from '@niivue/niivue'
 import { Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
-import { useSelectedInstance } from '../AppContext'
+import { useSelectedInstance } from '../AppContext.js'
 
 export const LabelManagerDialog = ({
   open,

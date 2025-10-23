@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ScrollArea, Text, Flex, Switch, Button } from '@radix-ui/themes'
-import { useSelectedInstance } from '../AppContext'
-import { loadFMRIEvents } from '@renderer/types/events'
-import { MosaicControls } from './MosaicControls'
+import { useSelectedInstance } from '../AppContext.js'
+import { loadFMRIEvents } from '@renderer/types/events.js'
+import { MosaicControls } from './MosaicControls.js'
 
 const electron = window.electron
 
@@ -19,14 +19,12 @@ export const VolumeTab = (): JSX.Element => {
   const [graphVisible, setGraphVisible] = useState<boolean>(nv.graph.opacity > 0)
   const [normalizeGraph, setNormalizeGraph] = useState<boolean>(nv.graph.normalizeValues)
   const [showColorMaps, setShowColorMaps] = useState<boolean>(nv.opts.isColorbar)
-  const [mosaicStr, setMosaicStr] = useState(() => instance.opts.sliceMosaicString ?? '')
 
   useEffect((): void => {
     nv.graph.autoSizeMultiplanar = true
     setGraphVisible(nv.graph.opacity > 0)
     setNormalizeGraph(nv.graph.normalizeValues)
     setShowColorMaps(nv.opts.isColorbar)
-    setMosaicStr(nv.opts.sliceMosaicString ?? '')
   }, [nv, nv.opts.sliceMosaicString])
 
   const toggleGraphVisibility = (visible: boolean): void => {
@@ -66,12 +64,19 @@ export const VolumeTab = (): JSX.Element => {
         {hasTimeSeries && (
           <Accordion.Item value="graph-settings" className="border-b border-gray-200">
             <Accordion.Header>
-              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
                 <Text size="2" weight="bold">
                   Graph Settings
                 </Text>
-                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                  ▼
+                <span
+                  className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                  aria-hidden
+                >
+                  ▶
                 </span>
               </Accordion.Trigger>
             </Accordion.Header>
@@ -111,12 +116,19 @@ export const VolumeTab = (): JSX.Element => {
         {/* Color Map Display */}
         <Accordion.Item value="colormap-settings" className="border-b border-gray-200">
           <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
                 Color Map Display
               </Text>
-              <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                ▼
+              <span
+                className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                aria-hidden
+              >
+                ▶
               </span>
             </Accordion.Trigger>
           </Accordion.Header>
@@ -131,15 +143,22 @@ export const VolumeTab = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Mosaic Settings */}
-        {mosaicStr.trim() !== '' && (
+        {instance.sliceMosaicString.trim() !== '' && (
           <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
             <Accordion.Header>
-              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left">
+              <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
                 <Text size="2" weight="bold">
                   Mosaic Settings
                 </Text>
-                <span className="transition-transform duration-200 transform rotate-0 data-[state=open]:rotate-180">
-                  ▼
+                <span
+                  className="
+      transform transition-transform duration-200
+      rotate-0
+      group-data-[state=open]:rotate-90
+    "
+                  aria-hidden
+                >
+                  ▶
                 </span>
               </Accordion.Trigger>
             </Accordion.Header>
