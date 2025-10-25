@@ -30,10 +30,6 @@ export async function readNifti(
       throw new Error('Buffer became invalid after decompression attempt.')
     }
 
-    if (!pairedImageData) {
-      console.log('paired image data is null')
-    }
-
     nvImage.hdr = await readHeaderAsync(dataBuffer as ArrayBuffer, pairedImageData != null)
     if (hasExtension(nvImage.hdr)) {
       nvImage.extensions = nvImage.hdr.extensions
