@@ -134,8 +134,8 @@ const kRenderInit = `void main() {
 	bool isClip = (sampleRange.x > 0.0) || ((sampleRange.y < len) && (sampleRange.y > 0.0));
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
-	//if (sampleRange.x >= sampleRange.y)
-	//	samplePos.a = len + 1.0;
+	if ((!isClipCutaway) && (sampleRange.x >= sampleRange.y))
+		samplePos.a = len + 1.0;
 	while (samplePos.a <= len) {
 		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
 			samplePos += deltaDirFast;
