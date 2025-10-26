@@ -12,7 +12,7 @@
       <label for="checkShowPlane">Show Plane</label>
       <input type="checkbox" id="checkShowPlane" checked="True">
       <label for="checkCutaway">Cutaway</label>
-      <input type="checkbox" id="checkCutaway">
+      <input type="checkbox" id="checkCutaway" checked="True">
       <label for="renderMode">Volume Render Mode</label>
       <select id="renderMode">
         <option value="-1">slices</option>
@@ -26,10 +26,10 @@
         <option>0</option>
         <option>1</option>
         <option>2</option>
-        <option>3</option>
+        <option selected>3</option>
         <option>4</option>
         <option>5</option>
-        <option selected>6</option>
+        <option>6</option>
       </select>
     </header>
     <main id="canvas-container">
@@ -67,9 +67,9 @@
         break
       case 3:
         planes = [
-          [-0.05, 270,  0], //left
-          [0.1, 90,  0], //right
-          [0.4, 180,  0], //anterior
+          [0.0, 90,  0], //right center
+          [0.0, 0, -20], //posterior oblique
+          [0.1, 0, -90], //inferior
         ]
         break
       case 4:
@@ -112,7 +112,7 @@
       url: "../demos/images/fslt.nii.gz",
       colormap: "warm",
       colormapNegative: "winter",
-      cal_min: 3,
+      cal_min: 4,
       cal_max: 6,
     },
   ]
