@@ -13172,7 +13172,7 @@ export class Niivue {
         this.gl.uniform4fv(shader.uniforms.clipPlanes, arr)
       }
       gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
-      gl.uniform1i(this.renderShader.uniforms.isClipCutaway, this.opts.isClipPlanesCutaway ? 1 : 0)
+      gl.uniform1i(shader.uniforms.isClipCutaway, this.opts.isClipPlanesCutaway ? 1 : 0)
       gl.bindVertexArray(object3D.vao)
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
       gl.bindVertexArray(this.unusedVAO)

@@ -50,10 +50,14 @@ float distance2Plane(in vec4 samplePos, in vec4 clipPlane) {
 }
 
 // see if clip plane trims ray sampling range sampleStartEnd.x..y
-void clipSampleRange(in vec3 dir, in vec4 rayStart, in vec4 clipPlane, inout vec2 sampleStartEnd) {
+void clipSampleRange(in vec3 dir, in vec4 rayStart, in vec4 clipPlane, inout vec2 sampleStartEnd, inout bool hasClip) {
 	const float CSR_EPS = 1e-6;
-	// quick exit: empty range or no clip plane
-	if (((sampleStartEnd.y - sampleStartEnd.x) <= CSR_EPS) || (clipPlane.a > 1.0))
+	// quick exit: no clip plane
+	if (clipPlane.a > 1.0)
+			return;
+	hasClip = true;
+	// quick exit: empty range
+	if ((sampleStartEnd.y - sampleStartEnd.x) <= CSR_EPS)
 			return;
 	// Which side does the ray start on? (plane eqn: dot(n, p-0.5) + a = 0)
 	float sampleSide = dot(clipPlane.xyz, rayStart.xyz - 0.5) + clipPlane.a;
@@ -129,16 +133,18 @@ const kRenderInit = `void main() {
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 
 	vec2 sampleRange = vec2(0.0, len);
+	bool hasClip = false;
 	for (int i = 0; i < MAX_CLIP_PLANES; i++)
-		clipSampleRange(dir, samplePos, clipPlanes[i], sampleRange);
+		clipSampleRange(dir, samplePos, clipPlanes[i], sampleRange, hasClip);
 	bool isClip = (sampleRange.x > 0.0) || ((sampleRange.y < len) && (sampleRange.y > 0.0));
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	if ((isClipCutaway) && (sampleRange.x <= 0.0) && (sampleRange.y >= len)) {
-		samplePos.a = len + 1.0;
 		//completely clipped, but ray does not intersect plane
-		// best to count as unclipped: try 1 clip plane with cutaway
-		//isClip = true;
+		if (hasClip)
+			samplePos.a = len + 1.0;
+		else
+			sampleRange = vec2(0.0, 0.0);
 	}
 	if ((!isClipCutaway) && (sampleRange.x >= sampleRange.y))
 		samplePos.a = len + 1.0;
@@ -2049,6 +2055,7 @@ uniform vec3 volScale;
 uniform vec3 texVox;
 uniform vec4 clipPlane;
 uniform vec4 clipPlanes[MAX_CLIP_PLANES];
+uniform bool isClipCutaway;
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
@@ -2084,13 +2091,20 @@ void main() {
 	float opacityCorrection = stepSize/sliceSize;
 	dir = normalize(dir);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
-	bool isClipCutaway = true;
+	bool hasClip = false;
 	vec2 sampleRange = vec2(0.0, len);
 	for (int i = 0; i < MAX_CLIP_PLANES; i++)
-		clipSampleRange(dir, samplePos, clipPlanes[i], sampleRange);
+		clipSampleRange(dir, samplePos, clipPlanes[i], sampleRange, hasClip);
 	bool isClip = (sampleRange.x > 0.0) || ((sampleRange.y < len) && (sampleRange.y > 0.0));
 	//vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	if (isClip) fColor = vec4(samplePos.xyz, 253.0 / 255.0); //assume no hit: ID = 0
+	if ((isClipCutaway) && (sampleRange.x <= 0.0) && (sampleRange.y >= len)) {
+		//completely clipped, but ray does not intersect plane
+		if (hasClip)
+			samplePos.a = len + 1.0;
+		else
+			sampleRange = vec2(0.0, 0.0);
+	}
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
