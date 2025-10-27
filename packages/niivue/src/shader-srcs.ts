@@ -189,8 +189,7 @@ const kRenderTail = `
 			float min1 = 1000.0;
 			float min2 = 1000.0;
 			// find smallest and second-smallest distances
-			vec4 firstHit1 = firstHit;
-			firstHit1 -= deltaDir;
+			vec4 firstHit1 = firstHit - deltaDir;
 			for (int i = 0; i < MAX_CLIP_PLANES; i++) {
 				float d = distance2Plane(firstHit1, clipPlanes[i]);
 				if (d < min1) {
@@ -210,15 +209,26 @@ const kRenderTail = `
 			float factor = (1.0 - aoFrac) + aoFrac * clamp(min2 / thresh, 0.0, 1.0);
 			// linear darkening: multiply color by factor (or use mix(vec3(0), colAcc.rgb, factor))
 			colAcc.rgb *= factor;
+			//shade voxels with clip color
+			if (clipPlaneColor.a < 0.0) {
+					thresh = 4.0 * sliceSize;
+					firstHit1 = firstHit + deltaDir;
+				if (isClipCutaway) {
+					min1 = abs(firstHit1.a - sampleRange.y);
+					float dx = samplePos.a - firstHit1.a;
+					if (( colAcc.a > earlyTermination ) && (dx > thresh))
+						min1 = min(min1, abs(firstHit1.a - sampleRange.x));
+					if (min1 < thresh)
+						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+				} else {
+					if (abs(firstHit1.a - sampleRange.x) < thresh)
+						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+				} // clipPlaneColor.a < 0.0
+			}
 		}
-		
 	}
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
-	//if (isClip) //CR
-	//if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
-	//	fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
-		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
 	float renderDrawAmbientOcclusionX = renderDrawAmbientOcclusionXY.x;
 	float drawOpacity = renderDrawAmbientOcclusionXY.y;
 	if ((overlays < 1.0) && (drawOpacity <= 0.0))
@@ -472,7 +482,7 @@ out vec4 fColor;
 		if (colorSample.a >= 0.01) {
 			if (firstHit.a > len)
 				firstHit = samplePos;
-			backNearest = min(backNearest, samplePos.a);
+			// backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -480,6 +490,8 @@ out vec4 fColor;
 				break;
 		}
 	}
+	if (firstHit.a < len)
+		backNearest = firstHit.a;
 ` +
   kRenderTail
 

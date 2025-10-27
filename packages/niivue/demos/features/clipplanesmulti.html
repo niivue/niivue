@@ -9,10 +9,19 @@
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
     <header>
-      <label for="checkShowPlane">Show Plane</label>
-      <input type="checkbox" id="checkShowPlane" checked="True">
+      <label for="checkOverlay">Overlay</label>
+      <input type="checkbox" id="checkOverlay" checked="True">
+      &nbsp;&nbsp;
       <label for="checkCutaway">Cutaway</label>
       <input type="checkbox" id="checkCutaway" checked="True">
+      &nbsp;&nbsp;
+      <label for="colorSelect">Clip color</label>
+      <select id="colorSelect">
+        <option>transparent</option>
+        <option selected>translucent</option>
+        <option>shading</option>
+      </select>
+      &nbsp;&nbsp;
       <label for="renderMode">Volume Render Mode</label>
       <select id="renderMode">
         <option value="-1">slices</option>
@@ -21,6 +30,7 @@
         <option value="0.6">medium</option>
         <option value="1.0">high</option>
       </select>
+      &nbsp;&nbsp;
       <label for="clipSelect">Clip Planes</label>
       <select id="clipSelect">
         <option>0</option>
@@ -43,14 +53,29 @@
 </html>
 <script type="module" async>
   import * as niivue from "../dist/index.js"
-  checkShowPlane.onchange = function () {
-    const clr = nv1.opts.clipPlaneColor.slice()
-    clr[3] = this.checked ? 0.5 : 0.0
-    nv1.setClipPlaneColor(clr)
+  checkOverlay.onchange = function () {
+    nv1.volumes[1].opacity = this.checked ? 1 : 0;
+    nv1.updateGLVolume()
   }
   checkCutaway.onchange = function () {
     nv1.opts.isClipPlanesCutaway = this.checked
     nv1.drawScene()
+  }
+  colorSelect.onchange = function () {
+    const index = this.selectedIndex
+    let clr = nv1.opts.clipPlaneColor.slice()
+    switch (index) {
+      case 0:
+        clr[3] = 0.0;
+        break
+      case 1:
+        clr[3] = 0.5;
+        break
+      case 2:
+        clr[3] = -0.5;
+        break
+    }
+    nv1.setClipPlaneColor(clr)
   }
   clipSelect.onchange = function () {
     const index = parseInt(this.value, 10); // selected option value as integer
