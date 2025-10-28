@@ -4594,6 +4594,7 @@ export class Niivue {
    * ensuring they always have the same length.
    *
    * @param depthAziElevs - array of `[depth, azimuthDeg, elevationDeg]` values
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | live demo usage}
    */
   setClipPlanes(depthAziElevs: number[][]): void {
     this.scene.clipPlanes = []
@@ -4883,11 +4884,17 @@ export class Niivue {
   }
 
   /**
-   * set the color of the 3D clip plane
-   * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+   * Set the color of the 3D clip plane.
+   * @param {number[]} color - An array of RGBA values.
+   *   - **R**, **G**, **B** components range from `0.0` to `1.0`.
+   *   - **A** (alpha) component ranges from `-1.0` to `1.0`, where:
+   *       - `0.0–1.0` → controls background translucency.
+   *       - `-1.0–0.0` → applies translucent shading to the volume instead of the background.
+   *
    * @example
-   * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * niivue.setClipPlaneColor([1, 1, 1, 0.5]);   // white, translucent background
+   * niivue.setClipPlaneColor([1, 1, 1, -0.5]);  // white, translucent shading
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | Live demo usage}
    */
   setClipPlaneColor(color: number[]): void {
     this.opts.clipPlaneColor = color
@@ -4897,39 +4904,21 @@ export class Niivue {
   }
 
   /**
-   * adjust thickness of the 3D clip plane
-   * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
-   * @example
-   * niivue.setClipPlaneThick(0.3) // thin slab
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * @deprecated This method has been removed.
+   * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
    */
-  setClipPlaneThick(thick: number): void {
-    this.opts.clipThick = thick
-    this.renderShader!.use(this.gl)
-    this.gl.uniform1f(this.renderShader!.uniforms.clipThick!, this.opts.clipThick)
-    // this.renderShader!.use(this.gl)
-    // this.gl.uniform4fv(this.renderShader!.uniforms.clipPlaneColor!, this.opts.clipPlaneColor)
-    this.drawScene()
+  setClipPlaneThick(_thick: number): void {
+    log.warn('setClipPlaneThick() has been removed. use setClipPlanes() instead.')
   }
 
   /**
-   * set the clipping region for volume rendering
-   * @param low - 3-component array specifying the lower bound of the clipping region along the X, Y, and Z axes. Values range from 0 (start) to 1 (end of volume).
-   * @param high - 3-component array specifying the upper bound of the clipping region along the X, Y, and Z axes. Values range from 0 to 1.
-   * @example
-   * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * @deprecated This method has been removed.
+   * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
    */
-  setClipVolume(low: number[], high: number[]): void {
-    this.opts.clipVolumeLow = [Math.min(low[0], high[0]), Math.min(low[1], high[1]), Math.min(low[2], high[2])]
-    this.opts.clipVolumeHigh = [Math.max(low[0], high[0]), Math.max(low[1], high[1]), Math.max(low[2], high[2])]
-    this.renderShader!.use(this.gl)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
-    this.pickingImageShader!.use(this.gl)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
-    this.drawScene()
+  setClipVolume(_low: number[], _high: number[]): void {
+    log.warn('setClipVolume() has been removed. use setClipPlanes() instead.')
   }
 
   /**
@@ -8892,16 +8881,9 @@ export class Niivue {
     const volScale = slicescl.volScale
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
-    this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
     this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane)
-    /* MORK???
-
-    this.gl.uniform4fv(this.renderShader.uniforms.clipPlanes, arr)
-    */
 
     this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
     this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
@@ -8912,8 +8894,6 @@ export class Niivue {
     this.pickingImageShader.use(this.gl)
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     let shader = this.sliceMMShader
     if (this.opts.is2DSliceShader) {
       shader = this.slice2DShader

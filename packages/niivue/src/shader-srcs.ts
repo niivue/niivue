@@ -191,6 +191,27 @@ const kRenderTail = `
 			colAcc.rgb = mix(colAcc.rgb, paqdSample.rgb, 0.5 * paqdSample.a * a);
 		}
 		if (isClip) {
+			//shade voxels with clip color
+			if (clipPlaneColor.a < 0.0) {
+					float thresh = 4.0 * sliceSize;
+					float firstHit1 = firstHit.a + deltaDir.a;
+				if (isClipCutaway) {
+					float min1 = abs(firstHit1 - sampleRange.y);
+					float dx = samplePos.a - firstHit1;
+					if (min1 < thresh)
+						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+					else if (( colAcc.a > earlyTermination ) && (dx > thresh)) {
+						min1 = abs(firstHit1 - sampleRange.x);
+						if (min1 < (thresh * 0.5)) {
+							colAcc.rgb = mix(colAcc.rgb , clipPlaneColorX.rgb, abs(clipPlaneColor.a)*0.5);
+						}
+							
+					}
+				} else {
+					if (abs(firstHit1 - sampleRange.x) < thresh)
+						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+				} // clipPlaneColor.a < 0.0
+			}
 			//ambient occlusion: make creases dark
 			float min1 = 1000.0;
 			float min2 = 1000.0;
@@ -215,22 +236,6 @@ const kRenderTail = `
 			float factor = (1.0 - aoFrac) + aoFrac * clamp(min2 / thresh, 0.0, 1.0);
 			// linear darkening: multiply color by factor (or use mix(vec3(0), colAcc.rgb, factor))
 			colAcc.rgb *= factor;
-			//shade voxels with clip color
-			if (clipPlaneColor.a < 0.0) {
-					thresh = 4.0 * sliceSize;
-					firstHit1 = firstHit + deltaDir;
-				if (isClipCutaway) {
-					min1 = abs(firstHit1.a - sampleRange.y);
-					float dx = samplePos.a - firstHit1.a;
-					if (( colAcc.a > earlyTermination ) && (dx > thresh))
-						min1 = min(min1, abs(firstHit1.a - sampleRange.x));
-					if (min1 < thresh)
-						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
-				} else {
-					if (abs(firstHit1.a - sampleRange.x) < thresh)
-						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
-				} // clipPlaneColor.a < 0.0
-			}
 		}
 	}
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
@@ -369,9 +374,6 @@ uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -462,9 +464,6 @@ uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -519,9 +518,6 @@ uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 normMtx;
@@ -2060,9 +2056,6 @@ uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform mat4 matRAS;
 uniform mat4 mvpMtx;
 uniform float drawOpacity, renderOverlayBlend;

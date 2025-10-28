@@ -135,9 +135,6 @@ export type NVConfigOptions = {
   clipPlaneColor: number[]
   isClipPlanesCutaway: boolean
   paqdUniforms: number[]
-  clipThick: number
-  clipVolumeLow: number[]
-  clipVolumeHigh: number[]
   rulerColor: number[]
   // x axis margin around color bar, clip space coordinates
   colorbarMargin: number
@@ -270,9 +267,6 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   isClipPlanesCutaway: false,
   paqdUniforms: [0.3, 0.5, 0.5, 1.0],
   // paqdUniforms: [0.3, 0.9, 1.0, 0.5],
-  clipThick: 2,
-  clipVolumeLow: [0, 0, 0],
-  clipVolumeHigh: [1.0, 1.0, 1.0],
   rulerColor: [1, 0, 0, 0.8],
   colorbarMargin: 0.05,
   trustCalMinMax: true,
@@ -379,9 +373,6 @@ type SceneData = {
   clipPlaneDepthAziElevs: number[][] // optional per-plane orientation
   volScaleMultiplier: number
   pan2Dxyzmm: vec4
-  clipThick: number
-  clipVolumeLow: number[]
-  clipVolumeHigh: number[]
 }
 
 export const INITIAL_SCENE_DATA = {
@@ -392,10 +383,7 @@ export const INITIAL_SCENE_DATA = {
   clipPlanes: [[0, 0, 0, 0]], // start with no planes
   clipPlaneDepthAziElevs: [[2, 0, 0]], // empty by default
   volScaleMultiplier: 1.0,
-  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1),
-  clipThick: 2.0,
-  clipVolumeLow: [0, 0, 0],
-  clipVolumeHigh: [1.0, 1.0, 1.0]
+  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1)
 }
 
 export type Scene = {
@@ -829,6 +817,9 @@ export class NVDocument {
     // Ensure we don’t accidentally persist legacy single-plane props
     delete (data.sceneData as any).clipPlane
     delete (data.sceneData as any).clipPlaneDepthAziElev
+    delete (data.sceneData as any).clipThick
+    delete (data.sceneData as any).clipVolumeLow
+    delete (data.sceneData as any).clipVolumeHigh
 
     // save our options
     data.opts = diffOptions(this.opts, DEFAULT_OPTIONS) as NVConfigOptions
