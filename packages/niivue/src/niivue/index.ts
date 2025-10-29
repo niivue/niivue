@@ -9974,6 +9974,23 @@ export class Niivue {
           continue
         }
         const nlayers = mesh.layers.length
+        const fiberColor = mesh.fiberColor.toLowerCase()
+        if (mesh.offsetPt0 && fiberColor.startsWith('dp')) {
+          let dp = null
+          const n = parseInt(fiberColor.substring(3))
+          if (fiberColor.startsWith('dpg') && !mesh.fiberGroupColormap) {
+            dp = n < mesh.dpg.length ? mesh.dpg[n] : mesh.dpg[0]
+          }
+          if (fiberColor.startsWith('dps')) {
+            dp = n < mesh.dps.length ? mesh.dps[n] : mesh.dps[0]
+          }
+          if (fiberColor.startsWith('dpv')) {
+            dp = n < mesh.dpv.length ? mesh.dpv[n] : mesh.dpv[0]
+          }
+          if (dp && typeof mesh.colormap === 'string') {
+            this.addColormapList(mesh.colormap, dp.cal_min, dp.cal_max, false, false, true, mesh.colormapInvert)
+          }
+        }
         if ('edgeColormap' in mesh && 'edges' in mesh && mesh.edges !== undefined) {
           const neg = negMinMax(mesh.edgeMin!, mesh.edgeMax!, NaN, NaN)
           this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true, true, mesh.colormapInvert)

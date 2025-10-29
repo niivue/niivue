@@ -46,6 +46,7 @@ export type TRX = {
   dpg: ValuesArray
   dps: ValuesArray
   dpv: ValuesArray
+  groups: ValuesArray
   header: unknown
 }
 

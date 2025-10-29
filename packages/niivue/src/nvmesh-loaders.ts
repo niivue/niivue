@@ -20,7 +20,8 @@ import {
   VTK,
   X3D,
   XmlTag,
-  AnyNumberArray
+  AnyNumberArray,
+  ValuesArray
 } from '@/nvmesh-types'
 
 const utiltiesLogger = log
@@ -208,6 +209,145 @@ export class NVMeshLoaders {
     }
   } // readTT
 
+  /**
+   * Assemble dpg from a map-of-groups into a ValuesArray ordered by groups[].
+   *
+   * @param dpgMap - map from groupId -> ValuesArray (entries for that group)
+   * @param groups - ValuesArray describing groups; groups[i].id defines the ordering
+   * @returns ValuesArray - one entry per tag where vals is the concatenation of each group's vals in groups[] order
+   *
+   * @throws Error when:
+   *  - groups is empty or missing
+   *  - any group in groups is missing from dpgMap
+   *  - any group contains duplicate entries for a tag
+   *  - tag coverage differs between groups (missing tag in any group)
+   *  - any entry has invalid/unconvertible vals
+   */
+  static assembleDpgFromMap(dpgMap: Record<string, ValuesArray>, groups: ValuesArray): ValuesArray {
+    if (!Array.isArray(groups) || groups.length === 0) {
+      throw new Error('assembleDpgFromMap: "groups" is empty or missing; cannot assemble dpg.')
+    }
+
+    // Ensure every group has an entry array in dpgMap
+    for (let gi = 0; gi < groups.length; gi++) {
+      const gid = String(groups[gi].id)
+      if (!dpgMap[gid]) {
+        throw new Error(`assembleDpgFromMap: missing dpgMap entry for group "${gid}".`)
+      }
+      if (!Array.isArray(dpgMap[gid])) {
+        throw new Error(`assembleDpgFromMap: dpgMap["${gid}"] is not an array.`)
+      }
+    }
+
+    // Build canonical tag set from the first group
+    const firstGroupId = String(groups[0].id)
+    const firstEntries = dpgMap[firstGroupId]
+    const tagOrder: string[] = []
+    const tagSet = new Set<string>()
+
+    for (const e of firstEntries) {
+      if (!e || typeof e.id !== 'string') {
+        throw new Error(`assembleDpgFromMap: invalid entry in group "${firstGroupId}".`)
+      }
+      if (tagSet.has(e.id)) {
+        throw new Error(`assembleDpgFromMap: duplicate tag "${e.id}" in group "${firstGroupId}".`)
+      }
+      tagSet.add(e.id)
+      tagOrder.push(e.id)
+    }
+
+    if (tagSet.size === 0) {
+      throw new Error(`assembleDpgFromMap: no tags found in group "${firstGroupId}".`)
+    }
+
+    // Validate all other groups have the same tags and no duplicates
+    for (let gi = 1; gi < groups.length; gi++) {
+      const gid = String(groups[gi].id)
+      const entries = dpgMap[gid]
+
+      const idsSeen = new Map<string, number>()
+      for (const e of entries) {
+        if (!e || typeof e.id !== 'string') {
+          throw new Error(`assembleDpgFromMap: invalid entry in group "${gid}".`)
+        }
+        idsSeen.set(e.id, (idsSeen.get(e.id) || 0) + 1)
+      }
+
+      for (const [id, count] of idsSeen.entries()) {
+        if (count > 1) {
+          throw new Error(`assembleDpgFromMap: multiple entries for tag "${id}" in group "${gid}".`)
+        }
+      }
+
+      if (idsSeen.size !== tagSet.size) {
+        throw new Error(
+          `assembleDpgFromMap: tag coverage mismatch for group "${gid}". Expected ${tagSet.size} tags but found ${idsSeen.size}.`
+        )
+      }
+
+      for (const t of tagSet) {
+        if (!idsSeen.has(t)) {
+          throw new Error(`assembleDpgFromMap: group "${gid}" missing tag "${t}".`)
+        }
+      }
+    }
+
+    // Build result: for each tag (keeps first-group order), collect vals from each group and concat
+    const result: ValuesArray = []
+
+    for (const tag of tagOrder) {
+      // collect per-group arrays and total length
+      const perGroupArrays: Float32Array[] = []
+      let totalLen = 0
+
+      for (let gi = 0; gi < groups.length; gi++) {
+        const gid = String(groups[gi].id)
+        const entries = dpgMap[gid]
+
+        // find the single entry for this tag
+        const matches = entries.filter((e) => e.id === tag)
+        if (matches.length === 0) {
+          throw new Error(`assembleDpgFromMap: missing tag "${tag}" for group "${gid}".`)
+        }
+        if (matches.length > 1) {
+          throw new Error(`assembleDpgFromMap: multiple entries for tag "${tag}" in group "${gid}".`)
+        }
+
+        const entry = matches[0]
+        if (entry.vals instanceof Float32Array) {
+          perGroupArrays.push(entry.vals)
+          totalLen += entry.vals.length
+        } else {
+          // try to convert any array-like into Float32Array
+          try {
+            const conv = Float32Array.from(entry.vals as Iterable<number>)
+            perGroupArrays.push(conv)
+            totalLen += conv.length
+          } catch (err) {
+            throw new Error(`assembleDpgFromMap: invalid vals for tag "${tag}" in group "${gid}".`)
+          }
+        }
+      }
+
+      // concatenate
+      const merged = new Float32Array(totalLen)
+      let off = 0
+      for (const arr of perGroupArrays) {
+        merged.set(arr, off)
+        off += arr.length
+      }
+
+      result.push({
+        id: tag,
+        vals: merged
+        // Note: global_min/global_max/cal_min/cal_max are not computed here.
+        // If you want to propagate or compute them, add logic to compute per-tag aggregated values.
+      })
+    }
+
+    return result
+  }
+
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
   static async readTRX(buffer: ArrayBuffer): Promise<TRX> {
@@ -232,7 +372,8 @@ export class NVMeshLoaders {
     let npt = 0
     let pts = new Float32Array([])
     const offsetPt0: number[] = []
-    const dpg = []
+    const dpgMap: Record<string, ValuesArray> = {}
+    const groups = []
     const dps = []
     const dpv = []
     let header = []
@@ -249,6 +390,7 @@ export class NVMeshLoaders {
       if (fname.startsWith('.')) {
         continue
       }
+      const dname = parts.slice(-3)[0] // my.trx/dpg/ARC_L/z.float32 -> dpg
       const pname = parts.slice(-2)[0] // my.trx/dpv/fx.float32 -> dpv
       const tag = fname.split('.')[0] // "positions.3.float16 -> "positions"
       const data = await entry.extract()
@@ -313,7 +455,18 @@ export class NVMeshLoaders {
       nval = vals.length
       // next: read data_per_group
       if (pname.includes('groups')) {
-        dpg.push({
+        groups.push({
+          id: tag,
+          vals: Float32Array.from(vals.slice())
+        })
+        continue
+      }
+      if (dname.includes('dpg')) {
+        const key = String(pname) // be defensive; ensure key is a string
+        if (!dpgMap[key]) {
+          dpgMap[key] = []
+        }
+        dpgMap[key].push({
           id: tag,
           vals: Float32Array.from(vals.slice())
         })
@@ -356,6 +509,10 @@ export class NVMeshLoaders {
       // TODO use BigInt
       throw new Error('Too many vertices: JavaScript does not support 64 bit integers')
     }
+    let dpg = []
+    if (groups.length > 0 && dpgMap && Object.keys(dpgMap).length > 0) {
+      dpg = this.assembleDpgFromMap(dpgMap, groups)
+    }
     offsetPt0[noff] = npt / 3 // solve fence post problem, offset for final streamline
     return {
       pts,
@@ -363,6 +520,7 @@ export class NVMeshLoaders {
       dpg,
       dps,
       dpv,
+      groups,
       header
     }
   } // readTRX()
