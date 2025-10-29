@@ -1,4 +1,4 @@
-import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import packageJson from '../../package.json' with { type: 'json' }
 import { orientCube } from '@/orientCube'
 import { NiivueObject3D } from '@/niivue-object3D'
@@ -130,6 +130,8 @@ import {
   unpackFloatFromVec4i,
   readFileAsDataURL
 } from '@/utils'
+import { NVComposer } from '@/nvcomposer'
+import { NVRenderer } from '@/nvrenderer'
 const { version } = packageJson
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
@@ -447,6 +449,8 @@ export class Niivue {
   sobelSecondOrderShader: Shader | null = null
   genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
   unusedVAO = null
+  composer: NVComposer
+  renderer: NVRenderer
   crosshairs3D: NiivueObject3D | null = null
   private DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
   private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
@@ -1115,6 +1119,7 @@ export class Niivue {
     if (this.opts.interactive) {
       this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
     }
+
     await this.init()
     this.drawScene()
     return this
@@ -7660,6 +7665,10 @@ export class Niivue {
       await this.loadBmpTexture(this.opts.thumbnail)
       this.thumbnailVisible = true
     }
+
+    this.composer = new NVComposer()
+    this.renderer = new NVRenderer(this.gl, this.opts)
+
     this.updateGLVolume()
     this.initialized = true
     this.resizeListener()
@@ -13013,6 +13022,74 @@ export class Niivue {
    * Render a 3D volume visualization of the current NVImage using provided transformation matrices and angles.
    * @internal
    */
+  // drawImage3D(mvpMatrix: mat4, azimuth: number, elevation: number): void {
+  //   if (this.volumes.length === 0) {
+  //     return
+  //   }
+  //   const gl = this.gl
+  //   const rayDir = this.calculateRayDirection(azimuth, elevation)
+  //   const object3D = this.volumeObject3D
+  //   if (object3D) {
+  //     gl.enable(gl.BLEND)
+  //     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+  //     gl.enable(gl.CULL_FACE)
+  //     gl.cullFace(gl.FRONT) // TH switch since we L/R flipped in calculateMvpMatrix
+  //     let shader = this.renderShader!
+  //     if (this.uiData.mouseDepthPicker) {
+  //       shader = this.pickingImageShader!
+  //     }
+  //     shader.use(this.gl)
+  //     // next lines optional: these textures should be bound by default
+  //     // these lines can cause warnings, e.g. if drawTexture not used or created
+  //     // gl.activeTexture(TEXTURE0_BACK_VOL)
+  //     // gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
+  //     // gl.activeTexture(TEXTURE1_COLORMAPS)
+  //     // gl.bindTexture(gl.TEXTURE_2D, this.colormapTexture)
+  //     // gl.activeTexture(TEXTURE2_OVERLAY_VOL)
+  //     // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
+  //     // gl.activeTexture(TEXTURE7_DRAW)
+  //     // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
+  //     // gl.activeTexture(TEXTURE8_PAQD)
+  //     // gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture)
+  //     gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+  //     if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
+  //       gl.activeTexture(TEXTURE6_GRADIENT)
+  //       gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
+  //       const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
+  //       const iModelMatrix = mat4.create()
+  //       mat4.invert(iModelMatrix, modelMatrix)
+  //       const normalMatrix = mat4.create()
+  //       mat4.transpose(normalMatrix, iModelMatrix)
+  //       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix)
+  //     }
+  //     if (this.drawBitmap && this.drawBitmap.length > 8) {
+  //       gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity)
+  //     } else {
+  //       gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
+  //     }
+  //     this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
+  //     gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
+  //     gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back!.matRAS!)
+  //     gl.uniform3fv(shader.uniforms.rayDir, rayDir)
+
+  //     if (this.gradientTextureAmount < 0.0) {
+  //       // use slice shader
+  //       gl.uniform4fv(shader.uniforms.clipPlane, [
+  //         this.scene.crosshairPos[0],
+  //         this.scene.crosshairPos[1],
+  //         this.scene.crosshairPos[2],
+  //         30
+  //       ])
+  //     } else {
+  //       gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
+  //     }
+  //     gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
+
+  //     gl.bindVertexArray(object3D.vao)
+  //     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
+  //     gl.bindVertexArray(this.unusedVAO)
+  //   }
+  // }
   drawImage3D(mvpMatrix: mat4, azimuth: number, elevation: number): void {
     if (this.volumes.length === 0) {
       return
@@ -13020,66 +13097,92 @@ export class Niivue {
     const gl = this.gl
     const rayDir = this.calculateRayDirection(azimuth, elevation)
     const object3D = this.volumeObject3D
-    if (object3D) {
-      gl.enable(gl.BLEND)
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-      gl.enable(gl.CULL_FACE)
-      gl.cullFace(gl.FRONT) // TH switch since we L/R flipped in calculateMvpMatrix
-      let shader = this.renderShader!
-      if (this.uiData.mouseDepthPicker) {
-        shader = this.pickingImageShader!
-      }
-      shader.use(this.gl)
-      // next lines optional: these textures should be bound by default
-      // these lines can cause warnings, e.g. if drawTexture not used or created
-      // gl.activeTexture(TEXTURE0_BACK_VOL)
-      // gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
-      // gl.activeTexture(TEXTURE1_COLORMAPS)
-      // gl.bindTexture(gl.TEXTURE_2D, this.colormapTexture)
-      // gl.activeTexture(TEXTURE2_OVERLAY_VOL)
-      // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
-      // gl.activeTexture(TEXTURE7_DRAW)
-      // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
-      // gl.activeTexture(TEXTURE8_PAQD)
-      // gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture)
-      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-      if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
-        gl.activeTexture(TEXTURE6_GRADIENT)
-        gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
-        const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
-        const iModelMatrix = mat4.create()
-        mat4.invert(iModelMatrix, modelMatrix)
-        const normalMatrix = mat4.create()
-        mat4.transpose(normalMatrix, iModelMatrix)
-        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix)
-      }
-      if (this.drawBitmap && this.drawBitmap.length > 8) {
-        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity)
-      } else {
-        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
-      }
-      this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
-      gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back!.matRAS!)
-      gl.uniform3fv(shader.uniforms.rayDir, rayDir)
-
-      if (this.gradientTextureAmount < 0.0) {
-        // use slice shader
-        gl.uniform4fv(shader.uniforms.clipPlane, [
-          this.scene.crosshairPos[0],
-          this.scene.crosshairPos[1],
-          this.scene.crosshairPos[2],
-          30
-        ])
-      } else {
-        gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
-      }
-      gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
-
-      gl.bindVertexArray(object3D.vao)
-      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
-      gl.bindVertexArray(this.unusedVAO)
+    if (!object3D) {
+      return
     }
+
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    // Keep culling enabled; choose FRONT or BACK depending on your volume algorithm.
+    // Most raymarchers render either back faces or front faces of the proxy cube.
+    gl.enable(gl.CULL_FACE)
+    // Do not hardcode frontFace here — we'll set frontFace below based on determinant.
+    // Keep cullFace as required by the volume algorithm (FRONT or BACK):
+    gl.frontFace(gl.CW)
+    gl.cullFace(gl.BACK) // keep the same as your legacy behavior if that's required
+    gl.clearDepth(1.0)
+    gl.clear(gl.DEPTH_BUFFER_BIT)
+
+    let shader = this.renderShader!
+    if (this.uiData.mouseDepthPicker) {
+      shader = this.pickingImageShader!
+    }
+    shader.use(this.gl)
+
+    // Optional texture binding comments preserved (not changed)
+    gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+
+    // Compute model / modelView matrices used for determinant & normal matrix.
+    // Use this.calculateModelMatrix (you already use it), and a viewMatrix if you have one.
+    // const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
+
+    // Compute modelView: if you have a separate viewMatrix, use it; otherwise use model alone.
+    const modelViewMatrix = mat4.create()
+
+    // Normal matrix: derive from modelView so lighting in eye space is correct.
+    if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
+      gl.activeTexture(TEXTURE6_GRADIENT)
+      gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
+
+      // Compute 3x3 normal matrix
+      const normalMatrix3 = mat3.create()
+      mat3.normalFromMat4(normalMatrix3, modelViewMatrix)
+
+      // Your shader currently expects a mat4 (you uploaded with uniformMatrix4fv).
+      // Preserve compatibility by copying the 3x3 into a 4x4 and uploading it the same way.
+      const normalMatrix4 = mat4.create() // identity
+      normalMatrix4[0] = normalMatrix3[0]
+      normalMatrix4[1] = normalMatrix3[1]
+      normalMatrix4[2] = normalMatrix3[2]
+      normalMatrix4[4] = normalMatrix3[3]
+      normalMatrix4[5] = normalMatrix3[4]
+      normalMatrix4[6] = normalMatrix3[5]
+      normalMatrix4[8] = normalMatrix3[6]
+      normalMatrix4[9] = normalMatrix3[7]
+      normalMatrix4[10] = normalMatrix3[8]
+      // leave last row/col as identity (normalMatrix4[15] = 1)
+      gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix4)
+    }
+
+    if (this.drawBitmap && this.drawBitmap.length > 8) {
+      gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity)
+    } else {
+      gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
+    }
+    this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
+
+    // Upload MVP and other uniforms (unchanged)
+    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
+    gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back!.matRAS!)
+    gl.uniform3fv(shader.uniforms.rayDir, rayDir)
+
+    if (this.gradientTextureAmount < 0.0) {
+      // use slice shader
+      gl.uniform4fv(shader.uniforms.clipPlane, [
+        this.scene.crosshairPos[0],
+        this.scene.crosshairPos[1],
+        this.scene.crosshairPos[2],
+        30
+      ])
+    } else {
+      gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
+    }
+    gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
+
+    gl.bindVertexArray(object3D.vao)
+    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
+    gl.bindVertexArray(this.unusedVAO)
   }
 
   /**
@@ -13710,6 +13813,199 @@ export class Niivue {
 
     return posString
   }
+  // draw3D(
+  //   leftTopWidthHeight = [0, 0, 0, 0],
+  //   mvpMatrix: mat4 | null = null,
+  //   modelMatrix: mat4 | null = null,
+  //   normalMatrix: mat4 | null = null,
+  //   azimuth: number | null = null,
+  //   elevation = 0
+  // ): string | undefined {
+  //   const gl = this.gl
+  //   const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
+
+  //   // Always work with a copy so we don’t mutate caller input
+  //   let ltwh = [...leftTopWidthHeight]
+
+  //   // Case 1: no rect specified → full canvas (or full bounds if bounds set)
+  //   if (ltwh[2] === 0 || ltwh[3] === 0) {
+  //     ltwh = this.opts.bounds ? [regionX, regionY, regionW, regionH] : [0, 0, gl.canvas.width, gl.canvas.height]
+  //   }
+
+  //   const isMosaic = azimuth !== null
+  //   this.setPivot3D()
+  //   if (!isMosaic) {
+  //     azimuth = this.scene.renderAzimuth
+  //     elevation = this.scene.renderElevation
+  //   }
+
+  //   // If caller didn't provide matrices, build them with the composer.
+  //   // Use opts.flipX if present — calculateMvpMatrix used flipX default true previously.
+  //   const flipX = this.opts?.isRadiologicalConvention ?? true
+
+  //   if (mvpMatrix === null) {
+  //     // build consistent matrices (MVP, model, normalMat3)
+  //     const matrices = this.composer.buildMatrices(
+  //       ltwh as [number, number, number, number],
+  //       azimuth!,
+  //       elevation,
+  //       flipX,
+  //       this.furthestFromPivot,
+  //       this.scene.volScaleMultiplier,
+  //       this.opts,
+  //       this.position,
+  //       this.pivot3D as [number, number, number]
+  //     )
+
+  //     // Extract returned matrices to keep rest of code compatible
+  //     mvpMatrix = matrices.mvp
+  //     modelMatrix = matrices.model
+  //     // Note: composer returns normalMat3; if you still expect a 4x4, you can expand it,
+  //     // but prefer to update shaders to accept a mat3 normal.
+  //     // For compatibility, we keep normalMatrix as null (legacy) and let renderer use normalMat3.
+  //     normalMatrix = null
+  //   }
+
+  //   const relativeLTWH = [...ltwh]
+
+  //   // Store the unmodified rect for borders / picking
+  //   this.screenSlices.push({
+  //     leftTopWidthHeight: ltwh.slice(), // canvas-space
+  //     axCorSag: SLICE_TYPE.RENDER,
+  //     sliceFrac: 0,
+  //     AxyzMxy: [],
+  //     leftTopMM: [],
+  //     fovMM: [isRadiological(modelMatrix!), 0]
+  //   })
+
+  //   // Flip Y only for GL viewport
+  //   const glLTWH: [number, number, number, number] = [ltwh[0], gl.canvas.height - ltwh[3] - ltwh[1], ltwh[2], ltwh[3]]
+
+  //   // Flip Y for GL viewport (mutate ltwh for later viewport calls)
+  //   ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
+
+  //   // Clear depth buffer (keep original behavior)
+  //   gl.clearDepth(0.0) // reset depth to nearest=0
+  //   gl.clear(gl.DEPTH_BUFFER_BIT)
+  //   gl.enable(gl.DEPTH_TEST)
+  //   // legacy code used ALWAYS here; we prefer consistent depth function globally.
+  //   // preserve current behavior: set to LEQUAL before actual drawing
+  //   // but leave it as is for now and set LEQUAL before renderer draws.
+  //   gl.depthMask(true)
+
+  //   this.draw3DLabels(mvpMatrix, relativeLTWH, false)
+
+  //   // restrict viewport to tile/bounds
+  //   this.gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3])
+
+  //   if (this.volumes.length > 0) {
+  //     this.updateInterpolation(0, true)
+  //     this.updateInterpolation(1, true)
+
+  //     // Choose shader (picking or normal)
+  //     let shader = this.renderShader!
+  //     if (this.uiData.mouseDepthPicker) {
+  //       shader = this.pickingImageShader!
+  //     }
+
+  //     // Use shader and set per-pass uniforms (same as earlier drawImage3D did)
+  //     shader.use(this.gl)
+
+  //     // These uniforms are still set here (same semantics as before)
+  //     if (shader.uniforms.backgroundMasksOverlays) {
+  //       this.gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
+  //     }
+
+  //     if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
+  //       this.gl.activeTexture(TEXTURE6_GRADIENT)
+  //       this.gl.bindTexture(this.gl.TEXTURE_3D, this.gradientTexture)
+
+  //       // composer returned model (and normalMat3). If needed, compute legacy 4x4 normal here.
+  //       // But renderer will upload mat3 directly; set legacy uniform if shader expects mat4
+  //       // (renderer will handle most of this automatically).
+  //     }
+
+  //     if (this.drawBitmap && this.drawBitmap.length > 8) {
+  //       this.gl.uniform2f(
+  //         shader.uniforms.renderDrawAmbientOcclusionXY,
+  //         this.renderDrawAmbientOcclusion,
+  //         this.drawOpacity
+  //       )
+  //     } else {
+  //       this.gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
+  //     }
+
+  //     this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
+
+  //     // Set clip plane and drawOpacity as before
+  //     if (this.gradientTextureAmount < 0.0) {
+  //       this.gl.uniform4fv(shader.uniforms.clipPlane, [
+  //         this.scene.crosshairPos[0],
+  //         this.scene.crosshairPos[1],
+  //         this.scene.crosshairPos[2],
+  //         30
+  //       ])
+  //     } else {
+  //       this.gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
+  //     }
+  //     this.gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
+
+  //     // Ensure renderer uses a consistent depth func
+  //     this.gl.depthFunc(this.gl.LEQUAL)
+
+  //     // Build matrices for renderer (prefer composer output if we created it earlier)
+  //     const matrices = this.composer.buildMatrices(
+  //       ltwh as [number, number, number, number],
+  //       azimuth!,
+  //       elevation,
+  //       flipX,
+  //       this.furthestFromPivot,
+  //       this.scene.volScaleMultiplier,
+  //       this.opts,
+  //       this.position,
+  //       this.pivot3D as [number, number, number]
+  //     )
+  //     // Actually render the volume via NVRenderer
+  //     this.renderer.render3D(matrices, shader, this.volumeObject3D)
+  //   }
+
+  //   this.updateInterpolation(0)
+  //   this.updateInterpolation(1)
+  //   if (!isMosaic) {
+  //     this.drawCrosshairs3D(true, 1.0, mvpMatrix)
+  //   }
+  //   this.drawMesh3D(true, 1.0, mvpMatrix, modelMatrix!, normalMatrix!)
+  //   if (this.uiData.mouseDepthPicker) {
+  //     this.depthPicker(ltwh, mvpMatrix)
+  //     this.createOnLocationChange()
+  //     // Avoid double flipping by reusing relativeLTWH
+  //     this.draw3D(relativeLTWH, mvpMatrix, modelMatrix, normalMatrix, azimuth, elevation)
+  //     return
+  //   }
+  //   if (this.opts.meshXRay > 0.0) {
+  //     this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
+  //   }
+
+  //   this.draw3DLabels(mvpMatrix, relativeLTWH, false)
+
+  //   gl.viewport(ltwh[0], ltwh[1], ltwh[2], ltwh[3])
+  //   if (!isMosaic) {
+  //     this.drawCrosshairs3D(false, 0.15, mvpMatrix)
+  //   }
+
+  //   // Reset viewport to whole bounds region
+  //   gl.viewport(regionX, regionY, regionW, regionH)
+  //   this.drawOrientationCube(ltwh, azimuth!, elevation)
+
+  //   const posString =
+  //     'azimuth: ' + this.scene.renderAzimuth.toFixed(0) + ' elevation: ' + this.scene.renderElevation.toFixed(0)
+
+  //   this.readyForSync = true
+  //   this.sync()
+  //   this.draw3DLabels(mvpMatrix, relativeLTWH, true)
+
+  //   return posString
+  // }
 
   /**
    * Render all visible 3D meshes with proper blending, depth, and shader settings.
@@ -15185,6 +15481,7 @@ export class Niivue {
 
     // --- Thumbnail pass
     if (this.bmpTexture && this.thumbnailVisible) {
+      this.gl.disable(this.gl.CULL_FACE)
       this.drawThumbnail()
       return
     }
