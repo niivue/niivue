@@ -7498,9 +7498,9 @@ export class Niivue {
     // firefox masks vendor and renderer for privacy
     const glInfo = this.gl.getParameter(this.gl.RENDERER)
     log.info('firefox renderer: ', glInfo) // Useful with firefox "Intel(R) HD Graphics" useless in Chrome and Safari "WebKit WebGL"
-    // this.gl.clearDepth(0.0)
+    this.gl.clearDepth(1.0)
     this.gl.enable(this.gl.CULL_FACE)
-    this.gl.cullFace(this.gl.FRONT)
+    this.gl.cullFace(this.gl.BACK)
     this.gl.enable(this.gl.BLEND)
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
 
@@ -13760,8 +13760,8 @@ export class Niivue {
 
     // Flip Y for GL viewport
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
-    gl.clearDepth(0.0) // reset depth to nearest=0
-    gl.clear(gl.DEPTH_BUFFER_BIT)
+    gl.clearDepth(1.0) // reset depth to nearest=0
+    // gl.clear(gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
     gl.depthMask(true)
@@ -14023,7 +14023,7 @@ export class Niivue {
         undefined,
         this.scene.renderAzimuth,
         this.scene.renderElevation,
-        true // no flipX for meshes
+        false // no flipX for meshes
       )
     }
 
@@ -14031,11 +14031,11 @@ export class Niivue {
 
     // Use inverted depth convention (matches current MVP math)
     if (isDepthTest) {
-      gl.depthFunc(gl.GREATER) // farther depth wins
+      gl.depthFunc(gl.LEQUAL) // farther depth wins
     } else {
       gl.depthFunc(gl.ALWAYS)
     }
-
+    gl.clear(gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.CULL_FACE)
     gl.cullFace(gl.BACK) // back-face culling
     gl.frontFace(gl.CCW) // CCW winding = front
@@ -14127,7 +14127,7 @@ export class Niivue {
       }
 
       gl.depthMask(true)
-      gl.depthFunc(gl.GREATER) // restore inverted depthFunc
+      gl.depthFunc(gl.LEQUAL) // restore inverted depthFunc
       gl.disable(gl.BLEND)
     }
 
@@ -14230,8 +14230,8 @@ export class Niivue {
     const color = [...this.opts.crosshairColor]
     if (isDepthTest) {
       gl.disable(gl.BLEND)
-      // gl.depthFunc(gl.LESS); //pass if LESS than incoming value
-      gl.depthFunc(gl.GREATER)
+      gl.depthFunc(gl.LESS); //pass if LESS than incoming value
+      // gl.depthFunc(gl.GREATER)
     } else {
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
