@@ -3956,6 +3956,11 @@ export class NVMeshLoaders {
     }
     let colormapLabel
     if (Labels.I.length > 1) {
+      // issue1441
+      const hasAlpha = Labels.A.some(a => a > 0);
+      if (!hasAlpha) {
+        Labels.A.fill(255);
+      }
       colormapLabel = cmapper.makeLabelLut(Labels)
     }
     if (n_vert > 0) {
