@@ -120,7 +120,6 @@ nv.loadVolumes(volumeList);
     ]
     const nv = new Niivue({
       isColorbar: true, // show colorbar
-      isOrientationCube: true, // show orientation cube in bottom corner
       crosshairColor: [0, 1, 0, 0.5], // set crosshair color to green and 50% opacity
       show3Dcrosshair: true, // show crosshair in 3D view
       backColor: [1, 1, 1, 1], // set background color to white

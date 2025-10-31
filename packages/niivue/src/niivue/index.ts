@@ -11494,6 +11494,7 @@ export class Niivue {
     if (txtHt <= 0) {
       return
     }
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     let margin = txtHt
     const fullHt = 3 * txtHt
     let barHt = txtHt
@@ -13895,14 +13896,10 @@ export class Niivue {
       gl.bindVertexArray(this.unusedVAO)
     }
 
-    // Restore defaults
-    gl.depthMask(true)
-    gl.disable(gl.BLEND)
-
     // -----------------------
-    // Pass 2: X-Ray overlay
+    // Pass 2: X-Ray Mesh
     // -----------------------
-    if (this.opts.meshXRay > 0.0) {
+    if (this.opts.meshXRay > 0.0 && !hasFibers) {
       gl.enable(gl.BLEND)
       gl.depthMask(false)
       gl.depthFunc(gl.ALWAYS) // ignore depth for x-ray
@@ -13951,6 +13948,9 @@ export class Niivue {
         gl.bindVertexArray(this.unusedVAO)
       }
     }
+    // Restore defaults
+    gl.depthMask(true)
+    gl.disable(gl.BLEND)
 
     this.readyForSync = true
   }
