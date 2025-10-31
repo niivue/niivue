@@ -1262,7 +1262,7 @@ export class NVMesh {
         // build a label colormap
         if (layer.colormapLabel && (layer.colormapLabel as ColorMap).R && !(layer.colormapLabel as LUT).lut) {
           // convert colormap JSON to RGBA LUT
-          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel as ColorMap)
+          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel as ColorMap, 255, layer.global_max)
         }
         if (layer.colormapLabel && (layer.colormapLabel as LUT).lut) {
           const colormapLabel = layer.colormapLabel as LUT
@@ -1576,7 +1576,7 @@ export class NVMesh {
       const nFjprev = fac.length / 3 // = 4^(j+1)*F0
       const nFj = Math.pow(4, j) * F0
 
-      console.log(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`)
+      log.info(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`)
 
       const remap = Array.from({ length: nVjprev }, (_, i) => i + 1)
 
@@ -1644,7 +1644,7 @@ export class NVMesh {
     if (key === 'colormapLabel') {
       if (typeof val === 'object') {
         // assume JSON
-        layer[key] = cmapper.makeLabelLut(val)
+        layer[key] = cmapper.makeLabelLut(val, 255, layer.global_max)
       } else if (typeof val === 'string') {
         // assume URL
         const cmap = await cmapper.makeLabelLutFromUrl(val)
