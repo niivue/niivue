@@ -85,7 +85,7 @@ export class ColorTables {
     return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I, isInvert)
   }
 
-  makeLabelLut(cm: ColorMap, alphaFill = 255): LUT {
+  makeLabelLut(cm: ColorMap, alphaFill = 255, maxIdx = Infinity): LUT {
     if (cm.R === undefined || cm.G === undefined || cm.B === undefined) {
       throw new Error(`Invalid colormap table: ${cm}`)
     }
@@ -93,6 +93,18 @@ export class ColorTables {
 
     // if indices are not provided, indices default to 0..(nLabels-1)
     const idxs = cm.I ?? [...Array(nLabels).keys()]
+
+    // --- Check for out-of-range values: issue 1441
+    let hasInvalid = false
+    for (let i = 0; i < idxs.length; i++) {
+      if (idxs[i] > maxIdx) {
+        hasInvalid = true
+        idxs[i] = maxIdx // clamp
+      }
+    }
+    if (hasInvalid) {
+      log.warn(`Some colormap indices clamped to match label range.`)
+    }
 
     if (nLabels !== cm.G.length || nLabels !== cm.B.length || nLabels !== idxs.length) {
       throw new Error(
@@ -141,10 +153,10 @@ export class ColorTables {
     return cmap
   }
 
-  async makeLabelLutFromUrl(name: string): Promise<LUT> {
+  async makeLabelLutFromUrl(name: string, alphaFill = 255, maxIdx = Infinity): Promise<LUT> {
     const response = await fetch(name)
     const cm = await response.json()
-    return this.makeLabelLut(cm)
+    return this.makeLabelLut(cm, alphaFill, maxIdx)
   }
 
   // not included in public docs

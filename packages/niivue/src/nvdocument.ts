@@ -133,10 +133,8 @@ export type NVConfigOptions = {
   fontColor: Float32List
   selectionBoxColor: number[]
   clipPlaneColor: number[]
+  isClipPlanesCutaway: boolean
   paqdUniforms: number[]
-  clipThick: number
-  clipVolumeLow: number[]
-  clipVolumeHigh: number[]
   rulerColor: number[]
   // x axis margin around color bar, clip space coordinates
   colorbarMargin: number
@@ -144,6 +142,8 @@ export type NVConfigOptions = {
   trustCalMinMax: boolean
   // keyboard short cut to activate the clip plane
   clipPlaneHotKey: string
+  // keyboard short cut to cycle the active clip plane
+  cycleClipPlaneHotKey: string
   // keyboard shortcut to switch view modes
   viewModeHotKey: string
   doubleTouchTimeout: number
@@ -264,15 +264,14 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
   fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  isClipPlanesCutaway: false,
   paqdUniforms: [0.3, 0.5, 0.5, 1.0],
   // paqdUniforms: [0.3, 0.9, 1.0, 0.5],
-  clipThick: 2,
-  clipVolumeLow: [0, 0, 0],
-  clipVolumeHigh: [1.0, 1.0, 1.0],
   rulerColor: [1, 0, 0, 0.8],
   colorbarMargin: 0.05,
   trustCalMinMax: true,
   clipPlaneHotKey: 'KeyC',
+  cycleClipPlaneHotKey: 'KeyP',
   viewModeHotKey: 'KeyV',
   doubleTouchTimeout: 500,
   longTouchTimeout: 1000,
@@ -370,13 +369,10 @@ type SceneData = {
   azimuth: number
   elevation: number
   crosshairPos: vec3
-  clipPlane: number[]
-  clipPlaneDepthAziElev: number[]
+  clipPlanes: number[][] // array of vec4 planes
+  clipPlaneDepthAziElevs: number[][] // optional per-plane orientation
   volScaleMultiplier: number
   pan2Dxyzmm: vec4
-  clipThick: number
-  clipVolumeLow: number[]
-  clipVolumeHigh: number[]
 }
 
 export const INITIAL_SCENE_DATA = {
@@ -384,13 +380,10 @@ export const INITIAL_SCENE_DATA = {
   azimuth: 110,
   elevation: 10,
   crosshairPos: vec3.fromValues(0.5, 0.5, 0.5),
-  clipPlane: [0, 0, 0, 0],
-  clipPlaneDepthAziElev: [2, 0, 0],
+  clipPlanes: [[0, 0, 0, 0]], // start with no planes
+  clipPlaneDepthAziElevs: [[2, 0, 0]], // empty by default
   volScaleMultiplier: 1.0,
-  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1),
-  clipThick: 2.0,
-  clipVolumeLow: [0, 0, 0],
-  clipVolumeHigh: [1.0, 1.0, 1.0]
+  pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1)
 }
 
 export type Scene = {
@@ -402,7 +395,9 @@ export type Scene = {
   volScaleMultiplier: number
   crosshairPos: vec3
   clipPlane: number[]
-  clipPlaneDepthAziElev: number[]
+  clipPlanes: number[][]
+  // clipPlaneDepthAziElev: number[]
+  clipPlaneDepthAziElevs: number[][]
   pan2Dxyzmm: vec4
   _elevation?: number
   _azimuth?: number
@@ -560,17 +555,31 @@ export class NVDocument {
       },
 
       get clipPlane(): number[] {
-        return this.sceneData.clipPlane
+        return this.sceneData.clipPlanes[0] ?? []
       },
       set clipPlane(clipPlane) {
-        this.sceneData.clipPlane = clipPlane
+        this.sceneData.clipPlanes[0] = clipPlane
       },
 
-      get clipPlaneDepthAziElev(): number[] {
-        return this.sceneData.clipPlaneDepthAziElev
+      // get clipPlaneDepthAziElev(): number[] {
+      //   return this.sceneData.clipPlaneDepthAziElevs[0] ?? []
+      // },
+      // set clipPlaneDepthAziElev(clipPlaneDepthAziElev: number[]) {
+      //   this.sceneData.clipPlaneDepthAziElevs[0] = clipPlaneDepthAziElev
+      // },
+
+      get clipPlanes(): number[][] {
+        return this.sceneData.clipPlanes
       },
-      set clipPlaneDepthAziElev(clipPlaneDepthAziElev: number[]) {
-        this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev
+      set clipPlanes(planes: number[][]) {
+        this.sceneData.clipPlanes = planes
+      },
+
+      get clipPlaneDepthAziElevs(): number[][] {
+        return this.sceneData.clipPlaneDepthAziElevs
+      },
+      set clipPlaneDepthAziElevs(values: number[][]) {
+        this.sceneData.clipPlaneDepthAziElevs = values
       },
 
       get pan2Dxyzmm(): vec4 {
@@ -804,6 +813,14 @@ export class NVDocument {
     const imageOptionsArray = []
     // save our scene object
     data.sceneData = { ...this.scene.sceneData }
+
+    // Ensure we don’t accidentally persist legacy single-plane props
+    delete (data.sceneData as any).clipPlane
+    delete (data.sceneData as any).clipPlaneDepthAziElev
+    delete (data.sceneData as any).clipThick
+    delete (data.sceneData as any).clipVolumeLow
+    delete (data.sceneData as any).clipVolumeHigh
+
     // save our options
     data.opts = diffOptions(this.opts, DEFAULT_OPTIONS) as NVConfigOptions
     if (this.opts.meshThicknessOn2D === Infinity) {
@@ -1048,15 +1065,12 @@ export class NVDocument {
    * @returns A reconstructed NVDocument instance
    */
   static loadFromJSON(data: DocumentData): NVDocument {
-    // 1. start with a fresh document (its constructor already seeds
-    //    document.data with whatever defaults you want)
+    // 1. start with a fresh document
     const document = new NVDocument()
 
-    // 2. copy *all* top-level saved fields over (this brings in
-    //    imageOptionsArray, encodedImageBlobs, masks, overlays, etc.)
+    // 2. copy *all* top-level saved fields over
     Object.assign(document.data, {
       ...data,
-      // 2a. ensure minimum required array fields are non-null
       imageOptionsArray: data.imageOptionsArray ?? [],
       encodedImageBlobs: data.encodedImageBlobs ?? [],
       labels: data.labels ?? [],
@@ -1068,13 +1082,12 @@ export class NVDocument {
       title: data.title ?? 'untitled'
     })
 
-    // 3. now merge opts with your DEFAULT_OPTIONS
+    // 3. merge opts with DEFAULT_OPTIONS
     document.data.opts = {
       ...DEFAULT_OPTIONS,
       ...(data.opts || {})
     } as NVConfigOptions
 
-    //    and restore the "infinity" sentinel
     if (document.data.opts.meshThicknessOn2D === 'infinity') {
       document.data.opts.meshThicknessOn2D = Infinity
     }
@@ -1085,7 +1098,16 @@ export class NVDocument {
       ...(data.sceneData || {})
     }
 
-    // 5. Load completedMeasurements and completedAngles if they exist
+    // 4a. migrate legacy single-plane fields → new arrays
+    const sceneData: any = data.sceneData || {}
+    if (sceneData.clipPlane && !sceneData.clipPlanes) {
+      document.scene.sceneData.clipPlanes = [sceneData.clipPlane]
+    }
+    if (sceneData.clipPlaneDepthAziElev && !sceneData.clipPlaneDepthAziElevs) {
+      document.scene.sceneData.clipPlaneDepthAziElevs = [sceneData.clipPlaneDepthAziElev]
+    }
+
+    // 5. restore completedMeasurements / completedAngles
     if (data.completedMeasurements) {
       document.completedMeasurements = data.completedMeasurements.map((m) => ({
         ...m,
@@ -1107,7 +1129,7 @@ export class NVDocument {
       }))
     }
 
-    // 6. finally, if there was a meshesString, deserialize it
+    // 6. deserialize meshes
     if (document.data.meshesString) {
       NVDocument.deserializeMeshDataObjects(document)
     }

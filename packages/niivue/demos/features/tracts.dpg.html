@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="light.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      <label for="checkXRay">XRay</label>
+      <input type="checkbox" id="checkXRay">
+      &nbsp;&nbsp;
+      <label for="checkCutaway">Cutaway</label>
+      <input type="checkbox" id="checkCutaway">
+      &nbsp;&nbsp;
+      <label for="colorSelect">Clip color</label>
+      <select id="colorSelect">
+        <option selected>transparent</option>
+        <option>translucent</option>
+        <option>shading</option>
+      </select>
+      &nbsp;&nbsp;
+      <label for="renderMode">Volume Render Mode</label>
+      <select id="renderMode">
+        <option value="-1">slices</option>
+        <option value="0" selected>matte</option>
+        <option value="0.3">low</option>
+        <option value="0.6">medium</option>
+        <option value="1.0">high</option>
+      </select>
+      &nbsp;&nbsp;
+      <label for="clipSelect">Clip Planes</label>
+      <select id="clipSelect">
+        <option>0</option>
+        <option>1</option>
+        <option selected>2</option>
+        <option>3</option>
+        <option>4</option>
+        <option>5</option>
+        <option>6</option>
+      </select>
+      <label for="fiberSelect">Choose fiber coloration:</label>
+      <select id="fiberSelect">
+        <option value="Global">Global direction</option>
+        <option value="Local">Local direction</option>
+        <option value="Fixed">Fixed</option>
+        <option value="DPG0" selected>First DPG</option>
+        <option value="show0">First Group</option>
+        <option value="show1">Second Group</option>
+        <option value="show2">Third Groups</option>
+        <option value="show012">First Three Groups </option>
+      </select>
+      &nbsp;&nbsp;
+      <label for="dpgThresholdSlider">Per-group threshold</label>
+      <input
+        type="range"
+        min="0"
+        max="6"
+        value="1"
+        class="slider"
+        id="dpgThresholdSlider"
+      />
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">&nbsp; </label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  function thresholdVisibility(isVisible) {
+    const label = document.querySelector('label[for="dpgThresholdSlider"]')
+    const slider = document.getElementById('dpgThresholdSlider')
+    if (!label || !slider) return // safely exit if not found
+    const displayValue = isVisible ? 'inline-block' : 'none'
+    label.style.display = displayValue
+    slider.style.display = displayValue
+  }
+  dpgThresholdSlider.onchange = function () {
+    nv1.meshes[0].dpg[0].cal_min = parseFloat(this.value) * 0.5
+    nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", null)
+  }
+  fiberSelect.onchange = function () {
+    const colorName = this.value
+    if (colorName === "show0") {
+      let cmap = {
+            R: [0],
+            G: [255],
+            B: [0],
+            I: [0]
+      }
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap)
+    } else if (colorName === "show1") {
+      let cmap = {
+            R: [255],
+            G: [0],
+            B: [0],
+            I: [1]
+      }
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap)
+    } else if (colorName === "show2") {
+      let cmap = {
+            R: [25],
+            G: [25],
+            B: [255],
+            I: [2]
+      }
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap)
+    } else if (colorName === "show012") {
+      let cmap = {
+            R: [0, 255, 25],
+            G: [255, 0, 25],
+            B: [0, 0, 255],
+            I: [0, 1, 2]
+      }
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", cmap)
+    } else {
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberGroupColormap", null)
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", colorName)
+    }
+    thresholdVisibility(colorName === "DPG0")
+  }
+  checkXRay.onchange = function () {
+    nv1.opts.meshXRay =this.checked ? 1/100 : 0
+    nv1.drawScene()
+  }
+  checkCutaway.onchange = function () {
+    nv1.opts.isClipPlanesCutaway = this.checked
+    nv1.drawScene()
+  }
+  colorSelect.onchange = function () {
+    const index = this.selectedIndex
+    let clr = nv1.opts.clipPlaneColor.slice()
+    switch (index) {
+      case 0:
+        clr[3] = 0.0
+        break
+      case 1:
+        clr[3] = 0.5
+        break
+      case 2:
+        clr[3] = -0.5
+        break
+    }
+    nv1.setClipPlaneColor(clr)
+  }
+  clipSelect.onchange = function () {
+    const index = parseInt(this.value, 10) // selected option value as integer
+    let planes = [[2.0, 180, 20]]
+    switch (index) {
+      case 1:
+        planes = [[0.1, 180, 20]]
+        break
+      case 2:
+        planes = [
+          [0.1, 180, 20],
+          [0.1, 0, -20],
+        ]
+        break
+      case 3:
+        planes = [
+          [0.0, 90,  0], //right center
+          [0.0, 0, -20], //posterior oblique
+          [0.1, 0, -90], //inferior
+        ]
+        break
+      case 4:
+        planes = [
+          [0.3, 270,  0], //left
+          [0.3, 90,  0], //right
+          [0.0, 180,  0], //anterior
+          [0.1, 0,  0], //posterior
+        ]
+        break
+      case 5:
+        planes = [
+          [0.4, 270,  0], //left
+          [0.3, 90,  0], //right
+          [0.4, 180,  0], //anterior
+          [0.3, 0,  0], //posterior
+          [0.1, 0, -90], //inferior
+        ]
+        break
+      case 6:
+        planes = [
+          [0.4, 270,  0], //left
+          [-0.1, 90,  0], //right
+          [0.4, 180,  0], //anterior
+          [0.2, 0,  0], //posterior
+          [0.1, 0, -90], //inferior
+          [0.3, 0, 90] //superior
+        ]
+        break
+    }
+    nv1.setClipPlanes(planes)
+  }
+  renderMode.onchange = async function () {
+    await nv1.setVolumeRenderIllumination(parseFloat(this.value))
+    await nv1.updateGLVolume()
+  }
+  var volumeList1 = [{ url: "../images/mni152.nii.gz" },]
+  const onLocationChange = (data) => {
+    statusBar.innerHTML = data.string
+  }
+  let defaults = {
+    loglevel: 'debug',
+    onLocationChange: onLocationChange,
+    backColor: [1, 1, 1, 1],
+    show3Dcrosshair: true,
+  }
+  var nv1 = new niivue.Niivue(defaults)
+  await nv1.attachToCanvas(gl1)
+  nv1.setSliceType(nv1.sliceTypeRender)
+  await nv1.loadVolumes(volumeList1)
+  await nv1.loadMeshes([{ url: "../images/yeh2022.trx", rgba255: [0, 142, 200, 255]}])
+  //start: synthesize a dpg (dpgs are often part of the file)
+  const ngroups = nv1.meshes[0].groups.length
+  const f32 = new Float32Array(ngroups).fill(0)
+  f32[0] = 1.64
+  f32[1] = 3.32
+  f32[2] = 5.01
+  nv1.meshes[0].dpg.push({
+        id: 'z',
+        vals: f32
+      })
+  function initValuesArray(va) {
+    for (let i = 0; i < va.length; i++) {
+      const mn = va[i].vals.reduce((acc, current) => Math.min(acc, current))
+      const mx = va[i].vals.reduce((acc, current) => Math.max(acc, current))
+      va[i].global_min = mn
+      va[i].global_max = mx
+      va[i].cal_min = mn + 0.5
+      va[i].cal_max = mx
+    }
+    return va
+  }
+  initValuesArray(nv1.meshes[0].dpg)
+  //end: synthesize a dpg
+  nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5)
+  nv1.volumes[0].colorbarVisible = false
+  nv1.meshes[0].colorbarVisible = true
+  nv1.opts.isColorbar = true
+  await renderMode.onchange()
+  checkCutaway.onchange()
+  clipSelect.onchange()
+  colorSelect.onchange()
+  fiberSelect.onchange()
+</script>

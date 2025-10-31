@@ -333,6 +333,7 @@ type UIData = {
   // angle measurement state
   angleFirstLine: number[] // [x1, y1, x2, y2] for first line
   angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
+  activeClipPlaneIndex: number
 }
 
 type SaveImageOptions = {
@@ -509,7 +510,8 @@ export class Niivue {
     activeDragMode: null,
     activeDragButton: null,
     angleFirstLine: [0.0, 0.0, 0.0, 0.0],
-    angleState: 'none'
+    angleState: 'none',
+    activeClipPlaneIndex: 0
   }
 
   #eventsController: AbortController | null = null
@@ -1244,7 +1246,7 @@ export class Niivue {
    * @internal
    */
   doSyncClipPlane(otherNV: Niivue): void {
-    otherNV.setClipPlane(this.scene.clipPlaneDepthAziElev)
+    otherNV.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
   }
 
   /**
@@ -1716,7 +1718,7 @@ export class Niivue {
         this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
       }
       this.uiData.isDragging = true
-      this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev
+      this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
     }
   }
 
@@ -2415,6 +2417,33 @@ export class Niivue {
   }
 
   /**
+   * Cycles active clip plane
+   * @internal
+   * @returns active clip plane index
+   */
+  cycleActiveClipPlane(): number {
+    // cycle to the next active clip plane index
+    const n = this.scene.clipPlanes.length || 6 // default to 6 planes
+    if (this.uiData.activeClipPlaneIndex == null) {
+      this.uiData.activeClipPlaneIndex = 0
+    } else {
+      this.uiData.activeClipPlaneIndex = (this.uiData.activeClipPlaneIndex + 1) % n
+    }
+
+    const idx = this.uiData.activeClipPlaneIndex
+
+    // ensure slot exists for both clipPlanes and clipPlaneDepthAziElevs
+    if (!this.scene.clipPlanes[idx]) {
+      this.scene.clipPlanes[idx] = [0, 0, 0, 2] // dummy "off" plane
+    }
+    if (!this.scene.clipPlaneDepthAziElevs[idx]) {
+      this.scene.clipPlaneDepthAziElevs[idx] = [2, 0, 0] // depth=2 → no clip plane
+    }
+
+    return idx
+  }
+
+  /**
    * Handles keyboard shortcuts for toggling clip planes and slice view modes with debounce logic.
    * @internal
    */
@@ -2425,36 +2454,44 @@ export class Niivue {
       this.drawScene()
       return
     }
+    const now = new Date().getTime()
+    const elapsed = now - this.lastCalled
+    if (e.code === this.opts.cycleClipPlaneHotKey) {
+      if (elapsed > this.opts.keyDebounceTime) {
+        const idx = this.cycleActiveClipPlane()
+        console.log('Active clip plane cycled to:', idx)
+        console.log('clip planes', this.scene.clipPlanes)
+        this.lastCalled = now
+      }
+    }
     if (e.code === this.opts.clipPlaneHotKey) {
-      const now = new Date().getTime()
-      const elapsed = now - this.lastCalled
       if (elapsed > this.opts.keyDebounceTime) {
         this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 7
         switch (this.currentClipPlaneIndex) {
           case 0: // NONE
-            this.scene.clipPlaneDepthAziElev = [2, 0, 0]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [2, 0, 0]
             break
           case 1: // left a 270 e 0
             // this.scene.clipPlane = [1, 0, 0, 0];
-            this.scene.clipPlaneDepthAziElev = [0, 270, 0]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 270, 0]
             break
           case 2: // right a 90 e 0
-            this.scene.clipPlaneDepthAziElev = [0, 90, 0]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 90, 0]
             break
           case 3: // posterior a 0 e 0
-            this.scene.clipPlaneDepthAziElev = [0, 0, 0]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 0]
             break
           case 4: // anterior a 0 e 0
-            this.scene.clipPlaneDepthAziElev = [0, 180, 0]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 180, 0]
             break
           case 5: // inferior a 0 e -90
-            this.scene.clipPlaneDepthAziElev = [0, 0, -90]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, -90]
             break
           case 6: // superior: a 0 e 90'
-            this.scene.clipPlaneDepthAziElev = [0, 0, 90]
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 90]
             break
         }
-        this.setClipPlane(this.scene.clipPlaneDepthAziElev)
+        this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
       }
       this.lastCalled = now
     } else if (e.code === this.opts.viewModeHotKey) {
@@ -4545,6 +4582,36 @@ export class Niivue {
   }
 
   /**
+   * Set multiple clip planes from their depth/azimuth/elevation definitions.
+   *
+   *  depth: distance of clip plane from center of volume, range 0..~1.73
+   *         (e.g. 2.0 for no clip plane)
+   *  azimuth: camera position in degrees around object, typically 0..360
+   *           (or -180..+180)
+   *  elevation: camera height in degrees, range -90..90
+   *
+   * This replaces the entire `clipPlanes` and `clipPlaneDepthAziElevs` arrays,
+   * ensuring they always have the same length.
+   *
+   * @param depthAziElevs - array of `[depth, azimuthDeg, elevationDeg]` values
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | live demo usage}
+   */
+  setClipPlanes(depthAziElevs: number[][]): void {
+    this.scene.clipPlanes = []
+    this.scene.clipPlaneDepthAziElevs = []
+    for (let i = 0; i < depthAziElevs.length; i++) {
+      const dae = depthAziElevs[i]
+      const n = this.sph2cartDeg(dae[1], dae[2])
+      const d = -dae[0] // correct sign for shader
+      const plane = [n[0], n[1], n[2], d]
+      this.scene.clipPlanes.push(plane)
+      this.scene.clipPlaneDepthAziElevs.push(dae)
+    }
+
+    this.drawScene()
+  }
+
+  /**
    * Update the clip plane orientation in 3D view mode.
    * @param depthAzimuthElevation - a 3-component array:
    *   - `depth`: distance of clip plane from center of volume (0 to ~1.73, or >2.0 to disable clipping)
@@ -4560,11 +4627,33 @@ export class Niivue {
     //  azimuthElevation is 2 component vector [a, e, d]
     //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
     //  elevation: camera height in degrees, range -90..90
+    if (!depthAzimuthElevation || depthAzimuthElevation.length === 0) {
+      return
+    }
+
+    const idx = this.uiData.activeClipPlaneIndex ?? 0
+
+    // ensure arrays exist and are long enough
+    if (!this.scene.clipPlanes) {
+      this.scene.clipPlanes = []
+    }
+    if (!this.scene.clipPlaneDepthAziElevs) {
+      this.scene.clipPlaneDepthAziElevs = []
+    }
+    while (this.scene.clipPlanes.length <= idx) {
+      this.scene.clipPlanes.push([0, 0, 0, 2]) // dummy "off" plane
+    }
+    while (this.scene.clipPlaneDepthAziElevs.length <= idx) {
+      this.scene.clipPlaneDepthAziElevs.push([2, 0, 0]) // depth=2 → no clip plane
+    }
 
     const v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2])
-    this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]]
-    this.scene.clipPlaneDepthAziElev = depthAzimuthElevation
-    this.onClipPlaneChange(this.scene.clipPlane)
+    const plane = [v[0], v[1], v[2], depthAzimuthElevation[0]]
+
+    this.scene.clipPlanes[idx] = plane
+    this.scene.clipPlaneDepthAziElevs[idx] = depthAzimuthElevation
+
+    this.onClipPlaneChange(plane)
     // if (this.opts.sliceType!= SLICE_TYPE.RENDER) return;
     this.drawScene()
   }
@@ -4795,11 +4884,17 @@ export class Niivue {
   }
 
   /**
-   * set the color of the 3D clip plane
-   * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+   * Set the color of the 3D clip plane.
+   * @param {number[]} color - An array of RGBA values.
+   *   - **R**, **G**, **B** components range from `0.0` to `1.0`.
+   *   - **A** (alpha) component ranges from `-1.0` to `1.0`, where:
+   *       - `0.0–1.0` → controls background translucency.
+   *       - `-1.0–0.0` → applies translucent shading to the volume instead of the background.
+   *
    * @example
-   * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * niivue.setClipPlaneColor([1, 1, 1, 0.5]);   // white, translucent background
+   * niivue.setClipPlaneColor([1, 1, 1, -0.5]);  // white, translucent shading
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | Live demo usage}
    */
   setClipPlaneColor(color: number[]): void {
     this.opts.clipPlaneColor = color
@@ -4809,39 +4904,21 @@ export class Niivue {
   }
 
   /**
-   * adjust thickness of the 3D clip plane
-   * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
-   * @example
-   * niivue.setClipPlaneThick(0.3) // thin slab
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * @deprecated This method has been removed.
+   * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
    */
-  setClipPlaneThick(thick: number): void {
-    this.opts.clipThick = thick
-    this.renderShader!.use(this.gl)
-    this.gl.uniform1f(this.renderShader!.uniforms.clipThick!, this.opts.clipThick)
-    // this.renderShader!.use(this.gl)
-    // this.gl.uniform4fv(this.renderShader!.uniforms.clipPlaneColor!, this.opts.clipPlaneColor)
-    this.drawScene()
+  setClipPlaneThick(_thick: number): void {
+    log.warn('setClipPlaneThick() has been removed. use setClipPlanes() instead.')
   }
 
   /**
-   * set the clipping region for volume rendering
-   * @param low - 3-component array specifying the lower bound of the clipping region along the X, Y, and Z axes. Values range from 0 (start) to 1 (end of volume).
-   * @param high - 3-component array specifying the upper bound of the clipping region along the X, Y, and Z axes. Values range from 0 to 1.
-   * @example
-   * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * @deprecated This method has been removed.
+   * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
    */
-  setClipVolume(low: number[], high: number[]): void {
-    this.opts.clipVolumeLow = [Math.min(low[0], high[0]), Math.min(low[1], high[1]), Math.min(low[2], high[2])]
-    this.opts.clipVolumeHigh = [Math.max(low[0], high[0]), Math.max(low[1], high[1]), Math.max(low[2], high[2])]
-    this.renderShader!.use(this.gl)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
-    this.pickingImageShader!.use(this.gl)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
-    this.drawScene()
+  setClipVolume(_low: number[], _high: number[]): void {
+    log.warn('setClipVolume() has been removed. use setClipPlanes() instead.')
   }
 
   /**
@@ -4982,7 +5059,9 @@ export class Niivue {
     const opts = { ...DEFAULT_OPTIONS, ...document.opts }
     this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
     this.document.opts = opts
-    this.setClipPlane(this.scene.clipPlaneDepthAziElev)
+    if (this.scene.clipPlaneDepthAziElevs) {
+      this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex ?? 0])
+    }
     log.debug('load document', document)
     this.mediaUrlMap.clear()
     this.createEmptyDrawing()
@@ -7470,6 +7549,7 @@ export class Niivue {
       }
     }
     this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, 'gradientOpacity'), gradientOpacityLut)
+    shader.uniforms.clipPlanes = this.gl.getUniformLocation(shader.program, 'clipPlanes[0]')
   }
 
   /**
@@ -7537,6 +7617,10 @@ export class Niivue {
     this.pickingMeshShader.use(gl)
     this.pickingImageShader = new Shader(gl, vertRenderShader, fragVolumePickingShader)
     this.pickingImageShader.use(gl)
+    this.pickingImageShader.uniforms.clipPlanes = this.gl.getUniformLocation(
+      this.pickingImageShader.program,
+      'clipPlanes[0]'
+    )
     gl.uniform1i(this.pickingImageShader.uniforms.volume, 0)
     gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
     gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
@@ -8797,13 +8881,10 @@ export class Niivue {
     const volScale = slicescl.volScale
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
-    this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.renderShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
     this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend)
-
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane)
+
     this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
     this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
 
@@ -8813,8 +8894,6 @@ export class Niivue {
     this.pickingImageShader.use(this.gl)
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipLo!, this.opts.clipVolumeLow)
-    this.gl.uniform3fv(this.pickingImageShader!.uniforms.clipHi!, this.opts.clipVolumeHigh)
     let shader = this.sliceMMShader
     if (this.opts.is2DSliceShader) {
       shader = this.slice2DShader
@@ -9895,6 +9974,23 @@ export class Niivue {
           continue
         }
         const nlayers = mesh.layers.length
+        const fiberColor = mesh.fiberColor.toLowerCase()
+        if (mesh.offsetPt0 && fiberColor.startsWith('dp')) {
+          let dp = null
+          const n = parseInt(fiberColor.substring(3))
+          if (fiberColor.startsWith('dpg') && !mesh.fiberGroupColormap) {
+            dp = n < mesh.dpg.length ? mesh.dpg[n] : mesh.dpg[0]
+          }
+          if (fiberColor.startsWith('dps')) {
+            dp = n < mesh.dps.length ? mesh.dps[n] : mesh.dps[0]
+          }
+          if (fiberColor.startsWith('dpv')) {
+            dp = n < mesh.dpv.length ? mesh.dpv[n] : mesh.dpv[0]
+          }
+          if (dp && typeof mesh.colormap === 'string') {
+            this.addColormapList(mesh.colormap, dp.cal_min, dp.cal_max, false, false, true, mesh.colormapInvert)
+          }
+        }
         if ('edgeColormap' in mesh && 'edges' in mesh && mesh.edges !== undefined) {
           const neg = negMinMax(mesh.edgeMin!, mesh.edgeMax!, NaN, NaN)
           this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true, true, mesh.colormapInvert)
@@ -10011,10 +10107,10 @@ export class Niivue {
       return
     }
     // n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
-    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
+    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8) {
       // clipping mode: change clip plane depth
       // if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
-      const depthAziElev = this.scene.clipPlaneDepthAziElev.slice()
+      const depthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex].slice()
       // bound clip sqrt(3) = 1.73
       if (posChange > 0) {
         depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025)
@@ -10022,9 +10118,9 @@ export class Niivue {
       if (posChange < 0) {
         depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025)
       } // Math.max(-1.7,
-      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
-        this.scene.clipPlaneDepthAziElev = depthAziElev
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElev)
+      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0]) {
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
       }
       return
     }
@@ -10035,19 +10131,6 @@ export class Niivue {
       this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.9)
     }
     this.drawScene()
-  }
-
-  /**
-   * Deletes loaded thumbnail texture and frees memory.
-   * @internal
-   */
-  deleteThumbnail(): void {
-    if (!this.bmpTexture) {
-      return
-    }
-    this.gl.deleteTexture(this.bmpTexture)
-    this.bmpTexture = null
-    this.thumbnailVisible = false
   }
 
   /**
@@ -11411,6 +11494,7 @@ export class Niivue {
     if (txtHt <= 0) {
       return
     }
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     let margin = txtHt
     const fullHt = 3 * txtHt
     let barHt = txtHt
@@ -13072,10 +13156,21 @@ export class Niivue {
           30
         ])
       } else {
-        gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
+        // gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
+        const MAX_CLIP_PLANES = 6
+        // n.b. clipplane.a == 2.0 means no clipping
+        const arr = new Float32Array(4 * MAX_CLIP_PLANES).fill(2.0)
+        // const firstPlane = this.scene.clipPlane; // e.g. [-1.7e-16, -0.9396, -0.3420, 0.1]
+        for (let i = 0; i < this.scene.clipPlaneDepthAziElevs.length; i++) {
+          const dae = this.scene.clipPlaneDepthAziElevs[i]
+          const v = this.sph2cartDeg(dae[1] + 180, dae[2])
+          const planeI = [v[0], v[1], v[2], dae[0]]
+          arr.set(planeI, i * 4)
+        }
+        this.gl.uniform4fv(shader.uniforms.clipPlanes, arr)
       }
       gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
-
+      gl.uniform1i(shader.uniforms.isClipCutaway, this.opts.isClipPlanesCutaway ? 1 : 0)
       gl.bindVertexArray(object3D.vao)
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
       gl.bindVertexArray(this.unusedVAO)
@@ -13764,8 +13859,8 @@ export class Niivue {
       }
       shader.use(gl)
       if (shader.isCrosscut) {
-        gl.disable(gl.DEPTH_TEST) // mork
-        gl.disable(gl.CULL_FACE) // mork
+        gl.disable(gl.DEPTH_TEST)
+        gl.disable(gl.CULL_FACE)
         const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM)
         this.gl.uniform3fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2]])
       }
@@ -13801,14 +13896,10 @@ export class Niivue {
       gl.bindVertexArray(this.unusedVAO)
     }
 
-    // Restore defaults
-    gl.depthMask(true)
-    gl.disable(gl.BLEND)
-
     // -----------------------
-    // Pass 2: X-Ray overlay
+    // Pass 2: X-Ray Mesh
     // -----------------------
-    if (this.opts.meshXRay > 0.0) {
+    if (this.opts.meshXRay > 0.0 && !hasFibers) {
       gl.enable(gl.BLEND)
       gl.depthMask(false)
       gl.depthFunc(gl.ALWAYS) // ignore depth for x-ray
@@ -13857,6 +13948,9 @@ export class Niivue {
         gl.bindVertexArray(this.unusedVAO)
       }
     }
+    // Restore defaults
+    gl.depthMask(true)
+    gl.disable(gl.BLEND)
 
     this.readyForSync = true
   }
@@ -15119,7 +15213,7 @@ export class Niivue {
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.matCapTexture)
 
     this.gl.activeTexture(TEXTURE6_GRADIENT)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.gradientTexture)
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.gradientTexture)
   }
 
   /**
@@ -15214,11 +15308,10 @@ export class Niivue {
       this.drawLoadingText(this.opts.loadingText)
       return
     }
-
     // --- Dragging clip plane over 3D rendering
     if (
       this.uiData.isDragging &&
-      this.scene.clipPlaneDepthAziElev[0] < 1.8 &&
+      this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8 &&
       this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
     ) {
       const x = this.uiData.dragStart[0] - this.uiData.dragEnd[0]
@@ -15228,11 +15321,11 @@ export class Niivue {
       depthAziElev[1] = depthAziElev[1] % 360
       depthAziElev[2] += y
       if (
-        depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] ||
-        depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]
+        depthAziElev[1] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][1] ||
+        depthAziElev[2] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][2]
       ) {
-        this.scene.clipPlaneDepthAziElev = depthAziElev
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElev)
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
       }
     }
 
