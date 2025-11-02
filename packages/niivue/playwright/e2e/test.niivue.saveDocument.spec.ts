@@ -136,9 +136,10 @@ test('niivue saveDocument clipVolume', async ({ page }) => {
   await page.evaluate(async (testOptions) => {
     const nv = new Niivue({
       ...testOptions,
-      //clipThick: 0.42,
-      //clipVolumeLow: [0.46, 0.42, 0.31],
-      //clipVolumeHigh: [0.76, 0.73, 0.75]
+      rulerWidth: 2
+      // clipThick: 0.42,
+      // clipVolumeLow: [0.46, 0.42, 0.31],
+      // clipVolumeHigh: [0.76, 0.73, 0.75]
     })
     await nv.attachTo('gl')
     const volumeList = [
@@ -157,9 +158,10 @@ test('niivue saveDocument clipVolume', async ({ page }) => {
     if (typeof data === 'string') {
       const json = JSON.parse(data)
       const doc = NVDocument.loadFromJSON(json)
-      //expect(doc.opts.clipThick).toBe(0.42)
-      //expect(doc.opts.clipVolumeLow).toBe([0.46, 0.42, 0.31])
-      //expect(doc.opts.clipVolumeHigh).toBe([0.76, 0.73, 0.75])
+      expect(doc.opts.rulerWidth).toBe(2)
+      // expect(doc.opts.clipThick).toBe(0.42)
+      // expect(doc.opts.clipVolumeLow).toBe([0.46, 0.42, 0.31])
+      // expect(doc.opts.clipVolumeHigh).toBe([0.76, 0.73, 0.75])
     } else {
       throw new Error('NVDocument not correctly encoded')
     }

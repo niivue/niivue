@@ -187,8 +187,8 @@ test('opts watching - array and object changes', async ({ page }) => {
     nv.opts.backColor = [1, 0, 0, 1]
     nv.opts.crosshairColor = [0, 1, 0, 1]
     nv.opts.fontColor = [0, 0, 1, 1]
-    //nv.opts.clipVolumeLow = [0.1, 0.1, 0.1]
-    //nv.opts.clipVolumeHigh = [0.9, 0.9, 0.9]
+    // nv.opts.clipVolumeLow = [0.1, 0.1, 0.1]
+    // nv.opts.clipVolumeHigh = [0.9, 0.9, 0.9]
 
     // Test string changes
     nv.opts.loadingText = 'Custom loading...'
