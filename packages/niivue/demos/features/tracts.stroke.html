@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Tractography groups</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <header>
+      <div class="dropdown">
+        <button class="dropbtn">
+          File
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="SaveBitmap">Screen Shot</a>
+          <a class="viewBtn" id="ShowHeader">Show Header</a>
+          <a class="linker" href="https://github.com/niivue/niivue">About</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn" data-toggle="dropdown">
+          View
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="#1">Show Fibers</a>
+          <a class="viewBtn" id="#2">Show Volume</a>
+          <a class="viewBtn" id="#3">Show Fibers and Volume</a>
+          <a href="#" class="viewBtn divider" id="|Axial">Axial</a>
+          <a class="viewBtn" id="|Sagittal">Sagittal</a>
+          <a class="viewBtn" id="|Coronal">Coronal</a>
+          <a class="viewBtn" id="|Render">Render</a>
+          <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
+          <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
+          <a class="viewBtn divider dropdown-item-checked" id="Colorbar">Colorbar</a>
+          <a class="viewBtn" id="Radiological">Radiological</a>
+          <a class="viewBtn" id="SagittalNoseLeft">Sagittal Nose Left</a>
+          <a class="viewBtn" id="BackColor">Dark Background</a>
+          <a class="viewBtn dropdown-item-checked" id="ClipDark">Clip Dark</a>
+          <a class="viewBtn dropdown-item-checked" id="OrientInfo">Orientation Info</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Fiber
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="Cylinders">Cylinders</a>
+          <a class="viewBtn" id="XRay">XRay</a>
+          <a class="viewBtn" id="Script">Set Visibility...</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Render
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="*0">Slices</a>
+          <a class="viewBtn" id="*1">Matte</a>
+          <a class="viewBtn" id="*2">Glossy</a>
+          <a class="viewBtn dropdown-item-checked divider" id="Crosshair">Crosshair</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Clip
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="!1">1</a>
+          <a class="viewBtn" id="!2">2</a>
+          <a class="viewBtn" id="!3">3</a>
+          <a class="viewBtn" id="!4">4</a>
+          <a class="viewBtn" id="!5">5</a>
+          <a class="viewBtn" id="!6">6</a>
+          <a class="viewBtn divider" id="@0">Transparent</a>
+          <a class="viewBtn" id="@1">Shade Outside</a>
+          <a class="viewBtn" id="@2">Shade Inside</a>
+          
+          <a class="viewBtn divider" id="Cutaway">Cutaway</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Drag
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="^contrast">Contrast</a>
+          <a class="viewBtn" id="^measurement">Measurement</a>
+          <a class="viewBtn" id="^pan">Pan</a>
+          <a class="viewBtn" id="^none">None</a>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">
+          Volume
+          <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn dropdown-item-checked" id="_mni152">mni152</a>
+          <a class="viewBtn" id="_mni152hr">mni152 high-resolution</a>
+          <a class="viewBtn" id="_M2208_T2w">stroke</a>
+        </div>
+      </div>
+    </header>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer id="intensity">&nbsp;</footer>
+<dialog id="editorDialog">
+  <form method="dialog">
+    <textarea id="scriptArea"
+              spellcheck="false"
+              aria-label="Script editor"
+              cols="80"
+              rows="24"></textarea>
+    <p><button type="submit" id="okBtn">Submit</button>
+  </form>
+</dialog>
+  </body>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  let fibervals = {
+    scores: { AF_L: 0.99, CS_P_L: 0.96, CPT_F_L: 0.84, CPT_P_L: 0.88},
+    cal_min: 0.8,
+    cal_max: 1,
+    colormap: "inferno"
+  }
+  const isTouchDevice =
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    navigator.msMaxTouchPoints > 0
+  function handleIntensityChange(data) {
+    document.getElementById("intensity").innerHTML =
+      "&nbsp;&nbsp;" + data.string
+  }
+  var nv1 = new niivue.Niivue({
+    dragAndDropEnabled: true,
+    show3Dcrosshair: true,
+    onLocationChange: handleIntensityChange,
+    onImageLoaded: handleImageLoaded,
+    backColor: [1, 1, 1, 1],
+  })
+  nv1.opts.isOrientCube = true
+  nv1.opts.isColorbar = true
+  nv1.isAlphaClipDark = true
+  nv1.setRadiologicalConvention(false)
+  await nv1.attachTo("gl1")
+  nv1.setClipPlane([0.3, 270, 0])
+  nv1.setRenderAzimuthElevation(120, 10)
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  nv1.setSliceMM(true)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  nv1.opts.yoke3Dto2DZoom = true
+  var volumeList1 = [{ url: "../images/mni152.nii.gz" }]
+  await nv1.loadVolumes(volumeList1)
+  let meshXRay = 0.0
+  let isCylinders = true
+  async function setFiberProperties() {
+      nv1.opts.meshXRay = meshXRay
+      const fiberRadius = isCylinders ? 0.5 : 0
+      nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", fiberRadius)
+      await nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", "dpg0")
+  }
+  async function setFiberColors() {
+    const ngroups = nv1.meshes[0].groups.length
+    let c_min = fibervals.cal_min
+    let c_max = fibervals.cal_max
+    let cmaps = nv1.colormaps()
+    if (!cmaps.includes(fibervals.colormap)) {
+      console.log(`Unknown colormap ${fibervals.colormap}`)
+      fibervals.colormap = "inferno"
+    }
+    nv1.meshes[0].colormap = fibervals.colormap
+    const f32 = new Float32Array(ngroups).fill(0)
+    // For each score key, find the matching group.id and set f32[index]
+    for (const [key, value] of Object.entries(fibervals.scores)) {
+      const idx = nv1.meshes[0].groups.findIndex(g => g.id === key)
+      if (idx !== -1) f32[idx] = value
+    }
+    const mn = f32.reduce((acc, current) => Math.min(acc, current))
+    const mx = f32.reduce((acc, current) => Math.max(acc, current))
+    if (!Number.isFinite(c_min) || !Number.isFinite(c_max) || c_max < c_min) {
+      c_min = mn
+      c_max = mx
+    }
+    nv1.meshes[0].dpg = [{
+      id: 'z',
+      vals: f32,
+      global_min: mn,
+      global_max: mx,
+      cal_min: c_min,
+      cal_max: c_max,
+    }]
+    await setFiberProperties()
+  }
+  async function addFibers() {
+    await nv1.loadMeshes([{ url: "../images/yeh2022.trx"}])
+    console.log("Regions:", nv1.meshes[0].groups.map(g => g.id).join(", "))
+    await setFiberColors()
+  }
+  function toggleGroup(id) {
+    let buttons = document.getElementsByClassName("viewBtn")
+    let char0 = id.charAt(0)
+    for (let i = 0; i < buttons.length; i++) {
+      if (buttons[i].id.charAt(0) !== char0) continue
+      buttons[i].classList.remove("dropdown-item-checked")
+      if (buttons[i].id === id)
+        buttons[i].classList.add("dropdown-item-checked")
+    }
+  } // toggleGroup()
+  async function onButtonClick(event) {
+    if (isTouchDevice) {
+      console.log("Touch device: click menu to close menu")
+    }
+    if (event.target.id === "SaveBitmap") {
+      nv1.saveScene("ScreenShot.png")
+      return
+    }
+    if (event.target.id === "ShowHeader") {
+      alert(nv1.volumes[0].hdr.toFormattedString())
+      return
+    }
+    if (event.target.id === "Colorbar") {
+      nv1.opts.isColorbar = !nv1.opts.isColorbar
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      nv1.drawScene()
+      return
+    }
+    if (event.target.id === "SagittalNoseLeft") {
+      nv1.opts.sagittalNoseLeft = !nv1.opts.sagittalNoseLeft
+      nv1.drawScene()
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      return
+    }
+    if (event.target.id === "ClipDark") {
+      nv1.isAlphaClipDark = !nv1.isAlphaClipDark
+      nv1.drawScene()
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      return
+    }
+    if (event.target.id === "Cutaway") {
+      nv1.opts.isClipPlanesCutaway = !nv1.opts.isClipPlanesCutaway
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      nv1.drawScene()
+      return
+    }
+    if (event.target.id === "Radiological") {
+      nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      nv1.drawScene()
+      return
+    }
+    if (event.target.id === "Crosshair") {
+      nv1.opts.show3Dcrosshair = !nv1.opts.show3Dcrosshair
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      nv1.drawScene()
+    }
+    if (event.target.id.charAt(0) === "*") {
+      const index = parseInt(event.target.id.substr(1))
+      let isGlossy = -1 // slices
+      if (index === 1)
+        isGlossy = 0
+      else if (index === 2)
+        isGlossy = 0.6
+      await nv1.setVolumeRenderIllumination(isGlossy)
+      nv1.updateGLVolume()
+      toggleGroup(event.target.id)
+      return
+    }
+    if (event.target.id.charAt(0) === "@") {
+      const index = parseInt(event.target.id.substr(1))
+      let clr = nv1.opts.clipPlaneColor.slice()
+      switch (index) {
+        case 0:
+          clr[3] = 0.0
+          break
+        case 1:
+          clr[3] = 0.5
+          break
+        case 2:
+          clr[3] = -0.5
+          break
+      }
+      nv1.setClipPlaneColor(clr)
+      toggleGroup(event.target.id)
+    }
+    if (event.target.id.charAt(0) === "!") {
+      const index = parseInt(event.target.id.substr(1))
+      let planes = [[2.0, 180, 20]]
+      switch (index) {
+        case 1:
+          planes = [[0.1, 180, 20]]
+          break
+        case 2:
+          planes = [
+            [0.1, 180, 20],
+            [0.1, 0, -20],
+          ]
+          break
+        case 3:
+          planes = [
+            [0.0, 90,  0], //right center
+            [0.0, 0, -20], //posterior oblique
+            [0.1, 0, -90], //inferior
+          ]
+          break
+        case 4:
+          planes = [
+            [0.3, 270,  0], //left
+            [0.3, 90,  0], //right
+            [0.0, 180,  0], //anterior
+            [0.1, 0,  0], //posterior
+          ]
+          break
+        case 5:
+          planes = [
+            [0.4, 270,  0], //left
+            [0.3, 90,  0], //right
+            [0.4, 180,  0], //anterior
+            [0.3, 0,  0], //posterior
+            [0.1, 0, -90], //inferior
+          ]
+          break
+        case 6:
+          planes = [
+            [0.4, 270,  0], //left
+            [-0.1, 90,  0], //right
+            [0.4, 180,  0], //anterior
+            [0.2, 0,  0], //posterior
+            [0.1, 0, -90], //inferior
+            [0.3, 0, 90] //superior
+          ]
+          break
+      }
+      nv1.setClipPlanes(planes)
+      toggleGroup(event.target.id)
+      return
+    }
+    if (event.target.id.charAt(0) === "|") {
+      //sliceType
+      if (event.target.id === "|Axial") nv1.setSliceType(nv1.sliceTypeAxial)
+      if (event.target.id === "|Coronal")
+        nv1.setSliceType(nv1.sliceTypeCoronal)
+      if (event.target.id === "|Sagittal")
+        nv1.setSliceType(nv1.sliceTypeSagittal)
+      if (event.target.id === "|Render") nv1.setSliceType(nv1.sliceTypeRender)
+      if (event.target.id === "|MultiPlanar") {
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER
+        nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      }
+      if (event.target.id === "|MultiPlanarRender") {
+        nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+        nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      }
+      toggleGroup(event.target.id)
+    } //sliceType
+    if (event.target.id === "OrientInfo") {
+      nv1.opts.isOrientationTextVisible = !nv1.opts.isOrientationTextVisible
+      nv1.opts.isOrientCube = !nv1.opts.isOrientCube
+      nv1.drawScene()
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      return
+    }
+    if (event.target.id === "XRay") {
+      meshXRay = (meshXRay === 0) ? 1/100 : 0
+      setFiberProperties()
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      return
+    }
+    if (event.target.id === "Cylinders") {
+      isCylinders = !isCylinders
+      setFiberProperties()
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      return
+    }
+    if (event.target.id === "BackColor") {
+      if (nv1.opts.backColor[0] < 0.5) nv1.opts.backColor = [1, 1, 1, 1]
+      else nv1.opts.backColor = [0, 0, 0, 1]
+      nv1.drawScene()
+      event.srcElement.classList.toggle("dropdown-item-checked")
+      return
+    }
+    if (event.target.id === "Script") {
+      scriptArea.value = JSON.stringify(fibervals, null, 2)
+      editorDialog.show()
+      return
+    }
+    if (event.target.id.charAt(0) === "#") {
+      //firber/mesh visibility
+      const index = parseInt(event.target.id.substr(1))
+      nv1.meshes[0].opacity = (index & 1) ? 1 : 0
+      nv1.volumes[0].opacity = (index & 2) ? 1 : 0
+      nv1.updateGLVolume()
+      toggleGroup(event.target.id)
+      return
+    }
+    if (event.target.id.charAt(0) === "^") {
+      //drag mode
+      let s = event.target.id.substr(1)
+      switch (s) {
+        case "none":
+          nv1.opts.dragMode = nv1.dragModes.none
+          break
+        case "contrast":
+          nv1.opts.dragMode = nv1.dragModes.contrast
+          break
+        case "measurement":
+          nv1.opts.dragMode = nv1.dragModes.measurement
+          break
+        case "pan":
+          nv1.opts.dragMode = nv1.dragModes.pan
+          break
+      }
+      toggleGroup(event.target.id)
+    } else if (event.target.id.charAt(0) === "_") {
+      //example images
+      nv1.meshes = []; //close open meshes
+      let s = event.target.id.substr(1)
+      let root = "https://niivue.github.io/niivue-demo-images/"
+      let img = root + s + ".nii.gz"
+      if (s === "mni152")
+        img = "../images/mni152.nii.gz"
+      console.log(s, "Loading " + img)
+      volumeList1[0].url = img
+      nv1.loadVolumes(volumeList1)
+      toggleGroup(event.target.id)
+      nv1.updateGLVolume()
+    }
+  } // onButtonClick()
+  var buttons = document.getElementsByClassName("viewBtn")
+  for (let i = 0; i < buttons.length; i++)
+    buttons[i].addEventListener("click", onButtonClick, false)
+  // provide a listing of available colormaps:
+  console.log("Colormaps:", nv1.colormaps().join(", "))
+  //set menu groups
+  document.getElementById("!2").click()
+  document.getElementById("*1").click()
+  document.getElementById("@1").click()
+  document.getElementById("^pan").click()
+  async function handleImageLoaded(data) {
+    nv1.volumes[0].colorbarVisible = false
+    await addFibers()
+    document.getElementById("#3").click()
+  }
+  okBtn.addEventListener('click', (e) => {
+    fibervals = JSON.parse(scriptArea.value )
+    setFiberColors()
+  })
+</script>
