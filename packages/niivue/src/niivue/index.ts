@@ -11169,6 +11169,7 @@ export class Niivue {
     if (!this.rectShader) {
       throw new Error('rectShader undefined')
     }
+    this.gl.disable(this.gl.CULL_FACE)
     if (!this.opts.selectionBoxIsOutline) {
       this.rectShader.use(this.gl)
       this.gl.enable(this.gl.BLEND)
@@ -13784,6 +13785,7 @@ export class Niivue {
     if (this.opts.meshXRay > 0.0) {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix!, normalMatrix!)
     }
+    this.gl.disable(this.gl.CULL_FACE)
 
     this.draw3DLabels(mvpMatrix, relativeLTWH, false)
 
