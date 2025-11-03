@@ -11932,7 +11932,7 @@ export class Niivue {
     clipDepth = 0,
     azimuth = 0,
     elevation = 0,
-    isRadiolgical: boolean
+    isRadiolgical: boolean = false
   ): MvpMatrix2D {
     const gl = this.gl
     gl.viewport(
@@ -11953,8 +11953,8 @@ export class Niivue {
     }
     const scale = 2 * Math.max(Math.abs(mn[2]), Math.abs(mx[2])) // 3rd dimension is near/far from camera
     const projectionMatrix = mat4.create()
-    let near = 0.01
-    let far = scale * 8.0
+    let far = 0.01
+    let near = scale * 8.0
     if (clipTolerance !== Infinity) {
       let r = isRadiolgical
       if (elevation === 0 && (azimuth === 0 || azimuth === 180)) {
@@ -12545,10 +12545,10 @@ export class Niivue {
 
     if (whratio < 1) {
       // tall window: "portrait" mode, width constrains
-      mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 0.01, scale * 8.0)
+      mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 8.0, scale * 0.01)
     } else {
       // wide window: "landscape" mode, height constrains
-      mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 0.01, scale * 8.0)
+      mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 8.0, scale * 0.01)
     }
 
     const modelMatrix = mat4.create()
@@ -13193,6 +13193,8 @@ export class Niivue {
     const gl = this.gl
     gl.enable(gl.CULL_FACE)
     gl.cullFace(gl.BACK)
+    // turn off depth test so letters overwrite cube
+    gl.disable(gl.DEPTH_TEST)
     this.orientCubeShader!.use(this.gl)
     gl.bindVertexArray(this.orientCubeShaderVAO)
     const modelMatrix = mat4.create()
@@ -13753,7 +13755,7 @@ export class Niivue {
 
     // Flip Y for GL viewport
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1]
-    gl.clearDepth(0.0) // reset depth to nearest=0
+    // gl.clearDepth(0.0) // reset depth to nearest=0
     gl.clear(gl.DEPTH_BUFFER_BIT)
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.ALWAYS)
@@ -13832,14 +13834,15 @@ export class Niivue {
 
     // Use inverted depth convention (matches current MVP math)
     if (isDepthTest) {
-      gl.depthFunc(gl.GREATER) // farther depth wins
+      gl.depthFunc(gl.LEQUAL)
     } else {
       gl.depthFunc(gl.ALWAYS)
     }
 
     gl.enable(gl.CULL_FACE)
     gl.cullFace(gl.BACK) // back-face culling
-    gl.frontFace(gl.CCW) // CCW winding = front
+    // gl.frontFace(gl.CCW) // CCW winding = front
+
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
     let hasFibers = false
@@ -14030,8 +14033,8 @@ export class Niivue {
     const color = [...this.opts.crosshairColor]
     if (isDepthTest) {
       gl.disable(gl.BLEND)
-      // gl.depthFunc(gl.LESS); //pass if LESS than incoming value
-      gl.depthFunc(gl.GREATER)
+      gl.depthFunc(gl.LEQUAL) // pass if LESS than incoming value
+      // gl.depthFunc(gl.GREATER)
     } else {
       gl.enable(gl.BLEND)
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)

@@ -115,7 +115,7 @@ const kRenderInit = `void main() {
 	}
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	vec3 start = vColor;
-	gl_FragDepth = 0.0;
+	gl_FragDepth = 1.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
 	vec3 dir = normalize(backPosition - start);
@@ -389,7 +389,7 @@ out vec4 fColor;
   `
 	void main() {
 	vec3 start = vColor;
-	gl_FragDepth = 0.0;
+	gl_FragDepth = 1.0;
 	vec3 backPosition = GetBackPosition(start);
 	vec3 dir = normalize(backPosition - start);
 	//clipVolumeStart(start, backPosition);
@@ -2070,7 +2070,7 @@ out vec4 fColor;
 void main() {
 	int id = 254;
 	vec3 start = vColor;
-	gl_FragDepth = 0.0;
+	gl_FragDepth = 1.0;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
 	float fid = float(id & 255)/ 255.0;
 	vec3 backPosition = GetBackPosition(start);

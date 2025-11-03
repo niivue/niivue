@@ -180,7 +180,6 @@ export const ThresholdingDemo = ({ nvOpts = {} }) => {
         ) {
           const theme = document.documentElement.getAttribute("data-theme")
           const isDark = theme === "dark"
-          console.log(">>>>>",isDark)
           if (niivueRef.current) {
             niivueRef.current.opts.backColor = isDark ? [0, 0, 0, 1] : [1, 1, 1, 1]
             niivueRef.current.drawScene() // refresh render
