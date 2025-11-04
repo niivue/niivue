@@ -1,4 +1,4 @@
-import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import packageJson from '../../package.json' with { type: 'json' }
 import { orientCube } from '@/orientCube'
 import { NiivueObject3D } from '@/niivue-object3D'
@@ -4563,6 +4563,7 @@ export class Niivue {
    * @example
    * niivue = new Niivue()
    * xyz = niivue.sph2cartDeg(42, 42)
+   * @internal
    */
   sph2cartDeg(azimuth: number, elevation: number): number[] {
     // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesian
@@ -5608,22 +5609,10 @@ export class Niivue {
       // await this.init();
     }
     this.meshes = []
-    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
-    // if more than one mesh, then fetch them all simultaneously
-    // using addMeshesFromUrl (note the "s" in "Meshes")
-    // if (meshList.length > 1) {
     await this.addMeshesFromUrl(meshList)
     this.updateGLVolume()
     this.drawScene()
     return this
-    // }
-
-    // await this.addMeshFromUrl(meshList[0])
-    // this.updateGLVolume()
-    // this.drawScene()
-    // return this
   }
 
   /**
@@ -5720,9 +5709,6 @@ export class Niivue {
   loadConnectome(json: Connectome | LegacyConnectome): this {
     this.drawScene()
     this.meshes = []
-    // this.gl.clearColor(0.0, 0.0, 0.0, 1.0)
-    // this.gl.clear(this.gl.COLOR_BUFFER_BIT)
-    // this.clearBounds(this.gl.COLOR_BUFFER_BIT)
     const mesh = this.loadConnectomeAsMesh(json)
     this.addMesh(mesh)
     this.drawScene()
@@ -12514,19 +12500,14 @@ export class Niivue {
 
   /**
    * Build MVP, Model, and Normal matrices for rendering.
-   * @param _unused - reserved
-   * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
-   * @param azimuth - azimuth rotation in degrees
-   * @param elevation - elevation rotation in degrees
-   * @param flipX - whether to mirror the X axis (default true for radiological convention)
+   * Note: 3D MVP is identical for radiological and neurological conventions.
+   * @param _unused - Reserved for future use.
+   * @param leftTopWidthHeight - Viewport rectangle [x, y, w, h] in device pixels.
+   * @param azimuth - Azimuth rotation in degrees.
+   * @param elevation - Elevation rotation in degrees.
+   * @internal
    */
-  calculateMvpMatrix(
-    _unused: unknown,
-    leftTopWidthHeight = [0, 0, 0, 0],
-    azimuth: number,
-    elevation: number,
-    flipX = true
-  ): mat4[] {
+  calculateMvpMatrix(_unused: unknown, leftTopWidthHeight = [0, 0, 0, 0], azimuth: number, elevation: number): mat4[] {
     const gl = this.gl
 
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
@@ -12553,9 +12534,7 @@ export class Niivue {
 
     const modelMatrix = mat4.create()
 
-    if (flipX) {
-      modelMatrix[0] = -1 // mirror X coordinate (radiological convention)
-    }
+    modelMatrix[0] = -1 // mirror X coordinate
 
     // push the model away from the camera so camera not inside model
     const translateVec3 = vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
@@ -12612,32 +12591,35 @@ export class Niivue {
   /**
    * Returns the normalized near-to-far ray direction for the given view angles.
    * Ensures components are nonzero to avoid divide-by-zero errors.
+   * n.b. volumes can have shear (see shear.html), so invert instead of transpose
    * @internal
    */
   calculateRayDirection(azimuth: number, elevation: number): vec3 {
+    // direction in clip/View space we want to map back (note: vec3 used for "direction")
+    const dirClip = vec3.fromValues(0, 0, -1)
     const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
-    // from NIfTI spatial coordinates (X=right, Y=anterior, Z=superior) to WebGL (screen X=right,Y=up, Z=depth)
-    const projectionMatrix = mat4.fromValues(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1)
-    const mvpMatrix = mat4.create()
-    mat4.multiply(mvpMatrix, projectionMatrix, modelMatrix)
-    const inv = mat4.create()
-    mat4.invert(inv, mvpMatrix)
-    const rayDir4 = vec4.fromValues(0, 0, -1, 1)
-    vec4.transformMat4(rayDir4, rayDir4, inv)
-    const rayDir = vec3.fromValues(rayDir4[0], rayDir4[1], rayDir4[2])
-    vec3.normalize(rayDir, rayDir)
-    // defuzz, avoid divide by zero
+    const proj3 = mat3.fromValues(1, 0, 0, 0, -1, 0, 0, 0, -1)
+    const dirAfterProj = vec3.create()
+    vec3.transformMat3(dirAfterProj, dirClip, proj3)
+    const model3 = mat3.create()
+    mat3.fromMat4(model3, modelMatrix)
+    const invModel3 = mat3.create()
+    if (!mat3.invert(invModel3, model3)) {
+      // fallback: if not invertible, return a sensible default (e.g. unit Z)
+      return vec3.fromValues(0, 0, 1)
+    }
+    // worldRay = invModel3 * dirAfterProj
+    const worldRay = vec3.create()
+    vec3.transformMat3(worldRay, dirAfterProj, invModel3)
+    vec3.normalize(worldRay, worldRay)
+    // small defuzz to avoid exact zero components
     const tiny = 0.00005
-    if (Math.abs(rayDir[0]) < tiny) {
-      rayDir[0] = tiny
+    for (let i = 0; i < 3; i++) {
+      if (Math.abs(worldRay[i]) < tiny) {
+        worldRay[i] = Math.sign(worldRay[i]) * tiny || tiny
+      }
     }
-    if (Math.abs(rayDir[1]) < tiny) {
-      rayDir[1] = tiny
-    }
-    if (Math.abs(rayDir[2]) < tiny) {
-      rayDir[2] = tiny
-    }
-    return rayDir
+    return worldRay
   }
 
   /**
@@ -13825,8 +13807,7 @@ export class Niivue {
         this.volumeObject3D,
         undefined,
         this.scene.renderAzimuth,
-        this.scene.renderElevation,
-        true // no flipX for meshes
+        this.scene.renderElevation
       )
     }
 
@@ -15599,7 +15580,7 @@ export class Niivue {
         const actualY = actualScale[1] * ltwh[4]
         const actualZ = actualScale[2] * ltwh[4]
 
-        // ✅ All draw calls offset by regionX/regionY
+        // All draw calls offset by regionX/regionY
         if (isDrawColumn) {
           this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], SLICE_TYPE.AXIAL, NaN, [actualX, actualY])
           this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad, sX, sZ], SLICE_TYPE.CORONAL, NaN, [
