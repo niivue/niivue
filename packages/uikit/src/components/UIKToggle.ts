@@ -24,6 +24,10 @@ export interface UIKToggleConfig {
   type?: 'checkbox' | 'switch'
   /** Label position: 'left' or 'right' */
   labelPosition?: 'left' | 'right'
+  /** Label offset from bounds (default: 10) */
+  labelOffset?: number
+  /** Toggle offset from right edge (default: 10) */
+  toggleOffset?: number
 }
 
 /**
@@ -48,6 +52,10 @@ export interface UIKToggleStyle {
   borderThickness?: number
   /** Corner radius for rounded appearance */
   cornerRadius?: number
+  /** Text outline color for better readability */
+  textOutlineColor?: Color
+  /** Text outline thickness */
+  textOutlineThickness?: number
 }
 
 /**
@@ -82,7 +90,9 @@ export class UIKToggle {
     disabledColor: [0.5, 0.5, 0.5, 0.5],
     hoverColor: [0.3, 0.8, 1.0, 1.0],
     borderThickness: 1,
-    cornerRadius: 3
+    cornerRadius: 8,
+    textOutlineColor: [0.0, 0.0, 0.0, 1.0],
+    textOutlineThickness: 3
   }
 
   constructor(renderer: UIKRenderer, config: UIKToggleConfig) {
@@ -91,6 +101,8 @@ export class UIKToggle {
       enabled: true,
       type: 'checkbox',
       labelPosition: 'right',
+      labelOffset: 10,
+      toggleOffset: 10,
       ...config
     }
     
@@ -205,14 +217,17 @@ export class UIKToggle {
     const [x, y, width, height] = this.config.bounds
     
     if (this.config.type === 'switch') {
-      // Switch is wider - use more of the available space
-      const toggleWidth = Math.min(width * 0.8, 48) // Increased from 0.4 to 0.8
-      const toggleHeight = Math.min(height * 0.8, 20) // Increased height proportion
-      return [x + (width - toggleWidth) / 2, y + (height - toggleHeight) / 2, toggleWidth, toggleHeight]
+      // Switch is wider - position it on the right side of the bounds area
+      const toggleWidth = Math.min(60, 48) // Fixed width for consistency
+      const toggleHeight = Math.min(height * 0.8, 20)
+      // Position toggle on the right side, using configurable offset
+      const toggleX = x + width - toggleWidth - (this.config.toggleOffset || 10)
+      return [toggleX, y + (height - toggleHeight) / 2, toggleWidth, toggleHeight]
     } else {
-      // Checkbox is square - make it larger and more prominent
-      const size = Math.min(width * 0.6, height * 0.8, 18) // Increased from 0.3 to 0.6
-      return [x + (width - size) / 2, y + (height - size) / 2, size, size]
+      // Checkbox is square - position it on the right side
+      const size = Math.min(18, height * 0.8)
+      const toggleX = x + width - size - (this.config.toggleOffset || 10)
+      return [toggleX, y + (height - size) / 2, size, size]
     }
   }
 
@@ -266,10 +281,15 @@ export class UIKToggle {
     const [toggleX, toggleY, toggleWidth, toggleHeight] = toggleBounds
     const style = this.config.style!
     
-    // Draw switch background (rounded rectangle)
+    // Draw switch background using proper rounded rectangle
     const cornerRadius = toggleHeight / 2
-    this.drawRoundedRect(toggleX, toggleY, toggleWidth, toggleHeight, 
-                        cornerRadius, backgroundColor, borderColor)
+    this.renderer.drawRoundedRect({
+      bounds: [toggleX, toggleY, toggleWidth, toggleHeight],
+      fillColor: backgroundColor,
+      outlineColor: borderColor,
+      cornerRadius: cornerRadius,
+      thickness: style.borderThickness!
+    })
     
     // Draw thumb (circle that slides)
     const thumbRadius = (toggleHeight - 4) / 2
@@ -296,9 +316,14 @@ export class UIKToggle {
     const [toggleX, toggleY, toggleWidth, toggleHeight] = toggleBounds
     const style = this.config.style!
     
-    // Draw checkbox background
-    this.drawRoundedRect(toggleX, toggleY, toggleWidth, toggleHeight,
-                        style.cornerRadius!, backgroundColor, borderColor)
+    // Draw checkbox background using proper rounded rectangle
+    this.renderer.drawRoundedRect({
+      bounds: [toggleX, toggleY, toggleWidth, toggleHeight],
+      fillColor: backgroundColor,
+      outlineColor: borderColor,
+      cornerRadius: style.cornerRadius!,
+      thickness: style.borderThickness!
+    })
     
     // Draw checkmark if checked
     if (this.animationProgress > 0.1) {
@@ -339,12 +364,26 @@ export class UIKToggle {
     const [toggleX, toggleY, toggleWidth, toggleHeight] = toggleBounds
     
     let labelX: number
-    const labelY = y + height / 2 - 6 // Center vertically
+    const labelY = y + height / 2 + 2 // Move text down slightly to align better with toggle center
     
     if (this.config.labelPosition === 'left') {
-      labelX = x
+      // Position label at the left edge of the bounds area using configurable offset
+      labelX = x + (this.config.labelOffset || 10)
     } else {
-      labelX = toggleX + toggleWidth + 10
+      labelX = toggleX + toggleWidth + 12 // More space from toggle
+    }
+    
+    // Configure font outline for enhanced medical readability
+    if (this.config.font) {
+      // Use medical imaging optimized outline for toggle labels
+      this.config.font.setOutlineConfig({
+        enabled: true,
+        width: 0.2,                     // Moderate outline width
+        color: [0.0, 0.0, 0.0, 0.85],  // Semi-transparent black
+        style: 'solid',                 // Clean solid outline
+        softness: 0.15,                 // Slight softness for smooth edges
+        offset: [0, 0]                  // No offset for clean look
+      })
     }
     
     this.renderer.drawRotatedText({
@@ -352,7 +391,10 @@ export class UIKToggle {
       xy: [labelX, labelY],
       str: this.config.label,
       color: textColor,
-      scale: 0.9
+      scale: 0.025,
+      // Legacy parameters for backward compatibility (handled by font config now)
+      outlineColor: this.config.style?.textOutlineColor ?? this.defaultStyle.textOutlineColor!,
+      outlineThickness: this.config.style?.textOutlineThickness ?? this.defaultStyle.textOutlineThickness!
     })
   }
 
@@ -361,45 +403,13 @@ export class UIKToggle {
    */
   private drawRoundedRect(x: number, y: number, width: number, height: number,
                          radius: number, fillColor: Color, borderColor: Color): void {
-    // For now, draw as regular rectangle with border
-    // TODO: Implement proper rounded rectangle rendering
-    
-    // Draw filled rectangle
-    this.renderer.drawLine({
-      startEnd: [x, y + height/2, x + width, y + height/2],
-      thickness: height,
-      color: fillColor
-    })
-    
-    // Draw border
-    const borderThickness = this.config.style!.borderThickness!
-    
-    // Top border
-    this.renderer.drawLine({
-      startEnd: [x, y, x + width, y],
-      thickness: borderThickness,
-      color: borderColor
-    })
-    
-    // Bottom border
-    this.renderer.drawLine({
-      startEnd: [x, y + height, x + width, y + height],
-      thickness: borderThickness,
-      color: borderColor
-    })
-    
-    // Left border
-    this.renderer.drawLine({
-      startEnd: [x, y, x, y + height],
-      thickness: borderThickness,
-      color: borderColor
-    })
-    
-    // Right border
-    this.renderer.drawLine({
-      startEnd: [x + width, y, x + width, y + height],
-      thickness: borderThickness,
-      color: borderColor
+    // Use the renderer's proper rounded rectangle implementation
+    this.renderer.drawRoundedRect({
+      bounds: [x, y, width, height],
+      fillColor: fillColor,
+      outlineColor: borderColor,
+      cornerRadius: radius,
+      thickness: this.config.style!.borderThickness!
     })
   }
 

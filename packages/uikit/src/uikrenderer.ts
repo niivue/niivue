@@ -15,6 +15,8 @@ import triangleVert from "./shaders/vert/triangle.vert.glsl"
 import triangleFrag from "./shaders/frag/triangle.frag.glsl"
 import rotatedFontVert from "./shaders/vert/rotated-font.vert.glsl"
 import rotatedFontFrag from "./shaders/frag/rotated-font.frag.glsl"
+import bitmapVert from "./shaders/vert/bitmap.vert.glsl"
+import bitmapFrag from "./shaders/frag/bitmap.frag.glsl"
 import { Vec4, Color, LineTerminator, LineStyle, Vec2, RoundedRectConfig } from "./types.js"
 import { UIKFont } from "./assets/uikfont.js"
 
@@ -29,6 +31,7 @@ export class UIKRenderer {
   private colorbarShader: UIKShader
   private projectedLineShader: UIKShader
   private ellipticalFillShader: UIKShader
+  private bitmapShader: UIKShader
   private genericVAO: WebGLVertexArrayObject
   private triangleVertexBuffer: WebGLBuffer
 
@@ -45,6 +48,7 @@ export class UIKRenderer {
     this.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
     this.projectedLineShader = new UIKShader(gl, projectedLineVert, solidColorFrag)
     this.ellipticalFillShader = new UIKShader(gl, ellipseVert, ellipseFrag)
+    this.bitmapShader = new UIKShader(gl, bitmapVert, bitmapFrag)
 
     // Create VAO for this specific WebGL context
       const rectStrip = [
@@ -76,7 +80,7 @@ export class UIKRenderer {
       gl.enableVertexAttribArray(0)
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
 
-      gl.bindVertexArray(null)
+      // CRITICAL FIX: Set up texture coordinates WHILE VAO is still bound
       const texCoordData = [
         1.0,
         1.0, // Top-right
@@ -96,7 +100,7 @@ export class UIKRenderer {
         gl.STATIC_DRAW
       )
 
-      // Assign a_texcoord (location = 1)
+      // Assign a_texcoord (location = 1) - WHILE VAO IS BOUND
       gl.enableVertexAttribArray(1)
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0)
 
@@ -576,12 +580,40 @@ export class UIKRenderer {
     gl.disable(gl.DEPTH_TEST)
     gl.disable(gl.CULL_FACE)
 
-    // Uniforms
+    // Get outline configuration from font (prioritize font config over parameters)
+    const outlineConfig = font.getOutlineConfig()
+    const finalOutlineColor = outlineConfig.enabled ? outlineConfig.color : outlineColor
+    const finalOutlineThickness = outlineConfig.enabled ? outlineConfig.width * 10 : outlineThickness
+
+    // Basic uniforms
     gl.uniform4fv(shader.uniforms.fontColor, color as Float32List)
-    gl.uniform4fv(shader.uniforms.outlineColor, outlineColor as Float32List)
-    gl.uniform1f(shader.uniforms.outlineThickness, outlineThickness)
+    gl.uniform4fv(shader.uniforms.outlineColor, finalOutlineColor as Float32List)
+    gl.uniform1f(shader.uniforms.outlineThickness, finalOutlineThickness)
     gl.uniform1i(shader.uniforms.fontTexture, 0)
-    gl.uniform1i(shader.uniforms.u_isMTSDF, font.isMTSDF ? 1 : 0)
+    gl.uniform1i(shader.uniforms.isMTSDF, font.isMTSDF ? 1 : 0)
+
+    // Enhanced outline uniforms (with fallback for older shaders)
+    const canvasWidthHeight = [gl.canvas.width, gl.canvas.height]
+    gl.uniform2fv(shader.uniforms.canvasWidthHeight, canvasWidthHeight)
+    
+    // Set enhanced outline configuration uniforms if available
+    if (shader.uniforms.outlineEnabled !== undefined) {
+      gl.uniform1i(shader.uniforms.outlineEnabled, outlineConfig.enabled ? 1 : 0)
+    }
+    if (shader.uniforms.outlineWidth !== undefined) {
+      gl.uniform1f(shader.uniforms.outlineWidth, outlineConfig.width)
+    }
+    if (shader.uniforms.outlineSoftness !== undefined) {
+      gl.uniform1f(shader.uniforms.outlineSoftness, outlineConfig.softness)
+    }
+    if (shader.uniforms.outlineStyle !== undefined) {
+      // Convert style string to integer for shader
+      const styleMap = { 'solid': 0, 'glow': 1, 'inner': 2, 'outer': 3 }
+      gl.uniform1i(shader.uniforms.outlineStyle, styleMap[outlineConfig.style] || 0)
+    }
+    if (shader.uniforms.outlineOffset !== undefined) {
+      gl.uniform2fv(shader.uniforms.outlineOffset, outlineConfig.offset)
+    }
 
     // Calculate screenPxRange based on scale and font metrics
     const canvasSize = Math.min(gl.canvas.width, gl.canvas.height)
@@ -606,32 +638,46 @@ export class UIKRenderer {
 
     for (const char of chars) {
       const metrics = font.fontMetrics.mets[char]
-      if (!metrics) continue
+      
+      // Handle missing character metrics with proper fallback
+      if (!metrics) {
+        // Use default advance for missing characters (especially spaces)
+        const defaultAdvance = char === ' ' ? 0.25 : 0.5
+        const advanceX = Math.cos(rotation) * defaultAdvance * size
+        const advanceY = Math.sin(rotation) * defaultAdvance * size
+        x += advanceX
+        y += advanceY
+        continue
+      }
 
-      const modelMatrix = mat4.create()
-      mat4.translate(modelMatrix, modelMatrix, [
-        x + Math.sin(rotation) * metrics.lbwh[1] * size,
-        y - Math.cos(rotation) * metrics.lbwh[1] * size,
-        0.0,
-      ])
-      mat4.rotateZ(modelMatrix, modelMatrix, rotation)
-      mat4.scale(modelMatrix, modelMatrix, [
-        metrics.lbwh[2] * size,
-        -metrics.lbwh[3] * size,
-        1.0,
-      ])
+      // Only render visible characters (width > 0)
+      if (metrics.lbwh[2] > 0 && metrics.lbwh[3] > 0) {
+        const modelMatrix = mat4.create()
+        mat4.translate(modelMatrix, modelMatrix, [
+          x + Math.sin(rotation) * metrics.lbwh[1] * size,
+          y - Math.cos(rotation) * metrics.lbwh[1] * size,
+          0.0,
+        ])
+        mat4.rotateZ(modelMatrix, modelMatrix, rotation)
+        mat4.scale(modelMatrix, modelMatrix, [
+          metrics.lbwh[2] * size,
+          -metrics.lbwh[3] * size,
+          1.0,
+        ])
 
-      const mvpMatrix = mat4.create()
-      mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
+        const mvpMatrix = mat4.create()
+        mat4.multiply(mvpMatrix, orthoMatrix, modelMatrix)
 
-      gl.uniformMatrix4fv(
-        shader.uniforms.modelViewProjectionMatrix,
-        false,
-        mvpMatrix
-      )
-      gl.uniform4fv(shader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        gl.uniformMatrix4fv(
+          shader.uniforms.modelViewProjectionMatrix,
+          false,
+          mvpMatrix
+        )
+        gl.uniform4fv(shader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+      }
 
+      // Always advance cursor position, even for spaces
       const advanceX = Math.cos(rotation) * metrics.xadv * size
       const advanceY = Math.sin(rotation) * metrics.xadv * size
       x += advanceX
@@ -855,5 +901,70 @@ export class UIKRenderer {
         color: lineColor,
       })
     }
+  }
+
+  /**
+   * Draw a bitmap/image texture on the canvas
+   * Used for rendering loaded images, SVGs converted to textures, etc.
+   */
+  public drawBitmap({
+    texture,
+    bounds
+  }: {
+    texture: WebGLTexture
+    bounds: Vec4 // [x, y, width, height]
+  }): void {
+    if (!this.bitmapShader) {
+      console.warn('UIKRenderer: Bitmap shader not available')
+      return
+    }
+
+    const [x, y, width, height] = bounds
+    const gl = this.gl
+
+    // Enable blending for transparency support
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+    this.bitmapShader.use(gl)
+    
+    // Set uniforms
+    this.bitmapShader.setUniform(gl, 'canvasWidthHeight', [gl.canvas.width, gl.canvas.height])
+    this.bitmapShader.setUniform(gl, 'leftTopWidthHeight', [x, y, width, height])
+
+    // Bind texture
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    this.bitmapShader.setUniform(gl, 'u_texture', 0)
+
+    // Bind VAO and draw
+    gl.bindVertexArray(this.genericVAO)
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+    gl.bindVertexArray(null)
+
+    gl.disable(gl.BLEND)
+  }
+
+  /**
+   * Draw an SVG asset using the bitmap rendering system
+   * This is a convenience method for rendering UIKSVG instances
+   */
+  public drawSVG({
+    svgAsset,
+    bounds
+  }: {
+    svgAsset: any // UIKSVG type - avoiding import cycle
+    bounds: Vec4 // [x, y, width, height]
+  }): void {
+    const texture = svgAsset.getTexture()
+    if (!texture) {
+      console.warn('UIKRenderer: SVG asset has no texture loaded')
+      return
+    }
+
+    this.drawBitmap({
+      texture,
+      bounds
+    })
   }
 }
