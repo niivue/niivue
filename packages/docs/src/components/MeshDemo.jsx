@@ -110,6 +110,7 @@ export const MeshDemo = ({ nvOpts = {}, showControls = true }) => {
         await new Promise(resolve => setTimeout(resolve, 100));
         await niivueRef.current.attachToCanvas(canvasRef.current);
         niivueRef.current.opts.showLegend = false;
+        niivueRef.current.opts.isOrientCube = true
         await niivueRef.current.loadVolumes([defaultImage]);
         await niivueRef.current.loadMeshes(defaultMeshes);
         niivueRef.current.setClipPlane([-0.2, 180, 20]);

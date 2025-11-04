@@ -193,7 +193,7 @@ export class NVMesh {
   dpg?: ValuesArray | null
   dps?: ValuesArray | null
   dpv?: ValuesArray | null
-
+  groups?: ValuesArray | null
   hasConnectome = false
   connectome?: LegacyConnectome | string
 
@@ -231,6 +231,7 @@ export class NVMesh {
    * @param dpg - Data per group for tractography, see TRK format. Default is null (not tractograpgy)
    * @param dps - Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
    * @param dpv - Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
+   * @param groups - Groups for tractography, see TRK format. Default is null (not tractograpgy)
    * @param colorbarVisible - does this mesh display a colorbar
    * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
    */
@@ -246,6 +247,7 @@ export class NVMesh {
     dpg: ValuesArray | null = null,
     dps: ValuesArray | null = null,
     dpv: ValuesArray | null = null,
+    groups: ValuesArray | null = null,
     colorbarVisible = true,
     anatomicalStructurePrimary = ''
   ) {
@@ -310,6 +312,7 @@ export class NVMesh {
       this.dpg = dpg
       this.dps = dps
       this.dpv = dpv
+      this.groups = groups
       if (dpg) {
         this.initValuesArray(dpg)
       }
@@ -318,6 +321,9 @@ export class NVMesh {
       }
       if (dpv) {
         this.initValuesArray(dpv)
+      }
+      if (groups) {
+        this.initValuesArray(groups)
       }
       this.offsetPt0 = new Uint32Array(tris)
       this.tris = new Uint32Array(0)
@@ -738,36 +744,61 @@ export class NVMesh {
       }
     }
     const streamlineVisible = new Int16Array(n_count)
-    // if ((this.dpg !== null) && (this.fiberGroupMask !== null) && (this.fiberGroupMask.length === this.dpg.length)) {
-    if (this.dpg && this.fiberGroupColormap !== null) {
-      const lut = new Uint8ClampedArray(this.dpg.length * 4) // 4 component RGBA for each group
-      const groupVisible = new Array(this.dpg.length).fill(false)
-      const cmap = this.fiberGroupColormap
-      if (cmap.A === undefined) {
-        cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255))
-      }
-      for (let i = 0; i < cmap.I.length; i++) {
-        let idx = cmap.I[i]
-        if (idx < 0 || idx >= this.dpg.length) {
-          continue
+    if ((this.groups && this.fiberGroupColormap !== null) || (fiberColor.startsWith('dpg') && this.dpg.length > 0)) {
+      const lut = new Uint8ClampedArray(this.groups.length * 4) // 4 component RGBA for each group
+      const groupVisible = new Array(this.groups.length).fill(false)
+      if (this.fiberGroupColormap) {
+        const cmap = this.fiberGroupColormap
+        if (cmap.A === undefined) {
+          cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255))
         }
-        if (cmap.A[i] < 1) {
-          continue
+        for (let i = 0; i < cmap.I.length; i++) {
+          let idx = cmap.I[i]
+          if (idx < 0 || idx >= this.groups.length) {
+            continue
+          }
+          if (cmap.A[i] < 1) {
+            continue
+          }
+          groupVisible[idx] = true
+          idx *= 4
+          lut[idx] = cmap.R[i]
+          lut[idx + 1] = cmap.G[i]
+          lut[idx + 2] = cmap.B[i]
+          lut[idx + 3] = 255 // opaque
         }
-        groupVisible[idx] = true
-        idx *= 4
-        lut[idx] = cmap.R[i]
-        lut[idx + 1] = cmap.G[i]
-        lut[idx + 2] = cmap.B[i]
-        lut[idx + 3] = 255 // opaque
+      } else {
+        if (fiberColor.startsWith('dpg') && this.dpg.length > 0) {
+          const n = parseInt(fiberColor.substring(3))
+          const dpg = n < this.dpg.length ? this.dpg[n] : this.dpg[0]
+          const lut255 = cmapper.colormap(this.colormap as string, this.colormapInvert)
+          const mn = dpg.cal_min
+          const mx = dpg.cal_max
+          const ngroup = this.groups.length
+          for (let i = 0; i < ngroup; i++) {
+            const v = dpg.vals[i]
+            if (v < mn) {
+              continue
+            }
+            let color255 = Math.round(255 * Math.min(Math.max((v - mn!) / (mx! - mn!), 0), 1))
+            groupVisible[i] = true
+            const idx = i * 4
+            // read RGB values from chosen colormap
+            color255 *= 4
+            lut[idx] = lut255[color255 + 0]
+            lut[idx + 1] = lut255[color255 + 1]
+            lut[idx + 2] = lut255[color255 + 2]
+            lut[idx + 3] = 255 // opaque
+          }
+        }
       }
       streamlineVisible.fill(-1) // -1 assume streamline not visible
-      for (let i = 0; i < this.dpg.length; i++) {
+      for (let i = 0; i < this.groups.length; i++) {
         if (!groupVisible[i]) {
           continue
         } // this group is not visible
-        for (let v = 0; v < this.dpg[i].vals.length; v++) {
-          streamlineVisible[this.dpg[i].vals[v]] = i
+        for (let v = 0; v < this.groups[i].vals.length; v++) {
+          streamlineVisible[this.groups[i].vals[v]] = i
         }
       }
       for (let i = 0; i < n_count; i++) {
@@ -1231,7 +1262,7 @@ export class NVMesh {
         // build a label colormap
         if (layer.colormapLabel && (layer.colormapLabel as ColorMap).R && !(layer.colormapLabel as LUT).lut) {
           // convert colormap JSON to RGBA LUT
-          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel as ColorMap)
+          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel as ColorMap, 255, layer.global_max)
         }
         if (layer.colormapLabel && (layer.colormapLabel as LUT).lut) {
           const colormapLabel = layer.colormapLabel as LUT
@@ -1545,7 +1576,7 @@ export class NVMesh {
       const nFjprev = fac.length / 3 // = 4^(j+1)*F0
       const nFj = Math.pow(4, j) * F0
 
-      console.log(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`)
+      log.info(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`)
 
       const remap = Array.from({ length: nVjprev }, (_, i) => i + 1)
 
@@ -1613,7 +1644,7 @@ export class NVMesh {
     if (key === 'colormapLabel') {
       if (typeof val === 'object') {
         // assume JSON
-        layer[key] = cmapper.makeLabelLut(val)
+        layer[key] = cmapper.makeLabelLut(val, 255, layer.global_max)
       } else if (typeof val === 'string') {
         // assume URL
         const cmap = await cmapper.makeLabelLutFromUrl(val)
@@ -1755,7 +1786,8 @@ export class NVMesh {
         'inferno',
         (obj as TRX).dpg || null,
         (obj as TRX).dps || null,
-        (obj as TRX).dpv || null
+        (obj as TRX).dpv || null,
+        (obj as TRX).groups
       )
     } // is fibers
     if (ext === 'GII') {
@@ -1864,6 +1896,7 @@ export class NVMesh {
       null, // dpg
       null, // dps
       null, // dpv
+      null, // groups
       true, // colorbarVisible
       anatomicalStructurePrimary
     )

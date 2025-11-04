@@ -10,76 +10,63 @@
   <body>
     <noscript>niivue requires JavaScript.</noscript>
     <header>
-      <label for="check3">World space</label>
-      <input type="checkbox" id="check3" checked />
-      <label for="smooth">Smooth</label>
-      <input type="checkbox" id="smooth" checked />
-      <button id="about">About</button>
+      <label for="worldCheck">World space</label>
+      <input type="checkbox" id="worldCheck" checked />
+      <label for="smoothCheck">Smooth</label>
+      <input type="checkbox" id="smoothCheck" checked />
+      <button id="aboutBtn">About</button>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
-    <script type="module" async>
-      import * as niivue from "../dist/index.js";
-      document
-        .getElementById("check3")
-        .addEventListener("change", doCheck3Click);
-      function doCheck3Click() {
-        nv1.setSliceMM(this.checked);
-      }
-      document.getElementById("smooth").addEventListener("change", doSmooth);
-      function doSmooth() {
-        nv1.setInterpolation(!this.checked);
-      }
-      var volumeList1 = [
-        // first item is background image
-        {
-          url: "../images/shear.nii.gz", //"./images/RAS.nii.gz", "./images/spm152.nii.gz",
-          colormap: "gray",
-          opacity: 1,
-          visible: true,
-        },
-      ];
-      var nv1 = new niivue.Niivue({
-        dragAndDropEnabled: true,
-        backColor: [1, 1, 1, 1],
-        show3Dcrosshair: true,
-      });
-      nv1.setSliceMM(true);
-      nv1.setRadiologicalConvention(false);
-      await nv1.attachTo("gl1");
-      await nv1.loadVolumes(volumeList1);
-      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
-      nv1.setSliceType(nv1.sliceTypeMultiplanar);
-      document.getElementById("about").addEventListener("click", doAbout);
-      function doAbout() {
-        window.alert(
-          "CT scans often have include gantry tilt to reduce artifacts from teeth fillings and radiation dose to the eyeballs. This creates rhomboidal voxels. Viewing 2D slices in world space reveals this shear. Note that 3D renderings are always in world space (so meshes and other objects align nicely)."
-        );
-      }
-      let connectome = {
-        name: "shearConnectome",
-        nodeColormap: "viridis",
-        nodeColormapNegative: "viridis",
-        nodeMinColor: 2,
-        nodeMaxColor: 4,
-        nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
-        edgeColormap: "warm",
-        edgeColormapNegative: "winter",
-        edgeMin: 2,
-        edgeMax: 4,
-        edgeScale: 1,
-        nodes: {
-          names: ["Sphere", "Pyramid", "Box", "CylinderLow"], //currently unused
-          X: [0, -41, -37, -21], //Xmm for each node
-          Y: [0, -59, -6, -21], //Ymm for each node
-          Z: [0, 3, 16, -22], //Zmm for each node
-          Color: [2, 2, 3, 4], //Used to interpolate color
-          Size: [2, 2, 3, 4], //Size of node
-        },
-        edges: [1, 4, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
-      }; //connectome{}
-      await nv1.loadConnectome(connectome);
-    </script>
   </body>
 </html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  worldCheck.onchange = function () {
+    nv1.setSliceMM(this.checked)
+  }
+  smoothCheck.onchange = function () {
+    nv1.setInterpolation(!this.checked)
+  }
+  aboutBtn.onclick = function () {
+    window.alert(
+      "CT scans often have include gantry tilt to reduce artifacts from teeth fillings and radiation dose to the eyeballs. This creates rhomboidal voxels. Viewing 2D slices in world space reveals this shear. Note that 3D renderings are always in world space (so meshes and other objects align nicely)."
+    )
+  }
+  var volumeList1 = [ { url: "../images/shear.nii.gz" } ]
+  var nv1 = new niivue.Niivue({
+    dragAndDropEnabled: true,
+    backColor: [1, 1, 1, 1],
+    show3Dcrosshair: true,
+  })
+  nv1.setSliceMM(true)
+  nv1.setRadiologicalConvention(false)
+  await nv1.attachTo("gl1")
+  await nv1.loadVolumes(volumeList1)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  nv1.setSliceType(nv1.sliceTypeMultiplanar)
+  let connectome = {
+    name: "shearConnectome",
+    nodeColormap: "viridis",
+    nodeColormapNegative: "viridis",
+    nodeMinColor: 2,
+    nodeMaxColor: 4,
+    nodeScale: 3, //scale factor for node, e.g. if 2 and a node has size 3, a 6mm ball is drawn
+    edgeColormap: "warm",
+    edgeColormapNegative: "winter",
+    edgeMin: 2,
+    edgeMax: 4,
+    edgeScale: 1,
+    nodes: {
+      names: ["Sphere", "Pyramid", "Box", "CylinderLow"], //currently unused
+      X: [0, -41, -37, -21], //Xmm for each node
+      Y: [0, -59, -6, -21], //Ymm for each node
+      Z: [0, 3, 16, -22], //Zmm for each node
+      Color: [2, 2, 3, 4], //Used to interpolate color
+      Size: [2, 2, 3, 4], //Size of node
+    },
+    edges: [1, 4, -3, 4, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1],
+  } //connectome{}
+  await nv1.loadConnectome(connectome)
+</script>

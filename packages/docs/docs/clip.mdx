@@ -1,0 +1,15 @@
+---
+title: Clip Planes
+sidebar_position: 6
+---
+
+import { Niivue, SLICE_TYPE, MULTIPLANAR_TYPE, SHOW_RENDER } from '@niivue/niivue';
+import { ClipDemo } from '../src/components/ClipDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+# Clip planes
+
+NiiVue supports up to six simultaneous clip planes for revealing internal structures in 3D volumes. Users can interactively adjust the orientation and depth of the active plane using mouse (drag to rotate, scroll to move) or touch gestures (drag and pinch). When multiple planes are displayed, pressing the `p` key cycles through them to select the active plane. Shading can be applied to the clipped surfaces, and the clipped region can be inverted to create cutaway views that expose the interior of the volume.
+<NiivueBrowserWrapper>
+  <ClipDemo />
+</NiivueBrowserWrapper>

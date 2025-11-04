@@ -22,6 +22,7 @@ export const WebGLDemo = ({
 
   // State for interactive controls
   const [currentShader, setCurrentShader] = useState("Phong");
+  const [isXRay, setIsXRay] = useState(false);
   const [shaderOptions, setShaderOptions] = useState([]);
   // Merge default and passed options
   const mergedNvOpts = { ...defaultNvOpts, ...nvOpts };
@@ -78,6 +79,18 @@ export const WebGLDemo = ({
     setCurrentShader(newShader);
   };
 
+  // Handler for XRay
+  const handleXRayChange = (event) => {
+    const isXRay = event.target.checked;
+    if (niivueRef.current && niivueRef.current.meshes.length > 0) {
+      
+      niivueRef.current.opts.meshXRay = isXRay * 0.1;
+      console.log(`Setting isXRay to: ${isXRay} ${niivueRef.current.meshXRay}`);
+      niivueRef.current.drawScene(); 
+      setIsXRay(isXRay); // Update component state
+    }
+  };
+
   return (
     <div
       style={{
@@ -129,7 +142,18 @@ export const WebGLDemo = ({
             </option>
           ))}
         </select>
-
+        {/* CutawayCheck Checkbox */}
+        <div>
+          <label htmlFor="xRayCheck" style={{ marginLeft: "5px" }}>
+            X-Ray
+          </label>
+          <input
+            type="checkbox"
+            id="xRayCheck"
+            checked={isXRay}
+            onChange={handleXRayChange}
+          />
+        </div>
       </div>
     </div>
   );
