@@ -50,6 +50,7 @@ npm run dev
 - [Slice:Drop Reloaded](https://gaiborjosue.github.io/slicedrop.github.com/reload/) uses NiiVue to extend the original [slicedrop](https://slicedrop.com/)
 - [VoxLogicA-UI](https://voxlogica-project.github.io/VoxLogicA-UI/) makes advanced medical
 imaging analysis intuitive
+- [LAMBADA (OpenBrainAtlas)](https://lambada.icm-institute.org/) – A reference atlas of the developing postnatal mouse brain, created using tissue clearing and light-sheet microscopy at the Paris Brain Institute (Institut du Cerveau). It uses NiiVue for 2D/3D visualization of brain structures, volume overlays, and mesh rendering.
 
 # Funding
 
