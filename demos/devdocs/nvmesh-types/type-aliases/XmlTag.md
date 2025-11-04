@@ -4,7 +4,7 @@
 type XmlTag = object;
 ```
 
-Defined in: [nvmesh-types.ts:138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L138)
+Defined in: [nvmesh-types.ts:139](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L139)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:138](https://github.com/niivue/niivue/blob/main/pac
 contentEndPos: number;
 ```
 
-Defined in: [nvmesh-types.ts:142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L142)
+Defined in: [nvmesh-types.ts:143](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L143)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh-types.ts:142](https://github.com/niivue/niivue/blob/main/pac
 contentStartPos: number;
 ```
 
-Defined in: [nvmesh-types.ts:141](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L141)
+Defined in: [nvmesh-types.ts:142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L142)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvmesh-types.ts:141](https://github.com/niivue/niivue/blob/main/pac
 endPos: number;
 ```
 
-Defined in: [nvmesh-types.ts:143](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L143)
+Defined in: [nvmesh-types.ts:144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L144)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvmesh-types.ts:143](https://github.com/niivue/niivue/blob/main/pac
 name: string;
 ```
 
-Defined in: [nvmesh-types.ts:139](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L139)
+Defined in: [nvmesh-types.ts:140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L140)
 
 ---
 
@@ -54,4 +54,4 @@ Defined in: [nvmesh-types.ts:139](https://github.com/niivue/niivue/blob/main/pac
 startPos: number;
 ```
 
-Defined in: [nvmesh-types.ts:140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L140)
+Defined in: [nvmesh-types.ts:141](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L141)

@@ -4,7 +4,7 @@
 type X3D = object;
 ```
 
-Defined in: [nvmesh-types.ts:108](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L108)
+Defined in: [nvmesh-types.ts:109](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L109)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:108](https://github.com/niivue/niivue/blob/main/pac
 indices: Uint32Array;
 ```
 
-Defined in: [nvmesh-types.ts:110](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L110)
+Defined in: [nvmesh-types.ts:111](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L111)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh-types.ts:110](https://github.com/niivue/niivue/blob/main/pac
 positions: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:109](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L109)
+Defined in: [nvmesh-types.ts:110](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L110)
 
 ---
 
@@ -34,4 +34,4 @@ Defined in: [nvmesh-types.ts:109](https://github.com/niivue/niivue/blob/main/pac
 rgba255: Uint8Array;
 ```
 
-Defined in: [nvmesh-types.ts:111](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L111)
+Defined in: [nvmesh-types.ts:112](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L112)

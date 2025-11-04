@@ -124,7 +124,7 @@ Defined in: [colortables.ts:52](https://github.com/niivue/niivue/blob/main/packa
 makeDrawLut(name: string | ColorMap): LUT;
 ```
 
-Defined in: [colortables.ts:152](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L152)
+Defined in: [colortables.ts:164](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L164)
 
 #### Parameters
 
@@ -141,7 +141,10 @@ Defined in: [colortables.ts:152](https://github.com/niivue/niivue/blob/main/pack
 ### makeLabelLut()
 
 ```ts
-makeLabelLut(cm: ColorMap, alphaFill: number): LUT;
+makeLabelLut(
+   cm: ColorMap,
+   alphaFill: number,
+   maxIdx: number): LUT;
 ```
 
 Defined in: [colortables.ts:88](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L88)
@@ -152,6 +155,7 @@ Defined in: [colortables.ts:88](https://github.com/niivue/niivue/blob/main/packa
 | ----------- | ----------------------------------------- | ------------- |
 | `cm`        | [`ColorMap`](../type-aliases/ColorMap.md) | `undefined`   |
 | `alphaFill` | `number`                                  | `255`         |
+| `maxIdx`    | `number`                                  | `Infinity`    |
 
 #### Returns
 
@@ -162,16 +166,21 @@ Defined in: [colortables.ts:88](https://github.com/niivue/niivue/blob/main/packa
 ### makeLabelLutFromUrl()
 
 ```ts
-makeLabelLutFromUrl(name: string): Promise<LUT>;
+makeLabelLutFromUrl(
+   name: string,
+   alphaFill: number,
+maxIdx: number): Promise<LUT>;
 ```
 
-Defined in: [colortables.ts:144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L144)
+Defined in: [colortables.ts:156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L156)
 
 #### Parameters
 
-| Parameter | Type     |
-| --------- | -------- |
-| `name`    | `string` |
+| Parameter   | Type     | Default value |
+| ----------- | -------- | ------------- |
+| `name`      | `string` | `undefined`   |
+| `alphaFill` | `number` | `255`         |
+| `maxIdx`    | `number` | `Infinity`    |
 
 #### Returns
 
@@ -191,7 +200,7 @@ makeLut(
    isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [colortables.ts:198](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L198)
+Defined in: [colortables.ts:210](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L210)
 
 #### Parameters
 

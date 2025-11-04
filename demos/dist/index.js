@@ -14795,12 +14795,22 @@ var ColorTables = class {
     const cmap = this.colormapFromKey(key);
     return this.makeLut(cmap.R, cmap.G, cmap.B, cmap.A, cmap.I, isInvert);
   }
-  makeLabelLut(cm, alphaFill = 255) {
+  makeLabelLut(cm, alphaFill = 255, maxIdx = Infinity) {
     if (cm.R === void 0 || cm.G === void 0 || cm.B === void 0) {
       throw new Error(`Invalid colormap table: ${cm}`);
     }
     const nLabels = cm.R.length;
     const idxs = cm.I ?? [...Array(nLabels).keys()];
+    let hasInvalid = false;
+    for (let i = 0; i < idxs.length; i++) {
+      if (idxs[i] > maxIdx) {
+        hasInvalid = true;
+        idxs[i] = maxIdx;
+      }
+    }
+    if (hasInvalid) {
+      log.warn(`Some colormap indices clamped to match label range.`);
+    }
     if (nLabels !== cm.G.length || nLabels !== cm.B.length || nLabels !== idxs.length) {
       throw new Error(
         `colormap does not make sense: ${cm} Rs ${cm.R.length} Gs ${cm.G.length} Bs ${cm.B.length} Is ${idxs.length}`
@@ -14841,10 +14851,10 @@ var ColorTables = class {
     }
     return cmap;
   }
-  async makeLabelLutFromUrl(name) {
+  async makeLabelLutFromUrl(name, alphaFill = 255, maxIdx = Infinity) {
     const response = await fetch(name);
     const cm = await response.json();
-    return this.makeLabelLut(cm);
+    return this.makeLabelLut(cm, alphaFill, maxIdx);
   }
   // not included in public docs
   // The drawing colormap is a variant of the label colormap with precisely 256 colors
@@ -15926,6 +15936,119 @@ var NVMeshLoaders = class _NVMeshLoaders {
     };
   }
   // readTT
+  /**
+   * Assemble dpg from a map-of-groups into a ValuesArray ordered by groups[].
+   *
+   * @param dpgMap - map from groupId -> ValuesArray (entries for that group)
+   * @param groups - ValuesArray describing groups; groups[i].id defines the ordering
+   * @returns ValuesArray - one entry per tag where vals is the concatenation of each group's vals in groups[] order
+   *
+   * @throws Error when:
+   *  - groups is empty or missing
+   *  - any group in groups is missing from dpgMap
+   *  - any group contains duplicate entries for a tag
+   *  - tag coverage differs between groups (missing tag in any group)
+   *  - any entry has invalid/unconvertible vals
+   */
+  static assembleDpgFromMap(dpgMap, groups) {
+    if (!Array.isArray(groups) || groups.length === 0) {
+      throw new Error('assembleDpgFromMap: "groups" is empty or missing; cannot assemble dpg.');
+    }
+    for (let gi = 0; gi < groups.length; gi++) {
+      const gid = String(groups[gi].id);
+      if (!dpgMap[gid]) {
+        throw new Error(`assembleDpgFromMap: missing dpgMap entry for group "${gid}".`);
+      }
+      if (!Array.isArray(dpgMap[gid])) {
+        throw new Error(`assembleDpgFromMap: dpgMap["${gid}"] is not an array.`);
+      }
+    }
+    const firstGroupId = String(groups[0].id);
+    const firstEntries = dpgMap[firstGroupId];
+    const tagOrder = [];
+    const tagSet = /* @__PURE__ */ new Set();
+    for (const e of firstEntries) {
+      if (!e || typeof e.id !== "string") {
+        throw new Error(`assembleDpgFromMap: invalid entry in group "${firstGroupId}".`);
+      }
+      if (tagSet.has(e.id)) {
+        throw new Error(`assembleDpgFromMap: duplicate tag "${e.id}" in group "${firstGroupId}".`);
+      }
+      tagSet.add(e.id);
+      tagOrder.push(e.id);
+    }
+    if (tagSet.size === 0) {
+      throw new Error(`assembleDpgFromMap: no tags found in group "${firstGroupId}".`);
+    }
+    for (let gi = 1; gi < groups.length; gi++) {
+      const gid = String(groups[gi].id);
+      const entries = dpgMap[gid];
+      const idsSeen = /* @__PURE__ */ new Map();
+      for (const e of entries) {
+        if (!e || typeof e.id !== "string") {
+          throw new Error(`assembleDpgFromMap: invalid entry in group "${gid}".`);
+        }
+        idsSeen.set(e.id, (idsSeen.get(e.id) || 0) + 1);
+      }
+      for (const [id, count] of idsSeen.entries()) {
+        if (count > 1) {
+          throw new Error(`assembleDpgFromMap: multiple entries for tag "${id}" in group "${gid}".`);
+        }
+      }
+      if (idsSeen.size !== tagSet.size) {
+        throw new Error(
+          `assembleDpgFromMap: tag coverage mismatch for group "${gid}". Expected ${tagSet.size} tags but found ${idsSeen.size}.`
+        );
+      }
+      for (const t of tagSet) {
+        if (!idsSeen.has(t)) {
+          throw new Error(`assembleDpgFromMap: group "${gid}" missing tag "${t}".`);
+        }
+      }
+    }
+    const result = [];
+    for (const tag of tagOrder) {
+      const perGroupArrays = [];
+      let totalLen = 0;
+      for (let gi = 0; gi < groups.length; gi++) {
+        const gid = String(groups[gi].id);
+        const entries = dpgMap[gid];
+        const matches = entries.filter((e) => e.id === tag);
+        if (matches.length === 0) {
+          throw new Error(`assembleDpgFromMap: missing tag "${tag}" for group "${gid}".`);
+        }
+        if (matches.length > 1) {
+          throw new Error(`assembleDpgFromMap: multiple entries for tag "${tag}" in group "${gid}".`);
+        }
+        const entry = matches[0];
+        if (entry.vals instanceof Float32Array) {
+          perGroupArrays.push(entry.vals);
+          totalLen += entry.vals.length;
+        } else {
+          try {
+            const conv = Float32Array.from(entry.vals);
+            perGroupArrays.push(conv);
+            totalLen += conv.length;
+          } catch (err2) {
+            throw new Error(`assembleDpgFromMap: invalid vals for tag "${tag}" in group "${gid}".`);
+          }
+        }
+      }
+      const merged = new Float32Array(totalLen);
+      let off = 0;
+      for (const arr of perGroupArrays) {
+        merged.set(arr, off);
+        off += arr.length;
+      }
+      result.push({
+        id: tag,
+        vals: merged
+        // Note: global_min/global_max/cal_min/cal_max are not computed here.
+        // If you want to propagate or compute them, add logic to compute per-tag aggregated values.
+      });
+    }
+    return result;
+  }
   // read TRX format tractogram
   // https://github.com/tee-ar-ex/trx-spec/blob/master/specifications.md
   static async readTRX(buffer) {
@@ -15939,7 +16062,8 @@ var NVMeshLoaders = class _NVMeshLoaders {
     let npt = 0;
     let pts = new Float32Array([]);
     const offsetPt0 = [];
-    const dpg = [];
+    const dpgMap = {};
+    const groups = [];
     const dps = [];
     const dpv = [];
     let header = [];
@@ -15955,6 +16079,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       if (fname.startsWith(".")) {
         continue;
       }
+      const dname = parts.slice(-3)[0];
       const pname = parts.slice(-2)[0];
       const tag = fname.split(".")[0];
       const data = await entry.extract();
@@ -16009,7 +16134,18 @@ var NVMeshLoaders = class _NVMeshLoaders {
       }
       nval = vals.length;
       if (pname.includes("groups")) {
-        dpg.push({
+        groups.push({
+          id: tag,
+          vals: Float32Array.from(vals.slice())
+        });
+        continue;
+      }
+      if (dname.includes("dpg")) {
+        const key = String(pname);
+        if (!dpgMap[key]) {
+          dpgMap[key] = [];
+        }
+        dpgMap[key].push({
           id: tag,
           vals: Float32Array.from(vals.slice())
         });
@@ -16046,6 +16182,10 @@ var NVMeshLoaders = class _NVMeshLoaders {
     if (isOverflowUint64) {
       throw new Error("Too many vertices: JavaScript does not support 64 bit integers");
     }
+    let dpg = [];
+    if (groups.length > 0 && dpgMap && Object.keys(dpgMap).length > 0) {
+      dpg = this.assembleDpgFromMap(dpgMap, groups);
+    }
     offsetPt0[noff] = npt / 3;
     return {
       pts,
@@ -16053,6 +16193,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       dpg,
       dps,
       dpv,
+      groups,
       header
     };
   }
@@ -19203,6 +19344,10 @@ var NVMeshLoaders = class _NVMeshLoaders {
     }
     let colormapLabel;
     if (Labels.I.length > 1) {
+      const hasAlpha = Labels.A.some((a) => a > 0);
+      if (!hasAlpha) {
+        Labels.A.fill(255);
+      }
       colormapLabel = cmapper.makeLabelLut(Labels);
     }
     if (n_vert > 0) {
@@ -24077,9 +24222,6 @@ async function readNifti(nvImage, buffer, pairedImageData) {
     if (!dataBuffer || dataBuffer.byteLength === 0) {
       throw new Error("Buffer became invalid after decompression attempt.");
     }
-    if (!pairedImageData) {
-      console.log("paired image data is null");
-    }
     nvImage.hdr = await readHeaderAsync(dataBuffer, pairedImageData != null);
     if (hasExtension(nvImage.hdr)) {
       nvImage.extensions = nvImage.hdr.extensions;
@@ -27912,15 +28054,14 @@ var DEFAULT_OPTIONS = {
   fontColor: [0.5, 0.5, 0.5, 1],
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
+  isClipPlanesCutaway: false,
   paqdUniforms: [0.3, 0.5, 0.5, 1],
   // paqdUniforms: [0.3, 0.9, 1.0, 0.5],
-  clipThick: 2,
-  clipVolumeLow: [0, 0, 0],
-  clipVolumeHigh: [1, 1, 1],
   rulerColor: [1, 0, 0, 0.8],
   colorbarMargin: 0.05,
   trustCalMinMax: true,
   clipPlaneHotKey: "KeyC",
+  cycleClipPlaneHotKey: "KeyP",
   viewModeHotKey: "KeyV",
   doubleTouchTimeout: 500,
   longTouchTimeout: 1e3,
@@ -28030,13 +28171,12 @@ var INITIAL_SCENE_DATA = {
   azimuth: 110,
   elevation: 10,
   crosshairPos: vec3_exports.fromValues(0.5, 0.5, 0.5),
-  clipPlane: [0, 0, 0, 0],
-  clipPlaneDepthAziElev: [2, 0, 0],
+  clipPlanes: [[0, 0, 0, 0]],
+  // start with no planes
+  clipPlaneDepthAziElevs: [[2, 0, 0]],
+  // empty by default
   volScaleMultiplier: 1,
-  pan2Dxyzmm: vec4_exports.fromValues(0, 0, 0, 1),
-  clipThick: 2,
-  clipVolumeLow: [0, 0, 0],
-  clipVolumeHigh: [1, 1, 1]
+  pan2Dxyzmm: vec4_exports.fromValues(0, 0, 0, 1)
 };
 function diffOptions(opts, defaults) {
   const diff = {};
@@ -28115,16 +28255,28 @@ var NVDocument = class _NVDocument {
         this.sceneData.crosshairPos = crosshairPos;
       },
       get clipPlane() {
-        return this.sceneData.clipPlane;
+        return this.sceneData.clipPlanes[0] ?? [];
       },
       set clipPlane(clipPlane) {
-        this.sceneData.clipPlane = clipPlane;
+        this.sceneData.clipPlanes[0] = clipPlane;
       },
-      get clipPlaneDepthAziElev() {
-        return this.sceneData.clipPlaneDepthAziElev;
+      // get clipPlaneDepthAziElev(): number[] {
+      //   return this.sceneData.clipPlaneDepthAziElevs[0] ?? []
+      // },
+      // set clipPlaneDepthAziElev(clipPlaneDepthAziElev: number[]) {
+      //   this.sceneData.clipPlaneDepthAziElevs[0] = clipPlaneDepthAziElev
+      // },
+      get clipPlanes() {
+        return this.sceneData.clipPlanes;
       },
-      set clipPlaneDepthAziElev(clipPlaneDepthAziElev) {
-        this.sceneData.clipPlaneDepthAziElev = clipPlaneDepthAziElev;
+      set clipPlanes(planes) {
+        this.sceneData.clipPlanes = planes;
+      },
+      get clipPlaneDepthAziElevs() {
+        return this.sceneData.clipPlaneDepthAziElevs;
+      },
+      set clipPlaneDepthAziElevs(values) {
+        this.sceneData.clipPlaneDepthAziElevs = values;
       },
       get pan2Dxyzmm() {
         return this.sceneData.pan2Dxyzmm;
@@ -28323,6 +28475,11 @@ var NVDocument = class _NVDocument {
     };
     const imageOptionsArray = [];
     data.sceneData = { ...this.scene.sceneData };
+    delete data.sceneData.clipPlane;
+    delete data.sceneData.clipPlaneDepthAziElev;
+    delete data.sceneData.clipThick;
+    delete data.sceneData.clipVolumeLow;
+    delete data.sceneData.clipVolumeHigh;
     data.opts = diffOptions(this.opts, DEFAULT_OPTIONS);
     if (this.opts.meshThicknessOn2D === Infinity) {
       data.opts.meshThicknessOn2D = "infinity";
@@ -28534,7 +28691,6 @@ var NVDocument = class _NVDocument {
     const document2 = new _NVDocument();
     Object.assign(document2.data, {
       ...data,
-      // 2a. ensure minimum required array fields are non-null
       imageOptionsArray: data.imageOptionsArray ?? [],
       encodedImageBlobs: data.encodedImageBlobs ?? [],
       labels: data.labels ?? [],
@@ -28556,6 +28712,13 @@ var NVDocument = class _NVDocument {
       ...INITIAL_SCENE_DATA,
       ...data.sceneData || {}
     };
+    const sceneData = data.sceneData || {};
+    if (sceneData.clipPlane && !sceneData.clipPlanes) {
+      document2.scene.sceneData.clipPlanes = [sceneData.clipPlane];
+    }
+    if (sceneData.clipPlaneDepthAziElev && !sceneData.clipPlaneDepthAziElevs) {
+      document2.scene.sceneData.clipPlaneDepthAziElevs = [sceneData.clipPlaneDepthAziElev];
+    }
     if (data.completedMeasurements) {
       document2.completedMeasurements = data.completedMeasurements.map((m) => ({
         ...m,
@@ -28680,10 +28843,11 @@ var NVMesh3 = class _NVMesh {
    * @param dpg - Data per group for tractography, see TRK format. Default is null (not tractograpgy)
    * @param dps - Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
    * @param dpv - Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
+   * @param groups - Groups for tractography, see TRK format. Default is null (not tractograpgy)
    * @param colorbarVisible - does this mesh display a colorbar
    * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
    */
-  constructor(pts, tris, name = "", rgba255 = new Uint8Array([255, 255, 255, 255]), opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null, colorbarVisible = true, anatomicalStructurePrimary = "") {
+  constructor(pts, tris, name = "", rgba255 = new Uint8Array([255, 255, 255, 255]), opacity = 1, visible = true, gl, connectome = null, dpg = null, dps = null, dpv = null, groups = null, colorbarVisible = true, anatomicalStructurePrimary = "") {
     __publicField(this, "id");
     __publicField(this, "name");
     __publicField(this, "anatomicalStructurePrimary");
@@ -28728,6 +28892,7 @@ var NVMesh3 = class _NVMesh {
     __publicField(this, "dpg");
     __publicField(this, "dps");
     __publicField(this, "dpv");
+    __publicField(this, "groups");
     __publicField(this, "hasConnectome", false);
     __publicField(this, "connectome");
     // TODO this should somehow get aligned with connectome
@@ -28800,6 +28965,7 @@ var NVMesh3 = class _NVMesh {
       this.dpg = dpg;
       this.dps = dps;
       this.dpv = dpv;
+      this.groups = groups;
       if (dpg) {
         this.initValuesArray(dpg);
       }
@@ -28808,6 +28974,9 @@ var NVMesh3 = class _NVMesh {
       }
       if (dpv) {
         this.initValuesArray(dpv);
+      }
+      if (groups) {
+        this.initValuesArray(groups);
       }
       this.offsetPt0 = new Uint32Array(tris);
       this.tris = new Uint32Array(0);
@@ -29153,35 +29322,60 @@ var NVMesh3 = class _NVMesh {
       }
     }
     const streamlineVisible = new Int16Array(n_count);
-    if (this.dpg && this.fiberGroupColormap !== null) {
-      const lut = new Uint8ClampedArray(this.dpg.length * 4);
-      const groupVisible = new Array(this.dpg.length).fill(false);
-      const cmap = this.fiberGroupColormap;
-      if (cmap.A === void 0) {
-        cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255));
-      }
-      for (let i = 0; i < cmap.I.length; i++) {
-        let idx = cmap.I[i];
-        if (idx < 0 || idx >= this.dpg.length) {
-          continue;
+    if (this.groups && this.fiberGroupColormap !== null || fiberColor.startsWith("dpg") && this.dpg.length > 0) {
+      const lut = new Uint8ClampedArray(this.groups.length * 4);
+      const groupVisible = new Array(this.groups.length).fill(false);
+      if (this.fiberGroupColormap) {
+        const cmap = this.fiberGroupColormap;
+        if (cmap.A === void 0) {
+          cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255));
         }
-        if (cmap.A[i] < 1) {
-          continue;
+        for (let i = 0; i < cmap.I.length; i++) {
+          let idx = cmap.I[i];
+          if (idx < 0 || idx >= this.groups.length) {
+            continue;
+          }
+          if (cmap.A[i] < 1) {
+            continue;
+          }
+          groupVisible[idx] = true;
+          idx *= 4;
+          lut[idx] = cmap.R[i];
+          lut[idx + 1] = cmap.G[i];
+          lut[idx + 2] = cmap.B[i];
+          lut[idx + 3] = 255;
         }
-        groupVisible[idx] = true;
-        idx *= 4;
-        lut[idx] = cmap.R[i];
-        lut[idx + 1] = cmap.G[i];
-        lut[idx + 2] = cmap.B[i];
-        lut[idx + 3] = 255;
+      } else {
+        if (fiberColor.startsWith("dpg") && this.dpg.length > 0) {
+          const n = parseInt(fiberColor.substring(3));
+          const dpg = n < this.dpg.length ? this.dpg[n] : this.dpg[0];
+          const lut255 = cmapper.colormap(this.colormap, this.colormapInvert);
+          const mn = dpg.cal_min;
+          const mx = dpg.cal_max;
+          const ngroup = this.groups.length;
+          for (let i = 0; i < ngroup; i++) {
+            const v = dpg.vals[i];
+            if (v < mn) {
+              continue;
+            }
+            let color255 = Math.round(255 * Math.min(Math.max((v - mn) / (mx - mn), 0), 1));
+            groupVisible[i] = true;
+            const idx = i * 4;
+            color255 *= 4;
+            lut[idx] = lut255[color255 + 0];
+            lut[idx + 1] = lut255[color255 + 1];
+            lut[idx + 2] = lut255[color255 + 2];
+            lut[idx + 3] = 255;
+          }
+        }
       }
       streamlineVisible.fill(-1);
-      for (let i = 0; i < this.dpg.length; i++) {
+      for (let i = 0; i < this.groups.length; i++) {
         if (!groupVisible[i]) {
           continue;
         }
-        for (let v = 0; v < this.dpg[i].vals.length; v++) {
-          streamlineVisible[this.dpg[i].vals[v]] = i;
+        for (let v = 0; v < this.groups[i].vals.length; v++) {
+          streamlineVisible[this.groups[i].vals[v]] = i;
         }
       }
       for (let i = 0; i < n_count; i++) {
@@ -29597,7 +29791,7 @@ var NVMesh3 = class _NVMesh {
           layer.isAdditiveBlend = false;
         }
         if (layer.colormapLabel && layer.colormapLabel.R && !layer.colormapLabel.lut) {
-          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel);
+          layer.colormapLabel = cmapper.makeLabelLut(layer.colormapLabel, 255, layer.global_max);
         }
         if (layer.colormapLabel && layer.colormapLabel.lut) {
           const colormapLabel = layer.colormapLabel;
@@ -29890,7 +30084,7 @@ var NVMesh3 = class _NVMesh {
       const nVj = Math.pow(4, j) * (V0 - 2) + 2;
       const nFjprev = fac.length / 3;
       const nFj = Math.pow(4, j) * F0;
-      console.log(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`);
+      log.info(`order ${j + 1} -> ${j} vertices ${nVjprev} -> ${nVj} faces ${nFjprev} -> ${nFj}`);
       const remap = Array.from({ length: nVjprev }, (_, i) => i + 1);
       for (let i = 0; i < nFjprev; i++) {
         const v1 = fac[3 * i];
@@ -29947,7 +30141,7 @@ var NVMesh3 = class _NVMesh {
     }
     if (key === "colormapLabel") {
       if (typeof val === "object") {
-        layer[key] = cmapper.makeLabelLut(val);
+        layer[key] = cmapper.makeLabelLut(val, 255, layer.global_max);
       } else if (typeof val === "string") {
         const cmap = await cmapper.makeLabelLutFromUrl(val);
         layer[key] = cmap;
@@ -30070,7 +30264,8 @@ var NVMesh3 = class _NVMesh {
         "inferno",
         obj.dpg || null,
         obj.dps || null,
-        obj.dpv || null
+        obj.dpv || null,
+        obj.groups
       );
     }
     if (ext === "GII") {
@@ -30182,6 +30377,8 @@ var NVMesh3 = class _NVMesh {
       // dps
       null,
       // dpv
+      null,
+      // groups
       true,
       // colorbarVisible
       anatomicalStructurePrimary
@@ -32878,77 +33075,59 @@ var kRenderFunc = `vec3 GetBackPosition(vec3 startPositionTex) {
 	return endPosition;
 }
 
-vec4 applyClip (vec3 dir, inout vec4 samplePos, inout float len, inout bool isClip) {
-	float cdot = dot(dir,clipPlane.xyz);
-	isClip = false;
-	if  ((clipPlane.a > 1.0) || (cdot == 0.0)) return samplePos;
+float distance2Plane(in vec4 samplePos, in vec4 clipPlane) {
+	// treat clipPlane.a > 1 as "no clip" sentinel (keeps existing behavior)
+	if (clipPlane.a > 1.0) {
+			return 1000.0; // sentinel large distance
+	}
+	vec3 n = clipPlane.xyz;
+	const float EPS = 1e-6;
+	float nlen = length(n);
+	if (nlen < EPS) {
+			return 1000.0; // invalid plane normal
+	}
+	// signed plane value: dot(n, p-0.5) + a
+	float signedDist = dot(n, samplePos.xyz - 0.5) + clipPlane.a;
+	// perpendicular (Euclidean) distance is |signedDist| / |n|
+	return abs(signedDist) / nlen;
+}
+
+// see if clip plane trims ray sampling range sampleStartEnd.x..y
+void clipSampleRange(in vec3 dir, in vec4 rayStart, in vec4 clipPlane, inout vec2 sampleStartEnd, inout bool hasClip) {
+	const float CSR_EPS = 1e-6;
+	// quick exit: no clip plane
+	if (clipPlane.a > 1.0)
+			return;
+	hasClip = true;
+	// quick exit: empty range
+	if ((sampleStartEnd.y - sampleStartEnd.x) <= CSR_EPS)
+			return;
+	// Which side does the ray start on? (plane eqn: dot(n, p-0.5) + a = 0)
+	float sampleSide = dot(clipPlane.xyz, rayStart.xyz - 0.5) + clipPlane.a;
+	bool startsFront = (sampleSide < 0.0);
+	float dis = - 1.0;
+	// plane normal dot ray direction
+	float cdot = dot(dir, clipPlane.xyz);
+	// avoid division by 0 for near-parallel plne
+	if (abs(cdot) >= CSR_EPS)
+		dis = (-clipPlane.a - dot(clipPlane.xyz, rayStart.xyz - 0.5)) / cdot;
+	if (dis < 0.0 || dis > sampleStartEnd.y + CSR_EPS) {
+			if (startsFront)
+				sampleStartEnd = vec2(0.0, 0.0);
+			return;
+	}
 	bool frontface = (cdot > 0.0);
-	float dis = (-clipPlane.a - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	float thick = clipThick;
-	if (thick <= 0.0) thick = 2.0;
-	float  disBackFace = (-(clipPlane.a-thick) - dot(clipPlane.xyz, samplePos.xyz-0.5)) / cdot;
-	if (((frontface) && (dis >= len)) || ((!frontface) && (dis <= 0.0))) {
-		samplePos.a = len + 1.0;
-		return samplePos;
-	}
-	if (frontface) {
-		dis = max(0.0, dis);
-		samplePos = vec4(samplePos.xyz+dir * dis, dis);
-		if (dis > 0.0) isClip = true;
-		len = min(disBackFace, len);
-	}
-	if (!frontface) {
-		len = min(dis, len);
-		disBackFace = max(0.0, disBackFace);
-		if (len == dis) isClip = true;
-		samplePos = vec4(samplePos.xyz+dir * disBackFace, disBackFace);
-	}
-	return samplePos;
+	if (frontface)
+		sampleStartEnd.x = max(sampleStartEnd.x, dis);
+	else
+		sampleStartEnd.y = min(sampleStartEnd.y, dis);
+	// if nothing remains, mark empty
+	if (sampleStartEnd.y - sampleStartEnd.x <= CSR_EPS)
+		sampleStartEnd = vec2(0.0, 0.0);
 }
 
-void clipVolume(inout vec3 startPos, inout vec3 backPos, int dim, float frac, bool isLo) {
-	vec3 dir = backPos - startPos;
-	float len = length(dir);
-	dir = normalize(dir);
-	// Discard if both startPos and backPos are outside the clipping plane
-	if (isLo && startPos[dim] < frac && backPos[dim] < frac) {
-		discard;
-	}
-	if (!isLo && startPos[dim] > frac && backPos[dim] > frac) {
-		discard;
-	}
-	vec4 plane = vec4(0.0, 0.0, 0.0, 0.5 - frac);
-	plane[dim] = 1.0;
-	float cdot = dot(dir, plane.xyz);
-	float dis = (-plane.w - dot(plane.xyz, startPos - vec3(0.5))) / cdot;
-	// Adjust startPos or backPos based on the intersection with the plane
-	bool isFrontFace = (cdot > 0.0);
-	if (!isLo)
-		isFrontFace = !isFrontFace;
-	if (dis > 0.0) {
-		if (isFrontFace) {
-				if (dis <= len) {
-					startPos = startPos + dir * dis;
-				}
-		} else {
-			if (dis < len) {
-				backPos = startPos + dir * dis;
-			}
-		}
-	}
-}
-
-void clipVolumeStart (inout vec3 startPos, inout vec3 backPos) {
-	// vec3 clipLo = vec3(0.1, 0.2, 0.4);
-	// vec3 clipHi = vec3(0.8, 0.7, 0.7);
-	for (int i = 0; i < 3; i++) {
-		if (clipLo[i] > 0.0)
-			clipVolume(startPos, backPos, i, clipLo[i], true);
-	}
-	for (int i = 0; i < 3; i++) {
-		if (clipHi[i] < 1.0)
-			clipVolume(startPos, backPos, i, clipHi[i], false);
-	}
+bool skipSample (float pos, vec2 sampleRange) {
+	return (pos < sampleRange.x || pos > sampleRange.y);
 }
 
 float frac2ndc(vec3 frac) {
@@ -32978,11 +33157,11 @@ var kRenderInit = `void main() {
 	}
 	//fColor = vec4(vColor.rgb, 1.0); return;
 	vec3 start = vColor;
-	gl_FragDepth = 0.0;
+	gl_FragDepth = 1.0;
 	vec3 backPosition = GetBackPosition(start);
 	// fColor = vec4(backPosition, 1.0); return;
 	vec3 dir = normalize(backPosition - start);
-	clipVolumeStart(start, backPosition);
+	//clipVolumeStart(start, backPosition);
 	dir = normalize(dir);
 	float len = length(backPosition - start);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
@@ -32994,14 +33173,28 @@ var kRenderInit = `void main() {
 	float opacityCorrection = stepSize/sliceSize;
 	vec4 deltaDir = vec4(dir.xyz * stepSize, stepSize);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
-	float lenNoClip = len;
-	bool isClip = false;
-	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
-	//if ((clipPos.a != samplePos.a) && (len < 3.0)) {
-	//start: OPTIONAL fast pass: rapid traversal until first hit
+
+	vec2 sampleRange = vec2(0.0, len);
+	bool hasClip = false;
+	for (int i = 0; i < MAX_CLIP_PLANES; i++)
+		clipSampleRange(dir, samplePos, clipPlanes[i], sampleRange, hasClip);
+	bool isClip = (sampleRange.x > 0.0) || ((sampleRange.y < len) && (sampleRange.y > 0.0));
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	if ((isClipCutaway) && (sampleRange.x <= 0.0) && (sampleRange.y >= len)) {
+		//completely clipped, but ray does not intersect plane
+		if (hasClip)
+			samplePos.a = len + 1.0;
+		else
+			sampleRange = vec2(0.0, 0.0);
+	}
+	if ((!isClipCutaway) && (sampleRange.x >= sampleRange.y))
+		samplePos.a = len + 1.0;
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01)
 			break;
@@ -33015,16 +33208,19 @@ var kRenderInit = `void main() {
 	}
 	fColor = vec4(1.0, 1.0, 1.0, 1.0);
 	//gl_FragDepth = frac2ndc(samplePos.xyz); //crude due to fast pass resolution
-	samplePos -= deltaDirFast;
-	if (samplePos.a < 0.0)
-		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
+	if (samplePos.a > deltaDirFast.a )
+		samplePos -= deltaDirFast;
 	//end: fast pass
 	vec4 colAcc = vec4(0.0,0.0,0.0,0.0);
-	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * lenNoClip);
+	vec4 firstHit = vec4(0.0,0.0,0.0,2.0 * len);
 	const float earlyTermination = 0.95;
 	float backNearest = len; //assume no hit
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
-	samplePos += deltaDir * ran; //jitter ray
+	// clip planes create steep gradients: reduce aliasing with more jitter
+	if (isClip)
+		samplePos += deltaDir * ran * 1.41; //jitter ray
+	else
+		samplePos += deltaDir * ran; //jitter ray
 `;
 var kRenderTail = `
 	if (firstHit.a < len) {
@@ -33035,20 +33231,61 @@ var kRenderTail = `
 			float a = max(abs(paqdUniforms[2]), abs(paqdUniforms[3]));
 			colAcc.rgb = mix(colAcc.rgb, paqdSample.rgb, 0.5 * paqdSample.a * a);
 		}
-		
+		if (isClip) {
+			//shade voxels with clip color
+			if (clipPlaneColor.a < 0.0) {
+					float thresh = 4.0 * sliceSize;
+					float firstHit1 = firstHit.a + deltaDir.a;
+				if (isClipCutaway) {
+					float min1 = abs(firstHit1 - sampleRange.y);
+					float dx = samplePos.a - firstHit1;
+					if (min1 < thresh)
+						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+					else if (( colAcc.a > earlyTermination ) && (dx > thresh)) {
+						min1 = abs(firstHit1 - sampleRange.x);
+						if (min1 < (thresh * 0.5)) {
+							colAcc.rgb = mix(colAcc.rgb , clipPlaneColorX.rgb, abs(clipPlaneColor.a)*0.5);
+						}
+							
+					}
+				} else {
+					if (abs(firstHit1 - sampleRange.x) < thresh)
+						colAcc.rgb = mix(colAcc.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
+				} // clipPlaneColor.a < 0.0
+			}
+			//ambient occlusion: make creases dark
+			float min1 = 1000.0;
+			float min2 = 1000.0;
+			// find smallest and second-smallest distances
+			vec4 firstHit1 = firstHit - deltaDir;
+			for (int i = 0; i < MAX_CLIP_PLANES; i++) {
+				float d = distance2Plane(firstHit1, clipPlanes[i]);
+				if (d < min1) {
+						min2 = min1;
+						min1 = d;
+				} else if (d < min2) {
+						min2 = d;
+				}
+			}
+			float thresh = 1.2 * sliceSize;
+			if ((isClipCutaway) && (min2 < thresh) && (sampleRange.x > 0.0)) {
+				if ((abs(sampleRange.x - firstHit.a) > ( 2.0 * thresh)) && ((abs(sampleRange.y - firstHit.a) > (2.0 * thresh))))
+					min2 = thresh; 
+			}
+			// if second is 0 -> factor 0 (black), if second >= sliceSize -> factor 1 (unchanged)
+			const float aoFrac = 0.5;
+			float factor = (1.0 - aoFrac) + aoFrac * clamp(min2 / thresh, 0.0, 1.0);
+			// linear darkening: multiply color by factor (or use mix(vec3(0), colAcc.rgb, factor))
+			colAcc.rgb *= factor;
+		}
 	}
 	colAcc.a = (colAcc.a / earlyTermination) * backOpacity;
 	fColor = colAcc;
-	//if (isClip) //CR
-	if ((isColorPlaneInVolume) && (clipPos.a != samplePos.a) && (abs(firstHit.a - clipPos.a) < deltaDir.a))
-		fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, abs(clipPlaneColor.a));
-		//fColor.rgb = mix(fColor.rgb, clipPlaneColorX.rgb, clipPlaneColorX.a * 0.65);
 	float renderDrawAmbientOcclusionX = renderDrawAmbientOcclusionXY.x;
 	float drawOpacity = renderDrawAmbientOcclusionXY.y;
 	if ((overlays < 1.0) && (drawOpacity <= 0.0))
 		return;
 	//overlay pass
-	len = lenNoClip;
 	samplePos = vec4(start.xyz, 0.0); //ray position
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	stepSizeFast = sliceSize * 1.0;
@@ -33162,6 +33399,7 @@ var kRenderTail = `
 }`;
 var fragRenderSliceShader = `#version 300 es
 #line 215
+#define MAX_CLIP_PLANES 6
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -33169,13 +33407,11 @@ uniform vec3 texVox;
 uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
+uniform vec4 clipPlanes[MAX_CLIP_PLANES];
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -33189,10 +33425,10 @@ out vec4 fColor;
 ` + kRenderFunc + `
 	void main() {
 	vec3 start = vColor;
-	gl_FragDepth = 0.0;
+	gl_FragDepth = 1.0;
 	vec3 backPosition = GetBackPosition(start);
 	vec3 dir = normalize(backPosition - start);
-	clipVolumeStart(start, backPosition);
+	//clipVolumeStart(start, backPosition);
 	float len = length(backPosition - start);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if ((lenVox < 0.5) || (len > 3.0)) { //length limit for parallel rays
@@ -33234,9 +33470,10 @@ out vec4 fColor;
 	//the following are only used by overlays
 	vec4 clipPlaneColorX = clipPlaneColor;
 	bool isColorPlaneInVolume = false;
-	float lenNoClip = len;
 	bool isClip = false;
-	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	bool isClipCutaway = false;
+	vec2 sampleRange;
+	// vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	if (samplePos.a < 0.0)
@@ -33246,6 +33483,7 @@ out vec4 fColor;
 ` + kRenderTail;
 var fragRenderShader = `#version 300 es
 #line 215
+#define MAX_CLIP_PLANES 6
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -33253,13 +33491,12 @@ uniform vec3 texVox;
 uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
+uniform vec4 clipPlanes[MAX_CLIP_PLANES];
+uniform bool isClipCutaway;
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 matRAS;
@@ -33271,12 +33508,16 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` + kRenderFunc + kRenderInit + `while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
-			if (firstHit.a > lenNoClip)
+			if (firstHit.a > len)
 				firstHit = samplePos;
-			backNearest = min(backNearest, samplePos.a);
+			// backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			colorSample.rgb *= colorSample.a;
 			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
@@ -33284,10 +33525,13 @@ out vec4 fColor;
 				break;
 		}
 	}
+	if (firstHit.a < len)
+		backNearest = firstHit.a;
 ` + kRenderTail;
 var gradientOpacityLutCount = 192;
 var kFragRenderGradientDecl = `#version 300 es
 #line 215
+#define MAX_CLIP_PLANES 6
 precision highp int;
 precision highp float;
 uniform vec3 rayDir;
@@ -33295,13 +33539,12 @@ uniform vec3 texVox;
 uniform int backgroundMasksOverlays;
 uniform vec3 volScale;
 uniform vec4 clipPlane;
+uniform vec4 clipPlanes[MAX_CLIP_PLANES];
+uniform bool isClipCutaway;
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform float backOpacity;
 uniform mat4 mvpMtx;
 uniform mat4 normMtx;
@@ -33320,11 +33563,20 @@ out vec4 fColor;
 `;
 var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderInit + `
 	float startPos = samplePos.a;
-	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
+	float clipCloseThresh = 5.0 * deltaDir.a;
+	float clipClose = sampleRange.x;
+	if (isClipCutaway)
+		clipClose = sampleRange.y;
+	if (!isClip)
+		clipClose = -1.0;
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
 	//vec4 prevGrad = vec4(0.0);
 	float silhouetteThreshold = 1.0 - silhouettePower;
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
@@ -33336,9 +33588,9 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 			n.y = - n.y;
 			vec4 mc = vec4(texture(matCap, n.xy * 0.5 + 0.5).rgb, 1.0) * brighten;
 			mc = mix(vec4(1.0), mc, gradientAmount);
-			if (samplePos.a > clipClose)
+			if (abs(samplePos.a - clipClose) > clipCloseThresh)
 				colorSample.rgb *= mc.rgb;
-			if (firstHit.a > lenNoClip)
+			if (firstHit.a > len)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
@@ -33362,7 +33614,7 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 ` + kRenderTail;
 var fragRenderGradientValuesShader = kFragRenderGradientDecl + kRenderFunc + kRenderInit + `
 	float startPos = samplePos.a;
-	float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
+	//float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
 	//vec4 prevGrad = vec4(0.0);
 	while (samplePos.a <= len) {
@@ -33370,7 +33622,7 @@ var fragRenderGradientValuesShader = kFragRenderGradientDecl + kRenderFunc + kRe
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
 			colorSample.rgb = abs(normalize(grad.rgb*2.0 - 1.0));
-			if (firstHit.a > lenNoClip)
+			if (firstHit.a > len)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
 			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
@@ -34732,19 +34984,19 @@ void main() {
 }`;
 var fragVolumePickingShader = `#version 300 es
 #line 1260
+#define MAX_CLIP_PLANES 6
 //precision highp int;
 precision highp float;
 uniform vec3 rayDir;
 uniform vec3 volScale;
 uniform vec3 texVox;
 uniform vec4 clipPlane;
+uniform vec4 clipPlanes[MAX_CLIP_PLANES];
+uniform bool isClipCutaway;
 uniform highp sampler3D volume, overlay;
 uniform highp sampler3D paqd;
 uniform vec4 paqdUniforms;
 uniform float overlays;
-uniform float clipThick;
-uniform vec3 clipLo;
-uniform vec3 clipHi;
 uniform mat4 matRAS;
 uniform mat4 mvpMtx;
 uniform float drawOpacity, renderOverlayBlend;
@@ -34757,12 +35009,12 @@ out vec4 fColor;
 void main() {
 	int id = 254;
 	vec3 start = vColor;
-	gl_FragDepth = 0.0;
+	gl_FragDepth = 1.0;
 	fColor = vec4(0.0, 0.0, 0.0, 0.0); //assume no hit: ID = 0
 	float fid = float(id & 255)/ 255.0;
 	vec3 backPosition = GetBackPosition(start);
 	vec3 dir = normalize(backPosition - start);
-	clipVolumeStart(start, backPosition);
+	//clipVolumeStart(start, backPosition);
 	float len = length(backPosition - start);
 	float lenVox = length((texVox * start) - (texVox * backPosition));
 	if ((lenVox < 0.5) || (len > 3.0)) return;//discard; //length limit for parallel rays
@@ -34771,14 +35023,28 @@ void main() {
 	float opacityCorrection = stepSize/sliceSize;
 	dir = normalize(dir);
 	vec4 samplePos = vec4(start.xyz, 0.0); //ray position
-	float lenNoClip = len;
-	bool isClip = false;
-	vec4 clipPos = applyClip(dir, samplePos, len, isClip);
+	bool hasClip = false;
+	vec2 sampleRange = vec2(0.0, len);
+	for (int i = 0; i < MAX_CLIP_PLANES; i++)
+		clipSampleRange(dir, samplePos, clipPlanes[i], sampleRange, hasClip);
+	bool isClip = (sampleRange.x > 0.0) || ((sampleRange.y < len) && (sampleRange.y > 0.0));
+	//vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	if (isClip) fColor = vec4(samplePos.xyz, 253.0 / 255.0); //assume no hit: ID = 0
+	if ((isClipCutaway) && (sampleRange.x <= 0.0) && (sampleRange.y >= len)) {
+		//completely clipped, but ray does not intersect plane
+		if (hasClip)
+			samplePos.a = len + 1.0;
+		else
+			sampleRange = vec2(0.0, 0.0);
+	}
 	//start: OPTIONAL fast pass: rapid traversal until first hit
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		float val = texture(volume, samplePos.xyz).a;
 		if (val > 0.01) {
 			fColor = vec4(samplePos.rgb, fid);
@@ -34792,7 +35058,7 @@ void main() {
 		return; //background hit, no overlays
 	}
 	//overlay pass
-	len = min(lenNoClip, samplePos.a); //only find overlay closer than background
+	len = min(len, samplePos.a); //only find overlay closer than background
 	samplePos = vec4(start.xyz, 0.0); //ray position
 	while (samplePos.a <= len) {
 		float val = texture(overlay, samplePos.xyz).a;
@@ -35521,7 +35787,8 @@ var Niivue = class {
       activeDragMode: null,
       activeDragButton: null,
       angleFirstLine: [0, 0, 0, 0],
-      angleState: "none"
+      angleState: "none",
+      activeClipPlaneIndex: 0
     });
     __privateAdd(this, _eventsController, null);
     __publicField(this, "back", null);
@@ -36168,7 +36435,7 @@ var Niivue = class {
    * @internal
    */
   doSyncClipPlane(otherNV) {
-    otherNV.setClipPlane(this.scene.clipPlaneDepthAziElev);
+    otherNV.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
   }
   /**
    * Sync the scene controls (orientation, crosshair location, etc.) from one Niivue instance to another. useful for using one canvas to drive another.
@@ -36559,7 +36826,7 @@ var Niivue = class {
         this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
       }
       this.uiData.isDragging = true;
-      this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElev;
+      this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex];
     }
   }
   /**
@@ -37137,6 +37404,27 @@ var Niivue = class {
     }
   }
   /**
+   * Cycles active clip plane
+   * @internal
+   * @returns active clip plane index
+   */
+  cycleActiveClipPlane() {
+    const n = this.scene.clipPlanes.length || 6;
+    if (this.uiData.activeClipPlaneIndex == null) {
+      this.uiData.activeClipPlaneIndex = 0;
+    } else {
+      this.uiData.activeClipPlaneIndex = (this.uiData.activeClipPlaneIndex + 1) % n;
+    }
+    const idx = this.uiData.activeClipPlaneIndex;
+    if (!this.scene.clipPlanes[idx]) {
+      this.scene.clipPlanes[idx] = [0, 0, 0, 2];
+    }
+    if (!this.scene.clipPlaneDepthAziElevs[idx]) {
+      this.scene.clipPlaneDepthAziElevs[idx] = [2, 0, 0];
+    }
+    return idx;
+  }
+  /**
    * Handles keyboard shortcuts for toggling clip planes and slice view modes with debounce logic.
    * @internal
    */
@@ -37146,43 +37434,51 @@ var Niivue = class {
       this.drawScene();
       return;
     }
+    const now = (/* @__PURE__ */ new Date()).getTime();
+    const elapsed = now - this.lastCalled;
+    if (e.code === this.opts.cycleClipPlaneHotKey) {
+      if (elapsed > this.opts.keyDebounceTime) {
+        const idx = this.cycleActiveClipPlane();
+        console.log("Active clip plane cycled to:", idx);
+        console.log("clip planes", this.scene.clipPlanes);
+        this.lastCalled = now;
+      }
+    }
     if (e.code === this.opts.clipPlaneHotKey) {
-      const now = (/* @__PURE__ */ new Date()).getTime();
-      const elapsed = now - this.lastCalled;
       if (elapsed > this.opts.keyDebounceTime) {
         this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 7;
         switch (this.currentClipPlaneIndex) {
           case 0:
-            this.scene.clipPlaneDepthAziElev = [2, 0, 0];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [2, 0, 0];
             break;
           case 1:
-            this.scene.clipPlaneDepthAziElev = [0, 270, 0];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 270, 0];
             break;
           case 2:
-            this.scene.clipPlaneDepthAziElev = [0, 90, 0];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 90, 0];
             break;
           case 3:
-            this.scene.clipPlaneDepthAziElev = [0, 0, 0];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 0];
             break;
           case 4:
-            this.scene.clipPlaneDepthAziElev = [0, 180, 0];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 180, 0];
             break;
           case 5:
-            this.scene.clipPlaneDepthAziElev = [0, 0, -90];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, -90];
             break;
           case 6:
-            this.scene.clipPlaneDepthAziElev = [0, 0, 90];
+            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 90];
             break;
         }
-        this.setClipPlane(this.scene.clipPlaneDepthAziElev);
+        this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
       }
       this.lastCalled = now;
     } else if (e.code === this.opts.viewModeHotKey) {
-      const now = (/* @__PURE__ */ new Date()).getTime();
-      const elapsed = now - this.lastCalled;
-      if (elapsed > this.opts.keyDebounceTime) {
+      const now2 = (/* @__PURE__ */ new Date()).getTime();
+      const elapsed2 = now2 - this.lastCalled;
+      if (elapsed2 > this.opts.keyDebounceTime) {
         this.setSliceType((this.opts.sliceType + 1) % 5);
-        this.lastCalled = now;
+        this.lastCalled = now2;
       }
     }
     this.drawScene();
@@ -38941,6 +39237,7 @@ var Niivue = class {
    * @example
    * niivue = new Niivue()
    * xyz = niivue.sph2cartDeg(42, 42)
+   * @internal
    */
   sph2cartDeg(azimuth, elevation) {
     const Phi = -elevation * (Math.PI / 180);
@@ -38956,6 +39253,34 @@ var Niivue = class {
     return ret;
   }
   /**
+   * Set multiple clip planes from their depth/azimuth/elevation definitions.
+   *
+   *  depth: distance of clip plane from center of volume, range 0..~1.73
+   *         (e.g. 2.0 for no clip plane)
+   *  azimuth: camera position in degrees around object, typically 0..360
+   *           (or -180..+180)
+   *  elevation: camera height in degrees, range -90..90
+   *
+   * This replaces the entire `clipPlanes` and `clipPlaneDepthAziElevs` arrays,
+   * ensuring they always have the same length.
+   *
+   * @param depthAziElevs - array of `[depth, azimuthDeg, elevationDeg]` values
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | live demo usage}
+   */
+  setClipPlanes(depthAziElevs) {
+    this.scene.clipPlanes = [];
+    this.scene.clipPlaneDepthAziElevs = [];
+    for (let i = 0; i < depthAziElevs.length; i++) {
+      const dae = depthAziElevs[i];
+      const n = this.sph2cartDeg(dae[1], dae[2]);
+      const d = -dae[0];
+      const plane = [n[0], n[1], n[2], d];
+      this.scene.clipPlanes.push(plane);
+      this.scene.clipPlaneDepthAziElevs.push(dae);
+    }
+    this.drawScene();
+  }
+  /**
    * Update the clip plane orientation in 3D view mode.
    * @param depthAzimuthElevation - a 3-component array:
    *   - `depth`: distance of clip plane from center of volume (0 to ~1.73, or >2.0 to disable clipping)
@@ -38967,10 +39292,27 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/mask.html | live demo usage}
    */
   setClipPlane(depthAzimuthElevation) {
+    if (!depthAzimuthElevation || depthAzimuthElevation.length === 0) {
+      return;
+    }
+    const idx = this.uiData.activeClipPlaneIndex ?? 0;
+    if (!this.scene.clipPlanes) {
+      this.scene.clipPlanes = [];
+    }
+    if (!this.scene.clipPlaneDepthAziElevs) {
+      this.scene.clipPlaneDepthAziElevs = [];
+    }
+    while (this.scene.clipPlanes.length <= idx) {
+      this.scene.clipPlanes.push([0, 0, 0, 2]);
+    }
+    while (this.scene.clipPlaneDepthAziElevs.length <= idx) {
+      this.scene.clipPlaneDepthAziElevs.push([2, 0, 0]);
+    }
     const v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
-    this.scene.clipPlane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
-    this.scene.clipPlaneDepthAziElev = depthAzimuthElevation;
-    this.onClipPlaneChange(this.scene.clipPlane);
+    const plane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
+    this.scene.clipPlanes[idx] = plane;
+    this.scene.clipPlaneDepthAziElevs[idx] = depthAzimuthElevation;
+    this.onClipPlaneChange(plane);
     this.drawScene();
   }
   /**
@@ -39174,11 +39516,17 @@ var Niivue = class {
     this.drawScene();
   }
   /**
-   * set the color of the 3D clip plane
-   * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+   * Set the color of the 3D clip plane.
+   * @param {number[]} color - An array of RGBA values.
+   *   - **R**, **G**, **B** components range from `0.0` to `1.0`.
+   *   - **A** (alpha) component ranges from `-1.0` to `1.0`, where:
+   *       - `0.0–1.0` → controls background translucency.
+   *       - `-1.0–0.0` → applies translucent shading to the volume instead of the background.
+   *
    * @example
-   * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * niivue.setClipPlaneColor([1, 1, 1, 0.5]);   // white, translucent background
+   * niivue.setClipPlaneColor([1, 1, 1, -0.5]);  // white, translucent shading
+   * @see {@link https://niivue.com/demos/features/clipplanes.html | Live demo usage}
    */
   setClipPlaneColor(color) {
     this.opts.clipPlaneColor = color;
@@ -39187,36 +39535,20 @@ var Niivue = class {
     this.drawScene();
   }
   /**
-   * adjust thickness of the 3D clip plane
-   * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
-   * @example
-   * niivue.setClipPlaneThick(0.3) // thin slab
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * @deprecated This method has been removed.
+   * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
    */
-  setClipPlaneThick(thick) {
-    this.opts.clipThick = thick;
-    this.renderShader.use(this.gl);
-    this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick);
-    this.drawScene();
+  setClipPlaneThick(_thick) {
+    log.warn("setClipPlaneThick() has been removed. use setClipPlanes() instead.");
   }
   /**
-   * set the clipping region for volume rendering
-   * @param low - 3-component array specifying the lower bound of the clipping region along the X, Y, and Z axes. Values range from 0 (start) to 1 (end of volume).
-   * @param high - 3-component array specifying the upper bound of the clipping region along the X, Y, and Z axes. Values range from 0 to 1.
-   * @example
-   * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
-   * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+   * @deprecated This method has been removed.
+   * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+   * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
    */
-  setClipVolume(low, high) {
-    this.opts.clipVolumeLow = [Math.min(low[0], high[0]), Math.min(low[1], high[1]), Math.min(low[2], high[2])];
-    this.opts.clipVolumeHigh = [Math.max(low[0], high[0]), Math.max(low[1], high[1]), Math.max(low[2], high[2])];
-    this.renderShader.use(this.gl);
-    this.gl.uniform3fv(this.renderShader.uniforms.clipLo, this.opts.clipVolumeLow);
-    this.gl.uniform3fv(this.renderShader.uniforms.clipHi, this.opts.clipVolumeHigh);
-    this.pickingImageShader.use(this.gl);
-    this.gl.uniform3fv(this.pickingImageShader.uniforms.clipLo, this.opts.clipVolumeLow);
-    this.gl.uniform3fv(this.pickingImageShader.uniforms.clipHi, this.opts.clipVolumeHigh);
-    this.drawScene();
+  setClipVolume(_low, _high) {
+    log.warn("setClipVolume() has been removed. use setClipPlanes() instead.");
   }
   /**
    * set proportion of volume rendering influenced by selected matcap.
@@ -39350,7 +39682,9 @@ var Niivue = class {
     const opts = { ...DEFAULT_OPTIONS, ...document2.opts };
     this.scene.pan2Dxyzmm = document2.scene.pan2Dxyzmm ? document2.scene.pan2Dxyzmm : [0, 0, 0, 1];
     this.document.opts = opts;
-    this.setClipPlane(this.scene.clipPlaneDepthAziElev);
+    if (this.scene.clipPlaneDepthAziElevs) {
+      this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex ?? 0]);
+    }
     log.debug("load document", document2);
     this.mediaUrlMap.clear();
     this.createEmptyDrawing();
@@ -41479,6 +41813,7 @@ var Niivue = class {
       }
     }
     this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, "gradientOpacity"), gradientOpacityLut);
+    shader.uniforms.clipPlanes = this.gl.getUniformLocation(shader.program, "clipPlanes[0]");
   }
   /**
    * Initializes WebGL state, shaders, textures, buffers, and sets up the rendering pipeline.
@@ -41538,6 +41873,10 @@ var Niivue = class {
     this.pickingMeshShader.use(gl);
     this.pickingImageShader = new Shader(gl, vertRenderShader, fragVolumePickingShader);
     this.pickingImageShader.use(gl);
+    this.pickingImageShader.uniforms.clipPlanes = this.gl.getUniformLocation(
+      this.pickingImageShader.program,
+      "clipPlanes[0]"
+    );
     gl.uniform1i(this.pickingImageShader.uniforms.volume, 0);
     gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1);
     gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2);
@@ -42613,9 +42952,6 @@ var Niivue = class {
     const volScale = slicescl.volScale;
     this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length);
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor);
-    this.gl.uniform1f(this.renderShader.uniforms.clipThick, this.opts.clipThick);
-    this.gl.uniform3fv(this.renderShader.uniforms.clipLo, this.opts.clipVolumeLow);
-    this.gl.uniform3fv(this.renderShader.uniforms.clipHi, this.opts.clipVolumeHigh);
     this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity);
     this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend);
     this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane);
@@ -42627,8 +42963,6 @@ var Niivue = class {
     this.pickingImageShader.use(this.gl);
     this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length);
     this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox);
-    this.gl.uniform3fv(this.pickingImageShader.uniforms.clipLo, this.opts.clipVolumeLow);
-    this.gl.uniform3fv(this.pickingImageShader.uniforms.clipHi, this.opts.clipVolumeHigh);
     let shader = this.sliceMMShader;
     if (this.opts.is2DSliceShader) {
       shader = this.slice2DShader;
@@ -43581,6 +43915,23 @@ var Niivue = class {
           continue;
         }
         const nlayers = mesh.layers.length;
+        const fiberColor = mesh.fiberColor.toLowerCase();
+        if (mesh.offsetPt0 && fiberColor.startsWith("dp")) {
+          let dp = null;
+          const n = parseInt(fiberColor.substring(3));
+          if (fiberColor.startsWith("dpg") && !mesh.fiberGroupColormap) {
+            dp = n < mesh.dpg.length ? mesh.dpg[n] : mesh.dpg[0];
+          }
+          if (fiberColor.startsWith("dps")) {
+            dp = n < mesh.dps.length ? mesh.dps[n] : mesh.dps[0];
+          }
+          if (fiberColor.startsWith("dpv")) {
+            dp = n < mesh.dpv.length ? mesh.dpv[n] : mesh.dpv[0];
+          }
+          if (dp && typeof mesh.colormap === "string") {
+            this.addColormapList(mesh.colormap, dp.cal_min, dp.cal_max, false, false, true, mesh.colormapInvert);
+          }
+        }
         if ("edgeColormap" in mesh && "edges" in mesh && mesh.edges !== void 0) {
           const neg = negMinMax(mesh.edgeMin, mesh.edgeMax, NaN, NaN);
           this.addColormapList(mesh.edgeColormapNegative, neg[0], neg[1], false, true, true, mesh.colormapInvert);
@@ -43695,17 +44046,17 @@ var Niivue = class {
     if (posChange === 0) {
       return;
     }
-    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElev[0] < 1.8) {
-      const depthAziElev = this.scene.clipPlaneDepthAziElev.slice();
+    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8) {
+      const depthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex].slice();
       if (posChange > 0) {
         depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025);
       }
       if (posChange < 0) {
         depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025);
       }
-      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElev[0]) {
-        this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
+      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0]) {
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev;
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
       }
       return;
     }
@@ -43716,18 +44067,6 @@ var Niivue = class {
       this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.9);
     }
     this.drawScene();
-  }
-  /**
-   * Deletes loaded thumbnail texture and frees memory.
-   * @internal
-   */
-  deleteThumbnail() {
-    if (!this.bmpTexture) {
-      return;
-    }
-    this.gl.deleteTexture(this.bmpTexture);
-    this.bmpTexture = null;
-    this.thumbnailVisible = false;
   }
   /**
    * Checks if (x,y) is within the visible graph plotting area.
@@ -44595,6 +44934,7 @@ var Niivue = class {
     if (!this.rectShader) {
       throw new Error("rectShader undefined");
     }
+    this.gl.disable(this.gl.CULL_FACE);
     if (!this.opts.selectionBoxIsOutline) {
       this.rectShader.use(this.gl);
       this.gl.enable(this.gl.BLEND);
@@ -44857,6 +45197,7 @@ var Niivue = class {
     if (txtHt <= 0) {
       return;
     }
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
     let margin = txtHt;
     const fullHt = 3 * txtHt;
     let barHt = txtHt;
@@ -45239,7 +45580,7 @@ var Niivue = class {
    * Configures viewport and accounts for radiological orientation, depth clipping, and camera rotation.
    * @internal
    */
-  calculateMvpMatrix2D(leftTopWidthHeight, mn, mx, clipTolerance = Infinity, clipDepth = 0, azimuth = 0, elevation = 0, isRadiolgical) {
+  calculateMvpMatrix2D(leftTopWidthHeight, mn, mx, clipTolerance = Infinity, clipDepth = 0, azimuth = 0, elevation = 0, isRadiolgical = false) {
     const gl = this.gl;
     gl.viewport(
       leftTopWidthHeight[0],
@@ -45260,8 +45601,8 @@ var Niivue = class {
     }
     const scale6 = 2 * Math.max(Math.abs(mn[2]), Math.abs(mx[2]));
     const projectionMatrix = mat4_exports.create();
-    let near = 0.01;
-    let far = scale6 * 8;
+    let far = 0.01;
+    let near = scale6 * 8;
     if (clipTolerance !== Infinity) {
       let r = isRadiolgical;
       if (elevation === 0 && (azimuth === 0 || azimuth === 180)) {
@@ -45749,13 +46090,14 @@ var Niivue = class {
   }
   /**
    * Build MVP, Model, and Normal matrices for rendering.
-   * @param _unused - reserved
-   * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
-   * @param azimuth - azimuth rotation in degrees
-   * @param elevation - elevation rotation in degrees
-   * @param flipX - whether to mirror the X axis (default true for radiological convention)
+   * Note: 3D MVP is identical for radiological and neurological conventions.
+   * @param _unused - Reserved for future use.
+   * @param leftTopWidthHeight - Viewport rectangle [x, y, w, h] in device pixels.
+   * @param azimuth - Azimuth rotation in degrees.
+   * @param elevation - Elevation rotation in degrees.
+   * @internal
    */
-  calculateMvpMatrix(_unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation, flipX = true) {
+  calculateMvpMatrix(_unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation) {
     const gl = this.gl;
     if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
       leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
@@ -45766,14 +46108,12 @@ var Niivue = class {
     const projectionMatrix = mat4_exports.create();
     scale6 = 0.8 * scale6 / this.scene.volScaleMultiplier;
     if (whratio < 1) {
-      mat4_exports.ortho(projectionMatrix, -scale6, scale6, -scale6 / whratio, scale6 / whratio, scale6 * 0.01, scale6 * 8);
+      mat4_exports.ortho(projectionMatrix, -scale6, scale6, -scale6 / whratio, scale6 / whratio, scale6 * 8, scale6 * 0.01);
     } else {
-      mat4_exports.ortho(projectionMatrix, -scale6 * whratio, scale6 * whratio, -scale6, scale6, scale6 * 0.01, scale6 * 8);
+      mat4_exports.ortho(projectionMatrix, -scale6 * whratio, scale6 * whratio, -scale6, scale6, scale6 * 8, scale6 * 0.01);
     }
     const modelMatrix = mat4_exports.create();
-    if (flipX) {
-      modelMatrix[0] = -1;
-    }
+    modelMatrix[0] = -1;
     const translateVec3 = vec3_exports.fromValues(0, 0, -scale6 * 1.8);
     mat4_exports.translate(modelMatrix, modelMatrix, translateVec3);
     if (this.position) {
@@ -45812,30 +46152,31 @@ var Niivue = class {
   /**
    * Returns the normalized near-to-far ray direction for the given view angles.
    * Ensures components are nonzero to avoid divide-by-zero errors.
+   * n.b. volumes can have shear (see shear.html), so invert instead of transpose
    * @internal
    */
   calculateRayDirection(azimuth, elevation) {
+    const dirClip = vec3_exports.fromValues(0, 0, -1);
     const modelMatrix = this.calculateModelMatrix(azimuth, elevation);
-    const projectionMatrix = mat4_exports.fromValues(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1);
-    const mvpMatrix = mat4_exports.create();
-    mat4_exports.multiply(mvpMatrix, projectionMatrix, modelMatrix);
-    const inv = mat4_exports.create();
-    mat4_exports.invert(inv, mvpMatrix);
-    const rayDir4 = vec4_exports.fromValues(0, 0, -1, 1);
-    vec4_exports.transformMat4(rayDir4, rayDir4, inv);
-    const rayDir = vec3_exports.fromValues(rayDir4[0], rayDir4[1], rayDir4[2]);
-    vec3_exports.normalize(rayDir, rayDir);
+    const proj3 = mat3_exports.fromValues(1, 0, 0, 0, -1, 0, 0, 0, -1);
+    const dirAfterProj = vec3_exports.create();
+    vec3_exports.transformMat3(dirAfterProj, dirClip, proj3);
+    const model3 = mat3_exports.create();
+    mat3_exports.fromMat4(model3, modelMatrix);
+    const invModel3 = mat3_exports.create();
+    if (!mat3_exports.invert(invModel3, model3)) {
+      return vec3_exports.fromValues(0, 0, 1);
+    }
+    const worldRay = vec3_exports.create();
+    vec3_exports.transformMat3(worldRay, dirAfterProj, invModel3);
+    vec3_exports.normalize(worldRay, worldRay);
     const tiny = 5e-5;
-    if (Math.abs(rayDir[0]) < tiny) {
-      rayDir[0] = tiny;
+    for (let i = 0; i < 3; i++) {
+      if (Math.abs(worldRay[i]) < tiny) {
+        worldRay[i] = Math.sign(worldRay[i]) * tiny || tiny;
+      }
     }
-    if (Math.abs(rayDir[1]) < tiny) {
-      rayDir[1] = tiny;
-    }
-    if (Math.abs(rayDir[2]) < tiny) {
-      rayDir[2] = tiny;
-    }
-    return rayDir;
+    return worldRay;
   }
   /**
    * Returns the scene's min, max, and range extents in mm or voxel space.
@@ -46295,9 +46636,18 @@ var Niivue = class {
           30
         ]);
       } else {
-        gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane);
+        const MAX_CLIP_PLANES = 6;
+        const arr = new Float32Array(4 * MAX_CLIP_PLANES).fill(2);
+        for (let i = 0; i < this.scene.clipPlaneDepthAziElevs.length; i++) {
+          const dae = this.scene.clipPlaneDepthAziElevs[i];
+          const v = this.sph2cartDeg(dae[1] + 180, dae[2]);
+          const planeI = [v[0], v[1], v[2], dae[0]];
+          arr.set(planeI, i * 4);
+        }
+        this.gl.uniform4fv(shader.uniforms.clipPlanes, arr);
       }
       gl.uniform1f(shader.uniforms.drawOpacity, 1);
+      gl.uniform1i(shader.uniforms.isClipCutaway, this.opts.isClipPlanesCutaway ? 1 : 0);
       gl.bindVertexArray(object3D.vao);
       gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
       gl.bindVertexArray(this.unusedVAO);
@@ -46318,6 +46668,7 @@ var Niivue = class {
     const gl = this.gl;
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
+    gl.disable(gl.DEPTH_TEST);
     this.orientCubeShader.use(this.gl);
     gl.bindVertexArray(this.orientCubeShaderVAO);
     const modelMatrix = mat4_exports.create();
@@ -46749,7 +47100,6 @@ var Niivue = class {
     });
     const glLTWH = [ltwh[0], gl.canvas.height - ltwh[3] - ltwh[1], ltwh[2], ltwh[3]];
     ltwh[1] = gl.canvas.height - ltwh[3] - ltwh[1];
-    gl.clearDepth(0);
     gl.clear(gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.ALWAYS);
@@ -46776,6 +47126,7 @@ var Niivue = class {
     if (this.opts.meshXRay > 0) {
       this.drawMesh3D(false, this.opts.meshXRay, mvpMatrix, modelMatrix, normalMatrix);
     }
+    this.gl.disable(this.gl.CULL_FACE);
     this.draw3DLabels(mvpMatrix, relativeLTWH, false);
     gl.viewport(ltwh[0], ltwh[1], ltwh[2], ltwh[3]);
     if (!isMosaic) {
@@ -46804,20 +47155,17 @@ var Niivue = class {
         this.volumeObject3D,
         void 0,
         this.scene.renderAzimuth,
-        this.scene.renderElevation,
-        true
-        // no flipX for meshes
+        this.scene.renderElevation
       );
     }
     gl.enable(gl.DEPTH_TEST);
     if (isDepthTest) {
-      gl.depthFunc(gl.GREATER);
+      gl.depthFunc(gl.LEQUAL);
     } else {
       gl.depthFunc(gl.ALWAYS);
     }
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
-    gl.frontFace(gl.CCW);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     let hasFibers = false;
     for (const mesh of this.meshes) {
@@ -46858,9 +47206,7 @@ var Niivue = class {
       gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
       gl.bindVertexArray(this.unusedVAO);
     }
-    gl.depthMask(true);
-    gl.disable(gl.BLEND);
-    if (this.opts.meshXRay > 0) {
+    if (this.opts.meshXRay > 0 && !hasFibers) {
       gl.enable(gl.BLEND);
       gl.depthMask(false);
       gl.depthFunc(gl.ALWAYS);
@@ -46898,6 +47244,8 @@ var Niivue = class {
         gl.bindVertexArray(this.unusedVAO);
       }
     }
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
     this.readyForSync = true;
   }
   /**
@@ -46959,7 +47307,7 @@ var Niivue = class {
     const color = [...this.opts.crosshairColor];
     if (isDepthTest) {
       gl.disable(gl.BLEND);
-      gl.depthFunc(gl.GREATER);
+      gl.depthFunc(gl.LEQUAL);
     } else {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -47910,7 +48258,7 @@ var Niivue = class {
     this.gl.activeTexture(TEXTURE5_MATCAP);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.matCapTexture);
     this.gl.activeTexture(TEXTURE6_GRADIENT);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.gradientTexture);
+    this.gl.bindTexture(this.gl.TEXTURE_3D, this.gradientTexture);
   }
   /**
    * Clear a rectangular region of this instance's canvas.
@@ -47982,16 +48330,16 @@ var Niivue = class {
       this.drawLoadingText(this.opts.loadingText);
       return;
     }
-    if (this.uiData.isDragging && this.scene.clipPlaneDepthAziElev[0] < 1.8 && this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
+    if (this.uiData.isDragging && this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8 && this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
       const x = this.uiData.dragStart[0] - this.uiData.dragEnd[0];
       const y = this.uiData.dragStart[1] - this.uiData.dragEnd[1];
       const depthAziElev = this.uiData.dragClipPlaneStartDepthAziElev.slice();
       depthAziElev[1] -= x;
       depthAziElev[1] = depthAziElev[1] % 360;
       depthAziElev[2] += y;
-      if (depthAziElev[1] !== this.scene.clipPlaneDepthAziElev[1] || depthAziElev[2] !== this.scene.clipPlaneDepthAziElev[2]) {
-        this.scene.clipPlaneDepthAziElev = depthAziElev;
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElev);
+      if (depthAziElev[1] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][1] || depthAziElev[2] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][2]) {
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev;
+        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
       }
     }
     if (this.sliceMosaicString.length < 1 && this.opts.sliceType === 4 /* RENDER */) {

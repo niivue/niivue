@@ -4,7 +4,7 @@
 type TCK = object;
 ```
 
-Defined in: [nvmesh-types.ts:59](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L59)
+Defined in: [nvmesh-types.ts:60](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L60)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:59](https://github.com/niivue/niivue/blob/main/pack
 offsetPt0: Uint32Array;
 ```
 
-Defined in: [nvmesh-types.ts:61](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L61)
+Defined in: [nvmesh-types.ts:62](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L62)
 
 ---
 
@@ -24,4 +24,4 @@ Defined in: [nvmesh-types.ts:61](https://github.com/niivue/niivue/blob/main/pack
 pts: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:60](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L60)
+Defined in: [nvmesh-types.ts:61](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L61)

@@ -30,8 +30,8 @@ declare class ColorTables {
     colorMaps(): Array<keyof typeof this.cluts>;
     colormapFromKey(name: string): ColorMap;
     colormap(key?: string, isInvert?: boolean): Uint8ClampedArray;
-    makeLabelLut(cm: ColorMap, alphaFill?: number): LUT;
-    makeLabelLutFromUrl(name: string): Promise<LUT>;
+    makeLabelLut(cm: ColorMap, alphaFill?: number, maxIdx?: number): LUT;
+    makeLabelLutFromUrl(name: string, alphaFill?: number, maxIdx?: number): Promise<LUT>;
     makeDrawLut(name: string | ColorMap): LUT;
     makeLut(Rsi: number[], Gsi: number[], Bsi: number[], Asi: number[], Isi: number[], isInvert: boolean): Uint8ClampedArray;
 }
@@ -672,14 +672,13 @@ type NVConfigOptions = {
     fontColor: Float32List;
     selectionBoxColor: number[];
     clipPlaneColor: number[];
+    isClipPlanesCutaway: boolean;
     paqdUniforms: number[];
-    clipThick: number;
-    clipVolumeLow: number[];
-    clipVolumeHigh: number[];
     rulerColor: number[];
     colorbarMargin: number;
     trustCalMinMax: boolean;
     clipPlaneHotKey: string;
+    cycleClipPlaneHotKey: string;
     viewModeHotKey: string;
     doubleTouchTimeout: number;
     longTouchTimeout: number;
@@ -772,26 +771,20 @@ type SceneData = {
     azimuth: number;
     elevation: number;
     crosshairPos: vec3;
-    clipPlane: number[];
-    clipPlaneDepthAziElev: number[];
+    clipPlanes: number[][];
+    clipPlaneDepthAziElevs: number[][];
     volScaleMultiplier: number;
     pan2Dxyzmm: vec4;
-    clipThick: number;
-    clipVolumeLow: number[];
-    clipVolumeHigh: number[];
 };
 declare const INITIAL_SCENE_DATA: {
     gamma: number;
     azimuth: number;
     elevation: number;
     crosshairPos: vec3;
-    clipPlane: number[];
-    clipPlaneDepthAziElev: number[];
+    clipPlanes: number[][];
+    clipPlaneDepthAziElevs: number[][];
     volScaleMultiplier: number;
     pan2Dxyzmm: vec4;
-    clipThick: number;
-    clipVolumeLow: number[];
-    clipVolumeHigh: number[];
 };
 type Scene = {
     onAzimuthElevationChange: (azimuth: number, elevation: number) => void;
@@ -802,7 +795,8 @@ type Scene = {
     volScaleMultiplier: number;
     crosshairPos: vec3;
     clipPlane: number[];
-    clipPlaneDepthAziElev: number[];
+    clipPlanes: number[][];
+    clipPlaneDepthAziElevs: number[][];
     pan2Dxyzmm: vec4;
     _elevation?: number;
     _azimuth?: number;
@@ -1152,6 +1146,7 @@ type TRX = {
     dpg: ValuesArray;
     dps: ValuesArray;
     dpv: ValuesArray;
+    groups: ValuesArray;
     header: unknown;
 };
 type TRK = {
@@ -1334,6 +1329,7 @@ declare class NVMesh {
     dpg?: ValuesArray | null;
     dps?: ValuesArray | null;
     dpv?: ValuesArray | null;
+    groups?: ValuesArray | null;
     hasConnectome: boolean;
     connectome?: LegacyConnectome | string;
     indexCount?: number;
@@ -1365,10 +1361,11 @@ declare class NVMesh {
      * @param dpg - Data per group for tractography, see TRK format. Default is null (not tractograpgy)
      * @param dps - Data per streamline for tractography, see TRK format.  Default is null (not tractograpgy)
      * @param dpv - Data per vertex for tractography, see TRK format.  Default is null (not tractograpgy)
+     * @param groups - Groups for tractography, see TRK format. Default is null (not tractograpgy)
      * @param colorbarVisible - does this mesh display a colorbar
      * @param anatomicalStructurePrimary - region for mesh. Default is an empty string
      */
-    constructor(pts: Float32Array, tris: Uint32Array, name: string, rgba255: Uint8Array, opacity: number, visible: boolean, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
+    constructor(pts: Float32Array, tris: Uint32Array, name: string, rgba255: Uint8Array, opacity: number, visible: boolean, gl: WebGL2RenderingContext, connectome?: LegacyConnectome | string | null, dpg?: ValuesArray | null, dps?: ValuesArray | null, dpv?: ValuesArray | null, groups?: ValuesArray | null, colorbarVisible?: boolean, anatomicalStructurePrimary?: string);
     initValuesArray(va: ValuesArray): ValuesArray;
     linesToCylinders(gl: WebGL2RenderingContext, posClrF32: Float32Array, indices: number[]): void;
     createFiberDensityMap(): void;
@@ -1475,6 +1472,21 @@ declare class NVUtilities {
 declare class NVMeshLoaders {
     static readTRACT(buffer: ArrayBuffer): TRACT;
     static readTT(buffer: ArrayBuffer): Promise<TT>;
+    /**
+     * Assemble dpg from a map-of-groups into a ValuesArray ordered by groups[].
+     *
+     * @param dpgMap - map from groupId -> ValuesArray (entries for that group)
+     * @param groups - ValuesArray describing groups; groups[i].id defines the ordering
+     * @returns ValuesArray - one entry per tag where vals is the concatenation of each group's vals in groups[] order
+     *
+     * @throws Error when:
+     *  - groups is empty or missing
+     *  - any group in groups is missing from dpgMap
+     *  - any group contains duplicate entries for a tag
+     *  - tag coverage differs between groups (missing tag in any group)
+     *  - any entry has invalid/unconvertible vals
+     */
+    static assembleDpgFromMap(dpgMap: Record<string, ValuesArray>, groups: ValuesArray): ValuesArray;
     static readTRX(buffer: ArrayBuffer): Promise<TRX>;
     static readTXT(buffer: ArrayBuffer, n_count?: number): Float32Array;
     static readTSF(buffer: ArrayBuffer, n_vert?: number): Float32Array;
@@ -1633,6 +1645,7 @@ type UIData = {
     activeDragButton: number | null;
     angleFirstLine: number[];
     angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete';
+    activeClipPlaneIndex: number;
 };
 type SaveImageOptions = {
     filename: string;
@@ -2293,6 +2306,12 @@ declare class Niivue {
      */
     handlePinchZoom(e: TouchEvent): void;
     /**
+     * Cycles active clip plane
+     * @internal
+     * @returns active clip plane index
+     */
+    cycleActiveClipPlane(): number;
+    /**
      * Handles keyboard shortcuts for toggling clip planes and slice view modes with debounce logic.
      * @internal
      */
@@ -2861,8 +2880,25 @@ declare class Niivue {
      * @example
      * niivue = new Niivue()
      * xyz = niivue.sph2cartDeg(42, 42)
+     * @internal
      */
     sph2cartDeg(azimuth: number, elevation: number): number[];
+    /**
+     * Set multiple clip planes from their depth/azimuth/elevation definitions.
+     *
+     *  depth: distance of clip plane from center of volume, range 0..~1.73
+     *         (e.g. 2.0 for no clip plane)
+     *  azimuth: camera position in degrees around object, typically 0..360
+     *           (or -180..+180)
+     *  elevation: camera height in degrees, range -90..90
+     *
+     * This replaces the entire `clipPlanes` and `clipPlaneDepthAziElevs` arrays,
+     * ensuring they always have the same length.
+     *
+     * @param depthAziElevs - array of `[depth, azimuthDeg, elevationDeg]` values
+     * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | live demo usage}
+     */
+    setClipPlanes(depthAziElevs: number[][]): void;
     /**
      * Update the clip plane orientation in 3D view mode.
      * @param depthAzimuthElevation - a 3-component array:
@@ -2965,30 +3001,31 @@ declare class Niivue {
      */
     setScale(scale: number): void;
     /**
-     * set the color of the 3D clip plane
-     * @param color - the new color. expects an array of RGBA values. values can range from 0 to 1
+     * Set the color of the 3D clip plane.
+     * @param {number[]} color - An array of RGBA values.
+     *   - **R**, **G**, **B** components range from `0.0` to `1.0`.
+     *   - **A** (alpha) component ranges from `-1.0` to `1.0`, where:
+     *       - `0.0–1.0` → controls background translucency.
+     *       - `-1.0–0.0` → applies translucent shading to the volume instead of the background.
+     *
      * @example
-     * niivue.setClipPlaneColor([1, 1, 1, 0.5]) // white, transparent
-     * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+     * niivue.setClipPlaneColor([1, 1, 1, 0.5]);   // white, translucent background
+     * niivue.setClipPlaneColor([1, 1, 1, -0.5]);  // white, translucent shading
+     * @see {@link https://niivue.com/demos/features/clipplanes.html | Live demo usage}
      */
     setClipPlaneColor(color: number[]): void;
     /**
-     * adjust thickness of the 3D clip plane
-     * @param thick - thickness of slab. Value 0..1.73 (cube opposite corner length is sqrt(3)).
-     * @example
-     * niivue.setClipPlaneThick(0.3) // thin slab
-     * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+     * @deprecated This method has been removed.
+     * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+     * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
      */
-    setClipPlaneThick(thick: number): void;
+    setClipPlaneThick(_thick: number): void;
     /**
-     * set the clipping region for volume rendering
-     * @param low - 3-component array specifying the lower bound of the clipping region along the X, Y, and Z axes. Values range from 0 (start) to 1 (end of volume).
-     * @param high - 3-component array specifying the upper bound of the clipping region along the X, Y, and Z axes. Values range from 0 to 1.
-     * @example
-     * niivue.setClipPlaneColor([0.0, 0.0, 0.2], [1.0, 1.0, 0.7]) // remove inferior 20% and superior 30%
-     * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
+     * @deprecated This method has been removed.
+     * Use {@link setClipPlanes} instead, which generalizes clip plane configuration
+     * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | Multiple clip plane demo}
      */
-    setClipVolume(low: number[], high: number[]): void;
+    setClipVolume(_low: number[], _high: number[]): void;
     /**
      * set proportion of volume rendering influenced by selected matcap.
      * @param gradientAmount - amount of matcap (NaN or 0..1), default 0 (matte, surface normal does not influence color). NaN renders the gradients.
@@ -3767,11 +3804,6 @@ declare class Niivue {
      */
     sliceScroll3D(posChange?: number): void;
     /**
-     * Deletes loaded thumbnail texture and frees memory.
-     * @internal
-     */
-    deleteThumbnail(): void;
-    /**
      * Checks if (x,y) is within the visible graph plotting area.
      * @internal
      */
@@ -4103,7 +4135,7 @@ declare class Niivue {
      * Configures viewport and accounts for radiological orientation, depth clipping, and camera rotation.
      * @internal
      */
-    calculateMvpMatrix2D(leftTopWidthHeight: number[], mn: vec3, mx: vec3, clipTolerance: number, clipDepth: number, azimuth: number, elevation: number, isRadiolgical: boolean): MvpMatrix2D;
+    calculateMvpMatrix2D(leftTopWidthHeight: number[], mn: vec3, mx: vec3, clipTolerance?: number, clipDepth?: number, azimuth?: number, elevation?: number, isRadiolgical?: boolean): MvpMatrix2D;
     /**
      * Reorders the components of a 3D vector based on the slice orientation (axial, coronal, or sagittal).
      * @internal
@@ -4151,13 +4183,14 @@ declare class Niivue {
     draw2D(leftTopWidthHeight: number[], axCorSag: SLICE_TYPE, customMM?: number, imageWidthHeight?: number[]): void;
     /**
      * Build MVP, Model, and Normal matrices for rendering.
-     * @param _unused - reserved
-     * @param leftTopWidthHeight - viewport rectangle [x, y, w, h] in device pixels
-     * @param azimuth - azimuth rotation in degrees
-     * @param elevation - elevation rotation in degrees
-     * @param flipX - whether to mirror the X axis (default true for radiological convention)
+     * Note: 3D MVP is identical for radiological and neurological conventions.
+     * @param _unused - Reserved for future use.
+     * @param leftTopWidthHeight - Viewport rectangle [x, y, w, h] in device pixels.
+     * @param azimuth - Azimuth rotation in degrees.
+     * @param elevation - Elevation rotation in degrees.
+     * @internal
      */
-    calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number, flipX?: boolean): mat4[];
+    calculateMvpMatrix(_unused: unknown, leftTopWidthHeight: number[], azimuth: number, elevation: number): mat4[];
     /**
      * Computes the model transformation matrix for the given azimuth and elevation.
      * Applies optional oblique RAS rotation if available.
@@ -4167,6 +4200,7 @@ declare class Niivue {
     /**
      * Returns the normalized near-to-far ray direction for the given view angles.
      * Ensures components are nonzero to avoid divide-by-zero errors.
+     * n.b. volumes can have shear (see shear.html), so invert instead of transpose
      * @internal
      */
     calculateRayDirection(azimuth: number, elevation: number): vec3;

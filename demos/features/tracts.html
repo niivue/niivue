@@ -101,6 +101,7 @@
   nv1.setSliceType(nv1.sliceTypeRender)
   await nv1.attachTo("gl1")
   await nv1.loadVolumes(volumeList1)
+  nv1.volumes[0].colorbarVisible = false
   await nv1.loadMeshes([{ url: "../images/dpsv.trx", rgba255: [0, 142, 0, 255]}])
   nv1.setMeshProperty(nv1.meshes[0].id, "colormap", "plasma"); //colormap for DPV and DPS
   nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); //color for fixed

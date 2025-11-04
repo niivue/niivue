@@ -17,4 +17,4 @@ type MZ3 =
     };
 ```
 
-Defined in: [nvmesh-types.ts:78](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L78)
+Defined in: [nvmesh-types.ts:79](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L79)

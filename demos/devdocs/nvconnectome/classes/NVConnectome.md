@@ -69,6 +69,7 @@ Defined in: [nvconnectome.ts:48](https://github.com/niivue/niivue/blob/main/pack
 | <a id="fibersides"></a> `fiberSides`                                 | `number`                                                                                                                                      | `5`             | [`NVMesh`](../../nvmesh/classes/NVMesh.md).[`fiberSides`](../../nvmesh/classes/NVMesh.md#fibersides)                                 | [nvmesh.ts:186](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L186)           |
 | <a id="furthestvertexfromorigin"></a> `furthestVertexFromOrigin`     | `number`                                                                                                                                      | `undefined`     | [`NVMesh`](../../nvmesh/classes/NVMesh.md).[`furthestVertexFromOrigin`](../../nvmesh/classes/NVMesh.md#furthestvertexfromorigin)     | [nvmesh.ts:157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L157)           |
 | <a id="gl"></a> `gl`                                                 | `WebGL2RenderingContext`                                                                                                                      | `undefined`     | -                                                                                                                                    | [nvconnectome.ts:45](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvconnectome.ts#L45) |
+| <a id="groups"></a> `groups?`                                        | [`ValuesArray`](../../nvmesh-types/type-aliases/ValuesArray.md)                                                                               | `undefined`     | [`NVMesh`](../../nvmesh/classes/NVMesh.md).[`groups`](../../nvmesh/classes/NVMesh.md#groups)                                         | [nvmesh.ts:196](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L196)           |
 | <a id="hasconnectome"></a> `hasConnectome`                           | `boolean`                                                                                                                                     | `false`         | [`NVMesh`](../../nvmesh/classes/NVMesh.md).[`hasConnectome`](../../nvmesh/classes/NVMesh.md#hasconnectome)                           | [nvmesh.ts:197](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L197)           |
 | <a id="id"></a> `id`                                                 | `string`                                                                                                                                      | `undefined`     | [`NVMesh`](../../nvmesh/classes/NVMesh.md).[`id`](../../nvmesh/classes/NVMesh.md#id)                                                 | [nvmesh.ts:153](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L153)           |
 | <a id="indexbuffer"></a> `indexBuffer`                               | `WebGLBuffer`                                                                                                                                 | `undefined`     | [`NVMesh`](../../nvmesh/classes/NVMesh.md).[`indexBuffer`](../../nvmesh/classes/NVMesh.md#indexbuffer)                               | [nvmesh.ts:168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L168)           |
@@ -158,7 +159,7 @@ blendColormap(
    invert: boolean): void;
 ```
 
-Defined in: [nvmesh.ts:1093](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1093)
+Defined in: [nvmesh.ts:1124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1124)
 
 #### Parameters
 
@@ -188,7 +189,7 @@ Defined in: [nvmesh.ts:1093](https://github.com/niivue/niivue/blob/main/packages
 createFiberDensityMap(): void;
 ```
 
-Defined in: [nvmesh.ts:531](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L531)
+Defined in: [nvmesh.ts:537](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L537)
 
 #### Returns
 
@@ -206,7 +207,7 @@ Defined in: [nvmesh.ts:531](https://github.com/niivue/niivue/blob/main/packages/
 decimateFaces(n: number, ntarget: number): void;
 ```
 
-Defined in: [nvmesh.ts:1537](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1537)
+Defined in: [nvmesh.ts:1568](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1568)
 
 #### Parameters
 
@@ -231,7 +232,7 @@ Defined in: [nvmesh.ts:1537](https://github.com/niivue/niivue/blob/main/packages
 decimateHierarchicalMesh(gl: WebGL2RenderingContext, order: number): boolean;
 ```
 
-Defined in: [nvmesh.ts:1571](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1571)
+Defined in: [nvmesh.ts:1602](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1602)
 
 #### Parameters
 
@@ -321,7 +322,7 @@ generatePosNormClr(
    rgba255: Uint8Array): Float32Array;
 ```
 
-Defined in: [nvmesh.ts:1654](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1654)
+Defined in: [nvmesh.ts:1685](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1685)
 
 #### Parameters
 
@@ -347,7 +348,7 @@ Defined in: [nvmesh.ts:1654](https://github.com/niivue/niivue/blob/main/packages
 hierarchicalOrder(): number;
 ```
 
-Defined in: [nvmesh.ts:1504](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1504)
+Defined in: [nvmesh.ts:1535](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1535)
 
 #### Returns
 
@@ -368,7 +369,7 @@ indexNearestXYZmm(
    Zmm: number): number[];
 ```
 
-Defined in: [nvmesh.ts:975](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L975)
+Defined in: [nvmesh.ts:1006](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1006)
 
 #### Parameters
 
@@ -394,7 +395,7 @@ Defined in: [nvmesh.ts:975](https://github.com/niivue/niivue/blob/main/packages/
 initValuesArray(va: ValuesArray): ValuesArray;
 ```
 
-Defined in: [nvmesh.ts:351](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L351)
+Defined in: [nvmesh.ts:357](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L357)
 
 #### Parameters
 
@@ -435,7 +436,7 @@ linesToCylinders(
    indices: number[]): void;
 ```
 
-Defined in: [nvmesh.ts:364](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L364)
+Defined in: [nvmesh.ts:370](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L370)
 
 #### Parameters
 
@@ -461,7 +462,7 @@ Defined in: [nvmesh.ts:364](https://github.com/niivue/niivue/blob/main/packages/
 loadFromBase64(__namedParameters: Partial<LoadFromBase64Params>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:2093](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2093)
+Defined in: [nvmesh.ts:2126](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2126)
 
 load and return a new NVMesh instance from a base64 encoded string
 
@@ -487,7 +488,7 @@ load and return a new NVMesh instance from a base64 encoded string
 reverseFaces(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1488](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1488)
+Defined in: [nvmesh.ts:1519](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1519)
 
 #### Parameters
 
@@ -515,7 +516,7 @@ scalars2RGBA(
    isNegativeCmap: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [nvmesh.ts:1027](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1027)
+Defined in: [nvmesh.ts:1058](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1058)
 
 #### Parameters
 
@@ -546,7 +547,7 @@ setLayerProperty(
 gl: WebGL2RenderingContext): Promise<void>;
 ```
 
-Defined in: [nvmesh.ts:1602](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1602)
+Defined in: [nvmesh.ts:1633](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1633)
 
 #### Parameters
 
@@ -584,7 +585,7 @@ setProperty(
    gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:1635](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1635)
+Defined in: [nvmesh.ts:1666](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1666)
 
 #### Parameters
 
@@ -610,7 +611,7 @@ Defined in: [nvmesh.ts:1635](https://github.com/niivue/niivue/blob/main/packages
 unloadMesh(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:996](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L996)
+Defined in: [nvmesh.ts:1027](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1027)
 
 #### Parameters
 
@@ -696,7 +697,7 @@ Defined in: [nvconnectome.ts:241](https://github.com/niivue/niivue/blob/main/pac
 updateFibers(gl: WebGL2RenderingContext): void;
 ```
 
-Defined in: [nvmesh.ts:657](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L657)
+Defined in: [nvmesh.ts:663](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L663)
 
 #### Parameters
 
@@ -822,7 +823,7 @@ Factory method to create connectome from options
 static loadFromFile(__namedParameters: Partial<LoadFromFileParams>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:2058](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2058)
+Defined in: [nvmesh.ts:2091](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2091)
 
 factory function to load and return a new NVMesh instance from a file in the browser
 
@@ -850,7 +851,7 @@ NVMesh instance
 static loadFromUrl(__namedParameters: Partial<LoadFromUrlParams>): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:1979](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1979)
+Defined in: [nvmesh.ts:2012](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2012)
 
 factory function to load and return a new NVMesh instance from a given URL
 
@@ -876,7 +877,7 @@ factory function to load and return a new NVMesh instance from a given URL
 static loadLayer(layer: NVMeshLayer, nvmesh: NVMesh): Promise<void>;
 ```
 
-Defined in: [nvmesh.ts:1882](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1882)
+Defined in: [nvmesh.ts:1915](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1915)
 
 #### Parameters
 
@@ -901,7 +902,7 @@ Defined in: [nvmesh.ts:1882](https://github.com/niivue/niivue/blob/main/packages
 static readFileAsync(file: Blob): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvmesh.ts:2039](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2039)
+Defined in: [nvmesh.ts:2072](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L2072)
 
 #### Parameters
 
@@ -931,7 +932,7 @@ static readMesh(
 visible: boolean): Promise<NVMesh>;
 ```
 
-Defined in: [nvmesh.ts:1700](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1700)
+Defined in: [nvmesh.ts:1731](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L1731)
 
 #### Parameters
 

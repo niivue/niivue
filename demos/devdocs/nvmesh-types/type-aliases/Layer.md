@@ -4,7 +4,7 @@
 type Layer = object;
 ```
 
-Defined in: [nvmesh-types.ts:114](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L114)
+Defined in: [nvmesh-types.ts:115](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L115)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:114](https://github.com/niivue/niivue/blob/main/pac
 alphaThreshold: boolean;
 ```
 
-Defined in: [nvmesh-types.ts:117](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L117)
+Defined in: [nvmesh-types.ts:118](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L118)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh-types.ts:117](https://github.com/niivue/niivue/blob/main/pac
 cal_max: number | null;
 ```
 
-Defined in: [nvmesh-types.ts:128](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L128)
+Defined in: [nvmesh-types.ts:129](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L129)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvmesh-types.ts:128](https://github.com/niivue/niivue/blob/main/pac
 cal_maxNeg: number;
 ```
 
-Defined in: [nvmesh-types.ts:131](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L131)
+Defined in: [nvmesh-types.ts:132](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L132)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvmesh-types.ts:131](https://github.com/niivue/niivue/blob/main/pac
 cal_min: number | null;
 ```
 
-Defined in: [nvmesh-types.ts:127](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L127)
+Defined in: [nvmesh-types.ts:128](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L128)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvmesh-types.ts:127](https://github.com/niivue/niivue/blob/main/pac
 cal_minNeg: number;
 ```
 
-Defined in: [nvmesh-types.ts:130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L130)
+Defined in: [nvmesh-types.ts:131](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L131)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvmesh-types.ts:130](https://github.com/niivue/niivue/blob/main/pac
 colorbarVisible: boolean;
 ```
 
-Defined in: [nvmesh-types.ts:120](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L120)
+Defined in: [nvmesh-types.ts:121](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L121)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [nvmesh-types.ts:120](https://github.com/niivue/niivue/blob/main/pac
 colormap: string;
 ```
 
-Defined in: [nvmesh-types.ts:133](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L133)
+Defined in: [nvmesh-types.ts:134](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L134)
 
 ---
 
@@ -84,7 +84,7 @@ Defined in: [nvmesh-types.ts:133](https://github.com/niivue/niivue/blob/main/pac
 colormapInvert: boolean;
 ```
 
-Defined in: [nvmesh-types.ts:116](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L116)
+Defined in: [nvmesh-types.ts:117](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L117)
 
 ---
 
@@ -94,7 +94,7 @@ Defined in: [nvmesh-types.ts:116](https://github.com/niivue/niivue/blob/main/pac
 colormapLabel: LUT;
 ```
 
-Defined in: [nvmesh-types.ts:121](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L121)
+Defined in: [nvmesh-types.ts:122](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L122)
 
 ---
 
@@ -104,7 +104,7 @@ Defined in: [nvmesh-types.ts:121](https://github.com/niivue/niivue/blob/main/pac
 colormapNegative: string;
 ```
 
-Defined in: [nvmesh-types.ts:134](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L134)
+Defined in: [nvmesh-types.ts:135](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L135)
 
 ---
 
@@ -114,7 +114,7 @@ Defined in: [nvmesh-types.ts:134](https://github.com/niivue/niivue/blob/main/pac
 frame4D: number;
 ```
 
-Defined in: [nvmesh-types.ts:123](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L123)
+Defined in: [nvmesh-types.ts:124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L124)
 
 ---
 
@@ -124,7 +124,7 @@ Defined in: [nvmesh-types.ts:123](https://github.com/niivue/niivue/blob/main/pac
 global_max: number;
 ```
 
-Defined in: [nvmesh-types.ts:126](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L126)
+Defined in: [nvmesh-types.ts:127](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L127)
 
 ---
 
@@ -134,7 +134,7 @@ Defined in: [nvmesh-types.ts:126](https://github.com/niivue/niivue/blob/main/pac
 global_min: number;
 ```
 
-Defined in: [nvmesh-types.ts:125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L125)
+Defined in: [nvmesh-types.ts:126](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L126)
 
 ---
 
@@ -144,7 +144,7 @@ Defined in: [nvmesh-types.ts:125](https://github.com/niivue/niivue/blob/main/pac
 isAdditiveBlend: boolean;
 ```
 
-Defined in: [nvmesh-types.ts:119](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L119)
+Defined in: [nvmesh-types.ts:120](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L120)
 
 ---
 
@@ -154,7 +154,7 @@ Defined in: [nvmesh-types.ts:119](https://github.com/niivue/niivue/blob/main/pac
 isTransparentBelowCalMin: boolean;
 ```
 
-Defined in: [nvmesh-types.ts:118](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L118)
+Defined in: [nvmesh-types.ts:119](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L119)
 
 ---
 
@@ -164,7 +164,7 @@ Defined in: [nvmesh-types.ts:118](https://github.com/niivue/niivue/blob/main/pac
 nFrame4D: number;
 ```
 
-Defined in: [nvmesh-types.ts:122](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L122)
+Defined in: [nvmesh-types.ts:123](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L123)
 
 ---
 
@@ -174,7 +174,7 @@ Defined in: [nvmesh-types.ts:122](https://github.com/niivue/niivue/blob/main/pac
 opacity: number;
 ```
 
-Defined in: [nvmesh-types.ts:132](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L132)
+Defined in: [nvmesh-types.ts:133](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L133)
 
 ---
 
@@ -184,7 +184,7 @@ Defined in: [nvmesh-types.ts:132](https://github.com/niivue/niivue/blob/main/pac
 outlineBorder: number;
 ```
 
-Defined in: [nvmesh-types.ts:124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L124)
+Defined in: [nvmesh-types.ts:125](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L125)
 
 ---
 
@@ -194,7 +194,7 @@ Defined in: [nvmesh-types.ts:124](https://github.com/niivue/niivue/blob/main/pac
 useNegativeCmap: boolean;
 ```
 
-Defined in: [nvmesh-types.ts:135](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L135)
+Defined in: [nvmesh-types.ts:136](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L136)
 
 ---
 
@@ -204,4 +204,4 @@ Defined in: [nvmesh-types.ts:135](https://github.com/niivue/niivue/blob/main/pac
 values: AnyNumberArray;
 ```
 
-Defined in: [nvmesh-types.ts:129](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L129)
+Defined in: [nvmesh-types.ts:130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L130)

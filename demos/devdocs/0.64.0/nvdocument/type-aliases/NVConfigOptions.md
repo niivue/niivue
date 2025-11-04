@@ -179,37 +179,7 @@ Defined in: [nvdocument.ts:135](https://github.com/niivue/niivue/blob/main/packa
 clipPlaneHotKey: string;
 ```
 
-Defined in: [nvdocument.ts:146](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L146)
-
----
-
-### clipThick
-
-```ts
-clipThick: number;
-```
-
-Defined in: [nvdocument.ts:137](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L137)
-
----
-
-### clipVolumeHigh
-
-```ts
-clipVolumeHigh: number[];
-```
-
-Defined in: [nvdocument.ts:139](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L139)
-
----
-
-### clipVolumeLow
-
-```ts
-clipVolumeLow: number[];
-```
-
-Defined in: [nvdocument.ts:138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L138)
+Defined in: [nvdocument.ts:144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L144)
 
 ---
 
@@ -229,7 +199,7 @@ Defined in: [nvdocument.ts:121](https://github.com/niivue/niivue/blob/main/packa
 colorbarMargin: number;
 ```
 
-Defined in: [nvdocument.ts:142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L142)
+Defined in: [nvdocument.ts:140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L140)
 
 ---
 
@@ -280,6 +250,16 @@ crosshairWidthUnit: "voxels" | "mm" | "percent";
 ```
 
 Defined in: [nvdocument.ts:127](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L127)
+
+---
+
+### cycleClipPlaneHotKey
+
+```ts
+cycleClipPlaneHotKey: string;
+```
+
+Defined in: [nvdocument.ts:146](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L146)
 
 ---
 
@@ -490,6 +470,16 @@ isAntiAlias: boolean | null;
 ```
 
 Defined in: [nvdocument.ts:201](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L201)
+
+---
+
+### isClipPlanesCutaway
+
+```ts
+isClipPlanesCutaway: boolean;
+```
+
+Defined in: [nvdocument.ts:136](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L136)
 
 ---
 
@@ -829,7 +819,7 @@ Defined in: [nvdocument.ts:164](https://github.com/niivue/niivue/blob/main/packa
 paqdUniforms: number[];
 ```
 
-Defined in: [nvdocument.ts:136](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L136)
+Defined in: [nvdocument.ts:137](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L137)
 
 ---
 
@@ -889,7 +879,7 @@ Defined in: [nvdocument.ts:241](https://github.com/niivue/niivue/blob/main/packa
 rulerColor: number[];
 ```
 
-Defined in: [nvdocument.ts:140](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L140)
+Defined in: [nvdocument.ts:138](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L138)
 
 ---
 
@@ -1079,7 +1069,7 @@ Defined in: [nvdocument.ts:171](https://github.com/niivue/niivue/blob/main/packa
 trustCalMinMax: boolean;
 ```
 
-Defined in: [nvdocument.ts:144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L144)
+Defined in: [nvdocument.ts:142](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L142)
 
 ---
 

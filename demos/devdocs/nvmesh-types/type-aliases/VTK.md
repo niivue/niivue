@@ -9,4 +9,4 @@ type VTK =
     };
 ```
 
-Defined in: [nvmesh-types.ts:64](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L64)
+Defined in: [nvmesh-types.ts:65](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L65)

@@ -38,13 +38,23 @@ Defined in: [nvmesh-types.ts:48](https://github.com/niivue/niivue/blob/main/pack
 
 ---
 
+### groups
+
+```ts
+groups: ValuesArray;
+```
+
+Defined in: [nvmesh-types.ts:49](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L49)
+
+---
+
 ### header
 
 ```ts
 header: unknown;
 ```
 
-Defined in: [nvmesh-types.ts:49](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L49)
+Defined in: [nvmesh-types.ts:50](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L50)
 
 ---
 
