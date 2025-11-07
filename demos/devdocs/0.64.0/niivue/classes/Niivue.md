@@ -875,7 +875,7 @@ nv.clearAngles();
 clearBounds(mask: number, ltwh?: [number, number, number, number]): void;
 ```
 
-Defined in: [niivue/index.ts:15213](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15213)
+Defined in: [niivue/index.ts:15234](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15234)
 
 Clear a rectangular region of this instance's canvas.
 
@@ -1348,7 +1348,7 @@ Performs a 1-voxel binary dilation on a connected cluster within the drawing mas
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:14833](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14833)
+Defined in: [niivue/index.ts:14854](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14854)
 
 display a lightbox or montage view
 
@@ -1438,7 +1438,7 @@ niivue.drawUndo();
 eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean;
 ```
 
-Defined in: [niivue/index.ts:15076](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15076)
+Defined in: [niivue/index.ts:15097](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15097)
 
 Returns true if a mouse/touch event happened inside this instance’s bounds.
 
@@ -1460,7 +1460,7 @@ Returns true if a mouse/touch event happened inside this instance’s bounds.
 findDrawingBoundarySlices(sliceType: SLICE_TYPE): object;
 ```
 
-Defined in: [niivue/index.ts:15883](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15883)
+Defined in: [niivue/index.ts:15904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15904)
 
 Find the first and last slices containing drawing data along a given axis
 
@@ -1478,8 +1478,8 @@ Object containing first and last slice indices, or null if no data found
 
 | Name    | Type     | Defined in                                                                                                     |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `first` | `number` | [niivue/index.ts:15883](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15883) |
-| `last`  | `number` | [niivue/index.ts:15883](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15883) |
+| `first` | `number` | [niivue/index.ts:15904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15904) |
+| `last`  | `number` | [niivue/index.ts:15904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15904) |
 
 ---
 
@@ -1489,7 +1489,7 @@ Object containing first and last slice indices, or null if no data found
 frac2canvasPos(frac: vec3): number[];
 ```
 
-Defined in: [niivue/index.ts:14297](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14297)
+Defined in: [niivue/index.ts:14318](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14318)
 
 #### Parameters
 
@@ -1872,7 +1872,7 @@ niivue.getVolumeIndexByID(someVolume.id);
 inBounds(x: number, y: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:15166](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15166)
+Defined in: [niivue/index.ts:15187](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15187)
 
 Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
 
@@ -1939,7 +1939,7 @@ interpolateMaskSlices(
    options?: object): void;
 ```
 
-Defined in: [niivue/index.ts:15898](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15898)
+Defined in: [niivue/index.ts:15919](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L15919)
 
 Interpolate between mask slices using geometric or intensity-guided methods
 
@@ -2559,7 +2559,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:14099](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14099)
+Defined in: [niivue/index.ts:14120](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L14120)
 
 move crosshair a fixed number of voxels (not mm)
 

@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:,">
     <title>Drawing User Interface</title>
   </head>
   <body>
@@ -152,17 +153,21 @@
   nv1.setSliceType(nv1.sliceTypeMultiplanar);
   nv1.setSliceMM(true);
   nv1.drawOpacity = 0.5;
+  nv1.opts.crosshairGap = 5.0;
   nv1.opts.isColorbar = false;
   var volumeList1 = [{ url: "../images/fs/brainmask.mgz" }];
   await nv1.loadVolumes(volumeList1);
   await nv1.loadDrawingFromUrl("../images/fs/wm.mgz", true);
-  nv1.setMeshThicknessOn2D(0.35);
+  //nv1.setMeshThicknessOn2D(0.35);
   await nv1.loadMeshes([
-    { url: "../images/fs/rh.pial", rgba255: [222, 22, 22, 255] },
-    { url: "../images/fs/lh.pial", rgba255: [222, 22, 22, 255] },
-    { url: "../images/fs/rh.white", rgba255: [222, 164, 0, 255] },
-    { url: "../images/fs/lh.white", rgba255: [222, 164, 0, 255] },
+    { url: "../images/fs/rh.pial", rgba255: [64, 22, 222, 255] },
+    { url: "../images/fs/lh.pial", rgba255: [64, 22, 222, 255] },
+    { url: "../images/fs/rh.white", rgba255: [222, 194, 0, 255] },
+    { url: "../images/fs/lh.white", rgba255: [222, 194, 0, 255] },
   ]);
+  for (let i = 0; i < nv1.meshes.length; i++) {
+    nv1.setMeshShader(nv1.meshes[i].id, 'crosscut');
+  }
   nv1.setInterpolation(true);
   nv1.opts.dragMode = nv1.dragModes.slicer3D;
   let cmap = {
@@ -200,6 +205,7 @@
       nv1.opts.isColorbar = !nv1.opts.isColorbar;
       event.srcElement.classList.toggle("dropdown-item-checked");
       nv1.drawScene();
+      event.srcElement.classList.toggle("dropdown-item-checked");
       return;
     }
     if (event.target.id === "Radiological") {

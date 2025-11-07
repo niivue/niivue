@@ -34779,35 +34779,42 @@ void main() {
 var fragCrosscutMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
-uniform vec3 sliceMM;
+uniform vec4 sliceMM;
+uniform float thickMM ;
 in vec4 vClr;
 in vec4 vP;  // vertex position in mm
 out vec4 color;
 void main() {
-	// Constants to tweak (later make them uniforms)
-	const vec3 PLANES = vec3(-20.0, 0.0, 0.0); // planes at X=10 mm, Y=30 mm, Z=40 mm
-	const float LINE_WIDTH_PX = 4.5;            // target thickness in pixels
-	const float TILT_STRENGTH = 2.0;            // >0 shrinks ribbon for oblique triangles
-	// --- signed distances to each orthogonal plane ---
-	vec3 d = vP.xyz - sliceMM;
-	vec3 ad = abs(d);
-	// --- derivatives to get pixel-consistent widths ---
-	vec3 fd = fwidth(d);
-	fd = max(fd, vec3(1e-6)); // avoid zeros
-	// --- estimate obliqueness using xy variation (same for all planes) ---
-	float tilt = length(vec2(fwidth(vP.x), fwidth(vP.y)));
-	float tiltFactor = 1.0 / (1.0 + TILT_STRENGTH * tilt);
-	tiltFactor = clamp(tiltFactor, 0.0, 1.0);
-	// --- half-widths for each plane ---
-	vec3 halfWidth = (LINE_WIDTH_PX * 0.5) * fd * tiltFactor;
-	// --- smooth alpha for each plane ---
-	vec3 edgeA = 1.0 - smoothstep(vec3(0.0), halfWidth, ad);
-	// combine planes (max of X,Y,Z ribbons)
-	float edgeAlpha = max(edgeA.x, max(edgeA.y, edgeA.z));
-	if (edgeAlpha <= 1e-4) discard; // outside ribbons
-	color = vec4(vClr.rgb, vClr.a * edgeAlpha);
-}
-`;
+    const float LINE_WIDTH_PX = 4.0;   // target thickness in pixels
+    //const float LINE_THRESH_MM = 1.5;   // target thickness in pixels
+    const float TILT_STRENGTH = 1.0;   // >0 shrinks ribbon for oblique triangles
+    // --- signed distances to each orthogonal plane (object space) ---
+    vec3 d = vP.xyz - sliceMM.xyz;
+    vec3 ad = abs(d);
+    // --- derivatives to get pixel-consistent widths (per-axis) ---
+    vec3 fd = fwidth(vP.xyz);
+    //minDist is in mm not pixels
+    float minDist = min(ad.x, min(ad.y, ad.z));
+    if (minDist >  sliceMM.w) discard;
+    // --- per-plane obliqueness: use the two in-plane components' fwidth ---
+    float tiltX = length(fd.yz); // for plane with normal X
+    float tiltY = length(fd.xz); // for plane with normal Y
+    float tiltZ = length(fd.xy); // for plane with normal Z
+    float tfX = clamp(1.0 / (1.0 + TILT_STRENGTH * tiltX), 0.0, 1.0);
+    float tfY = clamp(1.0 / (1.0 + TILT_STRENGTH * tiltY), 0.0, 1.0);
+    float tfZ = clamp(1.0 / (1.0 + TILT_STRENGTH * tiltZ), 0.0, 1.0);
+    // --- half-widths for each plane (apply per-axis tilt factor) ---
+    vec3 halfWidth;
+    halfWidth.x = (LINE_WIDTH_PX * 0.5) * fd.x * tfX;
+    halfWidth.y = (LINE_WIDTH_PX * 0.5) * fd.y * tfY;
+    halfWidth.z = (LINE_WIDTH_PX * 0.5) * fd.z * tfZ;
+    // --- smooth alpha for each plane ---
+    vec3 edgeA = 1.0 - smoothstep(vec3(0.0), halfWidth, ad);
+    // combine planes (max of X,Y,Z ribbons)
+    float edgeAlpha = max(edgeA.x, max(edgeA.y, edgeA.z));
+    if (edgeAlpha <= 1e-4) discard; // outside ribbons
+    color = vec4(vClr.rgb, vClr.a * edgeAlpha);
+}`;
 var fragMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
@@ -47164,7 +47171,6 @@ var Niivue = class {
     } else {
       gl.depthFunc(gl.ALWAYS);
     }
-    gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     let hasFibers = false;
@@ -47182,7 +47188,28 @@ var Niivue = class {
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.CULL_FACE);
         const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM);
-        this.gl.uniform3fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2]]);
+        gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx);
+        const OUT_OF_RANGE = 1e9;
+        if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
+          mm[1] = OUT_OF_RANGE;
+          mm[2] = OUT_OF_RANGE;
+        }
+        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
+          mm[0] = OUT_OF_RANGE;
+          mm[2] = OUT_OF_RANGE;
+        }
+        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
+          mm[0] = OUT_OF_RANGE;
+          mm[1] = OUT_OF_RANGE;
+        }
+        let meshThicknessMM = Number(this.opts.meshThicknessOn2D);
+        if (!Number.isFinite(meshThicknessMM)) {
+          meshThicknessMM = 1;
+        }
+        gl.uniform4fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2], meshThicknessMM]);
+      } else {
+        gl.enable(gl.CULL_FACE);
+        gl.enable(gl.DEPTH_TEST);
       }
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
       gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
@@ -47206,6 +47233,7 @@ var Niivue = class {
       gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
       gl.bindVertexArray(this.unusedVAO);
     }
+    gl.enable(gl.CULL_FACE);
     if (this.opts.meshXRay > 0 && !hasFibers) {
       gl.enable(gl.BLEND);
       gl.depthMask(false);
