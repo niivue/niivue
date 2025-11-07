@@ -1825,36 +1825,43 @@ void main() {
 export const fragCrosscutMeshShader = `#version 300 es
 precision highp int;
 precision highp float;
-uniform vec3 sliceMM;
+uniform vec4 sliceMM;
+uniform float thickMM ;
 in vec4 vClr;
 in vec4 vP;  // vertex position in mm
 out vec4 color;
 void main() {
-	// Constants to tweak (later make them uniforms)
-	const vec3 PLANES = vec3(-20.0, 0.0, 0.0); // planes at X=10 mm, Y=30 mm, Z=40 mm
-	const float LINE_WIDTH_PX = 4.5;            // target thickness in pixels
-	const float TILT_STRENGTH = 2.0;            // >0 shrinks ribbon for oblique triangles
-	// --- signed distances to each orthogonal plane ---
-	vec3 d = vP.xyz - sliceMM;
-	vec3 ad = abs(d);
-	// --- derivatives to get pixel-consistent widths ---
-	vec3 fd = fwidth(d);
-	fd = max(fd, vec3(1e-6)); // avoid zeros
-	// --- estimate obliqueness using xy variation (same for all planes) ---
-	float tilt = length(vec2(fwidth(vP.x), fwidth(vP.y)));
-	float tiltFactor = 1.0 / (1.0 + TILT_STRENGTH * tilt);
-	tiltFactor = clamp(tiltFactor, 0.0, 1.0);
-	// --- half-widths for each plane ---
-	vec3 halfWidth = (LINE_WIDTH_PX * 0.5) * fd * tiltFactor;
-	// --- smooth alpha for each plane ---
-	vec3 edgeA = 1.0 - smoothstep(vec3(0.0), halfWidth, ad);
-	// combine planes (max of X,Y,Z ribbons)
-	float edgeAlpha = max(edgeA.x, max(edgeA.y, edgeA.z));
-	if (edgeAlpha <= 1e-4) discard; // outside ribbons
-	color = vec4(vClr.rgb, vClr.a * edgeAlpha);
-}
-`
-// Phong: default
+    const float LINE_WIDTH_PX = 4.0;   // target thickness in pixels
+    //const float LINE_THRESH_MM = 1.5;   // target thickness in pixels
+    const float TILT_STRENGTH = 1.0;   // >0 shrinks ribbon for oblique triangles
+    // --- signed distances to each orthogonal plane (object space) ---
+    vec3 d = vP.xyz - sliceMM.xyz;
+    vec3 ad = abs(d);
+    // --- derivatives to get pixel-consistent widths (per-axis) ---
+    vec3 fd = fwidth(vP.xyz);
+    //minDist is in mm not pixels
+    float minDist = min(ad.x, min(ad.y, ad.z));
+    if (minDist >  sliceMM.w) discard;
+    // --- per-plane obliqueness: use the two in-plane components' fwidth ---
+    float tiltX = length(fd.yz); // for plane with normal X
+    float tiltY = length(fd.xz); // for plane with normal Y
+    float tiltZ = length(fd.xy); // for plane with normal Z
+    float tfX = clamp(1.0 / (1.0 + TILT_STRENGTH * tiltX), 0.0, 1.0);
+    float tfY = clamp(1.0 / (1.0 + TILT_STRENGTH * tiltY), 0.0, 1.0);
+    float tfZ = clamp(1.0 / (1.0 + TILT_STRENGTH * tiltZ), 0.0, 1.0);
+    // --- half-widths for each plane (apply per-axis tilt factor) ---
+    vec3 halfWidth;
+    halfWidth.x = (LINE_WIDTH_PX * 0.5) * fd.x * tfX;
+    halfWidth.y = (LINE_WIDTH_PX * 0.5) * fd.y * tfY;
+    halfWidth.z = (LINE_WIDTH_PX * 0.5) * fd.z * tfZ;
+    // --- smooth alpha for each plane ---
+    vec3 edgeA = 1.0 - smoothstep(vec3(0.0), halfWidth, ad);
+    // combine planes (max of X,Y,Z ribbons)
+    float edgeAlpha = max(edgeA.x, max(edgeA.y, edgeA.z));
+    if (edgeAlpha <= 1e-4) discard; // outside ribbons
+    color = vec4(vClr.rgb, vClr.a * edgeAlpha);
+}`
+
 // Phong: default
 export const fragMeshShader = `#version 300 es
 precision highp int;

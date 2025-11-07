@@ -9,37 +9,23 @@
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
     <header>
-      <label for="checkOverlay">Overlay</label>
-      <input type="checkbox" id="checkOverlay" checked="True">
-      &nbsp;&nbsp;
-      <label for="checkCutaway">Cutaway</label>
-      <input type="checkbox" id="checkCutaway" checked="True">
-      &nbsp;&nbsp;
-      <label for="colorSelect">Clip color</label>
-      <select id="colorSelect">
-        <option>transparent</option>
-        <option selected>translucent</option>
-        <option>shading</option>
+      &nbsp;
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option value="contrast">contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="none">none</option>
+        <option value="pan" selected>pan/zoom</option>
       </select>
-      &nbsp;&nbsp;
-      <label for="renderMode">Volume Render Mode</label>
-      <select id="renderMode">
-        <option value="-1">slices</option>
-        <option value="0" selected>matte</option>
-        <option value="0.3">low</option>
-        <option value="0.6">medium</option>
-        <option value="1.0">high</option>
-      </select>
-      &nbsp;&nbsp;
-      <label for="clipSelect">Clip Planes</label>
-      <select id="clipSelect">
-        <option>0</option>
-        <option>1</option>
-        <option>2</option>
-        <option selected>3</option>
-        <option>4</option>
-        <option>5</option>
-        <option>6</option>
+      &nbsp; 
+      <label for="thickSelect">&nbsp; Thickness</label>
+      <select id="thickSelect">
+        <option>0.5</option>
+        <option>1.0</option>
+        <option>1.5</option>
+        <option selected>2.0</option>
+        <option>2.5</option>
+        <option>3.0</option>
       </select>
     </header>
     <main id="canvas-container">
@@ -53,109 +39,50 @@
 </html>
 <script type="module" async>
   import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
-  checkOverlay.onchange = function () {
-    nv1.volumes[1].opacity = this.checked ? 1 : 0;
-    nv1.updateGLVolume()
+  thickSelect.onchange = function() {
+    nv1.setMeshThicknessOn2D(parseFloat(this.options[this.selectedIndex].text))
   }
-  checkCutaway.onchange = function () {
-    nv1.opts.isClipPlanesCutaway = this.checked
-    nv1.drawScene()
-  }
-  colorSelect.onchange = function () {
-    const index = this.selectedIndex
-    let clr = nv1.opts.clipPlaneColor.slice()
-    switch (index) {
-      case 0:
-        clr[3] = 0.0;
+  dragMode.onchange = function () {
+    switch (this.value) {
+      case "none":
+        nv1.opts.dragMode = nv1.dragModes.none
         break
-      case 1:
-        clr[3] = 0.5;
+      case "contrast":
+        nv1.opts.dragMode = nv1.dragModes.contrast
         break
-      case 2:
-        clr[3] = -0.5;
+      case "measurement":
+        nv1.opts.dragMode = nv1.dragModes.measurement
+        break
+      case "pan":
+        nv1.opts.dragMode = nv1.dragModes.pan
         break
     }
-    nv1.setClipPlaneColor(clr)
-  }
-  clipSelect.onchange = function () {
-    const index = parseInt(this.value, 10); // selected option value as integer
-    let planes = [[2.0, 180, 20]]
-    switch (index) {
-      case 1:
-        planes = [[0.1, 180, 20]]
-        break
-      case 2:
-        planes = [
-          [0.1, 180, 20],
-          [0.1, 0, -20],
-        ]
-        break
-      case 3:
-        planes = [
-          [0.0, 90,  0], //right center
-          [0.0, 0, -20], //posterior oblique
-          [0.1, 0, -90], //inferior
-        ]
-        break
-      case 4:
-        planes = [
-          [0.3, 270,  0], //left
-          [0.3, 90,  0], //right
-          [0.0, 180,  0], //anterior
-          [0.1, 0,  0], //posterior
-        ]
-        break
-      case 5:
-        planes = [
-          [0.4, 270,  0], //left
-          [0.4, 90,  0], //right
-          [0.4, 180,  0], //anterior
-          [0.2, 0,  0], //posterior
-          [0.1, 0, -90], //inferior
-        ]
-        break
-      case 6:
-        planes = [
-          [0.4, 270,  0], //left
-          [-0.1, 90,  0], //right
-          [0.4, 180,  0], //anterior
-          [0.2, 0,  0], //posterior
-          [0.1, 0, -90], //inferior
-          [0.3, 0, 90] //superior
-        ]
-        break
-    }
-    nv1.setClipPlanes(planes)
-  }
-  renderMode.onchange = async function () {
-    await nv1.setVolumeRenderIllumination(parseFloat(this.value))
-    await nv1.updateGLVolume()
   }
   var volumeList1 = [
-    { url: "../demos/images/mni152.nii.gz" },
-    {
-      url: "../demos/images/fslt.nii.gz",
-      colormap: "warm",
-      colormapNegative: "winter",
-      cal_min: 4,
-      cal_max: 6,
-    },
+    { url: "../demos/images/fs/brainmask.mgz" },
   ]
   const onLocationChange = (data) => {
     statusBar.innerHTML = data.string
   }
   let defaults = {
     loglevel: 'debug',
-    onLocationChange: onLocationChange,
-    backColor: [0, 0.2, 0.4, 1],
     show3Dcrosshair: true,
+    onLocationChange: onLocationChange,
   }
   var nv1 = new Niivue(defaults)
   await nv1.attachToCanvas(gl1)
-  nv1.setSliceType(nv1.sliceTypeRender)
-  nv1.setClipPlane([0.1, 180, 20])
+  nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+  nv1.opts.isOrientCube = true
+  nv1.opts.yoke3Dto2DZoom = true
+  nv1.opts.dragMode = nv1.dragModes.pan
+  nv1.opts.crosshairGap = 6
   await nv1.loadVolumes(volumeList1)
-  await renderMode.onchange()
-  checkCutaway.onchange()
-  clipSelect.onchange()
+
+  await nv1.loadMeshes([
+    { url: "../demos/images/fs/rh.white", rgba255: [255, 0, 255, 255] },
+    { url: "../demos/images/fs/rh.pial", rgba255: [0, 255, 64, 255] },
+  ])
+  nv1.setMeshShader(nv1.meshes[0].id, 'crosscut')
+  nv1.setMeshShader(nv1.meshes[1].id, 'crosscut')
+  nv1.setClipPlane([0.0, 180, 20])
 </script>
