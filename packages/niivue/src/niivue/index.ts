@@ -13820,7 +13820,6 @@ export class Niivue {
       gl.depthFunc(gl.ALWAYS)
     }
 
-    gl.enable(gl.CULL_FACE)
     gl.cullFace(gl.BACK) // back-face culling
     // gl.frontFace(gl.CCW) // CCW winding = front
 
@@ -13847,8 +13846,30 @@ export class Niivue {
       if (shader.isCrosscut) {
         gl.disable(gl.DEPTH_TEST)
         gl.disable(gl.CULL_FACE)
+
         const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM)
-        this.gl.uniform3fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2]])
+        gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx!)
+        const OUT_OF_RANGE = 1e9
+        if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
+          mm[1] = OUT_OF_RANGE
+          mm[2] = OUT_OF_RANGE
+        } // if sagittal
+        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
+          mm[0] = OUT_OF_RANGE
+          mm[2] = OUT_OF_RANGE
+        } // if coronal
+        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
+          mm[0] = OUT_OF_RANGE
+          mm[1] = OUT_OF_RANGE
+        } // if axial
+        let meshThicknessMM = Number(this.opts.meshThicknessOn2D)
+        if (!Number.isFinite(meshThicknessMM)) {
+          meshThicknessMM = 1.0
+        }
+        gl.uniform4fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2], meshThicknessMM])
+      } else {
+        gl.enable(gl.CULL_FACE)
+        gl.enable(gl.DEPTH_TEST)
       }
       // Set uniforms
       gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
@@ -13881,7 +13902,7 @@ export class Niivue {
       gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
       gl.bindVertexArray(this.unusedVAO)
     }
-
+    gl.enable(gl.CULL_FACE)
     // -----------------------
     // Pass 2: X-Ray Mesh
     // -----------------------
