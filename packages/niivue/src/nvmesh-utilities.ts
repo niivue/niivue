@@ -70,7 +70,8 @@ export class NVMeshUtilities {
     const headerSize = 16
     const indexSize = nface * 3 * 4 // Uint32Array
     const vertexSize = nvert * 3 * 4 // Float32Array
-    const totalSize = headerSize + indexSize + vertexSize
+    const colorSize = isRGBA ? colors.length : 0
+    const totalSize = headerSize + indexSize + vertexSize + colorSize
     const buffer = new ArrayBuffer(totalSize)
     const writer = new DataView(buffer)
     // Write header

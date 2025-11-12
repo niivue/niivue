@@ -1142,7 +1142,11 @@ export class NVMeshLoaders {
         }
       }
     } else if (ext === 'NII') {
-      layer.values = (await NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary)) as Float32Array
+      layer.values = (await NVMeshLoaders.readNII(
+        buffer,
+        nvmesh.pts,
+        nvmesh.anatomicalStructurePrimary
+      )) as Float32Array
     } else if (ext === 'SMP') {
       layer.values = await NVMeshLoaders.readSMP(buffer, n_vert)
     } else if (ext === 'STC') {
@@ -3125,16 +3129,17 @@ export class NVMeshLoaders {
   // https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
   static async readNII(
     buffer: ArrayBuffer,
-    n_vert = 0,
+    pts: Float32Array,
     anatomicalStructurePrimary = ''
   ): Promise<Float32Array | Uint8Array | Int32Array | Int16Array> {
+    const n_mesh_vert = pts.length / 3
     // TODO clean up number types
     let scalars: Float32Array | Int32Array | Int16Array | Uint8Array = new Float32Array()
     let isLittleEndian = true
     let reader = new DataView(buffer)
     let magic = reader.getUint16(0, isLittleEndian)
     if (magic === 540 || magic === 469893120) {
-      return NVMeshLoaders.readNII2(buffer, n_vert, anatomicalStructurePrimary)
+      return NVMeshLoaders.readNII2(buffer, n_mesh_vert, anatomicalStructurePrimary)
     }
     if (magic === 23553) {
       isLittleEndian = false
@@ -3147,7 +3152,7 @@ export class NVMeshLoaders {
       buffer = raw.buffer
       magic = reader.getUint16(0, isLittleEndian)
       if (magic === 540 || magic === 469893120) {
-        return NVMeshLoaders.readNII2(buffer, n_vert, anatomicalStructurePrimary)
+        return NVMeshLoaders.readNII2(buffer, n_mesh_vert, anatomicalStructurePrimary)
       }
       if (magic === 23553) {
         isLittleEndian = false
@@ -3160,52 +3165,147 @@ export class NVMeshLoaders {
     const voxoffset = reader.getFloat32(108, isLittleEndian)
     const scl_slope = reader.getFloat32(112, isLittleEndian)
     const scl_inter = reader.getFloat32(116, isLittleEndian)
-    if (scl_slope !== 1 || scl_inter !== 0) {
-      log.warn('ignoring scale slope and intercept')
-    }
+    const qform_code = reader.getUint16(252, isLittleEndian)
+    const sform_code = reader.getUint16(254, isLittleEndian)
     const datatype = reader.getUint16(70, isLittleEndian)
     if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
       throw new Error('Unsupported NIfTI datatype ' + datatype)
     }
-    let nvert = 1
-    for (let i = 1; i < 8; i++) {
-      const dim = reader.getUint16(40 + i * 2, isLittleEndian)
-      nvert *= Math.max(dim, 1)
+    const sform = mat4.create()
+    for (let i = 0; i < 12; i++) {
+      sform[i] = reader.getFloat32(280 + i * 4, isLittleEndian)
     }
-    nvert = this.decimateLayerVertices(nvert, n_vert)
-    if (nvert % n_vert !== 0) {
-      throw new Error('Vertices in layer (' + nvert + ') is not a multiple of number of vertices (' + n_vert + ')')
+    let n_vox = 1
+    const dim = new Array(8)
+    for (let i = 0; i < 8; i++) {
+      dim[i] = reader.getUint16(40 + i * 2, isLittleEndian)
+      if (i < 1) {
+        continue
+      }
+      n_vox *= dim[i] || 1
     }
+    let is3D = false
+    let nvertD = this.decimateLayerVertices(n_vox, n_mesh_vert)
+    if (nvertD % n_mesh_vert !== 0) {
+      if (dim[0] >= 3 && dim[1] > 1 && dim[2] > 1 && dim[3] > 1) {
+        is3D = true
+        nvertD = dim[1] * dim[2] * dim[3]
+      } else {
+        throw new Error('Voxels in layer (' + n_vox + ') is not a multiple of number of vertices (' + n_mesh_vert + ')')
+      }
+    }
+    n_vox = nvertD
     if (isLittleEndian) {
       // block read native endian
       if (datatype === 16) {
-        scalars = new Float32Array(buffer, voxoffset, nvert)
+        scalars = new Float32Array(buffer, voxoffset, n_vox)
       } else if (datatype === 8) {
-        scalars = new Int32Array(buffer, voxoffset, nvert)
+        scalars = new Int32Array(buffer, voxoffset, n_vox)
       } else if (datatype === 4) {
-        scalars = new Int16Array(buffer, voxoffset, nvert)
+        scalars = new Int16Array(buffer, voxoffset, n_vox)
       }
     } else {
       // if isLittleEndian
       if (datatype === 16) {
-        scalars = new Float32Array(nvert)
-        for (let i = 0; i < nvert; i++) {
+        scalars = new Float32Array(n_vox)
+        for (let i = 0; i < n_vox; i++) {
           scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian)
         }
       } else if (datatype === 8) {
-        scalars = new Int32Array(nvert)
-        for (let i = 0; i < nvert; i++) {
+        scalars = new Int32Array(n_vox)
+        for (let i = 0; i < n_vox; i++) {
           scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian)
         }
       } else if (datatype === 4) {
-        scalars = new Int16Array(nvert)
-        for (let i = 0; i < nvert; i++) {
+        scalars = new Int16Array(n_vox)
+        for (let i = 0; i < n_vox; i++) {
           scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian)
         }
       }
     } // if isLittleEndian else big end
     if (datatype === 2) {
-      scalars = new Uint8Array(buffer, voxoffset, nvert)
+      scalars = new Uint8Array(buffer, voxoffset, n_vox)
+    }
+    if (scl_slope !== 1 || scl_inter !== 0) {
+      const f32 = new Float32Array(n_vox)
+      for (let i = 0; i < n_vox; i++) {
+        f32[i] = scalars[i] * scl_slope + scl_inter
+      }
+      scalars = f32
+    }
+    for (let i = 0; i < n_vox; i++) {
+      if (isNaN(scalars[i])) {
+        scalars[i] = 0.0
+      }
+    }
+    if (is3D) {
+      const f32 = new Float32Array(n_vox)
+      // Sample voxel intensities at mesh vertices
+      log.warn('Sampling voxel intensities at mesh vertices (assumes precise alignment).')
+      if (qform_code > sform_code || sform_code <= 0) {
+        log.warn(`Requires valid sform (sform_code = ${sform_code})`)
+      }
+      const sformInv = mat4.create()
+      mat4.invert(sformInv, sform)
+      function transformMat4homogeneous(xyz: number[], m: mat4): number[] {
+        const out = [0, 0, 0]
+        out[0] = m[0] * xyz[0] + m[1] * xyz[1] + m[2] * xyz[2] + m[3]
+        out[1] = m[4] * xyz[0] + m[5] * xyz[1] + m[6] * xyz[2] + m[7]
+        out[2] = m[8] * xyz[0] + m[9] * xyz[1] + m[10] * xyz[2] + m[11]
+        return out
+      }
+      const nx = dim[1]
+      const ny = dim[2]
+      const nz = dim[3]
+      const nxy = nx * ny
+      let j = 0
+      let k = 0
+      let nOK = 0
+      while (k < n_mesh_vert) {
+        const xyz = [pts[j], pts[j + 1], pts[j + 2]]
+        const ijk = transformMat4homogeneous(xyz, sformInv)
+        j += 3
+        k += 1
+        // todo read voxel scalar
+        const ixf = Math.floor(ijk[0])
+        const iyf = Math.floor(ijk[1])
+        const izf = Math.floor(ijk[2])
+        const ixc = Math.ceil(ijk[0])
+        const iyc = Math.ceil(ijk[1])
+        const izc = Math.ceil(ijk[2])
+        // bounds check: valid ranges are 0..(nx-1), 0..(ny-1), 0..(nz-1)
+        if (ixf < 0 || ixc >= nx || iyf < 0 || iyc >= ny || izf < 0 || izc >= nz) {
+          continue
+        }
+        const base = ixf + iyf * nx + izf * nxy
+        const vs = new Float32Array(8)
+        vs[0] = scalars[base]
+        vs[1] = scalars[base + 1]
+        vs[2] = scalars[base + nx]
+        vs[3] = scalars[base + nx + 1]
+        vs[4] = scalars[base + nxy]
+        vs[5] = scalars[base + nxy + 1]
+        vs[6] = scalars[base + nxy + nx]
+        vs[7] = scalars[base + nxy + nx + 1]
+        // choose max (unrolled for speed)
+        let maxv = vs[0]
+        let minv = maxv
+        for (let i = 1; i < 8; i++) {
+          maxv = Math.max(maxv, vs[i])
+          minv = Math.min(minv, vs[i])
+        }
+        if (Math.abs(minv) > maxv) {
+          maxv = minv
+        }
+        f32[k - 1] = maxv
+        nOK++
+      }
+
+      const fractionOK = nOK / n_mesh_vert
+      if (fractionOK < 0.1) {
+        log.warn(`${nOK} of ${n_mesh_vert} vertices in range (${(fractionOK * 100).toFixed(1)}%)`)
+      }
+      scalars = f32
     }
     return scalars
   } // readNII();

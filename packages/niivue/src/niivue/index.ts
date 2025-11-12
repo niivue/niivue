@@ -12420,7 +12420,8 @@ export class Niivue {
         1,
         mx, // obj.modelViewProjectionMatrix,
         obj.modelMatrix,
-        obj.normalMatrix
+        obj.normalMatrix,
+        true
       )
     }
     if (isNaN(customMM)) {
@@ -13796,7 +13797,7 @@ export class Niivue {
    * Render all visible 3D meshes with proper blending, depth, and shader settings.
    * @internal
    */
-  drawMesh3D(isDepthTest = true, alpha = 1.0, m?: mat4, modelMtx?: mat4, normMtx?: mat4): void {
+  drawMesh3D(isDepthTest = true, alpha = 1.0, m?: mat4, modelMtx?: mat4, normMtx?: mat4, is2D: boolean = false): void {
     if (this.meshes.length < 1) {
       return
     }
@@ -13849,19 +13850,21 @@ export class Niivue {
 
         const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM)
         gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx!)
-        const OUT_OF_RANGE = 1e9
-        if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
-          mm[1] = OUT_OF_RANGE
-          mm[2] = OUT_OF_RANGE
-        } // if sagittal
-        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
-          mm[0] = OUT_OF_RANGE
-          mm[2] = OUT_OF_RANGE
-        } // if coronal
-        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
-          mm[0] = OUT_OF_RANGE
-          mm[1] = OUT_OF_RANGE
-        } // if axial
+        if (is2D) {
+          const OUT_OF_RANGE = 1e9
+          if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
+            mm[1] = OUT_OF_RANGE
+            mm[2] = OUT_OF_RANGE
+          } // if sagittal
+          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
+            mm[0] = OUT_OF_RANGE
+            mm[2] = OUT_OF_RANGE
+          } // if coronal
+          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
+            mm[0] = OUT_OF_RANGE
+            mm[1] = OUT_OF_RANGE
+          } // if axial
+        }
         let meshThicknessMM = Number(this.opts.meshThicknessOn2D)
         if (!Number.isFinite(meshThicknessMM)) {
           meshThicknessMM = 1.0
@@ -13886,7 +13889,6 @@ export class Niivue {
         gl.enable(gl.BLEND)
         gl.depthMask(false)
       }
-
       // Fiber meshes drawn later
       if (mesh.offsetPt0 && (mesh.fiberSides < 3 || mesh.fiberRadius <= 0)) {
         hasFibers = true
