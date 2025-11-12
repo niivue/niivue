@@ -1517,7 +1517,7 @@ declare class NVMeshLoaders {
     static readSTL(buffer: ArrayBuffer): DefaultMeshType;
     static decimateLayerVertices(nVertLayer: number, nVertMesh: number): number;
     static readNII2(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Promise<Int32Array | Float32Array | Int16Array | Uint8Array>;
-    static readNII(buffer: ArrayBuffer, n_vert?: number, anatomicalStructurePrimary?: string): Promise<Float32Array | Uint8Array | Int32Array | Int16Array>;
+    static readNII(buffer: ArrayBuffer, pts: Float32Array, anatomicalStructurePrimary?: string): Promise<Float32Array | Uint8Array | Int32Array | Int16Array>;
     static readMGH(buffer: ArrayBuffer, n_vert?: number, isReadColortables?: boolean): Promise<MGH>;
     static readX3D(buffer: ArrayBuffer): X3D;
     static readGII(buffer: ArrayBuffer, n_vert?: number): Promise<GII>;
@@ -4304,7 +4304,7 @@ declare class Niivue {
      * Render all visible 3D meshes with proper blending, depth, and shader settings.
      * @internal
      */
-    drawMesh3D(isDepthTest?: boolean, alpha?: number, m?: mat4, modelMtx?: mat4, normMtx?: mat4): void;
+    drawMesh3D(isDepthTest?: boolean, alpha?: number, m?: mat4, modelMtx?: mat4, normMtx?: mat4, is2D?: boolean): void;
     /**
      * Render 3D crosshairs at the current crosshair position with optional depth testing and transparency.
      * @internal

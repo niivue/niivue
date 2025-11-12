@@ -55,7 +55,7 @@ static createMZ3Async(
 colors: Uint8Array): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvmesh-utilities.ts:99](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L99)
+Defined in: [nvmesh-utilities.ts:100](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L100)
 
 #### Parameters
 
@@ -78,7 +78,7 @@ Defined in: [nvmesh-utilities.ts:99](https://github.com/niivue/niivue/blob/main/
 static createOBJ(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
 ```
 
-Defined in: [nvmesh-utilities.ts:112](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L112)
+Defined in: [nvmesh-utilities.ts:113](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L113)
 
 #### Parameters
 
@@ -99,7 +99,7 @@ Defined in: [nvmesh-utilities.ts:112](https://github.com/niivue/niivue/blob/main
 static createSTL(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
 ```
 
-Defined in: [nvmesh-utilities.ts:131](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L131)
+Defined in: [nvmesh-utilities.ts:132](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L132)
 
 #### Parameters
 
@@ -120,7 +120,7 @@ Defined in: [nvmesh-utilities.ts:131](https://github.com/niivue/niivue/blob/main
 static downloadArrayBuffer(buffer: ArrayBuffer, filename: string): void;
 ```
 
-Defined in: [nvmesh-utilities.ts:177](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L177)
+Defined in: [nvmesh-utilities.ts:178](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L178)
 
 #### Parameters
 
@@ -141,7 +141,7 @@ Defined in: [nvmesh-utilities.ts:177](https://github.com/niivue/niivue/blob/main
 static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
 ```
 
-Defined in: [nvmesh-utilities.ts:261](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L261)
+Defined in: [nvmesh-utilities.ts:262](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L262)
 
 #### Parameters
 
@@ -162,7 +162,7 @@ Defined in: [nvmesh-utilities.ts:261](https://github.com/niivue/niivue/blob/main
 static getClusterBoundary(rgba8: Uint8Array, faces: number[] | Uint32Array): boolean[];
 ```
 
-Defined in: [nvmesh-utilities.ts:215](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L215)
+Defined in: [nvmesh-utilities.ts:216](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L216)
 
 #### Parameters
 
@@ -204,7 +204,7 @@ Defined in: [nvmesh-utilities.ts:13](https://github.com/niivue/niivue/blob/main/
 static getExtents(pts: number[] | Float32Array): Extents;
 ```
 
-Defined in: [nvmesh-utilities.ts:239](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L239)
+Defined in: [nvmesh-utilities.ts:240](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L240)
 
 #### Parameters
 
@@ -248,7 +248,7 @@ static saveMesh(
 compress: boolean): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvmesh-utilities.ts:192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L192)
+Defined in: [nvmesh-utilities.ts:193](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-utilities.ts#L193)
 
 #### Parameters
 

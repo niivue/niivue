@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      <label for="voxelCheck">Show Voxels</label>
+      <input type="checkbox" id="voxelCheck"/>
+      &nbsp;
+      <button id="aboutBtn">About</button>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="shaderBtns">Shaders: </label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  voxelCheck.onchange = function () {
+    if (this.checked) {
+      nv1.volumes[0].opacity = 1.0
+      nv1.setMeshShader(nv1.meshes[0].id, 'Crosscut')
+    } else {
+      nv1.volumes[0].opacity = 0.0
+      nv1.setMeshShader(nv1.meshes[0].id, 'Matcap')
+    }
+    nv1.drawScene()
+  }
+  aboutBtn.onclick = function () {
+    window.alert("Sampling voxel intensities (NIfTI) at mesh vertices (assumes precise alignment).")
+  }
+  let defaults = {
+    show3Dcrosshair: true,
+    backColor: [1, 1, 1, 1],
+  }
+  var nv1 = new niivue.Niivue(defaults)
+  await nv1.attachToCanvas(gl1)
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  nv1.opts.isOrientCube = true
+  nv1.opts.crosshairGap = 3
+  nv1.setInterpolation(true)
+  var volumeList1 = [
+        {
+          url: "../images/spmMotor.nii.gz",
+          cal_min: 2,
+          cal_max: 5,
+          colormap: "warm",
+          colormapNegative: "winter",
+          opacity: 0.0,
+        },
+  ]
+  await nv1.loadVolumes(volumeList1)
+  var meshLayersList1 = [
+    {
+      url: "../images/spmMotor.nii.gz",
+      colormap: "warm",
+      cal_min: 2,
+      cal_max: 5,
+      useNegativeCmap: true,
+    },
+  ]
+  await nv1.loadMeshes([{
+    url: "../images/BrainMesh_ICBM152.lh.mz3",
+    layers: meshLayersList1,
+    }])
+  nv1.scene.crosshairPos = nv1.mm2frac([-39, -18, 52])
+  voxelCheck.onchange()
+  let shaders = nv1.meshShaderNames()
+  for (let i = 0; i < shaders.length; i++) {
+    let btn = document.createElement("button")
+    btn.innerHTML = shaders[i]
+    btn.onclick = function () {
+      nv1.setMeshShader(nv1.meshes[0].id, shaders[i])
+    }
+    shaderBtns.appendChild(btn)
+  }
+</script>

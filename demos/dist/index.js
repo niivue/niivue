@@ -15012,7 +15012,8 @@ var NVMeshUtilities = class {
     const headerSize = 16;
     const indexSize = nface * 3 * 4;
     const vertexSize = nvert * 3 * 4;
-    const totalSize = headerSize + indexSize + vertexSize;
+    const colorSize = isRGBA ? colors.length : 0;
+    const totalSize = headerSize + indexSize + vertexSize + colorSize;
     const buffer = new ArrayBuffer(totalSize);
     const writer = new DataView(buffer);
     writer.setUint16(0, magic, true);
@@ -16762,7 +16763,11 @@ var NVMeshLoaders = class _NVMeshLoaders {
         }
       }
     } else if (ext === "NII") {
-      layer.values = await _NVMeshLoaders.readNII(buffer, n_vert, nvmesh.anatomicalStructurePrimary);
+      layer.values = await _NVMeshLoaders.readNII(
+        buffer,
+        nvmesh.pts,
+        nvmesh.anatomicalStructurePrimary
+      );
     } else if (ext === "SMP") {
       layer.values = await _NVMeshLoaders.readSMP(buffer, n_vert);
     } else if (ext === "STC") {
@@ -18586,13 +18591,14 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readNII2()
   // read NIfTI1/2 as vertex colors
   // https://brainder.org/2012/09/23/the-nifti-file-format/#:~:text=In%20the%20nifti%20format%2C%20the,seventh%2C%20are%20for%20other%20uses.
-  static async readNII(buffer, n_vert = 0, anatomicalStructurePrimary = "") {
+  static async readNII(buffer, pts, anatomicalStructurePrimary = "") {
+    const n_mesh_vert = pts.length / 3;
     let scalars = new Float32Array();
     let isLittleEndian = true;
     let reader = new DataView(buffer);
     let magic = reader.getUint16(0, isLittleEndian);
     if (magic === 540 || magic === 469893120) {
-      return _NVMeshLoaders.readNII2(buffer, n_vert, anatomicalStructurePrimary);
+      return _NVMeshLoaders.readNII2(buffer, n_mesh_vert, anatomicalStructurePrimary);
     }
     if (magic === 23553) {
       isLittleEndian = false;
@@ -18604,7 +18610,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       buffer = raw.buffer;
       magic = reader.getUint16(0, isLittleEndian);
       if (magic === 540 || magic === 469893120) {
-        return _NVMeshLoaders.readNII2(buffer, n_vert, anatomicalStructurePrimary);
+        return _NVMeshLoaders.readNII2(buffer, n_mesh_vert, anatomicalStructurePrimary);
       }
       if (magic === 23553) {
         isLittleEndian = false;
@@ -18617,50 +18623,140 @@ var NVMeshLoaders = class _NVMeshLoaders {
     const voxoffset = reader.getFloat32(108, isLittleEndian);
     const scl_slope = reader.getFloat32(112, isLittleEndian);
     const scl_inter = reader.getFloat32(116, isLittleEndian);
-    if (scl_slope !== 1 || scl_inter !== 0) {
-      log.warn("ignoring scale slope and intercept");
-    }
+    const qform_code = reader.getUint16(252, isLittleEndian);
+    const sform_code = reader.getUint16(254, isLittleEndian);
     const datatype = reader.getUint16(70, isLittleEndian);
     if (datatype !== 2 && datatype !== 4 && datatype !== 8 && datatype !== 16) {
       throw new Error("Unsupported NIfTI datatype " + datatype);
     }
-    let nvert = 1;
-    for (let i = 1; i < 8; i++) {
-      const dim = reader.getUint16(40 + i * 2, isLittleEndian);
-      nvert *= Math.max(dim, 1);
+    const sform = mat4_exports.create();
+    for (let i = 0; i < 12; i++) {
+      sform[i] = reader.getFloat32(280 + i * 4, isLittleEndian);
     }
-    nvert = this.decimateLayerVertices(nvert, n_vert);
-    if (nvert % n_vert !== 0) {
-      throw new Error("Vertices in layer (" + nvert + ") is not a multiple of number of vertices (" + n_vert + ")");
+    let n_vox = 1;
+    const dim = new Array(8);
+    for (let i = 0; i < 8; i++) {
+      dim[i] = reader.getUint16(40 + i * 2, isLittleEndian);
+      if (i < 1) {
+        continue;
+      }
+      n_vox *= dim[i] || 1;
     }
+    let is3D = false;
+    let nvertD = this.decimateLayerVertices(n_vox, n_mesh_vert);
+    if (nvertD % n_mesh_vert !== 0) {
+      if (dim[0] >= 3 && dim[1] > 1 && dim[2] > 1 && dim[3] > 1) {
+        is3D = true;
+        nvertD = dim[1] * dim[2] * dim[3];
+      } else {
+        throw new Error("Voxels in layer (" + n_vox + ") is not a multiple of number of vertices (" + n_mesh_vert + ")");
+      }
+    }
+    n_vox = nvertD;
     if (isLittleEndian) {
       if (datatype === 16) {
-        scalars = new Float32Array(buffer, voxoffset, nvert);
+        scalars = new Float32Array(buffer, voxoffset, n_vox);
       } else if (datatype === 8) {
-        scalars = new Int32Array(buffer, voxoffset, nvert);
+        scalars = new Int32Array(buffer, voxoffset, n_vox);
       } else if (datatype === 4) {
-        scalars = new Int16Array(buffer, voxoffset, nvert);
+        scalars = new Int16Array(buffer, voxoffset, n_vox);
       }
     } else {
       if (datatype === 16) {
-        scalars = new Float32Array(nvert);
-        for (let i = 0; i < nvert; i++) {
+        scalars = new Float32Array(n_vox);
+        for (let i = 0; i < n_vox; i++) {
           scalars[i] = reader.getFloat32(voxoffset + i * 4, isLittleEndian);
         }
       } else if (datatype === 8) {
-        scalars = new Int32Array(nvert);
-        for (let i = 0; i < nvert; i++) {
+        scalars = new Int32Array(n_vox);
+        for (let i = 0; i < n_vox; i++) {
           scalars[i] = reader.getInt32(voxoffset + i * 4, isLittleEndian);
         }
       } else if (datatype === 4) {
-        scalars = new Int16Array(nvert);
-        for (let i = 0; i < nvert; i++) {
+        scalars = new Int16Array(n_vox);
+        for (let i = 0; i < n_vox; i++) {
           scalars[i] = reader.getInt16(voxoffset + i * 2, isLittleEndian);
         }
       }
     }
     if (datatype === 2) {
-      scalars = new Uint8Array(buffer, voxoffset, nvert);
+      scalars = new Uint8Array(buffer, voxoffset, n_vox);
+    }
+    if (scl_slope !== 1 || scl_inter !== 0) {
+      const f32 = new Float32Array(n_vox);
+      for (let i = 0; i < n_vox; i++) {
+        f32[i] = scalars[i] * scl_slope + scl_inter;
+      }
+      scalars = f32;
+    }
+    for (let i = 0; i < n_vox; i++) {
+      if (isNaN(scalars[i])) {
+        scalars[i] = 0;
+      }
+    }
+    if (is3D) {
+      let transformMat4homogeneous = function(xyz, m) {
+        const out = [0, 0, 0];
+        out[0] = m[0] * xyz[0] + m[1] * xyz[1] + m[2] * xyz[2] + m[3];
+        out[1] = m[4] * xyz[0] + m[5] * xyz[1] + m[6] * xyz[2] + m[7];
+        out[2] = m[8] * xyz[0] + m[9] * xyz[1] + m[10] * xyz[2] + m[11];
+        return out;
+      };
+      const f32 = new Float32Array(n_vox);
+      log.warn("Sampling voxel intensities at mesh vertices (assumes precise alignment).");
+      if (qform_code > sform_code || sform_code <= 0) {
+        log.warn(`Requires valid sform (sform_code = ${sform_code})`);
+      }
+      const sformInv = mat4_exports.create();
+      mat4_exports.invert(sformInv, sform);
+      const nx = dim[1];
+      const ny = dim[2];
+      const nz = dim[3];
+      const nxy = nx * ny;
+      let j = 0;
+      let k = 0;
+      let nOK = 0;
+      while (k < n_mesh_vert) {
+        const xyz = [pts[j], pts[j + 1], pts[j + 2]];
+        const ijk = transformMat4homogeneous(xyz, sformInv);
+        j += 3;
+        k += 1;
+        const ixf = Math.floor(ijk[0]);
+        const iyf = Math.floor(ijk[1]);
+        const izf = Math.floor(ijk[2]);
+        const ixc = Math.ceil(ijk[0]);
+        const iyc = Math.ceil(ijk[1]);
+        const izc = Math.ceil(ijk[2]);
+        if (ixf < 0 || ixc >= nx || iyf < 0 || iyc >= ny || izf < 0 || izc >= nz) {
+          continue;
+        }
+        const base = ixf + iyf * nx + izf * nxy;
+        const vs = new Float32Array(8);
+        vs[0] = scalars[base];
+        vs[1] = scalars[base + 1];
+        vs[2] = scalars[base + nx];
+        vs[3] = scalars[base + nx + 1];
+        vs[4] = scalars[base + nxy];
+        vs[5] = scalars[base + nxy + 1];
+        vs[6] = scalars[base + nxy + nx];
+        vs[7] = scalars[base + nxy + nx + 1];
+        let maxv = vs[0];
+        let minv = maxv;
+        for (let i = 1; i < 8; i++) {
+          maxv = Math.max(maxv, vs[i]);
+          minv = Math.min(minv, vs[i]);
+        }
+        if (Math.abs(minv) > maxv) {
+          maxv = minv;
+        }
+        f32[k - 1] = maxv;
+        nOK++;
+      }
+      const fractionOK = nOK / n_mesh_vert;
+      if (fractionOK < 0.1) {
+        log.warn(`${nOK} of ${n_mesh_vert} vertices in range (${(fractionOK * 100).toFixed(1)}%)`);
+      }
+      scalars = f32;
     }
     return scalars;
   }
@@ -46037,7 +46133,8 @@ var Niivue = class {
         mx,
         // obj.modelViewProjectionMatrix,
         obj.modelMatrix,
-        obj.normalMatrix
+        obj.normalMatrix,
+        true
       );
     }
     if (isNaN(customMM)) {
@@ -47151,7 +47248,7 @@ var Niivue = class {
    * Render all visible 3D meshes with proper blending, depth, and shader settings.
    * @internal
    */
-  drawMesh3D(isDepthTest = true, alpha = 1, m, modelMtx, normMtx) {
+  drawMesh3D(isDepthTest = true, alpha = 1, m, modelMtx, normMtx, is2D = false) {
     if (this.meshes.length < 1) {
       return;
     }
@@ -47189,18 +47286,20 @@ var Niivue = class {
         gl.disable(gl.CULL_FACE);
         const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM);
         gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx);
-        const OUT_OF_RANGE = 1e9;
-        if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
-          mm[1] = OUT_OF_RANGE;
-          mm[2] = OUT_OF_RANGE;
-        }
-        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
-          mm[0] = OUT_OF_RANGE;
-          mm[2] = OUT_OF_RANGE;
-        }
-        if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
-          mm[0] = OUT_OF_RANGE;
-          mm[1] = OUT_OF_RANGE;
+        if (is2D) {
+          const OUT_OF_RANGE = 1e9;
+          if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
+            mm[1] = OUT_OF_RANGE;
+            mm[2] = OUT_OF_RANGE;
+          }
+          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
+            mm[0] = OUT_OF_RANGE;
+            mm[2] = OUT_OF_RANGE;
+          }
+          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
+            mm[0] = OUT_OF_RANGE;
+            mm[1] = OUT_OF_RANGE;
+          }
         }
         let meshThicknessMM = Number(this.opts.meshThicknessOn2D);
         if (!Number.isFinite(meshThicknessMM)) {
