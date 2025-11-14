@@ -130,3 +130,28 @@ for (const file of meshFormats) {
     await expect(page.locator('#gl')).toHaveScreenshot({ timeout: 30000 })
   })
 }
+
+test('niivue loadMeshes with meshShaderIndex', async ({ page }) => {
+  const result = await page.evaluate(async (testOptions) => {
+    const nv = new Niivue(testOptions as NiivueTestOptions)
+    await nv.attachTo('gl')
+
+    // Load mesh with meshShaderIndex set to 2 (Toon shader)
+    await nv.loadMeshes([
+      {
+        url: './images/BrainMesh_ICBM152.lh.mz3',
+        rgba255: [255, 255, 255, 255],
+        meshShaderIndex: 2
+      }
+    ])
+
+    return {
+      meshCount: nv.meshes.length,
+      shaderIndex: nv.meshes[0]?.meshShaderIndex
+    }
+  }, TEST_OPTIONS)
+
+  expect(result.meshCount).toBe(1)
+  expect(result.shaderIndex).toBe(2)
+  await expect(page).toHaveScreenshot({ timeout: 30000 })
+})
