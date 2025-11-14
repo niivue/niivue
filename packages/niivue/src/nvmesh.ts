@@ -89,6 +89,7 @@ export class NVMeshFromUrlOptions {
   visible: boolean
   layers: NVMeshLayer[]
   colorbarVisible: boolean
+  meshShaderIndex: number
 
   constructor(
     url = '',
@@ -98,7 +99,8 @@ export class NVMeshFromUrlOptions {
     rgba255 = new Uint8Array([255, 255, 255, 255]),
     visible = true,
     layers = [],
-    colorbarVisible = true
+    colorbarVisible = true,
+    meshShaderIndex = 0
   ) {
     this.url = url
     this.gl = gl
@@ -108,6 +110,7 @@ export class NVMeshFromUrlOptions {
     this.visible = visible
     this.layers = layers
     this.colorbarVisible = colorbarVisible
+    this.meshShaderIndex = meshShaderIndex
   }
 }
 
@@ -127,6 +130,8 @@ type BaseLoadParams = {
   visible: boolean
   /** Layers of the mesh to load. */
   layers: NVMeshLayer[]
+  /** Shader index for mesh rendering. Default is 0 (Phong). */
+  meshShaderIndex: number
 }
 
 export type LoadFromUrlParams = Partial<BaseLoadParams> & {
@@ -2018,7 +2023,8 @@ export class NVMesh {
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = [],
-    buffer = new ArrayBuffer(0)
+    buffer = new ArrayBuffer(0),
+    meshShaderIndex = 0
   }: Partial<LoadFromUrlParams> = {}): Promise<NVMesh> {
     let urlParts = url.split('/') // split url parts at slash
     if (name === '') {
@@ -2053,6 +2059,11 @@ export class NVMesh {
       buff = await response.arrayBuffer()
     }
     const nvmesh = await this.readMesh(buff, name, gl, opacity, new Uint8Array(rgba255), visible)
+
+    // Set mesh shader index if provided
+    if (meshShaderIndex !== undefined) {
+      nvmesh.meshShaderIndex = meshShaderIndex
+    }
 
     if (!layers || layers.length < 1) {
       return nvmesh
