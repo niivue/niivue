@@ -1483,6 +1483,19 @@ export class NVMeshLoaders {
       LUT.I[struc] = (A << 24) + (B << 16) + (G << 8) + R
       LUT.labels[struc] = txt
     }
+    // start issue1455: if ALL labels are transparent assume ALL opaque
+    let isAllAlphaZero = true
+    for (let i = 0; i < maxstruc; i++) {
+      if (LUT.A[i] > 0) {
+        isAllAlphaZero = false
+      }
+    }
+    if (isAllAlphaZero) {
+      for (let i = 0; i < maxstruc; i++) {
+        LUT.A[i] = 255
+      }
+    }
+    // end issue1455
     const scalars = new Float32Array(n_vertex)
     scalars.fill(-1)
     let nError = 0
@@ -3226,18 +3239,28 @@ export class NVMeshLoaders {
     if (datatype === 2) {
       scalars = new Uint8Array(buffer, voxoffset, n_vox)
     }
-    if (scl_slope !== 1 || scl_inter !== 0) {
+    if (
+      Number.isFinite(scl_slope) &&
+      Number.isFinite(scl_inter) &&
+      scl_slope !== 0 &&
+      (scl_slope !== 1 || scl_inter !== 0)
+    ) {
       const f32 = new Float32Array(n_vox)
       for (let i = 0; i < n_vox; i++) {
         f32[i] = scalars[i] * scl_slope + scl_inter
       }
       scalars = f32
     }
+    let mn = scalars[0]
+    let mx = mn
     for (let i = 0; i < n_vox; i++) {
       if (isNaN(scalars[i])) {
         scalars[i] = 0.0
       }
+      mn = Math.min(mn, scalars[i])
+      mx = Math.max(mx, scalars[i])
     }
+    log.debug(`Layer Range ${mn}..${mx} slope ${scl_slope} inter ${scl_inter}`)
     if (is3D) {
       const f32 = new Float32Array(n_vox)
       // Sample voxel intensities at mesh vertices
