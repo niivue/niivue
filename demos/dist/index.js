@@ -28923,7 +28923,7 @@ var NVMeshLayerDefaults = {
   showLegend: true
 };
 var NVMeshFromUrlOptions = class {
-  constructor(url = "", gl = null, name = "", opacity = 1, rgba255 = new Uint8Array([255, 255, 255, 255]), visible = true, layers = [], colorbarVisible = true) {
+  constructor(url = "", gl = null, name = "", opacity = 1, rgba255 = new Uint8Array([255, 255, 255, 255]), visible = true, layers = [], colorbarVisible = true, meshShaderIndex = 0) {
     __publicField(this, "url");
     __publicField(this, "gl");
     __publicField(this, "name");
@@ -28932,6 +28932,7 @@ var NVMeshFromUrlOptions = class {
     __publicField(this, "visible");
     __publicField(this, "layers");
     __publicField(this, "colorbarVisible");
+    __publicField(this, "meshShaderIndex");
     this.url = url;
     this.gl = gl;
     this.name = name;
@@ -28940,6 +28941,7 @@ var NVMeshFromUrlOptions = class {
     this.visible = visible;
     this.layers = layers;
     this.colorbarVisible = colorbarVisible;
+    this.meshShaderIndex = meshShaderIndex;
   }
 };
 var NVMesh3 = class _NVMesh {
@@ -30599,7 +30601,8 @@ var NVMesh3 = class _NVMesh {
     rgba255 = [255, 255, 255, 255],
     visible = true,
     layers = [],
-    buffer = new ArrayBuffer(0)
+    buffer = new ArrayBuffer(0),
+    meshShaderIndex = 0
   } = {}) {
     let urlParts = url.split("/");
     if (name === "") {
@@ -30630,6 +30633,9 @@ var NVMesh3 = class _NVMesh {
       buff = await response.arrayBuffer();
     }
     const nvmesh = await this.readMesh(buff, name, gl, opacity, new Uint8Array(rgba255), visible);
+    if (meshShaderIndex !== void 0) {
+      nvmesh.meshShaderIndex = meshShaderIndex;
+    }
     if (!layers || layers.length < 1) {
       return nvmesh;
     }

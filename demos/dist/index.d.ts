@@ -1256,7 +1256,8 @@ declare class NVMeshFromUrlOptions {
     visible: boolean;
     layers: NVMeshLayer[];
     colorbarVisible: boolean;
-    constructor(url?: string, gl?: any, name?: string, opacity?: number, rgba255?: Uint8Array, visible?: boolean, layers?: any[], colorbarVisible?: boolean);
+    meshShaderIndex: number;
+    constructor(url?: string, gl?: any, name?: string, opacity?: number, rgba255?: Uint8Array, visible?: boolean, layers?: any[], colorbarVisible?: boolean, meshShaderIndex?: number);
 }
 /**
  * Parameters for loading a base mesh or volume.
@@ -1274,6 +1275,8 @@ type BaseLoadParams = {
     visible: boolean;
     /** Layers of the mesh to load. */
     layers: NVMeshLayer[];
+    /** Shader index for mesh rendering. Default is 0 (Phong). */
+    meshShaderIndex: number;
 };
 type LoadFromUrlParams = Partial<BaseLoadParams> & {
     url: string;
@@ -1387,7 +1390,7 @@ declare class NVMesh {
     /**
      * factory function to load and return a new NVMesh instance from a given URL
      */
-    static loadFromUrl({ url, headers, gl, name, opacity, rgba255, visible, layers, buffer }?: Partial<LoadFromUrlParams>): Promise<NVMesh>;
+    static loadFromUrl({ url, headers, gl, name, opacity, rgba255, visible, layers, buffer, meshShaderIndex }?: Partial<LoadFromUrlParams>): Promise<NVMesh>;
     static readFileAsync(file: Blob): Promise<ArrayBuffer>;
     /**
      * factory function to load and return a new NVMesh instance from a file in the browser
