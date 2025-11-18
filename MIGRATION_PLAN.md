@@ -52,7 +52,7 @@ This document outlines the plan to modularize the Niivue class from a monolithic
 These modules form the foundation and have minimal dependencies on each other.
 
 #### 1.1 WebGLContext Module
-**File:** `packages/niivue/src/niivue/core/WebGLContext.ts`
+**File:** `packages/niivue/src/niivue/core/gl.ts`
 **Responsibility:** WebGL context initialization, management, and basic operations
 **Line Range:** ~800-1000, ~7000-7200 (texture creation methods)
 **Key Methods:**
