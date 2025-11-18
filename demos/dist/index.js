@@ -17075,6 +17075,17 @@ var NVMeshLoaders = class _NVMeshLoaders {
       LUT4.I[struc] = (A << 24) + (B << 16) + (G << 8) + R;
       LUT4.labels[struc] = txt;
     }
+    let isAllAlphaZero = true;
+    for (let i = 0; i < maxstruc; i++) {
+      if (LUT4.A[i] > 0) {
+        isAllAlphaZero = false;
+      }
+    }
+    if (isAllAlphaZero) {
+      for (let i = 0; i < maxstruc; i++) {
+        LUT4.A[i] = 255;
+      }
+    }
     const scalars = new Float32Array(n_vertex);
     scalars.fill(-1);
     let nError = 0;
@@ -18682,18 +18693,23 @@ var NVMeshLoaders = class _NVMeshLoaders {
     if (datatype === 2) {
       scalars = new Uint8Array(buffer, voxoffset, n_vox);
     }
-    if (scl_slope !== 1 || scl_inter !== 0) {
+    if (Number.isFinite(scl_slope) && Number.isFinite(scl_inter) && scl_slope !== 0 && (scl_slope !== 1 || scl_inter !== 0)) {
       const f32 = new Float32Array(n_vox);
       for (let i = 0; i < n_vox; i++) {
         f32[i] = scalars[i] * scl_slope + scl_inter;
       }
       scalars = f32;
     }
+    let mn = scalars[0];
+    let mx = mn;
     for (let i = 0; i < n_vox; i++) {
       if (isNaN(scalars[i])) {
         scalars[i] = 0;
       }
+      mn = Math.min(mn, scalars[i]);
+      mx = Math.max(mx, scalars[i]);
     }
+    log.debug(`Layer Range ${mn}..${mx} slope ${scl_slope} inter ${scl_inter}`);
     if (is3D) {
       let transformMat4homogeneous = function(xyz, m) {
         const out = [0, 0, 0];
