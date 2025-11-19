@@ -301,26 +301,32 @@ These format readers are still embedded in index.ts and should be moved to the I
 
 #### 5.1 ImageFactory Module
 **File:** `packages/niivue/src/nvimage/ImageFactory.ts`
-**Responsibility:** Factory methods for creating NVImage instances
-**Line Range:** ~469-603, ~3164-3420, ~3477-3566, ~3635-3699
-**Key Static Methods:**
-- `NVImage.new()` - Create from ArrayBuffer with format detection
-- `loadFromUrl()` - Load from URL with streaming support
-- `loadFromFile()` - Load from browser File object
-- `loadFromBase64()` - Load from base64 string
-- `zerosLike()` - Create zero-filled image matching another
-- `clone()` - Create a copy of an image
+**Responsibility:** Pure utility functions for loading and creating NVImage instances
+**Line Range:** N/A (new module)
+**Implementation:** Extracted pure helper functions to avoid circular dependencies
 
-**Helper Static Methods:**
+**Extracted Helper Functions:**
 - `fetchDicomData()` - Fetch DICOM manifest
 - `readFirstDecompressedBytes()` - Stream decompression helper
 - `extractFilenameFromUrl()` - Parse filename from URL
 - `loadInitialVolumes()` - Load partial 4D volumes (uncompressed)
 - `loadInitialVolumesGz()` - Load partial 4D volumes (gzipped)
 - `readFileAsync()` - Read browser File with streaming
+- `base64ToArrayBuffer()` - Convert base64 to ArrayBuffer
+- `getPrimaryExtension()` - Extract primary file extension
 
-**Dependencies:** All format readers, coordinate transforms, data processing
-**Status:** ⬜ Not Started
+**Factory Methods (remain in NVImage class):**
+- `NVImage.new()` - Create from ArrayBuffer with format detection
+- `loadFromUrl()` - Load from URL (uses ImageFactory helpers)
+- `loadFromFile()` - Load from browser File (uses ImageFactory helpers)
+- `loadFromBase64()` - Load from base64 string (uses ImageFactory helpers)
+- `zerosLike()` - Create zero-filled image matching another
+- `clone()` - Create a copy of an image
+
+**Architecture:** ImageFactory exports pure functions with no NVImage dependency. NVImage static methods delegate to ImageFactory utilities, avoiding circular dependencies.
+
+**Dependencies:** nifti-reader-js, fflate, @/nvimage/utils
+**Status:** ✅ Completed
 
 ---
 
@@ -672,9 +678,9 @@ For each module in the plan above:
 - ⬜ 4.1 IntensityCalibration Module
 - ⬜ 4.2 ColormapManager Module
 
-### Phase 5: Factory and Loader Module ⬜
+### Phase 5: Factory and Loader Module ✅
 
-- ⬜ 5.1 ImageFactory Module
+- ✅ 5.1 ImageFactory Module
 
 ### Phase 6: Metadata and Options Module ⬜
 
