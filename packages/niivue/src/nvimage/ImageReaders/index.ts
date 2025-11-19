@@ -8,6 +8,7 @@ export interface ParsedVolumeData {
   error?: string
 }
 
+export * as Afni from '@/nvimage/ImageReaders/afni'
 export * as BrainVoyager from '@/nvimage/ImageReaders/brainvoyager'
 export * as DsiStudio from '@/nvimage/ImageReaders/dsistudio'
 export * as Ecat from '@/nvimage/ImageReaders/ecat'
