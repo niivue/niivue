@@ -189,7 +189,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - Corner coordinates: `mm000`, `mm100`, `mm010`, `mm001`
 
 **Dependencies:** gl-matrix (mat4, vec3, vec4)
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
 
 ---
 
@@ -657,9 +657,9 @@ For each module in the plan above:
 - ✅ 1.8 ITK Reader
 - ✅ 1.9 AFNI Reader
 
-### Phase 2: Coordinate Transform Module ⬜
+### Phase 2: Coordinate Transform Module ✅
 
-- ⬜ 2.1 CoordinateTransform Module
+- ✅ 2.1 CoordinateTransform Module
 
 ### Phase 3: Data Processing Modules ⬜
 
