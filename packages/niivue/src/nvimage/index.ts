@@ -1,5 +1,4 @@
 import { NIFTI1, NIFTI2, NIFTIEXTENSION, readHeaderAsync } from 'nifti-reader-js'
-import * as zarr from 'zarrita'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { ColorMap, LUT } from '@/colortables'
@@ -12,10 +11,7 @@ import {
   ImageType,
   NVIMAGE_TYPE,
   NiiDataType,
-  NiiIntentCode,
-  isAffineOK,
-  isPlatformLittleEndian,
-  uncompressStream
+  NiiIntentCode
 } from '@/nvimage/utils'
 import * as ImageWriter from '@/nvimage/ImageWriter'
 import * as VolumeUtils from '@/nvimage/VolumeUtils'
@@ -27,6 +23,10 @@ import * as IntensityCalibration from '@/nvimage/IntensityCalibration'
 import * as ColormapManager from '@/nvimage/ColormapManager'
 import * as ImageFactory from '@/nvimage/ImageFactory'
 import * as ImageMetadataModule from '@/nvimage/ImageMetadata'
+import * as ImageDataProcessor from '@/nvimage/ImageDataProcessor'
+import * as AffineProcessor from '@/nvimage/AffineProcessor'
+import * as ZarrProcessor from '@/nvimage/ZarrProcessor'
+import * as StreamingLoader from '@/nvimage/StreamingLoader'
 
 export * from '@/nvimage/utils'
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
@@ -252,212 +252,20 @@ export class NVImage {
       // change data from float32 to rgba32
       imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw)).buffer as ArrayBuffer
     } // NIFTI_INTENT_VECTOR: this is a RGB tensor
-    if (this.hdr.pixDims[1] === 0.0 || this.hdr.pixDims[2] === 0.0 || this.hdr.pixDims[3] === 0.0) {
-      log.error('pixDims not plausible', this.hdr)
+    // Process affine matrix: validate, calculate from QForm if needed, repair if defective
+    AffineProcessor.processAffine(this.hdr, useQFormNotSForm)
+    // Swap bytes if foreign endian, then convert to appropriate typed array
+    ImageDataProcessor.swapBytesIfNeeded(imgRaw, this.hdr)
+    const conversionResult = ImageDataProcessor.convertDataType(imgRaw, this.hdr)
+    this.img = conversionResult.img
+    if (conversionResult.imaginary) {
+      this.imaginary = conversionResult.imaginary
     }
-    if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0.0) {
-      this.hdr.scl_slope = 1.0
-    } // https://github.com/nipreps/fmriprep/issues/2507
-    if (isNaN(this.hdr.scl_inter)) {
-      this.hdr.scl_inter = 0.0
+    if (conversionResult.updatedDatatypeCode !== undefined) {
+      this.hdr.datatypeCode = conversionResult.updatedDatatypeCode
     }
-    let affineOK = isAffineOK(this.hdr.affine)
-    if (useQFormNotSForm || !affineOK || this.hdr.qform_code > this.hdr.sform_code) {
-      log.debug('spatial transform based on QForm')
-      // https://github.com/rii-mango/NIFTI-Reader-JS/blob/6908287bf99eb3bc4795c1591d3e80129da1e2f6/src/nifti1.js#L238
-      // Define a, b, c, d for coding convenience
-      const b = this.hdr.quatern_b
-      const c = this.hdr.quatern_c
-      const d = this.hdr.quatern_d
-      // quatern_a is a parameter in quaternion [a, b, c, d], which is required in affine calculation (METHOD 2)
-      // mentioned in the nifti1.h file
-      // It can be calculated by a = sqrt(1.0-(b*b+c*c+d*d))
-      const a = Math.sqrt(1.0 - (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2)))
-      const qfac = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0]
-      const quatern_R = [
-        [a * a + b * b - c * c - d * d, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c],
-        [2 * b * c + 2 * a * d, a * a + c * c - b * b - d * d, 2 * c * d - 2 * a * b],
-        [2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a * a + d * d - c * c - b * b]
-      ]
-      const affine = this.hdr.affine
-      for (let ctrOut = 0; ctrOut < 3; ctrOut += 1) {
-        for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
-          affine[ctrOut][ctrIn] = quatern_R[ctrOut][ctrIn] * this.hdr.pixDims[ctrIn + 1]
-          if (ctrIn === 2) {
-            affine[ctrOut][ctrIn] *= qfac
-          }
-        }
-      }
-      // The last row of affine matrix is the offset vector
-      affine[0][3] = this.hdr.qoffset_x
-      affine[1][3] = this.hdr.qoffset_y
-      affine[2][3] = this.hdr.qoffset_z
-      this.hdr.affine = affine
-    }
-    affineOK = isAffineOK(this.hdr.affine)
-    if (!affineOK) {
-      log.debug('Defective NIfTI: spatial transform does not make sense')
-      let x = this.hdr.pixDims[1]
-      let y = this.hdr.pixDims[2]
-      let z = this.hdr.pixDims[3]
-      if (isNaN(x) || x === 0.0) {
-        x = 1.0
-      }
-      if (isNaN(y) || y === 0.0) {
-        y = 1.0
-      }
-      if (isNaN(z) || z === 0.0) {
-        z = 1.0
-      }
-      this.hdr.pixDims[1] = x
-      this.hdr.pixDims[2] = y
-      this.hdr.pixDims[3] = z
-      const affine = [
-        [x, 0, 0, 0],
-        [0, y, 0, 0],
-        [0, 0, z, 0],
-        [0, 0, 0, 1]
-      ]
-      this.hdr.affine = affine
-    } // defective affine
-    // swap data if foreign endian:
-    if (
-      this.hdr.datatypeCode !== NiiDataType.DT_RGB24 &&
-      this.hdr.datatypeCode !== NiiDataType.DT_RGBA32 &&
-      this.hdr.littleEndian !== isPlatformLittleEndian() &&
-      this.hdr.numBitsPerVoxel > 8
-    ) {
-      if (this.hdr.numBitsPerVoxel === 16) {
-        // inspired by https://github.com/rii-mango/Papaya
-        const u16 = new Uint16Array(imgRaw)
-        for (let i = 0; i < u16.length; i++) {
-          const val = u16[i]
-          u16[i] = ((((val & 0xff) << 8) | ((val >> 8) & 0xff)) << 16) >> 16 // since JS uses 32-bit  when bit shifting
-        }
-      } else if (this.hdr.numBitsPerVoxel === 32) {
-        // inspired by https://github.com/rii-mango/Papaya
-        const u32 = new Uint32Array(imgRaw)
-        for (let i = 0; i < u32.length; i++) {
-          const val = u32[i]
-          u32[i] = ((val & 0xff) << 24) | ((val & 0xff00) << 8) | ((val >> 8) & 0xff00) | ((val >> 24) & 0xff)
-        }
-      } else if (this.hdr.numBitsPerVoxel === 64) {
-        // inspired by MIT licensed code: https://github.com/rochars/endianness
-        const numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8
-        const u8 = new Uint8Array(imgRaw)
-        for (let index = 0; index < u8.length; index += numBytesPerVoxel) {
-          let offset = numBytesPerVoxel - 1
-          for (let x = 0; x < offset; x++) {
-            const theByte = u8[index + x]
-            u8[index + x] = u8[index + offset]
-            u8[index + offset] = theByte
-            offset--
-          }
-        }
-      } // if 64-bits
-    } // swap byte order
-    switch (this.hdr.datatypeCode) {
-      case NiiDataType.DT_UINT8:
-        this.img = new Uint8Array(imgRaw)
-        break
-      case NiiDataType.DT_INT16:
-        this.img = new Int16Array(imgRaw)
-        break
-      case NiiDataType.DT_FLOAT32:
-        this.img = new Float32Array(imgRaw)
-        break
-      case NiiDataType.DT_FLOAT64:
-        this.img = new Float64Array(imgRaw)
-        break
-      case NiiDataType.DT_RGB24:
-        this.img = new Uint8Array(imgRaw)
-        break
-      case NiiDataType.DT_UINT16:
-        this.img = new Uint16Array(imgRaw)
-        break
-      case NiiDataType.DT_RGBA32:
-        this.img = new Uint8Array(imgRaw)
-        break
-      case NiiDataType.DT_INT8: {
-        const i8 = new Int8Array(imgRaw)
-        const vx8 = i8.length
-        this.img = new Int16Array(vx8)
-        for (let i = 0; i < vx8; i++) {
-          this.img[i] = i8[i]
-        }
-        this.hdr.datatypeCode = NiiDataType.DT_INT16
-        this.hdr.numBitsPerVoxel = 16
-        break
-      }
-      case NiiDataType.DT_BINARY: {
-        const nvox = this.hdr.dims[1] * this.hdr.dims[2] * Math.max(1, this.hdr.dims[3]) * Math.max(1, this.hdr.dims[4])
-        const img1 = new Uint8Array(imgRaw)
-        this.img = new Uint8Array(nvox)
-        const lut = new Uint8Array(8)
-        for (let i = 0; i < 8; i++) {
-          lut[i] = Math.pow(2, i)
-        }
-        let i1 = -1
-        for (let i = 0; i < nvox; i++) {
-          const bit = i % 8
-          if (bit === 0) {
-            i1++
-          }
-          if ((img1[i1] & lut[bit]) !== 0) {
-            this.img[i] = 1
-          }
-        }
-        this.hdr.datatypeCode = NiiDataType.DT_UINT8
-        this.hdr.numBitsPerVoxel = 8
-        break
-      }
-      case NiiDataType.DT_UINT32: {
-        const u32 = new Uint32Array(imgRaw)
-        const vx32 = u32.length
-        this.img = new Float64Array(vx32)
-        for (let i = 0; i < vx32 - 1; i++) {
-          this.img[i] = u32[i]
-        }
-        this.hdr.datatypeCode = NiiDataType.DT_FLOAT64
-        break
-      }
-      case NiiDataType.DT_INT32: {
-        const i32 = new Int32Array(imgRaw)
-        const vxi32 = i32.length
-        this.img = new Float64Array(vxi32)
-        for (let i = 0; i < vxi32 - 1; i++) {
-          this.img[i] = i32[i]
-        }
-        this.hdr.datatypeCode = NiiDataType.DT_FLOAT64
-        break
-      }
-      case NiiDataType.DT_INT64: {
-        const i64 = new BigInt64Array(imgRaw)
-        const vx = i64.length
-        this.img = new Float64Array(vx)
-        for (let i = 0; i < vx - 1; i++) {
-          this.img[i] = Number(i64[i])
-        }
-        this.hdr.datatypeCode = NiiDataType.DT_FLOAT64
-        break
-      }
-      case NiiDataType.DT_COMPLEX64: {
-        // saved as real/imaginary pairs: show real following fsleyes/MRIcroGL convention
-        const f32 = new Float32Array(imgRaw)
-        const nvx = Math.floor(f32.length / 2)
-        this.imaginary = new Float32Array(nvx)
-        this.img = new Float32Array(nvx)
-        let r = 0
-        for (let i = 0; i < nvx - 1; i++) {
-          this.img[i] = f32[r]
-          this.imaginary[i] = f32[r + 1]
-          r += 2
-        }
-        this.hdr.datatypeCode = NiiDataType.DT_FLOAT32
-        break
-      }
-      default:
-        throw new Error('datatype ' + this.hdr.datatypeCode + ' not supported')
+    if (conversionResult.updatedNumBitsPerVoxel !== undefined) {
+      this.hdr.numBitsPerVoxel = conversionResult.updatedNumBitsPerVoxel
     }
     this.calculateRAS()
     if (!isNaN(cal_min)) {
@@ -1046,55 +854,9 @@ export class NVImage {
     }
     // try url and name attributes to test for .zarr
     if (imageType === NVIMAGE_TYPE.ZARR) {
-      // get the z, x, y slice indices from the query string
-      const urlParams = new URL(url).searchParams
-      const zIndex = urlParams.get('z')
-      const yIndex = urlParams.get('y')
-      const xIndex = urlParams.get('x')
-      const zRange = zIndex ? zarr.slice(parseInt(zIndex), parseInt(zIndex) + 1) : null
-      const yRange = yIndex ? zarr.slice(parseInt(yIndex), parseInt(yIndex) + 1) : null
-      const xRange = xIndex ? zarr.slice(parseInt(xIndex), parseInt(xIndex) + 1) : null
-      // remove the query string from the original URL
-      const zarrUrl = url.split('?')[0]
-      // if multiscale, must provide the full path to the zarr array data
-      const store = new zarr.FetchStore(zarrUrl)
-      const root = zarr.root(store)
-      let arr
-      try {
-        // TODO: probably remove this, since it's not needed
-        arr = await zarr.open(root.resolve(url), { kind: 'array' })
-      } catch (e) {
-        arr = await zarr.open(root, { kind: 'array' })
-      }
-      let view
-      if (arr.shape.length === 4) {
-        const cRange = null
-        // make sure we are not exceeding the array shape. If so, set to max
-        const zDim = arr.shape[2]
-        const yDim = arr.shape[1]
-        const xDim = arr.shape[0]
-        if (zRange && zRange[0] >= zDim) {
-          zRange[0] = zDim - 1
-        }
-        if (yRange && yRange[0] >= yDim) {
-          yRange[0] = yDim - 1
-        }
-        if (xRange && xRange[0] >= xDim) {
-          xRange[0] = xDim - 1
-        }
-        view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
-      } else {
-        view = await zarr.get(arr, [xRange, yRange, zRange])
-      }
-      dataBuffer = view.data
-      const [height, width, zDim, cDim] = view.shape
-      zarrData = {
-        data: dataBuffer,
-        width,
-        height,
-        depth: zDim,
-        channels: cDim
-      }
+      const zarrResult = await ZarrProcessor.loadZarrData(url)
+      dataBuffer = zarrResult.dataBuffer
+      zarrData = zarrResult.zarrData
     }
     // DICOM assigned for unknown extensions: therefore test signature to see if mystery file is NIfTI
     const isTestNIfTI = imageType === NVIMAGE_TYPE.DCM || NVIMAGE_TYPE.NII
@@ -1107,79 +869,14 @@ export class NVImage {
         dataBuffer = await NVImage.fetchDicomData(url, headers)
         imageType = NVIMAGE_TYPE.DCM_MANIFEST
       } else {
-        const response = await fetch(url, { headers })
-        if (!response.ok) {
-          throw Error(response.statusText)
-        }
-        if (!response.body) {
-          throw new Error('No readable stream available')
-        }
-        const stream = await uncompressStream(response.body)
-        const chunks: Uint8Array[] = []
-        const reader = stream.getReader()
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) {
-            break
-          }
-          chunks.push(value)
-        }
-        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-        dataBuffer = new ArrayBuffer(totalLength)
-        const dataView = new Uint8Array(dataBuffer)
-        let offset = 0
-        for (const chunk of chunks) {
-          dataView.set(chunk, offset)
-          offset += chunk.length
-        }
+        dataBuffer = await StreamingLoader.fetchAndStreamData(url, headers)
       }
     }
-    // read paired header image files
-    if (ext.toUpperCase() === 'HEAD') {
-      if (urlImgData === '') {
-        urlImgData = url.substring(0, url.lastIndexOf('HEAD')) + 'BRIK'
-      }
-    }
-
-    if (ext.toUpperCase() === 'HDR') {
-      if (urlImgData === '') {
-        urlImgData = url.substring(0, url.lastIndexOf('HDR')) + 'IMG'
-      }
-    }
-
-    // Handle paired image data if necessary
+    // Handle paired image data for formats with separate header/data files
+    const pairedUrl = StreamingLoader.getPairedImageUrl(url, ext.toUpperCase(), urlImgData)
     let pairedImgData = null
-    if (urlImgData) {
-      try {
-        let response = await fetch(urlImgData, { headers })
-        if (response.status === 404 && (urlImgData.includes('BRIK') || urlImgData.includes('IMG'))) {
-          response = await fetch(`${urlImgData}.gz`, { headers })
-        }
-        if (response.ok && response.body) {
-          const stream = await uncompressStream(response.body)
-          const chunks: Uint8Array[] = []
-          const reader = stream.getReader()
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) {
-              break
-            }
-            chunks.push(value)
-          }
-
-          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-          pairedImgData = new ArrayBuffer(totalLength)
-          const dataView = new Uint8Array(pairedImgData)
-          let offset = 0
-          for (const chunk of chunks) {
-            dataView.set(chunk, offset)
-            offset += chunk.length
-          }
-        }
-      } catch (error) {
-        console.error('Error loading paired image data:', error)
-      }
+    if (pairedUrl) {
+      pairedImgData = await StreamingLoader.fetchPairedImageData(pairedUrl, headers)
     }
 
     if (!dataBuffer) {
