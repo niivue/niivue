@@ -10,8 +10,8 @@
  */
 
 import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
-import { NiiDataType, isPlatformLittleEndian } from '@/nvimage/utils'
 import type { TypedVoxelArray } from './index'
+import { NiiDataType, isPlatformLittleEndian } from '@/nvimage/utils'
 
 /**
  * Result of data type conversion, containing the converted image data

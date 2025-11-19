@@ -44,11 +44,7 @@ function zxy2xyz(data: any, X: number, Y: number, Z: number): Uint8Array {
  * @returns Promise resolving to ArrayBuffer containing the image data.
  * @throws Error if data dimensions don't match expected size.
  */
-export async function readZARR(
-  nvImage: NVImage,
-  buffer: ArrayBuffer,
-  zarrData: unknown
-): Promise<ArrayBufferLike> {
+export async function readZARR(nvImage: NVImage, buffer: ArrayBuffer, zarrData: unknown): Promise<ArrayBufferLike> {
   let { width, height, depth = 1, data } = (zarrData ?? {}) as any
   let expectedLength = width * height * depth * 3
   let isRGB = expectedLength === data.length

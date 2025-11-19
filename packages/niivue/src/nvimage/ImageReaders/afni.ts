@@ -70,12 +70,7 @@ function setPixDimFromSForm(nvImage: NVImage): void {
  * @param xyzOrigin - Origin coordinates
  * @param orientSpecific - Orientation codes for each axis
  */
-function THD_daxes_to_NIFTI(
-  nvImage: NVImage,
-  xyzDelta: number[],
-  xyzOrigin: number[],
-  orientSpecific: number[]
-): void {
+function THD_daxes_to_NIFTI(nvImage: NVImage, xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void {
   const hdr = nvImage.hdr
 
   if (hdr === null) {

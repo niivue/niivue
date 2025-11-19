@@ -7,9 +7,9 @@
  * - Loading and processing V1 vector data with optional flips
  */
 
+import type { NVImage } from './index'
 import { log } from '@/logger'
 import { NiiDataType } from '@/nvimage/utils'
-import type { NVImage } from './index'
 
 /**
  * Convert vector field from Float32 to RGBA representation.

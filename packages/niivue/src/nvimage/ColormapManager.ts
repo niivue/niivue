@@ -8,9 +8,9 @@
  * - Managing colormap and opacity properties
  */
 
+import type { NVImage } from './index'
 import { cmapper, type ColorMap } from '@/colortables'
 import * as IntensityCalibration from '@/nvimage/IntensityCalibration'
-import type { NVImage } from './index'
 
 /**
  * Set continuous colormap.

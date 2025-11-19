@@ -274,15 +274,7 @@ export async function readMIF(
   // input and output arrays
   let j = 0
   let inVs: Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array
-  let outVs:
-    | Int8Array
-    | Uint8Array
-    | Int16Array
-    | Uint16Array
-    | Int32Array
-    | Uint32Array
-    | Float32Array
-    | Float64Array
+  let outVs: Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array
   switch (hdr.datatypeCode) {
     case NiiDataType.DT_INT8:
       inVs = new Int8Array(rawImg)

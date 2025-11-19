@@ -11,10 +11,10 @@
 
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { NIFTI1, NIFTI2, readHeaderAsync } from 'nifti-reader-js'
+import type { NVImage } from './index'
 import { log } from '@/logger'
 import { hdrToArrayBuffer, TypedVoxelArray } from '@/nvimage/utils'
 import * as CoordinateTransform from '@/nvimage/CoordinateTransform'
-import type { NVImage } from './index'
 
 /**
  * Detect difference between voxel grid and world space.

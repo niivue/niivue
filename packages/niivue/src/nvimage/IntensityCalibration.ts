@@ -7,10 +7,10 @@
  * - Converting between raw and calibrated intensity values
  */
 
+import type { NVImage } from './index'
 import { log } from '@/logger'
 import { cmapper } from '@/colortables'
 import { NiiIntentCode } from '@/nvimage/utils'
-import type { NVImage } from './index'
 
 /**
  * Convert voxel intensity from stored value to scaled intensity.
@@ -57,7 +57,11 @@ export function intensityScaled2Raw(nvImage: NVImage, scaled: number): number {
  * @param isBorder - If true (default) only center of volume used for estimate
  * @returns Volume brightness and returns array [pct2, pct98, mnScale, mxScale]
  */
-export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINITY, isBorder: boolean = true): number[] {
+export function calMinMax(
+  nvImage: NVImage,
+  vol: number = Number.POSITIVE_INFINITY,
+  isBorder: boolean = true
+): number[] {
   if (!nvImage.hdr) {
     throw new Error('hdr undefined')
   }
