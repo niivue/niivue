@@ -353,7 +353,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `modulateAlpha` - Modulation alpha blending
 
 **Dependencies:** None (pure data access)
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
 
 ---
 
@@ -682,9 +682,9 @@ For each module in the plan above:
 
 - ✅ 5.1 ImageFactory Module
 
-### Phase 6: Metadata and Options Module ⬜
+### Phase 6: Metadata and Options Module ✅
 
-- ⬜ 6.1 ImageMetadata Module
+- ✅ 6.1 ImageMetadata Module
 
 ### Phase 7: Core Refactor ⬜
 

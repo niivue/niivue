@@ -1,8 +1,8 @@
 import { NIFTI1, NIFTI2, NIFTIEXTENSION, readHeaderAsync } from 'nifti-reader-js'
 import * as zarr from 'zarrita'
-import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
+import { mat4, vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
-import { ColorMap, LUT, cmapper } from '@/colortables'
+import { ColorMap, LUT } from '@/colortables'
 import { log } from '@/logger'
 import {
   ImageFromBase64,
@@ -13,8 +13,6 @@ import {
   NVIMAGE_TYPE,
   NiiDataType,
   NiiIntentCode,
-  NVImageFromUrlOptions,
-  hdrToArrayBuffer,
   isAffineOK,
   isPlatformLittleEndian,
   uncompressStream
@@ -28,6 +26,7 @@ import * as TensorProcessing from '@/nvimage/TensorProcessing'
 import * as IntensityCalibration from '@/nvimage/IntensityCalibration'
 import * as ColormapManager from '@/nvimage/ColormapManager'
 import * as ImageFactory from '@/nvimage/ImageFactory'
+import * as ImageMetadataModule from '@/nvimage/ImageMetadata'
 
 export * from '@/nvimage/utils'
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
@@ -626,7 +625,6 @@ export class NVImage {
   calculateOblique(): void {
     ImageOrientation.calculateOblique(this)
   }
-
 
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
@@ -1487,24 +1485,7 @@ export class NVImage {
    * get nifti specific metadata about the image
    */
   getImageMetadata(): ImageMetadata {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    const id = this.id
-    const datatypeCode = this.hdr.datatypeCode
-    const dims = this.hdr.dims
-    const nx = dims[1]
-    const ny = dims[2]
-    const nz = dims[3]
-    const nt = Math.max(1, dims[4])
-    const pixDims = this.hdr.pixDims
-    const dx = pixDims[1]
-    const dy = pixDims[2]
-    const dz = pixDims[3]
-    const dt = pixDims[4]
-    const bpv = Math.floor(this.hdr.numBitsPerVoxel / 8)
-
-    return { id, datatypeCode, nx, ny, nz, nt, dx, dy, dz, dt, bpv }
+    return ImageMetadataModule.getImageMetadata(this)
   }
 
   /**
@@ -1551,30 +1532,11 @@ export class NVImage {
    * Update options for image
    */
   applyOptionsUpdate(options: ImageFromUrlOptions): void {
-    this.hdr!.cal_min = options.cal_min!
-    this.hdr!.cal_max = options.cal_max!
-    Object.assign(this, options)
+    ImageMetadataModule.applyOptionsUpdate(this, options)
   }
 
   getImageOptions(): ImageFromUrlOptions {
-    const options = NVImageFromUrlOptions(
-      '', // url,
-      '', // urlImageData
-      this.name, // name
-      this._colormap, // colormap
-      this.opacity, // opacity
-      this.hdr!.cal_min, // cal_min
-      this.hdr!.cal_max, // cal_max
-      this.trustCalMinMax, // trustCalMinMax,
-      this.percentileFrac, // percentileFrac
-      this.ignoreZeroVoxels, // ignoreZeroVoxels
-      this.useQFormNotSForm, // useQFormNotSForm
-      this.colormapNegative, // colormapNegative
-      this.frame4D,
-      this.imageType, // imageType
-      this.colormapType
-    )
-    return options
+    return ImageMetadataModule.getImageOptions(this)
   }
 
   /**
