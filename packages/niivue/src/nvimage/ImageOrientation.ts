@@ -11,9 +11,9 @@
 
 import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import { NIFTI1, NIFTI2, readHeaderAsync } from 'nifti-reader-js'
-import type { NVImage } from './index'
+import type { NVImage, TypedVoxelArray } from './index'
 import { log } from '@/logger'
-import { hdrToArrayBuffer, TypedVoxelArray } from '@/nvimage/utils'
+import { hdrToArrayBuffer } from '@/nvimage/utils'
 import * as CoordinateTransform from '@/nvimage/CoordinateTransform'
 
 /**
