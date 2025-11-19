@@ -8,6 +8,7 @@ export interface ParsedVolumeData {
   error?: string
 }
 
+export * as Ecat from '@/nvimage/ImageReaders/ecat'
 export * as Mgh from '@/nvimage/ImageReaders/mgh'
 export * as Nii from '@/nvimage/ImageReaders/nii'
 export * as Nrrd from '@/nvimage/ImageReaders/nrrd'
