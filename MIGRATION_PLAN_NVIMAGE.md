@@ -64,7 +64,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readECAT()` - Parse ECAT7 format
 
 **Dependencies:** NIFTI1 (from nifti-reader-js)
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -77,7 +77,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readVMR()` - Read BrainVoyager VMR format
 
 **Dependencies:** NIFTI1 (from nifti-reader-js)
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
 
 ---
 
@@ -90,7 +90,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readSRC()` - Read DSI Studio SRC format (DWI source data)
 
 **Dependencies:** NIFTI1, NVUtilities.readMatV4, mat4, vec3
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -103,7 +103,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readNPZ()` - Read NumPy .npz format (zipped arrays)
 
 **Dependencies:** NIFTI1, Zip (from nvutilities)
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -116,7 +116,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `imageDataFromArrayBuffer()` - Convert ArrayBuffer to ImageData
 
 **Dependencies:** NIFTI1, browser Image API
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -128,7 +128,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readZARR()` - Read Zarr format with RGB handling
 
 **Dependencies:** NIFTI1, zarrita library
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -140,7 +140,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readMIF()` - Read MRtrix MIF format (supports 3D-5D data)
 
 **Dependencies:** NIFTI1, NVUtilities.decompressToBuffer, NVUtilities.range
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -152,7 +152,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readMHA()` - Read ITK MetaImage format (MHA/MHD)
 
 **Dependencies:** NIFTI1, mat3, vec3, NVUtilities.decompressToBuffer
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -164,7 +164,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `readHEAD()` - Read AFNI HEAD header and BRIK data
 
 **Dependencies:** NIFTI1, NIFTIEXTENSION, NVUtilities.decompressToBuffer
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -645,17 +645,17 @@ For each module in the plan above:
 
 ## Task Tracking
 
-### Phase 1: Extract Format Readers ⬜
+### Phase 1: Extract Format Readers ✅
 
-- ⬜ 1.1 ECAT Reader
-- ⬜ 1.2 BrainVoyager Readers
-- ⬜ 1.3 DSI Studio Readers
-- ⬜ 1.4 NumPy Readers
-- ⬜ 1.5 Image Format Readers
-- ⬜ 1.6 Zarr Reader
-- ⬜ 1.7 MRtrix Reader
-- ⬜ 1.8 ITK Reader
-- ⬜ 1.9 AFNI Reader
+- ✅ 1.1 ECAT Reader
+- ✅ 1.2 BrainVoyager Readers
+- ✅ 1.3 DSI Studio Readers
+- ✅ 1.4 NumPy Readers
+- ✅ 1.5 Image Format Readers
+- ✅ 1.6 Zarr Reader
+- ✅ 1.7 MRtrix Reader
+- ✅ 1.8 ITK Reader
+- ✅ 1.9 AFNI Reader
 
 ### Phase 2: Coordinate Transform Module ⬜
 
