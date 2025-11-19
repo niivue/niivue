@@ -7,6 +7,7 @@ import defaultMatCap from '@/matcaps/Shiny.jpg'
 import defaultFontPNG from '@/fonts/Roboto-Regular.png'
 import defaultFontMetrics from '@/fonts/Roboto-Regular.json' with { type: 'json' }
 import { ColorMap, cmapper } from '@/colortables'
+import * as glUtils from '@/niivue/core/gl'
 import {
   NVDocument,
   NVConfigOptions,
@@ -285,7 +286,6 @@ const TEXTURE0_BACK_VOL = 33984
 const TEXTURE1_COLORMAPS = 33985
 const TEXTURE2_OVERLAY_VOL = 33986
 const TEXTURE3_FONT = 33987
-const TEXTURE4_THUMBNAIL = 33988
 const TEXTURE5_MATCAP = 33989
 const TEXTURE6_GRADIENT = 33990
 const TEXTURE7_DRAW = 33991
@@ -1065,12 +1065,10 @@ export class Niivue {
       isAntiAlias = navigator.hardwareConcurrency > 6
       log.debug('AntiAlias ', isAntiAlias, ' Threads ', navigator.hardwareConcurrency)
     }
-    this.gl = this.canvas.getContext('webgl2', {
-      alpha: true,
-      antialias: isAntiAlias
-    })
-    this.uiData.max2D = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE)
-    this.uiData.max3D = this.gl.getParameter(this.gl.MAX_3D_TEXTURE_SIZE)
+    const { gl, max2D, max3D } = glUtils.initGL(this.canvas, isAntiAlias)
+    this.gl = gl
+    this.uiData.max2D = max2D
+    this.uiData.max3D = max3D
 
     log.info('NIIVUE VERSION ', version)
     log.debug(`Max texture size 2D: ${this.uiData.max2D} 3D: ${this.uiData.max3D}`)
@@ -5742,45 +5740,6 @@ export class Niivue {
   }
 
   /**
-   * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
-   * @internal
-   */
-  r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture {
-    if (texID) {
-      this.gl.deleteTexture(texID)
-    }
-    texID = this.gl.createTexture()!
-    this.gl.activeTexture(activeID)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, dims[1], dims[2], dims[3]) // output background dimensions
-    const nv = dims[1] * dims[2] * dims[3]
-    if (img16.length !== nv) {
-      img16 = new Int16Array(nv)
-    }
-    this.gl.texSubImage3D(
-      this.gl.TEXTURE_3D,
-      0,
-      0,
-      0,
-      0,
-      dims[1],
-      dims[2],
-      dims[3],
-      this.gl.RED_INTEGER,
-      this.gl.SHORT,
-      img16
-    ) // this.gl.SHORT,
-
-    return texID
-  }
-
-  /**
    * dilate drawing so all voxels are colored.
    * works on drawing with multiple colors
    * @example niivue.drawGrowCut();
@@ -6999,272 +6958,6 @@ export class Niivue {
       )
     }
     return texID
-  }
-
-  /**
-   * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
-   * @internal
-   */
-  r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
-    if (texID) {
-      this.gl.deleteTexture(texID)
-    }
-    texID = this.gl.createTexture()
-    this.gl.activeTexture(activeID)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8, dims[1], dims[2], dims[3]) // output background dimensions
-    if (isInit) {
-      const img8 = new Uint8Array(dims[1] * dims[2] * dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RED,
-        this.gl.UNSIGNED_BYTE,
-        img8
-      )
-    }
-    return texID
-  }
-
-  /**
-   * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
-   * @internal
-   */
-  rgbaTex2D(
-    texID: WebGLTexture | null,
-    activeID: number,
-    dims: number[],
-    data: Uint8Array | null = null,
-    isFlipVertical: boolean = true
-  ): WebGLTexture | null {
-    if (texID) {
-      this.gl.deleteTexture(texID)
-    }
-    texID = this.gl.createTexture()
-    this.gl.activeTexture(activeID)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, texID)
-
-    // Set texture parameters
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
-
-    // Allocate storage for the 2D texture
-    this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, dims[1], dims[2])
-    if (data) {
-      let drawData = data
-      const width = dims[1]
-      const height = dims[2]
-      if (isFlipVertical) {
-        drawData = new Uint8Array(data.length)
-        const rowSize = width * 4 // RGBA has 4 bytes per pixel
-        for (let y = 0; y < height; y++) {
-          const srcStart = y * rowSize
-          const destStart = (height - 1 - y) * rowSize
-          drawData.set(data.subarray(srcStart, srcStart + rowSize), destStart)
-        }
-      }
-      this.gl.texSubImage2D(
-        this.gl.TEXTURE_2D,
-        0, // Level
-        0,
-        0, // xOffset, yOffset
-        width,
-        height, // Width, Height
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        drawData
-      )
-    }
-    return texID
-  }
-
-  /**
-   * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
-   * @internal
-   */
-  rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
-    if (texID) {
-      this.gl.deleteTexture(texID)
-    }
-    texID = this.gl.createTexture()
-    this.gl.activeTexture(activeID)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8, dims[1], dims[2], dims[3]) // output background dimensions
-    if (isInit) {
-      const img8 = new Uint8Array(dims[1] * dims[2] * dims[3] * 4)
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        img8
-      )
-    }
-    return texID
-  }
-
-  /**
-   * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
-   * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
-   * @internal
-   */
-  rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
-    if (texID) {
-      this.gl.deleteTexture(texID)
-    }
-    texID = this.gl.createTexture()
-    this.gl.activeTexture(activeID)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID)
-    // Not: cannot be gl.LINEAR for integer textures
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2)
-    this.gl.pixelStorei(this.gl.PACK_ALIGNMENT, 2)
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA16UI, dims[1], dims[2], dims[3]) // output background dimensions
-    if (isInit) {
-      const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4)
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RGBA_INTEGER,
-        this.gl.UNSIGNED_SHORT,
-        img16
-      )
-    }
-    return texID
-  }
-
-  /**
-   * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
-   * @internal
-   */
-  requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
-    if (new URL(url, window.location.href).origin !== window.location.origin) {
-      img.crossOrigin = ''
-    }
-  }
-
-  /**
-   * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
-   * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
-   * Automatically handles CORS and draws scene if needed.
-   * @internal
-   */
-  async loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = (): void => {
-        if (!this.bmpShader) {
-          return
-        }
-        let pngTexture
-        if (textureNum === 4) {
-          if (this.bmpTexture !== null) {
-            this.gl.deleteTexture(this.bmpTexture)
-          }
-          this.bmpTexture = this.gl.createTexture()
-          pngTexture = this.bmpTexture
-          this.bmpTextureWH = img.width / img.height
-          this.gl.activeTexture(TEXTURE4_THUMBNAIL)
-          this.bmpShader.use(this.gl)
-          this.gl.uniform1i(this.bmpShader.uniforms.bmpTexture, 4)
-        } else if (textureNum === 5) {
-          this.gl.activeTexture(TEXTURE5_MATCAP)
-          if (this.matCapTexture !== null) {
-            this.gl.deleteTexture(this.matCapTexture)
-          }
-          this.matCapTexture = this.gl.createTexture()
-          pngTexture = this.matCapTexture
-        } else {
-          this.fontShader!.use(this.gl)
-          this.gl.activeTexture(TEXTURE3_FONT)
-          this.gl.uniform1i(this.fontShader!.uniforms.fontTexture, 3)
-          if (this.fontTexture !== null) {
-            this.gl.deleteTexture(this.fontTexture)
-          }
-          this.fontTexture = this.gl.createTexture()
-          pngTexture = this.fontTexture
-        }
-        this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture)
-        // Set the parameters so we can render any size image.
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR)
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR)
-        // Upload the image into the texture.
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img)
-        resolve(pngTexture)
-        if (textureNum !== 4) {
-          this.drawScene()
-        } // draw the font
-      }
-      img.onerror = reject
-      this.requestCORSIfNotSameOrigin(img, pngUrl)
-      img.src = pngUrl
-    })
-  }
-
-  /**
-   * Loads a font stored as a PNG bitmap into texture unit 3.
-   * @internal
-   */
-  async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null> {
-    return this.loadPngAsTexture(fontUrl, 3)
-  }
-
-  /**
-   * Loads a PNG bitmap into texture unit 4.
-   * @internal
-   */
-  async loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null> {
-    return this.loadPngAsTexture(bmpUrl, 4)
-  }
-
-  /**
-   * Load matcap for illumination model.
-   * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
-   * @example
-   * niivue.loadMatCapTexture("Cortex");
-   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
-   */
-  async loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null> {
-    return this.loadPngAsTexture(bmpUrl, 5)
   }
 
   /**
@@ -15877,6 +15570,124 @@ export class Niivue {
       posString = this.drawScene()
     }
     return posString
+  }
+
+  /**
+   * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
+   * @internal
+   */
+  r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    return glUtils.r8Tex(this.gl, texID, activeID, dims, isInit)
+  }
+
+  /**
+   * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
+   * @internal
+   */
+  r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture {
+    return glUtils.r16Tex(this.gl, texID, activeID, dims, img16)
+  }
+
+  /**
+   * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
+   * @internal
+   */
+  rgbaTex2D(
+    texID: WebGLTexture | null,
+    activeID: number,
+    dims: number[],
+    data: Uint8Array | null = null,
+    isFlipVertical: boolean = true
+  ): WebGLTexture | null {
+    return glUtils.rgbaTex2D(this.gl, texID, activeID, dims, data, isFlipVertical)
+  }
+
+  /**
+   * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
+   * @internal
+   */
+  rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    return glUtils.rgbaTex(this.gl, texID, activeID, dims, isInit)
+  }
+
+  /**
+   * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
+   * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
+   * @internal
+   */
+  rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit = false): WebGLTexture | null {
+    return glUtils.rgba16Tex(this.gl, texID, activeID, dims, isInit)
+  }
+
+  /**
+   * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
+   * @internal
+   */
+  requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void {
+    glUtils.requestCORSIfNotSameOrigin(img, url)
+  }
+
+  /**
+   * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
+   * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
+   * Automatically handles CORS and draws scene if needed.
+   * @internal
+   */
+  async loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null> {
+    const texture = await glUtils.loadPngAsTexture(
+      this.gl,
+      pngUrl,
+      textureNum,
+      this.fontShader,
+      this.bmpShader,
+      this.fontTexture,
+      this.bmpTexture,
+      this.matCapTexture,
+      (widthHeightRatio) => {
+        this.bmpTextureWH = widthHeightRatio
+      },
+      () => {
+        this.drawScene()
+      }
+    )
+
+    // Update the appropriate texture property based on textureNum
+    if (textureNum === 3) {
+      this.fontTexture = texture
+    } else if (textureNum === 4) {
+      this.bmpTexture = texture
+    } else if (textureNum === 5) {
+      this.matCapTexture = texture
+    }
+
+    return texture
+  }
+
+  /**
+   * Loads a font stored as a PNG bitmap into texture unit 3.
+   * @internal
+   */
+  async loadFontTexture(fontUrl: string): Promise<WebGLTexture | null> {
+    return this.loadPngAsTexture(fontUrl, 3)
+  }
+
+  /**
+   * Loads a PNG bitmap into texture unit 4.
+   * @internal
+   */
+  async loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null> {
+    return this.loadPngAsTexture(bmpUrl, 4)
+  }
+
+  /**
+   * Load matcap for illumination model.
+   * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
+   * @example
+   * niivue.loadMatCapTexture("Cortex");
+   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
+   */
+  async loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null> {
+    return this.loadPngAsTexture(bmpUrl, 5)
   }
 
   /**

@@ -51,16 +51,20 @@ This document outlines the plan to modularize the Niivue class from a monolithic
 
 These modules form the foundation and have minimal dependencies on each other.
 
-#### 1.1 WebGLContext Module
+#### 1.1 WebGL Utilities Module
 **File:** `packages/niivue/src/niivue/core/gl.ts`
 **Responsibility:** WebGL context initialization, management, and basic operations
 **Line Range:** ~800-1000, ~7000-7200 (texture creation methods)
-**Key Methods:**
-- `initGL()` - Initialize WebGL context
-- `r8Tex()`, `r16Tex()`, `rgbaTex()` - Texture creation
-- `requestCORSIfNotSameOrigin()` - CORS handling
+**Implementation Pattern:** Pure functions (not classes)
+**Key Functions:**
+- `initGL(canvas, isAntiAlias)` - Initialize WebGL context, returns `{ gl, max2D, max3D }`
+- `r8Tex(gl, ...)`, `r16Tex(gl, ...)`, `rgbaTex(gl, ...)`, `rgbaTex2D(gl, ...)`, `rgba16Tex(gl, ...)` - Texture creation
+- `requestCORSIfNotSameOrigin(img, url)` - CORS handling
+- `loadPngAsTexture(gl, ...)` - PNG image loading
 
-**Status:** ⬜ Not Started
+**Design Decision:** Using pure functions instead of classes for better reusability, testability, and tree-shaking. All functions accept WebGL context as first parameter.
+
+**Status:** ✅ Completed
 
 ---
 
@@ -899,11 +903,18 @@ export class Niivue {
 ### Guiding Principles
 
 1. **Backward Compatibility:** Maintain 100% backward compatibility with the existing public API
-2. **Incremental Migration:** Move one module at a time, testing after each change. Update playwright tests as needed.  
-3. **Dependency Injection:** Use constructor injection for module dependencies
-4. **Interface Contracts:** Define clear interfaces for each module
+2. **Incremental Migration:** Move one module at a time, testing after each change. Update playwright tests as needed.
+3. **Pure Functions Over Classes:** Prefer pure functions for utility modules (better reusability, testability, and tree-shaking)
+4. **Explicit Dependencies:** Pass dependencies as function parameters (e.g., `gl` as first parameter)
 5. **Test Coverage:** Add playwright tests for each module as it's created
 6. **Documentation:** Update docs as modules are created
+
+**Module Pattern Decision:** After implementing the WebGL module, we've adopted a **pure functions** approach instead of classes for utility modules. This provides:
+- Better reusability across the codebase
+- Easier testing (just pass in dependencies)
+- Better tree-shaking (unused functions can be eliminated)
+- No class instantiation overhead
+- Simpler mental model (no `this` binding)
 
 ### Migration Process (Per Module)
 
@@ -1010,9 +1021,9 @@ For each module in the plan above:
 
 ## Task Tracking
 
-### Phase 1: Core Infrastructure Modules ⬜
+### Phase 1: Core Infrastructure Modules 🔄
 
-- ⬜ 1.1 WebGLContext Module
+- ✅ 1.1 WebGLContext Module
 - ⬜ 1.2 CoordinateTransform Module
 - ⬜ 1.3 ShaderManager Module
 
