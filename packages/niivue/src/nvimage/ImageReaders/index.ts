@@ -11,6 +11,7 @@ export interface ParsedVolumeData {
 export * as BrainVoyager from '@/nvimage/ImageReaders/brainvoyager'
 export * as DsiStudio from '@/nvimage/ImageReaders/dsistudio'
 export * as Ecat from '@/nvimage/ImageReaders/ecat'
+export * as Image from '@/nvimage/ImageReaders/image'
 export * as Mgh from '@/nvimage/ImageReaders/mgh'
 export * as Nii from '@/nvimage/ImageReaders/nii'
 export * as Nrrd from '@/nvimage/ImageReaders/nrrd'
