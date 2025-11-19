@@ -24,6 +24,10 @@ import * as ImageWriter from '@/nvimage/ImageWriter'
 import * as VolumeUtils from '@/nvimage/VolumeUtils'
 import * as ImageReaders from '@/nvimage/ImageReaders'
 import * as CoordinateTransform from '@/nvimage/CoordinateTransform'
+import * as ImageOrientation from '@/nvimage/ImageOrientation'
+import * as TensorProcessing from '@/nvimage/TensorProcessing'
+import * as IntensityCalibration from '@/nvimage/IntensityCalibration'
+import * as ColormapManager from '@/nvimage/ColormapManager'
 
 export * from '@/nvimage/utils'
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
@@ -606,186 +610,21 @@ export class NVImage {
   // detect difference between voxel grid and world space
   // https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
   computeObliqueAngle(mtx44: mat4): number {
-    const mtx = mat4.clone(mtx44)
-    mat4.transpose(mtx, mtx44)
-    const dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2])
-    const xmax = Math.max(Math.max(Math.abs(mtx[0]), Math.abs(mtx[1])), Math.abs(mtx[2])) / dxtmp
-    const dytmp = Math.sqrt(mtx[4] * mtx[4] + mtx[5] * mtx[5] + mtx[6] * mtx[6])
-    const ymax = Math.max(Math.max(Math.abs(mtx[4]), Math.abs(mtx[5])), Math.abs(mtx[6])) / dytmp
-    const dztmp = Math.sqrt(mtx[8] * mtx[8] + mtx[9] * mtx[9] + mtx[10] * mtx[10])
-    const zmax = Math.max(Math.max(Math.abs(mtx[8]), Math.abs(mtx[9])), Math.abs(mtx[10])) / dztmp
-    const fig_merit = Math.min(Math.min(xmax, ymax), zmax)
-    let oblique_angle = Math.abs((Math.acos(fig_merit) * 180.0) / 3.141592653)
-    if (oblique_angle > 0.01) {
-      log.warn('Warning voxels not aligned with world space: ' + oblique_angle + ' degrees from plumb.\n')
-    } else {
-      oblique_angle = 0.0
-    }
-    return oblique_angle
+    return ImageOrientation.computeObliqueAngle(mtx44)
   }
 
   float32V1asRGBA(inImg: Float32Array): Uint8Array {
-    if (inImg.length !== this.nVox3D * 3) {
-      log.warn('float32V1asRGBA() expects ' + this.nVox3D * 3 + 'voxels, got ', +inImg.length)
-    }
-    const f32 = inImg.slice()
-    // Note we will use RGBA rather than RGB and use least significant bits to store vector polarity
-    // this allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction
-    this.hdr.datatypeCode = NiiDataType.DT_RGBA32
-    this.nFrame4D = 1
-    for (let i = 4; i < 7; i++) {
-      this.hdr.dims[i] = 1
-    }
-    this.hdr.dims[0] = 3 // 3D
-    const imgRaw = new Uint8Array(this.nVox3D * 4) //* 3 for RGB
-    let mx = 1.0
-    for (let i = 0; i < this.nVox3D * 3; i++) {
-      // n.b. NaN values created by dwi2tensor and tensor2metric tensors.mif -vector v1.mif
-      if (isNaN(f32[i])) {
-        continue
-      }
-      mx = Math.max(mx, Math.abs(f32[i]))
-    }
-    const slope = 255 / mx
-    const nVox3D2 = this.nVox3D * 2
-    let j = 0
-    for (let i = 0; i < this.nVox3D; i++) {
-      // n.b. it is really necessary to overwrite imgRaw with a new datatype mid-method
-      const x = f32[i]
-      const y = f32[i + this.nVox3D]
-      const z = f32[i + nVox3D2]
-      ;(imgRaw as Uint8Array)[j] = Math.abs(x * slope)
-      ;(imgRaw as Uint8Array)[j + 1] = Math.abs(y * slope)
-      ;(imgRaw as Uint8Array)[j + 2] = Math.abs(z * slope)
-      const xNeg = Number(x > 0) * 1
-      const yNeg = Number(y > 0) * 2
-      const zNeg = Number(z > 0) * 4
-      let alpha = 248 + xNeg + yNeg + zNeg
-      if (Math.abs(x) + Math.abs(y) + Math.abs(z) < 0.1) {
-        alpha = 0
-      }
-      ;(imgRaw as Uint8Array)[j + 3] = alpha
-      j += 4
-    }
-    return imgRaw
+    return TensorProcessing.float32V1asRGBA(this, inImg)
   }
 
   loadImgV1(isFlipX: boolean = false, isFlipY: boolean = false, isFlipZ: boolean = false): boolean {
-    let v1 = this.v1
-    if (!v1 && this.nFrame4D === 3 && this.img.constructor === Float32Array) {
-      v1 = this.img.slice()
-    }
-    if (!v1) {
-      log.warn('Image does not have V1 data')
-      return false
-    }
-    if (isFlipX) {
-      for (let i = 0; i < this.nVox3D; i++) {
-        v1[i] = -v1[i]
-      }
-    }
-    if (isFlipY) {
-      for (let i = this.nVox3D; i < 2 * this.nVox3D; i++) {
-        v1[i] = -v1[i]
-      }
-    }
-    if (isFlipZ) {
-      for (let i = 2 * this.nVox3D; i < 3 * this.nVox3D; i++) {
-        v1[i] = -v1[i]
-      }
-    }
-    this.img = this.float32V1asRGBA(v1)
-    return true
+    return TensorProcessing.loadImgV1(this, isFlipX, isFlipY, isFlipZ)
   }
 
   // not included in public docs
   // detect difference between voxel grid and world space
   calculateOblique(): void {
-    if (!this.matRAS) {
-      throw new Error('matRAS not defined')
-    }
-    if (this.pixDimsRAS === undefined) {
-      throw new Error('pixDimsRAS not defined')
-    }
-    if (!this.dimsRAS) {
-      throw new Error('dimsRAS not defined')
-    }
-
-    this.oblique_angle = this.computeObliqueAngle(this.matRAS)
-    const LPI = this.vox2mm([0.0, 0.0, 0.0], this.matRAS)
-    const X1mm = this.vox2mm([1.0 / this.pixDimsRAS[1], 0.0, 0.0], this.matRAS)
-    const Y1mm = this.vox2mm([0.0, 1.0 / this.pixDimsRAS[2], 0.0], this.matRAS)
-    const Z1mm = this.vox2mm([0.0, 0.0, 1.0 / this.pixDimsRAS[3]], this.matRAS)
-    vec3.subtract(X1mm, X1mm, LPI)
-    vec3.subtract(Y1mm, Y1mm, LPI)
-    vec3.subtract(Z1mm, Z1mm, LPI)
-    const oblique = mat4.fromValues(
-      X1mm[0],
-      X1mm[1],
-      X1mm[2],
-      0,
-      Y1mm[0],
-      Y1mm[1],
-      Y1mm[2],
-      0,
-      Z1mm[0],
-      Z1mm[1],
-      Z1mm[2],
-      0,
-      0,
-      0,
-      0,
-      1
-    )
-    this.obliqueRAS = mat4.clone(oblique)
-    const XY = Math.abs(90 - vec3.angle(X1mm, Y1mm) * (180 / Math.PI))
-    const XZ = Math.abs(90 - vec3.angle(X1mm, Z1mm) * (180 / Math.PI))
-    const YZ = Math.abs(90 - vec3.angle(Y1mm, Z1mm) * (180 / Math.PI))
-    this.maxShearDeg = Math.max(Math.max(XY, XZ), YZ)
-    if (this.maxShearDeg > 0.1) {
-      log.warn('Warning: voxels are rhomboidal, maximum shear is %f degrees.', this.maxShearDeg)
-    }
-    // compute a matrix to transform vectors from factional space to mm:
-    const dim = vec4.fromValues(this.dimsRAS[1], this.dimsRAS[2], this.dimsRAS[3], 1)
-    const sform = mat4.clone(this.matRAS)
-    mat4.transpose(sform, sform)
-    const shim = vec4.fromValues(-0.5, -0.5, -0.5, 0) // bitmap with 5 voxels scaled 0..1, voxel centers are 0.1,0.3,0.5,0.7,0.9
-    mat4.translate(sform, sform, vec3.fromValues(shim[0], shim[1], shim[2]))
-    // mat.mat4.scale(sform, sform, dim);
-    sform[0] *= dim[0]
-    sform[1] *= dim[0]
-    sform[2] *= dim[0]
-    sform[4] *= dim[1]
-    sform[5] *= dim[1]
-    sform[6] *= dim[1]
-    sform[8] *= dim[2]
-    sform[9] *= dim[2]
-    sform[10] *= dim[2]
-    this.frac2mm = mat4.clone(sform)
-    const pixdimX = this.pixDimsRAS[1] // vec3.length(X1mm);
-    const pixdimY = this.pixDimsRAS[2] // vec3.length(Y1mm);
-    const pixdimZ = this.pixDimsRAS[3] // vec3.length(Z1mm);
-    // orthographic view
-    const oform = mat4.clone(sform)
-    oform[0] = pixdimX * dim[0]
-    oform[1] = 0
-    oform[2] = 0
-    oform[4] = 0
-    oform[5] = pixdimY * dim[1]
-    oform[6] = 0
-    oform[8] = 0
-    oform[9] = 0
-    oform[10] = pixdimZ * dim[2]
-    const originVoxel = this.mm2vox([0, 0, 0], true)
-    // set matrix translation for distance from origin
-    oform[12] = (-originVoxel[0] - 0.5) * pixdimX
-    oform[13] = (-originVoxel[1] - 0.5) * pixdimY
-    oform[14] = (-originVoxel[2] - 0.5) * pixdimZ
-    this.frac2mmOrtho = mat4.clone(oform)
-    this.extentsMinOrtho = [oform[12], oform[13], oform[14]]
-    this.extentsMaxOrtho = [oform[0] + oform[12], oform[5] + oform[13], oform[10] + oform[14]]
-    this.mm2ortho = mat4.create()
-    mat4.invert(this.mm2ortho, oblique)
+    ImageOrientation.calculateOblique(this)
   }
 
 
@@ -994,276 +833,22 @@ export class NVImage {
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   calculateRAS(): void {
-    if (!this.hdr) {
-      throw new Error('hdr not set')
-    }
-    // port of Matlab reorient() https://github.com/xiangruili/dicm2nii/blob/master/nii_viewer.m
-    // not elegant, as JavaScript arrays are always 1D
-    const a = this.hdr.affine
-    const header = this.hdr
-    const absR = mat3.fromValues(
-      Math.abs(a[0][0]),
-      Math.abs(a[0][1]),
-      Math.abs(a[0][2]),
-      Math.abs(a[1][0]),
-      Math.abs(a[1][1]),
-      Math.abs(a[1][2]),
-      Math.abs(a[2][0]),
-      Math.abs(a[2][1]),
-      Math.abs(a[2][2])
-    )
-    // 1st column = x
-    const ixyz = [1, 1, 1]
-    if (absR[3] > absR[0]) {
-      ixyz[0] = 2 // (absR[1][0] > absR[0][0]) ixyz[0] = 2;
-    }
-    if (absR[6] > absR[0] && absR[6] > absR[3]) {
-      ixyz[0] = 3 // ((absR[2][0] > absR[0][0]) && (absR[2][0]> absR[1][0])) ixyz[0] = 3;
-    } // 2nd column = y
-    ixyz[1] = 1
-    if (ixyz[0] === 1) {
-      if (absR[4] > absR[7]) {
-        // (absR[1][1] > absR[2][1])
-        ixyz[1] = 2
-      } else {
-        ixyz[1] = 3
-      }
-    } else if (ixyz[0] === 2) {
-      if (absR[1] > absR[7]) {
-        // (absR[0][1] > absR[2][1])
-        ixyz[1] = 1
-      } else {
-        ixyz[1] = 3
-      }
-    } else {
-      if (absR[1] > absR[4]) {
-        // (absR[0][1] > absR[1][1])
-        ixyz[1] = 1
-      } else {
-        ixyz[1] = 2
-      }
-    }
-    // 3rd column = z: constrained as x+y+z = 1+2+3 = 6
-    ixyz[2] = 6 - ixyz[1] - ixyz[0]
-    let perm = [1, 2, 3]
-    perm[ixyz[0] - 1] = 1
-    perm[ixyz[1] - 1] = 2
-    perm[ixyz[2] - 1] = 3
-    let rotM = mat4.fromValues(
-      a[0][0],
-      a[0][1],
-      a[0][2],
-      a[0][3],
-      a[1][0],
-      a[1][1],
-      a[1][2],
-      a[1][3],
-      a[2][0],
-      a[2][1],
-      a[2][2],
-      a[2][3],
-      0,
-      0,
-      0,
-      1
-    )
-    // n.b. 0.5 in these values to account for voxel centers, e.g. a 3-pixel wide bitmap in unit space has voxel centers at 0.25, 0.5 and 0.75
-    this.mm000 = this.vox2mm([-0.5, -0.5, -0.5], rotM)
-    this.mm100 = this.vox2mm([header.dims[1] - 0.5, -0.5, -0.5], rotM)
-    this.mm010 = this.vox2mm([-0.5, header.dims[2] - 0.5, -0.5], rotM)
-    this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM)
-    const R = mat4.create()
-    mat4.copy(R, rotM)
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        R[i * 4 + j] = rotM[i * 4 + perm[j] - 1] // rotM[i+(4*(perm[j]-1))];//rotM[i],[perm[j]-1];
-      }
-    }
-    const flip = [0, 0, 0]
-    if (R[0] < 0) {
-      flip[0] = 1
-    } // R[0][0]
-    if (R[5] < 0) {
-      flip[1] = 1
-    } // R[1][1]
-    if (R[10] < 0) {
-      flip[2] = 1
-    } // R[2][2]
-    this.dimsRAS = [header.dims[0], header.dims[perm[0]], header.dims[perm[1]], header.dims[perm[2]]]
-    this.pixDimsRAS = [header.pixDims[0], header.pixDims[perm[0]], header.pixDims[perm[1]], header.pixDims[perm[2]]]
-    this.permRAS = perm.slice()
-    for (let i = 0; i < 3; i++) {
-      if (flip[i] === 1) {
-        this.permRAS[i] = -this.permRAS[i]
-      }
-    }
-    if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
-      this.toRAS = mat4.create() // aka fromValues(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-      this.matRAS = mat4.clone(rotM)
-      this.calculateOblique()
-      this.img2RASstep = [1, this.dimsRAS[1], this.dimsRAS[1] * this.dimsRAS[2]]
-      this.img2RASstart = [0, 0, 0]
-      return // no rotation required!
-    }
-    mat4.identity(rotM)
-    rotM[0 + 0 * 4] = 1 - flip[0] * 2
-    rotM[1 + 1 * 4] = 1 - flip[1] * 2
-    rotM[2 + 2 * 4] = 1 - flip[2] * 2
-    rotM[3 + 0 * 4] = (header.dims[perm[0]] - 1) * flip[0]
-    rotM[3 + 1 * 4] = (header.dims[perm[1]] - 1) * flip[1]
-    rotM[3 + 2 * 4] = (header.dims[perm[2]] - 1) * flip[2]
-    const residualR = mat4.create()
-    mat4.invert(residualR, rotM)
-    mat4.multiply(residualR, residualR, R)
-    this.matRAS = mat4.clone(residualR)
-    rotM = mat4.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
-    rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1
-    rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1
-    rotM[perm[2] - 1 + 2 * 4] = -flip[2] * 2 + 1
-    rotM[3 + 0 * 4] = flip[0]
-    rotM[3 + 1 * 4] = flip[1]
-    rotM[3 + 2 * 4] = flip[2]
-    this.toRAS = mat4.clone(rotM) // webGL unit textures
-    // voxel based column-major,
-    rotM[3] = 0
-    rotM[7] = 0
-    rotM[11] = 0
-    rotM[12] = 0
-    if (this.permRAS[0] === -1 || this.permRAS[1] === -1 || this.permRAS[2] === -1) {
-      rotM[12] = header.dims[1] - 1
-    }
-    rotM[13] = 0
-    if (this.permRAS[0] === -2 || this.permRAS[1] === -2 || this.permRAS[2] === -2) {
-      rotM[13] = header.dims[2] - 1
-    }
-    rotM[14] = 0
-    if (this.permRAS[0] === -3 || this.permRAS[1] === -3 || this.permRAS[2] === -3) {
-      rotM[14] = header.dims[3] - 1
-    }
-    this.toRASvox = mat4.clone(rotM)
-    log.debug(this.hdr.dims)
-    log.debug(this.dimsRAS)
-
-    // compute img2RASstep[] and img2RASstart[] for rapid native<->RAS conversion
-    // TODO: replace all other outStep/outStart calculations with img2RASstep/img2RASstart
-    const hdr = this.hdr
-    perm = this.permRAS
-    const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])]
-    const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]]
-    const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]] // increment i,j,k
-    const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]]
-    const outStart = [0, 0, 0]
-    for (let p = 0; p < 3; p++) {
-      // flip dimensions
-      if (perm[p] < 0) {
-        outStart[p] = outStep[p] * (outdim[p] - 1)
-        outStep[p] = -outStep[p]
-      }
-    }
-    this.img2RASstep = outStep
-    this.img2RASstart = outStart
-
-    this.calculateOblique()
+    ImageOrientation.calculateRAS(this)
   }
 
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
 
   async hdr2RAS(nVolumes: number = 1): Promise<NIFTI1 | NIFTI2> {
-    if (!this.permRAS) {
-      throw new Error('permRAS undefined')
-    }
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    // make a deep clone
-    const hdrBytes = hdrToArrayBuffer({ ...this.hdr!, vox_offset: 352 }, false)
-    const hdr = await readHeaderAsync(hdrBytes.buffer as ArrayBuffer, true)
-    // n.b. if nVolumes < 1, input volumes = output volumess
-    if (nVolumes === 1) {
-      // 3D
-      hdr.dims[0] = 3
-      hdr.dims[4] = 1
-    } else if (nVolumes > 1) {
-      // 4D
-      hdr.dims[0] = 4
-      hdr.dims[4] = nVolumes
-    }
-    const perm = this.permRAS.slice()
-    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-      return hdr
-    } // header is already in RAS
-    hdr.qform_code = 0
-    for (let i = 1; i < 4; i++) {
-      hdr.dims[i] = this.dimsRAS[i]
-    }
-
-    for (let i = 0; i < this.pixDimsRAS.length; i++) {
-      hdr.pixDims[i] = this.pixDimsRAS[i]
-    }
-    let k = 0
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        hdr.affine[i][j] = this.matRAS[k]
-        k++
-      }
-    }
-    return hdr
+    return ImageOrientation.hdr2RAS(this, nVolumes)
   }
 
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
   // returns single 3D volume even for 4D input. Use nVolume to select volume (0 indexed)
   img2RAS(nVolume: number = 0): TypedVoxelArray {
-    if (!this.permRAS) {
-      throw new Error('permRAS undefined')
-    }
-    if (!this.img) {
-      throw new Error('img undefined')
-    }
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-
-    const perm = this.permRAS.slice()
-    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-      return this.img
-    } // image is already in RAS
-    const hdr = this.hdr
-    const nVox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
-    let volSkip = nVolume * nVox
-    if (volSkip + nVox > this.img.length || volSkip < 0) {
-      volSkip = 0
-      log.warn(`img2RAS nVolume (${nVolume}) out of bounds (${nVolume}+1)×${nVox} > ${this.img.length}`)
-    }
-    // preallocate/clone image (only 3D for 4D datasets!)
-    const imgRAS = this.img.slice(0, nVox)
-    const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])]
-    const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]]
-    const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]] // increment i,j,k
-    const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]]
-    const outStart = [0, 0, 0]
-    for (let p = 0; p < 3; p++) {
-      // flip dimensions
-      if (perm[p] < 0) {
-        outStart[p] = outStep[p] * (outdim[p] - 1)
-        outStep[p] = -outStep[p]
-      }
-    }
-    let j = 0
-    for (let z = 0; z < outdim[2]; z++) {
-      const zi = outStart[2] + z * outStep[2]
-      for (let y = 0; y < outdim[1]; y++) {
-        const yi = outStart[1] + y * outStep[1]
-        for (let x = 0; x < outdim[0]; x++) {
-          const xi = outStart[0] + x * outStep[0]
-          imgRAS[j] = this.img[xi + yi + zi + volSkip]
-          j++
-        } // for x
-      } // for y
-    } // for z
-    return imgRAS
-  } // img2RAS()
+    return ImageOrientation.img2RAS(this, nVolume)
+  }
 
   // not included in public docs
   // convert voxel location (row, column slice, indexed from 0) to world space
@@ -1288,50 +873,43 @@ export class NVImage {
   // base function for niivue.setColormap()
   // colormaps are continuously interpolated between 256 values (0..256)
   setColormap(cm: string): void {
-    this._colormap = cm
-    this.calMinMax()
-    if (this.onColormapChange) {
-      this.onColormapChange(this)
-    }
+    ColormapManager.setColormap(this, cm)
   }
 
   // not included in public docs
   // base function for niivue.setColormap()
   // label colormaps are discretely sampled from an arbitrary number of colors
   setColormapLabel(cm: ColorMap): void {
-    this.colormapLabel = cmapper.makeLabelLut(cm)
+    ColormapManager.setColormapLabel(this, cm)
   }
 
   async setColormapLabelFromUrl(url: string): Promise<void> {
-    this.colormapLabel = await cmapper.makeLabelLutFromUrl(url)
+    return ColormapManager.setColormapLabelFromUrl(this, url)
   }
 
   get colormap(): string {
-    return this._colormap
+    return ColormapManager.getColormap(this)
   }
 
   get colorMap(): string {
-    return this._colormap
+    return ColormapManager.getColormap(this)
   }
 
   // TODO duplicate fields, see niivue/loadDocument
   set colormap(cm: string) {
-    this.setColormap(cm)
+    ColormapManager.setColormap(this, cm)
   }
 
   set colorMap(cm: string) {
-    this.setColormap(cm)
+    ColormapManager.setColormap(this, cm)
   }
 
   get opacity(): number {
-    return this._opacity
+    return ColormapManager.getOpacity(this)
   }
 
   set opacity(opacity) {
-    this._opacity = opacity
-    if (this.onOpacityChange) {
-      this.onOpacityChange(this)
-    }
+    ColormapManager.setOpacity(this, opacity)
   }
 
   /**
@@ -1342,264 +920,18 @@ export class NVImage {
    * @see {@link https://niivue.com/demos/features/timeseries2.html | live demo usage}
    */
   calMinMax(vol: number = Number.POSITIVE_INFINITY, isBorder: boolean = true): number[] {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-    if (!this.img) {
-      throw new Error('img undefined')
-    }
-    // determine full range: min..max
-    let mn = Number.POSITIVE_INFINITY // not this.img[0] in case ignoreZeroVoxels
-    let mx = Number.NEGATIVE_INFINITY // this.img[0] in case ignoreZeroVoxels
-    let nZero = 0
-    let nNan = 0
-    let nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
-    // n.b. due to limitFrames4D nVol may not equal dims[4]
-    const nVol = Math.floor(this.img.length / nVox3D)
-    if (vol >= nVol) {
-      vol = this.frame4D
-    }
-    vol = Math.min(vol, nVol - 1)
-    const skipVox = vol * nVox3D
-    let img = []
-    if (!isBorder) {
-      img = new (this.img.constructor as new (length: number) => any)(nVox3D)
-      for (let i = 0; i < nVox3D; i++) {
-        img[i] = this.img[i + skipVox]
-      }
-    } else {
-      const borderFrac = 0.25
-      const borders = [
-        Math.floor(borderFrac * this.hdr.dims[1]),
-        Math.floor(borderFrac * this.hdr.dims[2]),
-        Math.floor(borderFrac * this.hdr.dims[3])
-      ]
-      const dims = [
-        this.hdr.dims[1] - 2 * borders[0],
-        this.hdr.dims[2] - 2 * borders[1],
-        this.hdr.dims[3] - 2 * borders[2]
-      ]
-      const bordersHi = [dims[0] + borders[0], dims[1] + borders[1], dims[2] + borders[2]]
-      nVox3D = dims[0] * dims[1] * dims[2]
-      img = new (this.img.constructor as new (length: number) => any)(nVox3D)
-      let j = -1
-      let i = 0
-      for (let z = 0; z < this.hdr.dims[3]; z++) {
-        for (let y = 0; y < this.hdr.dims[2]; y++) {
-          for (let x = 0; x < this.hdr.dims[1]; x++) {
-            j++
-            if (x < borders[0] || y < borders[1] || z < borders[2]) {
-              continue
-            }
-            if (x >= bordersHi[0] || y >= bordersHi[1] || z >= bordersHi[2]) {
-              continue
-            }
-            img[i] = this.img[j + skipVox]
-            i++
-          }
-        }
-      }
-    }
-    /* for (let i = 0; i < nVox3D; i++) {
-      img[i] = this.img[i + skipVox]
-    } */
-    // we can accelerate loops for integer data (which can not store NaN)
-    // n.b. do to stack size, we can not use Math.max.apply()
-    const isFastCalc = img.constructor !== Float64Array && img.constructor !== Float32Array && this.ignoreZeroVoxels
-    if (isFastCalc) {
-      for (let i = 0; i < nVox3D; i++) {
-        mn = Math.min(img[i], mn)
-        mx = Math.max(img[i], mx)
-        if (img[i] === 0) {
-          nZero++
-        }
-      }
-    } else {
-      for (let i = 0; i < nVox3D; i++) {
-        if (isNaN(img[i])) {
-          nNan++
-          continue
-        }
-        if (img[i] === 0) {
-          nZero++
-          if (this.ignoreZeroVoxels) {
-            continue
-          }
-        }
-        mn = Math.min(img[i], mn)
-        mx = Math.max(img[i], mx)
-      }
-    }
-    if (this.ignoreZeroVoxels && mn === mx && nZero > 0) {
-      mn = 0
-    }
-    const mnScale = this.intensityRaw2Scaled(mn)
-    const mxScale = this.intensityRaw2Scaled(mx)
-    const cmap = cmapper.colormapFromKey(this._colormap)
-    let cmMin = 0
-    let cmMax = 0
-    if (cmap.min !== undefined) {
-      cmMin = cmap.min
-    }
-    if (cmap.max !== undefined) {
-      cmMax = cmap.max
-    }
-    if (
-      cmMin === cmMax &&
-      this.trustCalMinMax &&
-      isFinite(this.hdr.cal_min) &&
-      isFinite(this.hdr.cal_max) &&
-      this.hdr.cal_max > this.hdr.cal_min
-    ) {
-      this.cal_min = this.hdr.cal_min
-      this.cal_max = this.hdr.cal_max
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      this.global_min = mnScale
-      this.global_max = mxScale
-      return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max]
-    }
-    // if color map specifies non zero values for min and max then use them
-    if (cmMin !== cmMax) {
-      this.cal_min = cmMin
-      this.cal_max = cmMax
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      return [cmMin, cmMax, cmMin, cmMax]
-    }
-    const percentZero = (100 * nZero) / (nVox3D - 0)
-    let isOverrideIgnoreZeroVoxels = false
-    if (percentZero > 60 && !this.ignoreZeroVoxels) {
-      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
-      isOverrideIgnoreZeroVoxels = true
-      this.ignoreZeroVoxels = true
-    }
-    if (!this.ignoreZeroVoxels) {
-      nZero = 0
-    }
-    nZero += nNan
-    const n2pct = Math.round((nVox3D - 0 - nZero) * this.percentileFrac)
-    if (n2pct < 1 || mn === mx) {
-      if (isBorder) {
-        // central region has no variability: explore entire image
-        return this.calMinMax(vol, false)
-      }
-      log.debug('no variability in image intensity?')
-      this.cal_min = mnScale
-      this.cal_max = mxScale
-      this.robust_min = this.cal_min
-      this.robust_max = this.cal_max
-      this.global_min = mnScale
-      this.global_max = mxScale
-      return [mnScale, mxScale, mnScale, mxScale]
-    }
-    const nBins = 1001
-    const scl = (nBins - 1) / (mx - mn)
-    const hist = new Array(nBins)
-    for (let i = 0; i < nBins; i++) {
-      hist[i] = 0
-    }
-    if (isFastCalc) {
-      for (let i = 0; i < nVox3D; i++) {
-        hist[Math.round((img[i] - mn) * scl)]++
-      }
-    } else if (this.ignoreZeroVoxels) {
-      for (let i = 0; i < nVox3D; i++) {
-        if (img[i] === 0) {
-          continue
-        }
-        if (isNaN(img[i])) {
-          continue
-        }
-        hist[Math.round((img[i] - mn) * scl)]++
-      }
-    } else {
-      for (let i = 0; i < nVox3D; i++) {
-        if (isNaN(img[i])) {
-          continue
-        }
-        hist[Math.round((img[i] - mn) * scl)]++
-      }
-    }
-    let n = 0
-    let lo = 0
-    while (n < n2pct) {
-      n += hist[lo]
-      lo++
-    }
-    lo-- // remove final increment
-    n = 0
-    let hi = nBins
-    while (n < n2pct) {
-      hi--
-      n += hist[hi]
-    }
-    if (lo === hi) {
-      // MAJORITY are not black or white
-      let ok = -1
-      while (ok !== 0) {
-        if (lo > 0) {
-          lo--
-          if (hist[lo] > 0) {
-            ok = 0
-          }
-        }
-        if (ok !== 0 && hi < nBins - 1) {
-          hi++
-          if (hist[hi] > 0) {
-            ok = 0
-          }
-        }
-        if (lo === 0 && hi === nBins - 1) {
-          ok = 0
-        }
-      } // while not ok
-    } // if lo === hi
-    let pct2 = this.intensityRaw2Scaled(lo / scl + mn)
-    let pct98 = this.intensityRaw2Scaled(hi / scl + mn)
-    if (this.hdr.cal_min < this.hdr.cal_max && this.hdr.cal_min >= mnScale && this.hdr.cal_max <= mxScale) {
-      pct2 = this.hdr.cal_min
-      pct98 = this.hdr.cal_max
-    }
-    if (isOverrideIgnoreZeroVoxels) {
-      pct2 = Math.min(pct2, 0)
-    }
-    this.cal_min = pct2
-    this.cal_max = pct98
-    if (this.hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
-      this.cal_min = mnScale
-      this.cal_max = mxScale
-    }
-    this.robust_min = this.cal_min
-    this.robust_max = this.cal_max
-    this.global_min = mnScale
-    this.global_max = mxScale
-    return [pct2, pct98, mnScale, mxScale]
-  } // calMinMax
+    return IntensityCalibration.calMinMax(this, vol, isBorder)
+  }
 
   // not included in public docs
   // convert voxel intensity from stored value to scaled intensity
   intensityRaw2Scaled(raw: number): number {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-
-    if (this.hdr.scl_slope === 0) {
-      this.hdr.scl_slope = 1.0
-    }
-    return raw * this.hdr.scl_slope + this.hdr.scl_inter
+    return IntensityCalibration.intensityRaw2Scaled(this, raw)
   }
 
   // convert voxel intensity from scaled intensity to stored value
   intensityScaled2Raw(scaled: number): number {
-    if (!this.hdr) {
-      throw new Error('hdr undefined')
-    }
-
-    if (this.hdr.scl_slope === 0) {
-      this.hdr.scl_slope = 1.0
-    }
-    return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope
+    return IntensityCalibration.intensityScaled2Raw(this, scaled)
   }
 
   /**

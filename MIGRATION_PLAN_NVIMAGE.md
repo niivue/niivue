@@ -215,7 +215,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `arrayEquals()` - Array comparison utility
 
 **Dependencies:** gl-matrix (mat3, mat4, vec3, vec4), logger
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -228,7 +228,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `SetPixDimFromSForm()` - Calculate voxel spacing from affine matrix
 
 **Dependencies:** NIFTI1/NIFTI2, mat4, vec3
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -241,7 +241,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `loadImgV1()` - Load and process V1 vector data with optional flips
 
 **Dependencies:** None (pure data processing)
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -266,7 +266,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `trustCalMinMax` - Flag to trust header cal_min/cal_max
 
 **Dependencies:** cmapper (colortables), logger
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
@@ -293,7 +293,7 @@ These format readers are still embedded in index.ts and should be moved to the I
 - `onOpacityChange` - Triggered when opacity changes
 
 **Dependencies:** cmapper (colortables)
-**Status:** ⬜ Not Started
+**Status:** Completed
 
 ---
 
