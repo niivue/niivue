@@ -9,6 +9,7 @@ import defaultFontMetrics from '@/fonts/Roboto-Regular.json' with { type: 'json'
 import { ColorMap, cmapper } from '@/colortables'
 import * as glUtils from '@/niivue/core/gl'
 import * as CoordTransform from '@/niivue/core/CoordinateTransform'
+import * as ShaderManager from '@/niivue/core/ShaderManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -51,71 +52,12 @@ import {
 import { toNiivueObject3D } from '@/nvimage/RenderingUtils'
 import { findBoundarySlices, interpolateMaskSlices, drawUndo, encodeRLE, decodeRLE } from '@/drawing'
 import {
-  vertOrientCubeShader,
-  fragOrientCubeShader,
-  vertSliceMMShader,
-  fragSlice2DShader,
-  fragSliceMMShader,
-  fragSliceV1Shader,
-  vertRectShader,
-  vertLineShader,
-  vertLine3DShader,
-  fragRectShader,
-  fragRectOutlineShader,
-  vertRenderShader,
-  fragRenderShader,
-  fragRenderGradientShader,
-  fragRenderGradientValuesShader,
-  fragRenderSliceShader,
-  vertColorbarShader,
-  fragColorbarShader,
   vertFontShader,
   fragFontShader,
-  vertCircleShader,
-  fragCircleShader,
   vertBmpShader,
   fragBmpShader,
-  vertOrientShader,
-  vertPassThroughShader,
-  fragPassThroughShader,
-  vertGrowCutShader,
-  fragGrowCutShader,
-  fragOrientShaderU,
-  fragOrientShaderI,
-  fragOrientShaderF,
-  fragOrientShader,
-  fragOrientShaderAtlas,
-  fragRGBOrientShader,
-  fragPAQDOrientShader,
   vertMeshShader,
-  fragMeshShader,
-  fragMeshToonShader,
-  fragMeshMatcapShader,
-  fragMeshOutlineShader,
-  fragMeshEdgeShader,
-  fragMeshRimShader,
-  fragMeshContourShader,
-  fragCrosscutMeshShader,
-  fragMeshShaderCrevice,
-  fragMeshDiffuseEdgeShader,
-  fragMeshHemiShader,
-  fragMeshMatteShader,
-  fragMeshDepthShader,
-  fragMeshShaderSHBlue,
-  fragMeshSpecularEdgeShader,
-  vertFlatMeshShader,
-  fragFlatMeshShader,
-  vertFiberShader,
-  fragFiberShader,
-  vertSurfaceShader,
-  fragSurfaceShader,
-  fragVolumePickingShader,
-  blurVertShader,
-  blurFragShader,
-  sobelBlurFragShader,
-  sobelFirstOrderFragShader,
-  sobelSecondOrderFragShader,
-  gradientOpacityLutCount
+  fragMeshDepthShader
 } from '@/shader-srcs'
 import { Shader } from '@/shader'
 import { log } from '@/logger'
@@ -564,68 +506,7 @@ export class Niivue {
     sliceMM?: number
   }> = []
 
-  meshShaders: Array<{ Name: string; Frag: string; shader?: Shader }> = [
-    {
-      Name: 'Phong',
-      Frag: fragMeshShader
-    },
-    {
-      Name: 'Matte',
-      Frag: fragMeshMatteShader
-    },
-    {
-      Name: 'Harmonic',
-      Frag: fragMeshShaderSHBlue
-    },
-    {
-      Name: 'Hemispheric',
-      Frag: fragMeshHemiShader
-    },
-    {
-      Name: 'Crevice',
-      Frag: fragMeshShaderCrevice
-    },
-    {
-      Name: 'Edge',
-      Frag: fragMeshEdgeShader
-    },
-    {
-      Name: 'Diffuse',
-      Frag: fragMeshDiffuseEdgeShader
-    },
-    {
-      Name: 'Outline',
-      Frag: fragMeshOutlineShader
-    },
-    {
-      Name: 'Specular',
-      Frag: fragMeshSpecularEdgeShader
-    },
-    {
-      Name: 'Toon',
-      Frag: fragMeshToonShader
-    },
-    {
-      Name: 'Flat',
-      Frag: fragFlatMeshShader
-    },
-    {
-      Name: 'Matcap',
-      Frag: fragMeshMatcapShader
-    },
-    {
-      Name: 'Rim',
-      Frag: fragMeshRimShader
-    },
-    {
-      Name: 'Silhouette',
-      Frag: fragMeshContourShader
-    },
-    {
-      Name: 'Crosscut',
-      Frag: fragCrosscutMeshShader
-    }
-  ]
+  meshShaders: Array<{ Name: string; Frag: string; shader?: Shader }> = ShaderManager.createDefaultMeshShaders()
 
   // TODO just let users use DRAG_MODE instead
   dragModes = {
@@ -7070,12 +6951,7 @@ export class Niivue {
    * @internal
    */
   meshShaderNameToNumber(meshShaderName = 'Phong'): number | undefined {
-    const name = meshShaderName.toLowerCase()
-    for (let i = 0; i < this.meshShaders.length; i++) {
-      if (this.meshShaders[i].Name.toLowerCase() === name) {
-        return i
-      }
-    }
+    return ShaderManager.meshShaderNameToNumber(meshShaderName, this.meshShaders)
   }
 
   /**
@@ -7119,26 +6995,13 @@ export class Niivue {
     fragmentShaderText: string,
     name = 'Custom'
     // vertexShaderText = ""
-  ): { Name: string; Frag: string; shader: Shader } {
-    if (!fragmentShaderText) {
-      throw new Error('Need fragment shader')
-    }
-
-    const num = this.meshShaderNameToNumber(name)!
-    if (num >= 0) {
-      // prior shader uses this name: delete it!
-      this.gl.deleteProgram(this.meshShaders[num].shader!.program)
-      this.meshShaders.splice(num, 1)
-    }
-
-    const shader = new Shader(this.gl, vertMeshShader, fragmentShaderText)
-    shader.use(this.gl)
-
-    return {
-      Name: name,
-      Frag: fragmentShaderText,
-      shader
-    }
+  ): { Name: string; Frag: string; shader?: Shader } {
+    return ShaderManager.createCustomMeshShader({
+      gl: this.gl,
+      fragmentShaderText,
+      name,
+      meshShaders: this.meshShaders
+    })
   }
 
   /**
@@ -7148,31 +7011,12 @@ export class Niivue {
    * @internal
    */
   setCustomSliceShader(fragmentShaderText: string = ''): void {
-    const gl = this.gl
-
-    // If there's an existing custom shader, delete it
-    if (this.customSliceShader) {
-      gl.deleteProgram(this.customSliceShader.program)
-      this.customSliceShader = null
-    }
-
-    // If empty string, fall back to default shader
-    if (!fragmentShaderText) {
-      this.updateGLVolume()
-      return
-    }
-
-    // Create new custom shader
-    const shader = new Shader(gl, vertSliceMMShader, fragmentShaderText)
-    shader.use(gl)
-    gl.uniform1i(shader.uniforms.volume, 0)
-    gl.uniform1i(shader.uniforms.colormap, 1)
-    gl.uniform1i(shader.uniforms.overlay, 2)
-    gl.uniform1i(shader.uniforms.drawing, 7)
-    gl.uniform1i(shader.uniforms.paqd, 8) // TEXTURE8_PAQD
-    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
-
-    this.customSliceShader = shader
+    this.customSliceShader = ShaderManager.setCustomSliceShader({
+      gl: this.gl,
+      fragmentShaderText,
+      drawOpacity: this.drawOpacity,
+      customSliceShader: this.customSliceShader
+    })
     this.updateGLVolume()
   }
 
@@ -7199,11 +7043,7 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   meshShaderNames(sort = true): string[] {
-    const cm = []
-    for (let i = 0; i < this.meshShaders.length; i++) {
-      cm.push(this.meshShaders[i].Name)
-    }
-    return sort === true ? cm.sort() : cm
+    return ShaderManager.meshShaderNames(this.meshShaders, sort)
   }
 
   /**
@@ -7211,25 +7051,14 @@ export class Niivue {
    * @internal
    */
   initRenderShader(shader: Shader, gradientAmount = 0.0): void {
-    shader.use(this.gl)
-    this.gl.uniform1i(shader.uniforms.volume, 0)
-    this.gl.uniform1i(shader.uniforms.colormap, 1)
-    this.gl.uniform1i(shader.uniforms.overlay, 2)
-    this.gl.uniform1i(shader.uniforms.drawing, 7)
-    this.gl.uniform1i(shader.uniforms.paqd, 8) // TEXTURE8_PAQD
-    this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1.0])
-    this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
-    this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette)
-    const gradientOpacityLut = new Float32Array(gradientOpacityLutCount)
-    for (let i = 0; i < gradientOpacityLutCount; i++) {
-      if (this.opts.gradientOpacity === 0.0) {
-        gradientOpacityLut[i] = 1.0
-      } else {
-        gradientOpacityLut[i] = Math.pow(i / (gradientOpacityLutCount - 1.0), this.opts.gradientOpacity * 8.0)
-      }
-    }
-    this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, 'gradientOpacity'), gradientOpacityLut)
-    shader.uniforms.clipPlanes = this.gl.getUniformLocation(shader.program, 'clipPlanes[0]')
+    ShaderManager.initRenderShader({
+      gl: this.gl,
+      shader,
+      gradientAmount,
+      renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
+      renderSilhouette: this.opts.renderSilhouette,
+      gradientOpacity: this.opts.gradientOpacity
+    })
   }
 
   /**
@@ -7295,129 +7124,62 @@ export class Niivue {
     gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
     this.pickingMeshShader = new Shader(gl, vertMeshShader, fragMeshDepthShader)
     this.pickingMeshShader.use(gl)
-    this.pickingImageShader = new Shader(gl, vertRenderShader, fragVolumePickingShader)
+    this.pickingImageShader = ShaderManager.initPickingImageShader(gl)
+    // Initialize slice shaders
+    const sliceShaders = ShaderManager.initSliceShaders(gl, this.drawOpacity)
+    this.slice2DShader = sliceShaders.slice2DShader
+    this.sliceMMShader = sliceShaders.sliceMMShader
+    this.sliceV1Shader = sliceShaders.sliceV1Shader
+    // Initialize orient cube shader
+    const orientCubeShaderResult = ShaderManager.initOrientCubeShader(gl, orientCube, this.unusedVAO)
+    this.orientCubeShader = orientCubeShaderResult.shader
+    this.orientCubeShaderVAO = orientCubeShaderResult.vao
+    // Initialize 2D rendering shaders
+    const shaders2D = ShaderManager.init2DShaders(gl)
+    this.rectShader = shaders2D.rectShader
+    this.rectOutlineShader = shaders2D.rectOutlineShader
+    this.lineShader = shaders2D.lineShader
+    this.line3DShader = shaders2D.line3DShader
+    this.circleShader = shaders2D.circleShader
+    // Initialize 3D volume rendering shaders
+    const volumeRenderShaders = ShaderManager.initVolumeRenderShaders({
+      gl,
+      renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
+      renderSilhouette: this.opts.renderSilhouette,
+      gradientOpacity: this.opts.gradientOpacity
+    })
+    this.renderVolumeShader = volumeRenderShaders.renderVolumeShader
+    this.renderSliceShader = volumeRenderShaders.renderSliceShader
+    this.renderGradientShader = volumeRenderShaders.renderGradientShader
+    this.renderGradientValuesShader = volumeRenderShaders.renderGradientValuesShader
+    this.renderShader = volumeRenderShaders.renderShader
+    // Initialize colorbar shader
+    this.colorbarShader = ShaderManager.initColorbarShader(gl)
+    // Initialize image processing shaders
+    const imageProcessingShaders = ShaderManager.initImageProcessingShaders(gl)
+    this.blurShader = imageProcessingShaders.blurShader
+    this.sobelBlurShader = imageProcessingShaders.sobelBlurShader
+    this.sobelFirstOrderShader = imageProcessingShaders.sobelFirstOrderShader
+    this.sobelSecondOrderShader = imageProcessingShaders.sobelSecondOrderShader
+    this.growCutShader = imageProcessingShaders.growCutShader
+    this.passThroughShader = imageProcessingShaders.passThroughShader
+
+    // Initialize orientation shaders
+    const orientationShaders = ShaderManager.initOrientationShaders(gl)
+    this.orientShaderAtlasU = orientationShaders.orientShaderAtlasU
+    this.orientShaderAtlasI = orientationShaders.orientShaderAtlasI
+    this.orientShaderU = orientationShaders.orientShaderU
+    this.orientShaderI = orientationShaders.orientShaderI
+    this.orientShaderF = orientationShaders.orientShaderF
+    this.orientShaderRGBU = orientationShaders.orientShaderRGBU
+    this.orientShaderPAQD = orientationShaders.orientShaderPAQD
+    // Initialize 3D geometry shaders
+    const geometryShaders = ShaderManager.init3DGeometryShaders(gl)
+    this.surfaceShader = geometryShaders.surfaceShader
+    this.fiberShader = geometryShaders.fiberShader
     this.pickingImageShader.use(gl)
-    this.pickingImageShader.uniforms.clipPlanes = this.gl.getUniformLocation(
-      this.pickingImageShader.program,
-      'clipPlanes[0]'
-    )
-    gl.uniform1i(this.pickingImageShader.uniforms.volume, 0)
-    gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1)
-    gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2)
-    gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7)
-    // slice 2D shader
-    this.slice2DShader = new Shader(gl, vertSliceMMShader, fragSlice2DShader)
-    this.slice2DShader.use(gl)
-    gl.uniform1i(this.slice2DShader.uniforms.volume, 0)
-    gl.uniform1i(this.slice2DShader.uniforms.colormap, 1)
-    gl.uniform1i(this.slice2DShader.uniforms.overlay, 2)
-    gl.uniform1i(this.slice2DShader.uniforms.drawing, 7)
-    gl.uniform1f(this.slice2DShader.uniforms.drawOpacity, this.drawOpacity)
-    // slice mm shader
-    this.sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader)
-    this.sliceMMShader.use(gl)
-    gl.uniform1i(this.sliceMMShader.uniforms.volume, 0)
-    gl.uniform1i(this.sliceMMShader.uniforms.colormap, 1)
-    gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2)
-    gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7)
-    gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity)
-    // fragSliceV1Shader
-    this.sliceV1Shader = new Shader(gl, vertSliceMMShader, fragSliceV1Shader)
-    this.sliceV1Shader.use(gl)
-    gl.uniform1i(this.sliceV1Shader.uniforms.volume, 0)
-    gl.uniform1i(this.sliceV1Shader.uniforms.colormap, 1)
-    gl.uniform1i(this.sliceV1Shader.uniforms.overlay, 2)
-    gl.uniform1i(this.sliceV1Shader.uniforms.drawing, 7)
-    gl.uniform1f(this.sliceV1Shader.uniforms.drawOpacity, this.drawOpacity)
-    // orient cube
-    this.orientCubeShader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader)
-    this.orientCubeShaderVAO = gl.createVertexArray()
-    gl.bindVertexArray(this.orientCubeShaderVAO)
-    // Create a buffer
-    const positionBuffer = gl.createBuffer()
-    gl.enableVertexAttribArray(0)
-    gl.enableVertexAttribArray(1)
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, orientCube, gl.STATIC_DRAW)
-    // XYZ position: (three floats)
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0)
-    // RGB color: (also three floats)
-    gl.enableVertexAttribArray(1)
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12)
-    gl.bindVertexArray(this.unusedVAO)
-    // rect shader (crosshair): horizontal and vertical lines only
-    this.rectShader = new Shader(gl, vertRectShader, fragRectShader)
-    this.rectShader.use(gl)
-    this.rectOutlineShader = new Shader(gl, vertRectShader, fragRectOutlineShader)
-    this.rectOutlineShader.use(gl)
-    // line shader: diagonal lines
-    this.lineShader = new Shader(gl, vertLineShader, fragRectShader)
-    this.lineShader.use(gl)
-    // 3D line shader
-    this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader)
-    this.line3DShader.use(gl)
-    // circle shader
-    this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader)
-    this.circleShader.use(gl)
-    // render shader (3D)
-    this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader)
-    this.initRenderShader(this.renderVolumeShader)
-    this.renderSliceShader = new Shader(gl, vertRenderShader, fragRenderSliceShader)
-    this.initRenderShader(this.renderSliceShader)
-    this.renderGradientShader = new Shader(gl, vertRenderShader, fragRenderGradientShader)
-    this.initRenderShader(this.renderGradientShader, 0.3)
-    gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5)
-    gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6)
-    this.renderGradientValuesShader = new Shader(gl, vertRenderShader, fragRenderGradientValuesShader)
-    this.initRenderShader(this.renderGradientValuesShader)
-    gl.uniform1i(this.renderGradientValuesShader.uniforms.matCap, 5)
-    gl.uniform1i(this.renderGradientValuesShader.uniforms.gradient, 6)
-    this.renderShader = this.renderVolumeShader
-    // colorbar shader
-    this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader)
-    this.colorbarShader.use(gl)
-    gl.uniform1i(this.colorbarShader.uniforms.colormap, 1)
-    this.blurShader = new Shader(gl, blurVertShader, blurFragShader)
-    this.sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader)
-    this.sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader)
-    this.sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader)
-
-    this.growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader)
-
-    // pass through shaders
-    this.passThroughShader = new Shader(gl, vertPassThroughShader, fragPassThroughShader)
-
-    // orientation shaders
-    this.orientShaderAtlasU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas))
-    this.orientShaderAtlasI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShaderAtlas))
-
-    this.orientShaderU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader))
-    this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader))
-    this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader))
-    this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader))
-    this.orientShaderPAQD = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragPAQDOrientShader))
-    // 3D crosshair cylinder
-    this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader)
-    this.surfaceShader.use(gl)
-    // tractography fibers
-    this.fiberShader = new Shader(gl, vertFiberShader, fragFiberShader)
-    this.pickingImageShader.use(gl)
-    // compile all mesh shaders
-    // compile all mesh shaders
-    for (let i = 0; i < this.meshShaders.length; i++) {
-      const m = this.meshShaders[i]
-      if (m.Name === 'Flat') {
-        m.shader = new Shader(gl, vertFlatMeshShader, fragFlatMeshShader)
-      } else {
-        m.shader = new Shader(gl, vertMeshShader, m.Frag)
-      }
-      m.shader.use(gl)
-      m.shader.isCrosscut = m.Name === 'Crosscut'
-      m.shader.isMatcap = m.Name === 'Matcap'
-      if (m.shader.isMatcap) {
-        gl.uniform1i(m.shader.uniforms.matCap, 5)
-      }
-    }
+    // Compile all mesh shaders
+    ShaderManager.compileMeshShaders(gl, this.meshShaders)
     this.bmpShader = new Shader(gl, vertBmpShader, fragBmpShader)
     await this.initText()
     if (this.opts.thumbnail.length > 0) {
