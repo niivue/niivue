@@ -10,6 +10,7 @@ import { ColorMap, cmapper } from '@/colortables'
 import * as glUtils from '@/niivue/core/gl'
 import * as CoordTransform from '@/niivue/core/CoordinateTransform'
 import * as ShaderManager from '@/niivue/core/ShaderManager'
+import * as VolumeManager from '@/niivue/data/VolumeManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -3478,9 +3479,9 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
    */
   addVolume(volume: NVImage): void {
-    this.volumes.push(volume)
-    const idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1
-    this.setVolume(volume, idx)
+    const result = VolumeManager.addVolume(this.volumes, volume)
+    this.volumes = result.volumes
+    this.setVolume(volume, result.index)
     this.onImageLoaded(volume)
     log.debug('loaded volume', volume.name)
     log.debug(volume)
@@ -3509,14 +3510,7 @@ export class Niivue {
    * niivue.getVolumeIndexByID(someVolume.id)
    */
   getVolumeIndexByID(id: string): number {
-    const n = this.volumes.length
-    for (let i = 0; i < n; i++) {
-      const id_i = this.volumes[i].id
-      if (id_i === id) {
-        return i
-      }
-    }
-    return -1 // -1 signals that no valid index was found for a volume with the given id
+    return VolumeManager.getVolumeIndexByID(this.volumes, id)
   }
 
   /**
@@ -4192,14 +4186,7 @@ export class Niivue {
    * niivue.getOverlayIndexByID(someVolume.id)
    */
   getOverlayIndexByID(id: string): number {
-    const n = this.overlays.length
-    for (let i = 0; i < n; i++) {
-      const id_i = this.overlays[i].id
-      if (id_i === id) {
-        return i
-      }
-    }
-    return -1 // -1 signals that no valid index was found for an overlay with the given id
+    return VolumeManager.getOverlayIndexByID(this.volumes, id)
   }
 
   /**
@@ -4211,33 +4198,10 @@ export class Niivue {
    * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
    */
   setVolume(volume: NVImage, toIndex = 0): void {
-    const numberOfLoadedImages = this.volumes.length
-    if (toIndex > numberOfLoadedImages) {
-      return
-    }
-
-    const volIndex = this.getVolumeIndexByID(volume.id)
-    if (toIndex === 0) {
-      this.volumes.splice(volIndex, 1)
-      this.volumes.unshift(volume)
-      this.back = this.volumes[0]
-      this.overlays = this.volumes.slice(1)
-    } else if (toIndex < 0) {
-      // -1 to remove a volume
-      this.volumes.splice(this.getVolumeIndexByID(volume.id), 1)
-      // this.volumes = this.overlays
-      this.back = this.volumes[0]
-      if (this.volumes.length > 1) {
-        this.overlays = this.volumes.slice(1)
-      } else {
-        this.overlays = []
-      }
-    } else {
-      this.volumes.splice(volIndex, 1)
-      this.volumes.splice(toIndex, 0, volume)
-      this.overlays = this.volumes.slice(1)
-      this.back = this.volumes[0]
-    }
+    const result = VolumeManager.setVolume(this.volumes, volume, toIndex)
+    this.volumes = result.volumes
+    this.back = result.back
+    this.overlays = result.overlays
     this.updateGLVolume()
   }
 
@@ -4283,7 +4247,11 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   removeVolume(volume: NVImage): void {
-    this.setVolume(volume, -1)
+    const result = VolumeManager.removeVolume(this.volumes, volume)
+    this.volumes = result.volumes
+    this.back = this.volumes.length > 0 ? this.volumes[0] : null
+    this.overlays = this.volumes.slice(1)
+
     // check if we have a url for this volume
     if (this.mediaUrlMap.has(volume)) {
       const url = this.mediaUrlMap.get(volume)!
@@ -4293,6 +4261,7 @@ export class Niivue {
       this.mediaUrlMap.delete(volume)
     }
 
+    this.updateGLVolume()
     this.drawScene()
   }
 
@@ -4303,10 +4272,10 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
    */
   removeVolumeByIndex(index: number): void {
-    if (index >= this.volumes.length) {
-      throw new Error('Index of volume out of bounds')
+    const result = VolumeManager.removeVolumeByIndex(this.volumes, index)
+    if (result.removed) {
+      this.removeVolume(result.removed)
     }
-    this.removeVolume(this.volumes[index])
   }
 
   /**
@@ -4350,7 +4319,11 @@ export class Niivue {
    * niivue.moveVolumeToBottom(this.volumes[3]) // move the 4th volume to the 0 position. It will be the new background
    */
   moveVolumeToBottom(volume: NVImage): void {
-    this.setVolume(volume, 0)
+    const result = VolumeManager.moveVolumeToBottom(this.volumes, volume)
+    this.volumes = result.volumes
+    this.back = result.back
+    this.overlays = result.overlays
+    this.updateGLVolume()
   }
 
   /**
@@ -4361,8 +4334,11 @@ export class Niivue {
    * niivue.moveVolumeUp(this.volumes[0]) // move the background image to the second index position (it was 0 index, now will be 1)
    */
   moveVolumeUp(volume: NVImage): void {
-    const volIdx = this.getVolumeIndexByID(volume.id)
-    this.setVolume(volume, volIdx + 1)
+    const result = VolumeManager.moveVolumeUp(this.volumes, volume)
+    this.volumes = result.volumes
+    this.back = result.back
+    this.overlays = result.overlays
+    this.updateGLVolume()
   }
 
   /**
@@ -4373,8 +4349,11 @@ export class Niivue {
    * niivue.moveVolumeDown(this.volumes[1]) // move the second image to the background position (it was 1 index, now will be 0)
    */
   moveVolumeDown(volume: NVImage): void {
-    const volIdx = this.getVolumeIndexByID(volume.id)
-    this.setVolume(volume, volIdx - 1)
+    const result = VolumeManager.moveVolumeDown(this.volumes, volume)
+    this.volumes = result.volumes
+    this.back = result.back
+    this.overlays = result.overlays
+    this.updateGLVolume()
   }
 
   /**
@@ -4385,7 +4364,11 @@ export class Niivue {
    * niivue.moveVolumeToTop(this.volumes[0]) // move the background image to the top layer position
    */
   moveVolumeToTop(volume: NVImage): void {
-    this.setVolume(volume, this.volumes.length - 1)
+    const result = VolumeManager.moveVolumeToTop(this.volumes, volume)
+    this.volumes = result.volumes
+    this.back = result.back
+    this.overlays = result.overlays
+    this.updateGLVolume()
   }
 
   /**
@@ -4748,7 +4731,7 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/atlas.html | live demo usage}
    */
   setOpacity(volIdx: number, newOpacity: number): void {
-    this.volumes[volIdx].opacity = newOpacity
+    VolumeManager.setOpacity(this.volumes, volIdx, newOpacity)
     this.updateGLVolume()
   }
 
@@ -4870,33 +4853,7 @@ export class Niivue {
    * @remarks Marked for future removal — creates a test sphere, not intended for production use.
    */
   overlayRGBA(volume: NVImage): Uint8ClampedArray {
-    const hdr = volume.hdr!
-    const vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
-    const imgRGBA = new Uint8ClampedArray(vox * 4)
-    const radius = 0.2 * Math.min(Math.min(hdr.dims[1], hdr.dims[2]), hdr.dims[3])
-    const halfX = 0.5 * hdr.dims[1]
-    const halfY = 0.5 * hdr.dims[2]
-    const halfZ = 0.5 * hdr.dims[3]
-    let j = 0
-    for (let z = 0; z < hdr.dims[3]; z++) {
-      for (let y = 0; y < hdr.dims[2]; y++) {
-        for (let x = 0; x < hdr.dims[1]; x++) {
-          const dx = Math.abs(x - halfX)
-          const dy = Math.abs(y - halfY)
-          const dz = Math.abs(z - halfZ)
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
-          let v = 0
-          if (dist < radius) {
-            v = 255
-          }
-          imgRGBA[j++] = 0 // Red
-          imgRGBA[j++] = v // Green
-          imgRGBA[j++] = 0 // Blue
-          imgRGBA[j++] = v * 0.5 // Alpha
-        }
-      }
-    }
-    return imgRGBA
+    return VolumeManager.overlayRGBA(volume)
   }
 
   /**
@@ -4916,7 +4873,7 @@ export class Niivue {
    * niivue.cloneVolume(0)
    */
   cloneVolume(index: number): NVImage {
-    return this.volumes[index].clone()
+    return VolumeManager.cloneVolume(this.volumes, index)
   }
 
   /**
@@ -9274,22 +9231,19 @@ export class Niivue {
    */
   setFrame4D(id: string, frame4D: number): void {
     const idx = this.getVolumeIndexByID(id)
-    const volume = this.volumes[idx]
-    // don't allow indexing timepoints beyond the max number of time points.
-    if (frame4D > volume.nFrame4D! - 1) {
-      frame4D = volume.nFrame4D! - 1
-    }
-    // don't allow negative timepoints
-    if (frame4D < 0) {
-      frame4D = 0
-    }
-    if (frame4D === volume.frame4D) {
+    if (idx < 0) {
       return
-    } // no change
-    volume.frame4D = frame4D
-    this.updateGLVolume()
-    this.onFrameChange(volume, frame4D)
-    this.createOnLocationChange()
+    }
+
+    const oldFrame = this.volumes[idx].frame4D
+    VolumeManager.setFrame4D(this.volumes, id, frame4D)
+
+    // Check if frame actually changed
+    if (this.volumes[idx].frame4D !== oldFrame) {
+      this.updateGLVolume()
+      this.onFrameChange(this.volumes[idx], this.volumes[idx].frame4D!)
+      this.createOnLocationChange()
+    }
   }
 
   /**
@@ -9300,8 +9254,7 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/timeseries.html | live demo usage}
    */
   getFrame4D(id: string): number {
-    const idx = this.getVolumeIndexByID(id)
-    return this.volumes[idx].frame4D!
+    return VolumeManager.getFrame4D(this.volumes, id)
   }
 
   /**
