@@ -80,8 +80,9 @@ These modules form the foundation and have minimal dependencies on each other.
 - `canvasPos2frac()`, `frac2canvasPos()` - Canvas to fractional
 - `swizzleVec3MM()` - Coordinate swizzling for different orientations
 
-**Dependencies:** None (pure math)
-**Status:** ⬜ Not Started
+**Design Decision:** Using pure functions instead of classes for better reusability, testability, and tree-shaking.
+**Dependencies:** NVImage, NVMesh, NiivueObject3D, swizzleVec3, NVUtilities
+**Status:** ✅ Completed
 
 ---
 
@@ -1024,7 +1025,7 @@ For each module in the plan above:
 ### Phase 1: Core Infrastructure Modules 🔄
 
 - ✅ 1.1 WebGLContext Module
-- ⬜ 1.2 CoordinateTransform Module
+- ✅ 1.2 CoordinateTransform Module
 - ⬜ 1.3 ShaderManager Module
 
 ### Phase 2: Data Management Modules ⬜

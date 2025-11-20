@@ -8,6 +8,7 @@ import defaultFontPNG from '@/fonts/Roboto-Regular.png'
 import defaultFontMetrics from '@/fonts/Roboto-Regular.json' with { type: 'json' }
 import { ColorMap, cmapper } from '@/colortables'
 import * as glUtils from '@/niivue/core/gl'
+import * as CoordTransform from '@/niivue/core/CoordinateTransform'
 import {
   NVDocument,
   NVConfigOptions,
@@ -5022,7 +5023,7 @@ export class Niivue {
    * @internal
    */
   vox2mm(XYZ: number[], mtx: mat4): vec3 {
-    return NVUtilities.vox2mm(XYZ, mtx)
+    return CoordTransform.vox2mm(XYZ, mtx)
   }
 
   /**
@@ -10275,30 +10276,13 @@ export class Niivue {
    * @internal
    */
   screenXY2mm(x: number, y: number, forceSlice = -1): vec4 {
-    let texFrac: vec3
-    for (let s = 0; s < this.screenSlices.length; s++) {
-      let i = s
-      if (forceSlice >= 0) {
-        i = forceSlice
-      }
-      const axCorSag = this.screenSlices[i].axCorSag
-      if (axCorSag > SLICE_TYPE.SAGITTAL) {
-        continue
-      }
-
-      const ltwh = this.screenSlices[i].leftTopWidthHeight
-      if (x < ltwh[0] || y < ltwh[1] || x > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3]) {
-        continue
-      }
-      texFrac = this.screenXY2TextureFrac(x, y, i, false)
-      if (texFrac[0] < 0.0) {
-        continue
-      }
-      const mm = this.frac2mm(texFrac)
-
-      return vec4.fromValues(mm[0], mm[1], mm[2], i)
-    }
-    return vec4.fromValues(NaN, NaN, NaN, NaN)
+    return CoordTransform.screenXY2mm(x, y, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      forceSlice
+    })
   }
 
   /**
@@ -11677,15 +11661,7 @@ export class Niivue {
    * @internal
    */
   swizzleVec3MM(v3: vec3, axCorSag: SLICE_TYPE): vec3 {
-    // change order of vector components
-    if (axCorSag === SLICE_TYPE.CORONAL) {
-      // 2D coronal screenXYZ = nifti [i,k,j]
-      v3 = swizzleVec3(v3, [0, 2, 1])
-    } else if (axCorSag === SLICE_TYPE.SAGITTAL) {
-      // 2D sagittal screenXYZ = nifti [j,k,i]
-      v3 = swizzleVec3(v3, [1, 2, 0])
-    }
-    return v3
+    return CoordTransform.swizzleVec3MM(v3, axCorSag)
   }
 
   /**
@@ -12322,54 +12298,14 @@ export class Niivue {
    * @internal
    */
   sceneExtentsMinMax(isSliceMM = true): vec3[] {
-    let mn = vec3.fromValues(0, 0, 0)
-    let mx = vec3.fromValues(0, 0, 0)
-    if (this.volumes.length > 0) {
-      if (!this.volumeObject3D) {
-        throw new Error('volumeObject3D undefined')
-      }
-      mn = vec3.fromValues(
-        this.volumeObject3D.extentsMin[0],
-        this.volumeObject3D.extentsMin[1],
-        this.volumeObject3D.extentsMin[2]
-      )
-      mx = vec3.fromValues(
-        this.volumeObject3D.extentsMax[0],
-        this.volumeObject3D.extentsMax[1],
-        this.volumeObject3D.extentsMax[2]
-      )
-      if (!isSliceMM) {
-        mn = vec3.fromValues(
-          this.volumes[0].extentsMinOrtho![0],
-          this.volumes[0].extentsMinOrtho![1],
-          this.volumes[0].extentsMinOrtho![2]
-        )
-        mx = vec3.fromValues(
-          this.volumes[0].extentsMaxOrtho![0],
-          this.volumes[0].extentsMaxOrtho![1],
-          this.volumes[0].extentsMaxOrtho![2]
-        )
-      }
-    }
-    if (this.meshes.length > 0) {
-      if (this.volumes.length < 1) {
-        const minExtents = this.meshes[0].extentsMin as number[]
-        const maxExtents = this.meshes[0].extentsMax as number[]
-        mn = vec3.fromValues(minExtents[0], minExtents[1], minExtents[2])
-        mx = vec3.fromValues(maxExtents[0], maxExtents[1], maxExtents[2])
-      }
-      for (let i = 0; i < this.meshes.length; i++) {
-        const minExtents = this.meshes[i].extentsMin as number[]
-        const maxExtents = this.meshes[i].extentsMax as number[]
-        const vmn = vec3.fromValues(minExtents[0], minExtents[1], minExtents[2])
-        vec3.min(mn, mn, vmn)
-        const vmx = vec3.fromValues(maxExtents[0], maxExtents[1], maxExtents[2])
-        vec3.max(mx, mx, vmx)
-      }
-    }
-    const range = vec3.create()
-    vec3.subtract(range, mx, mn)
-    return [mn, mx, range]
+    return CoordTransform.sceneExtentsMinMax(
+      {
+        volumes: this.volumes,
+        meshes: this.meshes,
+        volumeObject3D: this.volumeObject3D
+      },
+      isSliceMM
+    )
   }
 
   /**
@@ -13754,32 +13690,13 @@ export class Niivue {
    * @internal
    */
   mm2frac(mm: vec3 | vec4, volIdx = 0, isForceSliceMM = false): vec3 {
-    // given mm, return volume fraction
-    if (this.volumes.length < 1) {
-      const frac = vec3.fromValues(0.1, 0.5, 0.5)
-      const [mn, _mx, range] = this.sceneExtentsMinMax()
-      frac[0] = (mm[0] - mn[0]) / range[0]
-      frac[1] = (mm[1] - mn[1]) / range[1]
-      frac[2] = (mm[2] - mn[2]) / range[2]
-      // FIXME this makes no sense, frac is an array
-      // @ts-expect-error -- not sure what should happen here
-      if (!isFinite(frac)) {
-        if (!isFinite(frac[0])) {
-          frac[0] = 0.5
-        }
-        if (!isFinite(frac[1])) {
-          frac[1] = 0.5
-        }
-        if (!isFinite(frac[2])) {
-          frac[2] = 0.5
-        }
-        if (this.meshes.length < 1) {
-          log.error('mm2frac() not finite: objects not (yet) loaded.')
-        }
-      }
-      return frac
-    }
-    return this.volumes[volIdx].convertMM2Frac(mm, isForceSliceMM || this.opts.isSliceMM)
+    return CoordTransform.mm2frac(mm, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      volIdx,
+      isSliceMM: isForceSliceMM || this.opts.isSliceMM
+    })
   }
 
   /**
@@ -13787,7 +13704,7 @@ export class Niivue {
    * @internal
    */
   vox2frac(vox: vec3, volIdx = 0): vec3 {
-    return this.volumes[volIdx].convertVox2Frac(vox)
+    return CoordTransform.vox2frac(vox, this.volumes, volIdx)
   }
 
   /**
@@ -13795,13 +13712,7 @@ export class Niivue {
    * @internal
    */
   frac2vox(frac: vec3, volIdx = 0): vec3 {
-    // convert from normalized texture space XYZ= [0..1, 0..1 ,0..1] to 0-index voxel space [0..dim[1]-1, 0..dim[2]-1, 0..dim[3]-1]
-    // consider dimension with 3 voxels, the voxel centers are at 0.25, 0.5, 0.75 corresponding to 0,1,2
-    if (this.volumes.length <= volIdx) {
-      return [0, 0, 0]
-    }
-
-    return this.volumes[volIdx].convertFrac2Vox(frac)
+    return CoordTransform.frac2vox(frac, this.volumes, volIdx)
   }
 
   /**
@@ -13835,17 +13746,13 @@ export class Niivue {
    * @internal
    */
   frac2mm(frac: vec3, volIdx = 0, isForceSliceMM = false): vec4 {
-    const pos = vec4.fromValues(frac[0], frac[1], frac[2], 1)
-    if (this.volumes.length > 0) {
-      return this.volumes[volIdx].convertFrac2MM(frac, isForceSliceMM || this.opts.isSliceMM)
-    } else {
-      const [mn, mx] = this.sceneExtentsMinMax()
-      const lerp = (x: number, y: number, a: number): number => x * (1 - a) + y * a
-      pos[0] = lerp(mn[0], mx[0], frac[0])
-      pos[1] = lerp(mn[1], mx[1], frac[1])
-      pos[2] = lerp(mn[2], mx[2], frac[2])
-    }
-    return pos
+    return CoordTransform.frac2mm(frac, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      volIdx,
+      isSliceMM: isForceSliceMM || this.opts.isSliceMM
+    })
   }
 
   /**
@@ -13853,48 +13760,13 @@ export class Niivue {
    * @internal
    */
   screenXY2TextureFrac(x: number, y: number, i: number, restrict0to1 = true): vec3 {
-    const texFrac = vec3.fromValues(-1, -1, -1) // texture 0..1 so -1 is out of bounds
-    const axCorSag = this.screenSlices[i].axCorSag
-    if (axCorSag > SLICE_TYPE.SAGITTAL) {
-      return texFrac
-    }
-    const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
-    let isMirror = false
-    if (ltwh[2] < 0) {
-      isMirror = true
-      ltwh[0] += ltwh[2]
-      ltwh[2] = -ltwh[2]
-    }
-    let fracX = (x - ltwh[0]) / ltwh[2]
-    if (isMirror) {
-      fracX = 1.0 - fracX
-    }
-    const fracY = 1.0 - (y - ltwh[1]) / ltwh[3]
-    if (fracX < 0.0 || fracX > 1.0 || fracY < 0.0 || fracY > 1.0) {
-      return texFrac
-    }
-    if (this.screenSlices[i].AxyzMxy.length < 4) {
-      return texFrac
-    }
-    let xyzMM = vec3.fromValues(0, 0, 0)
-    xyzMM[0] = this.screenSlices[i].leftTopMM[0] + fracX * this.screenSlices[i].fovMM[0]
-    xyzMM[1] = this.screenSlices[i].leftTopMM[1] + fracY * this.screenSlices[i].fovMM[1]
-    // let xyz = vec3.fromValues(30, 30, 0);
-    const v = this.screenSlices[i].AxyzMxy
-    xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
-    if (axCorSag === SLICE_TYPE.CORONAL) {
-      xyzMM = swizzleVec3(xyzMM, [0, 2, 1])
-    } // screen RSA to NIfTI RAS
-    if (axCorSag === SLICE_TYPE.SAGITTAL) {
-      xyzMM = swizzleVec3(xyzMM, [2, 0, 1])
-    } // screen ASR to NIfTI RAS
-    const xyz = this.mm2frac(xyzMM)
-    if (restrict0to1) {
-      if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1) {
-        return texFrac
-      }
-    }
-    return xyz
+    return CoordTransform.screenXY2TextureFrac(x, y, this.screenSlices, i, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      restrict0to1
+    })
   }
 
   /**
@@ -13902,13 +13774,27 @@ export class Niivue {
    * @internal
    */
   canvasPos2frac(canvasPos: number[]): vec3 {
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const texFrac = this.screenXY2TextureFrac(canvasPos[0], canvasPos[1], i)
-      if (texFrac[0] >= 0) {
-        return texFrac
-      }
-    }
-    return [-1, -1, -1] // texture 0..1 so -1 is out of bounds
+    return CoordTransform.canvasPos2frac(canvasPos, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM
+    })
+  }
+
+  /**
+   * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
+   * Returns both canvas position and the tile index for validation.
+   * @internal
+   */
+  frac2canvasPosWithTile(frac: vec3, preferredSliceType?: SLICE_TYPE): { pos: number[]; tileIndex: number } | null {
+    return CoordTransform.frac2canvasPosWithTile(frac, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      preferredSliceType
+    })
   }
 
   /**
@@ -13916,237 +13802,14 @@ export class Niivue {
    * Returns the first valid screen slice that contains the fractional coordinates.
    * @internal
    */
-  /**
-   * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
-   * Returns both canvas position and the tile index for validation.
-   * @internal
-   */
-  frac2canvasPosWithTile(frac: vec3, preferredSliceType?: SLICE_TYPE): { pos: number[]; tileIndex: number } | null {
-    // Convert fractional coordinates to world coordinates
-    const worldMM = this.frac2mm(frac)
-
-    // Try to find a screen slice that can display this world coordinate
-    // First pass: look for exact matches, prioritizing preferred slice type
-    let bestMatch = { index: -1, distance: Infinity }
-
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const axCorSag = this.screenSlices[i].axCorSag
-
-      // Only handle 2D slices (axial, coronal, sagittal)
-      if (axCorSag > SLICE_TYPE.SAGITTAL) {
-        continue
-      }
-
-      // Check if slice has valid transformation data
-      if (this.screenSlices[i].AxyzMxy.length < 4) {
-        continue
-      }
-
-      // Prioritize preferred slice type if specified
-      if (preferredSliceType !== undefined && axCorSag !== preferredSliceType) {
-        continue
-      }
-
-      // Start with world coordinates
-      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
-
-      // Apply inverse coordinate swizzling based on slice orientation
-      if (axCorSag === SLICE_TYPE.CORONAL) {
-        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
-      }
-      if (axCorSag === SLICE_TYPE.SAGITTAL) {
-        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
-      }
-
-      // Check if this point lies on the slice plane
-      const v = this.screenSlices[i].AxyzMxy
-      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
-
-      // Calculate distance from the slice plane
-      const distance = Math.abs(xyzMM[2] - expectedZ)
-
-      // Allow larger tolerance for multiplanar mode where slices might not align perfectly
-      const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
-
-      // Keep track of the best matching slice
-      if (distance < bestMatch.distance) {
-        bestMatch = { index: i, distance }
-      }
-
-      // If within tolerance, try to use this slice
-      if (distance <= tolerance) {
-        // Convert world coordinates to normalized slice coordinates
-        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
-        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
-
-        // Check if coordinates are within valid slice bounds
-        if (fracX >= 0.0 && fracX <= 1.0 && fracY >= 0.0 && fracY <= 1.0) {
-          // Convert normalized slice coordinates to screen coordinates
-          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
-          let isMirror = false
-
-          // Handle mirrored/flipped display
-          if (ltwh[2] < 0) {
-            isMirror = true
-            ltwh[0] += ltwh[2]
-            ltwh[2] = -ltwh[2]
-          }
-
-          let screenFracX = fracX
-          if (isMirror) {
-            screenFracX = 1.0 - fracX
-          }
-          const screenFracY = 1.0 - fracY
-
-          // Convert to screen pixel coordinates
-          const screenX = ltwh[0] + screenFracX * ltwh[2]
-          const screenY = ltwh[1] + screenFracY * ltwh[3]
-
-          return { pos: [screenX, screenY], tileIndex: i }
-        }
-      }
-    }
-
-    return null // no valid screen slice found
-  }
-
   frac2canvasPos(frac: vec3): number[] | null {
-    // Convert fractional coordinates to world coordinates
-    const worldMM = this.frac2mm(frac)
-
-    // Try to find a screen slice that can display this world coordinate
-    // First pass: look for exact matches
-    let bestMatch = { index: -1, distance: Infinity }
-
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const axCorSag = this.screenSlices[i].axCorSag
-
-      // Only handle 2D slices (axial, coronal, sagittal)
-      if (axCorSag > SLICE_TYPE.SAGITTAL) {
-        continue
-      }
-
-      // Check if slice has valid transformation data
-      if (this.screenSlices[i].AxyzMxy.length < 4) {
-        continue
-      }
-
-      // Start with world coordinates
-      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
-
-      // Apply inverse coordinate swizzling based on slice orientation
-      if (axCorSag === SLICE_TYPE.CORONAL) {
-        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
-      }
-      if (axCorSag === SLICE_TYPE.SAGITTAL) {
-        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
-      }
-
-      // Check if this point lies on the slice plane
-      const v = this.screenSlices[i].AxyzMxy
-      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
-
-      // Calculate distance from the slice plane
-      const distance = Math.abs(xyzMM[2] - expectedZ)
-
-      // Allow larger tolerance for multiplanar mode where slices might not align perfectly
-      const tolerance = this.opts.sliceType === SLICE_TYPE.MULTIPLANAR ? 1.0 : 0.1
-
-      // Keep track of the best matching slice
-      if (distance < bestMatch.distance) {
-        bestMatch = { index: i, distance }
-      }
-
-      // If within tolerance, try to use this slice
-      if (distance <= tolerance) {
-        // Convert world coordinates to normalized slice coordinates
-        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
-        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
-
-        // Check if coordinates are within valid slice bounds
-        if (fracX >= 0.0 && fracX <= 1.0 && fracY >= 0.0 && fracY <= 1.0) {
-          // Convert normalized slice coordinates to screen coordinates
-          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
-          let isMirror = false
-
-          // Handle mirrored/flipped display
-          if (ltwh[2] < 0) {
-            isMirror = true
-            ltwh[0] += ltwh[2]
-            ltwh[2] = -ltwh[2]
-          }
-
-          let screenFracX = fracX
-          if (isMirror) {
-            screenFracX = 1.0 - fracX
-          }
-          const screenFracY = 1.0 - fracY
-
-          // Convert to screen pixel coordinates
-          const screenX = ltwh[0] + screenFracX * ltwh[2]
-          const screenY = ltwh[1] + screenFracY * ltwh[3]
-
-          return [screenX, screenY]
-        }
-      }
-    }
-
-    // If no slice was within tolerance but we have a best match, try to project onto it
-    if (bestMatch.index >= 0 && bestMatch.distance < 2.0) {
-      const i = bestMatch.index
-      const axCorSag = this.screenSlices[i].axCorSag
-
-      // Start with world coordinates
-      let xyzMM = vec3.fromValues(worldMM[0], worldMM[1], worldMM[2])
-
-      // Apply inverse coordinate swizzling based on slice orientation
-      if (axCorSag === SLICE_TYPE.CORONAL) {
-        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]) // NIfTI RAS to screen RSA
-      }
-      if (axCorSag === SLICE_TYPE.SAGITTAL) {
-        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]) // NIfTI RAS to screen ASR
-      }
-
-      // Project the point onto the slice plane
-      const v = this.screenSlices[i].AxyzMxy
-      xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0])
-
-      // Convert world coordinates to normalized slice coordinates
-      const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0]
-      const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1]
-
-      // Check if coordinates are within valid slice bounds (with small margin)
-      if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
-        // Clamp to valid range
-        const clampedFracX = Math.max(0, Math.min(1, fracX))
-        const clampedFracY = Math.max(0, Math.min(1, fracY))
-
-        // Convert normalized slice coordinates to screen coordinates
-        const ltwh = this.screenSlices[i].leftTopWidthHeight.slice()
-        let isMirror = false
-
-        // Handle mirrored/flipped display
-        if (ltwh[2] < 0) {
-          isMirror = true
-          ltwh[0] += ltwh[2]
-          ltwh[2] = -ltwh[2]
-        }
-
-        let screenFracX = clampedFracX
-        if (isMirror) {
-          screenFracX = 1.0 - clampedFracX
-        }
-        const screenFracY = 1.0 - clampedFracY
-
-        // Convert to screen pixel coordinates
-        const screenX = ltwh[0] + screenFracX * ltwh[2]
-        const screenY = ltwh[1] + screenFracY * ltwh[3]
-
-        return [screenX, screenY]
-      }
-    }
-
-    return null // no valid screen slice found
+    return CoordTransform.frac2canvasPos(frac, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      sliceType: this.opts.sliceType
+    })
   }
 
   /**
