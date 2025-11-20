@@ -11,6 +11,9 @@ import * as glUtils from '@/niivue/core/gl'
 import * as CoordTransform from '@/niivue/core/CoordinateTransform'
 import * as ShaderManager from '@/niivue/core/ShaderManager'
 import * as VolumeManager from '@/niivue/data/VolumeManager'
+import * as VolumeTexture from '@/niivue/data/VolumeTexture'
+import * as VolumeColormap from '@/niivue/data/VolumeColormap'
+import * as VolumeModulation from '@/niivue/data/VolumeModulation'
 import {
   NVDocument,
   NVConfigOptions,
@@ -7686,13 +7689,7 @@ export class Niivue {
     } // e.g. only meshes
     this.refreshColormaps()
     const hdr = overlayItem.hdr
-    let img = overlayItem.img
-    if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D!) {
-      img = overlayItem.img!.slice(
-        overlayItem.frame4D * overlayItem.nVox3D!,
-        (overlayItem.frame4D + 1) * overlayItem.nVox3D!
-      )
-    }
+    const img = VolumeTexture.prepareLayerData(overlayItem)
     const opacity = overlayItem.opacity
     if (layer > 1 && opacity === 0) {
       return
@@ -7722,12 +7719,14 @@ export class Niivue {
       this.vox = vox
       this.volumeObject3D.scale = volScale
 
-      const isAboveMax2D = hdr.dims[1] > this.uiData.max2D || hdr.dims[2] > this.uiData.max2D
+      const { isAboveMax2D, isAboveMax3D } = VolumeTexture.checkImageSizeLimits({
+        hdr,
+        max2D: this.uiData.max2D,
+        max3D: this.uiData.max3D
+      })
       if (isAboveMax2D) {
         log.error(`Image dimensions exceed maximum texture size of hardware.`)
       }
-      const isAboveMax3D =
-        hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D || hdr.dims[3] > this.uiData.max3D
       if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
         log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
         // high res 2D image
@@ -8050,26 +8049,13 @@ export class Niivue {
     orientShader!.use(this.gl)
     this.gl.activeTexture(TEXTURE1_COLORMAPS)
     // for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
-    let colormapLabelTexture = null
-    if (overlayItem.colormapLabel !== null && overlayItem.colormapLabel.lut.length > 7) {
-      const nLabel = overlayItem.colormapLabel.max! - overlayItem.colormapLabel.min! + 1
-      colormapLabelTexture = this.createColormapTexture(colormapLabelTexture, 1, nLabel)
-      this.gl.texSubImage2D(
-        this.gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        nLabel,
-        1,
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        overlayItem.colormapLabel.lut
-      )
-      this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.colormapLabel.min! - 0.5)
-      this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.colormapLabel.max! + 0.5)
-      // this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-      this.gl.bindTexture(this.gl.TEXTURE_2D, colormapLabelTexture)
-    } else {
+    const { colormapLabelTexture } = VolumeColormap.setupColormapLabel({
+      gl: this.gl,
+      overlayItem,
+      orientShader,
+      createColormapTexture: this.createColormapTexture.bind(this)
+    })
+    if (colormapLabelTexture === null) {
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
       this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min!)
       this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max!)
@@ -8129,102 +8115,15 @@ export class Niivue {
     this.gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope)
     this.gl.uniform1f(orientShader.uniforms.opacity ?? null, opacity)
     this.gl.uniform1i(orientShader.uniforms.modulationVol ?? null, 7)
-    let modulateTexture = null
-    if (
-      overlayItem.modulationImage !== null &&
-      overlayItem.modulationImage >= 0 &&
-      overlayItem.modulationImage < this.volumes.length
-    ) {
-      log.debug('modulating', this.volumes)
-      const mhdr = this.volumes[overlayItem.modulationImage].hdr!
-      if (mhdr.dims[1] === hdr.dims[1] && mhdr.dims[2] === hdr.dims[2] && mhdr.dims[3] === hdr.dims[3]) {
-        if (overlayItem.modulateAlpha) {
-          this.gl.uniform1i(orientShader.uniforms.modulation, 2)
-          this.gl.uniform1f(orientShader.uniforms.opacity, 1.0)
-        } else {
-          this.gl.uniform1i(orientShader.uniforms.modulation, 1)
-        }
-        // r8Tex(texID, activeID, dims, isInit = false)
-        modulateTexture = this.r8Tex(modulateTexture, this.gl.TEXTURE7, hdr.dims, true)
-        this.gl.activeTexture(this.gl.TEXTURE7)
-        this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture)
-        const vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3]
-        const modulateVolume = new Uint8Array(vx)
-        const mn = this.volumes[overlayItem.modulationImage].cal_min!
-        const scale = 1.0 / (this.volumes[overlayItem.modulationImage].cal_max! - mn)
-        const imgRaw = this.volumes[overlayItem.modulationImage].img!.buffer
-        let img: Uint8Array | Int16Array | Float32Array | Float64Array | Uint8Array | Uint16Array = new Uint8Array(
-          imgRaw
-        )
-        switch (mhdr.datatypeCode) {
-          case NiiDataType.DT_INT16:
-            img = new Int16Array(imgRaw)
-            break
-          case NiiDataType.DT_FLOAT32:
-            img = new Float32Array(imgRaw)
-            break
-          case NiiDataType.DT_FLOAT64:
-            img = new Float64Array(imgRaw)
-            break
-          case NiiDataType.DT_RGB24:
-            img = new Uint8Array(imgRaw)
-            break
-          case NiiDataType.DT_UINT16:
-            img = new Uint16Array(imgRaw)
-            break
-        }
-        log.debug(this.volumes[overlayItem.modulationImage])
-        const isColormapNegative = this.volumes[overlayItem.modulationImage].colormapNegative.length > 0
-        // negative thresholds might be asymmetric from positive ones
-        let mnNeg = this.volumes[overlayItem.modulationImage].cal_min
-        let mxNeg = this.volumes[overlayItem.modulationImage].cal_max
-        if (
-          isFinite(this.volumes[overlayItem.modulationImage].cal_minNeg) &&
-          isFinite(this.volumes[overlayItem.modulationImage].cal_maxNeg)
-        ) {
-          // explicit range for negative colormap: allows asymmetric maps
-          mnNeg = this.volumes[overlayItem.modulationImage].cal_minNeg
-          mxNeg = this.volumes[overlayItem.modulationImage].cal_minNeg
-        }
-        mnNeg = Math.abs(mnNeg!)
-        mxNeg = Math.abs(mxNeg!)
-        if (mnNeg > mxNeg) {
-          ;[mnNeg, mxNeg] = [mxNeg, mnNeg]
-        }
-        const scaleNeg = 1.0 / (mxNeg - mnNeg)
-        let mpow = Math.abs(overlayItem.modulateAlpha) // can convert bool, too
-        mpow = Math.max(mpow, 1.0)
-        // volOffset selects the correct frame
-        const volOffset = this.volumes[overlayItem.modulationImage].frame4D * vx
-        for (let i = 0; i < vx; i++) {
-          const vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter
-          let v = (vRaw - mn) * scale
-          if (isColormapNegative && vRaw < 0.0) {
-            v = (Math.abs(vRaw) - mnNeg) * scaleNeg
-          }
-          v = Math.min(Math.max(v, 0.0), 1.0)
-          v = Math.pow(v, mpow) * 255.0
-          modulateVolume[i] = v
-        }
-        this.gl.texSubImage3D(
-          this.gl.TEXTURE_3D,
-          0,
-          0,
-          0,
-          0,
-          hdr.dims[1],
-          hdr.dims[2],
-          hdr.dims[3],
-          this.gl.RED,
-          this.gl.UNSIGNED_BYTE,
-          modulateVolume
-        )
-      } else {
-        log.debug('Modulation image dimensions do not match target')
-      }
-    } else {
-      this.gl.uniform1i(orientShader.uniforms.modulation, 0)
-    }
+    const { modulateTexture } = VolumeModulation.setupModulation({
+      gl: this.gl,
+      overlayItem,
+      hdr,
+      volumes: this.volumes,
+      orientShader,
+      r8Tex: this.r8Tex.bind(this),
+      TEXTURE7: this.gl.TEXTURE7
+    })
     this.gl.uniformMatrix4fv(orientShader.uniforms.mtx, false, mtx)
     if (!this.back.dims) {
       throw new Error('back.dims undefined')

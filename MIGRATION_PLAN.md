@@ -115,24 +115,99 @@ These modules form the foundation and have minimal dependencies on each other.
 **Responsibility:** Volume loading, management, and operations
 **Line Range:** ~3600-3631, ~4333-4507, ~8270-8932
 **Key Methods:**
-- `addVolume()`, `removeVolume()`, `removeVolumeByIndex()`
-- `setVolume()`, `cloneVolume()`
-- `getVolumeIndexByID()`, `getOverlayIndexByID()`
-- `moveVolumeUp()`, `moveVolumeDown()`, `moveVolumeToTop()`, `moveVolumeToBottom()`
-- `updateGLVolume()` - Update GPU textures
-- `refreshLayers()` - Layer management
-- `setFrame4D()`, `getFrame4D()` - 4D volume time series
-- `setOpacity()` - Volume opacity
-- `overlayRGBA()` - Overlay rendering data
+- `addVolume()`, `removeVolume()`, `removeVolumeByIndex()` ✅
+- `setVolume()`, `cloneVolume()` ✅
+- `getVolumeIndexByID()`, `getOverlayIndexByID()` ✅
+- `moveVolumeUp()`, `moveVolumeDown()`, `moveVolumeToTop()`, `moveVolumeToBottom()` ✅
+- `updateGLVolume()` - Update GPU textures (uses helper functions) ✅
+- `refreshLayers()` - Layer management (uses helper functions) ✅
+- `setFrame4D()`, `getFrame4D()` - 4D volume time series ✅
+- `setOpacity()` - Volume opacity ✅
+- `overlayRGBA()` - Overlay rendering data ✅
+
+**Related Modules Created:**
+- `VolumeTexture.ts` - Texture-related operations (prepareLayerData, checkImageSizeLimits, create2DRGBATextureData, selectOrientShader, create3DTextureByDatatype)
+- `VolumeColormap.ts` - Colormap operations (refreshColormaps, setupColormapLabel)
+- `VolumeModulation.ts` - Modulation operations (setupModulation)
 
 **Properties to migrate:**
-- `volumes: NVImage[]`
-- `volumeTexture: WebGLTexture`
-- `overlayTexture: WebGLTexture`
-- `backgroundMasksOverlays`
+- `volumes: NVImage[]` ✅ Handled via delegation
+- `volumeTexture: WebGLTexture` (remains in Niivue class - tightly coupled to WebGL state)
+- `overlayTexture: WebGLTexture` (remains in Niivue class - tightly coupled to WebGL state)
+- `backgroundMasksOverlays` (remains in Niivue class - tightly coupled to WebGL state)
 
 **Dependencies:** WebGLContext, ShaderManager
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed (with GPU texture management remaining in Niivue class)
+
+**Implementation Notes:**
+- Core volume array management functions extracted to VolumeManager.ts as pure functions
+- GPU-related helper functions extracted to VolumeTexture.ts, VolumeColormap.ts, and VolumeModulation.ts
+- `updateGLVolume()` and `refreshLayers()` remain in Niivue class but now use helper functions for better separation
+- All functions use pure functional approach with immutable data where possible
+- Niivue class delegates to VolumeManager functions and maintains backward compatibility
+
+**Refactoring Completed:**
+- ✅ `prepareLayerData()` - Extract 4D volume frame selection (7 lines → function call)
+- ✅ `checkImageSizeLimits()` - Check hardware texture size limits
+- ✅ `setupColormapLabel()` - Setup colormap for label volumes (~25 lines → function call)
+- ✅ `setupModulation()` - Setup modulation textures (~95 lines → function call)
+- ✅ `selectOrientShader()` - Select shader based on datatype and intent
+- ✅ `create3DTextureByDatatype()` - Create 3D textures based on NIfTI datatype
+- ✅ `refreshColormaps()` - Refresh colormap textures (extracted to VolumeColormap.ts)
+
+**Future Refactoring Opportunities:**
+The following complex operations in `refreshLayers()` (~650 lines) could be further extracted for better code reuse and separation of responsibilities:
+
+1. **Volume Object 3D Setup** (~20 lines, lines 7712-7723)
+   - `setupVolumeObject3D()` - Create volumeObject3D, set scale, calculate volScale/vox
+   - Dependencies: overlayItem, gl, toNiivueObject3D, sliceScale
+
+2. **Matrix Transformation** (~30 lines, lines 7795-7822)
+   - `calculateOverlayTransformMatrix()` - Calculate transformation matrix for overlay volumes
+   - Dependencies: overlayItem, back, mm2frac
+
+3. **Texture Allocation** (~15 lines, lines 7774, 7824-7829)
+   - `allocateVolumeTextures()` - Create volumeTexture and overlayTexture
+   - Dependencies: gl, layer, volumeTexture, overlayTexture, back.dims, rgbaTex
+
+4. **Framebuffer Setup** (~10 lines, lines 7831-7835)
+   - `setupFramebuffer()` - Create and configure framebuffer for rendering
+   - Dependencies: gl, back.dims
+
+5. **Blend Texture Management** (~30 lines, lines 8010-8048)
+   - `setupBlendTexture()` - Handle texture blending for multi-layer rendering
+   - Dependencies: gl, layer, overlayTexture, back.dims, passThroughShader, rgbaTex
+
+6. **Colormap Configuration** (~50 lines, lines 8063-8117)
+   - `configureColormapUniforms()` - Setup colormap uniforms (cal_min, cal_max, negative maps, etc.)
+   - Dependencies: gl, overlayItem, orientShader, layer, overlayOutlineWidth
+
+7. **Output Texture Rendering** (~30 lines, lines 8127-8260)
+   - `renderToOutputTexture()` - Render volume slices to output texture using framebuffer
+   - Dependencies: gl, orientShader, back.dims, outTexture, mtx, hdr, opts
+
+8. **Gradient Texture Generation** (~10 lines, lines 8261-8271)
+   - `updateGradientTexture()` - Generate gradient texture for lighting
+   - Dependencies: gl, hdr, gradientTextureAmount, useCustomGradientTexture, gradientGL
+
+9. **Shader Uniform Updates** (~20 lines, lines 8273-8330)
+   - `updateShaderUniforms()` - Update all shader uniforms after texture operations
+   - Dependencies: renderShader, pickingImageShader, sliceMMShader, volumes, overlays, scene
+
+**`updateGLVolume()` Orchestration** (~30 lines, lines 7406-7436)
+This method orchestrates the entire volume update process and could remain as-is since it's already quite clean:
+- Calls refreshColormaps()
+- Calls closePAQD()
+- Iterates volumes and calls refreshLayers()
+- Updates furthestVertexFromOrigin
+- Triggers callbacks and drawScene()
+
+**Benefits of Further Refactoring:**
+- Each function would be < 50 lines
+- Better testability (can test texture creation, matrix calculations independently)
+- Easier to understand the rendering pipeline
+- Potential for reuse in other rendering contexts
+- Better separation of WebGL state management from business logic
 
 ---
 
@@ -1028,9 +1103,9 @@ For each module in the plan above:
 - ✅ 1.2 CoordinateTransform Module
 - ✅ 1.3 ShaderManager Module
 
-### Phase 2: Data Management Modules ⬜
+### Phase 2: Data Management Modules 🔄
 
-- ⬜ 2.1 VolumeManager Module
+- ✅ 2.1 VolumeManager Module
 - ⬜ 2.2 MeshManager Module
 - ⬜ 2.3 ConnectomeManager Module
 - ⬜ 2.4 FileLoader Module
