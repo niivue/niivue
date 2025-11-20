@@ -155,7 +155,7 @@ These modules form the foundation and have minimal dependencies on each other.
 - ✅ `create3DTextureByDatatype()` - Create 3D textures based on NIfTI datatype
 - ✅ `refreshColormaps()` - Refresh colormap textures (extracted to VolumeColormap.ts)
 
-**Future Refactoring Opportunities:**
+**Next Refactoring Opportunities:**
 The following complex operations in `refreshLayers()` (~650 lines) could be further extracted for better code reuse and separation of responsibilities:
 
 1. **Volume Object 3D Setup** (~20 lines, lines 7712-7723)
