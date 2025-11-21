@@ -29,6 +29,7 @@ import * as TouchController from '@/niivue/interaction/TouchController'
 import * as KeyboardController from '@/niivue/interaction/KeyboardController'
 import * as WheelController from '@/niivue/interaction/WheelController'
 import * as DragModeManager from '@/niivue/interaction/DragModeManager'
+import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
 import {
   NVDocument,
   NVConfigOptions,
@@ -81,7 +82,6 @@ import {
 import { Shader } from '@/shader'
 import { log } from '@/logger'
 import {
-  clamp,
   deg2rad,
   img2ras16,
   intensityRaw2Scaled,
@@ -4528,12 +4528,18 @@ export class Niivue {
    * @internal
    */
   sliceScroll2D(posChange: number, x: number, y: number, isDelta = true): void {
-    // check if the canvas has focus
-    if (this.opts.scrollRequiresFocus && this.canvas !== document.activeElement) {
+    // Check if the canvas has focus
+    if (
+      !SliceNavigation.shouldProcessScroll({
+        scrollRequiresFocus: this.opts.scrollRequiresFocus,
+        canvasHasFocus: this.canvas === document.activeElement
+      })
+    ) {
       log.warn('Canvas element does not have focus. Scroll events will not be processed.')
       return
     }
 
+    // Handle graph tile interaction (frame scrolling)
     if (this.inGraphTile(x, y)) {
       let vol = this.volumes[0].frame4D
       if (posChange > 0) {
@@ -4545,27 +4551,37 @@ export class Niivue {
       this.setFrame4D(this.volumes[0].id, vol)
       return
     }
+
+    // Handle zoom scroll in pan mode
+    const isInRenderTile = this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) !== -1
     if (
-      posChange !== 0 &&
-      this.opts.dragMode === DRAG_MODE.pan &&
-      this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1
+      SliceNavigation.shouldApplyZoomScroll({
+        posChange,
+        dragMode: this.opts.dragMode,
+        isInRenderTile
+      })
     ) {
-      let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * posChange)
-      zoom = Math.round(zoom * 10) / 10
-      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
-      if (this.opts.yoke3Dto2DZoom) {
-        this.scene.volScaleMultiplier = zoom
-      }
-      this.scene.pan2Dxyzmm[3] = zoom
       const mm = this.frac2mm(this.scene.crosshairPos)
-      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
-      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
-      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
+      const zoomResult = SliceNavigation.calculateZoomScroll({
+        posChange,
+        currentZoom: this.scene.pan2Dxyzmm[3],
+        yoke3Dto2DZoom: this.opts.yoke3Dto2DZoom,
+        crosshairMM: mm
+      })
+
+      if (zoomResult.newVolScaleMultiplier !== undefined) {
+        this.scene.volScaleMultiplier = zoomResult.newVolScaleMultiplier
+      }
+      this.scene.pan2Dxyzmm[3] = zoomResult.newZoom
+      this.scene.pan2Dxyzmm[0] += zoomResult.panOffsetX
+      this.scene.pan2Dxyzmm[1] += zoomResult.panOffsetY
+      this.scene.pan2Dxyzmm[2] += zoomResult.panOffsetZ
       this.drawScene()
       this.canvas!.focus() // required after change for issue706
       this.sync()
       return
     }
+
     this.mouseClick(x, y, posChange, isDelta)
   }
 
@@ -8848,13 +8864,11 @@ export class Niivue {
    * @internal
    */
   tileIndex(x: number, y: number): number {
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const ltwh = this.screenSlices[i].leftTopWidthHeight
-      if (x > ltwh[0] && y > ltwh[1] && x < ltwh[0] + ltwh[2] && y < ltwh[1] + ltwh[3]) {
-        return i
-      }
-    }
-    return -1 // mouse position not in rendering tile
+    return SliceNavigation.findTileIndex({
+      x,
+      y,
+      screenSlices: this.screenSlices
+    })
   }
 
   /**
@@ -8862,11 +8876,11 @@ export class Niivue {
    * @internal
    */
   inRenderTile(x: number, y: number): number {
-    const idx = this.tileIndex(x, y)
-    if (idx >= 0 && this.screenSlices[idx].axCorSag === SLICE_TYPE.RENDER) {
-      return idx
-    }
-    return -1 // mouse position not in rendering tile
+    return SliceNavigation.findRenderTileIndex({
+      x,
+      y,
+      screenSlices: this.screenSlices
+    })
   }
 
   /**
@@ -8874,34 +8888,29 @@ export class Niivue {
    * @internal
    */
   sliceScroll3D(posChange = 0): void {
-    if (posChange === 0) {
+    const result = SliceNavigation.calculateSliceScroll3D({
+      posChange,
+      volumesLength: this.volumes.length,
+      clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
+      activeClipPlaneIndex: this.uiData.activeClipPlaneIndex,
+      volScaleMultiplier: this.scene.volScaleMultiplier
+    })
+
+    if (result.action === 'none') {
       return
     }
-    // n.b. clip plane only influences voxel-based volumes, so zoom is only action for meshes
-    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8) {
-      // clipping mode: change clip plane depth
-      // if (this.scene.clipPlaneDepthAziElev[0] > 1.8) return;
+
+    if (result.action === 'clipPlane' && result.newClipPlaneDepth !== undefined) {
       const depthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex].slice()
-      // bound clip sqrt(3) = 1.73
-      if (posChange > 0) {
-        depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025)
-      }
-      if (posChange < 0) {
-        depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025)
-      } // Math.max(-1.7,
-      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0]) {
-        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
-      }
-      return
+      depthAziElev[0] = result.newClipPlaneDepth
+      this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev
+      return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
     }
-    if (posChange > 0) {
-      this.scene.volScaleMultiplier = Math.min(2.0, this.scene.volScaleMultiplier * 1.1)
+
+    if (result.action === 'zoom' && result.newVolScaleMultiplier !== undefined) {
+      this.scene.volScaleMultiplier = result.newVolScaleMultiplier
+      this.drawScene()
     }
-    if (posChange < 0) {
-      this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.9)
-    }
-    this.drawScene()
   }
 
   /**
@@ -8909,17 +8918,13 @@ export class Niivue {
    * @internal
    */
   inGraphTile(x: number, y: number): boolean {
-    if (this.graph.opacity <= 0 || this.volumes.length < 1 || this.volumes[0].nFrame4D! < 1 || !this.graph.plotLTWH) {
-      return false
-    }
-    if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) {
-      return false
-    }
-    // this.graph.LTWH is tile
-    // this.graph.plotLTWH is body of plot
-    const pos = [(x - this.graph.LTWH[0]) / this.graph.LTWH[2], (y - this.graph.LTWH[1]) / this.graph.LTWH[3]]
-
-    return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1
+    return SliceNavigation.isInGraphTile({
+      x,
+      y,
+      graph: this.graph,
+      volumesLength: this.volumes.length,
+      firstVolumeFrameCount: this.volumes.length > 0 ? (this.volumes[0].nFrame4D ?? 0) : 0
+    })
   }
 
   /**
@@ -9624,52 +9629,13 @@ export class Niivue {
    * @internal
    */
   getCurrentSliceInfo(): { sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number } {
-    const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1])
-
-    if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
-      const sliceType = this.screenSlices[tileIdx].axCorSag
-      let slicePosition = 0
-
-      // Get the current slice position based on the crosshair position
-      if (sliceType === SLICE_TYPE.AXIAL) {
-        slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
-      } else if (sliceType === SLICE_TYPE.CORONAL) {
-        slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
-      } else if (sliceType === SLICE_TYPE.SAGITTAL) {
-        slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
-      }
-
-      return {
-        sliceIndex: tileIdx,
-        sliceType,
-        slicePosition
-      }
-    }
-
-    // Fallback: use current slice type and crosshair position when tileIndex fails
-    const currentSliceType = this.opts.sliceType
-    let slicePosition = 0
-
-    // Get the current slice position based on the crosshair position and current slice type
-    if (currentSliceType === SLICE_TYPE.AXIAL) {
-      slicePosition = this.scene.crosshairPos[2] // Z coordinate for axial slices
-    } else if (currentSliceType === SLICE_TYPE.CORONAL) {
-      slicePosition = this.scene.crosshairPos[1] // Y coordinate for coronal slices
-    } else if (currentSliceType === SLICE_TYPE.SAGITTAL) {
-      slicePosition = this.scene.crosshairPos[0] // X coordinate for sagittal slices
-    } else if (currentSliceType === SLICE_TYPE.MULTIPLANAR) {
-      // In multiplanar mode, try to determine the slice type from the mouse position
-      // by checking if we can convert the canvas position to fractional coordinates
-      const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]])
-      if (startFrac[0] >= 0) {
-        // If we can convert to fractional coordinates, use the current crosshair position
-        // but we need to determine which slice type this measurement is most likely for
-        // For now, default to axial in multiplanar mode
-        slicePosition = this.scene.crosshairPos[2]
-      }
-    }
-
-    return { sliceIndex: -1, sliceType: currentSliceType, slicePosition }
+    return SliceNavigation.getCurrentSliceInfo({
+      dragStart: this.uiData.dragStart,
+      screenSlices: this.screenSlices,
+      crosshairPos: this.scene.crosshairPos,
+      currentSliceType: this.opts.sliceType,
+      canvasPos2frac: (pos: number[]) => this.canvasPos2frac(pos)
+    })
   }
 
   /**
@@ -9677,14 +9643,10 @@ export class Niivue {
    * @internal
    */
   getCurrentSlicePosition(sliceType: SLICE_TYPE): number {
-    if (sliceType === SLICE_TYPE.AXIAL) {
-      return this.scene.crosshairPos[2] // Z coordinate for axial slices
-    } else if (sliceType === SLICE_TYPE.CORONAL) {
-      return this.scene.crosshairPos[1] // Y coordinate for coronal slices
-    } else if (sliceType === SLICE_TYPE.SAGITTAL) {
-      return this.scene.crosshairPos[0] // X coordinate for sagittal slices
-    }
-    return 0
+    return SliceNavigation.getSlicePosition({
+      sliceType,
+      crosshairPos: this.scene.crosshairPos
+    })
   }
 
   /**
@@ -9692,38 +9654,14 @@ export class Niivue {
    * @internal
    */
   shouldDrawOnCurrentSlice(sliceIndex: number, sliceType: SLICE_TYPE, slicePosition: number): boolean {
-    // In multiplanar mode, we need to check if the measurement can be displayed on any of the visible tiles
-    if (this.opts.sliceType === SLICE_TYPE.MULTIPLANAR) {
-      // Check if this is a valid 2D slice type
-      if (sliceType > SLICE_TYPE.SAGITTAL) {
-        return false
-      }
-
-      for (let i = 0; i < this.screenSlices.length; i++) {
-        if (this.screenSlices[i].axCorSag === sliceType) {
-          // Check if the position matches (within tolerance)
-          const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
-          const tolerance = 0.001 // Tolerance for position matching
-          const difference = Math.abs(currentSlicePosition - slicePosition)
-
-          if (difference < tolerance) {
-            return true
-          }
-        }
-      }
-      return false
-    } else if (this.opts.sliceType !== sliceType) {
-      return false
-    }
-
-    // For single slice view, just check the position
-    const currentSlicePosition = this.getCurrentSlicePosition(sliceType)
-
-    const tolerance = 0.001 // Increased from 0.001 to 0.01 to handle normal scroll increments
-    const difference = Math.abs(currentSlicePosition - slicePosition)
-    const result = difference < tolerance
-
-    return result
+    return SliceNavigation.shouldDrawOnCurrentSlice({
+      sliceIndex,
+      sliceType,
+      slicePosition,
+      currentSliceTypeOpt: this.opts.sliceType,
+      screenSlices: this.screenSlices,
+      crosshairPos: this.scene.crosshairPos
+    })
   }
 
   /**
@@ -12399,17 +12337,18 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   moveCrosshairInVox(x: number, y: number, z: number): void {
-    const vox = this.frac2vox(this.scene.crosshairPos)
-    const vox2 = vox[2]
-    vox[0] += x
-    vox[1] += y
-    vox[2] += z
-    vox[0] = clamp(vox[0], 0, this.volumes[0].dimsRAS![1] - 1)
-    vox[1] = clamp(vox[1], 0, this.volumes[0].dimsRAS![2] - 1)
-    vox[2] = clamp(vox[2], 0, this.volumes[0].dimsRAS![3] - 1)
-    this.scene.crosshairPos = this.vox2frac(vox)
+    const currentVox = this.frac2vox(this.scene.crosshairPos)
+    const result = SliceNavigation.calculateMoveCrosshairInVox({
+      x,
+      y,
+      z,
+      currentVox,
+      dimsRAS: this.volumes[0].dimsRAS!
+    })
+
+    this.scene.crosshairPos = this.vox2frac(result.newVox)
     this.createOnLocationChange()
-    if (this.opts.is2DSliceShader && vox2 !== vox[2]) {
+    if (this.opts.is2DSliceShader && result.zChanged) {
       this.updateGLVolume()
       this.refreshDrawing(false)
     }
@@ -13118,11 +13057,13 @@ export class Niivue {
    * Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
    */
   inBounds(x: number, y: number): boolean {
-    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion()
-    // Convert from CSS (top origin, unscaled) → GL pixels (bottom origin)
-    const glX = x * this.uiData.dpr!
-    const glY = this.gl.canvas.height - y * this.uiData.dpr!
-    return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH
+    return SliceNavigation.isInBounds({
+      x,
+      y,
+      dpr: this.uiData.dpr!,
+      canvasHeight: this.gl.canvas.height,
+      boundsRegion: this.getBoundsRegion()
+    })
   }
 
   /**
