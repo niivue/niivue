@@ -22,6 +22,7 @@ import * as SliceRenderer from '@/niivue/rendering/SliceRenderer'
 import * as VolumeRenderer from '@/niivue/rendering/VolumeRenderer'
 import * as MeshRenderer from '@/niivue/rendering/MeshRenderer'
 import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
+import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
 import {
   NVDocument,
   NVConfigOptions,
@@ -9313,39 +9314,25 @@ export class Niivue {
       return
     }
 
-    // --- Bounds region (normalized → pixels)
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
-
-    // --- Compute ruler geometry
-    const frac10cm = 100.0 / fovMM[0]
-    const pix10cm = frac10cm * ltwh[2]
-    const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2)
     const thick = Number(this.opts.rulerWidth)
 
-    // position ruler horizontally centered in slice, at bottom of slice
-    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm)
-    const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * thick
+    const rulerGeometry = UIElementRenderer.calculateRulerGeometry({
+      fovMM,
+      ltwh,
+      rulerWidth: thick,
+      regionBounds: { x: regionX, y: regionY, w: regionW, h: regionH }
+    })
 
-    // Clip to bounds region
-    const clippedLeft = Math.max(regionX, pixLeft)
-    const clippedRight = Math.min(regionX + regionW, pixLeft + pix10cm)
-    const clippedY = Math.min(regionY + regionH, pixTop)
-
-    if (clippedRight <= clippedLeft) {
-      return // fully clipped out
+    if (!rulerGeometry) {
+      return
     }
 
-    const startXYendXY: [number, number, number, number] = [clippedLeft, clippedY, clippedRight, clippedY]
+    const outlineColor = UIElementRenderer.getRulerOutlineColor(this.opts.rulerColor)
 
-    // --- Colors
-    let outlineColor: number[] = [0, 0, 0, 1]
-    if (this.opts.rulerColor[0] + this.opts.rulerColor[1] + this.opts.rulerColor[2] < 0.8) {
-      outlineColor = [1, 1, 1, 1]
-    }
-
-    // --- Draw ruler
-    this.drawRuler10cm(startXYendXY, outlineColor, thick + 1)
-    this.drawRuler10cm(startXYendXY, this.opts.rulerColor, thick)
+    // Draw ruler with outline
+    this.drawRuler10cm(rulerGeometry.startXYendXY, outlineColor, thick + 1)
+    this.drawRuler10cm(rulerGeometry.startXYendXY, this.opts.rulerColor, thick)
   }
 
   /**
@@ -9360,28 +9347,17 @@ export class Niivue {
     this.lineShader.use(this.gl)
     this.gl.uniform4fv(this.lineShader.uniforms.lineColor, rulerColor)
     this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
-    // draw Line
+    // draw main ruler line
     this.gl.uniform1f(this.lineShader.uniforms.thickness, rulerWidth)
     this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    // draw tick marks
-    // const w10cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
-    const w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2])
-    const b = startXYendXY[1] - Math.floor(0.5 * this.opts.rulerWidth)
-    const t = Math.floor(b - 0.35 * w1cm)
-    const t2 = Math.floor(b - 0.7 * w1cm)
-    for (let i = 0; i < 11; i++) {
-      let l = startXYendXY[0] + i * w1cm
-      l = Math.max(l, startXYendXY[0] + 0.5 * rulerWidth)
-      l = Math.min(l, startXYendXY[2] - 0.5 * rulerWidth)
-      const xyxy = [l, b, l, t]
-      if (i % 5 === 0) {
-        xyxy[3] = t2
-      }
+    // draw tick marks using helper
+    const ticks = UIElementRenderer.calculateRulerTicks(startXYendXY, this.opts.rulerWidth)
+    for (const xyxy of ticks) {
       this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, xyxy)
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     }
-    this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
+    this.gl.bindVertexArray(this.unusedVAO)
   }
 
   /**
@@ -9455,29 +9431,18 @@ export class Niivue {
    * @internal
    */
   drawMeasurementTool(startXYendXY: number[], isDrawText: boolean = true): void {
-    function extendTo(
+    // Use UIElementRenderer helper for line extension calculations
+    const extendTo = (
       x0: number,
       y0: number,
       x1: number,
       y1: number,
       distance: number
-    ): { origin: number[]; terminus: number[] } {
-      const x = x0 - x1
-      const y = y0 - y1
-      if (x === 0 && y === 0) {
-        return {
-          origin: [x1 + distance, y1],
-          terminus: [x1 + distance, y1]
-        }
-      }
-      const c = Math.sqrt(x * x + y * y)
-      const dX = (distance * x) / c
-      const dY = (distance * y) / c
-      return {
-        origin: [x0 + dX, y0 + dY], // next to start point
-        terminus: [x1 - dX, y1 - dY]
-      }
-      // return [x1 - dX, y1 - dY];  // next to end point
+    ): { origin: number[]; terminus: number[] } => {
+      return UIElementRenderer.extendMeasurementLine({
+        startXYendXY: [x0, y0, x1, y1],
+        distance
+      })
     }
 
     const gl = this.gl
@@ -10385,16 +10350,11 @@ export class Niivue {
    * @internal
    */
   textWidth(scale: number, str: string): number {
-    if (!str) {
-      return 0
-    }
-
-    let w = 0
-    const bytes = new TextEncoder().encode(str)
-    for (let i = 0; i < str.length; i++) {
-      w += scale * this.fontMets!.mets[bytes[i]].xadv!
-    }
-    return w
+    return UIElementRenderer.calculateTextWidth({
+      fontMets: this.fontMets as UIElementRenderer.FontMetrics,
+      scale,
+      str
+    })
   }
 
   /**
@@ -10402,17 +10362,11 @@ export class Niivue {
    * @internal
    */
   textHeight(scale: number, str: string): number {
-    if (!str) {
-      return 0
-    }
-    const byteSet = new Set(Array.from(str))
-    const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
-
-    const tallest = Object.values(this.fontMets!.mets)
-      .filter((_, index) => bytes.includes(index))
-      .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
-    const height = tallest.lbwh[3]
-    return scale * height
+    return UIElementRenderer.calculateTextHeight({
+      fontMets: this.fontMets as UIElementRenderer.FontMetrics,
+      scale,
+      str
+    })
   }
 
   /**
@@ -10538,28 +10492,15 @@ export class Niivue {
    * @internal
    */
   drawTextBetween(startXYendXY: number[], str: string, scale = 1, color: number[] | null = null): void {
-    // horizontally centered on x, below y
     if (this.fontPx <= 0) {
       return
     }
-    const xy = [(startXYendXY[0] + startXYendXY[2]) * 0.5, (startXYendXY[1] + startXYendXY[3]) * 0.5]
-    const size = this.fontPx * scale
-    const w = this.textWidth(size, str)
-    xy[0] -= 0.5 * w
-    xy[1] -= 0.5 * size
-    const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2]
-    let clr = color
-    if (clr === null) {
-      clr = this.opts.crosshairColor
-    }
-    // if color is bright, make rect background dark and vice versa
-    if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
-      clr = [0, 0, 0, 0.5]
-    } else {
-      clr = [1, 1, 1, 0.5]
-    }
-    this.drawRect(LTWH, clr) // background rect
-    this.drawText(xy, str, scale, color) // the text
+    const pos = UIElementRenderer.calculateTextBetweenPosition(startXYendXY, str, this.fontPx, scale, (size, s) =>
+      this.textWidth(size, s)
+    )
+    const bgColor = UIElementRenderer.getTextBetweenBackgroundColor(color, this.opts.crosshairColor)
+    this.drawRect(pos.rectLTWH, bgColor) // background rect
+    this.drawText([pos.textX, pos.textY], str, scale, color) // the text
   }
 
   /**
@@ -10567,24 +10508,17 @@ export class Niivue {
    * @internal
    */
   drawTextBelow(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
-    // horizontally centered on x, below y
     if (this.fontPx <= 0) {
       return
     }
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-    let size = this.fontPx * scale
-    let width = this.textWidth(size, str)
-    if (width > this.canvas.width) {
-      scale *= (this.canvas.width - 2) / width
-      size = this.fontPx * scale
-      width = this.textWidth(size, str)
-    }
-    xy[0] -= 0.5 * this.textWidth(size, str)
-    xy[0] = Math.max(xy[0], 1) // clamp left edge of canvas
-    xy[0] = Math.min(xy[0], this.canvas.width - width - 1) // clamp right edge of canvas
-    this.drawText(xy, str, scale, color)
+    const pos = UIElementRenderer.calculateTextBelowPosition(
+      { xy, str, fontPx: this.fontPx, scale, canvasWidth: this.canvas.width },
+      (size, s) => this.textWidth(size, s)
+    )
+    this.drawText([pos.x, pos.y], str, pos.scale, color)
   }
 
   /**
@@ -10592,25 +10526,17 @@ export class Niivue {
    * @internal
    */
   drawTextAbove(xy: number[], str: string, scale = 1, color: number[] | null = null): void {
-    // horizontally centered on x, above y
     if (this.fontPx <= 0) {
       return
     }
     if (!this.canvas) {
       throw new Error('canvas undefined')
     }
-    let size = this.fontPx * scale
-    let width = this.textWidth(size, str)
-    if (width > this.canvas.width) {
-      scale *= (this.canvas.width - 2) / width
-      size = this.fontPx * scale
-      width = this.textWidth(size, str)
-    }
-    xy[0] -= 0.5 * this.textWidth(size, str)
-    xy[0] = Math.max(xy[0], 1) // clamp left edge of canvas
-    xy[0] = Math.min(xy[0], this.canvas.width - width - 1) // clamp right edge of canvas
-    xy[1] -= size // position above the y coordinate
-    this.drawText(xy, str, scale, color)
+    const pos = UIElementRenderer.calculateTextAbovePosition(
+      { xy, str, fontPx: this.fontPx, scale, canvasWidth: this.canvas.width },
+      (size, s) => this.textWidth(size, s)
+    )
+    this.drawText([pos.x, pos.y], str, pos.scale, color)
   }
 
   /**
@@ -12664,24 +12590,16 @@ export class Niivue {
     // Set shader canvas size to the region instead of full canvas
     this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, regionW, regionH)
 
-    // Compute thumbnail width/height constrained by region
-    let h = regionH
-    let w = regionH * this.bmpTextureWH
-    if (w > regionW) {
-      // constrained by width
-      h = regionW / this.bmpTextureWH
-      w = regionW
-    }
+    // Calculate thumbnail dimensions using helper
+    const thumb = UIElementRenderer.calculateThumbnailDimensions(regionW, regionH, this.bmpTextureWH)
+    const left = regionX + thumb.left
+    const top = regionY + thumb.top
 
-    // Center thumbnail inside the region
-    const left = regionX + (regionW - w) / 2
-    const top = regionY + (regionH - h) / 2
-
-    this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, w, h)
+    this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, thumb.width, thumb.height)
 
     this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
+    this.gl.bindVertexArray(this.unusedVAO)
   }
 
   /**
@@ -12743,63 +12661,20 @@ export class Niivue {
     }
     this.lineShader.use(this.gl)
     const dottedLineColor = lineColor[3] < 0 ? [...this.opts.crosshairColor] : [...lineColor]
-
     dottedLineColor[3] = 0.3
-
-    // get vector
-    const segment = vec2.fromValues(startXYendXY[2] - startXYendXY[0], startXYendXY[3] - startXYendXY[1])
-    const totalLength = vec2.length(segment)
-    vec2.normalize(segment, segment)
-    const scale = 1.0
-    const size = this.fontPx * scale
-    vec2.scale(segment, segment, size / 2)
-    const segmentLength = vec2.length(segment)
-    let segmentCount = Math.floor(totalLength / segmentLength)
-
-    if (totalLength % segmentLength) {
-      segmentCount++
-    }
-
-    const currentSegmentXY = [startXYendXY[0], startXYendXY[1]]
 
     this.gl.uniform4fv(this.lineShader.uniforms.lineColor, dottedLineColor)
     this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height])
     this.gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
 
-    // draw all segments except for the last one
-    for (let i = 0; i < segmentCount - 1; i++) {
-      if (i % 2) {
-        currentSegmentXY[0] += segment[0]
-        currentSegmentXY[1] += segment[1]
-        continue
-      }
-
-      const segmentStartXYendXY = [
-        currentSegmentXY[0],
-        currentSegmentXY[1],
-        currentSegmentXY[0] + segment[0],
-        currentSegmentXY[1] + segment[1]
-      ]
-
-      // draw Line
-
-      this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentStartXYendXY)
+    // Calculate and draw dotted line segments using helper
+    const segments = UIElementRenderer.calculateDottedLineSegments(startXYendXY, this.fontPx, 1.0)
+    for (const seg of segments) {
+      this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, [seg.startX, seg.startY, seg.endX, seg.endY])
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-      // this.gl.bindVertexArray(this.unusedVAO); //set vertex attributes
-      currentSegmentXY[0] += segment[0]
-      currentSegmentXY[1] += segment[1]
     }
 
-    // this.gl.uniform4fv(this.lineShader.uniforms.lineColor, lineColor);
-    // this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [
-    //   this.gl.canvas.width,
-    //   this.gl.canvas.height,
-    // ]);
-    // //draw Line
-    // this.gl.uniform1f(this.lineShader.uniforms.thickness, thickness);
-    // this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY);
-    // this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-    this.gl.bindVertexArray(this.unusedVAO) // set vertex attributes
+    this.gl.bindVertexArray(this.unusedVAO)
   }
 
   /**

@@ -453,28 +453,57 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 3.5 UIElementRenderer Module
 **File:** `packages/niivue/src/niivue/rendering/UIElementRenderer.ts`
 **Responsibility:** Render UI overlays (colorbar, labels, rulers, etc.)
-**Line Range:** ~10491-10808, ~11151-11832, ~13637-13800
-**Key Methods:**
-- `drawColorbar()` - Colorbar rendering
-- `drawText()`, `drawTextRight()`, `drawTextLeft()`, `drawTextBelow()`, `drawTextAbove()` - Text rendering
-- `drawRect()`, `drawCircle()`, `drawSelectionBox()` - Shape rendering
-- `drawLine()`, `draw3DLine()`, `drawDottedLine()` - Line rendering
-- `drawRuler()`, `drawRuler10cm()` - Ruler/measurement display
-- `drawMeasurementTool()` - Measurement overlay
-- `drawAngleMeasurementTool()`, `drawAngleText()` - Angle measurement
-- `draw3DLabels()`, `drawAnchoredLabels()` - Label rendering
-- `drawGraph()` - Graph/plot overlay
-- `drawOrientationCube()` - Orientation indicator
-- `drawThumbnail()` - Thumbnail preview
+**Key Functions Extracted:**
+- `calculateTextWidth()` ✅ - Calculate pixel width of text string
+- `calculateTextHeight()` ✅ - Calculate pixel height of text
+- `calculateTextBelowPosition()` ✅ - Calculate text position centered below a point
+- `calculateTextAbovePosition()` ✅ - Calculate text position centered above a point
+- `calculateTextBetweenPosition()` ✅ - Calculate text position between two points
+- `getTextBetweenBackgroundColor()` ✅ - Determine background color for text
+- `calculateRulerGeometry()` ✅ - Calculate ruler geometry for 10cm ruler
+- `getRulerOutlineColor()` ✅ - Determine ruler outline color
+- `calculateRulerTicks()` ✅ - Calculate tick mark positions for ruler
+- `extendMeasurementLine()` ✅ - Calculate extended line coordinates for measurement tool
+- `calculateDottedLineSegments()` ✅ - Calculate dotted line segments
+- `calculateThumbnailDimensions()` ✅ - Calculate thumbnail dimensions to fit region
+- `calculateScreenPxRange()` ✅ - Calculate screen pixel range for MSDF font rendering
+- `calculateOrientationCubePosition()` ✅ - Calculate orientation cube position and size
+- `calculateGraphLayout()` ✅ - Calculate graph layout dimensions
+- `calculateGraphColors()` ✅ - Calculate graph background colors
+- `calculateGraphLineStride()` ✅ - Calculate stride for graph vertical lines
+- `calculateTickSpacing()` ✅ - Calculate tick spacing for colorbar/graph axis
+- `humanizeNumber()` ✅ - Format number by dropping trailing zeros
+- `calculateBulletMarginWidth()` ✅ - Calculate bullet margin width for labels
+- `calculateLegendPanelHeight()` ✅ - Calculate legend panel height
+- `calculateLegendPanelWidth()` ✅ - Calculate legend panel width
+- `calculateColorbarPanel()` ✅ - Calculate colorbar panel area
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `textWidth()` - Delegates to UIElementRenderer.calculateTextWidth()
+- `textHeight()` - Delegates to UIElementRenderer.calculateTextHeight()
+- `drawTextBelow()` - Uses UIElementRenderer.calculateTextBelowPosition()
+- `drawTextAbove()` - Uses UIElementRenderer.calculateTextAbovePosition()
+- `drawTextBetween()` - Uses UIElementRenderer.calculateTextBetweenPosition()
+- `drawRuler()` - Uses UIElementRenderer.calculateRulerGeometry()
+- `drawRuler10cm()` - Uses UIElementRenderer.calculateRulerTicks()
+- `drawMeasurementTool()` - Uses UIElementRenderer.extendMeasurementLine()
+- `drawDottedLine()` - Uses UIElementRenderer.calculateDottedLineSegments()
+- `drawThumbnail()` - Uses UIElementRenderer.calculateThumbnailDimensions()
+
+**Properties (remain in Niivue class - tightly coupled to WebGL state):**
 - `fontShader`, `fontTexture`, `fontMets`, `fontPx`
 - `colorbarHeight`
 - `legendFontScaling`
 - `bmpShader`, `bmpTexture`, `bmpTextureWH`, `thumbnailVisible`
 
-**Dependencies:** WebGLContext, ShaderManager, CoordinateTransform
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All calculation logic extracted to pure functions
+- WebGL rendering methods remain in Niivue class due to heavy state dependencies
+- Niivue class delegates to UIElementRenderer functions and maintains backward compatibility
+
+**Dependencies:** gl-matrix, NVLabel3D
+**Status:** ✅ Completed
 
 ---
 
@@ -1212,13 +1241,13 @@ For each module in the plan above:
 - ✅ 2.3 ConnectomeManager Module
 - ✅ 2.4 FileLoader Module
 
-### Phase 3: Rendering Modules 🔄
+### Phase 3: Rendering Modules ✅
 
 - ✅ 3.1 SliceRenderer Module
 - ✅ 3.2 VolumeRenderer Module
 - ✅ 3.3 MeshRenderer Module
 - ✅ 3.4 SceneRenderer Module
-- ⬜ 3.5 UIElementRenderer Module
+- ✅ 3.5 UIElementRenderer Module
 
 ### Phase 4: Interaction Modules ⬜
 
