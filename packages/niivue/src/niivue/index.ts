@@ -16,6 +16,7 @@ import * as VolumeColormap from '@/niivue/data/VolumeColormap'
 import * as VolumeModulation from '@/niivue/data/VolumeModulation'
 import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
 import * as MeshManager from '@/niivue/data/MeshManager'
+import * as ConnectomeManager from '@/niivue/data/ConnectomeManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -5486,21 +5487,8 @@ export class Niivue {
    * @internal
    */
   handleNodeAdded(event: { detail: { node: NVConnectomeNode } }): void {
-    const node = event.detail.node
-    const rgba = [1, 1, 1, 1]
-    this.addLabel(
-      node.name,
-      {
-        textColor: rgba,
-        bulletScale: 1,
-        bulletColor: rgba,
-        lineWidth: 0,
-        lineColor: rgba,
-        lineTerminator: LabelLineTerminator.NONE,
-        textScale: 1.0
-      },
-      [node.x, node.y, node.z]
-    )
+    const labelData = ConnectomeManager.createNodeAddedLabelData(event.detail.node)
+    this.addLabel(labelData.text, labelData.style, labelData.position)
     this.drawScene()
   }
 
@@ -5512,20 +5500,7 @@ export class Niivue {
    * @internal
    */
   loadConnectomeAsMesh(json: Connectome | LegacyConnectome | FreeSurferConnectome): NVMesh {
-    let connectome = json
-    if ('data_type' in json && json.data_type === 'fs_pointset') {
-      connectome = NVConnectome.convertFreeSurferConnectome(json as FreeSurferConnectome)
-      log.warn('converted FreeSurfer connectome', connectome)
-    } else if ('nodes' in json) {
-      const nodes = json.nodes
-      if ('names' in nodes && 'X' in nodes && 'Y' in nodes && 'Z' in nodes && 'Color' in nodes && 'Size' in nodes) {
-        // convert dense "legacy" format to sparse format
-        connectome = NVConnectome.convertLegacyConnectome(json as LegacyConnectome)
-      }
-    } else {
-      throw new Error('not a known connectome format')
-    }
-    return new NVConnectome(this.gl, connectome as LegacyConnectome)
+    return ConnectomeManager.loadConnectomeAsMesh({ gl: this.gl, json })
   }
 
   /**
@@ -10387,15 +10362,11 @@ export class Niivue {
    * Get all 3D labels from document and connectome meshes.
    * @internal
    */
-
   getAllLabels(): NVLabel3D[] {
-    const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME)
-    const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
-    const meshLabels = meshNodes.map((n) => n.label)
-    // filter our undefined labels
-    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
-    const labels = [...this.document.labels, ...definedMeshLabels]
-    return labels
+    return ConnectomeManager.getAllLabels({
+      meshes: this.meshes,
+      documentLabels: this.document.labels
+    })
   }
 
   /**
@@ -10403,34 +10374,10 @@ export class Niivue {
    * @internal
    */
   getConnectomeLabels(): NVLabel3D[] {
-    const connectomes = this.meshes.filter((m) => m.type === MeshType.CONNECTOME && m.showLegend !== false)
-
-    const meshNodes = connectomes.flatMap((m) => m.nodes as NVConnectomeNode[])
-    const meshLabels = meshNodes.map((n) => n.label)
-    // filter our undefined labels
-
-    // const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined)
-    const definedMeshLabels = meshLabels.filter((l): l is NVLabel3D => l !== undefined && l.text !== '')
-    // get all of our non-anchored labels
-    const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === LabelAnchorPoint.NONE)
-    // get the unique set of unanchored labels
-    // console.log(definedMeshLabels)
-    const nonAnchoredLabelSet = new Set(definedMeshLabels)
-    for (const label of nonAnchoredLabels) {
-      nonAnchoredLabelSet.add(label)
-    }
-    // now add mesh atlases
-    const meshes = this.meshes.filter((m) => m.type === MeshType.MESH)
-    for (let i = 0; i < meshes.length; i++) {
-      for (let j = 0; j < meshes[i].layers.length; j++) {
-        if (meshes[i].layers[j].labels) {
-          for (let k = 0; k < meshes[i].layers[j].labels.length; k++) {
-            nonAnchoredLabelSet.add(meshes[i].layers[j].labels[k])
-          }
-        }
-      }
-    }
-    return Array.from(nonAnchoredLabelSet)
+    return ConnectomeManager.getConnectomeLabels({
+      meshes: this.meshes,
+      documentLabels: this.document.labels
+    })
   }
 
   /**

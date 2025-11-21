@@ -249,12 +249,21 @@ This method orchestrates the entire volume update process and could remain as-is
 **Responsibility:** Connectome-specific data handling
 **Line Range:** ~5660-5709
 **Key Methods:**
-- `loadConnectome()` - Load connectome JSON
-- `loadConnectomeAsMesh()` - Convert to mesh representation
-- `handleNodeAdded()` - Event handling for connectome nodes
+- `loadConnectomeAsMesh()` ✅ - Convert to mesh representation
+- `createNodeAddedLabelData()` ✅ - Create label data for node-added events
+- `getAllLabels()` ✅ - Get all labels from meshes and document
+- `getConnectomeLabels()` ✅ - Get visible connectome labels
+- `convertFreeSurferConnectome()` ✅ - Convert FreeSurfer format (wrapper)
+- `convertLegacyConnectome()` ✅ - Convert legacy format (wrapper)
 
-**Dependencies:** MeshManager
-**Status:** ⬜ Not Started
+**Dependencies:** NVConnectome, NVLabel3D
+**Status:** ✅ Completed
+
+**Implementation Notes:**
+- Pure functions extracted to ConnectomeManager.ts
+- `loadConnectome()`, `loadConnectomeFromUrl()`, etc. remain in Niivue class as they are orchestration methods
+- Label filtering functions (`getAllLabels`, `getConnectomeLabels`) extracted as pure functions
+- Niivue class delegates to ConnectomeManager functions and maintains backward compatibility
 
 ---
 
@@ -1118,7 +1127,7 @@ For each module in the plan above:
 
 - ✅ 2.1 VolumeManager Module
 - ✅ 2.2 MeshManager Module
-- ⬜ 2.3 ConnectomeManager Module
+- ✅ 2.3 ConnectomeManager Module
 - ⬜ 2.4 FileLoader Module
 
 ### Phase 3: Rendering Modules ⬜
