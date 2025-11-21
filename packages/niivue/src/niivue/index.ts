@@ -15,6 +15,7 @@ import * as VolumeTexture from '@/niivue/data/VolumeTexture'
 import * as VolumeColormap from '@/niivue/data/VolumeColormap'
 import * as VolumeModulation from '@/niivue/data/VolumeModulation'
 import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
+import * as MeshManager from '@/niivue/data/MeshManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -3499,9 +3500,9 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   addMesh(mesh: NVMesh): void {
-    this.meshes.push(mesh)
-    const idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1
-    this.setMesh(mesh, idx)
+    const result = MeshManager.addMesh(this.meshes, mesh)
+    this.meshes = result.meshes
+    this.setMesh(mesh, result.index)
     this.onMeshLoaded(mesh)
   }
 
@@ -4043,20 +4044,7 @@ export class Niivue {
    * @returns The mesh index, or -1 if not found or out of range.
    */
   getMeshIndexByID(id: string | number): number {
-    if (typeof id === 'number') {
-      if (id >= this.meshes.length) {
-        return -1
-      } // range 0..len-1
-      return id
-    }
-    const n = this.meshes.length
-    for (let i = 0; i < n; i++) {
-      const id_i = this.meshes[i].id
-      if (id_i === id) {
-        return i
-      }
-    }
-    return -1 // -1 signals that no valid index was found for a volume with the given id
+    return MeshManager.getMeshIndexByID(this.meshes, id)
   }
 
   /**
@@ -4072,12 +4060,16 @@ export class Niivue {
     key: keyof NVMesh,
     val: number | string | boolean | Uint8Array | number[] | ColorMap | LegacyConnectome | Float32Array
   ): void {
-    const idx = this.getMeshIndexByID(id)
+    const idx = MeshManager.setMeshProperty({
+      meshes: this.meshes,
+      id,
+      key,
+      val,
+      gl: this.gl
+    })
     if (idx < 0) {
-      log.warn('setMeshProperty() id not loaded', id)
       return
     }
-    this.meshes[idx].setProperty(key, val, this.gl)
     this.updateGLVolume()
     this.onMeshPropertyChanged(idx, key, val)
   }
@@ -4093,12 +4085,13 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
    */
   indexNearestXYZmm(mesh: number, Xmm: number, Ymm: number, Zmm: number): number[] {
-    const idx = this.getMeshIndexByID(mesh)
-    if (idx < 0) {
-      log.warn('indexNearestXYZmm() id not loaded', mesh)
-      return [NaN, NaN]
-    }
-    return this.meshes[idx].indexNearestXYZmm(Xmm, Ymm, Zmm)
+    return MeshManager.indexNearestXYZmm({
+      meshes: this.meshes,
+      meshId: mesh,
+      Xmm,
+      Ymm,
+      Zmm
+    })
   }
 
   /**
@@ -4110,13 +4103,15 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   decimateHierarchicalMesh(mesh: number, order: number = 3): boolean {
-    const idx = this.getMeshIndexByID(mesh)
-    if (idx < 0) {
-      log.warn('reverseFaces() id not loaded', mesh)
-      return
+    const ret = MeshManager.decimateHierarchicalMesh({
+      meshes: this.meshes,
+      meshId: mesh,
+      gl: this.gl,
+      order
+    })
+    if (ret) {
+      this.updateGLVolume()
     }
-    const ret = this.meshes[idx].decimateHierarchicalMesh(this.gl, order)
-    this.updateGLVolume()
     return ret
   }
 
@@ -4127,13 +4122,14 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   reverseFaces(mesh: number): void {
-    const idx = this.getMeshIndexByID(mesh)
-    if (idx < 0) {
-      log.warn('reverseFaces() id not loaded', mesh)
-      return
+    const success = MeshManager.reverseFaces({
+      meshes: this.meshes,
+      meshId: mesh,
+      gl: this.gl
+    })
+    if (success) {
+      this.updateGLVolume()
     }
-    this.meshes[idx].reverseFaces(this.gl)
-    this.updateGLVolume()
   }
 
   /**
@@ -4146,13 +4142,17 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/mesh.4D.html | live demo usage}
    */
   async setMeshLayerProperty(mesh: number | string, layer: number, key: keyof NVMeshLayer, val: number): Promise<void> {
-    const idx = this.getMeshIndexByID(mesh)
-    if (idx < 0) {
-      log.warn('setMeshLayerProperty() id not loaded', mesh)
-      return
+    const success = await MeshManager.setMeshLayerProperty({
+      meshes: this.meshes,
+      meshId: mesh,
+      layer,
+      key,
+      val,
+      gl: this.gl
+    })
+    if (success) {
+      this.updateGLVolume()
     }
-    await this.meshes[idx].setLayerProperty(layer, key, val, this.gl)
-    this.updateGLVolume()
   }
 
   /**
@@ -4221,20 +4221,8 @@ export class Niivue {
     this.meshes.forEach((m) => {
       log.debug('MESH: ', m.name)
     })
-    const numberOfLoadedMeshes = this.meshes.length
-    if (toIndex > numberOfLoadedMeshes) {
-      return
-    }
-    const meshIndex = this.getMeshIndexByID(mesh.id)
-    if (toIndex === 0) {
-      this.meshes.splice(meshIndex, 1)
-      this.meshes.unshift(mesh)
-    } else if (toIndex < 0) {
-      this.meshes.splice(this.getMeshIndexByID(mesh.id), 1)
-    } else {
-      this.meshes.splice(meshIndex, 1)
-      this.meshes.splice(toIndex, 0, mesh)
-    }
+    const result = MeshManager.setMesh(this.meshes, mesh, toIndex)
+    this.meshes = result.meshes
     this.updateGLVolume()
     this.meshes.forEach((m) => {
       log.debug(m.name)
@@ -6922,27 +6910,18 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   setMeshShader(id: number | string, meshShaderNameOrNumber: number | string = 2): void {
-    let shaderIndex: number | undefined = 0
-    if (typeof meshShaderNameOrNumber === 'number') {
-      shaderIndex = meshShaderNameOrNumber
-    } else {
-      shaderIndex = this.meshShaderNameToNumber(meshShaderNameOrNumber)
-    }
-
-    if (shaderIndex === undefined) {
-      throw new Error('shaderIndex undefined')
-    }
-
-    shaderIndex = Math.min(shaderIndex, this.meshShaders.length - 1)
-    shaderIndex = Math.max(shaderIndex, 0)
-    const index = this.getMeshIndexByID(id)
-    if (index >= this.meshes.length) {
-      log.debug('Unable to change shader until mesh is loaded (maybe you need async)')
+    const result = MeshManager.setMeshShader({
+      meshes: this.meshes,
+      meshShaders: this.meshShaders,
+      id,
+      meshShaderNameOrNumber,
+      meshShaderNameToNumber: this.meshShaderNameToNumber.bind(this)
+    })
+    if (result === null) {
       return
     }
-    this.meshes[index].meshShaderIndex = shaderIndex
     this.updateGLVolume()
-    this.onMeshShaderChanged(index, shaderIndex)
+    this.onMeshShaderChanged(result.meshIndex, result.shaderIndex)
   }
 
   /**

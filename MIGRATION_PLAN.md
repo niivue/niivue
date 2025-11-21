@@ -217,20 +217,30 @@ This method orchestrates the entire volume update process and could remain as-is
 **Responsibility:** Mesh loading, management, and operations
 **Line Range:** ~3617-3631, ~4168-4286, ~4373-4456
 **Key Methods:**
-- `addMesh()`, `removeMesh()`, `removeMeshByUrl()`
-- `setMesh()`, `getMeshIndexByID()`
-- `indexNearestXYZmm()` - Find nearest vertex
-- `decimateHierarchicalMesh()` - Mesh decimation
-- `reverseFaces()` - Flip mesh normals
-- `setMeshShader()` - Shader assignment
-- `setMeshThicknessOn2D()` - 2D mesh rendering thickness
+- `addMesh()` ✅
+- `removeMesh()` ✅ (via setMesh with toIndex=-1)
+- `setMesh()`, `getMeshIndexByID()` ✅
+- `setMeshProperty()` ✅
+- `indexNearestXYZmm()` ✅ - Find nearest vertex
+- `decimateHierarchicalMesh()` ✅ - Mesh decimation
+- `reverseFaces()` ✅ - Flip mesh normals
+- `setMeshLayerProperty()` ✅ - Set mesh layer property
+- `setMeshShader()` ✅ - Shader assignment
+- `findMeshByUrl()` ✅ - Find mesh by URL helper
+- `setMeshThicknessOn2D()` - Remains in Niivue (simple option setter)
 
 **Properties to migrate:**
-- `meshes: NVMesh[]`
-- `matCapTexture: WebGLTexture`
+- `meshes: NVMesh[]` - Handled via delegation
+- `matCapTexture: WebGLTexture` - Remains in Niivue (tightly coupled to WebGL state)
 
 **Dependencies:** WebGLContext, ShaderManager
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
+
+**Implementation Notes:**
+- Core mesh array management functions extracted to MeshManager.ts as pure functions
+- All functions use pure functional approach with immutable data where possible
+- Niivue class delegates to MeshManager functions and maintains backward compatibility
+- Functions with more than 3 parameters use object parameters for clarity
 
 ---
 
@@ -1107,7 +1117,7 @@ For each module in the plan above:
 ### Phase 2: Data Management Modules 🔄
 
 - ✅ 2.1 VolumeManager Module
-- ⬜ 2.2 MeshManager Module
+- ✅ 2.2 MeshManager Module
 - ⬜ 2.3 ConnectomeManager Module
 - ⬜ 2.4 FileLoader Module
 
