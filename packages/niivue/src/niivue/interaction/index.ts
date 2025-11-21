@@ -4,3 +4,8 @@
  */
 
 export * from './EventController'
+export * from './MouseController'
+export * from './TouchController'
+export * from './KeyboardController'
+export * from './WheelController'
+export * from './DragModeManager'

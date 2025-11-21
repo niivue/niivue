@@ -704,20 +704,39 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 4.6 DragModeManager Module
 **File:** `packages/niivue/src/niivue/interaction/DragModeManager.ts`
 **Responsibility:** Manage different drag interaction modes
-**Line Range:** ~1539-1743, ~2344-2355, ~10615-10667
-**Key Methods:**
-- `setActiveDragMode()`, `getCurrentDragMode()`, `clearActiveDragMode()`
-- `setDragMode()` - Set global drag mode
-- `setDragStart()`, `setDragEnd()` - Drag boundaries
-- `dragForPanZoom()` - Pan/zoom drag handling
-- `dragForCenterButton()` - Center button drag
-- `dragForSlicer3D()` - 3D slicer plane drag
-- `windowingHandler()` - Window/level adjustment
-- `resetBriCon()` - Reset brightness/contrast
-- `calculateNewRange()` - Calculate new intensity range
-- `generateMouseUpCallback()` - Generate callback for mouse up
+**Key Functions Extracted:**
+- `parseDragModeString()` ✅ - Convert string to DRAG_MODE enum
+- `getCurrentDragModeValue()` ✅ - Get current drag mode or fallback
+- `createClearedDragModeState()` ✅ - Create state for cleared drag mode
+- `createActiveDragModeState()` ✅ - Create state for active drag mode
+- `calculateMinMaxVoxIdx()` ✅ - Calculate min/max voxel indices
+- `calculateAngleBetweenLines()` ✅ - Calculate angle between two lines
+- `createResetAngleMeasurementState()` ✅ - Reset angle measurement state
+- `calculateDragPosition()` ✅ - Scale position by dpr
+- `calculatePanZoomFromDrag()` ✅ - Calculate pan offset from drag
+- `calculateSlicer3DZoomFromDrag()` ✅ - Calculate 3D slicer zoom
+- `calculateWindowingAdjustment()` ✅ - Calculate windowing cal_min/cal_max
+- `calculateIntensityRangeFromVoxels()` ✅ - Calculate intensity range from voxel region
+- `adjustRangesForConstantDimension()` ✅ - Adjust ranges for constant dimensions
+- `shouldTrackDragPositions()` ✅ - Check if drag mode tracks positions
+- `getNextAngleMeasurementState()` ✅ - Get next angle measurement state
+- `isAngleDragMode()`, `isContrastDragMode()`, etc. ✅ - Drag mode type checks
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `calculateMinMaxVoxIdx()` - Delegates to DragModeManager.calculateMinMaxVoxIdx()
+- `calculateNewRange()` - Uses DragModeManager helper functions
+- `setDragStart()`, `setDragEnd()` - Uses DragModeManager.calculateDragPosition()
+- `windowingHandler()` - Uses DragModeManager.calculateWindowingAdjustment()
+- `setActiveDragMode()` - Uses DragModeManager.createActiveDragModeState()
+- `getCurrentDragMode()` - Uses DragModeManager.getCurrentDragModeValue()
+- `clearActiveDragMode()` - Uses DragModeManager.createClearedDragModeState()
+- `setDragMode()` - Uses DragModeManager.parseDragModeString()
+- `calculateAngleBetweenLines()` - Delegates to DragModeManager
+- `resetAngleMeasurement()` - Uses DragModeManager.createResetAngleMeasurementState()
+- `dragForPanZoom()` - Uses DragModeManager.calculatePanZoomFromDrag()
+- `dragForSlicer3D()` - Uses DragModeManager.calculateSlicer3DZoomFromDrag()
+
+**Properties (remain in Niivue class - state management):**
 - `uiData.isDragging`, `uiData.dragStart`, `uiData.dragEnd`
 - `uiData.activeDragMode`, `uiData.activeDragButton`
 - `uiData.windowX`, `uiData.windowY`
@@ -725,8 +744,14 @@ This method orchestrates the entire volume update process and could remain as-is
 - `uiData.dragClipPlaneStartDepthAziElev`
 - `opts.dragMode`, `opts.mouseButtonConfig`, `opts.touchConfig`
 
-**Dependencies:** None (pure state management)
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Event listener methods remain in Niivue class due to heavy state dependencies
+- All calculation logic extracted to pure functions
+- State management stays in Niivue class
+
+**Dependencies:** gl-matrix (vec4), DRAG_MODE from nvdocument
+**Status:** ✅ Completed
 
 ---
 
@@ -1348,14 +1373,14 @@ For each module in the plan above:
 - ✅ 3.4 SceneRenderer Module
 - ✅ 3.5 UIElementRenderer Module
 
-### Phase 4: Interaction Modules 🔄
+### Phase 4: Interaction Modules ✅
 
 - ✅ 4.1 EventController Module
 - ✅ 4.2 MouseController Module
 - ✅ 4.3 TouchController Module
 - ✅ 4.4 KeyboardController Module
 - ✅ 4.5 WheelController Module
-- ⬜ 4.6 DragModeManager Module
+- ✅ 4.6 DragModeManager Module
 
 ### Phase 5: Navigation & Layout Modules ⬜
 

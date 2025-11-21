@@ -28,6 +28,7 @@ import * as MouseController from '@/niivue/interaction/MouseController'
 import * as TouchController from '@/niivue/interaction/TouchController'
 import * as KeyboardController from '@/niivue/interaction/KeyboardController'
 import * as WheelController from '@/niivue/interaction/WheelController'
+import * as DragModeManager from '@/niivue/interaction/DragModeManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -1405,8 +1406,10 @@ export class Niivue {
    * @internal
    */
   setActiveDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): void {
-    this.uiData.activeDragMode = this.getMouseButtonDragMode(button, shiftKey, ctrlKey)
-    this.uiData.activeDragButton = button
+    const dragMode = this.getMouseButtonDragMode(button, shiftKey, ctrlKey)
+    const state = DragModeManager.createActiveDragModeState(dragMode, button)
+    this.uiData.activeDragMode = state.activeDragMode
+    this.uiData.activeDragButton = state.activeDragButton
   }
 
   /**
@@ -1414,11 +1417,10 @@ export class Niivue {
    * @internal
    */
   getCurrentDragMode(): DRAG_MODE {
-    if (this.uiData.activeDragMode !== null) {
-      return this.uiData.activeDragMode
-    }
-    // Fallback to right-click mode for backward compatibility
-    return this.opts.dragMode
+    return DragModeManager.getCurrentDragModeValue({
+      activeDragMode: this.uiData.activeDragMode,
+      fallbackDragMode: this.opts.dragMode
+    })
   }
 
   /**
@@ -1426,8 +1428,9 @@ export class Niivue {
    * @internal
    */
   clearActiveDragMode(): void {
-    this.uiData.activeDragMode = null
-    this.uiData.activeDragButton = null
+    const state = DragModeManager.createClearedDragModeState()
+    this.uiData.activeDragMode = state.activeDragMode
+    this.uiData.activeDragButton = state.activeDragButton
   }
 
   /**
@@ -1549,11 +1552,8 @@ export class Niivue {
    * @param array - an array of two values
    * @returns an array of two values representing the min and max voxel indices
    */
-  calculateMinMaxVoxIdx(array: number[]): number[] {
-    if (array.length > 2) {
-      throw new Error('array must not contain more than two values')
-    }
-    return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))]
+  calculateMinMaxVoxIdx(array: number[]): [number, number] {
+    return DragModeManager.calculateMinMaxVoxIdx(array)
   }
 
   /**
@@ -1580,20 +1580,12 @@ export class Niivue {
     }
     const endVox = this.frac2vox(frac, volIdx)
 
-    let hi = -Number.MAX_VALUE
-    let lo = Number.MAX_VALUE
     const xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]])
     const yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]])
     const zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]])
 
-    // for our constant dimension we add one so that the for loop runs at least once
-    if (startVox[0] - endVox[0] === 0) {
-      xrange[1] = startVox[0] + 1
-    } else if (startVox[1] - endVox[1] === 0) {
-      yrange[1] = startVox[1] + 1
-    } else if (startVox[2] - endVox[2] === 0) {
-      zrange[1] = startVox[2] + 1
-    }
+    // Adjust ranges for constant dimensions
+    const adjustedRanges = DragModeManager.adjustRangesForConstantDimension(startVox, endVox, xrange, yrange, zrange)
 
     const hdr = this.volumes[volIdx].hdr
     const img = this.volumes[volIdx].img
@@ -1601,28 +1593,21 @@ export class Niivue {
       return
     }
 
-    const xdim = hdr.dims[1]
-    const ydim = hdr.dims[2]
-    for (let z = zrange[0]; z < zrange[1]; z++) {
-      const zi = z * xdim * ydim
-      for (let y = yrange[0]; y < yrange[1]; y++) {
-        const yi = y * xdim
-        for (let x = xrange[0]; x < xrange[1]; x++) {
-          const index = zi + yi + x
-          if (lo > img[index]) {
-            lo = img[index]
-          }
-          if (hi < img[index]) {
-            hi = img[index]
-          }
-        }
-      }
-    }
-    if (lo >= hi) {
+    // Calculate intensity range using helper
+    const intensityResult = DragModeManager.calculateIntensityRangeFromVoxels({
+      xrange: adjustedRanges.xrange,
+      yrange: adjustedRanges.yrange,
+      zrange: adjustedRanges.zrange,
+      dims: hdr.dims,
+      img
+    })
+
+    if (!intensityResult.hasVariation) {
       return
     } // no variability or outside volume
-    const mnScale = intensityRaw2Scaled(hdr, lo)
-    const mxScale = intensityRaw2Scaled(hdr, hi)
+
+    const mnScale = intensityRaw2Scaled(hdr, intensityResult.lo)
+    const mxScale = intensityRaw2Scaled(hdr, intensityResult.hi)
     this.volumes[volIdx].cal_min = mnScale
     this.volumes[volIdx].cal_max = mxScale
     this.onIntensityChange(this.volumes[volIdx])
@@ -1935,61 +1920,25 @@ export class Niivue {
    * @internal
    */
   windowingHandler(x: number, y: number, volIdx: number = 0): void {
-    // x and y are the current mouse or touch position in window coordinates
-    const wx = this.uiData.windowX
-    const wy = this.uiData.windowY
-    let mn = this.volumes[0].cal_min
-    let mx = this.volumes[0].cal_max
-    const gmn = this.volumes[0].global_min
-    const gmx = this.volumes[0].global_max
+    // Calculate windowing adjustments using helper
+    const result = DragModeManager.calculateWindowingAdjustment({
+      x,
+      y,
+      windowX: this.uiData.windowX,
+      windowY: this.uiData.windowY,
+      currentCalMin: this.volumes[0].cal_min!,
+      currentCalMax: this.volumes[0].cal_max!,
+      globalMin: this.volumes[0].global_min!,
+      globalMax: this.volumes[0].global_max!
+    })
 
-    if (y < wy) {
-      // increase level if mouse moves up
-      mn += 1
-      mx += 1
-    } else if (y > wy) {
-      // decrease level if mouse moves down
-      mn -= 1
-      mx -= 1
-    }
-
-    if (x > wx) {
-      // increase window width if mouse moves right
-      mn -= 1
-      mx += 1
-    } else if (x < wx) {
-      // decrease window width if mouse moves left
-      mn += 1
-      mx -= 1
-    }
-
-    if (mx - mn < 1) {
-      // ensure window width is at least 1
-      mx = mn + 1
-    }
-
-    if (mn < gmn) {
-      // ensure min is not below global min
-      mn = gmn
-    }
-
-    if (mx > gmx) {
-      // ensure max is not above global max
-      mx = gmx
-    }
-
-    if (mn > mx) {
-      // ensure min is not above max
-      mn = mx - 1
-    }
-
-    this.volumes[volIdx].cal_min = mn
-    this.volumes[volIdx].cal_max = mx
+    this.volumes[volIdx].cal_min = result.calMin
+    this.volumes[volIdx].cal_max = result.calMax
     this.refreshLayers(this.volumes[volIdx], 0)
     // set the current mouse position (window space) as the new reference point
     // for the next comparison
-    this.uiData.windowX = x
-    this.uiData.windowY = y
+    this.uiData.windowX = result.windowX
+    this.uiData.windowY = result.windowY
   }
 
   /**
@@ -2199,10 +2148,9 @@ export class Niivue {
    * @internal
    */
   setDragStart(x: number, y: number): void {
-    x *= this.uiData.dpr!
-    y *= this.uiData.dpr!
-    this.uiData.dragStart[0] = x
-    this.uiData.dragStart[1] = y
+    const [scaledX, scaledY] = DragModeManager.calculateDragPosition(x, y, this.uiData.dpr!)
+    this.uiData.dragStart[0] = scaledX
+    this.uiData.dragStart[1] = scaledY
   }
 
   /**
@@ -2210,10 +2158,9 @@ export class Niivue {
    * @internal
    */
   setDragEnd(x: number, y: number): void {
-    x *= this.uiData.dpr!
-    y *= this.uiData.dpr!
-    this.uiData.dragEnd[0] = x
-    this.uiData.dragEnd[1] = y
+    const [scaledX, scaledY] = DragModeManager.calculateDragPosition(x, y, this.uiData.dpr!)
+    this.uiData.dragEnd[0] = scaledX
+    this.uiData.dragEnd[1] = scaledY
   }
 
   /**
@@ -9417,12 +9364,17 @@ export class Niivue {
     if (isNaN(startMM[0]) || isNaN(endMM[0]) || isNaN(endMM[3])) {
       return
     }
-    const v = vec4.create()
-    const zoom = this.uiData.pan2DxyzmmAtMouseDown[3]
-    vec4.sub(v, endMM, startMM)
-    this.scene.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0]
-    this.scene.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1]
-    this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2]
+
+    // Calculate pan using helper function
+    const result = DragModeManager.calculatePanZoomFromDrag({
+      startMM,
+      endMM,
+      pan2DxyzmmAtMouseDown: this.uiData.pan2DxyzmmAtMouseDown
+    })
+
+    this.scene.pan2Dxyzmm[0] = result.pan2Dxyzmm[0]
+    this.scene.pan2Dxyzmm[1] = result.pan2Dxyzmm[1]
+    this.scene.pan2Dxyzmm[2] = result.pan2Dxyzmm[2]
     this.canvas!.focus() // required after change for issue706
   }
 
@@ -9439,21 +9391,25 @@ export class Niivue {
    * @internal
    */
   dragForSlicer3D(startXYendXY: number[]): void {
-    let zoom = this.uiData.pan2DxyzmmAtMouseDown[3]
-    const y = startXYendXY[3] - startXYendXY[1]
-    const pixelScale = 0.01
-    zoom += y * pixelScale
-    zoom = Math.max(zoom, 0.1)
-    zoom = Math.min(zoom, 10.0)
-    const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
-    if (this.opts.yoke3Dto2DZoom) {
-      this.scene.volScaleMultiplier = zoom
-    }
-    this.scene.pan2Dxyzmm[3] = zoom
     const mm = this.frac2mm(this.scene.crosshairPos)
-    this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
-    this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
-    this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
+
+    // Calculate 3D slicer zoom using helper function
+    const result = DragModeManager.calculateSlicer3DZoomFromDrag({
+      startY: startXYendXY[1],
+      endY: startXYendXY[3],
+      pan2DxyzmmAtMouseDown: this.uiData.pan2DxyzmmAtMouseDown,
+      currentPan2Dxyzmm: this.scene.pan2Dxyzmm,
+      crosshairMM: mm,
+      yoke3Dto2DZoom: this.opts.yoke3Dto2DZoom
+    })
+
+    if (result.volScaleMultiplier !== undefined) {
+      this.scene.volScaleMultiplier = result.volScaleMultiplier
+    }
+    this.scene.pan2Dxyzmm[0] = result.pan2Dxyzmm[0]
+    this.scene.pan2Dxyzmm[1] = result.pan2Dxyzmm[1]
+    this.scene.pan2Dxyzmm[2] = result.pan2Dxyzmm[2]
+    this.scene.pan2Dxyzmm[3] = result.pan2Dxyzmm[3]
   }
 
   /**
@@ -9650,27 +9606,7 @@ export class Niivue {
    * @internal
    */
   calculateAngleBetweenLines(line1: number[], line2: number[]): number {
-    // For angle measurement, we need to calculate vectors from the intersection point
-    // The intersection point is the end of line1 (which is the start of line2)
-    const intersectionX = line1[2]
-    const intersectionY = line1[3]
-    const v1x = line1[0] - intersectionX
-    const v1y = line1[1] - intersectionY
-    const v2x = line2[2] - intersectionX
-    const v2y = line2[3] - intersectionY
-    const dot = v1x * v2x + v1y * v2y
-    const mag1 = Math.sqrt(v1x * v1x + v1y * v1y)
-    const mag2 = Math.sqrt(v2x * v2x + v2y * v2y)
-    // Avoid division by zero
-    if (mag1 === 0 || mag2 === 0) {
-      return 0
-    }
-    // Calculate angle in radians
-    const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)))
-    const angleRad = Math.acos(cosAngle)
-    // Convert to degrees
-    const angleDeg = angleRad * (180 / Math.PI)
-    return angleDeg
+    return DragModeManager.calculateAngleBetweenLines(line1, line2)
   }
 
   /**
@@ -9678,8 +9614,9 @@ export class Niivue {
    * @internal
    */
   resetAngleMeasurement(): void {
-    this.uiData.angleState = 'none'
-    this.uiData.angleFirstLine = [0.0, 0.0, 0.0, 0.0]
+    const state = DragModeManager.createResetAngleMeasurementState()
+    this.uiData.angleState = state.angleState
+    this.uiData.angleFirstLine = state.angleFirstLine
   }
 
   /**
@@ -9831,43 +9768,15 @@ export class Niivue {
    * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
    */
   setDragMode(mode: string | DRAG_MODE): void {
-    if (typeof mode === 'string') {
-      // Convert string to DRAG_MODE enum
-      switch (mode) {
-        case 'none':
-          this.opts.dragMode = DRAG_MODE.none
-          break
-        case 'contrast':
-          this.opts.dragMode = DRAG_MODE.contrast
-          break
-        case 'measurement':
-          this.opts.dragMode = DRAG_MODE.measurement
-          break
-        case 'angle':
-          this.opts.dragMode = DRAG_MODE.angle
-          break
-        case 'pan':
-          this.opts.dragMode = DRAG_MODE.pan
-          break
-        case 'slicer3D':
-          this.opts.dragMode = DRAG_MODE.slicer3D
-          break
-        case 'callbackOnly':
-          this.opts.dragMode = DRAG_MODE.callbackOnly
-          break
-        case 'roiSelection':
-          this.opts.dragMode = DRAG_MODE.roiSelection
-          break
-        default:
-          console.warn(`Unknown drag mode: ${mode}`)
-          return
-      }
-    } else {
-      this.opts.dragMode = mode
+    const parsedMode = DragModeManager.parseDragModeString(mode)
+    if (parsedMode === null) {
+      console.warn(`Unknown drag mode: ${mode}`)
+      return
     }
+    this.opts.dragMode = parsedMode
 
     // Reset angle measurement state when changing drag modes
-    if (this.opts.dragMode !== DRAG_MODE.angle) {
+    if (!DragModeManager.isAngleDragMode(this.opts.dragMode)) {
       this.resetAngleMeasurement()
     }
     // Clear active drag mode since we're changing the configuration
