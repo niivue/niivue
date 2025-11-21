@@ -597,23 +597,47 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 4.3 TouchController Module
 **File:** `packages/niivue/src/niivue/interaction/TouchController.ts`
-**Responsibility:** Touch event handling
-**Line Range:** ~1999-2399
-**Key Methods:**
-- `touchStartListener()` - Touch start
-- `touchEndListener()` - Touch end
-- `touchMoveListener()` - Touch movement
-- `checkMultitouch()` - Detect multi-touch gestures
-- `handlePinchZoom()` - Pinch-to-zoom gesture
-- `getTouchDragMode()` - Determine drag mode for touch
+**Responsibility:** Touch event handling helper functions
+**Key Functions Extracted:**
+- `getTouchDragMode()` ✅ - Determine drag mode for touch
+- `calculateTouchPosition()` ✅ - Calculate touch position relative to canvas
+- `detectDoubleTap()` ✅ - Detect double tap based on timing
+- `initializeTouchState()` ✅ - Initialize touch state on touch start
+- `createTouchEndState()` ✅ - Create reset state for touch end
+- `createNewTouchSequenceState()` ✅ - Reset state for new touch sequence
+- `createDoubleTapState()` ✅ - Create state for double tap
+- `calculatePinchZoom()` ✅ - Calculate pinch-to-zoom gesture
+- `shouldProcessPinchZoom()` ✅ - Check if pinch zoom should be processed
+- `initializeTouchDragState()` ✅ - Initialize drag state for touch
+- `calculateTouchMovePosition()` ✅ - Calculate touch move position values
+- `shouldSimulateMouseBehavior()` ✅ - Determine if touch should simulate mouse
+- `isSingleFingerTouch()` ✅ - Check for single-finger touch
+- `isMultiFingerGesture()` ✅ - Check for multi-finger gesture
+- `getMousePosFromTouch()` ✅ - Convert touch to mouse position array
+- `shouldUpdateDoubleTouchDrag()` ✅ - Check if double touch drag should update
+- `shouldStartLongPressTimer()` ✅ - Check if long press timer should start
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `getTouchDragMode()` - Delegates to TouchController.getTouchDragMode()
+- `checkMultitouch()` - Uses TouchController.shouldSimulateMouseBehavior() and calculateTouchPosition()
+- `touchStartListener()` - Uses TouchController.initializeTouchState(), detectDoubleTap(), createDoubleTapState(), etc.
+- `touchEndListener()` - Uses TouchController.createTouchEndState()
+- `touchMoveListener()` - Uses TouchController.isSingleFingerTouch(), shouldUpdateDoubleTouchDrag(), calculateTouchMovePosition()
+- `handlePinchZoom()` - Uses TouchController.shouldProcessPinchZoom(), calculatePinchZoom(), getMousePosFromTouch()
+
+**Properties (remain in Niivue class - state management):**
 - `uiData.touchdown`, `uiData.doubleTouch`
 - `uiData.currentTouchTime`, `uiData.lastTouchTime`, `uiData.touchTimer`
 - `uiData.lastTwoTouchDistance`, `uiData.multiTouchGesture`
 
-**Dependencies:** EventController, DragModeManager
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Event listener methods remain in Niivue class due to heavy state dependencies
+- Pure functions handle calculation logic; state management stays in Niivue
+- All functions use object parameters for clarity when >3 parameters
+
+**Dependencies:** gl-matrix (vec4), DRAG_MODE, TouchEventConfig
+**Status:** ✅ Completed
 
 ---
 
@@ -1294,7 +1318,7 @@ For each module in the plan above:
 
 - ✅ 4.1 EventController Module
 - ✅ 4.2 MouseController Module
-- ⬜ 4.3 TouchController Module
+- ✅ 4.3 TouchController Module
 - ⬜ 4.4 KeyboardController Module
 - ⬜ 4.5 WheelController Module
 - ⬜ 4.6 DragModeManager Module

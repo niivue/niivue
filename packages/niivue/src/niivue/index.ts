@@ -25,6 +25,7 @@ import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
 import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
 import * as EventController from '@/niivue/interaction/EventController'
 import * as MouseController from '@/niivue/interaction/MouseController'
+import * as TouchController from '@/niivue/interaction/TouchController'
 import {
   NVDocument,
   NVConfigOptions,
@@ -1389,13 +1390,12 @@ export class Niivue {
    * @internal
    */
   getTouchDragMode(isDoubleTouch: boolean): DRAG_MODE {
-    const touchConfig = this.opts.touchEventConfig
-
-    if (isDoubleTouch) {
-      return touchConfig?.doubleTouch ?? this.opts.dragMode
-    }
-
-    return touchConfig?.singleTouch ?? this.opts.dragModePrimary
+    return TouchController.getTouchDragMode({
+      isDoubleTouch,
+      touchConfig: this.opts.touchEventConfig,
+      dragMode: this.opts.dragMode,
+      dragModePrimary: this.opts.dragModePrimary
+    })
   }
 
   /**
@@ -1810,11 +1810,19 @@ export class Niivue {
    * @internal
    */
   checkMultitouch(e: TouchEvent): void {
-    if (this.uiData.touchdown && !this.uiData.multiTouchGesture) {
+    if (
+      TouchController.shouldSimulateMouseBehavior({
+        touchdown: this.uiData.touchdown,
+        multiTouchGesture: this.uiData.multiTouchGesture
+      })
+    ) {
       const rect = this.canvas!.getBoundingClientRect()
-      this.mouseDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
-
-      this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+      const pos = TouchController.calculateTouchPosition({
+        touch: e.touches[0],
+        canvasRect: rect
+      })
+      this.mouseDown(pos.x, pos.y)
+      this.mouseClick(pos.x, pos.y)
     }
   }
 
@@ -1824,36 +1832,62 @@ export class Niivue {
    */
   touchStartListener(e: TouchEvent): void {
     e.preventDefault()
-    if (!this.uiData.touchTimer) {
+
+    // Start long press timer if not already running
+    if (TouchController.shouldStartLongPressTimer(this.uiData.touchTimer)) {
       this.uiData.touchTimer = setTimeout(() => {
-        // this.drawScene()
         this.resetBriCon(e)
       }, this.opts.longTouchTimeout)
     }
-    this.uiData.touchdown = true
-    this.uiData.currentTouchTime = new Date().getTime()
-    const timeSinceTouch = this.uiData.currentTouchTime - this.uiData.lastTouchTime
-    if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
-      this.uiData.doubleTouch = true
-      this.setDragStart(
-        e.targetTouches[0].clientX - (e.target as HTMLElement).getBoundingClientRect().left,
-        e.targetTouches[0].clientY - (e.target as HTMLElement).getBoundingClientRect().top
-      )
+
+    const currentTime = new Date().getTime()
+
+    // Initialize touch state
+    const touchState = TouchController.initializeTouchState({
+      currentTime,
+      touchCount: e.touches.length,
+      isTouchdown: this.uiData.touchdown
+    })
+    this.uiData.touchdown = touchState.touchdown
+    this.uiData.currentTouchTime = touchState.currentTouchTime
+
+    // Check for double tap
+    const doubleTapResult = TouchController.detectDoubleTap({
+      currentTime,
+      lastTouchTime: this.uiData.lastTouchTime,
+      doubleTouchTimeout: this.opts.doubleTouchTimeout
+    })
+
+    if (doubleTapResult.isDoubleTap) {
+      // Double tap detected
+      const doubleTapState = TouchController.createDoubleTapState(currentTime)
+      this.uiData.doubleTouch = doubleTapState.doubleTouch!
+      this.uiData.lastTouchTime = doubleTapState.lastTouchTime!
+
+      const rect = (e.target as HTMLElement).getBoundingClientRect()
+      const pos = TouchController.calculateTouchPosition({
+        touch: e.targetTouches[0],
+        canvasRect: rect
+      })
+      this.setDragStart(pos.x, pos.y)
       this.resetBriCon(e)
-      this.uiData.lastTouchTime = this.uiData.currentTouchTime
       return
     } else {
-      // reset values to be ready for next touch
-      this.uiData.doubleTouch = false
+      // Single touch - reset values for next touch
+      const newSequenceState = TouchController.createNewTouchSequenceState(currentTime)
+      this.uiData.doubleTouch = newSequenceState.doubleTouch ?? false
+      this.uiData.lastTouchTime = newSequenceState.lastTouchTime!
       this.setDragStart(0, 0)
       this.setDragEnd(0, 0)
-      this.uiData.lastTouchTime = this.uiData.currentTouchTime
     }
-    if (this.uiData.touchdown && e.touches.length < 2) {
+
+    // Determine multi-touch gesture state
+    if (TouchController.isSingleFingerTouch(this.uiData.touchdown, e.touches.length)) {
       this.uiData.multiTouchGesture = false
     } else {
       this.uiData.multiTouchGesture = true
     }
+
     setTimeout(this.checkMultitouch.bind(this), 1, e)
   }
 
@@ -1863,13 +1897,20 @@ export class Niivue {
    */
   touchEndListener(e: TouchEvent): void {
     e.preventDefault()
-    this.uiData.touchdown = false
-    this.uiData.lastTwoTouchDistance = 0
-    this.uiData.multiTouchGesture = false
+
+    // Reset touch state
+    const endState = TouchController.createTouchEndState()
+    this.uiData.touchdown = endState.touchdown!
+    this.uiData.lastTwoTouchDistance = endState.lastTwoTouchDistance!
+    this.uiData.multiTouchGesture = endState.multiTouchGesture!
+
+    // Clear long press timer
     if (this.uiData.touchTimer) {
       clearTimeout(this.uiData.touchTimer)
       this.uiData.touchTimer = null
     }
+
+    // Handle drag completion
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false
       // if drag mode is contrast, and the user double taps and drags...
@@ -2178,26 +2219,44 @@ export class Niivue {
    * @internal
    */
   touchMoveListener(e: TouchEvent): void {
-    if (this.uiData.touchdown && e.touches.length < 2) {
+    // Check for single-finger touch
+    if (TouchController.isSingleFingerTouch(this.uiData.touchdown, e.touches.length)) {
       const rect = this.canvas!.getBoundingClientRect()
+
+      // Initialize drag state if not already dragging
       if (!this.uiData.isDragging) {
         this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
       }
       this.uiData.isDragging = true
-      if (this.uiData.doubleTouch && this.uiData.isDragging) {
-        this.setDragEnd(
-          e.targetTouches[0].clientX - (e.target as HTMLElement).getBoundingClientRect().left,
-          e.targetTouches[0].clientY - (e.target as HTMLElement).getBoundingClientRect().top
-        )
+
+      // Handle double touch drag
+      if (
+        TouchController.shouldUpdateDoubleTouchDrag({
+          doubleTouch: this.uiData.doubleTouch,
+          isDragging: this.uiData.isDragging
+        })
+      ) {
+        const pos = TouchController.calculateTouchPosition({
+          touch: e.targetTouches[0],
+          canvasRect: (e.target as HTMLElement).getBoundingClientRect()
+        })
+        this.setDragEnd(pos.x, pos.y)
         this.drawScene()
         return
       }
+
+      // Handle single touch based on drag mode
       const dragMode = this.getTouchDragMode(false)
+      const touchMovePos = TouchController.calculateTouchMovePosition({
+        touch: e.touches[0],
+        canvasRect: rect
+      })
+
       if (dragMode === DRAG_MODE.crosshair) {
-        this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
-        this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+        this.mouseClick(touchMovePos.x, touchMovePos.y)
+        this.mouseMove(touchMovePos.x, touchMovePos.y)
       } else if (dragMode === DRAG_MODE.windowing) {
-        this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY)
+        this.windowingHandler(touchMovePos.pageX, touchMovePos.pageY)
         this.drawScene()
       }
     } else {
@@ -2211,22 +2270,30 @@ export class Niivue {
    * @internal
    */
   handlePinchZoom(e: TouchEvent): void {
-    if (e.targetTouches.length === 2 && e.changedTouches.length === 2) {
-      const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY)
-
+    if (TouchController.shouldProcessPinchZoom(e.targetTouches.length, e.changedTouches.length)) {
       const rect = this.canvas!.getBoundingClientRect()
-      this.mousePos = [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top]
 
-      // scroll 2D slices
-      if (dist < this.uiData.lastTwoTouchDistance) {
-        // this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.95);
-        this.sliceScroll2D(-0.01, e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
-      } else {
-        // this.scene.volScaleMultiplier = Math.min(2.0, this.scene.volScaleMultiplier * 1.05);
-        this.sliceScroll2D(0.01, e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top)
+      // Calculate pinch zoom using helper function
+      const pinchResult = TouchController.calculatePinchZoom({
+        touch1: e.touches[0],
+        touch2: e.touches[1],
+        lastTwoTouchDistance: this.uiData.lastTwoTouchDistance
+      })
+
+      // Update mouse position for scroll target
+      const touchPos = TouchController.getMousePosFromTouch({
+        touch: e.touches[0],
+        canvasRect: rect
+      })
+      this.mousePos = touchPos
+
+      // Scroll 2D slices based on pinch direction (only if we have a previous distance)
+      if (this.uiData.lastTwoTouchDistance > 0) {
+        this.sliceScroll2D(pinchResult.scrollDelta, touchPos[0], touchPos[1])
       }
-      // this.drawScene();
-      this.uiData.lastTwoTouchDistance = dist
+
+      // Update last distance for next calculation
+      this.uiData.lastTwoTouchDistance = pinchResult.distance
     }
   }
 
