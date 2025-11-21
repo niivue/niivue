@@ -14,6 +14,7 @@ import * as VolumeManager from '@/niivue/data/VolumeManager'
 import * as VolumeTexture from '@/niivue/data/VolumeTexture'
 import * as VolumeColormap from '@/niivue/data/VolumeColormap'
 import * as VolumeModulation from '@/niivue/data/VolumeModulation'
+import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
 import {
   NVDocument,
   NVConfigOptions,
@@ -240,7 +241,6 @@ const TEXTURE8_PAQD = 33992
 // subsequent textures only used transiently
 const TEXTURE8_GRADIENT_TEMP = 33992
 const TEXTURE9_ORIENT = 33993
-const TEXTURE10_BLEND = 33994
 const TEXTURE11_GC_BACK = 33995
 const TEXTURE12_GC_STRENGTH0 = 33996
 const TEXTURE13_GC_STRENGTH1 = 33997
@@ -7706,18 +7706,26 @@ export class Niivue {
     } // force crosshairs3D redraw
     let mtx = mat4.clone(overlayItem.toRAS!)
     if (layer === 0) {
-      this.volumeObject3D = toNiivueObject3D(overlayItem, this.VOLUME_ID, this.gl)
+      // Create and assign volumeObject3D FIRST
+      this.volumeObject3D = VolumeLayerRenderer.setupVolumeObject3D({
+        overlayItem,
+        VOLUME_ID: this.VOLUME_ID,
+        gl: this.gl
+      })
+
       mat4.invert(mtx, mtx)
 
+      // Set back properties (required by sliceScale())
       this.back.matRAS = overlayItem.matRAS
       this.back.dims = overlayItem.dimsRAS
       this.back.pixDims = overlayItem.pixDimsRAS
 
-      const { volScale, vox } = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
+      // Now call sliceScale() (depends on this.volumeObject3D and this.back being set)
+      const { volScale, vox } = this.sliceScale(true)
 
       this.volScale = volScale
       this.vox = vox
-      this.volumeObject3D.scale = volScale
+      this.volumeObject3D.scale = Array.from(volScale)
 
       const { isAboveMax2D, isAboveMax3D } = VolumeTexture.checkImageSizeLimits({
         hdr,
@@ -7777,275 +7785,115 @@ export class Niivue {
       }
 
       this.renderShader.use(this.gl)
-      this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
-      this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
+      this.gl.uniform3fv(this.renderShader.uniforms.texVox, this.vox)
+      this.gl.uniform3fv(this.renderShader.uniforms.volScale, this.volScale)
       // add shader to object
       const pickingShader = this.pickingImageShader!
       pickingShader.use(this.gl)
       this.gl.uniform1i(pickingShader.uniforms.volume, 0)
       this.gl.uniform1i(pickingShader.uniforms.colormap, 1)
       this.gl.uniform1i(pickingShader.uniforms.overlay, 2)
-      this.gl.uniform3fv(pickingShader.uniforms.volScale, volScale)
+      this.gl.uniform3fv(pickingShader.uniforms.volScale, this.volScale)
       log.debug(this.volumeObject3D)
     } else {
       if (this.back?.dims === undefined) {
         log.error('Fatal error: Unable to render overlay: background dimensions not defined!')
       }
-      const f000 = this.mm2frac(overlayItem.mm000!, 0, true) // origin in output space
-      let f100 = this.mm2frac(overlayItem.mm100!, 0, true)
-      let f010 = this.mm2frac(overlayItem.mm010!, 0, true)
-      let f001 = this.mm2frac(overlayItem.mm001!, 0, true)
-      f100 = vec3.subtract(f100, f100, f000) // direction of i dimension from origin
-      f010 = vec3.subtract(f010, f010, f000) // direction of j dimension from origin
-      f001 = vec3.subtract(f001, f001, f000) // direction of k dimension from origin
-      mtx = mat4.fromValues(
-        f100[0],
-        f010[0],
-        f001[0],
-        f000[0],
 
-        f100[1],
-        f010[1],
-        f001[1],
-        f000[1],
+      // Calculate overlay transformation matrix
+      mtx = VolumeLayerRenderer.calculateOverlayTransformMatrix({
+        overlayItem,
+        mm2frac: this.mm2frac.bind(this)
+      })
 
-        f100[2],
-        f010[2],
-        f001[2],
-        f000[2],
-        0,
-        0,
-        0,
-        1
-      )
-      mat4.invert(mtx, mtx)
+      // Allocate textures for overlay layers
       if (layer === 1) {
-        outTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, this.back!.dims!)
+        const textures = VolumeLayerRenderer.allocateVolumeTextures({
+          gl: this.gl,
+          layer,
+          backDims: this.back!.dims!,
+          rgbaTex: this.rgbaTex.bind(this)
+        })
+        outTexture = textures.overlayTexture!
         this.overlayTexture = outTexture
         this.overlayTextureID = outTexture
       } else {
         outTexture = this.overlayTextureID
       }
     }
-    const fb = this.gl.createFramebuffer()
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb)
-    this.gl.disable(this.gl.CULL_FACE)
+    // Setup framebuffer for rendering
+    const fb = VolumeLayerRenderer.setupFramebuffer(this.gl)
     this.gl.viewport(0, 0, this.back.dims![1], this.back.dims![2]) // output in background dimensions
-    this.gl.disable(this.gl.BLEND)
-    const tempTex3D = this.gl.createTexture()
-    this.gl.activeTexture(TEXTURE9_ORIENT) // Temporary 3D Texture TEXTURE9_ORIENT
-    this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE)
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE)
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1)
-    // https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
-    // https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/glTexStorage3D.xhtml
-    let orientShader = this.orientShaderU!
+
+    // Create temporary 3D texture for volume data
+    const tempTex3D = VolumeLayerRenderer.createTemporaryTexture({
+      gl: this.gl,
+      TEXTURE9_ORIENT
+    })
+
     if (!hdr) {
       throw new Error('hdr undefined')
     }
     if (!img) {
       throw new Error('img undefined')
     }
-    if (hdr.datatypeCode === NiiDataType.DT_UINT8) {
-      // raw input data
-      if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
-        orientShader = this.orientShaderAtlasU!
+
+    // Setup volume texture data and select appropriate shader
+    let orientShader = this.orientShaderU!
+    if (hdr.datatypeCode === NiiDataType.DT_RGBA32) {
+      // RGBA32 has special PAQD handling
+      const rgba32Result = VolumeLayerRenderer.setupRGBA32TextureData({
+        gl: this.gl,
+        hdr,
+        img,
+        overlayItem,
+        layer,
+        orientShaderRGBU: this.orientShaderRGBU!,
+        orientShaderPAQD: this.orientShaderPAQD!,
+        volumes: this.volumes,
+        backDims: this.back!.dims!,
+        rgbaTex: this.rgbaTex.bind(this),
+        paqdTexture: this.paqdTexture,
+        TEXTURE8_PAQD,
+        TEXTURE9_ORIENT
+      })
+      orientShader = rgba32Result.orientShader
+      if (rgba32Result.outTexture !== null) {
+        outTexture = rgba32Result.outTexture
       }
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED_INTEGER,
-        this.gl.UNSIGNED_BYTE,
-        img
-      )
-    } else if (hdr.datatypeCode === NiiDataType.DT_INT16) {
-      orientShader = this.orientShaderI!
-      if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
-        orientShader = this.orientShaderAtlasI!
+      if (rgba32Result.paqdTexture !== null) {
+        this.paqdTexture = rgba32Result.paqdTexture
       }
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED_INTEGER,
-        this.gl.SHORT,
-        img
-      )
-    } else if (hdr.datatypeCode === NiiDataType.DT_FLOAT32) {
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED,
-        this.gl.FLOAT,
-        img
-      )
-      orientShader = this.orientShaderF!
-    } else if (hdr.datatypeCode === NiiDataType.DT_FLOAT64) {
-      let img32f = new Float32Array()
-      img32f = Float32Array.from(img)
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED,
-        this.gl.FLOAT,
-        img32f
-      )
-      orientShader = this.orientShaderF!
-    } else if (hdr.datatypeCode === NiiDataType.DT_RGB24) {
-      orientShader = this.orientShaderRGBU!
-      orientShader.use(this.gl)
-      // TODO was false instead of 0
-      this.gl.uniform1i(orientShader.uniforms.hasAlpha, 0)
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RGB_INTEGER,
-        this.gl.UNSIGNED_BYTE,
-        img
-      )
-    } else if (hdr.datatypeCode === NiiDataType.DT_UINT16) {
-      if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
-        orientShader = this.orientShaderAtlasU!
-      }
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED_INTEGER,
-        this.gl.UNSIGNED_SHORT,
-        img
-      )
-    } else if (hdr.datatypeCode === NiiDataType.DT_RGBA32) {
-      orientShader = this.orientShaderRGBU!
-      if (overlayItem.colormapLabel) {
-        orientShader = this.orientShaderPAQD!
-        let firstPAQD = true
-        for (let l = 0; l < layer; l++) {
-          const isRGBA = this.volumes[l].hdr.datatypeCode === NiiDataType.DT_RGBA32
-          const isLabel = !!this.volumes[l].colormapLabel
-          if (isRGBA && isLabel) {
-            firstPAQD = false
-          }
-        }
-        if (firstPAQD) {
-          this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, this.back!.dims!)
-        } else {
-          // n.b. do-able, but requires blend buffer copies
-          log.warn(`Current version only one probabilistic atlas (PAQD) at a time`)
-        }
-        outTexture = this.paqdTexture
-        this.gl.activeTexture(TEXTURE9_ORIENT) // Temporary 3D Texture TEXTURE9_ORIENT
-      }
-      orientShader.use(this.gl)
-      this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1)
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RGBA_INTEGER,
-        this.gl.UNSIGNED_BYTE,
-        img
-      )
+    } else {
+      // All other datatypes
+      const uploadResult = VolumeLayerRenderer.setupVolumeTextureData({
+        gl: this.gl,
+        hdr,
+        img,
+        orientShaderU: this.orientShaderU!,
+        orientShaderI: this.orientShaderI!,
+        orientShaderF: this.orientShaderF!,
+        orientShaderRGBU: this.orientShaderRGBU!,
+        orientShaderAtlasU: this.orientShaderAtlasU!,
+        orientShaderAtlasI: this.orientShaderAtlasI!
+      })
+      orientShader = uploadResult.orientShader
     }
     if (overlayItem.global_min === undefined) {
       // only once, first time volume is loaded
       // this.calMinMax(overlayItem, imgRaw);
       overlayItem.calMinMax()
     }
-    // blend texture
-    let blendTexture = null
+    // Setup blend texture for multi-layer rendering
     this.gl.bindVertexArray(this.genericVAO)
 
-    const isUseCopyTexSubImage3D = false
-    if (isUseCopyTexSubImage3D) {
-      if (layer > 1) {
-        // we can not simultaneously read and write to the same texture.
-        // therefore, we must clone the overlay texture when we wish to add another layer
-        // copy previous overlay texture to blend texture
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims!, true)
-        this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
-        for (let i = 0; i < this.back.dims![3]; i++) {
-          // n.b. copyTexSubImage3D is a screenshot function: it copies FROM the framebuffer to the TEXTURE (usually we write to a framebuffer)
-          this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.overlayTexture, 0, i) // read from existing overlay texture 2
-          this.gl.activeTexture(TEXTURE10_BLEND) // write to blend texture 5
-          this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i, 0, 0, this.back.dims![1], this.back.dims![2])
-        }
-      } else {
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, [2, 2, 2, 2], true)
-      }
-    } else {
-      if (layer > 1) {
-        if (!this.back.dims) {
-          throw new Error('back.dims undefined')
-        }
-        // use pass-through shader to copy previous color to temporary 2D texture
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims)
-        this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture)
-        const passShader = this.passThroughShader!
-        passShader.use(this.gl)
-        this.gl.uniform1i(passShader.uniforms.in3D, 2) // overlay volume
-        for (let i = 0; i < this.back.dims[3]; i++) {
-          // output slices
-          const coordZ = (1 / this.back.dims[3]) * (i + 0.5)
-          this.gl.uniform1f(passShader.uniforms.coordZ, coordZ)
-          this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, blendTexture, 0, i)
-          // this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
-          this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-        }
-      } else {
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, [2, 2, 2, 2])
-      }
-    }
+    const blendTexture = VolumeLayerRenderer.setupBlendTexture({
+      gl: this.gl,
+      layer,
+      backDims: this.back.dims!,
+      rgbaTex: this.rgbaTex.bind(this),
+      passThroughShader: this.passThroughShader!
+    })
     orientShader!.use(this.gl)
     this.gl.activeTexture(TEXTURE1_COLORMAPS)
     // for label maps, we create an indexed colormap that is not limited to a gradient of 256 colors
@@ -8060,6 +7908,7 @@ export class Niivue {
       this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min!)
       this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max!)
     }
+    // Handle deprecated alphaThreshold property
     if ('alphaThreshold' in overlayItem) {
       log.warn('alphaThreshold is deprecated: use colormapType')
       if (overlayItem.alphaThreshold === true) {
@@ -8070,51 +7919,19 @@ export class Niivue {
       }
       delete overlayItem.alphaThreshold
     }
-    const isColorbarFromZero = overlayItem.colormapType !== COLORMAP_TYPE.MIN_TO_MAX ? 1 : 0
-    const isAlphaThreshold = overlayItem.colormapType === COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN ? 1 : 0
-    this.gl.uniform1i(orientShader.uniforms.isAlphaThreshold, isAlphaThreshold)
-    this.gl.uniform1i(orientShader.uniforms.isColorbarFromZero, isColorbarFromZero)
-    this.gl.uniform1i(orientShader.uniforms.isAdditiveBlend, this.opts.isAdditiveBlend ? 1 : 0)
-    // if unused colormapNegative https://github.com/niivue/niivue/issues/490
-    let mnNeg = Number.POSITIVE_INFINITY
-    let mxNeg = Number.NEGATIVE_INFINITY
-    if (overlayItem.colormapNegative.length > 0) {
-      // assume symmetrical
-      mnNeg = Math.min(-overlayItem.cal_min!, -overlayItem.cal_max!)
-      mxNeg = Math.max(-overlayItem.cal_min!, -overlayItem.cal_max!)
-      if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
-        // explicit range for negative colormap: allows asymmetric maps
-        mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
-        mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg)
-      }
-    }
-    // issue 1139
-    if (layer > 0 && this.overlayOutlineWidth > 0.0) {
-      const A = overlayItem.cal_min
-      const B = overlayItem.cal_max
-      let isZeroCrossing = Math.min(A, B) <= 0 && Math.max(A, B) >= 0
-      if (!isZeroCrossing && mnNeg < mxNeg) {
-        isZeroCrossing = mnNeg <= 0 && mxNeg >= 0
-      }
-      if (isZeroCrossing) {
-        log.error('issue1139: do not use overlayOutlineWidth when thresholds cross or touch zero')
-      }
-    }
+
+    // Configure colormap uniforms
     if (!orientShader) {
       throw new Error('orientShader undefined')
     }
-    this.gl.uniform1f(orientShader.uniforms.layer ?? null, layer)
-    this.gl.uniform1f(orientShader.uniforms.cal_minNeg ?? null, mnNeg)
-    this.gl.uniform1f(orientShader.uniforms.cal_maxNeg ?? null, mxNeg)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
-    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 9) // TEXTURE9_ORIENT
-    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 10) // TEXTURE10_BLEND
-    this.gl.uniform1i(orientShader.uniforms.colormap ?? null, 1)
-    // this.gl.uniform1f(orientShader.uniforms["numLayers"], numLayers);
-    this.gl.uniform1f(orientShader.uniforms.scl_inter ?? null, hdr.scl_inter)
-    this.gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope)
-    this.gl.uniform1f(orientShader.uniforms.opacity ?? null, opacity)
-    this.gl.uniform1i(orientShader.uniforms.modulationVol ?? null, 7)
+    VolumeLayerRenderer.configureColormapUniforms({
+      gl: this.gl,
+      overlayItem,
+      orientShader,
+      layer,
+      isAdditiveBlend: this.opts.isAdditiveBlend
+    })
+    // Setup modulation
     const { modulateTexture } = VolumeModulation.setupModulation({
       gl: this.gl,
       overlayItem,
@@ -8124,30 +7941,30 @@ export class Niivue {
       r8Tex: this.r8Tex.bind(this),
       TEXTURE7: this.gl.TEXTURE7
     })
-    this.gl.uniformMatrix4fv(orientShader.uniforms.mtx, false, mtx)
+
+    // Bind temporary 3D texture
+    this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
+
+    // Render to output texture
     if (!this.back.dims) {
       throw new Error('back.dims undefined')
     }
-    let outline = 0
-    if (hdr.intent_code === NiiIntentCode.NIFTI_INTENT_LABEL) {
-      outline = this.opts.atlasOutline
-      this.gl.uniform1ui(orientShader.uniforms.activeIndex, this.opts.atlasActiveIndex | 0)
-    }
-    this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
-      1.0 / this.back.dims[1],
-      1.0 / this.back.dims[2],
-      1.0 / this.back.dims[3],
-      outline
-    ])
+    VolumeLayerRenderer.renderToOutputTexture({
+      gl: this.gl,
+      orientShader,
+      backDims: this.back.dims,
+      outTexture,
+      mtx,
+      hdr,
+      intensityVolTextureUnit: 9,
+      blendTextureUnit: 10,
+      colormapTextureUnit: 1,
+      modulationTextureUnit: 7,
+      opacity,
+      atlasOutline: this.opts.atlasOutline,
+      atlasActiveIndex: this.opts.atlasActiveIndex
+    })
     log.debug('back dims: ', this.back.dims)
-    for (let i = 0; i < this.back.dims[3]; i++) {
-      // output slices
-      const coordZ = (1 / this.back.dims[3]) * (i + 0.5)
-      this.gl.uniform1f(orientShader.uniforms.coordZ, coordZ)
-      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, outTexture, 0, i)
-      // this.gl.clear(this.gl.DEPTH_BUFFER_BIT); //exhaustive, so not required
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-    }
     this.gl.bindVertexArray(this.unusedVAO)
     this.gl.deleteTexture(tempTex3D)
     this.gl.deleteTexture(modulateTexture)
@@ -8157,75 +7974,75 @@ export class Niivue {
 
     this.gl.deleteFramebuffer(fb)
 
+    // Update gradient texture for layer 0
     if (layer === 0) {
       this.volumeTexture = outTexture
-      if (this.gradientTextureAmount > 0.0 && !this.useCustomGradientTexture) {
-        this.gradientGL(hdr)
-        this.gl.bindVertexArray(this.genericVAO)
-      } else if (this.gradientTextureAmount <= 0.0) {
-        if (this.gradientTexture !== null) {
-          this.gl.deleteTexture(this.gradientTexture)
-        }
-        this.gradientTexture = null
-      }
+      this.gradientTexture = VolumeLayerRenderer.updateGradientTexture({
+        gl: this.gl,
+        hdr,
+        gradientTextureAmount: this.gradientTextureAmount,
+        useCustomGradientTexture: this.useCustomGradientTexture,
+        gradientTexture: this.gradientTexture,
+        gradientGL: this.gradientGL.bind(this),
+        genericVAO: this.genericVAO
+      })
     }
-    // set slice scale for render shader
+    // Update shader uniforms after texture operations
     if (!this.renderShader) {
       throw new Error('renderShader undefined')
     }
-    this.renderShader.use(this.gl)
-    const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
-    const vox = slicescl.vox
-    const volScale = slicescl.volScale
-    this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length)
-    this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor)
-    this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity)
-    this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend)
-    this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane)
-
-    this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox)
-    this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale)
-
     if (!this.pickingImageShader) {
       throw new Error('pickingImageShader undefined')
     }
-    this.pickingImageShader.use(this.gl)
-    this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length)
-    this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox)
-    let shader = this.sliceMMShader
-    if (this.opts.is2DSliceShader) {
-      shader = this.slice2DShader
-    }
-    if (this.opts.isV1SliceShader) {
-      shader = this.sliceV1Shader
-    }
-    if (this.customSliceShader) {
-      shader = this.customSliceShader
-    }
-    if (!shader) {
-      throw new Error('slice shader undefined')
-    }
 
-    shader.use(this.gl)
+    const slicescl = this.sliceScale(true) // slice scale determined by this.back --> the base image layer
+    const vox = slicescl.vox
+    const volScale = slicescl.volScale
 
-    this.gl.uniform1f(shader.uniforms.overlays, this.overlays.length)
-    this.gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity)
+    // Select appropriate slice shader
+    const shader = VolumeLayerRenderer.selectSliceShader({
+      is2DSliceShader: this.opts.is2DSliceShader,
+      isV1SliceShader: this.opts.isV1SliceShader,
+      sliceMMShader: this.sliceMMShader,
+      slice2DShader: this.slice2DShader,
+      sliceV1Shader: this.sliceV1Shader,
+      customSliceShader: this.customSliceShader
+    })
+
+    VolumeLayerRenderer.updateShaderUniforms({
+      gl: this.gl,
+      renderShader: this.renderShader,
+      pickingImageShader: this.pickingImageShader,
+      sliceShader: shader,
+      overlaysLength: this.overlays.length,
+      clipPlaneColor: this.opts.clipPlaneColor,
+      backOpacity: this.volumes[0].opacity,
+      renderOverlayBlend: this.opts.renderOverlayBlend,
+      clipPlane: this.scene.clipPlane,
+      texVox: vox,
+      volScale,
+      drawOpacity: this.drawOpacity,
+      paqdUniforms: this.opts.paqdUniforms
+    })
+
+    // Cleanup label colormap texture if used
     if (colormapLabelTexture !== null) {
       this.gl.deleteTexture(colormapLabelTexture)
       this.gl.activeTexture(TEXTURE1_COLORMAPS)
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
     }
-    this.gl.uniform1i(shader.uniforms.drawing, 7)
-    this.gl.activeTexture(TEXTURE7_DRAW)
-    if (this.opts.is2DSliceShader) {
-      this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture)
-    } else {
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture)
-    }
-    this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
-    this.gl.uniform1i(shader.uniforms.paqd, 8)
-    this.gl.activeTexture(TEXTURE8_PAQD)
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture)
+
+    // Bind drawing and PAQD textures for slice shader
+    VolumeLayerRenderer.bindSliceShaderTextures({
+      gl: this.gl,
+      shader,
+      is2DSliceShader: this.opts.is2DSliceShader,
+      drawTexture: this.drawTexture,
+      paqdTexture: this.paqdTexture,
+      TEXTURE7_DRAW,
+      TEXTURE8_PAQD
+    })
+
     this.updateInterpolation(layer)
 
     //
