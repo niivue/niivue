@@ -20,6 +20,8 @@ import * as ConnectomeManager from '@/niivue/data/ConnectomeManager'
 import * as FileLoader from '@/niivue/data/FileLoader'
 import * as SliceRenderer from '@/niivue/rendering/SliceRenderer'
 import * as VolumeRenderer from '@/niivue/rendering/VolumeRenderer'
+import * as MeshRenderer from '@/niivue/rendering/MeshRenderer'
+import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
 import {
   NVDocument,
   NVConfigOptions,
@@ -11250,61 +11252,18 @@ export class Niivue {
    * @internal
    */
   calculateMvpMatrix(_unused: unknown, leftTopWidthHeight = [0, 0, 0, 0], azimuth: number, elevation: number): mat4[] {
-    const gl = this.gl
-
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      // use full canvas
-      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height]
-    }
-
-    const whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3]
-    // pivot from center of objects
-    let scale = this.furthestFromPivot
-    const origin = this.pivot3D
-    const projectionMatrix = mat4.create()
-
-    // 2.0 WebGL viewport has range of 2.0 [-1,-1]...[1,1]
-    scale = (0.8 * scale) / this.scene.volScaleMultiplier
-
-    if (whratio < 1) {
-      // tall window: "portrait" mode, width constrains
-      mat4.ortho(projectionMatrix, -scale, scale, -scale / whratio, scale / whratio, scale * 8.0, scale * 0.01)
-    } else {
-      // wide window: "landscape" mode, height constrains
-      mat4.ortho(projectionMatrix, -scale * whratio, scale * whratio, -scale, scale, scale * 8.0, scale * 0.01)
-    }
-
-    const modelMatrix = mat4.create()
-
-    modelMatrix[0] = -1 // mirror X coordinate
-
-    // push the model away from the camera so camera not inside model
-    const translateVec3 = vec3.fromValues(0, 0, -scale * 1.8) // to avoid clipping, >= SQRT(3)
-    mat4.translate(modelMatrix, modelMatrix, translateVec3)
-
-    if (this.position) {
-      mat4.translate(modelMatrix, modelMatrix, this.position)
-    }
-
-    // apply elevation
-    mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
-    // apply azimuth
-    mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
-
-    // translate to pivot
-    mat4.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]])
-
-    // build normal matrix
-    const iModelMatrix = mat4.create()
-    mat4.invert(iModelMatrix, modelMatrix)
-    const normalMatrix = mat4.create()
-    mat4.transpose(normalMatrix, iModelMatrix)
-
-    // combine into MVP
-    const modelViewProjectionMatrix = mat4.create()
-    mat4.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix)
-
-    return [modelViewProjectionMatrix, modelMatrix, normalMatrix]
+    const result = SceneRenderer.calculateMvpMatrix({
+      canvasWidth: this.gl.canvas.width,
+      canvasHeight: this.gl.canvas.height,
+      leftTopWidthHeight,
+      azimuth,
+      elevation,
+      furthestFromPivot: this.furthestFromPivot,
+      pivot3D: this.pivot3D,
+      volScaleMultiplier: this.scene.volScaleMultiplier,
+      position: this.position
+    })
+    return [result.mvpMatrix, result.modelMatrix, result.normalMatrix]
   }
 
   /**
@@ -11361,16 +11320,11 @@ export class Niivue {
     // compute extents of all volumes and meshes in scene
     // pivot around center of these.
     const [mn, mx] = this.sceneExtentsMinMax()
-    const pivot = vec3.create()
-    // pivot is half way between min and max:
-    vec3.add(pivot, mn, mx)
-    vec3.scale(pivot, pivot, 0.5)
-    this.pivot3D = [pivot[0], pivot[1], pivot[2]]
-    // find scale of scene
-    vec3.subtract(pivot, mx, mn)
-    this.extentsMin = mn
-    this.extentsMax = mx
-    this.furthestFromPivot = vec3.length(pivot) * 0.5 // pivot is half way between the extreme vertices
+    const result = SceneRenderer.calculatePivot3D({ sceneMin: mn, sceneMax: mx })
+    this.pivot3D = result.pivot3D
+    this.furthestFromPivot = result.furthestFromPivot
+    this.extentsMin = result.extentsMin
+    this.extentsMax = result.extentsMax
   }
 
   /**
@@ -11378,14 +11332,7 @@ export class Niivue {
    * @internal
    */
   getMaxVols(): number {
-    if (this.volumes.length < 1) {
-      return 0
-    }
-    let maxVols = 0
-    for (let i = 0; i < this.volumes.length; i++) {
-      maxVols = Math.max(maxVols, this.volumes[i].nFrame4D!)
-    }
-    return maxVols
+    return SceneRenderer.getMaxVols({ volumes: this.volumes })
   }
 
   /**
@@ -12422,7 +12369,6 @@ export class Niivue {
     if (this.meshes.length < 1) {
       return
     }
-    const gl = this.gl
 
     if (!m) {
       ;[m, modelMtx, normMtx] = this.calculateMvpMatrix(
@@ -12433,154 +12379,26 @@ export class Niivue {
       )
     }
 
-    gl.enable(gl.DEPTH_TEST)
-
-    // Use inverted depth convention (matches current MVP math)
-    if (isDepthTest) {
-      gl.depthFunc(gl.LEQUAL)
-    } else {
-      gl.depthFunc(gl.ALWAYS)
-    }
-
-    gl.cullFace(gl.BACK) // back-face culling
-    // gl.frontFace(gl.CCW) // CCW winding = front
-
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-
-    let hasFibers = false
-
-    // -----------------------
-    // Pass 1: Main mesh draw
-    // -----------------------
-    for (const mesh of this.meshes) {
-      if (!mesh.visible || mesh.opacity <= 0.0 || mesh.indexCount! < 3) {
-        continue
-      }
-
-      const meshAlpha = mesh.opacity * alpha
-
-      // Select shader
-      let shader = this.meshShaders[mesh.meshShaderIndex].shader!
-      if (this.uiData.mouseDepthPicker) {
-        shader = this.pickingMeshShader!
-      }
-      shader.use(gl)
-      if (shader.isCrosscut) {
-        gl.disable(gl.DEPTH_TEST)
-        gl.disable(gl.CULL_FACE)
-
-        const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM)
-        gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx!)
-        if (is2D) {
-          const OUT_OF_RANGE = 1e9
-          if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
-            mm[1] = OUT_OF_RANGE
-            mm[2] = OUT_OF_RANGE
-          } // if sagittal
-          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
-            mm[0] = OUT_OF_RANGE
-            mm[2] = OUT_OF_RANGE
-          } // if coronal
-          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
-            mm[0] = OUT_OF_RANGE
-            mm[1] = OUT_OF_RANGE
-          } // if axial
-        }
-        let meshThicknessMM = Number(this.opts.meshThicknessOn2D)
-        if (!Number.isFinite(meshThicknessMM)) {
-          meshThicknessMM = 1.0
-        }
-        gl.uniform4fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2], meshThicknessMM])
-      } else {
-        gl.enable(gl.CULL_FACE)
-        gl.enable(gl.DEPTH_TEST)
-      }
-      // Set uniforms
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
-      gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
-      gl.uniform1f(shader.uniforms.opacity, meshAlpha)
-
-      // Depth + blending per mesh
-      if (meshAlpha >= 1.0) {
-        // Opaque
-        gl.disable(gl.BLEND)
-        gl.depthMask(true)
-      } else {
-        // Transparent
-        gl.enable(gl.BLEND)
-        gl.depthMask(false)
-      }
-      // Fiber meshes drawn later
-      if (mesh.offsetPt0 && (mesh.fiberSides < 3 || mesh.fiberRadius <= 0)) {
-        hasFibers = true
-        continue
-      }
-      if (shader.isMatcap) {
-        gl.activeTexture(TEXTURE5_MATCAP)
-        gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture)
-      }
-
-      // Draw mesh
-      gl.bindVertexArray(mesh.vao)
-      gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
-      gl.bindVertexArray(this.unusedVAO)
-    }
-    gl.enable(gl.CULL_FACE)
-    // -----------------------
-    // Pass 2: X-Ray Mesh
-    // -----------------------
-    if (this.opts.meshXRay > 0.0 && !hasFibers) {
-      gl.enable(gl.BLEND)
-      gl.depthMask(false)
-      gl.depthFunc(gl.ALWAYS) // ignore depth for x-ray
-
-      for (const mesh of this.meshes) {
-        if (!mesh.visible || mesh.indexCount! < 3) {
-          continue
-        }
-
-        const shader = this.meshShaders[mesh.meshShaderIndex].shader!
-        shader.use(gl)
-
-        gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
-        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx!)
-        gl.uniform1f(shader.uniforms.opacity, mesh.opacity * alpha * this.opts.meshXRay)
-
-        gl.bindVertexArray(mesh.vao)
-        gl.drawElements(gl.TRIANGLES, mesh.indexCount!, gl.UNSIGNED_INT, 0)
-        gl.bindVertexArray(this.unusedVAO)
-      }
-
-      gl.depthMask(true)
-      gl.depthFunc(gl.GREATER) // restore inverted depthFunc
-      gl.disable(gl.BLEND)
-    }
-
-    // -----------------------
-    // Pass 3: Fibers
-    // -----------------------
-    if (hasFibers) {
-      const shader = this.fiberShader!
-      shader.use(gl)
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m!)
-      gl.uniform1f(shader.uniforms.opacity, alpha)
-
-      for (const mesh of this.meshes) {
-        if (!mesh.offsetPt0) {
-          continue
-        }
-        if (mesh.fiberSides >= 3 && mesh.fiberRadius > 0) {
-          continue
-        } // cylinders already drawn
-
-        gl.bindVertexArray(mesh.vaoFiber)
-        gl.drawElements(gl.LINE_STRIP, mesh.indexCount!, gl.UNSIGNED_INT, 0)
-        gl.bindVertexArray(this.unusedVAO)
-      }
-    }
-    // Restore defaults
-    gl.depthMask(true)
-    gl.disable(gl.BLEND)
+    MeshRenderer.drawMesh3D({
+      gl: this.gl,
+      meshes: this.meshes,
+      isDepthTest,
+      alpha,
+      mvpMatrix: m!,
+      modelMatrix: modelMtx!,
+      normalMatrix: normMtx!,
+      is2D,
+      meshShaders: this.meshShaders,
+      pickingMeshShader: this.pickingMeshShader,
+      fiberShader: this.fiberShader,
+      mouseDepthPicker: this.uiData.mouseDepthPicker,
+      matCapTexture: this.matCapTexture,
+      unusedVAO: this.unusedVAO,
+      meshXRay: this.opts.meshXRay,
+      meshThicknessOn2D: this.opts.meshThicknessOn2D,
+      frac2mm: (pos: number[]) => this.frac2mm(pos as vec3, 0, this.opts.isSliceMM),
+      crosshairPos: this.scene.crosshairPos
+    })
 
     this.readyForSync = true
   }

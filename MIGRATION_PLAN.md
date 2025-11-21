@@ -382,35 +382,71 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 3.3 MeshRenderer Module
 **File:** `packages/niivue/src/niivue/rendering/MeshRenderer.ts`
 **Responsibility:** 3D mesh rendering
-**Line Range:** ~13800-14063
-**Key Methods:**
-- `drawMesh3D()` - Render 3D meshes with various shaders
-- Shader-specific rendering logic
+**Key Functions Extracted:**
+- `shouldRenderMesh()` ✅ - Determine if mesh should be rendered
+- `selectMeshShader()` ✅ - Select appropriate shader for mesh
+- `calculateMeshAlpha()` ✅ - Calculate combined alpha value
+- `isFiberMesh()` ✅ - Check if mesh is fiber-based
+- `calculateCrosscutSlice()` ✅ - Calculate crosscut slice position for 2D views
+- `getMeshThickness()` ✅ - Get valid mesh thickness value
+- `configureMeshGLState()` ✅ - Configure WebGL state for rendering
+- `setupCrosscutShader()` ✅ - Setup crosscut shader uniforms
+- `setMeshUniforms()` ✅ - Set common mesh shader uniforms
+- `bindMatcapTexture()` ✅ - Bind matcap texture
+- `drawSingleMesh()` ✅ - Draw single mesh using VAO
+- `drawFiberMesh()` ✅ - Draw fiber mesh using line strips
+- `configureXRayPass()` ✅ - Configure GL state for X-ray pass
+- `resetAfterXRayPass()` ✅ - Reset GL state after X-ray
+- `resetMeshGLState()` ✅ - Reset GL state after mesh rendering
+- `drawMesh3D()` ✅ - Full mesh 3D rendering pass
 
-**Dependencies:** WebGLContext, ShaderManager, MeshManager
-**Status:** ⬜ Not Started
+**Niivue Methods Updated:**
+- `drawMesh3D()` - Delegates to MeshRenderer.drawMesh3D()
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- WebGL state management encapsulated in helper functions
+
+**Dependencies:** NVMesh, Shader, gl-matrix
+**Status:** ✅ Completed
 
 ---
 
 #### 3.4 SceneRenderer Module
 **File:** `packages/niivue/src/niivue/rendering/SceneRenderer.ts`
 **Responsibility:** Overall scene composition and rendering orchestration
-**Line Range:** ~15273-15860
-**Key Methods:**
-- `drawSceneCore()` - Core rendering loop
-- `drawScene()` - Main scene rendering entry point
-- `calculateMvpMatrix()` - Model-view-projection matrix calculation
-- `calculateModelMatrix()` - Model matrix calculation
-- `calculateRayDirection()` - Ray direction for picking
-- `sceneExtentsMinMax()` - Scene bounds calculation
-- `setPivot3D()` - 3D pivot point
+**Key Functions Extracted:**
+- `calculateMvpMatrix()` ✅ - Build MVP, Model, and Normal matrices
+- `calculatePivot3D()` ✅ - Calculate 3D pivot point and scene scale
+- `scaleSlice()` ✅ - Calculate scaled dimensions for slice panels
+- `effectiveCanvasWidth()` ✅ - Calculate effective canvas width
+- `effectiveCanvasHeight()` ✅ - Calculate effective canvas height
+- `getMaxVols()` ✅ - Get maximum number of 4D volumes
+- `getBoundsRegion()` ✅ - Get bounds region for rendering
+- `clearBounds()` ✅ - Clear specified region with scissor test
+- `setupViewport()` ✅ - Setup viewport for rendering
+- `calculatePadPixels()` ✅ - Calculate padding for grid layouts
+- `determineLayoutType()` ✅ - Determine optimal layout type
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `calculateMvpMatrix()` - Delegates to SceneRenderer.calculateMvpMatrix()
+- `setPivot3D()` - Delegates to SceneRenderer.calculatePivot3D()
+- `getMaxVols()` - Delegates to SceneRenderer.getMaxVols()
+
+**Properties (remain in Niivue class):**
 - `isBusy`, `needsRefresh` - Rendering state flags
 - Scene-related matrices and transforms
 
-**Dependencies:** SliceRenderer, VolumeRenderer, MeshRenderer, WebGLContext
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- `drawSceneCore()` and `drawScene()` remain in Niivue class due to heavy state dependencies
+- Helper functions extracted for matrix calculations and layout computations
+- Niivue class maintains backward compatibility through delegation
+
+**Dependencies:** gl-matrix, deg2rad utility
+**Status:** ✅ Completed
 
 ---
 
@@ -1180,8 +1216,8 @@ For each module in the plan above:
 
 - ✅ 3.1 SliceRenderer Module
 - ✅ 3.2 VolumeRenderer Module
-- ⬜ 3.3 MeshRenderer Module
-- ⬜ 3.4 SceneRenderer Module
+- ✅ 3.3 MeshRenderer Module
+- ✅ 3.4 SceneRenderer Module
 - ⬜ 3.5 UIElementRenderer Module
 
 ### Phase 4: Interaction Modules ⬜
