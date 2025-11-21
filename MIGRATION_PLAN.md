@@ -344,21 +344,38 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 3.2 VolumeRenderer Module
 **File:** `packages/niivue/src/niivue/rendering/VolumeRenderer.ts`
 **Responsibility:** 3D volume rendering (ray-casting, MIP, etc.)
-**Line Range:** ~13084-13168, ~7744-7916
-**Key Methods:**
-- `drawImage3D()` - 3D volume rendering
-- `gradientGL()` - Gradient texture generation for lighting
-- `getGradientTextureData()` - Retrieve gradient data
-- `setCustomGradientTexture()` - Custom gradient textures
+**Key Functions Extracted:**
+- `sph2cartDeg()` ✅ - Convert spherical coordinates to Cartesian
+- `calculateModelMatrix()` ✅ - Compute model transformation matrix
+- `calculateRayDirection()` ✅ - Calculate normalized ray direction for volume rendering
+- `gradientGL()` ✅ - Gradient texture generation for lighting
+- `getGradientTextureData()` ✅ - Retrieve gradient data as TypedArray
+- `setCustomGradientTexture()` ✅ - Set custom gradient textures
+- `drawImage3D()` ✅ - 3D volume rendering
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `sph2cartDeg()` - Delegates to VolumeRenderer.sph2cartDeg()
+- `calculateModelMatrix()` - Delegates to VolumeRenderer.calculateModelMatrix()
+- `calculateRayDirection()` - Delegates to VolumeRenderer.calculateRayDirection()
+- `gradientGL()` - Delegates to VolumeRenderer.gradientGL()
+- `getGradientTextureData()` - Delegates to VolumeRenderer.getGradientTextureData()
+- `setCustomGradientTexture()` - Delegates to VolumeRenderer.setCustomGradientTexture()
+- `drawImage3D()` - Delegates to VolumeRenderer.drawImage3D()
+
+**Properties (remain in Niivue class - tightly coupled to WebGL state):**
 - `gradientTexture: WebGLTexture`
 - `gradientTextureAmount`
 - `useCustomGradientTexture`
 - `renderGradientValues`
 
-**Dependencies:** WebGLContext, ShaderManager, VolumeManager
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- State management remains in Niivue class; pure functions handle computation
+
+**Dependencies:** gl-matrix, Shader, NiivueObject3D, NiftiHeader
+**Status:** ✅ Completed
 
 ---
 
@@ -1162,7 +1179,7 @@ For each module in the plan above:
 ### Phase 3: Rendering Modules 🔄
 
 - ✅ 3.1 SliceRenderer Module
-- ⬜ 3.2 VolumeRenderer Module
+- ✅ 3.2 VolumeRenderer Module
 - ⬜ 3.3 MeshRenderer Module
 - ⬜ 3.4 SceneRenderer Module
 - ⬜ 3.5 UIElementRenderer Module

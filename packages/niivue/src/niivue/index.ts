@@ -1,4 +1,4 @@
-import { mat3, mat4, vec2, vec3, vec4 } from 'gl-matrix'
+import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
 import packageJson from '../../package.json' with { type: 'json' }
 import { orientCube } from '@/orientCube'
 import { NiivueObject3D } from '@/niivue-object3D'
@@ -19,6 +19,7 @@ import * as MeshManager from '@/niivue/data/MeshManager'
 import * as ConnectomeManager from '@/niivue/data/ConnectomeManager'
 import * as FileLoader from '@/niivue/data/FileLoader'
 import * as SliceRenderer from '@/niivue/rendering/SliceRenderer'
+import * as VolumeRenderer from '@/niivue/rendering/VolumeRenderer'
 import {
   NVDocument,
   NVConfigOptions,
@@ -229,7 +230,7 @@ const TEXTURE6_GRADIENT = 33990
 const TEXTURE7_DRAW = 33991
 const TEXTURE8_PAQD = 33992
 // subsequent textures only used transiently
-const TEXTURE8_GRADIENT_TEMP = 33992
+const _TEXTURE8_GRADIENT_TEMP = 33992
 const TEXTURE9_ORIENT = 33993
 const TEXTURE11_GC_BACK = 33995
 const TEXTURE12_GC_STRENGTH0 = 33996
@@ -4323,20 +4324,7 @@ export class Niivue {
    * @internal
    */
   sph2cartDeg(azimuth: number, elevation: number): number[] {
-    // convert spherical AZIMUTH,ELEVATION,RANGE to Cartesian
-    // see Matlab's [x,y,z] = sph2cart(THETA,PHI,R)
-    // reverse with cart2sph
-    const Phi = -elevation * (Math.PI / 180)
-    const Theta = ((azimuth - 90) % 360) * (Math.PI / 180)
-    const ret = [Math.cos(Phi) * Math.cos(Theta), Math.cos(Phi) * Math.sin(Theta), Math.sin(Phi)]
-    const len = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2])
-    if (len <= 0.0) {
-      return ret
-    }
-    ret[0] /= len
-    ret[1] /= len
-    ret[2] /= len
-    return ret
+    return VolumeRenderer.sph2cartDeg(azimuth, elevation)
   }
 
   /**
@@ -7014,73 +7002,21 @@ export class Niivue {
    * @internal
    */
   gradientGL(hdr: NiftiHeader): void {
-    const gl = this.gl
-    gl.bindVertexArray(this.genericVAO)
-    const fb = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
-    gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
-    gl.disable(gl.BLEND)
-    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
-    const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader! : this.blurShader!
-    blurShader.use(gl)
-    gl.activeTexture(TEXTURE0_BACK_VOL)
-    gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    const blurRadius = 0.7
-    gl.uniform1i(blurShader.uniforms.intensityVol, 0)
-    gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
-    gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2])
-    gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3])
-    for (let i = 0; i < hdr.dims[3] - 1; i++) {
-      const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
-      gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
-      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i)
-      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-      if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error('blur shader: ', status)
-      }
-      // this.clearBounds(gl.DEPTH_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    }
-    const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader! : this.sobelFirstOrderShader!
-    sobelShader.use(gl)
-    gl.activeTexture(TEXTURE8_GRADIENT_TEMP)
-    gl.bindTexture(gl.TEXTURE_3D, tempTex3D) // input texture
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.uniform1i(sobelShader.uniforms.intensityVol, 8) // TEXTURE8_GRADIENT_TEMP
-    const sobelRadius = 0.7
-    gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1])
-    gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2])
-    gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3])
-    if (this.opts.gradientOrder === 2) {
-      gl.uniform1f(sobelShader.uniforms.dX2, (2.0 * sobelRadius) / hdr.dims[1])
-      gl.uniform1f(sobelShader.uniforms.dY2, (2.0 * sobelRadius) / hdr.dims[2])
-      gl.uniform1f(sobelShader.uniforms.dZ2, (2.0 * sobelRadius) / hdr.dims[3])
-    }
-    gl.uniform1f(sobelShader.uniforms.coordZ, 0.5)
-    if (this.gradientTexture !== null) {
-      gl.deleteTexture(this.gradientTexture)
-    }
-    this.gradientTexture = this.rgbaTex(this.gradientTexture, TEXTURE6_GRADIENT, hdr.dims)
-    for (let i = 0; i < hdr.dims[3] - 1; i++) {
-      const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
-      gl.uniform1f(sobelShader.uniforms.coordZ, coordZ)
-      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i)
-      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-      if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error('sobel shader: ', status)
-      }
-      // this.clearBounds(gl.DEPTH_BUFFER_BIT)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
-    }
-    gl.deleteFramebuffer(fb)
-    gl.deleteTexture(tempTex3D)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    gl.activeTexture(TEXTURE8_PAQD)
-    gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture) // input texture
-    this.gl.bindVertexArray(this.unusedVAO)
+    this.gradientTexture = VolumeRenderer.gradientGL({
+      gl: this.gl,
+      hdr,
+      genericVAO: this.genericVAO,
+      unusedVAO: this.unusedVAO,
+      volumeTexture: this.volumeTexture,
+      paqdTexture: this.paqdTexture,
+      gradientTexture: this.gradientTexture,
+      gradientOrder: this.opts.gradientOrder,
+      blurShader: this.blurShader!,
+      sobelBlurShader: this.sobelBlurShader!,
+      sobelFirstOrderShader: this.sobelFirstOrderShader!,
+      sobelSecondOrderShader: this.sobelSecondOrderShader!,
+      rgbaTex: this.rgbaTex.bind(this)
+    })
   }
 
   /**
@@ -7097,74 +7033,11 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
   getGradientTextureData(): Float32Array | null {
-    if (!this.gradientTexture || !this.back) {
-      return null
-    }
-
-    const gl = this.gl
-    const dims = this.back.dims!
-    const width = dims[1]
-    const height = dims[2]
-    const depth = dims[3]
-    const numVoxels = width * height * depth
-
-    // Create framebuffer to read from 3D texture
-    const fb = gl.createFramebuffer()
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
-
-    // Create output array
-    const data = new Float32Array(numVoxels * 4) // RGBA components
-
-    try {
-      // Read each slice of the 3D texture
-      for (let slice = 0; slice < depth; slice++) {
-        // Attach the current slice to the framebuffer
-        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, slice)
-
-        // Check framebuffer completeness
-        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER)
-        if (status !== gl.FRAMEBUFFER_COMPLETE) {
-          console.warn(
-            'Framebuffer not complete for gradient texture reading, slice',
-            slice,
-            'status:',
-            status.toString(16)
-          )
-          continue
-        }
-
-        // Read as UINT8 data (more compatible) and convert to float
-        try {
-          const byteData = new Uint8Array(width * height * 4)
-          gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, byteData)
-
-          // Convert from uint8 (0-255) to float (-1.0 to 1.0) range
-          const sliceData = new Float32Array(width * height * 4)
-          for (let i = 0; i < byteData.length; i++) {
-            sliceData[i] = byteData[i] / 127.5 - 1.0
-          }
-
-          // Copy slice data to output array
-          const sliceOffset = slice * width * height * 4
-          data.set(sliceData, sliceOffset)
-        } catch (readError) {
-          console.warn('Failed to read pixels for slice', slice, ':', readError)
-          // Fill with zeros for this slice
-          const sliceOffset = slice * width * height * 4
-          const zeroSlice = new Float32Array(width * height * 4)
-          data.set(zeroSlice, sliceOffset)
-        }
-      }
-    } catch (error) {
-      console.error('Error reading gradient texture:', error)
-      return null
-    } finally {
-      // Cleanup
-      gl.deleteFramebuffer(fb)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-    }
-
-    return data
+    return VolumeRenderer.getGradientTextureData({
+      gl: this.gl,
+      gradientTexture: this.gradientTexture,
+      dims: this.back?.dims ?? null
+    })
   }
 
   /**
@@ -7186,73 +7059,24 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
   setCustomGradientTexture(data: Float32Array | Uint8Array | null, dims?: number[]): void {
-    const gl = this.gl
+    const result = VolumeRenderer.setCustomGradientTexture({
+      gl: this.gl,
+      data,
+      dims,
+      backDims: this.back?.dims ?? null,
+      gradientTexture: this.gradientTexture,
+      gradientTextureAmount: this.gradientTextureAmount,
+      hdr: this.back?.hdr ?? null,
+      gradientGLFn: this.gradientGL.bind(this)
+    })
 
-    if (data === null) {
-      // Revert to auto-generated gradient
-      this.useCustomGradientTexture = false
-      if (this.back && this.gradientTextureAmount > 0.0) {
-        this.gradientGL(this.back.hdr!)
-      }
-      return
+    this.gradientTexture = result.gradientTexture
+    this.useCustomGradientTexture = result.useCustomGradientTexture
+
+    // Redraw scene to apply changes if custom texture was set
+    if (data !== null && result.useCustomGradientTexture) {
+      this.drawScene()
     }
-
-    if (!dims && !this.back) {
-      console.warn('No dimensions provided and no background volume loaded')
-      return
-    }
-
-    const texDims = dims || this.back!.dims!
-    const width = texDims[1]
-    const height = texDims[2]
-    const depth = texDims[3]
-    const expectedSize = width * height * depth * 4
-
-    if (data.length !== expectedSize) {
-      console.warn(`Custom gradient data size mismatch. Expected ${expectedSize}, got ${data.length}`)
-      return
-    }
-
-    // Set flag to indicate we're using a custom gradient texture
-    this.useCustomGradientTexture = true
-
-    // Delete existing gradient texture
-    if (this.gradientTexture !== null) {
-      gl.deleteTexture(this.gradientTexture)
-    }
-
-    // Create new texture
-    this.gradientTexture = gl.createTexture()
-    gl.activeTexture(TEXTURE6_GRADIENT)
-    gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
-
-    // Convert float data to uint8 if needed and use RGBA8 format for better compatibility
-    let textureData: Uint8Array
-    if (data instanceof Float32Array) {
-      // Convert float data (-1.0 to 1.0) to uint8 (0 to 255)
-      textureData = new Uint8Array(data.length)
-      for (let i = 0; i < data.length; i++) {
-        // Clamp to -1.0 to 1.0, then map to 0-255
-        const clampedValue = Math.max(-1.0, Math.min(1.0, data[i]))
-        textureData[i] = Math.round((clampedValue + 1.0) * 127.5)
-      }
-    } else {
-      // Data is already Uint8Array
-      textureData = data
-    }
-
-    // Use RGBA8 format for better WebGL compatibility
-    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8, width, height, depth)
-    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, width, height, depth, gl.RGBA, gl.UNSIGNED_BYTE, textureData)
-
-    // Redraw scene to apply changes
-    this.drawScene()
   }
 
   /**
@@ -11492,18 +11316,11 @@ export class Niivue {
     if (!this.back) {
       throw new Error('back undefined')
     }
-    const modelMatrix = mat4.create()
-    modelMatrix[0] = -1 // mirror X coordinate
-    // push the model away from the camera so camera not inside model
-    // apply elevation
-    mat4.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation))
-    // apply azimuth
-    mat4.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180))
-    if (this.back.obliqueRAS) {
-      const oblique = mat4.clone(this.back.obliqueRAS)
-      mat4.multiply(modelMatrix, modelMatrix, oblique)
-    }
-    return modelMatrix
+    return VolumeRenderer.calculateModelMatrix({
+      azimuth,
+      elevation,
+      obliqueRAS: this.back.obliqueRAS
+    })
   }
 
   /**
@@ -11513,31 +11330,11 @@ export class Niivue {
    * @internal
    */
   calculateRayDirection(azimuth: number, elevation: number): vec3 {
-    // direction in clip/View space we want to map back (note: vec3 used for "direction")
-    const dirClip = vec3.fromValues(0, 0, -1)
-    const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
-    const proj3 = mat3.fromValues(1, 0, 0, 0, -1, 0, 0, 0, -1)
-    const dirAfterProj = vec3.create()
-    vec3.transformMat3(dirAfterProj, dirClip, proj3)
-    const model3 = mat3.create()
-    mat3.fromMat4(model3, modelMatrix)
-    const invModel3 = mat3.create()
-    if (!mat3.invert(invModel3, model3)) {
-      // fallback: if not invertible, return a sensible default (e.g. unit Z)
-      return vec3.fromValues(0, 0, 1)
-    }
-    // worldRay = invModel3 * dirAfterProj
-    const worldRay = vec3.create()
-    vec3.transformMat3(worldRay, dirAfterProj, invModel3)
-    vec3.normalize(worldRay, worldRay)
-    // small defuzz to avoid exact zero components
-    const tiny = 0.00005
-    for (let i = 0; i < 3; i++) {
-      if (Math.abs(worldRay[i]) < tiny) {
-        worldRay[i] = Math.sign(worldRay[i]) * tiny || tiny
-      }
-    }
-    return worldRay
+    return VolumeRenderer.calculateRayDirection({
+      azimuth,
+      elevation,
+      obliqueRAS: this.back?.obliqueRAS
+    })
   }
 
   /**
@@ -11959,83 +11756,30 @@ export class Niivue {
    * @internal
    */
   drawImage3D(mvpMatrix: mat4, azimuth: number, elevation: number): void {
-    if (this.volumes.length === 0) {
-      return
-    }
-    const gl = this.gl
-    const rayDir = this.calculateRayDirection(azimuth, elevation)
-    const object3D = this.volumeObject3D
-    if (object3D) {
-      gl.enable(gl.BLEND)
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-      gl.enable(gl.CULL_FACE)
-      gl.cullFace(gl.FRONT) // TH switch since we L/R flipped in calculateMvpMatrix
-      let shader = this.renderShader!
-      if (this.uiData.mouseDepthPicker) {
-        shader = this.pickingImageShader!
-      }
-      shader.use(this.gl)
-      // next lines optional: these textures should be bound by default
-      // these lines can cause warnings, e.g. if drawTexture not used or created
-      // gl.activeTexture(TEXTURE0_BACK_VOL)
-      // gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture)
-      // gl.activeTexture(TEXTURE1_COLORMAPS)
-      // gl.bindTexture(gl.TEXTURE_2D, this.colormapTexture)
-      // gl.activeTexture(TEXTURE2_OVERLAY_VOL)
-      // gl.bindTexture(gl.TEXTURE_3D, this.overlayTexture)
-      // gl.activeTexture(TEXTURE7_DRAW)
-      // gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
-      // gl.activeTexture(TEXTURE8_PAQD)
-      // gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture)
-      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays)
-      if (this.gradientTextureAmount > 0.0 && shader.uniforms.normMtx && this.gradientTexture) {
-        gl.activeTexture(TEXTURE6_GRADIENT)
-        gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture)
-        const modelMatrix = this.calculateModelMatrix(azimuth, elevation)
-        const iModelMatrix = mat4.create()
-        mat4.invert(iModelMatrix, modelMatrix)
-        const normalMatrix = mat4.create()
-        mat4.transpose(normalMatrix, iModelMatrix)
-        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix)
-      }
-      if (this.drawBitmap && this.drawBitmap.length > 8) {
-        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity)
-      } else {
-        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0.0)
-      }
-      this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms)
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
-      gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back!.matRAS!)
-      gl.uniform3fv(shader.uniforms.rayDir, rayDir)
-
-      if (this.gradientTextureAmount < 0.0) {
-        // use slice shader
-        gl.uniform4fv(shader.uniforms.clipPlane, [
-          this.scene.crosshairPos[0],
-          this.scene.crosshairPos[1],
-          this.scene.crosshairPos[2],
-          30
-        ])
-      } else {
-        // gl.uniform4fv(shader.uniforms.clipPlane, this.scene.clipPlane)
-        const MAX_CLIP_PLANES = 6
-        // n.b. clipplane.a == 2.0 means no clipping
-        const arr = new Float32Array(4 * MAX_CLIP_PLANES).fill(2.0)
-        // const firstPlane = this.scene.clipPlane; // e.g. [-1.7e-16, -0.9396, -0.3420, 0.1]
-        for (let i = 0; i < this.scene.clipPlaneDepthAziElevs.length; i++) {
-          const dae = this.scene.clipPlaneDepthAziElevs[i]
-          const v = this.sph2cartDeg(dae[1] + 180, dae[2])
-          const planeI = [v[0], v[1], v[2], dae[0]]
-          arr.set(planeI, i * 4)
-        }
-        this.gl.uniform4fv(shader.uniforms.clipPlanes, arr)
-      }
-      gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
-      gl.uniform1i(shader.uniforms.isClipCutaway, this.opts.isClipPlanesCutaway ? 1 : 0)
-      gl.bindVertexArray(object3D.vao)
-      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
-      gl.bindVertexArray(this.unusedVAO)
-    }
+    VolumeRenderer.drawImage3D({
+      gl: this.gl,
+      mvpMatrix,
+      azimuth,
+      elevation,
+      volumesLength: this.volumes.length,
+      volumeObject3D: this.volumeObject3D,
+      unusedVAO: this.unusedVAO,
+      renderShader: this.renderShader!,
+      pickingImageShader: this.pickingImageShader!,
+      mouseDepthPicker: this.uiData.mouseDepthPicker,
+      backgroundMasksOverlays: this.backgroundMasksOverlays,
+      gradientTextureAmount: this.gradientTextureAmount,
+      gradientTexture: this.gradientTexture,
+      drawBitmap: this.drawBitmap,
+      renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
+      drawOpacity: this.drawOpacity,
+      paqdUniforms: this.opts.paqdUniforms,
+      matRAS: this.back!.matRAS!,
+      crosshairPos: this.scene.crosshairPos,
+      clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
+      isClipPlanesCutaway: this.opts.isClipPlanesCutaway,
+      obliqueRAS: this.back?.obliqueRAS
+    })
   }
 
   /**
