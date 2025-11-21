@@ -550,27 +550,48 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 4.2 MouseController Module
 **File:** `packages/niivue/src/niivue/interaction/MouseController.ts`
-**Responsibility:** Mouse event handling
-**Line Range:** ~1441-1851, ~4515-4539
-**Key Methods:**
-- `mouseDownListener()` - Mouse button press
-- `mouseUpListener()` - Mouse button release
-- `mouseMoveListener()` - Mouse movement
-- `mouseLeaveListener()` - Mouse leaves canvas
-- `mouseContextMenuListener()` - Right-click context menu
-- `mouseClick()` - Click handling with position
-- `mouseDown()`, `mouseMove()` - Programmatic mouse events
-- `updateMousePos()` - Position tracking
-- `getMouseButtonDragMode()` - Determine drag mode from button
-- `handleMouseAction()` - Execute action based on drag mode
+**Responsibility:** Mouse event handling helper functions
+**Key Functions Extracted:**
+- `getMouseButtonDragMode()` ✅ - Determine drag mode from button/modifiers
+- `determineButtonState()` ✅ - Determine which button flags to set
+- `calculateMouseDownPosition()` ✅ - Calculate scaled mouse down position
+- `calculateMouseMovePosition()` ✅ - Calculate mouse move delta and new position
+- `initializeDragState()` ✅ - Initialize drag state for drag operations
+- `createResetButtonState()` ✅ - Create reset state for button flags
+- `hasDragMoved()` ✅ - Check if drag has moved
+- `isOffCanvas()` ✅ - Check if position is off canvas
+- `createOffCanvasPosition()` ✅ - Create off-canvas position marker
+- `calculateWindowingValues()` ✅ - Calculate cal_min/cal_max for windowing drag
+- `getNextAngleState()` ✅ - Determine next angle measurement state
+- `isAngleMeasurementInProgress()` ✅ - Check if angle measurement is in progress
+- `shouldTrackDrag()` ✅ - Check if drag mode should track drag start/end
+- `isFunction()` ✅ - Check if value is a function
 
-**Properties to migrate:**
+**Exported Constants:**
+- `LEFT_MOUSE_BUTTON`, `CENTER_MOUSE_BUTTON`, `RIGHT_MOUSE_BUTTON` ✅
+
+**Niivue Methods Updated:**
+- `getMouseButtonDragMode()` - Delegates to MouseController.getMouseButtonDragMode()
+- `mouseDown()` - Uses MouseController.calculateMouseDownPosition()
+- `updateMousePos()` - Uses MouseController.calculateMouseDownPosition()
+- `mouseMove()` - Uses MouseController.calculateMouseMovePosition()
+- `mouseLeaveListener()` - Uses MouseController.createResetButtonState() and createOffCanvasPosition()
+- `mouseUpListener()` - Uses MouseController.isFunction()
+- `calculateNewRange()` - Uses MouseController.hasDragMoved()
+
+**Properties (remain in Niivue class - state management):**
 - `uiData.mousedown`, `uiData.mouseButtonLeftDown`, etc.
 - `uiData.prevX`, `uiData.prevY`, `uiData.currX`, `uiData.currY`
-- Mouse-related state from UIData
+- `mousePos` - Current mouse position
 
-**Dependencies:** EventController, DragModeManager
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Event listener methods remain in Niivue class due to heavy state dependencies
+- Pure functions handle calculation logic; state management stays in Niivue
+- Mouse button constants moved from Niivue class to MouseController module
+
+**Dependencies:** DRAG_MODE, MouseEventConfig, vec4
+**Status:** ✅ Completed
 
 ---
 
@@ -1272,7 +1293,7 @@ For each module in the plan above:
 ### Phase 4: Interaction Modules 🔄
 
 - ✅ 4.1 EventController Module
-- ⬜ 4.2 MouseController Module
+- ✅ 4.2 MouseController Module
 - ⬜ 4.3 TouchController Module
 - ⬜ 4.4 KeyboardController Module
 - ⬜ 4.5 WheelController Module

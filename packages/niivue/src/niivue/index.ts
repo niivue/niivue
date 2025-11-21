@@ -24,6 +24,7 @@ import * as MeshRenderer from '@/niivue/rendering/MeshRenderer'
 import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
 import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
 import * as EventController from '@/niivue/interaction/EventController'
+import * as MouseController from '@/niivue/interaction/MouseController'
 import {
   NVDocument,
   NVConfigOptions,
@@ -216,10 +217,8 @@ type MM = {
 // MESH_EXTENSIONS is now imported from FileLoader module
 const { MESH_EXTENSIONS } = FileLoader
 
-// mouse button codes
-const LEFT_MOUSE_BUTTON = 0
-const CENTER_MOUSE_BUTTON = 1
-const RIGHT_MOUSE_BUTTON = 2
+// mouse button codes are now imported from MouseController module
+const { LEFT_MOUSE_BUTTON, CENTER_MOUSE_BUTTON, RIGHT_MOUSE_BUTTON } = MouseController
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Constants
 // gl.TEXTURE0..31 are constants 0x84C0..0x84DF = 33984..34015
@@ -1375,32 +1374,14 @@ export class Niivue {
    * @internal
    */
   getMouseButtonDragMode(button: number, shiftKey: boolean, ctrlKey: boolean): DRAG_MODE {
-    const mouseConfig = this.opts.mouseEventConfig
-
-    if (button === LEFT_MOUSE_BUTTON) {
-      if (mouseConfig?.leftButton) {
-        if (shiftKey && mouseConfig.leftButton.withShift !== undefined) {
-          return mouseConfig.leftButton.withShift
-        }
-        if (ctrlKey && mouseConfig.leftButton.withCtrl !== undefined) {
-          return mouseConfig.leftButton.withCtrl
-        }
-        return mouseConfig.leftButton.primary
-      }
-      return ctrlKey ? DRAG_MODE.crosshair : this.opts.dragModePrimary
-    } else if (button === RIGHT_MOUSE_BUTTON) {
-      if (mouseConfig?.rightButton !== undefined) {
-        return mouseConfig.rightButton
-      }
-      return this.opts.dragMode
-    } else if (button === CENTER_MOUSE_BUTTON) {
-      if (mouseConfig?.centerButton !== undefined) {
-        return mouseConfig.centerButton
-      }
-      return this.opts.dragMode
-    }
-
-    return this.opts.dragMode as DRAG_MODE
+    return MouseController.getMouseButtonDragMode({
+      button,
+      shiftKey,
+      ctrlKey,
+      mouseConfig: this.opts.mouseEventConfig,
+      dragMode: this.opts.dragMode,
+      dragModePrimary: this.opts.dragModePrimary
+    })
   }
 
   /**
@@ -1582,7 +1563,7 @@ export class Niivue {
     if (this.opts.sliceType === SLICE_TYPE.RENDER && this.sliceMosaicString.length < 1) {
       return
     }
-    if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+    if (!MouseController.hasDragMoved(this.uiData.dragStart, this.uiData.dragEnd)) {
       return
     }
     // calculate our box
@@ -1688,9 +1669,6 @@ export class Niivue {
    */
   mouseUpListener(): void {
     this.uiData.mousedown = false
-    function isFunction(test: unknown): boolean {
-      return Object.prototype.toString.call(test).indexOf('Function') > -1
-    }
 
     // let fracPos = this.canvasPos2frac(this.mousePos);
     const uiData = {
@@ -1737,7 +1715,7 @@ export class Niivue {
       this.drawShapePreviewBitmap = null
       this.refreshDrawing(true, false)
     }
-    if (isFunction(this.onMouseUp)) {
+    if (MouseController.isFunction(this.onMouseUp)) {
       this.onMouseUp(uiData)
     }
     if (this.uiData.isDragging) {
@@ -1785,10 +1763,7 @@ export class Niivue {
           this.clearActiveDragMode()
           return
         }
-        if (
-          this.uiData.dragStart[0] === this.uiData.dragEnd[0] &&
-          this.uiData.dragStart[1] === this.uiData.dragEnd[1]
-        ) {
+        if (!MouseController.hasDragMoved(this.uiData.dragStart, this.uiData.dragEnd)) {
           this.clearActiveDragMode()
           return
         }
@@ -2011,14 +1986,15 @@ export class Niivue {
     if (this.uiData.isDragging || this.uiData.mousedown) {
       log.debug('Mouse left canvas during drag, resetting drag state.')
       this.uiData.isDragging = false
-      this.uiData.mouseButtonLeftDown = false
-      this.uiData.mouseButtonCenterDown = false
-      this.uiData.mouseButtonRightDown = false
-      this.uiData.mousedown = false
+      const resetState = MouseController.createResetButtonState()
+      this.uiData.mouseButtonLeftDown = resetState.mouseButtonLeftDown
+      this.uiData.mouseButtonCenterDown = resetState.mouseButtonCenterDown
+      this.uiData.mouseButtonRightDown = resetState.mouseButtonRightDown
+      this.uiData.mousedown = resetState.mousedown
       this.drawScene()
     }
     // Mark cursor as off-canvas so cursorInBounds() always returns false
-    this.mousePos = [-1, -1]
+    this.mousePos = MouseController.createOffCanvasPosition()
   }
 
   /**
@@ -4237,9 +4213,12 @@ export class Niivue {
    * @internal
    */
   mouseDown(x: number, y: number): void {
-    x *= this.uiData.dpr!
-    y *= this.uiData.dpr!
-    this.mousePos = [x, y]
+    const result = MouseController.calculateMouseDownPosition({
+      x,
+      y,
+      dpr: this.uiData.dpr!
+    })
+    this.mousePos = result.mousePos
     // if (this.inRenderTile(x, y) < 0) return;
   }
 
@@ -4248,11 +4227,13 @@ export class Niivue {
    * @internal
    */
   updateMousePos(x: number, y: number): [number, number] {
-    x *= this.uiData.dpr!
-    y *= this.uiData.dpr!
-
-    this.mousePos = [x, y]
-    return [x, y]
+    const result = MouseController.calculateMouseDownPosition({
+      x,
+      y,
+      dpr: this.uiData.dpr!
+    })
+    this.mousePos = result.mousePos
+    return result.mousePos
   }
 
   /**
@@ -4261,20 +4242,23 @@ export class Niivue {
    * @internal
    */
   mouseMove(x: number, y: number): void {
-    x *= this.uiData.dpr!
-    y *= this.uiData.dpr!
-    const dx = (x - this.mousePos[0]) / this.uiData.dpr!
-    const dy = (y - this.mousePos[1]) / this.uiData.dpr!
-    this.mousePos = [x, y]
-    if (this.inRenderTile(x, y) < 0) {
+    const result = MouseController.calculateMouseMovePosition({
+      x,
+      y,
+      dpr: this.uiData.dpr!,
+      currentMousePos: this.mousePos as [number, number]
+    })
+    this.mousePos = result.mousePos
+
+    if (this.inRenderTile(result.scaledX, result.scaledY) < 0) {
       return
     }
 
-    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+    if (Math.abs(result.dx) < 1 && Math.abs(result.dy) < 1) {
       return
     }
-    this.scene.renderAzimuth += dx
-    this.scene.renderElevation += dy
+    this.scene.renderAzimuth += result.dx
+    this.scene.renderElevation += result.dy
 
     this.drawScene()
   }
