@@ -272,21 +272,41 @@ This method orchestrates the entire volume update process and could remain as-is
 **Responsibility:** File loading, format detection, drag-and-drop
 **Line Range:** ~2747-3070
 **Key Methods:**
-- `dragEnterListener()`, `dragOverListener()` - Drag-and-drop
-- `getFileExt()` - File extension detection
-- `isMeshExt()` - Check if file is mesh format
-- `getMediaByUrl()` - Retrieve loaded media by URL
-- `removeVolumeByUrl()` - Remove by URL
-- `readDirectory()` - Directory reading
-- `useLoader()`, `useDicomLoader()` - Custom loaders
-- `getDicomLoader()` - Get DICOM loader
+- `handleDragEnter()`, `handleDragOver()` ✅ - Drag-and-drop event handlers
+- `getFileExt()` ✅ - File extension detection
+- `isMeshExt()` ✅ - Check if file is mesh format
+- `getMediaByUrl()` ✅ - Retrieve loaded media by URL
+- `removeVolumeByUrl()` - Remains in Niivue (delegates to getMediaByUrl + removeVolume)
+- `readDirectory()` ✅ - Directory reading
+- `traverseFileTree()` ✅ - File tree traversal
+- `readFileAsDataURL()` ✅ - Read file as data URL
+- `registerLoader()` ✅ - Register custom loader (used by useLoader)
+- `getLoader()` ✅ - Get loader for extension
+- `isDicomExtension()` ✅ - Check if extension is DICOM
+- `useDicomLoader()`, `getDicomLoader()` - Remain in Niivue (simple property setters/getters)
 
-**Properties to migrate:**
-- `loaders` object
-- `dicomLoader: DicomLoader | null`
+**Exported Constants:**
+- `MESH_EXTENSIONS` ✅ - Array of mesh file extensions
 
-**Dependencies:** VolumeManager, MeshManager
-**Status:** ⬜ Not Started
+**Exported Types:**
+- `DicomLoaderInput`, `DicomLoader` ✅ - DICOM loader types
+- `CustomLoader`, `LoaderRegistry` ✅ - Custom loader types
+- `MeshLoaderResult` ✅ - Mesh loader result type
+- `GetFileExtOptions`, `RegisterLoaderParams` ✅ - Function parameter types
+
+**Properties:**
+- `loaders: LoaderRegistry` ✅ - Now typed with LoaderRegistry
+- `dicomLoader: DicomLoader | null` ✅ - Now typed with FileLoader.DicomLoader
+
+**Dependencies:** NVImage, NVMesh, logger
+**Status:** ✅ Completed
+
+**Implementation Notes:**
+- Pure functions extracted to FileLoader.ts
+- All functions use pure functional approach
+- MESH_EXTENSIONS constant moved from Niivue class to FileLoader module
+- DicomLoaderInput and DicomLoader types moved to FileLoader and re-exported for backward compatibility
+- Niivue class delegates to FileLoader functions and maintains backward compatibility
 
 ---
 
@@ -1123,12 +1143,12 @@ For each module in the plan above:
 - ✅ 1.2 CoordinateTransform Module
 - ✅ 1.3 ShaderManager Module
 
-### Phase 2: Data Management Modules 🔄
+### Phase 2: Data Management Modules ✅
 
 - ✅ 2.1 VolumeManager Module
 - ✅ 2.2 MeshManager Module
 - ✅ 2.3 ConnectomeManager Module
-- ⬜ 2.4 FileLoader Module
+- ✅ 2.4 FileLoader Module
 
 ### Phase 3: Rendering Modules ⬜
 

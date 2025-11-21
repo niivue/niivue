@@ -17,6 +17,7 @@ import * as VolumeModulation from '@/niivue/data/VolumeModulation'
 import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
 import * as MeshManager from '@/niivue/data/MeshManager'
 import * as ConnectomeManager from '@/niivue/data/ConnectomeManager'
+import * as FileLoader from '@/niivue/data/FileLoader'
 import {
   NVDocument,
   NVConfigOptions,
@@ -93,6 +94,27 @@ export { NVUtilities } from '@/nvutilities'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '@/nvlabel'
 export { NVMeshLoaders } from '@/nvmesh-loaders'
 export { NVMeshUtilities } from '@/nvmesh-utilities'
+export {
+  MESH_EXTENSIONS,
+  getFileExt,
+  isMeshExt,
+  getMediaByUrl,
+  registerLoader,
+  getLoader,
+  isDicomExtension,
+  traverseFileTree,
+  readDirectory,
+  readFileAsDataURL,
+  handleDragEnter,
+  handleDragOver
+} from '@/niivue/data/FileLoader'
+export type {
+  LoaderRegistry,
+  CustomLoader,
+  GetFileExtOptions,
+  RegisterLoaderParams,
+  MeshLoaderResult
+} from '@/niivue/data/FileLoader'
 
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
@@ -185,43 +207,8 @@ type MM = {
   fovMM: vec3
 }
 
-/**
- * mesh file formats that can be loaded
- */
-const MESH_EXTENSIONS = [
-  'ASC',
-  'BYU',
-  'DFS',
-  'FSM',
-  'PIAL',
-  'ORIG',
-  'INFLATED',
-  'SMOOTHWM',
-  'SPHERE',
-  'WHITE',
-  'G',
-  'GEO',
-  'GII',
-  'ICO',
-  'MZ3',
-  'NV',
-  'OBJ',
-  'OFF',
-  'PLY',
-  'SRF',
-  'STL',
-  'TCK',
-  'TRACT',
-  'TRI',
-  'TRK',
-  'TT',
-  'TRX',
-  'VTK',
-  'WRL',
-  'X3D',
-  'JCON',
-  'JSON'
-]
+// MESH_EXTENSIONS is now imported from FileLoader module
+const { MESH_EXTENSIONS } = FileLoader
 
 // mouse button codes
 const LEFT_MOUSE_BUTTON = 0
@@ -298,12 +285,9 @@ const defaultSaveImageOptions: SaveImageOptions = {
   volumeByIndex: 0
 }
 
-export type DicomLoaderInput = ArrayBuffer | ArrayBuffer[] | File[]
-
-export type DicomLoader = {
-  loader: (data: DicomLoaderInput) => Promise<Array<{ name: string; data: ArrayBuffer }>>
-  toExt: string
-}
+// Re-export types from FileLoader for backward compatibility
+export type DicomLoaderInput = FileLoader.DicomLoaderInput
+export type DicomLoader = FileLoader.DicomLoader
 
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
@@ -313,9 +297,9 @@ export type DicomLoader = {
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
 export class Niivue {
-  loaders = {}
+  loaders: FileLoader.LoaderRegistry = {}
   // create a dicom loader
-  dicomLoader: DicomLoader | null = null
+  dicomLoader: FileLoader.DicomLoader | null = null
   // {
   //   loader: (data: DicomLoaderInput) => {
   //     return new Promise<{name: string; data: ArrayBuffer}[]>((resolve, reject) => {
@@ -2631,8 +2615,7 @@ export class Niivue {
    * @internal
    */
   dragEnterListener(e: MouseEvent): void {
-    e.stopPropagation()
-    e.preventDefault()
+    FileLoader.handleDragEnter(e)
   }
 
   /**
@@ -2640,8 +2623,7 @@ export class Niivue {
    * @internal
    */
   dragOverListener(e: MouseEvent): void {
-    e.stopPropagation()
-    e.preventDefault()
+    FileLoader.handleDragOver(e)
   }
 
   /**
@@ -2649,22 +2631,7 @@ export class Niivue {
    * @internal
    */
   getFileExt(fullname: string, upperCase = true): string {
-    log.debug('fullname: ', fullname)
-    const re = /(?:\.([^.]+))?$/
-    let ext = re.exec(fullname)![1]
-    ext = ext.toUpperCase()
-    if (ext === 'GZ') {
-      ext = re.exec(fullname.slice(0, -3))![1] // img.trk.gz -> img.trk
-      ext = ext.toUpperCase()
-    } else if (ext === 'CBOR') {
-      // we want to keep cbor WITH the extension before it.
-      // e.g. if fullname is img.iwi.cbor, we want the ext to be iwi.cbor
-      const endExt = ext
-      ext = re.exec(fullname.slice(0, -5))![1] // img.iwi.cbor -> iwi.cbor
-      ext = ext.toUpperCase()
-      ext = `${ext}.${endExt}`
-    }
-    return upperCase ? ext : ext.toLowerCase() // developer can choose to have extensions as upper or lower
+    return FileLoader.getFileExt(fullname, upperCase)
   }
 
   /**
@@ -2755,10 +2722,7 @@ export class Niivue {
    * @internal
    */
   getMediaByUrl(url: string): NVImage | NVMesh | undefined {
-    return [...this.mediaUrlMap.entries()]
-      .filter((v) => v[1] === url)
-      .map((v) => v[0])
-      .pop()
+    return FileLoader.getMediaByUrl(url, this.mediaUrlMap)
   }
 
   /**
@@ -2780,40 +2744,8 @@ export class Niivue {
    * Adds `_webkitRelativePath` to each file for compatibility with tools like dcm2niix.
    * @internal
    */
-  async traverseFileTree(item, path = '', fileArray): Promise<File[]> {
-    return new Promise((resolve) => {
-      if (item.isFile) {
-        item.file((file) => {
-          file.fullPath = path + file.name
-          // IMPORTANT: _webkitRelativePath is required for dcm2niix to work.
-          // We need to add this property so we can parse multiple directories correctly.
-          // the "webkitRelativePath" property on File objects is read-only, so we can't set it directly, hence the underscore.
-          file._webkitRelativePath = path + file.name
-          fileArray.push(file)
-          resolve(fileArray)
-        })
-      } else if (item.isDirectory) {
-        const dirReader = item.createReader()
-        const readAllEntries = (): void => {
-          dirReader.readEntries((entries) => {
-            if (entries.length > 0) {
-              const promises = []
-              for (const entry of entries) {
-                promises.push(this.traverseFileTree(entry, path + item.name + '/', fileArray))
-              }
-              Promise.all(promises)
-                .then(readAllEntries)
-                .catch((e) => {
-                  throw e
-                })
-            } else {
-              resolve(fileArray)
-            }
-          })
-        }
-        readAllEntries()
-      }
-    })
+  async traverseFileTree(item: FileSystemEntry, path = '', fileArray: File[]): Promise<File[]> {
+    return FileLoader.traverseFileTree(item, path, fileArray)
   }
 
   /**
@@ -2822,35 +2754,7 @@ export class Niivue {
    * @internal
    */
   readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[] {
-    const reader = directory.createReader()
-    let allEntiresInDir: FileSystemEntry[] = []
-    const getFileObjects = async (fileSystemEntries: FileSystemEntry[]): Promise<File | File[]> => {
-      const allFileObects: File[] = []
-      // https://stackoverflow.com/a/53113059
-      const getFile = async (fileEntry: FileSystemFileEntry): Promise<File> => {
-        return new Promise((resolve, reject) => fileEntry.file(resolve, reject))
-      }
-      for (let i = 0; i < fileSystemEntries.length; i++) {
-        allFileObects.push(await getFile(fileSystemEntries[i] as FileSystemFileEntry))
-      }
-      return allFileObects
-    }
-    const readEntries = (): void => {
-      reader.readEntries((entries) => {
-        if (entries.length) {
-          allEntiresInDir = allEntiresInDir.concat(entries)
-          readEntries()
-        } else {
-          getFileObjects(allEntiresInDir)
-            .then(async () => {})
-            .catch((e) => {
-              throw e
-            })
-        }
-      })
-    }
-    readEntries()
-    return allEntiresInDir
+    return FileLoader.readDirectory(directory)
   }
 
   /**
@@ -2859,10 +2763,7 @@ export class Niivue {
    * @internal
    */
   isMeshExt(url: string): boolean {
-    const ext = this.getFileExt(url)
-    log.debug('dropped ext')
-    log.debug(ext)
-    return MESH_EXTENSIONS.includes(ext)
+    return FileLoader.isMeshExt(url)
   }
 
   /**
@@ -2933,14 +2834,14 @@ export class Niivue {
    * @param fileExt - The original file extension (e.g. 'iwi.cbor') to associate with this loader.
    * @param toExt - The target file extension Niivue should treat the file as (e.g. 'nii' or 'mz3').
    */
-  useLoader(loader: unknown, fileExt: string, toExt: string): void {
-    this.loaders = {
-      ...this.loaders,
-      [fileExt.toUpperCase()]: {
-        loader,
-        toExt
-      }
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useLoader(loader: (data: string | Uint8Array | ArrayBuffer) => Promise<any>, fileExt: string, toExt: string): void {
+    this.loaders = FileLoader.registerLoader({
+      loaders: this.loaders,
+      loader,
+      fileExt,
+      toExt
+    })
   }
 
   /**
