@@ -26,6 +26,8 @@ import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
 import * as EventController from '@/niivue/interaction/EventController'
 import * as MouseController from '@/niivue/interaction/MouseController'
 import * as TouchController from '@/niivue/interaction/TouchController'
+import * as KeyboardController from '@/niivue/interaction/KeyboardController'
+import * as WheelController from '@/niivue/interaction/WheelController'
 import {
   NVDocument,
   NVConfigOptions,
@@ -2303,22 +2305,20 @@ export class Niivue {
    * @returns active clip plane index
    */
   cycleActiveClipPlane(): number {
-    // cycle to the next active clip plane index
-    const n = this.scene.clipPlanes.length || 6 // default to 6 planes
-    if (this.uiData.activeClipPlaneIndex == null) {
-      this.uiData.activeClipPlaneIndex = 0
-    } else {
-      this.uiData.activeClipPlaneIndex = (this.uiData.activeClipPlaneIndex + 1) % n
-    }
+    const result = KeyboardController.cycleActiveClipPlane({
+      currentIndex: this.uiData.activeClipPlaneIndex,
+      clipPlanesLength: this.scene.clipPlanes.length
+    })
 
-    const idx = this.uiData.activeClipPlaneIndex
+    this.uiData.activeClipPlaneIndex = result.newIndex
+    const idx = result.newIndex
 
     // ensure slot exists for both clipPlanes and clipPlaneDepthAziElevs
     if (!this.scene.clipPlanes[idx]) {
-      this.scene.clipPlanes[idx] = [0, 0, 0, 2] // dummy "off" plane
+      this.scene.clipPlanes[idx] = result.defaultClipPlane
     }
     if (!this.scene.clipPlaneDepthAziElevs[idx]) {
-      this.scene.clipPlaneDepthAziElevs[idx] = [2, 0, 0] // depth=2 → no clip plane
+      this.scene.clipPlaneDepthAziElevs[idx] = result.defaultDepthAziElev
     }
 
     return idx
@@ -2335,54 +2335,44 @@ export class Niivue {
       this.drawScene()
       return
     }
+
     const now = new Date().getTime()
-    const elapsed = now - this.lastCalled
-    if (e.code === this.opts.cycleClipPlaneHotKey) {
-      if (elapsed > this.opts.keyDebounceTime) {
+    const shouldProcess = KeyboardController.shouldProcessKey({
+      currentTime: now,
+      lastCalledTime: this.lastCalled,
+      debounceTime: this.opts.keyDebounceTime
+    })
+
+    if (KeyboardController.isHotkeyMatch(e.code, this.opts.cycleClipPlaneHotKey)) {
+      if (shouldProcess) {
         const idx = this.cycleActiveClipPlane()
         console.log('Active clip plane cycled to:', idx)
         console.log('clip planes', this.scene.clipPlanes)
         this.lastCalled = now
       }
     }
-    if (e.code === this.opts.clipPlaneHotKey) {
-      if (elapsed > this.opts.keyDebounceTime) {
-        this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 7
-        switch (this.currentClipPlaneIndex) {
-          case 0: // NONE
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [2, 0, 0]
-            break
-          case 1: // left a 270 e 0
-            // this.scene.clipPlane = [1, 0, 0, 0];
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 270, 0]
-            break
-          case 2: // right a 90 e 0
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 90, 0]
-            break
-          case 3: // posterior a 0 e 0
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 0]
-            break
-          case 4: // anterior a 0 e 0
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 180, 0]
-            break
-          case 5: // inferior a 0 e -90
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, -90]
-            break
-          case 6: // superior: a 0 e 90'
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 90]
-            break
-        }
+
+    if (KeyboardController.isHotkeyMatch(e.code, this.opts.clipPlaneHotKey)) {
+      if (shouldProcess) {
+        const result = KeyboardController.getNextClipPlanePreset({
+          currentClipPlaneIndex: this.currentClipPlaneIndex
+        })
+        this.currentClipPlaneIndex = result.newIndex
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = result.depthAziElev
         this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
       }
       this.lastCalled = now
-    } else if (e.code === this.opts.viewModeHotKey) {
-      const now = new Date().getTime()
-      const elapsed = now - this.lastCalled
-      if (elapsed > this.opts.keyDebounceTime) {
-        this.setSliceType((this.opts.sliceType + 1) % 5) // 5 total slice types
+    } else if (KeyboardController.isHotkeyMatch(e.code, this.opts.viewModeHotKey)) {
+      if (shouldProcess) {
+        const nextSliceType = KeyboardController.getNextViewMode({
+          currentSliceType: this.opts.sliceType,
+          totalSliceTypes: 5
+        })
+        this.setSliceType(nextSliceType)
         this.lastCalled = now
       }
     }
+
     this.drawScene()
   }
 
@@ -2398,41 +2388,64 @@ export class Niivue {
       return
     }
 
-    if (e.code === 'KeyH' && this.opts.sliceType === SLICE_TYPE.RENDER) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation)
-    } else if (e.code === 'KeyL' && this.opts.sliceType === SLICE_TYPE.RENDER) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth + 1, this.scene.renderElevation)
-    } else if (e.code === 'KeyJ' && this.opts.sliceType === SLICE_TYPE.RENDER) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation + 1)
-    } else if (e.code === 'KeyK' && this.opts.sliceType === SLICE_TYPE.RENDER) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation - 1)
-    } else if (e.code === 'KeyH' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-      this.moveCrosshairInVox(-1, 0, 0)
-    } else if (e.code === 'KeyL' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-      this.moveCrosshairInVox(1, 0, 0)
-    } else if (e.code === 'KeyU' && this.opts.sliceType !== SLICE_TYPE.RENDER && e.ctrlKey) {
-      this.moveCrosshairInVox(0, 0, 1)
-    } else if (e.code === 'KeyD' && this.opts.sliceType !== SLICE_TYPE.RENDER && e.ctrlKey) {
-      this.moveCrosshairInVox(0, 0, -1)
-    } else if (e.code === 'KeyJ' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-      this.moveCrosshairInVox(0, -1, 0)
-    } else if (e.code === 'KeyK' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-      this.moveCrosshairInVox(0, 1, 0)
-    } else if (e.code === 'KeyM' && this.opts.sliceType !== SLICE_TYPE.RENDER) {
-      this.opts.dragMode++
-      if (this.opts.dragMode >= DRAG_MODE.slicer3D) {
-        this.opts.dragMode = DRAG_MODE.none
-      }
-      log.info('drag mode changed to ', DRAG_MODE[this.opts.dragMode])
-    } else if (e.code === 'ArrowLeft') {
-      // only works for background (first loaded image is index 0)
-      this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1)
-    } else if (e.code === 'ArrowRight') {
-      // only works for background (first loaded image is index 0)
-      this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1)
-    } else if (e.code === 'Slash' && e.shiftKey) {
-      alert(`NIIVUE VERSION: ${version}`)
+    const { action } = KeyboardController.getKeyDownAction({
+      code: e.code,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey,
+      sliceType: this.opts.sliceType
+    })
+
+    switch (action) {
+      case 'render_azimuth_decrease':
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation)
+        break
+      case 'render_azimuth_increase':
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth + 1, this.scene.renderElevation)
+        break
+      case 'render_elevation_increase':
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation + 1)
+        break
+      case 'render_elevation_decrease':
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation - 1)
+        break
+      case 'crosshair_left':
+        this.moveCrosshairInVox(-1, 0, 0)
+        break
+      case 'crosshair_right':
+        this.moveCrosshairInVox(1, 0, 0)
+        break
+      case 'crosshair_up':
+        this.moveCrosshairInVox(0, 1, 0)
+        break
+      case 'crosshair_down':
+        this.moveCrosshairInVox(0, -1, 0)
+        break
+      case 'crosshair_forward':
+        this.moveCrosshairInVox(0, 0, 1)
+        break
+      case 'crosshair_backward':
+        this.moveCrosshairInVox(0, 0, -1)
+        break
+      case 'cycle_drag_mode':
+        this.opts.dragMode = KeyboardController.getNextDragMode(this.opts.dragMode)
+        log.info('drag mode changed to ', DRAG_MODE[this.opts.dragMode])
+        break
+      case 'frame_previous':
+        // only works for background (first loaded image is index 0)
+        this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1)
+        break
+      case 'frame_next':
+        // only works for background (first loaded image is index 0)
+        this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1)
+        break
+      case 'show_version':
+        alert(`NIIVUE VERSION: ${version}`)
+        break
+      case 'none':
+      default:
+        break
     }
+
     this.drawScene()
   }
 
@@ -2441,46 +2454,46 @@ export class Niivue {
    * @internal
    */
   wheelListener(e: WheelEvent): void {
-    if (this.thumbnailVisible) {
-      return
-    }
-    if (this.opts.sliceMosaicString.length > 0) {
+    // Check if wheel event should be processed
+    const wheelAction = WheelController.determineWheelAction({
+      thumbnailVisible: this.thumbnailVisible,
+      mosaicStringLength: this.opts.sliceMosaicString.length,
+      eventInBounds: this.eventInBounds(e),
+      hasBounds: this.opts.bounds !== null
+    })
+
+    if (!wheelAction.shouldProcess) {
+      if (!this.eventInBounds(e)) {
+        this.opts.showBoundsBorder = false
+        this.drawScene()
+      }
       return
     }
 
-    // for multiple instances
-    if (!this.eventInBounds(e)) {
-      this.opts.showBoundsBorder = false
-      this.drawScene()
-      return
-    } else if (this.opts.bounds) {
-      this.opts.showBoundsBorder = true
-    }
+    this.opts.showBoundsBorder = wheelAction.showBoundsBorder
 
     e.preventDefault()
     e.stopPropagation()
 
     // ROI Selection logic
-    const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0)
-    const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0)
-    const validDrag = dragStartSum > 0 && dragEndSum > 0
-    if (this.getCurrentDragMode() === DRAG_MODE.roiSelection && validDrag) {
-      const delta = e.deltaY > 0 ? 1 : -1
-      // update the uiData.dragStart and uiData.dragEnd values to grow or shrink the selection box
-      if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
-        this.uiData.dragStart[0] -= delta
-        this.uiData.dragEnd[0] += delta
-      } else {
-        this.uiData.dragStart[0] += delta
-        this.uiData.dragEnd[0] -= delta
-      }
-      if (this.uiData.dragStart[1] < this.uiData.dragEnd[1]) {
-        this.uiData.dragStart[1] -= delta
-        this.uiData.dragEnd[1] += delta
-      } else {
-        this.uiData.dragStart[1] += delta
-        this.uiData.dragEnd[1] -= delta
-      }
+    if (
+      WheelController.isValidRoiResize({
+        dragMode: this.getCurrentDragMode(),
+        dragStart: this.uiData.dragStart,
+        dragEnd: this.uiData.dragEnd
+      })
+    ) {
+      const delta = WheelController.getRoiScrollDelta(e.deltaY)
+      const roiResult = WheelController.updateRoiSelection({
+        dragStart: this.uiData.dragStart,
+        dragEnd: this.uiData.dragEnd,
+        delta
+      })
+
+      this.uiData.dragStart[0] = roiResult.newDragStart[0]
+      this.uiData.dragStart[1] = roiResult.newDragStart[1]
+      this.uiData.dragEnd[0] = roiResult.newDragEnd[0]
+      this.uiData.dragEnd[1] = roiResult.newDragEnd[1]
 
       // Redraw to show the updated selection box
       this.uiData.isDragging = true
@@ -2501,21 +2514,17 @@ export class Niivue {
     }
 
     // Compute scrollAmount, respecting invertScrollDirection
-    let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01
-    if (this.opts.invertScrollDirection) {
-      scrollAmount = -scrollAmount
-    }
+    const scrollAmount = WheelController.calculateScrollAmount({
+      deltaY: e.deltaY,
+      invertScrollDirection: this.opts.invertScrollDirection
+    })
 
     // If clickToSegment mode is active, change threshold instead of scrolling slices
     if (this.opts.clickToSegment) {
-      // Adjust clickToSegmentPercent by 0.01 in the direction of scrollAmount
-      if (scrollAmount < 0) {
-        this.opts.clickToSegmentPercent -= 0.01
-        this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0)
-      } else {
-        this.opts.clickToSegmentPercent += 0.01
-        this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1)
-      }
+      this.opts.clickToSegmentPercent = WheelController.adjustSegmentThreshold({
+        currentPercent: this.opts.clickToSegmentPercent,
+        scrollAmount
+      })
 
       // Get the mouse position
       const x = this.clickToSegmentXY[0]
@@ -2533,29 +2542,36 @@ export class Niivue {
 
     // Otherwise, handle pan/zoom if the mouse is outside the active render tile
     const rect = this.canvas!.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const [x, y] = WheelController.getWheelEventPosition(e.clientX, e.clientY, rect)
 
+    const isInRenderTile = this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) !== -1
     if (
-      this.getCurrentDragMode() === DRAG_MODE.pan &&
-      this.inRenderTile(this.uiData.dpr! * x, this.uiData.dpr! * y) === -1
+      WheelController.shouldApplyZoom({
+        dragMode: this.getCurrentDragMode(),
+        isInRenderTile
+      })
     ) {
       // Zoom
-      const zoomDirection = scrollAmount < 0 ? 1 : -1
-      let zoom = this.scene.pan2Dxyzmm[3] * (1.0 + 10 * (0.01 * zoomDirection))
-      zoom = Math.round(zoom * 10) / 10
-      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom
+      const zoomResult = WheelController.calculateZoom({
+        currentZoom: this.scene.pan2Dxyzmm[3],
+        scrollAmount
+      })
 
       if (this.opts.yoke3Dto2DZoom) {
-        this.scene.volScaleMultiplier = zoom
+        this.scene.volScaleMultiplier = zoomResult.newZoom
       }
-      this.scene.pan2Dxyzmm[3] = zoom
+      this.scene.pan2Dxyzmm[3] = zoomResult.newZoom
 
       // Shift the 2D scene center so the crosshair stays in place
       const mm = this.frac2mm(this.scene.crosshairPos)
-      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0]
-      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1]
-      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2]
+      const panOffset = WheelController.calculatePanOffsetAfterZoom({
+        currentPan: [this.scene.pan2Dxyzmm[0], this.scene.pan2Dxyzmm[1], this.scene.pan2Dxyzmm[2]],
+        zoomChange: zoomResult.zoomChange,
+        crosshairMM: [mm[0], mm[1], mm[2]]
+      })
+      this.scene.pan2Dxyzmm[0] = panOffset[0]
+      this.scene.pan2Dxyzmm[1] = panOffset[1]
+      this.scene.pan2Dxyzmm[2] = panOffset[2]
 
       this.drawScene()
       this.canvas!.focus()

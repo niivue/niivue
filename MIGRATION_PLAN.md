@@ -643,27 +643,61 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 4.4 KeyboardController Module
 **File:** `packages/niivue/src/niivue/interaction/KeyboardController.ts`
-**Responsibility:** Keyboard event handling
-**Line Range:** ~2450-2562
-**Key Methods:**
-- `keyDownListener()` - Key press
-- `keyUpListener()` - Key release
-- `cycleActiveClipPlane()` - Clip plane cycling with hotkey
+**Responsibility:** Keyboard event handling helper functions
+**Key Functions Extracted:**
+- `getKeyDownAction()` ✅ - Determine action from key event
+- `getNextDragMode()` ✅ - Calculate next drag mode
+- `shouldProcessKey()` ✅ - Debounce check for key events
+- `cycleActiveClipPlane()` ✅ - Cycle to next clip plane index
+- `getNextClipPlanePreset()` ✅ - Get next clip plane preset values
+- `getNextViewMode()` ✅ - Get next slice type for view mode cycling
+- `isHotkeyMatch()` ✅ - Check if key matches hotkey
 
-**Dependencies:** EventController, ClipPlaneManager
-**Status:** ⬜ Not Started
+**Exported Constants:**
+- `CLIP_PLANE_PRESETS` ✅ - Array of clip plane depth/azi/elev values
+
+**Niivue Methods Updated:**
+- `cycleActiveClipPlane()` - Delegates to KeyboardController.cycleActiveClipPlane()
+- `keyUpListener()` - Uses KeyboardController.shouldProcessKey(), isHotkeyMatch(), getNextClipPlanePreset(), getNextViewMode()
+- `keyDownListener()` - Uses KeyboardController.getKeyDownAction(), getNextDragMode()
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Event listener methods remain in Niivue class due to heavy state dependencies
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+
+**Dependencies:** DRAG_MODE, SLICE_TYPE from nvdocument
+**Status:** ✅ Completed
 
 ---
 
 #### 4.5 WheelController Module
 **File:** `packages/niivue/src/niivue/interaction/WheelController.ts`
-**Responsibility:** Mouse wheel/trackpad scrolling
-**Line Range:** ~2562-2694
-**Key Methods:**
-- `wheelListener()` - Scroll wheel handling
+**Responsibility:** Mouse wheel/trackpad scrolling helper functions
+**Key Functions Extracted:**
+- `calculateScrollAmount()` ✅ - Calculate normalized scroll amount
+- `isValidRoiResize()` ✅ - Check if ROI selection resize is valid
+- `updateRoiSelection()` ✅ - Calculate updated ROI bounds
+- `getRoiScrollDelta()` ✅ - Get scroll delta direction for ROI
+- `calculateZoom()` ✅ - Calculate zoom level and change
+- `calculatePanOffsetAfterZoom()` ✅ - Calculate pan offset to keep crosshair in place
+- `adjustSegmentThreshold()` ✅ - Adjust click-to-segment threshold
+- `determineWheelAction()` ✅ - Determine if wheel event should be processed
+- `shouldApplyZoom()` ✅ - Check if zoom should be applied
+- `getWheelEventPosition()` ✅ - Get mouse position from wheel event
 
-**Dependencies:** EventController, SliceNavigation
-**Status:** ⬜ Not Started
+**Niivue Methods Updated:**
+- `wheelListener()` - Delegates to WheelController helper functions
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Event listener method remains in Niivue class due to heavy state dependencies
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+
+**Dependencies:** DRAG_MODE from nvdocument
+**Status:** ✅ Completed
 
 ---
 
@@ -1319,8 +1353,8 @@ For each module in the plan above:
 - ✅ 4.1 EventController Module
 - ✅ 4.2 MouseController Module
 - ✅ 4.3 TouchController Module
-- ⬜ 4.4 KeyboardController Module
-- ⬜ 4.5 WheelController Module
+- ✅ 4.4 KeyboardController Module
+- ✅ 4.5 WheelController Module
 - ⬜ 4.6 DragModeManager Module
 
 ### Phase 5: Navigation & Layout Modules ⬜
