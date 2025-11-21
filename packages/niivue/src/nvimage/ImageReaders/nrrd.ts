@@ -268,6 +268,7 @@ export async function readNrrd(
     vec3.subtract(mm010, mm010, mm000)
     const mm001 = nvImage.vox2mm([0, 0, 1], mat)
     vec3.subtract(mm001, mm001, mm000)
+    hdr.pixDims[0] = 1
     hdr.pixDims[1] = vec3.length(mm100)
     hdr.pixDims[2] = vec3.length(mm010)
     hdr.pixDims[3] = vec3.length(mm001)
