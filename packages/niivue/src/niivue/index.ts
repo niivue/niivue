@@ -18,6 +18,7 @@ import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
 import * as MeshManager from '@/niivue/data/MeshManager'
 import * as ConnectomeManager from '@/niivue/data/ConnectomeManager'
 import * as FileLoader from '@/niivue/data/FileLoader'
+import * as SliceRenderer from '@/niivue/rendering/SliceRenderer'
 import {
   NVDocument,
   NVConfigOptions,
@@ -10791,24 +10792,13 @@ export class Niivue {
    * @internal
    */
   updateInterpolation(layer: number, isForceLinear = false): void {
-    let interp: number = this.gl.LINEAR
-    if (!isForceLinear && this.opts.isNearestInterpolation) {
-      interp = this.gl.NEAREST
-    }
-    if (layer === 0) {
-      this.gl.activeTexture(TEXTURE0_BACK_VOL) // background
-    } else {
-      this.gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
-    }
-    // if (this.opts.is2DSliceShader) {
-    // n.b. we set interpolation for BOTH 2D and 3D textures
-    if (this.opts.is2DSliceShader) {
-      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp)
-      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp)
-    } else {
-      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp)
-      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp)
-    }
+    SliceRenderer.updateInterpolation({
+      gl: this.gl,
+      layer,
+      isForceLinear,
+      isNearestInterpolation: this.opts.isNearestInterpolation,
+      is2DSliceShader: this.opts.is2DSliceShader
+    })
   }
 
   /**
@@ -13275,17 +13265,11 @@ export class Niivue {
     if (sliceFrac === Infinity) {
       sliceFrac = 0.5
     }
-    let linesH = corMM.slice()
-    let linesV = sagMM.slice()
+    const { linesH, linesV } = SliceRenderer.getCrossLinesForSliceType(axCorSag, axiMM, corMM, sagMM)
     const thick = Math.max(1, this.opts.crosshairWidth)
-    if (axCorSag === SLICE_TYPE.CORONAL) {
-      linesH = axiMM.slice()
-    }
-    if (axCorSag === SLICE_TYPE.SAGITTAL) {
-      linesH = axiMM.slice()
-      linesV = corMM.slice()
-    }
-    function mm2screen(mm: vec2): vec2 {
+
+    // Inline mm2screen to avoid creating closures each frame
+    const mm2screen = (mm: vec2): vec2 => {
       const screenXY = vec2.fromValues(0, 0)
       screenXY[0] =
         tile.leftTopWidthHeight[0] + ((mm[0] - tile.leftTopMM[0]) / tile.fovMM[0]) * tile.leftTopWidthHeight[2]
@@ -13416,16 +13400,8 @@ export class Niivue {
       return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM)
     }
     const tile = this.screenSlices[sliceIndex]
-    let linesH = corMM.slice()
-    let linesV = sagMM.slice()
+    const { linesH, linesV } = SliceRenderer.getCrossLinesForSliceType(axCorSag, axiMM, corMM, sagMM)
 
-    if (axCorSag === SLICE_TYPE.CORONAL) {
-      linesH = axiMM.slice()
-    }
-    if (axCorSag === SLICE_TYPE.SAGITTAL) {
-      linesH = axiMM.slice()
-      linesV = corMM.slice()
-    }
     if (linesH.length > 0) {
       // draw horizontal lines
       const LTWH = tile.leftTopWidthHeight.slice()
@@ -13443,7 +13419,7 @@ export class Niivue {
     if (linesV.length > 0) {
       // draw vertical lines
       const LTWH = tile.leftTopWidthHeight.slice()
-      const isRadiolgical = tile.fovMM[0] < 0
+      const isRadiological = tile.fovMM[0] < 0
       let sliceDim = 0 // vertical lines on axial/coronal are L/R axis
       if (axCorSag === SLICE_TYPE.SAGITTAL) {
         sliceDim = 1
@@ -13452,7 +13428,7 @@ export class Niivue {
       for (let i = 0; i < linesV.length; i++) {
         mm[sliceDim] = linesV[i]
         const frac = this.mm2frac(mm)
-        if (isRadiolgical) {
+        if (isRadiological) {
           this.drawRect([LTWH[0] + (LTWH[2] - frac[sliceDim] * LTWH[2]), LTWH[1], 1, LTWH[3]])
         } else {
           this.drawRect([LTWH[0] + frac[sliceDim] * LTWH[2], LTWH[1], 1, LTWH[3]])
@@ -13650,42 +13626,7 @@ export class Niivue {
     containerWidth: number,
     containerHeight: number
   ): [number, number] {
-    let xScale, yScale
-
-    switch (sliceType) {
-      case SLICE_TYPE.AXIAL:
-        xScale = volScale[0]
-        yScale = volScale[1]
-        break
-      case SLICE_TYPE.CORONAL:
-        xScale = volScale[0]
-        yScale = volScale[2]
-        break
-      case SLICE_TYPE.SAGITTAL:
-        xScale = volScale[1]
-        yScale = volScale[2]
-        break
-      default:
-        return [containerWidth, containerHeight]
-    }
-
-    // Calculate scale factor to fit within container while preserving aspect ratio
-    const aspectRatio = xScale / yScale
-    const containerAspect = containerWidth / containerHeight
-
-    let actualWidth, actualHeight
-
-    if (aspectRatio > containerAspect) {
-      // width-constrained
-      actualWidth = containerWidth
-      actualHeight = containerWidth / aspectRatio
-    } else {
-      // height-constrained
-      actualHeight = containerHeight
-      actualWidth = containerHeight * aspectRatio
-    }
-
-    return [actualWidth, actualHeight]
+    return SliceRenderer.calculateSliceDimensions(sliceType as SLICE_TYPE, volScale, containerWidth, containerHeight)
   }
 
   /**
