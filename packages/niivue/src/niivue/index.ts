@@ -23,6 +23,7 @@ import * as VolumeRenderer from '@/niivue/rendering/VolumeRenderer'
 import * as MeshRenderer from '@/niivue/rendering/MeshRenderer'
 import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
 import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
+import * as EventController from '@/niivue/interaction/EventController'
 import {
   NVDocument,
   NVConfigOptions,
@@ -816,29 +817,15 @@ export class Niivue {
    * @example niivue.cleanup();
    */
   cleanup(): void {
-    // Clean up resize listener
-    if (this.resizeEventListener) {
-      window.removeEventListener('resize', this.resizeEventListener)
-      this.resizeEventListener = null
-    }
-
-    // Clean up resize observer
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect()
-      this.resizeObserver = null
-    }
-
-    // Clean up canvas observer
-    if (this.canvasObserver) {
-      this.canvasObserver.disconnect()
-      this.canvasObserver = null
-    }
+    // Clean up resize observers and listeners
+    EventController.cleanupResizeObservers(this.resizeObserver, this.canvasObserver, this.resizeEventListener)
+    this.resizeEventListener = null
+    this.resizeObserver = null
+    this.canvasObserver = null
 
     // Remove all interaction event listeners
-    if (this.#eventsController) {
-      this.#eventsController.abort()
-      this.#eventsController = null
-    }
+    EventController.cleanupEventController(this.#eventsController)
+    this.#eventsController = null
 
     // Clean up opts change callback
     this.document.removeOptsChangeCallback()
@@ -955,27 +942,17 @@ export class Niivue {
     this.canvas!.parentElement!.style.backgroundColor = 'black'
     // fill all space in parent
     if (this.opts.isResizeCanvas) {
-      this.canvas.style.width = '100%'
-      this.canvas.style.height = '100%'
-      this.canvas.style.display = 'block'
+      EventController.applyCanvasResizeStyles(this.canvas)
       this.canvas.width = this.canvas.offsetWidth
       this.canvas.height = this.canvas.offsetHeight
       // Store a reference to the bound event handler function
-      this.resizeEventListener = (): void => {
-        requestAnimationFrame(() => {
-          this.resizeListener()
-        })
-      }
+      this.resizeEventListener = EventController.createResizeHandler(() => this.resizeListener())
       window.addEventListener('resize', this.resizeEventListener)
-      this.resizeObserver = new ResizeObserver(() => {
-        requestAnimationFrame(() => {
-          this.resizeListener()
-        })
-      })
+      this.resizeObserver = EventController.createResizeObserver(() => this.resizeListener())
       this.resizeObserver.observe(this.canvas.parentElement!)
 
       // Setup a MutationObserver to detect when canvas is removed from DOM
-      this.canvasObserver = new MutationObserver((mutations) => {
+      this.canvasObserver = EventController.createCanvasObserver((mutations) => {
         for (const mutation of mutations) {
           if (
             mutation.type === 'childList' &&
@@ -1241,7 +1218,8 @@ export class Niivue {
    * @internal
    */
   resizeListener(): void {
-    if (!this.canvas || !this.gl) {
+    // Use _gl directly to avoid getter that throws when null
+    if (!EventController.isValidForResize(this.canvas, this._gl)) {
       return
     }
     if (!this.opts.isResizeCanvas) {
@@ -1251,28 +1229,24 @@ export class Niivue {
       this.drawScene()
       return
     }
-    this.canvas.style.width = '100%'
-    this.canvas.style.height = '100%'
-    this.canvas.style.display = 'block'
+
+    EventController.applyCanvasResizeStyles(this.canvas)
 
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     // https://www.khronos.org/webgl/wiki/HandlingHighDPI
-    if (this.opts.forceDevicePixelRatio === 0) {
-      this.uiData.dpr = window.devicePixelRatio || 1
-    } else if (this.opts.forceDevicePixelRatio < 0) {
-      this.uiData.dpr = 1
-    } else {
-      this.uiData.dpr = this.opts.forceDevicePixelRatio
-    }
+    const resizeResult = EventController.calculateResizeDimensions({
+      canvas: this.canvas,
+      gl: this.gl,
+      isResizeCanvas: this.opts.isResizeCanvas,
+      forceDevicePixelRatio: this.opts.forceDevicePixelRatio
+    })
+
+    this.uiData.dpr = resizeResult.dpr
     log.debug('devicePixelRatio: ' + this.uiData.dpr)
-    if ('width' in this.canvas.parentElement!) {
-      this.canvas.width = (this.canvas.parentElement.width as number) * this.uiData.dpr
-      // @ts-expect-error not sure why height is not defined for HTMLElement
-      this.canvas.height = this.canvas.parentElement.height * this.uiData.dpr
-    } else {
-      this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr
-      this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr
-    }
+
+    this.canvas.width = resizeResult.width
+    this.canvas.height = resizeResult.height
+
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
     this.textSizePoints()
     this.drawScene()
@@ -1284,16 +1258,7 @@ export class Niivue {
    * @returns the mouse position relative to the canvas
    */
   getRelativeMousePosition(event: MouseEvent, target?: EventTarget | null): { x: number; y: number } | undefined {
-    target = target || event.target
-    if (!target) {
-      return
-    }
-    // @ts-expect-error -- not sure how this works, this would be an EventTarget?
-    const rect = target.getBoundingClientRect()
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    }
+    return EventController.getRelativeMousePosition(event, target)
   }
 
   /**
@@ -1304,9 +1269,7 @@ export class Niivue {
     event: MouseEvent,
     target: EventTarget
   ): { x: number; y: number } | undefined {
-    target = target || event.target
-    const pos = this.getRelativeMousePosition(event, target)
-    return pos
+    return EventController.getNoPaddingNoBorderCanvasRelativeMousePosition(event, target)
   }
 
   /**

@@ -512,19 +512,39 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 4.1 EventController Module
 **File:** `packages/niivue/src/niivue/interaction/EventController.ts`
 **Responsibility:** Central event listener registration and management
-**Line Range:** ~1368-1411, ~2694-2756
-**Key Methods:**
-- `registerInteractions()` - Register all event listeners
-- `resizeListener()` - Canvas resize handling
-- `getRelativeMousePosition()` - Mouse position calculation
-- `getNoPaddingNoBorderCanvasRelativeMousePosition()` - Adjusted mouse position
+**Key Functions Extracted:**
+- `getRelativeMousePosition()` ✅ - Mouse position calculation
+- `getNoPaddingNoBorderCanvasRelativeMousePosition()` ✅ - Adjusted mouse position
+- `calculateDpr()` ✅ - Calculate device pixel ratio
+- `calculateResizeDimensions()` ✅ - Calculate resize dimensions
+- `createResizeHandler()` ✅ - Create debounced resize handler
+- `createResizeObserver()` ✅ - Create ResizeObserver instance
+- `createCanvasObserver()` ✅ - Create MutationObserver instance
+- `applyCanvasResizeStyles()` ✅ - Apply canvas resize styles
+- `isValidForResize()` ✅ - Type guard for resize validation
+- `cleanupResizeObservers()` ✅ - Clean up resize observers
+- `cleanupEventController()` ✅ - Clean up event controller
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `getRelativeMousePosition()` - Delegates to EventController.getRelativeMousePosition()
+- `getNoPaddingNoBorderCanvasRelativeMousePosition()` - Delegates to EventController.getNoPaddingNoBorderCanvasRelativeMousePosition()
+- `resizeListener()` - Uses EventController.calculateResizeDimensions() and applyCanvasResizeStyles()
+- `attachToCanvas()` - Uses EventController.createResizeHandler(), createResizeObserver(), createCanvasObserver()
+- `cleanup()` - Uses EventController.cleanupResizeObservers() and cleanupEventController()
+
+**Properties (remain in Niivue class - state management):**
 - `resizeObserver`, `resizeEventListener`, `canvasObserver`
 - `#eventsController` (private)
 
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Factory functions for creating observers with callbacks
+- Cleanup functions for proper resource disposal
+- `registerInteractions()` remains in Niivue class due to complex handler binding requirements
+
 **Dependencies:** None (pure event handling)
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
 
 ---
 
@@ -1249,9 +1269,9 @@ For each module in the plan above:
 - ✅ 3.4 SceneRenderer Module
 - ✅ 3.5 UIElementRenderer Module
 
-### Phase 4: Interaction Modules ⬜
+### Phase 4: Interaction Modules 🔄
 
-- ⬜ 4.1 EventController Module
+- ✅ 4.1 EventController Module
 - ⬜ 4.2 MouseController Module
 - ⬜ 4.3 TouchController Module
 - ⬜ 4.4 KeyboardController Module
