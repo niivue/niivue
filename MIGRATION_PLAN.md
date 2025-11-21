@@ -314,21 +314,30 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 3.1 SliceRenderer Module
 **File:** `packages/niivue/src/niivue/rendering/SliceRenderer.ts`
-**Responsibility:** 2D slice rendering (axial, coronal, sagittal)
-**Line Range:** ~12213-12511, ~14651-14856
-**Key Methods:**
-- `draw2DMain()` - Main 2D slice rendering
-- `drawMosaic()` - Mosaic view rendering
-- `drawCrossLines()`, `drawCrossLinesMM()` - Crosshair rendering
-- `updateInterpolation()` - Interpolation settings
-- `setAtlasOutline()`, `setInterpolation()` - Rendering options
+**Responsibility:** 2D slice rendering helper functions
+**Key Functions Extracted:**
+- `updateInterpolation()` ✅ - Texture interpolation mode (nearest/linear)
+- `parseMosaicString()` ✅ - Parse mosaic specification strings
+- `calculateMosaicLayout()` ✅ - Calculate tile positions for mosaics
+- `getCrossLinesForSliceType()` ✅ - Get lines arrays for slice orientation
+- `getSliceDimension()` ✅ - Get dimension index for slice type
+- `getSliceAngles()` ✅ - Calculate azimuth/elevation angles
+- `determineRadiologicalConvention()` ✅ - Determine radiological convention
+- `calculateSliceDimensions()` ✅ - Calculate slice dimensions preserving aspect ratio
 
-**Properties to migrate:**
-- `crosshairs3D: NiivueObject3D`
-- Related shader references
+**Niivue Methods Updated:**
+- `updateInterpolation()` - Delegates to SliceRenderer.updateInterpolation()
+- `calculateWidthHeight()` - Delegates to SliceRenderer.calculateSliceDimensions()
+- `drawCrossLinesMM()` - Uses getCrossLinesForSliceType helper
+- `drawCrossLines()` - Uses getCrossLinesForSliceType helper
 
-**Dependencies:** WebGLContext, ShaderManager, CoordinateTransform
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Line calculation logic kept inline in drawCrossLinesMM to avoid per-frame object allocations that caused memory pressure during parallel test execution
+- Complex rendering methods (draw2DMain, drawMosaic) remain in Niivue class due to heavy WebGL state dependencies
+
+**Dependencies:** SLICE_TYPE from nvdocument
+**Status:** ✅ Completed
 
 ---
 
@@ -1150,9 +1159,9 @@ For each module in the plan above:
 - ✅ 2.3 ConnectomeManager Module
 - ✅ 2.4 FileLoader Module
 
-### Phase 3: Rendering Modules ⬜
+### Phase 3: Rendering Modules 🔄
 
-- ⬜ 3.1 SliceRenderer Module
+- ✅ 3.1 SliceRenderer Module
 - ⬜ 3.2 VolumeRenderer Module
 - ⬜ 3.3 MeshRenderer Module
 - ⬜ 3.4 SceneRenderer Module
