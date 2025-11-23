@@ -13223,7 +13223,8 @@ export class Niivue {
     let deci = dynamicDecimals(fov * 0.001)
     const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
     function flt2str(flt: number, decimals = 0): number {
-      return parseFloat(flt.toFixed(decimals))
+      // return parseFloat(flt.toFixed(decimals))
+      return parseFloat(Number(flt).toFixed(decimals))
     }
     let str = flt2str(mm[0], deci) + '×' + flt2str(mm[1], deci) + '×' + flt2str(mm[2], deci)
     if (this.volumes.length > 0 && this.volumes[0].nFrame4D! > 0) {
