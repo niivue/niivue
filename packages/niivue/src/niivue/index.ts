@@ -36,6 +36,7 @@ import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
 import * as DrawingManager from '@/niivue/drawing/DrawingManager'
 import * as PenTool from '@/niivue/drawing/PenTool'
 import * as ShapeTool from '@/niivue/drawing/ShapeTool'
+import * as FloodFillTool from '@/niivue/drawing/FloodFillTool'
 import {
   NVDocument,
   NVConfigOptions,
@@ -5729,90 +5730,14 @@ export class Niivue {
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
-    const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]] // +1: dims indexed from 0!
-    const nx = dims[0]
-    const nxy = nx * dims[1]
-    function xyz2vx(pt: number[]): number {
-      // provided an XYZ 3D point, provide address in 1D array
-      return pt[0] + pt[1] * nx + pt[2] * nxy
-    }
-    function vx2xyz(vx: number): number[] {
-      // provided address in 1D array, return XYZ coordinate
-      const Z = Math.floor(vx / nxy) // slice
-      const Y = Math.floor((vx - Z * nxy) / nx) // column
-      const X = Math.floor(vx % nx)
-      return [X, Y, Z]
-    }
-    // 1. Set Q to the empty queue or stack.
-    const Q = []
-    // 2. Add node to the end of Q.
-    Q.push(seedVx)
-    img[seedVx] = 2 // part of cluster
-    // 3. While Q is not empty:
-    while (Q.length > 0) {
-      // 4.   Set n equal to the first element of Q.
-      const vx = Q[0]
-      // 5.   Remove first element from Q.
-      Q.shift()
-      // 6. Test six neighbors of n (left,right,anterior,posterior,inferior, superior
-      //   If any is is unfound part of cluster (value = 1) set it to found (value 2) and add to Q
-      const xyz = vx2xyz(vx)
+    const dims: [number, number, number] = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
 
-      function testNeighbor(offset: number[]): void {
-        const xyzN = xyz.slice()
-        xyzN[0] += offset[0]
-        xyzN[1] += offset[1]
-        xyzN[2] += offset[2]
-        if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0) {
-          return
-        }
-        if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2]) {
-          return
-        }
-        const vxT = xyz2vx(xyzN)
-        if (img[vxT] !== 1) {
-          return
-        }
-        img[vxT] = 2 // part of cluster
-        Q.push(vxT)
-      }
-      // test neighbors that share face
-      testNeighbor([0, 0, -1]) // inferior
-      testNeighbor([0, 0, 1]) // superior
-      testNeighbor([0, -1, 0]) // posterior
-      testNeighbor([0, 1, 0]) // anterior
-      testNeighbor([-1, 0, 0]) // left
-      testNeighbor([1, 0, 0]) // right
-      if (neighbors <= 6) {
-        continue
-      }
-      // test voxels that share edge
-      testNeighbor([-1, -1, 0]) // left posterior
-      testNeighbor([1, 1, 0]) // right posterior
-      testNeighbor([-1, 1, 0]) // left anterior
-      testNeighbor([1, 1, 0]) // right anterior
-      testNeighbor([0, -1, -1]) // posterior inferior
-      testNeighbor([0, 1, -1]) // anterior inferior
-      testNeighbor([-1, 0, -1]) // left inferior
-      testNeighbor([1, 0, -1]) // right inferior
-      testNeighbor([0, -1, 1]) // posterior superior
-      testNeighbor([0, 1, 1]) // anterior superior
-      testNeighbor([-1, 0, 1]) // left superior
-      testNeighbor([1, 0, 1]) // right superior
-      if (neighbors <= 18) {
-        continue
-      }
-      // test neighbors that share a corner
-      testNeighbor([-1, -1, -1]) // left posterior inferior
-      testNeighbor([1, -1, -1]) // right posterior inferior
-      testNeighbor([-1, 1, -1]) // left anterior inferior
-      testNeighbor([1, 1, -1]) // right anterior inferior
-      testNeighbor([-1, -1, 1]) // left posterior superior
-      testNeighbor([1, -1, 1]) // right posterior superior
-      testNeighbor([-1, 1, 1]) // left anterior superior
-      testNeighbor([1, 1, 1]) // right anterior superior
-      // 7. Continue looping until Q is exhausted.
-    }
+    FloodFillTool.floodFillCore({
+      img,
+      seedVx,
+      dims,
+      neighbors: neighbors as FloodFillTool.NeighborConnectivity
+    })
   }
 
   /**
@@ -5867,17 +5792,16 @@ export class Niivue {
     }
 
     newColor = Math.abs(newColor)
-    const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
-    if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) {
-      return
-    }
-    if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2]) {
+    const dims: [number, number, number] = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
+
+    // Validate seed coordinates using FloodFillTool helper
+    if (!FloodFillTool.isValidSeedCoordinate(seedXYZ, dims)) {
       return
     }
 
-    const nx = dims[0]
-    const nxy = nx * dims[1]
-    const nxyz = nxy * dims[2]
+    // Create coordinate converters using FloodFillTool helper
+    const converters = FloodFillTool.createCoordinateConverters(dims)
+    const { nxyz } = converters
 
     const originalBitmap = this.clickToSegmentIsGrowing ? this.drawBitmap : targetBitmap
     if (!originalBitmap) {
@@ -5887,23 +5811,12 @@ export class Niivue {
 
     const img = new Uint8Array(nxyz).fill(0)
 
-    let constrainXYZ = -1
-    if (is2D && this.drawPenAxCorSag === SLICE_TYPE.AXIAL) {
-      constrainXYZ = 2
-    } else if (is2D && this.drawPenAxCorSag === SLICE_TYPE.CORONAL) {
-      constrainXYZ = 1
-    } else if (is2D && this.drawPenAxCorSag === SLICE_TYPE.SAGITTAL) {
-      constrainXYZ = 0
-    }
-    function vx2xyz(vx: number): number[] {
-      const Z = Math.floor(vx / nxy)
-      const Y = Math.floor((vx - Z * nxy) / nx)
-      const X = Math.floor(vx % nx)
-      return [X, Y, Z]
-    }
-    function xyz2vx(pt: number[]): number {
-      return pt[0] + pt[1] * nx + pt[2] * nxy
-    }
+    // Get constrained axis index for 2D fill using FloodFillTool helper
+    const constrainXYZ = FloodFillTool.getConstrainedAxisIndex(is2D, this.drawPenAxCorSag)
+
+    // Use coordinate converters from FloodFillTool
+    const vx2xyz = converters.vx2xyz
+    const xyz2vx = converters.xyz2vx
     const vx2mm = (xyz: number[]): vec3 => {
       return this.vox2mm(xyz, this.back.matRAS)
     }
@@ -5922,7 +5835,8 @@ export class Niivue {
     const seedVx = xyz2vx(seedXYZ)
     const originalSeedColor = originalBitmap[seedVx] // Color from original state
 
-    if (isGrowClusterTool && originalSeedColor === 0) {
+    // Validate grow cluster seed using FloodFillTool helper
+    if (isGrowClusterTool && !FloodFillTool.isValidGrowClusterSeed(originalSeedColor)) {
       log.debug('Grow/Erase Cluster tool requires starting on a masked voxel.')
       if (this.clickToSegmentIsGrowing && this.clickToSegmentGrowingBitmap && this.drawBitmap) {
         this.clickToSegmentGrowingBitmap.set(this.drawBitmap)
@@ -5954,25 +5868,18 @@ export class Niivue {
       this.drawFloodFillCore(tempImgForIdentification, seedVx, neighbors) // Marks cluster as 2
 
       const backImg = this.volumes[0].img2RAS()
-      let clusterSum = 0
-      let clusterCount = 0
-      for (let i = 0; i < nxyz; i++) {
-        if (tempImgForIdentification[i] === 2) {
-          clusterSum += backImg[i]
-          clusterCount++
-        }
-      }
-      baseIntensity = clusterCount > 0 ? clusterSum / clusterCount : backImg[seedVx] // Use mean
-      log.debug(`Grow Cluster using mean intensity: ${baseIntensity.toFixed(2)} from ${clusterCount} voxels.`)
 
-      let fillMin = -Infinity
-      let fillMax = Infinity
-      if (growSelectedCluster === Number.POSITIVE_INFINITY) {
-        fillMin = baseIntensity
-      }
-      if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
-        fillMax = baseIntensity
-      }
+      // Calculate cluster mean intensity using FloodFillTool helper
+      baseIntensity = FloodFillTool.calculateClusterMeanIntensity({
+        clusterImg: tempImgForIdentification,
+        backImg,
+        nxyz,
+        fallbackIntensity: backImg[seedVx]
+      })
+      log.debug(`Grow Cluster using mean intensity: ${baseIntensity.toFixed(2)} voxels.`)
+
+      // Calculate intensity bounds using FloodFillTool helper
+      const [fillMin, fillMax] = FloodFillTool.getIntensityBounds(growSelectedCluster, baseIntensity, NaN, NaN)
 
       for (let i = 0; i < nxyz; i++) {
         if (tempImgForIdentification[i] === 2) {
@@ -6004,16 +5911,14 @@ export class Niivue {
       } else {
         const backImg = this.volumes[0].img2RAS()
         baseIntensity = backImg[seedVx] // ClickToSegment uses single seed intensity
-        let fillMin = -Infinity
-        let fillMax = Infinity
-        if (isFinite(forceMin) && isFinite(forceMax)) {
-          fillMin = forceMin
-          fillMax = forceMax
-        } else if (growSelectedCluster === Number.POSITIVE_INFINITY) {
-          fillMin = baseIntensity
-        } else if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
-          fillMax = baseIntensity
-        }
+
+        // Calculate intensity bounds using FloodFillTool helper
+        const [fillMin, fillMax] = FloodFillTool.getIntensityBounds(
+          growSelectedCluster,
+          baseIntensity,
+          forceMin,
+          forceMax
+        )
 
         for (let i = 0; i < nxyz; i++) {
           const intensity = backImg[i]
@@ -6032,16 +5937,13 @@ export class Niivue {
     }
 
     if (img[seedVx] !== 1) {
-      let isSeedValidOriginal = false
-      if (isGrowClusterTool && growSelectedCluster !== 0) {
-        if (originalSeedColor !== 0) {
-          isSeedValidOriginal = true
-        }
-      } else {
-        if (originalSeedColor !== 0 || newColor === 0) {
-          isSeedValidOriginal = true
-        }
-      }
+      // Check if seed should be forced to candidate using FloodFillTool helper
+      const isSeedValidOriginal = FloodFillTool.shouldForceSeedToCandidate(
+        originalSeedColor,
+        newColor,
+        isGrowClusterTool,
+        growSelectedCluster
+      )
 
       if (isSeedValidOriginal && isWithinDistance(seedVx)) {
         img[seedVx] = 1
@@ -6057,13 +5959,15 @@ export class Niivue {
 
     this.drawFloodFillCore(img, seedVx, neighbors) // Marks reachable '1's as '2'
 
-    for (let i = 0; i < nxyz; i++) {
-      if (img[i] === 2) {
-        targetBitmap[i] = newColor // Apply final color
-      } else if (this.clickToSegmentIsGrowing && targetBitmap === this.clickToSegmentGrowingBitmap) {
-        targetBitmap[i] = originalBitmap[i]
-      }
-    }
+    // Apply fill result using FloodFillTool helper
+    FloodFillTool.applyFillResult({
+      img,
+      targetBitmap,
+      originalBitmap,
+      newColor,
+      nxyz,
+      isPreviewMode: this.clickToSegmentIsGrowing && targetBitmap === this.clickToSegmentGrowingBitmap
+    })
 
     if (!this.clickToSegmentIsGrowing) {
       this.drawAddUndoBitmap()
@@ -8569,19 +8473,13 @@ export class Niivue {
    * @internal
    */
   updateBitmapFromClickToSegment(): void {
-    if (this.clickToSegmentGrowingBitmap === null) {
+    if (this.clickToSegmentGrowingBitmap === null || this.drawBitmap === null) {
       return
     }
-    if (this.drawBitmap === null) {
-      return
-    }
-    if (this.clickToSegmentGrowingBitmap.length !== this.drawBitmap.length) {
-      return
-    }
-    const nvx = this.drawBitmap.length
-    for (let i = 0; i < nvx; i++) {
-      this.drawBitmap[i] = this.clickToSegmentGrowingBitmap[i]
-    }
+    FloodFillTool.updateBitmapFromPreview({
+      sourceBitmap: this.clickToSegmentGrowingBitmap,
+      targetBitmap: this.drawBitmap
+    })
   }
 
   /**
@@ -8589,11 +8487,7 @@ export class Niivue {
    * @internal
    */
   sumBitmap(img: Uint8Array): number {
-    let sum = 0
-    for (let i = 0; i < img.length; i++) {
-      sum += img[i]
-    }
-    return sum
+    return FloodFillTool.sumBitmap(img)
   }
 
   /**
@@ -8631,25 +8525,26 @@ export class Niivue {
     }
 
     const pt = this.frac2vox(texFrac) as [number, number, number]
-    const threshold = this.opts.clickToSegmentPercent
-    let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
+    const voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2])
 
-    // Auto intensity logic
-    if (this.opts.clickToSegmentAutoIntensity) {
-      if (threshold !== 0) {
-        if (voxelIntensity === 0) {
-          voxelIntensity = 0.01
-        }
-        this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold)
-        this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold)
-      }
-      if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
-        this.opts.clickToSegmentBright = true
-      } else {
-        this.opts.clickToSegmentBright = false
-      }
-    }
-    const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
+    // Calculate intensity thresholds using FloodFillTool helper
+    const intensityResult = FloodFillTool.calculateSegmentIntensity({
+      voxelIntensity,
+      thresholdPercent: this.opts.clickToSegmentPercent,
+      calMin: this.back.cal_min,
+      calMax: this.back.cal_max,
+      autoIntensity: this.opts.clickToSegmentAutoIntensity,
+      currentIntensityMin: this.opts.clickToSegmentIntensityMin,
+      currentIntensityMax: this.opts.clickToSegmentIntensityMax,
+      currentBright: this.opts.clickToSegmentBright
+    })
+
+    // Update opts with calculated values
+    this.opts.clickToSegmentIntensityMin = intensityResult.intensityMin
+    this.opts.clickToSegmentIntensityMax = intensityResult.intensityMax
+    this.opts.clickToSegmentBright = intensityResult.isBright
+
+    const brightOrDark = FloodFillTool.getGrowDirection(intensityResult.isBright)
 
     this.drawPenAxCorSag = axCorSag
 

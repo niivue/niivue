@@ -1046,20 +1046,67 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 6.4 FloodFillTool Module
 **File:** `packages/niivue/src/niivue/drawing/FloodFillTool.ts`
 **Responsibility:** Flood fill and click-to-segment
-**Line Range:** ~6256-6679, ~10144-10292
-**Key Methods:**
-- `drawFloodFillCore()` - Core flood fill algorithm
-- `doClickToSegment()` - Smart segmentation
-- `updateBitmapFromClickToSegment()` - Update from segmentation
+**Key Functions Extracted:**
+- `floodFillCore()` ✅ - Core BFS flood fill algorithm
+- `xyz2vx()`, `vx2xyz()` ✅ - Coordinate conversion functions
+- `createCoordinateConverters()` ✅ - Factory for coordinate converters
+- `createDistanceCheck()` ✅ - Factory for distance check function
+- `getConstrainedAxisIndex()` ✅ - Get axis index for 2D constraint
+- `calculateSegmentIntensity()` ✅ - Calculate intensity thresholds for segmentation
+- `getGrowDirection()` ✅ - Get grow direction (POSITIVE/NEGATIVE_INFINITY)
+- `updateBitmapFromPreview()` ✅ - Update bitmap from preview
+- `sumBitmap()` ✅ - Calculate sum of voxel values
+- `countNonZeroVoxels()` ✅ - Count non-zero voxels
+- `calculateClusterMeanIntensity()` ✅ - Calculate cluster mean intensity
+- `getIntensityBounds()` ✅ - Get fill intensity bounds
+- `isValidSeedCoordinate()` ✅ - Validate seed coordinates
+- `isValidGrowClusterSeed()` ✅ - Validate grow cluster seed
+- `shouldForceSeedToCandidate()` ✅ - Check if seed should be forced
+- `applyFillResult()` ✅ - Apply flood fill result to bitmap
+- `markCandidatesByColor()` ✅ - Mark candidates by color matching
+- `markCandidatesByIntensity()` ✅ - Mark candidates by intensity thresholds
+- `markCandidatesForGrowCluster()` ✅ - Mark candidates for grow cluster
+- `createInitialClickToSegmentState()` ✅ - Create initial state
+- `createResetClickToSegmentState()` ✅ - Create reset state
+- `isClickToSegmentActive()` ✅ - Check if preview is active
 
-**Properties to migrate:**
-- `clickToSegmentIsGrowing`
-- `clickToSegmentGrowingBitmap`
-- `clickToSegmentXY`
-- `opts.clickToSegment`
+**Exported Types:**
+- `NeighborConnectivity` ✅ - 6, 18, or 26 connectivity
+- `FloodFillCoreParams` ✅ - Core flood fill parameters
+- `CoordinateParams` ✅ - Coordinate parameters
+- `FloodFillParams` ✅ - Full flood fill parameters
+- `FloodFillResult` ✅ - Flood fill result
+- `CalculateSegmentIntensityParams` ✅ - Segment intensity params
+- `SegmentIntensityResult` ✅ - Segment intensity result
+- `UpdateBitmapFromPreviewParams` ✅ - Update preview params
+- `ClickToSegmentState` ✅ - Click-to-segment state
+- `CalculateClusterMeanParams` ✅ - Cluster mean params
+- `ApplyFillResultParams` ✅ - Apply result params
+- `MarkCandidatesParams` ✅ - Mark candidates params
+- `CreateDistanceCheckParams` ✅ - Distance check params
 
-**Dependencies:** DrawingManager, CoordinateTransform
-**Status:** ⬜ Not Started
+**Niivue Methods Updated:**
+- `drawFloodFillCore()` - Delegates to FloodFillTool.floodFillCore()
+- `sumBitmap()` - Delegates to FloodFillTool.sumBitmap()
+- `updateBitmapFromClickToSegment()` - Uses FloodFillTool.updateBitmapFromPreview()
+- `doClickToSegment()` - Uses FloodFillTool.calculateSegmentIntensity(), getGrowDirection()
+- `drawFloodFill()` - Uses FloodFillTool.isValidSeedCoordinate(), createCoordinateConverters(), getConstrainedAxisIndex(), isValidGrowClusterSeed(), getIntensityBounds(), shouldForceSeedToCandidate(), calculateClusterMeanIntensity(), applyFillResult()
+
+**Properties (remain in Niivue class - state management):**
+- `clickToSegmentIsGrowing` - Flag for preview mode
+- `clickToSegmentGrowingBitmap` - Preview bitmap
+- `clickToSegmentXY` - Click location
+- `opts.clickToSegment` - Enabled flag
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- State management remains in Niivue class; pure functions handle computation
+- Niivue class delegates to FloodFillTool functions and maintains backward compatibility
+
+**Dependencies:** gl-matrix (vec3), SLICE_TYPE from nvdocument
+**Status:** ✅ Completed
 
 ---
 
@@ -1511,7 +1558,7 @@ For each module in the plan above:
 - ✅ 6.1 DrawingManager Module
 - ✅ 6.2 PenTool Module
 - ✅ 6.3 ShapeTool Module
-- ⬜ 6.4 FloodFillTool Module
+- ✅ 6.4 FloodFillTool Module
 - ⬜ 6.5 GrowCutTool Module
 
 ### Phase 7: Visualization Modules ⬜
