@@ -929,23 +929,29 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 6.1 DrawingManager Module
 **File:** `packages/niivue/src/niivue/drawing/DrawingManager.ts`
 **Responsibility:** Drawing state management and undo/redo
-**Line Range:** ~3647-3810, ~5723-5789, ~6846-6963
-**Key Methods:**
-- `createEmptyDrawing()` - Initialize drawing bitmap
-- `loadDrawing()` - Load drawing from NVImage
-- `closeDrawing()` - Clean up drawing resources
-- `refreshDrawing()` - Update drawing display
-- `drawAddUndoBitmap()` - Save undo state
-- `drawClearAllUndoBitmaps()` - Clear undo history
-- `drawUndo()` - Undo last operation
-- `setDrawingEnabled()` - Enable/disable drawing
-- `setPenValue()` - Set pen drawing value
-- `setDrawOpacity()` - Set drawing opacity
-- `setDrawColormap()` - Set drawing colormap
-- `setRenderDrawAmbientOcclusion()` - Drawing AO rendering
-- `closePAQD()` - Close probabilistic atlas
+**Key Functions Extracted:**
+- `clearAllUndoBitmaps()` ✅ - Clear undo history (pure function)
+- `addUndoBitmap()` ✅ - Save undo state with RLE compression (pure function)
+- `calculateLoadDrawingTransform()` ✅ - Calculate permutation transform for loading drawings
+- `transformBitmap()` ✅ - Transform bitmap using lookup tables
+- `validateDrawingDimensions()` ✅ - Validate drawing dimensions match background
+- `isDrawingInitialized()` ✅ - Check if drawing bitmap exists
+- `calculateVoxelCount()` ✅ - Calculate total voxels from dimensions
+- `createEmptyBitmap()` ✅ - Create empty Uint8Array bitmap
+- `determineBitmapDataSource()` ✅ - Determine which bitmap to use (main or clickToSegment)
+- `createDisabledDrawingState()` ✅ - Reset drawing state when disabled
+- `adjustDimensionsForSpecialCase()` ✅ - Handle 2x2x2 texture special case
+- `validateBitmapLength()` ✅ - Validate bitmap length matches expected
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `drawClearAllUndoBitmaps()` - Delegates to DrawingManager.clearAllUndoBitmaps()
+- `drawAddUndoBitmap()` - Delegates to DrawingManager.addUndoBitmap()
+- `loadDrawing()` - Uses DrawingManager transform functions
+- `createEmptyDrawing()` - Uses DrawingManager.calculateVoxelCount() and createEmptyBitmap()
+- `setDrawingEnabled()` - Uses DrawingManager.createDisabledDrawingState()
+- `refreshDrawing()` - Uses DrawingManager.determineBitmapDataSource() and validation functions
+
+**Properties (remain in Niivue class - tightly coupled to WebGL state):**
 - `drawTexture: WebGLTexture`
 - `paqdTexture: WebGLTexture`
 - `drawUndoBitmaps: Uint8Array[]`
@@ -954,8 +960,15 @@ This method orchestrates the entire volume update process and could remain as-is
 - `renderDrawAmbientOcclusion`
 - `opts.drawingEnabled`
 
-**Dependencies:** WebGLContext, VolumeManager
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- WebGL texture operations remain in Niivue class
+- Niivue class delegates to DrawingManager functions and maintains backward compatibility
+
+**Dependencies:** @/drawing (encodeRLE, decodeRLE), @/logger
+**Status:** ✅ Completed
 
 ---
 
@@ -1460,9 +1473,9 @@ For each module in the plan above:
 - ✅ 5.3 CameraController Module
 - ✅ 5.4 ClipPlaneManager Module
 
-### Phase 6: Drawing Tools Modules ⬜
+### Phase 6: Drawing Tools Modules 🔄
 
-- ⬜ 6.1 DrawingManager Module
+- ✅ 6.1 DrawingManager Module
 - ⬜ 6.2 PenTool Module
 - ⬜ 6.3 ShapeTool Module
 - ⬜ 6.4 FloodFillTool Module

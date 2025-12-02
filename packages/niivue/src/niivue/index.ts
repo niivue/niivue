@@ -33,6 +33,7 @@ import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
 import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import * as CameraController from '@/niivue/navigation/CameraController'
 import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
+import * as DrawingManager from '@/niivue/drawing/DrawingManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -3387,27 +3388,21 @@ export class Niivue {
    * @internal
    */
   drawAddUndoBitmap(drawFillOverwrites: boolean = true): void {
-    if (!this.drawBitmap || this.drawBitmap.length < 1) {
-      log.debug('drawAddUndoBitmap error: No drawing open')
-      return
-    }
-    if (!drawFillOverwrites && this.drawUndoBitmaps.length > 0) {
-      const len = this.drawBitmap.length
-      const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], len)
-      for (let i = 0; i < len; i++) {
-        if (bmp[i] > 0) {
-          this.drawBitmap[i] = bmp[i]
-        }
-      }
+    const result = DrawingManager.addUndoBitmap({
+      drawBitmap: this.drawBitmap,
+      drawUndoBitmaps: this.drawUndoBitmaps,
+      currentDrawUndoBitmap: this.currentDrawUndoBitmap,
+      maxDrawUndoBitmaps: this.opts.maxDrawUndoBitmaps,
+      drawFillOverwrites
+    })
+
+    this.drawBitmap = result.drawBitmap
+    this.drawUndoBitmaps = result.drawUndoBitmaps
+    this.currentDrawUndoBitmap = result.currentDrawUndoBitmap
+
+    if (result.needsRefresh) {
       this.refreshDrawing(false)
     }
-    // let rle = encodeRLE(this.drawBitmap);
-    // the bitmaps are a cyclical loop, like a revolver hand gun: increment the cylinder
-    this.currentDrawUndoBitmap++
-    if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps) {
-      this.currentDrawUndoBitmap = 0
-    }
-    this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap)
   }
 
   /**
@@ -3415,13 +3410,9 @@ export class Niivue {
    * @internal
    */
   drawClearAllUndoBitmaps(): void {
-    this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps // next add will be cylinder 0
-    if (!this.drawUndoBitmaps || this.drawUndoBitmaps.length < 1) {
-      return
-    }
-    for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) {
-      this.drawUndoBitmaps[i] = new Uint8Array()
-    }
+    const result = DrawingManager.clearAllUndoBitmaps(this.drawUndoBitmaps, this.opts.maxDrawUndoBitmaps)
+    this.drawUndoBitmaps = result.drawUndoBitmaps
+    this.currentDrawUndoBitmap = result.currentDrawUndoBitmap
   }
 
   /**
@@ -3457,87 +3448,42 @@ export class Niivue {
     }
     this.drawClearAllUndoBitmaps()
     const dims = drawingBitmap.hdr!.dims
+
+    // Validate dimensions match background
     if (
-      dims[1] !== this.back.hdr!.dims[1] ||
-      dims[2] !== this.back.hdr!.dims[2] ||
-      dims[3] !== this.back.hdr!.dims[3]
+      !DrawingManager.validateDrawingDimensions({
+        drawingDims: dims,
+        backgroundDims: this.back.hdr!.dims
+      })
     ) {
       log.debug('drawing dimensions do not match background image')
       return false
     }
+
     if (drawingBitmap.img!.constructor !== Uint8Array) {
       log.debug('Drawings should be UINT8')
     }
+
     const perm = drawingBitmap.permRAS!
-    const vx = dims[1] * dims[2] * dims[3]
-    this.drawBitmap = new Uint8Array(vx)
+    const vx = DrawingManager.calculateVoxelCount(dims)
+    this.drawBitmap = DrawingManager.createEmptyBitmap(vx)
+
     if (this.opts.is2DSliceShader) {
       this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true)
     } else {
       this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims!, true)
     }
-    const layout = [0, 0, 0]
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        if (Math.abs(perm[i]) - 1 !== j) {
-          continue
-        }
-        layout[j] = i * Math.sign(perm[i])
-      }
-    }
-    let stride = 1
-    const instride = [1, 1, 1]
-    const inflip = [false, false, false]
-    for (let i = 0; i < layout.length; i++) {
-      for (let j = 0; j < layout.length; j++) {
-        const a = Math.abs(layout[j])
-        if (a !== i) {
-          continue
-        }
-        instride[j] = stride
-        // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-        if (layout[j] < 0 || Object.is(layout[j], -0)) {
-          inflip[j] = true
-        }
-        stride *= dims[j + 1]
-      }
-    }
-    // lookup table for flips and stride offsets:
-    let xlut = NVUtilities.range(0, dims[1] - 1, 1)
-    if (inflip[0]) {
-      xlut = NVUtilities.range(dims[1] - 1, 0, -1)
-    }
-    for (let i = 0; i < dims[1]; i++) {
-      xlut[i] *= instride[0]
-    }
-    let ylut = NVUtilities.range(0, dims[2] - 1, 1)
-    if (inflip[1]) {
-      ylut = NVUtilities.range(dims[2] - 1, 0, -1)
-    }
-    for (let i = 0; i < dims[2]; i++) {
-      ylut[i] *= instride[1]
-    }
-    let zlut = NVUtilities.range(0, dims[3] - 1, 1)
-    if (inflip[2]) {
-      zlut = NVUtilities.range(dims[3] - 1, 0, -1)
-    }
-    for (let i = 0; i < dims[3]; i++) {
-      zlut[i] *= instride[2]
-    }
-    // convert data
-    const inVs = drawingBitmap.img! // new Uint8Array(this.drawBitmap);
-    const outVs = this.drawBitmap
-    // for (let i = 0; i < vx; i++)
-    //  outVs[i] = i % 3;
-    let j = 0
-    for (let z = 0; z < dims[3]; z++) {
-      for (let y = 0; y < dims[2]; y++) {
-        for (let x = 0; x < dims[1]; x++) {
-          outVs[xlut[x] + ylut[y] + zlut[z]] = inVs[j]
-          j++
-        }
-      }
-    }
+
+    // Calculate transformation and transform the bitmap
+    const transform = DrawingManager.calculateLoadDrawingTransform({ permRAS: perm, dims })
+    this.drawBitmap = DrawingManager.transformBitmap({
+      inputData: drawingBitmap.img!,
+      dims,
+      xlut: transform.xlut,
+      ylut: transform.ylut,
+      zlut: transform.zlut
+    })
+
     this.drawAddUndoBitmap()
     this.refreshDrawing(false)
     this.drawScene()
@@ -4416,21 +4362,27 @@ export class Niivue {
         this.createEmptyDrawing()
       }
     } else {
-      // Clean up clickToSegment state when drawing is disabled
-      if (this.clickToSegmentIsGrowing) {
-        this.clickToSegmentIsGrowing = false
-        // Refresh the GPU texture using the main drawBitmap
+      // Clean up drawing state when drawing is disabled
+      const resetState = DrawingManager.createDisabledDrawingState({
+        clickToSegmentIsGrowing: this.clickToSegmentIsGrowing,
+        drawPenLocation: this.drawPenLocation,
+        drawPenAxCorSag: this.drawPenAxCorSag,
+        drawPenFillPts: this.drawPenFillPts,
+        drawShapeStartLocation: this.drawShapeStartLocation,
+        drawShapePreviewBitmap: this.drawShapePreviewBitmap,
+        drawBitmap: this.drawBitmap
+      })
+
+      this.clickToSegmentIsGrowing = resetState.clickToSegmentIsGrowing
+      this.drawPenLocation = resetState.drawPenLocation
+      this.drawPenAxCorSag = resetState.drawPenAxCorSag
+      this.drawPenFillPts = resetState.drawPenFillPts
+      this.drawShapeStartLocation = resetState.drawShapeStartLocation
+      this.drawShapePreviewBitmap = resetState.drawShapePreviewBitmap
+      this.drawBitmap = resetState.drawBitmap
+
+      if (resetState.needsRefresh) {
         this.refreshDrawing(true, false)
-      }
-      // Reset pen state
-      this.drawPenLocation = [NaN, NaN, NaN]
-      this.drawPenAxCorSag = -1
-      this.drawPenFillPts = []
-      // Reset shape state
-      this.drawShapeStartLocation = [NaN, NaN, NaN]
-      if (this.drawShapePreviewBitmap) {
-        this.drawBitmap = this.drawShapePreviewBitmap
-        this.drawShapePreviewBitmap = null
       }
     }
     this.drawScene() // Redraw needed in both cases
@@ -5391,9 +5343,9 @@ export class Niivue {
     if (mn < 1) {
       return
     } // something is horribly wrong!
-    const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
-    this.drawBitmap = new Uint8Array(vx)
-    this.clickToSegmentGrowingBitmap = new Uint8Array(vx)
+    const vx = DrawingManager.calculateVoxelCount(this.back.dims)
+    this.drawBitmap = DrawingManager.createEmptyBitmap(vx)
+    this.clickToSegmentGrowingBitmap = DrawingManager.createEmptyBitmap(vx)
     this.drawClearAllUndoBitmaps()
     this.drawAddUndoBitmap()
     if (this.opts.is2DSliceShader) {
@@ -6482,23 +6434,20 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
    */
   refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false): void {
-    // Only use the growing bitmap if drawing AND clickToSegment are enabled.
-    if (useClickToSegmentBitmap && (!this.opts.drawingEnabled || !this.opts.clickToSegment)) {
-      log.debug('refreshDrawing: Conditions not met for clickToSegment bitmap, using drawBitmap.')
-      useClickToSegmentBitmap = false // Fallback to the main drawing bitmap
+    // Determine which bitmap to use
+    const bitmapSourceResult = DrawingManager.determineBitmapDataSource({
+      useClickToSegmentBitmap,
+      drawingEnabled: this.opts.drawingEnabled,
+      clickToSegment: this.opts.clickToSegment,
+      drawBitmap: this.drawBitmap,
+      clickToSegmentGrowingBitmap: this.clickToSegmentGrowingBitmap
+    })
+
+    if (bitmapSourceResult.warning) {
+      log.warn(`refreshDrawing: ${bitmapSourceResult.warning}`)
     }
-    // Ensure the selected bitmap actually exists, otherwise use a blank default or the other one if possible.
-    const selectedBitmap = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
-    if (!selectedBitmap && !useClickToSegmentBitmap && this.clickToSegmentGrowingBitmap) {
-      log.warn('refreshDrawing: drawBitmap is null, but clickToSegmentGrowingBitmap exists. Check state.')
-    } else if (!selectedBitmap && useClickToSegmentBitmap && this.drawBitmap) {
-      log.warn('refreshDrawing: clickToSegmentGrowingBitmap is null, falling back to drawBitmap.')
-      useClickToSegmentBitmap = false // Use the main bitmap if growing one is missing
-    } else if (!selectedBitmap) {
-      log.warn('refreshDrawing: Both bitmaps are null. Uploading empty data.')
-    }
-    // Determine the bitmap data source
-    const bitmapDataSource = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap
+
+    const bitmapDataSource = bitmapSourceResult.bitmapDataSource
 
     if (!this.back?.dims) {
       // If back isn't ready, we can't determine dimensions. Exit early.
@@ -6507,13 +6456,12 @@ export class Niivue {
     }
 
     // Dimensions check
-    const dims = this.back.dims.slice()
-    const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3]
+    const vx = DrawingManager.calculateVoxelCount(this.back.dims)
 
     // Check if the determined bitmapDataSource exists
     if (!bitmapDataSource) {
       log.warn(
-        `refreshDrawing: Bitmap data source (${useClickToSegmentBitmap ? 'growing' : 'main'}) is null. Cannot update texture.`
+        `refreshDrawing: Bitmap data source (${bitmapSourceResult.useClickToSegmentBitmap ? 'growing' : 'main'}) is null. Cannot update texture.`
       )
       if (isForceRedraw) {
         this.drawScene()
@@ -6521,13 +6469,9 @@ export class Niivue {
       return
     }
 
-    // Check length consistency if bitmapDataSource is not null
-    if (bitmapDataSource.length === 8) {
-      // Special case for initial 2x2x2 texture
-      dims[1] = 2
-      dims[2] = 2
-      dims[3] = 2
-    } else if (vx !== bitmapDataSource.length) {
+    // Adjust dimensions for special cases and validate
+    const dims = DrawingManager.adjustDimensionsForSpecialCase(bitmapDataSource.length, this.back.dims.slice())
+    if (!DrawingManager.validateBitmapLength(bitmapDataSource.length, vx)) {
       log.warn(`Drawing bitmap length (${bitmapDataSource.length}) must match the background image (${vx})`)
     }
 
