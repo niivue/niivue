@@ -848,20 +848,35 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 5.3 CameraController Module
 **File:** `packages/niivue/src/niivue/navigation/CameraController.ts`
-**Responsibility:** 3D camera control (azimuth, elevation, zoom)
-**Line Range:** ~4286-4299, ~4568-4626
-**Key Methods:**
-- `setRenderAzimuthElevation()` - Set 3D view angle
-- `sph2cartDeg()` - Spherical to Cartesian conversion
-- `setPan2Dxyzmm()` - Set 2D pan position
+**Responsibility:** 3D camera rotation calculations
+**Key Functions Extracted:**
+- `normalizeAzimuth()` ✅ - Normalize azimuth angle to 0-360 range
+- `clampElevation()` ✅ - Clamp elevation angle to valid range
+- `calculateDragRotation()` ✅ - Calculate azimuth/elevation from mouse drag
+- `shouldUpdateCameraRotation()` ✅ - Check if drag is significant enough to update
+- `calculateKeyboardRotation()` ✅ - Calculate rotation from keyboard input
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `mouseMove()` - Uses CameraController.shouldUpdateCameraRotation() and calculateDragRotation()
+
+**Methods Unchanged (simple setters don't benefit from extraction):**
+- `setRenderAzimuthElevation()` - Direct property assignment
+- `setPan2Dxyzmm()` - Direct property assignment
+- `setScale()` - Direct property assignment
+
+**Properties (remain in Niivue class - state management):**
 - `scene.renderAzimuth`, `scene.renderElevation`
 - `scene.pan2Dxyzmm`
-- `volScaleMultiplier`
+- `scene.volScaleMultiplier`
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- Only functions with actual computation logic were extracted
+- Simple pass-through "prepare" functions were intentionally avoided
+- `sph2cartDeg()` remains in VolumeRenderer.ts (already extracted in Phase 3.2)
 
 **Dependencies:** None
-**Status:** ⬜ Not Started
+**Status:** ✅ Completed
 
 ---
 
@@ -1420,7 +1435,7 @@ For each module in the plan above:
 
 - ✅ 5.1 SliceNavigation Module
 - ✅ 5.2 LayoutManager Module
-- ⬜ 5.3 CameraController Module
+- ✅ 5.3 CameraController Module
 - ⬜ 5.4 ClipPlaneManager Module
 
 ### Phase 6: Drawing Tools Modules ⬜

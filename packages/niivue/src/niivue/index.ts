@@ -31,6 +31,7 @@ import * as WheelController from '@/niivue/interaction/WheelController'
 import * as DragModeManager from '@/niivue/interaction/DragModeManager'
 import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
 import * as LayoutManager from '@/niivue/navigation/LayoutManager'
+import * as CameraController from '@/niivue/navigation/CameraController'
 import {
   NVDocument,
   NVConfigOptions,
@@ -4270,11 +4271,20 @@ export class Niivue {
       return
     }
 
-    if (Math.abs(result.dx) < 1 && Math.abs(result.dy) < 1) {
+    // Check if drag is significant enough to update camera
+    if (!CameraController.shouldUpdateCameraRotation({ dx: result.dx, dy: result.dy })) {
       return
     }
-    this.scene.renderAzimuth += result.dx
-    this.scene.renderElevation += result.dy
+
+    // Calculate new camera rotation from drag
+    const rotation = CameraController.calculateDragRotation({
+      currentAzimuth: this.scene.renderAzimuth,
+      currentElevation: this.scene.renderElevation,
+      deltaX: result.dx,
+      deltaY: result.dy
+    })
+    this.scene.renderAzimuth = rotation.azimuth
+    this.scene.renderElevation = rotation.elevation
 
     this.drawScene()
   }
