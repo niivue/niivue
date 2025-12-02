@@ -30,6 +30,7 @@ import * as KeyboardController from '@/niivue/interaction/KeyboardController'
 import * as WheelController from '@/niivue/interaction/WheelController'
 import * as DragModeManager from '@/niivue/interaction/DragModeManager'
 import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
+import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -3166,25 +3167,10 @@ export class Niivue {
       sliceMM?: number
     }>
   ): void {
-    // check for overlapping tiles
-    for (let i = 0; i < layout.length; i++) {
-      const [left1, top1, width1, height1] = layout[i].position
-      const right1 = left1 + width1
-      const bottom1 = top1 + height1
-
-      // compare with subsequent tiles
-      for (let j = i + 1; j < layout.length; j++) {
-        const [left2, top2, width2, height2] = layout[j].position
-        const right2 = left2 + width2
-        const bottom2 = top2 + height2
-
-        // test if tile rectangles intersect both horizontally and vertically
-        const horizontallyOverlaps = left1 < right2 && right1 > left2
-        const verticallyOverlaps = top1 < bottom2 && bottom1 > top2
-        if (horizontallyOverlaps && verticallyOverlaps) {
-          throw new Error(`Custom layout is invalid. Tile ${i} overlaps with tile ${j}.`)
-        }
-      }
+    // Validate layout for overlapping tiles
+    const validation = LayoutManager.validateCustomLayout({ layout })
+    if (!validation.valid && validation.error) {
+      throw new Error(validation.error)
     }
 
     this.customLayout = layout
@@ -8845,17 +8831,15 @@ export class Niivue {
    * @internal
    */
   sliceScale(forceVox = false): SliceScale {
-    let dimsMM = this.screenFieldOfViewMM(SLICE_TYPE.AXIAL)
-    if (forceVox) {
-      dimsMM = this.screenFieldOfViewVox(SLICE_TYPE.AXIAL)
-    }
-    const longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]))
-    const volScale = [dimsMM[0] / longestAxis, dimsMM[1] / longestAxis, dimsMM[2] / longestAxis]
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
-    const vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]]
-    return { volScale, vox, longestAxis, dimsMM }
+    return LayoutManager.calculateSliceScale({
+      forceVox,
+      getScreenFieldOfViewMM: (axCorSag: SLICE_TYPE) => this.screenFieldOfViewMM(axCorSag),
+      getScreenFieldOfViewVox: (axCorSag: SLICE_TYPE) => this.screenFieldOfViewVox(axCorSag),
+      backDims: this.back.dims
+    })
   }
 
   /**
@@ -9899,17 +9883,11 @@ export class Niivue {
    * @internal
    */
   effectiveCanvasHeight(): number {
-    let regionH = this.gl.canvas.height
-
-    if (this.opts.bounds) {
-      const [[, y1], [, y2]] = this.opts.bounds
-      const yTop = Math.round(y1 * this.gl.canvas.height)
-      const yBot = Math.round(y2 * this.gl.canvas.height)
-      regionH = yBot - yTop
-    }
-
-    // Subtract colorbar height only within region
-    return regionH - this.colorbarHeight
+    return LayoutManager.calculateEffectiveCanvasHeight({
+      canvasHeight: this.gl.canvas.height,
+      bounds: this.opts.bounds as LayoutManager.NormalizedBounds | null | undefined,
+      colorbarHeight: this.colorbarHeight
+    })
   }
 
   /**
@@ -9917,15 +9895,11 @@ export class Niivue {
    * @internal
    */
   effectiveCanvasWidth(): number {
-    let regionW = this.gl.canvas.width
-
-    if (this.opts.bounds) {
-      const [[x1], [x2]] = this.opts.bounds
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width)
-    }
-
-    // Subtract legend panel width only within region
-    return regionW - this.getLegendPanelWidth()
+    return LayoutManager.calculateEffectiveCanvasWidth({
+      canvasWidth: this.gl.canvas.width,
+      bounds: this.opts.bounds as LayoutManager.NormalizedBounds | null | undefined,
+      legendPanelWidth: this.getLegendPanelWidth()
+    })
   }
 
   /**
@@ -9955,29 +9929,12 @@ export class Niivue {
    * @internal
    */
   getBulletMarginWidth(): number {
-    let bulletMargin = 0
     const labels = this.getConnectomeLabels()
-    if (labels.length === 0) {
-      return 0
-    }
-
-    const widestBulletScale =
-      labels.length === 1
-        ? labels[0].style.bulletScale
-        : labels.reduce((a, b) => (a.style.bulletScale! > b.style.bulletScale! ? a : b)).style.bulletScale
-    const tallestLabel =
-      labels.length === 1
-        ? labels[0]
-        : labels.reduce((a, b) => {
-            const aSize = this.fontPx * a.style.textScale
-            const bSize = this.fontPx * b.style.textScale
-            const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b
-            return taller
-          })
-    const size = this.fontPx * tallestLabel.style.textScale
-    bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale!
-    bulletMargin += size
-    return bulletMargin
+    return LayoutManager.calculateBulletMarginWidth({
+      labels,
+      fontPx: this.fontPx,
+      textHeight: (fontSize: number, text: string) => this.textHeight(fontSize, text)
+    })
   }
 
   /**
@@ -9987,33 +9944,14 @@ export class Niivue {
    */
   getLegendPanelWidth(): number {
     const labels = this.getConnectomeLabels()
-    if (!this.opts.showLegend || labels.length === 0) {
-      return 0
-    }
-    const scale = 1.0 // we may want to make this adjustable in the future
-    const horizontalMargin = this.fontPx * scale
-    let width = 0
-
-    const longestLabel = labels.reduce((a, b) => {
-      const aSize = this.fontPx * a.style.textScale
-      const bSize = this.fontPx * b.style.textScale
-      const longer = this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b
-      return longer
+    return LayoutManager.calculateLegendPanelWidth({
+      labels,
+      showLegend: this.opts.showLegend,
+      fontPx: this.fontPx,
+      canvasWidth: this.gl.canvas.width,
+      textWidth: (fontSize: number, text: string) => this.textWidth(fontSize, text),
+      getBulletMarginWidth: () => this.getBulletMarginWidth()
     })
-
-    const longestTextSize = this.fontPx * longestLabel.style.textScale
-    const longestTextLength = this.textWidth(longestTextSize, longestLabel.text)
-
-    const bulletMargin = this.getBulletMarginWidth()
-
-    if (longestTextLength) {
-      width = bulletMargin + longestTextLength
-      width += horizontalMargin * 2
-    }
-    if (width >= this.gl.canvas.width) {
-      return 0
-    }
-    return width
   }
 
   /**
@@ -10022,17 +9960,12 @@ export class Niivue {
    */
   getLegendPanelHeight(panelScale = 1.0): number {
     const labels = this.getConnectomeLabels()
-    let height = 0
-    const verticalMargin = this.fontPx
-    for (const label of labels) {
-      const labelSize = this.fontPx * label.style.textScale * panelScale
-      const textHeight = this.textHeight(labelSize, label.text)
-      height += textHeight
-    }
-    if (height) {
-      height += (verticalMargin / 2) * (labels.length + 1) * panelScale
-    }
-    return height
+    return LayoutManager.calculateLegendPanelHeight({
+      labels,
+      fontPx: this.fontPx,
+      panelScale,
+      textHeight: (fontSize: number, text: string) => this.textHeight(fontSize, text)
+    })
   }
 
   /**
@@ -10041,29 +9974,14 @@ export class Niivue {
    * @internal
    */
   reserveColorbarPanel(): number[] {
-    const fullHt = 3 * this.fontPx
-    if (fullHt < 0) {
-      return [0, 0, 0, 0]
-    }
+    const result = LayoutManager.calculateColorbarPanel({
+      fontPx: this.fontPx,
+      boundsRegion: this.getBoundsRegion(),
+      colorbarWidth: this.opts.colorbarWidth
+    })
 
-    // Derive drawing region from bounds (normalized → pixels)
-    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
-
-    // Calculate width as a percentage of region width
-    const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1.0
-
-    const width = widthPercentage * regionW
-
-    // Position at bottom of the region (so it doesn’t overlap content)
-    const leftTopWidthHeight: [number, number, number, number] = [
-      regionX + (regionW - width) / 2, // center within region
-      regionY + regionH - fullHt, // top within region
-      width,
-      fullHt
-    ]
-
-    this.colorbarHeight = leftTopWidthHeight[3] + 1
-    return leftTopWidthHeight
+    this.colorbarHeight = result.colorbarHeight
+    return result.leftTopWidthHeight
   }
 
   /**
@@ -10716,40 +10634,12 @@ export class Niivue {
    * @internal
    */
   xyMM2xyzMM(axCorSag: SLICE_TYPE, sliceFrac: number): number[] {
-    // given X and Y, find Z for a plane defined by 3 points (a,b,c)
-    // https://math.stackexchange.com/questions/851742/calculate-coordinate-of-any-point-on-triangle-in-3d-plane
-    let sliceDim = 2 // axial depth is NIfTI k dimension
-    if (axCorSag === SLICE_TYPE.CORONAL) {
-      sliceDim = 1
-    } // sagittal depth is NIfTI j dimension
-    if (axCorSag === SLICE_TYPE.SAGITTAL) {
-      sliceDim = 0
-    } // sagittal depth is NIfTI i dimension
-    let a: [number, number, number] | vec4 = [0, 0, 0]
-    let b: [number, number, number] | vec4 = [1, 1, 0]
-    let c: [number, number, number] | vec4 = [1, 0, 1]
-
-    a[sliceDim] = sliceFrac
-    b[sliceDim] = sliceFrac
-    c[sliceDim] = sliceFrac
-    a = this.frac2mm(a)
-    b = this.frac2mm(b)
-    c = this.frac2mm(c)
-    a = this.swizzleVec3MM(vec3.fromValues(a[0], a[1], a[2]), axCorSag)
-    b = this.swizzleVec3MM(vec3.fromValues(b[0], b[1], b[2]), axCorSag)
-    c = this.swizzleVec3MM(vec3.fromValues(c[0], c[1], c[2]), axCorSag)
-    const denom = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
-    let yMult = (b[0] - a[0]) * (c[2] - a[2]) - (c[0] - a[0]) * (b[2] - a[2])
-    yMult /= denom
-    let xMult = (b[1] - a[1]) * (c[2] - a[2]) - (c[1] - a[1]) * (b[2] - a[2])
-    xMult /= denom
-    const AxyzMxy = [0, 0, 0, 0, 0]
-    AxyzMxy[0] = a[0]
-    AxyzMxy[1] = a[1]
-    AxyzMxy[2] = a[2]
-    AxyzMxy[3] = xMult
-    AxyzMxy[4] = yMult
-    return AxyzMxy
+    return LayoutManager.calculateXyMM2xyzMM({
+      axCorSag,
+      sliceFrac,
+      frac2mm: (frac: [number, number, number]) => this.frac2mm(frac),
+      swizzleVec3MM: (v3: vec3, acs: SLICE_TYPE) => this.swizzleVec3MM(v3, acs)
+    })
   }
 
   /**
@@ -12950,21 +12840,15 @@ export class Niivue {
    */
   private getBoundsRegionCSS(): [number, number, number, number] {
     const rect = (this.gl.canvas as HTMLCanvasElement).getBoundingClientRect()
-    if (!this.opts.bounds) {
-      return [0, 0, rect.width, rect.height]
-    }
-    const [[x1, y1], [x2, y2]] = this.opts.bounds
-    const regionX = Math.round(x1 * rect.width)
-    const regionW = Math.round((x2 - x1) * rect.width)
-    const yTop = Math.round(y1 * rect.height)
-    const yBot = Math.round(y2 * rect.height)
-    const regionH = yBot - yTop
-    const regionY = rect.height - yBot
-    return [regionX, regionY, regionW, regionH]
+    return LayoutManager.calculateBoundsRegionCSS({
+      bounds: this.opts.bounds as LayoutManager.NormalizedBounds | null | undefined,
+      rectWidth: rect.width,
+      rectHeight: rect.height
+    })
   }
 
   /**
-   * Returns true if a mouse/touch event happened inside this instance’s bounds.
+   * Returns true if a mouse/touch event happened inside this instance's bounds.
    */
   public eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean {
     const rect = (this.gl.canvas as HTMLCanvasElement).getBoundingClientRect()
@@ -12992,8 +12876,11 @@ export class Niivue {
     const cssX = clientX - rect.left
     const cssY = clientY - rect.top
 
-    const [bx, by, bw, bh] = this.getBoundsRegionCSS()
-    return cssX >= bx && cssX <= bx + bw && cssY >= by && cssY <= by + bh
+    return LayoutManager.isPointInBoundsCSS({
+      x: cssX,
+      y: cssY,
+      boundsRegion: this.getBoundsRegionCSS()
+    })
   }
 
   /**
@@ -13006,13 +12893,11 @@ export class Niivue {
    * @internal
    */
   private cursorInBounds(): boolean {
-    if (this.mousePos[0] < 0 || this.mousePos[1] < 0) {
-      return false
-    }
-    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
-    const [mx, my] = this.mousePos // already tracked in device pixels
-
-    return mx >= regionX && mx <= regionX + regionW && my >= regionY && my <= regionY + regionH
+    return LayoutManager.isCursorInBounds({
+      mouseX: this.mousePos[0],
+      mouseY: this.mousePos[1],
+      boundsRegion: this.getBoundsRegion()
+    })
   }
 
   /**
@@ -13022,35 +12907,16 @@ export class Niivue {
   private getBoundsRegion(): [number, number, number, number] {
     const gl = this.gl
     const dpr = this.uiData?.dpr || window.devicePixelRatio || 1
-
     const canvas = gl.canvas as HTMLCanvasElement
-    const cssW = canvas.clientWidth
-    const cssH = canvas.clientHeight
 
-    if (!this.opts.bounds) {
-      return [0, 0, gl.canvas.width, gl.canvas.height]
-    }
-
-    const [[x1, y1], [x2, y2]] = this.opts.bounds
-
-    // Convert normalized CSS fractions → device px
-    const regionX = Math.floor(x1 * cssW * dpr)
-    const regionW = Math.ceil((x2 - x1) * cssW * dpr)
-
-    // Y: flip CSS top-origin → GL bottom-origin
-    let regionY = Math.floor((1.0 - y2) * cssH * dpr)
-    let regionH = Math.ceil((y2 - y1) * cssH * dpr)
-
-    // Clamp so region is always within canvas
-    if (regionY < 0) {
-      regionH += regionY // shrink height
-      regionY = 0
-    }
-    if (regionY + regionH > gl.canvas.height) {
-      regionH = gl.canvas.height - regionY
-    }
-
-    return [regionX, regionY, regionW, regionH]
+    return LayoutManager.calculateBoundsRegion({
+      bounds: this.opts.bounds as LayoutManager.NormalizedBounds | null | undefined,
+      canvasWidth: gl.canvas.width,
+      canvasHeight: gl.canvas.height,
+      cssWidth: canvas.clientWidth,
+      cssHeight: canvas.clientHeight,
+      dpr
+    })
   }
 
   /**

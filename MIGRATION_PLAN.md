@@ -791,30 +791,58 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 5.2 LayoutManager Module
 **File:** `packages/niivue/src/niivue/navigation/LayoutManager.ts`
-**Responsibility:** Manage multiplanar layouts and tile arrangements
-**Line Range:** ~3313-3445, ~11269-11439
-**Key Methods:**
-- `setMultiplanarLayout()` - Set layout type
-- `setMultiplanarPadPixels()` - Padding between tiles
-- `clearCustomLayout()`, `getCustomLayout()` - Custom layouts
-- `setHeroImage()` - Set hero image fraction
-- `effectiveCanvasWidth()`, `effectiveCanvasHeight()` - Canvas dimensions
-- `reserveColorbarPanel()` - Reserve space for colorbar
-- `getLegendPanelWidth()`, `getLegendPanelHeight()` - Legend dimensions
-- `getBulletMarginWidth()` - Bullet point margin
-- `sliceScale()` - Calculate slice scaling
-- `screenFieldOfViewVox()`, `screenFieldOfViewMM()` - Field of view calculations
-- `screenFieldOfViewExtendedVox()`, `screenFieldOfViewExtendedMM()` - Extended FOV
-- `xyMM2xyzMM()` - Convert 2D position to 3D
+**Responsibility:** Manage multiplanar layouts, tile arrangements, and canvas dimension calculations
+**Key Functions Extracted:**
+- `validateCustomLayout()` ✅ - Validate custom layout for overlapping tiles
+- `calculateBoundsRegion()` ✅ - Calculate bounds region in device pixels
+- `calculateBoundsRegionCSS()` ✅ - Calculate bounds region in CSS pixels
+- `calculateEffectiveCanvasHeight()` ✅ - Calculate canvas height minus colorbar
+- `calculateEffectiveCanvasWidth()` ✅ - Calculate canvas width minus legend panel
+- `calculateSliceScale()` ✅ - Calculate volume scaling factors and voxel dimensions
+- `calculateXyMM2xyzMM()` ✅ - Compute plane in mm space for slice orientation
+- `calculateBulletMarginWidth()` ✅ - Calculate bullet margin width for labels
+- `calculateLegendPanelWidth()` ✅ - Calculate legend panel width
+- `calculateLegendPanelHeight()` ✅ - Calculate legend panel height
+- `calculateColorbarPanel()` ✅ - Calculate colorbar panel area
+- `isPointInBoundsCSS()` ✅ - Check if point is inside CSS bounds region
+- `isCursorInBounds()` ✅ - Check if cursor is inside bounds region
+- `getSliceDimension()` ✅ - Get dimension index for slice type
+- `calculateScreenFieldOfViewVox()` ✅ - Get FOV in voxels for slice orientation
+- `calculateScreenFieldOfViewMM()` ✅ - Get FOV in mm for slice orientation
+- `calculateScreenFieldOfViewExtendedVox()` ✅ - Extended FOV in voxels
+- `calculateScreenFieldOfViewExtendedMM()` ✅ - Extended FOV in mm
 
-**Properties to migrate:**
+**Niivue Methods Updated:**
+- `setCustomLayout()` - Uses LayoutManager.validateCustomLayout()
+- `getBoundsRegion()` - Delegates to LayoutManager.calculateBoundsRegion()
+- `getBoundsRegionCSS()` - Delegates to LayoutManager.calculateBoundsRegionCSS()
+- `effectiveCanvasHeight()` - Delegates to LayoutManager.calculateEffectiveCanvasHeight()
+- `effectiveCanvasWidth()` - Delegates to LayoutManager.calculateEffectiveCanvasWidth()
+- `sliceScale()` - Delegates to LayoutManager.calculateSliceScale()
+- `xyMM2xyzMM()` - Delegates to LayoutManager.calculateXyMM2xyzMM()
+- `getBulletMarginWidth()` - Delegates to LayoutManager.calculateBulletMarginWidth()
+- `getLegendPanelWidth()` - Delegates to LayoutManager.calculateLegendPanelWidth()
+- `getLegendPanelHeight()` - Delegates to LayoutManager.calculateLegendPanelHeight()
+- `reserveColorbarPanel()` - Delegates to LayoutManager.calculateColorbarPanel()
+- `cursorInBounds()` - Delegates to LayoutManager.isCursorInBounds()
+- `eventInBounds()` - Uses LayoutManager.isPointInBoundsCSS()
+
+**Properties (remain in Niivue class - state management):**
 - `opts.multiplanarLayout`, `opts.multiplanarPadPixels`
 - `customLayout` array
 - `graph` object
 - `screenSlices`
+- `colorbarHeight`
 
-**Dependencies:** CoordinateTransform
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- Simple setter methods (setMultiplanarLayout, setMultiplanarPadPixels, setHeroImage, clearCustomLayout, getCustomLayout) remain in Niivue class as they primarily set options and call drawScene()
+- Niivue class delegates to LayoutManager functions and maintains backward compatibility
+
+**Dependencies:** gl-matrix, SLICE_TYPE from nvdocument
+**Status:** ✅ Completed
 
 ---
 
@@ -1391,7 +1419,7 @@ For each module in the plan above:
 ### Phase 5: Navigation & Layout Modules ⬜
 
 - ✅ 5.1 SliceNavigation Module
-- ⬜ 5.2 LayoutManager Module
+- ✅ 5.2 LayoutManager Module
 - ⬜ 5.3 CameraController Module
 - ⬜ 5.4 ClipPlaneManager Module
 
