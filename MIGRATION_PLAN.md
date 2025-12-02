@@ -883,22 +883,44 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 5.4 ClipPlaneManager Module
 **File:** `packages/niivue/src/niivue/navigation/ClipPlaneManager.ts`
 **Responsibility:** Manage clipping planes for 3D rendering
-**Line Range:** ~4600-4670, ~4900-4921
-**Key Methods:**
-- `setClipPlane()` - Set single clip plane
-- `setClipPlanes()` - Set multiple clip planes
-- `cycleActiveClipPlane()` - Cycle through clip planes
-- `setClipPlaneColor()` - Clip plane color
-- `setClipPlaneThick()` - Clip plane thickness
-- `setClipVolume()` - Volumetric clipping
+**Key Functions Extracted:**
+- `depthAziElevToClipPlane()` ✅ - Convert depth/azimuth/elevation to clip plane format (with 180° offset)
+- `depthAziElevToClipPlaneNoOffset()` ✅ - Convert depth/azimuth/elevation to clip plane format (no offset)
+- `calculateClipPlaneDrag()` ✅ - Calculate new azimuth/elevation from drag deltas
+- `ensureClipPlaneArrays()` ✅ - Ensure clip plane arrays exist and are large enough
+- `isClipPlaneActive()` ✅ - Check if clip plane is active (depth below threshold)
+- `convertMultipleClipPlanes()` ✅ - Convert array of depth/azi/elev to clip planes
+- `shouldUpdateClipPlaneDrag()` ✅ - Check if clip plane drag should update view
+- `createDefaultClipPlane()` ✅ - Create default disabled clip plane
+- `createDefaultDepthAziElev()` ✅ - Create default depth/azimuth/elevation values
+- `updateClipPlaneAtIndex()` ✅ - Update clip plane at specific index
+- `isValidDepthAziElev()` ✅ - Validate depth/azimuth/elevation input
 
-**Properties to migrate:**
-- `scene.clipPlane`, `scene.clipPlanes`
-- `scene.clipPlaneDepthAziElevs`
+**Exported Constants:**
+- `DEFAULT_CLIP_PLANE` ✅ - Default clip plane [0, 0, 0, 2]
+- `DEFAULT_DEPTH_AZI_ELEV` ✅ - Default depth/azi/elev [2, 0, 0]
+- `CLIP_PLANE_ACTIVE_THRESHOLD` ✅ - Threshold for active clip plane (1.8)
+
+**Niivue Methods Updated:**
+- `setClipPlane()` - Delegates to ClipPlaneManager.updateClipPlaneAtIndex()
+- `setClipPlanes()` - Delegates to ClipPlaneManager.convertMultipleClipPlanes()
+- `drawSceneCore()` - Uses ClipPlaneManager.shouldUpdateClipPlaneDrag() and calculateClipPlaneDrag()
+
+**Properties (remain in Niivue class - state management):**
+- `scene.clipPlanes`, `scene.clipPlaneDepthAziElevs`
 - `uiData.activeClipPlaneIndex`
+- `uiData.dragClipPlaneStartDepthAziElev`
 
-**Dependencies:** CameraController
-**Status:** ⬜ Not Started
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- `setClipPlaneColor()` remains in Niivue class (requires WebGL shader state)
+- `setClipPlaneThick()` and `setClipVolume()` are deprecated stubs
+- `cycleActiveClipPlane()` remains in KeyboardController (already extracted there)
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+
+**Dependencies:** VolumeRenderer (sph2cartDeg)
+**Status:** ✅ Completed
 
 ---
 
@@ -1431,12 +1453,12 @@ For each module in the plan above:
 - ✅ 4.5 WheelController Module
 - ✅ 4.6 DragModeManager Module
 
-### Phase 5: Navigation & Layout Modules ⬜
+### Phase 5: Navigation & Layout Modules ✅
 
 - ✅ 5.1 SliceNavigation Module
 - ✅ 5.2 LayoutManager Module
 - ✅ 5.3 CameraController Module
-- ⬜ 5.4 ClipPlaneManager Module
+- ✅ 5.4 ClipPlaneManager Module
 
 ### Phase 6: Drawing Tools Modules ⬜
 

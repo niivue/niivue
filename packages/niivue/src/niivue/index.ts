@@ -32,6 +32,7 @@ import * as DragModeManager from '@/niivue/interaction/DragModeManager'
 import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
 import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import * as CameraController from '@/niivue/navigation/CameraController'
+import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
 import {
   NVDocument,
   NVConfigOptions,
@@ -4319,17 +4320,9 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | live demo usage}
    */
   setClipPlanes(depthAziElevs: number[][]): void {
-    this.scene.clipPlanes = []
-    this.scene.clipPlaneDepthAziElevs = []
-    for (let i = 0; i < depthAziElevs.length; i++) {
-      const dae = depthAziElevs[i]
-      const n = this.sph2cartDeg(dae[1], dae[2])
-      const d = -dae[0] // correct sign for shader
-      const plane = [n[0], n[1], n[2], d]
-      this.scene.clipPlanes.push(plane)
-      this.scene.clipPlaneDepthAziElevs.push(dae)
-    }
-
+    const result = ClipPlaneManager.convertMultipleClipPlanes({ depthAziElevs })
+    this.scene.clipPlanes = result.clipPlanes
+    this.scene.clipPlaneDepthAziElevs = result.clipPlaneDepthAziElevs
     this.drawScene()
   }
 
@@ -4345,38 +4338,23 @@ export class Niivue {
    * @see {@link https://niivue.com/demos/features/mask.html | live demo usage}
    */
   setClipPlane(depthAzimuthElevation: number[]): void {
-    //  depth: distance of clip plane from center of volume, range 0..~1.73 (e.g. 2.0 for no clip plane)
-    //  azimuthElevation is 2 component vector [a, e, d]
-    //  azimuth: camera position in degrees around object, typically 0..360 (or -180..+180)
-    //  elevation: camera height in degrees, range -90..90
-    if (!depthAzimuthElevation || depthAzimuthElevation.length === 0) {
+    if (!ClipPlaneManager.isValidDepthAziElev(depthAzimuthElevation)) {
       return
     }
 
     const idx = this.uiData.activeClipPlaneIndex ?? 0
 
-    // ensure arrays exist and are long enough
-    if (!this.scene.clipPlanes) {
-      this.scene.clipPlanes = []
-    }
-    if (!this.scene.clipPlaneDepthAziElevs) {
-      this.scene.clipPlaneDepthAziElevs = []
-    }
-    while (this.scene.clipPlanes.length <= idx) {
-      this.scene.clipPlanes.push([0, 0, 0, 2]) // dummy "off" plane
-    }
-    while (this.scene.clipPlaneDepthAziElevs.length <= idx) {
-      this.scene.clipPlaneDepthAziElevs.push([2, 0, 0]) // depth=2 → no clip plane
-    }
+    const result = ClipPlaneManager.updateClipPlaneAtIndex({
+      clipPlanes: this.scene.clipPlanes,
+      clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
+      index: idx,
+      depthAzimuthElevation
+    })
 
-    const v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2])
-    const plane = [v[0], v[1], v[2], depthAzimuthElevation[0]]
+    this.scene.clipPlanes = result.clipPlanes
+    this.scene.clipPlaneDepthAziElevs = result.clipPlaneDepthAziElevs
 
-    this.scene.clipPlanes[idx] = plane
-    this.scene.clipPlaneDepthAziElevs[idx] = depthAzimuthElevation
-
-    this.onClipPlaneChange(plane)
-    // if (this.opts.sliceType!= SLICE_TYPE.RENDER) return;
+    this.onClipPlaneChange(result.clipPlane)
     this.drawScene()
   }
 
@@ -13066,22 +13044,24 @@ export class Niivue {
       return
     }
     // --- Dragging clip plane over 3D rendering
-    if (
-      this.uiData.isDragging &&
-      this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8 &&
-      this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0
-    ) {
-      const x = this.uiData.dragStart[0] - this.uiData.dragEnd[0]
-      const y = this.uiData.dragStart[1] - this.uiData.dragEnd[1]
-      const depthAziElev = this.uiData.dragClipPlaneStartDepthAziElev.slice()
-      depthAziElev[1] -= x
-      depthAziElev[1] = depthAziElev[1] % 360
-      depthAziElev[2] += y
-      if (
-        depthAziElev[1] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][1] ||
-        depthAziElev[2] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][2]
-      ) {
-        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev
+    const activeDepth = this.scene.clipPlaneDepthAziElevs?.[this.uiData.activeClipPlaneIndex]?.[0] ?? 2
+    const shouldUpdateClipDrag = ClipPlaneManager.shouldUpdateClipPlaneDrag({
+      isDragging: this.uiData.isDragging,
+      activeClipPlaneDepth: activeDepth,
+      dragStartTileIndex: this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1])
+    })
+
+    if (shouldUpdateClipDrag) {
+      const dragDeltaX = this.uiData.dragStart[0] - this.uiData.dragEnd[0]
+      const dragDeltaY = this.uiData.dragStart[1] - this.uiData.dragEnd[1]
+      const dragResult = ClipPlaneManager.calculateClipPlaneDrag({
+        startDepthAziElev: this.uiData.dragClipPlaneStartDepthAziElev,
+        dragDeltaX,
+        dragDeltaY
+      })
+
+      if (dragResult.changed) {
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = dragResult.depthAziElev
         return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
       }
     }
