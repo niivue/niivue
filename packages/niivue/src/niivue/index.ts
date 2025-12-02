@@ -35,6 +35,7 @@ import * as CameraController from '@/niivue/navigation/CameraController'
 import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
 import * as DrawingManager from '@/niivue/drawing/DrawingManager'
 import * as PenTool from '@/niivue/drawing/PenTool'
+import * as ShapeTool from '@/niivue/drawing/ShapeTool'
 import {
   NVDocument,
   NVConfigOptions,
@@ -5542,29 +5543,22 @@ export class Niivue {
    * @internal
    */
   drawRectangleMask(ptA: number[], ptB: number[], penValue: number): void {
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap not set')
+    }
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
-    const dx = this.back.dims[1]
-    const dy = this.back.dims[2]
-    const dz = this.back.dims[3]
 
-    // Get bounds of rectangle
-    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
-    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
-    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1)
-    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
-    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
-    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
-
-    // Fill the rectangle
-    for (let z = z1; z <= z2; z++) {
-      for (let y = y1; y <= y2; y++) {
-        for (let x = x1; x <= x2; x++) {
-          this.drawPt(x, y, z, penValue)
-        }
-      }
-    }
+    ShapeTool.drawRectangle({
+      ptA,
+      ptB,
+      penValue,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    })
   }
 
   /**
@@ -5572,43 +5566,22 @@ export class Niivue {
    * @internal
    */
   drawEllipseMask(ptA: number[], ptB: number[], penValue: number): void {
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap not set')
+    }
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
-    const dx = this.back.dims[1]
-    const dy = this.back.dims[2]
-    const dz = this.back.dims[3]
 
-    // Get bounds of ellipse
-    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1)
-    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1)
-    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1)
-    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1)
-    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1)
-    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1)
-
-    // Calculate center and radii
-    const centerX = (x1 + x2) / 2
-    const centerY = (y1 + y2) / 2
-    const centerZ = (z1 + z2) / 2
-    const radiusX = Math.abs(x2 - x1) / 2
-    const radiusY = Math.abs(y2 - y1) / 2
-    const radiusZ = Math.abs(z2 - z1) / 2
-
-    // Draw ellipse using the standard ellipse equation
-    for (let z = z1; z <= z2; z++) {
-      for (let y = y1; y <= y2; y++) {
-        for (let x = x1; x <= x2; x++) {
-          const distX = (x - centerX) / (radiusX + 0.5)
-          const distY = (y - centerY) / (radiusY + 0.5)
-          const distZ = (z - centerZ) / (radiusZ + 0.5)
-          // Check if point is inside ellipse
-          if (distX * distX + distY * distY + distZ * distZ <= 1.0) {
-            this.drawPt(x, y, z, penValue)
-          }
-        }
-      }
-    }
+    ShapeTool.drawEllipse({
+      ptA,
+      ptB,
+      penValue,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    })
   }
 
   /**

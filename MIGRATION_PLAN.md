@@ -1013,17 +1013,33 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 6.3 ShapeTool Module
 **File:** `packages/niivue/src/niivue/drawing/ShapeTool.ts`
 **Responsibility:** Rectangle and ellipse drawing
-**Line Range:** ~6045-6256
-**Key Methods:**
-- `drawRectangleMask()` - Draw rectangle
-- `drawEllipseMask()` - Draw ellipse
+**Key Functions Extracted:**
+- `calculateBounds()` ✅ - Calculate clamped bounding box from two corner points
+- `calculateEllipsoidGeometry()` ✅ - Calculate center and radii from bounding box
+- `isPointInEllipsoid()` ✅ - Check if point is inside ellipsoid using standard equation
+- `drawRectangle()` ✅ - Draw filled 3D rectangle (rectangular prism)
+- `drawEllipse()` ✅ - Draw filled 3D ellipse (ellipsoid)
+- `isShapeDrawingInProgress()` ✅ - Check if shape drawing is active
+- `createInitialShapeState()` ✅ - Create initial shape state
+- `createResetShapeState()` ✅ - Create reset shape state
 
-**Properties to migrate:**
-- `drawShapeStartLocation`
-- `drawShapePreviewBitmap`
+**Niivue Methods Updated:**
+- `drawRectangleMask()` - Delegates to ShapeTool.drawRectangle()
+- `drawEllipseMask()` - Delegates to ShapeTool.drawEllipse()
 
-**Dependencies:** DrawingManager, CoordinateTransform
-**Status:** ⬜ Not Started
+**Properties (remain in Niivue class - state management):**
+- `drawShapeStartLocation` - Start location for rectangle/ellipse drawing
+- `drawShapePreviewBitmap` - Preview bitmap for shape drawing
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- State management remains in Niivue class; pure functions handle computation
+- Uses PenTool.drawPoint() for drawing individual voxels with pen size support
+
+**Dependencies:** PenTool (drawPoint, DrawPointParams)
+**Status:** ✅ Completed
 
 ---
 
@@ -1494,7 +1510,7 @@ For each module in the plan above:
 
 - ✅ 6.1 DrawingManager Module
 - ✅ 6.2 PenTool Module
-- ⬜ 6.3 ShapeTool Module
+- ✅ 6.3 ShapeTool Module
 - ⬜ 6.4 FloodFillTool Module
 - ⬜ 6.5 GrowCutTool Module
 
