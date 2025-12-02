@@ -34,6 +34,7 @@ import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import * as CameraController from '@/niivue/navigation/CameraController'
 import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
 import * as DrawingManager from '@/niivue/drawing/DrawingManager'
+import * as PenTool from '@/niivue/drawing/PenTool'
 import {
   NVDocument,
   NVConfigOptions,
@@ -74,7 +75,7 @@ import {
   SyncOpts
 } from '@/types'
 import { toNiivueObject3D } from '@/nvimage/RenderingUtils'
-import { findBoundarySlices, interpolateMaskSlices, drawUndo, encodeRLE, decodeRLE } from '@/drawing'
+import { findBoundarySlices, interpolateMaskSlices, drawUndo } from '@/drawing'
 import {
   vertFontShader,
   fragFontShader,
@@ -5493,42 +5494,24 @@ export class Niivue {
    * @internal
    */
   drawPt(x: number, y: number, z: number, penValue: number, drawBitmap: Uint8Array | null = null): void {
-    if (drawBitmap === null) {
-      drawBitmap = this.drawBitmap
+    const targetBitmap = drawBitmap ?? this.drawBitmap
+    if (!targetBitmap) {
+      throw new Error('drawBitmap not set')
     }
     if (!this.back?.dims) {
       throw new Error('back.dims not set')
     }
-    const dx = this.back.dims[1]
-    const dy = this.back.dims[2]
-    const dz = this.back.dims[3]
-    x = Math.min(Math.max(x, 0), dx - 1)
-    y = Math.min(Math.max(y, 0), dy - 1)
-    z = Math.min(Math.max(z, 0), dz - 1)
-    drawBitmap![x + y * dx + z * dx * dy] = penValue
-    // get tile index for voxel
-    const isAx = this.drawPenAxCorSag === 0
-    const isCor = this.drawPenAxCorSag === 1
-    const isSag = this.drawPenAxCorSag === 2
-    // since the pen is only drawing in one 2D plane,
-    // only draw the neighbors (based on penSize) in that plane.
-    // if penSize is 1, only draw the voxel itself.
-    // if penSize is even (2, 4, 6, etc.), then the extra voxel will be drawn in the positive direction.
-    // if penSize is odd (3, 5, 7, etc.), then the the pen will be centered on the voxel.
-    if (this.opts.penSize > 1) {
-      const halfPenSize = Math.floor(this.opts.penSize / 2)
-      for (let i = -halfPenSize; i <= halfPenSize; i++) {
-        for (let j = -halfPenSize; j <= halfPenSize; j++) {
-          if (isAx) {
-            drawBitmap![x + i + (y + j) * dx + z * dx * dy] = penValue
-          } else if (isCor) {
-            drawBitmap![x + i + y * dx + (z + j) * dx * dy] = penValue
-          } else if (isSag) {
-            drawBitmap![x + (y + j) * dx + (z + i) * dx * dy] = penValue
-          }
-        }
-      }
-    }
+
+    PenTool.drawPoint({
+      x,
+      y,
+      z,
+      penValue,
+      drawBitmap: targetBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    })
   }
 
   /**
@@ -5536,82 +5519,22 @@ export class Niivue {
    * @internal
    */
   drawPenLine(ptA: number[], ptB: number[], penValue: number): void {
-    const dx = Math.abs(ptA[0] - ptB[0])
-    const dy = Math.abs(ptA[1] - ptB[1])
-    const dz = Math.abs(ptA[2] - ptB[2])
-    let xs = -1
-    let ys = -1
-    let zs = -1
-    if (ptB[0] > ptA[0]) {
-      xs = 1
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap not set')
     }
-    if (ptB[1] > ptA[1]) {
-      ys = 1
+    if (!this.back?.dims) {
+      throw new Error('back.dims not set')
     }
-    if (ptB[2] > ptA[2]) {
-      zs = 1
-    }
-    let x1 = ptA[0]
-    let y1 = ptA[1]
-    let z1 = ptA[2]
-    const x2 = ptB[0]
-    const y2 = ptB[1]
-    const z2 = ptB[2]
-    if (dx >= dy && dx >= dz) {
-      // Driving axis is X-axis"
-      let p1 = 2 * dy - dx
-      let p2 = 2 * dz - dx
-      while (x1 !== x2) {
-        x1 += xs
-        if (p1 >= 0) {
-          y1 += ys
-          p1 -= 2 * dx
-        }
-        if (p2 >= 0) {
-          z1 += zs
-          p2 -= 2 * dx
-        }
-        p1 += 2 * dy
-        p2 += 2 * dz
-        this.drawPt(x1, y1, z1, penValue)
-      }
-    } else if (dy >= dx && dy >= dz) {
-      // Driving axis is Y-axis"
-      let p1 = 2 * dx - dy
-      let p2 = 2 * dz - dy
-      while (y1 !== y2) {
-        y1 += ys
-        if (p1 >= 0) {
-          x1 += xs
-          p1 -= 2 * dy
-        }
-        if (p2 >= 0) {
-          z1 += zs
-          p2 -= 2 * dy
-        }
-        p1 += 2 * dx
-        p2 += 2 * dz
-        this.drawPt(x1, y1, z1, penValue)
-      }
-    } else {
-      // # Driving axis is Z-axis
-      let p1 = 2 * dy - dz
-      let p2 = 2 * dx - dz
-      while (z1 !== z2) {
-        z1 += zs
-        if (p1 >= 0) {
-          y1 += ys
-          p1 -= 2 * dz
-        }
-        if (p2 >= 0) {
-          x1 += xs
-          p2 -= 2 * dz
-        }
-        p1 += 2 * dy
-        p2 += 2 * dx
-        this.drawPt(x1, y1, z1, penValue)
-      }
-    }
+
+    PenTool.drawLine({
+      ptA,
+      ptB,
+      penValue,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    })
   }
 
   /**
@@ -6180,7 +6103,7 @@ export class Niivue {
   /**
    * Fills exterior regions of a 2D bitmap, marking outside voxels with 2
    * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
-   * uses first-in, first out queue for storage
+   * Uses first-in, first-out queue for storage.
    * @internal
    */
   floodFillSectionFIFO(
@@ -6189,63 +6112,7 @@ export class Niivue {
     minPt: readonly number[],
     maxPt: readonly number[]
   ): void {
-    const w = dims2D[0]
-    const [minX, minY] = minPt
-    const [maxX, maxY] = maxPt
-    // Worst-case buffer size = bounding box area
-    // const capacity = (maxX - minX + 1) * (maxY - minY + 1);
-    // Likely worst case: we retire perimeter and move concentrically inward
-    // const capacity = 2 * (maxX - minX + maxY - minY + 2);
-    // Lets over allocate as I am unsure about edge cases
-    const capacity = 4 * (maxX - minX + maxY - minY + 2)
-    const queue = new Int32Array(capacity * 2) // store x,y pairs
-    let head = 0
-    let tail = 0
-
-    function enqueue(x: number, y: number): void {
-      if (x < minX || x > maxX || y < minY || y > maxY) {
-        return
-      }
-      const idx = x + y * w
-      if (img2D[idx] !== 0) {
-        return
-      }
-      img2D[idx] = 2 // mark visited/outside
-
-      queue[tail] = x
-      queue[tail + 1] = y
-      tail = (tail + 2) % queue.length
-    }
-
-    function dequeue(): [number, number] | null {
-      if (head === tail) {
-        return null
-      }
-      const x = queue[head]
-      const y = queue[head + 1]
-      head = (head + 2) % queue.length
-      return [x, y]
-    }
-
-    // seed all edges
-    for (let x = minX; x <= maxX; x++) {
-      enqueue(x, minY)
-      enqueue(x, maxY)
-    }
-    for (let y = minY + 1; y <= maxY - 1; y++) {
-      enqueue(minX, y)
-      enqueue(maxX, y)
-    }
-
-    // flood fill
-    let pt: [number, number] | null
-    while ((pt = dequeue()) !== null) {
-      const [x, y] = pt
-      enqueue(x - 1, y)
-      enqueue(x + 1, y)
-      enqueue(x, y - 1)
-      enqueue(x, y + 1)
-    }
+    PenTool.floodFillSection({ img2D, dims2D, minPt, maxPt })
   }
 
   /**
@@ -6253,162 +6120,43 @@ export class Niivue {
    * @internal
    */
   drawPenFilled(): void {
-    const nPts = this.drawPenFillPts.length
-    if (nPts < 2) {
-      // can not fill single line
+    if (this.drawPenFillPts.length < 2) {
+      // Cannot fill single line
       this.drawPenFillPts = []
       return
     }
-    // do fill in 2D, based on axial (0), coronal (1) or sagittal drawing (2
-    const axCorSag = this.drawPenAxCorSag
-    // axial is x(0)*y(1) horizontal*vertical
-    let h = 0
-    let v = 1
-    if (axCorSag === 1) {
-      v = 2
-    } // coronal is x(0)*z(0)
-    if (axCorSag === 2) {
-      // sagittal is y(1)*z(2)
-      h = 1
-      v = 2
+
+    if (!this.drawBitmap) {
+      throw new Error('drawBitmap undefined')
     }
 
     if (!this.back?.dims) {
       throw new Error('back.dims undefined')
     }
 
-    const dims2D = [this.back.dims[h + 1], this.back.dims[v + 1]] // +1: dims indexed from 0!
-    // create bitmap of horizontal*vertical voxels:
-    const img2D = new Uint8Array(dims2D[0] * dims2D[1])
-    let pen = 1 // do not use this.opts.penValue, as "erase" is zero
-    function drawLine2D(ptA: number[], ptB: number[]): void {
-      const dx = Math.abs(ptA[0] - ptB[0])
-      const dy = Math.abs(ptA[1] - ptB[1])
-      img2D[ptA[0] + ptA[1] * dims2D[0]] = pen
-      img2D[ptB[0] + ptB[1] * dims2D[0]] = pen
-      let xs = -1
-      let ys = -1
-      if (ptB[0] > ptA[0]) {
-        xs = 1
-      }
-      if (ptB[1] > ptA[1]) {
-        ys = 1
-      }
-      let x1 = ptA[0]
-      let y1 = ptA[1]
-      const x2 = ptB[0]
-      const y2 = ptB[1]
-      if (dx >= dy) {
-        // Driving axis is X-axis"
-        let p1 = 2 * dy - dx
-        while (x1 !== x2) {
-          x1 += xs
-          if (p1 >= 0) {
-            y1 += ys
-            p1 -= 2 * dx
-          }
-          p1 += 2 * dy
-          img2D[x1 + y1 * dims2D[0]] = pen
-        }
-      } else {
-        // Driving axis is Y-axis"
-        let p1 = 2 * dx - dy
-        while (y1 !== y2) {
-          y1 += ys
-          if (p1 >= 0) {
-            x1 += xs
-            p1 -= 2 * dy
-          }
-          p1 += 2 * dx
-          img2D[x1 + y1 * dims2D[0]] = pen
-        }
-      }
-    }
-    function constrainXY(xy: number[]): number[] {
-      const x = Math.min(Math.max(xy[0], 0), dims2D[0] - 1)
-      const y = Math.min(Math.max(xy[1], 0), dims2D[1] - 1)
-      return [x, y]
-    }
-    const startPt = constrainXY([this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]])
-    let minPt = [...startPt]
-    let maxPt = [...startPt]
-    let prevPt = startPt
-    for (let i = 1; i < nPts; i++) {
-      let pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]]
-      pt = constrainXY(pt)
-      minPt = [Math.min(pt[0], minPt[0]), Math.min(pt[1], minPt[1])]
-      maxPt = [Math.max(pt[0], maxPt[0]), Math.max(pt[1], maxPt[1])]
-      drawLine2D(prevPt, pt)
-      prevPt = pt
-    }
-    drawLine2D(startPt, prevPt) // close drawing
-    const pad = 1
-    minPt[0] = Math.max(0, minPt[0] - pad)
-    minPt[1] = Math.max(0, minPt[1] - pad)
-    maxPt[0] = Math.min(dims2D[0] - 1, maxPt[0] + pad)
-    maxPt[1] = Math.min(dims2D[1] - 1, maxPt[1] + pad)
-    for (let y = 0; y < dims2D[1]; y++) {
-      for (let x = 0; x < dims2D[0]; x++) {
-        if (x >= minPt[0] && x < maxPt[0] && y >= minPt[1] && y <= maxPt[1]) {
-          continue
-        }
-        const pxl = x + y * dims2D[0]
-        if (img2D[pxl] !== 0) {
-          continue
-        }
-        img2D[pxl] = 2
-      }
-    }
-    const startTime = Date.now()
-    this.floodFillSectionFIFO(img2D, dims2D, minPt, maxPt)
-    log.debug(`FloodFill ${Date.now() - startTime}`)
-    // all voxels with value of zero have no path to edges
-    // insert surviving pixels from 2D bitmap into 3D bitmap
-    pen = this.opts.penValue
-    const slice = this.drawPenFillPts[0][3 - (h + v)]
+    // Get current undo bitmap for non-overwriting fill mode
+    const currentUndoBitmap =
+      this.drawUndoBitmaps[this.currentDrawUndoBitmap]?.length > 0
+        ? this.drawUndoBitmaps[this.currentDrawUndoBitmap]
+        : null
 
-    if (!this.drawBitmap) {
-      throw new Error('drawBitmap undefined')
+    // Delegate to pure function
+    const result = PenTool.drawPenFilled({
+      penFillPts: this.drawPenFillPts,
+      penAxCorSag: this.drawPenAxCorSag,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penValue: this.opts.penValue,
+      fillOverwrites: this.drawFillOverwrites,
+      currentUndoBitmap
+    })
+
+    // Update state with result
+    if (result.success) {
+      this.drawBitmap = result.drawBitmap
     }
 
-    if (axCorSag === 0) {
-      // axial
-      const offset = slice * dims2D[0] * dims2D[1]
-      for (let i = 0; i < dims2D[0] * dims2D[1]; i++) {
-        if (img2D[i] !== 2) {
-          this.drawBitmap[i + offset] = pen
-        }
-      }
-    } else {
-      let xStride = 1 // coronal: horizontal LR pixels contiguous
-      const yStride = this.back.dims[1] * this.back.dims[2] // coronal: vertical is slice
-      let zOffset = slice * this.back.dims[1] // coronal: slice is number of columns
-      if (axCorSag === 2) {
-        // sagittal
-        xStride = this.back.dims[1]
-        zOffset = slice
-      }
-      let i = 0
-      for (let y = 0; y < dims2D[1]; y++) {
-        for (let x = 0; x < dims2D[0]; x++) {
-          if (img2D[i] !== 2) {
-            this.drawBitmap[x * xStride + y * yStride + zOffset] = pen
-          }
-          i++
-        }
-      }
-    }
-    // this.drawUndoBitmaps[this.currentDrawUndoBitmap]
-    if (!this.drawFillOverwrites && this.drawUndoBitmaps[this.currentDrawUndoBitmap].length > 0) {
-      const nv = this.drawBitmap.length
-      const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], nv)
-      for (let i = 0; i < nv; i++) {
-        if (bmp[i] === 0) {
-          continue
-        }
-        this.drawBitmap[i] = bmp[i]
-      }
-    }
+    // Clear pen fill points and update undo/refresh
     this.drawPenFillPts = []
     this.drawAddUndoBitmap()
     this.refreshDrawing(false)

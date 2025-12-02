@@ -974,22 +974,39 @@ This method orchestrates the entire volume update process and could remain as-is
 
 #### 6.2 PenTool Module
 **File:** `packages/niivue/src/niivue/drawing/PenTool.ts`
-**Responsibility:** Pen drawing tool
-**Line Range:** ~5919-6045, ~6679-6846
-**Key Methods:**
-- `drawPt()` - Draw single point
-- `drawPenLine()` - Draw line between points
-- `drawPenFilled()` - Fill pen strokes
+**Responsibility:** Pen drawing tool pure functions
+**Key Functions Extracted:**
+- `drawPoint()` ✅ - Draw single point with pen size handling
+- `drawLine()` ✅ - Draw 3D line using Bresenham's algorithm
+- `drawPenFilled()` ✅ - Fill interior of pen strokes
+- `floodFillSection()` ✅ - Fill exterior regions of 2D bitmap (FIFO flood fill)
+- `voxelIndex()` ✅ - Calculate voxel index from coordinates
+- `clampToDimension()` ✅ - Clamp value to dimension bounds
+- `getSliceIndices()` ✅ - Get horizontal/vertical indices for slice orientation
+- `isPenLocationValid()` ✅ - Check if pen location is valid
+- `isSamePoint()` ✅ - Check if two points are the same
+- `createInitialPenState()` ✅ - Create initial pen state
+- `createResetPenState()` ✅ - Create reset pen state
 
-**Properties to migrate:**
-- `drawPenLocation`
-- `drawPenAxCorSag`
-- `drawPenFillPts`
-- `drawFillOverwrites`
-- `opts.penValue`
+**Niivue Methods Updated:**
+- `drawPt()` - Delegates to PenTool.drawPoint()
+- `drawPenLine()` - Delegates to PenTool.drawLine()
+- `drawPenFilled()` - Delegates to PenTool.drawPenFilled()
+- `floodFillSectionFIFO()` - Delegates to PenTool.floodFillSection()
 
-**Dependencies:** DrawingManager, CoordinateTransform
-**Status:** ⬜ Not Started
+**Properties (remain in Niivue class - state management):**
+- `drawPenLocation`, `drawPenAxCorSag`, `drawPenFillPts`
+- `drawFillOverwrites`, `opts.penValue`, `opts.penSize`
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- State management remains in Niivue class; pure functions handle computation
+- Removed unused `encodeRLE` and `decodeRLE` imports from Niivue class
+
+**Dependencies:** @/drawing (decodeRLE), @/logger
+**Status:** ✅ Completed
 
 ---
 
@@ -1476,7 +1493,7 @@ For each module in the plan above:
 ### Phase 6: Drawing Tools Modules 🔄
 
 - ✅ 6.1 DrawingManager Module
-- ⬜ 6.2 PenTool Module
+- ✅ 6.2 PenTool Module
 - ⬜ 6.3 ShapeTool Module
 - ⬜ 6.4 FloodFillTool Module
 - ⬜ 6.5 GrowCutTool Module
