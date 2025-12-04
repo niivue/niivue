@@ -94,6 +94,7 @@
     let mx = mn + (document.getElementById("rangeSlider").value * 0.1)
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_min", mn)
     nv1.setMeshLayerProperty(nv1.meshes[0].id, 1, "cal_max", mx)
+    console.log(nv1.meshes[0].layers[1])
   }
   colorDrop.onchange = function () {
     const index = this.selectedIndex
@@ -180,6 +181,7 @@
     { url: "../images/BrainMesh_ICBM152.lh.mz3", layers: meshLHLayersList1 },
   ])
   nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "colorbarVisible", false)
+  
   doThreshChange()
   divergeCheck.onchange()
   colormapTypeDrop.onchange()

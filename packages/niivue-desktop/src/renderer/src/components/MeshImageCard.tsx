@@ -78,7 +78,6 @@ export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.
     setShader(value)
     // request animation frame removes the lag between react state rerenders and niivue updates
     requestAnimationFrame(() => {
-      //@ts-expect-error - id is a string, but niivue expects a number. TODO: fix this type error in Niivue
       nv.setMeshShader(id, value)
     })
   }
