@@ -35,7 +35,8 @@ type AnyNumberArray =
 /** compute min/max (works with typed arrays) */
 function computeMeshLayerRange(layer: NVMeshLayer): { min: number; max: number } {
   const vals: AnyNumberArray = layer.values
-  if (vals == null || typeof vals.length !== 'number' || vals.length === 0) return { min: 0, max: 1 }
+  if (vals == null || typeof vals.length !== 'number' || vals.length === 0)
+    return { min: 0, max: 1 }
   let min = Infinity
   let max = -Infinity
   for (let i = 0; i < vals.length; i++) {
@@ -65,14 +66,17 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const meshRange = useMemo(
     () => computeMeshLayerRange(image),
     // include length so typed-array changes retrigger
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [image.values, image.values?.length]
   )
 
   // Initialize posRange from the image properties (image.cal_min/cal_max)
   const [posRange, setPosRange] = useState<number[]>([
-    typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : Math.max(0, meshRange.min),
-    typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : Math.max(meshRange.max, 1)
+    typeof image.cal_min === 'number' && isFinite(image.cal_min)
+      ? image.cal_min
+      : Math.max(0, meshRange.min),
+    typeof image.cal_max === 'number' && isFinite(image.cal_max)
+      ? image.cal_max
+      : Math.max(meshRange.max, 1)
   ])
 
   // Initialize negRange from image properties (image.cal_minNeg/cal_maxNeg)
@@ -90,10 +94,14 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const [isOpacityDisabled, setIsOpacityDisabled] = useState<boolean>(false)
 
   // Master checkbox: enable negative mapping (sets cal_min = 0 and useNegativeCmap = true)
-  const [enableNegativeMapping, setEnableNegativeMapping] = useState<boolean>(() => meshRange.min < 0)
+  const [enableNegativeMapping, setEnableNegativeMapping] = useState<boolean>(
+    () => meshRange.min < 0
+  )
   // Secondary checkbox: apply cal_minNeg / cal_maxNeg to Niivue (enables slider)
   const [useNegativeRange, setUseNegativeRange] = useState<boolean>(() =>
-    Number.isFinite(image.cal_minNeg) || Number.isFinite(image.cal_maxNeg) ? true : meshRange.min < 0
+    Number.isFinite(image.cal_minNeg) || Number.isFinite(image.cal_maxNeg)
+      ? true
+      : meshRange.min < 0
   )
 
   const instance = useSelectedInstance()
@@ -111,13 +119,14 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
 
   // Bind posRange to image.cal_min / image.cal_max: update UI when underlying layer props change
   useEffect(() => {
-    const newMin = typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : posRange[0]
-    const newMax = typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : posRange[1]
+    const newMin =
+      typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : posRange[0]
+    const newMax =
+      typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : posRange[1]
     // only apply if difference is meaningful to avoid fighting user typing
     if (Math.abs(newMin - posRange[0]) > EPS || Math.abs(newMax - posRange[1]) > EPS) {
       setPosRange([newMin, newMax])
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [image.cal_min, image.cal_max])
 
   // Bind negRange to image.cal_minNeg / image.cal_maxNeg
@@ -127,7 +136,6 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
     if (Math.abs(newMinNeg - negRange[0]) > EPS || Math.abs(newMaxNeg - negRange[1]) > EPS) {
       setNegRange([newMinNeg, newMaxNeg])
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [image.cal_minNeg, image.cal_maxNeg])
 
   // initial mount: ensure Niivue has current properties (and set NaN for neg if not used)
@@ -162,11 +170,10 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
         // ignore
       }
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // helpers to commit negative usage & cal_min
-  const setEnableNegativeMappingAndCommit = (checked: boolean) => {
+  const setEnableNegativeMappingAndCommit = (checked: boolean): void => {
     setEnableNegativeMapping(checked)
     requestAnimationFrame(() => {
       if (checked) {
@@ -187,7 +194,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
     })
   }
 
-  const commitNegRangeIfAllowed = (value: number[]) => {
+  const commitNegRangeIfAllowed = (value: number[]): void => {
     setNegRange(value)
     if (!useNegativeRange) {
       requestAnimationFrame(() => {
@@ -372,7 +379,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   }
 
   // handle toggling useNegativeRange checkbox
-  const handleUseNegativeRangeToggle = (checked: boolean) => {
+  const handleUseNegativeRangeToggle = (checked: boolean): void => {
     setUseNegativeRange(checked)
     if (checked) {
       requestAnimationFrame(() => {
@@ -476,7 +483,11 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
         </ContextMenu.Root>
 
         <Button onClick={handleVisibilityToggle} variant="ghost" color="gray">
-          {visible ? <EyeOpenIcon width="20" height="20" /> : <EyeNoneIcon width="20" height="20" />}
+          {visible ? (
+            <EyeOpenIcon width="20" height="20" />
+          ) : (
+            <EyeNoneIcon width="20" height="20" />
+          )}
         </Button>
       </div>
 
@@ -491,7 +502,12 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
             <div className="flex flex-col gap-2 w-[320px] min-w-[320px]">
               <div className="flex gap-1 justify-between items-center">
                 <Text size="1">Layer colormap</Text>
-                <Select.Root size="1" value={colormap} defaultValue="warm" onValueChange={handleColormapChange}>
+                <Select.Root
+                  size="1"
+                  value={colormap}
+                  defaultValue="warm"
+                  onValueChange={handleColormapChange}
+                >
                   <Select.Trigger className="truncate w-3/4 min-w-3/4" />
                   <Select.Content className="truncate">
                     {colormaps.map((cmap, i) => (
@@ -552,7 +568,9 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                       checked={enableNegativeMapping}
                       onChange={(e) => setEnableNegativeMappingAndCommit(e.target.checked)}
                     />
-                    <span className="text-xs text-gray-600">sets cal_min = 0 & useNegativeCmap</span>
+                    <span className="text-xs text-gray-600">
+                      sets cal_min = 0 & useNegativeCmap
+                    </span>
                   </label>
                 </div>
 
@@ -589,10 +607,22 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                       />
                       <span className="text-xs text-gray-600">Use negative cal range</span>
                     </label>
-                    <Button size="1" variant="ghost" color="gray" onClick={autoRangeNeg} disabled={!hasNegativeRange || !enableNegativeMapping}>
+                    <Button
+                      size="1"
+                      variant="ghost"
+                      color="gray"
+                      onClick={autoRangeNeg}
+                      disabled={!hasNegativeRange || !enableNegativeMapping}
+                    >
                       Auto
                     </Button>
-                    <Button size="1" variant="ghost" color="gray" onClick={resetNeg} disabled={!hasNegativeRange || !enableNegativeMapping}>
+                    <Button
+                      size="1"
+                      variant="ghost"
+                      color="gray"
+                      onClick={resetNeg}
+                      disabled={!hasNegativeRange || !enableNegativeMapping}
+                    >
                       Reset
                     </Button>
                   </div>
@@ -630,7 +660,8 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
 
                 {!hasNegativeRange && (
                   <Text size="1" color="gray">
-                    No negative values detected — you can still enable negative mapping and pre-select a negative colormap.
+                    No negative values detected — you can still enable negative mapping and
+                    pre-select a negative colormap.
                   </Text>
                 )}
               </div>

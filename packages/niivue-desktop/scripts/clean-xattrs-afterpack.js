@@ -1,13 +1,12 @@
 import { execSync } from 'child_process'
 import path from 'path'
-import fs from 'fs'
 
 export default async function (context) {
   if (process.platform !== 'darwin') {
     console.log('skip clean-xattrs (not mac):', process.platform)
     return
   }
-  
+
   const gpuHelperBinary = path.join(
     context.appOutDir,
     'niivue-desktop.app',
