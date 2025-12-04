@@ -7,7 +7,8 @@ import {
   Select,
   Popover,
   Slider,
-  TextField
+  TextField,
+  Dialog
 } from '@radix-ui/themes'
 import { EyeOpenIcon, EyeNoneIcon } from '@radix-ui/react-icons'
 import { NVMesh } from '@niivue/niivue'
@@ -103,6 +104,8 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
       ? true
       : meshRange.min < 0
   )
+
+  const [headerDialogOpen, setHeaderDialogOpen] = useState<boolean>(false)
 
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
@@ -473,12 +476,21 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
           <ContextMenu.Trigger className="mr-auto">
-            <Text title={image.name} size="2" weight="bold" className="mr-auto" truncate>
+            {/* removed 'truncate' so the header text can wrap */}
+            <Text
+              title={image.name}
+              size="2"
+              weight="bold"
+              className="mr-auto max-w-full break-words whitespace-normal"
+            >
               {displayName}
             </Text>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
             <ContextMenu.Item onClick={handleRemove}>Remove</ContextMenu.Item>
+            <ContextMenu.Item onClick={() => setHeaderDialogOpen(true)}>
+              Show Header
+            </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>
 
@@ -508,8 +520,9 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                   defaultValue="warm"
                   onValueChange={handleColormapChange}
                 >
-                  <Select.Trigger className="truncate w-3/4 min-w-3/4" />
-                  <Select.Content className="truncate">
+                  {/* removed truncate props on triggers so dropdowns can wrap if needed */}
+                  <Select.Trigger className="w-3/4 min-w-3/4" />
+                  <Select.Content>
                     {colormaps.map((cmap, i) => (
                       <Select.Item key={i} value={cmap}>
                         {cmap}
@@ -582,8 +595,8 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                     onValueChange={(v) => handleColormapNegChange(v)}
                     disabled={!enableNegativeMapping}
                   >
-                    <Select.Trigger className="truncate w-3/4 min-w-3/4" />
-                    <Select.Content className="truncate">
+                    <Select.Trigger className="w-3/4 min-w-3/4" />
+                    <Select.Content>
                       <Select.Item value="none">None</Select.Item>
                       {colormaps.map((cmap, i) => (
                         <Select.Item key={i} value={cmap}>
@@ -688,6 +701,364 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
           mesh layer
         </Text>
       </div>
+
+      {/* Header dialog (SurfIce-style summary + details + histogram) */}
+      <Dialog.Root open={headerDialogOpen} onOpenChange={setHeaderDialogOpen}>
+        <Dialog.Trigger>
+          {/* invisible trigger - we open via context menu */}
+          <button style={{ display: 'none' }} type="button">
+            Open Header
+          </button>
+        </Dialog.Trigger>
+        <Dialog.Content
+          className="p-4 bg-white rounded shadow"
+          // reduce width to avoid horizontal overflow; dialog will expand vertically as needed
+          style={{
+            width: 680,
+            maxWidth: 'calc(100vw - 48px)',
+            maxHeight: 'none',
+            overflowY: 'visible',
+            wordBreak: 'break-word'
+          }}
+        >
+          <Dialog.Title className="break-words whitespace-normal">{`Layer header — ${displayName}`}</Dialog.Title>
+          <Dialog.Description className="mb-2">
+            Summary for layer <strong>{displayName}</strong>
+          </Dialog.Description>
+
+          <MeshHeaderView
+            image={image}
+            idx={idx}
+            meshRange={meshRange}
+            posRange={posRange}
+            negRange={negRange}
+            useNegativeRange={useNegativeRange}
+          />
+
+          <div className="mt-4">
+            <Button color="gray" onClick={() => setHeaderDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
     </Card>
+  )
+}
+
+/** Mesh header view: surf-ice style single-line summary + detailed table + histogram.
+ * Detects atlases via atlasValues (typed arrays or arrays) and prints labels if present.
+ *
+ * Responsive histogram: measures container width and sizes canvas accordingly to avoid overflow.
+ */
+function MeshHeaderView({
+  image,
+  idx,
+  meshRange,
+  useNegativeRange
+}: {
+  image: NVMeshLayer
+  idx: number
+  meshRange: { min: number; max: number }
+  posRange: number[]
+  negRange: number[]
+  useNegativeRange: boolean
+}): JSX.Element {
+  // Detect atlas by presence of atlasValues (works for arrays or typed arrays)
+  const atlasVals = (image as unknown as { atlasValues?: AnyNumberArray }).atlasValues
+  const isAtlas =
+    atlasVals != null &&
+    typeof (atlasVals as AnyNumberArray).length === 'number' &&
+    (atlasVals as AnyNumberArray).length > 0
+
+  const minIntensity =
+    typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : meshRange.min
+  const maxIntensity =
+    typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : meshRange.max
+
+  // Canvas ref for histogram + container ref for resizing
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
+
+  // drawHistogram function uses measured width
+  const drawHistogram = (widthPx: number, heightPx: number): void => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const DPR = window.devicePixelRatio || 1
+    const width = Math.max(160, Math.floor(widthPx)) // ensure some minimal width
+    const height = Math.max(80, Math.floor(heightPx))
+    canvas.width = Math.round(width * DPR)
+    canvas.height = Math.round(height * DPR)
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
+
+    // Clear
+    ctx.clearRect(0, 0, width, height)
+
+    // Get values array
+    const vals = (image.values ?? []) as AnyNumberArray
+    if (
+      !vals ||
+      typeof (vals as AnyNumberArray).length !== 'number' ||
+      (vals as AnyNumberArray).length === 0
+    ) {
+      // draw "no data"
+      ctx.fillStyle = '#eee'
+      ctx.fillRect(0, 0, width, height)
+      ctx.fillStyle = '#666'
+      ctx.font = '12px sans-serif'
+      ctx.fillText('No numeric data for histogram', 8, Math.floor(height / 2))
+      return
+    }
+
+    // Histogram parameters
+    const N_BINS = 128
+    const dataMin = meshRange.min
+    const dataMax = meshRange.max === dataMin ? dataMin + 1 : meshRange.max
+    const binWidth = (dataMax - dataMin) / N_BINS
+    const counts = new Array(N_BINS).fill(0)
+
+    for (let i = 0; i < (vals as AnyNumberArray).length; i++) {
+      const v = vals[i] as number
+      if (typeof v !== 'number' || !isFinite(v)) continue
+      let bin = Math.floor((v - dataMin) / binWidth)
+      if (bin < 0) bin = 0
+      if (bin >= N_BINS) bin = N_BINS - 1
+      counts[bin]++
+    }
+
+    const maxCount = Math.max(...counts, 1)
+
+    // Background
+    ctx.fillStyle = '#f8fafc' // light
+    ctx.fillRect(0, 0, width, height)
+
+    // Draw bars
+    const paddingLeft = 8
+    const paddingRight = 8
+    const paddingTop = 8
+    const paddingBottom = 26
+    const drawW = width - paddingLeft - paddingRight
+    const drawH = height - paddingTop - paddingBottom
+
+    for (let b = 0; b < N_BINS; b++) {
+      const cx = paddingLeft + (b / N_BINS) * drawW
+      const w = Math.max(1, drawW / N_BINS - 1)
+      const h = (counts[b] / maxCount) * drawH
+      // bar color
+      ctx.fillStyle = '#cbd5e1'
+      ctx.fillRect(cx, paddingTop + (drawH - h), w, h)
+    }
+
+    // Overlay: visible range (cal_min..cal_max)
+    const clampToCanvasX = (v: number): number =>
+      paddingLeft + ((v - dataMin) / (dataMax - dataMin)) * drawW
+
+    // cal_min / cal_max lines
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#ef4444' // red for positive visible range
+    const calMin =
+      typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : NaN
+    const calMax =
+      typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : NaN
+    if (isFinite(calMin)) {
+      const x = clampToCanvasX(calMin)
+      ctx.beginPath()
+      ctx.moveTo(x, paddingTop)
+      ctx.lineTo(x, paddingTop + drawH)
+      ctx.stroke()
+    }
+    if (isFinite(calMax)) {
+      const x = clampToCanvasX(calMax)
+      ctx.beginPath()
+      ctx.moveTo(x, paddingTop)
+      ctx.lineTo(x, paddingTop + drawH)
+      ctx.stroke()
+    }
+
+    // Negative cal range (if applied) in blue (dashed)
+    const calMinNeg =
+      typeof image.cal_minNeg === 'number' && isFinite(image.cal_minNeg) ? image.cal_minNeg : NaN
+    const calMaxNeg =
+      typeof image.cal_maxNeg === 'number' && isFinite(image.cal_maxNeg) ? image.cal_maxNeg : NaN
+    if (useNegativeRange && isFinite(calMinNeg)) {
+      ctx.save()
+      ctx.setLineDash([4, 4])
+      ctx.lineWidth = 2
+      ctx.strokeStyle = '#2563eb' // blue
+      const x1 = clampToCanvasX(calMinNeg)
+      ctx.beginPath()
+      ctx.moveTo(x1, paddingTop)
+      ctx.lineTo(x1, paddingTop + drawH)
+      ctx.stroke()
+      if (isFinite(calMaxNeg)) {
+        const x2 = clampToCanvasX(calMaxNeg)
+        ctx.beginPath()
+        ctx.moveTo(x2, paddingTop)
+        ctx.lineTo(x2, paddingTop + drawH)
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+
+    // Axis / labels: min/max numbers
+    ctx.fillStyle = '#374151'
+    ctx.font = '12px sans-serif'
+    ctx.textBaseline = 'top'
+    ctx.fillText(dataMin.toFixed(3), paddingLeft, height - 18)
+    ctx.textAlign = 'right'
+    ctx.fillText(dataMax.toFixed(3), width - paddingRight, height - 18)
+    ctx.textAlign = 'left'
+  }
+
+  // Resize observer to keep histogram fitting container width
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const heightPx = 120
+    // initial draw at current width
+    const rect = container.getBoundingClientRect()
+    const widthPx = Math.max(160, rect.width - 0) // allow some minimal padding
+    drawHistogram(widthPx, heightPx)
+
+    // observe for later resizes
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserverRef.current = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const w = Math.max(160, entry.contentRect.width)
+          drawHistogram(w, heightPx)
+        }
+      })
+      resizeObserverRef.current.observe(container)
+    } else {
+      // fallback: window resize
+      const onResize = (): void => {
+        const r = container.getBoundingClientRect()
+        const w = Math.max(160, r.width)
+        drawHistogram(w, heightPx)
+      }
+      window.addEventListener('resize', onResize)
+      return (): void => {
+        window.removeEventListener('resize', onResize)
+      }
+    }
+    return (): void => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect()
+        resizeObserverRef.current = null
+      }
+    }
+  }, [
+    image.values,
+    meshRange.min,
+    meshRange.max,
+    image.cal_min,
+    image.cal_max,
+    image.cal_minNeg,
+    image.cal_maxNeg,
+    useNegativeRange
+  ])
+
+  return (
+    <div>
+      {/* SurfIce-style one-line summary */}
+      <Text size="1" className="mb-2 break-words whitespace-normal">
+        <strong>{isAtlas ? 'Atlas' : 'Layer'}</strong> {idx + 1}
+      </Text>
+
+      {/* Histogram container: responsive, will size canvas inside */}
+      <div ref={containerRef} className="mb-3" style={{ width: '100%', maxWidth: 600 }}>
+        <canvas
+          ref={canvasRef}
+          // style width/height are controlled by drawHistogram; set a small default so it occupies space
+          style={{ width: '100%', height: '120px', borderRadius: 4, display: 'block' }}
+        />
+      </div>
+
+      {/* Detailed table */}
+      <table className="table-auto border-collapse w-full text-sm text-left mb-3">
+        <tbody>
+          <tr>
+            <th className="p-1 font-bold">Type</th>
+            <td className="p-1">
+              {isAtlas ? 'Atlas (discrete labels)' : 'Intensity (continuous)'}
+            </td>
+          </tr>
+
+          <tr>
+            <th className="p-1 font-bold">Layer Index</th>
+            <td className="p-1">{idx + 1}</td>
+          </tr>
+
+          <tr>
+            <th className="p-1 font-bold">Visible Range (cal_min..cal_max)</th>
+            <td className="p-1">
+              {minIntensity.toFixed(6)} .. {maxIntensity.toFixed(6)}
+            </td>
+          </tr>
+
+          <tr>
+            <th className="p-1 font-bold">Actual Data Range</th>
+            <td className="p-1">
+              {meshRange.min.toFixed(6)} .. {meshRange.max.toFixed(6)}
+            </td>
+          </tr>
+
+          <tr>
+            <th className="p-1 font-bold">Filename</th>
+            {/* allow long filenames to wrap instead of causing scrolling */}
+            <td
+              className="p-1 break-words whitespace-normal max-w-full"
+              style={{ wordBreak: 'break-word' }}
+            >
+              {image.name ?? '(no name)'}
+            </td>
+          </tr>
+
+          <tr>
+            <th className="p-1 font-bold">Value Count</th>
+            <td className="p-1">
+              {(image.values && (image.values as AnyNumberArray).length) ?? 'unknown'}
+            </td>
+          </tr>
+
+          {isAtlas && (
+            <>
+              <tr>
+                <th className="p-1 font-bold">Atlas Values</th>
+                <td className="p-1">{(atlasVals as AnyNumberArray).length}</td>
+              </tr>
+
+              {Array.isArray(image.labels) && image.labels.length > 0 && (
+                <tr>
+                  <th className="p-1 font-bold align-top">Labels</th>
+                  <td className="p-1">
+                    <div className="text-xs max-h-48 overflow-auto">
+                      {image.labels!.slice(0, 200).map((lab, i) => (
+                        <div key={i}>
+                          <strong>{lab.value ?? i}:</strong> {lab.name ?? lab.label ?? 'unnamed'}
+                        </div>
+                      ))}
+                      {image.labels!.length > 200 && <div>... (truncated)</div>}
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </>
+          )}
+        </tbody>
+      </table>
+
+      <Text size="1" color="gray">
+        {isAtlas
+          ? 'This layer appears to be an atlas (discrete label map). Use the colormap/legend controls to toggle label rendering.'
+          : 'Continuous intensity layer. Use the positive / negative ranges and colormaps to adjust visualization.'}
+      </Text>
+    </div>
   )
 }

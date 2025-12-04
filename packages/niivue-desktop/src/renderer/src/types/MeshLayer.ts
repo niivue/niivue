@@ -10,6 +10,7 @@ type AnyNumberArray =
   | Int8Array
 
 export type NVMeshLayer = {
+  labels?: unknown
   url?: string
   name?: string
   opacity?: number
