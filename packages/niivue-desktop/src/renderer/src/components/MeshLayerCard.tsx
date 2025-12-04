@@ -48,6 +48,9 @@ function computeMeshLayerRange(layer: NVMeshLayer): { min: number; max: number }
   return { min, max }
 }
 
+/** small epsilon for float comparisons to avoid clobbering during typing */
+const EPS = 1e-6
+
 export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): JSX.Element {
   const [displayName, setDisplayName] = useState<string>(image.name ?? '')
   const [colormap, setColormap] = useState<string>(
@@ -66,10 +69,13 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
     [image.values, image.values?.length]
   )
 
+  // Initialize posRange from the image properties (image.cal_min/cal_max)
   const [posRange, setPosRange] = useState<number[]>([
-    image.cal_min ?? Math.max(0, meshRange.min),
-    image.cal_max ?? Math.max(meshRange.max, 1)
+    typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : Math.max(0, meshRange.min),
+    typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : Math.max(meshRange.max, 1)
   ])
+
+  // Initialize negRange from image properties (image.cal_minNeg/cal_maxNeg)
   const [negRange, setNegRange] = useState<number[]>([
     Number.isFinite(image.cal_minNeg) ? image.cal_minNeg : Math.min(meshRange.min, 0),
     Number.isFinite(image.cal_maxNeg) ? image.cal_maxNeg : Math.min(meshRange.max, 0)
@@ -103,27 +109,45 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
     setColormaps(nv.colormaps())
   }, [nv])
 
+  // Bind posRange to image.cal_min / image.cal_max: update UI when underlying layer props change
+  useEffect(() => {
+    const newMin = typeof image.cal_min === 'number' && isFinite(image.cal_min) ? image.cal_min : posRange[0]
+    const newMax = typeof image.cal_max === 'number' && isFinite(image.cal_max) ? image.cal_max : posRange[1]
+    // only apply if difference is meaningful to avoid fighting user typing
+    if (Math.abs(newMin - posRange[0]) > EPS || Math.abs(newMax - posRange[1]) > EPS) {
+      setPosRange([newMin, newMax])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image.cal_min, image.cal_max])
+
+  // Bind negRange to image.cal_minNeg / image.cal_maxNeg
+  useEffect(() => {
+    const newMinNeg = Number.isFinite(image.cal_minNeg) ? image.cal_minNeg : negRange[0]
+    const newMaxNeg = Number.isFinite(image.cal_maxNeg) ? image.cal_maxNeg : negRange[1]
+    if (Math.abs(newMinNeg - negRange[0]) > EPS || Math.abs(newMaxNeg - negRange[1]) > EPS) {
+      setNegRange([newMinNeg, newMaxNeg])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image.cal_minNeg, image.cal_maxNeg])
+
+  // initial mount: ensure Niivue has current properties (and set NaN for neg if not used)
   useEffect(() => {
     initialPosRange.current = [posRange[0], posRange[1]]
     initialNegRange.current = [negRange[0], negRange[1]]
 
     const meshIndex = nv.meshes.indexOf(parentMesh)
     requestAnimationFrame(() => {
-      // numeric properties via nv.setMeshLayerProperty
       nv.setMeshLayerProperty(meshIndex, idx, 'opacity', opacity)
       nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', posRange[0])
       nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_max', posRange[1])
-      // only commit neg if useNegativeRange is true
       if (useNegativeRange) {
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_minNeg', negRange[0])
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_maxNeg', negRange[1])
       } else {
-        // explicitly set NaN if user initially had useNegativeRange === false
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_minNeg', NaN)
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_maxNeg', NaN)
       }
 
-      // strings via parentMesh.setLayerProperty
       try {
         parentMesh.setLayerProperty(idx, 'colormap', colormap, nv.gl)
         if (colormapNeg !== 'none') {
@@ -131,7 +155,6 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
         } else {
           parentMesh.setLayerProperty(idx, 'colormapNegative', '', nv.gl)
         }
-        // ensure useNegativeCmap reflects state when appropriate
         parentMesh.setLayerProperty(idx, 'useNegativeCmap', enableNegativeMapping, nv.gl)
         nv.refreshColormaps?.()
         nv.updateGLVolume()
@@ -146,13 +169,18 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const setEnableNegativeMappingAndCommit = (checked: boolean) => {
     setEnableNegativeMapping(checked)
     requestAnimationFrame(() => {
-      // if enabling, set cal_min to 0 and enable useNegativeCmap
       if (checked) {
+        // when enabling negative mapping we set cal_min to 0 (and update UI immediately)
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', 0)
         parentMesh.setLayerProperty(idx, 'useNegativeCmap', true, nv.gl)
+        setPosRange((prev) => [0, prev[1]]) // <- ensure textbox/slider reflects cal_min = 0
       } else {
-        // disabling negative mapping -> turn off useNegativeCmap
         parentMesh.setLayerProperty(idx, 'useNegativeCmap', false, nv.gl)
+        // disable negative range and set cal_minNeg/cal_maxNeg to NaN
+        setUseNegativeRange(false)
+        nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_minNeg', NaN)
+        nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_maxNeg', NaN)
+        // do NOT modify posRange here (leave positive min as-is)
       }
       nv.refreshColormaps?.()
       nv.updateGLVolume()
@@ -162,7 +190,6 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const commitNegRangeIfAllowed = (value: number[]) => {
     setNegRange(value)
     if (!useNegativeRange) {
-      // when not applying negative range, ensure niivue receives NaN for both values
       requestAnimationFrame(() => {
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_minNeg', NaN)
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_maxNeg', NaN)
@@ -223,6 +250,10 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
           parentMesh.setLayerProperty(idx, 'useNegativeCmap', true, nv.gl)
           parentMesh.setLayerProperty(idx, 'colormapNegative', value, nv.gl)
           setEnableNegativeMapping(true)
+          // ensure UI shows cal_min = 0 when a negative cmap is selected
+          setPosRange((prev) => [0, prev[1]])
+          // also request that niivue set cal_min to 0 to keep things consistent
+          nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', 0)
         }
         nv.refreshColormaps?.()
         nv.updateGLVolume()
@@ -233,7 +264,16 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   }
 
   // Positive handlers
-  const handlePosRangeChange = (value: number[]): void => setPosRange(value)
+  // NOW: write to Niivue immediately when slider/textfield changes
+  const handlePosRangeChange = (value: number[]): void => {
+    setPosRange(value)
+    requestAnimationFrame(() => {
+      nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', value[0])
+      nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_max', value[1])
+      nv.updateGLVolume()
+    })
+  }
+  // keep commit handler to support onValueCommit if used elsewhere
   const handlePosRangeCommit = (value: number[]): void => {
     setPosRange(value)
     requestAnimationFrame(() => {
@@ -245,35 +285,69 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const handlePosMinChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const v = e.target.value
     const parsed = parseFloat(v)
-    if (v === '' || v === '-' || Number.isNaN(parsed)) return
+    // allow typing '-' or empty: don't write invalid values
+    if (v === '' || v === '-') {
+      setPosRange([posRange[0], posRange[1]])
+      return
+    }
+    if (Number.isNaN(parsed)) return
     const updated: number[] = [parsed, posRange[1]]
     setPosRange(updated)
-    handlePosRangeCommit(updated)
+    // immediate write
+    requestAnimationFrame(() => {
+      nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', updated[0])
+      nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_max', updated[1])
+      nv.updateGLVolume()
+    })
   }
   const handlePosMaxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const v = e.target.value
     const parsed = parseFloat(v)
-    if (v === '' || v === '-' || Number.isNaN(parsed)) return
+    if (v === '' || v === '-') {
+      setPosRange([posRange[0], posRange[1]])
+      return
+    }
+    if (Number.isNaN(parsed)) return
     const updated: number[] = [posRange[0], parsed]
     setPosRange(updated)
-    handlePosRangeCommit(updated)
+    requestAnimationFrame(() => {
+      nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', updated[0])
+      nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_max', updated[1])
+      nv.updateGLVolume()
+    })
   }
   const handlePosInputBlur = (maybeVal: string, which: 'min' | 'max'): void => {
     const parsed = parseFloat(maybeVal)
     if (Number.isNaN(parsed)) return
-    if (which === 'min') handlePosRangeCommit([parsed, posRange[1]])
-    else handlePosRangeCommit([posRange[0], parsed])
+    if (which === 'min') {
+      requestAnimationFrame(() => {
+        nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_min', parsed)
+        nv.updateGLVolume()
+      })
+    } else {
+      requestAnimationFrame(() => {
+        nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_max', parsed)
+        nv.updateGLVolume()
+      })
+    }
   }
 
-  // Negative handlers (local updates always allowed; commit only when useNegativeRange is true; otherwise NaN)
-  const handleNegRangeChange = (value: number[]): void => setNegRange(value)
+  // Negative handlers (now immediate on slider changes)
+  const handleNegRangeChange = (value: number[]): void => {
+    // respect apply toggle inside commit function
+    commitNegRangeIfAllowed(value)
+  }
   const handleNegRangeCommit = (value: number[]): void => {
     commitNegRangeIfAllowed(value)
   }
   const handleNegMinChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const v = e.target.value
     const parsed = parseFloat(v)
-    if (v === '' || v === '-' || Number.isNaN(parsed)) return
+    if (v === '' || v === '-') {
+      setNegRange([negRange[0], negRange[1]])
+      return
+    }
+    if (Number.isNaN(parsed)) return
     const updated = [parsed, negRange[1]]
     setNegRange(updated)
     commitNegRangeIfAllowed(updated)
@@ -281,7 +355,11 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const handleNegMaxChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const v = e.target.value
     const parsed = parseFloat(v)
-    if (v === '' || v === '-' || Number.isNaN(parsed)) return
+    if (v === '' || v === '-') {
+      setNegRange([negRange[0], negRange[1]])
+      return
+    }
+    if (Number.isNaN(parsed)) return
     const updated = [negRange[0], parsed]
     setNegRange(updated)
     commitNegRangeIfAllowed(updated)
@@ -297,14 +375,12 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const handleUseNegativeRangeToggle = (checked: boolean) => {
     setUseNegativeRange(checked)
     if (checked) {
-      // commit current negRange to Niivue
       requestAnimationFrame(() => {
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_minNeg', negRange[0])
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_maxNeg', negRange[1])
         nv.updateGLVolume()
       })
     } else {
-      // set them to NaN to disable negative cal range
       requestAnimationFrame(() => {
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_minNeg', NaN)
         nv.setMeshLayerProperty(parentMesh.id, idx, 'cal_maxNeg', NaN)
@@ -450,7 +526,6 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                 <Slider
                   size="1"
                   color="gray"
-                  defaultValue={[posRange[0], posRange[1]]}
                   min={Math.min(posRange[0], 0)}
                   max={Math.max(posRange[1], 1)}
                   step={Math.abs(posRange[1] - posRange[0]) > 10 ? 1 : 0.1}
@@ -461,96 +536,105 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                 <TextField.Root
                   onChange={handlePosMaxChange}
                   onBlur={(e) => handlePosInputBlur(e.target.value, 'max')}
-                  type="Number"
+                  type="number"
                   size="1"
                   value={posRange[1].toFixed(2)}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <Text size="1">Negative values colormap</Text>
-                <Select.Root size="1" value={colormapNeg} onValueChange={(v) => handleColormapNegChange(v)}>
-                  <Select.Trigger className="truncate w-3/4 min-w-3/4" />
-                  <Select.Content className="truncate">
-                    <Select.Item value="none">None</Select.Item>
-                    {colormaps.map((cmap, i) => (
-                      <Select.Item key={i} value={cmap}>
-                        {cmap}
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Root>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Text size="1">Enable negative mapping</Text>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={enableNegativeMapping}
-                    onChange={(e) => setEnableNegativeMappingAndCommit(e.target.checked)}
-                  />
-                  <span className="text-xs text-gray-600">sets cal_min = 0 & useNegativeCmap</span>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Text size="1">Negative range</Text>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1 text-sm">
+              {/* === Grouped negative mapping section === */}
+              <div className="p-2 rounded border bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <Text size="1">Enable negative mapping</Text>
+                  <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={useNegativeRange}
-                      onChange={(e) => handleUseNegativeRangeToggle(e.target.checked)}
-                      disabled={!enableNegativeMapping}
-                      title="If checked, cal_minNeg/cal_maxNeg will be applied to Niivue"
+                      checked={enableNegativeMapping}
+                      onChange={(e) => setEnableNegativeMappingAndCommit(e.target.checked)}
                     />
-                    <span className="text-xs text-gray-600">Use negative cal range</span>
+                    <span className="text-xs text-gray-600">sets cal_min = 0 & useNegativeCmap</span>
                   </label>
-                  <Button size="1" variant="ghost" color="gray" onClick={autoRangeNeg} disabled={!hasNegativeRange}>
-                    Auto
-                  </Button>
-                  <Button size="1" variant="ghost" color="gray" onClick={resetNeg} disabled={!hasNegativeRange}>
-                    Reset
-                  </Button>
                 </div>
-              </div>
 
-              <div className="flex gap-1 items-center">
-                <TextField.Root
-                  onChange={handleNegMinChange}
-                  onBlur={(e) => handleNegInputBlur(e.target.value, 'min')}
-                  type="number"
-                  size="1"
-                  value={negRange[0].toFixed(2)}
-                  disabled={!useNegativeRange}
-                />
-                <Slider
-                  size="1"
-                  color="gray"
-                  min={negSliderMin}
-                  max={negSliderMax}
-                  step={Math.abs(negRange[1] - negRange[0]) > 10 ? 1 : 0.1}
-                  value={negRange}
-                  onValueChange={(v) => handleNegRangeChange(v as number[])}
-                  onValueCommit={(v) => handleNegRangeCommit(v as number[])}
-                  disabled={!useNegativeRange}
-                />
-                <TextField.Root
-                  onChange={handleNegMaxChange}
-                  onBlur={(e) => handleNegInputBlur(e.target.value, 'max')}
-                  type="number"
-                  size="1"
-                  value={negRange[1].toFixed(2)}
-                  disabled={!useNegativeRange}
-                />
-              </div>
+                <div className="flex items-center justify-between">
+                  <Text size="1">Negative values colormap</Text>
+                  <Select.Root
+                    size="1"
+                    value={colormapNeg}
+                    onValueChange={(v) => handleColormapNegChange(v)}
+                    disabled={!enableNegativeMapping}
+                  >
+                    <Select.Trigger className="truncate w-3/4 min-w-3/4" />
+                    <Select.Content className="truncate">
+                      <Select.Item value="none">None</Select.Item>
+                      {colormaps.map((cmap, i) => (
+                        <Select.Item key={i} value={cmap}>
+                          {cmap}
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </div>
 
-              {!hasNegativeRange && (
-                <Text size="1" color="gray">
-                  No negative values detected — you can still enable negative mapping and pre-select a negative colormap.
-                </Text>
-              )}
+                <div className="flex items-center justify-between mt-2">
+                  <Text size="1">Negative range</Text>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={useNegativeRange}
+                        onChange={(e) => handleUseNegativeRangeToggle(e.target.checked)}
+                        disabled={!enableNegativeMapping}
+                        title="If checked, cal_minNeg/cal_maxNeg will be applied to Niivue"
+                      />
+                      <span className="text-xs text-gray-600">Use negative cal range</span>
+                    </label>
+                    <Button size="1" variant="ghost" color="gray" onClick={autoRangeNeg} disabled={!hasNegativeRange || !enableNegativeMapping}>
+                      Auto
+                    </Button>
+                    <Button size="1" variant="ghost" color="gray" onClick={resetNeg} disabled={!hasNegativeRange || !enableNegativeMapping}>
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-1 items-center mt-2">
+                  <TextField.Root
+                    onChange={handleNegMinChange}
+                    onBlur={(e) => handleNegInputBlur(e.target.value, 'min')}
+                    type="number"
+                    size="1"
+                    value={negRange[0].toFixed(2)}
+                    disabled={!useNegativeRange || !enableNegativeMapping}
+                  />
+                  <Slider
+                    size="1"
+                    color="gray"
+                    min={negSliderMin}
+                    max={negSliderMax}
+                    step={Math.abs(negRange[1] - negRange[0]) > 10 ? 1 : 0.1}
+                    value={negRange}
+                    onValueChange={(v) => handleNegRangeChange(v as number[])}
+                    onValueCommit={(v) => handleNegRangeCommit(v as number[])}
+                    disabled={!useNegativeRange || !enableNegativeMapping}
+                  />
+                  <TextField.Root
+                    onChange={handleNegMaxChange}
+                    onBlur={(e) => handleNegInputBlur(e.target.value, 'max')}
+                    type="number"
+                    size="1"
+                    value={negRange[1].toFixed(2)}
+                    disabled={!useNegativeRange || !enableNegativeMapping}
+                  />
+                </div>
+
+                {!hasNegativeRange && (
+                  <Text size="1" color="gray">
+                    No negative values detected — you can still enable negative mapping and pre-select a negative colormap.
+                  </Text>
+                )}
+              </div>
+              {/* === end negative group === */}
 
               <Text size="1">Opacity</Text>
               <div className="flex gap-1 items-center">
