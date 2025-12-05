@@ -40,6 +40,7 @@ import * as PenTool from '@/niivue/drawing/PenTool'
 import * as ShapeTool from '@/niivue/drawing/ShapeTool'
 import * as FloodFillTool from '@/niivue/drawing/FloodFillTool'
 import * as ImageProcessing from '@/niivue/processing/ImageProcessing'
+import { createMask, computeDescriptiveStats, scaleImageData } from '@/niivue/descriptives'
 import {
     NVDocument,
     NVConfigOptions,
@@ -6263,201 +6264,47 @@ export class Niivue {
     getDescriptives(options: { layer?: number; masks?: number[]; drawingIsMask?: boolean; roiIsMask?: boolean; startVox?: number[]; endVox?: number[] }): Descriptive {
         const { layer = 0, masks = [], drawingIsMask = false, roiIsMask = false, startVox = [0, 0, 0], endVox = [0, 0, 0] } = options
 
-        // Rest of the code remains the same
-        let area = null // used if roiIsMask since ROI is in 2D slice
         const hdr = this.volumes[layer].hdr!
         const pixDimsRAS = this.volumes[layer].pixDimsRAS!
-        let slope = hdr.scl_slope
-        if (isNaN(slope)) {
-            slope = 1
-        }
-        let inter = hdr.scl_inter
-        if (isNaN(inter)) {
-            inter = 1
-        }
+        const slope = isNaN(hdr.scl_slope) ? 1 : hdr.scl_slope
+        const inter = isNaN(hdr.scl_inter) ? 1 : hdr.scl_inter
         const imgRaw = this.volumes[layer].img!
-        const nv = imgRaw.length // number of voxels
-        // create mask
-        const img = new Float32Array(nv)
-        for (let i = 0; i < nv; i++) {
-            img[i] = imgRaw[i] * slope + inter
-        } // assume all voxels survive
-        const mask = new Uint8Array(nv)
-        for (let i = 0; i < nv; i++) {
-            mask[i] = 1
-        } // assume all voxels survive
-        if (masks.length > 0) {
-            for (let m = 0; m < masks.length; m++) {
-                const imgMask = this.volumes[masks[m]].img!
-                if (imgMask.length !== nv) {
-                    log.debug('Mask resolution does not match image. Skipping masking layer ' + masks[m])
-                    continue
+        const nv = imgRaw.length
+
+        // Scale image data
+        const img = scaleImageData(imgRaw, slope, inter)
+
+        // Collect mask images from volume indices
+        const maskImages = masks
+            .filter((m) => {
+                const valid = this.volumes[m].img!.length === nv
+                if (!valid) {
+                    log.debug('Mask resolution does not match image. Skipping masking layer ' + m)
                 }
-                for (let i = 0; i < nv; i++) {
-                    if (imgMask[i] === 0 || isNaN(imgMask[i])) {
-                        mask[i] = 0
-                    }
-                }
-            }
-        } else if (masks.length < 1 && drawingIsMask) {
-            for (let i = 0; i < nv; i++) {
-                if (this.drawBitmap![i] === 0 || isNaN(this.drawBitmap![i])) {
-                    mask[i] = 0
-                }
-            }
-        } else if (masks.length < 1 && roiIsMask) {
-            // fill mask with zeros
-            mask.fill(0)
+                return valid
+            })
+            .map((m) => this.volumes[m].img!)
 
-            // identify the constant dimension (the plane where the ellipse is drawn)
-            let constantDim = -1
-            if (startVox[0] === endVox[0]) {
-                constantDim = 0 // x is constant
-            } else if (startVox[1] === endVox[1]) {
-                constantDim = 1 // y is constant
-            } else if (startVox[2] === endVox[2]) {
-                constantDim = 2 // z is constant
-            } else {
-                console.error('Error: No constant dimension found.')
-                return
-            }
+        // Create mask based on options
+        const { mask, area } = createMask({
+            nv,
+            maskImages: maskImages.length > 0 ? maskImages : undefined,
+            drawBitmap: this.drawBitmap,
+            drawingIsMask: masks.length < 1 && drawingIsMask,
+            roiIsMask: masks.length < 1 && roiIsMask,
+            startVox,
+            endVox,
+            hdr,
+            pixDimsRAS
+        })
 
-            // get the varying dimensions
-            const dims = [0, 1, 2]
-            const varDims = dims.filter((dim) => dim !== constantDim)
-
-            // compute the center of the ellipse in voxel coordinates
-            const centerVox = []
-            centerVox[constantDim] = startVox[constantDim]
-            centerVox[varDims[0]] = (startVox[varDims[0]] + endVox[varDims[0]]) / 2
-            centerVox[varDims[1]] = (startVox[varDims[1]] + endVox[varDims[1]]) / 2
-
-            // compute the radii along each varying dimension
-            const radiusX = Math.abs(endVox[varDims[0]] - startVox[varDims[0]]) / 2
-            const radiusY = Math.abs(endVox[varDims[1]] - startVox[varDims[1]]) / 2
-
-            // dimensions of the image
-            const xdim = hdr.dims[1]
-            const ydim = hdr.dims[2]
-            // const zdim = hdr.dims[3]
-
-            // define the ranges for the varying dimensions
-            const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX))
-            const maxVarDim0 = Math.min(hdr.dims[varDims[0] + 1] - 1, Math.ceil(centerVox[varDims[0]] + radiusX))
-
-            const minVarDim1 = Math.max(0, Math.floor(centerVox[varDims[1]] - radiusY))
-            const maxVarDim1 = Math.min(hdr.dims[varDims[1] + 1] - 1, Math.ceil(centerVox[varDims[1]] + radiusY))
-
-            // the constant dimension value
-            const constDimVal = centerVox[constantDim]
-            if (constDimVal < 0 || constDimVal >= hdr.dims[constantDim + 1]) {
-                console.error('Error: Constant dimension value is out of bounds.')
-                return
-            }
-
-            // iterate over the varying dimensions and apply the elliptical mask
-            for (let i = minVarDim0; i <= maxVarDim0; i++) {
-                for (let j = minVarDim1; j <= maxVarDim1; j++) {
-                    // set the voxel coordinates
-                    const voxel = []
-                    voxel[constantDim] = constDimVal // Fixed dimension
-                    voxel[varDims[0]] = i
-                    voxel[varDims[1]] = j
-                    // calculate the normalized distances from the center
-                    const di = (voxel[varDims[0]] - centerVox[varDims[0]]) / radiusX
-                    const dj = (voxel[varDims[1]] - centerVox[varDims[1]]) / radiusY
-                    // calculate the squared distance in ellipse space
-                    const distSq = di * di + dj * dj
-                    // check if the voxel is within the ellipse
-                    if (distSq <= 1) {
-                        // calculate the index in the mask array
-                        const x = voxel[0]
-                        const y = voxel[1]
-                        const z = voxel[2]
-                        const index = z * xdim * ydim + y * xdim + x
-                        mask[index] = 1
-                    }
-                }
-            }
-            // calculate the area based on the number of voxels in the mask
-            // const voxelArea = pixDimsRAS[varDims[0] + 1] * pixDimsRAS[varDims[1] + 1] // adjusted for 1-indexing
-            // const numMaskedVoxels = mask.reduce((count, value) => count + (value === 1 ? 1 : 0), 0)
-            // area = numMaskedVoxels * voxelArea
-
-            // perhaps better to calculate the area using the ellipse area formula
-            const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1]
-            const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1]
-            const areaEllipse = Math.PI * radiusX_mm * radiusY_mm
-            area = areaEllipse
-            // for debugging: show mask -- loop over drawing and set drawing to 1 if mask is 1
-            // this.setDrawingEnabled(true)
-            // this.drawOpacity = 0.3
-            // for (let i = 0; i < nv; i++) {
-            //   if (mask[i] === 1) {
-            //     this.drawBitmap![i] = 1
-            //   } else {
-            //     this.drawBitmap![i] = 0
-            //   }
-            // }
-            // this.refreshDrawing(false)
-            // this.setDrawingEnabled(false)
-        }
-        // Welfords method
-        // https://www.embeddedrelated.com/showarticle/785.php
-        // https://www.johndcook.com/blog/2008/09/26/comparing-three-methods-of-computing-standard-deviation/
-        let k = 0
-        let M = 0
-        let S = 0
-        let mx = Number.NEGATIVE_INFINITY
-        let mn = Number.POSITIVE_INFINITY
-        let kNot0 = 0
-        let MNot0 = 0
-        let SNot0 = 0
-
-        for (let i = 0; i < nv; i++) {
-            if (mask[i] < 1) {
-                continue
-            }
-            const x = img[i]
-            k++
-            let Mnext = M + (x - M) / k
-            S = S + (x - M) * (x - Mnext)
-            M = Mnext
-            if (x === 0) {
-                continue
-            }
-            kNot0++
-            Mnext = MNot0 + (x - MNot0) / kNot0
-            SNot0 = SNot0 + (x - MNot0) * (x - Mnext)
-            MNot0 = Mnext
-
-            mn = Math.min(x, mn)
-            mx = Math.max(x, mx)
-        }
-        const stdev = Math.sqrt(S / (k - 1))
-        const stdevNot0 = Math.sqrt(SNot0 / (kNot0 - 1))
-        const mnNot0 = mn
-        const mxNot0 = mx
-        if (k !== kNot0) {
-            // some voxels are equal to zero
-            mn = Math.min(0, mn)
-            mx = Math.max(0, mx)
-        }
+        // Compute descriptive statistics
+        const stats = computeDescriptiveStats(img, mask)
 
         return {
-            mean: M,
-            stdev,
-            nvox: k,
-            volumeMM3: k * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3],
-            // volume also in milliliters
-            volumeML: k * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3] * 0.001,
-            min: mn,
-            max: mx,
-            meanNot0: MNot0,
-            stdevNot0,
-            nvoxNot0: kNot0,
-            minNot0: mnNot0,
-            maxNot0: mxNot0,
+            ...stats,
+            volumeMM3: stats.nvox * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3],
+            volumeML: stats.nvox * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3] * 0.001,
             cal_min: this.volumes[layer].cal_min!,
             cal_max: this.volumes[layer].cal_max!,
             robust_min: this.volumes[layer].robust_min!,
