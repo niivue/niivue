@@ -8,6 +8,7 @@
  * @module ImageProcessing
  */
 
+import { mat4, vec3, vec4 } from 'gl-matrix'
 import { log } from '@/logger'
 import { NiiDataType } from '@/nvimage'
 
@@ -767,4 +768,380 @@ export function isValidConnectivity(conn: number): boolean {
  */
 export function isValidDimensions(dim: Uint32Array): boolean {
     return dim[0] >= 2 && dim[1] >= 2 && dim[2] >= 1
+}
+
+// ============================================================================
+// Conform Functions (FreeSurfer-style resampling)
+// ============================================================================
+
+/**
+ * Parameters for computing intensity scale factors
+ */
+export interface GetScaleParams {
+    img: ArrayLike<number>
+    dims: number[]
+    global_min: number
+    global_max: number
+    datatypeCode: number
+    scl_slope: number
+    scl_inter: number
+    cal_min?: number
+    cal_max?: number
+    dst_min?: number
+    dst_max?: number
+    f_low?: number
+    f_high?: number
+}
+
+/**
+ * Parameters for conform voxel-to-voxel transform computation
+ */
+export interface ConformVox2VoxParams {
+    inDims: number[]
+    inAffine: number[]
+    outDim?: number
+    outMM?: number
+    toRAS?: boolean
+}
+
+/**
+ * Result of conform voxel-to-voxel transform computation
+ */
+export interface ConformVox2VoxResult {
+    outAffine: mat4
+    vox2vox: mat4
+    invVox2vox: mat4
+}
+
+/**
+ * Parameters for resampling a volume
+ */
+export interface ResampleVolumeParams {
+    inImg: Float32Array
+    inDims: number[]
+    outDim: number
+    invVox2vox: mat4
+    isLinear: boolean
+}
+
+/**
+ * Scales and crops a Float32 image to Uint8 range.
+ * @param img32 - Input Float32 image
+ * @param dst_min - Destination minimum value (default 0)
+ * @param dst_max - Destination maximum value (default 255)
+ * @param src_min - Source minimum value for scaling
+ * @param scale - Scale factor
+ * @returns Scaled Uint8 image
+ */
+export function scalecropUint8(img32: Float32Array, dst_min: number = 0, dst_max: number = 255, src_min: number, scale: number): Uint8Array {
+    const voxnum = img32.length
+    const img8 = new Uint8Array(voxnum)
+    for (let i = 0; i < voxnum; i++) {
+        let val = img32[i]
+        val = dst_min + scale * (val - src_min)
+        val = Math.max(val, dst_min)
+        val = Math.min(val, dst_max)
+        img8[i] = val
+    }
+    return img8
+}
+
+/**
+ * Scales and crops a Float32 image to a specified range.
+ * @param img32 - Input Float32 image
+ * @param dst_min - Destination minimum value (default 0)
+ * @param dst_max - Destination maximum value (default 1)
+ * @param src_min - Source minimum value for scaling
+ * @param scale - Scale factor
+ * @returns Scaled Float32 image
+ */
+export function scalecropFloat32(img32: Float32Array, dst_min: number = 0, dst_max: number = 1, src_min: number, scale: number): Float32Array {
+    const voxnum = img32.length
+    const img = new Float32Array(voxnum)
+    for (let i = 0; i < voxnum; i++) {
+        let val = img32[i]
+        val = dst_min + scale * (val - src_min)
+        val = Math.max(val, dst_min)
+        val = Math.min(val, dst_max)
+        img[i] = val
+    }
+    return img
+}
+
+/**
+ * Computes offset and scale to robustly rescale image intensities to a target range.
+ * Translation of FastSurfer conform.py (Apache License).
+ * @param params - Scale computation parameters
+ * @returns Tuple of [src_min, scale]
+ */
+export function getScale(params: GetScaleParams): [number, number] {
+    const { img, dims, global_min, global_max, datatypeCode, scl_slope, scl_inter, cal_min, cal_max, dst_min = 0, dst_max = 255, f_low = 0.0, f_high = 0.999 } = params
+
+    let src_min = global_min
+    let src_max = global_max
+
+    // For compatibility with conform.py: uint8 is not transformed
+    if (datatypeCode === NiiDataType.DT_UINT8) {
+        return [src_min, 1.0]
+    }
+
+    if (!isFinite(f_low) || !isFinite(f_high)) {
+        if (isFinite(cal_min!) && isFinite(cal_max!) && cal_max! > cal_min!) {
+            src_min = cal_min!
+            src_max = cal_max!
+            const scale = (dst_max - dst_min) / (src_max - src_min)
+            log.info(' Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
+            return [src_min, scale]
+        }
+    }
+
+    const voxnum = dims[1] * dims[2] * dims[3]
+    let scaledImg: Float32Array | ArrayLike<number> = img
+
+    if (scl_slope !== 1.0 || scl_inter !== 0.0) {
+        const newImg = new Float32Array(voxnum)
+        for (let i = 0; i < voxnum; i++) {
+            newImg[i] = img[i] * scl_slope + scl_inter
+        }
+        scaledImg = newImg
+    }
+
+    if (src_min < 0.0) {
+        log.warn('WARNING: Input image has value(s) below 0.0 !')
+    }
+
+    log.info(' Input:    min: ' + src_min + '  max: ' + src_max)
+
+    if (f_low === 0.0 && f_high === 1.0) {
+        return [src_min, 1.0]
+    }
+
+    // Compute non-zeros and total vox num
+    let nz = 0
+    for (let i = 0; i < voxnum; i++) {
+        if (Math.abs(scaledImg[i]) >= 1e-15) {
+            nz++
+        }
+    }
+
+    // Compute histogram
+    const histosize = 1000
+    const bin_size = (src_max - src_min) / histosize
+    const hist = new Array(histosize).fill(0)
+    for (let i = 0; i < voxnum; i++) {
+        const val = scaledImg[i]
+        let bin = Math.floor((val - src_min) / bin_size)
+        bin = Math.min(bin, histosize - 1)
+        hist[bin]++
+    }
+
+    // Compute cumulative sum
+    const cs = new Array(histosize).fill(0)
+    cs[0] = hist[0]
+    for (let i = 1; i < histosize; i++) {
+        cs[i] = cs[i - 1] + hist[i]
+    }
+
+    // Get lower limit
+    let nth = Math.floor(f_low * voxnum)
+    let idx = 0
+    while (idx < histosize) {
+        if (cs[idx] >= nth) {
+            break
+        }
+        idx++
+    }
+    const global_min_saved = src_min
+    src_min = idx * bin_size + global_min_saved
+
+    // Get upper limit
+    nth = voxnum - Math.floor((1.0 - f_high) * nz)
+    idx = 0
+    while (idx < histosize - 1) {
+        if (cs[idx + 1] >= nth) {
+            break
+        }
+        idx++
+    }
+    src_max = idx * bin_size + global_min_saved
+
+    // Scale
+    let scale = 1
+    if (src_min !== src_max) {
+        scale = (dst_max - dst_min) / (src_max - src_min)
+    }
+
+    log.info(' Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
+    return [src_min, scale]
+}
+
+/**
+ * Computes output affine, voxel-to-voxel transform, and its inverse for resampling.
+ * Translation of nibabel mghformat.py (MIT License) and FastSurfer conform.py (Apache License).
+ * @param params - Voxel-to-voxel transform parameters
+ * @returns Transform matrices
+ */
+export function conformVox2Vox(params: ConformVox2VoxParams): ConformVox2VoxResult {
+    const { inDims, inAffine, outDim = 256, outMM = 1, toRAS = false } = params
+
+    const a = inAffine.flat()
+    const affine = mat4.fromValues(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15])
+    const half = vec4.fromValues(inDims[1] / 2, inDims[2] / 2, inDims[3] / 2, 1)
+    const Pxyz_c4 = vec4.create()
+    const affineT = mat4.create()
+    mat4.transpose(affineT, affine)
+    vec4.transformMat4(Pxyz_c4, half, affineT)
+    const Pxyz_c = vec3.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2])
+
+    // MGH format doesn't store the transform directly. Instead it's gleaned
+    // from the zooms (delta), direction cosines (Mdc), RAS centers
+    const delta = vec3.fromValues(outMM, outMM, outMM)
+    let Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
+    if (toRAS) {
+        Mdc = mat4.fromValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+    }
+    mat4.transpose(Mdc, Mdc)
+
+    const dims = vec4.fromValues(outDim, outDim, outDim, 1)
+    const MdcD = mat4.create()
+    mat4.scale(MdcD, Mdc, delta)
+
+    const vol_center = vec4.fromValues(dims[0], dims[1], dims[2], 1)
+    vec4.transformMat4(vol_center, vol_center, MdcD)
+    vec4.scale(vol_center, vol_center, 0.5)
+
+    const translate = vec3.create()
+    vec3.subtract(translate, Pxyz_c, vec3.fromValues(vol_center[0], vol_center[1], vol_center[2]))
+
+    const outAffine = mat4.create()
+    mat4.transpose(outAffine, MdcD)
+    outAffine[3] = translate[0]
+    outAffine[7] = translate[1]
+    outAffine[11] = translate[2]
+
+    const invOutAffine = mat4.create()
+    mat4.invert(invOutAffine, outAffine)
+
+    const vox2vox = mat4.create()
+    // Compute vox2vox from src to trg
+    mat4.mul(vox2vox, affine, invOutAffine)
+
+    // Compute inverse
+    const invVox2vox = mat4.create()
+    mat4.invert(invVox2vox, vox2vox)
+
+    return { outAffine, vox2vox, invVox2vox }
+}
+
+/**
+ * Resamples a volume using the given inverse voxel-to-voxel transform.
+ * Supports both linear and nearest neighbor interpolation.
+ * @param params - Resampling parameters
+ * @returns Resampled volume as Float32Array
+ */
+export function resampleVolume(params: ResampleVolumeParams): Float32Array {
+    const { inImg, inDims, outDim, invVox2vox, isLinear } = params
+
+    const outNvox = outDim * outDim * outDim
+    const outImg = new Float32Array(outNvox)
+
+    const dimX = inDims[1]
+    const dimY = inDims[2]
+    const dimZ = inDims[3]
+    const dimXY = dimX * dimY
+
+    function voxidx(vx: number, vy: number, vz: number): number {
+        return vx + vy * dimX + vz * dimXY
+    }
+
+    const inv0 = invVox2vox[0]
+    const inv4 = invVox2vox[4]
+    const inv8 = invVox2vox[8]
+
+    let i = -1
+
+    if (isLinear) {
+        for (let z = 0; z < outDim; z++) {
+            for (let y = 0; y < outDim; y++) {
+                // Loop hoisting
+                const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3]
+                const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7]
+                const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11]
+
+                for (let x = 0; x < outDim; x++) {
+                    const ix = x * inv0 + ixYZ
+                    const iy = x * inv4 + iyYZ
+                    const iz = x * inv8 + izYZ
+
+                    const fx = Math.floor(ix)
+                    const fy = Math.floor(iy)
+                    const fz = Math.floor(iz)
+
+                    i++
+
+                    if (fx < 0 || fy < 0 || fz < 0) {
+                        continue
+                    }
+
+                    const cx = Math.ceil(ix)
+                    const cy = Math.ceil(iy)
+                    const cz = Math.ceil(iz)
+
+                    if (cx >= dimX || cy >= dimY || cz >= dimZ) {
+                        continue
+                    }
+
+                    // Residuals
+                    const rcx = ix - fx
+                    const rcy = iy - fy
+                    const rcz = iz - fz
+                    const rfx = 1 - rcx
+                    const rfy = 1 - rcy
+                    const rfz = 1 - rcz
+
+                    const fff = voxidx(fx, fy, fz)
+                    let vx = 0
+                    vx += inImg[fff] * rfx * rfy * rfz
+                    vx += inImg[fff + dimXY] * rfx * rfy * rcz
+                    vx += inImg[fff + dimX] * rfx * rcy * rfz
+                    vx += inImg[fff + dimX + dimXY] * rfx * rcy * rcz
+                    vx += inImg[fff + 1] * rcx * rfy * rfz
+                    vx += inImg[fff + 1 + dimXY] * rcx * rfy * rcz
+                    vx += inImg[fff + 1 + dimX] * rcx * rcy * rfz
+                    vx += inImg[fff + 1 + dimX + dimXY] * rcx * rcy * rcz
+                    outImg[i] = vx
+                }
+            }
+        }
+    } else {
+        // Nearest neighbor interpolation
+        for (let z = 0; z < outDim; z++) {
+            for (let y = 0; y < outDim; y++) {
+                // Loop hoisting
+                const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3]
+                const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7]
+                const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11]
+
+                for (let x = 0; x < outDim; x++) {
+                    const ix = Math.round(x * inv0 + ixYZ)
+                    const iy = Math.round(x * inv4 + iyYZ)
+                    const iz = Math.round(x * inv8 + izYZ)
+
+                    i++
+
+                    if (ix < 0 || iy < 0 || iz < 0) {
+                        continue
+                    }
+
+                    if (ix >= dimX || iy >= dimY || iz >= dimZ) {
+                        continue
+                    }
+
+                    outImg[i] = inImg[voxidx(ix, iy, iz)]
+                }
+            }
+        }
+    }
+
+    return outImg
 }

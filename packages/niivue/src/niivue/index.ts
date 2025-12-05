@@ -6809,180 +6809,6 @@ export class Niivue {
     // https://github.com/Deep-MI/FastSurfer/blob/4e76bed7b11fd7e6403ddac729059ad3842b56de/FastSurferCNN/data_loader/conform.py
     // Licensed under the Apache License, Version 2.0 (the "License")
 
-    // Crop the intensity ranges to specific min and max values.
-
-    /**
-     * Scales and crops a Float32 image to Uint8 range.
-     * @internal
-     */
-    async scalecropUint8(img32: Float32Array, dst_min: number = 0, dst_max: number = 255, src_min: number, scale: number): Promise<Uint8Array> {
-        const voxnum = img32.length
-        const img8 = new Uint8Array(voxnum)
-        for (let i = 0; i < voxnum; i++) {
-            let val = img32![i]
-            val = dst_min + scale * (val - src_min)
-            val = Math.max(val, dst_min)
-            val = Math.min(val, dst_max)
-            img8![i] = val
-        }
-        return img8
-    }
-
-    /**
-     * Scales and crops a Float32 image to a specified range.
-     * @internal
-     */
-    async scalecropFloat32(img32: Float32Array, dst_min: number = 0, dst_max: number = 1, src_min: number, scale: number): Promise<Float32Array> {
-        const voxnum = img32.length
-        const img = new Float32Array(voxnum)
-        for (let i = 0; i < voxnum; i++) {
-            let val = img32![i]
-            val = dst_min + scale * (val - src_min)
-            val = Math.max(val, dst_min)
-            val = Math.min(val, dst_max)
-            img![i] = val
-        }
-        return img
-    }
-
-    /**
-     * Computes offset and scale to robustly rescale image intensities to a target range.
-     * @internal
-     */
-    getScale(volume: NVImage, dst_min: number = 0, dst_max: number = 255, f_low: number = 0.0, f_high: number = 0.999): [number, number] {
-        let src_min = volume.global_min!
-        let src_max = volume.global_max!
-        if (volume.hdr!.datatypeCode === NiiDataType.DT_UINT8) {
-            // for compatibility with conform.py: uint8 is not transformed
-            return [src_min, 1.0]
-        }
-        if (!isFinite(f_low) || !isFinite(f_high)) {
-            if (isFinite(volume.cal_min!) && isFinite(volume.cal_max!) && volume.cal_max! > volume.cal_min!) {
-                src_min = volume.cal_min!
-                src_max = volume.cal_max!
-                const scale = (dst_max - dst_min) / (src_max - src_min)
-                log.info(' Robust Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
-                return [src_min, scale]
-            }
-        }
-        let img = volume.img!
-        const voxnum = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
-        if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
-            const srcimg = volume.img!
-            img = new Float32Array(volume.img!.length)
-            for (let i = 0; i < voxnum; i++) {
-                img[i] = srcimg[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
-            }
-        }
-        if (src_min < 0.0) {
-            log.warn('WARNING: Input image has value(s) below 0.0 !')
-        }
-        log.info(' Input:    min: ' + src_min + '  max: ' + src_max)
-        if (f_low === 0.0 && f_high === 1.0) {
-            return [src_min, 1.0]
-        }
-        // compute non-zeros and total vox num
-        let nz = 0
-        for (let i = 0; i < voxnum; i++) {
-            if (Math.abs(img![i]) >= 1e-15) {
-                nz++
-            }
-        }
-        // compute histogram
-        const histosize = 1000
-        const bin_size = (src_max - src_min) / histosize
-        const hist = new Array(histosize).fill(0)
-        for (let i = 0; i < voxnum; i++) {
-            const val = img[i]
-            let bin = Math.floor((val - src_min) / bin_size)
-            bin = Math.min(bin, histosize - 1)
-            hist[bin]++
-        }
-        // compute cumulative sum
-        const cs = new Array(histosize).fill(0)
-        cs[0] = hist[0]
-        for (let i = 1; i < histosize; i++) {
-            cs[i] = cs[i - 1] + hist[i]
-        }
-        // get lower limit
-        let nth = Math.floor(f_low * voxnum)
-        let idx = 0
-        while (idx < histosize) {
-            if (cs[idx] >= nth) {
-                break
-            }
-            idx++
-        }
-        const global_min = src_min
-        src_min = idx * bin_size + global_min
-        // get upper limit
-        // nth = Math.floor((1.0 - f_high2) * nz)
-        nth = voxnum - Math.floor((1.0 - f_high) * nz)
-        idx = 0
-        while (idx < histosize - 1) {
-            if (cs[idx + 1] >= nth) {
-                break
-            }
-            idx++
-        }
-        src_max = idx * bin_size + global_min
-        // scale
-        let scale = 1
-        if (src_min !== src_max) {
-            scale = (dst_max - dst_min) / (src_max - src_min)
-        }
-        log.info(' Rescale:  min: ' + src_min + '  max: ' + src_max + ' scale: ' + scale)
-        return [src_min, scale]
-    }
-
-    // Translation of nibabel mghformat.py (MIT License 2009-2019) and FastSurfer conform.py (Apache License)
-    // https://github.com/nipy/nibabel/blob/a2e5dee05cf374c22670ff9fd0d385ce366eb495/nibabel/freesurfer/mghformat.py#L30
-
-    /**
-     * Computes output affine, voxel-to-voxel transform, and its inverse for resampling.
-     * @internal
-     */
-    conformVox2Vox(inDims: number[], inAffine: number[], outDim = 256, outMM = 1, toRAS = false): [mat4, mat4, mat4] {
-        const a = inAffine.flat()
-        const affine = mat4.fromValues(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15])
-        const half = vec4.fromValues(inDims[1] / 2, inDims[2] / 2, inDims[3] / 2, 1)
-        const Pxyz_c4 = vec4.create()
-        const affineT = mat4.create()
-        mat4.transpose(affineT, affine)
-        vec4.transformMat4(Pxyz_c4, half, affineT)
-        const Pxyz_c = vec3.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2])
-        // MGH format doesn't store the transform directly. Instead it's gleaned
-        // from the zooms ( delta ), direction cosines ( Mdc ), RAS centers (
-        const delta = vec3.fromValues(outMM, outMM, outMM)
-        let Mdc = mat4.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1)
-        if (toRAS) {
-            Mdc = mat4.fromValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-        }
-        mat4.transpose(Mdc, Mdc)
-        const dims = vec4.fromValues(outDim, outDim, outDim, 1)
-        const MdcD = mat4.create()
-        mat4.scale(MdcD, Mdc, delta)
-        const vol_center = vec4.fromValues(dims[0], dims[1], dims[2], 1)
-        vec4.transformMat4(vol_center, vol_center, MdcD)
-        vec4.scale(vol_center, vol_center, 0.5)
-        const translate = vec3.create()
-        vec3.subtract(translate, Pxyz_c, vec3.fromValues(vol_center[0], vol_center[1], vol_center[2]))
-        const out_affine = mat4.create()
-        mat4.transpose(out_affine, MdcD)
-        out_affine[3] = translate[0]
-        out_affine[7] = translate[1]
-        out_affine[11] = translate[2]
-        const inv_out_affine = mat4.create()
-        mat4.invert(inv_out_affine, out_affine)
-        const vox2vox = mat4.create()
-        // compute vox2vox from src to trg
-        mat4.mul(vox2vox, affine, inv_out_affine)
-        // compute inverse
-        const inv_vox2vox = mat4.create()
-        mat4.invert(inv_vox2vox, vox2vox)
-        return [out_affine, vox2vox, inv_vox2vox]
-    }
-
     /**
      * Create a binary NIfTI file as a Uint8Array, including header and image data
      * @param dims - image dimensions [x, y, z]
@@ -7037,124 +6863,69 @@ export class Niivue {
      * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
      * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
      */
-    async conform(volume: NVImage, toRAS = false, isLinear: boolean = true, asFloat32 = false, isRobustMinMax = false): Promise<NVImage> {
+    async conform(volume: NVImage, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false): Promise<NVImage> {
         const outDim = 256
         const outMM = 1
-        const obj = this.conformVox2Vox(volume.hdr!.dims!, volume.hdr!.affine.flat(), outDim, outMM, toRAS)
-        const out_affine = obj[0]
-        const inv_vox2vox = obj[2]
-        const out_nvox = outDim * outDim * outDim
-        const out_img = new Float32Array(out_nvox)
-        const in_img = new Float32Array(volume.img!)
-        const in_nvox = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
+
+        // Compute voxel-to-voxel transform
+        const { outAffine, invVox2vox } = ImageProcessing.conformVox2Vox({
+            inDims: volume.hdr!.dims!,
+            inAffine: volume.hdr!.affine.flat(),
+            outDim,
+            outMM,
+            toRAS
+        })
+
+        // Prepare input image with slope/intercept scaling
+        const inImg = new Float32Array(volume.img!)
+        const inNvox = volume.hdr!.dims![1] * volume.hdr!.dims![2] * volume.hdr!.dims![3]
         if (volume.hdr!.scl_slope !== 1.0 || volume.hdr!.scl_inter !== 0.0) {
-            for (let i = 0; i < in_nvox; i++) {
-                in_img[i] = in_img[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
+            for (let i = 0; i < inNvox; i++) {
+                inImg[i] = inImg[i] * volume.hdr!.scl_slope + volume.hdr!.scl_inter
             }
         }
-        const dimX = volume.hdr!.dims![1]
-        const dimY = volume.hdr!.dims![2]
-        const dimZ = volume.hdr!.dims![3]
-        const dimXY = dimX * dimY
-        let i = -1
-        function voxidx(vx: number, vy: number, vz: number): number {
-            return vx + vy * dimX + vz * dimXY
+
+        // Resample volume
+        const outImg = ImageProcessing.resampleVolume({
+            inImg,
+            inDims: volume.hdr!.dims!,
+            outDim,
+            invVox2vox,
+            isLinear
+        })
+
+        // Compute intensity scale factors
+        const f_low = isRobustMinMax ? NaN : 0
+        const scaleParams: ImageProcessing.GetScaleParams = {
+            img: volume.img!,
+            dims: volume.hdr!.dims!,
+            global_min: volume.global_min!,
+            global_max: volume.global_max!,
+            datatypeCode: volume.hdr!.datatypeCode,
+            scl_slope: volume.hdr!.scl_slope,
+            scl_inter: volume.hdr!.scl_inter,
+            cal_min: volume.cal_min,
+            cal_max: volume.cal_max,
+            f_low
         }
-        const inv_vox2vox0 = inv_vox2vox[0]
-        const inv_vox2vox4 = inv_vox2vox[4]
-        const inv_vox2vox8 = inv_vox2vox[8]
-        if (isLinear) {
-            for (let z = 0; z < outDim; z++) {
-                for (let y = 0; y < outDim; y++) {
-                    // loop hoisting
-                    const ixYZ = y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
-                    const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
-                    const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
-                    for (let x = 0; x < outDim; x++) {
-                        const ix = x * inv_vox2vox0 + ixYZ
-                        const iy = x * inv_vox2vox4 + iyYZ
-                        const iz = x * inv_vox2vox8 + izYZ
-                        const fx = Math.floor(ix)
-                        const fy = Math.floor(iy)
-                        const fz = Math.floor(iz)
-                        i++
-                        if (fx < 0 || fy < 0 || fz < 0) {
-                            continue
-                        }
-                        // n.b. cx = fx + 1 unless fx is an integer
-                        // no performance benefits noted changing ceil to + 1
-                        const cx = Math.ceil(ix)
-                        const cy = Math.ceil(iy)
-                        const cz = Math.ceil(iz)
-                        if (cx >= dimX || cy >= dimY || cz >= dimZ) {
-                            continue
-                        }
-                        // residuals
-                        const rcx = ix - fx
-                        const rcy = iy - fy
-                        const rcz = iz - fz
-                        const rfx = 1 - rcx
-                        const rfy = 1 - rcy
-                        const rfz = 1 - rcz
-                        const fff = voxidx(fx, fy, fz)
-                        let vx = 0
-                        vx += in_img[fff] * rfx * rfy * rfz
-                        vx += in_img[fff + dimXY] * rfx * rfy * rcz
-                        vx += in_img[fff + dimX] * rfx * rcy * rfz
-                        vx += in_img[fff + dimX + dimXY] * rfx * rcy * rcz
-                        vx += in_img[fff + 1] * rcx * rfy * rfz
-                        vx += in_img[fff + 1 + dimXY] * rcx * rfy * rcz
-                        vx += in_img[fff + 1 + dimX] * rcx * rcy * rfz
-                        vx += in_img[fff + 1 + dimX + dimXY] * rcx * rcy * rcz
-                        out_img[i] = vx
-                    } // z
-                } // y
-            } // x
-        } else {
-            // nearest neighbor interpolation
-            for (let z = 0; z < outDim; z++) {
-                for (let y = 0; y < outDim; y++) {
-                    // loop hoisting
-                    const ixYZ = y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3]
-                    const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7]
-                    const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11]
-                    for (let x = 0; x < outDim; x++) {
-                        const ix = Math.round(x * inv_vox2vox0 + ixYZ)
-                        const iy = Math.round(x * inv_vox2vox4 + iyYZ)
-                        const iz = Math.round(x * inv_vox2vox8 + izYZ)
-                        i++
-                        if (ix < 0 || iy < 0 || iz < 0) {
-                            continue
-                        }
-                        if (ix >= dimX || iy >= dimY || iz >= dimZ) {
-                            continue
-                        }
-                        out_img[i] = in_img[voxidx(ix, iy, iz)]
-                    } // z
-                } // y
-            } // x
-        } // if linear else nearest
-        // Unlike mri_convert -c, we first interpolate (float image), and then rescale
-        // to uchar. mri_convert is doing it the other way around. However, we compute
-        // the scale factor from the input to increase similarity.
-        const src_min = 0
-        const scale = 0
-        let f_low = 0
-        if (isRobustMinMax) {
-            f_low = NaN
-        }
-        let bytes = new Uint8Array()
+
+        // Scale and create output NIfTI
+        let bytes: Uint8Array
         if (asFloat32) {
-            const gs = await this.getScale(volume, 0, 1, f_low)
-            const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1])
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(out_affine), NiiDataType.DT_FLOAT32, new Uint8Array(out_img32.buffer))
+            scaleParams.dst_min = 0
+            scaleParams.dst_max = 1
+            const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
+            const outImg32 = ImageProcessing.scalecropFloat32(outImg, 0, 1, srcMin, scale)
+            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer))
         } else {
-            const gs = await this.getScale(volume, 0, 255, f_low)
-            const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1])
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(out_affine), 2, out_img8)
+            scaleParams.dst_min = 0
+            scaleParams.dst_max = 255
+            const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
+            const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
+            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8)
         }
-        const nii = await this.niftiArray2NVImage(bytes)
-        return nii
+
+        return this.niftiArray2NVImage(bytes)
     }
 
     /**
