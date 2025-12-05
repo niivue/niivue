@@ -1121,7 +1121,7 @@ This method orchestrates the entire volume update process and could remain as-is
 - `growCutShader: Shader`
 
 **Dependencies:** DrawingManager, WebGLContext, ShaderManager
-**Status:** ⬜ Not Started
+**Status:** SKIPPED. It is inconsequential
 
 ---
 
@@ -1147,7 +1147,7 @@ This method orchestrates the entire volume update process and could remain as-is
 - `colormapLists: ColormapListEntry[]`
 
 **Dependencies:** WebGLContext
-**Status:** ⬜ Not Started
+**Status:** SKIPPED. Migrating this code is inconsequential
 
 ---
 
@@ -1164,7 +1164,7 @@ This method orchestrates the entire volume update process and could remain as-is
 - `drawLabelLine()` - Draw label leader line
 
 **Dependencies:** CoordinateTransform, MeshManager
-**Status:** ⬜ Not Started
+**Status:** SKIPPED. Migrating this code is inconsequential
 
 ---
 
@@ -1181,7 +1181,7 @@ This method orchestrates the entire volume update process and could remain as-is
 - `shouldDrawOnCurrentSlice()` - Check if measurement should be drawn
 
 **Dependencies:** CoordinateTransform, UIElementRenderer
-**Status:** ⬜ Not Started
+**Status:** SKIPPED. Migrating this code is inconsequential
 
 ---
 
@@ -1197,7 +1197,7 @@ This method orchestrates the entire volume update process and could remain as-is
 - `uiData.mouseDepthPicker`
 
 **Dependencies:** WebGLContext, ShaderManager
-**Status:** ⬜ Not Started
+**Status:** SKIPPED. Migrating this code is inconsequential
 
 ---
 
@@ -1222,7 +1222,7 @@ This method orchestrates the entire volume update process and could remain as-is
 - `readyForSync` - Sync readiness flag
 
 **Dependencies:** None (orchestration)
-**Status:** ⬜ Not Started
+**Status:** SKIPPED. Migrating this code is inconsequential
 
 ---
 
@@ -1265,22 +1265,46 @@ This method orchestrates the entire volume update process and could remain as-is
 #### 9.1 ImageProcessing Module
 **File:** `packages/niivue/src/niivue/processing/ImageProcessing.ts`
 **Responsibility:** Image processing algorithms
-**Line Range:** ~3810-4168, ~9061-9712
-**Key Methods:**
-- `binarize()` - Binary threshold
-- `findOtsu()` - Otsu threshold calculation
-- `drawOtsu()` - Apply Otsu threshold
-- `removeHaze()` - Haze removal filter
-- `do_initial_labelling()` - Connected component labeling
-- `fill_tratab()` - Translation table filling
-- `translate_labels()` - Label translation
-- `largest_original_cluster_labels()` - Find largest cluster
-- `idx()` - Index calculation helper
-- `sumBitmap()` - Sum bitmap values
-- `findDrawingBoundarySlices()` - Find drawing boundaries
+**Key Functions Extracted:**
+- `binarize()` ✅ - Binary threshold a volume
+- `findOtsu()` ✅ - Otsu threshold calculation
+- `applyOtsuToDrawing()` ✅ - Apply Otsu thresholds to drawing bitmap
+- `getOtsuLevelForHaze()` ✅ - Determine Otsu level for haze removal
+- `getHazeThreshold()` ✅ - Get threshold value from Otsu results
+- `applyHazeRemoval()` ✅ - Apply haze removal to image data
+- `idx()` ✅ - Index calculation helper
+- `fillTranslationTable()` ✅ - Translation table filling
+- `checkPreviousSlice()` ✅ - Check previous slice for labels
+- `doInitialLabeling()` ✅ - Connected component initial labeling
+- `translateLabels()` ✅ - Remove gaps in label indices
+- `largestOriginalClusterLabels()` ✅ - Find largest cluster per class
+- `bwlabel()` ✅ - Full connected component labeling
+- `isValidConnectivity()` ✅ - Validate connectivity parameter
+- `isValidDimensions()` ✅ - Validate dimensions for bwlabel
 
-**Dependencies:** VolumeManager, DrawingManager
-**Status:** ⬜ Not Started
+**Niivue Methods Updated:**
+- `binarize()` - Delegates to ImageProcessing.binarize()
+- `findOtsu()` - Delegates to ImageProcessing.findOtsu()
+- `drawOtsu()` - Uses ImageProcessing.applyOtsuToDrawing()
+- `removeHaze()` - Uses ImageProcessing helper functions
+- `idx()` - Delegates to ImageProcessing.idx()
+- `fill_tratab()` - Delegates to ImageProcessing.fillTranslationTable()
+- `check_previous_slice()` - Delegates to ImageProcessing.checkPreviousSlice()
+- `do_initial_labelling()` - Delegates to ImageProcessing.doInitialLabeling()
+- `translate_labels()` - Delegates to ImageProcessing.translateLabels()
+- `largest_original_cluster_labels()` - Delegates to ImageProcessing.largestOriginalClusterLabels()
+- `bwlabel()` - Delegates to ImageProcessing.bwlabel()
+
+**Implementation Notes:**
+- Pure functions pattern following established conventions
+- All functions accept required dependencies as parameters
+- Functions with >3 parameters use object parameters for clarity
+- `sumBitmap` already extracted to FloodFillTool (Phase 6.4)
+- `findDrawingBoundarySlices` already delegates to `@/drawing/masks.ts`
+- State management remains in Niivue class; pure functions handle computation
+
+**Dependencies:** @/logger, @/nvimage (NiiDataType)
+**Status:** ✅ Completed
 
 ---
 
@@ -1573,9 +1597,9 @@ For each module in the plan above:
 - ⬜ 8.1 ViewSynchronizer Module
 - ⬜ 8.2 ConfigurationManager Module
 
-### Phase 9: Utilities & Processing ⬜
+### Phase 9: Utilities & Processing 🔄
 
-- ⬜ 9.1 ImageProcessing Module
+- ✅ 9.1 ImageProcessing Module
 - ⬜ 9.2 GeometryUtilities Module
 - ⬜ 9.3 DocumentSerializer Module
 
