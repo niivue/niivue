@@ -30,6 +30,7 @@ import * as TouchController from '@/niivue/interaction/TouchController'
 import * as KeyboardController from '@/niivue/interaction/KeyboardController'
 import * as WheelController from '@/niivue/interaction/WheelController'
 import * as DragModeManager from '@/niivue/interaction/DragModeManager'
+import * as DropHandler from '@/niivue/interaction/DropHandler'
 import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
 import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import * as CameraController from '@/niivue/navigation/CameraController'
@@ -2667,201 +2668,186 @@ export class Niivue {
         if (!this.opts.dragAndDropEnabled) {
             return
         }
-        const urlsToLoad: string[] = []
-        const files = []
         const dt = e.dataTransfer
         if (!dt) {
             return
         }
-        const url = dt.getData('text/uri-list')
-        if (url) {
-            urlsToLoad.push(url)
-            const imageOptions = NVImageFromUrlOptions(url)
-            const ext = this.getFileExt(url)
-            log.debug('dropped ext')
-            log.debug(ext)
-            if (MESH_EXTENSIONS.includes(ext)) {
-                this.addMeshFromUrl({ url }).catch((e) => {
-                    throw e
-                })
-            } else if (ext === 'NVD') {
-                this.loadDocumentFromUrl(url).catch((e) => {
-                    throw e
-                })
-            } else {
-                this.addVolumeFromUrl(imageOptions).catch((e) => {
-                    throw e
-                })
-            }
-        } else {
-            // const files = dt.files;
-            const items = dt.items
-            if (items.length > 0) {
-                // adding or replacing
-                if (!e.shiftKey && !e.altKey) {
-                    this.volumes = []
-                    this.overlays = []
-                    this.meshes = []
-                }
-                this.closeDrawing()
-                this.closePAQD()
-                for (const item of Array.from(items)) {
-                    const entry = item.webkitGetAsEntry() as FileSystemFileEntry
-                    log.debug(entry)
-                    if (!entry) {
-                        throw new Error('could not get entry from file')
-                    }
-                    if (entry.isFile) {
-                        const ext = this.getFileExt(entry.name)
-                        let pairedImageData: FileSystemEntry
-                        // check for afni HEAD BRIK pair
-                        if (entry.name.lastIndexOf('HEAD') !== -1) {
-                            for (const pairedItem of Array.from(items)) {
-                                const pairedEntry = pairedItem.webkitGetAsEntry()
-                                if (!pairedEntry) {
-                                    throw new Error('could not get paired entry')
-                                }
-                                const fileBaseName = entry.name.substring(0, entry.name.lastIndexOf('HEAD'))
-                                const pairedItemBaseName = pairedEntry.name.substring(0, pairedEntry.name.lastIndexOf('BRIK'))
-                                if (fileBaseName === pairedItemBaseName) {
-                                    pairedImageData = pairedEntry
-                                }
-                            }
-                        }
-                        // check for HDR IMG pair
-                        if (entry.name.toUpperCase().lastIndexOf('HDR') !== -1) {
-                            for (const pairedItem of Array.from(items)) {
-                                const pairedEntry = pairedItem.webkitGetAsEntry()
-                                if (!pairedEntry) {
-                                    throw new Error('could not get paired entry')
-                                }
-                                const fileBaseName = entry.name.substring(0, entry.name.toUpperCase().lastIndexOf('HDR'))
-                                const pairedItemBaseName = pairedEntry.name.substring(0, pairedEntry.name.toUpperCase().lastIndexOf('IMG'))
-                                if (fileBaseName === pairedItemBaseName) {
-                                    pairedImageData = pairedEntry
-                                }
-                            }
-                        }
-                        if (entry.name.lastIndexOf('BRIK') !== -1 || entry.name.toUpperCase().lastIndexOf('IMG') !== -1) {
-                            continue
-                        }
-                        if (this.loaders[ext]) {
-                            const dataUrl = await readFileAsDataURL(entry)
-                            await this.loadImages([
-                                {
-                                    url: dataUrl,
-                                    name: `${entry.name}`
-                                }
-                            ])
-                            continue
-                        }
-                        if (MESH_EXTENSIONS.includes(ext)) {
-                            ;(entry as FileSystemFileEntry).file((file: File): void => {
-                                ;(async (): Promise<void> => {
-                                    try {
-                                        const mesh = await NVMesh.loadFromFile({
-                                            file,
-                                            gl: this.gl,
-                                            name: file.name
-                                        })
-                                        this.addMesh(mesh)
-                                    } catch (e) {
-                                        console.error('Error loading mesh:', e)
-                                    }
-                                })().catch((err) => console.error(err))
-                            })
-                            continue
-                        } else if (ext === 'NVD') {
-                            ;(entry as FileSystemFileEntry).file((file: File): void => {
-                                ;(async (): Promise<void> => {
-                                    try {
-                                        const nvdoc = await NVDocument.loadFromFile(file)
-                                        await this.loadDocument(nvdoc)
-                                        log.debug('loaded document')
-                                    } catch (e) {
-                                        console.error(e)
-                                    }
-                                })().catch((err) => console.error(err))
-                            })
-                            break
-                        }
 
-                        ;(entry as FileSystemFileEntry).file((file: File): void => {
-                            ;(async (): Promise<void> => {
-                                try {
-                                    if (pairedImageData) {
-                                        ;(pairedImageData as FileSystemFileEntry).file((imgfile: File): void => {
-                                            ;(async (): Promise<void> => {
-                                                try {
-                                                    const volume = await NVImage.loadFromFile({
-                                                        file,
-                                                        urlImgData: imgfile,
-                                                        limitFrames4D: this.opts.limitFrames4D
-                                                    })
-                                                    this.addVolume(volume)
-                                                } catch (e) {
-                                                    console.error(e)
-                                                }
-                                            })().catch(console.error)
-                                        })
-                                    } else {
-                                        const volume = await NVImage.loadFromFile({
-                                            file,
-                                            urlImgData: pairedImageData,
-                                            limitFrames4D: this.opts.limitFrames4D
-                                        })
-                                        if (e.altKey) {
-                                            log.debug('alt key detected: assuming this is a drawing overlay')
-                                            this.drawClearAllUndoBitmaps()
-                                            this.loadDrawing(volume)
-                                        } else {
-                                            this.addVolume(volume)
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.error(e)
-                                }
-                                // Explicitly return undefined (void)
-                            })().catch(console.error)
-                        })
-                    } else if (entry.isDirectory) {
-                        // assume that directories are only use for DICOM files
-                        this.traverseFileTree(entry, '', files)
-                            .then((files) => {
-                                const loader = this.getDicomLoader().loader
-                                if (!loader) {
-                                    throw new Error('No loader for DICOM files')
-                                }
-                                loader(files)
-                                    .then(async (fileArrayBuffers) => {
-                                        const promises = fileArrayBuffers.map((loaderImage) =>
-                                            NVImage.loadFromUrl({
-                                                url: loaderImage.data,
-                                                name: loaderImage.name,
-                                                limitFrames4D: this.opts.limitFrames4D
-                                            })
-                                        )
-                                        Promise.all(promises)
-                                            .then(async (loadedNvImages) => {
-                                                await this.onDicomLoaderFinishedWithImages(loadedNvImages)
-                                            })
-                                            .catch((e) => {
-                                                throw e
-                                            })
-                                    })
-                                    .catch((error) => {
-                                        console.error('Error loading DICOM files:', error)
-                                    })
-                            })
-                            .catch((e) => {
-                                throw e
-                            })
-                    }
-                }
-            }
+        const url = DropHandler.getDroppedUrl(dt)
+        if (url) {
+            await this.handleUrlDrop(url)
+        } else if (DropHandler.hasDroppedFiles(dt)) {
+            await this.handleFilesDrop(dt.items, e.shiftKey, e.altKey)
         }
-        // this.createEmptyDrawing();
-        this.drawScene() // <- this seems to be required if you drag and drop a mesh, not a volume
+
+        this.drawScene() // required if you drag and drop a mesh, not a volume
+    }
+
+    /**
+     * Handle a URL drop by loading the appropriate resource type.
+     * @param url - The dropped URL
+     * @internal
+     */
+    private async handleUrlDrop(url: string): Promise<void> {
+        const ext = this.getFileExt(url)
+        log.debug('dropped ext:', ext)
+
+        const fileType = DropHandler.categorizeByExtension(ext)
+        switch (fileType) {
+            case 'mesh':
+                await this.addMeshFromUrl({ url })
+                break
+            case 'document':
+                await this.loadDocumentFromUrl(url)
+                break
+            default:
+                await this.addVolumeFromUrl(NVImageFromUrlOptions(url))
+        }
+    }
+
+    /**
+     * Handle file system file drops.
+     * @param items - The dropped DataTransferItemList
+     * @param shiftKey - Whether shift was held (add to existing)
+     * @param altKey - Whether alt was held (load as drawing overlay)
+     * @internal
+     */
+    private async handleFilesDrop(items: DataTransferItemList, shiftKey: boolean, altKey: boolean): Promise<void> {
+        // Clear existing data unless modifier keys are held
+        if (!shiftKey && !altKey) {
+            this.volumes = []
+            this.overlays = []
+            this.meshes = []
+        }
+        this.closeDrawing()
+        this.closePAQD()
+
+        // Process file entries
+        const fileEntries = DropHandler.processDropItems(items)
+        for (const { entry, pairedEntry } of fileEntries) {
+            await this.handleFileEntry(entry, pairedEntry, altKey)
+        }
+
+        // Process directory entries (assumed to be DICOM)
+        const directories = DropHandler.extractDirectoryEntries(items)
+        for (const dir of directories) {
+            await this.handleDirectoryDrop(dir)
+        }
+    }
+
+    /**
+     * Handle a single file entry drop.
+     * @param entry - The file system entry
+     * @param pairedEntry - Optional paired data file (for AFNI/Analyze formats)
+     * @param altKey - Whether alt was held (load as drawing overlay)
+     * @internal
+     */
+    private async handleFileEntry(entry: FileSystemFileEntry, pairedEntry: FileSystemEntry | null, altKey: boolean): Promise<void> {
+        const ext = this.getFileExt(entry.name)
+
+        // Handle custom loaders
+        if (this.loaders[ext]) {
+            const dataUrl = await readFileAsDataURL(entry)
+            await this.loadImages([{ url: dataUrl, name: entry.name }])
+            return
+        }
+
+        const file = await DropHandler.getFileFromEntry(entry)
+        const fileType = DropHandler.categorizeByExtension(ext)
+
+        switch (fileType) {
+            case 'mesh':
+                await this.handleMeshFileDrop(file)
+                break
+            case 'document':
+                await this.handleDocumentFileDrop(file)
+                break
+            default:
+                await this.handleVolumeFileDrop(file, pairedEntry, altKey)
+        }
+    }
+
+    /**
+     * Handle mesh file drop.
+     * @internal
+     */
+    private async handleMeshFileDrop(file: File): Promise<void> {
+        try {
+            const mesh = await NVMesh.loadFromFile({ file, gl: this.gl, name: file.name })
+            this.addMesh(mesh)
+        } catch (err) {
+            console.error('Error loading mesh:', err)
+        }
+    }
+
+    /**
+     * Handle NVDocument file drop.
+     * @internal
+     */
+    private async handleDocumentFileDrop(file: File): Promise<void> {
+        try {
+            const nvdoc = await NVDocument.loadFromFile(file)
+            await this.loadDocument(nvdoc)
+            log.debug('loaded document')
+        } catch (err) {
+            console.error('Error loading document:', err)
+        }
+    }
+
+    /**
+     * Handle volume file drop with optional paired data.
+     * @internal
+     */
+    private async handleVolumeFileDrop(file: File, pairedEntry: FileSystemEntry | null, altKey: boolean): Promise<void> {
+        try {
+            let pairedFile: File | undefined
+            if (pairedEntry) {
+                pairedFile = await DropHandler.getFileFromEntry(pairedEntry as FileSystemFileEntry)
+            }
+
+            const volume = await NVImage.loadFromFile({
+                file,
+                urlImgData: pairedFile,
+                limitFrames4D: this.opts.limitFrames4D
+            })
+
+            if (altKey) {
+                log.debug('alt key detected: assuming this is a drawing overlay')
+                this.drawClearAllUndoBitmaps()
+                this.loadDrawing(volume)
+            } else {
+                this.addVolume(volume)
+            }
+        } catch (err) {
+            console.error('Error loading volume:', err)
+        }
+    }
+
+    /**
+     * Handle directory drop (assumed to contain DICOM files).
+     * @internal
+     */
+    private async handleDirectoryDrop(entry: FileSystemDirectoryEntry): Promise<void> {
+        try {
+            const files = await this.traverseFileTree(entry, '', [])
+            const loader = this.getDicomLoader().loader
+            if (!loader) {
+                throw new Error('No loader for DICOM files')
+            }
+
+            const fileArrayBuffers = await loader(files)
+            const promises = fileArrayBuffers.map((loaderImage) =>
+                NVImage.loadFromUrl({
+                    url: loaderImage.data,
+                    name: loaderImage.name,
+                    limitFrames4D: this.opts.limitFrames4D
+                })
+            )
+            const loadedNvImages = await Promise.all(promises)
+            await this.onDicomLoaderFinishedWithImages(loadedNvImages)
+        } catch (err) {
+            console.error('Error loading DICOM files:', err)
+        }
     }
 
     /**

@@ -40,7 +40,7 @@ module.exports = {
                 'max-lines-per-function': [
                     'warn',
                     {
-                        max: 200,
+                        max: 100,
                         skipBlankLines: true,
                         skipComments: true
                     }
