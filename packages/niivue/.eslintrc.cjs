@@ -19,17 +19,6 @@ module.exports = {
         '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
         '@typescript-eslint/no-use-before-define': 'error',
         '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^[_,test]' }]
-        // 'prettier/prettier': [
-        //   'error',
-        //   {
-        //     tabWidth: 4,
-        //     printWidth: 200,
-        //     useTabs: false,
-        //     singleQuote: true,
-        //     trailingComma: 'none',
-        //     semi: false
-        //   }
-        // ]
     },
     // separate ESLint rules for TS files for now
     overrides: [
