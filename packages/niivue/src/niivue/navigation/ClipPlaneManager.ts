@@ -28,9 +28,9 @@ export const CLIP_PLANE_ACTIVE_THRESHOLD = 1.8
  * Parameters for converting depth/azimuth/elevation to clip plane format
  */
 export interface DepthAziElevToClipPlaneParams {
-  depth: number
-  azimuth: number
-  elevation: number
+    depth: number
+    azimuth: number
+    elevation: number
 }
 
 /**
@@ -40,18 +40,18 @@ export interface DepthAziElevToClipPlaneParams {
  * @returns Clip plane as [x, y, z, depth] array
  */
 export function depthAziElevToClipPlane(params: DepthAziElevToClipPlaneParams): [number, number, number, number] {
-  const { depth, azimuth, elevation } = params
-  const v = sph2cartDeg(azimuth + 180, elevation)
-  return [v[0], v[1], v[2], depth]
+    const { depth, azimuth, elevation } = params
+    const v = sph2cartDeg(azimuth + 180, elevation)
+    return [v[0], v[1], v[2], depth]
 }
 
 /**
  * Parameters for converting depth/azimuth/elevation for setClipPlanes (no 180-degree offset)
  */
 export interface DepthAziElevToClipPlaneNoOffsetParams {
-  depth: number
-  azimuth: number
-  elevation: number
+    depth: number
+    azimuth: number
+    elevation: number
 }
 
 /**
@@ -60,29 +60,27 @@ export interface DepthAziElevToClipPlaneNoOffsetParams {
  * @param params - Depth, azimuth, and elevation values
  * @returns Clip plane as [x, y, z, -depth] array (note: depth is negated for shader)
  */
-export function depthAziElevToClipPlaneNoOffset(
-  params: DepthAziElevToClipPlaneNoOffsetParams
-): [number, number, number, number] {
-  const { depth, azimuth, elevation } = params
-  const n = sph2cartDeg(azimuth, elevation)
-  return [n[0], n[1], n[2], -depth] // depth negated for shader
+export function depthAziElevToClipPlaneNoOffset(params: DepthAziElevToClipPlaneNoOffsetParams): [number, number, number, number] {
+    const { depth, azimuth, elevation } = params
+    const n = sph2cartDeg(azimuth, elevation)
+    return [n[0], n[1], n[2], -depth] // depth negated for shader
 }
 
 /**
  * Parameters for calculating clip plane drag rotation
  */
 export interface CalculateClipPlaneDragParams {
-  startDepthAziElev: number[]
-  dragDeltaX: number
-  dragDeltaY: number
+    startDepthAziElev: number[]
+    dragDeltaX: number
+    dragDeltaY: number
 }
 
 /**
  * Result of clip plane drag calculation
  */
 export interface ClipPlaneDragResult {
-  depthAziElev: [number, number, number]
-  changed: boolean
+    depthAziElev: [number, number, number]
+    changed: boolean
 }
 
 /**
@@ -93,37 +91,33 @@ export interface ClipPlaneDragResult {
  * @returns New depth/azimuth/elevation and whether values changed
  */
 export function calculateClipPlaneDrag(params: CalculateClipPlaneDragParams): ClipPlaneDragResult {
-  const { startDepthAziElev, dragDeltaX, dragDeltaY } = params
+    const { startDepthAziElev, dragDeltaX, dragDeltaY } = params
 
-  const newDepthAziElev: [number, number, number] = [
-    startDepthAziElev[0],
-    (startDepthAziElev[1] - dragDeltaX) % 360,
-    startDepthAziElev[2] + dragDeltaY
-  ]
+    const newDepthAziElev: [number, number, number] = [startDepthAziElev[0], (startDepthAziElev[1] - dragDeltaX) % 360, startDepthAziElev[2] + dragDeltaY]
 
-  const changed = newDepthAziElev[1] !== startDepthAziElev[1] || newDepthAziElev[2] !== startDepthAziElev[2]
+    const changed = newDepthAziElev[1] !== startDepthAziElev[1] || newDepthAziElev[2] !== startDepthAziElev[2]
 
-  return {
-    depthAziElev: newDepthAziElev,
-    changed
-  }
+    return {
+        depthAziElev: newDepthAziElev,
+        changed
+    }
 }
 
 /**
  * Parameters for ensuring clip plane arrays exist
  */
 export interface EnsureClipPlaneArraysParams {
-  clipPlanes: number[][] | undefined
-  clipPlaneDepthAziElevs: number[][] | undefined
-  index: number
+    clipPlanes: number[][] | undefined
+    clipPlaneDepthAziElevs: number[][] | undefined
+    index: number
 }
 
 /**
  * Result of ensuring clip plane arrays
  */
 export interface EnsureClipPlaneArraysResult {
-  clipPlanes: number[][]
-  clipPlaneDepthAziElevs: number[][]
+    clipPlanes: number[][]
+    clipPlaneDepthAziElevs: number[][]
 }
 
 /**
@@ -133,21 +127,21 @@ export interface EnsureClipPlaneArraysResult {
  * @returns Updated arrays guaranteed to have elements up to index
  */
 export function ensureClipPlaneArrays(params: EnsureClipPlaneArraysParams): EnsureClipPlaneArraysResult {
-  const { index } = params
-  const clipPlanes = params.clipPlanes ? [...params.clipPlanes] : []
-  const clipPlaneDepthAziElevs = params.clipPlaneDepthAziElevs ? [...params.clipPlaneDepthAziElevs] : []
+    const { index } = params
+    const clipPlanes = params.clipPlanes ? [...params.clipPlanes] : []
+    const clipPlaneDepthAziElevs = params.clipPlaneDepthAziElevs ? [...params.clipPlaneDepthAziElevs] : []
 
-  while (clipPlanes.length <= index) {
-    clipPlanes.push([...DEFAULT_CLIP_PLANE])
-  }
-  while (clipPlaneDepthAziElevs.length <= index) {
-    clipPlaneDepthAziElevs.push([...DEFAULT_DEPTH_AZI_ELEV])
-  }
+    while (clipPlanes.length <= index) {
+        clipPlanes.push([...DEFAULT_CLIP_PLANE])
+    }
+    while (clipPlaneDepthAziElevs.length <= index) {
+        clipPlaneDepthAziElevs.push([...DEFAULT_DEPTH_AZI_ELEV])
+    }
 
-  return {
-    clipPlanes,
-    clipPlaneDepthAziElevs
-  }
+    return {
+        clipPlanes,
+        clipPlaneDepthAziElevs
+    }
 }
 
 /**
@@ -157,22 +151,22 @@ export function ensureClipPlaneArrays(params: EnsureClipPlaneArraysParams): Ensu
  * @returns True if the clip plane is active
  */
 export function isClipPlaneActive(depth: number, threshold = CLIP_PLANE_ACTIVE_THRESHOLD): boolean {
-  return depth < threshold
+    return depth < threshold
 }
 
 /**
  * Parameters for converting multiple depth/azimuth/elevation arrays to clip planes
  */
 export interface ConvertMultipleClipPlanesParams {
-  depthAziElevs: number[][]
+    depthAziElevs: number[][]
 }
 
 /**
  * Result of converting multiple clip planes
  */
 export interface ConvertMultipleClipPlanesResult {
-  clipPlanes: number[][]
-  clipPlaneDepthAziElevs: number[][]
+    clipPlanes: number[][]
+    clipPlaneDepthAziElevs: number[][]
 }
 
 /**
@@ -182,33 +176,33 @@ export interface ConvertMultipleClipPlanesResult {
  * @returns Parallel arrays of clip planes and their depth/azi/elev values
  */
 export function convertMultipleClipPlanes(params: ConvertMultipleClipPlanesParams): ConvertMultipleClipPlanesResult {
-  const { depthAziElevs } = params
-  const clipPlanes: number[][] = []
-  const clipPlaneDepthAziElevs: number[][] = []
+    const { depthAziElevs } = params
+    const clipPlanes: number[][] = []
+    const clipPlaneDepthAziElevs: number[][] = []
 
-  for (const dae of depthAziElevs) {
-    const plane = depthAziElevToClipPlaneNoOffset({
-      depth: dae[0],
-      azimuth: dae[1],
-      elevation: dae[2]
-    })
-    clipPlanes.push(plane)
-    clipPlaneDepthAziElevs.push([...dae])
-  }
+    for (const dae of depthAziElevs) {
+        const plane = depthAziElevToClipPlaneNoOffset({
+            depth: dae[0],
+            azimuth: dae[1],
+            elevation: dae[2]
+        })
+        clipPlanes.push(plane)
+        clipPlaneDepthAziElevs.push([...dae])
+    }
 
-  return {
-    clipPlanes,
-    clipPlaneDepthAziElevs
-  }
+    return {
+        clipPlanes,
+        clipPlaneDepthAziElevs
+    }
 }
 
 /**
  * Parameters for checking if clip plane drag should update the view
  */
 export interface ShouldUpdateClipPlaneDragParams {
-  isDragging: boolean
-  activeClipPlaneDepth: number
-  dragStartTileIndex: number
+    isDragging: boolean
+    activeClipPlaneDepth: number
+    dragStartTileIndex: number
 }
 
 /**
@@ -217,8 +211,8 @@ export interface ShouldUpdateClipPlaneDragParams {
  * @returns True if clip plane drag should be processed
  */
 export function shouldUpdateClipPlaneDrag(params: ShouldUpdateClipPlaneDragParams): boolean {
-  const { isDragging, activeClipPlaneDepth, dragStartTileIndex } = params
-  return isDragging && isClipPlaneActive(activeClipPlaneDepth) && dragStartTileIndex >= 0
+    const { isDragging, activeClipPlaneDepth, dragStartTileIndex } = params
+    return isDragging && isClipPlaneActive(activeClipPlaneDepth) && dragStartTileIndex >= 0
 }
 
 /**
@@ -226,7 +220,7 @@ export function shouldUpdateClipPlaneDrag(params: ShouldUpdateClipPlaneDragParam
  * @returns Default clip plane array [0, 0, 0, 2]
  */
 export function createDefaultClipPlane(): [number, number, number, number] {
-  return [...DEFAULT_CLIP_PLANE]
+    return [...DEFAULT_CLIP_PLANE]
 }
 
 /**
@@ -234,26 +228,26 @@ export function createDefaultClipPlane(): [number, number, number, number] {
  * @returns Default depth/azi/elev array [2, 0, 0]
  */
 export function createDefaultDepthAziElev(): [number, number, number] {
-  return [...DEFAULT_DEPTH_AZI_ELEV]
+    return [...DEFAULT_DEPTH_AZI_ELEV]
 }
 
 /**
  * Parameters for updating a single clip plane at a given index
  */
 export interface UpdateClipPlaneAtIndexParams {
-  clipPlanes: number[][]
-  clipPlaneDepthAziElevs: number[][]
-  index: number
-  depthAzimuthElevation: number[]
+    clipPlanes: number[][]
+    clipPlaneDepthAziElevs: number[][]
+    index: number
+    depthAzimuthElevation: number[]
 }
 
 /**
  * Result of updating a clip plane at an index
  */
 export interface UpdateClipPlaneAtIndexResult {
-  clipPlanes: number[][]
-  clipPlaneDepthAziElevs: number[][]
-  clipPlane: [number, number, number, number]
+    clipPlanes: number[][]
+    clipPlaneDepthAziElevs: number[][]
+    clipPlane: [number, number, number, number]
 }
 
 /**
@@ -263,31 +257,31 @@ export interface UpdateClipPlaneAtIndexResult {
  * @returns Updated arrays and the computed clip plane
  */
 export function updateClipPlaneAtIndex(params: UpdateClipPlaneAtIndexParams): UpdateClipPlaneAtIndexResult {
-  const { index, depthAzimuthElevation } = params
+    const { index, depthAzimuthElevation } = params
 
-  // Ensure arrays are large enough
-  const { clipPlanes, clipPlaneDepthAziElevs } = ensureClipPlaneArrays({
-    clipPlanes: params.clipPlanes,
-    clipPlaneDepthAziElevs: params.clipPlaneDepthAziElevs,
-    index
-  })
+    // Ensure arrays are large enough
+    const { clipPlanes, clipPlaneDepthAziElevs } = ensureClipPlaneArrays({
+        clipPlanes: params.clipPlanes,
+        clipPlaneDepthAziElevs: params.clipPlaneDepthAziElevs,
+        index
+    })
 
-  // Calculate the clip plane
-  const clipPlane = depthAziElevToClipPlane({
-    depth: depthAzimuthElevation[0],
-    azimuth: depthAzimuthElevation[1],
-    elevation: depthAzimuthElevation[2]
-  })
+    // Calculate the clip plane
+    const clipPlane = depthAziElevToClipPlane({
+        depth: depthAzimuthElevation[0],
+        azimuth: depthAzimuthElevation[1],
+        elevation: depthAzimuthElevation[2]
+    })
 
-  // Update the arrays
-  clipPlanes[index] = clipPlane
-  clipPlaneDepthAziElevs[index] = [...depthAzimuthElevation]
+    // Update the arrays
+    clipPlanes[index] = clipPlane
+    clipPlaneDepthAziElevs[index] = [...depthAzimuthElevation]
 
-  return {
-    clipPlanes,
-    clipPlaneDepthAziElevs,
-    clipPlane
-  }
+    return {
+        clipPlanes,
+        clipPlaneDepthAziElevs,
+        clipPlane
+    }
 }
 
 /**
@@ -296,5 +290,5 @@ export function updateClipPlaneAtIndex(params: UpdateClipPlaneAtIndexParams): Up
  * @returns True if valid (non-empty array)
  */
 export function isValidDepthAziElev(depthAzimuthElevation: number[] | undefined | null): boolean {
-  return !!depthAzimuthElevation && depthAzimuthElevation.length > 0
+    return !!depthAzimuthElevation && depthAzimuthElevation.length > 0
 }

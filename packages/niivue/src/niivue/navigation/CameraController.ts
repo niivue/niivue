@@ -11,11 +11,11 @@
  * @returns Normalized azimuth in 0-360 range
  */
 export function normalizeAzimuth(azimuth: number): number {
-  let normalized = azimuth % 360
-  if (normalized < 0) {
-    normalized += 360
-  }
-  return normalized
+    let normalized = azimuth % 360
+    if (normalized < 0) {
+        normalized += 360
+    }
+    return normalized
 }
 
 /**
@@ -26,25 +26,25 @@ export function normalizeAzimuth(azimuth: number): number {
  * @returns Clamped elevation value
  */
 export function clampElevation(elevation: number, minElevation = -90, maxElevation = 90): number {
-  return Math.max(minElevation, Math.min(maxElevation, elevation))
+    return Math.max(minElevation, Math.min(maxElevation, elevation))
 }
 
 /**
  * Parameters for calculating drag rotation (azimuth/elevation changes)
  */
 export interface CalculateDragRotationParams {
-  currentAzimuth: number
-  currentElevation: number
-  deltaX: number
-  deltaY: number
+    currentAzimuth: number
+    currentElevation: number
+    deltaX: number
+    deltaY: number
 }
 
 /**
  * Result of drag rotation calculation
  */
 export interface DragRotationResult {
-  azimuth: number
-  elevation: number
+    azimuth: number
+    elevation: number
 }
 
 /**
@@ -54,24 +54,24 @@ export interface DragRotationResult {
  * @returns New azimuth and elevation values
  */
 export function calculateDragRotation(params: CalculateDragRotationParams): DragRotationResult {
-  const { currentAzimuth, currentElevation, deltaX, deltaY } = params
+    const { currentAzimuth, currentElevation, deltaX, deltaY } = params
 
-  const newAzimuth = normalizeAzimuth(currentAzimuth + deltaX)
-  const newElevation = currentElevation + deltaY
+    const newAzimuth = normalizeAzimuth(currentAzimuth + deltaX)
+    const newElevation = currentElevation + deltaY
 
-  return {
-    azimuth: newAzimuth,
-    elevation: newElevation
-  }
+    return {
+        azimuth: newAzimuth,
+        elevation: newElevation
+    }
 }
 
 /**
  * Parameters for checking if drag should update camera rotation
  */
 export interface ShouldUpdateCameraRotationParams {
-  dx: number
-  dy: number
-  threshold?: number
+    dx: number
+    dy: number
+    threshold?: number
 }
 
 /**
@@ -80,18 +80,18 @@ export interface ShouldUpdateCameraRotationParams {
  * @returns true if drag should update camera
  */
 export function shouldUpdateCameraRotation(params: ShouldUpdateCameraRotationParams): boolean {
-  const { dx, dy, threshold = 1 } = params
-  return Math.abs(dx) >= threshold || Math.abs(dy) >= threshold
+    const { dx, dy, threshold = 1 } = params
+    return Math.abs(dx) >= threshold || Math.abs(dy) >= threshold
 }
 
 /**
  * Parameters for calculating keyboard rotation
  */
 export interface CalculateKeyboardRotationParams {
-  currentAzimuth: number
-  currentElevation: number
-  direction: 'azimuth_increase' | 'azimuth_decrease' | 'elevation_increase' | 'elevation_decrease'
-  step?: number
+    currentAzimuth: number
+    currentElevation: number
+    direction: 'azimuth_increase' | 'azimuth_decrease' | 'elevation_increase' | 'elevation_decrease'
+    step?: number
 }
 
 /**
@@ -100,30 +100,30 @@ export interface CalculateKeyboardRotationParams {
  * @returns New azimuth and elevation
  */
 export function calculateKeyboardRotation(params: CalculateKeyboardRotationParams): DragRotationResult {
-  const { currentAzimuth, currentElevation, direction, step = 1 } = params
+    const { currentAzimuth, currentElevation, direction, step = 1 } = params
 
-  let deltaX = 0
-  let deltaY = 0
+    let deltaX = 0
+    let deltaY = 0
 
-  switch (direction) {
-    case 'azimuth_increase':
-      deltaX = step
-      break
-    case 'azimuth_decrease':
-      deltaX = -step
-      break
-    case 'elevation_increase':
-      deltaY = step
-      break
-    case 'elevation_decrease':
-      deltaY = -step
-      break
-  }
+    switch (direction) {
+        case 'azimuth_increase':
+            deltaX = step
+            break
+        case 'azimuth_decrease':
+            deltaX = -step
+            break
+        case 'elevation_increase':
+            deltaY = step
+            break
+        case 'elevation_decrease':
+            deltaY = -step
+            break
+    }
 
-  return calculateDragRotation({
-    currentAzimuth,
-    currentElevation,
-    deltaX,
-    deltaY
-  })
+    return calculateDragRotation({
+        currentAzimuth,
+        currentElevation,
+        deltaX,
+        deltaY
+    })
 }

@@ -12,129 +12,129 @@ import { DRAG_MODE } from '../../nvdocument.js'
  * State for active drag mode
  */
 export interface ActiveDragModeState {
-  activeDragMode: DRAG_MODE
-  activeDragButton: number
+    activeDragMode: DRAG_MODE
+    activeDragButton: number
 }
 
 /**
  * Cleared drag mode state
  */
 export interface ClearedDragModeState {
-  activeDragMode: null
-  activeDragButton: null
+    activeDragMode: null
+    activeDragButton: null
 }
 
 /**
  * Angle measurement state
  */
 export interface AngleMeasurementState {
-  angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
-  angleFirstLine: [number, number, number, number]
+    angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
+    angleFirstLine: [number, number, number, number]
 }
 
 /**
  * Parameters for getting current drag mode
  */
 export interface GetCurrentDragModeParams {
-  activeDragMode: DRAG_MODE | null
-  fallbackDragMode: DRAG_MODE
+    activeDragMode: DRAG_MODE | null
+    fallbackDragMode: DRAG_MODE
 }
 
 /**
  * Parameters for calculating pan/zoom from drag
  */
 export interface CalculatePanZoomParams {
-  startMM: vec4 | number[]
-  endMM: vec4 | number[]
-  pan2DxyzmmAtMouseDown: vec4 | number[]
+    startMM: vec4 | number[]
+    endMM: vec4 | number[]
+    pan2DxyzmmAtMouseDown: vec4 | number[]
 }
 
 /**
  * Result of pan/zoom calculation
  */
 export interface PanZoomResult {
-  pan2Dxyzmm: [number, number, number, number]
+    pan2Dxyzmm: [number, number, number, number]
 }
 
 /**
  * Parameters for calculating 3D slicer zoom from drag
  */
 export interface CalculateSlicer3DZoomParams {
-  startY: number
-  endY: number
-  pan2DxyzmmAtMouseDown: vec4 | number[] | ArrayLike<number>
-  currentPan2Dxyzmm: vec4 | number[] | ArrayLike<number>
-  crosshairMM: number[] | ArrayLike<number>
-  yoke3Dto2DZoom: boolean
+    startY: number
+    endY: number
+    pan2DxyzmmAtMouseDown: vec4 | number[] | ArrayLike<number>
+    currentPan2Dxyzmm: vec4 | number[] | ArrayLike<number>
+    crosshairMM: number[] | ArrayLike<number>
+    yoke3Dto2DZoom: boolean
 }
 
 /**
  * Result of 3D slicer zoom calculation
  */
 export interface Slicer3DZoomResult {
-  zoom: number
-  pan2Dxyzmm: [number, number, number, number]
-  volScaleMultiplier?: number
+    zoom: number
+    pan2Dxyzmm: [number, number, number, number]
+    volScaleMultiplier?: number
 }
 
 /**
  * Parameters for calculating windowing adjustment
  */
 export interface CalculateWindowingParams {
-  x: number
-  y: number
-  windowX: number
-  windowY: number
-  currentCalMin: number
-  currentCalMax: number
-  globalMin: number
-  globalMax: number
+    x: number
+    y: number
+    windowX: number
+    windowY: number
+    currentCalMin: number
+    currentCalMax: number
+    globalMin: number
+    globalMax: number
 }
 
 /**
  * Result of windowing adjustment calculation
  */
 export interface WindowingAdjustmentResult {
-  calMin: number
-  calMax: number
-  windowX: number
-  windowY: number
+    calMin: number
+    calMax: number
+    windowX: number
+    windowY: number
 }
 
 /**
  * Parameters for calculating intensity range from voxel selection
  */
 export interface CalculateIntensityRangeParams {
-  xrange: [number, number]
-  yrange: [number, number]
-  zrange: [number, number]
-  dims: number[]
-  img: Float32Array | Float64Array | Int8Array | Int16Array | Int32Array | Uint8Array | Uint16Array | Uint32Array
+    xrange: [number, number]
+    yrange: [number, number]
+    zrange: [number, number]
+    dims: number[]
+    img: Float32Array | Float64Array | Int8Array | Int16Array | Int32Array | Uint8Array | Uint16Array | Uint32Array
 }
 
 /**
  * Result of intensity range calculation
  */
 export interface IntensityRangeResult {
-  lo: number
-  hi: number
-  hasVariation: boolean
+    lo: number
+    hi: number
+    hasVariation: boolean
 }
 
 /**
  * Map of string names to DRAG_MODE values
  */
 const DRAG_MODE_MAP: Record<string, DRAG_MODE> = {
-  none: DRAG_MODE.none,
-  contrast: DRAG_MODE.contrast,
-  measurement: DRAG_MODE.measurement,
-  angle: DRAG_MODE.angle,
-  pan: DRAG_MODE.pan,
-  slicer3D: DRAG_MODE.slicer3D,
-  callbackOnly: DRAG_MODE.callbackOnly,
-  roiSelection: DRAG_MODE.roiSelection,
-  crosshair: DRAG_MODE.crosshair,
-  windowing: DRAG_MODE.windowing
+    none: DRAG_MODE.none,
+    contrast: DRAG_MODE.contrast,
+    measurement: DRAG_MODE.measurement,
+    angle: DRAG_MODE.angle,
+    pan: DRAG_MODE.pan,
+    slicer3D: DRAG_MODE.slicer3D,
+    callbackOnly: DRAG_MODE.callbackOnly,
+    roiSelection: DRAG_MODE.roiSelection,
+    crosshair: DRAG_MODE.crosshair,
+    windowing: DRAG_MODE.windowing
 }
 
 /**
@@ -144,11 +144,11 @@ const DRAG_MODE_MAP: Record<string, DRAG_MODE> = {
  * @returns The corresponding DRAG_MODE value, or null if unknown string
  */
 export function parseDragModeString(mode: string | DRAG_MODE): DRAG_MODE | null {
-  if (typeof mode === 'string') {
-    const dragMode = DRAG_MODE_MAP[mode]
-    return dragMode !== undefined ? dragMode : null
-  }
-  return mode
+    if (typeof mode === 'string') {
+        const dragMode = DRAG_MODE_MAP[mode]
+        return dragMode !== undefined ? dragMode : null
+    }
+    return mode
 }
 
 /**
@@ -158,11 +158,11 @@ export function parseDragModeString(mode: string | DRAG_MODE): DRAG_MODE | null 
  * @returns The effective drag mode
  */
 export function getCurrentDragModeValue(params: GetCurrentDragModeParams): DRAG_MODE {
-  const { activeDragMode, fallbackDragMode } = params
-  if (activeDragMode !== null) {
-    return activeDragMode
-  }
-  return fallbackDragMode
+    const { activeDragMode, fallbackDragMode } = params
+    if (activeDragMode !== null) {
+        return activeDragMode
+    }
+    return fallbackDragMode
 }
 
 /**
@@ -171,10 +171,10 @@ export function getCurrentDragModeValue(params: GetCurrentDragModeParams): DRAG_
  * @returns State with null values for drag mode and button
  */
 export function createClearedDragModeState(): ClearedDragModeState {
-  return {
-    activeDragMode: null,
-    activeDragButton: null
-  }
+    return {
+        activeDragMode: null,
+        activeDragButton: null
+    }
 }
 
 /**
@@ -185,10 +185,10 @@ export function createClearedDragModeState(): ClearedDragModeState {
  * @returns Active drag mode state
  */
 export function createActiveDragModeState(dragMode: DRAG_MODE, button: number): ActiveDragModeState {
-  return {
-    activeDragMode: dragMode,
-    activeDragButton: button
-  }
+    return {
+        activeDragMode: dragMode,
+        activeDragButton: button
+    }
 }
 
 /**
@@ -200,10 +200,10 @@ export function createActiveDragModeState(dragMode: DRAG_MODE, button: number): 
  * @throws Error if array contains more than two values
  */
 export function calculateMinMaxVoxIdx(array: number[]): [number, number] {
-  if (array.length > 2) {
-    throw new Error('array must not contain more than two values')
-  }
-  return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))]
+    if (array.length > 2) {
+        throw new Error('array must not contain more than two values')
+    }
+    return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))]
 }
 
 /**
@@ -215,27 +215,27 @@ export function calculateMinMaxVoxIdx(array: number[]): [number, number] {
  * @returns Angle in degrees
  */
 export function calculateAngleBetweenLines(line1: number[], line2: number[]): number {
-  // For angle measurement, we need to calculate vectors from the intersection point
-  // The intersection point is the end of line1 (which is the start of line2)
-  const intersectionX = line1[2]
-  const intersectionY = line1[3]
-  const v1x = line1[0] - intersectionX
-  const v1y = line1[1] - intersectionY
-  const v2x = line2[2] - intersectionX
-  const v2y = line2[3] - intersectionY
-  const dot = v1x * v2x + v1y * v2y
-  const mag1 = Math.sqrt(v1x * v1x + v1y * v1y)
-  const mag2 = Math.sqrt(v2x * v2x + v2y * v2y)
-  // Avoid division by zero
-  if (mag1 === 0 || mag2 === 0) {
-    return 0
-  }
-  // Calculate angle in radians
-  const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)))
-  const angleRad = Math.acos(cosAngle)
-  // Convert to degrees
-  const angleDeg = angleRad * (180 / Math.PI)
-  return angleDeg
+    // For angle measurement, we need to calculate vectors from the intersection point
+    // The intersection point is the end of line1 (which is the start of line2)
+    const intersectionX = line1[2]
+    const intersectionY = line1[3]
+    const v1x = line1[0] - intersectionX
+    const v1y = line1[1] - intersectionY
+    const v2x = line2[2] - intersectionX
+    const v2y = line2[3] - intersectionY
+    const dot = v1x * v2x + v1y * v2y
+    const mag1 = Math.sqrt(v1x * v1x + v1y * v1y)
+    const mag2 = Math.sqrt(v2x * v2x + v2y * v2y)
+    // Avoid division by zero
+    if (mag1 === 0 || mag2 === 0) {
+        return 0
+    }
+    // Calculate angle in radians
+    const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)))
+    const angleRad = Math.acos(cosAngle)
+    // Convert to degrees
+    const angleDeg = angleRad * (180 / Math.PI)
+    return angleDeg
 }
 
 /**
@@ -244,10 +244,10 @@ export function calculateAngleBetweenLines(line1: number[], line2: number[]): nu
  * @returns Reset angle measurement state
  */
 export function createResetAngleMeasurementState(): AngleMeasurementState {
-  return {
-    angleState: 'none',
-    angleFirstLine: [0.0, 0.0, 0.0, 0.0]
-  }
+    return {
+        angleState: 'none',
+        angleFirstLine: [0.0, 0.0, 0.0, 0.0]
+    }
 }
 
 /**
@@ -259,7 +259,7 @@ export function createResetAngleMeasurementState(): AngleMeasurementState {
  * @returns Scaled [x, y] coordinates
  */
 export function calculateDragPosition(x: number, y: number, dpr: number): [number, number] {
-  return [x * dpr, y * dpr]
+    return [x * dpr, y * dpr]
 }
 
 /**
@@ -269,22 +269,17 @@ export function calculateDragPosition(x: number, y: number, dpr: number): [numbe
  * @returns Pan offset result
  */
 export function calculatePanZoomFromDrag(params: CalculatePanZoomParams): PanZoomResult {
-  const { startMM, endMM, pan2DxyzmmAtMouseDown } = params
+    const { startMM, endMM, pan2DxyzmmAtMouseDown } = params
 
-  // Calculate the delta between end and start positions
-  const v = vec4.create()
-  vec4.sub(v, endMM as vec4, startMM as vec4)
+    // Calculate the delta between end and start positions
+    const v = vec4.create()
+    vec4.sub(v, endMM as vec4, startMM as vec4)
 
-  const zoom = pan2DxyzmmAtMouseDown[3]
+    const zoom = pan2DxyzmmAtMouseDown[3]
 
-  return {
-    pan2Dxyzmm: [
-      pan2DxyzmmAtMouseDown[0] + zoom * v[0],
-      pan2DxyzmmAtMouseDown[1] + zoom * v[1],
-      pan2DxyzmmAtMouseDown[2] + zoom * v[2],
-      zoom
-    ]
-  }
+    return {
+        pan2Dxyzmm: [pan2DxyzmmAtMouseDown[0] + zoom * v[0], pan2DxyzmmAtMouseDown[1] + zoom * v[1], pan2DxyzmmAtMouseDown[2] + zoom * v[2], zoom]
+    }
 }
 
 /**
@@ -294,32 +289,27 @@ export function calculatePanZoomFromDrag(params: CalculatePanZoomParams): PanZoo
  * @returns 3D slicer zoom result
  */
 export function calculateSlicer3DZoomFromDrag(params: CalculateSlicer3DZoomParams): Slicer3DZoomResult {
-  const { startY, endY, pan2DxyzmmAtMouseDown, currentPan2Dxyzmm, crosshairMM, yoke3Dto2DZoom } = params
+    const { startY, endY, pan2DxyzmmAtMouseDown, currentPan2Dxyzmm, crosshairMM, yoke3Dto2DZoom } = params
 
-  let zoom = pan2DxyzmmAtMouseDown[3]
-  const y = endY - startY
-  const pixelScale = 0.01
-  zoom += y * pixelScale
-  zoom = Math.max(zoom, 0.1)
-  zoom = Math.min(zoom, 10.0)
+    let zoom = pan2DxyzmmAtMouseDown[3]
+    const y = endY - startY
+    const pixelScale = 0.01
+    zoom += y * pixelScale
+    zoom = Math.max(zoom, 0.1)
+    zoom = Math.min(zoom, 10.0)
 
-  const zoomChange = currentPan2Dxyzmm[3] - zoom
+    const zoomChange = currentPan2Dxyzmm[3] - zoom
 
-  const result: Slicer3DZoomResult = {
-    zoom,
-    pan2Dxyzmm: [
-      currentPan2Dxyzmm[0] + zoomChange * crosshairMM[0],
-      currentPan2Dxyzmm[1] + zoomChange * crosshairMM[1],
-      currentPan2Dxyzmm[2] + zoomChange * crosshairMM[2],
-      zoom
-    ]
-  }
+    const result: Slicer3DZoomResult = {
+        zoom,
+        pan2Dxyzmm: [currentPan2Dxyzmm[0] + zoomChange * crosshairMM[0], currentPan2Dxyzmm[1] + zoomChange * crosshairMM[1], currentPan2Dxyzmm[2] + zoomChange * crosshairMM[2], zoom]
+    }
 
-  if (yoke3Dto2DZoom) {
-    result.volScaleMultiplier = zoom
-  }
+    if (yoke3Dto2DZoom) {
+        result.volScaleMultiplier = zoom
+    }
 
-  return result
+    return result
 }
 
 /**
@@ -329,59 +319,59 @@ export function calculateSlicer3DZoomFromDrag(params: CalculateSlicer3DZoomParam
  * @returns Windowing result with adjusted cal_min and cal_max
  */
 export function calculateWindowingAdjustment(params: CalculateWindowingParams): WindowingAdjustmentResult {
-  const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params
+    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params
 
-  let mn = currentCalMin
-  let mx = currentCalMax
+    let mn = currentCalMin
+    let mx = currentCalMax
 
-  // Adjust level based on vertical movement
-  if (y < windowY) {
-    // increase level if mouse moves up
-    mn += 1
-    mx += 1
-  } else if (y > windowY) {
-    // decrease level if mouse moves down
-    mn -= 1
-    mx -= 1
-  }
+    // Adjust level based on vertical movement
+    if (y < windowY) {
+        // increase level if mouse moves up
+        mn += 1
+        mx += 1
+    } else if (y > windowY) {
+        // decrease level if mouse moves down
+        mn -= 1
+        mx -= 1
+    }
 
-  // Adjust window width based on horizontal movement
-  if (x > windowX) {
-    // increase window width if mouse moves right
-    mn -= 1
-    mx += 1
-  } else if (x < windowX) {
-    // decrease window width if mouse moves left
-    mn += 1
-    mx -= 1
-  }
+    // Adjust window width based on horizontal movement
+    if (x > windowX) {
+        // increase window width if mouse moves right
+        mn -= 1
+        mx += 1
+    } else if (x < windowX) {
+        // decrease window width if mouse moves left
+        mn += 1
+        mx -= 1
+    }
 
-  // Ensure window width is at least 1
-  if (mx - mn < 1) {
-    mx = mn + 1
-  }
+    // Ensure window width is at least 1
+    if (mx - mn < 1) {
+        mx = mn + 1
+    }
 
-  // Ensure min is not below global min
-  if (mn < globalMin) {
-    mn = globalMin
-  }
+    // Ensure min is not below global min
+    if (mn < globalMin) {
+        mn = globalMin
+    }
 
-  // Ensure max is not above global max
-  if (mx > globalMax) {
-    mx = globalMax
-  }
+    // Ensure max is not above global max
+    if (mx > globalMax) {
+        mx = globalMax
+    }
 
-  // Ensure min is not above max
-  if (mn > mx) {
-    mn = mx - 1
-  }
+    // Ensure min is not above max
+    if (mn > mx) {
+        mn = mx - 1
+    }
 
-  return {
-    calMin: mn,
-    calMax: mx,
-    windowX: x,
-    windowY: y
-  }
+    return {
+        calMin: mn,
+        calMax: mx,
+        windowX: x,
+        windowY: y
+    }
 }
 
 /**
@@ -391,35 +381,35 @@ export function calculateWindowingAdjustment(params: CalculateWindowingParams): 
  * @returns Intensity range result
  */
 export function calculateIntensityRangeFromVoxels(params: CalculateIntensityRangeParams): IntensityRangeResult {
-  const { xrange, yrange, zrange, dims, img } = params
+    const { xrange, yrange, zrange, dims, img } = params
 
-  let hi = -Number.MAX_VALUE
-  let lo = Number.MAX_VALUE
+    let hi = -Number.MAX_VALUE
+    let lo = Number.MAX_VALUE
 
-  const xdim = dims[1]
-  const ydim = dims[2]
+    const xdim = dims[1]
+    const ydim = dims[2]
 
-  for (let z = zrange[0]; z < zrange[1]; z++) {
-    const zi = z * xdim * ydim
-    for (let y = yrange[0]; y < yrange[1]; y++) {
-      const yi = y * xdim
-      for (let x = xrange[0]; x < xrange[1]; x++) {
-        const index = zi + yi + x
-        if (lo > img[index]) {
-          lo = img[index]
+    for (let z = zrange[0]; z < zrange[1]; z++) {
+        const zi = z * xdim * ydim
+        for (let y = yrange[0]; y < yrange[1]; y++) {
+            const yi = y * xdim
+            for (let x = xrange[0]; x < xrange[1]; x++) {
+                const index = zi + yi + x
+                if (lo > img[index]) {
+                    lo = img[index]
+                }
+                if (hi < img[index]) {
+                    hi = img[index]
+                }
+            }
         }
-        if (hi < img[index]) {
-          hi = img[index]
-        }
-      }
     }
-  }
 
-  return {
-    lo,
-    hi,
-    hasVariation: lo < hi
-  }
+    return {
+        lo,
+        hi,
+        hasVariation: lo < hi
+    }
 }
 
 /**
@@ -433,26 +423,26 @@ export function calculateIntensityRangeFromVoxels(params: CalculateIntensityRang
  * @returns Adjusted ranges
  */
 export function adjustRangesForConstantDimension(
-  startVox: ArrayLike<number>,
-  endVox: ArrayLike<number>,
-  xrange: [number, number],
-  yrange: [number, number],
-  zrange: [number, number]
+    startVox: ArrayLike<number>,
+    endVox: ArrayLike<number>,
+    xrange: [number, number],
+    yrange: [number, number],
+    zrange: [number, number]
 ): { xrange: [number, number]; yrange: [number, number]; zrange: [number, number] } {
-  const newXrange: [number, number] = [...xrange]
-  const newYrange: [number, number] = [...yrange]
-  const newZrange: [number, number] = [...zrange]
+    const newXrange: [number, number] = [...xrange]
+    const newYrange: [number, number] = [...yrange]
+    const newZrange: [number, number] = [...zrange]
 
-  // For constant dimension, add one so that the for loop runs at least once
-  if (startVox[0] - endVox[0] === 0) {
-    newXrange[1] = startVox[0] + 1
-  } else if (startVox[1] - endVox[1] === 0) {
-    newYrange[1] = startVox[1] + 1
-  } else if (startVox[2] - endVox[2] === 0) {
-    newZrange[1] = startVox[2] + 1
-  }
+    // For constant dimension, add one so that the for loop runs at least once
+    if (startVox[0] - endVox[0] === 0) {
+        newXrange[1] = startVox[0] + 1
+    } else if (startVox[1] - endVox[1] === 0) {
+        newYrange[1] = startVox[1] + 1
+    } else if (startVox[2] - endVox[2] === 0) {
+        newZrange[1] = startVox[2] + 1
+    }
 
-  return { xrange: newXrange, yrange: newYrange, zrange: newZrange }
+    return { xrange: newXrange, yrange: newYrange, zrange: newZrange }
 }
 
 /**
@@ -462,15 +452,15 @@ export function adjustRangesForConstantDimension(
  * @returns True if drag positions should be tracked
  */
 export function shouldTrackDragPositions(dragMode: DRAG_MODE): boolean {
-  return (
-    dragMode === DRAG_MODE.contrast ||
-    dragMode === DRAG_MODE.measurement ||
-    dragMode === DRAG_MODE.pan ||
-    dragMode === DRAG_MODE.slicer3D ||
-    dragMode === DRAG_MODE.callbackOnly ||
-    dragMode === DRAG_MODE.roiSelection ||
-    dragMode === DRAG_MODE.angle
-  )
+    return (
+        dragMode === DRAG_MODE.contrast ||
+        dragMode === DRAG_MODE.measurement ||
+        dragMode === DRAG_MODE.pan ||
+        dragMode === DRAG_MODE.slicer3D ||
+        dragMode === DRAG_MODE.callbackOnly ||
+        dragMode === DRAG_MODE.roiSelection ||
+        dragMode === DRAG_MODE.angle
+    )
 }
 
 /**
@@ -479,21 +469,19 @@ export function shouldTrackDragPositions(dragMode: DRAG_MODE): boolean {
  * @param currentState - Current angle measurement state
  * @returns Next state
  */
-export function getNextAngleMeasurementState(
-  currentState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'
-): 'drawing_first_line' | 'drawing_second_line' | 'complete' | 'none' {
-  switch (currentState) {
-    case 'none':
-      return 'drawing_first_line'
-    case 'drawing_first_line':
-      return 'drawing_second_line'
-    case 'drawing_second_line':
-      return 'complete'
-    case 'complete':
-      return 'drawing_first_line'
-    default:
-      return 'none'
-  }
+export function getNextAngleMeasurementState(currentState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete'): 'drawing_first_line' | 'drawing_second_line' | 'complete' | 'none' {
+    switch (currentState) {
+        case 'none':
+            return 'drawing_first_line'
+        case 'drawing_first_line':
+            return 'drawing_second_line'
+        case 'drawing_second_line':
+            return 'complete'
+        case 'complete':
+            return 'drawing_first_line'
+        default:
+            return 'none'
+    }
 }
 
 /**
@@ -503,7 +491,7 @@ export function getNextAngleMeasurementState(
  * @returns True if angle mode
  */
 export function isAngleDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.angle
+    return dragMode === DRAG_MODE.angle
 }
 
 /**
@@ -513,7 +501,7 @@ export function isAngleDragMode(dragMode: DRAG_MODE): boolean {
  * @returns True if contrast mode
  */
 export function isContrastDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.contrast
+    return dragMode === DRAG_MODE.contrast
 }
 
 /**
@@ -523,7 +511,7 @@ export function isContrastDragMode(dragMode: DRAG_MODE): boolean {
  * @returns True if measurement mode
  */
 export function isMeasurementDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.measurement
+    return dragMode === DRAG_MODE.measurement
 }
 
 /**
@@ -533,7 +521,7 @@ export function isMeasurementDragMode(dragMode: DRAG_MODE): boolean {
  * @returns True if pan mode
  */
 export function isPanDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.pan
+    return dragMode === DRAG_MODE.pan
 }
 
 /**
@@ -543,7 +531,7 @@ export function isPanDragMode(dragMode: DRAG_MODE): boolean {
  * @returns True if slicer3D mode
  */
 export function isSlicer3DDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.slicer3D
+    return dragMode === DRAG_MODE.slicer3D
 }
 
 /**
@@ -553,7 +541,7 @@ export function isSlicer3DDragMode(dragMode: DRAG_MODE): boolean {
  * @returns True if ROI selection mode
  */
 export function isRoiSelectionDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.roiSelection
+    return dragMode === DRAG_MODE.roiSelection
 }
 
 /**
@@ -563,5 +551,5 @@ export function isRoiSelectionDragMode(dragMode: DRAG_MODE): boolean {
  * @returns True if callback only mode
  */
 export function isCallbackOnlyDragMode(dragMode: DRAG_MODE): boolean {
-  return dragMode === DRAG_MODE.callbackOnly
+    return dragMode === DRAG_MODE.callbackOnly
 }

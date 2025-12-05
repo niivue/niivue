@@ -17,14 +17,14 @@ import * as zarr from 'zarrita'
  * and metadata about the array structure.
  */
 export interface ZarrLoadResult {
-  dataBuffer: ArrayBuffer
-  zarrData: {
-    data: ArrayBuffer
-    width: number
-    height: number
-    depth: number
-    channels?: number
-  }
+    dataBuffer: ArrayBuffer
+    zarrData: {
+        data: ArrayBuffer
+        width: number
+        height: number
+        depth: number
+        channels?: number
+    }
 }
 
 /**
@@ -44,71 +44,71 @@ export interface ZarrLoadResult {
  * ```
  */
 export async function loadZarrData(url: string): Promise<ZarrLoadResult> {
-  // Get the z, x, y slice indices from the query string
-  const urlParams = new URL(url).searchParams
-  const zIndex = urlParams.get('z')
-  const yIndex = urlParams.get('y')
-  const xIndex = urlParams.get('x')
+    // Get the z, x, y slice indices from the query string
+    const urlParams = new URL(url).searchParams
+    const zIndex = urlParams.get('z')
+    const yIndex = urlParams.get('y')
+    const xIndex = urlParams.get('x')
 
-  const zRange = zIndex ? zarr.slice(parseInt(zIndex), parseInt(zIndex) + 1) : null
-  const yRange = yIndex ? zarr.slice(parseInt(yIndex), parseInt(yIndex) + 1) : null
-  const xRange = xIndex ? zarr.slice(parseInt(xIndex), parseInt(xIndex) + 1) : null
+    const zRange = zIndex ? zarr.slice(parseInt(zIndex), parseInt(zIndex) + 1) : null
+    const yRange = yIndex ? zarr.slice(parseInt(yIndex), parseInt(yIndex) + 1) : null
+    const xRange = xIndex ? zarr.slice(parseInt(xIndex), parseInt(xIndex) + 1) : null
 
-  // Remove the query string from the original URL
-  const zarrUrl = url.split('?')[0]
+    // Remove the query string from the original URL
+    const zarrUrl = url.split('?')[0]
 
-  // If multiscale, must provide the full path to the zarr array data
-  const store = new zarr.FetchStore(zarrUrl)
-  const root = zarr.root(store)
+    // If multiscale, must provide the full path to the zarr array data
+    const store = new zarr.FetchStore(zarrUrl)
+    const root = zarr.root(store)
 
-  let arr
-  try {
-    // Try to resolve the full URL path first
-    arr = await zarr.open(root.resolve(url), { kind: 'array' })
-  } catch (e) {
-    // Fall back to opening the root directly
-    arr = await zarr.open(root, { kind: 'array' })
-  }
-
-  let view
-  if (arr.shape.length === 4) {
-    // 4D array (e.g., RGB/RGBA volume data)
-    const cRange = null // Load all channels
-
-    // Make sure we are not exceeding the array shape. If so, clamp to max
-    const zDim = arr.shape[2]
-    const yDim = arr.shape[1]
-    const xDim = arr.shape[0]
-
-    if (zRange && zRange[0] >= zDim) {
-      zRange[0] = zDim - 1
-    }
-    if (yRange && yRange[0] >= yDim) {
-      yRange[0] = yDim - 1
-    }
-    if (xRange && xRange[0] >= xDim) {
-      xRange[0] = xDim - 1
+    let arr
+    try {
+        // Try to resolve the full URL path first
+        arr = await zarr.open(root.resolve(url), { kind: 'array' })
+    } catch (e) {
+        // Fall back to opening the root directly
+        arr = await zarr.open(root, { kind: 'array' })
     }
 
-    view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
-  } else {
-    // 3D array
-    view = await zarr.get(arr, [xRange, yRange, zRange])
-  }
+    let view
+    if (arr.shape.length === 4) {
+        // 4D array (e.g., RGB/RGBA volume data)
+        const cRange = null // Load all channels
 
-  const dataBuffer = view.data as ArrayBuffer
-  const [height, width, zDim, cDim] = view.shape
+        // Make sure we are not exceeding the array shape. If so, clamp to max
+        const zDim = arr.shape[2]
+        const yDim = arr.shape[1]
+        const xDim = arr.shape[0]
 
-  const zarrData = {
-    data: dataBuffer,
-    width,
-    height,
-    depth: zDim,
-    channels: cDim
-  }
+        if (zRange && zRange[0] >= zDim) {
+            zRange[0] = zDim - 1
+        }
+        if (yRange && yRange[0] >= yDim) {
+            yRange[0] = yDim - 1
+        }
+        if (xRange && xRange[0] >= xDim) {
+            xRange[0] = xDim - 1
+        }
 
-  return {
-    dataBuffer,
-    zarrData
-  }
+        view = await zarr.get(arr, [xRange, yRange, zRange, cRange])
+    } else {
+        // 3D array
+        view = await zarr.get(arr, [xRange, yRange, zRange])
+    }
+
+    const dataBuffer = view.data as ArrayBuffer
+    const [height, width, zDim, cDim] = view.shape
+
+    const zarrData = {
+        data: dataBuffer,
+        width,
+        height,
+        depth: zDim,
+        channels: cDim
+    }
+
+    return {
+        dataBuffer,
+        zarrData
+    }
 }

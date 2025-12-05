@@ -2,10 +2,10 @@ import { NIFTI1, NIFTI2 } from 'nifti-reader-js'
 import { ImageType } from '@/nvimage/utils'
 
 export interface ParsedVolumeData {
-  hdr: NIFTI1 | NIFTI2 | null
-  imgRaw: ArrayBufferLike | null
-  imageType: ImageType
-  error?: string
+    hdr: NIFTI1 | NIFTI2 | null
+    imgRaw: ArrayBufferLike | null
+    imageType: ImageType
+    error?: string
 }
 
 export * as Afni from '@/nvimage/ImageReaders/afni'

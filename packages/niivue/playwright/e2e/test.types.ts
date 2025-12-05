@@ -1,16 +1,16 @@
 export interface NiivueTestOptions {
-  isAntiAlias: boolean
-  forceDevicePixelRatio: number
-  thumbnail?: string
+    isAntiAlias: boolean
+    forceDevicePixelRatio: number
+    thumbnail?: string
 }
 
 export interface FilePath {
-  filePath: string
+    filePath: string
 }
 
 export type NiivueTestOptionsFilePath = NiivueTestOptions & FilePath
 
 export const TEST_OPTIONS: NiivueTestOptions = {
-  isAntiAlias: false,
-  forceDevicePixelRatio: 0
+    isAntiAlias: false,
+    forceDevicePixelRatio: 0
 }

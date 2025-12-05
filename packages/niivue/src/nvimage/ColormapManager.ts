@@ -21,11 +21,11 @@ import * as IntensityCalibration from '@/nvimage/IntensityCalibration'
  * @param cm - Colormap name
  */
 export function setColormap(nvImage: NVImage, cm: string): void {
-  nvImage._colormap = cm
-  IntensityCalibration.calMinMax(nvImage)
-  if (nvImage.onColormapChange) {
-    nvImage.onColormapChange(nvImage)
-  }
+    nvImage._colormap = cm
+    IntensityCalibration.calMinMax(nvImage)
+    if (nvImage.onColormapChange) {
+        nvImage.onColormapChange(nvImage)
+    }
 }
 
 /**
@@ -37,7 +37,7 @@ export function setColormap(nvImage: NVImage, cm: string): void {
  * @param cm - ColorMap object
  */
 export function setColormapLabel(nvImage: NVImage, cm: ColorMap): void {
-  nvImage.colormapLabel = cmapper.makeLabelLut(cm)
+    nvImage.colormapLabel = cmapper.makeLabelLut(cm)
 }
 
 /**
@@ -47,7 +47,7 @@ export function setColormapLabel(nvImage: NVImage, cm: ColorMap): void {
  * @param url - URL to load colormap from
  */
 export async function setColormapLabelFromUrl(nvImage: NVImage, url: string): Promise<void> {
-  nvImage.colormapLabel = await cmapper.makeLabelLutFromUrl(url)
+    nvImage.colormapLabel = await cmapper.makeLabelLutFromUrl(url)
 }
 
 /**
@@ -57,7 +57,7 @@ export async function setColormapLabelFromUrl(nvImage: NVImage, url: string): Pr
  * @returns Colormap name
  */
 export function getColormap(nvImage: NVImage): string {
-  return nvImage._colormap
+    return nvImage._colormap
 }
 
 /**
@@ -67,7 +67,7 @@ export function getColormap(nvImage: NVImage): string {
  * @returns Opacity value
  */
 export function getOpacity(nvImage: NVImage): number {
-  return nvImage._opacity
+    return nvImage._opacity
 }
 
 /**
@@ -77,8 +77,8 @@ export function getOpacity(nvImage: NVImage): number {
  * @param opacity - Opacity value
  */
 export function setOpacity(nvImage: NVImage, opacity: number): void {
-  nvImage._opacity = opacity
-  if (nvImage.onOpacityChange) {
-    nvImage.onOpacityChange(nvImage)
-  }
+    nvImage._opacity = opacity
+    if (nvImage.onOpacityChange) {
+        nvImage.onOpacityChange(nvImage)
+    }
 }

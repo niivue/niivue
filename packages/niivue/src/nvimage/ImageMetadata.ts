@@ -20,24 +20,24 @@ import { NVImageFromUrlOptions } from '@/nvimage/utils'
  * @throws Error if header is undefined
  */
 export function getImageMetadata(nvImage: NVImage): ImageMetadataType {
-  if (!nvImage.hdr) {
-    throw new Error('hdr undefined')
-  }
-  const id = nvImage.id
-  const datatypeCode = nvImage.hdr.datatypeCode
-  const dims = nvImage.hdr.dims
-  const nx = dims[1]
-  const ny = dims[2]
-  const nz = dims[3]
-  const nt = Math.max(1, dims[4])
-  const pixDims = nvImage.hdr.pixDims
-  const dx = pixDims[1]
-  const dy = pixDims[2]
-  const dz = pixDims[3]
-  const dt = pixDims[4]
-  const bpv = Math.floor(nvImage.hdr.numBitsPerVoxel / 8)
+    if (!nvImage.hdr) {
+        throw new Error('hdr undefined')
+    }
+    const id = nvImage.id
+    const datatypeCode = nvImage.hdr.datatypeCode
+    const dims = nvImage.hdr.dims
+    const nx = dims[1]
+    const ny = dims[2]
+    const nz = dims[3]
+    const nt = Math.max(1, dims[4])
+    const pixDims = nvImage.hdr.pixDims
+    const dx = pixDims[1]
+    const dy = pixDims[2]
+    const dz = pixDims[3]
+    const dt = pixDims[4]
+    const bpv = Math.floor(nvImage.hdr.numBitsPerVoxel / 8)
 
-  return { id, datatypeCode, nx, ny, nz, nt, dx, dy, dz, dt, bpv }
+    return { id, datatypeCode, nx, ny, nz, nt, dx, dy, dz, dt, bpv }
 }
 
 /**
@@ -47,24 +47,24 @@ export function getImageMetadata(nvImage: NVImage): ImageMetadataType {
  * @returns Object containing current image options
  */
 export function getImageOptions(nvImage: NVImage): ImageFromUrlOptions {
-  const options = NVImageFromUrlOptions(
-    '', // url,
-    '', // urlImageData
-    nvImage.name, // name
-    nvImage._colormap, // colormap
-    nvImage.opacity, // opacity
-    nvImage.hdr!.cal_min, // cal_min
-    nvImage.hdr!.cal_max, // cal_max
-    nvImage.trustCalMinMax, // trustCalMinMax,
-    nvImage.percentileFrac, // percentileFrac
-    nvImage.ignoreZeroVoxels, // ignoreZeroVoxels
-    nvImage.useQFormNotSForm, // useQFormNotSForm
-    nvImage.colormapNegative, // colormapNegative
-    nvImage.frame4D,
-    nvImage.imageType, // imageType
-    nvImage.colormapType
-  )
-  return options
+    const options = NVImageFromUrlOptions(
+        '', // url,
+        '', // urlImageData
+        nvImage.name, // name
+        nvImage._colormap, // colormap
+        nvImage.opacity, // opacity
+        nvImage.hdr!.cal_min, // cal_min
+        nvImage.hdr!.cal_max, // cal_max
+        nvImage.trustCalMinMax, // trustCalMinMax,
+        nvImage.percentileFrac, // percentileFrac
+        nvImage.ignoreZeroVoxels, // ignoreZeroVoxels
+        nvImage.useQFormNotSForm, // useQFormNotSForm
+        nvImage.colormapNegative, // colormapNegative
+        nvImage.frame4D,
+        nvImage.imageType, // imageType
+        nvImage.colormapType
+    )
+    return options
 }
 
 /**
@@ -74,7 +74,7 @@ export function getImageOptions(nvImage: NVImage): ImageFromUrlOptions {
  * @param options - New options to apply to the image
  */
 export function applyOptionsUpdate(nvImage: NVImage, options: ImageFromUrlOptions): void {
-  nvImage.hdr!.cal_min = options.cal_min!
-  nvImage.hdr!.cal_max = options.cal_max!
-  Object.assign(nvImage, options)
+    nvImage.hdr!.cal_min = options.cal_min!
+    nvImage.hdr!.cal_max = options.cal_max!
+    Object.assign(nvImage, options)
 }
