@@ -37,9 +37,6 @@
     "build-release:mac": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run build:mac",
     "build-release:linux": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run build:linux"
   },
-  "build": {
-    "beforeBuild": "npm run build:deps"
-  },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
