@@ -8,6 +8,7 @@
     ],
     "scripts": {
         "build:niivue": "npm run build -w @niivue/niivue",
+        "build:desktop": "npm run build -w niivue-desktop",
         "build:docs": "npm run docs -w @niivue/niivue",
         "build:github": "npm run build:forTests -w @niivue/niivue",
         "build:docusaurus": "npm run build:docs && npm run build -w @niivue/docs",
@@ -29,7 +30,8 @@
         "lint": "npm run lint -w @niivue/niivue",
         "lint:fix": "npm run lint:fix -w @niivue/niivue",
         "lint:niivue": "npm run lint -w @niivue/niivue && npm run lint:ts -w @niivue/niivue",
-        "dev:uikit": "npm run dev -w @niivue/niivue-uikit"
+        "dev:uikit": "npm run dev -w @niivue/niivue-uikit",
+       
     },
     "author": "niivue authors",
     "license": "BSD-2-Clause",
