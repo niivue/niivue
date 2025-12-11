@@ -11,55 +11,55 @@ import { defineConfig } from 'vite'
 // bundle. This allows niivue to inject itself into html pages constructed
 // by saveAsHtml.
 function readAndZipNiivueUmd() {
-  const niivueUmd = readFileSync('./dist_intermediate/niivue.umd.js', 'utf8')
-  // use nodejs zlib to compress the string
-  const compressed = deflateSync(niivueUmd)
-  // convert to base64
-  const base64 = compressed.toString('base64')
-  // console.log(base64)
-  // convert to a string literal
-  const stringLiteral = String.raw`${base64}`
-  // return the string literal
-  return stringLiteral
+    const niivueUmd = readFileSync('./dist_intermediate/niivue.umd.js', 'utf8')
+    // use nodejs zlib to compress the string
+    const compressed = deflateSync(niivueUmd)
+    // convert to base64
+    const base64 = compressed.toString('base64')
+    // console.log(base64)
+    // convert to a string literal
+    const stringLiteral = String.raw`${base64}`
+    // return the string literal
+    return stringLiteral
 }
 
 const niivueUmd = readAndZipNiivueUmd()
 
 export default defineConfig({
-  define: {
-    __NIIVUE_VERSION__: JSON.stringify(process.env.npm_package_version),
-    __NIIVUE_UMD__: JSON.stringify(niivueUmd)
-  },
-  publicDir: process.env.NODE_ENV !== 'production',
-  root: '.',
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src')
+    define: {
+        __NIIVUE_VERSION__: JSON.stringify(process.env.npm_package_version),
+        __NIIVUE_UMD__: JSON.stringify(niivueUmd)
+    },
+    publicDir: process.env.NODE_ENV !== 'production',
+    root: '.',
+    resolve: {
+        alias: {
+            '@': resolve(__dirname, 'src')
+        }
+    },
+    server: {
+        open: '/src/index.html',
+        fs: {
+            // Allow serving files from one level up to the project root
+            allow: ['..']
+        }
+    },
+    optimizeDeps: {
+        include: ['nifti-reader-js']
+    },
+    plugins: [
+        commonjs({
+            include: /node_modules/
+        })
+    ],
+    build: {
+        outDir: './dist',
+        emptyOutDir: false,
+        lib: {
+            formats: ['umd'],
+            entry: resolve(__dirname, 'src/niivue/index.ts'),
+            name: 'niivue',
+            fileName: (format) => `niivue.${format}.js`
+        }
     }
-  },
-  server: {
-    open: '/src/index.html',
-    fs: {
-      // Allow serving files from one level up to the project root
-      allow: ['..']
-    }
-  },
-  optimizeDeps: {
-    include: ['nifti-reader-js']
-  },
-  plugins: [
-    commonjs({
-      include: /node_modules/
-    })
-  ],
-  build: {
-    outDir: './dist',
-    emptyOutDir: false,
-    lib: {
-      formats: ['umd'],
-      entry: resolve(__dirname, 'src/niivue/index.ts'),
-      name: 'niivue',
-      fileName: (format) => `niivue.${format}.js`
-    }
-  }
 })

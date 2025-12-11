@@ -19,7 +19,7 @@ const kDrawFunc = `
 }`
 
 const kRenderFunc =
-  `vec3 GetBackPosition(vec3 startPositionTex) {
+    `vec3 GetBackPosition(vec3 startPositionTex) {
 	vec3 startPosition = startPositionTex * volScale;
 	vec3 invR = 1.0 / rayDir;
 	vec3 tbot = invR * (vec3(0.0)-startPosition);
@@ -359,7 +359,7 @@ const kRenderTail = `
 
 // https://github.com/niivue/niivue/issues/679
 export const fragRenderSliceShader =
-  `#version 300 es
+    `#version 300 es
 #line 215
 #define MAX_CLIP_PLANES 6
 precision highp int;
@@ -385,8 +385,8 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  `
+    kRenderFunc +
+    `
 	void main() {
 	vec3 start = vColor;
 	gl_FragDepth = 1.0;
@@ -445,10 +445,10 @@ out vec4 fColor;
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
 	samplePos += deltaDir * ran; //jitter ray
 ` +
-  kRenderTail
+    kRenderTail
 
 export const fragRenderShader =
-  `#version 300 es
+    `#version 300 es
 #line 215
 #define MAX_CLIP_PLANES 6
 precision highp int;
@@ -475,9 +475,9 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  kRenderInit +
-  `while (samplePos.a <= len) {
+    kRenderFunc +
+    kRenderInit +
+    `while (samplePos.a <= len) {
 		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
 			samplePos += deltaDirFast;
 			continue;
@@ -498,7 +498,7 @@ out vec4 fColor;
 	if (firstHit.a < len)
 		backNearest = firstHit.a;
 ` +
-  kRenderTail
+    kRenderTail
 
 export const gradientOpacityLutCount = 192
 
@@ -535,10 +535,10 @@ in vec3 vColor;
 out vec4 fColor;
 `
 export const fragRenderGradientShader =
-  kFragRenderGradientDecl +
-  kRenderFunc +
-  kRenderInit +
-  `
+    kFragRenderGradientDecl +
+    kRenderFunc +
+    kRenderInit +
+    `
 	float startPos = samplePos.a;
 	float clipCloseThresh = 5.0 * deltaDir.a;
 	float clipClose = sampleRange.x;
@@ -589,13 +589,13 @@ export const fragRenderGradientShader =
 		samplePos += deltaDir; //advance ray position
 	}
 ` +
-  kRenderTail
+    kRenderTail
 
 export const fragRenderGradientValuesShader =
-  kFragRenderGradientDecl +
-  kRenderFunc +
-  kRenderInit +
-  `
+    kFragRenderGradientDecl +
+    kRenderFunc +
+    kRenderInit +
+    `
 	float startPos = samplePos.a;
 	//float clipClose = clipPos.a + 3.0 * deltaDir.a; //do not apply gradients near clip plane
 	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
@@ -617,7 +617,7 @@ export const fragRenderGradientValuesShader =
 		samplePos += deltaDir; //advance ray position
 	}
 ` +
-  kRenderTail
+    kRenderTail
 
 export const vertSliceMMShader = `#version 300 es
 #line 392
@@ -638,7 +638,7 @@ void main(void) {
 }`
 
 export const kFragSliceHead =
-  `#version 300 es
+    `#version 300 es
 #line 411
 precision highp int;
 precision highp float;
@@ -659,8 +659,8 @@ uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;
 ` +
-  kDrawFunc +
-  `
+    kDrawFunc +
+    `
 vec4 blendRGBA(vec4 foreground, vec4 background) {
   float alphaOut = foreground.a + background.a * (1.0 - foreground.a);
   vec3 colorOut = (foreground.rgb * foreground.a + background.rgb * background.a * (1.0 - foreground.a)) / alphaOut;
@@ -802,7 +802,7 @@ void main() {
 `
 
 export const fragSlice2DShader =
-  `#version 300 es
+    `#version 300 es
 #line 411
 precision highp int;
 precision highp float;
@@ -819,8 +819,8 @@ uniform highp sampler2D drawing;
 uniform highp sampler2D colormap;
 in vec3 texPos;
 out vec4 color;` +
-  kDrawFunc +
-  `void main() {
+    kDrawFunc +
+    `void main() {
 	//color = vec4(1.0, 0.0, 1.0, 1.0);return;
 	vec4 background = texture(volume, texPos.xy);
 	color = vec4(background.rgb, opacity);
@@ -872,8 +872,8 @@ export const kFragSliceTail = `	ocolor.a *= overlayAlpha;
 export const fragSliceMMShader = kFragSliceHead + kFragSliceTail
 
 export const fragSliceV1Shader =
-  kFragSliceHead +
-  `	if (ocolor.a > 0.0) {
+    kFragSliceHead +
+    `	if (ocolor.a > 0.0) {
 		//https://gamedev.stackexchange.com/questions/102889/is-it-possible-to-convert-vec4-to-int-in-glsl-using-opengl-es
 		uint alpha = uint(ocolor.a * 255.0);
 		vec3 xyzFlip = vec3(float((uint(1) & alpha) > uint(0)), float((uint(2) & alpha) > uint(0)), float((uint(4) & alpha) > uint(0)));
@@ -908,7 +908,7 @@ export const fragSliceV1Shader =
 		ocolor.rgb += (dx2-dx-(0.5 * pan)) * 1.0;
 	}
 ` +
-  kFragSliceTail
+    kFragSliceTail
 
 export const fragRectShader = `#version 300 es
 #line 480
@@ -2048,7 +2048,7 @@ void main() {
 }`
 
 export const fragVolumePickingShader =
-  `#version 300 es
+    `#version 300 es
 #line 1260
 #define MAX_CLIP_PLANES 6
 //precision highp int;
@@ -2072,8 +2072,8 @@ uniform int backgroundMasksOverlays;
 in vec3 vColor;
 out vec4 fColor;
 ` +
-  kRenderFunc +
-  `
+    kRenderFunc +
+    `
 void main() {
 	int id = 254;
 	vec3 start = vColor;

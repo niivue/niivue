@@ -3,8 +3,8 @@ name: Build desktop app
 on:
   push:
     paths:
-      - 'packages/niivue-desktop/**'
-      - '.github/workflows/build_desktop.yml'
+      - "packages/niivue-desktop/**"
+      - ".github/workflows/build_desktop.yml"
 
 jobs:
   release:
@@ -19,10 +19,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          cache: 'npm'
-          node-version: 20
+          cache: "npm"
+          node-version: 24
 
       - name: Install dependencies (workspace-aware)
         # use npm ci for reproducible installs; `--workspaces` ensures workspace symlinks are created

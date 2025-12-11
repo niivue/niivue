@@ -10,8 +10,6 @@ NiiVue is a web-based neuroimaging visualization library built on WebGL 2.0. It'
 
 ### Development
 ```bash
-npm run dev              # Start development server with hot reload
-npm run demo             # Build and serve demos locally
 npm run build:niivue     # Build core library
 npm run build:docs       # Build documentation site
 ```
@@ -165,3 +163,6 @@ TCK, TRK, TRX, TSF
 - NiiVue is WebGL-based and performance-critical
 - Shader modifications can significantly impact rendering performance
 - Always test with realistic medical imaging datasets
+
+## Git commits
+- Do not add claude as a co-author to git commits
