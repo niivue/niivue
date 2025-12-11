@@ -10,6 +10,7 @@ import defaultFontJSON from "./fonts/Roboto-Regular.json" assert { type: "json" 
 export { UIKRenderer } from './uikrenderer'
 export { UIKFont } from './assets/uikfont'
 export { UIKShader } from './uikshader'
+export { UIKSVG } from './assets/uiksvg'
 
 // Type definitions
 export * from './types'
