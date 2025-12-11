@@ -4,7 +4,7 @@
 type GII = object;
 ```
 
-Defined in: [nvmesh-types.ts:94](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L94)
+Defined in: [nvmesh-types.ts:85](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L85)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:94](https://github.com/niivue/niivue/blob/main/pack
 anatomicalStructurePrimary: string;
 ```
 
-Defined in: [nvmesh-types.ts:99](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L99)
+Defined in: [nvmesh-types.ts:90](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L90)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh-types.ts:99](https://github.com/niivue/niivue/blob/main/pack
 optional colormapLabel: LUT;
 ```
 
-Defined in: [nvmesh-types.ts:98](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L98)
+Defined in: [nvmesh-types.ts:89](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L89)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvmesh-types.ts:98](https://github.com/niivue/niivue/blob/main/pack
 optional indices: Uint32Array;
 ```
 
-Defined in: [nvmesh-types.ts:97](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L97)
+Defined in: [nvmesh-types.ts:88](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L88)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvmesh-types.ts:97](https://github.com/niivue/niivue/blob/main/pack
 optional positions: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:96](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L96)
+Defined in: [nvmesh-types.ts:87](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L87)
 
 ---
 
@@ -54,4 +54,4 @@ Defined in: [nvmesh-types.ts:96](https://github.com/niivue/niivue/blob/main/pack
 scalars: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:95](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L95)
+Defined in: [nvmesh-types.ts:86](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L86)

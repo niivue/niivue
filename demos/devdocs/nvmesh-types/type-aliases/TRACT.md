@@ -4,7 +4,7 @@
 type TRACT = object;
 ```
 
-Defined in: [nvmesh-types.ts:32](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L32)
+Defined in: [nvmesh-types.ts:23](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L23)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:32](https://github.com/niivue/niivue/blob/main/pack
 dps: ValuesArray;
 ```
 
-Defined in: [nvmesh-types.ts:35](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L35)
+Defined in: [nvmesh-types.ts:26](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L26)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh-types.ts:35](https://github.com/niivue/niivue/blob/main/pack
 offsetPt0: Uint32Array;
 ```
 
-Defined in: [nvmesh-types.ts:34](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L34)
+Defined in: [nvmesh-types.ts:25](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L25)
 
 ---
 
@@ -34,4 +34,4 @@ Defined in: [nvmesh-types.ts:34](https://github.com/niivue/niivue/blob/main/pack
 pts: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:33](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L33)
+Defined in: [nvmesh-types.ts:24](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L24)

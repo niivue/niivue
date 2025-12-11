@@ -8,7 +8,7 @@ function hdrToArrayBuffer(
 ): Uint8Array;
 ```
 
-Defined in: [nvimage/utils.ts:415](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L415)
+Defined in: [nvimage/utils.ts:407](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L407)
 
 ## Parameters
 

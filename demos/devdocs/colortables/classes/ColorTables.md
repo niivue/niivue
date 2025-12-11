@@ -124,7 +124,7 @@ Defined in: [colortables.ts:52](https://github.com/niivue/niivue/blob/main/packa
 makeDrawLut(name: string | ColorMap): LUT;
 ```
 
-Defined in: [colortables.ts:164](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L164)
+Defined in: [colortables.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L162)
 
 #### Parameters
 
@@ -172,7 +172,7 @@ makeLabelLutFromUrl(
 maxIdx: number): Promise<LUT>;
 ```
 
-Defined in: [colortables.ts:156](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L156)
+Defined in: [colortables.ts:154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L154)
 
 #### Parameters
 
@@ -200,7 +200,7 @@ makeLut(
    isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [colortables.ts:210](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L210)
+Defined in: [colortables.ts:208](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L208)
 
 #### Parameters
 

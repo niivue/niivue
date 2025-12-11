@@ -363,12 +363,10 @@ declare class NVImage {
     float32V1asRGBA(inImg: Float32Array): Uint8Array;
     loadImgV1(isFlipX?: boolean, isFlipY?: boolean, isFlipZ?: boolean): boolean;
     calculateOblique(): void;
-    THD_daxes_to_NIFTI(xyzDelta: number[], xyzOrigin: number[], orientSpecific: number[]): void;
-    SetPixDimFromSForm(): void;
     readECAT(buffer: ArrayBuffer): ArrayBuffer;
     readV16(buffer: ArrayBuffer): ArrayBuffer;
     readNPY(buffer: ArrayBuffer): Promise<ArrayBuffer>;
-    readNPZ(buffer: ArrayBuffer): Promise<ArrayBuffer>;
+    readNPZ(buffer: ArrayBuffer): Promise<ArrayBuffer | undefined>;
     imageDataFromArrayBuffer(buffer: ArrayBuffer): Promise<ImageData>;
     readBMP(buffer: ArrayBuffer): Promise<ArrayBuffer>;
     readZARR(buffer: ArrayBuffer, zarrData: unknown): Promise<ArrayBufferLike>;
@@ -1116,6 +1114,119 @@ type SyncOpts = {
     crosshair?: boolean;
     clipPlane?: boolean;
 };
+type UIData = {
+    mousedown: boolean;
+    touchdown: boolean;
+    mouseButtonLeftDown: boolean;
+    mouseButtonCenterDown: boolean;
+    mouseButtonRightDown: boolean;
+    mouseDepthPicker: boolean;
+    clickedTile: number;
+    pan2DxyzmmAtMouseDown: vec4;
+    prevX: number;
+    prevY: number;
+    currX: number;
+    currY: number;
+    currentTouchTime: number;
+    lastTouchTime: number;
+    touchTimer: NodeJS.Timeout | null;
+    doubleTouch: boolean;
+    isDragging: boolean;
+    dragStart: number[];
+    dragEnd: number[];
+    dragClipPlaneStartDepthAziElev: number[];
+    lastTwoTouchDistance: number;
+    multiTouchGesture: boolean;
+    dpr?: number;
+    max2D?: number;
+    max3D?: number;
+    windowX: number;
+    windowY: number;
+    activeDragMode: DRAG_MODE | null;
+    activeDragButton: number | null;
+    angleFirstLine: number[];
+    angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete';
+    activeClipPlaneIndex: number;
+};
+type FontMetrics = {
+    distanceRange: number;
+    size: number;
+    mets: Record<number, {
+        xadv: number;
+        uv_lbwh: number[];
+        lbwh: number[];
+    }>;
+};
+type ColormapListEntry = {
+    name: string;
+    min: number;
+    max: number;
+    isColorbarFromZero: boolean;
+    negative: boolean;
+    visible: boolean;
+    invert: boolean;
+};
+type Graph = {
+    LTWH: number[];
+    plotLTWH?: number[];
+    opacity: number;
+    vols: number[];
+    autoSizeMultiplanar: boolean;
+    normalizeValues: boolean;
+    isRangeCalMinMax: boolean;
+    backColor?: number[];
+    lineColor?: number[];
+    textColor?: number[];
+    lineThickness?: number;
+    gridLineThickness?: number;
+    lineAlpha?: number;
+    lines?: number[][];
+    selectedColumn?: number;
+    lineRGB?: number[][];
+};
+type Descriptive = {
+    mean: number;
+    stdev: number;
+    nvox: number;
+    volumeMM3: number;
+    volumeML: number;
+    min: number;
+    max: number;
+    meanNot0: number;
+    stdevNot0: number;
+    nvoxNot0: number;
+    minNot0: number;
+    maxNot0: number;
+    cal_min: number;
+    cal_max: number;
+    robust_min: number;
+    robust_max: number;
+    area: number | null;
+};
+type SliceScale = {
+    volScale: number[];
+    vox: number[];
+    longestAxis: number;
+    dimsMM: vec3;
+};
+type MvpMatrix2D = {
+    modelViewProjectionMatrix: mat4;
+    modelMatrix: mat4;
+    normalMatrix: mat4;
+    leftTopMM: number[];
+    fovMM: number[];
+};
+type MM = {
+    mnMM: vec3;
+    mxMM: vec3;
+    rotation: mat4;
+    fovMM: vec3;
+};
+type SaveImageOptions = {
+    filename: string;
+    isSaveDrawing: boolean;
+    volumeByIndex: number;
+};
 
 type ValuesArray = Array<{
     id: string;
@@ -1404,6 +1515,146 @@ declare class NVMesh {
     loadFromBase64({ base64, gl, name, opacity, rgba255, visible, layers }?: Partial<LoadFromBase64Params>): Promise<NVMesh>;
 }
 
+/**
+ * File loading and format detection utilities for Niivue.
+ * This module provides pure functions for file extension handling,
+ * format detection, custom loaders, and media URL management.
+ */
+
+/**
+ * DICOM loader input types
+ */
+type DicomLoaderInput$1 = ArrayBuffer | ArrayBuffer[] | File[];
+/**
+ * DICOM loader configuration
+ */
+type DicomLoader$1 = {
+    loader: (data: DicomLoaderInput$1) => Promise<Array<{
+        name: string;
+        data: ArrayBuffer;
+    }>>;
+    toExt: string;
+};
+/**
+ * Mesh data returned by custom mesh loaders
+ */
+interface MeshLoaderResult {
+    positions: Float32Array;
+    indices: Uint32Array;
+    colors?: Float32Array | null;
+}
+/**
+ * Custom file loader configuration.
+ * The loader function can return either:
+ * - ArrayBuffer for volume data
+ * - MeshLoaderResult for mesh data with positions and indices
+ */
+interface CustomLoader {
+    loader: (data: string | Uint8Array | ArrayBuffer) => Promise<any>;
+    toExt: string;
+}
+/**
+ * Collection of registered custom loaders by file extension
+ */
+interface LoaderRegistry {
+    [extension: string]: CustomLoader;
+}
+/**
+ * Mesh file extensions supported by Niivue
+ */
+declare const MESH_EXTENSIONS: string[];
+/**
+ * Options for getFileExt function
+ */
+interface GetFileExtOptions {
+    fullname: string;
+    upperCase?: boolean;
+}
+/**
+ * Extracts and normalizes the file extension, handling special cases like .gz and .cbor.
+ * @param options - Options containing fullname and optional upperCase flag
+ * @returns The normalized file extension
+ */
+declare function getFileExt(options: GetFileExtOptions): string;
+/**
+ * Extracts and normalizes the file extension, handling special cases like .gz and .cbor.
+ * @param fullname - The full filename or path
+ * @param upperCase - Whether to return uppercase extension (default: true)
+ * @returns The normalized file extension
+ */
+declare function getFileExt(fullname: string, upperCase?: boolean): string;
+/**
+ * Check if a URL/filename has a mesh file extension
+ * @param url - The URL or filename to check
+ * @returns True if the extension indicates a mesh file
+ */
+declare function isMeshExt(url: string): boolean;
+/**
+ * Get media (volume or mesh) by URL from a media URL map
+ * @param url - URL to search for
+ * @param mediaUrlMap - Map of media objects to URLs
+ * @returns The media object if found, undefined otherwise
+ */
+declare function getMediaByUrl(url: string, mediaUrlMap: Map<NVImage | NVMesh, string>): NVImage | NVMesh | undefined;
+/**
+ * Parameters for registerLoader
+ */
+interface RegisterLoaderParams {
+    loaders: LoaderRegistry;
+    loader: (data: string | Uint8Array | ArrayBuffer) => Promise<any>;
+    fileExt: string;
+    toExt: string;
+}
+/**
+ * Register a custom loader for a specific file extension
+ * @param params - Parameters object
+ * @returns New loader registry with the added loader
+ */
+declare function registerLoader(params: RegisterLoaderParams): LoaderRegistry;
+/**
+ * Get a loader for a specific file extension
+ * @param loaders - Loader registry
+ * @param ext - File extension to look up
+ * @returns The loader configuration if found, undefined otherwise
+ */
+declare function getLoader(loaders: LoaderRegistry, ext: string): CustomLoader | undefined;
+/**
+ * Check if a DICOM loader error should be thrown
+ * @param ext - File extension
+ * @returns True if extension is DCM
+ */
+declare function isDicomExtension(ext: string): boolean;
+/**
+ * Recursively traverse a file tree and collect all files
+ * @param item - FileSystemEntry to traverse
+ * @param path - Current path prefix
+ * @param fileArray - Array to accumulate files
+ * @returns Promise resolving to array of files with fullPath and _webkitRelativePath properties
+ */
+declare function traverseFileTree(item: FileSystemEntry, path: string, fileArray: File[]): Promise<File[]>;
+/**
+ * Read all entries from a directory
+ * @param directory - FileSystemDirectoryEntry to read
+ * @returns Array of file system entries (accumulated asynchronously)
+ */
+declare function readDirectory(directory: FileSystemDirectoryEntry): FileSystemEntry[];
+/**
+ * Read a file as a data URL
+ * @param entry - FileSystemFileEntry to read
+ * @returns Promise resolving to data URL string
+ */
+declare function readFileAsDataURL(entry: FileSystemFileEntry): Promise<string>;
+/**
+ * Simple drag enter event handler that prevents default behavior
+ * @param e - Mouse event
+ */
+declare function handleDragEnter(e: MouseEvent): void;
+/**
+ * Simple drag over event handler that prevents default behavior
+ * @param e - Mouse event
+ */
+declare function handleDragOver(e: MouseEvent): void;
+
 declare class Shader {
     program: WebGLProgram;
     uniforms: Record<string, WebGLUniformLocation | null>;
@@ -1548,121 +1799,8 @@ declare class NVMeshUtilities {
     static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
 }
 
-/**
- * Entry representing a single colormap with display properties.
- */
-type ColormapListEntry = {
-    name: string;
-    min: number;
-    max: number;
-    isColorbarFromZero: boolean;
-    negative: boolean;
-    visible: boolean;
-    invert: boolean;
-};
-type Graph = {
-    LTWH: number[];
-    plotLTWH?: number[];
-    opacity: number;
-    vols: number[];
-    autoSizeMultiplanar: boolean;
-    normalizeValues: boolean;
-    isRangeCalMinMax: boolean;
-    backColor?: number[];
-    lineColor?: number[];
-    textColor?: number[];
-    lineThickness?: number;
-    gridLineThickness?: number;
-    lineAlpha?: number;
-    lines?: number[][];
-    selectedColumn?: number;
-    lineRGB?: number[][];
-};
-type Descriptive = {
-    mean: number;
-    stdev: number;
-    nvox: number;
-    volumeMM3: number;
-    volumeML: number;
-    min: number;
-    max: number;
-    meanNot0: number;
-    stdevNot0: number;
-    nvoxNot0: number;
-    minNot0: number;
-    maxNot0: number;
-    cal_min: number;
-    cal_max: number;
-    robust_min: number;
-    robust_max: number;
-    area: number | null;
-};
-type SliceScale = {
-    volScale: number[];
-    vox: number[];
-    longestAxis: number;
-    dimsMM: vec3;
-};
-type MvpMatrix2D = {
-    modelViewProjectionMatrix: mat4;
-    modelMatrix: mat4;
-    normalMatrix: mat4;
-    leftTopMM: number[];
-    fovMM: number[];
-};
-type MM = {
-    mnMM: vec3;
-    mxMM: vec3;
-    rotation: mat4;
-    fovMM: vec3;
-};
-type UIData = {
-    mousedown: boolean;
-    touchdown: boolean;
-    mouseButtonLeftDown: boolean;
-    mouseButtonCenterDown: boolean;
-    mouseButtonRightDown: boolean;
-    mouseDepthPicker: boolean;
-    clickedTile: number;
-    pan2DxyzmmAtMouseDown: vec4;
-    prevX: number;
-    prevY: number;
-    currX: number;
-    currY: number;
-    currentTouchTime: number;
-    lastTouchTime: number;
-    touchTimer: NodeJS.Timeout | null;
-    doubleTouch: boolean;
-    isDragging: boolean;
-    dragStart: number[];
-    dragEnd: number[];
-    dragClipPlaneStartDepthAziElev: number[];
-    lastTwoTouchDistance: number;
-    multiTouchGesture: boolean;
-    dpr?: number;
-    max2D?: number;
-    max3D?: number;
-    windowX: number;
-    windowY: number;
-    activeDragMode: DRAG_MODE | null;
-    activeDragButton: number | null;
-    angleFirstLine: number[];
-    angleState: 'none' | 'drawing_first_line' | 'drawing_second_line' | 'complete';
-    activeClipPlaneIndex: number;
-};
-type SaveImageOptions = {
-    filename: string;
-    isSaveDrawing: boolean;
-    volumeByIndex: number;
-};
-type DicomLoaderInput = ArrayBuffer | ArrayBuffer[] | File[];
-type DicomLoader = {
-    loader: (data: DicomLoaderInput) => Promise<Array<{
-        name: string;
-        data: ArrayBuffer;
-    }>>;
-    toExt: string;
-};
+type DicomLoaderInput = DicomLoaderInput$1;
+type DicomLoader = DicomLoader$1;
 /**
  * Niivue can be attached to a canvas. An instance of Niivue contains methods for
  * loading and rendering NIFTI image data in a WebGL 2.0 context.
@@ -1672,8 +1810,8 @@ type DicomLoader = {
  */
 declare class Niivue {
     #private;
-    loaders: {};
-    dicomLoader: DicomLoader | null;
+    loaders: LoaderRegistry;
+    dicomLoader: DicomLoader$1 | null;
     canvas: HTMLCanvasElement | null;
     _gl: WebGL2RenderingContext | null;
     isBusy: boolean;
@@ -2234,7 +2372,7 @@ declare class Niivue {
      * @param array - an array of two values
      * @returns an array of two values representing the min and max voxel indices
      */
-    calculateMinMaxVoxIdx(array: number[]): number[];
+    calculateMinMaxVoxIdx(array: number[]): [number, number];
     /**
      * Updates cal_min and cal_max based on intensity range within the drag-selected voxel region.
      * Skips if no drag occurred, volume is missing, or selection has no variation.
@@ -2372,7 +2510,7 @@ declare class Niivue {
      * Adds `_webkitRelativePath` to each file for compatibility with tools like dcm2niix.
      * @internal
      */
-    traverseFileTree(item: any, path: string, fileArray: any): Promise<File[]>;
+    traverseFileTree(item: FileSystemEntry, path: string, fileArray: File[]): Promise<File[]>;
     /**
      * Recursively reads a directory and logs the File objects contained within.
      * Used for processing dropped folders via drag-and-drop.
@@ -2425,7 +2563,7 @@ declare class Niivue {
      * @param fileExt - The original file extension (e.g. 'iwi.cbor') to associate with this loader.
      * @param toExt - The target file extension Niivue should treat the file as (e.g. 'nii' or 'mz3').
      */
-    useLoader(loader: unknown, fileExt: string, toExt: string): void;
+    useLoader(loader: (data: string | Uint8Array | ArrayBuffer) => Promise<any>, fileExt: string, toExt: string): void;
     /**
      * Set a custom loader for handling DICOM files.
      */
@@ -2441,6 +2579,48 @@ declare class Niivue {
      * @internal
      */
     dropListener(e: DragEvent): Promise<void>;
+    /**
+     * Handle a URL drop by loading the appropriate resource type.
+     * @param url - The dropped URL
+     * @internal
+     */
+    private handleUrlDrop;
+    /**
+     * Handle file system file drops.
+     * @param items - The dropped DataTransferItemList
+     * @param shiftKey - Whether shift was held (add to existing)
+     * @param altKey - Whether alt was held (load as drawing overlay)
+     * @internal
+     */
+    private handleFilesDrop;
+    /**
+     * Handle a single file entry drop.
+     * @param entry - The file system entry
+     * @param pairedEntry - Optional paired data file (for AFNI/Analyze formats)
+     * @param altKey - Whether alt was held (load as drawing overlay)
+     * @internal
+     */
+    private handleFileEntry;
+    /**
+     * Handle mesh file drop.
+     * @internal
+     */
+    private handleMeshFileDrop;
+    /**
+     * Handle NVDocument file drop.
+     * @internal
+     */
+    private handleDocumentFileDrop;
+    /**
+     * Handle volume file drop with optional paired data.
+     * @internal
+     */
+    private handleVolumeFileDrop;
+    /**
+     * Handle directory drop (assumed to contain DICOM files).
+     * @internal
+     */
+    private handleDirectoryDrop;
     /**
      * insert a gap between slices of a mutliplanar view.
      * @param pixels - spacing between tiles of multiplanar view
@@ -3078,15 +3258,15 @@ declare class Niivue {
      */
     loadDocument(document: NVDocument): Promise<this>;
     /**
-   * generates JavaScript to load the current scene as a document
-   * @param canvasId - id of canvas NiiVue will be attached to
-   * @param esm - bundled version of NiiVue
-   * @example
-   * const javascript = this.generateLoadDocumentJavaScript("gl1");
-   * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-          ${javascript}</script></body></html>`;
-   * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
-   */
+ * generates JavaScript to load the current scene as a document
+ * @param canvasId - id of canvas NiiVue will be attached to
+ * @param esm - bundled version of NiiVue
+ * @example
+ * const javascript = this.generateLoadDocumentJavaScript("gl1");
+ * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
+        ${javascript}</script></body></html>`;
+ * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
+ */
     generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string>;
     /**
      * generates HTML of current scene
@@ -3222,11 +3402,6 @@ declare class Niivue {
      */
     createEmptyDrawing(): void;
     /**
-     * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
-     * @internal
-     */
-    r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture;
-    /**
      * dilate drawing so all voxels are colored.
      * works on drawing with multiple colors
      * @example niivue.drawGrowCut();
@@ -3280,7 +3455,7 @@ declare class Niivue {
     /**
      * Fills exterior regions of a 2D bitmap, marking outside voxels with 2
      * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
-     * uses first-in, first out queue for storage
+     * Uses first-in, first-out queue for storage.
      * @internal
      */
     floodFillSectionFIFO(img2D: Uint8Array, dims2D: readonly number[], minPt: readonly number[], maxPt: readonly number[]): void;
@@ -3313,57 +3488,6 @@ declare class Niivue {
      * @internal
      */
     r8Tex2D(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
-    /**
-     * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
-     * @internal
-     */
-    r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
-    /**
-     * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
-     * @internal
-     */
-    rgbaTex2D(texID: WebGLTexture | null, activeID: number, dims: number[], data?: Uint8Array | null, isFlipVertical?: boolean): WebGLTexture | null;
-    /**
-     * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
-     * @internal
-     */
-    rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
-    /**
-     * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
-     * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
-     * @internal
-     */
-    rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
-    /**
-     * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
-     * @internal
-     */
-    requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
-    /**
-     * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
-     * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
-     * Automatically handles CORS and draws scene if needed.
-     * @internal
-     */
-    loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null>;
-    /**
-     * Loads a font stored as a PNG bitmap into texture unit 3.
-     * @internal
-     */
-    loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>;
-    /**
-     * Loads a PNG bitmap into texture unit 4.
-     * @internal
-     */
-    loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null>;
-    /**
-     * Load matcap for illumination model.
-     * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
-     * @example
-     * niivue.loadMatCapTexture("Cortex");
-     * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
-     */
-    loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null>;
     /**
      * Initializes font metrics from loaded font data.
      * @internal
@@ -3456,7 +3580,7 @@ declare class Niivue {
     createCustomMeshShader(fragmentShaderText: string, name?: string): {
         Name: string;
         Frag: string;
-        shader: Shader;
+        shader?: Shader;
     };
     /**
      * Install a special shader for 2D slice views
@@ -3643,26 +3767,6 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
      */
     createConnectedLabelImage(id: string, conn?: number, binarize?: boolean, onlyLargestClusterPerClass?: boolean): Promise<NVImage>;
-    /**
-     * Scales and crops a Float32 image to Uint8 range.
-     * @internal
-     */
-    scalecropUint8(img32: Float32Array, dst_min: number, dst_max: number, src_min: number, scale: number): Promise<Uint8Array>;
-    /**
-     * Scales and crops a Float32 image to a specified range.
-     * @internal
-     */
-    scalecropFloat32(img32: Float32Array, dst_min: number, dst_max: number, src_min: number, scale: number): Promise<Float32Array>;
-    /**
-     * Computes offset and scale to robustly rescale image intensities to a target range.
-     * @internal
-     */
-    getScale(volume: NVImage, dst_min?: number, dst_max?: number, f_low?: number, f_high?: number): [number, number];
-    /**
-     * Computes output affine, voxel-to-voxel transform, and its inverse for resampling.
-     * @internal
-     */
-    conformVox2Vox(inDims: number[], inAffine: number[], outDim?: number, outMM?: number, toRAS?: boolean): [mat4, mat4, mat4];
     /**
      * Create a binary NIfTI file as a Uint8Array, including header and image data
      * @param dims - image dimensions [x, y, z]
@@ -4353,11 +4457,6 @@ declare class Niivue {
      */
     canvasPos2frac(canvasPos: number[]): vec3;
     /**
-     * Convert fractional volume coordinates to canvas pixel coordinates.
-     * Returns the first valid screen slice that contains the fractional coordinates.
-     * @internal
-     */
-    /**
      * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
      * Returns both canvas position and the tile index for validation.
      * @internal
@@ -4366,6 +4465,11 @@ declare class Niivue {
         pos: number[];
         tileIndex: number;
     } | null;
+    /**
+     * Convert fractional volume coordinates to canvas pixel coordinates.
+     * Returns the first valid screen slice that contains the fractional coordinates.
+     * @internal
+     */
     frac2canvasPos(frac: vec3): number[] | null;
     /**
      * Calculates scaled slice dimensions and position within the canvas.
@@ -4429,7 +4533,7 @@ declare class Niivue {
      */
     private getBoundsRegionCSS;
     /**
-     * Returns true if a mouse/touch event happened inside this instance’s bounds.
+     * Returns true if a mouse/touch event happened inside this instance's bounds.
      */
     eventInBounds(evt: MouseEvent | Touch | TouchEvent): boolean;
     /**
@@ -4477,6 +4581,62 @@ declare class Niivue {
      */
     drawScene(): string | void;
     /**
+     * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
+     * @internal
+     */
+    r8Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
+     * @internal
+     */
+    r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture;
+    /**
+     * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
+     * @internal
+     */
+    rgbaTex2D(texID: WebGLTexture | null, activeID: number, dims: number[], data?: Uint8Array | null, isFlipVertical?: boolean): WebGLTexture | null;
+    /**
+     * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
+     * @internal
+     */
+    rgbaTex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
+     * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
+     * @internal
+     */
+    rgba16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], isInit?: boolean): WebGLTexture | null;
+    /**
+     * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
+     * @internal
+     */
+    requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): void;
+    /**
+     * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
+     * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
+     * Automatically handles CORS and draws scene if needed.
+     * @internal
+     */
+    loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null>;
+    /**
+     * Loads a font stored as a PNG bitmap into texture unit 3.
+     * @internal
+     */
+    loadFontTexture(fontUrl: string): Promise<WebGLTexture | null>;
+    /**
+     * Loads a PNG bitmap into texture unit 4.
+     * @internal
+     */
+    loadBmpTexture(bmpUrl: string): Promise<WebGLTexture | null>;
+    /**
+     * Load matcap for illumination model.
+     * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
+     * @example
+     * niivue.loadMatCapTexture("Cortex");
+     * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
+     */
+    loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture | null>;
+    /**
      * Getter for WebGL2 rendering context; throws error if context is unavailable.
      * @internal
      */
@@ -4511,4 +4671,4 @@ declare class Niivue {
     }): void;
 }
 
-export { COLORMAP_TYPE, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, DEFAULT_OPTIONS, DRAG_MODE, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, MULTIPLANAR_TYPE, type MouseEventConfig, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, SHOW_RENDER, SLICE_TYPE, type Scene, type SyncOpts, type TouchEventConfig, type Volume, cmapper, ColorTables as colortables };
+export { COLORMAP_TYPE, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, cmapper, ColorTables as colortables, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, isDicomExtension, isMeshExt, readDirectory, readFileAsDataURL, registerLoader, traverseFileTree };

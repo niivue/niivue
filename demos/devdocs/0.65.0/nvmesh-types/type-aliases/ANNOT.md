@@ -9,4 +9,4 @@ type ANNOT =
     };
 ```
 
-Defined in: [nvmesh-types.ts:72](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L72)
+Defined in: [nvmesh-types.ts:63](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L63)

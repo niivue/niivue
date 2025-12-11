@@ -9,4 +9,4 @@ type MGH =
     };
 ```
 
-Defined in: [nvmesh-types.ts:102](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L102)
+Defined in: [nvmesh-types.ts:93](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L93)

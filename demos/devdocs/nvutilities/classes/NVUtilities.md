@@ -1,6 +1,6 @@
 # Class: NVUtilities
 
-Defined in: [nvutilities.ts:250](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L250)
+Defined in: [nvutilities.ts:240](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L240)
 
 ## Constructors
 
@@ -22,7 +22,7 @@ new NVUtilities(): NVUtilities;
 static arrayBufferToBase64(arrayBuffer: ArrayBuffer): string;
 ```
 
-Defined in: [nvutilities.ts:251](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L251)
+Defined in: [nvutilities.ts:241](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L241)
 
 #### Parameters
 
@@ -42,7 +42,7 @@ Defined in: [nvutilities.ts:251](https://github.com/niivue/niivue/blob/main/pack
 static arraysAreEqual(a: unknown[], b: unknown[]): boolean;
 ```
 
-Defined in: [nvutilities.ts:649](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L649)
+Defined in: [nvutilities.ts:631](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L631)
 
 #### Parameters
 
@@ -63,7 +63,7 @@ Defined in: [nvutilities.ts:649](https://github.com/niivue/niivue/blob/main/pack
 static b64toUint8(base64: string): Uint8Array;
 ```
 
-Defined in: [nvutilities.ts:376](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L376)
+Defined in: [nvutilities.ts:359](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L359)
 
 #### Parameters
 
@@ -83,7 +83,7 @@ Defined in: [nvutilities.ts:376](https://github.com/niivue/niivue/blob/main/pack
 static blobToBase64(blob: Blob): Promise<string>;
 ```
 
-Defined in: [nvutilities.ts:469](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L469)
+Defined in: [nvutilities.ts:452](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L452)
 
 #### Parameters
 
@@ -103,7 +103,7 @@ Defined in: [nvutilities.ts:469](https://github.com/niivue/niivue/blob/main/pack
 static compress(data: Uint8Array, format: CompressionFormat): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvutilities.ts:557](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L557)
+Defined in: [nvutilities.ts:540](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L540)
 
 #### Parameters
 
@@ -124,7 +124,7 @@ Defined in: [nvutilities.ts:557](https://github.com/niivue/niivue/blob/main/pack
 static compressStringToArrayBuffer(input: string): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvutilities.ts:573](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L573)
+Defined in: [nvutilities.ts:556](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L556)
 
 #### Parameters
 
@@ -144,7 +144,7 @@ Defined in: [nvutilities.ts:573](https://github.com/niivue/niivue/blob/main/pack
 static compressToBase64String(string: string): Promise<string>;
 ```
 
-Defined in: [nvutilities.ts:488](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L488)
+Defined in: [nvutilities.ts:471](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L471)
 
 #### Parameters
 
@@ -164,7 +164,7 @@ Defined in: [nvutilities.ts:488](https://github.com/niivue/niivue/blob/main/pack
 static decompress(data: Uint8Array): Promise<Uint8Array>;
 ```
 
-Defined in: [nvutilities.ts:256](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L256)
+Defined in: [nvutilities.ts:246](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L246)
 
 #### Parameters
 
@@ -184,7 +184,7 @@ Defined in: [nvutilities.ts:256](https://github.com/niivue/niivue/blob/main/pack
 static decompressArrayBuffer(buffer: ArrayBuffer): Promise<string>;
 ```
 
-Defined in: [nvutilities.ts:644](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L644)
+Defined in: [nvutilities.ts:626](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L626)
 
 #### Parameters
 
@@ -204,7 +204,7 @@ Defined in: [nvutilities.ts:644](https://github.com/niivue/niivue/blob/main/pack
 static decompressBase64String(base64: string): Promise<string>;
 ```
 
-Defined in: [nvutilities.ts:477](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L477)
+Defined in: [nvutilities.ts:460](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L460)
 
 #### Parameters
 
@@ -224,7 +224,7 @@ Defined in: [nvutilities.ts:477](https://github.com/niivue/niivue/blob/main/pack
 static decompressToBuffer(data: Uint8Array): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvutilities.ts:274](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L274)
+Defined in: [nvutilities.ts:260](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L260)
 
 #### Parameters
 
@@ -247,7 +247,7 @@ static download(
    contentType: string): void;
 ```
 
-Defined in: [nvutilities.ts:447](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L447)
+Defined in: [nvutilities.ts:430](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L430)
 
 #### Parameters
 
@@ -269,7 +269,7 @@ Defined in: [nvutilities.ts:447](https://github.com/niivue/niivue/blob/main/pack
 static isArrayBufferCompressed(buffer: ArrayBuffer): boolean;
 ```
 
-Defined in: [nvutilities.ts:578](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L578)
+Defined in: [nvutilities.ts:561](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L561)
 
 #### Parameters
 
@@ -292,7 +292,7 @@ static range(
    step: number): number[];
 ```
 
-Defined in: [nvutilities.ts:661](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L661)
+Defined in: [nvutilities.ts:643](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L643)
 
 Generate a pre-filled number array.
 
@@ -318,7 +318,7 @@ filled number array
 static readFileAsync(file: Blob): Promise<ArrayBuffer>;
 ```
 
-Defined in: [nvutilities.ts:456](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L456)
+Defined in: [nvutilities.ts:439](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L439)
 
 #### Parameters
 
@@ -338,7 +338,7 @@ Defined in: [nvutilities.ts:456](https://github.com/niivue/niivue/blob/main/pack
 static readMatV4(buffer: ArrayBuffer, isReplaceDots: boolean): Promise<Record<string, TypedNumberArray>>;
 ```
 
-Defined in: [nvutilities.ts:279](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L279)
+Defined in: [nvutilities.ts:265](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L265)
 
 #### Parameters
 
@@ -359,7 +359,7 @@ Defined in: [nvutilities.ts:279](https://github.com/niivue/niivue/blob/main/pack
 static sph2cartDeg(azimuth: number, elevation: number): number[];
 ```
 
-Defined in: [nvutilities.ts:673](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L673)
+Defined in: [nvutilities.ts:655](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L655)
 
 convert spherical AZIMUTH, ELEVATION to Cartesian
 
@@ -390,7 +390,7 @@ xyz = NVUtilities.sph2cartDeg(42, 42);
 static strFromU8(dat: Uint8Array, latin1?: boolean): string;
 ```
 
-Defined in: [nvutilities.ts:595](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L595)
+Defined in: [nvutilities.ts:578](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L578)
 
 Converts a Uint8Array to a string (101arrowz/fflate: MIT License)
 
@@ -415,7 +415,7 @@ The original UTF-8/Latin-1 string
 static strToU8(str: string, latin1?: boolean): Uint8Array;
 ```
 
-Defined in: [nvutilities.ts:501](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L501)
+Defined in: [nvutilities.ts:484](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L484)
 
 Converts a string into a Uint8Array for use with compression/decompression methods (101arrowz/fflate: MIT License)
 
@@ -440,7 +440,7 @@ The string encoded in UTF-8/Latin-1 binary
 static uint8tob64(bytes: Uint8Array): string;
 ```
 
-Defined in: [nvutilities.ts:394](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L394)
+Defined in: [nvutilities.ts:377](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L377)
 
 #### Parameters
 
@@ -460,7 +460,7 @@ Defined in: [nvutilities.ts:394](https://github.com/niivue/niivue/blob/main/pack
 static vox2mm(XYZ: number[], mtx: mat4): vec3;
 ```
 
-Defined in: [nvutilities.ts:690](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L690)
+Defined in: [nvutilities.ts:672](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L672)
 
 #### Parameters
 

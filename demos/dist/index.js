@@ -5343,7 +5343,7 @@ var package_default = {
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-tsdoc": "^0.3.0",
     express: "^4.19.2",
-    "happy-dom": "^15.11.6",
+    "happy-dom": "^20.0.11",
     "http-server": "^14.1.1",
     prettier: "^3.3.3",
     "regenerator-runtime": "^0.14.1",
@@ -5353,12 +5353,32 @@ var package_default = {
     "typedoc-docusaurus-theme": "^1.4.0",
     "typedoc-plugin-markdown": "^4.7.0",
     typescript: "^5.5.3",
-    vite: "^5.3.4",
+    vite: "^7.2.7",
     vitest: "^3.1.3"
   },
   optionalDependencies: {
     "@rollup/rollup-linux-x64-gnu": "^4.18.1"
   }
+};
+
+// src/niivue/texture-constants.ts
+var TEXTURE_CONSTANTS = {
+  TEXTURE0_BACK_VOL: 33984,
+  TEXTURE1_COLORMAPS: 33985,
+  TEXTURE2_OVERLAY_VOL: 33986,
+  TEXTURE3_FONT: 33987,
+  TEXTURE5_MATCAP: 33989,
+  TEXTURE6_GRADIENT: 33990,
+  TEXTURE7_DRAW: 33991,
+  TEXTURE8_PAQD: 33992,
+  // subsequent textures only used transiently
+  _TEXTURE8_GRADIENT_TEMP: 33992,
+  TEXTURE9_ORIENT: 33993,
+  TEXTURE11_GC_BACK: 33995,
+  TEXTURE12_GC_STRENGTH0: 33996,
+  TEXTURE13_GC_STRENGTH1: 33997,
+  TEXTURE14_GC_LABEL0: 33998,
+  TEXTURE15_GC_LABEL1: 33999
 };
 
 // src/orientCube.ts
@@ -6414,12 +6434,7 @@ var _NiivueObject3D = class _NiivueObject3D {
     this.vao = vao;
     this.mode = mode;
     this.id = id;
-    this.colorId = [
-      (id >> 0 & 255) / 255,
-      (id >> 8 & 255) / 255,
-      (id >> 16 & 255) / 255,
-      (id >> 24 & 255) / 255
-    ];
+    this.colorId = [(id >> 0 & 255) / 255, (id >> 8 & 255) / 255, (id >> 16 & 255) / 255, (id >> 24 & 255) / 255];
   }
 };
 __publicField(_NiivueObject3D, "BLEND", 1);
@@ -6429,14 +6444,7 @@ __publicField(_NiivueObject3D, "CULL_BACK", 8);
 __publicField(_NiivueObject3D, "ENABLE_DEPTH_TEST", 16);
 __publicField(_NiivueObject3D, "generateCrosshairs", function(gl, id, xyzMM, xyzMin, xyzMax, radius, sides = 20, gap = 0) {
   const geometry = _NiivueObject3D.generateCrosshairsGeometry(gl, xyzMM, xyzMin, xyzMax, radius, sides, gap);
-  return new _NiivueObject3D(
-    id,
-    geometry.vertexBuffer,
-    gl.TRIANGLES,
-    geometry.indexCount,
-    geometry.indexBuffer,
-    geometry.vao
-  );
+  return new _NiivueObject3D(id, geometry.vertexBuffer, gl.TRIANGLES, geometry.indexCount, geometry.indexBuffer, geometry.vao);
 });
 // not included in public docs
 __publicField(_NiivueObject3D, "generateCrosshairsGeometry", function(gl, xyzMM, xyzMin, xyzMax, radius, sides = 20, gap = 0) {
@@ -6627,7 +6635,7 @@ __publicField(_NiivueObject3D, "makeSphere", function(vertices, indices, radius,
     0,
     -1
   ];
-  const idx = [
+  const idx2 = [
     0,
     1,
     2,
@@ -6689,9 +6697,9 @@ __publicField(_NiivueObject3D, "makeSphere", function(vertices, indices, radius,
     6,
     1
   ];
-  _NiivueObject3D.subdivide(vtx, idx);
-  _NiivueObject3D.subdivide(vtx, idx);
-  vtx = _NiivueObject3D.weldVertices(vtx, idx);
+  _NiivueObject3D.subdivide(vtx, idx2);
+  _NiivueObject3D.subdivide(vtx, idx2);
+  vtx = _NiivueObject3D.weldVertices(vtx, idx2);
   for (let i = 0; i < vtx.length; i++) {
     vtx[i] = vtx[i] * radius;
   }
@@ -6706,10 +6714,10 @@ __publicField(_NiivueObject3D, "makeSphere", function(vertices, indices, radius,
     j++;
   }
   const idx0 = Math.floor(vertices.length / 3);
-  for (let i = 0; i < idx.length; i++) {
-    idx[i] = idx[i] + idx0;
+  for (let i = 0; i < idx2.length; i++) {
+    idx2[i] = idx2[i] + idx0;
   }
-  indices.push(...idx);
+  indices.push(...idx2);
   vertices.push(...vtx);
 });
 __publicField(_NiivueObject3D, "makeCylinder", function(vertices, indices, start, dest, radius, sides = 20, endcaps = true) {
@@ -6730,7 +6738,7 @@ __publicField(_NiivueObject3D, "makeCylinder", function(vertices, indices, start
     num_v += 2;
   }
   const idx0 = Math.floor(vertices.length / 3);
-  const idx = new Uint32Array(num_f * 3);
+  const idx2 = new Uint32Array(num_f * 3);
   const vtx = new Float32Array(num_v * 3);
   function setV(i, vec3) {
     vtx[i * 3 + 0] = vec3[0];
@@ -6738,9 +6746,9 @@ __publicField(_NiivueObject3D, "makeCylinder", function(vertices, indices, start
     vtx[i * 3 + 2] = vec3[2];
   }
   function setI(i, a, b, c) {
-    idx[i * 3 + 0] = a + idx0;
-    idx[i * 3 + 1] = b + idx0;
-    idx[i * 3 + 2] = c + idx0;
+    idx2[i * 3 + 0] = a + idx0;
+    idx2[i * 3 + 1] = b + idx0;
+    idx2[i * 3 + 2] = c + idx0;
   }
   const startPole = 2 * sides;
   const destPole = startPole + 1;
@@ -6771,7 +6779,7 @@ __publicField(_NiivueObject3D, "makeCylinder", function(vertices, indices, start
       setI(sides * 2 + i + sides, destPole, i + sides, nxt + sides);
     }
   }
-  indices.push(...idx);
+  indices.push(...idx2);
   vertices.push(...vtx);
 });
 __publicField(_NiivueObject3D, "makeColoredCylinder", function(vertices, indices, colors, start, dest, radius, rgba255 = [192, 0, 0, 255], sides = 20, endcaps = false) {
@@ -14812,9 +14820,7 @@ var ColorTables = class {
       log.warn(`Some colormap indices clamped to match label range.`);
     }
     if (nLabels !== cm.G.length || nLabels !== cm.B.length || nLabels !== idxs.length) {
-      throw new Error(
-        `colormap does not make sense: ${cm} Rs ${cm.R.length} Gs ${cm.G.length} Bs ${cm.B.length} Is ${idxs.length}`
-      );
+      throw new Error(`colormap does not make sense: ${cm} Rs ${cm.R.length} Gs ${cm.G.length} Bs ${cm.B.length} Is ${idxs.length}`);
     }
     let As = new Uint8ClampedArray(nLabels).fill(alphaFill);
     As[0] = 0;
@@ -14844,8 +14850,8 @@ var ColorTables = class {
       } else if (nL === nLabels) {
         cmap.labels = Array(nLabelsDense).fill("?");
         for (let i = 0; i < nLabels; i++) {
-          const idx = idxs[i];
-          cmap.labels[idx] = cm.labels[i];
+          const idx2 = idxs[i];
+          cmap.labels[idx2] = cm.labels[i];
         }
       }
     }
@@ -15316,9 +15322,7 @@ var Zip = class {
             foundZip64 = true;
             break;
           } else {
-            throw new Error(
-              `ZIP64 extra field found but is too small (expected at least 16 bytes, got ${fieldLength}).`
-            );
+            throw new Error(`ZIP64 extra field found but is too small (expected at least 16 bytes, got ${fieldLength}).`);
           }
         }
         zip64Offset += fieldLength;
@@ -15864,24 +15868,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     }
     let trans_to_mni = mat4_exports.create();
     const m = mat.trans_to_mni;
-    trans_to_mni = mat4_exports.fromValues(
-      m[0],
-      m[1],
-      m[2],
-      m[3],
-      m[4],
-      m[5],
-      m[6],
-      m[7],
-      m[8],
-      m[9],
-      m[10],
-      m[11],
-      m[12],
-      m[13],
-      m[14],
-      m[15]
-    );
+    trans_to_mni = mat4_exports.fromValues(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
     mat4_exports.transpose(trans_to_mni, trans_to_mni);
     function parse_tt(track) {
       const dv = new DataView(track.buffer);
@@ -15997,9 +15984,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
         }
       }
       if (idsSeen.size !== tagSet.size) {
-        throw new Error(
-          `assembleDpgFromMap: tag coverage mismatch for group "${gid}". Expected ${tagSet.size} tags but found ${idsSeen.size}.`
-        );
+        throw new Error(`assembleDpgFromMap: tag coverage mismatch for group "${gid}". Expected ${tagSet.size} tags but found ${idsSeen.size}.`);
       }
       for (const t of tagSet) {
         if (!idsSeen.has(t)) {
@@ -16379,24 +16364,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     const voxel_sizeX = reader.getFloat32(12, true);
     const voxel_sizeY = reader.getFloat32(16, true);
     const voxel_sizeZ = reader.getFloat32(20, true);
-    const zoomMat = mat4_exports.fromValues(
-      1 / voxel_sizeX,
-      0,
-      0,
-      -0.5,
-      0,
-      1 / voxel_sizeY,
-      0,
-      -0.5,
-      0,
-      0,
-      1 / voxel_sizeZ,
-      -0.5,
-      0,
-      0,
-      0,
-      1
-    );
+    const zoomMat = mat4_exports.fromValues(1 / voxel_sizeX, 0, 0, -0.5, 0, 1 / voxel_sizeY, 0, -0.5, 0, 0, 1 / voxel_sizeZ, -0.5, 0, 0, 0, 1);
     const n_properties = reader.getInt16(238, true);
     const dps = [];
     for (let i2 = 0; i2 < n_properties; i2++) {
@@ -16591,10 +16559,10 @@ var NVMeshLoaders = class _NVMeshLoaders {
             if (asciiIntsPos >= asciiInts.length) {
               lineToInts();
             }
-            const idx = asciiInts[asciiIntsPos++] * 3;
-            pts.push(positions[idx + 0]);
-            pts.push(positions[idx + 1]);
-            pts.push(positions[idx + 2]);
+            const idx2 = asciiInts[asciiIntsPos++] * 3;
+            pts.push(positions[idx2 + 0]);
+            pts.push(positions[idx2 + 1]);
+            pts.push(positions[idx2 + 2]);
           }
         }
       }
@@ -16763,11 +16731,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
         }
       }
     } else if (ext === "NII") {
-      layer.values = await _NVMeshLoaders.readNII(
-        buffer,
-        nvmesh.pts,
-        nvmesh.anatomicalStructurePrimary
-      );
+      layer.values = await _NVMeshLoaders.readNII(buffer, nvmesh.pts, nvmesh.anatomicalStructurePrimary);
     } else if (ext === "SMP") {
       layer.values = await _NVMeshLoaders.readSMP(buffer, n_vert);
     } else if (ext === "STC") {
@@ -17012,8 +16976,8 @@ var NVMeshLoaders = class _NVMeshLoaders {
     let pos = 0;
     const rgba32 = new Uint32Array(n_vertex);
     for (let i = 0; i < n_vertex; i++) {
-      const idx = view.getUint32(pos += 4, false);
-      rgba32[idx] = view.getUint32(pos += 4, false);
+      const idx2 = view.getUint32(pos += 4, false);
+      rgba32[idx2] = view.getUint32(pos += 4, false);
     }
     if (!isReadColortables) {
       return rgba32;
@@ -17039,7 +17003,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     if (num_entries < 1) {
       return rgba32;
     }
-    const LUT4 = {
+    const LUT3 = {
       R: Array(maxstruc).fill(0),
       G: Array(maxstruc).fill(0),
       B: Array(maxstruc).fill(0),
@@ -17068,22 +17032,22 @@ var NVMeshLoaders = class _NVMeshLoaders {
         log.warn("annot entry out of range");
         continue;
       }
-      LUT4.R[struc] = R;
-      LUT4.G[struc] = G;
-      LUT4.B[struc] = B;
-      LUT4.A[struc] = A;
-      LUT4.I[struc] = (A << 24) + (B << 16) + (G << 8) + R;
-      LUT4.labels[struc] = txt;
+      LUT3.R[struc] = R;
+      LUT3.G[struc] = G;
+      LUT3.B[struc] = B;
+      LUT3.A[struc] = A;
+      LUT3.I[struc] = (A << 24) + (B << 16) + (G << 8) + R;
+      LUT3.labels[struc] = txt;
     }
     let isAllAlphaZero = true;
     for (let i = 0; i < maxstruc; i++) {
-      if (LUT4.A[i] > 0) {
+      if (LUT3.A[i] > 0) {
         isAllAlphaZero = false;
       }
     }
     if (isAllAlphaZero) {
       for (let i = 0; i < maxstruc; i++) {
-        LUT4.A[i] = 255;
+        LUT3.A[i] = 255;
       }
     }
     const scalars = new Float32Array(n_vertex);
@@ -17092,7 +17056,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     for (let i = 0; i < n_vert; i++) {
       const RGB = rgba32[i];
       for (let c = 0; c < maxstruc; c++) {
-        if (LUT4.I[c] === RGB) {
+        if (LUT3.I[c] === RGB) {
           scalars[i] = c;
           break;
         }
@@ -17106,9 +17070,9 @@ var NVMeshLoaders = class _NVMeshLoaders {
       log.error(`annot vertex colors do not match ${nError} of ${n_vertex} vertices.`);
     }
     for (let i = 0; i < maxstruc; i++) {
-      LUT4.I[i] = i;
+      LUT3.I[i] = i;
     }
-    const colormapLabel = cmapper.makeLabelLut(LUT4);
+    const colormapLabel = cmapper.makeLabelLut(LUT3);
     return {
       scalars,
       colormapLabel
@@ -17309,23 +17273,23 @@ var NVMeshLoaders = class _NVMeshLoaders {
         if (isInt64) {
           let isOverflowInt32 = false;
           for (let c = 0; c < n_count; c++) {
-            let idx = reader.getInt32(pos, false);
-            if (idx !== 0) {
+            let idx2 = reader.getInt32(pos, false);
+            if (idx2 !== 0) {
               isOverflowInt32 = true;
             }
             pos += 4;
-            idx = reader.getInt32(pos, false);
+            idx2 = reader.getInt32(pos, false);
             pos += 4;
-            offsetPt02[c] = idx;
+            offsetPt02[c] = idx2;
           }
           if (isOverflowInt32) {
             log.warn("int32 overflow: JavaScript does not support int64");
           }
         } else {
           for (let c = 0; c < n_count; c++) {
-            const idx = reader.getInt32(pos, false);
+            const idx2 = reader.getInt32(pos, false);
             pos += 4;
-            offsetPt02[c] = idx;
+            offsetPt02[c] = idx2;
           }
         }
         const pts2 = positions;
@@ -17345,11 +17309,11 @@ var NVMeshLoaders = class _NVMeshLoaders {
         npt += numPoints;
         offsetPt0.push(npt);
         for (let i = 0; i < numPoints; i++) {
-          const idx = reader.getInt32(pos, false) * 3;
+          const idx2 = reader.getInt32(pos, false) * 3;
           pos += 4;
-          pts.push(positions[idx + 0]);
-          pts.push(positions[idx + 1]);
-          pts.push(positions[idx + 2]);
+          pts.push(positions[idx2 + 0]);
+          pts.push(positions[idx2 + 1]);
+          pts.push(positions[idx2 + 2]);
         }
       }
       return {
@@ -17542,9 +17506,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
     const isDOUBLE = (attr & 16) !== 0;
     const isAOMAP = (attr & 32) !== 0;
     const isLOOKUP = (attr & 64) !== 0;
-    utiltiesLogger.debug(
-      `isFace=${isFace} isVert=${isVert} isRGBA=${isRGBA} isSCALAR=${isSCALAR} isDOUBLE=${isDOUBLE} isAOMAP=${isAOMAP} isLOOKUP=${isLOOKUP}`
-    );
+    utiltiesLogger.debug(`isFace=${isFace} isVert=${isVert} isRGBA=${isRGBA} isSCALAR=${isSCALAR} isDOUBLE=${isDOUBLE} isAOMAP=${isAOMAP} isLOOKUP=${isLOOKUP}`);
     if (attr > 127) {
       throw new Error("Unsupported future version of MZ3 file");
     }
@@ -17799,9 +17761,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
       };
     }
     if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1) {
-      log.warn(
-        `Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`
-      );
+      log.warn(`Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`);
     }
     const reader = new DataView(buffer);
     let positions;
@@ -17900,18 +17860,18 @@ var NVMeshLoaders = class _NVMeshLoaders {
     for (let i = 0; i < num_v; i++) {
       const items = lines[line].trim().split(/\s+/);
       line++;
-      let idx = parseInt(items[0]) - 1;
+      let idx2 = parseInt(items[0]) - 1;
       const x = parseFloat(items[1]);
       const y = parseFloat(items[2]);
       const z = parseFloat(items[3]);
-      if (idx < 0 || idx >= num_v) {
+      if (idx2 < 0 || idx2 >= num_v) {
         log.error("ICO vertices corrupted");
         break;
       }
-      idx *= 3;
-      positions[idx] = x;
-      positions[idx + 1] = y;
-      positions[idx + 2] = z;
+      idx2 *= 3;
+      positions[idx2] = x;
+      positions[idx2 + 1] = y;
+      positions[idx2 + 2] = z;
     }
     header = lines[line].trim().split(/\s+/);
     line++;
@@ -17920,18 +17880,18 @@ var NVMeshLoaders = class _NVMeshLoaders {
     for (let i = 0; i < num_f; i++) {
       const items = lines[line].trim().split(/\s+/);
       line++;
-      let idx = parseInt(items[0]) - 1;
+      let idx2 = parseInt(items[0]) - 1;
       const x = parseInt(items[1]) - 1;
       const y = parseInt(items[2]) - 1;
       const z = parseInt(items[3]) - 1;
-      if (idx < 0 || idx >= num_f) {
+      if (idx2 < 0 || idx2 >= num_f) {
         log.error("ICO indices corrupted");
         break;
       }
-      idx *= 3;
-      indices[idx] = x;
-      indices[idx + 1] = y;
-      indices[idx + 2] = z;
+      idx2 *= 3;
+      indices[idx2] = x;
+      indices[idx2 + 1] = y;
+      indices[idx2 + 2] = z;
     }
     for (let j = 0; j < indices.length; j += 3) {
       const tri = indices[j];
@@ -18553,15 +18513,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
           j++;
         }
       }
-      log.debug(
-        "CIfTI diagnostics",
-        surfaceNumberOfVertices,
-        brainStructure,
-        indexOffset,
-        indexCount,
-        indexOffset,
-        anatomicalStructurePrimary
-      );
+      log.debug("CIfTI diagnostics", surfaceNumberOfVertices, brainStructure, indexOffset, indexCount, indexOffset, anatomicalStructurePrimary);
       return scalars2;
     }
     nvert = this.decimateLayerVertices(nvert, n_vert);
@@ -21661,6 +21613,3852 @@ function readImage(header, data) {
   return data.slice(imageOffset, imageOffset + imageSize);
 }
 
+// src/nvimage/utils.ts
+var isPlatformLittleEndian = () => {
+  const buffer = new ArrayBuffer(2);
+  new DataView(buffer).setInt16(0, 256, true);
+  return new Int16Array(buffer)[0] === 256;
+};
+var ImageType = /* @__PURE__ */ ((ImageType3) => {
+  ImageType3[ImageType3["UNKNOWN"] = 0] = "UNKNOWN";
+  ImageType3[ImageType3["NII"] = 1] = "NII";
+  ImageType3[ImageType3["DCM"] = 2] = "DCM";
+  ImageType3[ImageType3["DCM_MANIFEST"] = 3] = "DCM_MANIFEST";
+  ImageType3[ImageType3["MIH"] = 4] = "MIH";
+  ImageType3[ImageType3["MIF"] = 5] = "MIF";
+  ImageType3[ImageType3["NHDR"] = 6] = "NHDR";
+  ImageType3[ImageType3["NRRD"] = 7] = "NRRD";
+  ImageType3[ImageType3["MHD"] = 8] = "MHD";
+  ImageType3[ImageType3["MHA"] = 9] = "MHA";
+  ImageType3[ImageType3["MGH"] = 10] = "MGH";
+  ImageType3[ImageType3["MGZ"] = 11] = "MGZ";
+  ImageType3[ImageType3["V"] = 12] = "V";
+  ImageType3[ImageType3["V16"] = 13] = "V16";
+  ImageType3[ImageType3["VMR"] = 14] = "VMR";
+  ImageType3[ImageType3["HEAD"] = 15] = "HEAD";
+  ImageType3[ImageType3["DCM_FOLDER"] = 16] = "DCM_FOLDER";
+  ImageType3[ImageType3["SRC"] = 17] = "SRC";
+  ImageType3[ImageType3["FIB"] = 18] = "FIB";
+  ImageType3[ImageType3["BMP"] = 19] = "BMP";
+  ImageType3[ImageType3["ZARR"] = 20] = "ZARR";
+  ImageType3[ImageType3["NPY"] = 21] = "NPY";
+  ImageType3[ImageType3["NPZ"] = 22] = "NPZ";
+  ImageType3[ImageType3["HDR"] = 23] = "HDR";
+  return ImageType3;
+})(ImageType || {});
+var NVIMAGE_TYPE = Object.freeze({
+  ...ImageType,
+  parse: (ext) => {
+    let imageType = 0 /* UNKNOWN */;
+    switch (ext.toUpperCase()) {
+      case "":
+      case "DCM":
+        imageType = 2 /* DCM */;
+        break;
+      case "TXT":
+        imageType = 3 /* DCM_MANIFEST */;
+        break;
+      case "FZ":
+      case "GQI":
+      case "QSDR":
+      case "FIB":
+        imageType = 18 /* FIB */;
+        break;
+      case "HDR":
+      case "NII":
+        imageType = 1 /* NII */;
+        break;
+      case "MIH":
+        imageType = 4 /* MIH */;
+        break;
+      case "MIF":
+        imageType = 5 /* MIF */;
+        break;
+      case "NHDR":
+        imageType = 6 /* NHDR */;
+        break;
+      case "NRRD":
+        imageType = 7 /* NRRD */;
+        break;
+      case "MHD":
+        imageType = 8 /* MHD */;
+        break;
+      case "MHA":
+        imageType = 9 /* MHA */;
+        break;
+      case "MGH":
+        imageType = 10 /* MGH */;
+        break;
+      case "MGZ":
+        imageType = 11 /* MGZ */;
+        break;
+      case "NPY":
+        imageType = 21 /* NPY */;
+        break;
+      case "NPZ":
+        imageType = 22 /* NPZ */;
+        break;
+      case "SRC":
+        imageType = 17 /* SRC */;
+        break;
+      case "V":
+        imageType = 12 /* V */;
+        break;
+      case "V16":
+        imageType = 13 /* V16 */;
+        break;
+      case "VMR":
+        imageType = 14 /* VMR */;
+        break;
+      case "HEAD":
+        imageType = 15 /* HEAD */;
+        break;
+      case "PNG":
+      case "BMP":
+      case "GIF":
+      case "JPG":
+      case "JPEG":
+        imageType = 19 /* BMP */;
+        break;
+      case "ZARR":
+        imageType = 20 /* ZARR */;
+        break;
+    }
+    return imageType;
+  }
+});
+var NVImageFromUrlOptions = (url, urlImageData = "", name = "", colormap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, alphaThreshold = false, colormapLabel = null) => {
+  return {
+    url,
+    urlImageData,
+    name,
+    colormap,
+    colorMap: colormap,
+    opacity,
+    cal_min,
+    cal_max,
+    trustCalMinMax,
+    percentileFrac,
+    ignoreZeroVoxels,
+    useQFormNotSForm,
+    colormapNegative,
+    imageType,
+    cal_minNeg,
+    cal_maxNeg,
+    colorbarVisible,
+    frame4D,
+    alphaThreshold,
+    colormapLabel
+  };
+};
+function str2Buffer(str6, maxLen = 80) {
+  str6 = str6.replace(/[`$]/g, "");
+  const bytes = [];
+  const len4 = Math.min(maxLen, str6.length);
+  for (let i = 0; i < len4; i++) {
+    const char = str6.charCodeAt(i);
+    bytes.push(char & 255);
+  }
+  return bytes;
+}
+function hdrToArrayBuffer(hdr, isDrawing8 = false, isInputEndian = false) {
+  const SHORT_SIZE = 2;
+  const FLOAT32_SIZE = 4;
+  let isLittleEndian = true;
+  if (isInputEndian) {
+    isLittleEndian = hdr.littleEndian;
+  }
+  const byteArray = new Uint8Array(348);
+  const view = new DataView(byteArray.buffer);
+  view.setInt32(0, 348, isLittleEndian);
+  view.setUint8(38, 114);
+  view.setUint8(39, hdr.dim_info);
+  for (let i = 0; i < 8; i++) {
+    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], isLittleEndian);
+  }
+  view.setFloat32(56, hdr.intent_p1, isLittleEndian);
+  view.setFloat32(60, hdr.intent_p2, isLittleEndian);
+  view.setFloat32(64, hdr.intent_p3, isLittleEndian);
+  view.setInt16(68, hdr.intent_code, isLittleEndian);
+  if (isDrawing8) {
+    view.setInt16(70, 2, isLittleEndian);
+    view.setInt16(72, 8, isLittleEndian);
+  } else {
+    view.setInt16(70, hdr.datatypeCode, isLittleEndian);
+    view.setInt16(72, hdr.numBitsPerVoxel, isLittleEndian);
+  }
+  view.setInt16(74, hdr.slice_start, isLittleEndian);
+  for (let i = 0; i < 8; i++) {
+    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], isLittleEndian);
+  }
+  if (isDrawing8) {
+    view.setFloat32(108, 352, isLittleEndian);
+    view.setFloat32(112, 1, isLittleEndian);
+    view.setFloat32(116, 0, isLittleEndian);
+  } else {
+    view.setFloat32(108, hdr.vox_offset, isLittleEndian);
+    view.setFloat32(112, hdr.scl_slope, isLittleEndian);
+    view.setFloat32(116, hdr.scl_inter, isLittleEndian);
+  }
+  view.setInt16(120, hdr.slice_end, isLittleEndian);
+  view.setUint8(122, hdr.slice_code);
+  if (hdr.xyzt_units === 0) {
+    view.setUint8(123, 10);
+  } else {
+    view.setUint8(123, hdr.xyzt_units);
+  }
+  if (isDrawing8) {
+    view.setFloat32(124, 0, isLittleEndian);
+    view.setFloat32(128, 0, isLittleEndian);
+  } else {
+    view.setFloat32(124, hdr.cal_max, isLittleEndian);
+    view.setFloat32(128, hdr.cal_min, isLittleEndian);
+  }
+  view.setFloat32(132, hdr.slice_duration, isLittleEndian);
+  view.setFloat32(136, hdr.toffset, isLittleEndian);
+  byteArray.set(str2Buffer(hdr.description), 148);
+  byteArray.set(str2Buffer(hdr.aux_file), 228);
+  view.setInt16(252, hdr.qform_code, isLittleEndian);
+  if (hdr.sform_code < 1 || hdr.sform_code < 1) {
+    view.setInt16(254, 1, isLittleEndian);
+  } else {
+    view.setInt16(254, hdr.sform_code, isLittleEndian);
+  }
+  view.setFloat32(256, hdr.quatern_b, isLittleEndian);
+  view.setFloat32(260, hdr.quatern_c, isLittleEndian);
+  view.setFloat32(264, hdr.quatern_d, isLittleEndian);
+  view.setFloat32(268, hdr.qoffset_x, isLittleEndian);
+  view.setFloat32(272, hdr.qoffset_y, isLittleEndian);
+  view.setFloat32(276, hdr.qoffset_z, isLittleEndian);
+  const flattened = hdr.affine.flat();
+  for (let i = 0; i < 12; i++) {
+    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], isLittleEndian);
+  }
+  view.setInt32(344, 3222382, true);
+  return byteArray;
+}
+function getExtents(positions, forceOriginInVolume = true) {
+  const nV = Math.round(positions.length / 3);
+  const origin = vec3_exports.fromValues(0, 0, 0);
+  const mn = vec3_exports.create();
+  const mx = vec3_exports.create();
+  let mxDx = 0;
+  let nLoops = 1;
+  if (forceOriginInVolume) {
+    nLoops = 2;
+  }
+  for (let loop = 0; loop < nLoops; loop++) {
+    mxDx = 0;
+    for (let i = 0; i < nV; i++) {
+      const v = vec3_exports.fromValues(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+      if (i === 0) {
+        vec3_exports.copy(mn, v);
+        vec3_exports.copy(mx, v);
+      }
+      vec3_exports.min(mn, mn, v);
+      vec3_exports.max(mx, mx, v);
+      vec3_exports.subtract(v, v, origin);
+      const dx = vec3_exports.len(v);
+      mxDx = Math.max(mxDx, dx);
+    }
+    if (loop + 1 >= nLoops) {
+      break;
+    }
+    let ok = true;
+    for (let j = 0; j < 3; ++j) {
+      if (mn[j] > origin[j]) {
+        ok = false;
+      }
+      if (mx[j] < origin[j]) {
+        ok = false;
+      }
+    }
+    if (ok) {
+      break;
+    }
+    vec3_exports.lerp(origin, mn, mx, 0.5);
+    log.debug("origin moved inside volume: ", origin);
+  }
+  const min4 = [mn[0], mn[1], mn[2]];
+  const max5 = [mx[0], mx[1], mx[2]];
+  const furthestVertexFromOrigin = mxDx;
+  return { min: min4, max: max5, furthestVertexFromOrigin, origin };
+}
+function isAffineOK(mtx) {
+  const iOK = [false, false, false, false];
+  const jOK = [false, false, false, false];
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (isNaN(mtx[i][j])) {
+        return false;
+      }
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (mtx[i][j] === 0) {
+        continue;
+      }
+      iOK[i] = true;
+      jOK[j] = true;
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    if (!iOK[i]) {
+      return false;
+    }
+    if (!jOK[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+async function uncompressStream(stream) {
+  const reader = stream.getReader();
+  const { done, value } = await reader.read();
+  if (done) {
+    reader.releaseLock();
+    return new ReadableStream({
+      start(controller) {
+        controller.close();
+      }
+    });
+  }
+  if (!value || value.length < 2) {
+    reader.releaseLock();
+    return new ReadableStream({
+      start(controller) {
+        if (value) {
+          controller.enqueue(value);
+        }
+        controller.close();
+      }
+    });
+  }
+  const isGzip = value[0] === 31 && value[1] === 139;
+  const uncompressedStream = new ReadableStream({
+    async start(controller) {
+      try {
+        controller.enqueue(value);
+        while (true) {
+          const { done: done2, value: value2 } = await reader.read();
+          if (done2) {
+            controller.close();
+            reader.releaseLock();
+            break;
+          }
+          controller.enqueue(value2);
+        }
+      } catch (error) {
+        controller.error(error);
+        reader.releaseLock();
+      }
+    }
+  });
+  if (isGzip) {
+    return uncompressedStream.pipeThrough(new DecompressionStream("gzip"));
+  }
+  return uncompressedStream;
+}
+
+// src/nvimage/ImageWriter.ts
+function createNiftiHeader(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */) {
+  const hdr = new NIFTI1();
+  hdr.littleEndian = true;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.dims[0] = Math.max(3, dims.length);
+  for (let i = 0; i < dims.length; i++) {
+    hdr.dims[i + 1] = dims[i];
+  }
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  for (let i = 0; i < dims.length; i++) {
+    hdr.pixDims[i + 1] = pixDims[i];
+  }
+  if (affine.length === 16) {
+    let k = 0;
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        hdr.affine[i][j] = affine[k];
+        k++;
+      }
+    }
+  }
+  let bpv = 8;
+  if (datatypeCode === 256 /* DT_INT8 */ || datatypeCode === 2 /* DT_UINT8 */) {
+    bpv = 8;
+  } else if (datatypeCode === 512 /* DT_UINT16 */ || datatypeCode === 4 /* DT_INT16 */) {
+    bpv = 16;
+  } else if (datatypeCode === 16 /* DT_FLOAT32 */ || datatypeCode === 768 /* DT_UINT32 */ || datatypeCode === 8 /* DT_INT32 */ || datatypeCode === 2304 /* DT_RGBA32 */) {
+    bpv = 32;
+  } else if (datatypeCode === 64 /* DT_FLOAT64 */) {
+    bpv = 64;
+  } else {
+    log.warn("Unsupported NIfTI datatypeCode for header creation: " + datatypeCode);
+  }
+  hdr.datatypeCode = datatypeCode;
+  hdr.numBitsPerVoxel = bpv;
+  hdr.scl_inter = 0;
+  hdr.scl_slope = 1;
+  hdr.sform_code = 2;
+  hdr.magic = "n+1";
+  hdr.vox_offset = 352;
+  return hdr;
+}
+function createNiftiArray(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */, img = new Uint8Array()) {
+  const hdr = createNiftiHeader(dims, pixDims, affine, datatypeCode);
+  const hdrBytes = hdrToArrayBuffer(hdr, false);
+  hdr.vox_offset = Math.max(352, hdrBytes.length);
+  const finalHdrBytes = hdrToArrayBuffer(hdr, false);
+  if (img.length < 1) {
+    return finalHdrBytes;
+  }
+  const paddingSize = Math.max(0, hdr.vox_offset - finalHdrBytes.length);
+  const padding = new Uint8Array(paddingSize);
+  const imgBytes = new Uint8Array(img.buffer, img.byteOffset, img.byteLength);
+  const totalLength = hdr.vox_offset + imgBytes.length;
+  const outputData = new Uint8Array(totalLength);
+  outputData.set(finalHdrBytes, 0);
+  outputData.set(padding, finalHdrBytes.length);
+  outputData.set(imgBytes, hdr.vox_offset);
+  return outputData;
+}
+function toUint8Array(nvImage, drawingBytes = null) {
+  if (!nvImage.hdr) {
+    throw new Error("NVImage header is not defined for toUint8Array");
+  }
+  if (!nvImage.img && drawingBytes === null) {
+    throw new Error("NVImage image data is not defined for toUint8Array");
+  }
+  const isDrawing = drawingBytes !== null;
+  const hdrCopy = JSON.parse(JSON.stringify(nvImage.hdr));
+  const hasExtensions = nvImage.extensions && nvImage.extensions.length > 0;
+  const extFlag = new Uint8Array(4);
+  extFlag[0] = hasExtensions ? 1 : 0;
+  let extensionsData = new Uint8Array(0);
+  if (hasExtensions) {
+    const blocks = [];
+    let totalSize = 0;
+    for (const ext of nvImage.extensions) {
+      const edataBytes = new Uint8Array(ext.edata);
+      const block = new Uint8Array(8 + edataBytes.length);
+      const dv = new DataView(block.buffer);
+      dv.setInt32(0, ext.esize, true);
+      dv.setInt32(4, ext.ecode, true);
+      block.set(edataBytes, 8);
+      blocks.push(block);
+      totalSize += block.length;
+    }
+    extensionsData = new Uint8Array(totalSize);
+    let offset2 = 0;
+    for (const block of blocks) {
+      extensionsData.set(block, offset2);
+      offset2 += block.length;
+    }
+  }
+  const headerSize = 348;
+  hdrCopy.vox_offset = Math.max(352, headerSize + extFlag.length + extensionsData.length);
+  if (isDrawing) {
+    hdrCopy.datatypeCode = 2 /* DT_UINT8 */;
+    hdrCopy.numBitsPerVoxel = 8;
+    hdrCopy.scl_slope = 1;
+    hdrCopy.scl_inter = 0;
+  }
+  const hdrBytes = hdrToArrayBuffer(hdrCopy, isDrawing);
+  let imageBytesToSave;
+  if (isDrawing) {
+    const drawingBytesCurrent = drawingBytes;
+    const perm = nvImage.permRAS;
+    if (perm && (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3)) {
+      log.debug("Reorienting drawing bytes back to native space for saving...");
+      const dims = nvImage.hdr.dims;
+      const nVox = dims[1] * dims[2] * dims[3];
+      const nVoxRAS = nvImage.dimsRAS ? nvImage.dimsRAS[1] * nvImage.dimsRAS[2] * nvImage.dimsRAS[3] : nVox;
+      if (drawingBytesCurrent.length !== nVoxRAS) {
+        console.warn(`Drawing length (${drawingBytesCurrent.length}) does not match expected RAS voxel count (${nVoxRAS}). Cannot reorient drawing reliably.`);
+        imageBytesToSave = drawingBytesCurrent;
+      } else if (!nvImage.img2RASstep || !nvImage.img2RASstart || !nvImage.dimsRAS) {
+        console.warn(`Missing RAS transformation info (img2RASstep, img2RASstart, dimsRAS). Cannot reorient drawing reliably.`);
+        imageBytesToSave = drawingBytesCurrent;
+      } else {
+        const step = nvImage.img2RASstep;
+        const start = nvImage.img2RASstart;
+        const dimsRAS = nvImage.dimsRAS;
+        const nativeData = new Uint8Array(nVox);
+        nativeData.fill(0);
+        const inputDrawingRAS = drawingBytesCurrent;
+        let rasIndex = 0;
+        for (let rz = 0; rz < dimsRAS[3]; rz++) {
+          const zi = start[2] + rz * step[2];
+          for (let ry = 0; ry < dimsRAS[2]; ry++) {
+            const yi = start[1] + ry * step[1];
+            for (let rx = 0; rx < dimsRAS[1]; rx++) {
+              const xi = start[0] + rx * step[0];
+              const nativeIndex = xi + yi + zi;
+              if (nativeIndex >= 0 && nativeIndex < nVox) {
+                nativeData[nativeIndex] = inputDrawingRAS[rasIndex];
+              } else if (rasIndex < inputDrawingRAS.length) {
+                console.warn(`Calculated native index ${nativeIndex} is out of bounds [0..${nVox - 1}] during drawing reorientation.`);
+              }
+              rasIndex++;
+            }
+          }
+        }
+        imageBytesToSave = nativeData;
+      }
+    } else {
+      imageBytesToSave = drawingBytesCurrent;
+    }
+  } else {
+    if (!nvImage.img) {
+      throw new Error("NVImage image data is null when trying to save non-drawing.");
+    }
+    imageBytesToSave = new Uint8Array(nvImage.img.buffer, nvImage.img.byteOffset, nvImage.img.byteLength);
+  }
+  const preImageBytesSize = hdrBytes.length + extFlag.length + extensionsData.length;
+  const paddingSize = Math.max(0, hdrCopy.vox_offset - preImageBytesSize);
+  const padding = new Uint8Array(paddingSize);
+  const totalLength = hdrCopy.vox_offset + imageBytesToSave.length;
+  const outputData = new Uint8Array(totalLength);
+  let offset = 0;
+  outputData.set(hdrBytes, offset);
+  offset += hdrBytes.length;
+  outputData.set(extFlag, offset);
+  offset += extFlag.length;
+  outputData.set(extensionsData, offset);
+  offset += extensionsData.length;
+  outputData.set(padding, offset);
+  offset += padding.length;
+  outputData.set(imageBytesToSave, hdrCopy.vox_offset);
+  return outputData;
+}
+async function saveToUint8Array(nvImage, fnm, drawing8 = null) {
+  const odata = toUint8Array(nvImage, drawing8);
+  const compress = fnm.toLowerCase().endsWith(".gz");
+  if (compress) {
+    try {
+      const compressedData = await NVUtilities.compress(odata, "gzip");
+      return new Uint8Array(compressedData);
+    } catch (error) {
+      log.error("Compression failed:", error);
+      log.warn("Returning uncompressed data due to compression error.");
+      return odata;
+    }
+  } else {
+    return odata;
+  }
+}
+async function saveToDisk(nvImage, fnm = "", drawing8 = null) {
+  const saveData = await saveToUint8Array(nvImage, fnm, drawing8);
+  if (!fnm) {
+    log.debug("saveToDisk: empty file name, returning data as Uint8Array rather than triggering download");
+    return saveData;
+  }
+  try {
+    const blob = new Blob([saveData.buffer], {
+      type: "application/octet-stream"
+      // Standard type for binary download
+    });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", blobUrl);
+    link.setAttribute("download", fnm);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+  } catch (e) {
+    log.error("Failed to trigger download:", e);
+  }
+  return saveData;
+}
+
+// src/nvimage/VolumeUtils.ts
+function getValues(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
+  if (!nvImage.hdr) {
+    throw new Error("getValue: NVImage header is not defined.");
+  }
+  if (!isReadImaginary && !nvImage.img) {
+    throw new Error("getValue: NVImage image data is not defined.");
+  }
+  if (isReadImaginary && !nvImage.imaginary) {
+    log.warn("getValue: Attempted to read imaginary data, but none exists.");
+    return [0];
+  }
+  const nx = nvImage.hdr.dims[1];
+  const ny = nvImage.hdr.dims[2];
+  const nz = nvImage.hdr.dims[3];
+  const perm = nvImage.permRAS.slice();
+  if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
+    const pos = vec4_exports.fromValues(x, y, z, 1);
+    vec4_exports.transformMat4(pos, pos, nvImage.toRASvox);
+    x = pos[0];
+    y = pos[1];
+    z = pos[2];
+  }
+  x = Math.max(0, Math.min(Math.round(x), nx - 1));
+  y = Math.max(0, Math.min(Math.round(y), ny - 1));
+  z = Math.max(0, Math.min(Math.round(z), nz - 1));
+  frame4D = Math.max(0, frame4D);
+  let vx = x + y * nx + z * nx * ny;
+  if (nvImage.hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
+    if (!nvImage.img) {
+      return [0];
+    }
+    vx *= 4;
+    if (vx + 3 >= nvImage.img.length) {
+      log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`);
+      return [0];
+    }
+    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2], nvImage.img[vx + 3]];
+  }
+  if (nvImage.hdr.datatypeCode === 128 /* DT_RGB24 */) {
+    if (!nvImage.img) {
+      return [0];
+    }
+    vx *= 3;
+    if (vx + 2 >= nvImage.img.length) {
+      log.warn(`getValue: Calculated index ${vx} out of bounds for RGB data.`);
+      return [0];
+    }
+    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2]];
+  }
+  const nVox3D = nx * ny * nz;
+  const volOffset = frame4D * nVox3D;
+  const finalVxIndex = vx + volOffset;
+  const dataArray = isReadImaginary ? nvImage.imaginary : nvImage.img;
+  if (finalVxIndex < 0 || finalVxIndex >= dataArray.length) {
+    return [0];
+  }
+  const rawValue = dataArray[finalVxIndex];
+  const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
+  const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
+  return [slope * rawValue + inter];
+}
+function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
+  const vals = getValues(nvImage, x, y, z, frame4D, isReadImaginary);
+  if (vals.length < 3) {
+    return vals[0];
+  }
+  const lum = vals[0] * 0.2126 + vals[1] * 0.7152 + vals[2] * 0.0722;
+  return lum;
+}
+function getVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], dataType = "same") {
+  const defaultResult = [new Uint8Array(), [0, 0, 0]];
+  if (!nvImage.hdr || !nvImage.img || !nvImage.dimsRAS || !nvImage.img2RASstep || !nvImage.img2RASstart) {
+    log.error("getVolumeData: Missing required NVImage properties (hdr, img, dimsRAS, img2RASstep/start).");
+    return defaultResult;
+  }
+  voxStartRAS = voxStartRAS.slice(0, 3);
+  voxEndRAS = voxEndRAS.slice(0, 3);
+  if (Math.min(...voxStartRAS) < 0 || Math.min(...voxEndRAS) < 0) {
+    log.warn("getVolumeData: Invalid start or end coordinates provided.");
+    return defaultResult;
+  }
+  const dimsRAS = nvImage.dimsRAS.slice(1, 4);
+  for (let i = 0; i < 3; i++) {
+    voxStartRAS[i] = Math.max(0, Math.min(Math.round(voxStartRAS[i]), dimsRAS[i] - 1));
+    voxEndRAS[i] = Math.max(0, Math.min(Math.round(voxEndRAS[i]), dimsRAS[i] - 1));
+    if (voxEndRAS[i] < voxStartRAS[i]) {
+      const tmp = voxEndRAS[i];
+      voxEndRAS[i] = voxStartRAS[i];
+      voxStartRAS[i] = tmp;
+    }
+  }
+  const slabDims = [voxEndRAS[0] - voxStartRAS[0] + 1, voxEndRAS[1] - voxStartRAS[1] + 1, voxEndRAS[2] - voxStartRAS[2] + 1];
+  const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
+  if (slabNVox <= 0) {
+    log.warn("getVolumeData: Calculated slab size is zero or negative.");
+    return defaultResult;
+  }
+  let OutputArrayConstructor = nvImage.img.constructor;
+  if (dataType === "uint8") {
+    OutputArrayConstructor = Uint8Array;
+  } else if (dataType === "int16") {
+    OutputArrayConstructor = Int16Array;
+  } else if (dataType === "uint16") {
+    OutputArrayConstructor = Uint16Array;
+  } else if (dataType === "float32" || dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
+    OutputArrayConstructor = Float32Array;
+  } else if (dataType === "float64") {
+    OutputArrayConstructor = Float64Array;
+  } else if (dataType !== "same") {
+    log.warn(`getVolumeData: Unsupported dataType '${dataType}'. Using 'same'.`);
+  }
+  let outputImg;
+  try {
+    outputImg = new OutputArrayConstructor(slabNVox);
+  } catch (e) {
+    log.error(`getVolumeData: Failed to create output array for dataType '${dataType}'.`, e);
+    return defaultResult;
+  }
+  const step = nvImage.img2RASstep;
+  const start = nvImage.img2RASstart;
+  const sourceImg = nvImage.img;
+  let outputIndex = 0;
+  for (let rz = voxStartRAS[2]; rz <= voxEndRAS[2]; rz++) {
+    const zi = start[2] + rz * step[2];
+    for (let ry = voxStartRAS[1]; ry <= voxEndRAS[1]; ry++) {
+      const yi = start[1] + ry * step[1];
+      for (let rx = voxStartRAS[0]; rx <= voxEndRAS[0]; rx++) {
+        const xi = start[0] + rx * step[0];
+        const nativeIndex = xi + yi + zi;
+        let value = 0;
+        if (nativeIndex >= 0 && nativeIndex < sourceImg.length) {
+          value = sourceImg[nativeIndex];
+        }
+        outputImg[outputIndex++] = value;
+      }
+    }
+  }
+  const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
+  const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
+  if (dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
+    if (!(outputImg instanceof Float32Array)) {
+      log.warn(`getVolumeData: Converting output to Float32 for scaling type '${dataType}'.`);
+      outputImg = Float32Array.from(outputImg);
+    }
+    for (let i = 0; i < outputImg.length; i++) {
+      outputImg[i] = outputImg[i] * slope + inter;
+    }
+  }
+  if (dataType === "normalized" || dataType === "windowed") {
+    let minVal = nvImage.cal_min;
+    let maxVal = nvImage.cal_max;
+    if (dataType === "normalized") {
+      minVal = nvImage.global_min;
+      maxVal = nvImage.global_max;
+    }
+    const range2 = maxVal - minVal;
+    const scale6 = range2 === 0 ? 0 : 1 / range2;
+    for (let i = 0; i < outputImg.length; i++) {
+      outputImg[i] = (outputImg[i] - minVal) * scale6;
+      outputImg[i] = Math.max(0, Math.min(outputImg[i], 1));
+    }
+  }
+  return [outputImg, slabDims];
+}
+function setVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], slabData = new Uint8Array()) {
+  if (!nvImage.hdr || !nvImage.img || !nvImage.dimsRAS || !nvImage.img2RASstep || !nvImage.img2RASstart) {
+    log.error("setVolumeData: Missing required NVImage properties (hdr, img, dimsRAS, img2RASstep/start).");
+    return;
+  }
+  if (slabData.length < 1) {
+    log.warn("setVolumeData: Input slabData is empty.");
+    return;
+  }
+  voxStartRAS = voxStartRAS.slice(0, 3);
+  voxEndRAS = voxEndRAS.slice(0, 3);
+  if (Math.min(...voxStartRAS) < 0 || Math.min(...voxEndRAS) < 0) {
+    log.warn("setVolumeData: Invalid start or end coordinates provided.");
+    return;
+  }
+  const dimsRAS = nvImage.dimsRAS.slice(1, 4);
+  for (let i = 0; i < 3; i++) {
+    voxStartRAS[i] = Math.max(0, Math.min(Math.round(voxStartRAS[i]), dimsRAS[i] - 1));
+    voxEndRAS[i] = Math.max(0, Math.min(Math.round(voxEndRAS[i]), dimsRAS[i] - 1));
+    if (voxEndRAS[i] < voxStartRAS[i]) {
+      const tmp = voxEndRAS[i];
+      voxEndRAS[i] = voxStartRAS[i];
+      voxStartRAS[i] = tmp;
+    }
+  }
+  const slabDims = [voxEndRAS[0] - voxStartRAS[0] + 1, voxEndRAS[1] - voxStartRAS[1] + 1, voxEndRAS[2] - voxStartRAS[2] + 1];
+  const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
+  if (slabNVox <= 0) {
+    log.warn("setVolumeData: Calculated slab size is zero or negative.");
+    return;
+  }
+  if (slabData.length < slabNVox) {
+    log.error(`setVolumeData: Input slabData length (${slabData.length}) is less than the calculated slab size (${slabNVox}).`);
+    return;
+  }
+  const step = nvImage.img2RASstep;
+  const start = nvImage.img2RASstart;
+  const targetImg = nvImage.img;
+  let sourceIndex = 0;
+  for (let rz = voxStartRAS[2]; rz <= voxEndRAS[2]; rz++) {
+    const zi = start[2] + rz * step[2];
+    for (let ry = voxStartRAS[1]; ry <= voxEndRAS[1]; ry++) {
+      const yi = start[1] + ry * step[1];
+      for (let rx = voxStartRAS[0]; rx <= voxEndRAS[0]; rx++) {
+        const xi = start[0] + rx * step[0];
+        const nativeIndex = xi + yi + zi;
+        if (nativeIndex >= 0 && nativeIndex < targetImg.length) {
+          targetImg[nativeIndex] = slabData[sourceIndex];
+        }
+        sourceIndex++;
+      }
+    }
+  }
+}
+
+// src/nvimage/ImageReaders/afni.ts
+var afni_exports = {};
+__export(afni_exports, {
+  readHEAD: () => readHEAD
+});
+function vox2mm(XYZ, mtx) {
+  const sform = mat4_exports.clone(mtx);
+  mat4_exports.transpose(sform, sform);
+  const pos = vec4_exports.fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
+  vec4_exports.transformMat4(pos, pos, sform);
+  const pos3 = vec3_exports.fromValues(pos[0], pos[1], pos[2]);
+  return pos3;
+}
+function setPixDimFromSForm(nvImage) {
+  if (!nvImage.hdr) {
+    throw new Error("hdr not defined");
+  }
+  const m = nvImage.hdr.affine;
+  const mat = mat4_exports.fromValues(m[0][0], m[0][1], m[0][2], m[0][3], m[1][0], m[1][1], m[1][2], m[1][3], m[2][0], m[2][1], m[2][2], m[2][3], m[3][0], m[3][1], m[3][2], m[3][3]);
+  const mm000 = vox2mm([0, 0, 0], mat);
+  const mm100 = vox2mm([1, 0, 0], mat);
+  vec3_exports.subtract(mm100, mm100, mm000);
+  const mm010 = vox2mm([0, 1, 0], mat);
+  vec3_exports.subtract(mm010, mm010, mm000);
+  const mm001 = vox2mm([0, 0, 1], mat);
+  vec3_exports.subtract(mm001, mm001, mm000);
+  nvImage.hdr.pixDims[1] = vec3_exports.length(mm100);
+  nvImage.hdr.pixDims[2] = vec3_exports.length(mm010);
+  nvImage.hdr.pixDims[3] = vec3_exports.length(mm001);
+}
+function THD_daxes_to_NIFTI(nvImage, xyzDelta, xyzOrigin, orientSpecific) {
+  const hdr = nvImage.hdr;
+  if (hdr === null) {
+    throw new Error("HDR is not set");
+  }
+  hdr.sform_code = 2;
+  const ORIENT_xyz = "xxyyzzg";
+  let nif_x_axnum = -1;
+  let nif_y_axnum = -1;
+  let nif_z_axnum = -1;
+  const axcode = ["x", "y", "z"];
+  axcode[0] = ORIENT_xyz[orientSpecific[0]];
+  axcode[1] = ORIENT_xyz[orientSpecific[1]];
+  axcode[2] = ORIENT_xyz[orientSpecific[2]];
+  const axstep = xyzDelta.slice(0, 3);
+  const axstart = xyzOrigin.slice(0, 3);
+  for (let ii = 0; ii < 3; ii++) {
+    if (axcode[ii] === "x") {
+      nif_x_axnum = ii;
+    } else if (axcode[ii] === "y") {
+      nif_y_axnum = ii;
+    } else {
+      nif_z_axnum = ii;
+    }
+  }
+  if (nif_x_axnum < 0 || nif_y_axnum < 0 || nif_z_axnum < 0) {
+    return;
+  }
+  if (nif_x_axnum === nif_y_axnum || nif_x_axnum === nif_z_axnum || nif_y_axnum === nif_z_axnum) {
+    return;
+  }
+  hdr.pixDims[1] = Math.abs(axstep[0]);
+  hdr.pixDims[2] = Math.abs(axstep[1]);
+  hdr.pixDims[3] = Math.abs(axstep[2]);
+  hdr.affine = [
+    [1, 0, 0, 0],
+    [0, 1, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 1]
+  ];
+  hdr.affine[0][nif_x_axnum] = -axstep[nif_x_axnum];
+  hdr.affine[1][nif_y_axnum] = -axstep[nif_y_axnum];
+  hdr.affine[2][nif_z_axnum] = axstep[nif_z_axnum];
+  hdr.affine[0][3] = -axstart[nif_x_axnum];
+  hdr.affine[1][3] = -axstart[nif_y_axnum];
+  hdr.affine[2][3] = axstart[nif_z_axnum];
+}
+async function readHEAD(nvImage, dataBuffer, pairedImgData) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims[0] = 3;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  let orientSpecific = [0, 0, 0];
+  let xyzOrigin = [0, 0, 0];
+  let xyzDelta = [1, 1, 1];
+  const txt = new TextDecoder().decode(dataBuffer);
+  const lines = txt.split(/\r?\n/);
+  const mod = (dataBuffer.byteLength + 8) % 16;
+  const len4 = dataBuffer.byteLength + (16 - mod);
+  log.debug(dataBuffer.byteLength, "len", len4);
+  const extBuffer = new ArrayBuffer(len4);
+  new Uint8Array(extBuffer).set(new Uint8Array(dataBuffer));
+  const newExtension = new NIFTIEXTENSION(len4 + 8, 42, extBuffer, true);
+  hdr.addExtension(newExtension);
+  hdr.extensionCode = 42;
+  hdr.extensionFlag[0] = 1;
+  hdr.extensionSize = len4 + 8;
+  const nlines = lines.length;
+  let i = 0;
+  let hasIJK_TO_DICOM_REAL = false;
+  while (i < nlines) {
+    let line = lines[i];
+    i++;
+    if (!line.startsWith("type")) {
+      continue;
+    }
+    const isInt = line.includes("integer-attribute");
+    const isFloat = line.includes("float-attribute");
+    line = lines[i];
+    i++;
+    if (!line.startsWith("name")) {
+      continue;
+    }
+    let items = line.split("= ");
+    const key = items[1];
+    line = lines[i];
+    i++;
+    items = line.split("= ");
+    let count = parseInt(items[1]);
+    if (count < 1) {
+      continue;
+    }
+    line = lines[i];
+    i++;
+    items = line.trim().split(/\s+/);
+    if (isFloat || isInt) {
+      while (items.length < count) {
+        line = lines[i];
+        i++;
+        const items2 = line.trim().split(/\s+/);
+        items.push(...items2);
+      }
+      for (let j = 0; j < count; j++) {
+        items[j] = parseFloat(items[j]);
+      }
+    }
+    switch (key) {
+      case "BYTEORDER_STRING":
+        if (items[0].includes("LSB_FIRST")) {
+          hdr.littleEndian = true;
+        } else if (items[0].includes("MSB_FIRST")) {
+          hdr.littleEndian = false;
+        }
+        break;
+      case "BRICK_TYPES":
+        {
+          hdr.dims[4] = count;
+          const datatype = parseInt(items[0]);
+          if (datatype === 0) {
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = 2 /* DT_UINT8 */;
+          } else if (datatype === 1) {
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = 4 /* DT_INT16 */;
+          } else if (datatype === 3) {
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+          } else {
+            log.warn("Unknown BRICK_TYPES ", datatype);
+          }
+        }
+        break;
+      case "IJK_TO_DICOM_REAL":
+        if (count < 12) {
+          break;
+        }
+        hasIJK_TO_DICOM_REAL = true;
+        hdr.sform_code = 2;
+        hdr.affine = [
+          [-items[0], -items[1], -items[2], -items[3]],
+          [-items[4], -items[5], -items[6], -items[7]],
+          // TODO don't reuse items for numeric values
+          [items[8], items[9], items[10], items[11]],
+          [0, 0, 0, 1]
+        ];
+        break;
+      case "DATASET_DIMENSIONS":
+        count = Math.max(count, 3);
+        for (let j = 0; j < count; j++) {
+          hdr.dims[j + 1] = items[j];
+        }
+        break;
+      case "ORIENT_SPECIFIC":
+        orientSpecific = items;
+        break;
+      case "ORIGIN":
+        xyzOrigin = items;
+        break;
+      case "DELTA":
+        xyzDelta = items;
+        break;
+      case "TAXIS_FLOATS":
+        hdr.pixDims[4] = items[0];
+        break;
+      default:
+        log.warn("Unknown:", key);
+    }
+  }
+  if (!hasIJK_TO_DICOM_REAL) {
+    THD_daxes_to_NIFTI(nvImage, xyzDelta, xyzOrigin, orientSpecific);
+  } else {
+    setPixDimFromSForm(nvImage);
+  }
+  const nBytes = hdr.numBitsPerVoxel / 8 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
+  if (!pairedImgData) {
+    throw new Error("pairedImgData not set");
+  }
+  if (pairedImgData.byteLength < nBytes) {
+    return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData));
+  }
+  return pairedImgData.slice(0);
+}
+
+// src/nvimage/ImageReaders/brainvoyager.ts
+var brainvoyager_exports = {};
+__export(brainvoyager_exports, {
+  readV16: () => readV16,
+  readVMR: () => readVMR
+});
+function readV16(nvImage, buffer) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const reader = new DataView(buffer);
+  hdr.dims[1] = reader.getUint16(0, true);
+  hdr.dims[2] = reader.getUint16(2, true);
+  hdr.dims[3] = reader.getUint16(4, true);
+  const nBytes = 2 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (nBytes + 6 !== buffer.byteLength) {
+    log.warn("This does not look like a valid BrainVoyager V16 file");
+  }
+  hdr.numBitsPerVoxel = 16;
+  hdr.datatypeCode = 512 /* DT_UINT16 */;
+  log.warn("Warning: V16 files have no spatial transforms");
+  hdr.affine = [
+    [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1]
+  ];
+  hdr.littleEndian = true;
+  return buffer.slice(6);
+}
+function readVMR(nvImage, buffer) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const reader = new DataView(buffer);
+  const version2 = reader.getUint16(0, true);
+  if (version2 !== 4) {
+    log.warn("Not a valid version 4 VMR image");
+  }
+  hdr.dims[1] = reader.getUint16(2, true);
+  hdr.dims[2] = reader.getUint16(4, true);
+  hdr.dims[3] = reader.getUint16(6, true);
+  const nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  if (version2 >= 4) {
+    let pos = 8 + nBytes;
+    const nSpatialTransforms = reader.getUint32(pos + 88, true);
+    pos = pos + 92;
+    if (nSpatialTransforms > 0) {
+      const len4 = buffer.byteLength;
+      for (let i = 0; i < nSpatialTransforms; i++) {
+        while (pos < len4 && reader.getUint8(pos) !== 0) {
+          pos++;
+        }
+        pos++;
+        pos += 4;
+        while (pos < len4 && reader.getUint8(pos) !== 0) {
+          pos++;
+        }
+        pos++;
+        const nValues = reader.getUint32(pos, true);
+        pos += 4;
+        for (let j = 0; j < nValues; j++) {
+          pos += 4;
+        }
+      }
+    }
+    hdr.pixDims[1] = reader.getFloat32(pos + 2, true);
+    hdr.pixDims[2] = reader.getFloat32(pos + 6, true);
+    hdr.pixDims[3] = reader.getFloat32(pos + 10, true);
+  }
+  log.warn("Warning: VMR spatial transform not implemented");
+  hdr.affine = [
+    [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1]
+  ];
+  log.debug(hdr);
+  hdr.numBitsPerVoxel = 8;
+  hdr.datatypeCode = 2 /* DT_UINT8 */;
+  return buffer.slice(8, 8 + nBytes);
+}
+
+// src/nvimage/ImageReaders/dsistudio.ts
+var dsistudio_exports = {};
+__export(dsistudio_exports, {
+  readFIB: () => readFIB,
+  readSRC: () => readSRC
+});
+async function readFIB(nvImage, buffer) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.littleEndian = false;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const mat = await NVUtilities.readMatV4(buffer, true);
+  if (!("dimension" in mat) || !("dti_fa" in mat)) {
+    throw new Error("Not a valid DSIstudio FIB file");
+  }
+  const hasV1 = "index0" in mat && "index1" in mat && "index2" in mat && "odf_vertices" in mat;
+  hdr.numBitsPerVoxel = 32;
+  hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+  hdr.dims[1] = mat.dimension[0];
+  hdr.dims[2] = mat.dimension[1];
+  hdr.dims[3] = mat.dimension[2];
+  hdr.dims[4] = 1;
+  hdr.pixDims[1] = mat.voxel_size[0];
+  hdr.pixDims[2] = mat.voxel_size[1];
+  hdr.pixDims[3] = mat.voxel_size[2];
+  hdr.sform_code = 1;
+  const xmm = (hdr.dims[1] - 1) * 0.5 * hdr.pixDims[1];
+  const ymm = (hdr.dims[2] - 1) * 0.5 * hdr.pixDims[2];
+  const zmm = (hdr.dims[3] - 1) * 0.5 * hdr.pixDims[3];
+  hdr.affine = [
+    [hdr.pixDims[1], 0, 0, -xmm],
+    [0, -hdr.pixDims[2], 0, ymm],
+    [0, 0, hdr.pixDims[2], -zmm],
+    [0, 0, 0, 1]
+  ];
+  hdr.littleEndian = true;
+  const nVox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  const nBytes3D = nVox3D * Math.ceil(hdr.numBitsPerVoxel / 8);
+  const nBytes = nBytes3D * hdr.dims[4];
+  const buff8v1 = new Uint8Array(new ArrayBuffer(nVox3D * 4 * 3));
+  if (hasV1) {
+    const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    const dir0 = new Float32Array(nvox);
+    const dir1 = new Float32Array(nvox);
+    const dir2 = new Float32Array(nvox);
+    const idxs = mat.index0;
+    const dirs = mat.odf_vertices;
+    for (let i = 0; i < nvox; i++) {
+      const idx2 = idxs[i] * 3;
+      dir0[i] = dirs[idx2 + 0];
+      dir1[i] = dirs[idx2 + 1];
+      dir2[i] = -dirs[idx2 + 2];
+    }
+    buff8v1.set(new Uint8Array(dir0.buffer, dir0.byteOffset, dir0.byteLength), 0 * nBytes3D);
+    buff8v1.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D);
+    buff8v1.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D);
+  }
+  if ("report" in mat) {
+    hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)));
+  }
+  const buff8 = new Uint8Array(new ArrayBuffer(nBytes));
+  const arrFA = Float32Array.from(mat.dti_fa);
+  if ("mask" in mat) {
+    let slope = 1;
+    if ("dti_fa_slope" in mat) {
+      slope = mat.dti_fa_slope[0];
+    }
+    let inter = 1;
+    if ("dti_fa_inter" in mat) {
+      inter = mat.dti_fa_inter[0];
+    }
+    const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+    const mask = mat.mask;
+    const f32 = new Float32Array(nvox);
+    let j = 0;
+    for (let i = 0; i < nvox; i++) {
+      if (mask[i] !== 0) {
+        f32[i] = arrFA[j] * slope + inter;
+        j++;
+      }
+    }
+    return [f32.buffer, new Float32Array(buff8v1.buffer)];
+  }
+  const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength);
+  buff8.set(imgFA, 0);
+  return [buff8.buffer, new Float32Array(buff8v1.buffer)];
+}
+async function readSRC(nvImage, buffer) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.littleEndian = false;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const mat = await NVUtilities.readMatV4(buffer);
+  if (!("dimension" in mat) || !("image0" in mat)) {
+    throw new Error("Not a valid DSIstudio SRC file");
+  }
+  let n = 0;
+  let len4 = 0;
+  for (const [key, value] of Object.entries(mat)) {
+    if (!key.startsWith("image")) {
+      continue;
+    }
+    if (n === 0) {
+      len4 = value.length;
+    } else if (len4 !== value.length) {
+      len4 = -1;
+    }
+    if (value.constructor !== Uint16Array) {
+      throw new Error("DSIstudio SRC files always use Uint16 datatype");
+    }
+    n++;
+  }
+  if (len4 < 1 || n < 1) {
+    throw new Error("SRC file not valid DSI Studio data. The image(s) should have the same length");
+  }
+  hdr.numBitsPerVoxel = 16;
+  hdr.datatypeCode = 512 /* DT_UINT16 */;
+  hdr.dims[1] = mat.dimension[0];
+  hdr.dims[2] = mat.dimension[1];
+  hdr.dims[3] = mat.dimension[2];
+  hdr.dims[4] = n;
+  if (hdr.dims[4] > 1) {
+    hdr.dims[0] = 4;
+  }
+  hdr.pixDims[1] = mat.voxel_size[0];
+  hdr.pixDims[2] = mat.voxel_size[1];
+  hdr.pixDims[3] = mat.voxel_size[2];
+  hdr.sform_code = 1;
+  const xmm = (hdr.dims[1] - 1) * 0.5 * hdr.pixDims[1];
+  const ymm = (hdr.dims[2] - 1) * 0.5 * hdr.pixDims[2];
+  const zmm = (hdr.dims[3] - 1) * 0.5 * hdr.pixDims[3];
+  hdr.affine = [
+    [hdr.pixDims[1], 0, 0, -xmm],
+    [0, -hdr.pixDims[2], 0, ymm],
+    [0, 0, hdr.pixDims[2], -zmm],
+    [0, 0, 0, 1]
+  ];
+  hdr.littleEndian = true;
+  const nBytes3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (hdr.numBitsPerVoxel / 8);
+  const nBytes = nBytes3D * hdr.dims[4];
+  const buff8 = new Uint8Array(new ArrayBuffer(nBytes));
+  let offset = 0;
+  for (let i = 0; i < n; i++) {
+    const arr = mat[`image${i}`];
+    const img8 = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+    buff8.set(img8, offset);
+    offset += nBytes3D;
+  }
+  if ("report" in mat) {
+    hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)));
+  }
+  return buff8.buffer;
+}
+
+// src/nvimage/ImageReaders/ecat.ts
+var ecat_exports = {};
+__export(ecat_exports, {
+  readECAT: () => readECAT
+});
+function readECAT(nvImage, buffer) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const reader = new DataView(buffer);
+  const signature = reader.getInt32(0, false);
+  const filetype = reader.getInt16(50, false);
+  if (signature !== 1296127058 || filetype < 1 || filetype > 14) {
+    throw new Error("Not a valid ECAT file");
+  }
+  let pos = 512;
+  let vols = 0;
+  const frame_duration = [];
+  let rawImg = new Float32Array();
+  while (true) {
+    const hdr0 = reader.getInt32(pos, false);
+    const hdr3 = reader.getInt32(pos + 12, false);
+    if (hdr0 + hdr3 !== 31) {
+      break;
+    }
+    let lpos = pos + 20;
+    let r = 0;
+    let voloffset = 0;
+    while (r < 31) {
+      voloffset = reader.getInt32(lpos, false);
+      lpos += 16;
+      if (voloffset === 0) {
+        break;
+      }
+      r++;
+      let ipos = voloffset * 512;
+      const spos = ipos - 512;
+      const data_type = reader.getUint16(spos, false);
+      hdr.dims[1] = reader.getUint16(spos + 4, false);
+      hdr.dims[2] = reader.getUint16(spos + 6, false);
+      hdr.dims[3] = reader.getUint16(spos + 8, false);
+      const scale_factor = reader.getFloat32(spos + 26, false);
+      hdr.pixDims[1] = reader.getFloat32(spos + 34, false) * 10;
+      hdr.pixDims[2] = reader.getFloat32(spos + 38, false) * 10;
+      hdr.pixDims[3] = reader.getFloat32(spos + 42, false) * 10;
+      hdr.pixDims[4] = reader.getUint32(spos + 46, false) / 1e3;
+      frame_duration.push(hdr.pixDims[4]);
+      const nvox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+      const newImg = new Float32Array(nvox3D);
+      if (data_type === 1) {
+        for (let i = 0; i < nvox3D; i++) {
+          newImg[i] = reader.getUint8(ipos) * scale_factor;
+          ipos++;
+        }
+      } else if (data_type === 6) {
+        for (let i = 0; i < nvox3D; i++) {
+          newImg[i] = reader.getUint16(ipos, false) * scale_factor;
+          ipos += 2;
+        }
+      } else if (data_type === 7) {
+        for (let i = 0; i < nvox3D; i++) {
+          newImg[i] = reader.getUint32(ipos, false) * scale_factor;
+          ipos += 4;
+        }
+      } else {
+        log.warn("Unknown ECAT data type " + data_type);
+      }
+      const prevImg = rawImg.slice(0);
+      rawImg = new Float32Array(prevImg.length + newImg.length);
+      rawImg.set(prevImg);
+      rawImg.set(newImg, prevImg.length);
+      vols++;
+    }
+    if (voloffset === 0) {
+      break;
+    }
+    pos += 512;
+  }
+  hdr.dims[4] = vols;
+  hdr.pixDims[4] = frame_duration[0];
+  if (vols > 1) {
+    hdr.dims[0] = 4;
+    let isFDvaries = false;
+    for (let i = 0; i < vols; i++) {
+      if (frame_duration[i] !== frame_duration[0]) {
+        isFDvaries = true;
+      }
+    }
+    if (isFDvaries) {
+      log.warn("Frame durations vary");
+    }
+  }
+  hdr.sform_code = 1;
+  hdr.affine = [
+    [-hdr.pixDims[1], 0, 0, (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1]
+  ];
+  hdr.numBitsPerVoxel = 32;
+  hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+  return rawImg.buffer;
+}
+
+// src/nvimage/ImageReaders/image.ts
+var image_exports = {};
+__export(image_exports, {
+  imageDataFromArrayBuffer: () => imageDataFromArrayBuffer,
+  readBMP: () => readBMP
+});
+async function imageDataFromArrayBuffer(buffer) {
+  return new Promise((resolve2, reject) => {
+    const blob = new Blob([buffer]);
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = url;
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Failed to get 2D context"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve2(ctx.getImageData(0, 0, img.width, img.height));
+    };
+    img.onerror = (err2) => {
+      URL.revokeObjectURL(url);
+      reject(err2);
+    };
+  });
+}
+async function readBMP(nvImage, buffer) {
+  const imageData = await imageDataFromArrayBuffer(buffer);
+  const { width, height, data } = imageData;
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims = [3, width, height, 1, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.affine = [
+    [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1]
+  ];
+  hdr.numBitsPerVoxel = 8;
+  hdr.datatypeCode = 2304 /* DT_RGBA32 */;
+  let isGrayscale = true;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i] !== data[i + 1] || data[i] !== data[i + 2]) {
+      isGrayscale = false;
+      break;
+    }
+  }
+  if (isGrayscale) {
+    hdr.datatypeCode = 2 /* DT_UINT8 */;
+    const grayscaleData = new Uint8Array(width * height);
+    for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+      grayscaleData[j] = data[i];
+    }
+    return grayscaleData.buffer;
+  }
+  return data.buffer;
+}
+
+// src/nvimage/ImageReaders/itk.ts
+var itk_exports = {};
+__export(itk_exports, {
+  readMHA: () => readMHA
+});
+async function readMHA(nvImage, buffer, pairedImgData) {
+  const len4 = buffer.byteLength;
+  if (len4 < 20) {
+    throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
+  }
+  const bytes = new Uint8Array(buffer);
+  let pos = 0;
+  function eol(c) {
+    return c === 10 || c === 13;
+  }
+  function readStr() {
+    while (pos < len4 && eol(bytes[pos])) {
+      pos++;
+    }
+    const startPos = pos;
+    while (pos < len4 && !eol(bytes[pos])) {
+      pos++;
+    }
+    if (pos - startPos < 2) {
+      return "";
+    }
+    return new TextDecoder().decode(buffer.slice(startPos, pos));
+  }
+  let line = readStr();
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
+  hdr.littleEndian = true;
+  let isGz = false;
+  let isDetached = false;
+  const mat33 = mat3_exports.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  const offset = vec3_exports.fromValues(0, 0, 0);
+  while (line !== "") {
+    let items = line.split(" ");
+    if (items.length > 2) {
+      items = items.slice(2);
+    }
+    if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("False")) {
+      hdr.littleEndian = true;
+    }
+    if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("True")) {
+      hdr.littleEndian = false;
+    }
+    if (line.startsWith("CompressedData") && items[0].includes("True")) {
+      isGz = true;
+    }
+    if (line.startsWith("TransformMatrix")) {
+      for (let d = 0; d < 9; d++) {
+        mat33[d] = parseFloat(items[d]);
+      }
+    }
+    if (line.startsWith("Offset")) {
+      for (let d = 0; d < Math.min(items.length, 3); d++) {
+        offset[d] = parseFloat(items[d]);
+      }
+    }
+    if (line.startsWith("ElementSpacing")) {
+      for (let d = 0; d < items.length; d++) {
+        hdr.pixDims[d + 1] = parseFloat(items[d]);
+      }
+    }
+    if (line.startsWith("DimSize")) {
+      hdr.dims[0] = items.length;
+      for (let d = 0; d < items.length; d++) {
+        hdr.dims[d + 1] = parseInt(items[d]);
+      }
+    }
+    if (line.startsWith("ElementType")) {
+      switch (items[0]) {
+        case "MET_UCHAR":
+          hdr.numBitsPerVoxel = 8;
+          hdr.datatypeCode = 2 /* DT_UINT8 */;
+          break;
+        case "MET_CHAR":
+          hdr.numBitsPerVoxel = 8;
+          hdr.datatypeCode = 256 /* DT_INT8 */;
+          break;
+        case "MET_SHORT":
+          hdr.numBitsPerVoxel = 16;
+          hdr.datatypeCode = 4 /* DT_INT16 */;
+          break;
+        case "MET_USHORT":
+          hdr.numBitsPerVoxel = 16;
+          hdr.datatypeCode = 512 /* DT_UINT16 */;
+          break;
+        case "MET_INT":
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = 8 /* DT_INT32 */;
+          break;
+        case "MET_UINT":
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = 768 /* DT_UINT32 */;
+          break;
+        case "MET_FLOAT":
+          hdr.numBitsPerVoxel = 32;
+          hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+          break;
+        case "MET_DOUBLE":
+          hdr.numBitsPerVoxel = 64;
+          hdr.datatypeCode = 64 /* DT_FLOAT64 */;
+          break;
+        default:
+          throw new Error("Unsupported MHA data type: " + items[0]);
+      }
+    }
+    if (line.startsWith("ObjectType") && !items[0].includes("Image")) {
+      log.warn("Only able to read ObjectType = Image, not " + line);
+    }
+    if (line.startsWith("ElementDataFile")) {
+      if (items[0] !== "LOCAL") {
+        isDetached = true;
+      }
+      break;
+    }
+    line = readStr();
+  }
+  const mmMat = mat3_exports.fromValues(hdr.pixDims[1], 0, 0, 0, hdr.pixDims[2], 0, 0, 0, hdr.pixDims[3]);
+  mat3_exports.multiply(mat33, mat33, mmMat);
+  hdr.affine = [
+    [-mat33[0], -mat33[3], -mat33[6], -offset[0]],
+    [-mat33[1], -mat33[4], -mat33[7], -offset[1]],
+    [mat33[2], mat33[5], mat33[8], offset[2]],
+    [0, 0, 0, 1]
+  ];
+  while (bytes[pos] === 10) {
+    pos++;
+  }
+  hdr.vox_offset = pos;
+  if (isDetached && pairedImgData) {
+    if (isGz) {
+      return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData.slice(0)));
+    }
+    return pairedImgData.slice(0);
+  }
+  if (isGz) {
+    return await NVUtilities.decompressToBuffer(new Uint8Array(buffer.slice(hdr.vox_offset)));
+  }
+  return buffer.slice(hdr.vox_offset);
+}
+
+// src/nvimage/ImageReaders/mgh.ts
+var mgh_exports = {};
+__export(mgh_exports, {
+  isFreeSurferLabelImage: () => isFreeSurferLabelImage,
+  optimizeFreeSurferLabels: () => optimizeFreeSurferLabels,
+  readMgh: () => readMgh
+});
+function readTag(view, offset, footerLength, tagToRead = 1) {
+  const end = offset + footerLength;
+  let pos = offset;
+  const results = [];
+  while (pos + 12 <= end) {
+    const tag = view.getInt32(pos, false);
+    const length4 = view.getInt32(pos + 8, false);
+    pos += 12;
+    if (length4 <= 0 || pos + length4 > end) {
+      break;
+    }
+    if (tag !== tagToRead) {
+      pos += length4;
+      continue;
+    }
+    let strLen = length4;
+    let contentPos = pos;
+    if (tagToRead === 1) {
+      if (pos + 4 > end) {
+        break;
+      }
+      strLen = view.getInt32(pos, false);
+      contentPos += 4;
+    }
+    if (strLen > 1 && contentPos + strLen <= end) {
+      const raw = new Uint8Array(view.buffer, contentPos, strLen);
+      const str6 = new TextDecoder("utf-8").decode(raw.slice(0, -1));
+      results.push(str6);
+    }
+    pos += length4;
+  }
+  return results.join("\n\n");
+}
+function optimizeFreeSurferLabels(hdr, imgRaw) {
+  hdr.intent_code = 1002;
+  if (hdr.datatypeCode !== 16 /* DT_FLOAT32 */ && hdr.datatypeCode !== 8 /* DT_INT32 */) {
+    return imgRaw;
+  }
+  let img = new Float32Array(imgRaw);
+  if (hdr.datatypeCode === 8 /* DT_INT32 */) {
+    img = new Int32Array(imgRaw);
+  }
+  if (isPlatformLittleEndian()) {
+    const u32 = new Uint32Array(imgRaw);
+    for (let i = 0; i < u32.length; i++) {
+      const val = u32[i];
+      u32[i] = (val & 255) << 24 | (val & 65280) << 8 | (val & 16711680) >>> 8 | (val & 4278190080) >>> 24;
+    }
+  }
+  hdr.littleEndian = isPlatformLittleEndian();
+  let isInteger = true;
+  let mn = Infinity;
+  let mx = -Infinity;
+  for (let i = 0; i < img.length; i++) {
+    const v = img[i];
+    if (!Number.isFinite(v)) {
+      continue;
+    }
+    if (!Number.isInteger(v)) {
+      isInteger = false;
+    }
+    if (v < mn) {
+      mn = v;
+    }
+    if (v > mx) {
+      mx = v;
+    }
+  }
+  if (!isInteger || mn < 0 || mx > 2147483647) {
+    log.warn(`FreeSurfer Labels must be integers in INT32 range. range ${mn}..${mx}`);
+    return imgRaw;
+  }
+  if (mx > 32767) {
+    hdr.datatypeCode = 8 /* DT_INT32 */;
+    const out = new Int32Array(img.length);
+    for (let i = 0; i < img.length; i++) {
+      out[i] = Math.trunc(img[i]);
+    }
+    return out.buffer;
+  } else if (mx > 255) {
+    hdr.datatypeCode = 4 /* DT_INT16 */;
+    hdr.numBitsPerVoxel = 16;
+    const out = new Int16Array(img.length);
+    for (let i = 0; i < img.length; i++) {
+      out[i] = Math.trunc(img[i]);
+    }
+    return out.buffer;
+  } else {
+    hdr.datatypeCode = 2 /* DT_UINT8 */;
+    hdr.numBitsPerVoxel = 8;
+    const out = new Uint8Array(img.length);
+    for (let i = 0; i < img.length; i++) {
+      out[i] = Math.trunc(img[i]);
+    }
+    return out.buffer;
+  }
+}
+function isFreeSurferLabelImage(raw, hdr, expectedBytes) {
+  const remainingBytes = raw.byteLength - hdr.vox_offset;
+  if (remainingBytes < expectedBytes) {
+    log.error(`MGH image data size mismatch: expected ${expectedBytes}, found ${remainingBytes}`);
+    return false;
+  }
+  if (remainingBytes === expectedBytes) {
+    return false;
+  }
+  const footerStart = hdr.vox_offset + expectedBytes + 20;
+  const footerLength = raw.byteLength - footerStart;
+  if (footerLength <= 12) {
+    return false;
+  }
+  const tag1 = readTag(new DataView(raw), footerStart, footerLength);
+  if (tag1.toLowerCase().endsWith("lut.txt")) {
+    return true;
+  }
+  const tag3 = readTag(new DataView(raw), footerStart, footerLength, 3);
+  return tag3.includes("mri_label2vol");
+}
+async function readMgh(nvImage, buffer) {
+  if (!nvImage.hdr) {
+    log.debug("readMgh called before nvImage.hdr was initialized. Creating default.");
+    nvImage.hdr = new NIFTI1();
+  }
+  const hdr = nvImage.hdr;
+  hdr.littleEndian = false;
+  let raw = buffer;
+  let reader = new DataView(raw);
+  if (raw.byteLength >= 2 && reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
+    try {
+      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
+      reader = new DataView(raw);
+    } catch (err2) {
+      log.error("Failed to decompress MGZ file.", err2);
+      return null;
+    }
+  }
+  if (raw.byteLength < 284) {
+    log.error("File too small to be a valid MGH/MGZ header.");
+    return null;
+  }
+  const version2 = reader.getInt32(0, false);
+  const width = reader.getInt32(4, false);
+  const height = reader.getInt32(8, false);
+  const depth = reader.getInt32(12, false);
+  const nframes = reader.getInt32(16, false);
+  const mtype = reader.getInt32(20, false);
+  const spacingX = reader.getFloat32(30, false);
+  const spacingY = reader.getFloat32(34, false);
+  const spacingZ = reader.getFloat32(38, false);
+  const xr = reader.getFloat32(42, false);
+  const xa = reader.getFloat32(46, false);
+  const xs = reader.getFloat32(50, false);
+  const yr = reader.getFloat32(54, false);
+  const ya = reader.getFloat32(58, false);
+  const ys = reader.getFloat32(62, false);
+  const zr = reader.getFloat32(66, false);
+  const za = reader.getFloat32(70, false);
+  const zs = reader.getFloat32(74, false);
+  const cr = reader.getFloat32(78, false);
+  const ca = reader.getFloat32(82, false);
+  const cs = reader.getFloat32(86, false);
+  if (version2 !== 1) {
+    log.warn(`Unexpected MGH version: ${version2}.`);
+  }
+  if (width <= 0 || height <= 0 || depth <= 0) {
+    log.error(`Invalid MGH dimensions: ${width}x${height}x${depth}`);
+    return null;
+  }
+  switch (mtype) {
+    case 0:
+      hdr.numBitsPerVoxel = 8;
+      hdr.datatypeCode = 2 /* DT_UINT8 */;
+      break;
+    case 4:
+      hdr.numBitsPerVoxel = 16;
+      hdr.datatypeCode = 4 /* DT_INT16 */;
+      break;
+    case 1:
+      hdr.numBitsPerVoxel = 32;
+      hdr.datatypeCode = 8 /* DT_INT32 */;
+      break;
+    case 3:
+      hdr.numBitsPerVoxel = 32;
+      hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+      break;
+    default:
+      log.error(`Unsupported MGH data type: ${mtype}`);
+      return null;
+  }
+  hdr.dims[1] = width;
+  hdr.dims[2] = height;
+  hdr.dims[3] = depth;
+  hdr.dims[4] = Math.max(1, nframes);
+  hdr.dims[0] = hdr.dims[4] > 1 ? 4 : 3;
+  hdr.pixDims[1] = Math.abs(spacingX);
+  hdr.pixDims[2] = Math.abs(spacingY);
+  hdr.pixDims[3] = Math.abs(spacingZ);
+  hdr.pixDims[4] = 0;
+  hdr.sform_code = 1;
+  hdr.qform_code = 0;
+  hdr.sform_code = 1;
+  const rot44 = mat4_exports.fromValues(
+    xr * hdr.pixDims[1],
+    yr * hdr.pixDims[2],
+    zr * hdr.pixDims[3],
+    0,
+    xa * hdr.pixDims[1],
+    ya * hdr.pixDims[2],
+    za * hdr.pixDims[3],
+    0,
+    xs * hdr.pixDims[1],
+    ys * hdr.pixDims[2],
+    zs * hdr.pixDims[3],
+    0,
+    0,
+    0,
+    0,
+    1
+  );
+  const Pcrs = [hdr.dims[1] / 2, hdr.dims[2] / 2, hdr.dims[3] / 2, 1];
+  const PxyzOffset = [0, 0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    PxyzOffset[i] = 0;
+    for (let j = 0; j < 3; j++) {
+      PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j];
+    }
+  }
+  hdr.affine = [
+    [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
+    [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
+    [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
+    [0, 0, 0, 1]
+  ];
+  hdr.vox_offset = 284;
+  hdr.magic = "n+1";
+  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+  const nVoxels = width * height * depth * hdr.dims[4];
+  const expectedBytes = nVoxels * nBytesPerVoxel;
+  const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes);
+  if (isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
+    return optimizeFreeSurferLabels(hdr, imgRaw);
+  }
+  return imgRaw;
+}
+
+// src/nvimage/ImageReaders/mrtrix.ts
+var mrtrix_exports = {};
+__export(mrtrix_exports, {
+  readMIF: () => readMIF
+});
+async function readMIF(nvImage, buffer, pairedImgData) {
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
+  let len4 = buffer.byteLength;
+  if (len4 < 20) {
+    throw new Error("File too small to be MIF: bytes = " + len4);
+  }
+  let bytes = new Uint8Array(buffer);
+  if (bytes[0] === 31 && bytes[1] === 139) {
+    log.debug("MIF with GZ decompression");
+    buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
+    len4 = buffer.byteLength;
+    bytes = new Uint8Array(buffer);
+  }
+  let pos = 0;
+  function readStr() {
+    while (pos < len4 && bytes[pos] === 10) {
+      pos++;
+    }
+    const startPos = pos;
+    while (pos < len4 && bytes[pos] !== 10) {
+      pos++;
+    }
+    pos++;
+    if (pos - startPos < 1) {
+      return "";
+    }
+    return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
+  }
+  let line = readStr();
+  if (!line.startsWith("mrtrix image")) {
+    throw new Error("Not a valid MIF file");
+  }
+  const layout = [];
+  let isBit = false;
+  let nTransform = 0;
+  let TR = 0;
+  let isDetached = false;
+  line = readStr();
+  while (pos < len4 && !line.startsWith("END")) {
+    let items = line.split(":");
+    line = readStr();
+    if (items.length < 2) {
+      break;
+    }
+    const tag = items[0];
+    items = items[1].split(",");
+    for (let i = 0; i < items.length; i++) {
+      items[i] = items[i].trim();
+    }
+    switch (tag) {
+      case "dim":
+        hdr.dims[0] = items.length;
+        for (let i = 0; i < items.length; i++) {
+          hdr.dims[i + 1] = parseInt(items[i]);
+        }
+        break;
+      case "vox":
+        for (let i = 0; i < items.length; i++) {
+          hdr.pixDims[i + 1] = parseFloat(items[i]);
+          if (isNaN(hdr.pixDims[i + 1])) {
+            hdr.pixDims[i + 1] = 0;
+          }
+        }
+        break;
+      case "layout":
+        for (let i = 0; i < items.length; i++) {
+          layout.push(parseInt(items[i]));
+        }
+        break;
+      case "datatype":
+        {
+          const dt = items[0];
+          if (dt.startsWith("Bit")) {
+            isBit = true;
+            hdr.datatypeCode = 2 /* DT_UINT8 */;
+          } else if (dt.startsWith("Int8")) {
+            hdr.datatypeCode = 256 /* DT_INT8 */;
+          } else if (dt.startsWith("UInt8")) {
+            hdr.datatypeCode = 2 /* DT_UINT8 */;
+          } else if (dt.startsWith("Int16")) {
+            hdr.datatypeCode = 4 /* DT_INT16 */;
+          } else if (dt.startsWith("UInt16")) {
+            hdr.datatypeCode = 512 /* DT_UINT16 */;
+          } else if (dt.startsWith("Int32")) {
+            hdr.datatypeCode = 8 /* DT_INT32 */;
+          } else if (dt.startsWith("UInt32")) {
+            hdr.datatypeCode = 768 /* DT_UINT32 */;
+          } else if (dt.startsWith("Float32")) {
+            hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+          } else if (dt.startsWith("Float64")) {
+            hdr.datatypeCode = 64 /* DT_FLOAT64 */;
+          } else {
+            log.warn("Unsupported datatype " + dt);
+          }
+          if (dt.includes("8")) {
+            hdr.numBitsPerVoxel = 8;
+          } else if (dt.includes("16")) {
+            hdr.numBitsPerVoxel = 16;
+          } else if (dt.includes("32")) {
+            hdr.numBitsPerVoxel = 32;
+          } else if (dt.includes("64")) {
+            hdr.numBitsPerVoxel = 64;
+          }
+          hdr.littleEndian = true;
+          if (dt.endsWith("LE")) {
+            hdr.littleEndian = true;
+          }
+          if (dt.endsWith("BE")) {
+            hdr.littleEndian = false;
+          }
+        }
+        break;
+      case "transform":
+        if (nTransform > 2 || items.length !== 4) {
+          break;
+        }
+        hdr.affine[nTransform][0] = parseFloat(items[0]);
+        hdr.affine[nTransform][1] = parseFloat(items[1]);
+        hdr.affine[nTransform][2] = parseFloat(items[2]);
+        hdr.affine[nTransform][3] = parseFloat(items[3]);
+        nTransform++;
+        break;
+      case "comments":
+        hdr.description = items[0].substring(0, Math.min(79, items[0].length));
+        break;
+      /* case 'command_history':
+      if (items[0].startsWith('dwi2tensor')) {
+        isTensor = true
+      }
+      break */
+      case "RepetitionTime":
+        TR = parseFloat(items[0]);
+        break;
+      case "file":
+        isDetached = !items[0].startsWith(". ");
+        if (!isDetached) {
+          items = items[0].split(" ");
+          hdr.vox_offset = parseInt(items[1]);
+        }
+        break;
+    }
+  }
+  const ndim = hdr.dims[0];
+  if (ndim > 5) {
+    log.warn("reader only designed for a maximum of 5 dimensions (XYZTD)");
+  }
+  let nvox = 1;
+  for (let i = 0; i < ndim; i++) {
+    nvox *= Math.max(hdr.dims[i + 1], 1);
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let j2 = 0; j2 < 3; j2++) {
+      hdr.affine[i][j2] *= hdr.pixDims[j2 + 1];
+    }
+  }
+  log.debug("mif affine:" + hdr.affine[0]);
+  if (TR > 0) {
+    hdr.pixDims[4] = TR;
+  }
+  if (isDetached && !pairedImgData) {
+    log.warn("MIH header provided without paired image data");
+  }
+  let rawImg;
+  if (pairedImgData && isDetached) {
+    rawImg = pairedImgData.slice(0);
+  } else if (isBit) {
+    hdr.numBitsPerVoxel = 8;
+    const img8 = new Uint8Array(nvox);
+    const buffer1 = buffer.slice(hdr.vox_offset, hdr.vox_offset + Math.ceil(nvox / 8));
+    const img1 = new Uint8Array(buffer1);
+    let j2 = 0;
+    for (let i = 0; i < nvox; i++) {
+      const bit = i % 8;
+      img8[i] = img1[j2] >> 7 - bit & 1;
+      if (bit === 7) {
+        j2++;
+      }
+    }
+    rawImg = img8.buffer;
+  } else {
+    rawImg = buffer.slice(hdr.vox_offset, hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8));
+  }
+  if (layout.length !== hdr.dims[0]) {
+    log.warn("dims does not match layout");
+  }
+  let stride = 1;
+  const instride = [1, 1, 1, 1, 1];
+  const inflip = [false, false, false, false, false];
+  for (let i = 0; i < layout.length; i++) {
+    for (let j2 = 0; j2 < layout.length; j2++) {
+      const a = Math.abs(layout[j2]);
+      if (a !== i) {
+        continue;
+      }
+      instride[j2] = stride;
+      if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
+        inflip[j2] = true;
+      }
+      stride *= hdr.dims[j2 + 1];
+    }
+  }
+  let xlut = NVUtilities.range(0, hdr.dims[1] - 1, 1);
+  if (inflip[0]) {
+    xlut = NVUtilities.range(hdr.dims[1] - 1, 0, -1);
+  }
+  for (let i = 0; i < hdr.dims[1]; i++) {
+    xlut[i] *= instride[0];
+  }
+  let ylut = NVUtilities.range(0, hdr.dims[2] - 1, 1);
+  if (inflip[1]) {
+    ylut = NVUtilities.range(hdr.dims[2] - 1, 0, -1);
+  }
+  for (let i = 0; i < hdr.dims[2]; i++) {
+    ylut[i] *= instride[1];
+  }
+  let zlut = NVUtilities.range(0, hdr.dims[3] - 1, 1);
+  if (inflip[2]) {
+    zlut = NVUtilities.range(hdr.dims[3] - 1, 0, -1);
+  }
+  for (let i = 0; i < hdr.dims[3]; i++) {
+    zlut[i] *= instride[2];
+  }
+  let tlut = NVUtilities.range(0, hdr.dims[4] - 1, 1);
+  if (inflip[3]) {
+    tlut = NVUtilities.range(hdr.dims[4] - 1, 0, -1);
+  }
+  for (let i = 0; i < hdr.dims[4]; i++) {
+    tlut[i] *= instride[3];
+  }
+  let dlut = NVUtilities.range(0, hdr.dims[5] - 1, 1);
+  if (inflip[4]) {
+    dlut = NVUtilities.range(hdr.dims[5] - 1, 0, -1);
+  }
+  for (let i = 0; i < hdr.dims[5]; i++) {
+    dlut[i] *= instride[4];
+  }
+  let j = 0;
+  let inVs;
+  let outVs;
+  switch (hdr.datatypeCode) {
+    case 256 /* DT_INT8 */:
+      inVs = new Int8Array(rawImg);
+      outVs = new Int8Array(nvox);
+      break;
+    case 2 /* DT_UINT8 */:
+      inVs = new Uint8Array(rawImg);
+      outVs = new Uint8Array(nvox);
+      break;
+    case 4 /* DT_INT16 */:
+      inVs = new Int16Array(rawImg);
+      outVs = new Int16Array(nvox);
+      break;
+    case 512 /* DT_UINT16 */:
+      inVs = new Uint16Array(rawImg);
+      outVs = new Uint16Array(nvox);
+      break;
+    case 8 /* DT_INT32 */:
+      inVs = new Int32Array(rawImg);
+      outVs = new Int32Array(nvox);
+      break;
+    case 768 /* DT_UINT32 */:
+      inVs = new Uint32Array(rawImg);
+      outVs = new Uint32Array(nvox);
+      break;
+    case 16 /* DT_FLOAT32 */:
+      inVs = new Float32Array(rawImg);
+      outVs = new Float32Array(nvox);
+      break;
+    case 64 /* DT_FLOAT64 */:
+      inVs = new Float64Array(rawImg);
+      outVs = new Float64Array(nvox);
+      break;
+    default:
+      throw new Error("unknown datatypeCode");
+  }
+  for (let d = 0; d < hdr.dims[5]; d++) {
+    for (let t = 0; t < hdr.dims[4]; t++) {
+      for (let z = 0; z < hdr.dims[3]; z++) {
+        for (let y = 0; y < hdr.dims[2]; y++) {
+          for (let x = 0; x < hdr.dims[1]; x++) {
+            outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z] + tlut[t] + dlut[d]];
+            j++;
+          }
+        }
+      }
+    }
+  }
+  return outVs.buffer;
+}
+
+// src/nvimage/ImageReaders/nii.ts
+var nii_exports = {};
+__export(nii_exports, {
+  readNifti: () => readNifti
+});
+async function readNifti(nvImage, buffer, pairedImageData) {
+  let dataBuffer = buffer;
+  let imgRaw = null;
+  try {
+    if (isCompressed(dataBuffer)) {
+      log.debug(`Decompressing NIfTI file: ${nvImage.name}`);
+      dataBuffer = await decompressAsync(dataBuffer);
+      log.debug(`Decompression complete for: ${nvImage.name}`);
+    }
+    if (!dataBuffer || dataBuffer.byteLength === 0) {
+      throw new Error("Buffer became invalid after decompression attempt.");
+    }
+    nvImage.hdr = await readHeaderAsync(dataBuffer, pairedImageData != null);
+    if (hasExtension(nvImage.hdr)) {
+      nvImage.extensions = nvImage.hdr.extensions;
+    }
+    if (nvImage.hdr === null) {
+      throw new Error(`Failed to read NIfTI header: ${nvImage.name}`);
+    }
+    if (nvImage.hdr.cal_min === 0 && nvImage.hdr.cal_max === 255 && nvImage.hdr.datatypeCode !== 2 /* DT_UINT8 */) {
+      log.debug(`Resetting suspicious cal_min/max (0/255) for non-uint8 NIfTI: ${nvImage.name}`);
+      nvImage.hdr.cal_min = 0;
+      nvImage.hdr.cal_max = 0;
+    }
+    imgRaw = pairedImageData ? readImage(nvImage.hdr, pairedImageData) : readImage(nvImage.hdr, dataBuffer);
+    if (imgRaw === null) {
+      throw new Error(`nifti-reader-js readImage returned null for ${nvImage.name}`);
+    }
+    return imgRaw;
+  } catch (err2) {
+    log.error(`Error processing NIfTI file ${nvImage.name}:`, err2);
+    nvImage.hdr = null;
+    return null;
+  }
+}
+
+// src/nvimage/ImageReaders/nrrd.ts
+var nrrd_exports = {};
+__export(nrrd_exports, {
+  readNrrd: () => readNrrd
+});
+async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
+  if (!nvImage.hdr) {
+    log.warn("readNrrd called before nvImage.hdr was initialized. Creating default.");
+    nvImage.hdr = new NIFTI1();
+  }
+  const hdr = nvImage.hdr;
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  const len4 = dataBuffer.byteLength;
+  let txt = null;
+  const bytes = new Uint8Array(dataBuffer);
+  for (let i = 1; i < len4; i++) {
+    if (bytes[i - 1] === 10 && bytes[i] === 10) {
+      const v = dataBuffer.slice(0, i - 1);
+      txt = new TextDecoder().decode(v);
+      hdr.vox_offset = i + 1;
+      break;
+    }
+  }
+  if (txt === null) {
+    log.error("readNrrd: could not extract txt");
+    return null;
+  }
+  const lines = txt.split("\n");
+  if (!lines[0].startsWith("NRRD")) {
+    log.error("Invalid NRRD image (magic signature missing)");
+    return null;
+  }
+  const n = lines.length;
+  let isGz = false;
+  let isMicron = false;
+  let isDetached = false;
+  const mat33 = mat3_exports.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
+  const offset = vec3_exports.fromValues(0, 0, 0);
+  let rot33 = mat3_exports.create();
+  for (let i = 1; i < n; i++) {
+    let str6 = lines[i];
+    if (str6.length === 0 || str6[0] === "#") {
+      if (str6.startsWith("#")) {
+        continue;
+      }
+      if (str6.trim().length === 0) {
+        continue;
+      }
+    }
+    str6 = str6.toLowerCase();
+    const items = str6.split(":");
+    if (items.length < 2) {
+      continue;
+    }
+    const key = items[0].trim();
+    let value = items[1].trim();
+    value = value.replaceAll(")", " ");
+    value = value.replaceAll("(", " ");
+    value = value.trim();
+    switch (key) {
+      case "data file":
+        isDetached = true;
+        break;
+      case "encoding":
+        if (value.includes("raw")) {
+          isGz = false;
+        } else if (value.includes("gz")) {
+          isGz = true;
+        } else {
+          log.error("Unsupported NRRD encoding");
+          return null;
+        }
+        break;
+      case "type":
+        switch (value) {
+          case "uchar":
+          case "unsigned char":
+          case "uint8":
+          case "uint8_t":
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = 2 /* DT_UINT8 */;
+            break;
+          case "signed char":
+          case "int8":
+          case "int8_t":
+            hdr.numBitsPerVoxel = 8;
+            hdr.datatypeCode = 256 /* DT_INT8 */;
+            break;
+          case "short":
+          case "short int":
+          case "signed short":
+          case "signed short int":
+          case "int16":
+          case "int16_t":
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = 4 /* DT_INT16 */;
+            break;
+          case "ushort":
+          case "unsigned short":
+          case "unsigned short int":
+          case "uint16":
+          case "uint16_t":
+            hdr.numBitsPerVoxel = 16;
+            hdr.datatypeCode = 512 /* DT_UINT16 */;
+            break;
+          case "int":
+          case "signed int":
+          case "int32":
+          case "int32_t":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 8 /* DT_INT32 */;
+            break;
+          case "uint":
+          case "unsigned int":
+          case "uint32":
+          case "uint32_t":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 768 /* DT_UINT32 */;
+            break;
+          case "float":
+            hdr.numBitsPerVoxel = 32;
+            hdr.datatypeCode = 16 /* DT_FLOAT32 */;
+            break;
+          case "double":
+            hdr.numBitsPerVoxel = 64;
+            hdr.datatypeCode = 64 /* DT_FLOAT64 */;
+            break;
+          default:
+            log.error("Unsupported NRRD data type: " + value);
+            return null;
+        }
+        break;
+      case "spacings":
+        {
+          const values = value.split(/[ ,]+/);
+          for (let d = 0; d < values.length; d++) {
+            hdr.pixDims[d + 1] = parseFloat(values[d]);
+          }
+        }
+        break;
+      case "sizes":
+        {
+          const dims = value.split(/[ ,]+/);
+          hdr.dims[0] = dims.length;
+          for (let d = 0; d < dims.length; d++) {
+            hdr.dims[d + 1] = parseInt(dims[d]);
+          }
+        }
+        break;
+      case "endian":
+        if (value.includes("little")) {
+          hdr.littleEndian = true;
+        } else if (value.includes("big")) {
+          hdr.littleEndian = false;
+        }
+        break;
+      case "space directions":
+        {
+          const vs = value.split(/[ ,]+/);
+          if (vs.length === 9) {
+            for (let d = 0; d < 9; d++) {
+              mat33[d] = parseFloat(vs[d]);
+            }
+          }
+        }
+        break;
+      case "space origin":
+        {
+          const ts = value.split(/[ ,]+/);
+          if (ts.length === 3) {
+            offset[0] = parseFloat(ts[0]);
+            offset[1] = parseFloat(ts[1]);
+            offset[2] = parseFloat(ts[2]);
+          }
+        }
+        break;
+      case "space units":
+        if (value.includes("microns")) {
+          isMicron = true;
+        }
+        break;
+      case "space":
+        if (value.includes("right-anterior-superior") || value.includes("ras")) {
+          rot33 = mat3_exports.fromValues(1, 0, 0, 0, 1, 0, 0, 0, 1);
+        } else if (value.includes("left-anterior-superior") || value.includes("las")) {
+          rot33 = mat3_exports.fromValues(-1, 0, 0, 0, 1, 0, 0, 0, 1);
+        } else if (value.includes("left-posterior-superior") || value.includes("lps")) {
+          rot33 = mat3_exports.fromValues(-1, 0, 0, 0, -1, 0, 0, 0, 1);
+        } else {
+          log.warn("Unsupported NRRD space value:", value);
+        }
+        break;
+      default:
+        log.warn("Unknown:", key);
+        break;
+    }
+  }
+  if (!isNaN(mat33[0])) {
+    hdr.sform_code = 2;
+    if (isMicron) {
+      mat4_exports.multiplyScalar(mat33, mat33, 1e-3);
+      offset[0] *= 1e-3;
+      offset[1] *= 1e-3;
+      offset[2] *= 1e-3;
+    }
+    if (rot33[0] < 0) {
+      offset[0] = -offset[0];
+    }
+    if (rot33[4] < 0) {
+      offset[1] = -offset[1];
+    }
+    if (rot33[8] < 0) {
+      offset[2] = -offset[2];
+    }
+    mat3_exports.multiply(mat33, rot33, mat33);
+    const mat = mat4_exports.fromValues(mat33[0], mat33[3], mat33[6], offset[0], mat33[1], mat33[4], mat33[7], offset[1], mat33[2], mat33[5], mat33[8], offset[2], 0, 0, 0, 1);
+    if (!nvImage.vox2mm) {
+      return null;
+    }
+    const mm000 = nvImage.vox2mm([0, 0, 0], mat);
+    const mm100 = nvImage.vox2mm([1, 0, 0], mat);
+    vec3_exports.subtract(mm100, mm100, mm000);
+    const mm010 = nvImage.vox2mm([0, 1, 0], mat);
+    vec3_exports.subtract(mm010, mm010, mm000);
+    const mm001 = nvImage.vox2mm([0, 0, 1], mat);
+    vec3_exports.subtract(mm001, mm001, mm000);
+    hdr.pixDims[1] = vec3_exports.length(mm100);
+    hdr.pixDims[2] = vec3_exports.length(mm010);
+    hdr.pixDims[3] = vec3_exports.length(mm001);
+    hdr.affine = [
+      [mat[0], mat[1], mat[2], mat[3]],
+      [mat[4], mat[5], mat[6], mat[7]],
+      [mat[8], mat[9], mat[10], mat[11]],
+      [0, 0, 0, 1]
+    ];
+  }
+  let imgRaw = null;
+  const sourceBuffer = isDetached ? pairedImgData : dataBuffer;
+  const sourceOffset = isDetached ? 0 : hdr.vox_offset;
+  if (isDetached && !sourceBuffer) {
+    log.warn("Missing data: NRRD header describes detached data file but only one URL provided");
+    return null;
+  }
+  if (!sourceBuffer || sourceOffset >= sourceBuffer.byteLength) {
+    log.error(`NRRD data offset (${sourceOffset}) invalid for buffer length (${sourceBuffer?.byteLength ?? 0})`);
+    return null;
+  }
+  let dataSection = sourceBuffer.slice(sourceOffset);
+  if (isGz) {
+    try {
+      log.debug("Decompressing NRRD data...");
+      dataSection = await NVUtilities.decompressToBuffer(new Uint8Array(dataSection));
+      log.debug("Decompression complete.");
+    } catch (err2) {
+      log.error("Failed to decompress NRRD data.", err2);
+      return null;
+    }
+  }
+  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+  const nVoxels = hdr.dims.slice(1, hdr.dims[0] + 1).reduce((acc, dim) => acc * Math.max(1, dim), 1);
+  const expectedBytes = nVoxels * nBytesPerVoxel;
+  if (dataSection.byteLength < expectedBytes) {
+    log.error(`NRRD image data size mismatch: expected ${expectedBytes}, found ${dataSection.byteLength}`);
+    return null;
+  } else if (dataSection.byteLength > expectedBytes) {
+    log.warn(`NRRD has extra ${dataSection.byteLength - expectedBytes} bytes after expected image data. Truncating.`);
+    dataSection = dataSection.slice(0, expectedBytes);
+  }
+  imgRaw = dataSection;
+  if (!hdr.datatypeCode) {
+    log.error("NRRD parsing failed to set datatypeCode.");
+    return null;
+  }
+  if (!hdr.numBitsPerVoxel) {
+    log.error("NRRD parsing failed to set numBitsPerVoxel.");
+    return null;
+  }
+  return imgRaw;
+}
+
+// src/nvimage/ImageReaders/numpy.ts
+var numpy_exports = {};
+__export(numpy_exports, {
+  readNPY: () => readNPY,
+  readNPZ: () => readNPZ
+});
+function getTypeSize(dtype) {
+  const typeMap = {
+    "|b1": 1,
+    // Boolean
+    "<i1": 1,
+    // Int8
+    "<u1": 1,
+    // UInt8
+    "<i2": 2,
+    // Int16
+    "<u2": 2,
+    // UInt16
+    "<i4": 4,
+    // Int32
+    "<u4": 4,
+    // UInt32
+    "<f4": 4,
+    // Float32
+    "<f8": 8
+    // Float64
+  };
+  return typeMap[dtype] ?? 1;
+}
+function getDataTypeCode(dtype) {
+  const typeMap = {
+    "|b1": 2,
+    // DT_BINARY
+    "<i1": 256,
+    // DT_INT8
+    "<u1": 2,
+    // DT_UINT8
+    "<i2": 4,
+    // DT_INT16
+    "<u2": 512,
+    // DT_UINT16
+    "<i4": 8,
+    // DT_INT32
+    "<u4": 768,
+    // DT_UINT32
+    "<f4": 16,
+    // DT_FLOAT32
+    "<f8": 64
+    // DT_FLOAT64
+  };
+  return typeMap[dtype] ?? 16;
+}
+async function readNPY(nvImage, buffer) {
+  const dv = new DataView(buffer);
+  const magicBytes = [dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3), dv.getUint8(4), dv.getUint8(5)];
+  const expectedMagic = [147, 78, 85, 77, 80, 89];
+  if (!magicBytes.every((byte, i) => byte === expectedMagic[i])) {
+    throw new Error("Not a valid NPY file: Magic number mismatch");
+  }
+  const headerLen = dv.getUint16(8, true);
+  const headerText = new TextDecoder("utf-8").decode(buffer.slice(10, 10 + headerLen));
+  const shapeMatch = headerText.match(/'shape': \((.*?)\)/);
+  if (!shapeMatch) {
+    throw new Error("Invalid NPY header: Shape not found");
+  }
+  const shape = shapeMatch[1].split(",").map((s) => s.trim()).filter((s) => s !== "").map(Number);
+  const dtypeMatch = headerText.match(/'descr': '([^']+)'/);
+  if (!dtypeMatch) {
+    throw new Error("Invalid NPY header: Data type not found");
+  }
+  const dtype = dtypeMatch[1];
+  const numElements = shape.reduce((a, b) => a * b, 1);
+  const dataStart = 10 + headerLen;
+  const dataBuffer = buffer.slice(dataStart, dataStart + numElements * getTypeSize(dtype));
+  const width = shape.length > 0 ? shape[shape.length - 1] : 1;
+  const height = shape.length > 1 ? shape[shape.length - 2] : 1;
+  const slices = shape.length > 2 ? shape[shape.length - 3] : 1;
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims = [3, width, height, slices, 0, 0, 0, 0];
+  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.affine = [
+    [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1]
+  ];
+  hdr.numBitsPerVoxel = getTypeSize(dtype) * 8;
+  hdr.datatypeCode = getDataTypeCode(dtype);
+  return dataBuffer;
+}
+async function readNPZ(nvImage, buffer) {
+  const zip = new Zip(buffer);
+  for (let i = 0; i < zip.entries.length; i++) {
+    const entry = zip.entries[i];
+    if (entry.fileName.toLowerCase().endsWith(".npy")) {
+      const data = await entry.extract();
+      return await readNPY(nvImage, data.buffer);
+    }
+  }
+}
+
+// src/nvimage/ImageReaders/zarr.ts
+var zarr_exports = {};
+__export(zarr_exports, {
+  readZARR: () => readZARR
+});
+function zxy2xyz(data, X, Y, Z) {
+  const voxelCount = X * Y;
+  const rgb = new Uint8Array(voxelCount * Z * 3);
+  const offsets = new Array(Z);
+  for (let s = 0; s < Z; s++) {
+    offsets[s] = voxelCount * 3 * s;
+  }
+  let srcIndex = 0;
+  let dstIndex = 0;
+  for (let v = 0; v < voxelCount; v++) {
+    for (let s = 0; s < Z; s++) {
+      rgb[offsets[s] + dstIndex] = data[srcIndex++];
+      rgb[offsets[s] + dstIndex + 1] = data[srcIndex++];
+      rgb[offsets[s] + dstIndex + 2] = data[srcIndex++];
+    }
+    dstIndex += 3;
+  }
+  return rgb;
+}
+async function readZARR(nvImage, buffer, zarrData) {
+  let { width, height, depth = 1, data } = zarrData ?? {};
+  let expectedLength = width * height * depth * 3;
+  let isRGB = expectedLength === data.length;
+  if (!isRGB) {
+    expectedLength = width * height * depth;
+    if (depth === 3) {
+      isRGB = true;
+      depth = 1;
+    }
+  }
+  if (expectedLength !== data.length) {
+    throw new Error(`Expected RGB ${width}\xD7${height}\xD7${depth}\xD73 =  ${expectedLength}, but ZARR length ${data.length}`);
+  }
+  nvImage.hdr = new NIFTI1();
+  const hdr = nvImage.hdr;
+  hdr.dims = [3, width, height, depth, 1, 1, 1, 1];
+  hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0];
+  hdr.affine = [
+    [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
+    [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
+    [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
+    [0, 0, 0, 1]
+  ];
+  if (!isRGB) {
+    hdr.numBitsPerVoxel = 8;
+    hdr.datatypeCode = 2 /* DT_UINT8 */;
+    if (data instanceof Uint8Array) {
+      const retBuffer2 = new ArrayBuffer(data.length);
+      const retView2 = new Uint8Array(retBuffer2);
+      retView2.set(data);
+      return retBuffer2;
+    }
+    return data;
+  }
+  hdr.numBitsPerVoxel = 24;
+  hdr.datatypeCode = 128 /* DT_RGB24 */;
+  const retData = zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+  const retBuffer = new ArrayBuffer(retData.length);
+  const retView = new Uint8Array(retBuffer);
+  retView.set(retData);
+  return retBuffer;
+}
+
+// src/nvimage/CoordinateTransform.ts
+function vox2mm2(_nvImage, XYZ, mtx) {
+  const sform = mat4_exports.clone(mtx);
+  mat4_exports.transpose(sform, sform);
+  const pos = vec4_exports.fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
+  vec4_exports.transformMat4(pos, pos, sform);
+  const pos3 = vec3_exports.fromValues(pos[0], pos[1], pos[2]);
+  return pos3;
+}
+function mm2vox(nvImage, mm, frac = false) {
+  if (!nvImage.matRAS) {
+    throw new Error("matRAS undefined");
+  }
+  const sform = mat4_exports.clone(nvImage.matRAS);
+  const out = mat4_exports.clone(sform);
+  mat4_exports.transpose(out, sform);
+  mat4_exports.invert(out, out);
+  const pos = vec4_exports.fromValues(mm[0], mm[1], mm[2], 1);
+  vec4_exports.transformMat4(pos, pos, out);
+  const pos3 = vec3_exports.fromValues(pos[0], pos[1], pos[2]);
+  if (frac) {
+    return pos3;
+  }
+  return new Float32Array([Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])]);
+}
+function convertVox2Frac(nvImage, vox) {
+  const frac = vec3_exports.fromValues((vox[0] + 0.5) / nvImage.dimsRAS[1], (vox[1] + 0.5) / nvImage.dimsRAS[2], (vox[2] + 0.5) / nvImage.dimsRAS[3]);
+  return frac;
+}
+function convertFrac2Vox(nvImage, frac) {
+  const vox = vec3_exports.fromValues(
+    Math.round(frac[0] * nvImage.dims[1] - 0.5),
+    // dims === RAS
+    Math.round(frac[1] * nvImage.dims[2] - 0.5),
+    // dims === RAS
+    Math.round(frac[2] * nvImage.dims[3] - 0.5)
+    // dims === RAS
+  );
+  return vox;
+}
+function convertFrac2MM(nvImage, frac, isForceSliceMM = false) {
+  const pos = vec4_exports.fromValues(frac[0], frac[1], frac[2], 1);
+  if (isForceSliceMM) {
+    vec4_exports.transformMat4(pos, pos, nvImage.frac2mm);
+  } else {
+    vec4_exports.transformMat4(pos, pos, nvImage.frac2mmOrtho);
+  }
+  return pos;
+}
+function convertMM2Frac(nvImage, mm, isForceSliceMM = false) {
+  const mm4 = vec4_exports.fromValues(mm[0], mm[1], mm[2], 1);
+  const d = nvImage.dimsRAS;
+  const frac = vec3_exports.fromValues(0, 0, 0);
+  if (typeof d === "undefined") {
+    return frac;
+  }
+  if (!isForceSliceMM) {
+    const xform = mat4_exports.clone(nvImage.frac2mmOrtho);
+    mat4_exports.invert(xform, xform);
+    vec4_exports.transformMat4(mm4, mm4, xform);
+    frac[0] = mm4[0];
+    frac[1] = mm4[1];
+    frac[2] = mm4[2];
+    return frac;
+  }
+  if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
+    return frac;
+  }
+  const sform = mat4_exports.clone(nvImage.matRAS);
+  mat4_exports.invert(sform, sform);
+  mat4_exports.transpose(sform, sform);
+  vec4_exports.transformMat4(mm4, mm4, sform);
+  frac[0] = (mm4[0] + 0.5) / d[1];
+  frac[1] = (mm4[1] + 0.5) / d[2];
+  frac[2] = (mm4[2] + 0.5) / d[3];
+  return frac;
+}
+function arrayEquals(a, b) {
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
+}
+
+// src/nvimage/ImageOrientation.ts
+function computeObliqueAngle(mtx44) {
+  const mtx = mat4_exports.clone(mtx44);
+  mat4_exports.transpose(mtx, mtx44);
+  const dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2]);
+  const xmax = Math.max(Math.max(Math.abs(mtx[0]), Math.abs(mtx[1])), Math.abs(mtx[2])) / dxtmp;
+  const dytmp = Math.sqrt(mtx[4] * mtx[4] + mtx[5] * mtx[5] + mtx[6] * mtx[6]);
+  const ymax = Math.max(Math.max(Math.abs(mtx[4]), Math.abs(mtx[5])), Math.abs(mtx[6])) / dytmp;
+  const dztmp = Math.sqrt(mtx[8] * mtx[8] + mtx[9] * mtx[9] + mtx[10] * mtx[10]);
+  const zmax = Math.max(Math.max(Math.abs(mtx[8]), Math.abs(mtx[9])), Math.abs(mtx[10])) / dztmp;
+  const fig_merit = Math.min(Math.min(xmax, ymax), zmax);
+  let oblique_angle = Math.abs(Math.acos(fig_merit) * 180 / 3.141592653);
+  if (oblique_angle > 0.01) {
+    log.warn("Warning voxels not aligned with world space: " + oblique_angle + " degrees from plumb.\n");
+  } else {
+    oblique_angle = 0;
+  }
+  return oblique_angle;
+}
+function calculateOblique(nvImage) {
+  if (!nvImage.matRAS) {
+    throw new Error("matRAS not defined");
+  }
+  if (nvImage.pixDimsRAS === void 0) {
+    throw new Error("pixDimsRAS not defined");
+  }
+  if (!nvImage.dimsRAS) {
+    throw new Error("dimsRAS not defined");
+  }
+  nvImage.oblique_angle = computeObliqueAngle(nvImage.matRAS);
+  const LPI = vox2mm2(nvImage, [0, 0, 0], nvImage.matRAS);
+  const X1mm = vox2mm2(nvImage, [1 / nvImage.pixDimsRAS[1], 0, 0], nvImage.matRAS);
+  const Y1mm = vox2mm2(nvImage, [0, 1 / nvImage.pixDimsRAS[2], 0], nvImage.matRAS);
+  const Z1mm = vox2mm2(nvImage, [0, 0, 1 / nvImage.pixDimsRAS[3]], nvImage.matRAS);
+  vec3_exports.subtract(X1mm, X1mm, LPI);
+  vec3_exports.subtract(Y1mm, Y1mm, LPI);
+  vec3_exports.subtract(Z1mm, Z1mm, LPI);
+  const oblique = mat4_exports.fromValues(X1mm[0], X1mm[1], X1mm[2], 0, Y1mm[0], Y1mm[1], Y1mm[2], 0, Z1mm[0], Z1mm[1], Z1mm[2], 0, 0, 0, 0, 1);
+  nvImage.obliqueRAS = mat4_exports.clone(oblique);
+  const XY = Math.abs(90 - vec3_exports.angle(X1mm, Y1mm) * (180 / Math.PI));
+  const XZ = Math.abs(90 - vec3_exports.angle(X1mm, Z1mm) * (180 / Math.PI));
+  const YZ = Math.abs(90 - vec3_exports.angle(Y1mm, Z1mm) * (180 / Math.PI));
+  nvImage.maxShearDeg = Math.max(Math.max(XY, XZ), YZ);
+  if (nvImage.maxShearDeg > 0.1) {
+    log.warn("Warning: voxels are rhomboidal, maximum shear is %f degrees.", nvImage.maxShearDeg);
+  }
+  const dim = vec4_exports.fromValues(nvImage.dimsRAS[1], nvImage.dimsRAS[2], nvImage.dimsRAS[3], 1);
+  const sform = mat4_exports.clone(nvImage.matRAS);
+  mat4_exports.transpose(sform, sform);
+  const shim = vec4_exports.fromValues(-0.5, -0.5, -0.5, 0);
+  mat4_exports.translate(sform, sform, vec3_exports.fromValues(shim[0], shim[1], shim[2]));
+  sform[0] *= dim[0];
+  sform[1] *= dim[0];
+  sform[2] *= dim[0];
+  sform[4] *= dim[1];
+  sform[5] *= dim[1];
+  sform[6] *= dim[1];
+  sform[8] *= dim[2];
+  sform[9] *= dim[2];
+  sform[10] *= dim[2];
+  nvImage.frac2mm = mat4_exports.clone(sform);
+  const pixdimX = nvImage.pixDimsRAS[1];
+  const pixdimY = nvImage.pixDimsRAS[2];
+  const pixdimZ = nvImage.pixDimsRAS[3];
+  const oform = mat4_exports.clone(sform);
+  oform[0] = pixdimX * dim[0];
+  oform[1] = 0;
+  oform[2] = 0;
+  oform[4] = 0;
+  oform[5] = pixdimY * dim[1];
+  oform[6] = 0;
+  oform[8] = 0;
+  oform[9] = 0;
+  oform[10] = pixdimZ * dim[2];
+  const originVoxel = mm2vox(nvImage, [0, 0, 0], true);
+  oform[12] = (-originVoxel[0] - 0.5) * pixdimX;
+  oform[13] = (-originVoxel[1] - 0.5) * pixdimY;
+  oform[14] = (-originVoxel[2] - 0.5) * pixdimZ;
+  nvImage.frac2mmOrtho = mat4_exports.clone(oform);
+  nvImage.extentsMinOrtho = [oform[12], oform[13], oform[14]];
+  nvImage.extentsMaxOrtho = [oform[0] + oform[12], oform[5] + oform[13], oform[10] + oform[14]];
+  nvImage.mm2ortho = mat4_exports.create();
+  mat4_exports.invert(nvImage.mm2ortho, oblique);
+}
+function calculateRAS(nvImage) {
+  if (!nvImage.hdr) {
+    throw new Error("hdr not set");
+  }
+  const a = nvImage.hdr.affine;
+  const header = nvImage.hdr;
+  const absR = mat3_exports.fromValues(
+    Math.abs(a[0][0]),
+    Math.abs(a[0][1]),
+    Math.abs(a[0][2]),
+    Math.abs(a[1][0]),
+    Math.abs(a[1][1]),
+    Math.abs(a[1][2]),
+    Math.abs(a[2][0]),
+    Math.abs(a[2][1]),
+    Math.abs(a[2][2])
+  );
+  const ixyz = [1, 1, 1];
+  if (absR[3] > absR[0]) {
+    ixyz[0] = 2;
+  }
+  if (absR[6] > absR[0] && absR[6] > absR[3]) {
+    ixyz[0] = 3;
+  }
+  ixyz[1] = 1;
+  if (ixyz[0] === 1) {
+    if (absR[4] > absR[7]) {
+      ixyz[1] = 2;
+    } else {
+      ixyz[1] = 3;
+    }
+  } else if (ixyz[0] === 2) {
+    if (absR[1] > absR[7]) {
+      ixyz[1] = 1;
+    } else {
+      ixyz[1] = 3;
+    }
+  } else {
+    if (absR[1] > absR[4]) {
+      ixyz[1] = 1;
+    } else {
+      ixyz[1] = 2;
+    }
+  }
+  ixyz[2] = 6 - ixyz[1] - ixyz[0];
+  let perm = [1, 2, 3];
+  perm[ixyz[0] - 1] = 1;
+  perm[ixyz[1] - 1] = 2;
+  perm[ixyz[2] - 1] = 3;
+  let rotM = mat4_exports.fromValues(a[0][0], a[0][1], a[0][2], a[0][3], a[1][0], a[1][1], a[1][2], a[1][3], a[2][0], a[2][1], a[2][2], a[2][3], 0, 0, 0, 1);
+  nvImage.mm000 = vox2mm2(nvImage, [-0.5, -0.5, -0.5], rotM);
+  nvImage.mm100 = vox2mm2(nvImage, [header.dims[1] - 0.5, -0.5, -0.5], rotM);
+  nvImage.mm010 = vox2mm2(nvImage, [-0.5, header.dims[2] - 0.5, -0.5], rotM);
+  nvImage.mm001 = vox2mm2(nvImage, [-0.5, -0.5, header.dims[3] - 0.5], rotM);
+  const R = mat4_exports.create();
+  mat4_exports.copy(R, rotM);
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      R[i * 4 + j] = rotM[i * 4 + perm[j] - 1];
+    }
+  }
+  const flip = [0, 0, 0];
+  if (R[0] < 0) {
+    flip[0] = 1;
+  }
+  if (R[5] < 0) {
+    flip[1] = 1;
+  }
+  if (R[10] < 0) {
+    flip[2] = 1;
+  }
+  nvImage.dimsRAS = [header.dims[0], header.dims[perm[0]], header.dims[perm[1]], header.dims[perm[2]]];
+  nvImage.pixDimsRAS = [header.pixDims[0], header.pixDims[perm[0]], header.pixDims[perm[1]], header.pixDims[perm[2]]];
+  nvImage.permRAS = perm.slice();
+  for (let i = 0; i < 3; i++) {
+    if (flip[i] === 1) {
+      nvImage.permRAS[i] = -nvImage.permRAS[i];
+    }
+  }
+  if (arrayEquals(perm, [1, 2, 3]) && arrayEquals(flip, [0, 0, 0])) {
+    nvImage.toRAS = mat4_exports.create();
+    nvImage.matRAS = mat4_exports.clone(rotM);
+    calculateOblique(nvImage);
+    nvImage.img2RASstep = [1, nvImage.dimsRAS[1], nvImage.dimsRAS[1] * nvImage.dimsRAS[2]];
+    nvImage.img2RASstart = [0, 0, 0];
+    return;
+  }
+  mat4_exports.identity(rotM);
+  rotM[0 + 0 * 4] = 1 - flip[0] * 2;
+  rotM[1 + 1 * 4] = 1 - flip[1] * 2;
+  rotM[2 + 2 * 4] = 1 - flip[2] * 2;
+  rotM[3 + 0 * 4] = (header.dims[perm[0]] - 1) * flip[0];
+  rotM[3 + 1 * 4] = (header.dims[perm[1]] - 1) * flip[1];
+  rotM[3 + 2 * 4] = (header.dims[perm[2]] - 1) * flip[2];
+  const residualR = mat4_exports.create();
+  mat4_exports.invert(residualR, rotM);
+  mat4_exports.multiply(residualR, residualR, R);
+  nvImage.matRAS = mat4_exports.clone(residualR);
+  rotM = mat4_exports.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
+  rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1;
+  rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1;
+  rotM[perm[2] - 1 + 2 * 4] = -flip[2] * 2 + 1;
+  rotM[3 + 0 * 4] = flip[0];
+  rotM[3 + 1 * 4] = flip[1];
+  rotM[3 + 2 * 4] = flip[2];
+  nvImage.toRAS = mat4_exports.clone(rotM);
+  rotM[3] = 0;
+  rotM[7] = 0;
+  rotM[11] = 0;
+  rotM[12] = 0;
+  if (nvImage.permRAS[0] === -1 || nvImage.permRAS[1] === -1 || nvImage.permRAS[2] === -1) {
+    rotM[12] = header.dims[1] - 1;
+  }
+  rotM[13] = 0;
+  if (nvImage.permRAS[0] === -2 || nvImage.permRAS[1] === -2 || nvImage.permRAS[2] === -2) {
+    rotM[13] = header.dims[2] - 1;
+  }
+  rotM[14] = 0;
+  if (nvImage.permRAS[0] === -3 || nvImage.permRAS[1] === -3 || nvImage.permRAS[2] === -3) {
+    rotM[14] = header.dims[3] - 1;
+  }
+  nvImage.toRASvox = mat4_exports.clone(rotM);
+  log.debug(nvImage.hdr.dims);
+  log.debug(nvImage.dimsRAS);
+  const hdr = nvImage.hdr;
+  perm = nvImage.permRAS;
+  const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])];
+  const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]];
+  const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]];
+  const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]];
+  const outStart = [0, 0, 0];
+  for (let p = 0; p < 3; p++) {
+    if (perm[p] < 0) {
+      outStart[p] = outStep[p] * (outdim[p] - 1);
+      outStep[p] = -outStep[p];
+    }
+  }
+  nvImage.img2RASstep = outStep;
+  nvImage.img2RASstart = outStart;
+  calculateOblique(nvImage);
+}
+async function hdr2RAS(nvImage, nVolumes = 1) {
+  if (!nvImage.permRAS) {
+    throw new Error("permRAS undefined");
+  }
+  if (!nvImage.hdr) {
+    throw new Error("hdr undefined");
+  }
+  const hdrBytes = hdrToArrayBuffer({ ...nvImage.hdr, vox_offset: 352 }, false);
+  const hdr = await readHeaderAsync(hdrBytes.buffer, true);
+  if (nVolumes === 1) {
+    hdr.dims[0] = 3;
+    hdr.dims[4] = 1;
+  } else if (nVolumes > 1) {
+    hdr.dims[0] = 4;
+    hdr.dims[4] = nVolumes;
+  }
+  const perm = nvImage.permRAS.slice();
+  if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
+    return hdr;
+  }
+  hdr.qform_code = 0;
+  for (let i = 1; i < 4; i++) {
+    hdr.dims[i] = nvImage.dimsRAS[i];
+  }
+  for (let i = 0; i < nvImage.pixDimsRAS.length; i++) {
+    hdr.pixDims[i] = nvImage.pixDimsRAS[i];
+  }
+  let k = 0;
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      hdr.affine[i][j] = nvImage.matRAS[k];
+      k++;
+    }
+  }
+  return hdr;
+}
+function img2RAS(nvImage, nVolume = 0) {
+  if (!nvImage.permRAS) {
+    throw new Error("permRAS undefined");
+  }
+  if (!nvImage.img) {
+    throw new Error("img undefined");
+  }
+  if (!nvImage.hdr) {
+    throw new Error("hdr undefined");
+  }
+  const perm = nvImage.permRAS.slice();
+  if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
+    return nvImage.img;
+  }
+  const hdr = nvImage.hdr;
+  const nVox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  let volSkip = nVolume * nVox;
+  if (volSkip + nVox > nvImage.img.length || volSkip < 0) {
+    volSkip = 0;
+    log.warn(`img2RAS nVolume (${nVolume}) out of bounds (${nVolume}+1)\xD7${nVox} > ${nvImage.img.length}`);
+  }
+  const imgRAS = nvImage.img.slice(0, nVox);
+  const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])];
+  const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]];
+  const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]];
+  const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]];
+  const outStart = [0, 0, 0];
+  for (let p = 0; p < 3; p++) {
+    if (perm[p] < 0) {
+      outStart[p] = outStep[p] * (outdim[p] - 1);
+      outStep[p] = -outStep[p];
+    }
+  }
+  let j = 0;
+  for (let z = 0; z < outdim[2]; z++) {
+    const zi = outStart[2] + z * outStep[2];
+    for (let y = 0; y < outdim[1]; y++) {
+      const yi = outStart[1] + y * outStep[1];
+      for (let x = 0; x < outdim[0]; x++) {
+        const xi = outStart[0] + x * outStep[0];
+        imgRAS[j] = nvImage.img[xi + yi + zi + volSkip];
+        j++;
+      }
+    }
+  }
+  return imgRAS;
+}
+
+// src/nvimage/TensorProcessing.ts
+function float32V1asRGBA(nvImage, inImg) {
+  if (inImg.length !== nvImage.nVox3D * 3) {
+    log.warn("float32V1asRGBA() expects " + nvImage.nVox3D * 3 + "voxels, got ", +inImg.length);
+  }
+  const f32 = inImg.slice();
+  nvImage.hdr.datatypeCode = 2304 /* DT_RGBA32 */;
+  nvImage.nFrame4D = 1;
+  for (let i = 4; i < 7; i++) {
+    nvImage.hdr.dims[i] = 1;
+  }
+  nvImage.hdr.dims[0] = 3;
+  const imgRaw = new Uint8Array(nvImage.nVox3D * 4);
+  let mx = 1;
+  for (let i = 0; i < nvImage.nVox3D * 3; i++) {
+    if (isNaN(f32[i])) {
+      continue;
+    }
+    mx = Math.max(mx, Math.abs(f32[i]));
+  }
+  const slope = 255 / mx;
+  const nVox3D2 = nvImage.nVox3D * 2;
+  let j = 0;
+  for (let i = 0; i < nvImage.nVox3D; i++) {
+    const x = f32[i];
+    const y = f32[i + nvImage.nVox3D];
+    const z = f32[i + nVox3D2];
+    imgRaw[j] = Math.abs(x * slope);
+    imgRaw[j + 1] = Math.abs(y * slope);
+    imgRaw[j + 2] = Math.abs(z * slope);
+    const xNeg = Number(x > 0) * 1;
+    const yNeg = Number(y > 0) * 2;
+    const zNeg = Number(z > 0) * 4;
+    let alpha = 248 + xNeg + yNeg + zNeg;
+    if (Math.abs(x) + Math.abs(y) + Math.abs(z) < 0.1) {
+      alpha = 0;
+    }
+    ;
+    imgRaw[j + 3] = alpha;
+    j += 4;
+  }
+  return imgRaw;
+}
+function loadImgV1(nvImage, isFlipX = false, isFlipY = false, isFlipZ = false) {
+  let v1 = nvImage.v1;
+  if (!v1 && nvImage.nFrame4D === 3 && nvImage.img.constructor === Float32Array) {
+    v1 = nvImage.img.slice();
+  }
+  if (!v1) {
+    log.warn("Image does not have V1 data");
+    return false;
+  }
+  if (isFlipX) {
+    for (let i = 0; i < nvImage.nVox3D; i++) {
+      v1[i] = -v1[i];
+    }
+  }
+  if (isFlipY) {
+    for (let i = nvImage.nVox3D; i < 2 * nvImage.nVox3D; i++) {
+      v1[i] = -v1[i];
+    }
+  }
+  if (isFlipZ) {
+    for (let i = 2 * nvImage.nVox3D; i < 3 * nvImage.nVox3D; i++) {
+      v1[i] = -v1[i];
+    }
+  }
+  nvImage.img = float32V1asRGBA(nvImage, v1);
+  return true;
+}
+
+// src/nvimage/IntensityCalibration.ts
+function intensityRaw2Scaled(nvImage, raw) {
+  if (!nvImage.hdr) {
+    throw new Error("hdr undefined");
+  }
+  if (nvImage.hdr.scl_slope === 0) {
+    nvImage.hdr.scl_slope = 1;
+  }
+  return raw * nvImage.hdr.scl_slope + nvImage.hdr.scl_inter;
+}
+function intensityScaled2Raw(nvImage, scaled) {
+  if (!nvImage.hdr) {
+    throw new Error("hdr undefined");
+  }
+  if (nvImage.hdr.scl_slope === 0) {
+    nvImage.hdr.scl_slope = 1;
+  }
+  return (scaled - nvImage.hdr.scl_inter) / nvImage.hdr.scl_slope;
+}
+function calMinMax(nvImage, vol = Number.POSITIVE_INFINITY, isBorder = true) {
+  if (!nvImage.hdr) {
+    throw new Error("hdr undefined");
+  }
+  if (!nvImage.img) {
+    throw new Error("img undefined");
+  }
+  let mn = Number.POSITIVE_INFINITY;
+  let mx = Number.NEGATIVE_INFINITY;
+  let nZero = 0;
+  let nNan = 0;
+  let nVox3D = nvImage.hdr.dims[1] * nvImage.hdr.dims[2] * nvImage.hdr.dims[3];
+  const nVol = Math.floor(nvImage.img.length / nVox3D);
+  if (vol >= nVol) {
+    vol = nvImage.frame4D;
+  }
+  vol = Math.min(vol, nVol - 1);
+  const skipVox = vol * nVox3D;
+  let img = [];
+  if (!isBorder) {
+    img = new nvImage.img.constructor(nVox3D);
+    for (let i = 0; i < nVox3D; i++) {
+      img[i] = nvImage.img[i + skipVox];
+    }
+  } else {
+    const borderFrac = 0.25;
+    const borders = [Math.floor(borderFrac * nvImage.hdr.dims[1]), Math.floor(borderFrac * nvImage.hdr.dims[2]), Math.floor(borderFrac * nvImage.hdr.dims[3])];
+    const dims = [nvImage.hdr.dims[1] - 2 * borders[0], nvImage.hdr.dims[2] - 2 * borders[1], nvImage.hdr.dims[3] - 2 * borders[2]];
+    const bordersHi = [dims[0] + borders[0], dims[1] + borders[1], dims[2] + borders[2]];
+    nVox3D = dims[0] * dims[1] * dims[2];
+    img = new nvImage.img.constructor(nVox3D);
+    let j = -1;
+    let i = 0;
+    for (let z = 0; z < nvImage.hdr.dims[3]; z++) {
+      for (let y = 0; y < nvImage.hdr.dims[2]; y++) {
+        for (let x = 0; x < nvImage.hdr.dims[1]; x++) {
+          j++;
+          if (x < borders[0] || y < borders[1] || z < borders[2]) {
+            continue;
+          }
+          if (x >= bordersHi[0] || y >= bordersHi[1] || z >= bordersHi[2]) {
+            continue;
+          }
+          img[i] = nvImage.img[j + skipVox];
+          i++;
+        }
+      }
+    }
+  }
+  const isFastCalc = img.constructor !== Float64Array && img.constructor !== Float32Array && nvImage.ignoreZeroVoxels;
+  if (isFastCalc) {
+    for (let i = 0; i < nVox3D; i++) {
+      mn = Math.min(img[i], mn);
+      mx = Math.max(img[i], mx);
+      if (img[i] === 0) {
+        nZero++;
+      }
+    }
+  } else {
+    for (let i = 0; i < nVox3D; i++) {
+      if (isNaN(img[i])) {
+        nNan++;
+        continue;
+      }
+      if (img[i] === 0) {
+        nZero++;
+        if (nvImage.ignoreZeroVoxels) {
+          continue;
+        }
+      }
+      mn = Math.min(img[i], mn);
+      mx = Math.max(img[i], mx);
+    }
+  }
+  if (nvImage.ignoreZeroVoxels && mn === mx && nZero > 0) {
+    mn = 0;
+  }
+  const mnScale = intensityRaw2Scaled(nvImage, mn);
+  const mxScale = intensityRaw2Scaled(nvImage, mx);
+  const cmap = cmapper.colormapFromKey(nvImage._colormap);
+  let cmMin = 0;
+  let cmMax = 0;
+  if (cmap.min !== void 0) {
+    cmMin = cmap.min;
+  }
+  if (cmap.max !== void 0) {
+    cmMax = cmap.max;
+  }
+  if (cmMin === cmMax && nvImage.trustCalMinMax && isFinite(nvImage.hdr.cal_min) && isFinite(nvImage.hdr.cal_max) && nvImage.hdr.cal_max > nvImage.hdr.cal_min) {
+    nvImage.cal_min = nvImage.hdr.cal_min;
+    nvImage.cal_max = nvImage.hdr.cal_max;
+    nvImage.robust_min = nvImage.cal_min;
+    nvImage.robust_max = nvImage.cal_max;
+    nvImage.global_min = mnScale;
+    nvImage.global_max = mxScale;
+    return [nvImage.hdr.cal_min, nvImage.hdr.cal_max, nvImage.hdr.cal_min, nvImage.hdr.cal_max];
+  }
+  if (cmMin !== cmMax) {
+    nvImage.cal_min = cmMin;
+    nvImage.cal_max = cmMax;
+    nvImage.robust_min = nvImage.cal_min;
+    nvImage.robust_max = nvImage.cal_max;
+    return [cmMin, cmMax, cmMin, cmMax];
+  }
+  const percentZero = 100 * nZero / (nVox3D - 0);
+  let isOverrideIgnoreZeroVoxels = false;
+  if (percentZero > 60 && !nvImage.ignoreZeroVoxels) {
+    log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`);
+    isOverrideIgnoreZeroVoxels = true;
+    nvImage.ignoreZeroVoxels = true;
+  }
+  if (!nvImage.ignoreZeroVoxels) {
+    nZero = 0;
+  }
+  nZero += nNan;
+  const n2pct = Math.round((nVox3D - 0 - nZero) * nvImage.percentileFrac);
+  if (n2pct < 1 || mn === mx) {
+    if (isBorder) {
+      return calMinMax(nvImage, vol, false);
+    }
+    log.debug("no variability in image intensity?");
+    nvImage.cal_min = mnScale;
+    nvImage.cal_max = mxScale;
+    nvImage.robust_min = nvImage.cal_min;
+    nvImage.robust_max = nvImage.cal_max;
+    nvImage.global_min = mnScale;
+    nvImage.global_max = mxScale;
+    return [mnScale, mxScale, mnScale, mxScale];
+  }
+  const nBins = 1001;
+  const scl = (nBins - 1) / (mx - mn);
+  const hist = new Array(nBins);
+  for (let i = 0; i < nBins; i++) {
+    hist[i] = 0;
+  }
+  if (isFastCalc) {
+    for (let i = 0; i < nVox3D; i++) {
+      hist[Math.round((img[i] - mn) * scl)]++;
+    }
+  } else if (nvImage.ignoreZeroVoxels) {
+    for (let i = 0; i < nVox3D; i++) {
+      if (img[i] === 0) {
+        continue;
+      }
+      if (isNaN(img[i])) {
+        continue;
+      }
+      hist[Math.round((img[i] - mn) * scl)]++;
+    }
+  } else {
+    for (let i = 0; i < nVox3D; i++) {
+      if (isNaN(img[i])) {
+        continue;
+      }
+      hist[Math.round((img[i] - mn) * scl)]++;
+    }
+  }
+  let n = 0;
+  let lo = 0;
+  while (n < n2pct) {
+    n += hist[lo];
+    lo++;
+  }
+  lo--;
+  n = 0;
+  let hi = nBins;
+  while (n < n2pct) {
+    hi--;
+    n += hist[hi];
+  }
+  if (lo === hi) {
+    let ok = -1;
+    while (ok !== 0) {
+      if (lo > 0) {
+        lo--;
+        if (hist[lo] > 0) {
+          ok = 0;
+        }
+      }
+      if (ok !== 0 && hi < nBins - 1) {
+        hi++;
+        if (hist[hi] > 0) {
+          ok = 0;
+        }
+      }
+      if (lo === 0 && hi === nBins - 1) {
+        ok = 0;
+      }
+    }
+  }
+  let pct2 = intensityRaw2Scaled(nvImage, lo / scl + mn);
+  let pct98 = intensityRaw2Scaled(nvImage, hi / scl + mn);
+  if (nvImage.hdr.cal_min < nvImage.hdr.cal_max && nvImage.hdr.cal_min >= mnScale && nvImage.hdr.cal_max <= mxScale) {
+    pct2 = nvImage.hdr.cal_min;
+    pct98 = nvImage.hdr.cal_max;
+  }
+  if (isOverrideIgnoreZeroVoxels) {
+    pct2 = Math.min(pct2, 0);
+  }
+  nvImage.cal_min = pct2;
+  nvImage.cal_max = pct98;
+  if (nvImage.hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
+    nvImage.cal_min = mnScale;
+    nvImage.cal_max = mxScale;
+  }
+  nvImage.robust_min = nvImage.cal_min;
+  nvImage.robust_max = nvImage.cal_max;
+  nvImage.global_min = mnScale;
+  nvImage.global_max = mxScale;
+  return [pct2, pct98, mnScale, mxScale];
+}
+
+// src/nvimage/ColormapManager.ts
+function setColormap(nvImage, cm) {
+  nvImage._colormap = cm;
+  calMinMax(nvImage);
+  if (nvImage.onColormapChange) {
+    nvImage.onColormapChange(nvImage);
+  }
+}
+function setColormapLabel(nvImage, cm) {
+  nvImage.colormapLabel = cmapper.makeLabelLut(cm);
+}
+async function setColormapLabelFromUrl(nvImage, url) {
+  nvImage.colormapLabel = await cmapper.makeLabelLutFromUrl(url);
+}
+function getColormap(nvImage) {
+  return nvImage._colormap;
+}
+function getOpacity(nvImage) {
+  return nvImage._opacity;
+}
+function setOpacity(nvImage, opacity) {
+  nvImage._opacity = opacity;
+  if (nvImage.onOpacityChange) {
+    nvImage.onOpacityChange(nvImage);
+  }
+}
+
+// src/nvimage/ImageFactory.ts
+async function fetchDicomData(url, headers = {}) {
+  if (url === "") {
+    throw Error("url must not be empty");
+  }
+  const absoluteUrlRE = /^(?:[a-z+]+:)?\/\//i;
+  let manifestUrl = absoluteUrlRE.test(url) ? url : new URL(url, window.location.href);
+  const extensionRE = /(?:.([^.]+))?$/;
+  const extension = extensionRE.exec(manifestUrl.pathname);
+  if (!extension) {
+    manifestUrl = new URL("niivue-manifest.txt", url);
+  }
+  let response = await fetch(manifestUrl, { headers });
+  if (!response.ok) {
+    throw Error(response.statusText);
+  }
+  const text = await response.text();
+  const lines = text.split("\n");
+  const baseUrlRE = /(.*\/).*/;
+  const folderUrl = baseUrlRE.exec(manifestUrl)[0];
+  const dataBuffer = [];
+  for (const line of lines) {
+    const fileUrl = new URL(line, folderUrl);
+    response = await fetch(fileUrl, { headers });
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+    const contents = await response.arrayBuffer();
+    dataBuffer.push({ name: line, data: contents });
+  }
+  return dataBuffer;
+}
+async function readFirstDecompressedBytes(stream, minBytes) {
+  const reader = stream.getReader();
+  const gunzip = new Gunzip();
+  const decompressedChunks = [];
+  let totalDecompressed = 0;
+  let doneReading = false;
+  let resolveFn;
+  let rejectFn;
+  const promise = new Promise((resolve2, reject) => {
+    resolveFn = resolve2;
+    rejectFn = reject;
+    return void 0;
+  });
+  function finalize() {
+    const result = new Uint8Array(totalDecompressed);
+    let offset = 0;
+    for (const chunk of decompressedChunks) {
+      result.set(chunk, offset);
+      offset += chunk.length;
+    }
+    resolveFn(result);
+  }
+  gunzip.ondata = (chunk) => {
+    decompressedChunks.push(chunk);
+    totalDecompressed += chunk.length;
+    if (totalDecompressed >= minBytes) {
+      doneReading = true;
+      reader.cancel().catch(() => {
+      });
+      finalize();
+    }
+  };
+  (async () => {
+    try {
+      while (!doneReading) {
+        const { done, value } = await reader.read();
+        if (done) {
+          doneReading = true;
+          gunzip.push(new Uint8Array(), true);
+          return;
+        }
+        gunzip.push(value, false);
+      }
+    } catch (err2) {
+      rejectFn(err2);
+    }
+  })().catch(() => {
+  });
+  return promise;
+}
+function extractFilenameFromUrl(url) {
+  const params = new URL(url).searchParams;
+  const contentDisposition = params.get("response-content-disposition");
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/);
+    if (match) {
+      return decodeURIComponent(match[1]);
+    }
+  }
+  return url.split("/").pop().split("?")[0];
+}
+async function loadInitialVolumesGz(url = "", headers = {}, limitFrames4D = NaN) {
+  if (isNaN(limitFrames4D)) {
+    return null;
+  }
+  const response = await fetch(url, { headers, cache: "force-cache" });
+  let hdrBytes = 352;
+  let hdrU8s = await readFirstDecompressedBytes(response.body, hdrBytes);
+  const hdrView = new DataView(hdrU8s.buffer, hdrU8s.byteOffset, hdrU8s.byteLength);
+  const u162 = hdrView.getUint16(0, true);
+  const isNIfTI1 = u162 === 348;
+  const isNIfTI1be = u162 === 23553;
+  if (!isNIfTI1 && !isNIfTI1be) {
+    return null;
+  }
+  if (hdrU8s.length > 111) {
+    hdrBytes = hdrView.getFloat32(108, isNIfTI1);
+  }
+  if (hdrBytes > hdrU8s.length) {
+    hdrU8s = await readFirstDecompressedBytes(response.body, hdrBytes);
+  }
+  const isNifti1 = hdrU8s[0] === 92 && hdrU8s[1] === 1 || hdrU8s[1] === 92 && hdrU8s[0] === 1;
+  if (!isNifti1) {
+    return null;
+  }
+  const hdr = await readHeaderAsync(hdrU8s.buffer);
+  if (!hdr) {
+    throw new Error("Could not read NIfTI header");
+  }
+  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+  const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+  const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+  const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+  const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+  if (volsToLoad === nFrame4D) {
+    return null;
+  }
+  const responseImg = await fetch(url, { headers, cache: "force-cache" });
+  const dataBytes = await readFirstDecompressedBytes(responseImg.body, bytesToLoad);
+  return dataBytes.buffer.slice(0, bytesToLoad);
+}
+async function loadInitialVolumes(url = "", headers = {}, limitFrames4D = NaN) {
+  if (isNaN(limitFrames4D)) {
+    return null;
+  }
+  const response = await fetch(url, { headers, cache: "force-cache" });
+  const reader = response.body.getReader();
+  const { value, done } = await reader.read();
+  let hdrU8s = value;
+  if (done || !hdrU8s || hdrU8s.length < 2) {
+    throw new Error("Not enough data to determine compression");
+  }
+  const hdrView = new DataView(hdrU8s.buffer, hdrU8s.byteOffset, hdrU8s.byteLength);
+  const u162 = hdrView.getUint16(0, true);
+  const isGz = u162 === 35615;
+  if (isGz) {
+    await reader.cancel();
+    return loadInitialVolumesGz(url, headers, limitFrames4D);
+  }
+  const isNIfTI1 = u162 === 348;
+  const isNIfTI1be = u162 === 23553;
+  if (!isNIfTI1 && !isNIfTI1be) {
+    await reader.cancel();
+    return null;
+  }
+  let hdrBytes = 352;
+  if (hdrU8s.length > 111) {
+    hdrBytes = hdrView.getFloat32(108, isNIfTI1);
+  }
+  while (hdrU8s.length < hdrBytes) {
+    let concatU8s = function(arr1, arr2) {
+      const result = new Uint8Array(arr1.length + arr2.length);
+      result.set(arr1, 0);
+      result.set(arr2, arr1.length);
+      return result;
+    };
+    const { value: value2, done: done2 } = await reader.read();
+    if (done2 || !value2) {
+      break;
+    }
+    hdrU8s = concatU8s(hdrU8s, value2);
+  }
+  const hdr = await readHeaderAsync(hdrU8s.buffer);
+  if (!hdr) {
+    throw new Error("Could not read NIfTI header");
+  }
+  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+  const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+  const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
+  const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
+  const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
+  const imgU8s = new Uint8Array(bytesToLoad);
+  const hdrCopyLength = Math.min(hdrU8s.length, bytesToLoad);
+  imgU8s.set(hdrU8s.subarray(0, hdrCopyLength), 0);
+  let bytesRead = hdrCopyLength;
+  while (bytesRead < bytesToLoad) {
+    const { value: value2, done: done2 } = await reader.read();
+    if (done2 || !value2) {
+      await reader.cancel();
+      return null;
+    }
+    const remaining = Math.min(value2.length, bytesToLoad - bytesRead);
+    imgU8s.set(value2.subarray(0, remaining), bytesRead);
+    bytesRead += remaining;
+  }
+  await reader.cancel();
+  return imgU8s.buffer;
+}
+async function readFileAsync(file, bytesToLoad = NaN) {
+  let stream = file.stream();
+  if (!isNaN(bytesToLoad)) {
+    let bytesRead = 0;
+    const limiter = new TransformStream({
+      transform(chunk, controller) {
+        if (bytesRead >= bytesToLoad) {
+          controller.terminate();
+          return;
+        }
+        const remainingBytes = bytesToLoad - bytesRead;
+        if (chunk.length > remainingBytes) {
+          controller.enqueue(chunk.slice(0, remainingBytes));
+          controller.terminate();
+        } else {
+          controller.enqueue(chunk);
+        }
+        bytesRead += chunk.length;
+      }
+    });
+    stream = stream.pipeThrough(limiter);
+  }
+  const uncompressedStream = await uncompressStream(stream);
+  const chunks = [];
+  const reader = uncompressedStream.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+  }
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const result = new ArrayBuffer(totalLength);
+  const resultView = new Uint8Array(result);
+  let offset = 0;
+  for (const chunk of chunks) {
+    resultView.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+function base64ToArrayBuffer(base64) {
+  const binary_string = window.atob(base64);
+  const len4 = binary_string.length;
+  const bytes = new Uint8Array(len4);
+  for (let i = 0; i < len4; i++) {
+    bytes[i] = binary_string.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+function getPrimaryExtension(filename) {
+  const match = filename.match(/\.([^.]+)(?:\.gz|\.bz2|\.xz)?$/);
+  return match ? match[1] : "";
+}
+
+// src/nvimage/ImageMetadata.ts
+function getImageMetadata(nvImage) {
+  if (!nvImage.hdr) {
+    throw new Error("hdr undefined");
+  }
+  const id = nvImage.id;
+  const datatypeCode = nvImage.hdr.datatypeCode;
+  const dims = nvImage.hdr.dims;
+  const nx = dims[1];
+  const ny = dims[2];
+  const nz = dims[3];
+  const nt = Math.max(1, dims[4]);
+  const pixDims = nvImage.hdr.pixDims;
+  const dx = pixDims[1];
+  const dy = pixDims[2];
+  const dz = pixDims[3];
+  const dt = pixDims[4];
+  const bpv = Math.floor(nvImage.hdr.numBitsPerVoxel / 8);
+  return { id, datatypeCode, nx, ny, nz, nt, dx, dy, dz, dt, bpv };
+}
+function getImageOptions(nvImage) {
+  const options = NVImageFromUrlOptions(
+    "",
+    // url,
+    "",
+    // urlImageData
+    nvImage.name,
+    // name
+    nvImage._colormap,
+    // colormap
+    nvImage.opacity,
+    // opacity
+    nvImage.hdr.cal_min,
+    // cal_min
+    nvImage.hdr.cal_max,
+    // cal_max
+    nvImage.trustCalMinMax,
+    // trustCalMinMax,
+    nvImage.percentileFrac,
+    // percentileFrac
+    nvImage.ignoreZeroVoxels,
+    // ignoreZeroVoxels
+    nvImage.useQFormNotSForm,
+    // useQFormNotSForm
+    nvImage.colormapNegative,
+    // colormapNegative
+    nvImage.frame4D,
+    nvImage.imageType,
+    // imageType
+    nvImage.colormapType
+  );
+  return options;
+}
+function applyOptionsUpdate(nvImage, options) {
+  nvImage.hdr.cal_min = options.cal_min;
+  nvImage.hdr.cal_max = options.cal_max;
+  Object.assign(nvImage, options);
+}
+
+// src/nvimage/ImageDataProcessor.ts
+function swapBytesIfNeeded(imgRaw, hdr) {
+  if (hdr.datatypeCode === 128 /* DT_RGB24 */ || hdr.datatypeCode === 2304 /* DT_RGBA32 */ || hdr.littleEndian === isPlatformLittleEndian() || hdr.numBitsPerVoxel <= 8) {
+    return;
+  }
+  if (hdr.numBitsPerVoxel === 16) {
+    const u162 = new Uint16Array(imgRaw);
+    for (let i = 0; i < u162.length; i++) {
+      const val = u162[i];
+      u162[i] = ((val & 255) << 8 | val >> 8 & 255) << 16 >> 16;
+    }
+  } else if (hdr.numBitsPerVoxel === 32) {
+    const u32 = new Uint32Array(imgRaw);
+    for (let i = 0; i < u32.length; i++) {
+      const val = u32[i];
+      u32[i] = (val & 255) << 24 | (val & 65280) << 8 | val >> 8 & 65280 | val >> 24 & 255;
+    }
+  } else if (hdr.numBitsPerVoxel === 64) {
+    const numBytesPerVoxel = hdr.numBitsPerVoxel / 8;
+    const u82 = new Uint8Array(imgRaw);
+    for (let index = 0; index < u82.length; index += numBytesPerVoxel) {
+      let offset = numBytesPerVoxel - 1;
+      for (let x = 0; x < offset; x++) {
+        const theByte = u82[index + x];
+        u82[index + x] = u82[index + offset];
+        u82[index + offset] = theByte;
+        offset--;
+      }
+    }
+  }
+}
+function convertDataType(imgRaw, hdr) {
+  switch (hdr.datatypeCode) {
+    case 2 /* DT_UINT8 */:
+      return { img: new Uint8Array(imgRaw) };
+    case 4 /* DT_INT16 */:
+      return { img: new Int16Array(imgRaw) };
+    case 16 /* DT_FLOAT32 */:
+      return { img: new Float32Array(imgRaw) };
+    case 64 /* DT_FLOAT64 */:
+      return { img: new Float64Array(imgRaw) };
+    case 128 /* DT_RGB24 */:
+      return { img: new Uint8Array(imgRaw) };
+    case 512 /* DT_UINT16 */:
+      return { img: new Uint16Array(imgRaw) };
+    case 2304 /* DT_RGBA32 */:
+      return { img: new Uint8Array(imgRaw) };
+    case 256 /* DT_INT8 */: {
+      const i8 = new Int8Array(imgRaw);
+      const vx8 = i8.length;
+      const img = new Int16Array(vx8);
+      for (let i = 0; i < vx8; i++) {
+        img[i] = i8[i];
+      }
+      return {
+        img,
+        updatedDatatypeCode: 4 /* DT_INT16 */,
+        updatedNumBitsPerVoxel: 16
+      };
+    }
+    case 1 /* DT_BINARY */: {
+      const nvox = hdr.dims[1] * hdr.dims[2] * Math.max(1, hdr.dims[3]) * Math.max(1, hdr.dims[4]);
+      const img1 = new Uint8Array(imgRaw);
+      const img = new Uint8Array(nvox);
+      const lut = new Uint8Array(8);
+      for (let i = 0; i < 8; i++) {
+        lut[i] = Math.pow(2, i);
+      }
+      let i1 = -1;
+      for (let i = 0; i < nvox; i++) {
+        const bit = i % 8;
+        if (bit === 0) {
+          i1++;
+        }
+        if ((img1[i1] & lut[bit]) !== 0) {
+          img[i] = 1;
+        }
+      }
+      return {
+        img,
+        updatedDatatypeCode: 2 /* DT_UINT8 */,
+        updatedNumBitsPerVoxel: 8
+      };
+    }
+    case 768 /* DT_UINT32 */: {
+      const u32 = new Uint32Array(imgRaw);
+      const vx32 = u32.length;
+      const img = new Float64Array(vx32);
+      for (let i = 0; i < vx32 - 1; i++) {
+        img[i] = u32[i];
+      }
+      return {
+        img,
+        updatedDatatypeCode: 64 /* DT_FLOAT64 */
+      };
+    }
+    case 8 /* DT_INT32 */: {
+      const i322 = new Int32Array(imgRaw);
+      const vxi32 = i322.length;
+      const img = new Float64Array(vxi32);
+      for (let i = 0; i < vxi32 - 1; i++) {
+        img[i] = i322[i];
+      }
+      return {
+        img,
+        updatedDatatypeCode: 64 /* DT_FLOAT64 */
+      };
+    }
+    case 1024 /* DT_INT64 */: {
+      const i64 = new BigInt64Array(imgRaw);
+      const vx = i64.length;
+      const img = new Float64Array(vx);
+      for (let i = 0; i < vx - 1; i++) {
+        img[i] = Number(i64[i]);
+      }
+      return {
+        img,
+        updatedDatatypeCode: 64 /* DT_FLOAT64 */
+      };
+    }
+    case 32 /* DT_COMPLEX64 */: {
+      const f32 = new Float32Array(imgRaw);
+      const nvx = Math.floor(f32.length / 2);
+      const imaginary = new Float32Array(nvx);
+      const img = new Float32Array(nvx);
+      let r = 0;
+      for (let i = 0; i < nvx - 1; i++) {
+        img[i] = f32[r];
+        imaginary[i] = f32[r + 1];
+        r += 2;
+      }
+      return {
+        img,
+        imaginary,
+        updatedDatatypeCode: 16 /* DT_FLOAT32 */
+      };
+    }
+    default:
+      throw new Error("datatype " + hdr.datatypeCode + " not supported");
+  }
+}
+
+// src/nvimage/AffineProcessor.ts
+function validatePixelDimensions(hdr) {
+  if (hdr.pixDims[1] === 0 || hdr.pixDims[2] === 0 || hdr.pixDims[3] === 0) {
+    log.error("pixDims not plausible", hdr);
+  }
+}
+function validateScaleIntercept(hdr) {
+  if (isNaN(hdr.scl_slope) || hdr.scl_slope === 0) {
+    hdr.scl_slope = 1;
+  }
+  if (isNaN(hdr.scl_inter)) {
+    hdr.scl_inter = 0;
+  }
+}
+function calculateAffineFromQForm(hdr, useQFormNotSForm) {
+  const affineOK = isAffineOK(hdr.affine);
+  if (!useQFormNotSForm && affineOK && hdr.qform_code <= hdr.sform_code) {
+    return;
+  }
+  log.debug("spatial transform based on QForm");
+  const b = hdr.quatern_b;
+  const c = hdr.quatern_c;
+  const d = hdr.quatern_d;
+  const a = Math.sqrt(1 - (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2)));
+  const qfac = hdr.pixDims[0] === 0 ? 1 : hdr.pixDims[0];
+  const quatern_R = [
+    [a * a + b * b - c * c - d * d, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c],
+    [2 * b * c + 2 * a * d, a * a + c * c - b * b - d * d, 2 * c * d - 2 * a * b],
+    [2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a * a + d * d - c * c - b * b]
+  ];
+  const affine = hdr.affine;
+  for (let ctrOut = 0; ctrOut < 3; ctrOut += 1) {
+    for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
+      affine[ctrOut][ctrIn] = quatern_R[ctrOut][ctrIn] * hdr.pixDims[ctrIn + 1];
+      if (ctrIn === 2) {
+        affine[ctrOut][ctrIn] *= qfac;
+      }
+    }
+  }
+  affine[0][3] = hdr.qoffset_x;
+  affine[1][3] = hdr.qoffset_y;
+  affine[2][3] = hdr.qoffset_z;
+  hdr.affine = affine;
+}
+function repairDefectiveAffine(hdr) {
+  if (isAffineOK(hdr.affine)) {
+    return;
+  }
+  log.debug("Defective NIfTI: spatial transform does not make sense");
+  let x = hdr.pixDims[1];
+  let y = hdr.pixDims[2];
+  let z = hdr.pixDims[3];
+  if (isNaN(x) || x === 0) {
+    x = 1;
+  }
+  if (isNaN(y) || y === 0) {
+    y = 1;
+  }
+  if (isNaN(z) || z === 0) {
+    z = 1;
+  }
+  hdr.pixDims[1] = x;
+  hdr.pixDims[2] = y;
+  hdr.pixDims[3] = z;
+  const affine = [
+    [x, 0, 0, 0],
+    [0, y, 0, 0],
+    [0, 0, z, 0],
+    [0, 0, 0, 1]
+  ];
+  hdr.affine = affine;
+}
+function processAffine(hdr, useQFormNotSForm) {
+  validatePixelDimensions(hdr);
+  validateScaleIntercept(hdr);
+  calculateAffineFromQForm(hdr, useQFormNotSForm);
+  repairDefectiveAffine(hdr);
+}
+
 // ../../node_modules/zarrita/dist/src/errors.js
 var NodeNotFoundError = class extends Error {
   constructor(context, options = {}) {
@@ -21703,12 +25501,12 @@ var BoolArray = class {
   get length() {
     return __privateGet(this, _bytes).length;
   }
-  get(idx) {
-    let value = __privateGet(this, _bytes)[idx];
+  get(idx2) {
+    let value = __privateGet(this, _bytes)[idx2];
     return typeof value === "number" ? value !== 0 : value;
   }
-  set(idx, value) {
-    __privateGet(this, _bytes)[idx] = value ? 1 : 0;
+  set(idx2, value) {
+    __privateGet(this, _bytes)[idx2] = value ? 1 : 0;
   }
   fill(value) {
     __privateGet(this, _bytes).fill(value ? 1 : 0);
@@ -21757,12 +25555,12 @@ var ByteStringArray = class {
   get length() {
     return this.byteLength / this.BYTES_PER_ELEMENT;
   }
-  get(idx) {
-    const view = new Uint8Array(this.buffer, this.byteOffset + this.chars * idx, this.chars);
+  get(idx2) {
+    const view = new Uint8Array(this.buffer, this.byteOffset + this.chars * idx2, this.chars);
     return new TextDecoder().decode(view).replace(/\x00/g, "");
   }
-  set(idx, value) {
-    const view = new Uint8Array(this.buffer, this.byteOffset + this.chars * idx, this.chars);
+  set(idx2, value) {
+    const view = new Uint8Array(this.buffer, this.byteOffset + this.chars * idx2, this.chars);
     view.fill(0);
     view.set(__privateGet(this, _encoder).encode(value));
   }
@@ -21817,16 +25615,16 @@ var _UnicodeStringArray = class _UnicodeStringArray {
   get length() {
     return __privateGet(this, _data).length / this.chars;
   }
-  get(idx) {
-    const offset = this.chars * idx;
+  get(idx2) {
+    const offset = this.chars * idx2;
     let result = "";
     for (let i = 0; i < this.chars; i++) {
       result += String.fromCodePoint(__privateGet(this, _data)[offset + i]);
     }
     return result.replace(/\u0000/g, "");
   }
-  set(idx, value) {
-    const offset = this.chars * idx;
+  set(idx2, value) {
+    const offset = this.chars * idx2;
     const view = __privateGet(this, _data).subarray(offset, offset + this.chars);
     view.fill(0);
     for (let i = 0; i < this.chars; i++) {
@@ -22517,7 +26315,7 @@ function create_sharded_chunk_getter(location, shard_shape, encode_shard_key, sh
       return void 0;
     }
     let { data, shape, stride } = index;
-    let linear_offset = chunk_coord.map((d, i) => d % shape[i]).reduce((acc, sel, idx) => acc + sel * stride[idx], 0);
+    let linear_offset = chunk_coord.map((d, i) => d % shape[i]).reduce((acc, sel, idx2) => acc + sel * stride[idx2], 0);
     let offset = data[linear_offset];
     let length4 = data[linear_offset + 1];
     if (offset === MAX_BIG_UINT && length4 === MAX_BIG_UINT) {
@@ -23002,8 +26800,8 @@ var BasicIndexer = class {
 };
 
 // ../../node_modules/zarrita/dist/src/indexing/get.js
-function unwrap(arr, idx) {
-  return "get" in arr ? arr.get(idx) : arr[idx];
+function unwrap(arr, idx2) {
+  return "get" in arr ? arr.get(idx2) : arr[idx2];
 }
 async function get(arr, selection, opts, setter2) {
   let context = get_context(arr);
@@ -23269,1390 +27067,131 @@ merge_init_fn = function(overrides) {
 };
 var fetch_default = FetchStore;
 
-// src/nvimage/utils.ts
-var isPlatformLittleEndian = () => {
-  const buffer = new ArrayBuffer(2);
-  new DataView(buffer).setInt16(0, 256, true);
-  return new Int16Array(buffer)[0] === 256;
-};
-var ImageType = /* @__PURE__ */ ((ImageType3) => {
-  ImageType3[ImageType3["UNKNOWN"] = 0] = "UNKNOWN";
-  ImageType3[ImageType3["NII"] = 1] = "NII";
-  ImageType3[ImageType3["DCM"] = 2] = "DCM";
-  ImageType3[ImageType3["DCM_MANIFEST"] = 3] = "DCM_MANIFEST";
-  ImageType3[ImageType3["MIH"] = 4] = "MIH";
-  ImageType3[ImageType3["MIF"] = 5] = "MIF";
-  ImageType3[ImageType3["NHDR"] = 6] = "NHDR";
-  ImageType3[ImageType3["NRRD"] = 7] = "NRRD";
-  ImageType3[ImageType3["MHD"] = 8] = "MHD";
-  ImageType3[ImageType3["MHA"] = 9] = "MHA";
-  ImageType3[ImageType3["MGH"] = 10] = "MGH";
-  ImageType3[ImageType3["MGZ"] = 11] = "MGZ";
-  ImageType3[ImageType3["V"] = 12] = "V";
-  ImageType3[ImageType3["V16"] = 13] = "V16";
-  ImageType3[ImageType3["VMR"] = 14] = "VMR";
-  ImageType3[ImageType3["HEAD"] = 15] = "HEAD";
-  ImageType3[ImageType3["DCM_FOLDER"] = 16] = "DCM_FOLDER";
-  ImageType3[ImageType3["SRC"] = 17] = "SRC";
-  ImageType3[ImageType3["FIB"] = 18] = "FIB";
-  ImageType3[ImageType3["BMP"] = 19] = "BMP";
-  ImageType3[ImageType3["ZARR"] = 20] = "ZARR";
-  ImageType3[ImageType3["NPY"] = 21] = "NPY";
-  ImageType3[ImageType3["NPZ"] = 22] = "NPZ";
-  ImageType3[ImageType3["HDR"] = 23] = "HDR";
-  return ImageType3;
-})(ImageType || {});
-var NVIMAGE_TYPE = Object.freeze({
-  ...ImageType,
-  parse: (ext) => {
-    let imageType = 0 /* UNKNOWN */;
-    switch (ext.toUpperCase()) {
-      case "":
-      case "DCM":
-        imageType = 2 /* DCM */;
-        break;
-      case "TXT":
-        imageType = 3 /* DCM_MANIFEST */;
-        break;
-      case "FZ":
-      case "GQI":
-      case "QSDR":
-      case "FIB":
-        imageType = 18 /* FIB */;
-        break;
-      case "HDR":
-      case "NII":
-        imageType = 1 /* NII */;
-        break;
-      case "MIH":
-        imageType = 4 /* MIH */;
-        break;
-      case "MIF":
-        imageType = 5 /* MIF */;
-        break;
-      case "NHDR":
-        imageType = 6 /* NHDR */;
-        break;
-      case "NRRD":
-        imageType = 7 /* NRRD */;
-        break;
-      case "MHD":
-        imageType = 8 /* MHD */;
-        break;
-      case "MHA":
-        imageType = 9 /* MHA */;
-        break;
-      case "MGH":
-        imageType = 10 /* MGH */;
-        break;
-      case "MGZ":
-        imageType = 11 /* MGZ */;
-        break;
-      case "NPY":
-        imageType = 21 /* NPY */;
-        break;
-      case "NPZ":
-        imageType = 22 /* NPZ */;
-        break;
-      case "SRC":
-        imageType = 17 /* SRC */;
-        break;
-      case "V":
-        imageType = 12 /* V */;
-        break;
-      case "V16":
-        imageType = 13 /* V16 */;
-        break;
-      case "VMR":
-        imageType = 14 /* VMR */;
-        break;
-      case "HEAD":
-        imageType = 15 /* HEAD */;
-        break;
-      case "PNG":
-      case "BMP":
-      case "GIF":
-      case "JPG":
-      case "JPEG":
-        imageType = 19 /* BMP */;
-        break;
-      case "ZARR":
-        imageType = 20 /* ZARR */;
-        break;
-    }
-    return imageType;
+// src/nvimage/ZarrProcessor.ts
+async function loadZarrData(url) {
+  const urlParams = new URL(url).searchParams;
+  const zIndex = urlParams.get("z");
+  const yIndex = urlParams.get("y");
+  const xIndex = urlParams.get("x");
+  const zRange = zIndex ? slice(parseInt(zIndex), parseInt(zIndex) + 1) : null;
+  const yRange = yIndex ? slice(parseInt(yIndex), parseInt(yIndex) + 1) : null;
+  const xRange = xIndex ? slice(parseInt(xIndex), parseInt(xIndex) + 1) : null;
+  const zarrUrl = url.split("?")[0];
+  const store = new fetch_default(zarrUrl);
+  const root2 = root(store);
+  let arr;
+  try {
+    arr = await open(root2.resolve(url), { kind: "array" });
+  } catch (e) {
+    arr = await open(root2, { kind: "array" });
   }
-});
-var NVImageFromUrlOptions = (url, urlImageData = "", name = "", colormap = "gray", opacity = 1, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, alphaThreshold = false, colormapLabel = null) => {
-  return {
-    url,
-    urlImageData,
-    name,
-    colormap,
-    colorMap: colormap,
-    opacity,
-    cal_min,
-    cal_max,
-    trustCalMinMax,
-    percentileFrac,
-    ignoreZeroVoxels,
-    useQFormNotSForm,
-    colormapNegative,
-    imageType,
-    cal_minNeg,
-    cal_maxNeg,
-    colorbarVisible,
-    frame4D,
-    alphaThreshold,
-    colormapLabel
+  let view;
+  if (arr.shape.length === 4) {
+    const cRange = null;
+    const zDim2 = arr.shape[2];
+    const yDim = arr.shape[1];
+    const xDim = arr.shape[0];
+    if (zRange && zRange[0] >= zDim2) {
+      zRange[0] = zDim2 - 1;
+    }
+    if (yRange && yRange[0] >= yDim) {
+      yRange[0] = yDim - 1;
+    }
+    if (xRange && xRange[0] >= xDim) {
+      xRange[0] = xDim - 1;
+    }
+    view = await get2(arr, [xRange, yRange, zRange, cRange]);
+  } else {
+    view = await get2(arr, [xRange, yRange, zRange]);
+  }
+  const dataBuffer = view.data;
+  const [height, width, zDim, cDim] = view.shape;
+  const zarrData = {
+    data: dataBuffer,
+    width,
+    height,
+    depth: zDim,
+    channels: cDim
   };
-};
-function str2Buffer(str6, maxLen = 80) {
-  str6 = str6.replace(/[`$]/g, "");
-  const bytes = [];
-  const len4 = Math.min(maxLen, str6.length);
-  for (let i = 0; i < len4; i++) {
-    const char = str6.charCodeAt(i);
-    bytes.push(char & 255);
-  }
-  return bytes;
+  return {
+    dataBuffer,
+    zarrData
+  };
 }
-function hdrToArrayBuffer(hdr, isDrawing8 = false, isInputEndian = false) {
-  const SHORT_SIZE = 2;
-  const FLOAT32_SIZE = 4;
-  let isLittleEndian = true;
-  if (isInputEndian) {
-    isLittleEndian = hdr.littleEndian;
+
+// src/nvimage/StreamingLoader.ts
+async function fetchAndStreamData(url, headers = {}) {
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    throw Error(response.statusText);
   }
-  const byteArray = new Uint8Array(348);
-  const view = new DataView(byteArray.buffer);
-  view.setInt32(0, 348, isLittleEndian);
-  view.setUint8(38, 114);
-  view.setUint8(39, hdr.dim_info);
-  for (let i = 0; i < 8; i++) {
-    view.setUint16(40 + SHORT_SIZE * i, hdr.dims[i], isLittleEndian);
+  if (!response.body) {
+    throw new Error("No readable stream available");
   }
-  view.setFloat32(56, hdr.intent_p1, isLittleEndian);
-  view.setFloat32(60, hdr.intent_p2, isLittleEndian);
-  view.setFloat32(64, hdr.intent_p3, isLittleEndian);
-  view.setInt16(68, hdr.intent_code, isLittleEndian);
-  if (isDrawing8) {
-    view.setInt16(70, 2, isLittleEndian);
-    view.setInt16(72, 8, isLittleEndian);
-  } else {
-    view.setInt16(70, hdr.datatypeCode, isLittleEndian);
-    view.setInt16(72, hdr.numBitsPerVoxel, isLittleEndian);
-  }
-  view.setInt16(74, hdr.slice_start, isLittleEndian);
-  for (let i = 0; i < 8; i++) {
-    view.setFloat32(76 + FLOAT32_SIZE * i, hdr.pixDims[i], isLittleEndian);
-  }
-  if (isDrawing8) {
-    view.setFloat32(108, 352, isLittleEndian);
-    view.setFloat32(112, 1, isLittleEndian);
-    view.setFloat32(116, 0, isLittleEndian);
-  } else {
-    view.setFloat32(108, hdr.vox_offset, isLittleEndian);
-    view.setFloat32(112, hdr.scl_slope, isLittleEndian);
-    view.setFloat32(116, hdr.scl_inter, isLittleEndian);
-  }
-  view.setInt16(120, hdr.slice_end, isLittleEndian);
-  view.setUint8(122, hdr.slice_code);
-  if (hdr.xyzt_units === 0) {
-    view.setUint8(123, 10);
-  } else {
-    view.setUint8(123, hdr.xyzt_units);
-  }
-  if (isDrawing8) {
-    view.setFloat32(124, 0, isLittleEndian);
-    view.setFloat32(128, 0, isLittleEndian);
-  } else {
-    view.setFloat32(124, hdr.cal_max, isLittleEndian);
-    view.setFloat32(128, hdr.cal_min, isLittleEndian);
-  }
-  view.setFloat32(132, hdr.slice_duration, isLittleEndian);
-  view.setFloat32(136, hdr.toffset, isLittleEndian);
-  byteArray.set(str2Buffer(hdr.description), 148);
-  byteArray.set(str2Buffer(hdr.aux_file), 228);
-  view.setInt16(252, hdr.qform_code, isLittleEndian);
-  if (hdr.sform_code < 1 || hdr.sform_code < 1) {
-    view.setInt16(254, 1, isLittleEndian);
-  } else {
-    view.setInt16(254, hdr.sform_code, isLittleEndian);
-  }
-  view.setFloat32(256, hdr.quatern_b, isLittleEndian);
-  view.setFloat32(260, hdr.quatern_c, isLittleEndian);
-  view.setFloat32(264, hdr.quatern_d, isLittleEndian);
-  view.setFloat32(268, hdr.qoffset_x, isLittleEndian);
-  view.setFloat32(272, hdr.qoffset_y, isLittleEndian);
-  view.setFloat32(276, hdr.qoffset_z, isLittleEndian);
-  const flattened = hdr.affine.flat();
-  for (let i = 0; i < 12; i++) {
-    view.setFloat32(280 + FLOAT32_SIZE * i, flattened[i], isLittleEndian);
-  }
-  view.setInt32(344, 3222382, true);
-  return byteArray;
-}
-function getExtents(positions, forceOriginInVolume = true) {
-  const nV = Math.round(positions.length / 3);
-  const origin = vec3_exports.fromValues(0, 0, 0);
-  const mn = vec3_exports.create();
-  const mx = vec3_exports.create();
-  let mxDx = 0;
-  let nLoops = 1;
-  if (forceOriginInVolume) {
-    nLoops = 2;
-  }
-  for (let loop = 0; loop < nLoops; loop++) {
-    mxDx = 0;
-    for (let i = 0; i < nV; i++) {
-      const v = vec3_exports.fromValues(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-      if (i === 0) {
-        vec3_exports.copy(mn, v);
-        vec3_exports.copy(mx, v);
-      }
-      vec3_exports.min(mn, mn, v);
-      vec3_exports.max(mx, mx, v);
-      vec3_exports.subtract(v, v, origin);
-      const dx = vec3_exports.len(v);
-      mxDx = Math.max(mxDx, dx);
-    }
-    if (loop + 1 >= nLoops) {
-      break;
-    }
-    let ok = true;
-    for (let j = 0; j < 3; ++j) {
-      if (mn[j] > origin[j]) {
-        ok = false;
-      }
-      if (mx[j] < origin[j]) {
-        ok = false;
-      }
-    }
-    if (ok) {
-      break;
-    }
-    vec3_exports.lerp(origin, mn, mx, 0.5);
-    log.debug("origin moved inside volume: ", origin);
-  }
-  const min4 = [mn[0], mn[1], mn[2]];
-  const max5 = [mx[0], mx[1], mx[2]];
-  const furthestVertexFromOrigin = mxDx;
-  return { min: min4, max: max5, furthestVertexFromOrigin, origin };
-}
-function isAffineOK(mtx) {
-  const iOK = [false, false, false, false];
-  const jOK = [false, false, false, false];
-  for (let i = 0; i < 4; i++) {
-    for (let j = 0; j < 4; j++) {
-      if (isNaN(mtx[i][j])) {
-        return false;
-      }
-    }
-  }
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (mtx[i][j] === 0) {
-        continue;
-      }
-      iOK[i] = true;
-      jOK[j] = true;
-    }
-  }
-  for (let i = 0; i < 3; i++) {
-    if (!iOK[i]) {
-      return false;
-    }
-    if (!jOK[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-async function uncompressStream(stream) {
+  const stream = await uncompressStream(response.body);
+  const chunks = [];
   const reader = stream.getReader();
-  const { done, value } = await reader.read();
-  if (done) {
-    reader.releaseLock();
-    return new ReadableStream({
-      start(controller) {
-        controller.close();
-      }
-    });
-  }
-  if (!value || value.length < 2) {
-    reader.releaseLock();
-    return new ReadableStream({
-      start(controller) {
-        if (value) {
-          controller.enqueue(value);
-        }
-        controller.close();
-      }
-    });
-  }
-  const isGzip = value[0] === 31 && value[1] === 139;
-  const uncompressedStream = new ReadableStream({
-    async start(controller) {
-      try {
-        controller.enqueue(value);
-        while (true) {
-          const { done: done2, value: value2 } = await reader.read();
-          if (done2) {
-            controller.close();
-            reader.releaseLock();
-            break;
-          }
-          controller.enqueue(value2);
-        }
-      } catch (error) {
-        controller.error(error);
-        reader.releaseLock();
-      }
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
     }
-  });
-  if (isGzip) {
-    return uncompressedStream.pipeThrough(new DecompressionStream("gzip"));
+    chunks.push(value);
   }
-  return uncompressedStream;
-}
-
-// src/nvimage/ImageWriter.ts
-function createNiftiHeader(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */) {
-  const hdr = new NIFTI1();
-  hdr.littleEndian = true;
-  hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-  hdr.dims[0] = Math.max(3, dims.length);
-  for (let i = 0; i < dims.length; i++) {
-    hdr.dims[i + 1] = dims[i];
-  }
-  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  for (let i = 0; i < dims.length; i++) {
-    hdr.pixDims[i + 1] = pixDims[i];
-  }
-  if (affine.length === 16) {
-    let k = 0;
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        hdr.affine[i][j] = affine[k];
-        k++;
-      }
-    }
-  }
-  let bpv = 8;
-  if (datatypeCode === 256 /* DT_INT8 */ || datatypeCode === 2 /* DT_UINT8 */) {
-    bpv = 8;
-  } else if (datatypeCode === 512 /* DT_UINT16 */ || datatypeCode === 4 /* DT_INT16 */) {
-    bpv = 16;
-  } else if (datatypeCode === 16 /* DT_FLOAT32 */ || datatypeCode === 768 /* DT_UINT32 */ || datatypeCode === 8 /* DT_INT32 */ || datatypeCode === 2304 /* DT_RGBA32 */) {
-    bpv = 32;
-  } else if (datatypeCode === 64 /* DT_FLOAT64 */) {
-    bpv = 64;
-  } else {
-    log.warn("Unsupported NIfTI datatypeCode for header creation: " + datatypeCode);
-  }
-  hdr.datatypeCode = datatypeCode;
-  hdr.numBitsPerVoxel = bpv;
-  hdr.scl_inter = 0;
-  hdr.scl_slope = 1;
-  hdr.sform_code = 2;
-  hdr.magic = "n+1";
-  hdr.vox_offset = 352;
-  return hdr;
-}
-function createNiftiArray(dims = [256, 256, 256], pixDims = [1, 1, 1], affine = [1, 0, 0, -128, 0, 1, 0, -128, 0, 0, 1, -128, 0, 0, 0, 1], datatypeCode = 2 /* DT_UINT8 */, img = new Uint8Array()) {
-  const hdr = createNiftiHeader(dims, pixDims, affine, datatypeCode);
-  const hdrBytes = hdrToArrayBuffer(hdr, false);
-  hdr.vox_offset = Math.max(352, hdrBytes.length);
-  const finalHdrBytes = hdrToArrayBuffer(hdr, false);
-  if (img.length < 1) {
-    return finalHdrBytes;
-  }
-  const paddingSize = Math.max(0, hdr.vox_offset - finalHdrBytes.length);
-  const padding = new Uint8Array(paddingSize);
-  const imgBytes = new Uint8Array(img.buffer, img.byteOffset, img.byteLength);
-  const totalLength = hdr.vox_offset + imgBytes.length;
-  const outputData = new Uint8Array(totalLength);
-  outputData.set(finalHdrBytes, 0);
-  outputData.set(padding, finalHdrBytes.length);
-  outputData.set(imgBytes, hdr.vox_offset);
-  return outputData;
-}
-function toUint8Array(nvImage, drawingBytes = null) {
-  if (!nvImage.hdr) {
-    throw new Error("NVImage header is not defined for toUint8Array");
-  }
-  if (!nvImage.img && drawingBytes === null) {
-    throw new Error("NVImage image data is not defined for toUint8Array");
-  }
-  const isDrawing = drawingBytes !== null;
-  const hdrCopy = JSON.parse(JSON.stringify(nvImage.hdr));
-  const hasExtensions = nvImage.extensions && nvImage.extensions.length > 0;
-  const extFlag = new Uint8Array(4);
-  extFlag[0] = hasExtensions ? 1 : 0;
-  let extensionsData = new Uint8Array(0);
-  if (hasExtensions) {
-    const blocks = [];
-    let totalSize = 0;
-    for (const ext of nvImage.extensions) {
-      const edataBytes = new Uint8Array(ext.edata);
-      const block = new Uint8Array(8 + edataBytes.length);
-      const dv = new DataView(block.buffer);
-      dv.setInt32(0, ext.esize, true);
-      dv.setInt32(4, ext.ecode, true);
-      block.set(edataBytes, 8);
-      blocks.push(block);
-      totalSize += block.length;
-    }
-    extensionsData = new Uint8Array(totalSize);
-    let offset2 = 0;
-    for (const block of blocks) {
-      extensionsData.set(block, offset2);
-      offset2 += block.length;
-    }
-  }
-  const headerSize = 348;
-  hdrCopy.vox_offset = Math.max(352, headerSize + extFlag.length + extensionsData.length);
-  if (isDrawing) {
-    hdrCopy.datatypeCode = 2 /* DT_UINT8 */;
-    hdrCopy.numBitsPerVoxel = 8;
-    hdrCopy.scl_slope = 1;
-    hdrCopy.scl_inter = 0;
-  }
-  const hdrBytes = hdrToArrayBuffer(hdrCopy, isDrawing);
-  let imageBytesToSave;
-  if (isDrawing) {
-    const drawingBytesCurrent = drawingBytes;
-    const perm = nvImage.permRAS;
-    if (perm && (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3)) {
-      log.debug("Reorienting drawing bytes back to native space for saving...");
-      const dims = nvImage.hdr.dims;
-      const nVox = dims[1] * dims[2] * dims[3];
-      const nVoxRAS = nvImage.dimsRAS ? nvImage.dimsRAS[1] * nvImage.dimsRAS[2] * nvImage.dimsRAS[3] : nVox;
-      if (drawingBytesCurrent.length !== nVoxRAS) {
-        console.warn(
-          `Drawing length (${drawingBytesCurrent.length}) does not match expected RAS voxel count (${nVoxRAS}). Cannot reorient drawing reliably.`
-        );
-        imageBytesToSave = drawingBytesCurrent;
-      } else if (!nvImage.img2RASstep || !nvImage.img2RASstart || !nvImage.dimsRAS) {
-        console.warn(
-          `Missing RAS transformation info (img2RASstep, img2RASstart, dimsRAS). Cannot reorient drawing reliably.`
-        );
-        imageBytesToSave = drawingBytesCurrent;
-      } else {
-        const step = nvImage.img2RASstep;
-        const start = nvImage.img2RASstart;
-        const dimsRAS = nvImage.dimsRAS;
-        const nativeData = new Uint8Array(nVox);
-        nativeData.fill(0);
-        const inputDrawingRAS = drawingBytesCurrent;
-        let rasIndex = 0;
-        for (let rz = 0; rz < dimsRAS[3]; rz++) {
-          const zi = start[2] + rz * step[2];
-          for (let ry = 0; ry < dimsRAS[2]; ry++) {
-            const yi = start[1] + ry * step[1];
-            for (let rx = 0; rx < dimsRAS[1]; rx++) {
-              const xi = start[0] + rx * step[0];
-              const nativeIndex = xi + yi + zi;
-              if (nativeIndex >= 0 && nativeIndex < nVox) {
-                nativeData[nativeIndex] = inputDrawingRAS[rasIndex];
-              } else if (rasIndex < inputDrawingRAS.length) {
-                console.warn(
-                  `Calculated native index ${nativeIndex} is out of bounds [0..${nVox - 1}] during drawing reorientation.`
-                );
-              }
-              rasIndex++;
-            }
-          }
-        }
-        imageBytesToSave = nativeData;
-      }
-    } else {
-      imageBytesToSave = drawingBytesCurrent;
-    }
-  } else {
-    if (!nvImage.img) {
-      throw new Error("NVImage image data is null when trying to save non-drawing.");
-    }
-    imageBytesToSave = new Uint8Array(nvImage.img.buffer, nvImage.img.byteOffset, nvImage.img.byteLength);
-  }
-  const preImageBytesSize = hdrBytes.length + extFlag.length + extensionsData.length;
-  const paddingSize = Math.max(0, hdrCopy.vox_offset - preImageBytesSize);
-  const padding = new Uint8Array(paddingSize);
-  const totalLength = hdrCopy.vox_offset + imageBytesToSave.length;
-  const outputData = new Uint8Array(totalLength);
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const dataBuffer = new ArrayBuffer(totalLength);
+  const dataView = new Uint8Array(dataBuffer);
   let offset = 0;
-  outputData.set(hdrBytes, offset);
-  offset += hdrBytes.length;
-  outputData.set(extFlag, offset);
-  offset += extFlag.length;
-  outputData.set(extensionsData, offset);
-  offset += extensionsData.length;
-  outputData.set(padding, offset);
-  offset += padding.length;
-  outputData.set(imageBytesToSave, hdrCopy.vox_offset);
-  return outputData;
-}
-async function saveToUint8Array(nvImage, fnm, drawing8 = null) {
-  const odata = toUint8Array(nvImage, drawing8);
-  const compress = fnm.toLowerCase().endsWith(".gz");
-  if (compress) {
-    try {
-      const compressedData = await NVUtilities.compress(odata, "gzip");
-      return new Uint8Array(compressedData);
-    } catch (error) {
-      log.error("Compression failed:", error);
-      log.warn("Returning uncompressed data due to compression error.");
-      return odata;
-    }
-  } else {
-    return odata;
+  for (const chunk of chunks) {
+    dataView.set(chunk, offset);
+    offset += chunk.length;
   }
+  return dataBuffer;
 }
-async function saveToDisk(nvImage, fnm = "", drawing8 = null) {
-  const saveData = await saveToUint8Array(nvImage, fnm, drawing8);
-  if (!fnm) {
-    log.debug("saveToDisk: empty file name, returning data as Uint8Array rather than triggering download");
-    return saveData;
+function getPairedImageUrl(url, ext, providedUrlImgData) {
+  if (providedUrlImgData !== "") {
+    return providedUrlImgData;
   }
+  if (ext.toUpperCase() === "HEAD") {
+    return url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
+  }
+  if (ext.toUpperCase() === "HDR") {
+    return url.substring(0, url.lastIndexOf("HDR")) + "IMG";
+  }
+  return null;
+}
+async function fetchPairedImageData(urlImgData, headers = {}) {
   try {
-    const blob = new Blob([saveData.buffer], {
-      type: "application/octet-stream"
-      // Standard type for binary download
-    });
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", blobUrl);
-    link.setAttribute("download", fnm);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-  } catch (e) {
-    log.error("Failed to trigger download:", e);
-  }
-  return saveData;
-}
-
-// src/nvimage/VolumeUtils.ts
-function getValues(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
-  if (!nvImage.hdr) {
-    throw new Error("getValue: NVImage header is not defined.");
-  }
-  if (!isReadImaginary && !nvImage.img) {
-    throw new Error("getValue: NVImage image data is not defined.");
-  }
-  if (isReadImaginary && !nvImage.imaginary) {
-    log.warn("getValue: Attempted to read imaginary data, but none exists.");
-    return [0];
-  }
-  const nx = nvImage.hdr.dims[1];
-  const ny = nvImage.hdr.dims[2];
-  const nz = nvImage.hdr.dims[3];
-  const perm = nvImage.permRAS.slice();
-  if (perm[0] !== 1 || perm[1] !== 2 || perm[2] !== 3) {
-    const pos = vec4_exports.fromValues(x, y, z, 1);
-    vec4_exports.transformMat4(pos, pos, nvImage.toRASvox);
-    x = pos[0];
-    y = pos[1];
-    z = pos[2];
-  }
-  x = Math.max(0, Math.min(Math.round(x), nx - 1));
-  y = Math.max(0, Math.min(Math.round(y), ny - 1));
-  z = Math.max(0, Math.min(Math.round(z), nz - 1));
-  frame4D = Math.max(0, frame4D);
-  let vx = x + y * nx + z * nx * ny;
-  if (nvImage.hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
-    if (!nvImage.img) {
-      return [0];
+    let response = await fetch(urlImgData, { headers });
+    if (response.status === 404 && (urlImgData.includes("BRIK") || urlImgData.includes("IMG"))) {
+      response = await fetch(`${urlImgData}.gz`, { headers });
     }
-    vx *= 4;
-    if (vx + 3 >= nvImage.img.length) {
-      log.warn(`getValue: Calculated index ${vx} out of bounds for RGBA data.`);
-      return [0];
-    }
-    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2], nvImage.img[vx + 3]];
-  }
-  if (nvImage.hdr.datatypeCode === 128 /* DT_RGB24 */) {
-    if (!nvImage.img) {
-      return [0];
-    }
-    vx *= 3;
-    if (vx + 2 >= nvImage.img.length) {
-      log.warn(`getValue: Calculated index ${vx} out of bounds for RGB data.`);
-      return [0];
-    }
-    return [nvImage.img[vx], nvImage.img[vx + 1], nvImage.img[vx + 2]];
-  }
-  const nVox3D = nx * ny * nz;
-  const volOffset = frame4D * nVox3D;
-  const finalVxIndex = vx + volOffset;
-  const dataArray = isReadImaginary ? nvImage.imaginary : nvImage.img;
-  if (finalVxIndex < 0 || finalVxIndex >= dataArray.length) {
-    return [0];
-  }
-  const rawValue = dataArray[finalVxIndex];
-  const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
-  const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
-  return [slope * rawValue + inter];
-}
-function getValue(nvImage, x, y, z, frame4D = 0, isReadImaginary = false) {
-  const vals = getValues(nvImage, x, y, z, frame4D, isReadImaginary);
-  if (vals.length < 3) {
-    return vals[0];
-  }
-  const lum = vals[0] * 0.2126 + vals[1] * 0.7152 + vals[2] * 0.0722;
-  return lum;
-}
-function getVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], dataType = "same") {
-  const defaultResult = [new Uint8Array(), [0, 0, 0]];
-  if (!nvImage.hdr || !nvImage.img || !nvImage.dimsRAS || !nvImage.img2RASstep || !nvImage.img2RASstart) {
-    log.error("getVolumeData: Missing required NVImage properties (hdr, img, dimsRAS, img2RASstep/start).");
-    return defaultResult;
-  }
-  voxStartRAS = voxStartRAS.slice(0, 3);
-  voxEndRAS = voxEndRAS.slice(0, 3);
-  if (Math.min(...voxStartRAS) < 0 || Math.min(...voxEndRAS) < 0) {
-    log.warn("getVolumeData: Invalid start or end coordinates provided.");
-    return defaultResult;
-  }
-  const dimsRAS = nvImage.dimsRAS.slice(1, 4);
-  for (let i = 0; i < 3; i++) {
-    voxStartRAS[i] = Math.max(0, Math.min(Math.round(voxStartRAS[i]), dimsRAS[i] - 1));
-    voxEndRAS[i] = Math.max(0, Math.min(Math.round(voxEndRAS[i]), dimsRAS[i] - 1));
-    if (voxEndRAS[i] < voxStartRAS[i]) {
-      const tmp = voxEndRAS[i];
-      voxEndRAS[i] = voxStartRAS[i];
-      voxStartRAS[i] = tmp;
-    }
-  }
-  const slabDims = [
-    voxEndRAS[0] - voxStartRAS[0] + 1,
-    voxEndRAS[1] - voxStartRAS[1] + 1,
-    voxEndRAS[2] - voxStartRAS[2] + 1
-  ];
-  const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
-  if (slabNVox <= 0) {
-    log.warn("getVolumeData: Calculated slab size is zero or negative.");
-    return defaultResult;
-  }
-  let OutputArrayConstructor = nvImage.img.constructor;
-  if (dataType === "uint8") {
-    OutputArrayConstructor = Uint8Array;
-  } else if (dataType === "int16") {
-    OutputArrayConstructor = Int16Array;
-  } else if (dataType === "uint16") {
-    OutputArrayConstructor = Uint16Array;
-  } else if (dataType === "float32" || dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
-    OutputArrayConstructor = Float32Array;
-  } else if (dataType === "float64") {
-    OutputArrayConstructor = Float64Array;
-  } else if (dataType !== "same") {
-    log.warn(`getVolumeData: Unsupported dataType '${dataType}'. Using 'same'.`);
-  }
-  let outputImg;
-  try {
-    outputImg = new OutputArrayConstructor(slabNVox);
-  } catch (e) {
-    log.error(`getVolumeData: Failed to create output array for dataType '${dataType}'.`, e);
-    return defaultResult;
-  }
-  const step = nvImage.img2RASstep;
-  const start = nvImage.img2RASstart;
-  const sourceImg = nvImage.img;
-  let outputIndex = 0;
-  for (let rz = voxStartRAS[2]; rz <= voxEndRAS[2]; rz++) {
-    const zi = start[2] + rz * step[2];
-    for (let ry = voxStartRAS[1]; ry <= voxEndRAS[1]; ry++) {
-      const yi = start[1] + ry * step[1];
-      for (let rx = voxStartRAS[0]; rx <= voxEndRAS[0]; rx++) {
-        const xi = start[0] + rx * step[0];
-        const nativeIndex = xi + yi + zi;
-        let value = 0;
-        if (nativeIndex >= 0 && nativeIndex < sourceImg.length) {
-          value = sourceImg[nativeIndex];
-        }
-        outputImg[outputIndex++] = value;
-      }
-    }
-  }
-  const slope = isNaN(nvImage.hdr.scl_slope) || nvImage.hdr.scl_slope === 0 ? 1 : nvImage.hdr.scl_slope;
-  const inter = isNaN(nvImage.hdr.scl_inter) ? 0 : nvImage.hdr.scl_inter;
-  if (dataType === "scaled" || dataType === "normalized" || dataType === "windowed") {
-    if (!(outputImg instanceof Float32Array)) {
-      log.warn(`getVolumeData: Converting output to Float32 for scaling type '${dataType}'.`);
-      outputImg = Float32Array.from(outputImg);
-    }
-    for (let i = 0; i < outputImg.length; i++) {
-      outputImg[i] = outputImg[i] * slope + inter;
-    }
-  }
-  if (dataType === "normalized" || dataType === "windowed") {
-    let minVal = nvImage.cal_min;
-    let maxVal = nvImage.cal_max;
-    if (dataType === "normalized") {
-      minVal = nvImage.global_min;
-      maxVal = nvImage.global_max;
-    }
-    const range2 = maxVal - minVal;
-    const scale6 = range2 === 0 ? 0 : 1 / range2;
-    for (let i = 0; i < outputImg.length; i++) {
-      outputImg[i] = (outputImg[i] - minVal) * scale6;
-      outputImg[i] = Math.max(0, Math.min(outputImg[i], 1));
-    }
-  }
-  return [outputImg, slabDims];
-}
-function setVolumeData(nvImage, voxStartRAS = [-1, 0, 0], voxEndRAS = [0, 0, 0], slabData = new Uint8Array()) {
-  if (!nvImage.hdr || !nvImage.img || !nvImage.dimsRAS || !nvImage.img2RASstep || !nvImage.img2RASstart) {
-    log.error("setVolumeData: Missing required NVImage properties (hdr, img, dimsRAS, img2RASstep/start).");
-    return;
-  }
-  if (slabData.length < 1) {
-    log.warn("setVolumeData: Input slabData is empty.");
-    return;
-  }
-  voxStartRAS = voxStartRAS.slice(0, 3);
-  voxEndRAS = voxEndRAS.slice(0, 3);
-  if (Math.min(...voxStartRAS) < 0 || Math.min(...voxEndRAS) < 0) {
-    log.warn("setVolumeData: Invalid start or end coordinates provided.");
-    return;
-  }
-  const dimsRAS = nvImage.dimsRAS.slice(1, 4);
-  for (let i = 0; i < 3; i++) {
-    voxStartRAS[i] = Math.max(0, Math.min(Math.round(voxStartRAS[i]), dimsRAS[i] - 1));
-    voxEndRAS[i] = Math.max(0, Math.min(Math.round(voxEndRAS[i]), dimsRAS[i] - 1));
-    if (voxEndRAS[i] < voxStartRAS[i]) {
-      const tmp = voxEndRAS[i];
-      voxEndRAS[i] = voxStartRAS[i];
-      voxStartRAS[i] = tmp;
-    }
-  }
-  const slabDims = [
-    voxEndRAS[0] - voxStartRAS[0] + 1,
-    voxEndRAS[1] - voxStartRAS[1] + 1,
-    voxEndRAS[2] - voxStartRAS[2] + 1
-  ];
-  const slabNVox = slabDims[0] * slabDims[1] * slabDims[2];
-  if (slabNVox <= 0) {
-    log.warn("setVolumeData: Calculated slab size is zero or negative.");
-    return;
-  }
-  if (slabData.length < slabNVox) {
-    log.error(
-      `setVolumeData: Input slabData length (${slabData.length}) is less than the calculated slab size (${slabNVox}).`
-    );
-    return;
-  }
-  const step = nvImage.img2RASstep;
-  const start = nvImage.img2RASstart;
-  const targetImg = nvImage.img;
-  let sourceIndex = 0;
-  for (let rz = voxStartRAS[2]; rz <= voxEndRAS[2]; rz++) {
-    const zi = start[2] + rz * step[2];
-    for (let ry = voxStartRAS[1]; ry <= voxEndRAS[1]; ry++) {
-      const yi = start[1] + ry * step[1];
-      for (let rx = voxStartRAS[0]; rx <= voxEndRAS[0]; rx++) {
-        const xi = start[0] + rx * step[0];
-        const nativeIndex = xi + yi + zi;
-        if (nativeIndex >= 0 && nativeIndex < targetImg.length) {
-          targetImg[nativeIndex] = slabData[sourceIndex];
-        }
-        sourceIndex++;
-      }
-    }
-  }
-}
-
-// src/nvimage/ImageReaders/mgh.ts
-var mgh_exports = {};
-__export(mgh_exports, {
-  isFreeSurferLabelImage: () => isFreeSurferLabelImage,
-  optimizeFreeSurferLabels: () => optimizeFreeSurferLabels,
-  readMgh: () => readMgh
-});
-function readTag(view, offset, footerLength, tagToRead = 1) {
-  const end = offset + footerLength;
-  let pos = offset;
-  const results = [];
-  while (pos + 12 <= end) {
-    const tag = view.getInt32(pos, false);
-    const length4 = view.getInt32(pos + 8, false);
-    pos += 12;
-    if (length4 <= 0 || pos + length4 > end) {
-      break;
-    }
-    if (tag !== tagToRead) {
-      pos += length4;
-      continue;
-    }
-    let strLen = length4;
-    let contentPos = pos;
-    if (tagToRead === 1) {
-      if (pos + 4 > end) {
-        break;
-      }
-      strLen = view.getInt32(pos, false);
-      contentPos += 4;
-    }
-    if (strLen > 1 && contentPos + strLen <= end) {
-      const raw = new Uint8Array(view.buffer, contentPos, strLen);
-      const str6 = new TextDecoder("utf-8").decode(raw.slice(0, -1));
-      results.push(str6);
-    }
-    pos += length4;
-  }
-  return results.join("\n\n");
-}
-function optimizeFreeSurferLabels(hdr, imgRaw) {
-  hdr.intent_code = 1002;
-  if (hdr.datatypeCode !== 16 /* DT_FLOAT32 */ && hdr.datatypeCode !== 8 /* DT_INT32 */) {
-    return imgRaw;
-  }
-  let img = new Float32Array(imgRaw);
-  if (hdr.datatypeCode === 8 /* DT_INT32 */) {
-    img = new Int32Array(imgRaw);
-  }
-  if (isPlatformLittleEndian()) {
-    const u32 = new Uint32Array(imgRaw);
-    for (let i = 0; i < u32.length; i++) {
-      const val = u32[i];
-      u32[i] = (val & 255) << 24 | (val & 65280) << 8 | (val & 16711680) >>> 8 | (val & 4278190080) >>> 24;
-    }
-  }
-  hdr.littleEndian = isPlatformLittleEndian();
-  let isInteger = true;
-  let mn = Infinity;
-  let mx = -Infinity;
-  for (let i = 0; i < img.length; i++) {
-    const v = img[i];
-    if (!Number.isFinite(v)) {
-      continue;
-    }
-    if (!Number.isInteger(v)) {
-      isInteger = false;
-    }
-    if (v < mn) {
-      mn = v;
-    }
-    if (v > mx) {
-      mx = v;
-    }
-  }
-  if (!isInteger || mn < 0 || mx > 2147483647) {
-    log.warn(`FreeSurfer Labels must be integers in INT32 range. range ${mn}..${mx}`);
-    return imgRaw;
-  }
-  if (mx > 32767) {
-    hdr.datatypeCode = 8 /* DT_INT32 */;
-    const out = new Int32Array(img.length);
-    for (let i = 0; i < img.length; i++) {
-      out[i] = Math.trunc(img[i]);
-    }
-    return out.buffer;
-  } else if (mx > 255) {
-    hdr.datatypeCode = 4 /* DT_INT16 */;
-    hdr.numBitsPerVoxel = 16;
-    const out = new Int16Array(img.length);
-    for (let i = 0; i < img.length; i++) {
-      out[i] = Math.trunc(img[i]);
-    }
-    return out.buffer;
-  } else {
-    hdr.datatypeCode = 2 /* DT_UINT8 */;
-    hdr.numBitsPerVoxel = 8;
-    const out = new Uint8Array(img.length);
-    for (let i = 0; i < img.length; i++) {
-      out[i] = Math.trunc(img[i]);
-    }
-    return out.buffer;
-  }
-}
-function isFreeSurferLabelImage(raw, hdr, expectedBytes) {
-  const remainingBytes = raw.byteLength - hdr.vox_offset;
-  if (remainingBytes < expectedBytes) {
-    log.error(`MGH image data size mismatch: expected ${expectedBytes}, found ${remainingBytes}`);
-    return false;
-  }
-  if (remainingBytes === expectedBytes) {
-    return false;
-  }
-  const footerStart = hdr.vox_offset + expectedBytes + 20;
-  const footerLength = raw.byteLength - footerStart;
-  if (footerLength <= 12) {
-    return false;
-  }
-  const tag1 = readTag(new DataView(raw), footerStart, footerLength);
-  if (tag1.toLowerCase().endsWith("lut.txt")) {
-    return true;
-  }
-  const tag3 = readTag(new DataView(raw), footerStart, footerLength, 3);
-  return tag3.includes("mri_label2vol");
-}
-async function readMgh(nvImage, buffer) {
-  if (!nvImage.hdr) {
-    log.debug("readMgh called before nvImage.hdr was initialized. Creating default.");
-    nvImage.hdr = new NIFTI1();
-  }
-  const hdr = nvImage.hdr;
-  hdr.littleEndian = false;
-  let raw = buffer;
-  let reader = new DataView(raw);
-  if (raw.byteLength >= 2 && reader.getUint8(0) === 31 && reader.getUint8(1) === 139) {
-    try {
-      raw = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
-      reader = new DataView(raw);
-    } catch (err2) {
-      log.error("Failed to decompress MGZ file.", err2);
+    if (!response.ok || !response.body) {
       return null;
     }
-  }
-  if (raw.byteLength < 284) {
-    log.error("File too small to be a valid MGH/MGZ header.");
-    return null;
-  }
-  const version2 = reader.getInt32(0, false);
-  const width = reader.getInt32(4, false);
-  const height = reader.getInt32(8, false);
-  const depth = reader.getInt32(12, false);
-  const nframes = reader.getInt32(16, false);
-  const mtype = reader.getInt32(20, false);
-  const spacingX = reader.getFloat32(30, false);
-  const spacingY = reader.getFloat32(34, false);
-  const spacingZ = reader.getFloat32(38, false);
-  const xr = reader.getFloat32(42, false);
-  const xa = reader.getFloat32(46, false);
-  const xs = reader.getFloat32(50, false);
-  const yr = reader.getFloat32(54, false);
-  const ya = reader.getFloat32(58, false);
-  const ys = reader.getFloat32(62, false);
-  const zr = reader.getFloat32(66, false);
-  const za = reader.getFloat32(70, false);
-  const zs = reader.getFloat32(74, false);
-  const cr = reader.getFloat32(78, false);
-  const ca = reader.getFloat32(82, false);
-  const cs = reader.getFloat32(86, false);
-  if (version2 !== 1) {
-    log.warn(`Unexpected MGH version: ${version2}.`);
-  }
-  if (width <= 0 || height <= 0 || depth <= 0) {
-    log.error(`Invalid MGH dimensions: ${width}x${height}x${depth}`);
-    return null;
-  }
-  switch (mtype) {
-    case 0:
-      hdr.numBitsPerVoxel = 8;
-      hdr.datatypeCode = 2 /* DT_UINT8 */;
-      break;
-    case 4:
-      hdr.numBitsPerVoxel = 16;
-      hdr.datatypeCode = 4 /* DT_INT16 */;
-      break;
-    case 1:
-      hdr.numBitsPerVoxel = 32;
-      hdr.datatypeCode = 8 /* DT_INT32 */;
-      break;
-    case 3:
-      hdr.numBitsPerVoxel = 32;
-      hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-      break;
-    default:
-      log.error(`Unsupported MGH data type: ${mtype}`);
-      return null;
-  }
-  hdr.dims[1] = width;
-  hdr.dims[2] = height;
-  hdr.dims[3] = depth;
-  hdr.dims[4] = Math.max(1, nframes);
-  hdr.dims[0] = hdr.dims[4] > 1 ? 4 : 3;
-  hdr.pixDims[1] = Math.abs(spacingX);
-  hdr.pixDims[2] = Math.abs(spacingY);
-  hdr.pixDims[3] = Math.abs(spacingZ);
-  hdr.pixDims[4] = 0;
-  hdr.sform_code = 1;
-  hdr.qform_code = 0;
-  hdr.sform_code = 1;
-  const rot44 = mat4_exports.fromValues(
-    xr * hdr.pixDims[1],
-    yr * hdr.pixDims[2],
-    zr * hdr.pixDims[3],
-    0,
-    xa * hdr.pixDims[1],
-    ya * hdr.pixDims[2],
-    za * hdr.pixDims[3],
-    0,
-    xs * hdr.pixDims[1],
-    ys * hdr.pixDims[2],
-    zs * hdr.pixDims[3],
-    0,
-    0,
-    0,
-    0,
-    1
-  );
-  const Pcrs = [hdr.dims[1] / 2, hdr.dims[2] / 2, hdr.dims[3] / 2, 1];
-  const PxyzOffset = [0, 0, 0, 0];
-  for (let i = 0; i < 3; i++) {
-    PxyzOffset[i] = 0;
-    for (let j = 0; j < 3; j++) {
-      PxyzOffset[i] = PxyzOffset[i] + rot44[j + i * 4] * Pcrs[j];
-    }
-  }
-  hdr.affine = [
-    [rot44[0], rot44[1], rot44[2], cr - PxyzOffset[0]],
-    [rot44[4], rot44[5], rot44[6], ca - PxyzOffset[1]],
-    [rot44[8], rot44[9], rot44[10], cs - PxyzOffset[2]],
-    [0, 0, 0, 1]
-  ];
-  hdr.vox_offset = 284;
-  hdr.magic = "n+1";
-  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-  const nVoxels = width * height * depth * hdr.dims[4];
-  const expectedBytes = nVoxels * nBytesPerVoxel;
-  const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes);
-  if (isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
-    return optimizeFreeSurferLabels(hdr, imgRaw);
-  }
-  return imgRaw;
-}
-
-// src/nvimage/ImageReaders/nii.ts
-var nii_exports = {};
-__export(nii_exports, {
-  readNifti: () => readNifti
-});
-async function readNifti(nvImage, buffer, pairedImageData) {
-  let dataBuffer = buffer;
-  let imgRaw = null;
-  try {
-    if (isCompressed(dataBuffer)) {
-      log.debug(`Decompressing NIfTI file: ${nvImage.name}`);
-      dataBuffer = await decompressAsync(dataBuffer);
-      log.debug(`Decompression complete for: ${nvImage.name}`);
-    }
-    if (!dataBuffer || dataBuffer.byteLength === 0) {
-      throw new Error("Buffer became invalid after decompression attempt.");
-    }
-    nvImage.hdr = await readHeaderAsync(dataBuffer, pairedImageData != null);
-    if (hasExtension(nvImage.hdr)) {
-      nvImage.extensions = nvImage.hdr.extensions;
-    }
-    if (nvImage.hdr === null) {
-      throw new Error(`Failed to read NIfTI header: ${nvImage.name}`);
-    }
-    if (nvImage.hdr.cal_min === 0 && nvImage.hdr.cal_max === 255 && nvImage.hdr.datatypeCode !== 2 /* DT_UINT8 */) {
-      log.debug(`Resetting suspicious cal_min/max (0/255) for non-uint8 NIfTI: ${nvImage.name}`);
-      nvImage.hdr.cal_min = 0;
-      nvImage.hdr.cal_max = 0;
-    }
-    imgRaw = pairedImageData ? readImage(nvImage.hdr, pairedImageData) : readImage(nvImage.hdr, dataBuffer);
-    if (imgRaw === null) {
-      throw new Error(`nifti-reader-js readImage returned null for ${nvImage.name}`);
-    }
-    return imgRaw;
-  } catch (err2) {
-    log.error(`Error processing NIfTI file ${nvImage.name}:`, err2);
-    nvImage.hdr = null;
-    return null;
-  }
-}
-
-// src/nvimage/ImageReaders/nrrd.ts
-var nrrd_exports = {};
-__export(nrrd_exports, {
-  readNrrd: () => readNrrd
-});
-async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
-  if (!nvImage.hdr) {
-    log.warn("readNrrd called before nvImage.hdr was initialized. Creating default.");
-    nvImage.hdr = new NIFTI1();
-  }
-  const hdr = nvImage.hdr;
-  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-  const len4 = dataBuffer.byteLength;
-  let txt = null;
-  const bytes = new Uint8Array(dataBuffer);
-  for (let i = 1; i < len4; i++) {
-    if (bytes[i - 1] === 10 && bytes[i] === 10) {
-      const v = dataBuffer.slice(0, i - 1);
-      txt = new TextDecoder().decode(v);
-      hdr.vox_offset = i + 1;
-      break;
-    }
-  }
-  if (txt === null) {
-    log.error("readNrrd: could not extract txt");
-    return null;
-  }
-  const lines = txt.split("\n");
-  if (!lines[0].startsWith("NRRD")) {
-    log.error("Invalid NRRD image (magic signature missing)");
-    return null;
-  }
-  const n = lines.length;
-  let isGz = false;
-  let isMicron = false;
-  let isDetached = false;
-  const mat33 = mat3_exports.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
-  const offset = vec3_exports.fromValues(0, 0, 0);
-  let rot33 = mat3_exports.create();
-  for (let i = 1; i < n; i++) {
-    let str6 = lines[i];
-    if (str6.length === 0 || str6[0] === "#") {
-      if (str6.startsWith("#")) {
-        continue;
+    const stream = await uncompressStream(response.body);
+    const chunks = [];
+    const reader = stream.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
       }
-      if (str6.trim().length === 0) {
-        continue;
-      }
+      chunks.push(value);
     }
-    str6 = str6.toLowerCase();
-    const items = str6.split(":");
-    if (items.length < 2) {
-      continue;
+    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const pairedImgData = new ArrayBuffer(totalLength);
+    const dataView = new Uint8Array(pairedImgData);
+    let offset = 0;
+    for (const chunk of chunks) {
+      dataView.set(chunk, offset);
+      offset += chunk.length;
     }
-    const key = items[0].trim();
-    let value = items[1].trim();
-    value = value.replaceAll(")", " ");
-    value = value.replaceAll("(", " ");
-    value = value.trim();
-    switch (key) {
-      case "data file":
-        isDetached = true;
-        break;
-      case "encoding":
-        if (value.includes("raw")) {
-          isGz = false;
-        } else if (value.includes("gz")) {
-          isGz = true;
-        } else {
-          log.error("Unsupported NRRD encoding");
-          return null;
-        }
-        break;
-      case "type":
-        switch (value) {
-          case "uchar":
-          case "unsigned char":
-          case "uint8":
-          case "uint8_t":
-            hdr.numBitsPerVoxel = 8;
-            hdr.datatypeCode = 2 /* DT_UINT8 */;
-            break;
-          case "signed char":
-          case "int8":
-          case "int8_t":
-            hdr.numBitsPerVoxel = 8;
-            hdr.datatypeCode = 256 /* DT_INT8 */;
-            break;
-          case "short":
-          case "short int":
-          case "signed short":
-          case "signed short int":
-          case "int16":
-          case "int16_t":
-            hdr.numBitsPerVoxel = 16;
-            hdr.datatypeCode = 4 /* DT_INT16 */;
-            break;
-          case "ushort":
-          case "unsigned short":
-          case "unsigned short int":
-          case "uint16":
-          case "uint16_t":
-            hdr.numBitsPerVoxel = 16;
-            hdr.datatypeCode = 512 /* DT_UINT16 */;
-            break;
-          case "int":
-          case "signed int":
-          case "int32":
-          case "int32_t":
-            hdr.numBitsPerVoxel = 32;
-            hdr.datatypeCode = 8 /* DT_INT32 */;
-            break;
-          case "uint":
-          case "unsigned int":
-          case "uint32":
-          case "uint32_t":
-            hdr.numBitsPerVoxel = 32;
-            hdr.datatypeCode = 768 /* DT_UINT32 */;
-            break;
-          case "float":
-            hdr.numBitsPerVoxel = 32;
-            hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-            break;
-          case "double":
-            hdr.numBitsPerVoxel = 64;
-            hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-            break;
-          default:
-            log.error("Unsupported NRRD data type: " + value);
-            return null;
-        }
-        break;
-      case "spacings":
-        {
-          const values = value.split(/[ ,]+/);
-          for (let d = 0; d < values.length; d++) {
-            hdr.pixDims[d + 1] = parseFloat(values[d]);
-          }
-        }
-        break;
-      case "sizes":
-        {
-          const dims = value.split(/[ ,]+/);
-          hdr.dims[0] = dims.length;
-          for (let d = 0; d < dims.length; d++) {
-            hdr.dims[d + 1] = parseInt(dims[d]);
-          }
-        }
-        break;
-      case "endian":
-        if (value.includes("little")) {
-          hdr.littleEndian = true;
-        } else if (value.includes("big")) {
-          hdr.littleEndian = false;
-        }
-        break;
-      case "space directions":
-        {
-          const vs = value.split(/[ ,]+/);
-          if (vs.length === 9) {
-            for (let d = 0; d < 9; d++) {
-              mat33[d] = parseFloat(vs[d]);
-            }
-          }
-        }
-        break;
-      case "space origin":
-        {
-          const ts = value.split(/[ ,]+/);
-          if (ts.length === 3) {
-            offset[0] = parseFloat(ts[0]);
-            offset[1] = parseFloat(ts[1]);
-            offset[2] = parseFloat(ts[2]);
-          }
-        }
-        break;
-      case "space units":
-        if (value.includes("microns")) {
-          isMicron = true;
-        }
-        break;
-      case "space":
-        if (value.includes("right-anterior-superior") || value.includes("ras")) {
-          rot33 = mat3_exports.fromValues(1, 0, 0, 0, 1, 0, 0, 0, 1);
-        } else if (value.includes("left-anterior-superior") || value.includes("las")) {
-          rot33 = mat3_exports.fromValues(-1, 0, 0, 0, 1, 0, 0, 0, 1);
-        } else if (value.includes("left-posterior-superior") || value.includes("lps")) {
-          rot33 = mat3_exports.fromValues(-1, 0, 0, 0, -1, 0, 0, 0, 1);
-        } else {
-          log.warn("Unsupported NRRD space value:", value);
-        }
-        break;
-      default:
-        log.warn("Unknown:", key);
-        break;
-    }
-  }
-  if (!isNaN(mat33[0])) {
-    hdr.sform_code = 2;
-    if (isMicron) {
-      mat4_exports.multiplyScalar(mat33, mat33, 1e-3);
-      offset[0] *= 1e-3;
-      offset[1] *= 1e-3;
-      offset[2] *= 1e-3;
-    }
-    if (rot33[0] < 0) {
-      offset[0] = -offset[0];
-    }
-    if (rot33[4] < 0) {
-      offset[1] = -offset[1];
-    }
-    if (rot33[8] < 0) {
-      offset[2] = -offset[2];
-    }
-    mat3_exports.multiply(mat33, rot33, mat33);
-    const mat = mat4_exports.fromValues(
-      mat33[0],
-      mat33[3],
-      mat33[6],
-      offset[0],
-      mat33[1],
-      mat33[4],
-      mat33[7],
-      offset[1],
-      mat33[2],
-      mat33[5],
-      mat33[8],
-      offset[2],
-      0,
-      0,
-      0,
-      1
-    );
-    if (!nvImage.vox2mm) {
-      return null;
-    }
-    const mm000 = nvImage.vox2mm([0, 0, 0], mat);
-    const mm100 = nvImage.vox2mm([1, 0, 0], mat);
-    vec3_exports.subtract(mm100, mm100, mm000);
-    const mm010 = nvImage.vox2mm([0, 1, 0], mat);
-    vec3_exports.subtract(mm010, mm010, mm000);
-    const mm001 = nvImage.vox2mm([0, 0, 1], mat);
-    vec3_exports.subtract(mm001, mm001, mm000);
-    hdr.pixDims[1] = vec3_exports.length(mm100);
-    hdr.pixDims[2] = vec3_exports.length(mm010);
-    hdr.pixDims[3] = vec3_exports.length(mm001);
-    hdr.affine = [
-      [mat[0], mat[1], mat[2], mat[3]],
-      [mat[4], mat[5], mat[6], mat[7]],
-      [mat[8], mat[9], mat[10], mat[11]],
-      [0, 0, 0, 1]
-    ];
-  }
-  let imgRaw = null;
-  const sourceBuffer = isDetached ? pairedImgData : dataBuffer;
-  const sourceOffset = isDetached ? 0 : hdr.vox_offset;
-  if (isDetached && !sourceBuffer) {
-    log.warn("Missing data: NRRD header describes detached data file but only one URL provided");
+    return pairedImgData;
+  } catch (error) {
+    console.error("Error loading paired image data:", error);
     return null;
   }
-  if (!sourceBuffer || sourceOffset >= sourceBuffer.byteLength) {
-    log.error(`NRRD data offset (${sourceOffset}) invalid for buffer length (${sourceBuffer?.byteLength ?? 0})`);
-    return null;
-  }
-  let dataSection = sourceBuffer.slice(sourceOffset);
-  if (isGz) {
-    try {
-      log.debug("Decompressing NRRD data...");
-      dataSection = await NVUtilities.decompressToBuffer(new Uint8Array(dataSection));
-      log.debug("Decompression complete.");
-    } catch (err2) {
-      log.error("Failed to decompress NRRD data.", err2);
-      return null;
-    }
-  }
-  const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-  const nVoxels = hdr.dims.slice(1, hdr.dims[0] + 1).reduce((acc, dim) => acc * Math.max(1, dim), 1);
-  const expectedBytes = nVoxels * nBytesPerVoxel;
-  if (dataSection.byteLength < expectedBytes) {
-    log.error(`NRRD image data size mismatch: expected ${expectedBytes}, found ${dataSection.byteLength}`);
-    return null;
-  } else if (dataSection.byteLength > expectedBytes) {
-    log.warn(`NRRD has extra ${dataSection.byteLength - expectedBytes} bytes after expected image data. Truncating.`);
-    dataSection = dataSection.slice(0, expectedBytes);
-  }
-  imgRaw = dataSection;
-  if (!hdr.datatypeCode) {
-    log.error("NRRD parsing failed to set datatypeCode.");
-    return null;
-  }
-  if (!hdr.numBitsPerVoxel) {
-    log.error("NRRD parsing failed to set numBitsPerVoxel.");
-    return null;
-  }
-  return imgRaw;
 }
 
 // src/nvimage/index.ts
@@ -24814,196 +27353,18 @@ var NVImage = class _NVImage {
     if ((this.hdr.intent_code === 1007 /* NIFTI_INTENT_VECTOR */ || this.hdr.intent_code === 2003 /* NIFTI_INTENT_RGB_VECTOR */) && this.nFrame4D === 3 && this.hdr.datatypeCode === 16 /* DT_FLOAT32 */) {
       imgRaw = this.float32V1asRGBA(new Float32Array(imgRaw)).buffer;
     }
-    if (this.hdr.pixDims[1] === 0 || this.hdr.pixDims[2] === 0 || this.hdr.pixDims[3] === 0) {
-      log.error("pixDims not plausible", this.hdr);
+    processAffine(this.hdr, useQFormNotSForm);
+    swapBytesIfNeeded(imgRaw, this.hdr);
+    const conversionResult = convertDataType(imgRaw, this.hdr);
+    this.img = conversionResult.img;
+    if (conversionResult.imaginary) {
+      this.imaginary = conversionResult.imaginary;
     }
-    if (isNaN(this.hdr.scl_slope) || this.hdr.scl_slope === 0) {
-      this.hdr.scl_slope = 1;
+    if (conversionResult.updatedDatatypeCode !== void 0) {
+      this.hdr.datatypeCode = conversionResult.updatedDatatypeCode;
     }
-    if (isNaN(this.hdr.scl_inter)) {
-      this.hdr.scl_inter = 0;
-    }
-    let affineOK = isAffineOK(this.hdr.affine);
-    if (useQFormNotSForm || !affineOK || this.hdr.qform_code > this.hdr.sform_code) {
-      log.debug("spatial transform based on QForm");
-      const b = this.hdr.quatern_b;
-      const c = this.hdr.quatern_c;
-      const d = this.hdr.quatern_d;
-      const a = Math.sqrt(1 - (Math.pow(b, 2) + Math.pow(c, 2) + Math.pow(d, 2)));
-      const qfac = this.hdr.pixDims[0] === 0 ? 1 : this.hdr.pixDims[0];
-      const quatern_R = [
-        [a * a + b * b - c * c - d * d, 2 * b * c - 2 * a * d, 2 * b * d + 2 * a * c],
-        [2 * b * c + 2 * a * d, a * a + c * c - b * b - d * d, 2 * c * d - 2 * a * b],
-        [2 * b * d - 2 * a * c, 2 * c * d + 2 * a * b, a * a + d * d - c * c - b * b]
-      ];
-      const affine = this.hdr.affine;
-      for (let ctrOut = 0; ctrOut < 3; ctrOut += 1) {
-        for (let ctrIn = 0; ctrIn < 3; ctrIn += 1) {
-          affine[ctrOut][ctrIn] = quatern_R[ctrOut][ctrIn] * this.hdr.pixDims[ctrIn + 1];
-          if (ctrIn === 2) {
-            affine[ctrOut][ctrIn] *= qfac;
-          }
-        }
-      }
-      affine[0][3] = this.hdr.qoffset_x;
-      affine[1][3] = this.hdr.qoffset_y;
-      affine[2][3] = this.hdr.qoffset_z;
-      this.hdr.affine = affine;
-    }
-    affineOK = isAffineOK(this.hdr.affine);
-    if (!affineOK) {
-      log.debug("Defective NIfTI: spatial transform does not make sense");
-      let x = this.hdr.pixDims[1];
-      let y = this.hdr.pixDims[2];
-      let z = this.hdr.pixDims[3];
-      if (isNaN(x) || x === 0) {
-        x = 1;
-      }
-      if (isNaN(y) || y === 0) {
-        y = 1;
-      }
-      if (isNaN(z) || z === 0) {
-        z = 1;
-      }
-      this.hdr.pixDims[1] = x;
-      this.hdr.pixDims[2] = y;
-      this.hdr.pixDims[3] = z;
-      const affine = [
-        [x, 0, 0, 0],
-        [0, y, 0, 0],
-        [0, 0, z, 0],
-        [0, 0, 0, 1]
-      ];
-      this.hdr.affine = affine;
-    }
-    if (this.hdr.datatypeCode !== 128 /* DT_RGB24 */ && this.hdr.datatypeCode !== 2304 /* DT_RGBA32 */ && this.hdr.littleEndian !== isPlatformLittleEndian() && this.hdr.numBitsPerVoxel > 8) {
-      if (this.hdr.numBitsPerVoxel === 16) {
-        const u162 = new Uint16Array(imgRaw);
-        for (let i = 0; i < u162.length; i++) {
-          const val = u162[i];
-          u162[i] = ((val & 255) << 8 | val >> 8 & 255) << 16 >> 16;
-        }
-      } else if (this.hdr.numBitsPerVoxel === 32) {
-        const u32 = new Uint32Array(imgRaw);
-        for (let i = 0; i < u32.length; i++) {
-          const val = u32[i];
-          u32[i] = (val & 255) << 24 | (val & 65280) << 8 | val >> 8 & 65280 | val >> 24 & 255;
-        }
-      } else if (this.hdr.numBitsPerVoxel === 64) {
-        const numBytesPerVoxel = this.hdr.numBitsPerVoxel / 8;
-        const u82 = new Uint8Array(imgRaw);
-        for (let index = 0; index < u82.length; index += numBytesPerVoxel) {
-          let offset = numBytesPerVoxel - 1;
-          for (let x = 0; x < offset; x++) {
-            const theByte = u82[index + x];
-            u82[index + x] = u82[index + offset];
-            u82[index + offset] = theByte;
-            offset--;
-          }
-        }
-      }
-    }
-    switch (this.hdr.datatypeCode) {
-      case 2 /* DT_UINT8 */:
-        this.img = new Uint8Array(imgRaw);
-        break;
-      case 4 /* DT_INT16 */:
-        this.img = new Int16Array(imgRaw);
-        break;
-      case 16 /* DT_FLOAT32 */:
-        this.img = new Float32Array(imgRaw);
-        break;
-      case 64 /* DT_FLOAT64 */:
-        this.img = new Float64Array(imgRaw);
-        break;
-      case 128 /* DT_RGB24 */:
-        this.img = new Uint8Array(imgRaw);
-        break;
-      case 512 /* DT_UINT16 */:
-        this.img = new Uint16Array(imgRaw);
-        break;
-      case 2304 /* DT_RGBA32 */:
-        this.img = new Uint8Array(imgRaw);
-        break;
-      case 256 /* DT_INT8 */: {
-        const i8 = new Int8Array(imgRaw);
-        const vx8 = i8.length;
-        this.img = new Int16Array(vx8);
-        for (let i = 0; i < vx8; i++) {
-          this.img[i] = i8[i];
-        }
-        this.hdr.datatypeCode = 4 /* DT_INT16 */;
-        this.hdr.numBitsPerVoxel = 16;
-        break;
-      }
-      case 1 /* DT_BINARY */: {
-        const nvox = this.hdr.dims[1] * this.hdr.dims[2] * Math.max(1, this.hdr.dims[3]) * Math.max(1, this.hdr.dims[4]);
-        const img1 = new Uint8Array(imgRaw);
-        this.img = new Uint8Array(nvox);
-        const lut = new Uint8Array(8);
-        for (let i = 0; i < 8; i++) {
-          lut[i] = Math.pow(2, i);
-        }
-        let i1 = -1;
-        for (let i = 0; i < nvox; i++) {
-          const bit = i % 8;
-          if (bit === 0) {
-            i1++;
-          }
-          if ((img1[i1] & lut[bit]) !== 0) {
-            this.img[i] = 1;
-          }
-        }
-        this.hdr.datatypeCode = 2 /* DT_UINT8 */;
-        this.hdr.numBitsPerVoxel = 8;
-        break;
-      }
-      case 768 /* DT_UINT32 */: {
-        const u32 = new Uint32Array(imgRaw);
-        const vx32 = u32.length;
-        this.img = new Float64Array(vx32);
-        for (let i = 0; i < vx32 - 1; i++) {
-          this.img[i] = u32[i];
-        }
-        this.hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-        break;
-      }
-      case 8 /* DT_INT32 */: {
-        const i322 = new Int32Array(imgRaw);
-        const vxi32 = i322.length;
-        this.img = new Float64Array(vxi32);
-        for (let i = 0; i < vxi32 - 1; i++) {
-          this.img[i] = i322[i];
-        }
-        this.hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-        break;
-      }
-      case 1024 /* DT_INT64 */: {
-        const i64 = new BigInt64Array(imgRaw);
-        const vx = i64.length;
-        this.img = new Float64Array(vx);
-        for (let i = 0; i < vx - 1; i++) {
-          this.img[i] = Number(i64[i]);
-        }
-        this.hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-        break;
-      }
-      case 32 /* DT_COMPLEX64 */: {
-        const f32 = new Float32Array(imgRaw);
-        const nvx = Math.floor(f32.length / 2);
-        this.imaginary = new Float32Array(nvx);
-        this.img = new Float32Array(nvx);
-        let r = 0;
-        for (let i = 0; i < nvx - 1; i++) {
-          this.img[i] = f32[r];
-          this.imaginary[i] = f32[r + 1];
-          r += 2;
-        }
-        this.hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-        break;
-      }
-      default:
-        throw new Error("datatype " + this.hdr.datatypeCode + " not supported");
+    if (conversionResult.updatedNumBitsPerVoxel !== void 0) {
+      this.hdr.numBitsPerVoxel = conversionResult.updatedNumBitsPerVoxel;
     }
     this.calculateRAS();
     if (!isNaN(cal_min)) {
@@ -25042,11 +27403,11 @@ var NVImage = class _NVImage {
         return;
       case NVIMAGE_TYPE.FIB:
         ;
-        [imgRaw, newImg.v1] = await newImg.readFIB(dataBuffer);
+        [imgRaw, newImg.v1] = await dsistudio_exports.readFIB(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.MIH:
       case NVIMAGE_TYPE.MIF:
-        imgRaw = await newImg.readMIF(dataBuffer, pairedImgData);
+        imgRaw = await mrtrix_exports.readMIF(newImg, dataBuffer, pairedImgData);
         break;
       case NVIMAGE_TYPE.NHDR:
       case NVIMAGE_TYPE.NRRD:
@@ -25057,7 +27418,7 @@ var NVImage = class _NVImage {
         break;
       case NVIMAGE_TYPE.MHD:
       case NVIMAGE_TYPE.MHA:
-        imgRaw = await newImg.readMHA(dataBuffer, pairedImgData);
+        imgRaw = await itk_exports.readMHA(newImg, dataBuffer, pairedImgData);
         break;
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
@@ -25067,31 +27428,31 @@ var NVImage = class _NVImage {
         }
         break;
       case NVIMAGE_TYPE.SRC:
-        imgRaw = await newImg.readSRC(dataBuffer);
+        imgRaw = await dsistudio_exports.readSRC(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.V:
-        imgRaw = newImg.readECAT(dataBuffer);
+        imgRaw = ecat_exports.readECAT(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.V16:
-        imgRaw = newImg.readV16(dataBuffer);
+        imgRaw = brainvoyager_exports.readV16(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.VMR:
-        imgRaw = newImg.readVMR(dataBuffer);
+        imgRaw = brainvoyager_exports.readVMR(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.HEAD:
-        imgRaw = await newImg.readHEAD(dataBuffer, pairedImgData);
+        imgRaw = await afni_exports.readHEAD(newImg, dataBuffer, pairedImgData);
         break;
       case NVIMAGE_TYPE.BMP:
-        imgRaw = await newImg.readBMP(dataBuffer);
+        imgRaw = await image_exports.readBMP(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.NPY:
-        imgRaw = await newImg.readNPY(dataBuffer);
+        imgRaw = await numpy_exports.readNPY(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.NPZ:
-        imgRaw = await newImg.readNPZ(dataBuffer);
+        imgRaw = await numpy_exports.readNPZ(newImg, dataBuffer);
         break;
       case NVIMAGE_TYPE.ZARR:
-        imgRaw = await newImg.readZARR(dataBuffer, zarrData);
+        imgRaw = await zarr_exports.readZARR(newImg, dataBuffer, zarrData);
         break;
       case NVIMAGE_TYPE.NII:
         imgRaw = await nii_exports.readNifti(newImg, dataBuffer, pairedImgData);
@@ -25130,261 +27491,18 @@ var NVImage = class _NVImage {
   // detect difference between voxel grid and world space
   // https://github.com/afni/afni/blob/25e77d564f2c67ff480fa99a7b8e48ec2d9a89fc/src/thd_coords.c#L717
   computeObliqueAngle(mtx44) {
-    const mtx = mat4_exports.clone(mtx44);
-    mat4_exports.transpose(mtx, mtx44);
-    const dxtmp = Math.sqrt(mtx[0] * mtx[0] + mtx[1] * mtx[1] + mtx[2] * mtx[2]);
-    const xmax = Math.max(Math.max(Math.abs(mtx[0]), Math.abs(mtx[1])), Math.abs(mtx[2])) / dxtmp;
-    const dytmp = Math.sqrt(mtx[4] * mtx[4] + mtx[5] * mtx[5] + mtx[6] * mtx[6]);
-    const ymax = Math.max(Math.max(Math.abs(mtx[4]), Math.abs(mtx[5])), Math.abs(mtx[6])) / dytmp;
-    const dztmp = Math.sqrt(mtx[8] * mtx[8] + mtx[9] * mtx[9] + mtx[10] * mtx[10]);
-    const zmax = Math.max(Math.max(Math.abs(mtx[8]), Math.abs(mtx[9])), Math.abs(mtx[10])) / dztmp;
-    const fig_merit = Math.min(Math.min(xmax, ymax), zmax);
-    let oblique_angle = Math.abs(Math.acos(fig_merit) * 180 / 3.141592653);
-    if (oblique_angle > 0.01) {
-      log.warn("Warning voxels not aligned with world space: " + oblique_angle + " degrees from plumb.\n");
-    } else {
-      oblique_angle = 0;
-    }
-    return oblique_angle;
+    return computeObliqueAngle(mtx44);
   }
   float32V1asRGBA(inImg) {
-    if (inImg.length !== this.nVox3D * 3) {
-      log.warn("float32V1asRGBA() expects " + this.nVox3D * 3 + "voxels, got ", +inImg.length);
-    }
-    const f32 = inImg.slice();
-    this.hdr.datatypeCode = 2304 /* DT_RGBA32 */;
-    this.nFrame4D = 1;
-    for (let i = 4; i < 7; i++) {
-      this.hdr.dims[i] = 1;
-    }
-    this.hdr.dims[0] = 3;
-    const imgRaw = new Uint8Array(this.nVox3D * 4);
-    let mx = 1;
-    for (let i = 0; i < this.nVox3D * 3; i++) {
-      if (isNaN(f32[i])) {
-        continue;
-      }
-      mx = Math.max(mx, Math.abs(f32[i]));
-    }
-    const slope = 255 / mx;
-    const nVox3D2 = this.nVox3D * 2;
-    let j = 0;
-    for (let i = 0; i < this.nVox3D; i++) {
-      const x = f32[i];
-      const y = f32[i + this.nVox3D];
-      const z = f32[i + nVox3D2];
-      imgRaw[j] = Math.abs(x * slope);
-      imgRaw[j + 1] = Math.abs(y * slope);
-      imgRaw[j + 2] = Math.abs(z * slope);
-      const xNeg = Number(x > 0) * 1;
-      const yNeg = Number(y > 0) * 2;
-      const zNeg = Number(z > 0) * 4;
-      let alpha = 248 + xNeg + yNeg + zNeg;
-      if (Math.abs(x) + Math.abs(y) + Math.abs(z) < 0.1) {
-        alpha = 0;
-      }
-      ;
-      imgRaw[j + 3] = alpha;
-      j += 4;
-    }
-    return imgRaw;
+    return float32V1asRGBA(this, inImg);
   }
   loadImgV1(isFlipX = false, isFlipY = false, isFlipZ = false) {
-    let v1 = this.v1;
-    if (!v1 && this.nFrame4D === 3 && this.img.constructor === Float32Array) {
-      v1 = this.img.slice();
-    }
-    if (!v1) {
-      log.warn("Image does not have V1 data");
-      return false;
-    }
-    if (isFlipX) {
-      for (let i = 0; i < this.nVox3D; i++) {
-        v1[i] = -v1[i];
-      }
-    }
-    if (isFlipY) {
-      for (let i = this.nVox3D; i < 2 * this.nVox3D; i++) {
-        v1[i] = -v1[i];
-      }
-    }
-    if (isFlipZ) {
-      for (let i = 2 * this.nVox3D; i < 3 * this.nVox3D; i++) {
-        v1[i] = -v1[i];
-      }
-    }
-    this.img = this.float32V1asRGBA(v1);
-    return true;
+    return loadImgV1(this, isFlipX, isFlipY, isFlipZ);
   }
   // not included in public docs
   // detect difference between voxel grid and world space
   calculateOblique() {
-    if (!this.matRAS) {
-      throw new Error("matRAS not defined");
-    }
-    if (this.pixDimsRAS === void 0) {
-      throw new Error("pixDimsRAS not defined");
-    }
-    if (!this.dimsRAS) {
-      throw new Error("dimsRAS not defined");
-    }
-    this.oblique_angle = this.computeObliqueAngle(this.matRAS);
-    const LPI = this.vox2mm([0, 0, 0], this.matRAS);
-    const X1mm = this.vox2mm([1 / this.pixDimsRAS[1], 0, 0], this.matRAS);
-    const Y1mm = this.vox2mm([0, 1 / this.pixDimsRAS[2], 0], this.matRAS);
-    const Z1mm = this.vox2mm([0, 0, 1 / this.pixDimsRAS[3]], this.matRAS);
-    vec3_exports.subtract(X1mm, X1mm, LPI);
-    vec3_exports.subtract(Y1mm, Y1mm, LPI);
-    vec3_exports.subtract(Z1mm, Z1mm, LPI);
-    const oblique = mat4_exports.fromValues(
-      X1mm[0],
-      X1mm[1],
-      X1mm[2],
-      0,
-      Y1mm[0],
-      Y1mm[1],
-      Y1mm[2],
-      0,
-      Z1mm[0],
-      Z1mm[1],
-      Z1mm[2],
-      0,
-      0,
-      0,
-      0,
-      1
-    );
-    this.obliqueRAS = mat4_exports.clone(oblique);
-    const XY = Math.abs(90 - vec3_exports.angle(X1mm, Y1mm) * (180 / Math.PI));
-    const XZ = Math.abs(90 - vec3_exports.angle(X1mm, Z1mm) * (180 / Math.PI));
-    const YZ = Math.abs(90 - vec3_exports.angle(Y1mm, Z1mm) * (180 / Math.PI));
-    this.maxShearDeg = Math.max(Math.max(XY, XZ), YZ);
-    if (this.maxShearDeg > 0.1) {
-      log.warn("Warning: voxels are rhomboidal, maximum shear is %f degrees.", this.maxShearDeg);
-    }
-    const dim = vec4_exports.fromValues(this.dimsRAS[1], this.dimsRAS[2], this.dimsRAS[3], 1);
-    const sform = mat4_exports.clone(this.matRAS);
-    mat4_exports.transpose(sform, sform);
-    const shim = vec4_exports.fromValues(-0.5, -0.5, -0.5, 0);
-    mat4_exports.translate(sform, sform, vec3_exports.fromValues(shim[0], shim[1], shim[2]));
-    sform[0] *= dim[0];
-    sform[1] *= dim[0];
-    sform[2] *= dim[0];
-    sform[4] *= dim[1];
-    sform[5] *= dim[1];
-    sform[6] *= dim[1];
-    sform[8] *= dim[2];
-    sform[9] *= dim[2];
-    sform[10] *= dim[2];
-    this.frac2mm = mat4_exports.clone(sform);
-    const pixdimX = this.pixDimsRAS[1];
-    const pixdimY = this.pixDimsRAS[2];
-    const pixdimZ = this.pixDimsRAS[3];
-    const oform = mat4_exports.clone(sform);
-    oform[0] = pixdimX * dim[0];
-    oform[1] = 0;
-    oform[2] = 0;
-    oform[4] = 0;
-    oform[5] = pixdimY * dim[1];
-    oform[6] = 0;
-    oform[8] = 0;
-    oform[9] = 0;
-    oform[10] = pixdimZ * dim[2];
-    const originVoxel = this.mm2vox([0, 0, 0], true);
-    oform[12] = (-originVoxel[0] - 0.5) * pixdimX;
-    oform[13] = (-originVoxel[1] - 0.5) * pixdimY;
-    oform[14] = (-originVoxel[2] - 0.5) * pixdimZ;
-    this.frac2mmOrtho = mat4_exports.clone(oform);
-    this.extentsMinOrtho = [oform[12], oform[13], oform[14]];
-    this.extentsMaxOrtho = [oform[0] + oform[12], oform[5] + oform[13], oform[10] + oform[14]];
-    this.mm2ortho = mat4_exports.create();
-    mat4_exports.invert(this.mm2ortho, oblique);
-  }
-  // not included in public docs
-  // convert AFNI head/brik space to NIfTI format
-  // https://github.com/afni/afni/blob/d6997e71f2b625ac1199460576d48f3136dac62c/src/thd_niftiwrite.c#L315
-  THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific) {
-    const hdr = this.hdr;
-    if (hdr === null) {
-      throw new Error("HDR is not set");
-    }
-    hdr.sform_code = 2;
-    const ORIENT_xyz = "xxyyzzg";
-    let nif_x_axnum = -1;
-    let nif_y_axnum = -1;
-    let nif_z_axnum = -1;
-    const axcode = ["x", "y", "z"];
-    axcode[0] = ORIENT_xyz[orientSpecific[0]];
-    axcode[1] = ORIENT_xyz[orientSpecific[1]];
-    axcode[2] = ORIENT_xyz[orientSpecific[2]];
-    const axstep = xyzDelta.slice(0, 3);
-    const axstart = xyzOrigin.slice(0, 3);
-    for (let ii = 0; ii < 3; ii++) {
-      if (axcode[ii] === "x") {
-        nif_x_axnum = ii;
-      } else if (axcode[ii] === "y") {
-        nif_y_axnum = ii;
-      } else {
-        nif_z_axnum = ii;
-      }
-    }
-    if (nif_x_axnum < 0 || nif_y_axnum < 0 || nif_z_axnum < 0) {
-      return;
-    }
-    if (nif_x_axnum === nif_y_axnum || nif_x_axnum === nif_z_axnum || nif_y_axnum === nif_z_axnum) {
-      return;
-    }
-    hdr.pixDims[1] = Math.abs(axstep[0]);
-    hdr.pixDims[2] = Math.abs(axstep[1]);
-    hdr.pixDims[3] = Math.abs(axstep[2]);
-    hdr.affine = [
-      [1, 0, 0, 0],
-      [0, 1, 0, 0],
-      [0, 0, 1, 0],
-      [0, 0, 0, 1]
-    ];
-    hdr.affine[0][nif_x_axnum] = -axstep[nif_x_axnum];
-    hdr.affine[1][nif_y_axnum] = -axstep[nif_y_axnum];
-    hdr.affine[2][nif_z_axnum] = axstep[nif_z_axnum];
-    hdr.affine[0][3] = -axstart[nif_x_axnum];
-    hdr.affine[1][3] = -axstart[nif_y_axnum];
-    hdr.affine[2][3] = axstart[nif_z_axnum];
-  }
-  // not included in public docs
-  // determine spacing voxel centers (rows, columns, slices)
-  SetPixDimFromSForm() {
-    if (!this.hdr) {
-      throw new Error("hdr not defined");
-    }
-    const m = this.hdr.affine;
-    const mat = mat4_exports.fromValues(
-      m[0][0],
-      m[0][1],
-      m[0][2],
-      m[0][3],
-      m[1][0],
-      m[1][1],
-      m[1][2],
-      m[1][3],
-      m[2][0],
-      m[2][1],
-      m[2][2],
-      m[2][3],
-      m[3][0],
-      m[3][1],
-      m[3][2],
-      m[3][3]
-    );
-    const mm000 = this.vox2mm([0, 0, 0], mat);
-    const mm100 = this.vox2mm([1, 0, 0], mat);
-    vec3_exports.subtract(mm100, mm100, mm000);
-    const mm010 = this.vox2mm([0, 1, 0], mat);
-    vec3_exports.subtract(mm010, mm010, mm000);
-    const mm001 = this.vox2mm([0, 0, 1], mat);
-    vec3_exports.subtract(mm001, mm001, mm000);
-    this.hdr.pixDims[1] = vec3_exports.length(mm100);
-    this.hdr.pixDims[2] = vec3_exports.length(mm010);
-    this.hdr.pixDims[3] = vec3_exports.length(mm001);
+    calculateOblique(this);
   }
   // not included in public docs
   // read DICOM format image and treat it like a NIfTI
@@ -25519,1464 +27637,128 @@ var NVImage = class _NVImage {
   // read ECAT7 format image
   // https://github.com/openneuropet/PET2BIDS/tree/28aae3fab22309047d36d867c624cd629c921ca6/ecat_validation/ecat_info
   readECAT(buffer) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const reader = new DataView(buffer);
-    const signature = reader.getInt32(0, false);
-    const filetype = reader.getInt16(50, false);
-    if (signature !== 1296127058 || filetype < 1 || filetype > 14) {
-      throw new Error("Not a valid ECAT file");
-    }
-    let pos = 512;
-    let vols = 0;
-    const frame_duration = [];
-    let rawImg = new Float32Array();
-    while (true) {
-      const hdr0 = reader.getInt32(pos, false);
-      const hdr3 = reader.getInt32(pos + 12, false);
-      if (hdr0 + hdr3 !== 31) {
-        break;
-      }
-      let lpos = pos + 20;
-      let r = 0;
-      let voloffset = 0;
-      while (r < 31) {
-        voloffset = reader.getInt32(lpos, false);
-        lpos += 16;
-        if (voloffset === 0) {
-          break;
-        }
-        r++;
-        let ipos = voloffset * 512;
-        const spos = ipos - 512;
-        const data_type = reader.getUint16(spos, false);
-        hdr.dims[1] = reader.getUint16(spos + 4, false);
-        hdr.dims[2] = reader.getUint16(spos + 6, false);
-        hdr.dims[3] = reader.getUint16(spos + 8, false);
-        const scale_factor = reader.getFloat32(spos + 26, false);
-        hdr.pixDims[1] = reader.getFloat32(spos + 34, false) * 10;
-        hdr.pixDims[2] = reader.getFloat32(spos + 38, false) * 10;
-        hdr.pixDims[3] = reader.getFloat32(spos + 42, false) * 10;
-        hdr.pixDims[4] = reader.getUint32(spos + 46, false) / 1e3;
-        frame_duration.push(hdr.pixDims[4]);
-        const nvox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-        const newImg = new Float32Array(nvox3D);
-        if (data_type === 1) {
-          for (let i = 0; i < nvox3D; i++) {
-            newImg[i] = reader.getUint8(ipos) * scale_factor;
-            ipos++;
-          }
-        } else if (data_type === 6) {
-          for (let i = 0; i < nvox3D; i++) {
-            newImg[i] = reader.getUint16(ipos, false) * scale_factor;
-            ipos += 2;
-          }
-        } else if (data_type === 7) {
-          for (let i = 0; i < nvox3D; i++) {
-            newImg[i] = reader.getUint32(ipos, false) * scale_factor;
-            ipos += 4;
-          }
-        } else {
-          log.warn("Unknown ECAT data type " + data_type);
-        }
-        const prevImg = rawImg.slice(0);
-        rawImg = new Float32Array(prevImg.length + newImg.length);
-        rawImg.set(prevImg);
-        rawImg.set(newImg, prevImg.length);
-        vols++;
-      }
-      if (voloffset === 0) {
-        break;
-      }
-      pos += 512;
-    }
-    hdr.dims[4] = vols;
-    hdr.pixDims[4] = frame_duration[0];
-    if (vols > 1) {
-      hdr.dims[0] = 4;
-      let isFDvaries = false;
-      for (let i = 0; i < vols; i++) {
-        if (frame_duration[i] !== frame_duration[0]) {
-          isFDvaries = true;
-        }
-      }
-      if (isFDvaries) {
-        log.warn("Frame durations vary");
-      }
-    }
-    hdr.sform_code = 1;
-    hdr.affine = [
-      [-hdr.pixDims[1], 0, 0, (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ];
-    hdr.numBitsPerVoxel = 32;
-    hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-    return rawImg.buffer;
+    return ecat_exports.readECAT(this, buffer);
   }
-  // readECAT()
   readV16(buffer) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const reader = new DataView(buffer);
-    hdr.dims[1] = reader.getUint16(0, true);
-    hdr.dims[2] = reader.getUint16(2, true);
-    hdr.dims[3] = reader.getUint16(4, true);
-    const nBytes = 2 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-    if (nBytes + 6 !== buffer.byteLength) {
-      log.warn("This does not look like a valid BrainVoyager V16 file");
-    }
-    hdr.numBitsPerVoxel = 16;
-    hdr.datatypeCode = 512 /* DT_UINT16 */;
-    log.warn("Warning: V16 files have no spatial transforms");
-    hdr.affine = [
-      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ];
-    hdr.littleEndian = true;
-    return buffer.slice(6);
+    return brainvoyager_exports.readV16(this, buffer);
   }
-  // readV16()
   async readNPY(buffer) {
-    function getTypeSize(dtype2) {
-      const typeMap = {
-        "|b1": 1,
-        // Boolean
-        "<i1": 1,
-        // Int8
-        "<u1": 1,
-        // UInt8
-        "<i2": 2,
-        // Int16
-        "<u2": 2,
-        // UInt16
-        "<i4": 4,
-        // Int32
-        "<u4": 4,
-        // UInt32
-        "<f4": 4,
-        // Float32
-        "<f8": 8
-        // Float64
-      };
-      return typeMap[dtype2] ?? 1;
-    }
-    function getDataTypeCode(dtype2) {
-      const typeMap = {
-        "|b1": 2,
-        // DT_BINARY
-        "<i1": 256,
-        // DT_INT8
-        "<u1": 2,
-        // DT_UINT8
-        "<i2": 4,
-        // DT_INT16
-        "<u2": 512,
-        // DT_UINT16
-        "<i4": 8,
-        // DT_INT32
-        "<u4": 768,
-        // DT_UINT32
-        "<f4": 16,
-        // DT_FLOAT32
-        "<f8": 64
-        // DT_FLOAT64
-      };
-      return typeMap[dtype2] ?? 16;
-    }
-    const dv = new DataView(buffer);
-    const magicBytes = [dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3), dv.getUint8(4), dv.getUint8(5)];
-    const expectedMagic = [147, 78, 85, 77, 80, 89];
-    if (!magicBytes.every((byte, i) => byte === expectedMagic[i])) {
-      throw new Error("Not a valid NPY file: Magic number mismatch");
-    }
-    const headerLen = dv.getUint16(8, true);
-    const headerText = new TextDecoder("utf-8").decode(buffer.slice(10, 10 + headerLen));
-    const shapeMatch = headerText.match(/'shape': \((.*?)\)/);
-    if (!shapeMatch) {
-      throw new Error("Invalid NPY header: Shape not found");
-    }
-    const shape = shapeMatch[1].split(",").map((s) => s.trim()).filter((s) => s !== "").map(Number);
-    const dtypeMatch = headerText.match(/'descr': '([^']+)'/);
-    if (!dtypeMatch) {
-      throw new Error("Invalid NPY header: Data type not found");
-    }
-    const dtype = dtypeMatch[1];
-    const numElements = shape.reduce((a, b) => a * b, 1);
-    const dataStart = 10 + headerLen;
-    const dataBuffer = buffer.slice(dataStart, dataStart + numElements * getTypeSize(dtype));
-    const width = shape.length > 0 ? shape[shape.length - 1] : 1;
-    const height = shape.length > 1 ? shape[shape.length - 2] : 1;
-    const slices = shape.length > 2 ? shape[shape.length - 3] : 1;
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims = [3, width, height, slices, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    hdr.affine = [
-      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ];
-    hdr.numBitsPerVoxel = getTypeSize(dtype) * 8;
-    hdr.datatypeCode = getDataTypeCode(dtype);
-    return dataBuffer;
+    return numpy_exports.readNPY(this, buffer);
   }
   async readNPZ(buffer) {
-    const zip = new Zip(buffer);
-    for (let i = 0; i < zip.entries.length; i++) {
-      const entry = zip.entries[i];
-      if (entry.fileName.toLowerCase().endsWith(".npy")) {
-        const data = await entry.extract();
-        return await this.readNPY(data.buffer);
-      }
-    }
+    return numpy_exports.readNPZ(this, buffer);
   }
   async imageDataFromArrayBuffer(buffer) {
-    return new Promise((resolve2, reject) => {
-      const blob = new Blob([buffer]);
-      const url = URL.createObjectURL(blob);
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.src = url;
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Failed to get 2D context"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0);
-        resolve2(ctx.getImageData(0, 0, img.width, img.height));
-      };
-      img.onerror = (err2) => {
-        URL.revokeObjectURL(url);
-        reject(err2);
-      };
-    });
+    return image_exports.imageDataFromArrayBuffer(buffer);
   }
   async readBMP(buffer) {
-    const imageData = await this.imageDataFromArrayBuffer(buffer);
-    const { width, height, data } = imageData;
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims = [3, width, height, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    hdr.affine = [
-      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ];
-    hdr.numBitsPerVoxel = 8;
-    hdr.datatypeCode = 2304 /* DT_RGBA32 */;
-    let isGrayscale = true;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] !== data[i + 1] || data[i] !== data[i + 2]) {
-        isGrayscale = false;
-        break;
-      }
-    }
-    if (isGrayscale) {
-      hdr.datatypeCode = 2 /* DT_UINT8 */;
-      const grayscaleData = new Uint8Array(width * height);
-      for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-        grayscaleData[j] = data[i];
-      }
-      return grayscaleData.buffer;
-    }
-    return data.buffer;
+    return image_exports.readBMP(this, buffer);
   }
   async readZARR(buffer, zarrData) {
-    let { width, height, depth = 1, data } = zarrData ?? {};
-    let expectedLength = width * height * depth * 3;
-    let isRGB = expectedLength === data.length;
-    if (!isRGB) {
-      expectedLength = width * height * depth;
-      if (depth === 3) {
-        isRGB = true;
-        depth = 1;
-      }
-    }
-    if (expectedLength !== data.length) {
-      throw new Error(`Expected RGB ${width}\xD7${height}\xD7${depth}\xD73 =  ${expectedLength}, but ZARR length ${data.length}`);
-    }
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims = [3, width, height, depth, 1, 1, 1, 1];
-    hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0];
-    hdr.affine = [
-      [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ];
-    if (!isRGB) {
-      hdr.numBitsPerVoxel = 8;
-      hdr.datatypeCode = 2 /* DT_UINT8 */;
-      if (data instanceof Uint8Array) {
-        const retBuffer2 = new ArrayBuffer(data.length);
-        const retView2 = new Uint8Array(retBuffer2);
-        retView2.set(data);
-        return retBuffer2;
-      }
-      return data;
-    }
-    hdr.numBitsPerVoxel = 24;
-    hdr.datatypeCode = 128 /* DT_RGB24 */;
-    function zxy2xyz(data2, X, Y, Z) {
-      const voxelCount = X * Y;
-      const rgb = new Uint8Array(voxelCount * Z * 3);
-      const offsets = new Array(Z);
-      for (let s = 0; s < Z; s++) {
-        offsets[s] = voxelCount * 3 * s;
-      }
-      let srcIndex = 0;
-      let dstIndex = 0;
-      for (let v = 0; v < voxelCount; v++) {
-        for (let s = 0; s < Z; s++) {
-          rgb[offsets[s] + dstIndex] = data2[srcIndex++];
-          rgb[offsets[s] + dstIndex + 1] = data2[srcIndex++];
-          rgb[offsets[s] + dstIndex + 2] = data2[srcIndex++];
-        }
-        dstIndex += 3;
-      }
-      return rgb;
-    }
-    const retData = zxy2xyz(data, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-    const retBuffer = new ArrayBuffer(retData.length);
-    const retView = new Uint8Array(retBuffer);
-    retView.set(retData);
-    return retBuffer;
+    return zarr_exports.readZARR(this, buffer, zarrData);
   }
   // not included in public docs
   // read brainvoyager format VMR image
   // https://support.brainvoyager.com/brainvoyager/automation-development/84-file-formats/343-developer-guide-2-6-the-format-of-vmr-files
   readVMR(buffer) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const reader = new DataView(buffer);
-    const version2 = reader.getUint16(0, true);
-    if (version2 !== 4) {
-      log.warn("Not a valid version 4 VMR image");
-    }
-    hdr.dims[1] = reader.getUint16(2, true);
-    hdr.dims[2] = reader.getUint16(4, true);
-    hdr.dims[3] = reader.getUint16(6, true);
-    const nBytes = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-    if (version2 >= 4) {
-      let pos = 8 + nBytes;
-      const nSpatialTransforms = reader.getUint32(pos + 88, true);
-      pos = pos + 92;
-      if (nSpatialTransforms > 0) {
-        const len4 = buffer.byteLength;
-        for (let i = 0; i < nSpatialTransforms; i++) {
-          while (pos < len4 && reader.getUint8(pos) !== 0) {
-            pos++;
-          }
-          pos++;
-          pos += 4;
-          while (pos < len4 && reader.getUint8(pos) !== 0) {
-            pos++;
-          }
-          pos++;
-          const nValues = reader.getUint32(pos, true);
-          pos += 4;
-          for (let j = 0; j < nValues; j++) {
-            pos += 4;
-          }
-        }
-      }
-      hdr.pixDims[1] = reader.getFloat32(pos + 2, true);
-      hdr.pixDims[2] = reader.getFloat32(pos + 6, true);
-      hdr.pixDims[3] = reader.getFloat32(pos + 10, true);
-    }
-    log.warn("Warning: VMR spatial transform not implemented");
-    hdr.affine = [
-      [0, 0, -hdr.pixDims[1], (hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
-      [-hdr.pixDims[2], 0, 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
-      [0, -hdr.pixDims[3], 0, (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
-      [0, 0, 0, 1]
-    ];
-    log.debug(hdr);
-    hdr.numBitsPerVoxel = 8;
-    hdr.datatypeCode = 2 /* DT_UINT8 */;
-    return buffer.slice(8, 8 + nBytes);
+    return brainvoyager_exports.readVMR(this, buffer);
   }
-  // readVMR()
   // not included in public docs
   // read DSI-Studio FIB format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async readFIB(buffer) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.littleEndian = false;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const mat = await NVUtilities.readMatV4(buffer, true);
-    if (!("dimension" in mat) || !("dti_fa" in mat)) {
-      throw new Error("Not a valid DSIstudio FIB file");
-    }
-    const hasV1 = "index0" in mat && "index1" in mat && "index2" in mat && "odf_vertices" in mat;
-    hdr.numBitsPerVoxel = 32;
-    hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-    hdr.dims[1] = mat.dimension[0];
-    hdr.dims[2] = mat.dimension[1];
-    hdr.dims[3] = mat.dimension[2];
-    hdr.dims[4] = 1;
-    hdr.pixDims[1] = mat.voxel_size[0];
-    hdr.pixDims[2] = mat.voxel_size[1];
-    hdr.pixDims[3] = mat.voxel_size[2];
-    hdr.sform_code = 1;
-    const xmm = (hdr.dims[1] - 1) * 0.5 * hdr.pixDims[1];
-    const ymm = (hdr.dims[2] - 1) * 0.5 * hdr.pixDims[2];
-    const zmm = (hdr.dims[3] - 1) * 0.5 * hdr.pixDims[3];
-    hdr.affine = [
-      [hdr.pixDims[1], 0, 0, -xmm],
-      [0, -hdr.pixDims[2], 0, ymm],
-      [0, 0, hdr.pixDims[2], -zmm],
-      [0, 0, 0, 1]
-    ];
-    hdr.littleEndian = true;
-    const nVox3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-    const nBytes3D = nVox3D * Math.ceil(hdr.numBitsPerVoxel / 8);
-    const nBytes = nBytes3D * hdr.dims[4];
-    const buff8v1 = new Uint8Array(new ArrayBuffer(nVox3D * 4 * 3));
-    if (hasV1) {
-      const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-      const dir0 = new Float32Array(nvox);
-      const dir1 = new Float32Array(nvox);
-      const dir2 = new Float32Array(nvox);
-      const idxs = mat.index0;
-      const dirs = mat.odf_vertices;
-      for (let i = 0; i < nvox; i++) {
-        const idx = idxs[i] * 3;
-        dir0[i] = dirs[idx + 0];
-        dir1[i] = dirs[idx + 1];
-        dir2[i] = -dirs[idx + 2];
-      }
-      buff8v1.set(new Uint8Array(dir0.buffer, dir0.byteOffset, dir0.byteLength), 0 * nBytes3D);
-      buff8v1.set(new Uint8Array(dir1.buffer, dir1.byteOffset, dir1.byteLength), 1 * nBytes3D);
-      buff8v1.set(new Uint8Array(dir2.buffer, dir2.byteOffset, dir2.byteLength), 2 * nBytes3D);
-    }
-    if ("report" in mat) {
-      hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)));
-    }
-    const buff8 = new Uint8Array(new ArrayBuffer(nBytes));
-    const arrFA = Float32Array.from(mat.dti_fa);
-    if ("mask" in mat) {
-      let slope = 1;
-      if ("dti_fa_slope" in mat) {
-        slope = mat.dti_fa_slope[0];
-      }
-      let inter = 1;
-      if ("dti_fa_inter" in mat) {
-        inter = mat.dti_fa_inter[0];
-      }
-      const nvox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-      const mask = mat.mask;
-      const f32 = new Float32Array(nvox);
-      let j = 0;
-      for (let i = 0; i < nvox; i++) {
-        if (mask[i] !== 0) {
-          f32[i] = arrFA[j] * slope + inter;
-          j++;
-        }
-      }
-      return [f32.buffer, new Float32Array(buff8v1.buffer)];
-    }
-    const imgFA = new Uint8Array(arrFA.buffer, arrFA.byteOffset, arrFA.byteLength);
-    buff8.set(imgFA, 0);
-    return [buff8.buffer, new Float32Array(buff8v1.buffer)];
+    return dsistudio_exports.readFIB(this, buffer);
   }
-  // readFIB()
   // not included in public docs
   // read DSI-Studio SRC format image
   // https://dsi-studio.labsolver.org/doc/cli_data.html
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async readSRC(buffer) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.littleEndian = false;
-    hdr.dims = [3, 1, 1, 1, 0, 0, 0, 0];
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    const mat = await NVUtilities.readMatV4(buffer);
-    if (!("dimension" in mat) || !("image0" in mat)) {
-      throw new Error("Not a valid DSIstudio SRC file");
-    }
-    let n = 0;
-    let len4 = 0;
-    for (const [key, value] of Object.entries(mat)) {
-      if (!key.startsWith("image")) {
-        continue;
-      }
-      if (n === 0) {
-        len4 = value.length;
-      } else if (len4 !== value.length) {
-        len4 = -1;
-      }
-      if (value.constructor !== Uint16Array) {
-        throw new Error("DSIstudio SRC files always use Uint16 datatype");
-      }
-      n++;
-    }
-    if (len4 < 1 || n < 1) {
-      throw new Error("SRC file not valid DSI Studio data. The image(s) should have the same length");
-    }
-    hdr.numBitsPerVoxel = 16;
-    hdr.datatypeCode = 512 /* DT_UINT16 */;
-    hdr.dims[1] = mat.dimension[0];
-    hdr.dims[2] = mat.dimension[1];
-    hdr.dims[3] = mat.dimension[2];
-    hdr.dims[4] = n;
-    if (hdr.dims[4] > 1) {
-      hdr.dims[0] = 4;
-    }
-    hdr.pixDims[1] = mat.voxel_size[0];
-    hdr.pixDims[2] = mat.voxel_size[1];
-    hdr.pixDims[3] = mat.voxel_size[2];
-    hdr.sform_code = 1;
-    const xmm = (hdr.dims[1] - 1) * 0.5 * hdr.pixDims[1];
-    const ymm = (hdr.dims[2] - 1) * 0.5 * hdr.pixDims[2];
-    const zmm = (hdr.dims[3] - 1) * 0.5 * hdr.pixDims[3];
-    hdr.affine = [
-      [hdr.pixDims[1], 0, 0, -xmm],
-      [0, -hdr.pixDims[2], 0, ymm],
-      [0, 0, hdr.pixDims[2], -zmm],
-      [0, 0, 0, 1]
-    ];
-    hdr.littleEndian = true;
-    const nBytes3D = hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * (hdr.numBitsPerVoxel / 8);
-    const nBytes = nBytes3D * hdr.dims[4];
-    const buff8 = new Uint8Array(new ArrayBuffer(nBytes));
-    let offset = 0;
-    for (let i = 0; i < n; i++) {
-      const arr = mat[`image${i}`];
-      const img8 = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-      buff8.set(img8, offset);
-      offset += nBytes3D;
-    }
-    if ("report" in mat) {
-      hdr.description = new TextDecoder().decode(mat.report.subarray(0, Math.min(79, mat.report.byteLength)));
-    }
-    return buff8.buffer;
+    return dsistudio_exports.readSRC(this, buffer);
   }
-  // readSRC()
   // not included in public docs
   // read AFNI head/brik format image
   async readHEAD(dataBuffer, pairedImgData) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.dims[0] = 3;
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    let orientSpecific = [0, 0, 0];
-    let xyzOrigin = [0, 0, 0];
-    let xyzDelta = [1, 1, 1];
-    const txt = new TextDecoder().decode(dataBuffer);
-    const lines = txt.split(/\r?\n/);
-    const mod = (dataBuffer.byteLength + 8) % 16;
-    const len4 = dataBuffer.byteLength + (16 - mod);
-    log.debug(dataBuffer.byteLength, "len", len4);
-    const extBuffer = new ArrayBuffer(len4);
-    new Uint8Array(extBuffer).set(new Uint8Array(dataBuffer));
-    const newExtension = new NIFTIEXTENSION(len4 + 8, 42, extBuffer, true);
-    hdr.addExtension(newExtension);
-    hdr.extensionCode = 42;
-    hdr.extensionFlag[0] = 1;
-    hdr.extensionSize = len4 + 8;
-    const nlines = lines.length;
-    let i = 0;
-    let hasIJK_TO_DICOM_REAL = false;
-    while (i < nlines) {
-      let line = lines[i];
-      i++;
-      if (!line.startsWith("type")) {
-        continue;
-      }
-      const isInt = line.includes("integer-attribute");
-      const isFloat = line.includes("float-attribute");
-      line = lines[i];
-      i++;
-      if (!line.startsWith("name")) {
-        continue;
-      }
-      let items = line.split("= ");
-      const key = items[1];
-      line = lines[i];
-      i++;
-      items = line.split("= ");
-      let count = parseInt(items[1]);
-      if (count < 1) {
-        continue;
-      }
-      line = lines[i];
-      i++;
-      items = line.trim().split(/\s+/);
-      if (isFloat || isInt) {
-        while (items.length < count) {
-          line = lines[i];
-          i++;
-          const items2 = line.trim().split(/\s+/);
-          items.push(...items2);
-        }
-        for (let j = 0; j < count; j++) {
-          items[j] = parseFloat(items[j]);
-        }
-      }
-      switch (key) {
-        case "BYTEORDER_STRING":
-          if (items[0].includes("LSB_FIRST")) {
-            hdr.littleEndian = true;
-          } else if (items[0].includes("MSB_FIRST")) {
-            hdr.littleEndian = false;
-          }
-          break;
-        case "BRICK_TYPES":
-          {
-            hdr.dims[4] = count;
-            const datatype = parseInt(items[0]);
-            if (datatype === 0) {
-              hdr.numBitsPerVoxel = 8;
-              hdr.datatypeCode = 2 /* DT_UINT8 */;
-            } else if (datatype === 1) {
-              hdr.numBitsPerVoxel = 16;
-              hdr.datatypeCode = 4 /* DT_INT16 */;
-            } else if (datatype === 3) {
-              hdr.numBitsPerVoxel = 32;
-              hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-            } else {
-              log.warn("Unknown BRICK_TYPES ", datatype);
-            }
-          }
-          break;
-        case "IJK_TO_DICOM_REAL":
-          if (count < 12) {
-            break;
-          }
-          hasIJK_TO_DICOM_REAL = true;
-          hdr.sform_code = 2;
-          hdr.affine = [
-            [-items[0], -items[1], -items[2], -items[3]],
-            [-items[4], -items[5], -items[6], -items[7]],
-            // TODO don't reuse items for numeric values
-            [items[8], items[9], items[10], items[11]],
-            [0, 0, 0, 1]
-          ];
-          break;
-        case "DATASET_DIMENSIONS":
-          count = Math.max(count, 3);
-          for (let j = 0; j < count; j++) {
-            hdr.dims[j + 1] = items[j];
-          }
-          break;
-        case "ORIENT_SPECIFIC":
-          orientSpecific = items;
-          break;
-        case "ORIGIN":
-          xyzOrigin = items;
-          break;
-        case "DELTA":
-          xyzDelta = items;
-          break;
-        case "TAXIS_FLOATS":
-          hdr.pixDims[4] = items[0];
-          break;
-        default:
-          log.warn("Unknown:", key);
-      }
-    }
-    if (!hasIJK_TO_DICOM_REAL) {
-      this.THD_daxes_to_NIFTI(xyzDelta, xyzOrigin, orientSpecific);
-    } else {
-      this.SetPixDimFromSForm();
-    }
-    const nBytes = hdr.numBitsPerVoxel / 8 * hdr.dims[1] * hdr.dims[2] * hdr.dims[3] * hdr.dims[4];
-    if (!pairedImgData) {
-      throw new Error("pairedImgData not set");
-    }
-    if (pairedImgData.byteLength < nBytes) {
-      return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData));
-    }
-    return pairedImgData.slice(0);
+    return afni_exports.readHEAD(this, dataBuffer, pairedImgData);
   }
   // not included in public docs
   // read ITK MHA format image
   // https://itk.org/Wiki/ITK/MetaIO/Documentation#Reading_a_Brick-of-Bytes_.28an_N-Dimensional_volume_in_a_single_file.29
   async readMHA(buffer, pairedImgData) {
-    const len4 = buffer.byteLength;
-    if (len4 < 20) {
-      throw new Error("File too small to be VTK: bytes = " + buffer.byteLength);
-    }
-    const bytes = new Uint8Array(buffer);
-    let pos = 0;
-    function eol(c) {
-      return c === 10 || c === 13;
-    }
-    function readStr() {
-      while (pos < len4 && eol(bytes[pos])) {
-        pos++;
-      }
-      const startPos = pos;
-      while (pos < len4 && !eol(bytes[pos])) {
-        pos++;
-      }
-      if (pos - startPos < 2) {
-        return "";
-      }
-      return new TextDecoder().decode(buffer.slice(startPos, pos));
-    }
-    let line = readStr();
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
-    hdr.littleEndian = true;
-    let isGz = false;
-    let isDetached = false;
-    const mat33 = mat3_exports.fromValues(NaN, 0, 0, 0, 1, 0, 0, 0, 1);
-    const offset = vec3_exports.fromValues(0, 0, 0);
-    while (line !== "") {
-      let items = line.split(" ");
-      if (items.length > 2) {
-        items = items.slice(2);
-      }
-      if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("False")) {
-        hdr.littleEndian = true;
-      }
-      if (line.startsWith("BinaryDataByteOrderMSB") && items[0].includes("True")) {
-        hdr.littleEndian = false;
-      }
-      if (line.startsWith("CompressedData") && items[0].includes("True")) {
-        isGz = true;
-      }
-      if (line.startsWith("TransformMatrix")) {
-        for (let d = 0; d < 9; d++) {
-          mat33[d] = parseFloat(items[d]);
-        }
-      }
-      if (line.startsWith("Offset")) {
-        for (let d = 0; d < Math.min(items.length, 3); d++) {
-          offset[d] = parseFloat(items[d]);
-        }
-      }
-      if (line.startsWith("ElementSpacing")) {
-        for (let d = 0; d < items.length; d++) {
-          hdr.pixDims[d + 1] = parseFloat(items[d]);
-        }
-      }
-      if (line.startsWith("DimSize")) {
-        hdr.dims[0] = items.length;
-        for (let d = 0; d < items.length; d++) {
-          hdr.dims[d + 1] = parseInt(items[d]);
-        }
-      }
-      if (line.startsWith("ElementType")) {
-        switch (items[0]) {
-          case "MET_UCHAR":
-            hdr.numBitsPerVoxel = 8;
-            hdr.datatypeCode = 2 /* DT_UINT8 */;
-            break;
-          case "MET_CHAR":
-            hdr.numBitsPerVoxel = 8;
-            hdr.datatypeCode = 256 /* DT_INT8 */;
-            break;
-          case "MET_SHORT":
-            hdr.numBitsPerVoxel = 16;
-            hdr.datatypeCode = 4 /* DT_INT16 */;
-            break;
-          case "MET_USHORT":
-            hdr.numBitsPerVoxel = 16;
-            hdr.datatypeCode = 512 /* DT_UINT16 */;
-            break;
-          case "MET_INT":
-            hdr.numBitsPerVoxel = 32;
-            hdr.datatypeCode = 8 /* DT_INT32 */;
-            break;
-          case "MET_UINT":
-            hdr.numBitsPerVoxel = 32;
-            hdr.datatypeCode = 768 /* DT_UINT32 */;
-            break;
-          case "MET_FLOAT":
-            hdr.numBitsPerVoxel = 32;
-            hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-            break;
-          case "MET_DOUBLE":
-            hdr.numBitsPerVoxel = 64;
-            hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-            break;
-          default:
-            throw new Error("Unsupported MHA data type: " + items[0]);
-        }
-      }
-      if (line.startsWith("ObjectType") && !items[0].includes("Image")) {
-        log.warn("Only able to read ObjectType = Image, not " + line);
-      }
-      if (line.startsWith("ElementDataFile")) {
-        if (items[0] !== "LOCAL") {
-          isDetached = true;
-        }
-        break;
-      }
-      line = readStr();
-    }
-    const mmMat = mat3_exports.fromValues(hdr.pixDims[1], 0, 0, 0, hdr.pixDims[2], 0, 0, 0, hdr.pixDims[3]);
-    mat3_exports.multiply(mat33, mat33, mmMat);
-    hdr.affine = [
-      [-mat33[0], -mat33[3], -mat33[6], -offset[0]],
-      [-mat33[1], -mat33[4], -mat33[7], -offset[1]],
-      [mat33[2], mat33[5], mat33[8], offset[2]],
-      [0, 0, 0, 1]
-    ];
-    while (bytes[pos] === 10) {
-      pos++;
-    }
-    hdr.vox_offset = pos;
-    if (isDetached && pairedImgData) {
-      if (isGz) {
-        return await NVUtilities.decompressToBuffer(new Uint8Array(pairedImgData.slice(0)));
-      }
-      return pairedImgData.slice(0);
-    }
-    if (isGz) {
-      return await NVUtilities.decompressToBuffer(new Uint8Array(buffer.slice(hdr.vox_offset)));
-    }
-    return buffer.slice(hdr.vox_offset);
+    return itk_exports.readMHA(this, buffer, pairedImgData);
   }
-  // readMHA()
   // not included in public docs
   // read mrtrix MIF format image
   // https://mrtrix.readthedocs.io/en/latest/getting_started/image_data.html#mrtrix-image-formats
   async readMIF(buffer, pairedImgData) {
-    this.hdr = new NIFTI1();
-    const hdr = this.hdr;
-    hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
-    hdr.dims = [1, 1, 1, 1, 1, 1, 1, 1];
-    let len4 = buffer.byteLength;
-    if (len4 < 20) {
-      throw new Error("File too small to be MIF: bytes = " + len4);
-    }
-    let bytes = new Uint8Array(buffer);
-    if (bytes[0] === 31 && bytes[1] === 139) {
-      log.debug("MIF with GZ decompression");
-      buffer = await NVUtilities.decompressToBuffer(new Uint8Array(buffer));
-      len4 = buffer.byteLength;
-      bytes = new Uint8Array(buffer);
-    }
-    let pos = 0;
-    function readStr() {
-      while (pos < len4 && bytes[pos] === 10) {
-        pos++;
-      }
-      const startPos = pos;
-      while (pos < len4 && bytes[pos] !== 10) {
-        pos++;
-      }
-      pos++;
-      if (pos - startPos < 1) {
-        return "";
-      }
-      return new TextDecoder().decode(buffer.slice(startPos, pos - 1));
-    }
-    let line = readStr();
-    if (!line.startsWith("mrtrix image")) {
-      throw new Error("Not a valid MIF file");
-    }
-    const layout = [];
-    let isBit = false;
-    let nTransform = 0;
-    let TR = 0;
-    let isDetached = false;
-    line = readStr();
-    while (pos < len4 && !line.startsWith("END")) {
-      let items = line.split(":");
-      line = readStr();
-      if (items.length < 2) {
-        break;
-      }
-      const tag = items[0];
-      items = items[1].split(",");
-      for (let i = 0; i < items.length; i++) {
-        items[i] = items[i].trim();
-      }
-      switch (tag) {
-        case "dim":
-          hdr.dims[0] = items.length;
-          for (let i = 0; i < items.length; i++) {
-            hdr.dims[i + 1] = parseInt(items[i]);
-          }
-          break;
-        case "vox":
-          for (let i = 0; i < items.length; i++) {
-            hdr.pixDims[i + 1] = parseFloat(items[i]);
-            if (isNaN(hdr.pixDims[i + 1])) {
-              hdr.pixDims[i + 1] = 0;
-            }
-          }
-          break;
-        case "layout":
-          for (let i = 0; i < items.length; i++) {
-            layout.push(parseInt(items[i]));
-          }
-          break;
-        case "datatype":
-          {
-            const dt = items[0];
-            if (dt.startsWith("Bit")) {
-              isBit = true;
-              hdr.datatypeCode = 2 /* DT_UINT8 */;
-            } else if (dt.startsWith("Int8")) {
-              hdr.datatypeCode = 256 /* DT_INT8 */;
-            } else if (dt.startsWith("UInt8")) {
-              hdr.datatypeCode = 2 /* DT_UINT8 */;
-            } else if (dt.startsWith("Int16")) {
-              hdr.datatypeCode = 4 /* DT_INT16 */;
-            } else if (dt.startsWith("UInt16")) {
-              hdr.datatypeCode = 512 /* DT_UINT16 */;
-            } else if (dt.startsWith("Int32")) {
-              hdr.datatypeCode = 8 /* DT_INT32 */;
-            } else if (dt.startsWith("UInt32")) {
-              hdr.datatypeCode = 768 /* DT_UINT32 */;
-            } else if (dt.startsWith("Float32")) {
-              hdr.datatypeCode = 16 /* DT_FLOAT32 */;
-            } else if (dt.startsWith("Float64")) {
-              hdr.datatypeCode = 64 /* DT_FLOAT64 */;
-            } else {
-              log.warn("Unsupported datatype " + dt);
-            }
-            if (dt.includes("8")) {
-              hdr.numBitsPerVoxel = 8;
-            } else if (dt.includes("16")) {
-              hdr.numBitsPerVoxel = 16;
-            } else if (dt.includes("32")) {
-              hdr.numBitsPerVoxel = 32;
-            } else if (dt.includes("64")) {
-              hdr.numBitsPerVoxel = 64;
-            }
-            hdr.littleEndian = true;
-            if (dt.endsWith("LE")) {
-              hdr.littleEndian = true;
-            }
-            if (dt.endsWith("BE")) {
-              hdr.littleEndian = false;
-            }
-          }
-          break;
-        case "transform":
-          if (nTransform > 2 || items.length !== 4) {
-            break;
-          }
-          hdr.affine[nTransform][0] = parseFloat(items[0]);
-          hdr.affine[nTransform][1] = parseFloat(items[1]);
-          hdr.affine[nTransform][2] = parseFloat(items[2]);
-          hdr.affine[nTransform][3] = parseFloat(items[3]);
-          nTransform++;
-          break;
-        case "comments":
-          hdr.description = items[0].substring(0, Math.min(79, items[0].length));
-          break;
-        /* case 'command_history':
-          if (items[0].startsWith('dwi2tensor')) {
-            isTensor = true
-          }
-          break */
-        case "RepetitionTime":
-          TR = parseFloat(items[0]);
-          break;
-        case "file":
-          isDetached = !items[0].startsWith(". ");
-          if (!isDetached) {
-            items = items[0].split(" ");
-            hdr.vox_offset = parseInt(items[1]);
-          }
-          break;
-      }
-    }
-    const ndim = hdr.dims[0];
-    if (ndim > 5) {
-      log.warn("reader only designed for a maximum of 5 dimensions (XYZTD)");
-    }
-    let nvox = 1;
-    for (let i = 0; i < ndim; i++) {
-      nvox *= Math.max(hdr.dims[i + 1], 1);
-    }
-    for (let i = 0; i < 3; i++) {
-      for (let j2 = 0; j2 < 3; j2++) {
-        hdr.affine[i][j2] *= hdr.pixDims[j2 + 1];
-      }
-    }
-    log.debug("mif affine:" + hdr.affine[0]);
-    if (TR > 0) {
-      hdr.pixDims[4] = TR;
-    }
-    if (isDetached && !pairedImgData) {
-      log.warn("MIH header provided without paired image data");
-    }
-    let rawImg;
-    if (pairedImgData && isDetached) {
-      rawImg = pairedImgData.slice(0);
-    } else if (isBit) {
-      hdr.numBitsPerVoxel = 8;
-      const img8 = new Uint8Array(nvox);
-      const buffer1 = buffer.slice(hdr.vox_offset, hdr.vox_offset + Math.ceil(nvox / 8));
-      const img1 = new Uint8Array(buffer1);
-      let j2 = 0;
-      for (let i = 0; i < nvox; i++) {
-        const bit = i % 8;
-        img8[i] = img1[j2] >> 7 - bit & 1;
-        if (bit === 7) {
-          j2++;
-        }
-      }
-      rawImg = img8.buffer;
-    } else {
-      rawImg = buffer.slice(hdr.vox_offset, hdr.vox_offset + nvox * (hdr.numBitsPerVoxel / 8));
-    }
-    if (layout.length !== hdr.dims[0]) {
-      log.warn("dims does not match layout");
-    }
-    let stride = 1;
-    const instride = [1, 1, 1, 1, 1];
-    const inflip = [false, false, false, false, false];
-    for (let i = 0; i < layout.length; i++) {
-      for (let j2 = 0; j2 < layout.length; j2++) {
-        const a = Math.abs(layout[j2]);
-        if (a !== i) {
-          continue;
-        }
-        instride[j2] = stride;
-        if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
-          inflip[j2] = true;
-        }
-        stride *= hdr.dims[j2 + 1];
-      }
-    }
-    let xlut = NVUtilities.range(0, hdr.dims[1] - 1, 1);
-    if (inflip[0]) {
-      xlut = NVUtilities.range(hdr.dims[1] - 1, 0, -1);
-    }
-    for (let i = 0; i < hdr.dims[1]; i++) {
-      xlut[i] *= instride[0];
-    }
-    let ylut = NVUtilities.range(0, hdr.dims[2] - 1, 1);
-    if (inflip[1]) {
-      ylut = NVUtilities.range(hdr.dims[2] - 1, 0, -1);
-    }
-    for (let i = 0; i < hdr.dims[2]; i++) {
-      ylut[i] *= instride[1];
-    }
-    let zlut = NVUtilities.range(0, hdr.dims[3] - 1, 1);
-    if (inflip[2]) {
-      zlut = NVUtilities.range(hdr.dims[3] - 1, 0, -1);
-    }
-    for (let i = 0; i < hdr.dims[3]; i++) {
-      zlut[i] *= instride[2];
-    }
-    let tlut = NVUtilities.range(0, hdr.dims[4] - 1, 1);
-    if (inflip[3]) {
-      tlut = NVUtilities.range(hdr.dims[4] - 1, 0, -1);
-    }
-    for (let i = 0; i < hdr.dims[4]; i++) {
-      tlut[i] *= instride[3];
-    }
-    let dlut = NVUtilities.range(0, hdr.dims[5] - 1, 1);
-    if (inflip[4]) {
-      dlut = NVUtilities.range(hdr.dims[5] - 1, 0, -1);
-    }
-    for (let i = 0; i < hdr.dims[5]; i++) {
-      dlut[i] *= instride[4];
-    }
-    let j = 0;
-    let inVs;
-    let outVs;
-    switch (hdr.datatypeCode) {
-      case 256 /* DT_INT8 */:
-        inVs = new Int8Array(rawImg);
-        outVs = new Int8Array(nvox);
-        break;
-      case 2 /* DT_UINT8 */:
-        inVs = new Uint8Array(rawImg);
-        outVs = new Uint8Array(nvox);
-        break;
-      case 4 /* DT_INT16 */:
-        inVs = new Int16Array(rawImg);
-        outVs = new Int16Array(nvox);
-        break;
-      case 512 /* DT_UINT16 */:
-        inVs = new Uint16Array(rawImg);
-        outVs = new Uint16Array(nvox);
-        break;
-      case 8 /* DT_INT32 */:
-        inVs = new Int32Array(rawImg);
-        outVs = new Int32Array(nvox);
-        break;
-      case 768 /* DT_UINT32 */:
-        inVs = new Uint32Array(rawImg);
-        outVs = new Uint32Array(nvox);
-        break;
-      case 16 /* DT_FLOAT32 */:
-        inVs = new Float32Array(rawImg);
-        outVs = new Float32Array(nvox);
-        break;
-      case 64 /* DT_FLOAT64 */:
-        inVs = new Float64Array(rawImg);
-        outVs = new Float64Array(nvox);
-        break;
-      default:
-        throw new Error("unknown datatypeCode");
-    }
-    for (let d = 0; d < hdr.dims[5]; d++) {
-      for (let t = 0; t < hdr.dims[4]; t++) {
-        for (let z = 0; z < hdr.dims[3]; z++) {
-          for (let y = 0; y < hdr.dims[2]; y++) {
-            for (let x = 0; x < hdr.dims[1]; x++) {
-              outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z] + tlut[t] + dlut[d]];
-              j++;
-            }
-          }
-        }
-      }
-    }
-    return outVs.buffer;
+    return mrtrix_exports.readMIF(this, buffer, pairedImgData);
   }
-  // readMIF()
   // not included in public docs
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   calculateRAS() {
-    if (!this.hdr) {
-      throw new Error("hdr not set");
-    }
-    const a = this.hdr.affine;
-    const header = this.hdr;
-    const absR = mat3_exports.fromValues(
-      Math.abs(a[0][0]),
-      Math.abs(a[0][1]),
-      Math.abs(a[0][2]),
-      Math.abs(a[1][0]),
-      Math.abs(a[1][1]),
-      Math.abs(a[1][2]),
-      Math.abs(a[2][0]),
-      Math.abs(a[2][1]),
-      Math.abs(a[2][2])
-    );
-    const ixyz = [1, 1, 1];
-    if (absR[3] > absR[0]) {
-      ixyz[0] = 2;
-    }
-    if (absR[6] > absR[0] && absR[6] > absR[3]) {
-      ixyz[0] = 3;
-    }
-    ixyz[1] = 1;
-    if (ixyz[0] === 1) {
-      if (absR[4] > absR[7]) {
-        ixyz[1] = 2;
-      } else {
-        ixyz[1] = 3;
-      }
-    } else if (ixyz[0] === 2) {
-      if (absR[1] > absR[7]) {
-        ixyz[1] = 1;
-      } else {
-        ixyz[1] = 3;
-      }
-    } else {
-      if (absR[1] > absR[4]) {
-        ixyz[1] = 1;
-      } else {
-        ixyz[1] = 2;
-      }
-    }
-    ixyz[2] = 6 - ixyz[1] - ixyz[0];
-    let perm = [1, 2, 3];
-    perm[ixyz[0] - 1] = 1;
-    perm[ixyz[1] - 1] = 2;
-    perm[ixyz[2] - 1] = 3;
-    let rotM = mat4_exports.fromValues(
-      a[0][0],
-      a[0][1],
-      a[0][2],
-      a[0][3],
-      a[1][0],
-      a[1][1],
-      a[1][2],
-      a[1][3],
-      a[2][0],
-      a[2][1],
-      a[2][2],
-      a[2][3],
-      0,
-      0,
-      0,
-      1
-    );
-    this.mm000 = this.vox2mm([-0.5, -0.5, -0.5], rotM);
-    this.mm100 = this.vox2mm([header.dims[1] - 0.5, -0.5, -0.5], rotM);
-    this.mm010 = this.vox2mm([-0.5, header.dims[2] - 0.5, -0.5], rotM);
-    this.mm001 = this.vox2mm([-0.5, -0.5, header.dims[3] - 0.5], rotM);
-    const R = mat4_exports.create();
-    mat4_exports.copy(R, rotM);
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        R[i * 4 + j] = rotM[i * 4 + perm[j] - 1];
-      }
-    }
-    const flip = [0, 0, 0];
-    if (R[0] < 0) {
-      flip[0] = 1;
-    }
-    if (R[5] < 0) {
-      flip[1] = 1;
-    }
-    if (R[10] < 0) {
-      flip[2] = 1;
-    }
-    this.dimsRAS = [header.dims[0], header.dims[perm[0]], header.dims[perm[1]], header.dims[perm[2]]];
-    this.pixDimsRAS = [header.pixDims[0], header.pixDims[perm[0]], header.pixDims[perm[1]], header.pixDims[perm[2]]];
-    this.permRAS = perm.slice();
-    for (let i = 0; i < 3; i++) {
-      if (flip[i] === 1) {
-        this.permRAS[i] = -this.permRAS[i];
-      }
-    }
-    if (this.arrayEquals(perm, [1, 2, 3]) && this.arrayEquals(flip, [0, 0, 0])) {
-      this.toRAS = mat4_exports.create();
-      this.matRAS = mat4_exports.clone(rotM);
-      this.calculateOblique();
-      this.img2RASstep = [1, this.dimsRAS[1], this.dimsRAS[1] * this.dimsRAS[2]];
-      this.img2RASstart = [0, 0, 0];
-      return;
-    }
-    mat4_exports.identity(rotM);
-    rotM[0 + 0 * 4] = 1 - flip[0] * 2;
-    rotM[1 + 1 * 4] = 1 - flip[1] * 2;
-    rotM[2 + 2 * 4] = 1 - flip[2] * 2;
-    rotM[3 + 0 * 4] = (header.dims[perm[0]] - 1) * flip[0];
-    rotM[3 + 1 * 4] = (header.dims[perm[1]] - 1) * flip[1];
-    rotM[3 + 2 * 4] = (header.dims[perm[2]] - 1) * flip[2];
-    const residualR = mat4_exports.create();
-    mat4_exports.invert(residualR, rotM);
-    mat4_exports.multiply(residualR, residualR, R);
-    this.matRAS = mat4_exports.clone(residualR);
-    rotM = mat4_exports.fromValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
-    rotM[perm[0] - 1 + 0 * 4] = -flip[0] * 2 + 1;
-    rotM[perm[1] - 1 + 1 * 4] = -flip[1] * 2 + 1;
-    rotM[perm[2] - 1 + 2 * 4] = -flip[2] * 2 + 1;
-    rotM[3 + 0 * 4] = flip[0];
-    rotM[3 + 1 * 4] = flip[1];
-    rotM[3 + 2 * 4] = flip[2];
-    this.toRAS = mat4_exports.clone(rotM);
-    rotM[3] = 0;
-    rotM[7] = 0;
-    rotM[11] = 0;
-    rotM[12] = 0;
-    if (this.permRAS[0] === -1 || this.permRAS[1] === -1 || this.permRAS[2] === -1) {
-      rotM[12] = header.dims[1] - 1;
-    }
-    rotM[13] = 0;
-    if (this.permRAS[0] === -2 || this.permRAS[1] === -2 || this.permRAS[2] === -2) {
-      rotM[13] = header.dims[2] - 1;
-    }
-    rotM[14] = 0;
-    if (this.permRAS[0] === -3 || this.permRAS[1] === -3 || this.permRAS[2] === -3) {
-      rotM[14] = header.dims[3] - 1;
-    }
-    this.toRASvox = mat4_exports.clone(rotM);
-    log.debug(this.hdr.dims);
-    log.debug(this.dimsRAS);
-    const hdr = this.hdr;
-    perm = this.permRAS;
-    const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])];
-    const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]];
-    const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]];
-    const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]];
-    const outStart = [0, 0, 0];
-    for (let p = 0; p < 3; p++) {
-      if (perm[p] < 0) {
-        outStart[p] = outStep[p] * (outdim[p] - 1);
-        outStep[p] = -outStep[p];
-      }
-    }
-    this.img2RASstep = outStep;
-    this.img2RASstart = outStart;
-    this.calculateOblique();
+    calculateRAS(this);
   }
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
   async hdr2RAS(nVolumes = 1) {
-    if (!this.permRAS) {
-      throw new Error("permRAS undefined");
-    }
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    const hdrBytes = hdrToArrayBuffer({ ...this.hdr, vox_offset: 352 }, false);
-    const hdr = await readHeaderAsync(hdrBytes.buffer, true);
-    if (nVolumes === 1) {
-      hdr.dims[0] = 3;
-      hdr.dims[4] = 1;
-    } else if (nVolumes > 1) {
-      hdr.dims[0] = 4;
-      hdr.dims[4] = nVolumes;
-    }
-    const perm = this.permRAS.slice();
-    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-      return hdr;
-    }
-    hdr.qform_code = 0;
-    for (let i = 1; i < 4; i++) {
-      hdr.dims[i] = this.dimsRAS[i];
-    }
-    for (let i = 0; i < this.pixDimsRAS.length; i++) {
-      hdr.pixDims[i] = this.pixDimsRAS[i];
-    }
-    let k = 0;
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        hdr.affine[i][j] = this.matRAS[k];
-        k++;
-      }
-    }
-    return hdr;
+    return hdr2RAS(this, nVolumes);
   }
   // Reorient raw image data to RAS
   // note that GPU-based orient shader is much faster
   // returns single 3D volume even for 4D input. Use nVolume to select volume (0 indexed)
   img2RAS(nVolume = 0) {
-    if (!this.permRAS) {
-      throw new Error("permRAS undefined");
-    }
-    if (!this.img) {
-      throw new Error("img undefined");
-    }
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    const perm = this.permRAS.slice();
-    if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-      return this.img;
-    }
-    const hdr = this.hdr;
-    const nVox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-    let volSkip = nVolume * nVox;
-    if (volSkip + nVox > this.img.length || volSkip < 0) {
-      volSkip = 0;
-      log.warn(`img2RAS nVolume (${nVolume}) out of bounds (${nVolume}+1)\xD7${nVox} > ${this.img.length}`);
-    }
-    const imgRAS = this.img.slice(0, nVox);
-    const aperm = [Math.abs(perm[0]), Math.abs(perm[1]), Math.abs(perm[2])];
-    const outdim = [hdr.dims[aperm[0]], hdr.dims[aperm[1]], hdr.dims[aperm[2]]];
-    const inStep = [1, hdr.dims[1], hdr.dims[1] * hdr.dims[2]];
-    const outStep = [inStep[aperm[0] - 1], inStep[aperm[1] - 1], inStep[aperm[2] - 1]];
-    const outStart = [0, 0, 0];
-    for (let p = 0; p < 3; p++) {
-      if (perm[p] < 0) {
-        outStart[p] = outStep[p] * (outdim[p] - 1);
-        outStep[p] = -outStep[p];
-      }
-    }
-    let j = 0;
-    for (let z = 0; z < outdim[2]; z++) {
-      const zi = outStart[2] + z * outStep[2];
-      for (let y = 0; y < outdim[1]; y++) {
-        const yi = outStart[1] + y * outStep[1];
-        for (let x = 0; x < outdim[0]; x++) {
-          const xi = outStart[0] + x * outStep[0];
-          imgRAS[j] = this.img[xi + yi + zi + volSkip];
-          j++;
-        }
-      }
-    }
-    return imgRAS;
+    return img2RAS(this, nVolume);
   }
-  // img2RAS()
   // not included in public docs
   // convert voxel location (row, column slice, indexed from 0) to world space
   vox2mm(XYZ, mtx) {
-    const sform = mat4_exports.clone(mtx);
-    mat4_exports.transpose(sform, sform);
-    const pos = vec4_exports.fromValues(XYZ[0], XYZ[1], XYZ[2], 1);
-    vec4_exports.transformMat4(pos, pos, sform);
-    const pos3 = vec3_exports.fromValues(pos[0], pos[1], pos[2]);
-    return pos3;
+    return vox2mm2(this, XYZ, mtx);
   }
   // vox2mm()
   // not included in public docs
   // convert world space to voxel location (row, column slice, indexed from 0)
   mm2vox(mm, frac = false) {
-    if (!this.matRAS) {
-      throw new Error("matRAS undefined");
-    }
-    const sform = mat4_exports.clone(this.matRAS);
-    const out = mat4_exports.clone(sform);
-    mat4_exports.transpose(out, sform);
-    mat4_exports.invert(out, out);
-    const pos = vec4_exports.fromValues(mm[0], mm[1], mm[2], 1);
-    vec4_exports.transformMat4(pos, pos, out);
-    const pos3 = vec3_exports.fromValues(pos[0], pos[1], pos[2]);
-    if (frac) {
-      return pos3;
-    }
-    return [Math.round(pos3[0]), Math.round(pos3[1]), Math.round(pos3[2])];
+    return mm2vox(this, mm, frac);
   }
-  // vox2mm()
+  // mm2vox()
   // not included in public docs
   // returns boolean: are two arrays identical?
   // TODO this won't work for complex objects. Maybe use array-equal from NPM
   arrayEquals(a, b) {
-    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
+    return arrayEquals(a, b);
   }
   // not included in public docs
   // base function for niivue.setColormap()
   // colormaps are continuously interpolated between 256 values (0..256)
   setColormap(cm) {
-    this._colormap = cm;
-    this.calMinMax();
-    if (this.onColormapChange) {
-      this.onColormapChange(this);
-    }
+    setColormap(this, cm);
   }
   // not included in public docs
   // base function for niivue.setColormap()
   // label colormaps are discretely sampled from an arbitrary number of colors
   setColormapLabel(cm) {
-    this.colormapLabel = cmapper.makeLabelLut(cm);
+    setColormapLabel(this, cm);
   }
   async setColormapLabelFromUrl(url) {
-    this.colormapLabel = await cmapper.makeLabelLutFromUrl(url);
+    return setColormapLabelFromUrl(this, url);
   }
   get colormap() {
-    return this._colormap;
+    return getColormap(this);
   }
   get colorMap() {
-    return this._colormap;
+    return getColormap(this);
   }
   // TODO duplicate fields, see niivue/loadDocument
   set colormap(cm) {
-    this.setColormap(cm);
+    setColormap(this, cm);
   }
   set colorMap(cm) {
-    this.setColormap(cm);
+    setColormap(this, cm);
   }
   get opacity() {
-    return this._opacity;
+    return getOpacity(this);
   }
   set opacity(opacity) {
-    this._opacity = opacity;
-    if (this.onOpacityChange) {
-      this.onOpacityChange(this);
-    }
+    setOpacity(this, opacity);
   }
   /**
    * set contrast/brightness to robust range (2%..98%)
@@ -26986,245 +27768,16 @@ var NVImage = class _NVImage {
    * @see {@link https://niivue.com/demos/features/timeseries2.html | live demo usage}
    */
   calMinMax(vol = Number.POSITIVE_INFINITY, isBorder = true) {
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    if (!this.img) {
-      throw new Error("img undefined");
-    }
-    let mn = Number.POSITIVE_INFINITY;
-    let mx = Number.NEGATIVE_INFINITY;
-    let nZero = 0;
-    let nNan = 0;
-    let nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
-    const nVol = Math.floor(this.img.length / nVox3D);
-    if (vol >= nVol) {
-      vol = this.frame4D;
-    }
-    vol = Math.min(vol, nVol - 1);
-    const skipVox = vol * nVox3D;
-    let img = [];
-    if (!isBorder) {
-      img = new this.img.constructor(nVox3D);
-      for (let i = 0; i < nVox3D; i++) {
-        img[i] = this.img[i + skipVox];
-      }
-    } else {
-      const borderFrac = 0.25;
-      const borders = [
-        Math.floor(borderFrac * this.hdr.dims[1]),
-        Math.floor(borderFrac * this.hdr.dims[2]),
-        Math.floor(borderFrac * this.hdr.dims[3])
-      ];
-      const dims = [
-        this.hdr.dims[1] - 2 * borders[0],
-        this.hdr.dims[2] - 2 * borders[1],
-        this.hdr.dims[3] - 2 * borders[2]
-      ];
-      const bordersHi = [dims[0] + borders[0], dims[1] + borders[1], dims[2] + borders[2]];
-      nVox3D = dims[0] * dims[1] * dims[2];
-      img = new this.img.constructor(nVox3D);
-      let j = -1;
-      let i = 0;
-      for (let z = 0; z < this.hdr.dims[3]; z++) {
-        for (let y = 0; y < this.hdr.dims[2]; y++) {
-          for (let x = 0; x < this.hdr.dims[1]; x++) {
-            j++;
-            if (x < borders[0] || y < borders[1] || z < borders[2]) {
-              continue;
-            }
-            if (x >= bordersHi[0] || y >= bordersHi[1] || z >= bordersHi[2]) {
-              continue;
-            }
-            img[i] = this.img[j + skipVox];
-            i++;
-          }
-        }
-      }
-    }
-    const isFastCalc = img.constructor !== Float64Array && img.constructor !== Float32Array && this.ignoreZeroVoxels;
-    if (isFastCalc) {
-      for (let i = 0; i < nVox3D; i++) {
-        mn = Math.min(img[i], mn);
-        mx = Math.max(img[i], mx);
-        if (img[i] === 0) {
-          nZero++;
-        }
-      }
-    } else {
-      for (let i = 0; i < nVox3D; i++) {
-        if (isNaN(img[i])) {
-          nNan++;
-          continue;
-        }
-        if (img[i] === 0) {
-          nZero++;
-          if (this.ignoreZeroVoxels) {
-            continue;
-          }
-        }
-        mn = Math.min(img[i], mn);
-        mx = Math.max(img[i], mx);
-      }
-    }
-    if (this.ignoreZeroVoxels && mn === mx && nZero > 0) {
-      mn = 0;
-    }
-    const mnScale = this.intensityRaw2Scaled(mn);
-    const mxScale = this.intensityRaw2Scaled(mx);
-    const cmap = cmapper.colormapFromKey(this._colormap);
-    let cmMin = 0;
-    let cmMax = 0;
-    if (cmap.min !== void 0) {
-      cmMin = cmap.min;
-    }
-    if (cmap.max !== void 0) {
-      cmMax = cmap.max;
-    }
-    if (cmMin === cmMax && this.trustCalMinMax && isFinite(this.hdr.cal_min) && isFinite(this.hdr.cal_max) && this.hdr.cal_max > this.hdr.cal_min) {
-      this.cal_min = this.hdr.cal_min;
-      this.cal_max = this.hdr.cal_max;
-      this.robust_min = this.cal_min;
-      this.robust_max = this.cal_max;
-      this.global_min = mnScale;
-      this.global_max = mxScale;
-      return [this.hdr.cal_min, this.hdr.cal_max, this.hdr.cal_min, this.hdr.cal_max];
-    }
-    if (cmMin !== cmMax) {
-      this.cal_min = cmMin;
-      this.cal_max = cmMax;
-      this.robust_min = this.cal_min;
-      this.robust_max = this.cal_max;
-      return [cmMin, cmMax, cmMin, cmMax];
-    }
-    const percentZero = 100 * nZero / (nVox3D - 0);
-    let isOverrideIgnoreZeroVoxels = false;
-    if (percentZero > 60 && !this.ignoreZeroVoxels) {
-      log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`);
-      isOverrideIgnoreZeroVoxels = true;
-      this.ignoreZeroVoxels = true;
-    }
-    if (!this.ignoreZeroVoxels) {
-      nZero = 0;
-    }
-    nZero += nNan;
-    const n2pct = Math.round((nVox3D - 0 - nZero) * this.percentileFrac);
-    if (n2pct < 1 || mn === mx) {
-      if (isBorder) {
-        return this.calMinMax(vol, false);
-      }
-      log.debug("no variability in image intensity?");
-      this.cal_min = mnScale;
-      this.cal_max = mxScale;
-      this.robust_min = this.cal_min;
-      this.robust_max = this.cal_max;
-      this.global_min = mnScale;
-      this.global_max = mxScale;
-      return [mnScale, mxScale, mnScale, mxScale];
-    }
-    const nBins = 1001;
-    const scl = (nBins - 1) / (mx - mn);
-    const hist = new Array(nBins);
-    for (let i = 0; i < nBins; i++) {
-      hist[i] = 0;
-    }
-    if (isFastCalc) {
-      for (let i = 0; i < nVox3D; i++) {
-        hist[Math.round((img[i] - mn) * scl)]++;
-      }
-    } else if (this.ignoreZeroVoxels) {
-      for (let i = 0; i < nVox3D; i++) {
-        if (img[i] === 0) {
-          continue;
-        }
-        if (isNaN(img[i])) {
-          continue;
-        }
-        hist[Math.round((img[i] - mn) * scl)]++;
-      }
-    } else {
-      for (let i = 0; i < nVox3D; i++) {
-        if (isNaN(img[i])) {
-          continue;
-        }
-        hist[Math.round((img[i] - mn) * scl)]++;
-      }
-    }
-    let n = 0;
-    let lo = 0;
-    while (n < n2pct) {
-      n += hist[lo];
-      lo++;
-    }
-    lo--;
-    n = 0;
-    let hi = nBins;
-    while (n < n2pct) {
-      hi--;
-      n += hist[hi];
-    }
-    if (lo === hi) {
-      let ok = -1;
-      while (ok !== 0) {
-        if (lo > 0) {
-          lo--;
-          if (hist[lo] > 0) {
-            ok = 0;
-          }
-        }
-        if (ok !== 0 && hi < nBins - 1) {
-          hi++;
-          if (hist[hi] > 0) {
-            ok = 0;
-          }
-        }
-        if (lo === 0 && hi === nBins - 1) {
-          ok = 0;
-        }
-      }
-    }
-    let pct2 = this.intensityRaw2Scaled(lo / scl + mn);
-    let pct98 = this.intensityRaw2Scaled(hi / scl + mn);
-    if (this.hdr.cal_min < this.hdr.cal_max && this.hdr.cal_min >= mnScale && this.hdr.cal_max <= mxScale) {
-      pct2 = this.hdr.cal_min;
-      pct98 = this.hdr.cal_max;
-    }
-    if (isOverrideIgnoreZeroVoxels) {
-      pct2 = Math.min(pct2, 0);
-    }
-    this.cal_min = pct2;
-    this.cal_max = pct98;
-    if (this.hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
-      this.cal_min = mnScale;
-      this.cal_max = mxScale;
-    }
-    this.robust_min = this.cal_min;
-    this.robust_max = this.cal_max;
-    this.global_min = mnScale;
-    this.global_max = mxScale;
-    return [pct2, pct98, mnScale, mxScale];
+    return calMinMax(this, vol, isBorder);
   }
-  // calMinMax
   // not included in public docs
   // convert voxel intensity from stored value to scaled intensity
   intensityRaw2Scaled(raw) {
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    if (this.hdr.scl_slope === 0) {
-      this.hdr.scl_slope = 1;
-    }
-    return raw * this.hdr.scl_slope + this.hdr.scl_inter;
+    return intensityRaw2Scaled(this, raw);
   }
   // convert voxel intensity from scaled intensity to stored value
   intensityScaled2Raw(scaled) {
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    if (this.hdr.scl_slope === 0) {
-      this.hdr.scl_slope = 1;
-    }
-    return (scaled - this.hdr.scl_inter) / this.hdr.scl_slope;
+    return intensityScaled2Raw(this, scaled);
   }
   /**
    * Converts NVImage to NIfTI compliant byte array, potentially compressed.
@@ -27241,203 +27794,19 @@ var NVImage = class _NVImage {
     return saveToDisk(this, fnm, drawing8);
   }
   static async fetchDicomData(url, headers = {}) {
-    if (url === "") {
-      throw Error("url must not be empty");
-    }
-    const absoluteUrlRE = /^(?:[a-z+]+:)?\/\//i;
-    let manifestUrl = absoluteUrlRE.test(url) ? url : new URL(url, window.location.href);
-    const extensionRE = /(?:.([^.]+))?$/;
-    const extension = extensionRE.exec(manifestUrl.pathname);
-    if (!extension) {
-      manifestUrl = new URL("niivue-manifest.txt", url);
-    }
-    let response = await fetch(manifestUrl, { headers });
-    if (!response.ok) {
-      throw Error(response.statusText);
-    }
-    const text = await response.text();
-    const lines = text.split("\n");
-    const baseUrlRE = /(.*\/).*/;
-    const folderUrl = baseUrlRE.exec(manifestUrl)[0];
-    const dataBuffer = [];
-    for (const line of lines) {
-      const fileUrl = new URL(line, folderUrl);
-      response = await fetch(fileUrl, { headers });
-      if (!response.ok) {
-        throw Error(response.statusText);
-      }
-      const contents = await response.arrayBuffer();
-      dataBuffer.push({ name: line, data: contents });
-    }
-    return dataBuffer;
+    return fetchDicomData(url, headers);
   }
   static async readFirstDecompressedBytes(stream, minBytes) {
-    const reader = stream.getReader();
-    const gunzip = new Gunzip();
-    const decompressedChunks = [];
-    let totalDecompressed = 0;
-    let doneReading = false;
-    let resolveFn;
-    let rejectFn;
-    const promise = new Promise((resolve2, reject) => {
-      resolveFn = resolve2;
-      rejectFn = reject;
-      return void 0;
-    });
-    function finalize() {
-      const result = new Uint8Array(totalDecompressed);
-      let offset = 0;
-      for (const chunk of decompressedChunks) {
-        result.set(chunk, offset);
-        offset += chunk.length;
-      }
-      resolveFn(result);
-    }
-    gunzip.ondata = (chunk) => {
-      decompressedChunks.push(chunk);
-      totalDecompressed += chunk.length;
-      if (totalDecompressed >= minBytes) {
-        doneReading = true;
-        reader.cancel().catch(() => {
-        });
-        finalize();
-      }
-    };
-    (async () => {
-      try {
-        while (!doneReading) {
-          const { done, value } = await reader.read();
-          if (done) {
-            doneReading = true;
-            gunzip.push(new Uint8Array(), true);
-            return;
-          }
-          gunzip.push(value, false);
-        }
-      } catch (err2) {
-        rejectFn(err2);
-      }
-    })().catch(() => {
-    });
-    return promise;
+    return readFirstDecompressedBytes(stream, minBytes);
   }
   static extractFilenameFromUrl(url) {
-    const params = new URL(url).searchParams;
-    const contentDisposition = params.get("response-content-disposition");
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/);
-      if (match) {
-        return decodeURIComponent(match[1]);
-      }
-    }
-    return url.split("/").pop().split("?")[0];
+    return extractFilenameFromUrl(url);
   }
   static async loadInitialVolumesGz(url = "", headers = {}, limitFrames4D = NaN) {
-    if (isNaN(limitFrames4D)) {
-      return null;
-    }
-    const response = await fetch(url, { headers, cache: "force-cache" });
-    let hdrBytes = 352;
-    let hdrU8s = await this.readFirstDecompressedBytes(response.body, hdrBytes);
-    const hdrView = new DataView(hdrU8s.buffer, hdrU8s.byteOffset, hdrU8s.byteLength);
-    const u162 = hdrView.getUint16(0, true);
-    const isNIfTI1 = u162 === 348;
-    const isNIfTI1be = u162 === 23553;
-    if (!isNIfTI1 && !isNIfTI1be) {
-      return null;
-    }
-    if (hdrU8s.length > 111) {
-      hdrBytes = hdrView.getFloat32(108, isNIfTI1);
-    }
-    if (hdrBytes > hdrU8s.length) {
-      hdrU8s = await this.readFirstDecompressedBytes(response.body, hdrBytes);
-    }
-    const isNifti1 = hdrU8s[0] === 92 && hdrU8s[1] === 1 || hdrU8s[1] === 92 && hdrU8s[0] === 1;
-    if (!isNifti1) {
-      return null;
-    }
-    const hdr = await readHeaderAsync(hdrU8s.buffer);
-    if (!hdr) {
-      throw new Error("Could not read NIfTI header");
-    }
-    const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-    const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-    const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-    const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
-    const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
-    if (volsToLoad === nFrame4D) {
-      return null;
-    }
-    const responseImg = await fetch(url, { headers, cache: "force-cache" });
-    const dataBytes = await this.readFirstDecompressedBytes(responseImg.body, bytesToLoad);
-    return dataBytes.buffer.slice(0, bytesToLoad);
+    return loadInitialVolumesGz(url, headers, limitFrames4D);
   }
   static async loadInitialVolumes(url = "", headers = {}, limitFrames4D = NaN) {
-    if (isNaN(limitFrames4D)) {
-      return null;
-    }
-    const response = await fetch(url, { headers, cache: "force-cache" });
-    const reader = response.body.getReader();
-    const { value, done } = await reader.read();
-    let hdrU8s = value;
-    if (done || !hdrU8s || hdrU8s.length < 2) {
-      throw new Error("Not enough data to determine compression");
-    }
-    const hdrView = new DataView(hdrU8s.buffer, hdrU8s.byteOffset, hdrU8s.byteLength);
-    const u162 = hdrView.getUint16(0, true);
-    const isGz = u162 === 35615;
-    if (isGz) {
-      await reader.cancel();
-      return this.loadInitialVolumesGz(url, headers, limitFrames4D);
-    }
-    const isNIfTI1 = u162 === 348;
-    const isNIfTI1be = u162 === 23553;
-    if (!isNIfTI1 && !isNIfTI1be) {
-      await reader.cancel();
-      return null;
-    }
-    let hdrBytes = 352;
-    if (hdrU8s.length > 111) {
-      hdrBytes = hdrView.getFloat32(108, isNIfTI1);
-    }
-    while (hdrU8s.length < hdrBytes) {
-      let concatU8s = function(arr1, arr2) {
-        const result = new Uint8Array(arr1.length + arr2.length);
-        result.set(arr1, 0);
-        result.set(arr2, arr1.length);
-        return result;
-      };
-      const { value: value2, done: done2 } = await reader.read();
-      if (done2 || !value2) {
-        break;
-      }
-      hdrU8s = concatU8s(hdrU8s, value2);
-    }
-    const hdr = await readHeaderAsync(hdrU8s.buffer);
-    if (!hdr) {
-      throw new Error("Could not read NIfTI header");
-    }
-    const nBytesPerVoxel = hdr.numBitsPerVoxel / 8;
-    const nVox3D = [1, 2, 3].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-    const nFrame4D = [4, 5, 6].reduce((acc, i) => acc * (hdr.dims[i] > 1 ? hdr.dims[i] : 1), 1);
-    const volsToLoad = Math.max(Math.min(limitFrames4D, nFrame4D), 1);
-    const bytesToLoad = hdr.vox_offset + volsToLoad * nVox3D * nBytesPerVoxel;
-    const imgU8s = new Uint8Array(bytesToLoad);
-    const hdrCopyLength = Math.min(hdrU8s.length, bytesToLoad);
-    imgU8s.set(hdrU8s.subarray(0, hdrCopyLength), 0);
-    let bytesRead = hdrCopyLength;
-    while (bytesRead < bytesToLoad) {
-      const { value: value2, done: done2 } = await reader.read();
-      if (done2 || !value2) {
-        await reader.cancel();
-        return null;
-      }
-      const remaining = Math.min(value2.length, bytesToLoad - bytesRead);
-      imgU8s.set(value2.subarray(0, remaining), bytesRead);
-      bytesRead += remaining;
-    }
-    await reader.cancel();
-    return imgU8s.buffer;
+    return loadInitialVolumes(url, headers, limitFrames4D);
   }
   /**
    * factory function to load and return a new NVImage instance from a given URL
@@ -27484,10 +27853,6 @@ var NVImage = class _NVImage {
         url = bytes[0] === 31 && bytes[1] === 139 ? "array.nii.gz" : "array.nii";
       }
     }
-    function getPrimaryExtension(filename) {
-      const match = filename.match(/\.([^.]+)(?:\.gz|\.bz2|\.xz)?$/);
-      return match ? match[1] : "";
-    }
     let ext = "";
     if (name === "") {
       ext = getPrimaryExtension(url);
@@ -27511,50 +27876,9 @@ var NVImage = class _NVImage {
       }
     }
     if (imageType === NVIMAGE_TYPE.ZARR) {
-      const urlParams = new URL(url).searchParams;
-      const zIndex = urlParams.get("z");
-      const yIndex = urlParams.get("y");
-      const xIndex = urlParams.get("x");
-      const zRange = zIndex ? slice(parseInt(zIndex), parseInt(zIndex) + 1) : null;
-      const yRange = yIndex ? slice(parseInt(yIndex), parseInt(yIndex) + 1) : null;
-      const xRange = xIndex ? slice(parseInt(xIndex), parseInt(xIndex) + 1) : null;
-      const zarrUrl = url.split("?")[0];
-      const store = new fetch_default(zarrUrl);
-      const root2 = root(store);
-      let arr;
-      try {
-        arr = await open(root2.resolve(url), { kind: "array" });
-      } catch (e) {
-        arr = await open(root2, { kind: "array" });
-      }
-      let view;
-      if (arr.shape.length === 4) {
-        const cRange = null;
-        const zDim2 = arr.shape[2];
-        const yDim = arr.shape[1];
-        const xDim = arr.shape[0];
-        if (zRange && zRange[0] >= zDim2) {
-          zRange[0] = zDim2 - 1;
-        }
-        if (yRange && yRange[0] >= yDim) {
-          yRange[0] = yDim - 1;
-        }
-        if (xRange && xRange[0] >= xDim) {
-          xRange[0] = xDim - 1;
-        }
-        view = await get2(arr, [xRange, yRange, zRange, cRange]);
-      } else {
-        view = await get2(arr, [xRange, yRange, zRange]);
-      }
-      dataBuffer = view.data;
-      const [height, width, zDim, cDim] = view.shape;
-      zarrData = {
-        data: dataBuffer,
-        width,
-        height,
-        depth: zDim,
-        channels: cDim
-      };
+      const zarrResult = await loadZarrData(url);
+      dataBuffer = zarrResult.dataBuffer;
+      zarrData = zarrResult.zarrData;
     }
     const isTestNIfTI = imageType === NVIMAGE_TYPE.DCM || NVIMAGE_TYPE.NII;
     if (!dataBuffer && isTestNIfTI) {
@@ -27565,73 +27889,13 @@ var NVImage = class _NVImage {
         dataBuffer = await _NVImage.fetchDicomData(url, headers);
         imageType = NVIMAGE_TYPE.DCM_MANIFEST;
       } else {
-        const response = await fetch(url, { headers });
-        if (!response.ok) {
-          throw Error(response.statusText);
-        }
-        if (!response.body) {
-          throw new Error("No readable stream available");
-        }
-        const stream = await uncompressStream(response.body);
-        const chunks = [];
-        const reader = stream.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          chunks.push(value);
-        }
-        const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-        dataBuffer = new ArrayBuffer(totalLength);
-        const dataView = new Uint8Array(dataBuffer);
-        let offset = 0;
-        for (const chunk of chunks) {
-          dataView.set(chunk, offset);
-          offset += chunk.length;
-        }
+        dataBuffer = await fetchAndStreamData(url, headers);
       }
     }
-    if (ext.toUpperCase() === "HEAD") {
-      if (urlImgData === "") {
-        urlImgData = url.substring(0, url.lastIndexOf("HEAD")) + "BRIK";
-      }
-    }
-    if (ext.toUpperCase() === "HDR") {
-      if (urlImgData === "") {
-        urlImgData = url.substring(0, url.lastIndexOf("HDR")) + "IMG";
-      }
-    }
+    const pairedUrl = getPairedImageUrl(url, ext.toUpperCase(), urlImgData);
     let pairedImgData = null;
-    if (urlImgData) {
-      try {
-        let response = await fetch(urlImgData, { headers });
-        if (response.status === 404 && (urlImgData.includes("BRIK") || urlImgData.includes("IMG"))) {
-          response = await fetch(`${urlImgData}.gz`, { headers });
-        }
-        if (response.ok && response.body) {
-          const stream = await uncompressStream(response.body);
-          const chunks = [];
-          const reader = stream.getReader();
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              break;
-            }
-            chunks.push(value);
-          }
-          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-          pairedImgData = new ArrayBuffer(totalLength);
-          const dataView = new Uint8Array(pairedImgData);
-          let offset = 0;
-          for (const chunk of chunks) {
-            dataView.set(chunk, offset);
-            offset += chunk.length;
-          }
-        }
-      } catch (error) {
-        console.error("Error loading paired image data:", error);
-      }
+    if (pairedUrl) {
+      pairedImgData = await fetchPairedImageData(pairedUrl, headers);
     }
     if (!dataBuffer) {
       throw new Error("Unable to load buffer properly from volume");
@@ -27677,46 +27941,7 @@ var NVImage = class _NVImage {
   // not included in public docs
   // loading Nifti files
   static async readFileAsync(file, bytesToLoad = NaN) {
-    let stream = file.stream();
-    if (!isNaN(bytesToLoad)) {
-      let bytesRead = 0;
-      const limiter = new TransformStream({
-        transform(chunk, controller) {
-          if (bytesRead >= bytesToLoad) {
-            controller.terminate();
-            return;
-          }
-          const remainingBytes = bytesToLoad - bytesRead;
-          if (chunk.length > remainingBytes) {
-            controller.enqueue(chunk.slice(0, remainingBytes));
-            controller.terminate();
-          } else {
-            controller.enqueue(chunk);
-          }
-          bytesRead += chunk.length;
-        }
-      });
-      stream = stream.pipeThrough(limiter);
-    }
-    const uncompressedStream = await uncompressStream(stream);
-    const chunks = [];
-    const reader = uncompressedStream.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      chunks.push(value);
-    }
-    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-    const result = new ArrayBuffer(totalLength);
-    const resultView = new Uint8Array(result);
-    let offset = 0;
-    for (const chunk of chunks) {
-      resultView.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return result;
+    return readFileAsync(file, bytesToLoad);
   }
   /**
    * factory function to load and return a new NVImage instance from a file in the browser
@@ -27865,15 +28090,6 @@ var NVImage = class _NVImage {
     colorbarVisible = true,
     colormapLabel = null
   }) {
-    function base64ToArrayBuffer(base642) {
-      const binary_string = window.atob(base642);
-      const len4 = binary_string.length;
-      const bytes = new Uint8Array(len4);
-      for (let i = 0; i < len4; i++) {
-        bytes[i] = binary_string.charCodeAt(i);
-      }
-      return bytes.buffer;
-    }
     let nvimage = null;
     try {
       const dataBuffer = base64ToArrayBuffer(base64);
@@ -27936,23 +28152,7 @@ var NVImage = class _NVImage {
    * get nifti specific metadata about the image
    */
   getImageMetadata() {
-    if (!this.hdr) {
-      throw new Error("hdr undefined");
-    }
-    const id = this.id;
-    const datatypeCode = this.hdr.datatypeCode;
-    const dims = this.hdr.dims;
-    const nx = dims[1];
-    const ny = dims[2];
-    const nz = dims[3];
-    const nt = Math.max(1, dims[4]);
-    const pixDims = this.hdr.pixDims;
-    const dx = pixDims[1];
-    const dy = pixDims[2];
-    const dz = pixDims[3];
-    const dt = pixDims[4];
-    const bpv = Math.floor(this.hdr.numBitsPerVoxel / 8);
-    return { id, datatypeCode, nx, ny, nz, nt, dx, dy, dz, dt, bpv };
+    return getImageMetadata(this);
   }
   /**
    * a factory function to make a zero filled image given a NVImage as a reference
@@ -27993,42 +28193,10 @@ var NVImage = class _NVImage {
    * Update options for image
    */
   applyOptionsUpdate(options) {
-    this.hdr.cal_min = options.cal_min;
-    this.hdr.cal_max = options.cal_max;
-    Object.assign(this, options);
+    applyOptionsUpdate(this, options);
   }
   getImageOptions() {
-    const options = NVImageFromUrlOptions(
-      "",
-      // url,
-      "",
-      // urlImageData
-      this.name,
-      // name
-      this._colormap,
-      // colormap
-      this.opacity,
-      // opacity
-      this.hdr.cal_min,
-      // cal_min
-      this.hdr.cal_max,
-      // cal_max
-      this.trustCalMinMax,
-      // trustCalMinMax,
-      this.percentileFrac,
-      // percentileFrac
-      this.ignoreZeroVoxels,
-      // ignoreZeroVoxels
-      this.useQFormNotSForm,
-      // useQFormNotSForm
-      this.colormapNegative,
-      // colormapNegative
-      this.frame4D,
-      this.imageType,
-      // imageType
-      this.colormapType
-    );
-    return options;
+    return getImageOptions(this);
   }
   /**
    * Converts NVImage to NIfTI compliant byte array.
@@ -28040,63 +28208,19 @@ var NVImage = class _NVImage {
   }
   // not included in public docs
   convertVox2Frac(vox) {
-    const frac = vec3_exports.fromValues(
-      (vox[0] + 0.5) / this.dimsRAS[1],
-      (vox[1] + 0.5) / this.dimsRAS[2],
-      (vox[2] + 0.5) / this.dimsRAS[3]
-    );
-    return frac;
+    return convertVox2Frac(this, vox);
   }
   // not included in public docs
   convertFrac2Vox(frac) {
-    const vox = vec3_exports.fromValues(
-      Math.round(frac[0] * this.dims[1] - 0.5),
-      // dims === RAS
-      Math.round(frac[1] * this.dims[2] - 0.5),
-      // dims === RAS
-      Math.round(frac[2] * this.dims[3] - 0.5)
-      // dims === RAS
-    );
-    return vox;
+    return convertFrac2Vox(this, frac);
   }
   // not included in public docs
   convertFrac2MM(frac, isForceSliceMM = false) {
-    const pos = vec4_exports.fromValues(frac[0], frac[1], frac[2], 1);
-    if (isForceSliceMM) {
-      vec4_exports.transformMat4(pos, pos, this.frac2mm);
-    } else {
-      vec4_exports.transformMat4(pos, pos, this.frac2mmOrtho);
-    }
-    return pos;
+    return convertFrac2MM(this, frac, isForceSliceMM);
   }
   // not included in public docs
   convertMM2Frac(mm, isForceSliceMM = false) {
-    const mm4 = vec4_exports.fromValues(mm[0], mm[1], mm[2], 1);
-    const d = this.dimsRAS;
-    const frac = vec3_exports.fromValues(0, 0, 0);
-    if (typeof d === "undefined") {
-      return frac;
-    }
-    if (!isForceSliceMM) {
-      const xform = mat4_exports.clone(this.frac2mmOrtho);
-      mat4_exports.invert(xform, xform);
-      vec4_exports.transformMat4(mm4, mm4, xform);
-      frac[0] = mm4[0];
-      frac[1] = mm4[1];
-      frac[2] = mm4[2];
-      return frac;
-    }
-    if (d[1] < 1 || d[2] < 1 || d[3] < 1) {
-      return frac;
-    }
-    const sform = mat4_exports.clone(this.matRAS);
-    mat4_exports.invert(sform, sform);
-    mat4_exports.transpose(sform, sform);
-    vec4_exports.transformMat4(mm4, mm4, sform);
-    frac[0] = (mm4[0] + 0.5) / d[1];
-    frac[1] = (mm4[1] + 0.5) / d[2];
-    frac[2] = (mm4[2] + 0.5) / d[3];
-    return frac;
+    return convertMM2Frac(this, mm, isForceSliceMM);
   }
 };
 
@@ -29164,14 +29288,14 @@ var NVMesh3 = class _NVMesh {
       if (isLineEnd && node < 1) {
         continue;
       }
-      let idx2 = indices[i] * 4;
+      let idx3 = indices[i] * 4;
       node++;
       if (node <= 1) {
-        prevV4 = vec4_exports.fromValues(posClrF32[idx2 + 0], posClrF32[idx2 + 1], posClrF32[idx2 + 2], posClrF32[idx2 + 3]);
+        prevV4 = vec4_exports.fromValues(posClrF32[idx3 + 0], posClrF32[idx3 + 1], posClrF32[idx3 + 2], posClrF32[idx3 + 3]);
         currV4 = vec4_exports.clone(prevV4);
         if (i + 1 < n_count && indices[i + 1] !== primitiveRestart) {
-          idx2 = indices[i + 1] * 4;
-          nextV4 = vec4_exports.fromValues(posClrF32[idx2 + 0], posClrF32[idx2 + 1], posClrF32[idx2 + 2], posClrF32[idx2 + 3]);
+          idx3 = indices[i + 1] * 4;
+          nextV4 = vec4_exports.fromValues(posClrF32[idx3 + 0], posClrF32[idx3 + 1], posClrF32[idx3 + 2], posClrF32[idx3 + 3]);
           vec3_exports.subtract(v1, v4ToV3(prevV4), v4ToV3(nextV4));
           vec3_exports.normalize(v1, v1);
           prevV2 = NiivueObject3D.getFirstPerpVector(v1);
@@ -29181,7 +29305,7 @@ var NVMesh3 = class _NVMesh {
       if (isLineEnd) {
         nextV4 = vec4_exports.clone(currV4);
       } else {
-        nextV4 = vec4_exports.fromValues(posClrF32[idx2 + 0], posClrF32[idx2 + 1], posClrF32[idx2 + 2], posClrF32[idx2 + 3]);
+        nextV4 = vec4_exports.fromValues(posClrF32[idx3 + 0], posClrF32[idx3 + 1], posClrF32[idx3 + 2], posClrF32[idx3 + 3]);
       }
       vec3_exports.subtract(v1, v4ToV3(prevV4), v4ToV3(nextV4));
       vec3_exports.normalize(v1, v1);
@@ -29223,7 +29347,7 @@ var NVMesh3 = class _NVMesh {
     }
     const nidx = (n_line_vtx - n_streamlines) * cyl_sides * 2 * 3;
     const idxs = new Uint32Array(nidx);
-    let idx = 0;
+    let idx2 = 0;
     vtx = 0;
     for (let i = 1; i < n_count; i++) {
       if (indices[i] === primitiveRestart) {
@@ -29238,18 +29362,18 @@ var NVMesh3 = class _NVMesh {
       const prevStartVtxOverflow = startVtx;
       const startVtxOverflow = startVtx + cyl_sides;
       for (let j = 0; j < cyl_sides; j++) {
-        idxs[idx++] = prevStartVtx;
-        idxs[idx++] = startVtx++;
+        idxs[idx2++] = prevStartVtx;
+        idxs[idx2++] = startVtx++;
         if (startVtx === startVtxOverflow) {
           startVtx = startVtxOverflow - cyl_sides;
         }
-        idxs[idx++] = startVtx;
-        idxs[idx++] = prevStartVtx++;
+        idxs[idx2++] = startVtx;
+        idxs[idx2++] = prevStartVtx++;
         if (prevStartVtx === prevStartVtxOverflow) {
           prevStartVtx = prevStartVtxOverflow - cyl_sides;
         }
-        idxs[idx++] = startVtx;
-        idxs[idx++] = prevStartVtx;
+        idxs[idx2++] = startVtx;
+        idxs[idx2++] = prevStartVtx;
       }
       vtx += cyl_sides;
     }
@@ -29445,19 +29569,19 @@ var NVMesh3 = class _NVMesh {
           cmap.A = Array.from(new Uint8ClampedArray(cmap.I.length).fill(255));
         }
         for (let i = 0; i < cmap.I.length; i++) {
-          let idx = cmap.I[i];
-          if (idx < 0 || idx >= this.groups.length) {
+          let idx2 = cmap.I[i];
+          if (idx2 < 0 || idx2 >= this.groups.length) {
             continue;
           }
           if (cmap.A[i] < 1) {
             continue;
           }
-          groupVisible[idx] = true;
-          idx *= 4;
-          lut[idx] = cmap.R[i];
-          lut[idx + 1] = cmap.G[i];
-          lut[idx + 2] = cmap.B[i];
-          lut[idx + 3] = 255;
+          groupVisible[idx2] = true;
+          idx2 *= 4;
+          lut[idx2] = cmap.R[i];
+          lut[idx2 + 1] = cmap.G[i];
+          lut[idx2 + 2] = cmap.B[i];
+          lut[idx2 + 3] = 255;
         }
       } else {
         if (fiberColor.startsWith("dpg") && this.dpg.length > 0) {
@@ -29474,12 +29598,12 @@ var NVMesh3 = class _NVMesh {
             }
             let color255 = Math.round(255 * Math.min(Math.max((v - mn) / (mx - mn), 0), 1));
             groupVisible[i] = true;
-            const idx = i * 4;
+            const idx2 = i * 4;
             color255 *= 4;
-            lut[idx] = lut255[color255 + 0];
-            lut[idx + 1] = lut255[color255 + 1];
-            lut[idx + 2] = lut255[color255 + 2];
-            lut[idx + 3] = 255;
+            lut[idx2] = lut255[color255 + 0];
+            lut[idx2 + 1] = lut255[color255 + 1];
+            lut[idx2 + 2] = lut255[color255 + 2];
+            lut[idx2 + 3] = 255;
           }
         }
       }
@@ -29584,15 +29708,7 @@ var NVMesh3 = class _NVMesh {
         const vEnd = offsetPt0[i + 1] - 1;
         const vStart3 = vStart * 3;
         const vEnd3 = vEnd * 3;
-        const RGBA = direction2rgb(
-          pts[vStart3],
-          pts[vStart3 + 1],
-          pts[vStart3 + 2],
-          pts[vEnd3],
-          pts[vEnd3 + 1],
-          pts[vEnd3 + 2],
-          dither * Math.random()
-        );
+        const RGBA = direction2rgb(pts[vStart3], pts[vStart3 + 1], pts[vStart3 + 2], pts[vEnd3], pts[vEnd3 + 1], pts[vEnd3 + 2], dither * Math.random());
         const vStart4 = vStart * 4 + 3;
         const vEnd4 = vEnd * 4 + 3;
         for (let j = vStart4; j <= vEnd4; j += 4) {
@@ -29774,11 +29890,11 @@ var NVMesh3 = class _NVMesh {
         continue;
       }
       v = Math.min(255, Math.max(0, Math.round(v))) * 4;
-      const idx = j * 4;
-      rgba[idx + 0] = lut[v + 0];
-      rgba[idx + 1] = lut[v + 1];
-      rgba[idx + 2] = lut[v + 2];
-      rgba[idx + 3] = opa;
+      const idx2 = j * 4;
+      rgba[idx2 + 0] = lut[v + 0];
+      rgba[idx2 + 1] = lut[v + 1];
+      rgba[idx2 + 2] = lut[v + 2];
+      rgba[idx2 + 3] = opa;
     }
     return rgba;
   }
@@ -29982,10 +30098,10 @@ var NVMesh3 = class _NVMesh {
               let count = 0;
               for (let i2 = 0; i2 < nvtx; i2++) {
                 if (layer.values[i2] === j) {
-                  const idx = i2 * 3;
-                  xyzMM[0] += this.pts[idx];
-                  xyzMM[1] += this.pts[idx + 1];
-                  xyzMM[2] += this.pts[idx + 2];
+                  const idx2 = i2 * 3;
+                  xyzMM[0] += this.pts[idx2];
+                  xyzMM[1] += this.pts[idx2 + 1];
+                  xyzMM[2] += this.pts[idx2 + 2];
                   count++;
                 }
               }
@@ -30025,11 +30141,11 @@ var NVMesh3 = class _NVMesh {
           let k = 0;
           for (let j = 0; j < nvtx; j++) {
             const v = layer.values[j + frameOffset] - minv;
-            const idx = 4 * Math.min(Math.max(v, 0), nLabel - 1);
-            rgba8[k + 0] = lut2[idx + 0];
-            rgba8[k + 1] = lut2[idx + 1];
-            rgba8[k + 2] = lut2[idx + 2];
-            rgba8[k + 3] = Math.round(lut2[idx + 3] / 255 * layer.opacity * 255);
+            const idx2 = 4 * Math.min(Math.max(v, 0), nLabel - 1);
+            rgba8[k + 0] = lut2[idx2 + 0];
+            rgba8[k + 1] = lut2[idx2 + 1];
+            rgba8[k + 2] = lut2[idx2 + 2];
+            rgba8[k + 3] = Math.round(lut2[idx2 + 3] / 255 * layer.opacity * 255);
             k += 4;
           }
           let opaque = new Array(nvtx).fill(false);
@@ -30510,7 +30626,7 @@ var NVMesh3 = class _NVMesh {
   }
   static async loadLayer(layer, nvmesh) {
     let buffer = new Uint8Array().buffer;
-    function base64ToArrayBuffer(base64) {
+    function base64ToArrayBuffer2(base64) {
       const binary_string = window.atob(base64);
       const len4 = binary_string.length;
       const bytes = new Uint8Array(len4);
@@ -30520,7 +30636,7 @@ var NVMesh3 = class _NVMesh {
       return bytes.buffer;
     }
     if (layer.base64 !== void 0) {
-      buffer = base64ToArrayBuffer(layer.base64);
+      buffer = base64ToArrayBuffer2(layer.base64);
     } else {
       if (!layer.url) {
         throw new Error("layer: missing url");
@@ -30574,17 +30690,7 @@ var NVMesh3 = class _NVMesh {
     if ("cal_max" in layer) {
       cal_max = layer.cal_max;
     }
-    const newLayer = await NVMeshLoaders.readLayer(
-      layerName,
-      buffer,
-      nvmesh,
-      opacity,
-      colormap,
-      colormapNegative,
-      useNegativeCmap,
-      cal_min,
-      cal_max
-    );
+    const newLayer = await NVMeshLoaders.readLayer(layerName, buffer, nvmesh, opacity, colormap, colormapNegative, useNegativeCmap, cal_min, cal_max);
     if (newLayer) {
       nvmesh.layers.push(newLayer);
     }
@@ -30662,15 +30768,7 @@ var NVMesh3 = class _NVMesh {
    *
    * @returns NVMesh instance
    */
-  static async loadFromFile({
-    file,
-    gl,
-    name = "",
-    opacity = 1,
-    rgba255 = [255, 255, 255, 255],
-    visible = true,
-    layers = []
-  } = {}) {
+  static async loadFromFile({ file, gl, name = "", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true, layers = [] } = {}) {
     if (!file) {
       throw new Error("file must be set");
     }
@@ -30691,22 +30789,14 @@ var NVMesh3 = class _NVMesh {
   /**
    * load and return a new NVMesh instance from a base64 encoded string
    */
-  async loadFromBase64({
-    base64,
-    gl,
-    name = "",
-    opacity = 1,
-    rgba255 = [255, 255, 255, 255],
-    visible = true,
-    layers = []
-  } = {}) {
+  async loadFromBase64({ base64, gl, name = "", opacity = 1, rgba255 = [255, 255, 255, 255], visible = true, layers = [] } = {}) {
     if (!base64) {
       throw new Error("base64 must bet set");
     }
     if (!gl) {
       throw new Error("rendering context must be set");
     }
-    function base64ToArrayBuffer(base642) {
+    function base64ToArrayBuffer2(base642) {
       const binary_string = window.atob(base642);
       const len4 = binary_string.length;
       const bytes = new Uint8Array(len4);
@@ -30715,7 +30805,7 @@ var NVMesh3 = class _NVMesh {
       }
       return bytes.buffer;
     }
-    const buffer = base64ToArrayBuffer(base64);
+    const buffer = base64ToArrayBuffer2(base64);
     const nvmesh = await _NVMesh.readMesh(buffer, name, gl, opacity, new Uint8Array(rgba255), visible);
     if (!layers || layers.length < 1) {
       return nvmesh;
@@ -32232,934 +32322,816 @@ var Roboto_Regular_default2 = {
   kerning: []
 };
 
-// src/nvconnectome.ts
-var defaultOptions = {
-  name: "untitled connectome",
-  nodeColormap: "warm",
-  nodeColormapNegative: "winter",
-  nodeMinColor: 0,
-  nodeMaxColor: 4,
-  nodeScale: 3,
-  edgeColormap: "warm",
-  edgeColormapNegative: "winter",
-  edgeMin: 2,
-  edgeMax: 6,
-  edgeScale: 1,
-  legendLineThickness: 0,
-  showLegend: true
-};
-var NVConnectome = class _NVConnectome extends NVMesh3 {
-  constructor(gl, connectome) {
-    super(new Float32Array([]), new Uint32Array([]), connectome.name, new Uint8Array([]), 1, true, gl, connectome);
-    __publicField(this, "gl");
-    __publicField(this, "nodesChanged");
-    this.gl = gl;
-    this.type = "connectome" /* CONNECTOME */;
-    if (this.nodes) {
-      this.updateLabels();
-    }
-    this.nodesChanged = new EventTarget();
+// src/niivue/core/gl.ts
+var TEXTURE3_FONT = 33987;
+var TEXTURE4_THUMBNAIL = 33988;
+var TEXTURE5_MATCAP = 33989;
+function initGL(canvas, isAntiAlias) {
+  const gl = canvas.getContext("webgl2", {
+    alpha: true,
+    antialias: isAntiAlias
+  });
+  if (!gl) {
+    throw new Error("Unable to initialize WebGL2. Your browser may not support it.");
   }
-  static convertLegacyConnectome(json) {
-    const connectome = { nodes: [], edges: [], ...defaultOptions };
-    for (const prop in json) {
-      if (prop in defaultOptions) {
-        const key = prop;
-        connectome[key] = json[key];
+  return {
+    gl,
+    max2D: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+    max3D: gl.getParameter(gl.MAX_3D_TEXTURE_SIZE)
+  };
+}
+function r8Tex(gl, texID, activeID, dims, isInit = false) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_3D, texID);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, dims[1], dims[2], dims[3]);
+  if (isInit) {
+    const img8 = new Uint8Array(dims[1] * dims[2] * dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RED, gl.UNSIGNED_BYTE, img8);
+  }
+  return texID;
+}
+function r16Tex(gl, texID, activeID, dims, img16) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_3D, texID);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16I, dims[1], dims[2], dims[3]);
+  const nv = dims[1] * dims[2] * dims[3];
+  if (img16.length !== nv) {
+    img16 = new Int16Array(nv);
+  }
+  gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RED_INTEGER, gl.SHORT, img16);
+  return texID;
+}
+function rgbaTex2D(gl, texID, activeID, dims, data = null, isFlipVertical = true) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_2D, texID);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, dims[1], dims[2]);
+  if (data) {
+    let drawData = data;
+    const width = dims[1];
+    const height = dims[2];
+    if (isFlipVertical) {
+      drawData = new Uint8Array(data.length);
+      const rowSize = width * 4;
+      for (let y = 0; y < height; y++) {
+        const srcStart = y * rowSize;
+        const destStart = (height - 1 - y) * rowSize;
+        drawData.set(data.subarray(srcStart, srcStart + rowSize), destStart);
       }
     }
-    const nodes = json.nodes;
-    for (let i = 0; i < nodes.names.length; i++) {
-      connectome.nodes.push({
-        name: nodes.names[i],
-        x: nodes.X[i],
-        y: nodes.Y[i],
-        z: nodes.Z[i],
-        colorValue: nodes.Color[i],
-        sizeValue: nodes.Size[i]
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, drawData);
+  }
+  return texID;
+}
+function rgbaTex(gl, texID, activeID, dims, isInit = false) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_3D, texID);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8, dims[1], dims[2], dims[3]);
+  if (isInit) {
+    const img8 = new Uint8Array(dims[1] * dims[2] * dims[3] * 4);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RGBA, gl.UNSIGNED_BYTE, img8);
+  }
+  return texID;
+}
+function rgba16Tex(gl, texID, activeID, dims, isInit = false) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_3D, texID);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 2);
+  gl.pixelStorei(gl.PACK_ALIGNMENT, 2);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA16UI, dims[1], dims[2], dims[3]);
+  if (isInit) {
+    const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RGBA_INTEGER, gl.UNSIGNED_SHORT, img16);
+  }
+  return texID;
+}
+function requestCORSIfNotSameOrigin(img, url) {
+  if (new URL(url, window.location.href).origin !== window.location.origin) {
+    img.crossOrigin = "";
+  }
+}
+async function loadPngAsTexture(gl, pngUrl, textureNum, fontShader, bmpShader, fontTexture, bmpTexture, matCapTexture, onBmpTextureLoaded, onDrawScene) {
+  return new Promise((resolve2, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      if (!bmpShader) {
+        return;
+      }
+      let pngTexture;
+      if (textureNum === 4) {
+        if (bmpTexture !== null) {
+          gl.deleteTexture(bmpTexture);
+        }
+        pngTexture = gl.createTexture();
+        const bmpTextureWH = img.width / img.height;
+        gl.activeTexture(TEXTURE4_THUMBNAIL);
+        bmpShader.use(gl);
+        gl.uniform1i(bmpShader.uniforms.bmpTexture, 4);
+        if (onBmpTextureLoaded) {
+          onBmpTextureLoaded(bmpTextureWH);
+        }
+      } else if (textureNum === 5) {
+        if (matCapTexture !== null) {
+          gl.deleteTexture(matCapTexture);
+        }
+        pngTexture = gl.createTexture();
+        gl.activeTexture(TEXTURE5_MATCAP);
+      } else {
+        if (!fontShader) {
+          reject(new Error("Font shader required for texture unit 3"));
+          return;
+        }
+        if (fontTexture !== null) {
+          gl.deleteTexture(fontTexture);
+        }
+        pngTexture = gl.createTexture();
+        fontShader.use(gl);
+        gl.activeTexture(TEXTURE3_FONT);
+        gl.uniform1i(fontShader.uniforms.fontTexture, 3);
+      }
+      gl.bindTexture(gl.TEXTURE_2D, pngTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      resolve2(pngTexture);
+      if (textureNum !== 4 && onDrawScene) {
+        onDrawScene();
+      }
+    };
+    img.onerror = reject;
+    requestCORSIfNotSameOrigin(img, pngUrl);
+    img.src = pngUrl;
+  });
+}
+
+// src/utils/nice.ts
+var nice = (x, round4) => {
+  const exp = Math.floor(Math.log(x) / Math.log(10));
+  const f = x / Math.pow(10, exp);
+  let nf;
+  if (round4) {
+    if (f < 1.5) {
+      nf = 1;
+    } else if (f < 3) {
+      nf = 2;
+    } else if (f < 7) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  } else {
+    if (f <= 1) {
+      nf = 1;
+    } else if (f <= 2) {
+      nf = 2;
+    } else if (f <= 5) {
+      nf = 5;
+    } else {
+      nf = 10;
+    }
+  }
+  return nf * Math.pow(10, exp);
+};
+
+// src/utils/file-utils.ts
+function readFileAsDataURL(input) {
+  return new Promise((resolve2, reject) => {
+    let filePromise;
+    if (input instanceof File) {
+      filePromise = Promise.resolve(input);
+    } else {
+      filePromise = new Promise((resolve3, reject2) => {
+        input.file(resolve3, reject2);
       });
     }
-    for (let i = 0; i < nodes.names.length - 1; i++) {
-      for (let j = i + 1; j < nodes.names.length; j++) {
-        const colorValue = json.edges[i * nodes.names.length + j];
-        connectome.edges.push({
-          first: i,
-          second: j,
-          colorValue
-        });
-      }
-    }
-    return connectome;
-  }
-  static convertFreeSurferConnectome(json, colormap = "warm") {
-    let isValid = true;
-    if (!("data_type" in json)) {
-      isValid = false;
-    } else if (json.data_type !== "fs_pointset") {
-      isValid = false;
-    }
-    if (!("points" in json)) {
-      isValid = false;
-    }
-    if (!isValid) {
-      throw Error("not a valid FreeSurfer json pointset");
-    }
-    const nodes = json.points.map((p) => ({
-      name: Array.isArray(p.comments) && p.comments.length > 0 && "text" in p.comments[0] ? p.comments[0].text : "",
-      x: p.coordinates.x,
-      y: p.coordinates.y,
-      z: p.coordinates.z,
-      colorValue: 1,
-      sizeValue: 1,
-      metadata: p.comments
-    }));
-    const connectome = {
-      ...defaultOptions,
-      nodeColormap: colormap,
-      edgeColormap: colormap,
-      nodes,
-      edges: []
-    };
-    return connectome;
-  }
-  updateLabels() {
-    const nodes = this.nodes;
-    if (nodes && nodes.length > 0) {
-      const largest = nodes.reduce((a, b) => a.sizeValue > b.sizeValue ? a : b).sizeValue;
-      let min4, max5;
-      if (typeof this.nodeMinColor !== "undefined" && isFinite(this.nodeMinColor)) {
-        min4 = this.nodeMinColor;
-      } else {
-        min4 = nodes[0].colorValue;
-        for (let i = 1; i < nodes.length; i++) {
-          if (nodes[i].colorValue < min4) {
-            min4 = nodes[i].colorValue;
-          }
-        }
-      }
-      if (typeof this.nodeMaxColor !== "undefined" && isFinite(this.nodeMaxColor)) {
-        max5 = this.nodeMaxColor;
-      } else {
-        max5 = nodes[0].colorValue;
-        for (let i = 1; i < nodes.length; i++) {
-          if (nodes[i].colorValue > max5) {
-            max5 = nodes[i].colorValue;
-          }
-        }
-      }
-      const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
-      const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert);
-      const hasNeg = "nodeColormapNegative" in this;
-      let legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0;
-      if (this.showLegend === false) {
-        legendLineThickness = 0;
-      }
-      for (let i = 0; i < nodes.length; i++) {
-        let color = nodes[i].colorValue;
-        let isNeg = false;
-        if (hasNeg && color < 0) {
-          isNeg = true;
-          color = -color;
-        }
-        if (min4 < max5) {
-          if (color < min4) {
-            log.warn("color value lower than min");
-            continue;
-          }
-          color = (color - min4) / (max5 - min4);
+    filePromise.then((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve2(reader.result);
         } else {
-          color = 1;
+          reject(new Error("Expected a string from FileReader.result"));
         }
-        color = Math.round(Math.max(Math.min(255, color * 255))) * 4;
-        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-        if (isNeg) {
-          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-        }
-        rgba = rgba.map((c) => c / 255);
-        log.debug("adding label for ", nodes[i]);
-        nodes[i].label = new NVLabel3D(
-          nodes[i].name,
-          {
-            textColor: rgba,
-            bulletScale: nodes[i].sizeValue / largest,
-            bulletColor: rgba,
-            lineWidth: legendLineThickness,
-            lineColor: rgba,
-            textScale: 1,
-            textAlignment: "left" /* LEFT */,
-            lineTerminator: "none" /* NONE */
-          },
-          [nodes[i].x, nodes[i].y, nodes[i].z]
-        );
-        log.debug("label for node:", nodes[i].label);
-      }
-    }
-  }
-  addConnectomeNode(node) {
-    log.debug("adding node", node);
-    if (!this.nodes) {
-      throw new Error("nodes not defined");
-    }
-    ;
-    this.nodes.push(node);
-    this.updateLabels();
-    this.nodesChanged.dispatchEvent(new CustomEvent("nodeAdded", { detail: { node } }));
-  }
-  deleteConnectomeNode(node) {
-    const index = this.nodes.indexOf(node);
-    const edges = this.edges;
-    if (edges) {
-      this.edges = edges.filter((e) => e.first !== index && e.second !== index);
-    }
-    this.nodes = this.nodes.filter((n) => n !== node);
-    this.updateLabels();
-    this.updateConnectome(this.gl);
-    this.nodesChanged.dispatchEvent(new CustomEvent("nodeDeleted", { detail: { node } }));
-  }
-  updateConnectomeNodeByIndex(index, updatedNode) {
-    ;
-    this.nodes[index] = updatedNode;
-    this.updateLabels();
-    this.updateConnectome(this.gl);
-    this.nodesChanged.dispatchEvent(new CustomEvent("nodeChanged", { detail: { node: updatedNode } }));
-  }
-  updateConnectomeNodeByPoint(point, updatedNode) {
-    const nodes = this.nodes;
-    if (!nodes) {
-      throw new Error("Node to update does not exist");
-    }
-    const node = nodes.find((node2) => NVUtilities.arraysAreEqual([node2.x, node2.y, node2.z], point));
-    if (!node) {
-      throw new Error(`Node with point ${point} to update does not exist`);
-    }
-    const index = nodes.findIndex((n) => n === node);
-    this.updateConnectomeNodeByIndex(index, updatedNode);
-  }
-  addConnectomeEdge(first, second, colorValue) {
-    const edges = this.edges;
-    let edge = edges.find((f) => (f.first === first || f.second === first) && f.first + f.second === first + second);
-    if (edge) {
-      return edge;
-    }
-    edge = { first, second, colorValue };
-    edges.push(edge);
-    this.updateConnectome(this.gl);
-    return edge;
-  }
-  deleteConnectomeEdge(first, second) {
-    const edges = this.edges;
-    const edge = edges.find((f) => (f.first === first || f.first === second) && f.first + f.second === first + second);
-    if (edge) {
-      this.edges = edges.filter((e) => e !== edge);
-    } else {
-      throw new Error(`edge between ${first} and ${second} not found`);
-    }
-    this.updateConnectome(this.gl);
-    return edge;
-  }
-  findClosestConnectomeNode(point, distance4) {
-    const nodes = this.nodes;
-    if (!nodes || nodes.length === 0) {
-      return null;
-    }
-    const closeNodes = nodes.map((n, i) => ({
-      node: n,
-      distance: Math.sqrt(Math.pow(n.x - point[0], 2) + Math.pow(n.y - point[1], 2) + Math.pow(n.z - point[2], 2)),
-      index: i
-    })).filter((n) => n.distance < distance4).sort((a, b) => a.distance - b.distance);
-    if (closeNodes.length > 0) {
-      return closeNodes[0].node;
-    } else {
-      return null;
-    }
-  }
-  updateConnectome(gl) {
-    const tris = [];
-    const pts = [];
-    const rgba255 = [];
-    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
-    let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert);
-    let hasNeg = "nodeColormapNegative" in this;
-    if (this.nodeMinColor === void 0) {
-      this.nodeMinColor = NaN;
-    }
-    if (this.nodeMaxColor === void 0) {
-      this.nodeMaxColor = NaN;
-    }
-    if (this.edgeMin === void 0) {
-      this.edgeMin = NaN;
-    }
-    if (this.edgeMax === void 0) {
-      this.edgeMax = NaN;
-    }
-    let min4 = this.nodeMinColor;
-    let max5 = this.nodeMaxColor;
-    if (!isFinite(min4) || !isFinite(min4)) {
-      const nodes2 = this.nodes;
-      min4 = nodes2[0].colorValue;
-      max5 = nodes2[0].colorValue;
-      for (let i = 0; i < nodes2.length; i++) {
-        min4 = Math.min(min4, nodes2[i].colorValue);
-        max5 = Math.max(max5, nodes2[i].colorValue);
-      }
-    }
-    const nodes = this.nodes;
-    const nNode = nodes.length;
-    for (let i = 0; i < nNode; i++) {
-      const radius = nodes[i].sizeValue * this.nodeScale;
-      if (radius <= 0) {
+      };
+      reader.onerror = () => {
+        reject(reader.error ?? new Error("Unknown FileReader error"));
+      };
+      reader.readAsDataURL(file);
+    }).catch((err2) => reject(err2));
+  });
+}
+
+// src/utils/image-utils.ts
+function img2ras16(volume) {
+  const dims = volume.hdr.dims;
+  const perm = volume.permRAS;
+  const vx = dims[1] * dims[2] * dims[3];
+  const img16 = new Int16Array(vx);
+  const layout = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    for (let j2 = 0; j2 < 3; j2++) {
+      if (Math.abs(perm[i]) - 1 !== j2) {
         continue;
       }
-      let color = nodes[i].colorValue;
-      let isNeg = false;
-      if (hasNeg && color < 0) {
-        isNeg = true;
-        color = -color;
-      }
-      if (min4 < max5) {
-        if (color < min4) {
-          continue;
-        }
-        color = (color - min4) / (max5 - min4);
-      } else {
-        color = 1;
-      }
-      color = Math.round(Math.max(Math.min(255, color * 255))) * 4;
-      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-      if (isNeg) {
-        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-      }
-      const pt = vec3_exports.fromValues(nodes[i].x, nodes[i].y, nodes[i].z);
-      NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
+      layout[j2] = i * Math.sign(perm[i]);
     }
-    lut = cmapper.colormap(this.edgeColormap, this.colormapInvert);
-    lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert);
-    hasNeg = "edgeColormapNegative" in this;
-    const edges = this.edges;
-    if (edges !== void 0 && edges.length > 0) {
-      min4 = this.edgeMin;
-      max5 = this.edgeMax;
-      if (!isFinite(min4) || !isFinite(min4)) {
-        min4 = edges[0].colorValue;
-        max5 = edges[0].colorValue;
-        for (let i = 0; i < edges.length; i++) {
-          min4 = Math.min(min4, edges[i].colorValue);
-          max5 = Math.max(max5, edges[i].colorValue);
-        }
+  }
+  let stride = 1;
+  const instride = [1, 1, 1];
+  const inflip = [false, false, false];
+  for (let i = 0; i < layout.length; i++) {
+    for (let j2 = 0; j2 < layout.length; j2++) {
+      const a = Math.abs(layout[j2]);
+      if (a !== i) {
+        continue;
       }
-      for (const edge of edges) {
-        let color = edge.colorValue;
-        const isNeg = hasNeg && color < 0;
-        if (isNeg) {
-          color = -color;
-        }
-        const radius = color * this.edgeScale;
-        if (radius <= 0) {
-          continue;
-        }
-        if (min4 < max5) {
-          if (color < min4) {
-            continue;
-          }
-          color = (color - min4) / (max5 - min4);
-        } else {
-          color = 1;
-        }
-        color = Math.round(Math.max(Math.min(255, color * 255))) * 4;
-        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
-        if (isNeg) {
-          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
-        }
-        const pti = vec3_exports.fromValues(nodes[edge.first].x, nodes[edge.first].y, nodes[edge.first].z);
-        const ptj = vec3_exports.fromValues(nodes[edge.second].x, nodes[edge.second].y, nodes[edge.second].z);
-        NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba);
+      instride[j2] = stride;
+      if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
+        inflip[j2] = true;
+      }
+      stride *= dims[j2 + 1];
+    }
+  }
+  let xlut = NVUtilities.range(0, dims[1] - 1, 1);
+  if (inflip[0]) {
+    xlut = NVUtilities.range(dims[1] - 1, 0, -1);
+  }
+  for (let i = 0; i < dims[1]; i++) {
+    xlut[i] *= instride[0];
+  }
+  let ylut = NVUtilities.range(0, dims[2] - 1, 1);
+  if (inflip[1]) {
+    ylut = NVUtilities.range(dims[2] - 1, 0, -1);
+  }
+  for (let i = 0; i < dims[2]; i++) {
+    ylut[i] *= instride[1];
+  }
+  let zlut = NVUtilities.range(0, dims[3] - 1, 1);
+  if (inflip[2]) {
+    zlut = NVUtilities.range(dims[3] - 1, 0, -1);
+  }
+  for (let i = 0; i < dims[3]; i++) {
+    zlut[i] *= instride[2];
+  }
+  let j = 0;
+  for (let z = 0; z < dims[3]; z++) {
+    for (let y = 0; y < dims[2]; y++) {
+      for (let x = 0; x < dims[1]; x++) {
+        img16[xlut[x] + ylut[y] + zlut[z]] = volume.img[j];
+        j++;
       }
     }
-    const pts32 = new Float32Array(pts);
-    const tris32 = new Uint32Array(tris);
-    const obj = NVMeshUtilities.getExtents(pts32);
-    this.furthestVertexFromOrigin = obj.mxDx;
-    this.extentsMin = obj.extentsMin;
-    this.extentsMax = obj.extentsMax;
-    const posNormClr = this.generatePosNormClr(pts32, tris32, new Uint8Array(rgba255));
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(tris32), gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW);
-    this.indexCount = tris.length;
   }
-  updateMesh(gl) {
-    this.updateConnectome(gl);
-    this.updateLabels();
+  return img16;
+}
+function unpackFloatFromVec4i(val) {
+  const bitSh = [1 / (256 * 256 * 256), 1 / (256 * 256), 1 / 256, 1];
+  return (val[0] * bitSh[0] + val[1] * bitSh[1] + val[2] * bitSh[2] + val[3] * bitSh[3]) / 255;
+}
+function intensityRaw2Scaled2(hdr, raw) {
+  if (hdr.scl_slope === 0) {
+    hdr.scl_slope = 1;
   }
-  json() {
-    const json = {};
-    for (const prop in this) {
-      if (prop in defaultOptions || prop === "nodes" || prop === "edges") {
-        json[prop] = this[prop];
-      }
-    }
-    return json;
-  }
-  /**
-   * Factory method to create connectome from options
-   */
-  static async loadConnectomeFromUrl(gl, url) {
-    const response = await fetch(url);
-    const json = await response.json();
-    return new _NVConnectome(gl, json);
-  }
-};
-
-// src/nvimage/RenderingUtils.ts
-function toNiivueObject3D(nvImage, id, gl) {
-  if (!nvImage.dimsRAS || !nvImage.matRAS || !nvImage.pixDimsRAS || !nvImage.vox2mm) {
-    throw new Error("Cannot create NiivueObject3D: Missing required RAS properties or vox2mm access on NVImage.");
-  }
-  const dimsRAS = nvImage.dimsRAS;
-  const matRAS = nvImage.matRAS;
-  const pixDimsRAS = nvImage.pixDimsRAS;
-  const L = -0.5;
-  const P = -0.5;
-  const I = -0.5;
-  const R = dimsRAS[1] - 1 + 0.5;
-  const A = dimsRAS[2] - 1 + 0.5;
-  const S = dimsRAS[3] - 1 + 0.5;
-  const vox2mmFn = nvImage.vox2mm;
-  const LPI = vox2mmFn.call(nvImage, [L, P, I], matRAS);
-  const LAI = vox2mmFn.call(nvImage, [L, A, I], matRAS);
-  const LPS = vox2mmFn.call(nvImage, [L, P, S], matRAS);
-  const LAS = vox2mmFn.call(nvImage, [L, A, S], matRAS);
-  const RPI = vox2mmFn.call(nvImage, [R, P, I], matRAS);
-  const RAI = vox2mmFn.call(nvImage, [R, A, I], matRAS);
-  const RPS = vox2mmFn.call(nvImage, [R, P, S], matRAS);
-  const RAS = vox2mmFn.call(nvImage, [R, A, S], matRAS);
-  const posTex = [
-    // Superior face vertices (Indices 0-3)
-    ...LPS,
-    ...[0, 0, 1],
-    // 0
-    ...RPS,
-    ...[1, 0, 1],
-    // 1
-    ...RAS,
-    ...[1, 1, 1],
-    // 2
-    ...LAS,
-    ...[0, 1, 1],
-    // 3
-    // Inferior face vertices (Indices 4-7)
-    ...LPI,
-    ...[0, 0, 0],
-    // 4
-    ...LAI,
-    ...[0, 1, 0],
-    // 5
-    ...RAI,
-    ...[1, 1, 0],
-    // 6
-    ...RPI,
-    ...[1, 0, 0]
-    // 7
-  ];
-  const indexBuffer = gl.createBuffer();
-  if (!indexBuffer) {
-    throw new Error("Failed to create GL index buffer");
-  }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  const indices = [
-    0,
-    3,
-    2,
-    2,
-    1,
-    0,
-    // Top
-    4,
-    7,
-    6,
-    6,
-    5,
-    4,
-    // Bottom
-    5,
-    6,
-    2,
-    2,
-    3,
-    5,
-    // Front -> Corresponds to LAI(5), RAI(6), RAS(2) / RAS(2), LAS(3), LAI(5)
-    4,
-    0,
-    1,
-    1,
-    7,
-    4,
-    // Back -> Corresponds to LPI(4), LPS(0), RPS(1) / RPS(1), RPI(7), LPI(4)
-    7,
-    1,
-    2,
-    2,
-    6,
-    7,
-    // Right -> Corresponds to RPI(7), RPS(1), RAS(2) / RAS(2), RAI(6), RPI(7)
-    4,
-    5,
-    3,
-    3,
-    0,
-    4
-    // Left -> Corresponds to LPI(4), LAI(5), LAS(3) / LAS(3), LPS(0), LPI(4)
-  ];
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-  const posTexBuffer = gl.createBuffer();
-  if (!posTexBuffer) {
-    throw new Error("Failed to create GL vertex buffer");
-  }
-  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW);
-  const vao = gl.createVertexArray();
-  if (!vao) {
-    throw new Error("Failed to create GL VAO");
-  }
-  gl.bindVertexArray(vao);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
-  const stride = 24;
-  gl.enableVertexAttribArray(0);
-  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
-  gl.enableVertexAttribArray(1);
-  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 12);
-  gl.bindVertexArray(null);
-  const obj3D = new NiivueObject3D(id, posTexBuffer, gl.TRIANGLES, indices.length, indexBuffer, vao);
-  const allCorners = [...LPS, ...RPS, ...RAS, ...LAS, ...LPI, ...LAI, ...RAI, ...RPI];
-  const extents = getExtents(allCorners);
-  obj3D.extentsMin = extents.min.slice();
-  obj3D.extentsMax = extents.max.slice();
-  obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
-  obj3D.originNegate = vec3_exports.clone(extents.origin);
-  vec3_exports.negate(obj3D.originNegate, obj3D.originNegate);
-  obj3D.fieldOfViewDeObliqueMM = [dimsRAS[1] * pixDimsRAS[1], dimsRAS[2] * pixDimsRAS[2], dimsRAS[3] * pixDimsRAS[3]];
-  return obj3D;
+  return raw * hdr.scl_slope + hdr.scl_inter;
 }
 
-// src/drawing/rle.ts
-function encodeRLE(data) {
-  const dl = data.length;
-  let dp = 0;
-  const r = new Uint8Array(dl + Math.ceil(0.01 * dl));
-  const rI = new Int8Array(r.buffer);
-  let rp = 0;
-  while (dp < dl) {
-    let v = data[dp];
-    dp++;
-    let rl = 1;
-    while (rl < 129 && dp < dl && data[dp] === v) {
-      dp++;
-      rl++;
+// src/utils/math-utils.ts
+function loose_label(min4, max5, ntick = 4) {
+  const range2 = nice(max5 - min4, false);
+  const d = nice(range2 / (ntick - 1), true);
+  const graphmin = Math.floor(min4 / d) * d;
+  const graphmax = Math.ceil(max5 / d) * d;
+  const perfect = graphmin === min4 && graphmax === max5;
+  return [d, graphmin, graphmax, perfect];
+}
+function tickSpacing(mn, mx) {
+  let v = loose_label(mn, mx, 3);
+  if (!v[3]) {
+    v = loose_label(mn, mx, 5);
+  }
+  if (!v[3]) {
+    v = loose_label(mn, mx, 4);
+  }
+  if (!v[3]) {
+    v = loose_label(mn, mx, 3);
+  }
+  if (!v[3]) {
+    v = loose_label(mn, mx, 5);
+  }
+  return [v[0], v[1], v[2]];
+}
+function deg2rad(deg) {
+  return deg * (Math.PI / 180);
+}
+function negMinMax(min4, max5, minNeg, maxNeg) {
+  let mn = -min4;
+  let mx = -max5;
+  if (isFinite(minNeg) && isFinite(maxNeg)) {
+    mn = minNeg;
+    mx = maxNeg;
+  }
+  if (mn > mx) {
+    ;
+    [mn, mx] = [mx, mn];
+  }
+  return [mn, mx];
+}
+
+// src/utils/webgl-utils.ts
+function swizzleVec3(vec, order = [0, 1, 2]) {
+  const vout = vec3_exports.create();
+  vout[0] = vec[order[0]];
+  vout[1] = vec[order[1]];
+  vout[2] = vec[order[2]];
+  return vout;
+}
+function isRadiological(mtx) {
+  const vRight = vec4_exports.fromValues(1, 0, 0, 0);
+  const vRotated = vec4_exports.create();
+  vec4_exports.transformMat4(vRotated, vRight, mtx);
+  return vRotated[0];
+}
+function unProject(winX, winY, winZ, mvpMatrix) {
+  const inp = vec4_exports.fromValues(winX, winY, winZ, 1);
+  const finalMatrix = mat4_exports.clone(mvpMatrix);
+  mat4_exports.invert(finalMatrix, finalMatrix);
+  inp[0] = inp[0] * 2 - 1;
+  inp[1] = inp[1] * 2 - 1;
+  inp[2] = inp[2] * 2 - 1;
+  const out = vec4_exports.create();
+  vec4_exports.transformMat4(out, inp, finalMatrix);
+  if (out[3] === 0) {
+    return out;
+  }
+  out[0] /= out[3];
+  out[1] /= out[3];
+  out[2] /= out[3];
+  return out;
+}
+
+// src/niivue/core/CoordinateTransform.ts
+function sceneExtentsMinMax(params, isSliceMM = true) {
+  const { volumes, meshes, volumeObject3D } = params;
+  let mn = vec3_exports.fromValues(0, 0, 0);
+  let mx = vec3_exports.fromValues(0, 0, 0);
+  if (volumes.length > 0) {
+    if (!volumeObject3D) {
+      throw new Error("volumeObject3D undefined");
     }
-    if (rl > 1) {
-      rI[rp] = -rl + 1;
-      rp++;
-      r[rp] = v;
-      rp++;
+    mn = vec3_exports.fromValues(volumeObject3D.extentsMin[0], volumeObject3D.extentsMin[1], volumeObject3D.extentsMin[2]);
+    mx = vec3_exports.fromValues(volumeObject3D.extentsMax[0], volumeObject3D.extentsMax[1], volumeObject3D.extentsMax[2]);
+    if (!isSliceMM) {
+      mn = vec3_exports.fromValues(volumes[0].extentsMinOrtho[0], volumes[0].extentsMinOrtho[1], volumes[0].extentsMinOrtho[2]);
+      mx = vec3_exports.fromValues(volumes[0].extentsMaxOrtho[0], volumes[0].extentsMaxOrtho[1], volumes[0].extentsMaxOrtho[2]);
+    }
+  }
+  if (meshes.length > 0) {
+    if (volumes.length < 1) {
+      const minExtents = meshes[0].extentsMin;
+      const maxExtents = meshes[0].extentsMax;
+      mn = vec3_exports.fromValues(minExtents[0], minExtents[1], minExtents[2]);
+      mx = vec3_exports.fromValues(maxExtents[0], maxExtents[1], maxExtents[2]);
+    }
+    for (let i = 0; i < meshes.length; i++) {
+      const minExtents = meshes[i].extentsMin;
+      const maxExtents = meshes[i].extentsMax;
+      const vmn = vec3_exports.fromValues(minExtents[0], minExtents[1], minExtents[2]);
+      vec3_exports.min(mn, mn, vmn);
+      const vmx = vec3_exports.fromValues(maxExtents[0], maxExtents[1], maxExtents[2]);
+      vec3_exports.max(mx, mx, vmx);
+    }
+  }
+  const range2 = vec3_exports.create();
+  vec3_exports.subtract(range2, mx, mn);
+  return [mn, mx, range2];
+}
+function mm2frac(mm, options) {
+  const { volumes, meshes, volumeObject3D, volIdx = 0, isSliceMM = false } = options;
+  if (volumes.length < 1) {
+    const frac = vec3_exports.fromValues(0.1, 0.5, 0.5);
+    const [mn, _mx, range2] = sceneExtentsMinMax({ volumes, meshes, volumeObject3D }, isSliceMM);
+    frac[0] = (mm[0] - mn[0]) / range2[0];
+    frac[1] = (mm[1] - mn[1]) / range2[1];
+    frac[2] = (mm[2] - mn[2]) / range2[2];
+    if (!isFinite(frac[0])) {
+      frac[0] = 0.5;
+    }
+    if (!isFinite(frac[1])) {
+      frac[1] = 0.5;
+    }
+    if (!isFinite(frac[2])) {
+      frac[2] = 0.5;
+    }
+    return frac;
+  }
+  return volumes[volIdx].convertMM2Frac(mm, isSliceMM);
+}
+function frac2mm(frac, options) {
+  const { volumes, meshes, volumeObject3D, volIdx = 0, isSliceMM = false } = options;
+  const pos = vec4_exports.fromValues(frac[0], frac[1], frac[2], 1);
+  if (volumes.length > 0) {
+    return volumes[volIdx].convertFrac2MM(frac, isSliceMM);
+  } else {
+    const [mn, mx] = sceneExtentsMinMax({ volumes, meshes, volumeObject3D }, isSliceMM);
+    const lerp4 = (x, y, a) => x * (1 - a) + y * a;
+    pos[0] = lerp4(mn[0], mx[0], frac[0]);
+    pos[1] = lerp4(mn[1], mx[1], frac[1]);
+    pos[2] = lerp4(mn[2], mx[2], frac[2]);
+  }
+  return pos;
+}
+function vox2frac(vox, volumes, volIdx = 0) {
+  return volumes[volIdx].convertVox2Frac(vox);
+}
+function frac2vox(frac, volumes, volIdx = 0) {
+  if (volumes.length <= volIdx) {
+    return vec3_exports.fromValues(0, 0, 0);
+  }
+  return volumes[volIdx].convertFrac2Vox(frac);
+}
+function vox2mm3(XYZ, mtx) {
+  return NVUtilities.vox2mm(XYZ, mtx);
+}
+function swizzleVec3MM(v3, axCorSag) {
+  if (axCorSag === 1 /* CORONAL */) {
+    return swizzleVec3(v3, [0, 2, 1]);
+  } else if (axCorSag === 2 /* SAGITTAL */) {
+    return swizzleVec3(v3, [1, 2, 0]);
+  }
+  return v3;
+}
+function screenXY2TextureFrac(x, y, screenSlices, sliceIndex, options) {
+  const { volumes, meshes, volumeObject3D, isSliceMM = false, restrict0to1 = true } = options;
+  const texFrac = vec3_exports.fromValues(-1, -1, -1);
+  const slice2 = screenSlices[sliceIndex];
+  const axCorSag = slice2.axCorSag;
+  if (axCorSag > 2 /* SAGITTAL */) {
+    return texFrac;
+  }
+  const ltwh = slice2.leftTopWidthHeight.slice();
+  let isMirror = false;
+  if (ltwh[2] < 0) {
+    isMirror = true;
+    ltwh[0] += ltwh[2];
+    ltwh[2] = -ltwh[2];
+  }
+  let fracX = (x - ltwh[0]) / ltwh[2];
+  if (isMirror) {
+    fracX = 1 - fracX;
+  }
+  const fracY = 1 - (y - ltwh[1]) / ltwh[3];
+  if (fracX < 0 || fracX > 1 || fracY < 0 || fracY > 1) {
+    return texFrac;
+  }
+  if (slice2.AxyzMxy.length < 4) {
+    return texFrac;
+  }
+  let xyzMM = vec3_exports.fromValues(0, 0, 0);
+  xyzMM[0] = slice2.leftTopMM[0] + fracX * slice2.fovMM[0];
+  xyzMM[1] = slice2.leftTopMM[1] + fracY * slice2.fovMM[1];
+  const v = slice2.AxyzMxy;
+  xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+  if (axCorSag === 1 /* CORONAL */) {
+    xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+  }
+  if (axCorSag === 2 /* SAGITTAL */) {
+    xyzMM = swizzleVec3(xyzMM, [2, 0, 1]);
+  }
+  const xyz = mm2frac(xyzMM, { volumes, meshes, volumeObject3D, isSliceMM });
+  if (restrict0to1) {
+    if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1) {
+      return texFrac;
+    }
+  }
+  return xyz;
+}
+function screenXY2mm(x, y, screenSlices, options) {
+  const { volumes, meshes, volumeObject3D, isSliceMM = false, forceSlice = -1 } = options;
+  for (let s = 0; s < screenSlices.length; s++) {
+    let i = s;
+    if (forceSlice >= 0) {
+      i = forceSlice;
+    }
+    const slice2 = screenSlices[i];
+    const axCorSag = slice2.axCorSag;
+    if (axCorSag > 2 /* SAGITTAL */) {
       continue;
     }
-    while (dp < dl) {
-      if (rl > 127) {
-        break;
-      }
-      if (dp + 2 < dl) {
-        if (v !== data[dp] && data[dp + 2] === data[dp] && data[dp + 1] === data[dp]) {
-          break;
-        }
-      }
-      v = data[dp];
-      dp++;
-      rl++;
-    }
-    r[rp] = rl - 1;
-    rp++;
-    for (let i = 0; i < rl; i++) {
-      r[rp] = data[dp - rl + i];
-      rp++;
-    }
-  }
-  log.debug("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
-  return r.slice(0, rp);
-}
-function decodeRLE(rle, decodedlen) {
-  const r = new Uint8Array(rle.buffer);
-  const rI = new Int8Array(r.buffer);
-  let rp = 0;
-  const d = new Uint8Array(decodedlen);
-  let dp = 0;
-  while (rp < r.length) {
-    const hdr = rI[rp];
-    rp++;
-    if (hdr < 0) {
-      const v = rI[rp];
-      rp++;
-      for (let i = 0; i < 1 - hdr; i++) {
-        d[dp] = v;
-        dp++;
-      }
-    } else {
-      for (let i = 0; i < hdr + 1; i++) {
-        d[dp] = rI[rp];
-        rp++;
-        dp++;
-      }
-    }
-  }
-  return d;
-}
-
-// src/drawing/undo.ts
-var drawUndo = ({
-  drawUndoBitmaps,
-  currentDrawUndoBitmap,
-  drawBitmap
-}) => {
-  const len4 = drawUndoBitmaps.length;
-  if (len4 < 1) {
-    log.debug("undo bitmaps not loaded");
-    return;
-  }
-  currentDrawUndoBitmap--;
-  if (currentDrawUndoBitmap < 0) {
-    currentDrawUndoBitmap = len4 - 1;
-  }
-  if (currentDrawUndoBitmap >= len4) {
-    currentDrawUndoBitmap = 0;
-  }
-  if (drawUndoBitmaps[currentDrawUndoBitmap].length < 2) {
-    log.debug("drawUndo is misbehaving");
-    return;
-  }
-  drawBitmap = decodeRLE(drawUndoBitmaps[currentDrawUndoBitmap], drawBitmap.length);
-  return { drawBitmap, currentDrawUndoBitmap };
-};
-
-// src/drawing/masks.ts
-function findBoundarySlices(sliceType, drawBitmap, dims) {
-  const { dimX, dimY, dimZ } = dims;
-  let axisSize;
-  if (sliceType === 0 /* AXIAL */) {
-    axisSize = dimZ;
-  } else if (sliceType === 1 /* CORONAL */) {
-    axisSize = dimY;
-  } else if (sliceType === 2 /* SAGITTAL */) {
-    axisSize = dimX;
-  } else {
-    return null;
-  }
-  let firstSliceWithData = -1;
-  let lastSliceWithData = -1;
-  for (let slice2 = 0; slice2 < axisSize; slice2++) {
-    let hasData = false;
-    if (sliceType === 0 /* AXIAL */) {
-      const offset = slice2 * dimX * dimY;
-      for (let i = 0; i < dimX * dimY; i++) {
-        if (drawBitmap[offset + i] > 0) {
-          hasData = true;
-          break;
-        }
-      }
-    } else if (sliceType === 1 /* CORONAL */) {
-      for (let z = 0; z < dimZ; z++) {
-        for (let x = 0; x < dimX; x++) {
-          const idx = x + slice2 * dimX + z * dimX * dimY;
-          if (drawBitmap[idx] > 0) {
-            hasData = true;
-            break;
-          }
-        }
-        if (hasData) {
-          break;
-        }
-      }
-    } else if (sliceType === 2 /* SAGITTAL */) {
-      for (let z = 0; z < dimZ; z++) {
-        for (let y = 0; y < dimY; y++) {
-          const idx = slice2 + y * dimX + z * dimX * dimY;
-          if (drawBitmap[idx] > 0) {
-            hasData = true;
-            break;
-          }
-        }
-        if (hasData) {
-          break;
-        }
-      }
-    }
-    if (hasData) {
-      if (firstSliceWithData === -1) {
-        firstSliceWithData = slice2;
-      }
-      lastSliceWithData = slice2;
-    }
-  }
-  if (firstSliceWithData === -1 || lastSliceWithData === -1) {
-    return null;
-  }
-  return { first: firstSliceWithData, last: lastSliceWithData };
-}
-function extractSlice(sliceIndex, sliceType, drawBitmap, dims) {
-  const { dimX, dimY, dimZ } = dims;
-  let sliceData;
-  if (sliceType === 0 /* AXIAL */) {
-    sliceData = new Float32Array(dimX * dimY);
-    const offset = sliceIndex * dimX * dimY;
-    for (let i = 0; i < dimX * dimY; i++) {
-      sliceData[i] = drawBitmap[offset + i];
-    }
-  } else if (sliceType === 1 /* CORONAL */) {
-    sliceData = new Float32Array(dimX * dimZ);
-    for (let z = 0; z < dimZ; z++) {
-      for (let x = 0; x < dimX; x++) {
-        const srcIdx = x + sliceIndex * dimX + z * dimX * dimY;
-        const dstIdx = x + z * dimX;
-        sliceData[dstIdx] = drawBitmap[srcIdx];
-      }
-    }
-  } else if (sliceType === 2 /* SAGITTAL */) {
-    sliceData = new Float32Array(dimY * dimZ);
-    for (let z = 0; z < dimZ; z++) {
-      for (let y = 0; y < dimY; y++) {
-        const srcIdx = sliceIndex + y * dimX + z * dimX * dimY;
-        const dstIdx = y + z * dimY;
-        sliceData[dstIdx] = drawBitmap[srcIdx];
-      }
-    }
-  } else {
-    throw new Error("Invalid slice type");
-  }
-  return sliceData;
-}
-function extractIntensitySlice(sliceIndex, sliceType, imageData, dims, maxVal) {
-  const { dimX, dimY, dimZ } = dims;
-  let sliceData;
-  if (sliceType === 0 /* AXIAL */) {
-    sliceData = new Float32Array(dimX * dimY);
-    const offset = sliceIndex * dimX * dimY;
-    for (let i = 0; i < dimX * dimY; i++) {
-      sliceData[i] = imageData[offset + i] / maxVal;
-    }
-  } else if (sliceType === 1 /* CORONAL */) {
-    sliceData = new Float32Array(dimX * dimZ);
-    for (let z = 0; z < dimZ; z++) {
-      for (let x = 0; x < dimX; x++) {
-        const srcIdx = x + sliceIndex * dimX + z * dimX * dimY;
-        const dstIdx = x + z * dimX;
-        sliceData[dstIdx] = imageData[srcIdx] / maxVal;
-      }
-    }
-  } else if (sliceType === 2 /* SAGITTAL */) {
-    sliceData = new Float32Array(dimY * dimZ);
-    for (let z = 0; z < dimZ; z++) {
-      for (let y = 0; y < dimY; y++) {
-        const srcIdx = sliceIndex + y * dimX + z * dimX * dimY;
-        const dstIdx = y + z * dimY;
-        sliceData[dstIdx] = imageData[srcIdx] / maxVal;
-      }
-    }
-  } else {
-    throw new Error("Invalid slice type");
-  }
-  return sliceData;
-}
-function insertColorMask(mask, sliceIndex, sliceType, drawBitmap, dims, binaryThreshold, color) {
-  const { dimX, dimY, dimZ } = dims;
-  if (sliceType === 0 /* AXIAL */) {
-    const offset = sliceIndex * dimX * dimY;
-    for (let i = 0; i < mask.length; i++) {
-      if (mask[i] >= binaryThreshold) {
-        drawBitmap[offset + i] = color;
-      }
-    }
-  } else if (sliceType === 1 /* CORONAL */) {
-    for (let z = 0; z < dimZ; z++) {
-      for (let x = 0; x < dimX; x++) {
-        const srcIdx = x + z * dimX;
-        const dstIdx = x + sliceIndex * dimX + z * dimX * dimY;
-        if (mask[srcIdx] >= binaryThreshold) {
-          drawBitmap[dstIdx] = color;
-        }
-      }
-    }
-  } else if (sliceType === 2 /* SAGITTAL */) {
-    for (let z = 0; z < dimZ; z++) {
-      for (let y = 0; y < dimY; y++) {
-        const srcIdx = y + z * dimY;
-        const dstIdx = sliceIndex + y * dimX + z * dimX * dimY;
-        if (mask[srcIdx] >= binaryThreshold) {
-          drawBitmap[dstIdx] = color;
-        }
-      }
-    }
-  } else {
-    throw new Error("Invalid slice type");
-  }
-}
-function smoothSlice(slice2, width, height) {
-  if (width < 3 || height < 3) {
-    return;
-  }
-  const temp = new Float32Array(slice2.length);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = x + y * width;
-      if (x === 0 || x === width - 1) {
-        temp[idx] = slice2[idx];
-      } else {
-        temp[idx] = (slice2[idx - 1] + 2 * slice2[idx] + slice2[idx + 1]) * 0.25;
-      }
-    }
-  }
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = x + y * width;
-      if (y === 0 || y === height - 1) {
-        slice2[idx] = temp[idx];
-      } else {
-        slice2[idx] = (temp[idx - width] + 2 * temp[idx] + temp[idx + width]) * 0.25;
-      }
-    }
-  }
-}
-function calculateIntensityWeight(intensity1, intensity2, targetIntensity, intensitySigma) {
-  const diff1 = Math.abs(targetIntensity - intensity1);
-  const diff2 = Math.abs(targetIntensity - intensity2);
-  const weight1 = Math.exp(-diff1 * diff1 / (2 * intensitySigma * intensitySigma));
-  const weight2 = Math.exp(-diff2 * diff2 / (2 * intensitySigma * intensitySigma));
-  const totalWeight = weight1 + weight2;
-  if (totalWeight < 1e-6) {
-    return 0.5;
-  }
-  return weight1 / totalWeight;
-}
-function doGeometricInterpolation(sliceLow, sliceHigh, z, sliceIndexLow, sliceIndexHigh, interpolatedSlice) {
-  const fracHigh = (z - sliceIndexLow) / (sliceIndexHigh - sliceIndexLow);
-  const fracLow = 1 - fracHigh;
-  for (let i = 0; i < sliceLow.length; i++) {
-    interpolatedSlice[i] = sliceLow[i] * fracLow + sliceHigh[i] * fracHigh;
-  }
-}
-function doIntensityGuidedInterpolation(sliceLow, sliceHigh, z, sliceIndexLow, sliceIndexHigh, interpolatedSlice, opts, intensityLow, intensityHigh, targetIntensity) {
-  const baseFracHigh = (z - sliceIndexLow) / (sliceIndexHigh - sliceIndexLow);
-  const baseFracLow = 1 - baseFracHigh;
-  for (let i = 0; i < sliceLow.length; i++) {
-    if (sliceLow[i] > 0 || sliceHigh[i] > 0) {
-      const intensityWeight = calculateIntensityWeight(
-        intensityLow[i],
-        intensityHigh[i],
-        targetIntensity[i],
-        opts.intensitySigma
-      );
-      const alpha = opts.intensityWeight;
-      const combinedWeightLow = alpha * intensityWeight + (1 - alpha) * baseFracLow;
-      const combinedWeightHigh = 1 - combinedWeightLow;
-      interpolatedSlice[i] = sliceLow[i] * combinedWeightLow + sliceHigh[i] * combinedWeightHigh;
-    } else {
-      interpolatedSlice[i] = sliceLow[i] * baseFracLow + sliceHigh[i] * baseFracHigh;
-    }
-  }
-}
-function interpolateMaskSlices(drawBitmap, dims, imageData, maxVal, sliceIndexLow, sliceIndexHigh, options, refreshDrawingCallback) {
-  const { dimX, dimY, dimZ } = dims;
-  const sliceType = options.sliceType ?? 0 /* AXIAL */;
-  let sliceWidth, sliceHeight, maxSliceIndex;
-  if (sliceType === 0 /* AXIAL */) {
-    sliceWidth = dimX;
-    sliceHeight = dimY;
-    maxSliceIndex = dimZ - 1;
-  } else if (sliceType === 1 /* CORONAL */) {
-    sliceWidth = dimX;
-    sliceHeight = dimZ;
-    maxSliceIndex = dimY - 1;
-  } else if (sliceType === 2 /* SAGITTAL */) {
-    sliceWidth = dimY;
-    sliceHeight = dimZ;
-    maxSliceIndex = dimX - 1;
-  } else {
-    throw new Error("Invalid slice type. Must be AXIAL, CORONAL, or SAGITTAL");
-  }
-  const opts = {
-    intensityWeight: options.intensityWeight ?? 0.7,
-    binaryThreshold: options.binaryThreshold ?? 0.375,
-    intensitySigma: options.intensitySigma ?? 0.1,
-    applySmoothingToSlices: options.applySmoothingToSlices ?? true,
-    useIntensityGuided: options.useIntensityGuided ?? true
-  };
-  if (sliceIndexLow !== void 0 && sliceIndexHigh !== void 0) {
-    if (sliceIndexLow >= sliceIndexHigh) {
-      throw new Error("Low slice index must be less than high slice index");
-    }
-    if (sliceIndexLow < 0 || sliceIndexHigh > maxSliceIndex) {
-      throw new Error(`Slice indices out of bounds [0, ${maxSliceIndex}]`);
-    }
-  }
-  const colorRanges = /* @__PURE__ */ new Map();
-  for (let sliceIdx = 0; sliceIdx <= maxSliceIndex; sliceIdx++) {
-    const slice2 = extractSlice(sliceIdx, sliceType, drawBitmap, dims);
-    for (let i = 0; i < slice2.length; i++) {
-      const color = slice2[i];
-      if (color > 0) {
-        if (!colorRanges.has(color)) {
-          colorRanges.set(color, { min: sliceIdx, max: sliceIdx });
-        } else {
-          const range2 = colorRanges.get(color);
-          range2.min = Math.min(range2.min, sliceIdx);
-          range2.max = Math.max(range2.max, sliceIdx);
-        }
-      }
-    }
-  }
-  for (const [color, range2] of colorRanges) {
-    const colorSliceLow = sliceIndexLow !== void 0 ? Math.max(sliceIndexLow, range2.min) : range2.min;
-    const colorSliceHigh = sliceIndexHigh !== void 0 ? Math.min(sliceIndexHigh, range2.max) : range2.max;
-    if (colorSliceLow >= colorSliceHigh || colorSliceHigh - colorSliceLow < 2) {
+    const ltwh = slice2.leftTopWidthHeight;
+    if (x < ltwh[0] || y < ltwh[1] || x > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3]) {
       continue;
     }
-    const sliceLow = extractSlice(colorSliceLow, sliceType, drawBitmap, dims);
-    const sliceHigh = extractSlice(colorSliceHigh, sliceType, drawBitmap, dims);
-    const colorMaskLow = new Float32Array(sliceLow.length);
-    const colorMaskHigh = new Float32Array(sliceHigh.length);
-    for (let i = 0; i < sliceLow.length; i++) {
-      colorMaskLow[i] = sliceLow[i] === color ? 1 : 0;
-      colorMaskHigh[i] = sliceHigh[i] === color ? 1 : 0;
+    const texFrac = screenXY2TextureFrac(x, y, screenSlices, i, {
+      volumes,
+      meshes,
+      volumeObject3D,
+      isSliceMM,
+      restrict0to1: false
+    });
+    if (texFrac[0] < 0) {
+      continue;
     }
-    if (opts.applySmoothingToSlices) {
-      smoothSlice(colorMaskLow, sliceWidth, sliceHeight);
-      smoothSlice(colorMaskHigh, sliceWidth, sliceHeight);
-    }
-    for (let z = colorSliceLow + 1; z < colorSliceHigh; z++) {
-      const colorInterpolated = new Float32Array(sliceWidth * sliceHeight);
-      if (opts.useIntensityGuided && imageData) {
-        const intensityLow = extractIntensitySlice(colorSliceLow, sliceType, imageData, dims, maxVal);
-        const intensityHigh = extractIntensitySlice(colorSliceHigh, sliceType, imageData, dims, maxVal);
-        const targetIntensity = extractIntensitySlice(z, sliceType, imageData, dims, maxVal);
-        doIntensityGuidedInterpolation(
-          colorMaskLow,
-          colorMaskHigh,
-          z,
-          colorSliceLow,
-          colorSliceHigh,
-          colorInterpolated,
-          opts,
-          intensityLow,
-          intensityHigh,
-          targetIntensity
-        );
-      } else {
-        doGeometricInterpolation(colorMaskLow, colorMaskHigh, z, colorSliceLow, colorSliceHigh, colorInterpolated);
-      }
-      insertColorMask(colorInterpolated, z, sliceType, drawBitmap, dims, opts.binaryThreshold, color);
+    const mm = frac2mm(texFrac, { volumes, meshes, volumeObject3D, isSliceMM });
+    return vec4_exports.fromValues(mm[0], mm[1], mm[2], i);
+  }
+  return vec4_exports.fromValues(NaN, NaN, NaN, NaN);
+}
+function canvasPos2frac(canvasPos, screenSlices, options) {
+  const { volumes, meshes, volumeObject3D, isSliceMM = false } = options;
+  for (let i = 0; i < screenSlices.length; i++) {
+    const texFrac = screenXY2TextureFrac(canvasPos[0], canvasPos[1], screenSlices, i, {
+      volumes,
+      meshes,
+      volumeObject3D,
+      isSliceMM
+    });
+    if (texFrac[0] >= 0) {
+      return texFrac;
     }
   }
-  refreshDrawingCallback();
+  return vec3_exports.fromValues(-1, -1, -1);
 }
+function frac2canvasPos(frac, screenSlices, options) {
+  const { volumes, meshes, volumeObject3D, isSliceMM = false, sliceType } = options;
+  const worldMM = frac2mm(frac, { volumes, meshes, volumeObject3D, isSliceMM });
+  let bestMatch = { index: -1, distance: Infinity };
+  for (let i = 0; i < screenSlices.length; i++) {
+    const slice2 = screenSlices[i];
+    const axCorSag = slice2.axCorSag;
+    if (axCorSag > 2 /* SAGITTAL */) {
+      continue;
+    }
+    if (slice2.AxyzMxy.length < 4) {
+      continue;
+    }
+    let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+    if (axCorSag === 1 /* CORONAL */) {
+      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+    }
+    if (axCorSag === 2 /* SAGITTAL */) {
+      xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+    }
+    const v = slice2.AxyzMxy;
+    const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+    const distance4 = Math.abs(xyzMM[2] - expectedZ);
+    const tolerance = sliceType === 3 /* MULTIPLANAR */ ? 1 : 0.1;
+    if (distance4 < bestMatch.distance) {
+      bestMatch = { index: i, distance: distance4 };
+    }
+    if (distance4 <= tolerance) {
+      const fracX = (xyzMM[0] - slice2.leftTopMM[0]) / slice2.fovMM[0];
+      const fracY = (xyzMM[1] - slice2.leftTopMM[1]) / slice2.fovMM[1];
+      if (fracX >= 0 && fracX <= 1 && fracY >= 0 && fracY <= 1) {
+        const ltwh = slice2.leftTopWidthHeight.slice();
+        let isMirror = false;
+        if (ltwh[2] < 0) {
+          isMirror = true;
+          ltwh[0] += ltwh[2];
+          ltwh[2] = -ltwh[2];
+        }
+        let screenFracX = fracX;
+        if (isMirror) {
+          screenFracX = 1 - fracX;
+        }
+        const screenFracY = 1 - fracY;
+        const screenX = ltwh[0] + screenFracX * ltwh[2];
+        const screenY = ltwh[1] + screenFracY * ltwh[3];
+        return [screenX, screenY];
+      }
+    }
+  }
+  if (bestMatch.index >= 0 && bestMatch.distance < 2) {
+    const i = bestMatch.index;
+    const slice2 = screenSlices[i];
+    const axCorSag = slice2.axCorSag;
+    let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+    if (axCorSag === 1 /* CORONAL */) {
+      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+    }
+    if (axCorSag === 2 /* SAGITTAL */) {
+      xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+    }
+    const v = slice2.AxyzMxy;
+    xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+    const fracX = (xyzMM[0] - slice2.leftTopMM[0]) / slice2.fovMM[0];
+    const fracY = (xyzMM[1] - slice2.leftTopMM[1]) / slice2.fovMM[1];
+    if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
+      const clampedFracX = Math.max(0, Math.min(1, fracX));
+      const clampedFracY = Math.max(0, Math.min(1, fracY));
+      const ltwh = slice2.leftTopWidthHeight.slice();
+      let isMirror = false;
+      if (ltwh[2] < 0) {
+        isMirror = true;
+        ltwh[0] += ltwh[2];
+        ltwh[2] = -ltwh[2];
+      }
+      let screenFracX = clampedFracX;
+      if (isMirror) {
+        screenFracX = 1 - clampedFracX;
+      }
+      const screenFracY = 1 - clampedFracY;
+      const screenX = ltwh[0] + screenFracX * ltwh[2];
+      const screenY = ltwh[1] + screenFracY * ltwh[3];
+      return [screenX, screenY];
+    }
+  }
+  return null;
+}
+function frac2canvasPosWithTile(frac, screenSlices, options) {
+  const { volumes, meshes, volumeObject3D, isSliceMM = false, preferredSliceType } = options;
+  const worldMM = frac2mm(frac, { volumes, meshes, volumeObject3D, isSliceMM });
+  let bestMatch = { index: -1, distance: Infinity };
+  for (let i = 0; i < screenSlices.length; i++) {
+    const slice2 = screenSlices[i];
+    const axCorSag = slice2.axCorSag;
+    if (axCorSag > 2 /* SAGITTAL */) {
+      continue;
+    }
+    if (slice2.AxyzMxy.length < 4) {
+      continue;
+    }
+    if (preferredSliceType !== void 0 && axCorSag !== preferredSliceType) {
+      continue;
+    }
+    let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+    if (axCorSag === 1 /* CORONAL */) {
+      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+    }
+    if (axCorSag === 2 /* SAGITTAL */) {
+      xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+    }
+    const v = slice2.AxyzMxy;
+    const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+    const distance4 = Math.abs(xyzMM[2] - expectedZ);
+    if (distance4 < bestMatch.distance) {
+      bestMatch = { index: i, distance: distance4 };
+    }
+    const tolerance = 0.1;
+    if (distance4 <= tolerance) {
+      const fracX = (xyzMM[0] - slice2.leftTopMM[0]) / slice2.fovMM[0];
+      const fracY = (xyzMM[1] - slice2.leftTopMM[1]) / slice2.fovMM[1];
+      if (fracX >= 0 && fracX <= 1 && fracY >= 0 && fracY <= 1) {
+        const ltwh = slice2.leftTopWidthHeight.slice();
+        let isMirror = false;
+        if (ltwh[2] < 0) {
+          isMirror = true;
+          ltwh[0] += ltwh[2];
+          ltwh[2] = -ltwh[2];
+        }
+        let screenFracX = fracX;
+        if (isMirror) {
+          screenFracX = 1 - fracX;
+        }
+        const screenFracY = 1 - fracY;
+        const screenX = ltwh[0] + screenFracX * ltwh[2];
+        const screenY = ltwh[1] + screenFracY * ltwh[3];
+        return { pos: [screenX, screenY], tileIndex: i };
+      }
+    }
+  }
+  if (bestMatch.index >= 0 && bestMatch.distance < 2) {
+    const i = bestMatch.index;
+    const slice2 = screenSlices[i];
+    const axCorSag = slice2.axCorSag;
+    let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
+    if (axCorSag === 1 /* CORONAL */) {
+      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
+    }
+    if (axCorSag === 2 /* SAGITTAL */) {
+      xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
+    }
+    const v = slice2.AxyzMxy;
+    xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
+    const fracX = (xyzMM[0] - slice2.leftTopMM[0]) / slice2.fovMM[0];
+    const fracY = (xyzMM[1] - slice2.leftTopMM[1]) / slice2.fovMM[1];
+    if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
+      const clampedFracX = Math.max(0, Math.min(1, fracX));
+      const clampedFracY = Math.max(0, Math.min(1, fracY));
+      const ltwh = slice2.leftTopWidthHeight.slice();
+      let isMirror = false;
+      if (ltwh[2] < 0) {
+        isMirror = true;
+        ltwh[0] += ltwh[2];
+        ltwh[2] = -ltwh[2];
+      }
+      let screenFracX = clampedFracX;
+      if (isMirror) {
+        screenFracX = 1 - clampedFracX;
+      }
+      const screenFracY = 1 - clampedFracY;
+      const screenX = ltwh[0] + screenFracX * ltwh[2];
+      const screenY = ltwh[1] + screenFracY * ltwh[3];
+      return { pos: [screenX, screenY], tileIndex: i };
+    }
+  }
+  return null;
+}
+
+// src/shader.ts
+var compileShader = function(gl, vert, frag) {
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, vert);
+  gl.compileShader(vs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, frag);
+  gl.compileShader(fs);
+  const program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.log(gl.getProgramInfoLog(program));
+    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+      console.log("Vertex shader compilation error:", gl.getShaderInfoLog(vs));
+    }
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+      console.log("Fragment shader compilation error:", gl.getShaderInfoLog(fs));
+    }
+    log.error(gl.getProgramInfoLog(program));
+    throw new Error("Shader failed to link, see console for log");
+  }
+  return program;
+};
+var Shader = class {
+  constructor(gl, vertexSrc, fragmentSrc) {
+    __publicField(this, "program");
+    __publicField(this, "uniforms", {});
+    __publicField(this, "isMatcap");
+    __publicField(this, "isCrosscut");
+    this.program = compileShader(gl, vertexSrc, fragmentSrc);
+    const regexUniform = /uniform[^;]+[ ](\w+);/g;
+    const matchUniformName = /uniform[^;]+[ ](\w+);/;
+    const vertexUnifs = vertexSrc.match(regexUniform);
+    const fragUnifs = fragmentSrc.match(regexUniform);
+    if (vertexUnifs) {
+      vertexUnifs.forEach((unif) => {
+        const m = unif.match(matchUniformName);
+        this.uniforms[m[1]] = -1;
+      });
+    }
+    if (fragUnifs) {
+      fragUnifs.forEach((unif) => {
+        const m = unif.match(matchUniformName);
+        this.uniforms[m[1]] = -1;
+      });
+    }
+    for (const unif in this.uniforms) {
+      this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
+    }
+  }
+  use(gl) {
+    gl.useProgram(this.program);
+  }
+};
 
 // src/shader-srcs.ts
 var vertRenderShader = `#version 300 es
@@ -35404,273 +35376,1534 @@ ${kGradientMagnitude}
   FragColor = gradientSample;
 }`;
 
-// src/shader.ts
-var compileShader = function(gl, vert, frag) {
-  const vs = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vs, vert);
-  gl.compileShader(vs);
-  const fs = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fs, frag);
-  gl.compileShader(fs);
-  const program = gl.createProgram();
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.log(gl.getProgramInfoLog(program));
-    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-      console.log("Vertex shader compilation error:", gl.getShaderInfoLog(vs));
+// src/niivue/core/ShaderManager.ts
+function createDefaultMeshShaders() {
+  return [
+    {
+      Name: "Phong",
+      Frag: fragMeshShader
+    },
+    {
+      Name: "Matte",
+      Frag: fragMeshMatteShader
+    },
+    {
+      Name: "Harmonic",
+      Frag: fragMeshShaderSHBlue
+    },
+    {
+      Name: "Hemispheric",
+      Frag: fragMeshHemiShader
+    },
+    {
+      Name: "Crevice",
+      Frag: fragMeshShaderCrevice
+    },
+    {
+      Name: "Edge",
+      Frag: fragMeshEdgeShader
+    },
+    {
+      Name: "Diffuse",
+      Frag: fragMeshDiffuseEdgeShader
+    },
+    {
+      Name: "Outline",
+      Frag: fragMeshOutlineShader
+    },
+    {
+      Name: "Specular",
+      Frag: fragMeshSpecularEdgeShader
+    },
+    {
+      Name: "Toon",
+      Frag: fragMeshToonShader
+    },
+    {
+      Name: "Flat",
+      Frag: fragFlatMeshShader
+    },
+    {
+      Name: "Matcap",
+      Frag: fragMeshMatcapShader
+    },
+    {
+      Name: "Rim",
+      Frag: fragMeshRimShader
+    },
+    {
+      Name: "Silhouette",
+      Frag: fragMeshContourShader
+    },
+    {
+      Name: "Crosscut",
+      Frag: fragCrosscutMeshShader
     }
-    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-      console.log("Fragment shader compilation error:", gl.getShaderInfoLog(fs));
+  ];
+}
+function initRenderShader(params) {
+  const { gl, shader, gradientAmount = 0, renderDrawAmbientOcclusion, renderSilhouette, gradientOpacity } = params;
+  shader.use(gl);
+  gl.uniform1i(shader.uniforms.volume, 0);
+  gl.uniform1i(shader.uniforms.colormap, 1);
+  gl.uniform1i(shader.uniforms.overlay, 2);
+  gl.uniform1i(shader.uniforms.drawing, 7);
+  gl.uniform1i(shader.uniforms.paqd, 8);
+  gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [renderDrawAmbientOcclusion, 1]);
+  gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
+  gl.uniform1f(shader.uniforms.silhouettePower, renderSilhouette);
+  const gradientOpacityLut = new Float32Array(gradientOpacityLutCount);
+  for (let i = 0; i < gradientOpacityLutCount; i++) {
+    if (gradientOpacity === 0) {
+      gradientOpacityLut[i] = 1;
+    } else {
+      gradientOpacityLut[i] = Math.pow(i / (gradientOpacityLutCount - 1), gradientOpacity * 8);
     }
-    log.error(gl.getProgramInfoLog(program));
-    throw new Error("Shader failed to link, see console for log");
   }
-  return program;
+  gl.uniform1fv(gl.getUniformLocation(shader.program, "gradientOpacity"), gradientOpacityLut);
+  shader.uniforms.clipPlanes = gl.getUniformLocation(shader.program, "clipPlanes[0]");
+}
+function setCustomSliceShader(params) {
+  const { gl, fragmentShaderText, drawOpacity, customSliceShader } = params;
+  if (customSliceShader) {
+    gl.deleteProgram(customSliceShader.program);
+  }
+  if (!fragmentShaderText) {
+    return null;
+  }
+  const shader = new Shader(gl, vertSliceMMShader, fragmentShaderText);
+  shader.use(gl);
+  gl.uniform1i(shader.uniforms.volume, 0);
+  gl.uniform1i(shader.uniforms.colormap, 1);
+  gl.uniform1i(shader.uniforms.overlay, 2);
+  gl.uniform1i(shader.uniforms.drawing, 7);
+  gl.uniform1i(shader.uniforms.paqd, 8);
+  gl.uniform1f(shader.uniforms.drawOpacity, drawOpacity);
+  return shader;
+}
+function meshShaderNameToNumber(meshShaderName, meshShaders) {
+  const name = meshShaderName.toLowerCase();
+  for (let i = 0; i < meshShaders.length; i++) {
+    if (meshShaders[i].Name.toLowerCase() === name) {
+      return i;
+    }
+  }
+  return void 0;
+}
+function createCustomMeshShader(params) {
+  const { gl, fragmentShaderText, name, meshShaders } = params;
+  if (!fragmentShaderText) {
+    throw new Error("Need fragment shader");
+  }
+  const existingIndex = meshShaderNameToNumber(name, meshShaders);
+  if (existingIndex !== void 0 && existingIndex >= 0) {
+    const existingShader = meshShaders[existingIndex].shader;
+    if (existingShader) {
+      gl.deleteProgram(existingShader.program);
+    }
+    meshShaders.splice(existingIndex, 1);
+  }
+  const shader = new Shader(gl, vertMeshShader, fragmentShaderText);
+  shader.use(gl);
+  return {
+    Name: name,
+    Frag: fragmentShaderText,
+    shader
+  };
+}
+function meshShaderNames(meshShaders, sort = true) {
+  const names = meshShaders.map((shader) => shader.Name);
+  return sort ? names.sort() : names;
+}
+function initSliceShaders(gl, drawOpacity) {
+  const slice2DShader = new Shader(gl, vertSliceMMShader, fragSlice2DShader);
+  slice2DShader.use(gl);
+  gl.uniform1i(slice2DShader.uniforms.volume, 0);
+  gl.uniform1i(slice2DShader.uniforms.colormap, 1);
+  gl.uniform1i(slice2DShader.uniforms.overlay, 2);
+  gl.uniform1i(slice2DShader.uniforms.drawing, 7);
+  gl.uniform1f(slice2DShader.uniforms.drawOpacity, drawOpacity);
+  const sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader);
+  sliceMMShader.use(gl);
+  gl.uniform1i(sliceMMShader.uniforms.volume, 0);
+  gl.uniform1i(sliceMMShader.uniforms.colormap, 1);
+  gl.uniform1i(sliceMMShader.uniforms.overlay, 2);
+  gl.uniform1i(sliceMMShader.uniforms.drawing, 7);
+  gl.uniform1f(sliceMMShader.uniforms.drawOpacity, drawOpacity);
+  const sliceV1Shader = new Shader(gl, vertSliceMMShader, fragSliceV1Shader);
+  sliceV1Shader.use(gl);
+  gl.uniform1i(sliceV1Shader.uniforms.volume, 0);
+  gl.uniform1i(sliceV1Shader.uniforms.colormap, 1);
+  gl.uniform1i(sliceV1Shader.uniforms.overlay, 2);
+  gl.uniform1i(sliceV1Shader.uniforms.drawing, 7);
+  gl.uniform1f(sliceV1Shader.uniforms.drawOpacity, drawOpacity);
+  return { slice2DShader, sliceMMShader, sliceV1Shader };
+}
+function initOrientCubeShader(gl, orientCube2, unusedVAO) {
+  const shader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const positionBuffer = gl.createBuffer();
+  gl.enableVertexAttribArray(0);
+  gl.enableVertexAttribArray(1);
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, orientCube2, gl.STATIC_DRAW);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
+  gl.bindVertexArray(unusedVAO);
+  return { shader, vao };
+}
+function init2DShaders(gl) {
+  const rectShader = new Shader(gl, vertRectShader, fragRectShader);
+  rectShader.use(gl);
+  const rectOutlineShader = new Shader(gl, vertRectShader, fragRectOutlineShader);
+  rectOutlineShader.use(gl);
+  const lineShader = new Shader(gl, vertLineShader, fragRectShader);
+  lineShader.use(gl);
+  const line3DShader = new Shader(gl, vertLine3DShader, fragRectShader);
+  line3DShader.use(gl);
+  const circleShader = new Shader(gl, vertCircleShader, fragCircleShader);
+  circleShader.use(gl);
+  return { rectShader, rectOutlineShader, lineShader, line3DShader, circleShader };
+}
+function initVolumeRenderShaders(params) {
+  const { gl, renderDrawAmbientOcclusion, renderSilhouette, gradientOpacity } = params;
+  const renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader);
+  initRenderShader({ gl, shader: renderVolumeShader, renderDrawAmbientOcclusion, renderSilhouette, gradientOpacity });
+  const renderSliceShader = new Shader(gl, vertRenderShader, fragRenderSliceShader);
+  initRenderShader({ gl, shader: renderSliceShader, renderDrawAmbientOcclusion, renderSilhouette, gradientOpacity });
+  const renderGradientShader = new Shader(gl, vertRenderShader, fragRenderGradientShader);
+  initRenderShader({
+    gl,
+    shader: renderGradientShader,
+    gradientAmount: 0.3,
+    renderDrawAmbientOcclusion,
+    renderSilhouette,
+    gradientOpacity
+  });
+  gl.uniform1i(renderGradientShader.uniforms.matCap, 5);
+  gl.uniform1i(renderGradientShader.uniforms.gradient, 6);
+  const renderGradientValuesShader = new Shader(gl, vertRenderShader, fragRenderGradientValuesShader);
+  initRenderShader({
+    gl,
+    shader: renderGradientValuesShader,
+    renderDrawAmbientOcclusion,
+    renderSilhouette,
+    gradientOpacity
+  });
+  gl.uniform1i(renderGradientValuesShader.uniforms.matCap, 5);
+  gl.uniform1i(renderGradientValuesShader.uniforms.gradient, 6);
+  return {
+    renderVolumeShader,
+    renderSliceShader,
+    renderGradientShader,
+    renderGradientValuesShader,
+    renderShader: renderVolumeShader
+  };
+}
+function initColorbarShader(gl) {
+  const shader = new Shader(gl, vertColorbarShader, fragColorbarShader);
+  shader.use(gl);
+  gl.uniform1i(shader.uniforms.colormap, 1);
+  return shader;
+}
+function initImageProcessingShaders(gl) {
+  const blurShader = new Shader(gl, blurVertShader, blurFragShader);
+  const sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader);
+  const sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader);
+  const sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader);
+  const growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader);
+  const passThroughShader = new Shader(gl, vertPassThroughShader, fragPassThroughShader);
+  return {
+    blurShader,
+    sobelBlurShader,
+    sobelFirstOrderShader,
+    sobelSecondOrderShader,
+    growCutShader,
+    passThroughShader
+  };
+}
+function initOrientationShaders(gl) {
+  const orientShaderAtlasU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas));
+  const orientShaderAtlasI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShaderAtlas));
+  const orientShaderU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader));
+  const orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
+  const orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
+  const orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
+  const orientShaderPAQD = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragPAQDOrientShader));
+  return {
+    orientShaderAtlasU,
+    orientShaderAtlasI,
+    orientShaderU,
+    orientShaderI,
+    orientShaderF,
+    orientShaderRGBU,
+    orientShaderPAQD
+  };
+}
+function init3DGeometryShaders(gl) {
+  const surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader);
+  surfaceShader.use(gl);
+  const fiberShader = new Shader(gl, vertFiberShader, fragFiberShader);
+  return { surfaceShader, fiberShader };
+}
+function initPickingImageShader(gl) {
+  const shader = new Shader(gl, vertRenderShader, fragVolumePickingShader);
+  shader.use(gl);
+  shader.uniforms.clipPlanes = gl.getUniformLocation(shader.program, "clipPlanes[0]");
+  gl.uniform1i(shader.uniforms.volume, 0);
+  gl.uniform1i(shader.uniforms.colormap, 1);
+  gl.uniform1i(shader.uniforms.overlay, 2);
+  gl.uniform1i(shader.uniforms.drawing, 7);
+  return shader;
+}
+function compileMeshShaders(gl, meshShaders) {
+  for (let i = 0; i < meshShaders.length; i++) {
+    const m = meshShaders[i];
+    if (m.Name === "Flat") {
+      m.shader = new Shader(gl, vertFlatMeshShader, fragFlatMeshShader);
+    } else {
+      m.shader = new Shader(gl, vertMeshShader, m.Frag);
+    }
+    m.shader.use(gl);
+    m.shader.isCrosscut = m.Name === "Crosscut";
+    m.shader.isMatcap = m.Name === "Matcap";
+    if (m.shader.isMatcap) {
+      gl.uniform1i(m.shader.uniforms.matCap, 5);
+    }
+  }
+}
+
+// src/niivue/data/VolumeManager.ts
+function addVolume(volumes, volume) {
+  const newVolumes = [...volumes, volume];
+  const index = newVolumes.length === 1 ? 0 : newVolumes.length - 1;
+  return { volumes: newVolumes, index };
+}
+function getVolumeIndexByID(volumes, id) {
+  for (let i = 0; i < volumes.length; i++) {
+    if (volumes[i].id === id) {
+      return i;
+    }
+  }
+  return -1;
+}
+function getOverlayIndexByID(volumes, id) {
+  const overlays = volumes.slice(1);
+  for (let i = 0; i < overlays.length; i++) {
+    if (overlays[i].id === id) {
+      return i;
+    }
+  }
+  return -1;
+}
+function setVolume(volumes, volume, toIndex = 0) {
+  const numberOfLoadedImages = volumes.length;
+  if (toIndex > numberOfLoadedImages) {
+    return {
+      volumes,
+      back: volumes.length > 0 ? volumes[0] : null,
+      overlays: volumes.slice(1)
+    };
+  }
+  const volIndex = getVolumeIndexByID(volumes, volume.id);
+  const newVolumes = [...volumes];
+  if (toIndex === 0) {
+    newVolumes.splice(volIndex, 1);
+    newVolumes.unshift(volume);
+  } else if (toIndex < 0) {
+    newVolumes.splice(volIndex, 1);
+  } else {
+    newVolumes.splice(volIndex, 1);
+    newVolumes.splice(toIndex, 0, volume);
+  }
+  return {
+    volumes: newVolumes,
+    back: newVolumes.length > 0 ? newVolumes[0] : null,
+    overlays: newVolumes.slice(1)
+  };
+}
+function removeVolume(volumes, volume) {
+  const result = setVolume(volumes, volume, -1);
+  return {
+    volumes: result.volumes,
+    removed: volume
+  };
+}
+function removeVolumeByIndex(volumes, index) {
+  if (index >= volumes.length) {
+    throw new Error("Index of volume out of bounds");
+  }
+  return removeVolume(volumes, volumes[index]);
+}
+function moveVolumeToBottom(volumes, volume) {
+  return setVolume(volumes, volume, 0);
+}
+function moveVolumeUp(volumes, volume) {
+  const volIdx = getVolumeIndexByID(volumes, volume.id);
+  return setVolume(volumes, volume, volIdx + 1);
+}
+function moveVolumeDown(volumes, volume) {
+  const volIdx = getVolumeIndexByID(volumes, volume.id);
+  return setVolume(volumes, volume, volIdx - 1);
+}
+function moveVolumeToTop(volumes, volume) {
+  return setVolume(volumes, volume, volumes.length - 1);
+}
+function setOpacity2(volumes, volIdx, newOpacity) {
+  volumes[volIdx].opacity = newOpacity;
+  return volumes;
+}
+function cloneVolume(volumes, index) {
+  return volumes[index].clone();
+}
+function setFrame4D(volumes, id, frame4D) {
+  const idx2 = getVolumeIndexByID(volumes, id);
+  if (idx2 < 0) {
+    return volumes;
+  }
+  const volume = volumes[idx2];
+  let clampedFrame = frame4D;
+  if (clampedFrame > volume.nFrame4D - 1) {
+    clampedFrame = volume.nFrame4D - 1;
+  }
+  if (clampedFrame < 0) {
+    clampedFrame = 0;
+  }
+  if (clampedFrame === volume.frame4D) {
+    return volumes;
+  }
+  volume.frame4D = clampedFrame;
+  return volumes;
+}
+function getFrame4D(volumes, id) {
+  const idx2 = getVolumeIndexByID(volumes, id);
+  if (idx2 < 0) {
+    return 0;
+  }
+  return volumes[idx2].frame4D;
+}
+function overlayRGBA(volume) {
+  const hdr = volume.hdr;
+  const vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  const imgRGBA = new Uint8ClampedArray(vox * 4);
+  const radius = 0.2 * Math.min(Math.min(hdr.dims[1], hdr.dims[2]), hdr.dims[3]);
+  const halfX = 0.5 * hdr.dims[1];
+  const halfY = 0.5 * hdr.dims[2];
+  const halfZ = 0.5 * hdr.dims[3];
+  let j = 0;
+  for (let z = 0; z < hdr.dims[3]; z++) {
+    for (let y = 0; y < hdr.dims[2]; y++) {
+      for (let x = 0; x < hdr.dims[1]; x++) {
+        const dx = Math.abs(x - halfX);
+        const dy = Math.abs(y - halfY);
+        const dz = Math.abs(z - halfZ);
+        const dist4 = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        let v = 0;
+        if (dist4 < radius) {
+          v = 255;
+        }
+        imgRGBA[j++] = 0;
+        imgRGBA[j++] = v;
+        imgRGBA[j++] = 0;
+        imgRGBA[j++] = v * 0.5;
+      }
+    }
+  }
+  return imgRGBA;
+}
+
+// src/niivue/data/VolumeTexture.ts
+function prepareLayerData(overlayItem) {
+  let img = overlayItem.img;
+  if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D) {
+    img = overlayItem.img.slice(overlayItem.frame4D * overlayItem.nVox3D, (overlayItem.frame4D + 1) * overlayItem.nVox3D);
+  }
+  return img;
+}
+function checkImageSizeLimits(params) {
+  const { hdr, max2D, max3D } = params;
+  const isAboveMax2D = hdr.dims[1] > max2D || hdr.dims[2] > max2D;
+  const isAboveMax3D = hdr.dims[1] > max3D || hdr.dims[2] > max3D || hdr.dims[3] > max3D;
+  return { isAboveMax2D, isAboveMax3D };
+}
+
+// src/niivue/data/VolumeColormap.ts
+function setupColormapLabel(params) {
+  const { gl, overlayItem, orientShader, createColormapTexture } = params;
+  if (overlayItem.colormapLabel === null || overlayItem.colormapLabel.lut.length <= 7) {
+    return {
+      colormapLabelTexture: null,
+      shouldCleanup: false
+    };
+  }
+  const nLabel = overlayItem.colormapLabel.max - overlayItem.colormapLabel.min + 1;
+  const colormapLabelTexture = createColormapTexture(null, 1, nLabel);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, nLabel, 1, gl.RGBA, gl.UNSIGNED_BYTE, overlayItem.colormapLabel.lut);
+  gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.colormapLabel.min - 0.5);
+  gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.colormapLabel.max + 0.5);
+  gl.bindTexture(gl.TEXTURE_2D, colormapLabelTexture);
+  return {
+    colormapLabelTexture,
+    shouldCleanup: true
+  };
+}
+
+// src/niivue/data/VolumeModulation.ts
+function setupModulation(params) {
+  const { gl, overlayItem, hdr, volumes, orientShader, r8Tex: r8Tex2, TEXTURE7 } = params;
+  if (overlayItem.modulationImage === null || overlayItem.modulationImage < 0 || overlayItem.modulationImage >= volumes.length) {
+    gl.uniform1i(orientShader.uniforms.modulation, 0);
+    return { modulateTexture: null };
+  }
+  const mhdr = volumes[overlayItem.modulationImage].hdr;
+  if (mhdr.dims[1] !== hdr.dims[1] || mhdr.dims[2] !== hdr.dims[2] || mhdr.dims[3] !== hdr.dims[3]) {
+    log.debug("Modulation image dimensions do not match target");
+    gl.uniform1i(orientShader.uniforms.modulation, 0);
+    return { modulateTexture: null };
+  }
+  log.debug("modulating", volumes);
+  if (overlayItem.modulateAlpha) {
+    gl.uniform1i(orientShader.uniforms.modulation, 2);
+    gl.uniform1f(orientShader.uniforms.opacity, 1);
+  } else {
+    gl.uniform1i(orientShader.uniforms.modulation, 1);
+  }
+  const modulateTexture = r8Tex2(null, TEXTURE7, hdr.dims, true);
+  gl.activeTexture(TEXTURE7);
+  gl.bindTexture(gl.TEXTURE_3D, modulateTexture);
+  const vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
+  const modulateVolume = new Uint8Array(vx);
+  const mn = volumes[overlayItem.modulationImage].cal_min;
+  const scale6 = 1 / (volumes[overlayItem.modulationImage].cal_max - mn);
+  const imgRaw = volumes[overlayItem.modulationImage].img.buffer;
+  let img = new Uint8Array(imgRaw);
+  switch (mhdr.datatypeCode) {
+    case 4 /* DT_INT16 */:
+      img = new Int16Array(imgRaw);
+      break;
+    case 16 /* DT_FLOAT32 */:
+      img = new Float32Array(imgRaw);
+      break;
+    case 64 /* DT_FLOAT64 */:
+      img = new Float64Array(imgRaw);
+      break;
+    case 128 /* DT_RGB24 */:
+      img = new Uint8Array(imgRaw);
+      break;
+    case 512 /* DT_UINT16 */:
+      img = new Uint16Array(imgRaw);
+      break;
+  }
+  log.debug(volumes[overlayItem.modulationImage]);
+  const isColormapNegative = volumes[overlayItem.modulationImage].colormapNegative.length > 0;
+  let mnNeg = volumes[overlayItem.modulationImage].cal_min;
+  let mxNeg = volumes[overlayItem.modulationImage].cal_max;
+  if (isFinite(volumes[overlayItem.modulationImage].cal_minNeg) && isFinite(volumes[overlayItem.modulationImage].cal_maxNeg)) {
+    mnNeg = volumes[overlayItem.modulationImage].cal_minNeg;
+    mxNeg = volumes[overlayItem.modulationImage].cal_maxNeg;
+  }
+  mnNeg = Math.abs(mnNeg);
+  mxNeg = Math.abs(mxNeg);
+  if (mnNeg > mxNeg) {
+    ;
+    [mnNeg, mxNeg] = [mxNeg, mnNeg];
+  }
+  const scaleNeg = 1 / (mxNeg - mnNeg);
+  let mpow = Math.abs(overlayItem.modulateAlpha);
+  mpow = Math.max(mpow, 1);
+  const volOffset = volumes[overlayItem.modulationImage].frame4D * vx;
+  for (let i = 0; i < vx; i++) {
+    const vRaw = img[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter;
+    let v = (vRaw - mn) * scale6;
+    if (isColormapNegative && vRaw < 0) {
+      v = (Math.abs(vRaw) - mnNeg) * scaleNeg;
+    }
+    v = Math.min(Math.max(v, 0), 1);
+    v = Math.pow(v, mpow) * 255;
+    modulateVolume[i] = v;
+  }
+  gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED, gl.UNSIGNED_BYTE, modulateVolume);
+  return { modulateTexture };
+}
+
+// src/nvimage/RenderingUtils.ts
+function toNiivueObject3D(nvImage, id, gl) {
+  if (!nvImage.dimsRAS || !nvImage.matRAS || !nvImage.pixDimsRAS || !nvImage.vox2mm) {
+    throw new Error("Cannot create NiivueObject3D: Missing required RAS properties or vox2mm access on NVImage.");
+  }
+  const dimsRAS = nvImage.dimsRAS;
+  const matRAS = nvImage.matRAS;
+  const pixDimsRAS = nvImage.pixDimsRAS;
+  const L = -0.5;
+  const P = -0.5;
+  const I = -0.5;
+  const R = dimsRAS[1] - 1 + 0.5;
+  const A = dimsRAS[2] - 1 + 0.5;
+  const S = dimsRAS[3] - 1 + 0.5;
+  const vox2mmFn = nvImage.vox2mm;
+  const LPI = vox2mmFn.call(nvImage, [L, P, I], matRAS);
+  const LAI = vox2mmFn.call(nvImage, [L, A, I], matRAS);
+  const LPS = vox2mmFn.call(nvImage, [L, P, S], matRAS);
+  const LAS = vox2mmFn.call(nvImage, [L, A, S], matRAS);
+  const RPI = vox2mmFn.call(nvImage, [R, P, I], matRAS);
+  const RAI = vox2mmFn.call(nvImage, [R, A, I], matRAS);
+  const RPS = vox2mmFn.call(nvImage, [R, P, S], matRAS);
+  const RAS = vox2mmFn.call(nvImage, [R, A, S], matRAS);
+  const posTex = [
+    // Superior face vertices (Indices 0-3)
+    ...LPS,
+    ...[0, 0, 1],
+    // 0
+    ...RPS,
+    ...[1, 0, 1],
+    // 1
+    ...RAS,
+    ...[1, 1, 1],
+    // 2
+    ...LAS,
+    ...[0, 1, 1],
+    // 3
+    // Inferior face vertices (Indices 4-7)
+    ...LPI,
+    ...[0, 0, 0],
+    // 4
+    ...LAI,
+    ...[0, 1, 0],
+    // 5
+    ...RAI,
+    ...[1, 1, 0],
+    // 6
+    ...RPI,
+    ...[1, 0, 0]
+    // 7
+  ];
+  const indexBuffer = gl.createBuffer();
+  if (!indexBuffer) {
+    throw new Error("Failed to create GL index buffer");
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  const indices = [
+    0,
+    3,
+    2,
+    2,
+    1,
+    0,
+    // Top
+    4,
+    7,
+    6,
+    6,
+    5,
+    4,
+    // Bottom
+    5,
+    6,
+    2,
+    2,
+    3,
+    5,
+    // Front -> Corresponds to LAI(5), RAI(6), RAS(2) / RAS(2), LAS(3), LAI(5)
+    4,
+    0,
+    1,
+    1,
+    7,
+    4,
+    // Back -> Corresponds to LPI(4), LPS(0), RPS(1) / RPS(1), RPI(7), LPI(4)
+    7,
+    1,
+    2,
+    2,
+    6,
+    7,
+    // Right -> Corresponds to RPI(7), RPS(1), RAS(2) / RAS(2), RAI(6), RPI(7)
+    4,
+    5,
+    3,
+    3,
+    0,
+    4
+    // Left -> Corresponds to LPI(4), LAI(5), LAS(3) / LAS(3), LPS(0), LPI(4)
+  ];
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  const posTexBuffer = gl.createBuffer();
+  if (!posTexBuffer) {
+    throw new Error("Failed to create GL vertex buffer");
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posTex), gl.STATIC_DRAW);
+  const vao = gl.createVertexArray();
+  if (!vao) {
+    throw new Error("Failed to create GL VAO");
+  }
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindBuffer(gl.ARRAY_BUFFER, posTexBuffer);
+  const stride = 24;
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 12);
+  gl.bindVertexArray(null);
+  const obj3D = new NiivueObject3D(id, posTexBuffer, gl.TRIANGLES, indices.length, indexBuffer, vao);
+  const allCorners = [...LPS, ...RPS, ...RAS, ...LAS, ...LPI, ...LAI, ...RAI, ...RPI];
+  const extents = getExtents(allCorners);
+  obj3D.extentsMin = extents.min.slice();
+  obj3D.extentsMax = extents.max.slice();
+  obj3D.furthestVertexFromOrigin = extents.furthestVertexFromOrigin;
+  obj3D.originNegate = vec3_exports.clone(extents.origin);
+  vec3_exports.negate(obj3D.originNegate, obj3D.originNegate);
+  obj3D.fieldOfViewDeObliqueMM = [dimsRAS[1] * pixDimsRAS[1], dimsRAS[2] * pixDimsRAS[2], dimsRAS[3] * pixDimsRAS[3]];
+  return obj3D;
+}
+
+// src/niivue/data/VolumeLayerRenderer.ts
+var TEXTURE0_BACK_VOL = 33984;
+var TEXTURE2_OVERLAY_VOL = 33986;
+var TEXTURE10_BLEND = 33994;
+function setupVolumeObject3D(params) {
+  const { overlayItem, VOLUME_ID, gl } = params;
+  return toNiivueObject3D(overlayItem, VOLUME_ID, gl);
+}
+function calculateOverlayTransformMatrix(params) {
+  const { overlayItem, mm2frac: mm2frac2 } = params;
+  const f000 = mm2frac2(overlayItem.mm000, 0, true);
+  let f100 = mm2frac2(overlayItem.mm100, 0, true);
+  let f010 = mm2frac2(overlayItem.mm010, 0, true);
+  let f001 = mm2frac2(overlayItem.mm001, 0, true);
+  f100 = vec3_exports.subtract(f100, f100, f000);
+  f010 = vec3_exports.subtract(f010, f010, f000);
+  f001 = vec3_exports.subtract(f001, f001, f000);
+  const mtx = mat4_exports.fromValues(
+    f100[0],
+    f010[0],
+    f001[0],
+    f000[0],
+    f100[1],
+    f010[1],
+    f001[1],
+    f000[1],
+    f100[2],
+    f010[2],
+    f001[2],
+    f000[2],
+    0,
+    0,
+    0,
+    1
+  );
+  mat4_exports.invert(mtx, mtx);
+  return mtx;
+}
+function allocateVolumeTextures(params) {
+  const { layer, backDims, rgbaTex: rgbaTex2 } = params;
+  if (layer === 0) {
+    const outTexture = rgbaTex2(null, TEXTURE0_BACK_VOL, backDims);
+    return { volumeTexture: outTexture };
+  } else if (layer === 1) {
+    const outTexture = rgbaTex2(null, TEXTURE2_OVERLAY_VOL, backDims);
+    return {
+      overlayTexture: outTexture,
+      overlayTextureID: outTexture
+    };
+  }
+  return {};
+}
+function setupFramebuffer(gl) {
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.disable(gl.CULL_FACE);
+  gl.disable(gl.BLEND);
+  return fb;
+}
+function setupBlendTexture(params) {
+  const { gl, layer, backDims, rgbaTex: rgbaTex2, passThroughShader } = params;
+  if (layer <= 1) {
+    return rgbaTex2(null, TEXTURE10_BLEND, [2, 2, 2, 2]);
+  }
+  const blendTexture = rgbaTex2(null, TEXTURE10_BLEND, backDims);
+  gl.bindTexture(gl.TEXTURE_3D, blendTexture);
+  passThroughShader.use(gl);
+  gl.uniform1i(passThroughShader.uniforms.in3D, 2);
+  for (let i = 0; i < backDims[3]; i++) {
+    const coordZ = 1 / backDims[3] * (i + 0.5);
+    gl.uniform1f(passThroughShader.uniforms.coordZ, coordZ);
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, blendTexture, 0, i);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  return blendTexture;
+}
+function configureColormapUniforms(params) {
+  const { gl, overlayItem, orientShader, layer, isAdditiveBlend } = params;
+  const isColorbarFromZero = overlayItem.colormapType !== 0 ? 1 : 0;
+  const isAlphaThreshold = overlayItem.colormapType === 1 ? 1 : 0;
+  gl.uniform1i(orientShader.uniforms.isAlphaThreshold, isAlphaThreshold);
+  gl.uniform1i(orientShader.uniforms.isColorbarFromZero, isColorbarFromZero);
+  gl.uniform1i(orientShader.uniforms.isAdditiveBlend, isAdditiveBlend ? 1 : 0);
+  let mnNeg = Number.POSITIVE_INFINITY;
+  let mxNeg = Number.NEGATIVE_INFINITY;
+  if (overlayItem.colormapNegative.length > 0) {
+    mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
+    mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
+    if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
+      mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+      mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
+    }
+  }
+  gl.uniform1f(orientShader.uniforms.layer ?? null, layer);
+  gl.uniform1f(orientShader.uniforms.cal_minNeg ?? null, mnNeg);
+  gl.uniform1f(orientShader.uniforms.cal_maxNeg ?? null, mxNeg);
+}
+function renderToOutputTexture(params) {
+  const { gl, orientShader, backDims, outTexture, mtx, hdr, intensityVolTextureUnit, blendTextureUnit, colormapTextureUnit, modulationTextureUnit, opacity, atlasOutline, atlasActiveIndex } = params;
+  orientShader.use(gl);
+  gl.uniform1i(orientShader.uniforms.intensityVol ?? null, intensityVolTextureUnit);
+  gl.uniform1i(orientShader.uniforms.blend3D ?? null, blendTextureUnit);
+  gl.uniform1i(orientShader.uniforms.colormap ?? null, colormapTextureUnit);
+  gl.uniform1f(orientShader.uniforms.scl_inter ?? null, hdr.scl_inter);
+  gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope);
+  gl.uniform1f(orientShader.uniforms.opacity ?? null, opacity);
+  gl.uniform1i(orientShader.uniforms.modulationVol ?? null, modulationTextureUnit);
+  gl.uniformMatrix4fv(orientShader.uniforms.mtx, false, mtx);
+  let outline = 0;
+  if (hdr.intent_code === 1002) {
+    outline = atlasOutline;
+    gl.uniform1ui(orientShader.uniforms.activeIndex, atlasActiveIndex | 0);
+  }
+  gl.uniform4fv(orientShader.uniforms.xyzaFrac, [1 / backDims[1], 1 / backDims[2], 1 / backDims[3], outline]);
+  for (let i = 0; i < backDims[3]; i++) {
+    const coordZ = 1 / backDims[3] * (i + 0.5);
+    gl.uniform1f(orientShader.uniforms.coordZ, coordZ);
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, outTexture, 0, i);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+}
+function updateGradientTexture(params) {
+  const { gl, hdr, gradientTextureAmount, useCustomGradientTexture, gradientTexture, gradientGL: gradientGL2, genericVAO } = params;
+  if (gradientTextureAmount > 0 && !useCustomGradientTexture) {
+    gradientGL2(hdr);
+    gl.bindVertexArray(genericVAO);
+    return gradientTexture;
+  } else if (gradientTextureAmount <= 0) {
+    if (gradientTexture !== null) {
+      gl.deleteTexture(gradientTexture);
+    }
+    return null;
+  }
+  return gradientTexture;
+}
+function updateShaderUniforms(params) {
+  const { gl, renderShader, pickingImageShader, sliceShader, overlaysLength, clipPlaneColor, backOpacity, renderOverlayBlend, clipPlane, texVox, volScale, drawOpacity, paqdUniforms } = params;
+  renderShader.use(gl);
+  gl.uniform1f(renderShader.uniforms.overlays, overlaysLength);
+  gl.uniform4fv(renderShader.uniforms.clipPlaneColor, clipPlaneColor);
+  gl.uniform1f(renderShader.uniforms.backOpacity, backOpacity);
+  gl.uniform1f(renderShader.uniforms.renderOverlayBlend, renderOverlayBlend);
+  gl.uniform4fv(renderShader.uniforms.clipPlane, clipPlane);
+  gl.uniform3fv(renderShader.uniforms.texVox, texVox);
+  gl.uniform3fv(renderShader.uniforms.volScale, volScale);
+  pickingImageShader.use(gl);
+  gl.uniform1f(pickingImageShader.uniforms.overlays, overlaysLength);
+  gl.uniform3fv(pickingImageShader.uniforms.texVox, texVox);
+  sliceShader.use(gl);
+  gl.uniform1f(sliceShader.uniforms.overlays, overlaysLength);
+  gl.uniform1f(sliceShader.uniforms.drawOpacity, drawOpacity);
+  gl.uniform4fv(sliceShader.uniforms.paqdUniforms, paqdUniforms);
+}
+function selectSliceShader(params) {
+  const { is2DSliceShader, isV1SliceShader, sliceMMShader, slice2DShader, sliceV1Shader, customSliceShader } = params;
+  let shader = sliceMMShader;
+  if (is2DSliceShader) {
+    shader = slice2DShader;
+  }
+  if (isV1SliceShader) {
+    shader = sliceV1Shader;
+  }
+  if (customSliceShader) {
+    shader = customSliceShader;
+  }
+  if (!shader) {
+    throw new Error("slice shader undefined");
+  }
+  return shader;
+}
+function bindSliceShaderTextures(params) {
+  const { gl, shader, is2DSliceShader, drawTexture, paqdTexture, TEXTURE7_DRAW, TEXTURE8_PAQD } = params;
+  gl.uniform1i(shader.uniforms.drawing, 7);
+  gl.activeTexture(TEXTURE7_DRAW);
+  if (is2DSliceShader) {
+    gl.bindTexture(gl.TEXTURE_2D, drawTexture);
+  } else {
+    gl.bindTexture(gl.TEXTURE_3D, drawTexture);
+  }
+  gl.uniform1i(shader.uniforms.paqd, 8);
+  gl.activeTexture(TEXTURE8_PAQD);
+  gl.bindTexture(gl.TEXTURE_3D, paqdTexture);
+}
+function createTemporaryTexture(params) {
+  const { gl, TEXTURE9_ORIENT } = params;
+  const tempTex3D = gl.createTexture();
+  gl.activeTexture(TEXTURE9_ORIENT);
+  gl.bindTexture(gl.TEXTURE_3D, tempTex3D);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  return tempTex3D;
+}
+var NII_DT_UINT8 = 2;
+var NII_DT_INT16 = 4;
+var NII_DT_FLOAT32 = 16;
+var NII_DT_FLOAT64 = 64;
+var NII_DT_RGB24 = 128;
+var NII_DT_UINT16 = 512;
+var NII_DT_RGBA32 = 2304;
+var NII_INTENT_LABEL = 1002;
+function setupVolumeTextureData(params) {
+  const { gl, hdr, img, orientShaderU, orientShaderI, orientShaderF, orientShaderRGBU, orientShaderAtlasU, orientShaderAtlasI } = params;
+  let orientShader = orientShaderU;
+  if (hdr.datatypeCode === NII_DT_UINT8) {
+    if (hdr.intent_code === NII_INTENT_LABEL) {
+      orientShader = orientShaderAtlasU;
+    }
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.UNSIGNED_BYTE, img);
+  } else if (hdr.datatypeCode === NII_DT_INT16) {
+    orientShader = orientShaderI;
+    if (hdr.intent_code === NII_INTENT_LABEL) {
+      orientShader = orientShaderAtlasI;
+    }
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.SHORT, img);
+  } else if (hdr.datatypeCode === NII_DT_FLOAT32) {
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED, gl.FLOAT, img);
+    orientShader = orientShaderF;
+  } else if (hdr.datatypeCode === NII_DT_FLOAT64) {
+    const img32f = Float32Array.from(img);
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED, gl.FLOAT, img32f);
+    orientShader = orientShaderF;
+  } else if (hdr.datatypeCode === NII_DT_RGB24) {
+    orientShader = orientShaderRGBU;
+    orientShader.use(gl);
+    gl.uniform1i(orientShader.uniforms.hasAlpha, 0);
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RGB_INTEGER, gl.UNSIGNED_BYTE, img);
+  } else if (hdr.datatypeCode === NII_DT_UINT16) {
+    if (hdr.intent_code === NII_INTENT_LABEL) {
+      orientShader = orientShaderAtlasU;
+    }
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.UNSIGNED_SHORT, img);
+  }
+  return { orientShader };
+}
+function setupRGBA32TextureData(params) {
+  const { gl, hdr, img, overlayItem, layer, orientShaderRGBU, orientShaderPAQD, volumes, backDims, rgbaTex: rgbaTex2, paqdTexture, TEXTURE8_PAQD, TEXTURE9_ORIENT } = params;
+  let orientShader = orientShaderRGBU;
+  let outTexture = null;
+  let updatedPaqdTexture = paqdTexture;
+  if (overlayItem.colormapLabel) {
+    orientShader = orientShaderPAQD;
+    let firstPAQD = true;
+    for (let l = 0; l < layer; l++) {
+      const isRGBA = volumes[l].hdr.datatypeCode === NII_DT_RGBA32;
+      const isLabel = !!volumes[l].colormapLabel;
+      if (isRGBA && isLabel) {
+        firstPAQD = false;
+      }
+    }
+    if (firstPAQD) {
+      updatedPaqdTexture = rgbaTex2(paqdTexture, TEXTURE8_PAQD, backDims);
+    }
+    outTexture = updatedPaqdTexture;
+    gl.activeTexture(TEXTURE9_ORIENT);
+  }
+  orientShader.use(gl);
+  gl.uniform1i(orientShader.uniforms.hasAlpha, 1);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
+  gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, img);
+  return { orientShader, outTexture, paqdTexture: updatedPaqdTexture };
+}
+
+// src/niivue/data/MeshManager.ts
+function getMeshIndexByID(meshes, id) {
+  if (typeof id === "number") {
+    if (id >= meshes.length) {
+      return -1;
+    }
+    return id;
+  }
+  for (let i = 0; i < meshes.length; i++) {
+    if (meshes[i].id === id) {
+      return i;
+    }
+  }
+  return -1;
+}
+function addMesh(meshes, mesh) {
+  const newMeshes = [...meshes, mesh];
+  const index = newMeshes.length === 1 ? 0 : newMeshes.length - 1;
+  return { meshes: newMeshes, index };
+}
+function setMesh(meshes, mesh, toIndex = 0) {
+  const numberOfLoadedMeshes = meshes.length;
+  if (toIndex > numberOfLoadedMeshes) {
+    return { meshes };
+  }
+  const meshIndex = getMeshIndexByID(meshes, mesh.id);
+  if (meshIndex < 0) {
+    return { meshes };
+  }
+  const newMeshes = [...meshes];
+  if (toIndex === 0) {
+    newMeshes.splice(meshIndex, 1);
+    newMeshes.unshift(mesh);
+  } else if (toIndex < 0) {
+    newMeshes.splice(meshIndex, 1);
+  } else {
+    newMeshes.splice(meshIndex, 1);
+    newMeshes.splice(toIndex, 0, mesh);
+  }
+  return { meshes: newMeshes };
+}
+function setMeshProperty(params) {
+  const { meshes, id, key, val, gl } = params;
+  const idx2 = getMeshIndexByID(meshes, id);
+  if (idx2 < 0) {
+    log.warn("setMeshProperty() id not loaded", id);
+    return -1;
+  }
+  meshes[idx2].setProperty(key, val, gl);
+  return idx2;
+}
+function indexNearestXYZmm(params) {
+  const { meshes, meshId, Xmm, Ymm, Zmm } = params;
+  const idx2 = getMeshIndexByID(meshes, meshId);
+  if (idx2 < 0) {
+    log.warn("indexNearestXYZmm() id not loaded", meshId);
+    return [NaN, NaN];
+  }
+  return meshes[idx2].indexNearestXYZmm(Xmm, Ymm, Zmm);
+}
+function decimateHierarchicalMesh(params) {
+  const { meshes, meshId, gl, order = 3 } = params;
+  const idx2 = getMeshIndexByID(meshes, meshId);
+  if (idx2 < 0) {
+    log.warn("decimateHierarchicalMesh() id not loaded", meshId);
+    return false;
+  }
+  return meshes[idx2].decimateHierarchicalMesh(gl, order);
+}
+function reverseFaces(params) {
+  const { meshes, meshId, gl } = params;
+  const idx2 = getMeshIndexByID(meshes, meshId);
+  if (idx2 < 0) {
+    log.warn("reverseFaces() id not loaded", meshId);
+    return false;
+  }
+  meshes[idx2].reverseFaces(gl);
+  return true;
+}
+async function setMeshLayerProperty(params) {
+  const { meshes, meshId, layer, key, val, gl } = params;
+  const idx2 = getMeshIndexByID(meshes, meshId);
+  if (idx2 < 0) {
+    log.warn("setMeshLayerProperty() id not loaded", meshId);
+    return false;
+  }
+  await meshes[idx2].setLayerProperty(layer, key, val, gl);
+  return true;
+}
+function setMeshShader(params) {
+  const { meshes, meshShaders, id, meshShaderNameOrNumber, meshShaderNameToNumber: meshShaderNameToNumber2 } = params;
+  let shaderIndex = 0;
+  if (typeof meshShaderNameOrNumber === "number") {
+    shaderIndex = meshShaderNameOrNumber;
+  } else {
+    shaderIndex = meshShaderNameToNumber2(meshShaderNameOrNumber);
+  }
+  if (shaderIndex === void 0) {
+    throw new Error("shaderIndex undefined");
+  }
+  shaderIndex = Math.min(shaderIndex, meshShaders.length - 1);
+  shaderIndex = Math.max(shaderIndex, 0);
+  const meshIndex = getMeshIndexByID(meshes, id);
+  if (meshIndex >= meshes.length || meshIndex < 0) {
+    log.debug("Unable to change shader until mesh is loaded (maybe you need async)");
+    return null;
+  }
+  meshes[meshIndex].meshShaderIndex = shaderIndex;
+  return { meshIndex, shaderIndex };
+}
+
+// src/nvconnectome.ts
+var defaultOptions = {
+  name: "untitled connectome",
+  nodeColormap: "warm",
+  nodeColormapNegative: "winter",
+  nodeMinColor: 0,
+  nodeMaxColor: 4,
+  nodeScale: 3,
+  edgeColormap: "warm",
+  edgeColormapNegative: "winter",
+  edgeMin: 2,
+  edgeMax: 6,
+  edgeScale: 1,
+  legendLineThickness: 0,
+  showLegend: true
 };
-var Shader = class {
-  constructor(gl, vertexSrc, fragmentSrc) {
-    __publicField(this, "program");
-    __publicField(this, "uniforms", {});
-    __publicField(this, "isMatcap");
-    __publicField(this, "isCrosscut");
-    this.program = compileShader(gl, vertexSrc, fragmentSrc);
-    const regexUniform = /uniform[^;]+[ ](\w+);/g;
-    const matchUniformName = /uniform[^;]+[ ](\w+);/;
-    const vertexUnifs = vertexSrc.match(regexUniform);
-    const fragUnifs = fragmentSrc.match(regexUniform);
-    if (vertexUnifs) {
-      vertexUnifs.forEach((unif) => {
-        const m = unif.match(matchUniformName);
-        this.uniforms[m[1]] = -1;
+var NVConnectome = class _NVConnectome extends NVMesh3 {
+  constructor(gl, connectome) {
+    super(new Float32Array([]), new Uint32Array([]), connectome.name, new Uint8Array([]), 1, true, gl, connectome);
+    __publicField(this, "gl");
+    __publicField(this, "nodesChanged");
+    this.gl = gl;
+    this.type = "connectome" /* CONNECTOME */;
+    if (this.nodes) {
+      this.updateLabels();
+    }
+    this.nodesChanged = new EventTarget();
+  }
+  static convertLegacyConnectome(json) {
+    const connectome = { nodes: [], edges: [], ...defaultOptions };
+    for (const prop in json) {
+      if (prop in defaultOptions) {
+        const key = prop;
+        connectome[key] = json[key];
+      }
+    }
+    const nodes = json.nodes;
+    for (let i = 0; i < nodes.names.length; i++) {
+      connectome.nodes.push({
+        name: nodes.names[i],
+        x: nodes.X[i],
+        y: nodes.Y[i],
+        z: nodes.Z[i],
+        colorValue: nodes.Color[i],
+        sizeValue: nodes.Size[i]
       });
     }
-    if (fragUnifs) {
-      fragUnifs.forEach((unif) => {
-        const m = unif.match(matchUniformName);
-        this.uniforms[m[1]] = -1;
-      });
+    for (let i = 0; i < nodes.names.length - 1; i++) {
+      for (let j = i + 1; j < nodes.names.length; j++) {
+        const colorValue = json.edges[i * nodes.names.length + j];
+        connectome.edges.push({
+          first: i,
+          second: j,
+          colorValue
+        });
+      }
     }
-    for (const unif in this.uniforms) {
-      this.uniforms[unif] = gl.getUniformLocation(this.program, unif);
+    return connectome;
+  }
+  static convertFreeSurferConnectome(json, colormap = "warm") {
+    let isValid = true;
+    if (!("data_type" in json)) {
+      isValid = false;
+    } else if (json.data_type !== "fs_pointset") {
+      isValid = false;
+    }
+    if (!("points" in json)) {
+      isValid = false;
+    }
+    if (!isValid) {
+      throw Error("not a valid FreeSurfer json pointset");
+    }
+    const nodes = json.points.map((p) => ({
+      name: Array.isArray(p.comments) && p.comments.length > 0 && "text" in p.comments[0] ? p.comments[0].text : "",
+      x: p.coordinates.x,
+      y: p.coordinates.y,
+      z: p.coordinates.z,
+      colorValue: 1,
+      sizeValue: 1,
+      metadata: p.comments
+    }));
+    const connectome = {
+      ...defaultOptions,
+      nodeColormap: colormap,
+      edgeColormap: colormap,
+      nodes,
+      edges: []
+    };
+    return connectome;
+  }
+  updateLabels() {
+    const nodes = this.nodes;
+    if (nodes && nodes.length > 0) {
+      const largest = nodes.reduce((a, b) => a.sizeValue > b.sizeValue ? a : b).sizeValue;
+      let min4, max5;
+      if (typeof this.nodeMinColor !== "undefined" && isFinite(this.nodeMinColor)) {
+        min4 = this.nodeMinColor;
+      } else {
+        min4 = nodes[0].colorValue;
+        for (let i = 1; i < nodes.length; i++) {
+          if (nodes[i].colorValue < min4) {
+            min4 = nodes[i].colorValue;
+          }
+        }
+      }
+      if (typeof this.nodeMaxColor !== "undefined" && isFinite(this.nodeMaxColor)) {
+        max5 = this.nodeMaxColor;
+      } else {
+        max5 = nodes[0].colorValue;
+        for (let i = 1; i < nodes.length; i++) {
+          if (nodes[i].colorValue > max5) {
+            max5 = nodes[i].colorValue;
+          }
+        }
+      }
+      const lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
+      const lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert);
+      const hasNeg = "nodeColormapNegative" in this;
+      let legendLineThickness = this.legendLineThickness ? this.legendLineThickness : 0;
+      if (this.showLegend === false) {
+        legendLineThickness = 0;
+      }
+      for (let i = 0; i < nodes.length; i++) {
+        let color = nodes[i].colorValue;
+        let isNeg = false;
+        if (hasNeg && color < 0) {
+          isNeg = true;
+          color = -color;
+        }
+        if (min4 < max5) {
+          if (color < min4) {
+            log.warn("color value lower than min");
+            continue;
+          }
+          color = (color - min4) / (max5 - min4);
+        } else {
+          color = 1;
+        }
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg) {
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+        }
+        rgba = rgba.map((c) => c / 255);
+        log.debug("adding label for ", nodes[i]);
+        nodes[i].label = new NVLabel3D(
+          nodes[i].name,
+          {
+            textColor: rgba,
+            bulletScale: nodes[i].sizeValue / largest,
+            bulletColor: rgba,
+            lineWidth: legendLineThickness,
+            lineColor: rgba,
+            textScale: 1,
+            textAlignment: "left" /* LEFT */,
+            lineTerminator: "none" /* NONE */
+          },
+          [nodes[i].x, nodes[i].y, nodes[i].z]
+        );
+        log.debug("label for node:", nodes[i].label);
+      }
     }
   }
-  use(gl) {
-    gl.useProgram(this.program);
+  addConnectomeNode(node) {
+    log.debug("adding node", node);
+    if (!this.nodes) {
+      throw new Error("nodes not defined");
+    }
+    ;
+    this.nodes.push(node);
+    this.updateLabels();
+    this.nodesChanged.dispatchEvent(new CustomEvent("nodeAdded", { detail: { node } }));
+  }
+  deleteConnectomeNode(node) {
+    const index = this.nodes.indexOf(node);
+    const edges = this.edges;
+    if (edges) {
+      this.edges = edges.filter((e) => e.first !== index && e.second !== index);
+    }
+    this.nodes = this.nodes.filter((n) => n !== node);
+    this.updateLabels();
+    this.updateConnectome(this.gl);
+    this.nodesChanged.dispatchEvent(new CustomEvent("nodeDeleted", { detail: { node } }));
+  }
+  updateConnectomeNodeByIndex(index, updatedNode) {
+    ;
+    this.nodes[index] = updatedNode;
+    this.updateLabels();
+    this.updateConnectome(this.gl);
+    this.nodesChanged.dispatchEvent(new CustomEvent("nodeChanged", { detail: { node: updatedNode } }));
+  }
+  updateConnectomeNodeByPoint(point, updatedNode) {
+    const nodes = this.nodes;
+    if (!nodes) {
+      throw new Error("Node to update does not exist");
+    }
+    const node = nodes.find((node2) => NVUtilities.arraysAreEqual([node2.x, node2.y, node2.z], point));
+    if (!node) {
+      throw new Error(`Node with point ${point} to update does not exist`);
+    }
+    const index = nodes.findIndex((n) => n === node);
+    this.updateConnectomeNodeByIndex(index, updatedNode);
+  }
+  addConnectomeEdge(first, second, colorValue) {
+    const edges = this.edges;
+    let edge = edges.find((f) => (f.first === first || f.second === first) && f.first + f.second === first + second);
+    if (edge) {
+      return edge;
+    }
+    edge = { first, second, colorValue };
+    edges.push(edge);
+    this.updateConnectome(this.gl);
+    return edge;
+  }
+  deleteConnectomeEdge(first, second) {
+    const edges = this.edges;
+    const edge = edges.find((f) => (f.first === first || f.first === second) && f.first + f.second === first + second);
+    if (edge) {
+      this.edges = edges.filter((e) => e !== edge);
+    } else {
+      throw new Error(`edge between ${first} and ${second} not found`);
+    }
+    this.updateConnectome(this.gl);
+    return edge;
+  }
+  findClosestConnectomeNode(point, distance4) {
+    const nodes = this.nodes;
+    if (!nodes || nodes.length === 0) {
+      return null;
+    }
+    const closeNodes = nodes.map((n, i) => ({
+      node: n,
+      distance: Math.sqrt(Math.pow(n.x - point[0], 2) + Math.pow(n.y - point[1], 2) + Math.pow(n.z - point[2], 2)),
+      index: i
+    })).filter((n) => n.distance < distance4).sort((a, b) => a.distance - b.distance);
+    if (closeNodes.length > 0) {
+      return closeNodes[0].node;
+    } else {
+      return null;
+    }
+  }
+  updateConnectome(gl) {
+    const tris = [];
+    const pts = [];
+    const rgba255 = [];
+    let lut = cmapper.colormap(this.nodeColormap, this.colormapInvert);
+    let lutNeg = cmapper.colormap(this.nodeColormapNegative, this.colormapInvert);
+    let hasNeg = "nodeColormapNegative" in this;
+    if (this.nodeMinColor === void 0) {
+      this.nodeMinColor = NaN;
+    }
+    if (this.nodeMaxColor === void 0) {
+      this.nodeMaxColor = NaN;
+    }
+    if (this.edgeMin === void 0) {
+      this.edgeMin = NaN;
+    }
+    if (this.edgeMax === void 0) {
+      this.edgeMax = NaN;
+    }
+    let min4 = this.nodeMinColor;
+    let max5 = this.nodeMaxColor;
+    if (!isFinite(min4) || !isFinite(min4)) {
+      const nodes2 = this.nodes;
+      min4 = nodes2[0].colorValue;
+      max5 = nodes2[0].colorValue;
+      for (let i = 0; i < nodes2.length; i++) {
+        min4 = Math.min(min4, nodes2[i].colorValue);
+        max5 = Math.max(max5, nodes2[i].colorValue);
+      }
+    }
+    const nodes = this.nodes;
+    const nNode = nodes.length;
+    for (let i = 0; i < nNode; i++) {
+      const radius = nodes[i].sizeValue * this.nodeScale;
+      if (radius <= 0) {
+        continue;
+      }
+      let color = nodes[i].colorValue;
+      let isNeg = false;
+      if (hasNeg && color < 0) {
+        isNeg = true;
+        color = -color;
+      }
+      if (min4 < max5) {
+        if (color < min4) {
+          continue;
+        }
+        color = (color - min4) / (max5 - min4);
+      } else {
+        color = 1;
+      }
+      color = Math.round(Math.max(Math.min(255, color * 255))) * 4;
+      let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+      if (isNeg) {
+        rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+      }
+      const pt = vec3_exports.fromValues(nodes[i].x, nodes[i].y, nodes[i].z);
+      NiivueObject3D.makeColoredSphere(pts, tris, rgba255, radius, pt, rgba);
+    }
+    lut = cmapper.colormap(this.edgeColormap, this.colormapInvert);
+    lutNeg = cmapper.colormap(this.edgeColormapNegative, this.colormapInvert);
+    hasNeg = "edgeColormapNegative" in this;
+    const edges = this.edges;
+    if (edges !== void 0 && edges.length > 0) {
+      min4 = this.edgeMin;
+      max5 = this.edgeMax;
+      if (!isFinite(min4) || !isFinite(min4)) {
+        min4 = edges[0].colorValue;
+        max5 = edges[0].colorValue;
+        for (let i = 0; i < edges.length; i++) {
+          min4 = Math.min(min4, edges[i].colorValue);
+          max5 = Math.max(max5, edges[i].colorValue);
+        }
+      }
+      for (const edge of edges) {
+        let color = edge.colorValue;
+        const isNeg = hasNeg && color < 0;
+        if (isNeg) {
+          color = -color;
+        }
+        const radius = color * this.edgeScale;
+        if (radius <= 0) {
+          continue;
+        }
+        if (min4 < max5) {
+          if (color < min4) {
+            continue;
+          }
+          color = (color - min4) / (max5 - min4);
+        } else {
+          color = 1;
+        }
+        color = Math.round(Math.max(Math.min(255, color * 255))) * 4;
+        let rgba = [lut[color], lut[color + 1], lut[color + 2], 255];
+        if (isNeg) {
+          rgba = [lutNeg[color], lutNeg[color + 1], lutNeg[color + 2], 255];
+        }
+        const pti = vec3_exports.fromValues(nodes[edge.first].x, nodes[edge.first].y, nodes[edge.first].z);
+        const ptj = vec3_exports.fromValues(nodes[edge.second].x, nodes[edge.second].y, nodes[edge.second].z);
+        NiivueObject3D.makeColoredCylinder(pts, tris, rgba255, pti, ptj, radius, rgba);
+      }
+    }
+    const pts32 = new Float32Array(pts);
+    const tris32 = new Uint32Array(tris);
+    const obj = NVMeshUtilities.getExtents(pts32);
+    this.furthestVertexFromOrigin = obj.mxDx;
+    this.extentsMin = obj.extentsMin;
+    this.extentsMax = obj.extentsMax;
+    const posNormClr = this.generatePosNormClr(pts32, tris32, new Uint8Array(rgba255));
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, Uint32Array.from(tris32), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(posNormClr), gl.STATIC_DRAW);
+    this.indexCount = tris.length;
+  }
+  updateMesh(gl) {
+    this.updateConnectome(gl);
+    this.updateLabels();
+  }
+  json() {
+    const json = {};
+    for (const prop in this) {
+      if (prop in defaultOptions || prop === "nodes" || prop === "edges") {
+        json[prop] = this[prop];
+      }
+    }
+    return json;
+  }
+  /**
+   * Factory method to create connectome from options
+   */
+  static async loadConnectomeFromUrl(gl, url) {
+    const response = await fetch(url);
+    const json = await response.json();
+    return new _NVConnectome(gl, json);
   }
 };
 
-// src/utils/nice.ts
-var nice = (x, round4) => {
-  const exp = Math.floor(Math.log(x) / Math.log(10));
-  const f = x / Math.pow(10, exp);
-  let nf;
-  if (round4) {
-    if (f < 1.5) {
-      nf = 1;
-    } else if (f < 3) {
-      nf = 2;
-    } else if (f < 7) {
-      nf = 5;
-    } else {
-      nf = 10;
+// src/niivue/data/ConnectomeManager.ts
+function loadConnectomeAsMesh(params) {
+  const { gl, json } = params;
+  let connectome = json;
+  if ("data_type" in json && json.data_type === "fs_pointset") {
+    connectome = NVConnectome.convertFreeSurferConnectome(json);
+    log.warn("converted FreeSurfer connectome", connectome);
+  } else if ("nodes" in json) {
+    const nodes = json.nodes;
+    if ("names" in nodes && "X" in nodes && "Y" in nodes && "Z" in nodes && "Color" in nodes && "Size" in nodes) {
+      connectome = NVConnectome.convertLegacyConnectome(json);
     }
   } else {
-    if (f <= 1) {
-      nf = 1;
-    } else if (f <= 2) {
-      nf = 2;
-    } else if (f <= 5) {
-      nf = 5;
-    } else {
-      nf = 10;
-    }
+    throw new Error("not a known connectome format");
   }
-  return nf * Math.pow(10, exp);
-};
-
-// src/utils/file-utils.ts
-function readFileAsDataURL(input) {
-  return new Promise((resolve2, reject) => {
-    let filePromise;
-    if (input instanceof File) {
-      filePromise = Promise.resolve(input);
-    } else {
-      filePromise = new Promise((resolve3, reject2) => {
-        input.file(resolve3, reject2);
-      });
-    }
-    filePromise.then((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          resolve2(reader.result);
-        } else {
-          reject(new Error("Expected a string from FileReader.result"));
+  return new NVConnectome(gl, connectome);
+}
+function createNodeAddedLabelData(node, lineTerminator = "none" /* NONE */) {
+  const rgba = [1, 1, 1, 1];
+  return {
+    text: node.name,
+    style: {
+      textColor: rgba,
+      bulletScale: 1,
+      bulletColor: rgba,
+      lineWidth: 0,
+      lineColor: rgba,
+      lineTerminator,
+      textScale: 1
+    },
+    position: [node.x, node.y, node.z]
+  };
+}
+function getAllLabels(params) {
+  const { meshes, documentLabels } = params;
+  const connectomes = meshes.filter((m) => m.type === "connectome" /* CONNECTOME */);
+  const meshNodes = connectomes.flatMap((m) => m.nodes);
+  const meshLabels = meshNodes.map((n) => n.label);
+  const definedMeshLabels = meshLabels.filter((l) => l !== void 0);
+  const labels = [...documentLabels, ...definedMeshLabels];
+  return labels;
+}
+function getConnectomeLabels(params) {
+  const { meshes, documentLabels } = params;
+  const connectomes = meshes.filter((m) => m.type === "connectome" /* CONNECTOME */ && m.showLegend !== false);
+  const meshNodes = connectomes.flatMap((m) => m.nodes);
+  const meshLabels = meshNodes.map((n) => n.label);
+  const definedMeshLabels = meshLabels.filter((l) => l !== void 0 && l.text !== "");
+  const nonAnchoredLabels = documentLabels.filter((l) => l.anchor == null || l.anchor === 0 /* NONE */);
+  const nonAnchoredLabelSet = new Set(definedMeshLabels);
+  for (const label of nonAnchoredLabels) {
+    nonAnchoredLabelSet.add(label);
+  }
+  const regularMeshes = meshes.filter((m) => m.type === "mesh" /* MESH */);
+  for (let i = 0; i < regularMeshes.length; i++) {
+    for (let j = 0; j < regularMeshes[i].layers.length; j++) {
+      if (regularMeshes[i].layers[j].labels) {
+        for (let k = 0; k < regularMeshes[i].layers[j].labels.length; k++) {
+          nonAnchoredLabelSet.add(regularMeshes[i].layers[j].labels[k]);
         }
-      };
-      reader.onerror = () => {
-        reject(reader.error ?? new Error("Unknown FileReader error"));
-      };
-      reader.readAsDataURL(file);
-    }).catch((err2) => reject(err2));
-  });
-}
-
-// src/utils/image-utils.ts
-function img2ras16(volume) {
-  const dims = volume.hdr.dims;
-  const perm = volume.permRAS;
-  const vx = dims[1] * dims[2] * dims[3];
-  const img16 = new Int16Array(vx);
-  const layout = [0, 0, 0];
-  for (let i = 0; i < 3; i++) {
-    for (let j2 = 0; j2 < 3; j2++) {
-      if (Math.abs(perm[i]) - 1 !== j2) {
-        continue;
-      }
-      layout[j2] = i * Math.sign(perm[i]);
-    }
-  }
-  let stride = 1;
-  const instride = [1, 1, 1];
-  const inflip = [false, false, false];
-  for (let i = 0; i < layout.length; i++) {
-    for (let j2 = 0; j2 < layout.length; j2++) {
-      const a = Math.abs(layout[j2]);
-      if (a !== i) {
-        continue;
-      }
-      instride[j2] = stride;
-      if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
-        inflip[j2] = true;
-      }
-      stride *= dims[j2 + 1];
-    }
-  }
-  let xlut = NVUtilities.range(0, dims[1] - 1, 1);
-  if (inflip[0]) {
-    xlut = NVUtilities.range(dims[1] - 1, 0, -1);
-  }
-  for (let i = 0; i < dims[1]; i++) {
-    xlut[i] *= instride[0];
-  }
-  let ylut = NVUtilities.range(0, dims[2] - 1, 1);
-  if (inflip[1]) {
-    ylut = NVUtilities.range(dims[2] - 1, 0, -1);
-  }
-  for (let i = 0; i < dims[2]; i++) {
-    ylut[i] *= instride[1];
-  }
-  let zlut = NVUtilities.range(0, dims[3] - 1, 1);
-  if (inflip[2]) {
-    zlut = NVUtilities.range(dims[3] - 1, 0, -1);
-  }
-  for (let i = 0; i < dims[3]; i++) {
-    zlut[i] *= instride[2];
-  }
-  let j = 0;
-  for (let z = 0; z < dims[3]; z++) {
-    for (let y = 0; y < dims[2]; y++) {
-      for (let x = 0; x < dims[1]; x++) {
-        img16[xlut[x] + ylut[y] + zlut[z]] = volume.img[j];
-        j++;
       }
     }
   }
-  return img16;
-}
-function unpackFloatFromVec4i(val) {
-  const bitSh = [1 / (256 * 256 * 256), 1 / (256 * 256), 1 / 256, 1];
-  return (val[0] * bitSh[0] + val[1] * bitSh[1] + val[2] * bitSh[2] + val[3] * bitSh[3]) / 255;
-}
-function intensityRaw2Scaled(hdr, raw) {
-  if (hdr.scl_slope === 0) {
-    hdr.scl_slope = 1;
-  }
-  return raw * hdr.scl_slope + hdr.scl_inter;
+  return Array.from(nonAnchoredLabelSet);
 }
 
-// src/utils/math-utils.ts
-function loose_label(min4, max5, ntick = 4) {
-  const range2 = nice(max5 - min4, false);
-  const d = nice(range2 / (ntick - 1), true);
-  const graphmin = Math.floor(min4 / d) * d;
-  const graphmax = Math.ceil(max5 / d) * d;
-  const perfect = graphmin === min4 && graphmax === max5;
-  return [d, graphmin, graphmax, perfect];
-}
-function tickSpacing(mn, mx) {
-  let v = loose_label(mn, mx, 3);
-  if (!v[3]) {
-    v = loose_label(mn, mx, 5);
-  }
-  if (!v[3]) {
-    v = loose_label(mn, mx, 4);
-  }
-  if (!v[3]) {
-    v = loose_label(mn, mx, 3);
-  }
-  if (!v[3]) {
-    v = loose_label(mn, mx, 5);
-  }
-  return [v[0], v[1], v[2]];
-}
-function deg2rad(deg) {
-  return deg * (Math.PI / 180);
-}
-function negMinMax(min4, max5, minNeg, maxNeg) {
-  let mn = -min4;
-  let mx = -max5;
-  if (isFinite(minNeg) && isFinite(maxNeg)) {
-    mn = minNeg;
-    mx = maxNeg;
-  }
-  if (mn > mx) {
-    ;
-    [mn, mx] = [mx, mn];
-  }
-  return [mn, mx];
-}
-function clamp(value, min4, max5) {
-  return Math.min(Math.max(value, min4), max5);
-}
-
-// src/utils/webgl-utils.ts
-function swizzleVec3(vec, order = [0, 1, 2]) {
-  const vout = vec3_exports.create();
-  vout[0] = vec[order[0]];
-  vout[1] = vec[order[1]];
-  vout[2] = vec[order[2]];
-  return vout;
-}
-function isRadiological(mtx) {
-  const vRight = vec4_exports.fromValues(1, 0, 0, 0);
-  const vRotated = vec4_exports.create();
-  vec4_exports.transformMat4(vRotated, vRight, mtx);
-  return vRotated[0];
-}
-function unProject(winX, winY, winZ, mvpMatrix) {
-  const inp = vec4_exports.fromValues(winX, winY, winZ, 1);
-  const finalMatrix = mat4_exports.clone(mvpMatrix);
-  mat4_exports.invert(finalMatrix, finalMatrix);
-  inp[0] = inp[0] * 2 - 1;
-  inp[1] = inp[1] * 2 - 1;
-  inp[2] = inp[2] * 2 - 1;
-  const out = vec4_exports.create();
-  vec4_exports.transformMat4(out, inp, finalMatrix);
-  if (out[3] === 0) {
-    return out;
-  }
-  out[0] /= out[3];
-  out[1] /= out[3];
-  out[2] /= out[3];
-  return out;
-}
-
-// src/niivue/index.ts
-var { version } = package_default;
+// src/niivue/data/FileLoader.ts
+var FileLoader_exports = {};
+__export(FileLoader_exports, {
+  MESH_EXTENSIONS: () => MESH_EXTENSIONS,
+  getFileExt: () => getFileExt,
+  getLoader: () => getLoader,
+  getMediaByUrl: () => getMediaByUrl,
+  handleDragEnter: () => handleDragEnter,
+  handleDragOver: () => handleDragOver,
+  isDicomExtension: () => isDicomExtension,
+  isMeshExt: () => isMeshExt,
+  readDirectory: () => readDirectory,
+  readFileAsDataURL: () => readFileAsDataURL2,
+  registerLoader: () => registerLoader,
+  traverseFileTree: () => traverseFileTree
+});
 var MESH_EXTENSIONS = [
   "ASC",
   "BYU",
@@ -35705,26 +36938,4329 @@ var MESH_EXTENSIONS = [
   "JCON",
   "JSON"
 ];
+function getFileExt(fullnameOrOptions, upperCase = true) {
+  let fullname;
+  if (typeof fullnameOrOptions === "object") {
+    fullname = fullnameOrOptions.fullname;
+    upperCase = fullnameOrOptions.upperCase ?? true;
+  } else {
+    fullname = fullnameOrOptions;
+  }
+  log.debug("fullname: ", fullname);
+  const re = /(?:\.([^.]+))?$/;
+  let ext = re.exec(fullname)[1];
+  ext = ext.toUpperCase();
+  if (ext === "GZ") {
+    ext = re.exec(fullname.slice(0, -3))[1];
+    ext = ext.toUpperCase();
+  } else if (ext === "CBOR") {
+    const endExt = ext;
+    ext = re.exec(fullname.slice(0, -5))[1];
+    ext = ext.toUpperCase();
+    ext = `${ext}.${endExt}`;
+  }
+  return upperCase ? ext : ext.toLowerCase();
+}
+function isMeshExt(url) {
+  const ext = getFileExt(url);
+  log.debug("checking mesh ext:", ext);
+  return MESH_EXTENSIONS.includes(ext);
+}
+function getMediaByUrl(url, mediaUrlMap) {
+  return [...mediaUrlMap.entries()].filter((v) => v[1] === url).map((v) => v[0]).pop();
+}
+function registerLoader(params) {
+  const { loaders, loader, fileExt, toExt } = params;
+  return {
+    ...loaders,
+    [fileExt.toUpperCase()]: {
+      loader,
+      toExt
+    }
+  };
+}
+function getLoader(loaders, ext) {
+  return loaders[ext.toUpperCase()];
+}
+function isDicomExtension(ext) {
+  return ext.toUpperCase() === "DCM";
+}
+async function traverseFileTree(item, path = "", fileArray) {
+  return new Promise((resolve2) => {
+    if (item.isFile) {
+      ;
+      item.file((file) => {
+        file.fullPath = path + file.name;
+        file._webkitRelativePath = path + file.name;
+        fileArray.push(file);
+        resolve2(fileArray);
+      });
+    } else if (item.isDirectory) {
+      const dirReader = item.createReader();
+      const readAllEntries = () => {
+        dirReader.readEntries((entries) => {
+          if (entries.length > 0) {
+            const promises = entries.map((entry) => traverseFileTree(entry, path + item.name + "/", fileArray));
+            Promise.all(promises).then(readAllEntries).catch((e) => {
+              throw e;
+            });
+          } else {
+            resolve2(fileArray);
+          }
+        });
+      };
+      readAllEntries();
+    }
+  });
+}
+function readDirectory(directory) {
+  const reader = directory.createReader();
+  let allEntriesInDir = [];
+  const getFileObjects = async (fileSystemEntries) => {
+    const allFileObjects = [];
+    const getFile = async (fileEntry) => {
+      return new Promise((resolve2, reject) => fileEntry.file(resolve2, reject));
+    };
+    for (let i = 0; i < fileSystemEntries.length; i++) {
+      allFileObjects.push(await getFile(fileSystemEntries[i]));
+    }
+    return allFileObjects;
+  };
+  const readEntries = () => {
+    reader.readEntries((entries) => {
+      if (entries.length) {
+        allEntriesInDir = allEntriesInDir.concat(entries);
+        readEntries();
+      } else {
+        getFileObjects(allEntriesInDir).then(async () => {
+        }).catch((e) => {
+          throw e;
+        });
+      }
+    });
+  };
+  readEntries();
+  return allEntriesInDir;
+}
+function readFileAsDataURL2(entry) {
+  return new Promise((resolve2, reject) => {
+    entry.file(
+      (file) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve2(reader.result);
+        reader.onerror = () => reject(new Error("Failed to read file as data URL"));
+        reader.readAsDataURL(file);
+      },
+      (err2) => reject(err2)
+    );
+  });
+}
+function handleDragEnter(e) {
+  e.stopPropagation();
+  e.preventDefault();
+}
+function handleDragOver(e) {
+  e.stopPropagation();
+  e.preventDefault();
+}
+
+// src/niivue/rendering/SliceRenderer.ts
+var TEXTURE0_BACK_VOL2 = 33984;
+var TEXTURE2_OVERLAY_VOL2 = 33986;
+function updateInterpolation(params) {
+  const { gl, layer, isForceLinear = false, isNearestInterpolation, is2DSliceShader } = params;
+  let interp = gl.LINEAR;
+  if (!isForceLinear && isNearestInterpolation) {
+    interp = gl.NEAREST;
+  }
+  if (layer === 0) {
+    gl.activeTexture(TEXTURE0_BACK_VOL2);
+  } else {
+    gl.activeTexture(TEXTURE2_OVERLAY_VOL2);
+  }
+  if (is2DSliceShader) {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, interp);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, interp);
+  } else {
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, interp);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, interp);
+  }
+}
+function getCrossLinesForSliceType(axCorSag, axiMM, corMM, sagMM) {
+  let linesH = corMM.slice();
+  let linesV = sagMM.slice();
+  if (axCorSag === 1 /* CORONAL */) {
+    linesH = axiMM.slice();
+  }
+  if (axCorSag === 2 /* SAGITTAL */) {
+    linesH = axiMM.slice();
+    linesV = corMM.slice();
+  }
+  return { linesH, linesV };
+}
+function calculateSliceDimensions(sliceType, volScale, containerWidth, containerHeight) {
+  let xScale;
+  let yScale;
+  switch (sliceType) {
+    case 0 /* AXIAL */:
+      xScale = volScale[0];
+      yScale = volScale[1];
+      break;
+    case 1 /* CORONAL */:
+      xScale = volScale[0];
+      yScale = volScale[2];
+      break;
+    case 2 /* SAGITTAL */:
+      xScale = volScale[1];
+      yScale = volScale[2];
+      break;
+    default:
+      return [containerWidth, containerHeight];
+  }
+  const aspectRatio = xScale / yScale;
+  const containerAspect = containerWidth / containerHeight;
+  let actualWidth;
+  let actualHeight;
+  if (aspectRatio > containerAspect) {
+    actualWidth = containerWidth;
+    actualHeight = containerWidth / aspectRatio;
+  } else {
+    actualHeight = containerHeight;
+    actualWidth = containerHeight * aspectRatio;
+  }
+  return [actualWidth, actualHeight];
+}
+
+// src/niivue/rendering/VolumeRenderer.ts
+var TEXTURE0_BACK_VOL3 = 33984;
+var TEXTURE6_GRADIENT = 33990;
+var TEXTURE8_GRADIENT_TEMP = 33992;
+function sph2cartDeg(azimuth, elevation) {
+  const Phi = -elevation * (Math.PI / 180);
+  const Theta = (azimuth - 90) % 360 * (Math.PI / 180);
+  const ret = [Math.cos(Phi) * Math.cos(Theta), Math.cos(Phi) * Math.sin(Theta), Math.sin(Phi)];
+  const len4 = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2]);
+  if (len4 <= 0) {
+    return ret;
+  }
+  ret[0] /= len4;
+  ret[1] /= len4;
+  ret[2] /= len4;
+  return ret;
+}
+function calculateModelMatrix(params) {
+  const { azimuth, elevation, obliqueRAS } = params;
+  const modelMatrix = mat4_exports.create();
+  modelMatrix[0] = -1;
+  mat4_exports.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
+  mat4_exports.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180));
+  if (obliqueRAS) {
+    const oblique = mat4_exports.clone(obliqueRAS);
+    mat4_exports.multiply(modelMatrix, modelMatrix, oblique);
+  }
+  return modelMatrix;
+}
+function calculateRayDirection(params) {
+  const { azimuth, elevation, obliqueRAS } = params;
+  const dirClip = vec3_exports.fromValues(0, 0, -1);
+  const modelMatrix = calculateModelMatrix({ azimuth, elevation, obliqueRAS });
+  const proj3 = mat3_exports.fromValues(1, 0, 0, 0, -1, 0, 0, 0, -1);
+  const dirAfterProj = vec3_exports.create();
+  vec3_exports.transformMat3(dirAfterProj, dirClip, proj3);
+  const model3 = mat3_exports.create();
+  mat3_exports.fromMat4(model3, modelMatrix);
+  const invModel3 = mat3_exports.create();
+  if (!mat3_exports.invert(invModel3, model3)) {
+    return vec3_exports.fromValues(0, 0, 1);
+  }
+  const worldRay = vec3_exports.create();
+  vec3_exports.transformMat3(worldRay, dirAfterProj, invModel3);
+  vec3_exports.normalize(worldRay, worldRay);
+  const tiny = 5e-5;
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(worldRay[i]) < tiny) {
+      worldRay[i] = Math.sign(worldRay[i]) * tiny || tiny;
+    }
+  }
+  return worldRay;
+}
+function gradientGL(params) {
+  const { gl, hdr, genericVAO, unusedVAO, volumeTexture, paqdTexture, gradientOrder, blurShader: blurShaderInput, sobelBlurShader, sobelFirstOrderShader, sobelSecondOrderShader, rgbaTex: rgbaTex2 } = params;
+  let { gradientTexture } = params;
+  gl.bindVertexArray(genericVAO);
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.viewport(0, 0, hdr.dims[1], hdr.dims[2]);
+  gl.disable(gl.BLEND);
+  const tempTex3D = rgbaTex2(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true);
+  const blurShader = gradientOrder === 2 ? sobelBlurShader : blurShaderInput;
+  blurShader.use(gl);
+  gl.activeTexture(TEXTURE0_BACK_VOL3);
+  gl.bindTexture(gl.TEXTURE_3D, volumeTexture);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  const blurRadius = 0.7;
+  gl.uniform1i(blurShader.uniforms.intensityVol, 0);
+  gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1]);
+  gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2]);
+  gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3]);
+  for (let i = 0; i < hdr.dims[3] - 1; i++) {
+    const coordZ = 1 / hdr.dims[3] * (i + 0.5);
+    gl.uniform1f(blurShader.uniforms.coordZ, coordZ);
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i);
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      log.error("blur shader: ", status);
+    }
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  const sobelShader = gradientOrder === 2 ? sobelSecondOrderShader : sobelFirstOrderShader;
+  sobelShader.use(gl);
+  gl.activeTexture(TEXTURE8_GRADIENT_TEMP);
+  gl.bindTexture(gl.TEXTURE_3D, tempTex3D);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.uniform1i(sobelShader.uniforms.intensityVol, 8);
+  const sobelRadius = 0.7;
+  gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1]);
+  gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2]);
+  gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3]);
+  if (gradientOrder === 2) {
+    gl.uniform1f(sobelShader.uniforms.dX2, 2 * sobelRadius / hdr.dims[1]);
+    gl.uniform1f(sobelShader.uniforms.dY2, 2 * sobelRadius / hdr.dims[2]);
+    gl.uniform1f(sobelShader.uniforms.dZ2, 2 * sobelRadius / hdr.dims[3]);
+  }
+  gl.uniform1f(sobelShader.uniforms.coordZ, 0.5);
+  if (gradientTexture !== null) {
+    gl.deleteTexture(gradientTexture);
+  }
+  gradientTexture = rgbaTex2(gradientTexture, TEXTURE6_GRADIENT, hdr.dims);
+  for (let i = 0; i < hdr.dims[3] - 1; i++) {
+    const coordZ = 1 / hdr.dims[3] * (i + 0.5);
+    gl.uniform1f(sobelShader.uniforms.coordZ, coordZ);
+    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gradientTexture, 0, i);
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      log.error("sobel shader: ", status);
+    }
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  gl.deleteFramebuffer(fb);
+  gl.deleteTexture(tempTex3D);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.activeTexture(33992);
+  gl.bindTexture(gl.TEXTURE_3D, paqdTexture);
+  gl.bindVertexArray(unusedVAO);
+  return gradientTexture;
+}
+function getGradientTextureData(params) {
+  const { gl, gradientTexture, dims } = params;
+  if (!gradientTexture || !dims) {
+    return null;
+  }
+  const width = dims[1];
+  const height = dims[2];
+  const depth = dims[3];
+  const numVoxels = width * height * depth;
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  const data = new Float32Array(numVoxels * 4);
+  try {
+    for (let slice2 = 0; slice2 < depth; slice2++) {
+      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gradientTexture, 0, slice2);
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        console.warn("Framebuffer not complete for gradient texture reading, slice", slice2, "status:", status.toString(16));
+        continue;
+      }
+      try {
+        const byteData = new Uint8Array(width * height * 4);
+        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, byteData);
+        const sliceData = new Float32Array(width * height * 4);
+        for (let i = 0; i < byteData.length; i++) {
+          sliceData[i] = byteData[i] / 127.5 - 1;
+        }
+        const sliceOffset = slice2 * width * height * 4;
+        data.set(sliceData, sliceOffset);
+      } catch (readError) {
+        console.warn("Failed to read pixels for slice", slice2, ":", readError);
+        const sliceOffset = slice2 * width * height * 4;
+        const zeroSlice = new Float32Array(width * height * 4);
+        data.set(zeroSlice, sliceOffset);
+      }
+    }
+  } catch (error) {
+    console.error("Error reading gradient texture:", error);
+    return null;
+  } finally {
+    gl.deleteFramebuffer(fb);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+  return data;
+}
+function setCustomGradientTexture(params) {
+  const { gl, data, dims, backDims, gradientTextureAmount, hdr, gradientGLFn } = params;
+  let { gradientTexture } = params;
+  if (data === null) {
+    if (hdr && gradientTextureAmount > 0 && gradientGLFn) {
+      gradientGLFn(hdr);
+    }
+    return {
+      gradientTexture,
+      useCustomGradientTexture: false
+    };
+  }
+  if (!dims && !backDims) {
+    console.warn("No dimensions provided and no background volume loaded");
+    return {
+      gradientTexture,
+      useCustomGradientTexture: false
+    };
+  }
+  const texDims = dims || backDims;
+  const width = texDims[1];
+  const height = texDims[2];
+  const depth = texDims[3];
+  const expectedSize = width * height * depth * 4;
+  if (data.length !== expectedSize) {
+    console.warn(`Custom gradient data size mismatch. Expected ${expectedSize}, got ${data.length}`);
+    return {
+      gradientTexture,
+      useCustomGradientTexture: false
+    };
+  }
+  if (gradientTexture !== null) {
+    gl.deleteTexture(gradientTexture);
+  }
+  gradientTexture = gl.createTexture();
+  gl.activeTexture(TEXTURE6_GRADIENT);
+  gl.bindTexture(gl.TEXTURE_3D, gradientTexture);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  let textureData;
+  if (data instanceof Float32Array) {
+    textureData = new Uint8Array(data.length);
+    for (let i = 0; i < data.length; i++) {
+      const clampedValue = Math.max(-1, Math.min(1, data[i]));
+      textureData[i] = Math.round((clampedValue + 1) * 127.5);
+    }
+  } else {
+    textureData = data;
+  }
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8, width, height, depth);
+  gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, width, height, depth, gl.RGBA, gl.UNSIGNED_BYTE, textureData);
+  return {
+    gradientTexture,
+    useCustomGradientTexture: true
+  };
+}
+function drawImage3D(params) {
+  const {
+    gl,
+    mvpMatrix,
+    azimuth,
+    elevation,
+    volumesLength,
+    volumeObject3D,
+    unusedVAO,
+    renderShader,
+    pickingImageShader,
+    mouseDepthPicker,
+    backgroundMasksOverlays,
+    gradientTextureAmount,
+    gradientTexture,
+    drawBitmap,
+    renderDrawAmbientOcclusion,
+    drawOpacity,
+    paqdUniforms,
+    matRAS,
+    crosshairPos,
+    clipPlaneDepthAziElevs,
+    isClipPlanesCutaway,
+    obliqueRAS
+  } = params;
+  if (volumesLength === 0) {
+    return;
+  }
+  const rayDir = calculateRayDirection({ azimuth, elevation, obliqueRAS });
+  const object3D = volumeObject3D;
+  if (object3D) {
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.FRONT);
+    let shader = renderShader;
+    if (mouseDepthPicker) {
+      shader = pickingImageShader;
+    }
+    shader.use(gl);
+    gl.uniform1i(shader.uniforms.backgroundMasksOverlays, backgroundMasksOverlays);
+    if (gradientTextureAmount > 0 && shader.uniforms.normMtx && gradientTexture) {
+      gl.activeTexture(TEXTURE6_GRADIENT);
+      gl.bindTexture(gl.TEXTURE_3D, gradientTexture);
+      const modelMatrix = calculateModelMatrix({ azimuth, elevation, obliqueRAS });
+      const iModelMatrix = mat4_exports.create();
+      mat4_exports.invert(iModelMatrix, modelMatrix);
+      const normalMatrix = mat4_exports.create();
+      mat4_exports.transpose(normalMatrix, iModelMatrix);
+      gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix);
+    }
+    if (drawBitmap && drawBitmap.length > 8) {
+      gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, drawOpacity);
+    } else {
+      gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, 0);
+    }
+    gl.uniform4fv(shader.uniforms.paqdUniforms, paqdUniforms);
+    gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix);
+    gl.uniformMatrix4fv(shader.uniforms.matRAS, false, matRAS);
+    gl.uniform3fv(shader.uniforms.rayDir, rayDir);
+    if (gradientTextureAmount < 0) {
+      gl.uniform4fv(shader.uniforms.clipPlane, [crosshairPos[0], crosshairPos[1], crosshairPos[2], 30]);
+    } else {
+      const MAX_CLIP_PLANES = 6;
+      const arr = new Float32Array(4 * MAX_CLIP_PLANES).fill(2);
+      for (let i = 0; i < clipPlaneDepthAziElevs.length; i++) {
+        const dae = clipPlaneDepthAziElevs[i];
+        const v = sph2cartDeg(dae[1] + 180, dae[2]);
+        const planeI = [v[0], v[1], v[2], dae[0]];
+        arr.set(planeI, i * 4);
+      }
+      gl.uniform4fv(shader.uniforms.clipPlanes, arr);
+    }
+    gl.uniform1f(shader.uniforms.drawOpacity, 1);
+    gl.uniform1i(shader.uniforms.isClipCutaway, isClipPlanesCutaway ? 1 : 0);
+    gl.bindVertexArray(object3D.vao);
+    gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
+    gl.bindVertexArray(unusedVAO);
+  }
+}
+
+// src/niivue/rendering/MeshRenderer.ts
+var TEXTURE5_MATCAP2 = 33989;
+function shouldRenderMesh(params) {
+  const { visible, opacity, indexCount } = params;
+  return visible && opacity > 0 && indexCount >= 3;
+}
+function selectMeshShader(params) {
+  const { meshShaderIndex, meshShaders, pickingMeshShader, mouseDepthPicker } = params;
+  if (mouseDepthPicker) {
+    return pickingMeshShader;
+  }
+  return meshShaders[meshShaderIndex]?.shader ?? null;
+}
+function calculateMeshAlpha(params) {
+  const { meshOpacity, globalAlpha } = params;
+  return meshOpacity * globalAlpha;
+}
+function isFiberMesh(params) {
+  const { offsetPt0, fiberSides, fiberRadius } = params;
+  return !!offsetPt0 && (fiberSides < 3 || fiberRadius <= 0);
+}
+function calculateCrosscutSlice(params) {
+  const { modelMtx, crosshairMM, is2D } = params;
+  const OUT_OF_RANGE = 1e9;
+  const mm = [crosshairMM[0], crosshairMM[1], crosshairMM[2]];
+  if (is2D) {
+    if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
+      mm[1] = OUT_OF_RANGE;
+      mm[2] = OUT_OF_RANGE;
+    }
+    if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
+      mm[0] = OUT_OF_RANGE;
+      mm[2] = OUT_OF_RANGE;
+    }
+    if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
+      mm[0] = OUT_OF_RANGE;
+      mm[1] = OUT_OF_RANGE;
+    }
+  }
+  return mm;
+}
+function getMeshThickness(meshThicknessOn2D) {
+  let thickness = Number(meshThicknessOn2D);
+  if (!Number.isFinite(thickness)) {
+    thickness = 1;
+  }
+  return thickness;
+}
+function setupCrosscutShader(params) {
+  const { gl, shader, modelMtx, sliceMM, meshThickness } = params;
+  gl.disable(gl.DEPTH_TEST);
+  gl.disable(gl.CULL_FACE);
+  gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx);
+  gl.uniform4fv(shader.uniforms.sliceMM, [sliceMM[0], sliceMM[1], sliceMM[2], meshThickness]);
+}
+function setMeshUniforms(params) {
+  const { gl, shader, mvpMtx, normMtx, opacity } = params;
+  gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMtx);
+  gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
+  gl.uniform1f(shader.uniforms.opacity, opacity);
+}
+function bindMatcapTexture(params) {
+  const { gl, matCapTexture } = params;
+  gl.activeTexture(TEXTURE5_MATCAP2);
+  gl.bindTexture(gl.TEXTURE_2D, matCapTexture);
+}
+function drawSingleMesh(params) {
+  const { gl, mesh, unusedVAO } = params;
+  gl.bindVertexArray(mesh.vao);
+  gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
+  gl.bindVertexArray(unusedVAO);
+}
+function drawFiberMesh(params) {
+  const { gl, mesh, unusedVAO } = params;
+  gl.bindVertexArray(mesh.vaoFiber);
+  gl.drawElements(gl.LINE_STRIP, mesh.indexCount, gl.UNSIGNED_INT, 0);
+  gl.bindVertexArray(unusedVAO);
+}
+function configureXRayPass(params) {
+  const { gl } = params;
+  gl.enable(gl.BLEND);
+  gl.depthMask(false);
+  gl.depthFunc(gl.ALWAYS);
+}
+function resetAfterXRayPass(gl) {
+  gl.depthMask(true);
+  gl.depthFunc(gl.LEQUAL);
+  gl.disable(gl.BLEND);
+}
+function resetMeshGLState(gl) {
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+}
+function drawMesh3D(params) {
+  const {
+    gl,
+    meshes,
+    isDepthTest,
+    alpha,
+    mvpMatrix,
+    modelMatrix,
+    normalMatrix,
+    is2D,
+    meshShaders,
+    pickingMeshShader,
+    fiberShader,
+    mouseDepthPicker,
+    matCapTexture,
+    unusedVAO,
+    meshXRay,
+    meshThicknessOn2D,
+    frac2mm: frac2mm2,
+    crosshairPos
+  } = params;
+  if (meshes.length < 1) {
+    return;
+  }
+  gl.enable(gl.DEPTH_TEST);
+  if (isDepthTest) {
+    gl.depthFunc(gl.LEQUAL);
+  } else {
+    gl.depthFunc(gl.ALWAYS);
+  }
+  gl.cullFace(gl.BACK);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  let hasFibers = false;
+  for (const mesh of meshes) {
+    if (!shouldRenderMesh({ visible: mesh.visible, opacity: mesh.opacity, indexCount: mesh.indexCount })) {
+      continue;
+    }
+    const meshAlpha = calculateMeshAlpha({ meshOpacity: mesh.opacity, globalAlpha: alpha });
+    const shader = selectMeshShader({
+      meshShaderIndex: mesh.meshShaderIndex,
+      meshShaders,
+      pickingMeshShader,
+      mouseDepthPicker
+    });
+    if (!shader) {
+      continue;
+    }
+    shader.use(gl);
+    if (shader.isCrosscut) {
+      const mm = frac2mm2([crosshairPos[0], crosshairPos[1], crosshairPos[2]]);
+      const sliceMM = calculateCrosscutSlice({ modelMtx: modelMatrix, crosshairMM: mm, is2D });
+      const thickness = getMeshThickness(meshThicknessOn2D);
+      setupCrosscutShader({ gl, shader, modelMtx: modelMatrix, sliceMM, meshThickness: thickness });
+    } else {
+      gl.enable(gl.CULL_FACE);
+      gl.enable(gl.DEPTH_TEST);
+    }
+    setMeshUniforms({ gl, shader, mvpMtx: mvpMatrix, normMtx: normalMatrix, opacity: meshAlpha });
+    if (meshAlpha >= 1) {
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+    } else {
+      gl.enable(gl.BLEND);
+      gl.depthMask(false);
+    }
+    if (isFiberMesh({ offsetPt0: mesh.offsetPt0, fiberSides: mesh.fiberSides, fiberRadius: mesh.fiberRadius })) {
+      hasFibers = true;
+      continue;
+    }
+    if (shader.isMatcap) {
+      bindMatcapTexture({ gl, matCapTexture });
+    }
+    drawSingleMesh({ gl, mesh, unusedVAO });
+  }
+  gl.enable(gl.CULL_FACE);
+  if (meshXRay > 0 && !hasFibers) {
+    configureXRayPass({ gl });
+    for (const mesh of meshes) {
+      if (!mesh.visible || mesh.indexCount < 3) {
+        continue;
+      }
+      const shader = meshShaders[mesh.meshShaderIndex]?.shader;
+      if (!shader) {
+        continue;
+      }
+      shader.use(gl);
+      setMeshUniforms({
+        gl,
+        shader,
+        mvpMtx: mvpMatrix,
+        normMtx: normalMatrix,
+        opacity: mesh.opacity * alpha * meshXRay
+      });
+      drawSingleMesh({ gl, mesh, unusedVAO });
+    }
+    resetAfterXRayPass(gl);
+  }
+  if (hasFibers && fiberShader) {
+    fiberShader.use(gl);
+    gl.uniformMatrix4fv(fiberShader.uniforms.mvpMtx, false, mvpMatrix);
+    gl.uniform1f(fiberShader.uniforms.opacity, alpha);
+    for (const mesh of meshes) {
+      if (!mesh.offsetPt0) {
+        continue;
+      }
+      if (mesh.fiberSides >= 3 && mesh.fiberRadius > 0) {
+        continue;
+      }
+      drawFiberMesh({ gl, mesh, unusedVAO });
+    }
+  }
+  resetMeshGLState(gl);
+}
+
+// src/niivue/rendering/SceneRenderer.ts
+function calculateMvpMatrix(params) {
+  const { canvasWidth, canvasHeight, leftTopWidthHeight, azimuth, elevation, furthestFromPivot, pivot3D, volScaleMultiplier, position } = params;
+  let ltwh = leftTopWidthHeight;
+  if (ltwh[2] === 0 || ltwh[3] === 0) {
+    ltwh = [0, 0, canvasWidth, canvasHeight];
+  }
+  const whratio = ltwh[2] / ltwh[3];
+  let scale6 = furthestFromPivot;
+  const origin = pivot3D;
+  const projectionMatrix = mat4_exports.create();
+  scale6 = 0.8 * scale6 / volScaleMultiplier;
+  if (whratio < 1) {
+    mat4_exports.ortho(projectionMatrix, -scale6, scale6, -scale6 / whratio, scale6 / whratio, scale6 * 8, scale6 * 0.01);
+  } else {
+    mat4_exports.ortho(projectionMatrix, -scale6 * whratio, scale6 * whratio, -scale6, scale6, scale6 * 8, scale6 * 0.01);
+  }
+  const modelMatrix = mat4_exports.create();
+  modelMatrix[0] = -1;
+  const translateVec3 = vec3_exports.fromValues(0, 0, -scale6 * 1.8);
+  mat4_exports.translate(modelMatrix, modelMatrix, translateVec3);
+  if (position) {
+    mat4_exports.translate(modelMatrix, modelMatrix, position);
+  }
+  mat4_exports.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
+  mat4_exports.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180));
+  mat4_exports.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]]);
+  const iModelMatrix = mat4_exports.create();
+  mat4_exports.invert(iModelMatrix, modelMatrix);
+  const normalMatrix = mat4_exports.create();
+  mat4_exports.transpose(normalMatrix, iModelMatrix);
+  const mvpMatrix = mat4_exports.create();
+  mat4_exports.multiply(mvpMatrix, projectionMatrix, modelMatrix);
+  return { mvpMatrix, modelMatrix, normalMatrix };
+}
+function calculatePivot3D(params) {
+  const { sceneMin, sceneMax } = params;
+  const pivot = vec3_exports.create();
+  vec3_exports.add(pivot, sceneMin, sceneMax);
+  vec3_exports.scale(pivot, pivot, 0.5);
+  const range2 = vec3_exports.create();
+  vec3_exports.subtract(range2, sceneMax, sceneMin);
+  return {
+    pivot3D: [pivot[0], pivot[1], pivot[2]],
+    furthestFromPivot: vec3_exports.length(range2) * 0.5,
+    extentsMin: sceneMin,
+    extentsMax: sceneMax
+  };
+}
+function getMaxVols(params) {
+  const { volumes } = params;
+  if (volumes.length < 1) {
+    return 0;
+  }
+  let maxVols = 0;
+  for (let i = 0; i < volumes.length; i++) {
+    maxVols = Math.max(maxVols, volumes[i].nFrame4D ?? 0);
+  }
+  return maxVols;
+}
+
+// src/niivue/rendering/UIElementRenderer.ts
+function calculateTextWidth(params) {
+  const { fontMets, scale: scale6, str: str6 } = params;
+  if (!str6) {
+    return 0;
+  }
+  let w = 0;
+  const bytes = new TextEncoder().encode(str6);
+  for (let i = 0; i < str6.length; i++) {
+    w += scale6 * fontMets.mets[bytes[i]].xadv;
+  }
+  return w;
+}
+function calculateTextHeight(params) {
+  const { fontMets, scale: scale6, str: str6 } = params;
+  if (!str6) {
+    return 0;
+  }
+  const byteSet = new Set(Array.from(str6));
+  const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
+  const tallest = Object.values(fontMets.mets).filter((_, index) => bytes.includes(index)).reduce((a, b) => a.lbwh[3] > b.lbwh[3] ? a : b);
+  const height = tallest.lbwh[3];
+  return scale6 * height;
+}
+function calculateTextBelowPosition(params, getTextWidth) {
+  const { xy, str: str6, fontPx, canvasWidth } = params;
+  let scale6 = params.scale;
+  let size = fontPx * scale6;
+  let width = getTextWidth(size, str6);
+  if (width > canvasWidth) {
+    scale6 *= (canvasWidth - 2) / width;
+    size = fontPx * scale6;
+    width = getTextWidth(size, str6);
+  }
+  let x = xy[0] - 0.5 * getTextWidth(size, str6);
+  x = Math.max(x, 1);
+  x = Math.min(x, canvasWidth - width - 1);
+  return { x, y: xy[1], scale: scale6 };
+}
+function calculateTextAbovePosition(params, getTextWidth) {
+  const { xy, str: str6, fontPx, canvasWidth } = params;
+  let scale6 = params.scale;
+  let size = fontPx * scale6;
+  let width = getTextWidth(size, str6);
+  if (width > canvasWidth) {
+    scale6 *= (canvasWidth - 2) / width;
+    size = fontPx * scale6;
+    width = getTextWidth(size, str6);
+  }
+  let x = xy[0] - 0.5 * getTextWidth(size, str6);
+  x = Math.max(x, 1);
+  x = Math.min(x, canvasWidth - width - 1);
+  const y = xy[1] - size;
+  return { x, y, scale: scale6 };
+}
+function calculateTextBetweenPosition(startXYendXY, str6, fontPx, scale6, getTextWidth) {
+  const size = fontPx * scale6;
+  const w = getTextWidth(size, str6);
+  const x = (startXYendXY[0] + startXYendXY[2]) * 0.5 - 0.5 * w;
+  const y = (startXYendXY[1] + startXYendXY[3]) * 0.5 - 0.5 * size;
+  return {
+    textX: x,
+    textY: y,
+    rectLTWH: [x - 1, y - 1, w + 2, size + 2]
+  };
+}
+function getTextBetweenBackgroundColor(color, crosshairColor) {
+  const clr = color ?? crosshairColor;
+  if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
+    return [0, 0, 0, 0.5];
+  }
+  return [1, 1, 1, 0.5];
+}
+function calculateRulerGeometry(params) {
+  const { fovMM, ltwh, rulerWidth, regionBounds } = params;
+  if (ltwh.length < 4 || fovMM.length < 1) {
+    return null;
+  }
+  const frac10cm = 100 / fovMM[0];
+  const pix10cm = frac10cm * ltwh[2];
+  const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2);
+  const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm);
+  const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * rulerWidth;
+  const clippedLeft = Math.max(regionBounds.x, pixLeft);
+  const clippedRight = Math.min(regionBounds.x + regionBounds.w, pixLeft + pix10cm);
+  const clippedY = Math.min(regionBounds.y + regionBounds.h, pixTop);
+  if (clippedRight <= clippedLeft) {
+    return null;
+  }
+  return {
+    startXYendXY: [clippedLeft, clippedY, clippedRight, clippedY],
+    pix1cm,
+    clipped: clippedLeft > pixLeft || clippedRight < pixLeft + pix10cm
+  };
+}
+function getRulerOutlineColor(rulerColor) {
+  if (rulerColor[0] + rulerColor[1] + rulerColor[2] < 0.8) {
+    return [1, 1, 1, 1];
+  }
+  return [0, 0, 0, 1];
+}
+function calculateRulerTicks(startXYendXY, rulerWidth) {
+  const ticks = [];
+  const w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2]);
+  const b = startXYendXY[1] - Math.floor(0.5 * rulerWidth);
+  const t = Math.floor(b - 0.35 * w1cm);
+  const t2 = Math.floor(b - 0.7 * w1cm);
+  for (let i = 0; i < 11; i++) {
+    let l = startXYendXY[0] + i * w1cm;
+    l = Math.max(l, startXYendXY[0] + 0.5 * rulerWidth);
+    l = Math.min(l, startXYendXY[2] - 0.5 * rulerWidth);
+    const xyxy = [l, b, l, i % 5 === 0 ? t2 : t];
+    ticks.push(xyxy);
+  }
+  return ticks;
+}
+function extendMeasurementLine(params) {
+  const { startXYendXY, distance: distance4 } = params;
+  const x0 = startXYendXY[0];
+  const y0 = startXYendXY[1];
+  const x1 = startXYendXY[2];
+  const y1 = startXYendXY[3];
+  const x = x0 - x1;
+  const y = y0 - y1;
+  if (x === 0 && y === 0) {
+    return {
+      origin: [x1 + distance4, y1],
+      terminus: [x1 + distance4, y1]
+    };
+  }
+  const c = Math.sqrt(x * x + y * y);
+  const dX = distance4 * x / c;
+  const dY = distance4 * y / c;
+  return {
+    origin: [x0 + dX, y0 + dY],
+    // next to start point
+    terminus: [x1 - dX, y1 - dY]
+    // next to end point
+  };
+}
+function calculateDottedLineSegments(startXYendXY, fontPx, scale6) {
+  const segments = [];
+  const segmentX = startXYendXY[2] - startXYendXY[0];
+  const segmentY = startXYendXY[3] - startXYendXY[1];
+  const totalLength = Math.sqrt(segmentX * segmentX + segmentY * segmentY);
+  if (totalLength === 0) {
+    return segments;
+  }
+  const size = fontPx * scale6;
+  const segmentLength = size / 2;
+  const normalizedX = segmentX / totalLength;
+  const normalizedY = segmentY / totalLength;
+  const stepX = normalizedX * segmentLength;
+  const stepY = normalizedY * segmentLength;
+  let segmentCount = Math.floor(totalLength / segmentLength);
+  if (totalLength % segmentLength) {
+    segmentCount++;
+  }
+  let currentX = startXYendXY[0];
+  let currentY = startXYendXY[1];
+  for (let i = 0; i < segmentCount - 1; i++) {
+    if (i % 2 === 0) {
+      segments.push({
+        startX: currentX,
+        startY: currentY,
+        endX: currentX + stepX,
+        endY: currentY + stepY
+      });
+    }
+    currentX += stepX;
+    currentY += stepY;
+  }
+  return segments;
+}
+function calculateThumbnailDimensions(regionWidth, regionHeight, aspectRatio) {
+  let h = regionHeight;
+  let w = regionHeight * aspectRatio;
+  if (w > regionWidth) {
+    h = regionWidth / aspectRatio;
+    w = regionWidth;
+  }
+  return {
+    left: (regionWidth - w) / 2,
+    top: (regionHeight - h) / 2,
+    width: w,
+    height: h
+  };
+}
+
+// src/niivue/interaction/EventController.ts
+function getRelativeMousePosition(event, target) {
+  const resolvedTarget = target || event.target;
+  if (!resolvedTarget) {
+    return void 0;
+  }
+  const element = resolvedTarget;
+  if (typeof element.getBoundingClientRect !== "function") {
+    return void 0;
+  }
+  const rect = element.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+}
+function getNoPaddingNoBorderCanvasRelativeMousePosition(event, target) {
+  const resolvedTarget = target || event.target;
+  return getRelativeMousePosition(event, resolvedTarget);
+}
+function calculateDpr(params) {
+  const { forceDevicePixelRatio } = params;
+  if (forceDevicePixelRatio === 0) {
+    return window.devicePixelRatio || 1;
+  } else if (forceDevicePixelRatio < 0) {
+    return 1;
+  }
+  return forceDevicePixelRatio;
+}
+function calculateResizeDimensions(params) {
+  const { canvas, isResizeCanvas, forceDevicePixelRatio } = params;
+  if (!isResizeCanvas) {
+    return {
+      dpr: 1,
+      width: canvas.width,
+      height: canvas.height,
+      shouldDraw: true
+    };
+  }
+  const dpr = calculateDpr({ forceDevicePixelRatio });
+  let width;
+  let height;
+  const parent = canvas.parentElement;
+  if (parent && "width" in parent) {
+    width = parent.width * dpr;
+    height = parent.height * dpr;
+  } else {
+    width = canvas.offsetWidth * dpr;
+    height = canvas.offsetHeight * dpr;
+  }
+  return {
+    dpr,
+    width,
+    height,
+    shouldDraw: true
+  };
+}
+function createResizeHandler(callback) {
+  return () => {
+    requestAnimationFrame(() => {
+      callback();
+    });
+  };
+}
+function createResizeObserver(callback) {
+  return new ResizeObserver(() => {
+    requestAnimationFrame(() => {
+      callback();
+    });
+  });
+}
+function createCanvasObserver(callback) {
+  return new MutationObserver(callback);
+}
+function applyCanvasResizeStyles(canvas) {
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.style.display = "block";
+}
+function isValidForResize(canvas, gl) {
+  return canvas !== null && gl !== null;
+}
+function cleanupResizeObservers(resizeObserver, canvasObserver, resizeEventListener) {
+  if (resizeEventListener) {
+    window.removeEventListener("resize", resizeEventListener);
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+  if (canvasObserver) {
+    canvasObserver.disconnect();
+  }
+}
+function cleanupEventController(controller) {
+  if (controller) {
+    controller.abort();
+  }
+}
+
+// src/niivue/interaction/MouseController.ts
+var MouseController_exports = {};
+__export(MouseController_exports, {
+  CENTER_MOUSE_BUTTON: () => CENTER_MOUSE_BUTTON,
+  LEFT_MOUSE_BUTTON: () => LEFT_MOUSE_BUTTON,
+  RIGHT_MOUSE_BUTTON: () => RIGHT_MOUSE_BUTTON,
+  calculateMouseDownPosition: () => calculateMouseDownPosition,
+  calculateMouseMovePosition: () => calculateMouseMovePosition,
+  calculateWindowingValues: () => calculateWindowingValues,
+  createOffCanvasPosition: () => createOffCanvasPosition,
+  createResetButtonState: () => createResetButtonState,
+  determineButtonState: () => determineButtonState,
+  getMouseButtonDragMode: () => getMouseButtonDragMode,
+  getNextAngleState: () => getNextAngleState,
+  hasDragMoved: () => hasDragMoved,
+  initializeDragState: () => initializeDragState,
+  isAngleMeasurementInProgress: () => isAngleMeasurementInProgress,
+  isFunction: () => isFunction,
+  isOffCanvas: () => isOffCanvas,
+  shouldTrackDrag: () => shouldTrackDrag
+});
 var LEFT_MOUSE_BUTTON = 0;
 var CENTER_MOUSE_BUTTON = 1;
 var RIGHT_MOUSE_BUTTON = 2;
-var TEXTURE0_BACK_VOL = 33984;
-var TEXTURE1_COLORMAPS = 33985;
-var TEXTURE2_OVERLAY_VOL = 33986;
-var TEXTURE3_FONT = 33987;
-var TEXTURE4_THUMBNAIL = 33988;
-var TEXTURE5_MATCAP = 33989;
-var TEXTURE6_GRADIENT = 33990;
-var TEXTURE7_DRAW = 33991;
-var TEXTURE8_PAQD = 33992;
-var TEXTURE8_GRADIENT_TEMP = 33992;
-var TEXTURE9_ORIENT = 33993;
-var TEXTURE10_BLEND = 33994;
-var TEXTURE11_GC_BACK = 33995;
-var TEXTURE12_GC_STRENGTH0 = 33996;
-var TEXTURE13_GC_STRENGTH1 = 33997;
-var TEXTURE14_GC_LABEL0 = 33998;
-var TEXTURE15_GC_LABEL1 = 33999;
+function getMouseButtonDragMode(params) {
+  const { button, shiftKey, ctrlKey, mouseConfig, dragMode, dragModePrimary } = params;
+  if (button === LEFT_MOUSE_BUTTON) {
+    if (mouseConfig?.leftButton) {
+      if (shiftKey && mouseConfig.leftButton.withShift !== void 0) {
+        return mouseConfig.leftButton.withShift;
+      }
+      if (ctrlKey && mouseConfig.leftButton.withCtrl !== void 0) {
+        return mouseConfig.leftButton.withCtrl;
+      }
+      return mouseConfig.leftButton.primary;
+    }
+    return ctrlKey ? 8 /* crosshair */ : dragModePrimary;
+  } else if (button === RIGHT_MOUSE_BUTTON) {
+    if (mouseConfig?.rightButton !== void 0) {
+      return mouseConfig.rightButton;
+    }
+    return dragMode;
+  } else if (button === CENTER_MOUSE_BUTTON) {
+    if (mouseConfig?.centerButton !== void 0) {
+      return mouseConfig.centerButton;
+    }
+    return dragMode;
+  }
+  return dragMode;
+}
+function determineButtonState(params) {
+  const { button, shiftKey } = params;
+  if (button === LEFT_MOUSE_BUTTON && shiftKey) {
+    return { mouseButtonCenterDown: true };
+  } else if (button === LEFT_MOUSE_BUTTON) {
+    return { mouseButtonLeftDown: true };
+  } else if (button === RIGHT_MOUSE_BUTTON) {
+    return { mouseButtonRightDown: true };
+  } else if (button === CENTER_MOUSE_BUTTON) {
+    return { mouseButtonCenterDown: true };
+  }
+  return {};
+}
+function calculateMouseDownPosition(params) {
+  const { x, y, dpr } = params;
+  const scaledX = x * dpr;
+  const scaledY = y * dpr;
+  return {
+    scaledX,
+    scaledY,
+    mousePos: [scaledX, scaledY]
+  };
+}
+function calculateMouseMovePosition(params) {
+  const { x, y, dpr, currentMousePos } = params;
+  const scaledX = x * dpr;
+  const scaledY = y * dpr;
+  const dx = (scaledX - currentMousePos[0]) / dpr;
+  const dy = (scaledY - currentMousePos[1]) / dpr;
+  return {
+    scaledX,
+    scaledY,
+    dx,
+    dy,
+    mousePos: [scaledX, scaledY]
+  };
+}
+function initializeDragState(params) {
+  const { posX, posY, pan2Dxyzmm, clipPlaneDepthAziElev } = params;
+  return {
+    dragStart: [posX, posY],
+    pan2DxyzmmAtMouseDown: vec4_exports.clone(pan2Dxyzmm),
+    isDragging: true,
+    dragClipPlaneStartDepthAziElev: [...clipPlaneDepthAziElev]
+  };
+}
+function createResetButtonState() {
+  return {
+    mousedown: false,
+    mouseButtonLeftDown: false,
+    mouseButtonCenterDown: false,
+    mouseButtonRightDown: false
+  };
+}
+function hasDragMoved(dragStart, dragEnd) {
+  return dragStart[0] !== dragEnd[0] || dragStart[1] !== dragEnd[1];
+}
+function isOffCanvas(mousePos) {
+  return mousePos[0] < 0 || mousePos[1] < 0;
+}
+function createOffCanvasPosition() {
+  return [-1, -1];
+}
+function calculateWindowingValues(params) {
+  const { currentX, currentY, windowX, windowY, calMin, calMax, robustMin, robustMax, windowRangeMultiplier } = params;
+  const windowRange = robustMax - robustMin;
+  const factor = windowRange * windowRangeMultiplier / 100;
+  let newCalMin = calMin;
+  let newCalMax = calMax;
+  if (currentY < windowY) {
+    newCalMin = calMin - factor;
+    newCalMax = calMax - factor;
+  } else if (currentY > windowY) {
+    newCalMin = calMin + factor;
+    newCalMax = calMax + factor;
+  }
+  if (currentX > windowX) {
+    newCalMin = newCalMin - factor;
+    newCalMax = newCalMax + factor;
+  } else if (currentX < windowX) {
+    newCalMin = newCalMin + factor;
+    newCalMax = newCalMax - factor;
+  }
+  return {
+    newCalMin,
+    newCalMax,
+    newWindowX: currentX,
+    newWindowY: currentY
+  };
+}
+function getNextAngleState(params) {
+  const { currentState, dragMode } = params;
+  if (dragMode !== 7 /* angle */) {
+    return currentState;
+  }
+  switch (currentState) {
+    case "none":
+      return "drawing_first_line";
+    case "drawing_first_line":
+      return "drawing_second_line";
+    case "drawing_second_line":
+      return "complete";
+    case "complete":
+      return "drawing_first_line";
+    default:
+      return "none";
+  }
+}
+function isAngleMeasurementInProgress(angleState) {
+  return angleState === "drawing_first_line" || angleState === "drawing_second_line";
+}
+function shouldTrackDrag(dragMode) {
+  return dragMode !== 8 /* crosshair */ && dragMode !== 9 /* windowing */ && dragMode !== 0 /* none */;
+}
+function isFunction(test) {
+  return Object.prototype.toString.call(test).indexOf("Function") > -1;
+}
+
+// src/niivue/interaction/TouchController.ts
+function getTouchDragMode(params) {
+  const { isDoubleTouch, touchConfig, dragMode, dragModePrimary } = params;
+  if (isDoubleTouch) {
+    return touchConfig?.doubleTouch ?? dragMode;
+  }
+  return touchConfig?.singleTouch ?? dragModePrimary;
+}
+function calculateTouchPosition(params) {
+  const { touch, canvasRect } = params;
+  return {
+    x: touch.clientX - canvasRect.left,
+    y: touch.clientY - canvasRect.top
+  };
+}
+function detectDoubleTap(params) {
+  const { currentTime, lastTouchTime, doubleTouchTimeout } = params;
+  const timeSinceTouch = currentTime - lastTouchTime;
+  return {
+    isDoubleTap: timeSinceTouch < doubleTouchTimeout && timeSinceTouch > 0,
+    timeSinceTouch
+  };
+}
+function initializeTouchState(params) {
+  const { currentTime, touchCount, isTouchdown } = params;
+  return {
+    touchdown: true,
+    currentTouchTime: currentTime,
+    multiTouchGesture: isTouchdown && touchCount >= 2
+  };
+}
+function createTouchEndState() {
+  return {
+    touchdown: false,
+    lastTwoTouchDistance: 0,
+    multiTouchGesture: false
+  };
+}
+function createNewTouchSequenceState(currentTime) {
+  return {
+    doubleTouch: false,
+    lastTouchTime: currentTime
+  };
+}
+function createDoubleTapState(currentTime) {
+  return {
+    doubleTouch: true,
+    lastTouchTime: currentTime
+  };
+}
+function calculatePinchZoom(params) {
+  const { touch1, touch2, lastTwoTouchDistance } = params;
+  const distance4 = Math.hypot(touch1.pageX - touch2.pageX, touch1.pageY - touch2.pageY);
+  let scrollDelta;
+  if (lastTwoTouchDistance === 0) {
+    scrollDelta = 0;
+  } else if (distance4 < lastTwoTouchDistance) {
+    scrollDelta = -0.01;
+  } else {
+    scrollDelta = 0.01;
+  }
+  const centerPosition = {
+    x: (touch1.clientX + touch2.clientX) / 2,
+    y: (touch1.clientY + touch2.clientY) / 2
+  };
+  return {
+    distance: distance4,
+    scrollDelta,
+    centerPosition
+  };
+}
+function shouldProcessPinchZoom(targetTouchesLength, changedTouchesLength) {
+  return targetTouchesLength === 2 && changedTouchesLength === 2;
+}
+function calculateTouchMovePosition(params) {
+  const { touch, canvasRect } = params;
+  return {
+    x: touch.clientX - canvasRect.left,
+    y: touch.clientY - canvasRect.top,
+    pageX: touch.pageX,
+    pageY: touch.pageY
+  };
+}
+function shouldSimulateMouseBehavior(params) {
+  const { touchdown, multiTouchGesture } = params;
+  return touchdown && !multiTouchGesture;
+}
+function isSingleFingerTouch(touchdown, touchCount) {
+  return touchdown && touchCount < 2;
+}
+function getMousePosFromTouch(params) {
+  const { touch, canvasRect } = params;
+  return [touch.clientX - canvasRect.left, touch.clientY - canvasRect.top];
+}
+function shouldUpdateDoubleTouchDrag(params) {
+  const { doubleTouch, isDragging } = params;
+  return doubleTouch && isDragging;
+}
+function shouldStartLongPressTimer(currentTimer) {
+  return currentTimer === null;
+}
+
+// src/niivue/interaction/KeyboardController.ts
+var CLIP_PLANE_PRESETS = [
+  [2, 0, 0],
+  // NONE (depth=2 disables clip plane)
+  [0, 270, 0],
+  // LEFT
+  [0, 90, 0],
+  // RIGHT
+  [0, 0, 0],
+  // POSTERIOR
+  [0, 180, 0],
+  // ANTERIOR
+  [0, 0, -90],
+  // INFERIOR
+  [0, 0, 90]
+  // SUPERIOR
+];
+function getKeyDownAction(params) {
+  const { code, ctrlKey, shiftKey, sliceType } = params;
+  const isRenderMode = sliceType === 4 /* RENDER */;
+  if (code === "KeyH" && isRenderMode) {
+    return { action: "render_azimuth_decrease" };
+  }
+  if (code === "KeyL" && isRenderMode) {
+    return { action: "render_azimuth_increase" };
+  }
+  if (code === "KeyJ" && isRenderMode) {
+    return { action: "render_elevation_increase" };
+  }
+  if (code === "KeyK" && isRenderMode) {
+    return { action: "render_elevation_decrease" };
+  }
+  if (code === "KeyH" && !isRenderMode) {
+    return { action: "crosshair_left" };
+  }
+  if (code === "KeyL" && !isRenderMode) {
+    return { action: "crosshair_right" };
+  }
+  if (code === "KeyU" && !isRenderMode && ctrlKey) {
+    return { action: "crosshair_forward" };
+  }
+  if (code === "KeyD" && !isRenderMode && ctrlKey) {
+    return { action: "crosshair_backward" };
+  }
+  if (code === "KeyJ" && !isRenderMode) {
+    return { action: "crosshair_down" };
+  }
+  if (code === "KeyK" && !isRenderMode) {
+    return { action: "crosshair_up" };
+  }
+  if (code === "KeyM" && !isRenderMode) {
+    return { action: "cycle_drag_mode" };
+  }
+  if (code === "ArrowLeft") {
+    return { action: "frame_previous" };
+  }
+  if (code === "ArrowRight") {
+    return { action: "frame_next" };
+  }
+  if (code === "Slash" && shiftKey) {
+    return { action: "show_version" };
+  }
+  return { action: "none" };
+}
+function getNextDragMode(currentDragMode) {
+  const nextMode = currentDragMode + 1;
+  if (nextMode >= 4 /* slicer3D */) {
+    return 0 /* none */;
+  }
+  return nextMode;
+}
+function shouldProcessKey(params) {
+  const { currentTime, lastCalledTime, debounceTime } = params;
+  const elapsed = currentTime - lastCalledTime;
+  return elapsed > debounceTime;
+}
+function cycleActiveClipPlane(params) {
+  const { currentIndex, clipPlanesLength } = params;
+  const n = clipPlanesLength || 6;
+  let newIndex;
+  if (currentIndex == null) {
+    newIndex = 0;
+  } else {
+    newIndex = (currentIndex + 1) % n;
+  }
+  return {
+    newIndex,
+    defaultClipPlane: [0, 0, 0, 2],
+    // dummy "off" plane
+    defaultDepthAziElev: [2, 0, 0]
+    // depth=2 → no clip plane
+  };
+}
+function getNextClipPlanePreset(params) {
+  const { currentClipPlaneIndex } = params;
+  const newIndex = (currentClipPlaneIndex + 1) % 7;
+  const depthAziElev = CLIP_PLANE_PRESETS[newIndex];
+  return {
+    newIndex,
+    depthAziElev
+  };
+}
+function getNextViewMode(params) {
+  const { currentSliceType, totalSliceTypes } = params;
+  return (currentSliceType + 1) % totalSliceTypes;
+}
+function isHotkeyMatch(keyCode, hotKey) {
+  return keyCode === hotKey;
+}
+
+// src/niivue/interaction/WheelController.ts
+function calculateScrollAmount(params) {
+  const { deltaY, invertScrollDirection } = params;
+  let scrollAmount = deltaY < 0 ? -0.01 : 0.01;
+  if (invertScrollDirection) {
+    scrollAmount = -scrollAmount;
+  }
+  return scrollAmount;
+}
+function isValidRoiResize(params) {
+  const { dragMode, dragStart, dragEnd } = params;
+  if (dragMode !== 6 /* roiSelection */) {
+    return false;
+  }
+  const dragStartSum = dragStart.reduce((a, b) => a + b, 0);
+  const dragEndSum = dragEnd.reduce((a, b) => a + b, 0);
+  return dragStartSum > 0 && dragEndSum > 0;
+}
+function updateRoiSelection(params) {
+  const { dragStart, dragEnd, delta } = params;
+  const newDragStart = [...dragStart];
+  const newDragEnd = [...dragEnd];
+  if (dragStart[0] < dragEnd[0]) {
+    newDragStart[0] = dragStart[0] - delta;
+    newDragEnd[0] = dragEnd[0] + delta;
+  } else {
+    newDragStart[0] = dragStart[0] + delta;
+    newDragEnd[0] = dragEnd[0] - delta;
+  }
+  if (dragStart[1] < dragEnd[1]) {
+    newDragStart[1] = dragStart[1] - delta;
+    newDragEnd[1] = dragEnd[1] + delta;
+  } else {
+    newDragStart[1] = dragStart[1] + delta;
+    newDragEnd[1] = dragEnd[1] - delta;
+  }
+  return {
+    newDragStart,
+    newDragEnd
+  };
+}
+function getRoiScrollDelta(deltaY) {
+  return deltaY > 0 ? 1 : -1;
+}
+function calculateZoom(params) {
+  const { currentZoom, scrollAmount } = params;
+  const zoomDirection = scrollAmount < 0 ? 1 : -1;
+  let newZoom = currentZoom * (1 + 10 * (0.01 * zoomDirection));
+  newZoom = Math.round(newZoom * 10) / 10;
+  const zoomChange = currentZoom - newZoom;
+  return {
+    newZoom,
+    zoomChange
+  };
+}
+function calculatePanOffsetAfterZoom(params) {
+  const { currentPan, zoomChange, crosshairMM } = params;
+  return [currentPan[0] + zoomChange * crosshairMM[0], currentPan[1] + zoomChange * crosshairMM[1], currentPan[2] + zoomChange * crosshairMM[2]];
+}
+function adjustSegmentThreshold(params) {
+  const { currentPercent, scrollAmount } = params;
+  let newPercent = currentPercent;
+  if (scrollAmount < 0) {
+    newPercent -= 0.01;
+    newPercent = Math.max(newPercent, 0);
+  } else {
+    newPercent += 0.01;
+    newPercent = Math.min(newPercent, 1);
+  }
+  return newPercent;
+}
+function determineWheelAction(params) {
+  const { thumbnailVisible, mosaicStringLength, eventInBounds, hasBounds } = params;
+  if (thumbnailVisible || mosaicStringLength > 0) {
+    return {
+      shouldProcess: false,
+      showBoundsBorder: false
+    };
+  }
+  if (!eventInBounds) {
+    return {
+      shouldProcess: false,
+      showBoundsBorder: false
+    };
+  }
+  return {
+    shouldProcess: true,
+    showBoundsBorder: hasBounds
+  };
+}
+function shouldApplyZoom(params) {
+  const { dragMode, isInRenderTile } = params;
+  return dragMode === 3 /* pan */ && !isInRenderTile;
+}
+function getWheelEventPosition(clientX, clientY, canvasRect) {
+  return [clientX - canvasRect.left, clientY - canvasRect.top];
+}
+
+// src/niivue/interaction/DragModeManager.ts
+var DRAG_MODE_MAP = {
+  none: 0 /* none */,
+  contrast: 1 /* contrast */,
+  measurement: 2 /* measurement */,
+  angle: 7 /* angle */,
+  pan: 3 /* pan */,
+  slicer3D: 4 /* slicer3D */,
+  callbackOnly: 5 /* callbackOnly */,
+  roiSelection: 6 /* roiSelection */,
+  crosshair: 8 /* crosshair */,
+  windowing: 9 /* windowing */
+};
+function parseDragModeString(mode) {
+  if (typeof mode === "string") {
+    const dragMode = DRAG_MODE_MAP[mode];
+    return dragMode !== void 0 ? dragMode : null;
+  }
+  return mode;
+}
+function getCurrentDragModeValue(params) {
+  const { activeDragMode, fallbackDragMode } = params;
+  if (activeDragMode !== null) {
+    return activeDragMode;
+  }
+  return fallbackDragMode;
+}
+function createClearedDragModeState() {
+  return {
+    activeDragMode: null,
+    activeDragButton: null
+  };
+}
+function createActiveDragModeState(dragMode, button) {
+  return {
+    activeDragMode: dragMode,
+    activeDragButton: button
+  };
+}
+function calculateMinMaxVoxIdx(array) {
+  if (array.length > 2) {
+    throw new Error("array must not contain more than two values");
+  }
+  return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))];
+}
+function calculateAngleBetweenLines(line1, line2) {
+  const intersectionX = line1[2];
+  const intersectionY = line1[3];
+  const v1x = line1[0] - intersectionX;
+  const v1y = line1[1] - intersectionY;
+  const v2x = line2[2] - intersectionX;
+  const v2y = line2[3] - intersectionY;
+  const dot4 = v1x * v2x + v1y * v2y;
+  const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
+  const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
+  if (mag1 === 0 || mag2 === 0) {
+    return 0;
+  }
+  const cosAngle = Math.max(-1, Math.min(1, dot4 / (mag1 * mag2)));
+  const angleRad = Math.acos(cosAngle);
+  const angleDeg = angleRad * (180 / Math.PI);
+  return angleDeg;
+}
+function createResetAngleMeasurementState() {
+  return {
+    angleState: "none",
+    angleFirstLine: [0, 0, 0, 0]
+  };
+}
+function calculateDragPosition(x, y, dpr) {
+  return [x * dpr, y * dpr];
+}
+function calculatePanZoomFromDrag(params) {
+  const { startMM, endMM, pan2DxyzmmAtMouseDown } = params;
+  const v = vec4_exports.create();
+  vec4_exports.sub(v, endMM, startMM);
+  const zoom = pan2DxyzmmAtMouseDown[3];
+  return {
+    pan2Dxyzmm: [pan2DxyzmmAtMouseDown[0] + zoom * v[0], pan2DxyzmmAtMouseDown[1] + zoom * v[1], pan2DxyzmmAtMouseDown[2] + zoom * v[2], zoom]
+  };
+}
+function calculateSlicer3DZoomFromDrag(params) {
+  const { startY, endY, pan2DxyzmmAtMouseDown, currentPan2Dxyzmm, crosshairMM, yoke3Dto2DZoom } = params;
+  let zoom = pan2DxyzmmAtMouseDown[3];
+  const y = endY - startY;
+  const pixelScale = 0.01;
+  zoom += y * pixelScale;
+  zoom = Math.max(zoom, 0.1);
+  zoom = Math.min(zoom, 10);
+  const zoomChange = currentPan2Dxyzmm[3] - zoom;
+  const result = {
+    zoom,
+    pan2Dxyzmm: [currentPan2Dxyzmm[0] + zoomChange * crosshairMM[0], currentPan2Dxyzmm[1] + zoomChange * crosshairMM[1], currentPan2Dxyzmm[2] + zoomChange * crosshairMM[2], zoom]
+  };
+  if (yoke3Dto2DZoom) {
+    result.volScaleMultiplier = zoom;
+  }
+  return result;
+}
+function calculateWindowingAdjustment(params) {
+  const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params;
+  let mn = currentCalMin;
+  let mx = currentCalMax;
+  if (y < windowY) {
+    mn += 1;
+    mx += 1;
+  } else if (y > windowY) {
+    mn -= 1;
+    mx -= 1;
+  }
+  if (x > windowX) {
+    mn -= 1;
+    mx += 1;
+  } else if (x < windowX) {
+    mn += 1;
+    mx -= 1;
+  }
+  if (mx - mn < 1) {
+    mx = mn + 1;
+  }
+  if (mn < globalMin) {
+    mn = globalMin;
+  }
+  if (mx > globalMax) {
+    mx = globalMax;
+  }
+  if (mn > mx) {
+    mn = mx - 1;
+  }
+  return {
+    calMin: mn,
+    calMax: mx,
+    windowX: x,
+    windowY: y
+  };
+}
+function calculateIntensityRangeFromVoxels(params) {
+  const { xrange, yrange, zrange, dims, img } = params;
+  let hi = -Number.MAX_VALUE;
+  let lo = Number.MAX_VALUE;
+  const xdim = dims[1];
+  const ydim = dims[2];
+  for (let z = zrange[0]; z < zrange[1]; z++) {
+    const zi = z * xdim * ydim;
+    for (let y = yrange[0]; y < yrange[1]; y++) {
+      const yi = y * xdim;
+      for (let x = xrange[0]; x < xrange[1]; x++) {
+        const index = zi + yi + x;
+        if (lo > img[index]) {
+          lo = img[index];
+        }
+        if (hi < img[index]) {
+          hi = img[index];
+        }
+      }
+    }
+  }
+  return {
+    lo,
+    hi,
+    hasVariation: lo < hi
+  };
+}
+function adjustRangesForConstantDimension(startVox, endVox, xrange, yrange, zrange) {
+  const newXrange = [...xrange];
+  const newYrange = [...yrange];
+  const newZrange = [...zrange];
+  if (startVox[0] - endVox[0] === 0) {
+    newXrange[1] = startVox[0] + 1;
+  } else if (startVox[1] - endVox[1] === 0) {
+    newYrange[1] = startVox[1] + 1;
+  } else if (startVox[2] - endVox[2] === 0) {
+    newZrange[1] = startVox[2] + 1;
+  }
+  return { xrange: newXrange, yrange: newYrange, zrange: newZrange };
+}
+function isAngleDragMode(dragMode) {
+  return dragMode === 7 /* angle */;
+}
+
+// src/niivue/interaction/DropHandler.ts
+function categorizeByExtension(ext) {
+  if (MESH_EXTENSIONS.includes(ext)) {
+    return "mesh";
+  }
+  if (ext === "NVD") {
+    return "document";
+  }
+  return "volume";
+}
+function shouldSkipPairedDataFile(filename) {
+  if (filename.lastIndexOf("BRIK") !== -1) {
+    return "brik";
+  }
+  if (filename.toUpperCase().lastIndexOf("IMG") !== -1) {
+    return "img";
+  }
+  return null;
+}
+function findAfniPairedFile(headerEntry, items) {
+  const headerIndex = headerEntry.name.lastIndexOf("HEAD");
+  if (headerIndex === -1) {
+    return null;
+  }
+  const fileBaseName = headerEntry.name.substring(0, headerIndex);
+  for (const item of Array.from(items)) {
+    const pairedEntry = item.webkitGetAsEntry();
+    if (!pairedEntry) {
+      continue;
+    }
+    const brikIndex = pairedEntry.name.lastIndexOf("BRIK");
+    if (brikIndex === -1) {
+      continue;
+    }
+    const pairedBaseName = pairedEntry.name.substring(0, brikIndex);
+    if (fileBaseName === pairedBaseName) {
+      return pairedEntry;
+    }
+  }
+  return null;
+}
+function findAnalyzePairedFile(headerEntry, items) {
+  const upperName = headerEntry.name.toUpperCase();
+  const hdrIndex = upperName.lastIndexOf("HDR");
+  if (hdrIndex === -1) {
+    return null;
+  }
+  const fileBaseName = headerEntry.name.substring(0, hdrIndex);
+  for (const item of Array.from(items)) {
+    const pairedEntry = item.webkitGetAsEntry();
+    if (!pairedEntry) {
+      continue;
+    }
+    const upperPairedName = pairedEntry.name.toUpperCase();
+    const imgIndex = upperPairedName.lastIndexOf("IMG");
+    if (imgIndex === -1) {
+      continue;
+    }
+    const pairedBaseName = pairedEntry.name.substring(0, imgIndex);
+    if (fileBaseName.toUpperCase() === pairedBaseName.toUpperCase()) {
+      return pairedEntry;
+    }
+  }
+  return null;
+}
+function findPairedFile(entry, items) {
+  const afniPair = findAfniPairedFile(entry, items);
+  if (afniPair) {
+    return afniPair;
+  }
+  return findAnalyzePairedFile(entry, items);
+}
+function getFileFromEntry(entry) {
+  return new Promise((resolve2, reject) => {
+    entry.file(resolve2, reject);
+  });
+}
+function processDropItems(items) {
+  const results = [];
+  for (const item of Array.from(items)) {
+    const entry = item.webkitGetAsEntry();
+    if (!entry) {
+      log.warn("could not get entry from dropped item");
+      continue;
+    }
+    if (entry.isFile) {
+      if (shouldSkipPairedDataFile(entry.name)) {
+        continue;
+      }
+      const pairedEntry = findPairedFile(entry, items);
+      results.push({ entry, pairedEntry });
+    }
+  }
+  return results;
+}
+function extractDirectoryEntries(items) {
+  const directories = [];
+  for (const item of Array.from(items)) {
+    const entry = item.webkitGetAsEntry();
+    if (entry?.isDirectory) {
+      directories.push(entry);
+    }
+  }
+  return directories;
+}
+function getDroppedUrl(dataTransfer) {
+  const url = dataTransfer.getData("text/uri-list");
+  return url || null;
+}
+function hasDroppedFiles(dataTransfer) {
+  return dataTransfer.items.length > 0;
+}
+
+// src/niivue/navigation/SliceNavigation.ts
+function findTileIndex(params) {
+  const { x, y, screenSlices } = params;
+  for (let i = 0; i < screenSlices.length; i++) {
+    const ltwh = screenSlices[i].leftTopWidthHeight;
+    if (x > ltwh[0] && y > ltwh[1] && x < ltwh[0] + ltwh[2] && y < ltwh[1] + ltwh[3]) {
+      return i;
+    }
+  }
+  return -1;
+}
+function findRenderTileIndex(params) {
+  const { x, y, screenSlices } = params;
+  const idx2 = findTileIndex({ x, y, screenSlices });
+  if (idx2 >= 0 && screenSlices[idx2].axCorSag === 4 /* RENDER */) {
+    return idx2;
+  }
+  return -1;
+}
+function isInGraphTile(params) {
+  const { x, y, graph, volumesLength, firstVolumeFrameCount } = params;
+  if (graph.opacity <= 0 || volumesLength < 1 || firstVolumeFrameCount < 1 || !graph.plotLTWH) {
+    return false;
+  }
+  if (graph.plotLTWH[2] < 1 || graph.plotLTWH[3] < 1) {
+    return false;
+  }
+  const pos = [(x - graph.LTWH[0]) / graph.LTWH[2], (y - graph.LTWH[1]) / graph.LTWH[3]];
+  return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1;
+}
+function isInBounds(params) {
+  const { x, y, dpr, canvasHeight, boundsRegion } = params;
+  const [vpX, vpY, vpW, vpH] = boundsRegion;
+  const glX = x * dpr;
+  const glY = canvasHeight - y * dpr;
+  return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH;
+}
+function getSlicePosition(params) {
+  const { sliceType, crosshairPos } = params;
+  if (sliceType === 0 /* AXIAL */) {
+    return crosshairPos[2];
+  } else if (sliceType === 1 /* CORONAL */) {
+    return crosshairPos[1];
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    return crosshairPos[0];
+  }
+  return 0;
+}
+function getCurrentSliceInfo(params) {
+  const { dragStart, screenSlices, crosshairPos, currentSliceType, canvasPos2frac: canvasPos2frac2 } = params;
+  const tileIdx = findTileIndex({
+    x: dragStart[0],
+    y: dragStart[1],
+    screenSlices
+  });
+  if (tileIdx >= 0 && tileIdx < screenSlices.length) {
+    const sliceType = screenSlices[tileIdx].axCorSag;
+    const slicePosition2 = getSlicePosition({ sliceType, crosshairPos });
+    return {
+      sliceIndex: tileIdx,
+      sliceType,
+      slicePosition: slicePosition2
+    };
+  }
+  let slicePosition = 0;
+  if (currentSliceType === 0 /* AXIAL */) {
+    slicePosition = crosshairPos[2];
+  } else if (currentSliceType === 1 /* CORONAL */) {
+    slicePosition = crosshairPos[1];
+  } else if (currentSliceType === 2 /* SAGITTAL */) {
+    slicePosition = crosshairPos[0];
+  } else if (currentSliceType === 3 /* MULTIPLANAR */) {
+    const startFrac = canvasPos2frac2([dragStart[0], dragStart[1]]);
+    if (startFrac[0] >= 0) {
+      slicePosition = crosshairPos[2];
+    }
+  }
+  return { sliceIndex: -1, sliceType: currentSliceType, slicePosition };
+}
+function shouldDrawOnCurrentSlice(params) {
+  const { sliceType, slicePosition, currentSliceTypeOpt, screenSlices, crosshairPos } = params;
+  if (currentSliceTypeOpt === 3 /* MULTIPLANAR */) {
+    if (sliceType > 2 /* SAGITTAL */) {
+      return false;
+    }
+    for (let i = 0; i < screenSlices.length; i++) {
+      if (screenSlices[i].axCorSag === sliceType) {
+        const currentSlicePosition2 = getSlicePosition({ sliceType, crosshairPos });
+        const tolerance2 = 1e-3;
+        const difference2 = Math.abs(currentSlicePosition2 - slicePosition);
+        if (difference2 < tolerance2) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  if (sliceType !== currentSliceTypeOpt) {
+    return false;
+  }
+  const currentSlicePosition = getSlicePosition({ sliceType, crosshairPos });
+  const tolerance = 1e-3;
+  const difference = Math.abs(currentSlicePosition - slicePosition);
+  return difference < tolerance;
+}
+function calculateSliceScroll3D(params) {
+  const { posChange, volumesLength, clipPlaneDepthAziElevs, activeClipPlaneIndex, volScaleMultiplier } = params;
+  if (posChange === 0) {
+    return { action: "none" };
+  }
+  if (volumesLength > 0 && clipPlaneDepthAziElevs[activeClipPlaneIndex][0] < 1.8) {
+    const currentDepth = clipPlaneDepthAziElevs[activeClipPlaneIndex][0];
+    let newDepth = currentDepth;
+    if (posChange > 0) {
+      newDepth = Math.min(1.5, currentDepth + 0.025);
+    }
+    if (posChange < 0) {
+      newDepth = Math.max(-1.5, currentDepth - 0.025);
+    }
+    if (newDepth !== currentDepth) {
+      return {
+        action: "clipPlane",
+        newClipPlaneDepth: newDepth
+      };
+    }
+    return { action: "none" };
+  }
+  let newScale = volScaleMultiplier;
+  if (posChange > 0) {
+    newScale = Math.min(2, volScaleMultiplier * 1.1);
+  }
+  if (posChange < 0) {
+    newScale = Math.max(0.5, volScaleMultiplier * 0.9);
+  }
+  return {
+    action: "zoom",
+    newVolScaleMultiplier: newScale
+  };
+}
+function calculateZoomScroll(params) {
+  const { posChange, currentZoom, yoke3Dto2DZoom, crosshairMM } = params;
+  let zoom = currentZoom * (1 + 10 * posChange);
+  zoom = Math.round(zoom * 10) / 10;
+  const zoomChange = currentZoom - zoom;
+  return {
+    newZoom: zoom,
+    zoomChange,
+    panOffsetX: zoomChange * crosshairMM[0],
+    panOffsetY: zoomChange * crosshairMM[1],
+    panOffsetZ: zoomChange * crosshairMM[2],
+    newVolScaleMultiplier: yoke3Dto2DZoom ? zoom : void 0
+  };
+}
+function calculateMoveCrosshairInVox(params) {
+  const { x, y, z, currentVox, dimsRAS } = params;
+  const newVox = vec3_exports.clone(currentVox);
+  const originalZ = newVox[2];
+  newVox[0] += x;
+  newVox[1] += y;
+  newVox[2] += z;
+  newVox[0] = Math.max(0, Math.min(newVox[0], dimsRAS[1] - 1));
+  newVox[1] = Math.max(0, Math.min(newVox[1], dimsRAS[2] - 1));
+  newVox[2] = Math.max(0, Math.min(newVox[2], dimsRAS[3] - 1));
+  return {
+    newVox,
+    zChanged: originalZ !== newVox[2]
+  };
+}
+function shouldProcessScroll(params) {
+  const { scrollRequiresFocus, canvasHasFocus } = params;
+  return !scrollRequiresFocus || canvasHasFocus;
+}
+function shouldApplyZoomScroll(params) {
+  const { posChange, dragMode, isInRenderTile } = params;
+  return posChange !== 0 && dragMode === 3 /* pan */ && !isInRenderTile;
+}
+
+// src/niivue/navigation/LayoutManager.ts
+function validateCustomLayout(params) {
+  const { layout } = params;
+  for (let i = 0; i < layout.length; i++) {
+    const [left1, top1, width1, height1] = layout[i].position;
+    const right1 = left1 + width1;
+    const bottom1 = top1 + height1;
+    for (let j = i + 1; j < layout.length; j++) {
+      const [left2, top2, width2, height2] = layout[j].position;
+      const right2 = left2 + width2;
+      const bottom2 = top2 + height2;
+      const horizontallyOverlaps = left1 < right2 && right1 > left2;
+      const verticallyOverlaps = top1 < bottom2 && bottom1 > top2;
+      if (horizontallyOverlaps && verticallyOverlaps) {
+        return {
+          valid: false,
+          error: `Custom layout is invalid. Tile ${i} overlaps with tile ${j}.`,
+          overlappingTiles: [i, j]
+        };
+      }
+    }
+  }
+  return { valid: true };
+}
+function calculateBoundsRegion(params) {
+  const { bounds, canvasWidth, canvasHeight, cssWidth, cssHeight, dpr } = params;
+  if (!bounds) {
+    return [0, 0, canvasWidth, canvasHeight];
+  }
+  const [[x1, y1], [x2, y2]] = bounds;
+  const regionX = Math.floor(x1 * cssWidth * dpr);
+  const regionW = Math.ceil((x2 - x1) * cssWidth * dpr);
+  let regionY = Math.floor((1 - y2) * cssHeight * dpr);
+  let regionH = Math.ceil((y2 - y1) * cssHeight * dpr);
+  if (regionY < 0) {
+    regionH += regionY;
+    regionY = 0;
+  }
+  if (regionY + regionH > canvasHeight) {
+    regionH = canvasHeight - regionY;
+  }
+  return [regionX, regionY, regionW, regionH];
+}
+function calculateBoundsRegionCSS(params) {
+  const { bounds, rectWidth, rectHeight } = params;
+  if (!bounds) {
+    return [0, 0, rectWidth, rectHeight];
+  }
+  const [[x1, y1], [x2, y2]] = bounds;
+  const regionX = Math.round(x1 * rectWidth);
+  const regionW = Math.round((x2 - x1) * rectWidth);
+  const yTop = Math.round(y1 * rectHeight);
+  const yBot = Math.round(y2 * rectHeight);
+  const regionH = yBot - yTop;
+  const regionY = rectHeight - yBot;
+  return [regionX, regionY, regionW, regionH];
+}
+function calculateEffectiveCanvasHeight(params) {
+  const { canvasHeight, bounds, colorbarHeight } = params;
+  let regionH = canvasHeight;
+  if (bounds) {
+    const [[, y1], [, y2]] = bounds;
+    const yTop = Math.round(y1 * canvasHeight);
+    const yBot = Math.round(y2 * canvasHeight);
+    regionH = yBot - yTop;
+  }
+  return regionH - colorbarHeight;
+}
+function calculateEffectiveCanvasWidth(params) {
+  const { canvasWidth, bounds, legendPanelWidth } = params;
+  let regionW = canvasWidth;
+  if (bounds) {
+    const [[x1], [x2]] = bounds;
+    regionW = Math.round((x2 - x1) * canvasWidth);
+  }
+  return regionW - legendPanelWidth;
+}
+function calculateSliceScale(params) {
+  const { forceVox, getScreenFieldOfViewMM, getScreenFieldOfViewVox, backDims } = params;
+  let dimsMM = getScreenFieldOfViewMM(0 /* AXIAL */);
+  if (forceVox) {
+    dimsMM = getScreenFieldOfViewVox(0 /* AXIAL */);
+  }
+  const longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]));
+  const volScale = [dimsMM[0] / longestAxis, dimsMM[1] / longestAxis, dimsMM[2] / longestAxis];
+  const vox = [backDims[1], backDims[2], backDims[3]];
+  return { volScale, vox, longestAxis, dimsMM };
+}
+function calculateXyMM2xyzMM(params) {
+  const { axCorSag, sliceFrac, frac2mm: frac2mm2, swizzleVec3MM: swizzleVec3MM2 } = params;
+  let sliceDim = 2;
+  if (axCorSag === 1 /* CORONAL */) {
+    sliceDim = 1;
+  }
+  if (axCorSag === 2 /* SAGITTAL */) {
+    sliceDim = 0;
+  }
+  const a = [0, 0, 0];
+  const b = [1, 1, 0];
+  const c = [1, 0, 1];
+  a[sliceDim] = sliceFrac;
+  b[sliceDim] = sliceFrac;
+  c[sliceDim] = sliceFrac;
+  const aMM = frac2mm2(a);
+  const bMM = frac2mm2(b);
+  const cMM = frac2mm2(c);
+  const aSwizzled = swizzleVec3MM2(vec3_exports.fromValues(aMM[0], aMM[1], aMM[2]), axCorSag);
+  const bSwizzled = swizzleVec3MM2(vec3_exports.fromValues(bMM[0], bMM[1], bMM[2]), axCorSag);
+  const cSwizzled = swizzleVec3MM2(vec3_exports.fromValues(cMM[0], cMM[1], cMM[2]), axCorSag);
+  const denom = (bSwizzled[0] - aSwizzled[0]) * (cSwizzled[1] - aSwizzled[1]) - (cSwizzled[0] - aSwizzled[0]) * (bSwizzled[1] - aSwizzled[1]);
+  let yMult = (bSwizzled[0] - aSwizzled[0]) * (cSwizzled[2] - aSwizzled[2]) - (cSwizzled[0] - aSwizzled[0]) * (bSwizzled[2] - aSwizzled[2]);
+  yMult /= denom;
+  let xMult = (bSwizzled[1] - aSwizzled[1]) * (cSwizzled[2] - aSwizzled[2]) - (cSwizzled[1] - aSwizzled[1]) * (bSwizzled[2] - aSwizzled[2]);
+  xMult /= denom;
+  const AxyzMxy = [0, 0, 0, 0, 0];
+  AxyzMxy[0] = aSwizzled[0];
+  AxyzMxy[1] = aSwizzled[1];
+  AxyzMxy[2] = aSwizzled[2];
+  AxyzMxy[3] = xMult;
+  AxyzMxy[4] = yMult;
+  return AxyzMxy;
+}
+function calculateBulletMarginWidth(params) {
+  const { labels, fontPx, textHeight } = params;
+  if (labels.length === 0) {
+    return 0;
+  }
+  const widestBulletScale = labels.length === 1 ? labels[0].style.bulletScale ?? 1 : labels.reduce((a, b) => (a.style.bulletScale ?? 1) > (b.style.bulletScale ?? 1) ? a : b).style.bulletScale ?? 1;
+  const tallestLabel = labels.length === 1 ? labels[0] : labels.reduce((a, b) => {
+    const aSize = fontPx * a.style.textScale;
+    const bSize = fontPx * b.style.textScale;
+    const taller = textHeight(aSize, a.text) > textHeight(bSize, b.text) ? a : b;
+    return taller;
+  });
+  const size = fontPx * tallestLabel.style.textScale;
+  let bulletMargin = textHeight(size, tallestLabel.text) * widestBulletScale;
+  bulletMargin += size;
+  return bulletMargin;
+}
+function calculateLegendPanelWidth(params) {
+  const { labels, showLegend, fontPx, canvasWidth, textWidth, getBulletMarginWidth } = params;
+  if (!showLegend || labels.length === 0) {
+    return 0;
+  }
+  const scale6 = 1;
+  const horizontalMargin = fontPx * scale6;
+  let width = 0;
+  const longestLabel = labels.reduce((a, b) => {
+    const aSize = fontPx * a.style.textScale;
+    const bSize = fontPx * b.style.textScale;
+    const longer = textWidth(aSize, a.text) > textWidth(bSize, b.text) ? a : b;
+    return longer;
+  });
+  const longestTextSize = fontPx * longestLabel.style.textScale;
+  const longestTextLength = textWidth(longestTextSize, longestLabel.text);
+  const bulletMargin = getBulletMarginWidth();
+  if (longestTextLength) {
+    width = bulletMargin + longestTextLength;
+    width += horizontalMargin * 2;
+  }
+  if (width >= canvasWidth) {
+    return 0;
+  }
+  return width;
+}
+function calculateLegendPanelHeight(params) {
+  const { labels, fontPx, panelScale, textHeight } = params;
+  let height = 0;
+  const verticalMargin = fontPx;
+  for (const label of labels) {
+    const labelSize = fontPx * label.style.textScale * panelScale;
+    const labelHeight = textHeight(labelSize, label.text);
+    height += labelHeight;
+  }
+  if (height) {
+    height += verticalMargin / 2 * (labels.length + 1) * panelScale;
+  }
+  return height;
+}
+function calculateColorbarPanel(params) {
+  const { fontPx, boundsRegion, colorbarWidth } = params;
+  const fullHt = 3 * fontPx;
+  if (fullHt < 0) {
+    return {
+      leftTopWidthHeight: [0, 0, 0, 0],
+      colorbarHeight: 0
+    };
+  }
+  const [regionX, regionY, regionW, regionH] = boundsRegion;
+  const widthPercentage = colorbarWidth > 0 && colorbarWidth <= 1 ? colorbarWidth : 1;
+  const width = widthPercentage * regionW;
+  const leftTopWidthHeight = [
+    regionX + (regionW - width) / 2,
+    // center within region
+    regionY + regionH - fullHt,
+    // top within region
+    width,
+    fullHt
+  ];
+  return {
+    leftTopWidthHeight,
+    colorbarHeight: fullHt + 1
+  };
+}
+function isPointInBoundsCSS(params) {
+  const { x, y, boundsRegion } = params;
+  const [bx, by, bw, bh] = boundsRegion;
+  return x >= bx && x <= bx + bw && y >= by && y <= by + bh;
+}
+function isCursorInBounds(params) {
+  const { mouseX, mouseY, boundsRegion } = params;
+  if (mouseX < 0 || mouseY < 0) {
+    return false;
+  }
+  const [regionX, regionY, regionW, regionH] = boundsRegion;
+  return mouseX >= regionX && mouseX <= regionX + regionW && mouseY >= regionY && mouseY <= regionY + regionH;
+}
+
+// src/niivue/navigation/CameraController.ts
+function normalizeAzimuth(azimuth) {
+  let normalized = azimuth % 360;
+  if (normalized < 0) {
+    normalized += 360;
+  }
+  return normalized;
+}
+function calculateDragRotation(params) {
+  const { currentAzimuth, currentElevation, deltaX, deltaY } = params;
+  const newAzimuth = normalizeAzimuth(currentAzimuth + deltaX);
+  const newElevation = currentElevation + deltaY;
+  return {
+    azimuth: newAzimuth,
+    elevation: newElevation
+  };
+}
+function shouldUpdateCameraRotation(params) {
+  const { dx, dy, threshold = 1 } = params;
+  return Math.abs(dx) >= threshold || Math.abs(dy) >= threshold;
+}
+
+// src/niivue/navigation/ClipPlaneManager.ts
+var DEFAULT_CLIP_PLANE = [0, 0, 0, 2];
+var DEFAULT_DEPTH_AZI_ELEV = [2, 0, 0];
+var CLIP_PLANE_ACTIVE_THRESHOLD = 1.8;
+function depthAziElevToClipPlane(params) {
+  const { depth, azimuth, elevation } = params;
+  const v = sph2cartDeg(azimuth + 180, elevation);
+  return [v[0], v[1], v[2], depth];
+}
+function depthAziElevToClipPlaneNoOffset(params) {
+  const { depth, azimuth, elevation } = params;
+  const n = sph2cartDeg(azimuth, elevation);
+  return [n[0], n[1], n[2], -depth];
+}
+function calculateClipPlaneDrag(params) {
+  const { startDepthAziElev, dragDeltaX, dragDeltaY } = params;
+  const newDepthAziElev = [startDepthAziElev[0], (startDepthAziElev[1] - dragDeltaX) % 360, startDepthAziElev[2] + dragDeltaY];
+  const changed = newDepthAziElev[1] !== startDepthAziElev[1] || newDepthAziElev[2] !== startDepthAziElev[2];
+  return {
+    depthAziElev: newDepthAziElev,
+    changed
+  };
+}
+function ensureClipPlaneArrays(params) {
+  const { index } = params;
+  const clipPlanes = params.clipPlanes ? [...params.clipPlanes] : [];
+  const clipPlaneDepthAziElevs = params.clipPlaneDepthAziElevs ? [...params.clipPlaneDepthAziElevs] : [];
+  while (clipPlanes.length <= index) {
+    clipPlanes.push([...DEFAULT_CLIP_PLANE]);
+  }
+  while (clipPlaneDepthAziElevs.length <= index) {
+    clipPlaneDepthAziElevs.push([...DEFAULT_DEPTH_AZI_ELEV]);
+  }
+  return {
+    clipPlanes,
+    clipPlaneDepthAziElevs
+  };
+}
+function isClipPlaneActive(depth, threshold = CLIP_PLANE_ACTIVE_THRESHOLD) {
+  return depth < threshold;
+}
+function convertMultipleClipPlanes(params) {
+  const { depthAziElevs } = params;
+  const clipPlanes = [];
+  const clipPlaneDepthAziElevs = [];
+  for (const dae of depthAziElevs) {
+    const plane = depthAziElevToClipPlaneNoOffset({
+      depth: dae[0],
+      azimuth: dae[1],
+      elevation: dae[2]
+    });
+    clipPlanes.push(plane);
+    clipPlaneDepthAziElevs.push([...dae]);
+  }
+  return {
+    clipPlanes,
+    clipPlaneDepthAziElevs
+  };
+}
+function shouldUpdateClipPlaneDrag(params) {
+  const { isDragging, activeClipPlaneDepth, dragStartTileIndex } = params;
+  return isDragging && isClipPlaneActive(activeClipPlaneDepth) && dragStartTileIndex >= 0;
+}
+function updateClipPlaneAtIndex(params) {
+  const { index, depthAzimuthElevation } = params;
+  const { clipPlanes, clipPlaneDepthAziElevs } = ensureClipPlaneArrays({
+    clipPlanes: params.clipPlanes,
+    clipPlaneDepthAziElevs: params.clipPlaneDepthAziElevs,
+    index
+  });
+  const clipPlane = depthAziElevToClipPlane({
+    depth: depthAzimuthElevation[0],
+    azimuth: depthAzimuthElevation[1],
+    elevation: depthAzimuthElevation[2]
+  });
+  clipPlanes[index] = clipPlane;
+  clipPlaneDepthAziElevs[index] = [...depthAzimuthElevation];
+  return {
+    clipPlanes,
+    clipPlaneDepthAziElevs,
+    clipPlane
+  };
+}
+function isValidDepthAziElev(depthAzimuthElevation) {
+  return !!depthAzimuthElevation && depthAzimuthElevation.length > 0;
+}
+
+// src/drawing/rle.ts
+function encodeRLE(data) {
+  const dl = data.length;
+  let dp = 0;
+  const r = new Uint8Array(dl + Math.ceil(0.01 * dl));
+  const rI = new Int8Array(r.buffer);
+  let rp = 0;
+  while (dp < dl) {
+    let v = data[dp];
+    dp++;
+    let rl = 1;
+    while (rl < 129 && dp < dl && data[dp] === v) {
+      dp++;
+      rl++;
+    }
+    if (rl > 1) {
+      rI[rp] = -rl + 1;
+      rp++;
+      r[rp] = v;
+      rp++;
+      continue;
+    }
+    while (dp < dl) {
+      if (rl > 127) {
+        break;
+      }
+      if (dp + 2 < dl) {
+        if (v !== data[dp] && data[dp + 2] === data[dp] && data[dp + 1] === data[dp]) {
+          break;
+        }
+      }
+      v = data[dp];
+      dp++;
+      rl++;
+    }
+    r[rp] = rl - 1;
+    rp++;
+    for (let i = 0; i < rl; i++) {
+      r[rp] = data[dp - rl + i];
+      rp++;
+    }
+  }
+  log.debug("PackBits " + dl + " -> " + rp + " bytes (x" + dl / rp + ")");
+  return r.slice(0, rp);
+}
+function decodeRLE(rle, decodedlen) {
+  const r = new Uint8Array(rle.buffer);
+  const rI = new Int8Array(r.buffer);
+  let rp = 0;
+  const d = new Uint8Array(decodedlen);
+  let dp = 0;
+  while (rp < r.length) {
+    const hdr = rI[rp];
+    rp++;
+    if (hdr < 0) {
+      const v = rI[rp];
+      rp++;
+      for (let i = 0; i < 1 - hdr; i++) {
+        d[dp] = v;
+        dp++;
+      }
+    } else {
+      for (let i = 0; i < hdr + 1; i++) {
+        d[dp] = rI[rp];
+        rp++;
+        dp++;
+      }
+    }
+  }
+  return d;
+}
+
+// src/drawing/undo.ts
+var drawUndo = ({ drawUndoBitmaps, currentDrawUndoBitmap, drawBitmap }) => {
+  const len4 = drawUndoBitmaps.length;
+  if (len4 < 1) {
+    log.debug("undo bitmaps not loaded");
+    return;
+  }
+  currentDrawUndoBitmap--;
+  if (currentDrawUndoBitmap < 0) {
+    currentDrawUndoBitmap = len4 - 1;
+  }
+  if (currentDrawUndoBitmap >= len4) {
+    currentDrawUndoBitmap = 0;
+  }
+  if (drawUndoBitmaps[currentDrawUndoBitmap].length < 2) {
+    log.debug("drawUndo is misbehaving");
+    return;
+  }
+  drawBitmap = decodeRLE(drawUndoBitmaps[currentDrawUndoBitmap], drawBitmap.length);
+  return { drawBitmap, currentDrawUndoBitmap };
+};
+
+// src/drawing/masks.ts
+function findBoundarySlices(sliceType, drawBitmap, dims) {
+  const { dimX, dimY, dimZ } = dims;
+  let axisSize;
+  if (sliceType === 0 /* AXIAL */) {
+    axisSize = dimZ;
+  } else if (sliceType === 1 /* CORONAL */) {
+    axisSize = dimY;
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    axisSize = dimX;
+  } else {
+    return null;
+  }
+  let firstSliceWithData = -1;
+  let lastSliceWithData = -1;
+  for (let slice2 = 0; slice2 < axisSize; slice2++) {
+    let hasData = false;
+    if (sliceType === 0 /* AXIAL */) {
+      const offset = slice2 * dimX * dimY;
+      for (let i = 0; i < dimX * dimY; i++) {
+        if (drawBitmap[offset + i] > 0) {
+          hasData = true;
+          break;
+        }
+      }
+    } else if (sliceType === 1 /* CORONAL */) {
+      for (let z = 0; z < dimZ; z++) {
+        for (let x = 0; x < dimX; x++) {
+          const idx2 = x + slice2 * dimX + z * dimX * dimY;
+          if (drawBitmap[idx2] > 0) {
+            hasData = true;
+            break;
+          }
+        }
+        if (hasData) {
+          break;
+        }
+      }
+    } else if (sliceType === 2 /* SAGITTAL */) {
+      for (let z = 0; z < dimZ; z++) {
+        for (let y = 0; y < dimY; y++) {
+          const idx2 = slice2 + y * dimX + z * dimX * dimY;
+          if (drawBitmap[idx2] > 0) {
+            hasData = true;
+            break;
+          }
+        }
+        if (hasData) {
+          break;
+        }
+      }
+    }
+    if (hasData) {
+      if (firstSliceWithData === -1) {
+        firstSliceWithData = slice2;
+      }
+      lastSliceWithData = slice2;
+    }
+  }
+  if (firstSliceWithData === -1 || lastSliceWithData === -1) {
+    return null;
+  }
+  return { first: firstSliceWithData, last: lastSliceWithData };
+}
+function extractSlice(sliceIndex, sliceType, drawBitmap, dims) {
+  const { dimX, dimY, dimZ } = dims;
+  let sliceData;
+  if (sliceType === 0 /* AXIAL */) {
+    sliceData = new Float32Array(dimX * dimY);
+    const offset = sliceIndex * dimX * dimY;
+    for (let i = 0; i < dimX * dimY; i++) {
+      sliceData[i] = drawBitmap[offset + i];
+    }
+  } else if (sliceType === 1 /* CORONAL */) {
+    sliceData = new Float32Array(dimX * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let x = 0; x < dimX; x++) {
+        const srcIdx = x + sliceIndex * dimX + z * dimX * dimY;
+        const dstIdx = x + z * dimX;
+        sliceData[dstIdx] = drawBitmap[srcIdx];
+      }
+    }
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    sliceData = new Float32Array(dimY * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let y = 0; y < dimY; y++) {
+        const srcIdx = sliceIndex + y * dimX + z * dimX * dimY;
+        const dstIdx = y + z * dimY;
+        sliceData[dstIdx] = drawBitmap[srcIdx];
+      }
+    }
+  } else {
+    throw new Error("Invalid slice type");
+  }
+  return sliceData;
+}
+function extractIntensitySlice(sliceIndex, sliceType, imageData, dims, maxVal) {
+  const { dimX, dimY, dimZ } = dims;
+  let sliceData;
+  if (sliceType === 0 /* AXIAL */) {
+    sliceData = new Float32Array(dimX * dimY);
+    const offset = sliceIndex * dimX * dimY;
+    for (let i = 0; i < dimX * dimY; i++) {
+      sliceData[i] = imageData[offset + i] / maxVal;
+    }
+  } else if (sliceType === 1 /* CORONAL */) {
+    sliceData = new Float32Array(dimX * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let x = 0; x < dimX; x++) {
+        const srcIdx = x + sliceIndex * dimX + z * dimX * dimY;
+        const dstIdx = x + z * dimX;
+        sliceData[dstIdx] = imageData[srcIdx] / maxVal;
+      }
+    }
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    sliceData = new Float32Array(dimY * dimZ);
+    for (let z = 0; z < dimZ; z++) {
+      for (let y = 0; y < dimY; y++) {
+        const srcIdx = sliceIndex + y * dimX + z * dimX * dimY;
+        const dstIdx = y + z * dimY;
+        sliceData[dstIdx] = imageData[srcIdx] / maxVal;
+      }
+    }
+  } else {
+    throw new Error("Invalid slice type");
+  }
+  return sliceData;
+}
+function insertColorMask(mask, sliceIndex, sliceType, drawBitmap, dims, binaryThreshold, color) {
+  const { dimX, dimY, dimZ } = dims;
+  if (sliceType === 0 /* AXIAL */) {
+    const offset = sliceIndex * dimX * dimY;
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] >= binaryThreshold) {
+        drawBitmap[offset + i] = color;
+      }
+    }
+  } else if (sliceType === 1 /* CORONAL */) {
+    for (let z = 0; z < dimZ; z++) {
+      for (let x = 0; x < dimX; x++) {
+        const srcIdx = x + z * dimX;
+        const dstIdx = x + sliceIndex * dimX + z * dimX * dimY;
+        if (mask[srcIdx] >= binaryThreshold) {
+          drawBitmap[dstIdx] = color;
+        }
+      }
+    }
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    for (let z = 0; z < dimZ; z++) {
+      for (let y = 0; y < dimY; y++) {
+        const srcIdx = y + z * dimY;
+        const dstIdx = sliceIndex + y * dimX + z * dimX * dimY;
+        if (mask[srcIdx] >= binaryThreshold) {
+          drawBitmap[dstIdx] = color;
+        }
+      }
+    }
+  } else {
+    throw new Error("Invalid slice type");
+  }
+}
+function smoothSlice(slice2, width, height) {
+  if (width < 3 || height < 3) {
+    return;
+  }
+  const temp = new Float32Array(slice2.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx2 = x + y * width;
+      if (x === 0 || x === width - 1) {
+        temp[idx2] = slice2[idx2];
+      } else {
+        temp[idx2] = (slice2[idx2 - 1] + 2 * slice2[idx2] + slice2[idx2 + 1]) * 0.25;
+      }
+    }
+  }
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx2 = x + y * width;
+      if (y === 0 || y === height - 1) {
+        slice2[idx2] = temp[idx2];
+      } else {
+        slice2[idx2] = (temp[idx2 - width] + 2 * temp[idx2] + temp[idx2 + width]) * 0.25;
+      }
+    }
+  }
+}
+function calculateIntensityWeight(intensity1, intensity2, targetIntensity, intensitySigma) {
+  const diff1 = Math.abs(targetIntensity - intensity1);
+  const diff2 = Math.abs(targetIntensity - intensity2);
+  const weight1 = Math.exp(-diff1 * diff1 / (2 * intensitySigma * intensitySigma));
+  const weight2 = Math.exp(-diff2 * diff2 / (2 * intensitySigma * intensitySigma));
+  const totalWeight = weight1 + weight2;
+  if (totalWeight < 1e-6) {
+    return 0.5;
+  }
+  return weight1 / totalWeight;
+}
+function doGeometricInterpolation(sliceLow, sliceHigh, z, sliceIndexLow, sliceIndexHigh, interpolatedSlice) {
+  const fracHigh = (z - sliceIndexLow) / (sliceIndexHigh - sliceIndexLow);
+  const fracLow = 1 - fracHigh;
+  for (let i = 0; i < sliceLow.length; i++) {
+    interpolatedSlice[i] = sliceLow[i] * fracLow + sliceHigh[i] * fracHigh;
+  }
+}
+function doIntensityGuidedInterpolation(sliceLow, sliceHigh, z, sliceIndexLow, sliceIndexHigh, interpolatedSlice, opts, intensityLow, intensityHigh, targetIntensity) {
+  const baseFracHigh = (z - sliceIndexLow) / (sliceIndexHigh - sliceIndexLow);
+  const baseFracLow = 1 - baseFracHigh;
+  for (let i = 0; i < sliceLow.length; i++) {
+    if (sliceLow[i] > 0 || sliceHigh[i] > 0) {
+      const intensityWeight = calculateIntensityWeight(intensityLow[i], intensityHigh[i], targetIntensity[i], opts.intensitySigma);
+      const alpha = opts.intensityWeight;
+      const combinedWeightLow = alpha * intensityWeight + (1 - alpha) * baseFracLow;
+      const combinedWeightHigh = 1 - combinedWeightLow;
+      interpolatedSlice[i] = sliceLow[i] * combinedWeightLow + sliceHigh[i] * combinedWeightHigh;
+    } else {
+      interpolatedSlice[i] = sliceLow[i] * baseFracLow + sliceHigh[i] * baseFracHigh;
+    }
+  }
+}
+function interpolateMaskSlices(drawBitmap, dims, imageData, maxVal, sliceIndexLow, sliceIndexHigh, options, refreshDrawingCallback) {
+  const { dimX, dimY, dimZ } = dims;
+  const sliceType = options.sliceType ?? 0 /* AXIAL */;
+  let sliceWidth, sliceHeight, maxSliceIndex;
+  if (sliceType === 0 /* AXIAL */) {
+    sliceWidth = dimX;
+    sliceHeight = dimY;
+    maxSliceIndex = dimZ - 1;
+  } else if (sliceType === 1 /* CORONAL */) {
+    sliceWidth = dimX;
+    sliceHeight = dimZ;
+    maxSliceIndex = dimY - 1;
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    sliceWidth = dimY;
+    sliceHeight = dimZ;
+    maxSliceIndex = dimX - 1;
+  } else {
+    throw new Error("Invalid slice type. Must be AXIAL, CORONAL, or SAGITTAL");
+  }
+  const opts = {
+    intensityWeight: options.intensityWeight ?? 0.7,
+    binaryThreshold: options.binaryThreshold ?? 0.375,
+    intensitySigma: options.intensitySigma ?? 0.1,
+    applySmoothingToSlices: options.applySmoothingToSlices ?? true,
+    useIntensityGuided: options.useIntensityGuided ?? true
+  };
+  if (sliceIndexLow !== void 0 && sliceIndexHigh !== void 0) {
+    if (sliceIndexLow >= sliceIndexHigh) {
+      throw new Error("Low slice index must be less than high slice index");
+    }
+    if (sliceIndexLow < 0 || sliceIndexHigh > maxSliceIndex) {
+      throw new Error(`Slice indices out of bounds [0, ${maxSliceIndex}]`);
+    }
+  }
+  const colorRanges = /* @__PURE__ */ new Map();
+  for (let sliceIdx = 0; sliceIdx <= maxSliceIndex; sliceIdx++) {
+    const slice2 = extractSlice(sliceIdx, sliceType, drawBitmap, dims);
+    for (let i = 0; i < slice2.length; i++) {
+      const color = slice2[i];
+      if (color > 0) {
+        if (!colorRanges.has(color)) {
+          colorRanges.set(color, { min: sliceIdx, max: sliceIdx });
+        } else {
+          const range2 = colorRanges.get(color);
+          range2.min = Math.min(range2.min, sliceIdx);
+          range2.max = Math.max(range2.max, sliceIdx);
+        }
+      }
+    }
+  }
+  for (const [color, range2] of colorRanges) {
+    const colorSliceLow = sliceIndexLow !== void 0 ? Math.max(sliceIndexLow, range2.min) : range2.min;
+    const colorSliceHigh = sliceIndexHigh !== void 0 ? Math.min(sliceIndexHigh, range2.max) : range2.max;
+    if (colorSliceLow >= colorSliceHigh || colorSliceHigh - colorSliceLow < 2) {
+      continue;
+    }
+    const sliceLow = extractSlice(colorSliceLow, sliceType, drawBitmap, dims);
+    const sliceHigh = extractSlice(colorSliceHigh, sliceType, drawBitmap, dims);
+    const colorMaskLow = new Float32Array(sliceLow.length);
+    const colorMaskHigh = new Float32Array(sliceHigh.length);
+    for (let i = 0; i < sliceLow.length; i++) {
+      colorMaskLow[i] = sliceLow[i] === color ? 1 : 0;
+      colorMaskHigh[i] = sliceHigh[i] === color ? 1 : 0;
+    }
+    if (opts.applySmoothingToSlices) {
+      smoothSlice(colorMaskLow, sliceWidth, sliceHeight);
+      smoothSlice(colorMaskHigh, sliceWidth, sliceHeight);
+    }
+    for (let z = colorSliceLow + 1; z < colorSliceHigh; z++) {
+      const colorInterpolated = new Float32Array(sliceWidth * sliceHeight);
+      if (opts.useIntensityGuided && imageData) {
+        const intensityLow = extractIntensitySlice(colorSliceLow, sliceType, imageData, dims, maxVal);
+        const intensityHigh = extractIntensitySlice(colorSliceHigh, sliceType, imageData, dims, maxVal);
+        const targetIntensity = extractIntensitySlice(z, sliceType, imageData, dims, maxVal);
+        doIntensityGuidedInterpolation(colorMaskLow, colorMaskHigh, z, colorSliceLow, colorSliceHigh, colorInterpolated, opts, intensityLow, intensityHigh, targetIntensity);
+      } else {
+        doGeometricInterpolation(colorMaskLow, colorMaskHigh, z, colorSliceLow, colorSliceHigh, colorInterpolated);
+      }
+      insertColorMask(colorInterpolated, z, sliceType, drawBitmap, dims, opts.binaryThreshold, color);
+    }
+  }
+  refreshDrawingCallback();
+}
+
+// src/niivue/drawing/DrawingManager.ts
+function clearAllUndoBitmaps(drawUndoBitmaps, maxDrawUndoBitmaps) {
+  const newDrawUndoBitmaps = [...drawUndoBitmaps];
+  const currentDrawUndoBitmap = maxDrawUndoBitmaps;
+  if (!newDrawUndoBitmaps || newDrawUndoBitmaps.length < 1) {
+    return { drawUndoBitmaps: newDrawUndoBitmaps, currentDrawUndoBitmap };
+  }
+  for (let i = newDrawUndoBitmaps.length - 1; i >= 0; i--) {
+    newDrawUndoBitmaps[i] = new Uint8Array();
+  }
+  return { drawUndoBitmaps: newDrawUndoBitmaps, currentDrawUndoBitmap };
+}
+function addUndoBitmap(params) {
+  const { drawBitmap, drawUndoBitmaps, currentDrawUndoBitmap: currentIndex, maxDrawUndoBitmaps, drawFillOverwrites } = params;
+  if (!drawBitmap || drawBitmap.length < 1) {
+    log.debug("addUndoBitmap error: No drawing open");
+    return {
+      drawBitmap,
+      drawUndoBitmaps,
+      currentDrawUndoBitmap: currentIndex,
+      needsRefresh: false
+    };
+  }
+  const newDrawUndoBitmaps = [...drawUndoBitmaps];
+  let newDrawBitmap = drawBitmap;
+  let needsRefresh = false;
+  if (!drawFillOverwrites && newDrawUndoBitmaps.length > 0) {
+    const len4 = drawBitmap.length;
+    const bmp = decodeRLE(newDrawUndoBitmaps[currentIndex], len4);
+    newDrawBitmap = new Uint8Array(drawBitmap);
+    for (let i = 0; i < len4; i++) {
+      if (bmp[i] > 0) {
+        newDrawBitmap[i] = bmp[i];
+      }
+    }
+    needsRefresh = true;
+  }
+  let newCurrentIndex = currentIndex + 1;
+  if (newCurrentIndex >= maxDrawUndoBitmaps) {
+    newCurrentIndex = 0;
+  }
+  newDrawUndoBitmaps[newCurrentIndex] = encodeRLE(newDrawBitmap);
+  return {
+    drawBitmap: newDrawBitmap,
+    drawUndoBitmaps: newDrawUndoBitmaps,
+    currentDrawUndoBitmap: newCurrentIndex,
+    needsRefresh
+  };
+}
+function createLookupTable(size, stride, flip) {
+  const lut = new Array(size);
+  if (flip) {
+    for (let i = 0; i < size; i++) {
+      lut[i] = (size - 1 - i) * stride;
+    }
+  } else {
+    for (let i = 0; i < size; i++) {
+      lut[i] = i * stride;
+    }
+  }
+  return lut;
+}
+function calculateLoadDrawingTransform(params) {
+  const { permRAS, dims } = params;
+  const layout = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (Math.abs(permRAS[i]) - 1 !== j) {
+        continue;
+      }
+      layout[j] = i * Math.sign(permRAS[i]);
+    }
+  }
+  let stride = 1;
+  const instride = [1, 1, 1];
+  const inflip = [false, false, false];
+  for (let i = 0; i < layout.length; i++) {
+    for (let j = 0; j < layout.length; j++) {
+      const a = Math.abs(layout[j]);
+      if (a !== i) {
+        continue;
+      }
+      instride[j] = stride;
+      if (layout[j] < 0 || Object.is(layout[j], -0)) {
+        inflip[j] = true;
+      }
+      stride *= dims[j + 1];
+    }
+  }
+  const xlut = createLookupTable(dims[1], instride[0], inflip[0]);
+  const ylut = createLookupTable(dims[2], instride[1], inflip[1]);
+  const zlut = createLookupTable(dims[3], instride[2], inflip[2]);
+  return { instride, inflip, xlut, ylut, zlut };
+}
+function transformBitmap(params) {
+  const { inputData, dims, xlut, ylut, zlut } = params;
+  const vx = dims[1] * dims[2] * dims[3];
+  const outputBitmap = new Uint8Array(vx);
+  let j = 0;
+  for (let z = 0; z < dims[3]; z++) {
+    for (let y = 0; y < dims[2]; y++) {
+      for (let x = 0; x < dims[1]; x++) {
+        outputBitmap[xlut[x] + ylut[y] + zlut[z]] = inputData[j];
+        j++;
+      }
+    }
+  }
+  return outputBitmap;
+}
+function validateDrawingDimensions(params) {
+  const { drawingDims, backgroundDims } = params;
+  return drawingDims[1] === backgroundDims[1] && drawingDims[2] === backgroundDims[2] && drawingDims[3] === backgroundDims[3];
+}
+function calculateVoxelCount(dims) {
+  if (!dims || dims.length < 4) {
+    return 0;
+  }
+  return dims[1] * dims[2] * dims[3];
+}
+function createEmptyBitmap(voxelCount) {
+  return new Uint8Array(voxelCount);
+}
+function determineBitmapDataSource(params) {
+  let { useClickToSegmentBitmap, drawingEnabled, clickToSegment, drawBitmap, clickToSegmentGrowingBitmap } = params;
+  let warning = null;
+  if (useClickToSegmentBitmap && (!drawingEnabled || !clickToSegment)) {
+    log.debug("determineBitmapDataSource: Conditions not met for clickToSegment bitmap, using drawBitmap.");
+    useClickToSegmentBitmap = false;
+  }
+  const selectedBitmap = useClickToSegmentBitmap ? clickToSegmentGrowingBitmap : drawBitmap;
+  if (!selectedBitmap && !useClickToSegmentBitmap && clickToSegmentGrowingBitmap) {
+    warning = "drawBitmap is null, but clickToSegmentGrowingBitmap exists. Check state.";
+  } else if (!selectedBitmap && useClickToSegmentBitmap && drawBitmap) {
+    warning = "clickToSegmentGrowingBitmap is null, falling back to drawBitmap.";
+    useClickToSegmentBitmap = false;
+  } else if (!selectedBitmap) {
+    warning = "Both bitmaps are null. Uploading empty data.";
+  }
+  const bitmapDataSource = useClickToSegmentBitmap ? clickToSegmentGrowingBitmap : drawBitmap;
+  return { bitmapDataSource, useClickToSegmentBitmap, warning };
+}
+function createDisabledDrawingState(params) {
+  const { clickToSegmentIsGrowing, drawShapePreviewBitmap, drawBitmap } = params;
+  let newDrawBitmap = drawBitmap;
+  let needsRefresh = false;
+  if (clickToSegmentIsGrowing) {
+    needsRefresh = true;
+  }
+  if (drawShapePreviewBitmap) {
+    newDrawBitmap = drawShapePreviewBitmap;
+  }
+  return {
+    clickToSegmentIsGrowing: false,
+    drawPenLocation: [NaN, NaN, NaN],
+    drawPenAxCorSag: -1,
+    drawPenFillPts: [],
+    drawShapeStartLocation: [NaN, NaN, NaN],
+    drawShapePreviewBitmap: null,
+    drawBitmap: newDrawBitmap,
+    needsRefresh
+  };
+}
+function adjustDimensionsForSpecialCase(bitmapLength, dims) {
+  if (bitmapLength === 8) {
+    return [dims[0], 2, 2, 2, ...dims.slice(4)];
+  }
+  return dims;
+}
+function validateBitmapLength(bitmapLength, expectedVoxelCount) {
+  if (bitmapLength === 8) {
+    return true;
+  }
+  return bitmapLength === expectedVoxelCount;
+}
+
+// src/niivue/drawing/PenTool.ts
+function voxelIndex(x, y, z, dx, dy) {
+  return x + y * dx + z * dx * dy;
+}
+function clampToDimension(value, max5) {
+  return Math.min(Math.max(value, 0), max5 - 1);
+}
+function drawPoint(params) {
+  const { x: inputX, y: inputY, z: inputZ, penValue, drawBitmap, dims, penSize, penAxCorSag } = params;
+  const dx = dims[1];
+  const dy = dims[2];
+  const dz = dims[3];
+  const x = clampToDimension(inputX, dx);
+  const y = clampToDimension(inputY, dy);
+  const z = clampToDimension(inputZ, dz);
+  drawBitmap[voxelIndex(x, y, z, dx, dy)] = penValue;
+  if (penSize > 1) {
+    const halfPenSize = Math.floor(penSize / 2);
+    const isAx = penAxCorSag === 0 /* AXIAL */;
+    const isCor = penAxCorSag === 1 /* CORONAL */;
+    const isSag = penAxCorSag === 2 /* SAGITTAL */;
+    for (let i = -halfPenSize; i <= halfPenSize; i++) {
+      for (let j = -halfPenSize; j <= halfPenSize; j++) {
+        let nx, ny, nz;
+        if (isAx) {
+          nx = clampToDimension(x + i, dx);
+          ny = clampToDimension(y + j, dy);
+          nz = z;
+        } else if (isCor) {
+          nx = clampToDimension(x + i, dx);
+          ny = y;
+          nz = clampToDimension(z + j, dz);
+        } else if (isSag) {
+          nx = x;
+          ny = clampToDimension(y + j, dy);
+          nz = clampToDimension(z + i, dz);
+        } else {
+          continue;
+        }
+        drawBitmap[voxelIndex(nx, ny, nz, dx, dy)] = penValue;
+      }
+    }
+  }
+}
+function drawLine(params) {
+  const { ptA, ptB, penValue, drawBitmap, dims, penSize, penAxCorSag } = params;
+  const dx = Math.abs(ptA[0] - ptB[0]);
+  const dy = Math.abs(ptA[1] - ptB[1]);
+  const dz = Math.abs(ptA[2] - ptB[2]);
+  const xs = ptB[0] > ptA[0] ? 1 : -1;
+  const ys = ptB[1] > ptA[1] ? 1 : -1;
+  const zs = ptB[2] > ptA[2] ? 1 : -1;
+  let x1 = ptA[0];
+  let y1 = ptA[1];
+  let z1 = ptA[2];
+  const x2 = ptB[0];
+  const y2 = ptB[1];
+  const z2 = ptB[2];
+  const pointParams = {
+    x: 0,
+    y: 0,
+    z: 0,
+    penValue,
+    drawBitmap,
+    dims,
+    penSize,
+    penAxCorSag
+  };
+  if (dx >= dy && dx >= dz) {
+    let p1 = 2 * dy - dx;
+    let p2 = 2 * dz - dx;
+    while (x1 !== x2) {
+      x1 += xs;
+      if (p1 >= 0) {
+        y1 += ys;
+        p1 -= 2 * dx;
+      }
+      if (p2 >= 0) {
+        z1 += zs;
+        p2 -= 2 * dx;
+      }
+      p1 += 2 * dy;
+      p2 += 2 * dz;
+      pointParams.x = x1;
+      pointParams.y = y1;
+      pointParams.z = z1;
+      drawPoint(pointParams);
+    }
+  } else if (dy >= dx && dy >= dz) {
+    let p1 = 2 * dx - dy;
+    let p2 = 2 * dz - dy;
+    while (y1 !== y2) {
+      y1 += ys;
+      if (p1 >= 0) {
+        x1 += xs;
+        p1 -= 2 * dy;
+      }
+      if (p2 >= 0) {
+        z1 += zs;
+        p2 -= 2 * dy;
+      }
+      p1 += 2 * dx;
+      p2 += 2 * dz;
+      pointParams.x = x1;
+      pointParams.y = y1;
+      pointParams.z = z1;
+      drawPoint(pointParams);
+    }
+  } else {
+    let p1 = 2 * dy - dz;
+    let p2 = 2 * dx - dz;
+    while (z1 !== z2) {
+      z1 += zs;
+      if (p1 >= 0) {
+        y1 += ys;
+        p1 -= 2 * dz;
+      }
+      if (p2 >= 0) {
+        x1 += xs;
+        p2 -= 2 * dz;
+      }
+      p1 += 2 * dy;
+      p2 += 2 * dx;
+      pointParams.x = x1;
+      pointParams.y = y1;
+      pointParams.z = z1;
+      drawPoint(pointParams);
+    }
+  }
+}
+function floodFillSection(params) {
+  const { img2D, dims2D, minPt, maxPt } = params;
+  const w = dims2D[0];
+  const [minX, minY] = minPt;
+  const [maxX, maxY] = maxPt;
+  const capacity = 4 * (maxX - minX + maxY - minY + 2);
+  const queue = new Int32Array(capacity * 2);
+  let head = 0;
+  let tail = 0;
+  function enqueue(x, y) {
+    if (x < minX || x > maxX || y < minY || y > maxY) {
+      return;
+    }
+    const idx2 = x + y * w;
+    if (img2D[idx2] !== 0) {
+      return;
+    }
+    img2D[idx2] = 2;
+    queue[tail] = x;
+    queue[tail + 1] = y;
+    tail = (tail + 2) % queue.length;
+  }
+  function dequeue() {
+    if (head === tail) {
+      return null;
+    }
+    const x = queue[head];
+    const y = queue[head + 1];
+    head = (head + 2) % queue.length;
+    return [x, y];
+  }
+  for (let x = minX; x <= maxX; x++) {
+    enqueue(x, minY);
+    enqueue(x, maxY);
+  }
+  for (let y = minY + 1; y <= maxY - 1; y++) {
+    enqueue(minX, y);
+    enqueue(maxX, y);
+  }
+  let pt;
+  while ((pt = dequeue()) !== null) {
+    const [x, y] = pt;
+    enqueue(x - 1, y);
+    enqueue(x + 1, y);
+    enqueue(x, y - 1);
+    enqueue(x, y + 1);
+  }
+}
+function drawLine2D(img2D, dims2D, ptA, ptB, pen) {
+  const dx = Math.abs(ptA[0] - ptB[0]);
+  const dy = Math.abs(ptA[1] - ptB[1]);
+  img2D[ptA[0] + ptA[1] * dims2D[0]] = pen;
+  img2D[ptB[0] + ptB[1] * dims2D[0]] = pen;
+  const xs = ptB[0] > ptA[0] ? 1 : -1;
+  const ys = ptB[1] > ptA[1] ? 1 : -1;
+  let x1 = ptA[0];
+  let y1 = ptA[1];
+  const x2 = ptB[0];
+  const y2 = ptB[1];
+  if (dx >= dy) {
+    let p1 = 2 * dy - dx;
+    while (x1 !== x2) {
+      x1 += xs;
+      if (p1 >= 0) {
+        y1 += ys;
+        p1 -= 2 * dx;
+      }
+      p1 += 2 * dy;
+      img2D[x1 + y1 * dims2D[0]] = pen;
+    }
+  } else {
+    let p1 = 2 * dx - dy;
+    while (y1 !== y2) {
+      y1 += ys;
+      if (p1 >= 0) {
+        x1 += xs;
+        p1 -= 2 * dy;
+      }
+      p1 += 2 * dx;
+      img2D[x1 + y1 * dims2D[0]] = pen;
+    }
+  }
+}
+function constrainXY(xy, dims2D) {
+  const x = Math.min(Math.max(xy[0], 0), dims2D[0] - 1);
+  const y = Math.min(Math.max(xy[1], 0), dims2D[1] - 1);
+  return [x, y];
+}
+function getSliceIndices(axCorSag) {
+  let h = 0;
+  let v = 1;
+  if (axCorSag === 1) {
+    v = 2;
+  } else if (axCorSag === 2) {
+    h = 1;
+    v = 2;
+  }
+  return [h, v];
+}
+function drawPenFilled(params) {
+  const { penFillPts, penAxCorSag, drawBitmap, dims, penValue, fillOverwrites, currentUndoBitmap } = params;
+  const nPts = penFillPts.length;
+  if (nPts < 2) {
+    return { drawBitmap, success: false };
+  }
+  const [h, v] = getSliceIndices(penAxCorSag);
+  const dims2D = [dims[h + 1], dims[v + 1]];
+  const img2D = new Uint8Array(dims2D[0] * dims2D[1]);
+  const pen = 1;
+  const startPt = constrainXY([penFillPts[0][h], penFillPts[0][v]], dims2D);
+  let minPt = [...startPt];
+  let maxPt = [...startPt];
+  let prevPt = startPt;
+  for (let i = 1; i < nPts; i++) {
+    let pt = [penFillPts[i][h], penFillPts[i][v]];
+    pt = constrainXY(pt, dims2D);
+    minPt = [Math.min(pt[0], minPt[0]), Math.min(pt[1], minPt[1])];
+    maxPt = [Math.max(pt[0], maxPt[0]), Math.max(pt[1], maxPt[1])];
+    drawLine2D(img2D, dims2D, prevPt, pt, pen);
+    prevPt = pt;
+  }
+  drawLine2D(img2D, dims2D, startPt, prevPt, pen);
+  const pad = 1;
+  minPt[0] = Math.max(0, minPt[0] - pad);
+  minPt[1] = Math.max(0, minPt[1] - pad);
+  maxPt[0] = Math.min(dims2D[0] - 1, maxPt[0] + pad);
+  maxPt[1] = Math.min(dims2D[1] - 1, maxPt[1] + pad);
+  for (let y = 0; y < dims2D[1]; y++) {
+    for (let x = 0; x < dims2D[0]; x++) {
+      if (x >= minPt[0] && x < maxPt[0] && y >= minPt[1] && y <= maxPt[1]) {
+        continue;
+      }
+      const pxl = x + y * dims2D[0];
+      if (img2D[pxl] !== 0) {
+        continue;
+      }
+      img2D[pxl] = 2;
+    }
+  }
+  const startTime = Date.now();
+  floodFillSection({ img2D, dims2D, minPt, maxPt });
+  log.debug(`FloodFill ${Date.now() - startTime}`);
+  const slice2 = penFillPts[0][3 - (h + v)];
+  const newDrawBitmap = new Uint8Array(drawBitmap);
+  if (penAxCorSag === 0) {
+    const offset = slice2 * dims2D[0] * dims2D[1];
+    for (let i = 0; i < dims2D[0] * dims2D[1]; i++) {
+      if (img2D[i] !== 2) {
+        newDrawBitmap[i + offset] = penValue;
+      }
+    }
+  } else {
+    let xStride = 1;
+    const yStride = dims[1] * dims[2];
+    let zOffset = slice2 * dims[1];
+    if (penAxCorSag === 2) {
+      xStride = dims[1];
+      zOffset = slice2;
+    }
+    let i = 0;
+    for (let y = 0; y < dims2D[1]; y++) {
+      for (let x = 0; x < dims2D[0]; x++) {
+        if (img2D[i] !== 2) {
+          newDrawBitmap[x * xStride + y * yStride + zOffset] = penValue;
+        }
+        i++;
+      }
+    }
+  }
+  if (!fillOverwrites && currentUndoBitmap && currentUndoBitmap.length > 0) {
+    const nv = newDrawBitmap.length;
+    const bmp = decodeRLE(currentUndoBitmap, nv);
+    for (let i = 0; i < nv; i++) {
+      if (bmp[i] === 0) {
+        continue;
+      }
+      newDrawBitmap[i] = bmp[i];
+    }
+  }
+  return { drawBitmap: newDrawBitmap, success: true };
+}
+
+// src/niivue/drawing/ShapeTool.ts
+function calculateBounds(params) {
+  const { ptA, ptB, dims } = params;
+  const dx = dims[1];
+  const dy = dims[2];
+  const dz = dims[3];
+  const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1);
+  const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1);
+  const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1);
+  const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1);
+  const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1);
+  const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1);
+  return { x1, y1, z1, x2, y2, z2 };
+}
+function calculateEllipsoidGeometry(bounds) {
+  const { x1, y1, z1, x2, y2, z2 } = bounds;
+  const centerX = (x1 + x2) / 2;
+  const centerY = (y1 + y2) / 2;
+  const centerZ = (z1 + z2) / 2;
+  const radiusX = Math.abs(x2 - x1) / 2;
+  const radiusY = Math.abs(y2 - y1) / 2;
+  const radiusZ = Math.abs(z2 - z1) / 2;
+  return { centerX, centerY, centerZ, radiusX, radiusY, radiusZ };
+}
+function isPointInEllipsoid(x, y, z, geometry) {
+  const { centerX, centerY, centerZ, radiusX, radiusY, radiusZ } = geometry;
+  const distX = (x - centerX) / (radiusX + 0.5);
+  const distY = (y - centerY) / (radiusY + 0.5);
+  const distZ = (z - centerZ) / (radiusZ + 0.5);
+  return distX * distX + distY * distY + distZ * distZ <= 1;
+}
+function drawRectangle(params) {
+  const { ptA, ptB, penValue, drawBitmap, dims, penSize, penAxCorSag } = params;
+  const bounds = calculateBounds({ ptA, ptB, dims });
+  const { x1, y1, z1, x2, y2, z2 } = bounds;
+  const pointParams = {
+    x: 0,
+    y: 0,
+    z: 0,
+    penValue,
+    drawBitmap,
+    dims,
+    penSize,
+    penAxCorSag
+  };
+  for (let z = z1; z <= z2; z++) {
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        pointParams.x = x;
+        pointParams.y = y;
+        pointParams.z = z;
+        drawPoint(pointParams);
+      }
+    }
+  }
+}
+function drawEllipse(params) {
+  const { ptA, ptB, penValue, drawBitmap, dims, penSize, penAxCorSag } = params;
+  const bounds = calculateBounds({ ptA, ptB, dims });
+  const { x1, y1, z1, x2, y2, z2 } = bounds;
+  const geometry = calculateEllipsoidGeometry(bounds);
+  const pointParams = {
+    x: 0,
+    y: 0,
+    z: 0,
+    penValue,
+    drawBitmap,
+    dims,
+    penSize,
+    penAxCorSag
+  };
+  for (let z = z1; z <= z2; z++) {
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        if (isPointInEllipsoid(x, y, z, geometry)) {
+          pointParams.x = x;
+          pointParams.y = y;
+          pointParams.z = z;
+          drawPoint(pointParams);
+        }
+      }
+    }
+  }
+}
+
+// src/niivue/drawing/FloodFillTool.ts
+function xyz2vx(pt, nx, nxy) {
+  return pt[0] + pt[1] * nx + pt[2] * nxy;
+}
+function vx2xyz(vx, nx, nxy) {
+  const z = Math.floor(vx / nxy);
+  const y = Math.floor((vx - z * nxy) / nx);
+  const x = Math.floor(vx % nx);
+  return [x, y, z];
+}
+function createCoordinateConverters(dims) {
+  const nx = dims[0];
+  const nxy = nx * dims[1];
+  const nxyz = nxy * dims[2];
+  return {
+    xyz2vx: (pt) => xyz2vx(pt, nx, nxy),
+    vx2xyz: (vx) => vx2xyz(vx, nx, nxy),
+    nx,
+    nxy,
+    nxyz
+  };
+}
+function getConstrainedAxisIndex(is2D, sliceType) {
+  if (!is2D) {
+    return -1;
+  }
+  if (sliceType === 0 /* AXIAL */) {
+    return 2;
+  } else if (sliceType === 1 /* CORONAL */) {
+    return 1;
+  } else if (sliceType === 2 /* SAGITTAL */) {
+    return 0;
+  }
+  return -1;
+}
+var NEIGHBOR_OFFSETS = {
+  // Face neighbors (6-connectivity)
+  face: [
+    [0, 0, -1],
+    // inferior
+    [0, 0, 1],
+    // superior
+    [0, -1, 0],
+    // posterior
+    [0, 1, 0],
+    // anterior
+    [-1, 0, 0],
+    // left
+    [1, 0, 0]
+    // right
+  ],
+  // Edge neighbors (additional for 18-connectivity)
+  edge: [
+    [-1, -1, 0],
+    // left posterior
+    [1, -1, 0],
+    // right posterior
+    [-1, 1, 0],
+    // left anterior
+    [1, 1, 0],
+    // right anterior
+    [0, -1, -1],
+    // posterior inferior
+    [0, 1, -1],
+    // anterior inferior
+    [-1, 0, -1],
+    // left inferior
+    [1, 0, -1],
+    // right inferior
+    [0, -1, 1],
+    // posterior superior
+    [0, 1, 1],
+    // anterior superior
+    [-1, 0, 1],
+    // left superior
+    [1, 0, 1]
+    // right superior
+  ],
+  // Corner neighbors (additional for 26-connectivity)
+  corner: [
+    [-1, -1, -1],
+    // left posterior inferior
+    [1, -1, -1],
+    // right posterior inferior
+    [-1, 1, -1],
+    // left anterior inferior
+    [1, 1, -1],
+    // right anterior inferior
+    [-1, -1, 1],
+    // left posterior superior
+    [1, -1, 1],
+    // right posterior superior
+    [-1, 1, 1],
+    // left anterior superior
+    [1, 1, 1]
+    // right anterior superior
+  ]
+};
+function floodFillCore(params) {
+  const { img, seedVx, dims, neighbors = 6 } = params;
+  const converters = createCoordinateConverters(dims);
+  const queue = [];
+  queue.push(seedVx);
+  img[seedVx] = 2;
+  const neighborOffsets = [...NEIGHBOR_OFFSETS.face];
+  if (neighbors >= 18) {
+    neighborOffsets.push(...NEIGHBOR_OFFSETS.edge);
+  }
+  if (neighbors >= 26) {
+    neighborOffsets.push(...NEIGHBOR_OFFSETS.corner);
+  }
+  while (queue.length > 0) {
+    const vx = queue.shift();
+    const xyz = converters.vx2xyz(vx);
+    for (const offset of neighborOffsets) {
+      const xyzN = [xyz[0] + offset[0], xyz[1] + offset[1], xyz[2] + offset[2]];
+      if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0) {
+        continue;
+      }
+      if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2]) {
+        continue;
+      }
+      const vxN = converters.xyz2vx(xyzN);
+      if (img[vxN] !== 1) {
+        continue;
+      }
+      img[vxN] = 2;
+      queue.push(vxN);
+    }
+  }
+}
+function calculateSegmentIntensity(params) {
+  const { voxelIntensity, thresholdPercent, calMin, calMax, autoIntensity, currentIntensityMin, currentIntensityMax, currentBright } = params;
+  let intensityMin = currentIntensityMin;
+  let intensityMax = currentIntensityMax;
+  let isBright = currentBright;
+  if (autoIntensity) {
+    if (thresholdPercent !== 0) {
+      const effectiveIntensity = voxelIntensity === 0 ? 0.01 : voxelIntensity;
+      intensityMax = effectiveIntensity * (1 + thresholdPercent);
+      intensityMin = effectiveIntensity * (1 - thresholdPercent);
+    }
+    isBright = voxelIntensity > (calMin + calMax) * 0.5;
+  }
+  return { intensityMin, intensityMax, isBright };
+}
+function getGrowDirection(isBright) {
+  return isBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+}
+function updateBitmapFromPreview(params) {
+  const { sourceBitmap, targetBitmap } = params;
+  if (!sourceBitmap || !targetBitmap) {
+    return false;
+  }
+  if (sourceBitmap.length !== targetBitmap.length) {
+    return false;
+  }
+  const nvx = targetBitmap.length;
+  for (let i = 0; i < nvx; i++) {
+    targetBitmap[i] = sourceBitmap[i];
+  }
+  return true;
+}
+function sumBitmap(img) {
+  let sum = 0;
+  for (let i = 0; i < img.length; i++) {
+    sum += img[i];
+  }
+  return sum;
+}
+function calculateClusterMeanIntensity(params) {
+  const { clusterImg, backImg, nxyz, fallbackIntensity } = params;
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < nxyz; i++) {
+    if (clusterImg[i] === 2) {
+      sum += backImg[i];
+      count++;
+    }
+  }
+  return count > 0 ? sum / count : fallbackIntensity;
+}
+function getIntensityBounds(growDirection, baseIntensity, forceMin, forceMax) {
+  if (isFinite(forceMin) && isFinite(forceMax)) {
+    return [forceMin, forceMax];
+  }
+  if (growDirection === Number.POSITIVE_INFINITY) {
+    return [baseIntensity, Infinity];
+  } else if (growDirection === Number.NEGATIVE_INFINITY) {
+    return [-Infinity, baseIntensity];
+  }
+  return [-Infinity, Infinity];
+}
+function isValidSeedCoordinate(seedXYZ, dims) {
+  if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) {
+    return false;
+  }
+  if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2]) {
+    return false;
+  }
+  return true;
+}
+function isValidGrowClusterSeed(originalSeedColor) {
+  return originalSeedColor !== 0;
+}
+function shouldForceSeedToCandidate(originalSeedColor, newColor, isGrowClusterTool, growSelectedCluster) {
+  if (isGrowClusterTool && growSelectedCluster !== 0) {
+    return originalSeedColor !== 0;
+  }
+  return originalSeedColor !== 0 || newColor === 0;
+}
+function applyFillResult(params) {
+  const { img, targetBitmap, originalBitmap, newColor, nxyz, isPreviewMode } = params;
+  let filledCount = 0;
+  for (let i = 0; i < nxyz; i++) {
+    if (img[i] === 2) {
+      targetBitmap[i] = newColor;
+      filledCount++;
+    } else if (isPreviewMode) {
+      targetBitmap[i] = originalBitmap[i];
+    }
+  }
+  return filledCount;
+}
+
+// src/niivue/processing/ImageProcessing.ts
+function binarize(params) {
+  const { img, dims } = params;
+  const vx = dims[1] * dims[2] * dims[3];
+  const result = new Uint8Array(vx);
+  for (let i = 0; i < vx; i++) {
+    if (img[i] !== 0) {
+      result[i] = 1;
+    }
+  }
+  return {
+    img: result,
+    datatypeCode: 2 /* DT_UINT8 */,
+    cal_min: 0,
+    cal_max: 1
+  };
+}
+function findOtsu(params) {
+  const { img, cal_min, cal_max, scl_inter, scl_slope, mlevel = 2 } = params;
+  const nvox = img.length;
+  if (nvox < 1) {
+    return [];
+  }
+  const nBin = 256;
+  const maxBin = nBin - 1;
+  const h = new Array(nBin).fill(0);
+  const mn = cal_min;
+  const mx = cal_max;
+  if (mx <= mn) {
+    return [];
+  }
+  const scale2raw = (mx - mn) / nBin;
+  function bin2raw(bin) {
+    return bin * scale2raw + mn;
+  }
+  const scale2bin = (nBin - 1) / Math.abs(mx - mn);
+  for (let v = 0; v < nvox; v++) {
+    let val = img[v] * scl_slope + scl_inter;
+    val = Math.min(Math.max(val, mn), mx);
+    val = Math.round((val - mn) * scale2bin);
+    h[val]++;
+  }
+  const P = Array(nBin).fill(0).map(() => Array(nBin).fill(0));
+  const S = Array(nBin).fill(0).map(() => Array(nBin).fill(0));
+  for (let i = 1; i < nBin; ++i) {
+    P[i][i] = h[i];
+    S[i][i] = i * h[i];
+  }
+  for (let i = 1; i < nBin - 1; ++i) {
+    P[1][i + 1] = P[1][i] + h[i + 1];
+    S[1][i + 1] = S[1][i] + (i + 1) * h[i + 1];
+  }
+  for (let i = 2; i < nBin; i++) {
+    for (let j = i + 1; j < nBin; j++) {
+      P[i][j] = P[1][j] - P[1][i - 1];
+      S[i][j] = S[1][j] - S[1][i - 1];
+    }
+  }
+  for (let i = 1; i < nBin; ++i) {
+    for (let j = i + 1; j < nBin; j++) {
+      if (P[i][j] !== 0) {
+        P[i][j] = S[i][j] * S[i][j] / P[i][j];
+      }
+    }
+  }
+  let max5 = 0;
+  const t = [Infinity, Infinity, Infinity];
+  if (mlevel > 3) {
+    for (let l = 0; l < nBin - 3; l++) {
+      for (let m = l + 1; m < nBin - 2; m++) {
+        for (let hIdx = m + 1; hIdx < nBin - 1; hIdx++) {
+          const v = P[0][l] + P[l + 1][m] + P[m + 1][hIdx] + P[hIdx + 1][maxBin];
+          if (v > max5) {
+            t[0] = l;
+            t[1] = m;
+            t[2] = hIdx;
+            max5 = v;
+          }
+        }
+      }
+    }
+  } else if (mlevel === 3) {
+    for (let l = 0; l < nBin - 2; l++) {
+      for (let hIdx = l + 1; hIdx < nBin - 1; hIdx++) {
+        const v = P[0][l] + P[l + 1][hIdx] + P[hIdx + 1][maxBin];
+        if (v > max5) {
+          t[0] = l;
+          t[1] = hIdx;
+          max5 = v;
+        }
+      }
+    }
+  } else {
+    for (let i = 0; i < nBin - 1; i++) {
+      const v = P[0][i] + P[i + 1][maxBin];
+      if (v > max5) {
+        t[0] = i;
+        max5 = v;
+      }
+    }
+  }
+  return [bin2raw(t[0]), bin2raw(t[1]), bin2raw(t[2])];
+}
+function applyOtsuToDrawing(params) {
+  const { img, drawBitmap, thresholds } = params;
+  const nvox = img.length;
+  const result = new Uint8Array(drawBitmap);
+  for (let i = 0; i < nvox; i++) {
+    if (result[i] !== 0) {
+      continue;
+    }
+    const v = img[i];
+    if (v > thresholds[0]) {
+      result[i] = 1;
+    }
+    if (v > thresholds[1]) {
+      result[i] = 2;
+    }
+    if (v > thresholds[2]) {
+      result[i] = 3;
+    }
+  }
+  return result;
+}
+function getOtsuLevelForHaze(params) {
+  const { level } = params;
+  if (level === 5 || level === 1) {
+    return 4;
+  }
+  if (level === 4 || level === 2) {
+    return 3;
+  }
+  return 2;
+}
+function getHazeThreshold(params) {
+  const { level, thresholds } = params;
+  if (level === 1) {
+    return thresholds[2];
+  }
+  if (level === 2) {
+    return thresholds[1];
+  }
+  return thresholds[0];
+}
+function applyHazeRemoval(params) {
+  const { img, scl_inter, scl_slope, global_min, threshold } = params;
+  const nvox = img.length;
+  for (let v = 0; v < nvox; v++) {
+    const val = img[v] * scl_slope + scl_inter;
+    if (val < threshold) {
+      img[v] = global_min;
+    }
+  }
+}
+function idx(a, b, c, dim) {
+  return c * dim[0] * dim[1] + b * dim[0] + a;
+}
+function fillTranslationTable(tt, nabo, nr_set) {
+  let cntr = 0;
+  const tn = new Uint32Array(nr_set + 5).fill(0);
+  const INT_MAX = 2147483647;
+  let ltn = INT_MAX;
+  for (let i = 0; i < nr_set; i++) {
+    let j = nabo[i];
+    cntr = 0;
+    while (tt[j - 1] !== j) {
+      j = tt[j - 1];
+      cntr++;
+      if (cntr > 100) {
+        log.info("\nOoh no!!");
+        break;
+      }
+    }
+    tn[i] = j;
+    ltn = Math.min(ltn, j);
+  }
+  for (let i = 0; i < nr_set; i++) {
+    tt[tn[i] - 1] = ltn;
+  }
+}
+function checkPreviousSlice(bw, il, r, c, sl, dim, conn, tt) {
+  const nabo = new Uint32Array(27);
+  let nr_set = 0;
+  if (!sl) {
+    return 0;
+  }
+  const val = bw[idx(r, c, sl, dim)];
+  if (conn >= 6) {
+    const i = idx(r, c, sl - 1, dim);
+    if (val === bw[i]) {
+      nabo[nr_set++] = il[i];
+    }
+  }
+  if (conn >= 18) {
+    if (r) {
+      const i = idx(r - 1, c, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+    if (c) {
+      const i = idx(r, c - 1, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+    if (r < dim[0] - 1) {
+      const i = idx(r + 1, c, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+    if (c < dim[1] - 1) {
+      const i = idx(r, c + 1, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+  }
+  if (conn === 26) {
+    if (r && c) {
+      const i = idx(r - 1, c - 1, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+    if (r < dim[0] - 1 && c) {
+      const i = idx(r + 1, c - 1, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+    if (r && c < dim[1] - 1) {
+      const i = idx(r - 1, c + 1, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+    if (r < dim[0] - 1 && c < dim[1] - 1) {
+      const i = idx(r + 1, c + 1, sl - 1, dim);
+      if (val === bw[i]) {
+        nabo[nr_set++] = il[i];
+      }
+    }
+  }
+  if (nr_set) {
+    fillTranslationTable(tt, nabo, nr_set);
+    return nabo[0];
+  } else {
+    return 0;
+  }
+}
+function doInitialLabeling(bw, dim, conn) {
+  let label = 1;
+  const kGrowArrayBy = 8192;
+  let ttn = kGrowArrayBy;
+  let tt = new Uint32Array(ttn).fill(0);
+  const il = new Uint32Array(dim[0] * dim[1] * dim[2]).fill(0);
+  const nabo = new Uint32Array(27);
+  for (let sl = 0; sl < dim[2]; sl++) {
+    for (let c = 0; c < dim[1]; c++) {
+      for (let r = 0; r < dim[0]; r++) {
+        let nr_set = 0;
+        const val = bw[idx(r, c, sl, dim)];
+        if (val === 0) {
+          continue;
+        }
+        nabo[0] = checkPreviousSlice(bw, il, r, c, sl, dim, conn, tt);
+        if (nabo[0]) {
+          nr_set += 1;
+        }
+        if (conn >= 6) {
+          if (r) {
+            const i = idx(r - 1, c, sl, dim);
+            if (val === bw[i]) {
+              nabo[nr_set++] = il[i];
+            }
+          }
+          if (c) {
+            const i = idx(r, c - 1, sl, dim);
+            if (val === bw[i]) {
+              nabo[nr_set++] = il[i];
+            }
+          }
+        }
+        if (conn >= 18) {
+          if (c && r) {
+            const i = idx(r - 1, c - 1, sl, dim);
+            if (val === bw[i]) {
+              nabo[nr_set++] = il[i];
+            }
+          }
+          if (c && r < dim[0] - 1) {
+            const i = idx(r + 1, c - 1, sl, dim);
+            if (val === bw[i]) {
+              nabo[nr_set++] = il[i];
+            }
+          }
+        }
+        if (nr_set) {
+          il[idx(r, c, sl, dim)] = nabo[0];
+          fillTranslationTable(tt, nabo, nr_set);
+        } else {
+          il[idx(r, c, sl, dim)] = label;
+          if (label >= ttn) {
+            ttn += kGrowArrayBy;
+            const ext = new Uint32Array(ttn);
+            ext.set(tt);
+            tt = ext;
+          }
+          tt[label - 1] = label;
+          label++;
+        }
+      }
+    }
+  }
+  for (let i = 0; i < label - 1; i++) {
+    let j = i;
+    while (tt[j] !== j + 1) {
+      j = tt[j] - 1;
+    }
+    tt[i] = j + 1;
+  }
+  return {
+    labelCount: label - 1,
+    translationTable: tt,
+    initialLabels: il
+  };
+}
+function translateLabels(il, dim, tt, ttn) {
+  const nvox = dim[0] * dim[1] * dim[2];
+  let ml = 0;
+  const l = new Uint32Array(nvox).fill(0);
+  for (let i = 0; i < ttn; i++) {
+    ml = Math.max(ml, tt[i]);
+  }
+  const fl2 = new Uint32Array(ml).fill(0);
+  let cl = 0;
+  for (let i = 0; i < nvox; i++) {
+    if (il[i]) {
+      if (!fl2[tt[il[i] - 1] - 1]) {
+        cl += 1;
+        fl2[tt[il[i] - 1] - 1] = cl;
+      }
+      l[i] = fl2[tt[il[i] - 1] - 1];
+    }
+  }
+  return {
+    clusterCount: cl,
+    labels: l
+  };
+}
+function largestOriginalClusterLabels(bw, cl, ls) {
+  const nvox = bw.length;
+  const ls2bw = new Uint32Array(cl + 1).fill(0);
+  const sumls = new Uint32Array(cl + 1).fill(0);
+  for (let i = 0; i < nvox; i++) {
+    const bwVal = bw[i];
+    const lsVal = ls[i];
+    ls2bw[lsVal] = bwVal;
+    sumls[lsVal]++;
+  }
+  let mxbw = 0;
+  for (let i = 0; i < cl + 1; i++) {
+    const bwVal = ls2bw[i];
+    mxbw = Math.max(mxbw, bwVal);
+    for (let j = 0; j < cl + 1; j++) {
+      if (j === i) {
+        continue;
+      }
+      if (bwVal !== ls2bw[j]) {
+        continue;
+      }
+      if (sumls[i] < sumls[j]) {
+        ls2bw[i] = 0;
+      } else if (sumls[i] === sumls[j] && i < j) {
+        ls2bw[i] = 0;
+      }
+    }
+  }
+  const vxs = new Uint32Array(nvox).fill(0);
+  for (let i = 0; i < nvox; i++) {
+    vxs[i] = ls2bw[ls[i]];
+  }
+  return {
+    maxValue: mxbw,
+    voxels: vxs
+  };
+}
+function bwlabel(params) {
+  const { img, dim, conn = 26, binarize: shouldBinarize = false, onlyLargestClusterPerClass = false } = params;
+  const start = Date.now();
+  const nvox = dim[0] * dim[1] * dim[2];
+  const bw = new Uint32Array(nvox).fill(0);
+  if (![6, 18, 26].includes(conn)) {
+    log.info("bwlabel: conn must be 6, 18 or 26.");
+    return { clusterCount: 0, labels: bw };
+  }
+  if (dim[0] < 2 || dim[1] < 2 || dim[2] < 1) {
+    log.info("bwlabel: img must be 2 or 3-dimensional");
+    return { clusterCount: 0, labels: bw };
+  }
+  if (shouldBinarize) {
+    for (let i = 0; i < nvox; i++) {
+      if (img[i] !== 0) {
+        bw[i] = 1;
+      }
+    }
+  } else {
+    bw.set(img);
+  }
+  let { labelCount: ttn, translationTable: tt, initialLabels: il } = doInitialLabeling(bw, dim, conn);
+  if (tt === void 0) {
+    tt = new Uint32Array();
+  }
+  const { clusterCount: cl, labels: ls } = translateLabels(il, dim, tt, ttn);
+  log.info(conn + " neighbor clustering into " + cl + " regions in " + (Date.now() - start) + "ms");
+  if (onlyLargestClusterPerClass) {
+    const { maxValue: nbw, voxels: bwMx } = largestOriginalClusterLabels(bw, cl, ls);
+    return { clusterCount: nbw, labels: bwMx };
+  }
+  return { clusterCount: cl, labels: ls };
+}
+function scalecropUint8(img32, dst_min = 0, dst_max = 255, src_min, scale6) {
+  const voxnum = img32.length;
+  const img8 = new Uint8Array(voxnum);
+  for (let i = 0; i < voxnum; i++) {
+    let val = img32[i];
+    val = dst_min + scale6 * (val - src_min);
+    val = Math.max(val, dst_min);
+    val = Math.min(val, dst_max);
+    img8[i] = val;
+  }
+  return img8;
+}
+function scalecropFloat32(img32, dst_min = 0, dst_max = 1, src_min, scale6) {
+  const voxnum = img32.length;
+  const img = new Float32Array(voxnum);
+  for (let i = 0; i < voxnum; i++) {
+    let val = img32[i];
+    val = dst_min + scale6 * (val - src_min);
+    val = Math.max(val, dst_min);
+    val = Math.min(val, dst_max);
+    img[i] = val;
+  }
+  return img;
+}
+function getScale(params) {
+  const { img, dims, global_min, global_max, datatypeCode, scl_slope, scl_inter, cal_min, cal_max, dst_min = 0, dst_max = 255, f_low = 0, f_high = 0.999 } = params;
+  let src_min = global_min;
+  let src_max = global_max;
+  if (datatypeCode === 2 /* DT_UINT8 */) {
+    return [src_min, 1];
+  }
+  if (!isFinite(f_low) || !isFinite(f_high)) {
+    if (isFinite(cal_min) && isFinite(cal_max) && cal_max > cal_min) {
+      src_min = cal_min;
+      src_max = cal_max;
+      const scale7 = (dst_max - dst_min) / (src_max - src_min);
+      log.info(" Robust Rescale:  min: " + src_min + "  max: " + src_max + " scale: " + scale7);
+      return [src_min, scale7];
+    }
+  }
+  const voxnum = dims[1] * dims[2] * dims[3];
+  let scaledImg = img;
+  if (scl_slope !== 1 || scl_inter !== 0) {
+    const newImg = new Float32Array(voxnum);
+    for (let i = 0; i < voxnum; i++) {
+      newImg[i] = img[i] * scl_slope + scl_inter;
+    }
+    scaledImg = newImg;
+  }
+  if (src_min < 0) {
+    log.warn("WARNING: Input image has value(s) below 0.0 !");
+  }
+  log.info(" Input:    min: " + src_min + "  max: " + src_max);
+  if (f_low === 0 && f_high === 1) {
+    return [src_min, 1];
+  }
+  let nz = 0;
+  for (let i = 0; i < voxnum; i++) {
+    if (Math.abs(scaledImg[i]) >= 1e-15) {
+      nz++;
+    }
+  }
+  const histosize = 1e3;
+  const bin_size = (src_max - src_min) / histosize;
+  const hist = new Array(histosize).fill(0);
+  for (let i = 0; i < voxnum; i++) {
+    const val = scaledImg[i];
+    let bin = Math.floor((val - src_min) / bin_size);
+    bin = Math.min(bin, histosize - 1);
+    hist[bin]++;
+  }
+  const cs = new Array(histosize).fill(0);
+  cs[0] = hist[0];
+  for (let i = 1; i < histosize; i++) {
+    cs[i] = cs[i - 1] + hist[i];
+  }
+  let nth = Math.floor(f_low * voxnum);
+  let idx2 = 0;
+  while (idx2 < histosize) {
+    if (cs[idx2] >= nth) {
+      break;
+    }
+    idx2++;
+  }
+  const global_min_saved = src_min;
+  src_min = idx2 * bin_size + global_min_saved;
+  nth = voxnum - Math.floor((1 - f_high) * nz);
+  idx2 = 0;
+  while (idx2 < histosize - 1) {
+    if (cs[idx2 + 1] >= nth) {
+      break;
+    }
+    idx2++;
+  }
+  src_max = idx2 * bin_size + global_min_saved;
+  let scale6 = 1;
+  if (src_min !== src_max) {
+    scale6 = (dst_max - dst_min) / (src_max - src_min);
+  }
+  log.info(" Rescale:  min: " + src_min + "  max: " + src_max + " scale: " + scale6);
+  return [src_min, scale6];
+}
+function conformVox2Vox(params) {
+  const { inDims, inAffine, outDim = 256, outMM = 1, toRAS = false } = params;
+  const a = inAffine.flat();
+  const affine = mat4_exports.fromValues(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]);
+  const half = vec4_exports.fromValues(inDims[1] / 2, inDims[2] / 2, inDims[3] / 2, 1);
+  const Pxyz_c4 = vec4_exports.create();
+  const affineT = mat4_exports.create();
+  mat4_exports.transpose(affineT, affine);
+  vec4_exports.transformMat4(Pxyz_c4, half, affineT);
+  const Pxyz_c = vec3_exports.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2]);
+  const delta = vec3_exports.fromValues(outMM, outMM, outMM);
+  let Mdc = mat4_exports.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1);
+  if (toRAS) {
+    Mdc = mat4_exports.fromValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  }
+  mat4_exports.transpose(Mdc, Mdc);
+  const dims = vec4_exports.fromValues(outDim, outDim, outDim, 1);
+  const MdcD = mat4_exports.create();
+  mat4_exports.scale(MdcD, Mdc, delta);
+  const vol_center = vec4_exports.fromValues(dims[0], dims[1], dims[2], 1);
+  vec4_exports.transformMat4(vol_center, vol_center, MdcD);
+  vec4_exports.scale(vol_center, vol_center, 0.5);
+  const translate3 = vec3_exports.create();
+  vec3_exports.subtract(translate3, Pxyz_c, vec3_exports.fromValues(vol_center[0], vol_center[1], vol_center[2]));
+  const outAffine = mat4_exports.create();
+  mat4_exports.transpose(outAffine, MdcD);
+  outAffine[3] = translate3[0];
+  outAffine[7] = translate3[1];
+  outAffine[11] = translate3[2];
+  const invOutAffine = mat4_exports.create();
+  mat4_exports.invert(invOutAffine, outAffine);
+  const vox2vox = mat4_exports.create();
+  mat4_exports.mul(vox2vox, affine, invOutAffine);
+  const invVox2vox = mat4_exports.create();
+  mat4_exports.invert(invVox2vox, vox2vox);
+  return { outAffine, vox2vox, invVox2vox };
+}
+function resampleVolume(params) {
+  const { inImg, inDims, outDim, invVox2vox, isLinear } = params;
+  const outNvox = outDim * outDim * outDim;
+  const outImg = new Float32Array(outNvox);
+  const dimX = inDims[1];
+  const dimY = inDims[2];
+  const dimZ = inDims[3];
+  const dimXY = dimX * dimY;
+  function voxidx(vx, vy, vz) {
+    return vx + vy * dimX + vz * dimXY;
+  }
+  const inv0 = invVox2vox[0];
+  const inv4 = invVox2vox[4];
+  const inv8 = invVox2vox[8];
+  let i = -1;
+  if (isLinear) {
+    for (let z = 0; z < outDim; z++) {
+      for (let y = 0; y < outDim; y++) {
+        const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3];
+        const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7];
+        const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11];
+        for (let x = 0; x < outDim; x++) {
+          const ix = x * inv0 + ixYZ;
+          const iy = x * inv4 + iyYZ;
+          const iz = x * inv8 + izYZ;
+          const fx = Math.floor(ix);
+          const fy = Math.floor(iy);
+          const fz = Math.floor(iz);
+          i++;
+          if (fx < 0 || fy < 0 || fz < 0) {
+            continue;
+          }
+          const cx = Math.ceil(ix);
+          const cy = Math.ceil(iy);
+          const cz = Math.ceil(iz);
+          if (cx >= dimX || cy >= dimY || cz >= dimZ) {
+            continue;
+          }
+          const rcx = ix - fx;
+          const rcy = iy - fy;
+          const rcz = iz - fz;
+          const rfx = 1 - rcx;
+          const rfy = 1 - rcy;
+          const rfz = 1 - rcz;
+          const fff = voxidx(fx, fy, fz);
+          let vx = 0;
+          vx += inImg[fff] * rfx * rfy * rfz;
+          vx += inImg[fff + dimXY] * rfx * rfy * rcz;
+          vx += inImg[fff + dimX] * rfx * rcy * rfz;
+          vx += inImg[fff + dimX + dimXY] * rfx * rcy * rcz;
+          vx += inImg[fff + 1] * rcx * rfy * rfz;
+          vx += inImg[fff + 1 + dimXY] * rcx * rfy * rcz;
+          vx += inImg[fff + 1 + dimX] * rcx * rcy * rfz;
+          vx += inImg[fff + 1 + dimX + dimXY] * rcx * rcy * rcz;
+          outImg[i] = vx;
+        }
+      }
+    }
+  } else {
+    for (let z = 0; z < outDim; z++) {
+      for (let y = 0; y < outDim; y++) {
+        const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3];
+        const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7];
+        const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11];
+        for (let x = 0; x < outDim; x++) {
+          const ix = Math.round(x * inv0 + ixYZ);
+          const iy = Math.round(x * inv4 + iyYZ);
+          const iz = Math.round(x * inv8 + izYZ);
+          i++;
+          if (ix < 0 || iy < 0 || iz < 0) {
+            continue;
+          }
+          if (ix >= dimX || iy >= dimY || iz >= dimZ) {
+            continue;
+          }
+          outImg[i] = inImg[voxidx(ix, iy, iz)];
+        }
+      }
+    }
+  }
+  return outImg;
+}
+
+// src/niivue/descriptives.ts
+function createEllipticalMask(nv, startVox, endVox, hdr, pixDimsRAS) {
+  const mask = new Uint8Array(nv);
+  mask.fill(0);
+  let constantDim = -1;
+  if (startVox[0] === endVox[0]) {
+    constantDim = 0;
+  } else if (startVox[1] === endVox[1]) {
+    constantDim = 1;
+  } else if (startVox[2] === endVox[2]) {
+    constantDim = 2;
+  } else {
+    console.error("Error: No constant dimension found.");
+    return null;
+  }
+  const dims = [0, 1, 2];
+  const varDims = dims.filter((dim) => dim !== constantDim);
+  const centerVox = [];
+  centerVox[constantDim] = startVox[constantDim];
+  centerVox[varDims[0]] = (startVox[varDims[0]] + endVox[varDims[0]]) / 2;
+  centerVox[varDims[1]] = (startVox[varDims[1]] + endVox[varDims[1]]) / 2;
+  const radiusX = Math.abs(endVox[varDims[0]] - startVox[varDims[0]]) / 2;
+  const radiusY = Math.abs(endVox[varDims[1]] - startVox[varDims[1]]) / 2;
+  const xdim = hdr.dims[1];
+  const ydim = hdr.dims[2];
+  const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX));
+  const maxVarDim0 = Math.min(hdr.dims[varDims[0] + 1] - 1, Math.ceil(centerVox[varDims[0]] + radiusX));
+  const minVarDim1 = Math.max(0, Math.floor(centerVox[varDims[1]] - radiusY));
+  const maxVarDim1 = Math.min(hdr.dims[varDims[1] + 1] - 1, Math.ceil(centerVox[varDims[1]] + radiusY));
+  const constDimVal = centerVox[constantDim];
+  if (constDimVal < 0 || constDimVal >= hdr.dims[constantDim + 1]) {
+    console.error("Error: Constant dimension value is out of bounds.");
+    return null;
+  }
+  for (let i = minVarDim0; i <= maxVarDim0; i++) {
+    for (let j = minVarDim1; j <= maxVarDim1; j++) {
+      const voxel = [];
+      voxel[constantDim] = constDimVal;
+      voxel[varDims[0]] = i;
+      voxel[varDims[1]] = j;
+      const di = (voxel[varDims[0]] - centerVox[varDims[0]]) / radiusX;
+      const dj = (voxel[varDims[1]] - centerVox[varDims[1]]) / radiusY;
+      const distSq = di * di + dj * dj;
+      if (distSq <= 1) {
+        const x = voxel[0];
+        const y = voxel[1];
+        const z = voxel[2];
+        const index = z * xdim * ydim + y * xdim + x;
+        mask[index] = 1;
+      }
+    }
+  }
+  const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1];
+  const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1];
+  const area = Math.PI * radiusX_mm * radiusY_mm;
+  return { mask, area };
+}
+function createMask(options) {
+  const { nv, maskImages, drawBitmap, drawingIsMask, roiIsMask, startVox, endVox, hdr, pixDimsRAS } = options;
+  const mask = new Uint8Array(nv);
+  mask.fill(1);
+  const area = null;
+  if (maskImages && maskImages.length > 0) {
+    for (const imgMask of maskImages) {
+      if (imgMask.length !== nv) {
+        continue;
+      }
+      for (let i = 0; i < nv; i++) {
+        if (imgMask[i] === 0 || isNaN(imgMask[i])) {
+          mask[i] = 0;
+        }
+      }
+    }
+  } else if (drawingIsMask && drawBitmap) {
+    for (let i = 0; i < nv; i++) {
+      if (drawBitmap[i] === 0 || isNaN(drawBitmap[i])) {
+        mask[i] = 0;
+      }
+    }
+  } else if (roiIsMask && startVox && endVox && hdr && pixDimsRAS) {
+    const result = createEllipticalMask(nv, startVox, endVox, hdr, pixDimsRAS);
+    if (!result) {
+      return { mask, area: null };
+    }
+    return { mask: result.mask, area: result.area };
+  }
+  return { mask, area };
+}
+function computeDescriptiveStats(img, mask) {
+  const nv = img.length;
+  let k = 0;
+  let M = 0;
+  let S = 0;
+  let mx = Number.NEGATIVE_INFINITY;
+  let mn = Number.POSITIVE_INFINITY;
+  let kNot0 = 0;
+  let MNot0 = 0;
+  let SNot0 = 0;
+  for (let i = 0; i < nv; i++) {
+    if (mask[i] < 1) {
+      continue;
+    }
+    const x = img[i];
+    k++;
+    let Mnext = M + (x - M) / k;
+    S = S + (x - M) * (x - Mnext);
+    M = Mnext;
+    if (x === 0) {
+      continue;
+    }
+    kNot0++;
+    Mnext = MNot0 + (x - MNot0) / kNot0;
+    SNot0 = SNot0 + (x - MNot0) * (x - Mnext);
+    MNot0 = Mnext;
+    mn = Math.min(x, mn);
+    mx = Math.max(x, mx);
+  }
+  const stdev = Math.sqrt(S / (k - 1));
+  const stdevNot0 = Math.sqrt(SNot0 / (kNot0 - 1));
+  const mnNot0 = mn;
+  const mxNot0 = mx;
+  if (k !== kNot0) {
+    mn = Math.min(0, mn);
+    mx = Math.max(0, mx);
+  }
+  return {
+    mean: M,
+    stdev,
+    nvox: k,
+    min: mn,
+    max: mx,
+    meanNot0: MNot0,
+    stdevNot0,
+    nvoxNot0: kNot0,
+    minNot0: mnNot0,
+    maxNot0: mxNot0
+  };
+}
+function scaleImageData(imgRaw, slope, inter) {
+  const nv = imgRaw.length;
+  const img = new Float32Array(nv);
+  for (let i = 0; i < nv; i++) {
+    img[i] = imgRaw[i] * slope + inter;
+  }
+  return img;
+}
+
+// src/niivue/index.ts
+var { version } = package_default;
+var { MESH_EXTENSIONS: MESH_EXTENSIONS2 } = FileLoader_exports;
+var { LEFT_MOUSE_BUTTON: LEFT_MOUSE_BUTTON2, CENTER_MOUSE_BUTTON: CENTER_MOUSE_BUTTON2, RIGHT_MOUSE_BUTTON: RIGHT_MOUSE_BUTTON2 } = MouseController_exports;
 var defaultSaveImageOptions = {
   filename: "",
   isSaveDrawing: false,
@@ -35952,68 +41488,7 @@ var Niivue = class {
       isRangeCalMinMax: false
     });
     __publicField(this, "customLayout", []);
-    __publicField(this, "meshShaders", [
-      {
-        Name: "Phong",
-        Frag: fragMeshShader
-      },
-      {
-        Name: "Matte",
-        Frag: fragMeshMatteShader
-      },
-      {
-        Name: "Harmonic",
-        Frag: fragMeshShaderSHBlue
-      },
-      {
-        Name: "Hemispheric",
-        Frag: fragMeshHemiShader
-      },
-      {
-        Name: "Crevice",
-        Frag: fragMeshShaderCrevice
-      },
-      {
-        Name: "Edge",
-        Frag: fragMeshEdgeShader
-      },
-      {
-        Name: "Diffuse",
-        Frag: fragMeshDiffuseEdgeShader
-      },
-      {
-        Name: "Outline",
-        Frag: fragMeshOutlineShader
-      },
-      {
-        Name: "Specular",
-        Frag: fragMeshSpecularEdgeShader
-      },
-      {
-        Name: "Toon",
-        Frag: fragMeshToonShader
-      },
-      {
-        Name: "Flat",
-        Frag: fragFlatMeshShader
-      },
-      {
-        Name: "Matcap",
-        Frag: fragMeshMatcapShader
-      },
-      {
-        Name: "Rim",
-        Frag: fragMeshRimShader
-      },
-      {
-        Name: "Silhouette",
-        Frag: fragMeshContourShader
-      },
-      {
-        Name: "Crosscut",
-        Frag: fragCrosscutMeshShader
-      }
-    ]);
+    __publicField(this, "meshShaders", createDefaultMeshShaders());
     // TODO just let users use DRAG_MODE instead
     __publicField(this, "dragModes", {
       contrast: 1 /* contrast */,
@@ -36307,22 +41782,12 @@ var Niivue = class {
    * @example niivue.cleanup();
    */
   cleanup() {
-    if (this.resizeEventListener) {
-      window.removeEventListener("resize", this.resizeEventListener);
-      this.resizeEventListener = null;
-    }
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-    if (this.canvasObserver) {
-      this.canvasObserver.disconnect();
-      this.canvasObserver = null;
-    }
-    if (__privateGet(this, _eventsController)) {
-      __privateGet(this, _eventsController).abort();
-      __privateSet(this, _eventsController, null);
-    }
+    cleanupResizeObservers(this.resizeObserver, this.canvasObserver, this.resizeEventListener);
+    this.resizeEventListener = null;
+    this.resizeObserver = null;
+    this.canvasObserver = null;
+    cleanupEventController(__privateGet(this, _eventsController));
+    __privateSet(this, _eventsController, null);
     this.document.removeOptsChangeCallback();
   }
   get volumes() {
@@ -36409,34 +41874,22 @@ var Niivue = class {
       isAntiAlias = navigator.hardwareConcurrency > 6;
       log.debug("AntiAlias ", isAntiAlias, " Threads ", navigator.hardwareConcurrency);
     }
-    this.gl = this.canvas.getContext("webgl2", {
-      alpha: true,
-      antialias: isAntiAlias
-    });
-    this.uiData.max2D = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE);
-    this.uiData.max3D = this.gl.getParameter(this.gl.MAX_3D_TEXTURE_SIZE);
+    const { gl, max2D, max3D } = initGL(this.canvas, isAntiAlias);
+    this.gl = gl;
+    this.uiData.max2D = max2D;
+    this.uiData.max3D = max3D;
     log.info("NIIVUE VERSION ", version);
     log.debug(`Max texture size 2D: ${this.uiData.max2D} 3D: ${this.uiData.max3D}`);
     this.canvas.parentElement.style.backgroundColor = "black";
     if (this.opts.isResizeCanvas) {
-      this.canvas.style.width = "100%";
-      this.canvas.style.height = "100%";
-      this.canvas.style.display = "block";
+      applyCanvasResizeStyles(this.canvas);
       this.canvas.width = this.canvas.offsetWidth;
       this.canvas.height = this.canvas.offsetHeight;
-      this.resizeEventListener = () => {
-        requestAnimationFrame(() => {
-          this.resizeListener();
-        });
-      };
+      this.resizeEventListener = createResizeHandler(() => this.resizeListener());
       window.addEventListener("resize", this.resizeEventListener);
-      this.resizeObserver = new ResizeObserver(() => {
-        requestAnimationFrame(() => {
-          this.resizeListener();
-        });
-      });
+      this.resizeObserver = createResizeObserver(() => this.resizeListener());
       this.resizeObserver.observe(this.canvas.parentElement);
-      this.canvasObserver = new MutationObserver((mutations) => {
+      this.canvasObserver = createCanvasObserver((mutations) => {
         for (const mutation of mutations) {
           if (mutation.type === "childList" && mutation.removedNodes.length > 0 && Array.from(mutation.removedNodes).includes(this.canvas)) {
             this.cleanup();
@@ -36659,7 +42112,7 @@ var Niivue = class {
    * @internal
    */
   resizeListener() {
-    if (!this.canvas || !this.gl) {
+    if (!isValidForResize(this.canvas, this._gl)) {
       return;
     }
     if (!this.opts.isResizeCanvas) {
@@ -36669,24 +42122,17 @@ var Niivue = class {
       this.drawScene();
       return;
     }
-    this.canvas.style.width = "100%";
-    this.canvas.style.height = "100%";
-    this.canvas.style.display = "block";
-    if (this.opts.forceDevicePixelRatio === 0) {
-      this.uiData.dpr = window.devicePixelRatio || 1;
-    } else if (this.opts.forceDevicePixelRatio < 0) {
-      this.uiData.dpr = 1;
-    } else {
-      this.uiData.dpr = this.opts.forceDevicePixelRatio;
-    }
+    applyCanvasResizeStyles(this.canvas);
+    const resizeResult = calculateResizeDimensions({
+      canvas: this.canvas,
+      gl: this.gl,
+      isResizeCanvas: this.opts.isResizeCanvas,
+      forceDevicePixelRatio: this.opts.forceDevicePixelRatio
+    });
+    this.uiData.dpr = resizeResult.dpr;
     log.debug("devicePixelRatio: " + this.uiData.dpr);
-    if ("width" in this.canvas.parentElement) {
-      this.canvas.width = this.canvas.parentElement.width * this.uiData.dpr;
-      this.canvas.height = this.canvas.parentElement.height * this.uiData.dpr;
-    } else {
-      this.canvas.width = this.canvas.offsetWidth * this.uiData.dpr;
-      this.canvas.height = this.canvas.offsetHeight * this.uiData.dpr;
-    }
+    this.canvas.width = resizeResult.width;
+    this.canvas.height = resizeResult.height;
     this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
     this.textSizePoints();
     this.drawScene();
@@ -36697,24 +42143,14 @@ var Niivue = class {
    * @returns the mouse position relative to the canvas
    */
   getRelativeMousePosition(event, target) {
-    target = target || event.target;
-    if (!target) {
-      return;
-    }
-    const rect = target.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
+    return getRelativeMousePosition(event, target);
   }
   /**
    * Returns mouse position relative to the canvas, excluding padding and borders.
    * @internal
    */
   getNoPaddingNoBorderCanvasRelativeMousePosition(event, target) {
-    target = target || event.target;
-    const pos = this.getRelativeMousePosition(event, target);
-    return pos;
+    return getNoPaddingNoBorderCanvasRelativeMousePosition(event, target);
   }
   /**
    * Disables the default context menu to allow custom right-click behavior.
@@ -36779,21 +42215,21 @@ var Niivue = class {
       }
     }
     this.uiData.clickedTile = this.tileIndex(x, y);
-    if (e.button === LEFT_MOUSE_BUTTON && e.shiftKey) {
+    if (e.button === LEFT_MOUSE_BUTTON2 && e.shiftKey) {
       this.uiData.mouseButtonCenterDown = true;
-      this.setActiveDragMode(LEFT_MOUSE_BUTTON, true, e.ctrlKey);
+      this.setActiveDragMode(LEFT_MOUSE_BUTTON2, true, e.ctrlKey);
       this.handleMouseAction(this.uiData.activeDragMode, e, pos);
-    } else if (e.button === LEFT_MOUSE_BUTTON) {
+    } else if (e.button === LEFT_MOUSE_BUTTON2) {
       this.uiData.mouseButtonLeftDown = true;
-      this.setActiveDragMode(LEFT_MOUSE_BUTTON, false, e.ctrlKey);
+      this.setActiveDragMode(LEFT_MOUSE_BUTTON2, false, e.ctrlKey);
       this.handleMouseAction(this.uiData.activeDragMode, e, pos);
-    } else if (e.button === RIGHT_MOUSE_BUTTON) {
+    } else if (e.button === RIGHT_MOUSE_BUTTON2) {
       this.uiData.mouseButtonRightDown = true;
-      this.setActiveDragMode(RIGHT_MOUSE_BUTTON, e.shiftKey, e.ctrlKey);
+      this.setActiveDragMode(RIGHT_MOUSE_BUTTON2, e.shiftKey, e.ctrlKey);
       this.handleMouseAction(this.uiData.activeDragMode, e, pos);
-    } else if (e.button === CENTER_MOUSE_BUTTON) {
+    } else if (e.button === CENTER_MOUSE_BUTTON2) {
       this.uiData.mouseButtonCenterDown = true;
-      this.setActiveDragMode(CENTER_MOUSE_BUTTON, e.shiftKey, e.ctrlKey);
+      this.setActiveDragMode(CENTER_MOUSE_BUTTON2, e.shiftKey, e.ctrlKey);
       this.handleMouseAction(this.uiData.activeDragMode, e, pos);
     }
     this.drawScene();
@@ -36803,67 +42239,55 @@ var Niivue = class {
    * @internal
    */
   getMouseButtonDragMode(button, shiftKey, ctrlKey) {
-    const mouseConfig = this.opts.mouseEventConfig;
-    if (button === LEFT_MOUSE_BUTTON) {
-      if (mouseConfig?.leftButton) {
-        if (shiftKey && mouseConfig.leftButton.withShift !== void 0) {
-          return mouseConfig.leftButton.withShift;
-        }
-        if (ctrlKey && mouseConfig.leftButton.withCtrl !== void 0) {
-          return mouseConfig.leftButton.withCtrl;
-        }
-        return mouseConfig.leftButton.primary;
-      }
-      return ctrlKey ? 8 /* crosshair */ : this.opts.dragModePrimary;
-    } else if (button === RIGHT_MOUSE_BUTTON) {
-      if (mouseConfig?.rightButton !== void 0) {
-        return mouseConfig.rightButton;
-      }
-      return this.opts.dragMode;
-    } else if (button === CENTER_MOUSE_BUTTON) {
-      if (mouseConfig?.centerButton !== void 0) {
-        return mouseConfig.centerButton;
-      }
-      return this.opts.dragMode;
-    }
-    return this.opts.dragMode;
+    return getMouseButtonDragMode({
+      button,
+      shiftKey,
+      ctrlKey,
+      mouseConfig: this.opts.mouseEventConfig,
+      dragMode: this.opts.dragMode,
+      dragModePrimary: this.opts.dragModePrimary
+    });
   }
   /**
    * Gets the appropriate drag mode for touch events based on configuration.
    * @internal
    */
   getTouchDragMode(isDoubleTouch) {
-    const touchConfig = this.opts.touchEventConfig;
-    if (isDoubleTouch) {
-      return touchConfig?.doubleTouch ?? this.opts.dragMode;
-    }
-    return touchConfig?.singleTouch ?? this.opts.dragModePrimary;
+    return getTouchDragMode({
+      isDoubleTouch,
+      touchConfig: this.opts.touchEventConfig,
+      dragMode: this.opts.dragMode,
+      dragModePrimary: this.opts.dragModePrimary
+    });
   }
   /**
    * Sets the active drag mode for the current interaction.
    * @internal
    */
   setActiveDragMode(button, shiftKey, ctrlKey) {
-    this.uiData.activeDragMode = this.getMouseButtonDragMode(button, shiftKey, ctrlKey);
-    this.uiData.activeDragButton = button;
+    const dragMode = this.getMouseButtonDragMode(button, shiftKey, ctrlKey);
+    const state = createActiveDragModeState(dragMode, button);
+    this.uiData.activeDragMode = state.activeDragMode;
+    this.uiData.activeDragButton = state.activeDragButton;
   }
   /**
    * Gets the currently active drag mode, or falls back to configured defaults.
    * @internal
    */
   getCurrentDragMode() {
-    if (this.uiData.activeDragMode !== null) {
-      return this.uiData.activeDragMode;
-    }
-    return this.opts.dragMode;
+    return getCurrentDragModeValue({
+      activeDragMode: this.uiData.activeDragMode,
+      fallbackDragMode: this.opts.dragMode
+    });
   }
   /**
    * Clears the active drag mode.
    * @internal
    */
   clearActiveDragMode() {
-    this.uiData.activeDragMode = null;
-    this.uiData.activeDragButton = null;
+    const state = createClearedDragModeState();
+    this.uiData.activeDragMode = state.activeDragMode;
+    this.uiData.activeDragButton = state.activeDragButton;
   }
   /**
    * Unified handler for mouse actions based on drag mode.
@@ -36961,10 +42385,7 @@ var Niivue = class {
    * @returns an array of two values representing the min and max voxel indices
    */
   calculateMinMaxVoxIdx(array) {
-    if (array.length > 2) {
-      throw new Error("array must not contain more than two values");
-    }
-    return [Math.floor(Math.min(array[0], array[1])), Math.floor(Math.max(array[0], array[1]))];
+    return calculateMinMaxVoxIdx(array);
   }
   /**
    * Updates cal_min and cal_max based on intensity range within the drag-selected voxel region.
@@ -36975,7 +42396,7 @@ var Niivue = class {
     if (this.opts.sliceType === 4 /* RENDER */ && this.sliceMosaicString.length < 1) {
       return;
     }
-    if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+    if (!hasDragMoved(this.uiData.dragStart, this.uiData.dragEnd)) {
       return;
     }
     let frac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]]);
@@ -36988,45 +42409,27 @@ var Niivue = class {
       return;
     }
     const endVox = this.frac2vox(frac, volIdx);
-    let hi = -Number.MAX_VALUE;
-    let lo = Number.MAX_VALUE;
     const xrange = this.calculateMinMaxVoxIdx([startVox[0], endVox[0]]);
     const yrange = this.calculateMinMaxVoxIdx([startVox[1], endVox[1]]);
     const zrange = this.calculateMinMaxVoxIdx([startVox[2], endVox[2]]);
-    if (startVox[0] - endVox[0] === 0) {
-      xrange[1] = startVox[0] + 1;
-    } else if (startVox[1] - endVox[1] === 0) {
-      yrange[1] = startVox[1] + 1;
-    } else if (startVox[2] - endVox[2] === 0) {
-      zrange[1] = startVox[2] + 1;
-    }
+    const adjustedRanges = adjustRangesForConstantDimension(startVox, endVox, xrange, yrange, zrange);
     const hdr = this.volumes[volIdx].hdr;
     const img = this.volumes[volIdx].img;
     if (!hdr || !img) {
       return;
     }
-    const xdim = hdr.dims[1];
-    const ydim = hdr.dims[2];
-    for (let z = zrange[0]; z < zrange[1]; z++) {
-      const zi = z * xdim * ydim;
-      for (let y = yrange[0]; y < yrange[1]; y++) {
-        const yi = y * xdim;
-        for (let x = xrange[0]; x < xrange[1]; x++) {
-          const index = zi + yi + x;
-          if (lo > img[index]) {
-            lo = img[index];
-          }
-          if (hi < img[index]) {
-            hi = img[index];
-          }
-        }
-      }
-    }
-    if (lo >= hi) {
+    const intensityResult = calculateIntensityRangeFromVoxels({
+      xrange: adjustedRanges.xrange,
+      yrange: adjustedRanges.yrange,
+      zrange: adjustedRanges.zrange,
+      dims: hdr.dims,
+      img
+    });
+    if (!intensityResult.hasVariation) {
       return;
     }
-    const mnScale = intensityRaw2Scaled(hdr, lo);
-    const mxScale = intensityRaw2Scaled(hdr, hi);
+    const mnScale = intensityRaw2Scaled2(hdr, intensityResult.lo);
+    const mxScale = intensityRaw2Scaled2(hdr, intensityResult.hi);
     this.volumes[volIdx].cal_min = mnScale;
     this.volumes[volIdx].cal_max = mxScale;
     this.onIntensityChange(this.volumes[volIdx]);
@@ -37071,9 +42474,6 @@ var Niivue = class {
    */
   mouseUpListener() {
     this.uiData.mousedown = false;
-    function isFunction(test) {
-      return Object.prototype.toString.call(test).indexOf("Function") > -1;
-    }
     const uiData = {
       mouseButtonRightDown: this.uiData.mouseButtonRightDown,
       mouseButtonCenterDown: this.uiData.mouseButtonCenterDown,
@@ -37114,12 +42514,7 @@ var Niivue = class {
       this.uiData.isDragging = false;
       if (currentDragMode === 7 /* angle */) {
         if (this.uiData.angleState === "drawing_first_line") {
-          this.uiData.angleFirstLine = [
-            this.uiData.dragStart[0],
-            this.uiData.dragStart[1],
-            this.uiData.dragEnd[0],
-            this.uiData.dragEnd[1]
-          ];
+          this.uiData.angleFirstLine = [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]];
           this.uiData.angleState = "drawing_second_line";
           this.uiData.isDragging = true;
           this.drawScene();
@@ -37147,7 +42542,7 @@ var Niivue = class {
           this.clearActiveDragMode();
           return;
         }
-        if (this.uiData.dragStart[0] === this.uiData.dragEnd[0] && this.uiData.dragStart[1] === this.uiData.dragEnd[1]) {
+        if (!hasDragMoved(this.uiData.dragStart, this.uiData.dragEnd)) {
           this.clearActiveDragMode();
           return;
         }
@@ -37167,10 +42562,7 @@ var Niivue = class {
             sliceIndex: sliceInfo.sliceIndex,
             sliceType: sliceInfo.sliceType,
             slicePosition: sliceInfo.slicePosition,
-            distance: vec3_exports.distance(
-              vec3_exports.fromValues(startMM[0], startMM[1], startMM[2]),
-              vec3_exports.fromValues(endMM[0], endMM[1], endMM[2])
-            )
+            distance: vec3_exports.distance(vec3_exports.fromValues(startMM[0], startMM[1], startMM[2]), vec3_exports.fromValues(endMM[0], endMM[1], endMM[2]))
           });
         }
         this.clearActiveDragMode();
@@ -37186,10 +42578,17 @@ var Niivue = class {
    * @internal
    */
   checkMultitouch(e) {
-    if (this.uiData.touchdown && !this.uiData.multiTouchGesture) {
+    if (shouldSimulateMouseBehavior({
+      touchdown: this.uiData.touchdown,
+      multiTouchGesture: this.uiData.multiTouchGesture
+    })) {
       const rect = this.canvas.getBoundingClientRect();
-      this.mouseDown(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-      this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+      const pos = calculateTouchPosition({
+        touch: e.touches[0],
+        canvasRect: rect
+      });
+      this.mouseDown(pos.x, pos.y);
+      this.mouseClick(pos.x, pos.y);
     }
   }
   /**
@@ -37198,30 +42597,44 @@ var Niivue = class {
    */
   touchStartListener(e) {
     e.preventDefault();
-    if (!this.uiData.touchTimer) {
+    if (shouldStartLongPressTimer(this.uiData.touchTimer)) {
       this.uiData.touchTimer = setTimeout(() => {
         this.resetBriCon(e);
       }, this.opts.longTouchTimeout);
     }
-    this.uiData.touchdown = true;
-    this.uiData.currentTouchTime = (/* @__PURE__ */ new Date()).getTime();
-    const timeSinceTouch = this.uiData.currentTouchTime - this.uiData.lastTouchTime;
-    if (timeSinceTouch < this.opts.doubleTouchTimeout && timeSinceTouch > 0) {
-      this.uiData.doubleTouch = true;
-      this.setDragStart(
-        e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
-        e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-      );
+    const currentTime = (/* @__PURE__ */ new Date()).getTime();
+    const touchState = initializeTouchState({
+      currentTime,
+      touchCount: e.touches.length,
+      isTouchdown: this.uiData.touchdown
+    });
+    this.uiData.touchdown = touchState.touchdown;
+    this.uiData.currentTouchTime = touchState.currentTouchTime;
+    const doubleTapResult = detectDoubleTap({
+      currentTime,
+      lastTouchTime: this.uiData.lastTouchTime,
+      doubleTouchTimeout: this.opts.doubleTouchTimeout
+    });
+    if (doubleTapResult.isDoubleTap) {
+      const doubleTapState = createDoubleTapState(currentTime);
+      this.uiData.doubleTouch = doubleTapState.doubleTouch;
+      this.uiData.lastTouchTime = doubleTapState.lastTouchTime;
+      const rect = e.target.getBoundingClientRect();
+      const pos = calculateTouchPosition({
+        touch: e.targetTouches[0],
+        canvasRect: rect
+      });
+      this.setDragStart(pos.x, pos.y);
       this.resetBriCon(e);
-      this.uiData.lastTouchTime = this.uiData.currentTouchTime;
       return;
     } else {
-      this.uiData.doubleTouch = false;
+      const newSequenceState = createNewTouchSequenceState(currentTime);
+      this.uiData.doubleTouch = newSequenceState.doubleTouch ?? false;
+      this.uiData.lastTouchTime = newSequenceState.lastTouchTime;
       this.setDragStart(0, 0);
       this.setDragEnd(0, 0);
-      this.uiData.lastTouchTime = this.uiData.currentTouchTime;
     }
-    if (this.uiData.touchdown && e.touches.length < 2) {
+    if (isSingleFingerTouch(this.uiData.touchdown, e.touches.length)) {
       this.uiData.multiTouchGesture = false;
     } else {
       this.uiData.multiTouchGesture = true;
@@ -37234,9 +42647,10 @@ var Niivue = class {
    */
   touchEndListener(e) {
     e.preventDefault();
-    this.uiData.touchdown = false;
-    this.uiData.lastTwoTouchDistance = 0;
-    this.uiData.multiTouchGesture = false;
+    const endState = createTouchEndState();
+    this.uiData.touchdown = endState.touchdown;
+    this.uiData.lastTwoTouchDistance = endState.lastTwoTouchDistance;
+    this.uiData.multiTouchGesture = endState.multiTouchGesture;
     if (this.uiData.touchTimer) {
       clearTimeout(this.uiData.touchTimer);
       this.uiData.touchTimer = null;
@@ -37258,43 +42672,21 @@ var Niivue = class {
    * @internal
    */
   windowingHandler(x, y, volIdx = 0) {
-    const wx = this.uiData.windowX;
-    const wy = this.uiData.windowY;
-    let mn = this.volumes[0].cal_min;
-    let mx = this.volumes[0].cal_max;
-    const gmn = this.volumes[0].global_min;
-    const gmx = this.volumes[0].global_max;
-    if (y < wy) {
-      mn += 1;
-      mx += 1;
-    } else if (y > wy) {
-      mn -= 1;
-      mx -= 1;
-    }
-    if (x > wx) {
-      mn -= 1;
-      mx += 1;
-    } else if (x < wx) {
-      mn += 1;
-      mx -= 1;
-    }
-    if (mx - mn < 1) {
-      mx = mn + 1;
-    }
-    if (mn < gmn) {
-      mn = gmn;
-    }
-    if (mx > gmx) {
-      mx = gmx;
-    }
-    if (mn > mx) {
-      mn = mx - 1;
-    }
-    this.volumes[volIdx].cal_min = mn;
-    this.volumes[volIdx].cal_max = mx;
+    const result = calculateWindowingAdjustment({
+      x,
+      y,
+      windowX: this.uiData.windowX,
+      windowY: this.uiData.windowY,
+      currentCalMin: this.volumes[0].cal_min,
+      currentCalMax: this.volumes[0].cal_max,
+      globalMin: this.volumes[0].global_min,
+      globalMax: this.volumes[0].global_max
+    });
+    this.volumes[volIdx].cal_min = result.calMin;
+    this.volumes[volIdx].cal_max = result.calMax;
     this.refreshLayers(this.volumes[volIdx], 0);
-    this.uiData.windowX = x;
-    this.uiData.windowY = y;
+    this.uiData.windowX = result.windowX;
+    this.uiData.windowY = result.windowY;
   }
   /**
    * Handles mouse leaving the canvas, resetting segmentation, drawing, and drag states.
@@ -37324,13 +42716,14 @@ var Niivue = class {
     if (this.uiData.isDragging || this.uiData.mousedown) {
       log.debug("Mouse left canvas during drag, resetting drag state.");
       this.uiData.isDragging = false;
-      this.uiData.mouseButtonLeftDown = false;
-      this.uiData.mouseButtonCenterDown = false;
-      this.uiData.mouseButtonRightDown = false;
-      this.uiData.mousedown = false;
+      const resetState = createResetButtonState();
+      this.uiData.mouseButtonLeftDown = resetState.mouseButtonLeftDown;
+      this.uiData.mouseButtonCenterDown = resetState.mouseButtonCenterDown;
+      this.uiData.mouseButtonRightDown = resetState.mouseButtonRightDown;
+      this.uiData.mousedown = resetState.mousedown;
       this.drawScene();
     }
-    this.mousePos = [-1, -1];
+    this.mousePos = createOffCanvasPosition();
   }
   /**
    * Handles mouse move events for dragging, crosshair movement, windowing, and click-to-segment preview.
@@ -37465,46 +42858,52 @@ var Niivue = class {
    * @internal
    */
   setDragStart(x, y) {
-    x *= this.uiData.dpr;
-    y *= this.uiData.dpr;
-    this.uiData.dragStart[0] = x;
-    this.uiData.dragStart[1] = y;
+    const [scaledX, scaledY] = calculateDragPosition(x, y, this.uiData.dpr);
+    this.uiData.dragStart[0] = scaledX;
+    this.uiData.dragStart[1] = scaledY;
   }
   /**
    * Sets the drag end position in canvas coordinates.
    * @internal
    */
   setDragEnd(x, y) {
-    x *= this.uiData.dpr;
-    y *= this.uiData.dpr;
-    this.uiData.dragEnd[0] = x;
-    this.uiData.dragEnd[1] = y;
+    const [scaledX, scaledY] = calculateDragPosition(x, y, this.uiData.dpr);
+    this.uiData.dragEnd[0] = scaledX;
+    this.uiData.dragEnd[1] = scaledY;
   }
   /**
    * Handles touch movement for crosshair, windowing, and pinch-to-zoom interactions.
    * @internal
    */
   touchMoveListener(e) {
-    if (this.uiData.touchdown && e.touches.length < 2) {
+    if (isSingleFingerTouch(this.uiData.touchdown, e.touches.length)) {
       const rect = this.canvas.getBoundingClientRect();
       if (!this.uiData.isDragging) {
         this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
       }
       this.uiData.isDragging = true;
-      if (this.uiData.doubleTouch && this.uiData.isDragging) {
-        this.setDragEnd(
-          e.targetTouches[0].clientX - e.target.getBoundingClientRect().left,
-          e.targetTouches[0].clientY - e.target.getBoundingClientRect().top
-        );
+      if (shouldUpdateDoubleTouchDrag({
+        doubleTouch: this.uiData.doubleTouch,
+        isDragging: this.uiData.isDragging
+      })) {
+        const pos = calculateTouchPosition({
+          touch: e.targetTouches[0],
+          canvasRect: e.target.getBoundingClientRect()
+        });
+        this.setDragEnd(pos.x, pos.y);
         this.drawScene();
         return;
       }
       const dragMode = this.getTouchDragMode(false);
+      const touchMovePos = calculateTouchMovePosition({
+        touch: e.touches[0],
+        canvasRect: rect
+      });
       if (dragMode === 8 /* crosshair */) {
-        this.mouseClick(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-        this.mouseMove(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+        this.mouseClick(touchMovePos.x, touchMovePos.y);
+        this.mouseMove(touchMovePos.x, touchMovePos.y);
       } else if (dragMode === 9 /* windowing */) {
-        this.windowingHandler(e.touches[0].pageX, e.touches[0].pageY);
+        this.windowingHandler(touchMovePos.pageX, touchMovePos.pageY);
         this.drawScene();
       }
     } else {
@@ -37516,16 +42915,22 @@ var Niivue = class {
    * @internal
    */
   handlePinchZoom(e) {
-    if (e.targetTouches.length === 2 && e.changedTouches.length === 2) {
-      const dist4 = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    if (shouldProcessPinchZoom(e.targetTouches.length, e.changedTouches.length)) {
       const rect = this.canvas.getBoundingClientRect();
-      this.mousePos = [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
-      if (dist4 < this.uiData.lastTwoTouchDistance) {
-        this.sliceScroll2D(-0.01, e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-      } else {
-        this.sliceScroll2D(0.01, e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+      const pinchResult = calculatePinchZoom({
+        touch1: e.touches[0],
+        touch2: e.touches[1],
+        lastTwoTouchDistance: this.uiData.lastTwoTouchDistance
+      });
+      const touchPos = getMousePosFromTouch({
+        touch: e.touches[0],
+        canvasRect: rect
+      });
+      this.mousePos = touchPos;
+      if (this.uiData.lastTwoTouchDistance > 0) {
+        this.sliceScroll2D(pinchResult.scrollDelta, touchPos[0], touchPos[1]);
       }
-      this.uiData.lastTwoTouchDistance = dist4;
+      this.uiData.lastTwoTouchDistance = pinchResult.distance;
     }
   }
   /**
@@ -37534,20 +42939,19 @@ var Niivue = class {
    * @returns active clip plane index
    */
   cycleActiveClipPlane() {
-    const n = this.scene.clipPlanes.length || 6;
-    if (this.uiData.activeClipPlaneIndex == null) {
-      this.uiData.activeClipPlaneIndex = 0;
-    } else {
-      this.uiData.activeClipPlaneIndex = (this.uiData.activeClipPlaneIndex + 1) % n;
+    const result = cycleActiveClipPlane({
+      currentIndex: this.uiData.activeClipPlaneIndex,
+      clipPlanesLength: this.scene.clipPlanes.length
+    });
+    this.uiData.activeClipPlaneIndex = result.newIndex;
+    const idx2 = result.newIndex;
+    if (!this.scene.clipPlanes[idx2]) {
+      this.scene.clipPlanes[idx2] = result.defaultClipPlane;
     }
-    const idx = this.uiData.activeClipPlaneIndex;
-    if (!this.scene.clipPlanes[idx]) {
-      this.scene.clipPlanes[idx] = [0, 0, 0, 2];
+    if (!this.scene.clipPlaneDepthAziElevs[idx2]) {
+      this.scene.clipPlaneDepthAziElevs[idx2] = result.defaultDepthAziElev;
     }
-    if (!this.scene.clipPlaneDepthAziElevs[idx]) {
-      this.scene.clipPlaneDepthAziElevs[idx] = [2, 0, 0];
-    }
-    return idx;
+    return idx2;
   }
   /**
    * Handles keyboard shortcuts for toggling clip planes and slice view modes with debounce logic.
@@ -37560,50 +42964,37 @@ var Niivue = class {
       return;
     }
     const now = (/* @__PURE__ */ new Date()).getTime();
-    const elapsed = now - this.lastCalled;
-    if (e.code === this.opts.cycleClipPlaneHotKey) {
-      if (elapsed > this.opts.keyDebounceTime) {
-        const idx = this.cycleActiveClipPlane();
-        console.log("Active clip plane cycled to:", idx);
+    const shouldProcess = shouldProcessKey({
+      currentTime: now,
+      lastCalledTime: this.lastCalled,
+      debounceTime: this.opts.keyDebounceTime
+    });
+    if (isHotkeyMatch(e.code, this.opts.cycleClipPlaneHotKey)) {
+      if (shouldProcess) {
+        const idx2 = this.cycleActiveClipPlane();
+        console.log("Active clip plane cycled to:", idx2);
         console.log("clip planes", this.scene.clipPlanes);
         this.lastCalled = now;
       }
     }
-    if (e.code === this.opts.clipPlaneHotKey) {
-      if (elapsed > this.opts.keyDebounceTime) {
-        this.currentClipPlaneIndex = (this.currentClipPlaneIndex + 1) % 7;
-        switch (this.currentClipPlaneIndex) {
-          case 0:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [2, 0, 0];
-            break;
-          case 1:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 270, 0];
-            break;
-          case 2:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 90, 0];
-            break;
-          case 3:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 0];
-            break;
-          case 4:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 180, 0];
-            break;
-          case 5:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, -90];
-            break;
-          case 6:
-            this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = [0, 0, 90];
-            break;
-        }
+    if (isHotkeyMatch(e.code, this.opts.clipPlaneHotKey)) {
+      if (shouldProcess) {
+        const result = getNextClipPlanePreset({
+          currentClipPlaneIndex: this.currentClipPlaneIndex
+        });
+        this.currentClipPlaneIndex = result.newIndex;
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = result.depthAziElev;
         this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
       }
       this.lastCalled = now;
-    } else if (e.code === this.opts.viewModeHotKey) {
-      const now2 = (/* @__PURE__ */ new Date()).getTime();
-      const elapsed2 = now2 - this.lastCalled;
-      if (elapsed2 > this.opts.keyDebounceTime) {
-        this.setSliceType((this.opts.sliceType + 1) % 5);
-        this.lastCalled = now2;
+    } else if (isHotkeyMatch(e.code, this.opts.viewModeHotKey)) {
+      if (shouldProcess) {
+        const nextSliceType = getNextViewMode({
+          currentSliceType: this.opts.sliceType,
+          totalSliceTypes: 5
+        });
+        this.setSliceType(nextSliceType);
+        this.lastCalled = now;
       }
     }
     this.drawScene();
@@ -37618,38 +43009,59 @@ var Niivue = class {
       this.drawScene();
       return;
     }
-    if (e.code === "KeyH" && this.opts.sliceType === 4 /* RENDER */) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation);
-    } else if (e.code === "KeyL" && this.opts.sliceType === 4 /* RENDER */) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth + 1, this.scene.renderElevation);
-    } else if (e.code === "KeyJ" && this.opts.sliceType === 4 /* RENDER */) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation + 1);
-    } else if (e.code === "KeyK" && this.opts.sliceType === 4 /* RENDER */) {
-      this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation - 1);
-    } else if (e.code === "KeyH" && this.opts.sliceType !== 4 /* RENDER */) {
-      this.moveCrosshairInVox(-1, 0, 0);
-    } else if (e.code === "KeyL" && this.opts.sliceType !== 4 /* RENDER */) {
-      this.moveCrosshairInVox(1, 0, 0);
-    } else if (e.code === "KeyU" && this.opts.sliceType !== 4 /* RENDER */ && e.ctrlKey) {
-      this.moveCrosshairInVox(0, 0, 1);
-    } else if (e.code === "KeyD" && this.opts.sliceType !== 4 /* RENDER */ && e.ctrlKey) {
-      this.moveCrosshairInVox(0, 0, -1);
-    } else if (e.code === "KeyJ" && this.opts.sliceType !== 4 /* RENDER */) {
-      this.moveCrosshairInVox(0, -1, 0);
-    } else if (e.code === "KeyK" && this.opts.sliceType !== 4 /* RENDER */) {
-      this.moveCrosshairInVox(0, 1, 0);
-    } else if (e.code === "KeyM" && this.opts.sliceType !== 4 /* RENDER */) {
-      this.opts.dragMode++;
-      if (this.opts.dragMode >= 4 /* slicer3D */) {
-        this.opts.dragMode = 0 /* none */;
-      }
-      log.info("drag mode changed to ", DRAG_MODE[this.opts.dragMode]);
-    } else if (e.code === "ArrowLeft") {
-      this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1);
-    } else if (e.code === "ArrowRight") {
-      this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
-    } else if (e.code === "Slash" && e.shiftKey) {
-      alert(`NIIVUE VERSION: ${version}`);
+    const { action } = getKeyDownAction({
+      code: e.code,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey,
+      sliceType: this.opts.sliceType
+    });
+    switch (action) {
+      case "render_azimuth_decrease":
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth - 1, this.scene.renderElevation);
+        break;
+      case "render_azimuth_increase":
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth + 1, this.scene.renderElevation);
+        break;
+      case "render_elevation_increase":
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation + 1);
+        break;
+      case "render_elevation_decrease":
+        this.setRenderAzimuthElevation(this.scene.renderAzimuth, this.scene.renderElevation - 1);
+        break;
+      case "crosshair_left":
+        this.moveCrosshairInVox(-1, 0, 0);
+        break;
+      case "crosshair_right":
+        this.moveCrosshairInVox(1, 0, 0);
+        break;
+      case "crosshair_up":
+        this.moveCrosshairInVox(0, 1, 0);
+        break;
+      case "crosshair_down":
+        this.moveCrosshairInVox(0, -1, 0);
+        break;
+      case "crosshair_forward":
+        this.moveCrosshairInVox(0, 0, 1);
+        break;
+      case "crosshair_backward":
+        this.moveCrosshairInVox(0, 0, -1);
+        break;
+      case "cycle_drag_mode":
+        this.opts.dragMode = getNextDragMode(this.opts.dragMode);
+        log.info("drag mode changed to ", DRAG_MODE[this.opts.dragMode]);
+        break;
+      case "frame_previous":
+        this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D - 1);
+        break;
+      case "frame_next":
+        this.setFrame4D(this.volumes[0].id, this.volumes[0].frame4D + 1);
+        break;
+      case "show_version":
+        alert(`NIIVUE VERSION: ${version}`);
+        break;
+      case "none":
+      default:
+        break;
     }
     this.drawScene();
   }
@@ -37658,40 +43070,37 @@ var Niivue = class {
    * @internal
    */
   wheelListener(e) {
-    if (this.thumbnailVisible) {
+    const wheelAction = determineWheelAction({
+      thumbnailVisible: this.thumbnailVisible,
+      mosaicStringLength: this.opts.sliceMosaicString.length,
+      eventInBounds: this.eventInBounds(e),
+      hasBounds: this.opts.bounds !== null
+    });
+    if (!wheelAction.shouldProcess) {
+      if (!this.eventInBounds(e)) {
+        this.opts.showBoundsBorder = false;
+        this.drawScene();
+      }
       return;
     }
-    if (this.opts.sliceMosaicString.length > 0) {
-      return;
-    }
-    if (!this.eventInBounds(e)) {
-      this.opts.showBoundsBorder = false;
-      this.drawScene();
-      return;
-    } else if (this.opts.bounds) {
-      this.opts.showBoundsBorder = true;
-    }
+    this.opts.showBoundsBorder = wheelAction.showBoundsBorder;
     e.preventDefault();
     e.stopPropagation();
-    const dragStartSum = this.uiData.dragStart.reduce((a, b) => a + b, 0);
-    const dragEndSum = this.uiData.dragEnd.reduce((a, b) => a + b, 0);
-    const validDrag = dragStartSum > 0 && dragEndSum > 0;
-    if (this.getCurrentDragMode() === 6 /* roiSelection */ && validDrag) {
-      const delta = e.deltaY > 0 ? 1 : -1;
-      if (this.uiData.dragStart[0] < this.uiData.dragEnd[0]) {
-        this.uiData.dragStart[0] -= delta;
-        this.uiData.dragEnd[0] += delta;
-      } else {
-        this.uiData.dragStart[0] += delta;
-        this.uiData.dragEnd[0] -= delta;
-      }
-      if (this.uiData.dragStart[1] < this.uiData.dragEnd[1]) {
-        this.uiData.dragStart[1] -= delta;
-        this.uiData.dragEnd[1] += delta;
-      } else {
-        this.uiData.dragStart[1] += delta;
-        this.uiData.dragEnd[1] -= delta;
-      }
+    if (isValidRoiResize({
+      dragMode: this.getCurrentDragMode(),
+      dragStart: this.uiData.dragStart,
+      dragEnd: this.uiData.dragEnd
+    })) {
+      const delta = getRoiScrollDelta(e.deltaY);
+      const roiResult = updateRoiSelection({
+        dragStart: this.uiData.dragStart,
+        dragEnd: this.uiData.dragEnd,
+        delta
+      });
+      this.uiData.dragStart[0] = roiResult.newDragStart[0];
+      this.uiData.dragStart[1] = roiResult.newDragStart[1];
+      this.uiData.dragEnd[0] = roiResult.newDragEnd[0];
+      this.uiData.dragEnd[1] = roiResult.newDragEnd[1];
       this.uiData.isDragging = true;
       this.drawScene();
       this.uiData.isDragging = false;
@@ -37706,18 +43115,15 @@ var Niivue = class {
       }
       return;
     }
-    let scrollAmount = e.deltaY < 0 ? -0.01 : 0.01;
-    if (this.opts.invertScrollDirection) {
-      scrollAmount = -scrollAmount;
-    }
+    const scrollAmount = calculateScrollAmount({
+      deltaY: e.deltaY,
+      invertScrollDirection: this.opts.invertScrollDirection
+    });
     if (this.opts.clickToSegment) {
-      if (scrollAmount < 0) {
-        this.opts.clickToSegmentPercent -= 0.01;
-        this.opts.clickToSegmentPercent = Math.max(this.opts.clickToSegmentPercent, 0);
-      } else {
-        this.opts.clickToSegmentPercent += 0.01;
-        this.opts.clickToSegmentPercent = Math.min(this.opts.clickToSegmentPercent, 1);
-      }
+      this.opts.clickToSegmentPercent = adjustSegmentThreshold({
+        currentPercent: this.opts.clickToSegmentPercent,
+        scrollAmount
+      });
       const x2 = this.clickToSegmentXY[0];
       const y2 = this.clickToSegmentXY[1];
       const tileIdx = this.tileIndex(x2, y2);
@@ -37729,21 +43135,29 @@ var Niivue = class {
       return;
     }
     const rect = this.canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    if (this.getCurrentDragMode() === 3 /* pan */ && this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1) {
-      const zoomDirection = scrollAmount < 0 ? 1 : -1;
-      let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * (0.01 * zoomDirection));
-      zoom = Math.round(zoom * 10) / 10;
-      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
+    const [x, y] = getWheelEventPosition(e.clientX, e.clientY, rect);
+    const isInRenderTile = this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) !== -1;
+    if (shouldApplyZoom({
+      dragMode: this.getCurrentDragMode(),
+      isInRenderTile
+    })) {
+      const zoomResult = calculateZoom({
+        currentZoom: this.scene.pan2Dxyzmm[3],
+        scrollAmount
+      });
       if (this.opts.yoke3Dto2DZoom) {
-        this.scene.volScaleMultiplier = zoom;
+        this.scene.volScaleMultiplier = zoomResult.newZoom;
       }
-      this.scene.pan2Dxyzmm[3] = zoom;
+      this.scene.pan2Dxyzmm[3] = zoomResult.newZoom;
       const mm = this.frac2mm(this.scene.crosshairPos);
-      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
-      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
-      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
+      const panOffset = calculatePanOffsetAfterZoom({
+        currentPan: [this.scene.pan2Dxyzmm[0], this.scene.pan2Dxyzmm[1], this.scene.pan2Dxyzmm[2]],
+        zoomChange: zoomResult.zoomChange,
+        crosshairMM: [mm[0], mm[1], mm[2]]
+      });
+      this.scene.pan2Dxyzmm[0] = panOffset[0];
+      this.scene.pan2Dxyzmm[1] = panOffset[1];
+      this.scene.pan2Dxyzmm[2] = panOffset[2];
       this.drawScene();
       this.canvas.focus();
       this.sync();
@@ -37790,36 +43204,21 @@ var Niivue = class {
    * @internal
    */
   dragEnterListener(e) {
-    e.stopPropagation();
-    e.preventDefault();
+    handleDragEnter(e);
   }
   /**
    * Prevents default behavior when a dragged item is over the canvas.
    * @internal
    */
   dragOverListener(e) {
-    e.stopPropagation();
-    e.preventDefault();
+    handleDragOver(e);
   }
   /**
    * Extracts and normalizes the file extension, handling special cases like .gz and .cbor.
    * @internal
    */
   getFileExt(fullname, upperCase = true) {
-    log.debug("fullname: ", fullname);
-    const re = /(?:\.([^.]+))?$/;
-    let ext = re.exec(fullname)[1];
-    ext = ext.toUpperCase();
-    if (ext === "GZ") {
-      ext = re.exec(fullname.slice(0, -3))[1];
-      ext = ext.toUpperCase();
-    } else if (ext === "CBOR") {
-      const endExt = ext;
-      ext = re.exec(fullname.slice(0, -5))[1];
-      ext = ext.toUpperCase();
-      ext = `${ext}.${endExt}`;
-    }
-    return upperCase ? ext : ext.toLowerCase();
+    return getFileExt(fullname, upperCase);
   }
   /**
    * Add an image and notify subscribers
@@ -37899,7 +43298,7 @@ var Niivue = class {
    * @internal
    */
   getMediaByUrl(url) {
-    return [...this.mediaUrlMap.entries()].filter((v) => v[1] === url).map((v) => v[0]).pop();
+    return getMediaByUrl(url, this.mediaUrlMap);
   }
   /**
    * Remove volume by url
@@ -37920,34 +43319,7 @@ var Niivue = class {
    * @internal
    */
   async traverseFileTree(item, path = "", fileArray) {
-    return new Promise((resolve2) => {
-      if (item.isFile) {
-        item.file((file) => {
-          file.fullPath = path + file.name;
-          file._webkitRelativePath = path + file.name;
-          fileArray.push(file);
-          resolve2(fileArray);
-        });
-      } else if (item.isDirectory) {
-        const dirReader = item.createReader();
-        const readAllEntries = () => {
-          dirReader.readEntries((entries) => {
-            if (entries.length > 0) {
-              const promises = [];
-              for (const entry of entries) {
-                promises.push(this.traverseFileTree(entry, path + item.name + "/", fileArray));
-              }
-              Promise.all(promises).then(readAllEntries).catch((e) => {
-                throw e;
-              });
-            } else {
-              resolve2(fileArray);
-            }
-          });
-        };
-        readAllEntries();
-      }
-    });
+    return traverseFileTree(item, path, fileArray);
   }
   /**
    * Recursively reads a directory and logs the File objects contained within.
@@ -37955,33 +43327,7 @@ var Niivue = class {
    * @internal
    */
   readDirectory(directory) {
-    const reader = directory.createReader();
-    let allEntiresInDir = [];
-    const getFileObjects = async (fileSystemEntries) => {
-      const allFileObects = [];
-      const getFile = async (fileEntry) => {
-        return new Promise((resolve2, reject) => fileEntry.file(resolve2, reject));
-      };
-      for (let i = 0; i < fileSystemEntries.length; i++) {
-        allFileObects.push(await getFile(fileSystemEntries[i]));
-      }
-      return allFileObects;
-    };
-    const readEntries = () => {
-      reader.readEntries((entries) => {
-        if (entries.length) {
-          allEntiresInDir = allEntiresInDir.concat(entries);
-          readEntries();
-        } else {
-          getFileObjects(allEntiresInDir).then(async () => {
-          }).catch((e) => {
-            throw e;
-          });
-        }
-      });
-    };
-    readEntries();
-    return allEntiresInDir;
+    return readDirectory(directory);
   }
   /**
    * Returns boolean: true if filename ends with mesh extension (TRK, pial, etc)
@@ -37989,10 +43335,7 @@ var Niivue = class {
    * @internal
    */
   isMeshExt(url) {
-    const ext = this.getFileExt(url);
-    log.debug("dropped ext");
-    log.debug(ext);
-    return MESH_EXTENSIONS.includes(ext);
+    return isMeshExt(url);
   }
   /**
    * Load an image or mesh from an array buffer
@@ -38002,7 +43345,7 @@ var Niivue = class {
    */
   async loadFromArrayBuffer(buffer, name) {
     const ext = this.getFileExt(name);
-    if (MESH_EXTENSIONS.includes(ext)) {
+    if (MESH_EXTENSIONS2.includes(ext)) {
       await this.addMeshFromUrl({ url: name, buffer });
       return;
     }
@@ -38019,7 +43362,7 @@ var Niivue = class {
    */
   async loadFromFile(file) {
     const ext = this.getFileExt(file.name);
-    if (MESH_EXTENSIONS.includes(ext)) {
+    if (MESH_EXTENSIONS2.includes(ext)) {
       await NVMesh3.loadFromFile({ file, gl: this.gl, name: file.name }).then((mesh) => {
         this.addMesh(mesh);
       });
@@ -38058,14 +43401,14 @@ var Niivue = class {
    * @param fileExt - The original file extension (e.g. 'iwi.cbor') to associate with this loader.
    * @param toExt - The target file extension Niivue should treat the file as (e.g. 'nii' or 'mz3').
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useLoader(loader, fileExt, toExt) {
-    this.loaders = {
-      ...this.loaders,
-      [fileExt.toUpperCase()]: {
-        loader,
-        toExt
-      }
-    };
+    this.loaders = registerLoader({
+      loaders: this.loaders,
+      loader,
+      fileExt,
+      toExt
+    });
   }
   /**
    * Set a custom loader for handling DICOM files.
@@ -38109,198 +43452,164 @@ var Niivue = class {
     if (!this.opts.dragAndDropEnabled) {
       return;
     }
-    const urlsToLoad = [];
-    const files = [];
     const dt = e.dataTransfer;
     if (!dt) {
       return;
     }
-    const url = dt.getData("text/uri-list");
+    const url = getDroppedUrl(dt);
     if (url) {
-      urlsToLoad.push(url);
-      const imageOptions = NVImageFromUrlOptions(url);
-      const ext = this.getFileExt(url);
-      log.debug("dropped ext");
-      log.debug(ext);
-      if (MESH_EXTENSIONS.includes(ext)) {
-        this.addMeshFromUrl({ url }).catch((e2) => {
-          throw e2;
-        });
-      } else if (ext === "NVD") {
-        this.loadDocumentFromUrl(url).catch((e2) => {
-          throw e2;
-        });
-      } else {
-        this.addVolumeFromUrl(imageOptions).catch((e2) => {
-          throw e2;
-        });
-      }
-    } else {
-      const items = dt.items;
-      if (items.length > 0) {
-        if (!e.shiftKey && !e.altKey) {
-          this.volumes = [];
-          this.overlays = [];
-          this.meshes = [];
-        }
-        this.closeDrawing();
-        this.closePAQD();
-        for (const item of Array.from(items)) {
-          const entry = item.webkitGetAsEntry();
-          log.debug(entry);
-          if (!entry) {
-            throw new Error("could not get entry from file");
-          }
-          if (entry.isFile) {
-            const ext = this.getFileExt(entry.name);
-            let pairedImageData;
-            if (entry.name.lastIndexOf("HEAD") !== -1) {
-              for (const pairedItem of Array.from(items)) {
-                const pairedEntry = pairedItem.webkitGetAsEntry();
-                if (!pairedEntry) {
-                  throw new Error("could not get paired entry");
-                }
-                const fileBaseName = entry.name.substring(0, entry.name.lastIndexOf("HEAD"));
-                const pairedItemBaseName = pairedEntry.name.substring(0, pairedEntry.name.lastIndexOf("BRIK"));
-                if (fileBaseName === pairedItemBaseName) {
-                  pairedImageData = pairedEntry;
-                }
-              }
-            }
-            if (entry.name.toUpperCase().lastIndexOf("HDR") !== -1) {
-              for (const pairedItem of Array.from(items)) {
-                const pairedEntry = pairedItem.webkitGetAsEntry();
-                if (!pairedEntry) {
-                  throw new Error("could not get paired entry");
-                }
-                const fileBaseName = entry.name.substring(0, entry.name.toUpperCase().lastIndexOf("HDR"));
-                const pairedItemBaseName = pairedEntry.name.substring(
-                  0,
-                  pairedEntry.name.toUpperCase().lastIndexOf("IMG")
-                );
-                if (fileBaseName === pairedItemBaseName) {
-                  pairedImageData = pairedEntry;
-                }
-              }
-            }
-            if (entry.name.lastIndexOf("BRIK") !== -1 || entry.name.toUpperCase().lastIndexOf("IMG") !== -1) {
-              continue;
-            }
-            if (this.loaders[ext]) {
-              const dataUrl = await readFileAsDataURL(entry);
-              await this.loadImages([
-                {
-                  url: dataUrl,
-                  name: `${entry.name}`
-                }
-              ]);
-              continue;
-            }
-            if (MESH_EXTENSIONS.includes(ext)) {
-              ;
-              entry.file((file) => {
-                ;
-                (async () => {
-                  try {
-                    const mesh = await NVMesh3.loadFromFile({
-                      file,
-                      gl: this.gl,
-                      name: file.name
-                    });
-                    this.addMesh(mesh);
-                  } catch (e2) {
-                    console.error("Error loading mesh:", e2);
-                  }
-                })().catch((err2) => console.error(err2));
-              });
-              continue;
-            } else if (ext === "NVD") {
-              ;
-              entry.file((file) => {
-                ;
-                (async () => {
-                  try {
-                    const nvdoc = await NVDocument.loadFromFile(file);
-                    await this.loadDocument(nvdoc);
-                    log.debug("loaded document");
-                  } catch (e2) {
-                    console.error(e2);
-                  }
-                })().catch((err2) => console.error(err2));
-              });
-              break;
-            }
-            ;
-            entry.file((file) => {
-              ;
-              (async () => {
-                try {
-                  if (pairedImageData) {
-                    ;
-                    pairedImageData.file((imgfile) => {
-                      ;
-                      (async () => {
-                        try {
-                          const volume = await NVImage.loadFromFile({
-                            file,
-                            urlImgData: imgfile,
-                            limitFrames4D: this.opts.limitFrames4D
-                          });
-                          this.addVolume(volume);
-                        } catch (e2) {
-                          console.error(e2);
-                        }
-                      })().catch(console.error);
-                    });
-                  } else {
-                    const volume = await NVImage.loadFromFile({
-                      file,
-                      urlImgData: pairedImageData,
-                      limitFrames4D: this.opts.limitFrames4D
-                    });
-                    if (e.altKey) {
-                      log.debug("alt key detected: assuming this is a drawing overlay");
-                      this.drawClearAllUndoBitmaps();
-                      this.loadDrawing(volume);
-                    } else {
-                      this.addVolume(volume);
-                    }
-                  }
-                } catch (e2) {
-                  console.error(e2);
-                }
-              })().catch(console.error);
-            });
-          } else if (entry.isDirectory) {
-            this.traverseFileTree(entry, "", files).then((files2) => {
-              const loader = this.getDicomLoader().loader;
-              if (!loader) {
-                throw new Error("No loader for DICOM files");
-              }
-              loader(files2).then(async (fileArrayBuffers) => {
-                const promises = fileArrayBuffers.map(
-                  (loaderImage) => NVImage.loadFromUrl({
-                    url: loaderImage.data,
-                    name: loaderImage.name,
-                    limitFrames4D: this.opts.limitFrames4D
-                  })
-                );
-                Promise.all(promises).then(async (loadedNvImages) => {
-                  await this.onDicomLoaderFinishedWithImages(loadedNvImages);
-                }).catch((e2) => {
-                  throw e2;
-                });
-              }).catch((error) => {
-                console.error("Error loading DICOM files:", error);
-              });
-            }).catch((e2) => {
-              throw e2;
-            });
-          }
-        }
-      }
+      await this.handleUrlDrop(url);
+    } else if (hasDroppedFiles(dt)) {
+      await this.handleFilesDrop(dt.items, e.shiftKey, e.altKey);
     }
     this.drawScene();
+  }
+  /**
+   * Handle a URL drop by loading the appropriate resource type.
+   * @param url - The dropped URL
+   * @internal
+   */
+  async handleUrlDrop(url) {
+    const ext = this.getFileExt(url);
+    log.debug("dropped ext:", ext);
+    const fileType = categorizeByExtension(ext);
+    switch (fileType) {
+      case "mesh":
+        await this.addMeshFromUrl({ url });
+        break;
+      case "document":
+        await this.loadDocumentFromUrl(url);
+        break;
+      default:
+        await this.addVolumeFromUrl(NVImageFromUrlOptions(url));
+    }
+  }
+  /**
+   * Handle file system file drops.
+   * @param items - The dropped DataTransferItemList
+   * @param shiftKey - Whether shift was held (add to existing)
+   * @param altKey - Whether alt was held (load as drawing overlay)
+   * @internal
+   */
+  async handleFilesDrop(items, shiftKey, altKey) {
+    if (!shiftKey && !altKey) {
+      this.volumes = [];
+      this.overlays = [];
+      this.meshes = [];
+    }
+    this.closeDrawing();
+    this.closePAQD();
+    const fileEntries = processDropItems(items);
+    for (const { entry, pairedEntry } of fileEntries) {
+      await this.handleFileEntry(entry, pairedEntry, altKey);
+    }
+    const directories = extractDirectoryEntries(items);
+    for (const dir of directories) {
+      await this.handleDirectoryDrop(dir);
+    }
+  }
+  /**
+   * Handle a single file entry drop.
+   * @param entry - The file system entry
+   * @param pairedEntry - Optional paired data file (for AFNI/Analyze formats)
+   * @param altKey - Whether alt was held (load as drawing overlay)
+   * @internal
+   */
+  async handleFileEntry(entry, pairedEntry, altKey) {
+    const ext = this.getFileExt(entry.name);
+    if (this.loaders[ext]) {
+      const dataUrl = await readFileAsDataURL(entry);
+      await this.loadImages([{ url: dataUrl, name: entry.name }]);
+      return;
+    }
+    const file = await getFileFromEntry(entry);
+    const fileType = categorizeByExtension(ext);
+    switch (fileType) {
+      case "mesh":
+        await this.handleMeshFileDrop(file);
+        break;
+      case "document":
+        await this.handleDocumentFileDrop(file);
+        break;
+      default:
+        await this.handleVolumeFileDrop(file, pairedEntry, altKey);
+    }
+  }
+  /**
+   * Handle mesh file drop.
+   * @internal
+   */
+  async handleMeshFileDrop(file) {
+    try {
+      const mesh = await NVMesh3.loadFromFile({ file, gl: this.gl, name: file.name });
+      this.addMesh(mesh);
+    } catch (err2) {
+      console.error("Error loading mesh:", err2);
+    }
+  }
+  /**
+   * Handle NVDocument file drop.
+   * @internal
+   */
+  async handleDocumentFileDrop(file) {
+    try {
+      const nvdoc = await NVDocument.loadFromFile(file);
+      await this.loadDocument(nvdoc);
+      log.debug("loaded document");
+    } catch (err2) {
+      console.error("Error loading document:", err2);
+    }
+  }
+  /**
+   * Handle volume file drop with optional paired data.
+   * @internal
+   */
+  async handleVolumeFileDrop(file, pairedEntry, altKey) {
+    try {
+      let pairedFile;
+      if (pairedEntry) {
+        pairedFile = await getFileFromEntry(pairedEntry);
+      }
+      const volume = await NVImage.loadFromFile({
+        file,
+        urlImgData: pairedFile,
+        limitFrames4D: this.opts.limitFrames4D
+      });
+      if (altKey) {
+        log.debug("alt key detected: assuming this is a drawing overlay");
+        this.drawClearAllUndoBitmaps();
+        this.loadDrawing(volume);
+      } else {
+        this.addVolume(volume);
+      }
+    } catch (err2) {
+      console.error("Error loading volume:", err2);
+    }
+  }
+  /**
+   * Handle directory drop (assumed to contain DICOM files).
+   * @internal
+   */
+  async handleDirectoryDrop(entry) {
+    try {
+      const files = await this.traverseFileTree(entry, "", []);
+      const loader = this.getDicomLoader().loader;
+      if (!loader) {
+        throw new Error("No loader for DICOM files");
+      }
+      const fileArrayBuffers = await loader(files);
+      const promises = fileArrayBuffers.map(
+        (loaderImage) => NVImage.loadFromUrl({
+          url: loaderImage.data,
+          name: loaderImage.name,
+          limitFrames4D: this.opts.limitFrames4D
+        })
+      );
+      const loadedNvImages = await Promise.all(promises);
+      await this.onDicomLoaderFinishedWithImages(loadedNvImages);
+    } catch (err2) {
+      console.error("Error loading DICOM files:", err2);
+    }
   }
   /**
    * insert a gap between slices of a mutliplanar view.
@@ -38391,20 +43700,9 @@ var Niivue = class {
    * +----------------+----------------+
    */
   setCustomLayout(layout) {
-    for (let i = 0; i < layout.length; i++) {
-      const [left1, top1, width1, height1] = layout[i].position;
-      const right1 = left1 + width1;
-      const bottom1 = top1 + height1;
-      for (let j = i + 1; j < layout.length; j++) {
-        const [left2, top2, width2, height2] = layout[j].position;
-        const right2 = left2 + width2;
-        const bottom2 = top2 + height2;
-        const horizontallyOverlaps = left1 < right2 && right1 > left2;
-        const verticallyOverlaps = top1 < bottom2 && bottom1 > top2;
-        if (horizontallyOverlaps && verticallyOverlaps) {
-          throw new Error(`Custom layout is invalid. Tile ${i} overlaps with tile ${j}.`);
-        }
-      }
+    const validation = validateCustomLayout({ layout });
+    if (!validation.valid && validation.error) {
+      throw new Error(validation.error);
     }
     this.customLayout = layout;
     this.drawScene();
@@ -38553,9 +43851,9 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/conform.html | live demo usage}
    */
   addVolume(volume) {
-    this.volumes.push(volume);
-    const idx = this.volumes.length === 1 ? 0 : this.volumes.length - 1;
-    this.setVolume(volume, idx);
+    const result = addVolume(this.volumes, volume);
+    this.volumes = result.volumes;
+    this.setVolume(volume, result.index);
     this.onImageLoaded(volume);
     log.debug("loaded volume", volume.name);
     log.debug(volume);
@@ -38569,9 +43867,9 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   addMesh(mesh) {
-    this.meshes.push(mesh);
-    const idx = this.meshes.length === 1 ? 0 : this.meshes.length - 1;
-    this.setMesh(mesh, idx);
+    const result = addMesh(this.meshes, mesh);
+    this.meshes = result.meshes;
+    this.setMesh(mesh, result.index);
     this.onMeshLoaded(mesh);
   }
   /**
@@ -38582,14 +43880,7 @@ var Niivue = class {
    * niivue.getVolumeIndexByID(someVolume.id)
    */
   getVolumeIndexByID(id) {
-    const n = this.volumes.length;
-    for (let i = 0; i < n; i++) {
-      const id_i = this.volumes[i].id;
-      if (id_i === id) {
-        return i;
-      }
-    }
-    return -1;
+    return getVolumeIndexByID(this.volumes, id);
   }
   /**
    * Saves the current drawing state as an RLE-compressed bitmap for undo history.
@@ -38597,38 +43888,28 @@ var Niivue = class {
    * @internal
    */
   drawAddUndoBitmap(drawFillOverwrites = true) {
-    if (!this.drawBitmap || this.drawBitmap.length < 1) {
-      log.debug("drawAddUndoBitmap error: No drawing open");
-      return;
-    }
-    if (!drawFillOverwrites && this.drawUndoBitmaps.length > 0) {
-      const len4 = this.drawBitmap.length;
-      const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], len4);
-      for (let i = 0; i < len4; i++) {
-        if (bmp[i] > 0) {
-          this.drawBitmap[i] = bmp[i];
-        }
-      }
+    const result = addUndoBitmap({
+      drawBitmap: this.drawBitmap,
+      drawUndoBitmaps: this.drawUndoBitmaps,
+      currentDrawUndoBitmap: this.currentDrawUndoBitmap,
+      maxDrawUndoBitmaps: this.opts.maxDrawUndoBitmaps,
+      drawFillOverwrites
+    });
+    this.drawBitmap = result.drawBitmap;
+    this.drawUndoBitmaps = result.drawUndoBitmaps;
+    this.currentDrawUndoBitmap = result.currentDrawUndoBitmap;
+    if (result.needsRefresh) {
       this.refreshDrawing(false);
     }
-    this.currentDrawUndoBitmap++;
-    if (this.currentDrawUndoBitmap >= this.opts.maxDrawUndoBitmaps) {
-      this.currentDrawUndoBitmap = 0;
-    }
-    this.drawUndoBitmaps[this.currentDrawUndoBitmap] = encodeRLE(this.drawBitmap);
   }
   /**
    * Clears all stored drawing undo bitmaps and resets the undo index.
    * @internal
    */
   drawClearAllUndoBitmaps() {
-    this.currentDrawUndoBitmap = this.opts.maxDrawUndoBitmaps;
-    if (!this.drawUndoBitmaps || this.drawUndoBitmaps.length < 1) {
-      return;
-    }
-    for (let i = this.drawUndoBitmaps.length - 1; i >= 0; i--) {
-      this.drawUndoBitmaps[i] = new Uint8Array();
-    }
+    const result = clearAllUndoBitmaps(this.drawUndoBitmaps, this.opts.maxDrawUndoBitmaps);
+    this.drawUndoBitmaps = result.drawUndoBitmaps;
+    this.currentDrawUndoBitmap = result.currentDrawUndoBitmap;
   }
   /**
    * Restore drawing to previous state
@@ -38662,7 +43943,10 @@ var Niivue = class {
     }
     this.drawClearAllUndoBitmaps();
     const dims = drawingBitmap.hdr.dims;
-    if (dims[1] !== this.back.hdr.dims[1] || dims[2] !== this.back.hdr.dims[2] || dims[3] !== this.back.hdr.dims[3]) {
+    if (!validateDrawingDimensions({
+      drawingDims: dims,
+      backgroundDims: this.back.hdr.dims
+    })) {
       log.debug("drawing dimensions do not match background image");
       return false;
     }
@@ -38670,70 +43954,21 @@ var Niivue = class {
       log.debug("Drawings should be UINT8");
     }
     const perm = drawingBitmap.permRAS;
-    const vx = dims[1] * dims[2] * dims[3];
-    this.drawBitmap = new Uint8Array(vx);
+    const vx = calculateVoxelCount(dims);
+    this.drawBitmap = createEmptyBitmap(vx);
     if (this.opts.is2DSliceShader) {
-      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true);
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, this.back.dims, true);
     } else {
-      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true);
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, this.back.dims, true);
     }
-    const layout = [0, 0, 0];
-    for (let i = 0; i < 3; i++) {
-      for (let j2 = 0; j2 < 3; j2++) {
-        if (Math.abs(perm[i]) - 1 !== j2) {
-          continue;
-        }
-        layout[j2] = i * Math.sign(perm[i]);
-      }
-    }
-    let stride = 1;
-    const instride = [1, 1, 1];
-    const inflip = [false, false, false];
-    for (let i = 0; i < layout.length; i++) {
-      for (let j2 = 0; j2 < layout.length; j2++) {
-        const a = Math.abs(layout[j2]);
-        if (a !== i) {
-          continue;
-        }
-        instride[j2] = stride;
-        if (layout[j2] < 0 || Object.is(layout[j2], -0)) {
-          inflip[j2] = true;
-        }
-        stride *= dims[j2 + 1];
-      }
-    }
-    let xlut = NVUtilities.range(0, dims[1] - 1, 1);
-    if (inflip[0]) {
-      xlut = NVUtilities.range(dims[1] - 1, 0, -1);
-    }
-    for (let i = 0; i < dims[1]; i++) {
-      xlut[i] *= instride[0];
-    }
-    let ylut = NVUtilities.range(0, dims[2] - 1, 1);
-    if (inflip[1]) {
-      ylut = NVUtilities.range(dims[2] - 1, 0, -1);
-    }
-    for (let i = 0; i < dims[2]; i++) {
-      ylut[i] *= instride[1];
-    }
-    let zlut = NVUtilities.range(0, dims[3] - 1, 1);
-    if (inflip[2]) {
-      zlut = NVUtilities.range(dims[3] - 1, 0, -1);
-    }
-    for (let i = 0; i < dims[3]; i++) {
-      zlut[i] *= instride[2];
-    }
-    const inVs = drawingBitmap.img;
-    const outVs = this.drawBitmap;
-    let j = 0;
-    for (let z = 0; z < dims[3]; z++) {
-      for (let y = 0; y < dims[2]; y++) {
-        for (let x = 0; x < dims[1]; x++) {
-          outVs[xlut[x] + ylut[y] + zlut[z]] = inVs[j];
-          j++;
-        }
-      }
-    }
+    const transform = calculateLoadDrawingTransform({ permRAS: perm, dims });
+    this.drawBitmap = transformBitmap({
+      inputData: drawingBitmap.img,
+      dims,
+      xlut: transform.xlut,
+      ylut: transform.ylut,
+      zlut: transform.zlut
+    });
     this.drawAddUndoBitmap();
     this.refreshDrawing(false);
     this.drawScene();
@@ -38745,18 +43980,14 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
    */
   binarize(volume) {
-    const dims = volume.hdr.dims;
-    const vx = dims[1] * dims[2] * dims[3];
-    const img = new Uint8Array(vx);
-    for (let i = 0; i < vx; i++) {
-      if (volume.img[i] !== 0) {
-        img[i] = 1;
-      }
-    }
-    volume.img = img;
-    volume.hdr.datatypeCode = 2 /* DT_UINT8 */;
-    volume.hdr.cal_min = 0;
-    volume.hdr.cal_max = 1;
+    const result = binarize({
+      img: volume.img,
+      dims: volume.hdr.dims
+    });
+    volume.img = result.img;
+    volume.hdr.datatypeCode = result.datatypeCode;
+    volume.hdr.cal_min = result.cal_min;
+    volume.hdr.cal_max = result.cal_max;
   }
   /**
    * Open drawing
@@ -38792,92 +44023,14 @@ var Niivue = class {
     if (this.volumes.length < 1) {
       return [];
     }
-    const img = this.volumes[0].img;
-    const nvox = img.length;
-    if (nvox < 1) {
-      return [];
-    }
-    const nBin = 256;
-    const maxBin = nBin - 1;
-    const h = new Array(nBin).fill(0);
-    const mn = this.volumes[0].cal_min;
-    const mx = this.volumes[0].cal_max;
-    if (mx <= mn) {
-      return [];
-    }
-    const scale2raw = (mx - mn) / nBin;
-    function bin2raw(bin) {
-      return bin * scale2raw + mn;
-    }
-    const scale2bin = (nBin - 1) / Math.abs(mx - mn);
-    const inter = this.volumes[0].hdr.scl_inter;
-    const slope = this.volumes[0].hdr.scl_slope;
-    for (let v = 0; v < nvox; v++) {
-      let val = img[v] * slope + inter;
-      val = Math.min(Math.max(val, mn), mx);
-      val = Math.round((val - mn) * scale2bin);
-      h[val]++;
-    }
-    const P = Array(nBin).fill(0).map(() => Array(nBin).fill(0));
-    const S = Array(nBin).fill(0).map(() => Array(nBin).fill(0));
-    for (let i = 1; i < nBin; ++i) {
-      P[i][i] = h[i];
-      S[i][i] = i * h[i];
-    }
-    for (let i = 1; i < nBin - 1; ++i) {
-      P[1][i + 1] = P[1][i] + h[i + 1];
-      S[1][i + 1] = S[1][i] + (i + 1) * h[i + 1];
-    }
-    for (let i = 2; i < nBin; i++) {
-      for (let j = i + 1; j < nBin; j++) {
-        P[i][j] = P[1][j] - P[1][i - 1];
-        S[i][j] = S[1][j] - S[1][i - 1];
-      }
-    }
-    for (let i = 1; i < nBin; ++i) {
-      for (let j = i + 1; j < nBin; j++) {
-        if (P[i][j] !== 0) {
-          P[i][j] = S[i][j] * S[i][j] / P[i][j];
-        }
-      }
-    }
-    let max5 = 0;
-    const t = [Infinity, Infinity, Infinity];
-    if (mlevel > 3) {
-      for (let l = 0; l < nBin - 3; l++) {
-        for (let m = l + 1; m < nBin - 2; m++) {
-          for (let h2 = m + 1; h2 < nBin - 1; h2++) {
-            const v = P[0][l] + P[l + 1][m] + P[m + 1][h2] + P[h2 + 1][maxBin];
-            if (v > max5) {
-              t[0] = l;
-              t[1] = m;
-              t[2] = h2;
-              max5 = v;
-            }
-          }
-        }
-      }
-    } else if (mlevel === 3) {
-      for (let l = 0; l < nBin - 2; l++) {
-        for (let h2 = l + 1; h2 < nBin - 1; h2++) {
-          const v = P[0][l] + P[l + 1][h2] + P[h2 + 1][maxBin];
-          if (v > max5) {
-            t[0] = l;
-            t[1] = h2;
-            max5 = v;
-          }
-        }
-      }
-    } else {
-      for (let i = 0; i < nBin - 1; i++) {
-        const v = P[0][i] + P[i + 1][maxBin];
-        if (v > max5) {
-          t[0] = i;
-          max5 = v;
-        }
-      }
-    }
-    return [bin2raw(t[0]), bin2raw(t[1]), bin2raw(t[2])];
+    return findOtsu({
+      img: this.volumes[0].img,
+      cal_min: this.volumes[0].cal_min,
+      cal_max: this.volumes[0].cal_max,
+      scl_inter: this.volumes[0].hdr.scl_inter,
+      scl_slope: this.volumes[0].hdr.scl_slope,
+      mlevel
+    });
   }
   /**
    * remove dark voxels in air
@@ -38889,7 +44042,6 @@ var Niivue = class {
     if (this.volumes.length === 0) {
       return;
     }
-    const nvox = this.volumes[0].img.length;
     const thresholds = this.findOtsu(levels);
     if (thresholds.length < 3) {
       return;
@@ -38897,23 +44049,12 @@ var Niivue = class {
     if (!this.drawBitmap) {
       this.createEmptyDrawing();
     }
-    const drawImg = this.drawBitmap;
-    const img = this.volumes[0].img;
-    for (let i = 0; i < nvox; i++) {
-      if (drawImg[i] !== 0) {
-        continue;
-      }
-      const v = img[i];
-      if (v > thresholds[0]) {
-        drawImg[i] = 1;
-      }
-      if (v > thresholds[1]) {
-        drawImg[i] = 2;
-      }
-      if (v > thresholds[2]) {
-        drawImg[i] = 3;
-      }
-    }
+    const result = applyOtsuToDrawing({
+      img: this.volumes[0].img,
+      drawBitmap: this.drawBitmap,
+      thresholds
+    });
+    this.drawBitmap.set(result);
     this.drawAddUndoBitmap();
     this.refreshDrawing(true);
   }
@@ -38927,34 +44068,19 @@ var Niivue = class {
   removeHaze(level = 5, volIndex = 0) {
     const img = this.volumes[volIndex].img;
     const hdr = this.volumes[volIndex].hdr;
-    const nvox = img.length;
-    let otsu = 2;
-    if (level === 5 || level === 1) {
-      otsu = 4;
-    }
-    if (level === 4 || level === 2) {
-      otsu = 3;
-    }
+    const otsu = getOtsuLevelForHaze({ level });
     const thresholds = this.findOtsu(otsu);
     if (thresholds.length < 3) {
       return;
     }
-    let threshold = thresholds[0];
-    if (level === 1) {
-      threshold = thresholds[2];
-    }
-    if (level === 2) {
-      threshold = thresholds[1];
-    }
-    const inter = hdr.scl_inter;
-    const slope = hdr.scl_slope;
-    const mn = this.volumes[volIndex].global_min;
-    for (let v = 0; v < nvox; v++) {
-      const val = img[v] * slope + inter;
-      if (val < threshold) {
-        img[v] = mn;
-      }
-    }
+    const threshold = getHazeThreshold({ level, thresholds });
+    applyHazeRemoval({
+      img,
+      scl_inter: hdr.scl_inter,
+      scl_slope: hdr.scl_slope,
+      global_min: this.volumes[volIndex].global_min,
+      threshold
+    });
     this.refreshLayers(this.volumes[volIndex], 0);
     this.drawScene();
   }
@@ -39002,20 +44128,7 @@ var Niivue = class {
    * @returns The mesh index, or -1 if not found or out of range.
    */
   getMeshIndexByID(id) {
-    if (typeof id === "number") {
-      if (id >= this.meshes.length) {
-        return -1;
-      }
-      return id;
-    }
-    const n = this.meshes.length;
-    for (let i = 0; i < n; i++) {
-      const id_i = this.meshes[i].id;
-      if (id_i === id) {
-        return i;
-      }
-    }
-    return -1;
+    return getMeshIndexByID(this.meshes, id);
   }
   /**
    * change property of mesh, tractogram or connectome
@@ -39026,14 +44139,18 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   setMeshProperty(id, key, val) {
-    const idx = this.getMeshIndexByID(id);
-    if (idx < 0) {
-      log.warn("setMeshProperty() id not loaded", id);
+    const idx2 = setMeshProperty({
+      meshes: this.meshes,
+      id,
+      key,
+      val,
+      gl: this.gl
+    });
+    if (idx2 < 0) {
       return;
     }
-    this.meshes[idx].setProperty(key, val, this.gl);
     this.updateGLVolume();
-    this.onMeshPropertyChanged(idx, key, val);
+    this.onMeshPropertyChanged(idx2, key, val);
   }
   /**
    * returns the index of the mesh vertex that is closest to the provided coordinates
@@ -39046,12 +44163,13 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/clipplanes.html | live demo usage}
    */
   indexNearestXYZmm(mesh, Xmm, Ymm, Zmm) {
-    const idx = this.getMeshIndexByID(mesh);
-    if (idx < 0) {
-      log.warn("indexNearestXYZmm() id not loaded", mesh);
-      return [NaN, NaN];
-    }
-    return this.meshes[idx].indexNearestXYZmm(Xmm, Ymm, Zmm);
+    return indexNearestXYZmm({
+      meshes: this.meshes,
+      meshId: mesh,
+      Xmm,
+      Ymm,
+      Zmm
+    });
   }
   /**
    * reduce complexity of FreeSurfer mesh
@@ -39062,13 +44180,15 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   decimateHierarchicalMesh(mesh, order = 3) {
-    const idx = this.getMeshIndexByID(mesh);
-    if (idx < 0) {
-      log.warn("reverseFaces() id not loaded", mesh);
-      return;
+    const ret = decimateHierarchicalMesh({
+      meshes: this.meshes,
+      meshId: mesh,
+      gl: this.gl,
+      order
+    });
+    if (ret) {
+      this.updateGLVolume();
     }
-    const ret = this.meshes[idx].decimateHierarchicalMesh(this.gl, order);
-    this.updateGLVolume();
     return ret;
   }
   /**
@@ -39078,13 +44198,14 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   reverseFaces(mesh) {
-    const idx = this.getMeshIndexByID(mesh);
-    if (idx < 0) {
-      log.warn("reverseFaces() id not loaded", mesh);
-      return;
+    const success = reverseFaces({
+      meshes: this.meshes,
+      meshId: mesh,
+      gl: this.gl
+    });
+    if (success) {
+      this.updateGLVolume();
     }
-    this.meshes[idx].reverseFaces(this.gl);
-    this.updateGLVolume();
   }
   /**
    * reverse triangle winding of mesh (swap front and back faces)
@@ -39096,13 +44217,17 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/mesh.4D.html | live demo usage}
    */
   async setMeshLayerProperty(mesh, layer, key, val) {
-    const idx = this.getMeshIndexByID(mesh);
-    if (idx < 0) {
-      log.warn("setMeshLayerProperty() id not loaded", mesh);
-      return;
+    const success = await setMeshLayerProperty({
+      meshes: this.meshes,
+      meshId: mesh,
+      layer,
+      key,
+      val,
+      gl: this.gl
+    });
+    if (success) {
+      this.updateGLVolume();
     }
-    await this.meshes[idx].setLayerProperty(layer, key, val, this.gl);
-    this.updateGLVolume();
   }
   /**
    * adjust offset position and scale of 2D sliceScale
@@ -39136,14 +44261,7 @@ var Niivue = class {
    * niivue.getOverlayIndexByID(someVolume.id)
    */
   getOverlayIndexByID(id) {
-    const n = this.overlays.length;
-    for (let i = 0; i < n; i++) {
-      const id_i = this.overlays[i].id;
-      if (id_i === id) {
-        return i;
-      }
-    }
-    return -1;
+    return getOverlayIndexByID(this.volumes, id);
   }
   /**
    * set the index of a volume. This will change it's ordering and appearance if there are multiple volumes loaded.
@@ -39154,30 +44272,10 @@ var Niivue = class {
    * niivue.setVolume(someVolume, 1) // move it to the second position in the array of loaded volumes (0 is the first position)
    */
   setVolume(volume, toIndex = 0) {
-    const numberOfLoadedImages = this.volumes.length;
-    if (toIndex > numberOfLoadedImages) {
-      return;
-    }
-    const volIndex = this.getVolumeIndexByID(volume.id);
-    if (toIndex === 0) {
-      this.volumes.splice(volIndex, 1);
-      this.volumes.unshift(volume);
-      this.back = this.volumes[0];
-      this.overlays = this.volumes.slice(1);
-    } else if (toIndex < 0) {
-      this.volumes.splice(this.getVolumeIndexByID(volume.id), 1);
-      this.back = this.volumes[0];
-      if (this.volumes.length > 1) {
-        this.overlays = this.volumes.slice(1);
-      } else {
-        this.overlays = [];
-      }
-    } else {
-      this.volumes.splice(volIndex, 1);
-      this.volumes.splice(toIndex, 0, volume);
-      this.overlays = this.volumes.slice(1);
-      this.back = this.volumes[0];
-    }
+    const result = setVolume(this.volumes, volume, toIndex);
+    this.volumes = result.volumes;
+    this.back = result.back;
+    this.overlays = result.overlays;
     this.updateGLVolume();
   }
   /**
@@ -39193,20 +44291,8 @@ var Niivue = class {
     this.meshes.forEach((m) => {
       log.debug("MESH: ", m.name);
     });
-    const numberOfLoadedMeshes = this.meshes.length;
-    if (toIndex > numberOfLoadedMeshes) {
-      return;
-    }
-    const meshIndex = this.getMeshIndexByID(mesh.id);
-    if (toIndex === 0) {
-      this.meshes.splice(meshIndex, 1);
-      this.meshes.unshift(mesh);
-    } else if (toIndex < 0) {
-      this.meshes.splice(this.getMeshIndexByID(mesh.id), 1);
-    } else {
-      this.meshes.splice(meshIndex, 1);
-      this.meshes.splice(toIndex, 0, mesh);
-    }
+    const result = setMesh(this.meshes, mesh, toIndex);
+    this.meshes = result.meshes;
     this.updateGLVolume();
     this.meshes.forEach((m) => {
       log.debug(m.name);
@@ -39221,12 +44307,16 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   removeVolume(volume) {
-    this.setVolume(volume, -1);
+    const result = removeVolume(this.volumes, volume);
+    this.volumes = result.volumes;
+    this.back = this.volumes.length > 0 ? this.volumes[0] : null;
+    this.overlays = this.volumes.slice(1);
     if (this.mediaUrlMap.has(volume)) {
       const url = this.mediaUrlMap.get(volume);
       this.onVolumeWithUrlRemoved(url);
       this.mediaUrlMap.delete(volume);
     }
+    this.updateGLVolume();
     this.drawScene();
   }
   /**
@@ -39236,10 +44326,10 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
    */
   removeVolumeByIndex(index) {
-    if (index >= this.volumes.length) {
-      throw new Error("Index of volume out of bounds");
+    const result = removeVolumeByIndex(this.volumes, index);
+    if (result.removed) {
+      this.removeVolume(result.removed);
     }
-    this.removeVolume(this.volumes[index]);
   }
   /**
    * Remove a triangulated mesh, connectome or tractogram
@@ -39280,7 +44370,11 @@ var Niivue = class {
    * niivue.moveVolumeToBottom(this.volumes[3]) // move the 4th volume to the 0 position. It will be the new background
    */
   moveVolumeToBottom(volume) {
-    this.setVolume(volume, 0);
+    const result = moveVolumeToBottom(this.volumes, volume);
+    this.volumes = result.volumes;
+    this.back = result.back;
+    this.overlays = result.overlays;
+    this.updateGLVolume();
   }
   /**
    * Move a volume up one index position in the stack of loaded volumes. This moves it up one layer
@@ -39290,8 +44384,11 @@ var Niivue = class {
    * niivue.moveVolumeUp(this.volumes[0]) // move the background image to the second index position (it was 0 index, now will be 1)
    */
   moveVolumeUp(volume) {
-    const volIdx = this.getVolumeIndexByID(volume.id);
-    this.setVolume(volume, volIdx + 1);
+    const result = moveVolumeUp(this.volumes, volume);
+    this.volumes = result.volumes;
+    this.back = result.back;
+    this.overlays = result.overlays;
+    this.updateGLVolume();
   }
   /**
    * Move a volume down one index position in the stack of loaded volumes. This moves it down one layer
@@ -39301,8 +44398,11 @@ var Niivue = class {
    * niivue.moveVolumeDown(this.volumes[1]) // move the second image to the background position (it was 1 index, now will be 0)
    */
   moveVolumeDown(volume) {
-    const volIdx = this.getVolumeIndexByID(volume.id);
-    this.setVolume(volume, volIdx - 1);
+    const result = moveVolumeDown(this.volumes, volume);
+    this.volumes = result.volumes;
+    this.back = result.back;
+    this.overlays = result.overlays;
+    this.updateGLVolume();
   }
   /**
    * Move a volume to the top position in the stack of loaded volumes. This will be the top layer
@@ -39312,26 +44412,36 @@ var Niivue = class {
    * niivue.moveVolumeToTop(this.volumes[0]) // move the background image to the top layer position
    */
   moveVolumeToTop(volume) {
-    this.setVolume(volume, this.volumes.length - 1);
+    const result = moveVolumeToTop(this.volumes, volume);
+    this.volumes = result.volumes;
+    this.back = result.back;
+    this.overlays = result.overlays;
+    this.updateGLVolume();
   }
   /**
    * Records the current mouse position in screen space (adjusted for device pixel ratio).
    * @internal
    */
   mouseDown(x, y) {
-    x *= this.uiData.dpr;
-    y *= this.uiData.dpr;
-    this.mousePos = [x, y];
+    const result = calculateMouseDownPosition({
+      x,
+      y,
+      dpr: this.uiData.dpr
+    });
+    this.mousePos = result.mousePos;
   }
   /**
    * Updates mouse position
    * @internal
    */
   updateMousePos(x, y) {
-    x *= this.uiData.dpr;
-    y *= this.uiData.dpr;
-    this.mousePos = [x, y];
-    return [x, y];
+    const result = calculateMouseDownPosition({
+      x,
+      y,
+      dpr: this.uiData.dpr
+    });
+    this.mousePos = result.mousePos;
+    return result.mousePos;
   }
   /**
    *  and modifies 3D render view if the pointer is in the render tile.
@@ -39339,19 +44449,27 @@ var Niivue = class {
    * @internal
    */
   mouseMove(x, y) {
-    x *= this.uiData.dpr;
-    y *= this.uiData.dpr;
-    const dx = (x - this.mousePos[0]) / this.uiData.dpr;
-    const dy = (y - this.mousePos[1]) / this.uiData.dpr;
-    this.mousePos = [x, y];
-    if (this.inRenderTile(x, y) < 0) {
+    const result = calculateMouseMovePosition({
+      x,
+      y,
+      dpr: this.uiData.dpr,
+      currentMousePos: this.mousePos
+    });
+    this.mousePos = result.mousePos;
+    if (this.inRenderTile(result.scaledX, result.scaledY) < 0) {
       return;
     }
-    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+    if (!shouldUpdateCameraRotation({ dx: result.dx, dy: result.dy })) {
       return;
     }
-    this.scene.renderAzimuth += dx;
-    this.scene.renderElevation += dy;
+    const rotation = calculateDragRotation({
+      currentAzimuth: this.scene.renderAzimuth,
+      currentElevation: this.scene.renderElevation,
+      deltaX: result.dx,
+      deltaY: result.dy
+    });
+    this.scene.renderAzimuth = rotation.azimuth;
+    this.scene.renderElevation = rotation.elevation;
     this.drawScene();
   }
   /**
@@ -39365,17 +44483,7 @@ var Niivue = class {
    * @internal
    */
   sph2cartDeg(azimuth, elevation) {
-    const Phi = -elevation * (Math.PI / 180);
-    const Theta = (azimuth - 90) % 360 * (Math.PI / 180);
-    const ret = [Math.cos(Phi) * Math.cos(Theta), Math.cos(Phi) * Math.sin(Theta), Math.sin(Phi)];
-    const len4 = Math.sqrt(ret[0] * ret[0] + ret[1] * ret[1] + ret[2] * ret[2]);
-    if (len4 <= 0) {
-      return ret;
-    }
-    ret[0] /= len4;
-    ret[1] /= len4;
-    ret[2] /= len4;
-    return ret;
+    return sph2cartDeg(azimuth, elevation);
   }
   /**
    * Set multiple clip planes from their depth/azimuth/elevation definitions.
@@ -39393,16 +44501,9 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/clipplanesmulti.html | live demo usage}
    */
   setClipPlanes(depthAziElevs) {
-    this.scene.clipPlanes = [];
-    this.scene.clipPlaneDepthAziElevs = [];
-    for (let i = 0; i < depthAziElevs.length; i++) {
-      const dae = depthAziElevs[i];
-      const n = this.sph2cartDeg(dae[1], dae[2]);
-      const d = -dae[0];
-      const plane = [n[0], n[1], n[2], d];
-      this.scene.clipPlanes.push(plane);
-      this.scene.clipPlaneDepthAziElevs.push(dae);
-    }
+    const result = convertMultipleClipPlanes({ depthAziElevs });
+    this.scene.clipPlanes = result.clipPlanes;
+    this.scene.clipPlaneDepthAziElevs = result.clipPlaneDepthAziElevs;
     this.drawScene();
   }
   /**
@@ -39417,27 +44518,19 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/mask.html | live demo usage}
    */
   setClipPlane(depthAzimuthElevation) {
-    if (!depthAzimuthElevation || depthAzimuthElevation.length === 0) {
+    if (!isValidDepthAziElev(depthAzimuthElevation)) {
       return;
     }
-    const idx = this.uiData.activeClipPlaneIndex ?? 0;
-    if (!this.scene.clipPlanes) {
-      this.scene.clipPlanes = [];
-    }
-    if (!this.scene.clipPlaneDepthAziElevs) {
-      this.scene.clipPlaneDepthAziElevs = [];
-    }
-    while (this.scene.clipPlanes.length <= idx) {
-      this.scene.clipPlanes.push([0, 0, 0, 2]);
-    }
-    while (this.scene.clipPlaneDepthAziElevs.length <= idx) {
-      this.scene.clipPlaneDepthAziElevs.push([2, 0, 0]);
-    }
-    const v = this.sph2cartDeg(depthAzimuthElevation[1] + 180, depthAzimuthElevation[2]);
-    const plane = [v[0], v[1], v[2], depthAzimuthElevation[0]];
-    this.scene.clipPlanes[idx] = plane;
-    this.scene.clipPlaneDepthAziElevs[idx] = depthAzimuthElevation;
-    this.onClipPlaneChange(plane);
+    const idx2 = this.uiData.activeClipPlaneIndex ?? 0;
+    const result = updateClipPlaneAtIndex({
+      clipPlanes: this.scene.clipPlanes,
+      clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
+      index: idx2,
+      depthAzimuthElevation
+    });
+    this.scene.clipPlanes = result.clipPlanes;
+    this.scene.clipPlaneDepthAziElevs = result.clipPlaneDepthAziElevs;
+    this.onClipPlaneChange(result.clipPlane);
     this.drawScene();
   }
   /**
@@ -39495,17 +44588,24 @@ var Niivue = class {
         this.createEmptyDrawing();
       }
     } else {
-      if (this.clickToSegmentIsGrowing) {
-        this.clickToSegmentIsGrowing = false;
+      const resetState = createDisabledDrawingState({
+        clickToSegmentIsGrowing: this.clickToSegmentIsGrowing,
+        drawPenLocation: this.drawPenLocation,
+        drawPenAxCorSag: this.drawPenAxCorSag,
+        drawPenFillPts: this.drawPenFillPts,
+        drawShapeStartLocation: this.drawShapeStartLocation,
+        drawShapePreviewBitmap: this.drawShapePreviewBitmap,
+        drawBitmap: this.drawBitmap
+      });
+      this.clickToSegmentIsGrowing = resetState.clickToSegmentIsGrowing;
+      this.drawPenLocation = resetState.drawPenLocation;
+      this.drawPenAxCorSag = resetState.drawPenAxCorSag;
+      this.drawPenFillPts = resetState.drawPenFillPts;
+      this.drawShapeStartLocation = resetState.drawShapeStartLocation;
+      this.drawShapePreviewBitmap = resetState.drawShapePreviewBitmap;
+      this.drawBitmap = resetState.drawBitmap;
+      if (resetState.needsRefresh) {
         this.refreshDrawing(true, false);
-      }
-      this.drawPenLocation = [NaN, NaN, NaN];
-      this.drawPenAxCorSag = -1;
-      this.drawPenFillPts = [];
-      this.drawShapeStartLocation = [NaN, NaN, NaN];
-      if (this.drawShapePreviewBitmap) {
-        this.drawBitmap = this.drawShapePreviewBitmap;
-        this.drawShapePreviewBitmap = null;
       }
     }
     this.drawScene();
@@ -39569,7 +44669,10 @@ var Niivue = class {
    * @internal
    */
   sliceScroll2D(posChange, x, y, isDelta = true) {
-    if (this.opts.scrollRequiresFocus && this.canvas !== document.activeElement) {
+    if (!shouldProcessScroll({
+      scrollRequiresFocus: this.opts.scrollRequiresFocus,
+      canvasHasFocus: this.canvas === document.activeElement
+    })) {
       log.warn("Canvas element does not have focus. Scroll events will not be processed.");
       return;
     }
@@ -39584,18 +44687,26 @@ var Niivue = class {
       this.setFrame4D(this.volumes[0].id, vol);
       return;
     }
-    if (posChange !== 0 && this.opts.dragMode === 3 /* pan */ && this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) === -1) {
-      let zoom = this.scene.pan2Dxyzmm[3] * (1 + 10 * posChange);
-      zoom = Math.round(zoom * 10) / 10;
-      const zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
-      if (this.opts.yoke3Dto2DZoom) {
-        this.scene.volScaleMultiplier = zoom;
-      }
-      this.scene.pan2Dxyzmm[3] = zoom;
+    const isInRenderTile = this.inRenderTile(this.uiData.dpr * x, this.uiData.dpr * y) !== -1;
+    if (shouldApplyZoomScroll({
+      posChange,
+      dragMode: this.opts.dragMode,
+      isInRenderTile
+    })) {
       const mm = this.frac2mm(this.scene.crosshairPos);
-      this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
-      this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
-      this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
+      const zoomResult = calculateZoomScroll({
+        posChange,
+        currentZoom: this.scene.pan2Dxyzmm[3],
+        yoke3Dto2DZoom: this.opts.yoke3Dto2DZoom,
+        crosshairMM: mm
+      });
+      if (zoomResult.newVolScaleMultiplier !== void 0) {
+        this.scene.volScaleMultiplier = zoomResult.newVolScaleMultiplier;
+      }
+      this.scene.pan2Dxyzmm[3] = zoomResult.newZoom;
+      this.scene.pan2Dxyzmm[0] += zoomResult.panOffsetX;
+      this.scene.pan2Dxyzmm[1] += zoomResult.panOffsetY;
+      this.scene.pan2Dxyzmm[2] += zoomResult.panOffsetZ;
       this.drawScene();
       this.canvas.focus();
       this.sync();
@@ -39626,7 +44737,7 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/atlas.html | live demo usage}
    */
   setOpacity(volIdx, newOpacity) {
-    this.volumes[volIdx].opacity = newOpacity;
+    setOpacity2(this.volumes, volIdx, newOpacity);
     this.updateGLVolume();
   }
   /**
@@ -39741,40 +44852,14 @@ var Niivue = class {
    * @remarks Marked for future removal — creates a test sphere, not intended for production use.
    */
   overlayRGBA(volume) {
-    const hdr = volume.hdr;
-    const vox = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-    const imgRGBA = new Uint8ClampedArray(vox * 4);
-    const radius = 0.2 * Math.min(Math.min(hdr.dims[1], hdr.dims[2]), hdr.dims[3]);
-    const halfX = 0.5 * hdr.dims[1];
-    const halfY = 0.5 * hdr.dims[2];
-    const halfZ = 0.5 * hdr.dims[3];
-    let j = 0;
-    for (let z = 0; z < hdr.dims[3]; z++) {
-      for (let y = 0; y < hdr.dims[2]; y++) {
-        for (let x = 0; x < hdr.dims[1]; x++) {
-          const dx = Math.abs(x - halfX);
-          const dy = Math.abs(y - halfY);
-          const dz = Math.abs(z - halfZ);
-          const dist4 = Math.sqrt(dx * dx + dy * dy + dz * dz);
-          let v = 0;
-          if (dist4 < radius) {
-            v = 255;
-          }
-          imgRGBA[j++] = 0;
-          imgRGBA[j++] = v;
-          imgRGBA[j++] = 0;
-          imgRGBA[j++] = v * 0.5;
-        }
-      }
-    }
-    return imgRGBA;
+    return overlayRGBA(volume);
   }
   /**
    * Convert voxel coordinates to millimeters using a transformation matrix.
    * @internal
    */
   vox2mm(XYZ, mtx) {
-    return NVUtilities.vox2mm(XYZ, mtx);
+    return vox2mm3(XYZ, mtx);
   }
   /**
    * clone a volume and return a new volume
@@ -39785,7 +44870,7 @@ var Niivue = class {
    * niivue.cloneVolume(0)
    */
   cloneVolume(index) {
-    return this.volumes[index].clone();
+    return cloneVolume(this.volumes, index);
   }
   /**
    * Loads an NVDocument from a URL and integrates it into the scene.
@@ -39890,9 +44975,7 @@ var Niivue = class {
           expectedBytes += 352;
         }
         if (drawingBitmap.length !== expectedBytes) {
-          throw new Error(
-            `drawBitmap size does not match the texture dimensions (${dims[1]}\xD7${dims[2]}\xD7${dims[3]}) ${expectedBytes} != ${dims[1] * dims[2] * dims[3]}.`
-          );
+          throw new Error(`drawBitmap size does not match the texture dimensions (${dims[1]}\xD7${dims[2]}\xD7${dims[3]}) ${expectedBytes} != ${dims[1] * dims[2] * dims[3]}.`);
         }
         this.drawBitmap = drawingBitmap;
         this.refreshDrawing();
@@ -40093,14 +45176,14 @@ var Niivue = class {
         const ext = this.getFileExt(image.name ? image.name : image.url);
         if (this.loaders[ext]) {
           const toExt = this.loaders[ext].toExt.toUpperCase();
-          if (MESH_EXTENSIONS.includes(toExt)) {
+          if (MESH_EXTENSIONS2.includes(toExt)) {
             meshes.push(image);
           } else {
             volumes.push(image);
           }
           continue;
         }
-        if (MESH_EXTENSIONS.includes(ext.toUpperCase())) {
+        if (MESH_EXTENSIONS2.includes(ext.toUpperCase())) {
           meshes.push(image);
         } else {
           volumes.push(image);
@@ -40300,21 +45383,8 @@ var Niivue = class {
    * @internal
    */
   handleNodeAdded(event) {
-    const node = event.detail.node;
-    const rgba = [1, 1, 1, 1];
-    this.addLabel(
-      node.name,
-      {
-        textColor: rgba,
-        bulletScale: 1,
-        bulletColor: rgba,
-        lineWidth: 0,
-        lineColor: rgba,
-        lineTerminator: "none" /* NONE */,
-        textScale: 1
-      },
-      [node.x, node.y, node.z]
-    );
+    const labelData = createNodeAddedLabelData(event.detail.node);
+    this.addLabel(labelData.text, labelData.style, labelData.position);
     this.drawScene();
   }
   /**
@@ -40325,19 +45395,7 @@ var Niivue = class {
    * @internal
    */
   loadConnectomeAsMesh(json) {
-    let connectome = json;
-    if ("data_type" in json && json.data_type === "fs_pointset") {
-      connectome = NVConnectome.convertFreeSurferConnectome(json);
-      log.warn("converted FreeSurfer connectome", connectome);
-    } else if ("nodes" in json) {
-      const nodes = json.nodes;
-      if ("names" in nodes && "X" in nodes && "Y" in nodes && "Z" in nodes && "Color" in nodes && "Size" in nodes) {
-        connectome = NVConnectome.convertLegacyConnectome(json);
-      }
-    } else {
-      throw new Error("not a known connectome format");
-    }
-    return new NVConnectome(this.gl, connectome);
+    return loadConnectomeAsMesh({ gl: this.gl, json });
   }
   /**
    * load a connectome specified by json
@@ -40366,54 +45424,17 @@ var Niivue = class {
     if (mn < 1) {
       return;
     }
-    const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
-    this.drawBitmap = new Uint8Array(vx);
-    this.clickToSegmentGrowingBitmap = new Uint8Array(vx);
+    const vx = calculateVoxelCount(this.back.dims);
+    this.drawBitmap = createEmptyBitmap(vx);
+    this.clickToSegmentGrowingBitmap = createEmptyBitmap(vx);
     this.drawClearAllUndoBitmaps();
     this.drawAddUndoBitmap();
     if (this.opts.is2DSliceShader) {
-      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE7_DRAW, this.back.dims);
+      this.drawTexture = this.r8Tex2D(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, this.back.dims);
     } else {
-      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, this.back.dims, true);
+      this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, this.back.dims, true);
     }
     this.refreshDrawing(false);
-  }
-  /**
-   * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
-   * @internal
-   */
-  r16Tex(texID, activeID, dims, img16) {
-    if (texID) {
-      this.gl.deleteTexture(texID);
-    }
-    texID = this.gl.createTexture();
-    this.gl.activeTexture(activeID);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, dims[1], dims[2], dims[3]);
-    const nv = dims[1] * dims[2] * dims[3];
-    if (img16.length !== nv) {
-      img16 = new Int16Array(nv);
-    }
-    this.gl.texSubImage3D(
-      this.gl.TEXTURE_3D,
-      0,
-      0,
-      0,
-      0,
-      dims[1],
-      dims[2],
-      dims[3],
-      this.gl.RED_INTEGER,
-      this.gl.SHORT,
-      img16
-    );
-    return texID;
   }
   /**
    * dilate drawing so all voxels are colored.
@@ -40438,20 +45459,20 @@ var Niivue = class {
     gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]);
     gl.disable(gl.BLEND);
     let img16 = img2ras16(this.back);
-    const background = this.r16Tex(null, TEXTURE11_GC_BACK, this.back.dims, img16);
+    const background = this.r16Tex(null, TEXTURE_CONSTANTS.TEXTURE11_GC_BACK, this.back.dims, img16);
     for (let i = 1; i < nv; i++) {
       img16[i] = this.drawBitmap[i];
     }
-    const label0 = this.r16Tex(null, TEXTURE14_GC_LABEL0, this.back.dims, img16);
-    const label1 = this.r16Tex(null, TEXTURE15_GC_LABEL1, this.back.dims, img16);
+    const label0 = this.r16Tex(null, TEXTURE_CONSTANTS.TEXTURE14_GC_LABEL0, this.back.dims, img16);
+    const label1 = this.r16Tex(null, TEXTURE_CONSTANTS.TEXTURE15_GC_LABEL1, this.back.dims, img16);
     const kMAX_STRENGTH = 1e4;
     for (let i = 1; i < nv; i++) {
       if (img16[i] > 0) {
         img16[i] = kMAX_STRENGTH;
       }
     }
-    const strength0 = this.r16Tex(null, TEXTURE12_GC_STRENGTH0, this.back.dims, img16);
-    const strength1 = this.r16Tex(null, TEXTURE13_GC_STRENGTH1, this.back.dims, img16);
+    const strength0 = this.r16Tex(null, TEXTURE_CONSTANTS.TEXTURE12_GC_STRENGTH0, this.back.dims, img16);
+    const strength1 = this.r16Tex(null, TEXTURE_CONSTANTS.TEXTURE13_GC_STRENGTH1, this.back.dims, img16);
     gl.bindVertexArray(this.genericVAO);
     const shader = this.growCutShader;
     shader.use(gl);
@@ -40540,176 +45561,86 @@ var Niivue = class {
    * @internal
    */
   drawPt(x, y, z, penValue, drawBitmap = null) {
-    if (drawBitmap === null) {
-      drawBitmap = this.drawBitmap;
+    const targetBitmap = drawBitmap ?? this.drawBitmap;
+    if (!targetBitmap) {
+      throw new Error("drawBitmap not set");
     }
     if (!this.back?.dims) {
       throw new Error("back.dims not set");
     }
-    const dx = this.back.dims[1];
-    const dy = this.back.dims[2];
-    const dz = this.back.dims[3];
-    x = Math.min(Math.max(x, 0), dx - 1);
-    y = Math.min(Math.max(y, 0), dy - 1);
-    z = Math.min(Math.max(z, 0), dz - 1);
-    drawBitmap[x + y * dx + z * dx * dy] = penValue;
-    const isAx = this.drawPenAxCorSag === 0;
-    const isCor = this.drawPenAxCorSag === 1;
-    const isSag = this.drawPenAxCorSag === 2;
-    if (this.opts.penSize > 1) {
-      const halfPenSize = Math.floor(this.opts.penSize / 2);
-      for (let i = -halfPenSize; i <= halfPenSize; i++) {
-        for (let j = -halfPenSize; j <= halfPenSize; j++) {
-          if (isAx) {
-            drawBitmap[x + i + (y + j) * dx + z * dx * dy] = penValue;
-          } else if (isCor) {
-            drawBitmap[x + i + y * dx + (z + j) * dx * dy] = penValue;
-          } else if (isSag) {
-            drawBitmap[x + (y + j) * dx + (z + i) * dx * dy] = penValue;
-          }
-        }
-      }
-    }
+    drawPoint({
+      x,
+      y,
+      z,
+      penValue,
+      drawBitmap: targetBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    });
   }
   /**
    * Draws a 3D line between two voxels in the drawing bitmap using Bresenham's algorithm.
    * @internal
    */
   drawPenLine(ptA, ptB, penValue) {
-    const dx = Math.abs(ptA[0] - ptB[0]);
-    const dy = Math.abs(ptA[1] - ptB[1]);
-    const dz = Math.abs(ptA[2] - ptB[2]);
-    let xs = -1;
-    let ys = -1;
-    let zs = -1;
-    if (ptB[0] > ptA[0]) {
-      xs = 1;
+    if (!this.drawBitmap) {
+      throw new Error("drawBitmap not set");
     }
-    if (ptB[1] > ptA[1]) {
-      ys = 1;
+    if (!this.back?.dims) {
+      throw new Error("back.dims not set");
     }
-    if (ptB[2] > ptA[2]) {
-      zs = 1;
-    }
-    let x1 = ptA[0];
-    let y1 = ptA[1];
-    let z1 = ptA[2];
-    const x2 = ptB[0];
-    const y2 = ptB[1];
-    const z2 = ptB[2];
-    if (dx >= dy && dx >= dz) {
-      let p1 = 2 * dy - dx;
-      let p2 = 2 * dz - dx;
-      while (x1 !== x2) {
-        x1 += xs;
-        if (p1 >= 0) {
-          y1 += ys;
-          p1 -= 2 * dx;
-        }
-        if (p2 >= 0) {
-          z1 += zs;
-          p2 -= 2 * dx;
-        }
-        p1 += 2 * dy;
-        p2 += 2 * dz;
-        this.drawPt(x1, y1, z1, penValue);
-      }
-    } else if (dy >= dx && dy >= dz) {
-      let p1 = 2 * dx - dy;
-      let p2 = 2 * dz - dy;
-      while (y1 !== y2) {
-        y1 += ys;
-        if (p1 >= 0) {
-          x1 += xs;
-          p1 -= 2 * dy;
-        }
-        if (p2 >= 0) {
-          z1 += zs;
-          p2 -= 2 * dy;
-        }
-        p1 += 2 * dx;
-        p2 += 2 * dz;
-        this.drawPt(x1, y1, z1, penValue);
-      }
-    } else {
-      let p1 = 2 * dy - dz;
-      let p2 = 2 * dx - dz;
-      while (z1 !== z2) {
-        z1 += zs;
-        if (p1 >= 0) {
-          y1 += ys;
-          p1 -= 2 * dz;
-        }
-        if (p2 >= 0) {
-          x1 += xs;
-          p2 -= 2 * dz;
-        }
-        p1 += 2 * dy;
-        p2 += 2 * dx;
-        this.drawPt(x1, y1, z1, penValue);
-      }
-    }
+    drawLine({
+      ptA,
+      ptB,
+      penValue,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    });
   }
   /**
    * Draw a rectangle from point A to point B
    * @internal
    */
   drawRectangleMask(ptA, ptB, penValue) {
+    if (!this.drawBitmap) {
+      throw new Error("drawBitmap not set");
+    }
     if (!this.back?.dims) {
       throw new Error("back.dims not set");
     }
-    const dx = this.back.dims[1];
-    const dy = this.back.dims[2];
-    const dz = this.back.dims[3];
-    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1);
-    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1);
-    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1);
-    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1);
-    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1);
-    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1);
-    for (let z = z1; z <= z2; z++) {
-      for (let y = y1; y <= y2; y++) {
-        for (let x = x1; x <= x2; x++) {
-          this.drawPt(x, y, z, penValue);
-        }
-      }
-    }
+    drawRectangle({
+      ptA,
+      ptB,
+      penValue,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    });
   }
   /**
    * Draw an ellipse from point A to point B (treating them as opposite corners of bounding box)
    * @internal
    */
   drawEllipseMask(ptA, ptB, penValue) {
+    if (!this.drawBitmap) {
+      throw new Error("drawBitmap not set");
+    }
     if (!this.back?.dims) {
       throw new Error("back.dims not set");
     }
-    const dx = this.back.dims[1];
-    const dy = this.back.dims[2];
-    const dz = this.back.dims[3];
-    const x1 = Math.min(Math.max(Math.min(ptA[0], ptB[0]), 0), dx - 1);
-    const y1 = Math.min(Math.max(Math.min(ptA[1], ptB[1]), 0), dy - 1);
-    const z1 = Math.min(Math.max(Math.min(ptA[2], ptB[2]), 0), dz - 1);
-    const x2 = Math.min(Math.max(Math.max(ptA[0], ptB[0]), 0), dx - 1);
-    const y2 = Math.min(Math.max(Math.max(ptA[1], ptB[1]), 0), dy - 1);
-    const z2 = Math.min(Math.max(Math.max(ptA[2], ptB[2]), 0), dz - 1);
-    const centerX = (x1 + x2) / 2;
-    const centerY = (y1 + y2) / 2;
-    const centerZ = (z1 + z2) / 2;
-    const radiusX = Math.abs(x2 - x1) / 2;
-    const radiusY = Math.abs(y2 - y1) / 2;
-    const radiusZ = Math.abs(z2 - z1) / 2;
-    for (let z = z1; z <= z2; z++) {
-      for (let y = y1; y <= y2; y++) {
-        for (let x = x1; x <= x2; x++) {
-          const distX = (x - centerX) / (radiusX + 0.5);
-          const distY = (y - centerY) / (radiusY + 0.5);
-          const distZ = (z - centerZ) / (radiusZ + 0.5);
-          if (distX * distX + distY * distY + distZ * distZ <= 1) {
-            this.drawPt(x, y, z, penValue);
-          }
-        }
-      }
-    }
+    drawEllipse({
+      ptA,
+      ptB,
+      penValue,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penSize: this.opts.penSize,
+      penAxCorSag: this.drawPenAxCorSag
+    });
   }
   /**
    * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
@@ -40719,7 +45650,7 @@ var Niivue = class {
    */
   drawingBinaryDilationWithSeed(seedXYZ, neighbors = 6) {
     try {
-      let xyz2vx = function(pt) {
+      let xyz2vx2 = function(pt) {
         return pt[0] + pt[1] * nx + pt[2] * nxy;
       };
       const mask = this.drawBitmap;
@@ -40729,7 +45660,7 @@ var Niivue = class {
       const nx = xDim;
       const nxy = xDim * yDim;
       const totalVoxels = nxy * zDim;
-      const seedIndex = xyz2vx(seedXYZ);
+      const seedIndex = xyz2vx2(seedXYZ);
       if (seedIndex < 0 || seedIndex >= totalVoxels) {
         throw new Error("Seed index is out of bounds.");
       }
@@ -40747,40 +45678,18 @@ var Niivue = class {
       const offsets6 = [-nxy, nxy, -xDim, xDim, -1, 1];
       neighborOffsets.push(...offsets6);
       if (neighbors > 6) {
-        neighborOffsets.push(
-          -xDim - 1,
-          -xDim + 1,
-          xDim - 1,
-          xDim + 1,
-          -nxy - xDim,
-          -nxy + xDim,
-          -nxy - 1,
-          -nxy + 1,
-          nxy - xDim,
-          nxy + xDim,
-          nxy - 1,
-          nxy + 1
-        );
+        neighborOffsets.push(-xDim - 1, -xDim + 1, xDim - 1, xDim + 1, -nxy - xDim, -nxy + xDim, -nxy - 1, -nxy + 1, nxy - xDim, nxy + xDim, nxy - 1, nxy + 1);
       }
       if (neighbors > 18) {
-        neighborOffsets.push(
-          -nxy - xDim - 1,
-          -nxy - xDim + 1,
-          -nxy + xDim - 1,
-          -nxy + xDim + 1,
-          nxy - xDim - 1,
-          nxy - xDim + 1,
-          nxy + xDim - 1,
-          nxy + xDim + 1
-        );
+        neighborOffsets.push(-nxy - xDim - 1, -nxy - xDim + 1, -nxy + xDim - 1, -nxy + xDim + 1, nxy - xDim - 1, nxy - xDim + 1, nxy + xDim - 1, nxy + xDim + 1);
       }
-      for (let idx = 0; idx < totalVoxels; idx++) {
-        if (img[idx] === 2) {
-          const x = idx % xDim;
-          const y = Math.floor(idx % nxy / xDim);
-          const z = Math.floor(idx / nxy);
+      for (let idx2 = 0; idx2 < totalVoxels; idx2++) {
+        if (img[idx2] === 2) {
+          const x = idx2 % xDim;
+          const y = Math.floor(idx2 % nxy / xDim);
+          const z = Math.floor(idx2 / nxy);
           for (const offset of neighborOffsets) {
-            const neighborIdx = idx + offset;
+            const neighborIdx = idx2 + offset;
             if (neighborIdx < 0 || neighborIdx >= totalVoxels) {
               continue;
             }
@@ -40815,75 +45724,12 @@ var Niivue = class {
       throw new Error("back.dims undefined");
     }
     const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
-    const nx = dims[0];
-    const nxy = nx * dims[1];
-    function xyz2vx(pt) {
-      return pt[0] + pt[1] * nx + pt[2] * nxy;
-    }
-    function vx2xyz(vx) {
-      const Z = Math.floor(vx / nxy);
-      const Y = Math.floor((vx - Z * nxy) / nx);
-      const X = Math.floor(vx % nx);
-      return [X, Y, Z];
-    }
-    const Q = [];
-    Q.push(seedVx);
-    img[seedVx] = 2;
-    while (Q.length > 0) {
-      let testNeighbor = function(offset) {
-        const xyzN = xyz.slice();
-        xyzN[0] += offset[0];
-        xyzN[1] += offset[1];
-        xyzN[2] += offset[2];
-        if (xyzN[0] < 0 || xyzN[1] < 0 || xyzN[2] < 0) {
-          return;
-        }
-        if (xyzN[0] >= dims[0] || xyzN[1] >= dims[1] || xyzN[2] >= dims[2]) {
-          return;
-        }
-        const vxT = xyz2vx(xyzN);
-        if (img[vxT] !== 1) {
-          return;
-        }
-        img[vxT] = 2;
-        Q.push(vxT);
-      };
-      const vx = Q[0];
-      Q.shift();
-      const xyz = vx2xyz(vx);
-      testNeighbor([0, 0, -1]);
-      testNeighbor([0, 0, 1]);
-      testNeighbor([0, -1, 0]);
-      testNeighbor([0, 1, 0]);
-      testNeighbor([-1, 0, 0]);
-      testNeighbor([1, 0, 0]);
-      if (neighbors <= 6) {
-        continue;
-      }
-      testNeighbor([-1, -1, 0]);
-      testNeighbor([1, 1, 0]);
-      testNeighbor([-1, 1, 0]);
-      testNeighbor([1, 1, 0]);
-      testNeighbor([0, -1, -1]);
-      testNeighbor([0, 1, -1]);
-      testNeighbor([-1, 0, -1]);
-      testNeighbor([1, 0, -1]);
-      testNeighbor([0, -1, 1]);
-      testNeighbor([0, 1, 1]);
-      testNeighbor([-1, 0, 1]);
-      testNeighbor([1, 0, 1]);
-      if (neighbors <= 18) {
-        continue;
-      }
-      testNeighbor([-1, -1, -1]);
-      testNeighbor([1, -1, -1]);
-      testNeighbor([-1, 1, -1]);
-      testNeighbor([1, 1, -1]);
-      testNeighbor([-1, -1, 1]);
-      testNeighbor([1, -1, 1]);
-      testNeighbor([-1, 1, 1]);
-      testNeighbor([1, 1, 1]);
-    }
+    floodFillCore({
+      img,
+      seedVx,
+      dims,
+      neighbors
+    });
   }
   /**
    * Performs a flood fill on the drawing bitmap starting from a seed voxel, recoloring all connected voxels
@@ -40926,45 +45772,27 @@ var Niivue = class {
     }
     newColor = Math.abs(newColor);
     const dims = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
-    if (seedXYZ[0] < 0 || seedXYZ[1] < 0 || seedXYZ[2] < 0) {
+    if (!isValidSeedCoordinate(seedXYZ, dims)) {
       return;
     }
-    if (seedXYZ[0] >= dims[0] || seedXYZ[1] >= dims[1] || seedXYZ[2] >= dims[2]) {
-      return;
-    }
-    const nx = dims[0];
-    const nxy = nx * dims[1];
-    const nxyz = nxy * dims[2];
+    const converters = createCoordinateConverters(dims);
+    const { nxyz } = converters;
     const originalBitmap = this.clickToSegmentIsGrowing ? this.drawBitmap : targetBitmap;
     if (!originalBitmap) {
       log.error("Could not determine original bitmap state.");
       return;
     }
     const img = new Uint8Array(nxyz).fill(0);
-    let constrainXYZ = -1;
-    if (is2D && this.drawPenAxCorSag === 0 /* AXIAL */) {
-      constrainXYZ = 2;
-    } else if (is2D && this.drawPenAxCorSag === 1 /* CORONAL */) {
-      constrainXYZ = 1;
-    } else if (is2D && this.drawPenAxCorSag === 2 /* SAGITTAL */) {
-      constrainXYZ = 0;
-    }
-    function vx2xyz(vx) {
-      const Z = Math.floor(vx / nxy);
-      const Y = Math.floor((vx - Z * nxy) / nx);
-      const X = Math.floor(vx % nx);
-      return [X, Y, Z];
-    }
-    function xyz2vx(pt) {
-      return pt[0] + pt[1] * nx + pt[2] * nxy;
-    }
+    const constrainXYZ = getConstrainedAxisIndex(is2D, this.drawPenAxCorSag);
+    const vx2xyz2 = converters.vx2xyz;
+    const xyz2vx2 = converters.xyz2vx;
     const vx2mm = (xyz) => {
       return this.vox2mm(xyz, this.back.matRAS);
     };
     const seedMM = vx2mm(seedXYZ);
     const maxDistanceMM2 = maxDistanceMM ** 2;
     function isWithinDistance(vx) {
-      const xzyVox = vx2xyz(vx);
+      const xzyVox = vx2xyz2(vx);
       if (constrainXYZ >= 0 && xzyVox[constrainXYZ] !== seedXYZ[constrainXYZ]) {
         return false;
       }
@@ -40972,9 +45800,9 @@ var Niivue = class {
       const dist22 = (xyzMM[0] - seedMM[0]) ** 2 + (xyzMM[1] - seedMM[1]) ** 2 + (xyzMM[2] - seedMM[2]) ** 2;
       return dist22 <= maxDistanceMM2;
     }
-    const seedVx = xyz2vx(seedXYZ);
+    const seedVx = xyz2vx2(seedXYZ);
     const originalSeedColor = originalBitmap[seedVx];
-    if (isGrowClusterTool && originalSeedColor === 0) {
+    if (isGrowClusterTool && !isValidGrowClusterSeed(originalSeedColor)) {
       log.debug("Grow/Erase Cluster tool requires starting on a masked voxel.");
       if (this.clickToSegmentIsGrowing && this.clickToSegmentGrowingBitmap && this.drawBitmap) {
         this.clickToSegmentGrowingBitmap.set(this.drawBitmap);
@@ -41000,24 +45828,14 @@ var Niivue = class {
       }
       this.drawFloodFillCore(tempImgForIdentification, seedVx, neighbors);
       const backImg = this.volumes[0].img2RAS();
-      let clusterSum = 0;
-      let clusterCount = 0;
-      for (let i = 0; i < nxyz; i++) {
-        if (tempImgForIdentification[i] === 2) {
-          clusterSum += backImg[i];
-          clusterCount++;
-        }
-      }
-      baseIntensity = clusterCount > 0 ? clusterSum / clusterCount : backImg[seedVx];
-      log.debug(`Grow Cluster using mean intensity: ${baseIntensity.toFixed(2)} from ${clusterCount} voxels.`);
-      let fillMin = -Infinity;
-      let fillMax = Infinity;
-      if (growSelectedCluster === Number.POSITIVE_INFINITY) {
-        fillMin = baseIntensity;
-      }
-      if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
-        fillMax = baseIntensity;
-      }
+      baseIntensity = calculateClusterMeanIntensity({
+        clusterImg: tempImgForIdentification,
+        backImg,
+        nxyz,
+        fallbackIntensity: backImg[seedVx]
+      });
+      log.debug(`Grow Cluster using mean intensity: ${baseIntensity.toFixed(2)} voxels.`);
+      const [fillMin, fillMax] = getIntensityBounds(growSelectedCluster, baseIntensity, NaN, NaN);
       for (let i = 0; i < nxyz; i++) {
         if (tempImgForIdentification[i] === 2) {
           img[i] = 1;
@@ -41048,16 +45866,7 @@ var Niivue = class {
       } else {
         const backImg = this.volumes[0].img2RAS();
         baseIntensity = backImg[seedVx];
-        let fillMin = -Infinity;
-        let fillMax = Infinity;
-        if (isFinite(forceMin) && isFinite(forceMax)) {
-          fillMin = forceMin;
-          fillMax = forceMax;
-        } else if (growSelectedCluster === Number.POSITIVE_INFINITY) {
-          fillMin = baseIntensity;
-        } else if (growSelectedCluster === Number.NEGATIVE_INFINITY) {
-          fillMax = baseIntensity;
-        }
+        const [fillMin, fillMax] = getIntensityBounds(growSelectedCluster, baseIntensity, forceMin, forceMax);
         for (let i = 0; i < nxyz; i++) {
           const intensity = backImg[i];
           if (intensity >= fillMin && intensity <= fillMax && isWithinDistance(i)) {
@@ -41074,16 +45883,7 @@ var Niivue = class {
       }
     }
     if (img[seedVx] !== 1) {
-      let isSeedValidOriginal = false;
-      if (isGrowClusterTool && growSelectedCluster !== 0) {
-        if (originalSeedColor !== 0) {
-          isSeedValidOriginal = true;
-        }
-      } else {
-        if (originalSeedColor !== 0 || newColor === 0) {
-          isSeedValidOriginal = true;
-        }
-      }
+      const isSeedValidOriginal = shouldForceSeedToCandidate(originalSeedColor, newColor, isGrowClusterTool, growSelectedCluster);
       if (isSeedValidOriginal && isWithinDistance(seedVx)) {
         img[seedVx] = 1;
         log.debug("Forcing seed voxel to 1 in working buffer.");
@@ -41096,13 +45896,14 @@ var Niivue = class {
       }
     }
     this.drawFloodFillCore(img, seedVx, neighbors);
-    for (let i = 0; i < nxyz; i++) {
-      if (img[i] === 2) {
-        targetBitmap[i] = newColor;
-      } else if (this.clickToSegmentIsGrowing && targetBitmap === this.clickToSegmentGrowingBitmap) {
-        targetBitmap[i] = originalBitmap[i];
-      }
-    }
+    applyFillResult({
+      img,
+      targetBitmap,
+      originalBitmap,
+      newColor,
+      nxyz,
+      isPreviewMode: this.clickToSegmentIsGrowing && targetBitmap === this.clickToSegmentGrowingBitmap
+    });
     if (!this.clickToSegmentIsGrowing) {
       this.drawAddUndoBitmap();
       this.refreshDrawing(true, false);
@@ -41113,200 +45914,39 @@ var Niivue = class {
   /**
    * Fills exterior regions of a 2D bitmap, marking outside voxels with 2
    * while leaving interior voxels at 0 and borders at 1. Operates within specified bounds.
-   * uses first-in, first out queue for storage
+   * Uses first-in, first-out queue for storage.
    * @internal
    */
   floodFillSectionFIFO(img2D, dims2D, minPt, maxPt) {
-    const w = dims2D[0];
-    const [minX, minY] = minPt;
-    const [maxX, maxY] = maxPt;
-    const capacity = 4 * (maxX - minX + maxY - minY + 2);
-    const queue = new Int32Array(capacity * 2);
-    let head = 0;
-    let tail = 0;
-    function enqueue(x, y) {
-      if (x < minX || x > maxX || y < minY || y > maxY) {
-        return;
-      }
-      const idx = x + y * w;
-      if (img2D[idx] !== 0) {
-        return;
-      }
-      img2D[idx] = 2;
-      queue[tail] = x;
-      queue[tail + 1] = y;
-      tail = (tail + 2) % queue.length;
-    }
-    function dequeue() {
-      if (head === tail) {
-        return null;
-      }
-      const x = queue[head];
-      const y = queue[head + 1];
-      head = (head + 2) % queue.length;
-      return [x, y];
-    }
-    for (let x = minX; x <= maxX; x++) {
-      enqueue(x, minY);
-      enqueue(x, maxY);
-    }
-    for (let y = minY + 1; y <= maxY - 1; y++) {
-      enqueue(minX, y);
-      enqueue(maxX, y);
-    }
-    let pt;
-    while ((pt = dequeue()) !== null) {
-      const [x, y] = pt;
-      enqueue(x - 1, y);
-      enqueue(x + 1, y);
-      enqueue(x, y - 1);
-      enqueue(x, y + 1);
-    }
+    floodFillSection({ img2D, dims2D, minPt, maxPt });
   }
   /**
    * Connects and fills the interior of drawn line segments in 2D slice space.
    * @internal
    */
   drawPenFilled() {
-    const nPts = this.drawPenFillPts.length;
-    if (nPts < 2) {
+    if (this.drawPenFillPts.length < 2) {
       this.drawPenFillPts = [];
       return;
     }
-    const axCorSag = this.drawPenAxCorSag;
-    let h = 0;
-    let v = 1;
-    if (axCorSag === 1) {
-      v = 2;
-    }
-    if (axCorSag === 2) {
-      h = 1;
-      v = 2;
+    if (!this.drawBitmap) {
+      throw new Error("drawBitmap undefined");
     }
     if (!this.back?.dims) {
       throw new Error("back.dims undefined");
     }
-    const dims2D = [this.back.dims[h + 1], this.back.dims[v + 1]];
-    const img2D = new Uint8Array(dims2D[0] * dims2D[1]);
-    let pen = 1;
-    function drawLine2D(ptA, ptB) {
-      const dx = Math.abs(ptA[0] - ptB[0]);
-      const dy = Math.abs(ptA[1] - ptB[1]);
-      img2D[ptA[0] + ptA[1] * dims2D[0]] = pen;
-      img2D[ptB[0] + ptB[1] * dims2D[0]] = pen;
-      let xs = -1;
-      let ys = -1;
-      if (ptB[0] > ptA[0]) {
-        xs = 1;
-      }
-      if (ptB[1] > ptA[1]) {
-        ys = 1;
-      }
-      let x1 = ptA[0];
-      let y1 = ptA[1];
-      const x2 = ptB[0];
-      const y2 = ptB[1];
-      if (dx >= dy) {
-        let p1 = 2 * dy - dx;
-        while (x1 !== x2) {
-          x1 += xs;
-          if (p1 >= 0) {
-            y1 += ys;
-            p1 -= 2 * dx;
-          }
-          p1 += 2 * dy;
-          img2D[x1 + y1 * dims2D[0]] = pen;
-        }
-      } else {
-        let p1 = 2 * dx - dy;
-        while (y1 !== y2) {
-          y1 += ys;
-          if (p1 >= 0) {
-            x1 += xs;
-            p1 -= 2 * dy;
-          }
-          p1 += 2 * dx;
-          img2D[x1 + y1 * dims2D[0]] = pen;
-        }
-      }
-    }
-    function constrainXY(xy) {
-      const x = Math.min(Math.max(xy[0], 0), dims2D[0] - 1);
-      const y = Math.min(Math.max(xy[1], 0), dims2D[1] - 1);
-      return [x, y];
-    }
-    const startPt = constrainXY([this.drawPenFillPts[0][h], this.drawPenFillPts[0][v]]);
-    let minPt = [...startPt];
-    let maxPt = [...startPt];
-    let prevPt = startPt;
-    for (let i = 1; i < nPts; i++) {
-      let pt = [this.drawPenFillPts[i][h], this.drawPenFillPts[i][v]];
-      pt = constrainXY(pt);
-      minPt = [Math.min(pt[0], minPt[0]), Math.min(pt[1], minPt[1])];
-      maxPt = [Math.max(pt[0], maxPt[0]), Math.max(pt[1], maxPt[1])];
-      drawLine2D(prevPt, pt);
-      prevPt = pt;
-    }
-    drawLine2D(startPt, prevPt);
-    const pad = 1;
-    minPt[0] = Math.max(0, minPt[0] - pad);
-    minPt[1] = Math.max(0, minPt[1] - pad);
-    maxPt[0] = Math.min(dims2D[0] - 1, maxPt[0] + pad);
-    maxPt[1] = Math.min(dims2D[1] - 1, maxPt[1] + pad);
-    for (let y = 0; y < dims2D[1]; y++) {
-      for (let x = 0; x < dims2D[0]; x++) {
-        if (x >= minPt[0] && x < maxPt[0] && y >= minPt[1] && y <= maxPt[1]) {
-          continue;
-        }
-        const pxl = x + y * dims2D[0];
-        if (img2D[pxl] !== 0) {
-          continue;
-        }
-        img2D[pxl] = 2;
-      }
-    }
-    const startTime = Date.now();
-    this.floodFillSectionFIFO(img2D, dims2D, minPt, maxPt);
-    log.debug(`FloodFill ${Date.now() - startTime}`);
-    pen = this.opts.penValue;
-    const slice2 = this.drawPenFillPts[0][3 - (h + v)];
-    if (!this.drawBitmap) {
-      throw new Error("drawBitmap undefined");
-    }
-    if (axCorSag === 0) {
-      const offset = slice2 * dims2D[0] * dims2D[1];
-      for (let i = 0; i < dims2D[0] * dims2D[1]; i++) {
-        if (img2D[i] !== 2) {
-          this.drawBitmap[i + offset] = pen;
-        }
-      }
-    } else {
-      let xStride = 1;
-      const yStride = this.back.dims[1] * this.back.dims[2];
-      let zOffset = slice2 * this.back.dims[1];
-      if (axCorSag === 2) {
-        xStride = this.back.dims[1];
-        zOffset = slice2;
-      }
-      let i = 0;
-      for (let y = 0; y < dims2D[1]; y++) {
-        for (let x = 0; x < dims2D[0]; x++) {
-          if (img2D[i] !== 2) {
-            this.drawBitmap[x * xStride + y * yStride + zOffset] = pen;
-          }
-          i++;
-        }
-      }
-    }
-    if (!this.drawFillOverwrites && this.drawUndoBitmaps[this.currentDrawUndoBitmap].length > 0) {
-      const nv = this.drawBitmap.length;
-      const bmp = decodeRLE(this.drawUndoBitmaps[this.currentDrawUndoBitmap], nv);
-      for (let i = 0; i < nv; i++) {
-        if (bmp[i] === 0) {
-          continue;
-        }
-        this.drawBitmap[i] = bmp[i];
-      }
+    const currentUndoBitmap = this.drawUndoBitmaps[this.currentDrawUndoBitmap]?.length > 0 ? this.drawUndoBitmaps[this.currentDrawUndoBitmap] : null;
+    const result = drawPenFilled({
+      penFillPts: this.drawPenFillPts,
+      penAxCorSag: this.drawPenAxCorSag,
+      drawBitmap: this.drawBitmap,
+      dims: this.back.dims,
+      penValue: this.opts.penValue,
+      fillOverwrites: this.drawFillOverwrites,
+      currentUndoBitmap
+    });
+    if (result.success) {
+      this.drawBitmap = result.drawBitmap;
     }
     this.drawPenFillPts = [];
     this.drawAddUndoBitmap();
@@ -41319,7 +45959,7 @@ var Niivue = class {
    */
   closeDrawing() {
     this.drawClearAllUndoBitmaps();
-    this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true);
+    this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true);
     this.drawBitmap = null;
     this.clickToSegmentGrowingBitmap = null;
     this.drawScene();
@@ -41331,43 +45971,34 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/cactus.html | live demo usage}
    */
   refreshDrawing(isForceRedraw = true, useClickToSegmentBitmap = false) {
-    if (useClickToSegmentBitmap && (!this.opts.drawingEnabled || !this.opts.clickToSegment)) {
-      log.debug("refreshDrawing: Conditions not met for clickToSegment bitmap, using drawBitmap.");
-      useClickToSegmentBitmap = false;
+    const bitmapSourceResult = determineBitmapDataSource({
+      useClickToSegmentBitmap,
+      drawingEnabled: this.opts.drawingEnabled,
+      clickToSegment: this.opts.clickToSegment,
+      drawBitmap: this.drawBitmap,
+      clickToSegmentGrowingBitmap: this.clickToSegmentGrowingBitmap
+    });
+    if (bitmapSourceResult.warning) {
+      log.warn(`refreshDrawing: ${bitmapSourceResult.warning}`);
     }
-    const selectedBitmap = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap;
-    if (!selectedBitmap && !useClickToSegmentBitmap && this.clickToSegmentGrowingBitmap) {
-      log.warn("refreshDrawing: drawBitmap is null, but clickToSegmentGrowingBitmap exists. Check state.");
-    } else if (!selectedBitmap && useClickToSegmentBitmap && this.drawBitmap) {
-      log.warn("refreshDrawing: clickToSegmentGrowingBitmap is null, falling back to drawBitmap.");
-      useClickToSegmentBitmap = false;
-    } else if (!selectedBitmap) {
-      log.warn("refreshDrawing: Both bitmaps are null. Uploading empty data.");
-    }
-    const bitmapDataSource = useClickToSegmentBitmap ? this.clickToSegmentGrowingBitmap : this.drawBitmap;
+    const bitmapDataSource = bitmapSourceResult.bitmapDataSource;
     if (!this.back?.dims) {
       log.warn("refreshDrawing: back.dims undefined, cannot refresh drawing texture yet.");
       return;
     }
-    const dims = this.back.dims.slice();
-    const vx = this.back.dims[1] * this.back.dims[2] * this.back.dims[3];
+    const vx = calculateVoxelCount(this.back.dims);
     if (!bitmapDataSource) {
-      log.warn(
-        `refreshDrawing: Bitmap data source (${useClickToSegmentBitmap ? "growing" : "main"}) is null. Cannot update texture.`
-      );
+      log.warn(`refreshDrawing: Bitmap data source (${bitmapSourceResult.useClickToSegmentBitmap ? "growing" : "main"}) is null. Cannot update texture.`);
       if (isForceRedraw) {
         this.drawScene();
       }
       return;
     }
-    if (bitmapDataSource.length === 8) {
-      dims[1] = 2;
-      dims[2] = 2;
-      dims[3] = 2;
-    } else if (vx !== bitmapDataSource.length) {
+    const dims = adjustDimensionsForSpecialCase(bitmapDataSource.length, this.back.dims.slice());
+    if (!validateBitmapLength(bitmapDataSource.length, vx)) {
       log.warn(`Drawing bitmap length (${bitmapDataSource.length}) must match the background image (${vx})`);
     }
-    this.gl.activeTexture(TEXTURE7_DRAW);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE7_DRAW);
     if (this.opts.is2DSliceShader) {
       const vox = this.frac2vox(this.scene.crosshairPos);
       const z = Math.min(Math.max(vox[2], 0), dims[3] - 1);
@@ -41392,19 +46023,7 @@ var Niivue = class {
       );
     } else {
       this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RED,
-        this.gl.UNSIGNED_BYTE,
-        bitmapDataSource
-      );
+      this.gl.texSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], this.gl.RED, this.gl.UNSIGNED_BYTE, bitmapDataSource);
     }
     if (!this.drawTexture) {
       log.error("refreshDrawing: drawTexture (GPU texture) is null.");
@@ -41423,7 +46042,7 @@ var Niivue = class {
     if (!this._gl || !this.paqdTexture) {
       return;
     }
-    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true);
+    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE_CONSTANTS.TEXTURE8_PAQD, [2, 2, 2, 2], true);
   }
   /**
    * Creates a 2D 1-component uint8 texture on the GPU with given dimensions.
@@ -41460,253 +46079,6 @@ var Niivue = class {
       );
     }
     return texID;
-  }
-  /**
-   * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
-   * @internal
-   */
-  r8Tex(texID, activeID, dims, isInit = false) {
-    if (texID) {
-      this.gl.deleteTexture(texID);
-    }
-    texID = this.gl.createTexture();
-    this.gl.activeTexture(activeID);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8, dims[1], dims[2], dims[3]);
-    if (isInit) {
-      const img8 = new Uint8Array(dims[1] * dims[2] * dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RED,
-        this.gl.UNSIGNED_BYTE,
-        img8
-      );
-    }
-    return texID;
-  }
-  /**
-   * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
-   * @internal
-   */
-  rgbaTex2D(texID, activeID, dims, data = null, isFlipVertical = true) {
-    if (texID) {
-      this.gl.deleteTexture(texID);
-    }
-    texID = this.gl.createTexture();
-    this.gl.activeTexture(activeID);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, texID);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-    this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, dims[1], dims[2]);
-    if (data) {
-      let drawData = data;
-      const width = dims[1];
-      const height = dims[2];
-      if (isFlipVertical) {
-        drawData = new Uint8Array(data.length);
-        const rowSize = width * 4;
-        for (let y = 0; y < height; y++) {
-          const srcStart = y * rowSize;
-          const destStart = (height - 1 - y) * rowSize;
-          drawData.set(data.subarray(srcStart, srcStart + rowSize), destStart);
-        }
-      }
-      this.gl.texSubImage2D(
-        this.gl.TEXTURE_2D,
-        0,
-        // Level
-        0,
-        0,
-        // xOffset, yOffset
-        width,
-        height,
-        // Width, Height
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        drawData
-      );
-    }
-    return texID;
-  }
-  /**
-   * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
-   * @internal
-   */
-  rgbaTex(texID, activeID, dims, isInit = false) {
-    if (texID) {
-      this.gl.deleteTexture(texID);
-    }
-    texID = this.gl.createTexture();
-    this.gl.activeTexture(activeID);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8, dims[1], dims[2], dims[3]);
-    if (isInit) {
-      const img8 = new Uint8Array(dims[1] * dims[2] * dims[3] * 4);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        img8
-      );
-    }
-    return texID;
-  }
-  /**
-   * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
-   * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
-   * @internal
-   */
-  rgba16Tex(texID, activeID, dims, isInit = false) {
-    if (texID) {
-      this.gl.deleteTexture(texID);
-    }
-    texID = this.gl.createTexture();
-    this.gl.activeTexture(activeID);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, texID);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 2);
-    this.gl.pixelStorei(this.gl.PACK_ALIGNMENT, 2);
-    this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA16UI, dims[1], dims[2], dims[3]);
-    if (isInit) {
-      const img16 = new Uint16Array(dims[1] * dims[2] * dims[3] * 4);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        dims[1],
-        dims[2],
-        dims[3],
-        this.gl.RGBA_INTEGER,
-        this.gl.UNSIGNED_SHORT,
-        img16
-      );
-    }
-    return texID;
-  }
-  /**
-   * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
-   * @internal
-   */
-  requestCORSIfNotSameOrigin(img, url) {
-    if (new URL(url, window.location.href).origin !== window.location.origin) {
-      img.crossOrigin = "";
-    }
-  }
-  /**
-   * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
-   * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
-   * Automatically handles CORS and draws scene if needed.
-   * @internal
-   */
-  async loadPngAsTexture(pngUrl, textureNum) {
-    return new Promise((resolve2, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        if (!this.bmpShader) {
-          return;
-        }
-        let pngTexture;
-        if (textureNum === 4) {
-          if (this.bmpTexture !== null) {
-            this.gl.deleteTexture(this.bmpTexture);
-          }
-          this.bmpTexture = this.gl.createTexture();
-          pngTexture = this.bmpTexture;
-          this.bmpTextureWH = img.width / img.height;
-          this.gl.activeTexture(TEXTURE4_THUMBNAIL);
-          this.bmpShader.use(this.gl);
-          this.gl.uniform1i(this.bmpShader.uniforms.bmpTexture, 4);
-        } else if (textureNum === 5) {
-          this.gl.activeTexture(TEXTURE5_MATCAP);
-          if (this.matCapTexture !== null) {
-            this.gl.deleteTexture(this.matCapTexture);
-          }
-          this.matCapTexture = this.gl.createTexture();
-          pngTexture = this.matCapTexture;
-        } else {
-          this.fontShader.use(this.gl);
-          this.gl.activeTexture(TEXTURE3_FONT);
-          this.gl.uniform1i(this.fontShader.uniforms.fontTexture, 3);
-          if (this.fontTexture !== null) {
-            this.gl.deleteTexture(this.fontTexture);
-          }
-          this.fontTexture = this.gl.createTexture();
-          pngTexture = this.fontTexture;
-        }
-        this.gl.bindTexture(this.gl.TEXTURE_2D, pngTexture);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
-        resolve2(pngTexture);
-        if (textureNum !== 4) {
-          this.drawScene();
-        }
-      };
-      img.onerror = reject;
-      this.requestCORSIfNotSameOrigin(img, pngUrl);
-      img.src = pngUrl;
-    });
-  }
-  /**
-   * Loads a font stored as a PNG bitmap into texture unit 3.
-   * @internal
-   */
-  async loadFontTexture(fontUrl) {
-    return this.loadPngAsTexture(fontUrl, 3);
-  }
-  /**
-   * Loads a PNG bitmap into texture unit 4.
-   * @internal
-   */
-  async loadBmpTexture(bmpUrl) {
-    return this.loadPngAsTexture(bmpUrl, 4);
-  }
-  /**
-   * Load matcap for illumination model.
-   * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
-   * @example
-   * niivue.loadMatCapTexture("Cortex");
-   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
-   */
-  async loadMatCapTexture(bmpUrl) {
-    return this.loadPngAsTexture(bmpUrl, 5);
   }
   /**
    * Initializes font metrics from loaded font data.
@@ -41803,12 +46175,7 @@ var Niivue = class {
    * @internal
    */
   meshShaderNameToNumber(meshShaderName = "Phong") {
-    const name = meshShaderName.toLowerCase();
-    for (let i = 0; i < this.meshShaders.length; i++) {
-      if (this.meshShaders[i].Name.toLowerCase() === name) {
-        return i;
-      }
-    }
+    return meshShaderNameToNumber(meshShaderName, this.meshShaders);
   }
   /**
    * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
@@ -41818,25 +46185,18 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   setMeshShader(id, meshShaderNameOrNumber = 2) {
-    let shaderIndex = 0;
-    if (typeof meshShaderNameOrNumber === "number") {
-      shaderIndex = meshShaderNameOrNumber;
-    } else {
-      shaderIndex = this.meshShaderNameToNumber(meshShaderNameOrNumber);
-    }
-    if (shaderIndex === void 0) {
-      throw new Error("shaderIndex undefined");
-    }
-    shaderIndex = Math.min(shaderIndex, this.meshShaders.length - 1);
-    shaderIndex = Math.max(shaderIndex, 0);
-    const index = this.getMeshIndexByID(id);
-    if (index >= this.meshes.length) {
-      log.debug("Unable to change shader until mesh is loaded (maybe you need async)");
+    const result = setMeshShader({
+      meshes: this.meshes,
+      meshShaders: this.meshShaders,
+      id,
+      meshShaderNameOrNumber,
+      meshShaderNameToNumber: this.meshShaderNameToNumber.bind(this)
+    });
+    if (result === null) {
       return;
     }
-    this.meshes[index].meshShaderIndex = shaderIndex;
     this.updateGLVolume();
-    this.onMeshShaderChanged(index, shaderIndex);
+    this.onMeshShaderChanged(result.meshIndex, result.shaderIndex);
   }
   /**
    *
@@ -41845,21 +46205,12 @@ var Niivue = class {
    * @returns created custom mesh shader
    */
   createCustomMeshShader(fragmentShaderText, name = "Custom") {
-    if (!fragmentShaderText) {
-      throw new Error("Need fragment shader");
-    }
-    const num = this.meshShaderNameToNumber(name);
-    if (num >= 0) {
-      this.gl.deleteProgram(this.meshShaders[num].shader.program);
-      this.meshShaders.splice(num, 1);
-    }
-    const shader = new Shader(this.gl, vertMeshShader, fragmentShaderText);
-    shader.use(this.gl);
-    return {
-      Name: name,
-      Frag: fragmentShaderText,
-      shader
-    };
+    return createCustomMeshShader({
+      gl: this.gl,
+      fragmentShaderText,
+      name,
+      meshShaders: this.meshShaders
+    });
   }
   /**
    * Install a special shader for 2D slice views
@@ -41868,24 +46219,12 @@ var Niivue = class {
    * @internal
    */
   setCustomSliceShader(fragmentShaderText = "") {
-    const gl = this.gl;
-    if (this.customSliceShader) {
-      gl.deleteProgram(this.customSliceShader.program);
-      this.customSliceShader = null;
-    }
-    if (!fragmentShaderText) {
-      this.updateGLVolume();
-      return;
-    }
-    const shader = new Shader(gl, vertSliceMMShader, fragmentShaderText);
-    shader.use(gl);
-    gl.uniform1i(shader.uniforms.volume, 0);
-    gl.uniform1i(shader.uniforms.colormap, 1);
-    gl.uniform1i(shader.uniforms.overlay, 2);
-    gl.uniform1i(shader.uniforms.drawing, 7);
-    gl.uniform1i(shader.uniforms.paqd, 8);
-    gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
-    this.customSliceShader = shader;
+    this.customSliceShader = setCustomSliceShader({
+      gl: this.gl,
+      fragmentShaderText,
+      drawOpacity: this.drawOpacity,
+      customSliceShader: this.customSliceShader
+    });
     this.updateGLVolume();
   }
   /**
@@ -41909,36 +46248,21 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   meshShaderNames(sort = true) {
-    const cm = [];
-    for (let i = 0; i < this.meshShaders.length; i++) {
-      cm.push(this.meshShaders[i].Name);
-    }
-    return sort === true ? cm.sort() : cm;
+    return meshShaderNames(this.meshShaders, sort);
   }
   /**
    * Initializes a rendering shader with texture units and uniforms.
    * @internal
    */
   initRenderShader(shader, gradientAmount = 0) {
-    shader.use(this.gl);
-    this.gl.uniform1i(shader.uniforms.volume, 0);
-    this.gl.uniform1i(shader.uniforms.colormap, 1);
-    this.gl.uniform1i(shader.uniforms.overlay, 2);
-    this.gl.uniform1i(shader.uniforms.drawing, 7);
-    this.gl.uniform1i(shader.uniforms.paqd, 8);
-    this.gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [this.renderDrawAmbientOcclusion, 1]);
-    this.gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
-    this.gl.uniform1f(shader.uniforms.silhouettePower, this.opts.renderSilhouette);
-    const gradientOpacityLut = new Float32Array(gradientOpacityLutCount);
-    for (let i = 0; i < gradientOpacityLutCount; i++) {
-      if (this.opts.gradientOpacity === 0) {
-        gradientOpacityLut[i] = 1;
-      } else {
-        gradientOpacityLut[i] = Math.pow(i / (gradientOpacityLutCount - 1), this.opts.gradientOpacity * 8);
-      }
-    }
-    this.gl.uniform1fv(this.gl.getUniformLocation(shader.program, "gradientOpacity"), gradientOpacityLut);
-    shader.uniforms.clipPlanes = this.gl.getUniformLocation(shader.program, "clipPlanes[0]");
+    initRenderShader({
+      gl: this.gl,
+      shader,
+      gradientAmount,
+      renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
+      renderSilhouette: this.opts.renderSilhouette,
+      gradientOpacity: this.opts.gradientOpacity
+    });
   }
   /**
    * Initializes WebGL state, shaders, textures, buffers, and sets up the rendering pipeline.
@@ -41962,10 +46286,10 @@ var Niivue = class {
     this.gl.cullFace(this.gl.FRONT);
     this.gl.enable(this.gl.BLEND);
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-    this.volumeTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, [2, 2, 2, 2], true);
-    this.overlayTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, [2, 2, 2, 2], true);
-    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE7_DRAW, [2, 2, 2, 2], true);
-    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, [2, 2, 2, 2], true);
+    this.volumeTexture = this.rgbaTex(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, [2, 2, 2, 2], true);
+    this.overlayTexture = this.rgbaTex(this.overlayTexture, TEXTURE_CONSTANTS.TEXTURE2_OVERLAY_VOL, [2, 2, 2, 2], true);
+    this.drawTexture = this.r8Tex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true);
+    this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE_CONSTANTS.TEXTURE8_PAQD, [2, 2, 2, 2], true);
     const rectStrip = [
       1,
       1,
@@ -41996,106 +46320,52 @@ var Niivue = class {
     gl.bindVertexArray(this.unusedVAO);
     this.pickingMeshShader = new Shader(gl, vertMeshShader, fragMeshDepthShader);
     this.pickingMeshShader.use(gl);
-    this.pickingImageShader = new Shader(gl, vertRenderShader, fragVolumePickingShader);
+    this.pickingImageShader = initPickingImageShader(gl);
+    const sliceShaders = initSliceShaders(gl, this.drawOpacity);
+    this.slice2DShader = sliceShaders.slice2DShader;
+    this.sliceMMShader = sliceShaders.sliceMMShader;
+    this.sliceV1Shader = sliceShaders.sliceV1Shader;
+    const orientCubeShaderResult = initOrientCubeShader(gl, orientCube, this.unusedVAO);
+    this.orientCubeShader = orientCubeShaderResult.shader;
+    this.orientCubeShaderVAO = orientCubeShaderResult.vao;
+    const shaders2D = init2DShaders(gl);
+    this.rectShader = shaders2D.rectShader;
+    this.rectOutlineShader = shaders2D.rectOutlineShader;
+    this.lineShader = shaders2D.lineShader;
+    this.line3DShader = shaders2D.line3DShader;
+    this.circleShader = shaders2D.circleShader;
+    const volumeRenderShaders = initVolumeRenderShaders({
+      gl,
+      renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
+      renderSilhouette: this.opts.renderSilhouette,
+      gradientOpacity: this.opts.gradientOpacity
+    });
+    this.renderVolumeShader = volumeRenderShaders.renderVolumeShader;
+    this.renderSliceShader = volumeRenderShaders.renderSliceShader;
+    this.renderGradientShader = volumeRenderShaders.renderGradientShader;
+    this.renderGradientValuesShader = volumeRenderShaders.renderGradientValuesShader;
+    this.renderShader = volumeRenderShaders.renderShader;
+    this.colorbarShader = initColorbarShader(gl);
+    const imageProcessingShaders = initImageProcessingShaders(gl);
+    this.blurShader = imageProcessingShaders.blurShader;
+    this.sobelBlurShader = imageProcessingShaders.sobelBlurShader;
+    this.sobelFirstOrderShader = imageProcessingShaders.sobelFirstOrderShader;
+    this.sobelSecondOrderShader = imageProcessingShaders.sobelSecondOrderShader;
+    this.growCutShader = imageProcessingShaders.growCutShader;
+    this.passThroughShader = imageProcessingShaders.passThroughShader;
+    const orientationShaders = initOrientationShaders(gl);
+    this.orientShaderAtlasU = orientationShaders.orientShaderAtlasU;
+    this.orientShaderAtlasI = orientationShaders.orientShaderAtlasI;
+    this.orientShaderU = orientationShaders.orientShaderU;
+    this.orientShaderI = orientationShaders.orientShaderI;
+    this.orientShaderF = orientationShaders.orientShaderF;
+    this.orientShaderRGBU = orientationShaders.orientShaderRGBU;
+    this.orientShaderPAQD = orientationShaders.orientShaderPAQD;
+    const geometryShaders = init3DGeometryShaders(gl);
+    this.surfaceShader = geometryShaders.surfaceShader;
+    this.fiberShader = geometryShaders.fiberShader;
     this.pickingImageShader.use(gl);
-    this.pickingImageShader.uniforms.clipPlanes = this.gl.getUniformLocation(
-      this.pickingImageShader.program,
-      "clipPlanes[0]"
-    );
-    gl.uniform1i(this.pickingImageShader.uniforms.volume, 0);
-    gl.uniform1i(this.pickingImageShader.uniforms.colormap, 1);
-    gl.uniform1i(this.pickingImageShader.uniforms.overlay, 2);
-    gl.uniform1i(this.pickingImageShader.uniforms.drawing, 7);
-    this.slice2DShader = new Shader(gl, vertSliceMMShader, fragSlice2DShader);
-    this.slice2DShader.use(gl);
-    gl.uniform1i(this.slice2DShader.uniforms.volume, 0);
-    gl.uniform1i(this.slice2DShader.uniforms.colormap, 1);
-    gl.uniform1i(this.slice2DShader.uniforms.overlay, 2);
-    gl.uniform1i(this.slice2DShader.uniforms.drawing, 7);
-    gl.uniform1f(this.slice2DShader.uniforms.drawOpacity, this.drawOpacity);
-    this.sliceMMShader = new Shader(gl, vertSliceMMShader, fragSliceMMShader);
-    this.sliceMMShader.use(gl);
-    gl.uniform1i(this.sliceMMShader.uniforms.volume, 0);
-    gl.uniform1i(this.sliceMMShader.uniforms.colormap, 1);
-    gl.uniform1i(this.sliceMMShader.uniforms.overlay, 2);
-    gl.uniform1i(this.sliceMMShader.uniforms.drawing, 7);
-    gl.uniform1f(this.sliceMMShader.uniforms.drawOpacity, this.drawOpacity);
-    this.sliceV1Shader = new Shader(gl, vertSliceMMShader, fragSliceV1Shader);
-    this.sliceV1Shader.use(gl);
-    gl.uniform1i(this.sliceV1Shader.uniforms.volume, 0);
-    gl.uniform1i(this.sliceV1Shader.uniforms.colormap, 1);
-    gl.uniform1i(this.sliceV1Shader.uniforms.overlay, 2);
-    gl.uniform1i(this.sliceV1Shader.uniforms.drawing, 7);
-    gl.uniform1f(this.sliceV1Shader.uniforms.drawOpacity, this.drawOpacity);
-    this.orientCubeShader = new Shader(gl, vertOrientCubeShader, fragOrientCubeShader);
-    this.orientCubeShaderVAO = gl.createVertexArray();
-    gl.bindVertexArray(this.orientCubeShaderVAO);
-    const positionBuffer = gl.createBuffer();
-    gl.enableVertexAttribArray(0);
-    gl.enableVertexAttribArray(1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, orientCube, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
-    gl.enableVertexAttribArray(1);
-    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
-    gl.bindVertexArray(this.unusedVAO);
-    this.rectShader = new Shader(gl, vertRectShader, fragRectShader);
-    this.rectShader.use(gl);
-    this.rectOutlineShader = new Shader(gl, vertRectShader, fragRectOutlineShader);
-    this.rectOutlineShader.use(gl);
-    this.lineShader = new Shader(gl, vertLineShader, fragRectShader);
-    this.lineShader.use(gl);
-    this.line3DShader = new Shader(gl, vertLine3DShader, fragRectShader);
-    this.line3DShader.use(gl);
-    this.circleShader = new Shader(gl, vertCircleShader, fragCircleShader);
-    this.circleShader.use(gl);
-    this.renderVolumeShader = new Shader(gl, vertRenderShader, fragRenderShader);
-    this.initRenderShader(this.renderVolumeShader);
-    this.renderSliceShader = new Shader(gl, vertRenderShader, fragRenderSliceShader);
-    this.initRenderShader(this.renderSliceShader);
-    this.renderGradientShader = new Shader(gl, vertRenderShader, fragRenderGradientShader);
-    this.initRenderShader(this.renderGradientShader, 0.3);
-    gl.uniform1i(this.renderGradientShader.uniforms.matCap, 5);
-    gl.uniform1i(this.renderGradientShader.uniforms.gradient, 6);
-    this.renderGradientValuesShader = new Shader(gl, vertRenderShader, fragRenderGradientValuesShader);
-    this.initRenderShader(this.renderGradientValuesShader);
-    gl.uniform1i(this.renderGradientValuesShader.uniforms.matCap, 5);
-    gl.uniform1i(this.renderGradientValuesShader.uniforms.gradient, 6);
-    this.renderShader = this.renderVolumeShader;
-    this.colorbarShader = new Shader(gl, vertColorbarShader, fragColorbarShader);
-    this.colorbarShader.use(gl);
-    gl.uniform1i(this.colorbarShader.uniforms.colormap, 1);
-    this.blurShader = new Shader(gl, blurVertShader, blurFragShader);
-    this.sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader);
-    this.sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader);
-    this.sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader);
-    this.growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader);
-    this.passThroughShader = new Shader(gl, vertPassThroughShader, fragPassThroughShader);
-    this.orientShaderAtlasU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShaderAtlas));
-    this.orientShaderAtlasI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShaderAtlas));
-    this.orientShaderU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragOrientShader));
-    this.orientShaderI = new Shader(gl, vertOrientShader, fragOrientShaderI.concat(fragOrientShader));
-    this.orientShaderF = new Shader(gl, vertOrientShader, fragOrientShaderF.concat(fragOrientShader));
-    this.orientShaderRGBU = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragRGBOrientShader));
-    this.orientShaderPAQD = new Shader(gl, vertOrientShader, fragOrientShaderU.concat(fragPAQDOrientShader));
-    this.surfaceShader = new Shader(gl, vertSurfaceShader, fragSurfaceShader);
-    this.surfaceShader.use(gl);
-    this.fiberShader = new Shader(gl, vertFiberShader, fragFiberShader);
-    this.pickingImageShader.use(gl);
-    for (let i = 0; i < this.meshShaders.length; i++) {
-      const m = this.meshShaders[i];
-      if (m.Name === "Flat") {
-        m.shader = new Shader(gl, vertFlatMeshShader, fragFlatMeshShader);
-      } else {
-        m.shader = new Shader(gl, vertMeshShader, m.Frag);
-      }
-      m.shader.use(gl);
-      m.shader.isCrosscut = m.Name === "Crosscut";
-      m.shader.isMatcap = m.Name === "Matcap";
-      if (m.shader.isMatcap) {
-        gl.uniform1i(m.shader.uniforms.matCap, 5);
-      }
-    }
+    compileMeshShaders(gl, this.meshShaders);
     this.bmpShader = new Shader(gl, vertBmpShader, fragBmpShader);
     await this.initText();
     if (this.opts.thumbnail.length > 0) {
@@ -42113,71 +46383,21 @@ var Niivue = class {
    * @internal
    */
   gradientGL(hdr) {
-    const gl = this.gl;
-    gl.bindVertexArray(this.genericVAO);
-    const fb = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    gl.viewport(0, 0, hdr.dims[1], hdr.dims[2]);
-    gl.disable(gl.BLEND);
-    const tempTex3D = this.rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true);
-    const blurShader = this.opts.gradientOrder === 2 ? this.sobelBlurShader : this.blurShader;
-    blurShader.use(gl);
-    gl.activeTexture(TEXTURE0_BACK_VOL);
-    gl.bindTexture(gl.TEXTURE_3D, this.volumeTexture);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    const blurRadius = 0.7;
-    gl.uniform1i(blurShader.uniforms.intensityVol, 0);
-    gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1]);
-    gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2]);
-    gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3]);
-    for (let i = 0; i < hdr.dims[3] - 1; i++) {
-      const coordZ = 1 / hdr.dims[3] * (i + 0.5);
-      gl.uniform1f(blurShader.uniforms.coordZ, coordZ);
-      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i);
-      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-      if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error("blur shader: ", status);
-      }
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }
-    const sobelShader = this.opts.gradientOrder === 2 ? this.sobelSecondOrderShader : this.sobelFirstOrderShader;
-    sobelShader.use(gl);
-    gl.activeTexture(TEXTURE8_GRADIENT_TEMP);
-    gl.bindTexture(gl.TEXTURE_3D, tempTex3D);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.uniform1i(sobelShader.uniforms.intensityVol, 8);
-    const sobelRadius = 0.7;
-    gl.uniform1f(sobelShader.uniforms.dX, sobelRadius / hdr.dims[1]);
-    gl.uniform1f(sobelShader.uniforms.dY, sobelRadius / hdr.dims[2]);
-    gl.uniform1f(sobelShader.uniforms.dZ, sobelRadius / hdr.dims[3]);
-    if (this.opts.gradientOrder === 2) {
-      gl.uniform1f(sobelShader.uniforms.dX2, 2 * sobelRadius / hdr.dims[1]);
-      gl.uniform1f(sobelShader.uniforms.dY2, 2 * sobelRadius / hdr.dims[2]);
-      gl.uniform1f(sobelShader.uniforms.dZ2, 2 * sobelRadius / hdr.dims[3]);
-    }
-    gl.uniform1f(sobelShader.uniforms.coordZ, 0.5);
-    if (this.gradientTexture !== null) {
-      gl.deleteTexture(this.gradientTexture);
-    }
-    this.gradientTexture = this.rgbaTex(this.gradientTexture, TEXTURE6_GRADIENT, hdr.dims);
-    for (let i = 0; i < hdr.dims[3] - 1; i++) {
-      const coordZ = 1 / hdr.dims[3] * (i + 0.5);
-      gl.uniform1f(sobelShader.uniforms.coordZ, coordZ);
-      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, i);
-      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-      if (status !== gl.FRAMEBUFFER_COMPLETE) {
-        log.error("sobel shader: ", status);
-      }
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }
-    gl.deleteFramebuffer(fb);
-    gl.deleteTexture(tempTex3D);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.activeTexture(TEXTURE8_PAQD);
-    gl.bindTexture(gl.TEXTURE_3D, this.paqdTexture);
-    this.gl.bindVertexArray(this.unusedVAO);
+    this.gradientTexture = gradientGL({
+      gl: this.gl,
+      hdr,
+      genericVAO: this.genericVAO,
+      unusedVAO: this.unusedVAO,
+      volumeTexture: this.volumeTexture,
+      paqdTexture: this.paqdTexture,
+      gradientTexture: this.gradientTexture,
+      gradientOrder: this.opts.gradientOrder,
+      blurShader: this.blurShader,
+      sobelBlurShader: this.sobelBlurShader,
+      sobelFirstOrderShader: this.sobelFirstOrderShader,
+      sobelSecondOrderShader: this.sobelSecondOrderShader,
+      rgbaTex: this.rgbaTex.bind(this)
+    });
   }
   /**
    * Get the gradient texture produced by gradientGL as a TypedArray
@@ -42193,55 +46413,11 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
   getGradientTextureData() {
-    if (!this.gradientTexture || !this.back) {
-      return null;
-    }
-    const gl = this.gl;
-    const dims = this.back.dims;
-    const width = dims[1];
-    const height = dims[2];
-    const depth = dims[3];
-    const numVoxels = width * height * depth;
-    const fb = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    const data = new Float32Array(numVoxels * 4);
-    try {
-      for (let slice2 = 0; slice2 < depth; slice2++) {
-        gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.gradientTexture, 0, slice2);
-        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-        if (status !== gl.FRAMEBUFFER_COMPLETE) {
-          console.warn(
-            "Framebuffer not complete for gradient texture reading, slice",
-            slice2,
-            "status:",
-            status.toString(16)
-          );
-          continue;
-        }
-        try {
-          const byteData = new Uint8Array(width * height * 4);
-          gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, byteData);
-          const sliceData = new Float32Array(width * height * 4);
-          for (let i = 0; i < byteData.length; i++) {
-            sliceData[i] = byteData[i] / 127.5 - 1;
-          }
-          const sliceOffset = slice2 * width * height * 4;
-          data.set(sliceData, sliceOffset);
-        } catch (readError) {
-          console.warn("Failed to read pixels for slice", slice2, ":", readError);
-          const sliceOffset = slice2 * width * height * 4;
-          const zeroSlice = new Float32Array(width * height * 4);
-          data.set(zeroSlice, sliceOffset);
-        }
-      }
-    } catch (error) {
-      console.error("Error reading gradient texture:", error);
-      return null;
-    } finally {
-      gl.deleteFramebuffer(fb);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-    return data;
+    return getGradientTextureData({
+      gl: this.gl,
+      gradientTexture: this.gradientTexture,
+      dims: this.back?.dims ?? null
+    });
   }
   /**
    * Set a custom gradient texture to use instead of the one produced by gradientGL
@@ -42262,53 +46438,21 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/gradient.custom.html | live demo usage}
    */
   setCustomGradientTexture(data, dims) {
-    const gl = this.gl;
-    if (data === null) {
-      this.useCustomGradientTexture = false;
-      if (this.back && this.gradientTextureAmount > 0) {
-        this.gradientGL(this.back.hdr);
-      }
-      return;
+    const result = setCustomGradientTexture({
+      gl: this.gl,
+      data,
+      dims,
+      backDims: this.back?.dims ?? null,
+      gradientTexture: this.gradientTexture,
+      gradientTextureAmount: this.gradientTextureAmount,
+      hdr: this.back?.hdr ?? null,
+      gradientGLFn: this.gradientGL.bind(this)
+    });
+    this.gradientTexture = result.gradientTexture;
+    this.useCustomGradientTexture = result.useCustomGradientTexture;
+    if (data !== null && result.useCustomGradientTexture) {
+      this.drawScene();
     }
-    if (!dims && !this.back) {
-      console.warn("No dimensions provided and no background volume loaded");
-      return;
-    }
-    const texDims = dims || this.back.dims;
-    const width = texDims[1];
-    const height = texDims[2];
-    const depth = texDims[3];
-    const expectedSize = width * height * depth * 4;
-    if (data.length !== expectedSize) {
-      console.warn(`Custom gradient data size mismatch. Expected ${expectedSize}, got ${data.length}`);
-      return;
-    }
-    this.useCustomGradientTexture = true;
-    if (this.gradientTexture !== null) {
-      gl.deleteTexture(this.gradientTexture);
-    }
-    this.gradientTexture = gl.createTexture();
-    gl.activeTexture(TEXTURE6_GRADIENT);
-    gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    let textureData;
-    if (data instanceof Float32Array) {
-      textureData = new Uint8Array(data.length);
-      for (let i = 0; i < data.length; i++) {
-        const clampedValue = Math.max(-1, Math.min(1, data[i]));
-        textureData[i] = Math.round((clampedValue + 1) * 127.5);
-      }
-    } else {
-      textureData = data;
-    }
-    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGBA8, width, height, depth);
-    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, width, height, depth, gl.RGBA, gl.UNSIGNED_BYTE, textureData);
-    this.drawScene();
   }
   /**
    * update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
@@ -42365,158 +46509,37 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   getDescriptives(options) {
-    const {
-      layer = 0,
-      masks = [],
-      drawingIsMask = false,
-      roiIsMask = false,
-      startVox = [0, 0, 0],
-      endVox = [0, 0, 0]
-    } = options;
-    let area = null;
+    const { layer = 0, masks = [], drawingIsMask = false, roiIsMask = false, startVox = [0, 0, 0], endVox = [0, 0, 0] } = options;
     const hdr = this.volumes[layer].hdr;
     const pixDimsRAS = this.volumes[layer].pixDimsRAS;
-    let slope = hdr.scl_slope;
-    if (isNaN(slope)) {
-      slope = 1;
-    }
-    let inter = hdr.scl_inter;
-    if (isNaN(inter)) {
-      inter = 1;
-    }
+    const slope = isNaN(hdr.scl_slope) ? 1 : hdr.scl_slope;
+    const inter = isNaN(hdr.scl_inter) ? 1 : hdr.scl_inter;
     const imgRaw = this.volumes[layer].img;
     const nv = imgRaw.length;
-    const img = new Float32Array(nv);
-    for (let i = 0; i < nv; i++) {
-      img[i] = imgRaw[i] * slope + inter;
-    }
-    const mask = new Uint8Array(nv);
-    for (let i = 0; i < nv; i++) {
-      mask[i] = 1;
-    }
-    if (masks.length > 0) {
-      for (let m = 0; m < masks.length; m++) {
-        const imgMask = this.volumes[masks[m]].img;
-        if (imgMask.length !== nv) {
-          log.debug("Mask resolution does not match image. Skipping masking layer " + masks[m]);
-          continue;
-        }
-        for (let i = 0; i < nv; i++) {
-          if (imgMask[i] === 0 || isNaN(imgMask[i])) {
-            mask[i] = 0;
-          }
-        }
+    const img = scaleImageData(imgRaw, slope, inter);
+    const maskImages = masks.filter((m) => {
+      const valid = this.volumes[m].img.length === nv;
+      if (!valid) {
+        log.debug("Mask resolution does not match image. Skipping masking layer " + m);
       }
-    } else if (masks.length < 1 && drawingIsMask) {
-      for (let i = 0; i < nv; i++) {
-        if (this.drawBitmap[i] === 0 || isNaN(this.drawBitmap[i])) {
-          mask[i] = 0;
-        }
-      }
-    } else if (masks.length < 1 && roiIsMask) {
-      mask.fill(0);
-      let constantDim = -1;
-      if (startVox[0] === endVox[0]) {
-        constantDim = 0;
-      } else if (startVox[1] === endVox[1]) {
-        constantDim = 1;
-      } else if (startVox[2] === endVox[2]) {
-        constantDim = 2;
-      } else {
-        console.error("Error: No constant dimension found.");
-        return;
-      }
-      const dims = [0, 1, 2];
-      const varDims = dims.filter((dim) => dim !== constantDim);
-      const centerVox = [];
-      centerVox[constantDim] = startVox[constantDim];
-      centerVox[varDims[0]] = (startVox[varDims[0]] + endVox[varDims[0]]) / 2;
-      centerVox[varDims[1]] = (startVox[varDims[1]] + endVox[varDims[1]]) / 2;
-      const radiusX = Math.abs(endVox[varDims[0]] - startVox[varDims[0]]) / 2;
-      const radiusY = Math.abs(endVox[varDims[1]] - startVox[varDims[1]]) / 2;
-      const xdim = hdr.dims[1];
-      const ydim = hdr.dims[2];
-      const minVarDim0 = Math.max(0, Math.floor(centerVox[varDims[0]] - radiusX));
-      const maxVarDim0 = Math.min(hdr.dims[varDims[0] + 1] - 1, Math.ceil(centerVox[varDims[0]] + radiusX));
-      const minVarDim1 = Math.max(0, Math.floor(centerVox[varDims[1]] - radiusY));
-      const maxVarDim1 = Math.min(hdr.dims[varDims[1] + 1] - 1, Math.ceil(centerVox[varDims[1]] + radiusY));
-      const constDimVal = centerVox[constantDim];
-      if (constDimVal < 0 || constDimVal >= hdr.dims[constantDim + 1]) {
-        console.error("Error: Constant dimension value is out of bounds.");
-        return;
-      }
-      for (let i = minVarDim0; i <= maxVarDim0; i++) {
-        for (let j = minVarDim1; j <= maxVarDim1; j++) {
-          const voxel = [];
-          voxel[constantDim] = constDimVal;
-          voxel[varDims[0]] = i;
-          voxel[varDims[1]] = j;
-          const di = (voxel[varDims[0]] - centerVox[varDims[0]]) / radiusX;
-          const dj = (voxel[varDims[1]] - centerVox[varDims[1]]) / radiusY;
-          const distSq = di * di + dj * dj;
-          if (distSq <= 1) {
-            const x = voxel[0];
-            const y = voxel[1];
-            const z = voxel[2];
-            const index = z * xdim * ydim + y * xdim + x;
-            mask[index] = 1;
-          }
-        }
-      }
-      const radiusX_mm = radiusX * pixDimsRAS[varDims[0] + 1];
-      const radiusY_mm = radiusY * pixDimsRAS[varDims[1] + 1];
-      const areaEllipse = Math.PI * radiusX_mm * radiusY_mm;
-      area = areaEllipse;
-    }
-    let k = 0;
-    let M = 0;
-    let S = 0;
-    let mx = Number.NEGATIVE_INFINITY;
-    let mn = Number.POSITIVE_INFINITY;
-    let kNot0 = 0;
-    let MNot0 = 0;
-    let SNot0 = 0;
-    for (let i = 0; i < nv; i++) {
-      if (mask[i] < 1) {
-        continue;
-      }
-      const x = img[i];
-      k++;
-      let Mnext = M + (x - M) / k;
-      S = S + (x - M) * (x - Mnext);
-      M = Mnext;
-      if (x === 0) {
-        continue;
-      }
-      kNot0++;
-      Mnext = MNot0 + (x - MNot0) / kNot0;
-      SNot0 = SNot0 + (x - MNot0) * (x - Mnext);
-      MNot0 = Mnext;
-      mn = Math.min(x, mn);
-      mx = Math.max(x, mx);
-    }
-    const stdev = Math.sqrt(S / (k - 1));
-    const stdevNot0 = Math.sqrt(SNot0 / (kNot0 - 1));
-    const mnNot0 = mn;
-    const mxNot0 = mx;
-    if (k !== kNot0) {
-      mn = Math.min(0, mn);
-      mx = Math.max(0, mx);
-    }
+      return valid;
+    }).map((m) => this.volumes[m].img);
+    const { mask, area } = createMask({
+      nv,
+      maskImages: maskImages.length > 0 ? maskImages : void 0,
+      drawBitmap: this.drawBitmap,
+      drawingIsMask: masks.length < 1 && drawingIsMask,
+      roiIsMask: masks.length < 1 && roiIsMask,
+      startVox,
+      endVox,
+      hdr,
+      pixDimsRAS
+    });
+    const stats = computeDescriptiveStats(img, mask);
     return {
-      mean: M,
-      stdev,
-      nvox: k,
-      volumeMM3: k * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3],
-      // volume also in milliliters
-      volumeML: k * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3] * 1e-3,
-      min: mn,
-      max: mx,
-      meanNot0: MNot0,
-      stdevNot0,
-      nvoxNot0: kNot0,
-      minNot0: mnNot0,
-      maxNot0: mxNot0,
+      ...stats,
+      volumeMM3: stats.nvox * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3],
+      volumeML: stats.nvox * hdr.pixDims[1] * hdr.pixDims[2] * hdr.pixDims[3] * 1e-3,
       cal_min: this.volumes[layer].cal_min,
       cal_max: this.volumes[layer].cal_max,
       robust_min: this.volumes[layer].robust_min,
@@ -42534,13 +46557,7 @@ var Niivue = class {
     }
     this.refreshColormaps();
     const hdr = overlayItem.hdr;
-    let img = overlayItem.img;
-    if (overlayItem.frame4D > 0 && overlayItem.frame4D < overlayItem.nFrame4D) {
-      img = overlayItem.img.slice(
-        overlayItem.frame4D * overlayItem.nVox3D,
-        (overlayItem.frame4D + 1) * overlayItem.nVox3D
-      );
-    }
+    const img = prepareLayerData(overlayItem);
     const opacity = overlayItem.opacity;
     if (layer > 1 && opacity === 0) {
       return;
@@ -42555,7 +46572,11 @@ var Niivue = class {
     }
     let mtx = mat4_exports.clone(overlayItem.toRAS);
     if (layer === 0) {
-      this.volumeObject3D = toNiivueObject3D(overlayItem, this.VOLUME_ID, this.gl);
+      this.volumeObject3D = setupVolumeObject3D({
+        overlayItem,
+        VOLUME_ID: this.VOLUME_ID,
+        gl: this.gl
+      });
       mat4_exports.invert(mtx, mtx);
       this.back.matRAS = overlayItem.matRAS;
       this.back.dims = overlayItem.dimsRAS;
@@ -42563,22 +46584,23 @@ var Niivue = class {
       const { volScale: volScale2, vox: vox2 } = this.sliceScale(true);
       this.volScale = volScale2;
       this.vox = vox2;
-      this.volumeObject3D.scale = volScale2;
-      const isAboveMax2D = hdr.dims[1] > this.uiData.max2D || hdr.dims[2] > this.uiData.max2D;
+      this.volumeObject3D.scale = Array.from(volScale2);
+      const { isAboveMax2D, isAboveMax3D } = checkImageSizeLimits({
+        hdr,
+        max2D: this.uiData.max2D,
+        max3D: this.uiData.max3D
+      });
       if (isAboveMax2D) {
         log.error(`Image dimensions exceed maximum texture size of hardware.`);
       }
-      const isAboveMax3D = hdr.dims[1] > this.uiData.max3D || hdr.dims[2] > this.uiData.max3D || hdr.dims[3] > this.uiData.max3D;
       if (isAboveMax3D && hdr.datatypeCode === 2304 /* DT_RGBA32 */ && hdr.dims[3] < 2) {
         log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`);
         this.opts.is2DSliceShader = true;
-        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS, img);
+        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS, img);
         return;
       }
       if (isAboveMax3D) {
-        log.info(
-          `Large scalar image (>${this.uiData.max3D}) requires Texture2D (${hdr.dims[1]}\xD7${hdr.dims[2]}\xD7${hdr.dims[3]})`
-        );
+        log.info(`Large scalar image (>${this.uiData.max3D}) requires Texture2D (${hdr.dims[1]}\xD7${hdr.dims[2]}\xD7${hdr.dims[3]})`);
         const nPix = hdr.dims[1] * hdr.dims[2];
         const vox3 = this.frac2vox(this.scene.crosshairPos);
         const z = Math.min(Math.max(vox3[2], 0), hdr.dims[3] - 1);
@@ -42598,295 +46620,119 @@ var Niivue = class {
           img2D[j += 4] = opacity2;
         }
         this.opts.is2DSliceShader = true;
-        outTexture = this.rgbaTex2D(
-          this.volumeTexture,
-          TEXTURE0_BACK_VOL,
-          overlayItem.dimsRAS,
-          img2D,
-          false
-        );
+        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS, img2D, false);
         return;
       }
       if (isAboveMax3D) {
         log.warn(`dimensions exceed 3D limits ${hdr.dims}`);
       }
       this.opts.is2DSliceShader = false;
-      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE0_BACK_VOL, overlayItem.dimsRAS);
+      outTexture = this.rgbaTex(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS);
       if (!this.renderShader) {
         throw new Error("renderShader undefined");
       }
       this.renderShader.use(this.gl);
-      this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox2);
-      this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale2);
+      this.gl.uniform3fv(this.renderShader.uniforms.texVox, this.vox);
+      this.gl.uniform3fv(this.renderShader.uniforms.volScale, this.volScale);
       const pickingShader = this.pickingImageShader;
       pickingShader.use(this.gl);
       this.gl.uniform1i(pickingShader.uniforms.volume, 0);
       this.gl.uniform1i(pickingShader.uniforms.colormap, 1);
       this.gl.uniform1i(pickingShader.uniforms.overlay, 2);
-      this.gl.uniform3fv(pickingShader.uniforms.volScale, volScale2);
+      this.gl.uniform3fv(pickingShader.uniforms.volScale, this.volScale);
       log.debug(this.volumeObject3D);
     } else {
       if (this.back?.dims === void 0) {
         log.error("Fatal error: Unable to render overlay: background dimensions not defined!");
       }
-      const f000 = this.mm2frac(overlayItem.mm000, 0, true);
-      let f100 = this.mm2frac(overlayItem.mm100, 0, true);
-      let f010 = this.mm2frac(overlayItem.mm010, 0, true);
-      let f001 = this.mm2frac(overlayItem.mm001, 0, true);
-      f100 = vec3_exports.subtract(f100, f100, f000);
-      f010 = vec3_exports.subtract(f010, f010, f000);
-      f001 = vec3_exports.subtract(f001, f001, f000);
-      mtx = mat4_exports.fromValues(
-        f100[0],
-        f010[0],
-        f001[0],
-        f000[0],
-        f100[1],
-        f010[1],
-        f001[1],
-        f000[1],
-        f100[2],
-        f010[2],
-        f001[2],
-        f000[2],
-        0,
-        0,
-        0,
-        1
-      );
-      mat4_exports.invert(mtx, mtx);
+      mtx = calculateOverlayTransformMatrix({
+        overlayItem,
+        mm2frac: this.mm2frac.bind(this)
+      });
       if (layer === 1) {
-        outTexture = this.rgbaTex(this.overlayTexture, TEXTURE2_OVERLAY_VOL, this.back.dims);
+        const textures = allocateVolumeTextures({
+          gl: this.gl,
+          layer,
+          backDims: this.back.dims,
+          rgbaTex: this.rgbaTex.bind(this)
+        });
+        outTexture = textures.overlayTexture;
         this.overlayTexture = outTexture;
         this.overlayTextureID = outTexture;
       } else {
         outTexture = this.overlayTextureID;
       }
     }
-    const fb = this.gl.createFramebuffer();
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, fb);
-    this.gl.disable(this.gl.CULL_FACE);
+    const fb = setupFramebuffer(this.gl);
     this.gl.viewport(0, 0, this.back.dims[1], this.back.dims[2]);
-    this.gl.disable(this.gl.BLEND);
-    const tempTex3D = this.gl.createTexture();
-    this.gl.activeTexture(TEXTURE9_ORIENT);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_R, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-    this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-    let orientShader = this.orientShaderU;
+    const tempTex3D = createTemporaryTexture({
+      gl: this.gl,
+      TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE9_ORIENT
+    });
     if (!hdr) {
       throw new Error("hdr undefined");
     }
     if (!img) {
       throw new Error("img undefined");
     }
-    if (hdr.datatypeCode === 2 /* DT_UINT8 */) {
-      if (hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
-        orientShader = this.orientShaderAtlasU;
+    let orientShader = this.orientShaderU;
+    if (hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
+      const rgba32Result = setupRGBA32TextureData({
+        gl: this.gl,
+        hdr,
+        img,
+        overlayItem,
+        layer,
+        orientShaderRGBU: this.orientShaderRGBU,
+        orientShaderPAQD: this.orientShaderPAQD,
+        volumes: this.volumes,
+        backDims: this.back.dims,
+        rgbaTex: this.rgbaTex.bind(this),
+        paqdTexture: this.paqdTexture,
+        TEXTURE8_PAQD: TEXTURE_CONSTANTS.TEXTURE8_PAQD,
+        TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE8_PAQD
+      });
+      orientShader = rgba32Result.orientShader;
+      if (rgba32Result.outTexture !== null) {
+        outTexture = rgba32Result.outTexture;
       }
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED_INTEGER,
-        this.gl.UNSIGNED_BYTE,
-        img
-      );
-    } else if (hdr.datatypeCode === 4 /* DT_INT16 */) {
-      orientShader = this.orientShaderI;
-      if (hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
-        orientShader = this.orientShaderAtlasI;
+      if (rgba32Result.paqdTexture !== null) {
+        this.paqdTexture = rgba32Result.paqdTexture;
       }
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED_INTEGER,
-        this.gl.SHORT,
-        img
-      );
-    } else if (hdr.datatypeCode === 16 /* DT_FLOAT32 */) {
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED,
-        this.gl.FLOAT,
-        img
-      );
-      orientShader = this.orientShaderF;
-    } else if (hdr.datatypeCode === 64 /* DT_FLOAT64 */) {
-      let img32f = new Float32Array();
-      img32f = Float32Array.from(img);
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED,
-        this.gl.FLOAT,
-        img32f
-      );
-      orientShader = this.orientShaderF;
-    } else if (hdr.datatypeCode === 128 /* DT_RGB24 */) {
-      orientShader = this.orientShaderRGBU;
-      orientShader.use(this.gl);
-      this.gl.uniform1i(orientShader.uniforms.hasAlpha, 0);
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RGB_INTEGER,
-        this.gl.UNSIGNED_BYTE,
-        img
-      );
-    } else if (hdr.datatypeCode === 512 /* DT_UINT16 */) {
-      if (hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
-        orientShader = this.orientShaderAtlasU;
-      }
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RED_INTEGER,
-        this.gl.UNSIGNED_SHORT,
-        img
-      );
-    } else if (hdr.datatypeCode === 2304 /* DT_RGBA32 */) {
-      orientShader = this.orientShaderRGBU;
-      if (overlayItem.colormapLabel) {
-        orientShader = this.orientShaderPAQD;
-        let firstPAQD = true;
-        for (let l = 0; l < layer; l++) {
-          const isRGBA = this.volumes[l].hdr.datatypeCode === 2304 /* DT_RGBA32 */;
-          const isLabel = !!this.volumes[l].colormapLabel;
-          if (isRGBA && isLabel) {
-            firstPAQD = false;
-          }
-        }
-        if (firstPAQD) {
-          this.paqdTexture = this.rgbaTex(this.paqdTexture, TEXTURE8_PAQD, this.back.dims);
-        } else {
-          log.warn(`Current version only one probabilistic atlas (PAQD) at a time`);
-        }
-        outTexture = this.paqdTexture;
-        this.gl.activeTexture(TEXTURE9_ORIENT);
-      }
-      orientShader.use(this.gl);
-      this.gl.uniform1i(orientShader.uniforms.hasAlpha, 1);
-      this.gl.texStorage3D(this.gl.TEXTURE_3D, 1, this.gl.RGBA8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3]);
-      this.gl.texSubImage3D(
-        this.gl.TEXTURE_3D,
-        0,
-        0,
-        0,
-        0,
-        hdr.dims[1],
-        hdr.dims[2],
-        hdr.dims[3],
-        this.gl.RGBA_INTEGER,
-        this.gl.UNSIGNED_BYTE,
-        img
-      );
+    } else {
+      const uploadResult = setupVolumeTextureData({
+        gl: this.gl,
+        hdr,
+        img,
+        orientShaderU: this.orientShaderU,
+        orientShaderI: this.orientShaderI,
+        orientShaderF: this.orientShaderF,
+        orientShaderRGBU: this.orientShaderRGBU,
+        orientShaderAtlasU: this.orientShaderAtlasU,
+        orientShaderAtlasI: this.orientShaderAtlasI
+      });
+      orientShader = uploadResult.orientShader;
     }
     if (overlayItem.global_min === void 0) {
       overlayItem.calMinMax();
     }
-    let blendTexture = null;
     this.gl.bindVertexArray(this.genericVAO);
-    const isUseCopyTexSubImage3D = false;
-    if (isUseCopyTexSubImage3D) {
-      if (layer > 1) {
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims, true);
-        this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
-        for (let i = 0; i < this.back.dims[3]; i++) {
-          this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.overlayTexture, 0, i);
-          this.gl.activeTexture(TEXTURE10_BLEND);
-          this.gl.copyTexSubImage3D(this.gl.TEXTURE_3D, 0, 0, 0, i, 0, 0, this.back.dims[1], this.back.dims[2]);
-        }
-      } else {
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, [2, 2, 2, 2], true);
-      }
-    } else {
-      if (layer > 1) {
-        if (!this.back.dims) {
-          throw new Error("back.dims undefined");
-        }
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, this.back.dims);
-        this.gl.bindTexture(this.gl.TEXTURE_3D, blendTexture);
-        const passShader = this.passThroughShader;
-        passShader.use(this.gl);
-        this.gl.uniform1i(passShader.uniforms.in3D, 2);
-        for (let i = 0; i < this.back.dims[3]; i++) {
-          const coordZ = 1 / this.back.dims[3] * (i + 0.5);
-          this.gl.uniform1f(passShader.uniforms.coordZ, coordZ);
-          this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, blendTexture, 0, i);
-          this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-        }
-      } else {
-        blendTexture = this.rgbaTex(blendTexture, TEXTURE10_BLEND, [2, 2, 2, 2]);
-      }
-    }
+    const blendTexture = setupBlendTexture({
+      gl: this.gl,
+      layer,
+      backDims: this.back.dims,
+      rgbaTex: this.rgbaTex.bind(this),
+      passThroughShader: this.passThroughShader
+    });
     orientShader.use(this.gl);
-    this.gl.activeTexture(TEXTURE1_COLORMAPS);
-    let colormapLabelTexture = null;
-    if (overlayItem.colormapLabel !== null && overlayItem.colormapLabel.lut.length > 7) {
-      const nLabel = overlayItem.colormapLabel.max - overlayItem.colormapLabel.min + 1;
-      colormapLabelTexture = this.createColormapTexture(colormapLabelTexture, 1, nLabel);
-      this.gl.texSubImage2D(
-        this.gl.TEXTURE_2D,
-        0,
-        0,
-        0,
-        nLabel,
-        1,
-        this.gl.RGBA,
-        this.gl.UNSIGNED_BYTE,
-        overlayItem.colormapLabel.lut
-      );
-      this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.colormapLabel.min - 0.5);
-      this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.colormapLabel.max + 0.5);
-      this.gl.bindTexture(this.gl.TEXTURE_2D, colormapLabelTexture);
-    } else {
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE1_COLORMAPS);
+    const { colormapLabelTexture } = setupColormapLabel({
+      gl: this.gl,
+      overlayItem,
+      orientShader,
+      createColormapTexture: this.createColormapTexture.bind(this)
+    });
+    if (colormapLabelTexture === null) {
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
       this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min);
       this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max);
@@ -42901,154 +46747,45 @@ var Niivue = class {
       }
       delete overlayItem.alphaThreshold;
     }
-    const isColorbarFromZero = overlayItem.colormapType !== 0 /* MIN_TO_MAX */ ? 1 : 0;
-    const isAlphaThreshold = overlayItem.colormapType === 2 /* ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN */ ? 1 : 0;
-    this.gl.uniform1i(orientShader.uniforms.isAlphaThreshold, isAlphaThreshold);
-    this.gl.uniform1i(orientShader.uniforms.isColorbarFromZero, isColorbarFromZero);
-    this.gl.uniform1i(orientShader.uniforms.isAdditiveBlend, this.opts.isAdditiveBlend ? 1 : 0);
-    let mnNeg = Number.POSITIVE_INFINITY;
-    let mxNeg = Number.NEGATIVE_INFINITY;
-    if (overlayItem.colormapNegative.length > 0) {
-      mnNeg = Math.min(-overlayItem.cal_min, -overlayItem.cal_max);
-      mxNeg = Math.max(-overlayItem.cal_min, -overlayItem.cal_max);
-      if (isFinite(overlayItem.cal_minNeg) && isFinite(overlayItem.cal_maxNeg)) {
-        mnNeg = Math.min(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
-        mxNeg = Math.max(overlayItem.cal_minNeg, overlayItem.cal_maxNeg);
-      }
-    }
-    if (layer > 0 && this.overlayOutlineWidth > 0) {
-      const A = overlayItem.cal_min;
-      const B = overlayItem.cal_max;
-      let isZeroCrossing = Math.min(A, B) <= 0 && Math.max(A, B) >= 0;
-      if (!isZeroCrossing && mnNeg < mxNeg) {
-        isZeroCrossing = mnNeg <= 0 && mxNeg >= 0;
-      }
-      if (isZeroCrossing) {
-        log.error("issue1139: do not use overlayOutlineWidth when thresholds cross or touch zero");
-      }
-    }
     if (!orientShader) {
       throw new Error("orientShader undefined");
     }
-    this.gl.uniform1f(orientShader.uniforms.layer ?? null, layer);
-    this.gl.uniform1f(orientShader.uniforms.cal_minNeg ?? null, mnNeg);
-    this.gl.uniform1f(orientShader.uniforms.cal_maxNeg ?? null, mxNeg);
+    configureColormapUniforms({
+      gl: this.gl,
+      overlayItem,
+      orientShader,
+      layer,
+      isAdditiveBlend: this.opts.isAdditiveBlend
+    });
+    const { modulateTexture } = setupModulation({
+      gl: this.gl,
+      overlayItem,
+      hdr,
+      volumes: this.volumes,
+      orientShader,
+      r8Tex: this.r8Tex.bind(this),
+      TEXTURE7: this.gl.TEXTURE7
+    });
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
-    this.gl.uniform1i(orientShader.uniforms.intensityVol ?? null, 9);
-    this.gl.uniform1i(orientShader.uniforms.blend3D ?? null, 10);
-    this.gl.uniform1i(orientShader.uniforms.colormap ?? null, 1);
-    this.gl.uniform1f(orientShader.uniforms.scl_inter ?? null, hdr.scl_inter);
-    this.gl.uniform1f(orientShader.uniforms.scl_slope ?? null, hdr.scl_slope);
-    this.gl.uniform1f(orientShader.uniforms.opacity ?? null, opacity);
-    this.gl.uniform1i(orientShader.uniforms.modulationVol ?? null, 7);
-    let modulateTexture = null;
-    if (overlayItem.modulationImage !== null && overlayItem.modulationImage >= 0 && overlayItem.modulationImage < this.volumes.length) {
-      log.debug("modulating", this.volumes);
-      const mhdr = this.volumes[overlayItem.modulationImage].hdr;
-      if (mhdr.dims[1] === hdr.dims[1] && mhdr.dims[2] === hdr.dims[2] && mhdr.dims[3] === hdr.dims[3]) {
-        if (overlayItem.modulateAlpha) {
-          this.gl.uniform1i(orientShader.uniforms.modulation, 2);
-          this.gl.uniform1f(orientShader.uniforms.opacity, 1);
-        } else {
-          this.gl.uniform1i(orientShader.uniforms.modulation, 1);
-        }
-        modulateTexture = this.r8Tex(modulateTexture, this.gl.TEXTURE7, hdr.dims, true);
-        this.gl.activeTexture(this.gl.TEXTURE7);
-        this.gl.bindTexture(this.gl.TEXTURE_3D, modulateTexture);
-        const vx = hdr.dims[1] * hdr.dims[2] * hdr.dims[3];
-        const modulateVolume = new Uint8Array(vx);
-        const mn = this.volumes[overlayItem.modulationImage].cal_min;
-        const scale6 = 1 / (this.volumes[overlayItem.modulationImage].cal_max - mn);
-        const imgRaw = this.volumes[overlayItem.modulationImage].img.buffer;
-        let img2 = new Uint8Array(
-          imgRaw
-        );
-        switch (mhdr.datatypeCode) {
-          case 4 /* DT_INT16 */:
-            img2 = new Int16Array(imgRaw);
-            break;
-          case 16 /* DT_FLOAT32 */:
-            img2 = new Float32Array(imgRaw);
-            break;
-          case 64 /* DT_FLOAT64 */:
-            img2 = new Float64Array(imgRaw);
-            break;
-          case 128 /* DT_RGB24 */:
-            img2 = new Uint8Array(imgRaw);
-            break;
-          case 512 /* DT_UINT16 */:
-            img2 = new Uint16Array(imgRaw);
-            break;
-        }
-        log.debug(this.volumes[overlayItem.modulationImage]);
-        const isColormapNegative = this.volumes[overlayItem.modulationImage].colormapNegative.length > 0;
-        let mnNeg2 = this.volumes[overlayItem.modulationImage].cal_min;
-        let mxNeg2 = this.volumes[overlayItem.modulationImage].cal_max;
-        if (isFinite(this.volumes[overlayItem.modulationImage].cal_minNeg) && isFinite(this.volumes[overlayItem.modulationImage].cal_maxNeg)) {
-          mnNeg2 = this.volumes[overlayItem.modulationImage].cal_minNeg;
-          mxNeg2 = this.volumes[overlayItem.modulationImage].cal_minNeg;
-        }
-        mnNeg2 = Math.abs(mnNeg2);
-        mxNeg2 = Math.abs(mxNeg2);
-        if (mnNeg2 > mxNeg2) {
-          ;
-          [mnNeg2, mxNeg2] = [mxNeg2, mnNeg2];
-        }
-        const scaleNeg = 1 / (mxNeg2 - mnNeg2);
-        let mpow = Math.abs(overlayItem.modulateAlpha);
-        mpow = Math.max(mpow, 1);
-        const volOffset = this.volumes[overlayItem.modulationImage].frame4D * vx;
-        for (let i = 0; i < vx; i++) {
-          const vRaw = img2[i + volOffset] * mhdr.scl_slope + mhdr.scl_inter;
-          let v = (vRaw - mn) * scale6;
-          if (isColormapNegative && vRaw < 0) {
-            v = (Math.abs(vRaw) - mnNeg2) * scaleNeg;
-          }
-          v = Math.min(Math.max(v, 0), 1);
-          v = Math.pow(v, mpow) * 255;
-          modulateVolume[i] = v;
-        }
-        this.gl.texSubImage3D(
-          this.gl.TEXTURE_3D,
-          0,
-          0,
-          0,
-          0,
-          hdr.dims[1],
-          hdr.dims[2],
-          hdr.dims[3],
-          this.gl.RED,
-          this.gl.UNSIGNED_BYTE,
-          modulateVolume
-        );
-      } else {
-        log.debug("Modulation image dimensions do not match target");
-      }
-    } else {
-      this.gl.uniform1i(orientShader.uniforms.modulation, 0);
-    }
-    this.gl.uniformMatrix4fv(orientShader.uniforms.mtx, false, mtx);
     if (!this.back.dims) {
       throw new Error("back.dims undefined");
     }
-    let outline = 0;
-    if (hdr.intent_code === 1002 /* NIFTI_INTENT_LABEL */) {
-      outline = this.opts.atlasOutline;
-      this.gl.uniform1ui(orientShader.uniforms.activeIndex, this.opts.atlasActiveIndex | 0);
-    }
-    this.gl.uniform4fv(orientShader.uniforms.xyzaFrac, [
-      1 / this.back.dims[1],
-      1 / this.back.dims[2],
-      1 / this.back.dims[3],
-      outline
-    ]);
+    renderToOutputTexture({
+      gl: this.gl,
+      orientShader,
+      backDims: this.back.dims,
+      outTexture,
+      mtx,
+      hdr,
+      intensityVolTextureUnit: 9,
+      blendTextureUnit: 10,
+      colormapTextureUnit: 1,
+      modulationTextureUnit: 7,
+      opacity,
+      atlasOutline: this.opts.atlasOutline,
+      atlasActiveIndex: this.opts.atlasActiveIndex
+    });
     log.debug("back dims: ", this.back.dims);
-    for (let i = 0; i < this.back.dims[3]; i++) {
-      const coordZ = 1 / this.back.dims[3] * (i + 0.5);
-      this.gl.uniform1f(orientShader.uniforms.coordZ, coordZ);
-      this.gl.framebufferTextureLayer(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, outTexture, 0, i);
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-    }
     this.gl.bindVertexArray(this.unusedVAO);
     this.gl.deleteTexture(tempTex3D);
     this.gl.deleteTexture(modulateTexture);
@@ -43058,68 +46795,62 @@ var Niivue = class {
     this.gl.deleteFramebuffer(fb);
     if (layer === 0) {
       this.volumeTexture = outTexture;
-      if (this.gradientTextureAmount > 0 && !this.useCustomGradientTexture) {
-        this.gradientGL(hdr);
-        this.gl.bindVertexArray(this.genericVAO);
-      } else if (this.gradientTextureAmount <= 0) {
-        if (this.gradientTexture !== null) {
-          this.gl.deleteTexture(this.gradientTexture);
-        }
-        this.gradientTexture = null;
-      }
+      this.gradientTexture = updateGradientTexture({
+        gl: this.gl,
+        hdr,
+        gradientTextureAmount: this.gradientTextureAmount,
+        useCustomGradientTexture: this.useCustomGradientTexture,
+        gradientTexture: this.gradientTexture,
+        gradientGL: this.gradientGL.bind(this),
+        genericVAO: this.genericVAO
+      });
     }
     if (!this.renderShader) {
       throw new Error("renderShader undefined");
     }
-    this.renderShader.use(this.gl);
-    const slicescl = this.sliceScale(true);
-    const vox = slicescl.vox;
-    const volScale = slicescl.volScale;
-    this.gl.uniform1f(this.renderShader.uniforms.overlays, this.overlays.length);
-    this.gl.uniform4fv(this.renderShader.uniforms.clipPlaneColor, this.opts.clipPlaneColor);
-    this.gl.uniform1f(this.renderShader.uniforms.backOpacity, this.volumes[0].opacity);
-    this.gl.uniform1f(this.renderShader.uniforms.renderOverlayBlend, this.opts.renderOverlayBlend);
-    this.gl.uniform4fv(this.renderShader.uniforms.clipPlane, this.scene.clipPlane);
-    this.gl.uniform3fv(this.renderShader.uniforms.texVox, vox);
-    this.gl.uniform3fv(this.renderShader.uniforms.volScale, volScale);
     if (!this.pickingImageShader) {
       throw new Error("pickingImageShader undefined");
     }
-    this.pickingImageShader.use(this.gl);
-    this.gl.uniform1f(this.pickingImageShader.uniforms.overlays, this.overlays.length);
-    this.gl.uniform3fv(this.pickingImageShader.uniforms.texVox, vox);
-    let shader = this.sliceMMShader;
-    if (this.opts.is2DSliceShader) {
-      shader = this.slice2DShader;
-    }
-    if (this.opts.isV1SliceShader) {
-      shader = this.sliceV1Shader;
-    }
-    if (this.customSliceShader) {
-      shader = this.customSliceShader;
-    }
-    if (!shader) {
-      throw new Error("slice shader undefined");
-    }
-    shader.use(this.gl);
-    this.gl.uniform1f(shader.uniforms.overlays, this.overlays.length);
-    this.gl.uniform1f(shader.uniforms.drawOpacity, this.drawOpacity);
+    const slicescl = this.sliceScale(true);
+    const vox = slicescl.vox;
+    const volScale = slicescl.volScale;
+    const shader = selectSliceShader({
+      is2DSliceShader: this.opts.is2DSliceShader,
+      isV1SliceShader: this.opts.isV1SliceShader,
+      sliceMMShader: this.sliceMMShader,
+      slice2DShader: this.slice2DShader,
+      sliceV1Shader: this.sliceV1Shader,
+      customSliceShader: this.customSliceShader
+    });
+    updateShaderUniforms({
+      gl: this.gl,
+      renderShader: this.renderShader,
+      pickingImageShader: this.pickingImageShader,
+      sliceShader: shader,
+      overlaysLength: this.overlays.length,
+      clipPlaneColor: this.opts.clipPlaneColor,
+      backOpacity: this.volumes[0].opacity,
+      renderOverlayBlend: this.opts.renderOverlayBlend,
+      clipPlane: this.scene.clipPlane,
+      texVox: vox,
+      volScale,
+      drawOpacity: this.drawOpacity,
+      paqdUniforms: this.opts.paqdUniforms
+    });
     if (colormapLabelTexture !== null) {
       this.gl.deleteTexture(colormapLabelTexture);
-      this.gl.activeTexture(TEXTURE1_COLORMAPS);
+      this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE1_COLORMAPS);
       this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
     }
-    this.gl.uniform1i(shader.uniforms.drawing, 7);
-    this.gl.activeTexture(TEXTURE7_DRAW);
-    if (this.opts.is2DSliceShader) {
-      this.gl.bindTexture(this.gl.TEXTURE_2D, this.drawTexture);
-    } else {
-      this.gl.bindTexture(this.gl.TEXTURE_3D, this.drawTexture);
-    }
-    this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms);
-    this.gl.uniform1i(shader.uniforms.paqd, 8);
-    this.gl.activeTexture(TEXTURE8_PAQD);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture);
+    bindSliceShaderTextures({
+      gl: this.gl,
+      shader,
+      is2DSliceShader: this.opts.is2DSliceShader,
+      drawTexture: this.drawTexture,
+      paqdTexture: this.paqdTexture,
+      TEXTURE7_DRAW: TEXTURE_CONSTANTS.TEXTURE7_DRAW,
+      TEXTURE8_PAQD: TEXTURE_CONSTANTS.TEXTURE8_PAQD
+    });
     this.updateInterpolation(layer);
   }
   /**
@@ -43151,8 +46882,8 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/colormaps.html | live demo usage}
    */
   setColormap(id, colormap) {
-    const idx = this.getVolumeIndexByID(id);
-    this.volumes[idx].colormap = colormap;
+    const idx2 = this.getVolumeIndexByID(id);
+    this.volumes[idx2].colormap = colormap;
     this.updateGLVolume();
   }
   // port of https://github.com/rordenlab/niimath/blob/master/src/bwlabel.c
@@ -43161,293 +46892,60 @@ var Niivue = class {
    * @internal
    */
   idx(A, B, C, DIM) {
-    return C * DIM[0] * DIM[1] + B * DIM[0] + A;
+    return idx(A, B, C, DIM);
   }
-  // idx()
   /**
    * Checks if voxels below the given voxel have labels matching its value, returning the first matching label or 0.
    * @internal
    */
   check_previous_slice(bw, il, r, c, sl, dim, conn, tt) {
-    const nabo = new Uint32Array(27);
-    let nr_set = 0;
-    if (!sl) {
-      return 0;
-    }
-    const val = bw[this.idx(r, c, sl, dim)];
-    if (conn >= 6) {
-      const idx = this.idx(r, c, sl - 1, dim);
-      if (val === bw[idx]) {
-        nabo[nr_set++] = il[idx];
-      }
-    }
-    if (conn >= 18) {
-      if (r) {
-        const idx = this.idx(r - 1, c, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-      if (c) {
-        const idx = this.idx(r, c - 1, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-      if (r < dim[0] - 1) {
-        const idx = this.idx(r + 1, c, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-      if (c < dim[1] - 1) {
-        const idx = this.idx(r, c + 1, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-    }
-    if (conn === 26) {
-      if (r && c) {
-        const idx = this.idx(r - 1, c - 1, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-      if (r < dim[0] - 1 && c) {
-        const idx = this.idx(r + 1, c - 1, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-      if (r && c < dim[1] - 1) {
-        const idx = this.idx(r - 1, c + 1, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-      if (r < dim[0] - 1 && c < dim[1] - 1) {
-        const idx = this.idx(r + 1, c + 1, sl - 1, dim);
-        if (val === bw[idx]) {
-          nabo[nr_set++] = il[idx];
-        }
-      }
-    }
-    if (nr_set) {
-      this.fill_tratab(tt, nabo, nr_set);
-      return nabo[0];
-    } else {
-      return 0;
-    }
+    return checkPreviousSlice(bw, il, r, c, sl, dim, conn, tt);
   }
-  // check_previous_slice()
   /**
    * Performs provisional labeling of connected voxels in a volume using specified connectivity.
    * @internal
    */
   do_initial_labelling(bw, dim, conn) {
-    let label = 1;
-    const kGrowArrayBy = 8192;
-    let ttn = kGrowArrayBy;
-    let tt = new Uint32Array(ttn).fill(0);
-    const il = new Uint32Array(dim[0] * dim[1] * dim[2]).fill(0);
-    const nabo = new Uint32Array(27);
-    for (let sl = 0; sl < dim[2]; sl++) {
-      for (let c = 0; c < dim[1]; c++) {
-        for (let r = 0; r < dim[0]; r++) {
-          let nr_set = 0;
-          const val = bw[this.idx(r, c, sl, dim)];
-          if (val === 0) {
-            continue;
-          }
-          nabo[0] = this.check_previous_slice(bw, il, r, c, sl, dim, conn, tt);
-          if (nabo[0]) {
-            nr_set += 1;
-          }
-          if (conn >= 6) {
-            if (r) {
-              const idx = this.idx(r - 1, c, sl, dim);
-              if (val === bw[idx]) {
-                nabo[nr_set++] = il[idx];
-              }
-            }
-            if (c) {
-              const idx = this.idx(r, c - 1, sl, dim);
-              if (val === bw[idx]) {
-                nabo[nr_set++] = il[idx];
-              }
-            }
-          }
-          if (conn >= 18) {
-            if (c && r) {
-              const idx = this.idx(r - 1, c - 1, sl, dim);
-              if (val === bw[idx]) {
-                nabo[nr_set++] = il[idx];
-              }
-            }
-            if (c && r < dim[0] - 1) {
-              const idx = this.idx(r + 1, c - 1, sl, dim);
-              if (val === bw[idx]) {
-                nabo[nr_set++] = il[idx];
-              }
-            }
-          }
-          if (nr_set) {
-            il[this.idx(r, c, sl, dim)] = nabo[0];
-            this.fill_tratab(tt, nabo, nr_set);
-          } else {
-            il[this.idx(r, c, sl, dim)] = label;
-            if (label >= ttn) {
-              ttn += kGrowArrayBy;
-              const ext = new Uint32Array(ttn);
-              ext.set(tt);
-              tt = ext;
-            }
-            tt[label - 1] = label;
-            label++;
-          }
-        }
-      }
-    }
-    for (let i = 0; i < label - 1; i++) {
-      let j = i;
-      while (tt[j] !== j + 1) {
-        j = tt[j] - 1;
-      }
-      tt[i] = j + 1;
-    }
-    return [label - 1, tt, il];
+    const result = doInitialLabeling(bw, dim, conn);
+    return [result.labelCount, result.translationTable, result.initialLabels];
   }
-  // do_initial_labelling()
   /**
    * Merges multiple provisional labels into a unified class using a translation table.
    * @internal
    */
   fill_tratab(tt, nabo, nr_set) {
-    let cntr = 0;
-    const tn = new Uint32Array(nr_set + 5).fill(0);
-    const INT_MAX = 2147483647;
-    let ltn = INT_MAX;
-    for (let i = 0; i < nr_set; i++) {
-      let j = nabo[i];
-      cntr = 0;
-      while (tt[j - 1] !== j) {
-        j = tt[j - 1];
-        cntr++;
-        if (cntr > 100) {
-          log.info("\nOoh no!!");
-          break;
-        }
-      }
-      tn[i] = j;
-      ltn = Math.min(ltn, j);
-    }
-    for (let i = 0; i < nr_set; i++) {
-      tt[tn[i] - 1] = ltn;
-    }
+    fillTranslationTable(tt, nabo, nr_set);
   }
-  // fill_tratab()
   /**
    * Removes gaps in label indices to produce a dense labeling.
    * @internal
    */
   translate_labels(il, dim, tt, ttn) {
-    const nvox = dim[0] * dim[1] * dim[2];
-    let ml = 0;
-    const l = new Uint32Array(nvox).fill(0);
-    for (let i = 0; i < ttn; i++) {
-      ml = Math.max(ml, tt[i]);
-    }
-    const fl2 = new Uint32Array(ml).fill(0);
-    let cl = 0;
-    for (let i = 0; i < nvox; i++) {
-      if (il[i]) {
-        if (!fl2[tt[il[i] - 1] - 1]) {
-          cl += 1;
-          fl2[tt[il[i] - 1] - 1] = cl;
-        }
-        l[i] = fl2[tt[il[i] - 1] - 1];
-      }
-    }
-    return [cl, l];
+    const result = translateLabels(il, dim, tt, ttn);
+    return [result.clusterCount, result.labels];
   }
-  // translate_labels()
   /**
    * Retains only the largest cluster for each region in a labeled volume.
    * @internal
    */
   largest_original_cluster_labels(bw, cl, ls) {
-    const nvox = bw.length;
-    const ls2bw = new Uint32Array(cl + 1).fill(0);
-    const sumls = new Uint32Array(cl + 1).fill(0);
-    for (let i = 0; i < nvox; i++) {
-      const bwVal = bw[i];
-      const lsVal = ls[i];
-      ls2bw[lsVal] = bwVal;
-      sumls[lsVal]++;
-    }
-    let mxbw = 0;
-    for (let i = 0; i < cl + 1; i++) {
-      const bwVal = ls2bw[i];
-      mxbw = Math.max(mxbw, bwVal);
-      for (let j = 0; j < cl + 1; j++) {
-        if (j === i) {
-          continue;
-        }
-        if (bwVal !== ls2bw[j]) {
-          continue;
-        }
-        if (sumls[i] < sumls[j]) {
-          ls2bw[i] = 0;
-        } else if (sumls[i] === sumls[j] && i < j) {
-          ls2bw[i] = 0;
-        }
-      }
-    }
-    const vxs = new Uint32Array(nvox).fill(0);
-    for (let i = 0; i < nvox; i++) {
-      vxs[i] = ls2bw[ls[i]];
-    }
-    return [mxbw, vxs];
+    const result = largestOriginalClusterLabels(bw, cl, ls);
+    return [result.maxValue, result.voxels];
   }
   /**
    * Computes connected components labeling on a 3D image.
    * @internal
    */
-  bwlabel(img, dim, conn = 26, binarize = false, onlyLargestClusterPerClass = false) {
-    const start = Date.now();
-    const nvox = dim[0] * dim[1] * dim[2];
-    const bw = new Uint32Array(nvox).fill(0);
-    if (![6, 18, 26].includes(conn)) {
-      log.info("bwlabel: conn must be 6, 18 or 26.");
-      return [0, bw];
-    }
-    if (dim[0] < 2 || dim[1] < 2 || dim[2] < 1) {
-      log.info("bwlabel: img must be 2 or 3-dimensional");
-      return [0, bw];
-    }
-    if (binarize) {
-      for (let i = 0; i < nvox; i++) {
-        if (img[i] !== 0) {
-          bw[i] = 1;
-        }
-      }
-    } else {
-      bw.set(img);
-    }
-    let [ttn, tt, il] = this.do_initial_labelling(bw, dim, conn);
-    if (tt === void 0) {
-      tt = new Uint32Array();
-    }
-    const [cl, ls] = this.translate_labels(il, dim, tt, ttn);
-    log.info(conn + " neighbor clustering into " + cl + " regions in " + (Date.now() - start) + "ms");
-    if (onlyLargestClusterPerClass) {
-      const [nbw, bwMx] = this.largest_original_cluster_labels(bw, cl, ls);
-      return [nbw, bwMx];
-    }
-    return [cl, ls];
+  bwlabel(img, dim, conn = 26, binarize2 = false, onlyLargestClusterPerClass = false) {
+    const result = bwlabel({
+      img,
+      dim,
+      conn,
+      binarize: binarize2,
+      onlyLargestClusterPerClass
+    });
+    return [result.clusterCount, result.labels];
   }
-  // bwlabel()
   /**
    * Create a connected component label map from a volume
    * @param id - ID of the input volume
@@ -43457,12 +46955,12 @@ var Niivue = class {
    * @returns a new NVImage with labeled clusters, using random colormap
    * @see {@link https://niivue.com/demos/features/clusterize.html | live demo usage}
    */
-  async createConnectedLabelImage(id, conn = 26, binarize = false, onlyLargestClusterPerClass = false) {
-    const idx = this.getVolumeIndexByID(id);
-    const dim = Uint32Array.from(this.volumes[idx].dims?.slice(1, 4) ?? []);
-    const img = Uint32Array.from(this.volumes[idx].img?.slice() ?? []);
-    const [mx, clusterImg] = this.bwlabel(img, dim, conn, binarize, onlyLargestClusterPerClass);
-    const nii = this.volumes[idx].clone();
+  async createConnectedLabelImage(id, conn = 26, binarize2 = false, onlyLargestClusterPerClass = false) {
+    const idx2 = this.getVolumeIndexByID(id);
+    const dim = Uint32Array.from(this.volumes[idx2].dims?.slice(1, 4) ?? []);
+    const img = Uint32Array.from(this.volumes[idx2].img?.slice() ?? []);
+    const [mx, clusterImg] = this.bwlabel(img, dim, conn, binarize2, onlyLargestClusterPerClass);
+    const nii = this.volumes[idx2].clone();
     nii.opacity = 0.5;
     nii.colormap = "random";
     for (let i = 0; i < nii.img.length; i++) {
@@ -43475,179 +46973,6 @@ var Niivue = class {
   // conform.py functions follow
   // https://github.com/Deep-MI/FastSurfer/blob/4e76bed7b11fd7e6403ddac729059ad3842b56de/FastSurferCNN/data_loader/conform.py
   // Licensed under the Apache License, Version 2.0 (the "License")
-  // Crop the intensity ranges to specific min and max values.
-  /**
-   * Scales and crops a Float32 image to Uint8 range.
-   * @internal
-   */
-  async scalecropUint8(img32, dst_min = 0, dst_max = 255, src_min, scale6) {
-    const voxnum = img32.length;
-    const img8 = new Uint8Array(voxnum);
-    for (let i = 0; i < voxnum; i++) {
-      let val = img32[i];
-      val = dst_min + scale6 * (val - src_min);
-      val = Math.max(val, dst_min);
-      val = Math.min(val, dst_max);
-      img8[i] = val;
-    }
-    return img8;
-  }
-  /**
-   * Scales and crops a Float32 image to a specified range.
-   * @internal
-   */
-  async scalecropFloat32(img32, dst_min = 0, dst_max = 1, src_min, scale6) {
-    const voxnum = img32.length;
-    const img = new Float32Array(voxnum);
-    for (let i = 0; i < voxnum; i++) {
-      let val = img32[i];
-      val = dst_min + scale6 * (val - src_min);
-      val = Math.max(val, dst_min);
-      val = Math.min(val, dst_max);
-      img[i] = val;
-    }
-    return img;
-  }
-  /**
-   * Computes offset and scale to robustly rescale image intensities to a target range.
-   * @internal
-   */
-  getScale(volume, dst_min = 0, dst_max = 255, f_low = 0, f_high = 0.999) {
-    let src_min = volume.global_min;
-    let src_max = volume.global_max;
-    if (volume.hdr.datatypeCode === 2 /* DT_UINT8 */) {
-      return [src_min, 1];
-    }
-    if (!isFinite(f_low) || !isFinite(f_high)) {
-      if (isFinite(volume.cal_min) && isFinite(volume.cal_max) && volume.cal_max > volume.cal_min) {
-        src_min = volume.cal_min;
-        src_max = volume.cal_max;
-        const scale7 = (dst_max - dst_min) / (src_max - src_min);
-        log.info(" Robust Rescale:  min: " + src_min + "  max: " + src_max + " scale: " + scale7);
-        return [src_min, scale7];
-      }
-    }
-    let img = volume.img;
-    const voxnum = volume.hdr.dims[1] * volume.hdr.dims[2] * volume.hdr.dims[3];
-    if (volume.hdr.scl_slope !== 1 || volume.hdr.scl_inter !== 0) {
-      const srcimg = volume.img;
-      img = new Float32Array(volume.img.length);
-      for (let i = 0; i < voxnum; i++) {
-        img[i] = srcimg[i] * volume.hdr.scl_slope + volume.hdr.scl_inter;
-      }
-    }
-    if (src_min < 0) {
-      log.warn("WARNING: Input image has value(s) below 0.0 !");
-    }
-    log.info(" Input:    min: " + src_min + "  max: " + src_max);
-    if (f_low === 0 && f_high === 1) {
-      return [src_min, 1];
-    }
-    let nz = 0;
-    for (let i = 0; i < voxnum; i++) {
-      if (Math.abs(img[i]) >= 1e-15) {
-        nz++;
-      }
-    }
-    const histosize = 1e3;
-    const bin_size = (src_max - src_min) / histosize;
-    const hist = new Array(histosize).fill(0);
-    for (let i = 0; i < voxnum; i++) {
-      const val = img[i];
-      let bin = Math.floor((val - src_min) / bin_size);
-      bin = Math.min(bin, histosize - 1);
-      hist[bin]++;
-    }
-    const cs = new Array(histosize).fill(0);
-    cs[0] = hist[0];
-    for (let i = 1; i < histosize; i++) {
-      cs[i] = cs[i - 1] + hist[i];
-    }
-    let nth = Math.floor(f_low * voxnum);
-    let idx = 0;
-    while (idx < histosize) {
-      if (cs[idx] >= nth) {
-        break;
-      }
-      idx++;
-    }
-    const global_min = src_min;
-    src_min = idx * bin_size + global_min;
-    nth = voxnum - Math.floor((1 - f_high) * nz);
-    idx = 0;
-    while (idx < histosize - 1) {
-      if (cs[idx + 1] >= nth) {
-        break;
-      }
-      idx++;
-    }
-    src_max = idx * bin_size + global_min;
-    let scale6 = 1;
-    if (src_min !== src_max) {
-      scale6 = (dst_max - dst_min) / (src_max - src_min);
-    }
-    log.info(" Rescale:  min: " + src_min + "  max: " + src_max + " scale: " + scale6);
-    return [src_min, scale6];
-  }
-  // Translation of nibabel mghformat.py (MIT License 2009-2019) and FastSurfer conform.py (Apache License)
-  // https://github.com/nipy/nibabel/blob/a2e5dee05cf374c22670ff9fd0d385ce366eb495/nibabel/freesurfer/mghformat.py#L30
-  /**
-   * Computes output affine, voxel-to-voxel transform, and its inverse for resampling.
-   * @internal
-   */
-  conformVox2Vox(inDims, inAffine, outDim = 256, outMM = 1, toRAS = false) {
-    const a = inAffine.flat();
-    const affine = mat4_exports.fromValues(
-      a[0],
-      a[1],
-      a[2],
-      a[3],
-      a[4],
-      a[5],
-      a[6],
-      a[7],
-      a[8],
-      a[9],
-      a[10],
-      a[11],
-      a[12],
-      a[13],
-      a[14],
-      a[15]
-    );
-    const half = vec4_exports.fromValues(inDims[1] / 2, inDims[2] / 2, inDims[3] / 2, 1);
-    const Pxyz_c4 = vec4_exports.create();
-    const affineT = mat4_exports.create();
-    mat4_exports.transpose(affineT, affine);
-    vec4_exports.transformMat4(Pxyz_c4, half, affineT);
-    const Pxyz_c = vec3_exports.fromValues(Pxyz_c4[0], Pxyz_c4[1], Pxyz_c4[2]);
-    const delta = vec3_exports.fromValues(outMM, outMM, outMM);
-    let Mdc = mat4_exports.fromValues(-1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1);
-    if (toRAS) {
-      Mdc = mat4_exports.fromValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    }
-    mat4_exports.transpose(Mdc, Mdc);
-    const dims = vec4_exports.fromValues(outDim, outDim, outDim, 1);
-    const MdcD = mat4_exports.create();
-    mat4_exports.scale(MdcD, Mdc, delta);
-    const vol_center = vec4_exports.fromValues(dims[0], dims[1], dims[2], 1);
-    vec4_exports.transformMat4(vol_center, vol_center, MdcD);
-    vec4_exports.scale(vol_center, vol_center, 0.5);
-    const translate3 = vec3_exports.create();
-    vec3_exports.subtract(translate3, Pxyz_c, vec3_exports.fromValues(vol_center[0], vol_center[1], vol_center[2]));
-    const out_affine = mat4_exports.create();
-    mat4_exports.transpose(out_affine, MdcD);
-    out_affine[3] = translate3[0];
-    out_affine[7] = translate3[1];
-    out_affine[11] = translate3[2];
-    const inv_out_affine = mat4_exports.create();
-    mat4_exports.invert(inv_out_affine, out_affine);
-    const vox2vox = mat4_exports.create();
-    mat4_exports.mul(vox2vox, affine, inv_out_affine);
-    const inv_vox2vox = mat4_exports.create();
-    mat4_exports.invert(inv_vox2vox, vox2vox);
-    return [out_affine, vox2vox, inv_vox2vox];
-  }
   /**
    * Create a binary NIfTI file as a Uint8Array, including header and image data
    * @param dims - image dimensions [x, y, z]
@@ -43696,124 +47021,55 @@ var Niivue = class {
   async conform(volume, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false) {
     const outDim = 256;
     const outMM = 1;
-    const obj = this.conformVox2Vox(volume.hdr.dims, volume.hdr.affine.flat(), outDim, outMM, toRAS);
-    const out_affine = obj[0];
-    const inv_vox2vox = obj[2];
-    const out_nvox = outDim * outDim * outDim;
-    const out_img = new Float32Array(out_nvox);
-    const in_img = new Float32Array(volume.img);
-    const in_nvox = volume.hdr.dims[1] * volume.hdr.dims[2] * volume.hdr.dims[3];
+    const { outAffine, invVox2vox } = conformVox2Vox({
+      inDims: volume.hdr.dims,
+      inAffine: volume.hdr.affine.flat(),
+      outDim,
+      outMM,
+      toRAS
+    });
+    const inImg = new Float32Array(volume.img);
+    const inNvox = volume.hdr.dims[1] * volume.hdr.dims[2] * volume.hdr.dims[3];
     if (volume.hdr.scl_slope !== 1 || volume.hdr.scl_inter !== 0) {
-      for (let i2 = 0; i2 < in_nvox; i2++) {
-        in_img[i2] = in_img[i2] * volume.hdr.scl_slope + volume.hdr.scl_inter;
+      for (let i = 0; i < inNvox; i++) {
+        inImg[i] = inImg[i] * volume.hdr.scl_slope + volume.hdr.scl_inter;
       }
     }
-    const dimX = volume.hdr.dims[1];
-    const dimY = volume.hdr.dims[2];
-    const dimZ = volume.hdr.dims[3];
-    const dimXY = dimX * dimY;
-    let i = -1;
-    function voxidx(vx, vy, vz) {
-      return vx + vy * dimX + vz * dimXY;
-    }
-    const inv_vox2vox0 = inv_vox2vox[0];
-    const inv_vox2vox4 = inv_vox2vox[4];
-    const inv_vox2vox8 = inv_vox2vox[8];
-    if (isLinear) {
-      for (let z = 0; z < outDim; z++) {
-        for (let y = 0; y < outDim; y++) {
-          const ixYZ = y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3];
-          const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7];
-          const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11];
-          for (let x = 0; x < outDim; x++) {
-            const ix = x * inv_vox2vox0 + ixYZ;
-            const iy = x * inv_vox2vox4 + iyYZ;
-            const iz = x * inv_vox2vox8 + izYZ;
-            const fx = Math.floor(ix);
-            const fy = Math.floor(iy);
-            const fz = Math.floor(iz);
-            i++;
-            if (fx < 0 || fy < 0 || fz < 0) {
-              continue;
-            }
-            const cx = Math.ceil(ix);
-            const cy = Math.ceil(iy);
-            const cz = Math.ceil(iz);
-            if (cx >= dimX || cy >= dimY || cz >= dimZ) {
-              continue;
-            }
-            const rcx = ix - fx;
-            const rcy = iy - fy;
-            const rcz = iz - fz;
-            const rfx = 1 - rcx;
-            const rfy = 1 - rcy;
-            const rfz = 1 - rcz;
-            const fff = voxidx(fx, fy, fz);
-            let vx = 0;
-            vx += in_img[fff] * rfx * rfy * rfz;
-            vx += in_img[fff + dimXY] * rfx * rfy * rcz;
-            vx += in_img[fff + dimX] * rfx * rcy * rfz;
-            vx += in_img[fff + dimX + dimXY] * rfx * rcy * rcz;
-            vx += in_img[fff + 1] * rcx * rfy * rfz;
-            vx += in_img[fff + 1 + dimXY] * rcx * rfy * rcz;
-            vx += in_img[fff + 1 + dimX] * rcx * rcy * rfz;
-            vx += in_img[fff + 1 + dimX + dimXY] * rcx * rcy * rcz;
-            out_img[i] = vx;
-          }
-        }
-      }
-    } else {
-      for (let z = 0; z < outDim; z++) {
-        for (let y = 0; y < outDim; y++) {
-          const ixYZ = y * inv_vox2vox[1] + z * inv_vox2vox[2] + inv_vox2vox[3];
-          const iyYZ = y * inv_vox2vox[5] + z * inv_vox2vox[6] + inv_vox2vox[7];
-          const izYZ = y * inv_vox2vox[9] + z * inv_vox2vox[10] + inv_vox2vox[11];
-          for (let x = 0; x < outDim; x++) {
-            const ix = Math.round(x * inv_vox2vox0 + ixYZ);
-            const iy = Math.round(x * inv_vox2vox4 + iyYZ);
-            const iz = Math.round(x * inv_vox2vox8 + izYZ);
-            i++;
-            if (ix < 0 || iy < 0 || iz < 0) {
-              continue;
-            }
-            if (ix >= dimX || iy >= dimY || iz >= dimZ) {
-              continue;
-            }
-            out_img[i] = in_img[voxidx(ix, iy, iz)];
-          }
-        }
-      }
-    }
-    const src_min = 0;
-    const scale6 = 0;
-    let f_low = 0;
-    if (isRobustMinMax) {
-      f_low = NaN;
-    }
-    let bytes = new Uint8Array();
+    const outImg = resampleVolume({
+      inImg,
+      inDims: volume.hdr.dims,
+      outDim,
+      invVox2vox,
+      isLinear
+    });
+    const f_low = isRobustMinMax ? NaN : 0;
+    const scaleParams = {
+      img: volume.img,
+      dims: volume.hdr.dims,
+      global_min: volume.global_min,
+      global_max: volume.global_max,
+      datatypeCode: volume.hdr.datatypeCode,
+      scl_slope: volume.hdr.scl_slope,
+      scl_inter: volume.hdr.scl_inter,
+      cal_min: volume.cal_min,
+      cal_max: volume.cal_max,
+      f_low
+    };
+    let bytes;
     if (asFloat32) {
-      const gs = await this.getScale(volume, 0, 1, f_low);
-      const out_img32 = await this.scalecropFloat32(out_img, 0, 1, gs[0], gs[1]);
-      bytes = await this.createNiftiArray(
-        [outDim, outDim, outDim],
-        [outMM, outMM, outMM],
-        Array.from(out_affine),
-        16 /* DT_FLOAT32 */,
-        new Uint8Array(out_img32.buffer)
-      );
+      scaleParams.dst_min = 0;
+      scaleParams.dst_max = 1;
+      const [srcMin, scale6] = getScale(scaleParams);
+      const outImg32 = scalecropFloat32(outImg, 0, 1, srcMin, scale6);
+      bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), 16 /* DT_FLOAT32 */, new Uint8Array(outImg32.buffer));
     } else {
-      const gs = await this.getScale(volume, 0, 255, f_low);
-      const out_img8 = await this.scalecropUint8(out_img, 0, 255, gs[0], gs[1]);
-      bytes = await this.createNiftiArray(
-        [outDim, outDim, outDim],
-        [outMM, outMM, outMM],
-        Array.from(out_affine),
-        2,
-        out_img8
-      );
+      scaleParams.dst_min = 0;
+      scaleParams.dst_max = 255;
+      const [srcMin, scale6] = getScale(scaleParams);
+      const outImg8 = scalecropUint8(outImg, 0, 255, srcMin, scale6);
+      bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), 2 /* DT_UINT8 */, outImg8);
     }
-    const nii = await this.niftiArray2NVImage(bytes);
-    return nii;
+    return this.niftiArray2NVImage(bytes);
   }
   /**
    * darken crevices and brighten corners when 3D rendering drawings.
@@ -43847,8 +47103,8 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/mosaics2.html | live demo usage}
    */
   setColormapNegative(id, colormapNegative) {
-    const idx = this.getVolumeIndexByID(id);
-    this.volumes[idx].colormapNegative = colormapNegative;
+    const idx2 = this.getVolumeIndexByID(id);
+    this.volumes[idx2].colormapNegative = colormapNegative;
     this.updateGLVolume();
   }
   /**
@@ -43885,8 +47141,8 @@ var Niivue = class {
    * @param id - the ID of the 4D NVImage
    **/
   async loadDeferred4DVolumes(id) {
-    const idx = this.getVolumeIndexByID(id);
-    const volume = this.volumes[idx];
+    const idx2 = this.getVolumeIndexByID(id);
+    const volume = this.volumes[idx2];
     if (volume.nTotalFrame4D <= volume.nFrame4D) {
       return;
     }
@@ -43912,21 +47168,17 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/timeseries.html | live demo usage}
    */
   setFrame4D(id, frame4D) {
-    const idx = this.getVolumeIndexByID(id);
-    const volume = this.volumes[idx];
-    if (frame4D > volume.nFrame4D - 1) {
-      frame4D = volume.nFrame4D - 1;
-    }
-    if (frame4D < 0) {
-      frame4D = 0;
-    }
-    if (frame4D === volume.frame4D) {
+    const idx2 = this.getVolumeIndexByID(id);
+    if (idx2 < 0) {
       return;
     }
-    volume.frame4D = frame4D;
-    this.updateGLVolume();
-    this.onFrameChange(volume, frame4D);
-    this.createOnLocationChange();
+    const oldFrame = this.volumes[idx2].frame4D;
+    setFrame4D(this.volumes, id, frame4D);
+    if (this.volumes[idx2].frame4D !== oldFrame) {
+      this.updateGLVolume();
+      this.onFrameChange(this.volumes[idx2], this.volumes[idx2].frame4D);
+      this.createOnLocationChange();
+    }
   }
   /**
    * determine active 3D volume from 4D time series
@@ -43936,8 +47188,7 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/timeseries.html | live demo usage}
    */
   getFrame4D(id) {
-    const idx = this.getVolumeIndexByID(id);
-    return this.volumes[idx].frame4D;
+    return getFrame4D(this.volumes, id);
   }
   /**
    * Returns a colormap by its name key.
@@ -43968,7 +47219,7 @@ var Niivue = class {
       return null;
     }
     texture = this.gl.createTexture();
-    this.gl.activeTexture(TEXTURE1_COLORMAPS);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE1_COLORMAPS);
     this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
     this.gl.texStorage2D(this.gl.TEXTURE_2D, 1, this.gl.RGBA8, nCol, nRow);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
@@ -44012,24 +47263,8 @@ var Niivue = class {
         const volume = this.volumes[i];
         const neg = negMinMax(volume.cal_min, volume.cal_max, volume.cal_minNeg, volume.cal_maxNeg);
         const isColorbarFromZero = volume.colormapType !== 0 /* MIN_TO_MAX */;
-        this.addColormapList(
-          volume.colormapNegative,
-          neg[0],
-          neg[1],
-          isColorbarFromZero,
-          true,
-          volume.colorbarVisible,
-          volume.colormapInvert
-        );
-        this.addColormapList(
-          volume.colormap,
-          volume.cal_min,
-          volume.cal_max,
-          isColorbarFromZero,
-          false,
-          volume.colorbarVisible,
-          volume.colormapInvert
-        );
+        this.addColormapList(volume.colormapNegative, neg[0], neg[1], isColorbarFromZero, true, volume.colorbarVisible, volume.colormapInvert);
+        this.addColormapList(volume.colormap, volume.cal_min, volume.cal_max, isColorbarFromZero, false, volume.colorbarVisible, volume.colormapInvert);
       }
     }
     const nmesh = this.meshes.length;
@@ -44126,17 +47361,15 @@ var Niivue = class {
    * @internal
    */
   sliceScale(forceVox = false) {
-    let dimsMM = this.screenFieldOfViewMM(0 /* AXIAL */);
-    if (forceVox) {
-      dimsMM = this.screenFieldOfViewVox(0 /* AXIAL */);
-    }
-    const longestAxis = Math.max(dimsMM[0], Math.max(dimsMM[1], dimsMM[2]));
-    const volScale = [dimsMM[0] / longestAxis, dimsMM[1] / longestAxis, dimsMM[2] / longestAxis];
     if (!this.back?.dims) {
       throw new Error("back.dims undefined");
     }
-    const vox = [this.back.dims[1], this.back.dims[2], this.back.dims[3]];
-    return { volScale, vox, longestAxis, dimsMM };
+    return calculateSliceScale({
+      forceVox,
+      getScreenFieldOfViewMM: (axCorSag) => this.screenFieldOfViewMM(axCorSag),
+      getScreenFieldOfViewVox: (axCorSag) => this.screenFieldOfViewVox(axCorSag),
+      backDims: this.back.dims
+    });
   }
   /**
    * Returns the index of the tile containing the given (x, y) screen coordinates.
@@ -44144,98 +47377,81 @@ var Niivue = class {
    * @internal
    */
   tileIndex(x, y) {
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const ltwh = this.screenSlices[i].leftTopWidthHeight;
-      if (x > ltwh[0] && y > ltwh[1] && x < ltwh[0] + ltwh[2] && y < ltwh[1] + ltwh[3]) {
-        return i;
-      }
-    }
-    return -1;
+    return findTileIndex({
+      x,
+      y,
+      screenSlices: this.screenSlices
+    });
   }
   /**
    * Returns the index of the render tile containing (x, y) screen coordinates, or -1 if none.
    * @internal
    */
   inRenderTile(x, y) {
-    const idx = this.tileIndex(x, y);
-    if (idx >= 0 && this.screenSlices[idx].axCorSag === 4 /* RENDER */) {
-      return idx;
-    }
-    return -1;
+    return findRenderTileIndex({
+      x,
+      y,
+      screenSlices: this.screenSlices
+    });
   }
   /**
    * Adjusts clip plane depth if active, else zooms render size.
    * @internal
    */
   sliceScroll3D(posChange = 0) {
-    if (posChange === 0) {
+    const result = calculateSliceScroll3D({
+      posChange,
+      volumesLength: this.volumes.length,
+      clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
+      activeClipPlaneIndex: this.uiData.activeClipPlaneIndex,
+      volScaleMultiplier: this.scene.volScaleMultiplier
+    });
+    if (result.action === "none") {
       return;
     }
-    if (this.volumes.length > 0 && this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8) {
+    if (result.action === "clipPlane" && result.newClipPlaneDepth !== void 0) {
       const depthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex].slice();
-      if (posChange > 0) {
-        depthAziElev[0] = Math.min(1.5, depthAziElev[0] + 0.025);
-      }
-      if (posChange < 0) {
-        depthAziElev[0] = Math.max(-1.5, depthAziElev[0] - 0.025);
-      }
-      if (depthAziElev[0] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0]) {
-        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev;
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
-      }
-      return;
+      depthAziElev[0] = result.newClipPlaneDepth;
+      this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev;
+      return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
     }
-    if (posChange > 0) {
-      this.scene.volScaleMultiplier = Math.min(2, this.scene.volScaleMultiplier * 1.1);
+    if (result.action === "zoom" && result.newVolScaleMultiplier !== void 0) {
+      this.scene.volScaleMultiplier = result.newVolScaleMultiplier;
+      this.drawScene();
     }
-    if (posChange < 0) {
-      this.scene.volScaleMultiplier = Math.max(0.5, this.scene.volScaleMultiplier * 0.9);
-    }
-    this.drawScene();
   }
   /**
    * Checks if (x,y) is within the visible graph plotting area.
    * @internal
    */
   inGraphTile(x, y) {
-    if (this.graph.opacity <= 0 || this.volumes.length < 1 || this.volumes[0].nFrame4D < 1 || !this.graph.plotLTWH) {
-      return false;
-    }
-    if (this.graph.plotLTWH[2] < 1 || this.graph.plotLTWH[3] < 1) {
-      return false;
-    }
-    const pos = [(x - this.graph.LTWH[0]) / this.graph.LTWH[2], (y - this.graph.LTWH[1]) / this.graph.LTWH[3]];
-    return pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1;
+    return isInGraphTile({
+      x,
+      y,
+      graph: this.graph,
+      volumesLength: this.volumes.length,
+      firstVolumeFrameCount: this.volumes.length > 0 ? this.volumes[0].nFrame4D ?? 0 : 0
+    });
   }
   /**
    * Updates drawBitmap to match clickToSegmentGrowingBitmap if they differ in content and size.
    * @internal
    */
   updateBitmapFromClickToSegment() {
-    if (this.clickToSegmentGrowingBitmap === null) {
+    if (this.clickToSegmentGrowingBitmap === null || this.drawBitmap === null) {
       return;
     }
-    if (this.drawBitmap === null) {
-      return;
-    }
-    if (this.clickToSegmentGrowingBitmap.length !== this.drawBitmap.length) {
-      return;
-    }
-    const nvx = this.drawBitmap.length;
-    for (let i = 0; i < nvx; i++) {
-      this.drawBitmap[i] = this.clickToSegmentGrowingBitmap[i];
-    }
+    updateBitmapFromPreview({
+      sourceBitmap: this.clickToSegmentGrowingBitmap,
+      targetBitmap: this.drawBitmap
+    });
   }
   /**
    * Calculates the sum of all voxel values in the given bitmap.
    * @internal
    */
   sumBitmap(img) {
-    let sum = 0;
-    for (let i = 0; i < img.length; i++) {
-      sum += img[i];
-    }
-    return sum;
+    return sumBitmap(img);
   }
   /**
    * Performs click-to-segment operation based on user click within a specified tile.
@@ -44267,23 +47483,21 @@ var Niivue = class {
       return;
     }
     const pt = this.frac2vox(texFrac);
-    const threshold = this.opts.clickToSegmentPercent;
-    let voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2]);
-    if (this.opts.clickToSegmentAutoIntensity) {
-      if (threshold !== 0) {
-        if (voxelIntensity === 0) {
-          voxelIntensity = 0.01;
-        }
-        this.opts.clickToSegmentIntensityMax = voxelIntensity * (1 + threshold);
-        this.opts.clickToSegmentIntensityMin = voxelIntensity * (1 - threshold);
-      }
-      if (voxelIntensity > (this.back.cal_min + this.back.cal_max) * 0.5) {
-        this.opts.clickToSegmentBright = true;
-      } else {
-        this.opts.clickToSegmentBright = false;
-      }
-    }
-    const brightOrDark = this.opts.clickToSegmentBright ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+    const voxelIntensity = this.back.getValue(pt[0], pt[1], pt[2]);
+    const intensityResult = calculateSegmentIntensity({
+      voxelIntensity,
+      thresholdPercent: this.opts.clickToSegmentPercent,
+      calMin: this.back.cal_min,
+      calMax: this.back.cal_max,
+      autoIntensity: this.opts.clickToSegmentAutoIntensity,
+      currentIntensityMin: this.opts.clickToSegmentIntensityMin,
+      currentIntensityMax: this.opts.clickToSegmentIntensityMax,
+      currentBright: this.opts.clickToSegmentBright
+    });
+    this.opts.clickToSegmentIntensityMin = intensityResult.intensityMin;
+    this.opts.clickToSegmentIntensityMax = intensityResult.intensityMax;
+    this.opts.clickToSegmentBright = intensityResult.isBright;
+    const brightOrDark = getGrowDirection(intensityResult.isBright);
     this.drawPenAxCorSag = axCorSag;
     const targetBitmap = this.clickToSegmentIsGrowing ? this.clickToSegmentGrowingBitmap : this.drawBitmap;
     if (!targetBitmap) {
@@ -44355,10 +47569,7 @@ var Niivue = class {
       if (!this.graph.plotLTWH) {
         throw new Error("plotLTWH undefined");
       }
-      const pos = [
-        (x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2],
-        (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3]
-      ];
+      const pos = [(x - this.graph.plotLTWH[0]) / this.graph.plotLTWH[2], (y - this.graph.plotLTWH[1]) / this.graph.plotLTWH[3]];
       if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
         const vol = Math.round(pos[0] * (this.volumes[0].nFrame4D - 1));
         this.setFrame4D(this.volumes[0].id, vol);
@@ -44427,18 +47638,7 @@ var Niivue = class {
             growMode = this.opts.penValue;
             log.debug("Intensity Grow selected", growMode);
           }
-          this.drawFloodFill(
-            pt,
-            floodFillNewColor,
-            growMode,
-            NaN,
-            NaN,
-            this.opts.floodFillNeighbors,
-            Number.POSITIVE_INFINITY,
-            false,
-            this.drawBitmap,
-            isGrowTool
-          );
+          this.drawFloodFill(pt, floodFillNewColor, growMode, NaN, NaN, this.opts.floodFillNeighbors, Number.POSITIVE_INFINITY, false, this.drawBitmap, isGrowTool);
           this.drawScene();
           this.createOnLocationChange(axCorSag);
           return;
@@ -44519,25 +47719,19 @@ var Niivue = class {
       return;
     }
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
-    const frac10cm = 100 / fovMM[0];
-    const pix10cm = frac10cm * ltwh[2];
-    const pix1cm = Math.max(Math.round(pix10cm * 0.1), 2);
     const thick = Number(this.opts.rulerWidth);
-    const pixLeft = Math.floor(ltwh[0] + 0.5 * ltwh[2] - 0.5 * pix10cm);
-    const pixTop = Math.floor(ltwh[1] + ltwh[3] - pix1cm) + 0.5 * thick;
-    const clippedLeft = Math.max(regionX, pixLeft);
-    const clippedRight = Math.min(regionX + regionW, pixLeft + pix10cm);
-    const clippedY = Math.min(regionY + regionH, pixTop);
-    if (clippedRight <= clippedLeft) {
+    const rulerGeometry = calculateRulerGeometry({
+      fovMM,
+      ltwh,
+      rulerWidth: thick,
+      regionBounds: { x: regionX, y: regionY, w: regionW, h: regionH }
+    });
+    if (!rulerGeometry) {
       return;
     }
-    const startXYendXY = [clippedLeft, clippedY, clippedRight, clippedY];
-    let outlineColor = [0, 0, 0, 1];
-    if (this.opts.rulerColor[0] + this.opts.rulerColor[1] + this.opts.rulerColor[2] < 0.8) {
-      outlineColor = [1, 1, 1, 1];
-    }
-    this.drawRuler10cm(startXYendXY, outlineColor, thick + 1);
-    this.drawRuler10cm(startXYendXY, this.opts.rulerColor, thick);
+    const outlineColor = getRulerOutlineColor(this.opts.rulerColor);
+    this.drawRuler10cm(rulerGeometry.startXYendXY, outlineColor, thick + 1);
+    this.drawRuler10cm(rulerGeometry.startXYendXY, this.opts.rulerColor, thick);
   }
   /**
    * Draws a 10cm ruler at specified coordinates with given color and width.
@@ -44554,18 +47748,8 @@ var Niivue = class {
     this.gl.uniform1f(this.lineShader.uniforms.thickness, rulerWidth);
     this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, startXYendXY);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-    const w1cm = -0.1 * (startXYendXY[0] - startXYendXY[2]);
-    const b = startXYendXY[1] - Math.floor(0.5 * this.opts.rulerWidth);
-    const t = Math.floor(b - 0.35 * w1cm);
-    const t2 = Math.floor(b - 0.7 * w1cm);
-    for (let i = 0; i < 11; i++) {
-      let l = startXYendXY[0] + i * w1cm;
-      l = Math.max(l, startXYendXY[0] + 0.5 * rulerWidth);
-      l = Math.min(l, startXYendXY[2] - 0.5 * rulerWidth);
-      const xyxy = [l, b, l, t];
-      if (i % 5 === 0) {
-        xyxy[3] = t2;
-      }
+    const ticks = calculateRulerTicks(startXYendXY, this.opts.rulerWidth);
+    for (const xyxy of ticks) {
       this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, xyxy);
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
@@ -44576,28 +47760,13 @@ var Niivue = class {
    * @internal
    */
   screenXY2mm(x, y, forceSlice = -1) {
-    let texFrac;
-    for (let s = 0; s < this.screenSlices.length; s++) {
-      let i = s;
-      if (forceSlice >= 0) {
-        i = forceSlice;
-      }
-      const axCorSag = this.screenSlices[i].axCorSag;
-      if (axCorSag > 2 /* SAGITTAL */) {
-        continue;
-      }
-      const ltwh = this.screenSlices[i].leftTopWidthHeight;
-      if (x < ltwh[0] || y < ltwh[1] || x > ltwh[0] + ltwh[2] || y > ltwh[1] + ltwh[3]) {
-        continue;
-      }
-      texFrac = this.screenXY2TextureFrac(x, y, i, false);
-      if (texFrac[0] < 0) {
-        continue;
-      }
-      const mm = this.frac2mm(texFrac);
-      return vec4_exports.fromValues(mm[0], mm[1], mm[2], i);
-    }
-    return vec4_exports.fromValues(NaN, NaN, NaN, NaN);
+    return screenXY2mm(x, y, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      forceSlice
+    });
   }
   /**
    * Update scene pan position during drag based on start and end screen coordinates.
@@ -44612,12 +47781,14 @@ var Niivue = class {
     if (isNaN(startMM[0]) || isNaN(endMM[0]) || isNaN(endMM[3])) {
       return;
     }
-    const v = vec4_exports.create();
-    const zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
-    vec4_exports.sub(v, endMM, startMM);
-    this.scene.pan2Dxyzmm[0] = this.uiData.pan2DxyzmmAtMouseDown[0] + zoom * v[0];
-    this.scene.pan2Dxyzmm[1] = this.uiData.pan2DxyzmmAtMouseDown[1] + zoom * v[1];
-    this.scene.pan2Dxyzmm[2] = this.uiData.pan2DxyzmmAtMouseDown[2] + zoom * v[2];
+    const result = calculatePanZoomFromDrag({
+      startMM,
+      endMM,
+      pan2DxyzmmAtMouseDown: this.uiData.pan2DxyzmmAtMouseDown
+    });
+    this.scene.pan2Dxyzmm[0] = result.pan2Dxyzmm[0];
+    this.scene.pan2Dxyzmm[1] = result.pan2Dxyzmm[1];
+    this.scene.pan2Dxyzmm[2] = result.pan2Dxyzmm[2];
     this.canvas.focus();
   }
   /**
@@ -44632,45 +47803,34 @@ var Niivue = class {
    * @internal
    */
   dragForSlicer3D(startXYendXY) {
-    let zoom = this.uiData.pan2DxyzmmAtMouseDown[3];
-    const y = startXYendXY[3] - startXYendXY[1];
-    const pixelScale = 0.01;
-    zoom += y * pixelScale;
-    zoom = Math.max(zoom, 0.1);
-    zoom = Math.min(zoom, 10);
-    const zoomChange = this.scene.pan2Dxyzmm[3] - zoom;
-    if (this.opts.yoke3Dto2DZoom) {
-      this.scene.volScaleMultiplier = zoom;
-    }
-    this.scene.pan2Dxyzmm[3] = zoom;
     const mm = this.frac2mm(this.scene.crosshairPos);
-    this.scene.pan2Dxyzmm[0] += zoomChange * mm[0];
-    this.scene.pan2Dxyzmm[1] += zoomChange * mm[1];
-    this.scene.pan2Dxyzmm[2] += zoomChange * mm[2];
+    const result = calculateSlicer3DZoomFromDrag({
+      startY: startXYendXY[1],
+      endY: startXYendXY[3],
+      pan2DxyzmmAtMouseDown: this.uiData.pan2DxyzmmAtMouseDown,
+      currentPan2Dxyzmm: this.scene.pan2Dxyzmm,
+      crosshairMM: mm,
+      yoke3Dto2DZoom: this.opts.yoke3Dto2DZoom
+    });
+    if (result.volScaleMultiplier !== void 0) {
+      this.scene.volScaleMultiplier = result.volScaleMultiplier;
+    }
+    this.scene.pan2Dxyzmm[0] = result.pan2Dxyzmm[0];
+    this.scene.pan2Dxyzmm[1] = result.pan2Dxyzmm[1];
+    this.scene.pan2Dxyzmm[2] = result.pan2Dxyzmm[2];
+    this.scene.pan2Dxyzmm[3] = result.pan2Dxyzmm[3];
   }
   /**
    * Draw a measurement line with end caps and length text on a 2D tile.
    * @internal
    */
   drawMeasurementTool(startXYendXY, isDrawText = true) {
-    function extendTo(x0, y0, x1, y1, distance4) {
-      const x = x0 - x1;
-      const y = y0 - y1;
-      if (x === 0 && y === 0) {
-        return {
-          origin: [x1 + distance4, y1],
-          terminus: [x1 + distance4, y1]
-        };
-      }
-      const c = Math.sqrt(x * x + y * y);
-      const dX = distance4 * x / c;
-      const dY = distance4 * y / c;
-      return {
-        origin: [x0 + dX, y0 + dY],
-        // next to start point
-        terminus: [x1 - dX, y1 - dY]
-      };
-    }
+    const extendTo = (x0, y0, x1, y1, distance4) => {
+      return extendMeasurementLine({
+        startXYendXY: [x0, y0, x1, y1],
+        distance: distance4
+      });
+    };
     const gl = this.gl;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.bindVertexArray(this.genericVAO);
@@ -44750,10 +47910,7 @@ var Niivue = class {
    */
   drawAngleMeasurementTool() {
     if (this.uiData.angleState === "drawing_first_line") {
-      this.drawMeasurementTool(
-        [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]],
-        false
-      );
+      this.drawMeasurementTool([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]], false);
     } else if (this.uiData.angleState === "drawing_second_line") {
       this.drawMeasurementTool(this.uiData.angleFirstLine, false);
       this.drawMeasurementTool(
@@ -44788,12 +47945,7 @@ var Niivue = class {
     const intersectionX = this.uiData.angleFirstLine[2];
     const intersectionY = this.uiData.angleFirstLine[3];
     const angleText = `${angle3.toFixed(1)}\xB0`;
-    this.drawTextBetween(
-      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
-      angleText,
-      this.opts.measureTextHeight / 0.06,
-      this.opts.measureTextColor
-    );
+    this.drawTextBetween([intersectionX, intersectionY, intersectionX + 1, intersectionY + 1], angleText, this.opts.measureTextHeight / 0.06, this.opts.measureTextColor);
   }
   /**
    * Calculate and draw angle text for a completed angle.
@@ -44804,123 +47956,60 @@ var Niivue = class {
     const intersectionX = angle3.firstLine[2];
     const intersectionY = angle3.firstLine[3];
     const angleText = `${angle_degrees.toFixed(1)}\xB0`;
-    this.drawTextBetween(
-      [intersectionX, intersectionY, intersectionX + 1, intersectionY + 1],
-      angleText,
-      this.opts.measureTextHeight / 0.06,
-      this.opts.measureTextColor
-    );
+    this.drawTextBetween([intersectionX, intersectionY, intersectionX + 1, intersectionY + 1], angleText, this.opts.measureTextHeight / 0.06, this.opts.measureTextColor);
   }
   /**
    * Calculate angle between two lines in degrees.
    * @internal
    */
   calculateAngleBetweenLines(line1, line2) {
-    const intersectionX = line1[2];
-    const intersectionY = line1[3];
-    const v1x = line1[0] - intersectionX;
-    const v1y = line1[1] - intersectionY;
-    const v2x = line2[2] - intersectionX;
-    const v2y = line2[3] - intersectionY;
-    const dot4 = v1x * v2x + v1y * v2y;
-    const mag1 = Math.sqrt(v1x * v1x + v1y * v1y);
-    const mag2 = Math.sqrt(v2x * v2x + v2y * v2y);
-    if (mag1 === 0 || mag2 === 0) {
-      return 0;
-    }
-    const cosAngle = Math.max(-1, Math.min(1, dot4 / (mag1 * mag2)));
-    const angleRad = Math.acos(cosAngle);
-    const angleDeg = angleRad * (180 / Math.PI);
-    return angleDeg;
+    return calculateAngleBetweenLines(line1, line2);
   }
   /**
    * Reset the angle measurement state.
    * @internal
    */
   resetAngleMeasurement() {
-    this.uiData.angleState = "none";
-    this.uiData.angleFirstLine = [0, 0, 0, 0];
+    const state = createResetAngleMeasurementState();
+    this.uiData.angleState = state.angleState;
+    this.uiData.angleFirstLine = state.angleFirstLine;
   }
   /**
    * Get slice information for the current measurement/angle.
    * @internal
    */
   getCurrentSliceInfo() {
-    const tileIdx = this.tileIndex(this.uiData.dragStart[0], this.uiData.dragStart[1]);
-    if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
-      const sliceType = this.screenSlices[tileIdx].axCorSag;
-      let slicePosition2 = 0;
-      if (sliceType === 0 /* AXIAL */) {
-        slicePosition2 = this.scene.crosshairPos[2];
-      } else if (sliceType === 1 /* CORONAL */) {
-        slicePosition2 = this.scene.crosshairPos[1];
-      } else if (sliceType === 2 /* SAGITTAL */) {
-        slicePosition2 = this.scene.crosshairPos[0];
-      }
-      return {
-        sliceIndex: tileIdx,
-        sliceType,
-        slicePosition: slicePosition2
-      };
-    }
-    const currentSliceType = this.opts.sliceType;
-    let slicePosition = 0;
-    if (currentSliceType === 0 /* AXIAL */) {
-      slicePosition = this.scene.crosshairPos[2];
-    } else if (currentSliceType === 1 /* CORONAL */) {
-      slicePosition = this.scene.crosshairPos[1];
-    } else if (currentSliceType === 2 /* SAGITTAL */) {
-      slicePosition = this.scene.crosshairPos[0];
-    } else if (currentSliceType === 3 /* MULTIPLANAR */) {
-      const startFrac = this.canvasPos2frac([this.uiData.dragStart[0], this.uiData.dragStart[1]]);
-      if (startFrac[0] >= 0) {
-        slicePosition = this.scene.crosshairPos[2];
-      }
-    }
-    return { sliceIndex: -1, sliceType: currentSliceType, slicePosition };
+    return getCurrentSliceInfo({
+      dragStart: this.uiData.dragStart,
+      screenSlices: this.screenSlices,
+      crosshairPos: this.scene.crosshairPos,
+      currentSliceType: this.opts.sliceType,
+      canvasPos2frac: (pos) => this.canvasPos2frac(pos)
+    });
   }
   /**
    * Get the current slice position based on slice type.
    * @internal
    */
   getCurrentSlicePosition(sliceType) {
-    if (sliceType === 0 /* AXIAL */) {
-      return this.scene.crosshairPos[2];
-    } else if (sliceType === 1 /* CORONAL */) {
-      return this.scene.crosshairPos[1];
-    } else if (sliceType === 2 /* SAGITTAL */) {
-      return this.scene.crosshairPos[0];
-    }
-    return 0;
+    return getSlicePosition({
+      sliceType,
+      crosshairPos: this.scene.crosshairPos
+    });
   }
   /**
    * Check if a measurement/angle should be drawn on the current slice.
    * @internal
    */
   shouldDrawOnCurrentSlice(sliceIndex, sliceType, slicePosition) {
-    if (this.opts.sliceType === 3 /* MULTIPLANAR */) {
-      if (sliceType > 2 /* SAGITTAL */) {
-        return false;
-      }
-      for (let i = 0; i < this.screenSlices.length; i++) {
-        if (this.screenSlices[i].axCorSag === sliceType) {
-          const currentSlicePosition2 = this.getCurrentSlicePosition(sliceType);
-          const tolerance2 = 1e-3;
-          const difference2 = Math.abs(currentSlicePosition2 - slicePosition);
-          if (difference2 < tolerance2) {
-            return true;
-          }
-        }
-      }
-      return false;
-    } else if (this.opts.sliceType !== sliceType) {
-      return false;
-    }
-    const currentSlicePosition = this.getCurrentSlicePosition(sliceType);
-    const tolerance = 1e-3;
-    const difference = Math.abs(currentSlicePosition - slicePosition);
-    const result = difference < tolerance;
-    return result;
+    return shouldDrawOnCurrentSlice({
+      sliceIndex,
+      sliceType,
+      slicePosition,
+      currentSliceTypeOpt: this.opts.sliceType,
+      screenSlices: this.screenSlices,
+      crosshairPos: this.scene.crosshairPos
+    });
   }
   /**
    * Clear all persistent measurement lines from the canvas.
@@ -44961,40 +48050,13 @@ var Niivue = class {
    * @param mode - The drag mode to set ('none', 'contrast', 'measurement', 'angle', 'pan', 'slicer3D', 'callbackOnly', 'roiSelection')
    */
   setDragMode(mode) {
-    if (typeof mode === "string") {
-      switch (mode) {
-        case "none":
-          this.opts.dragMode = 0 /* none */;
-          break;
-        case "contrast":
-          this.opts.dragMode = 1 /* contrast */;
-          break;
-        case "measurement":
-          this.opts.dragMode = 2 /* measurement */;
-          break;
-        case "angle":
-          this.opts.dragMode = 7 /* angle */;
-          break;
-        case "pan":
-          this.opts.dragMode = 3 /* pan */;
-          break;
-        case "slicer3D":
-          this.opts.dragMode = 4 /* slicer3D */;
-          break;
-        case "callbackOnly":
-          this.opts.dragMode = 5 /* callbackOnly */;
-          break;
-        case "roiSelection":
-          this.opts.dragMode = 6 /* roiSelection */;
-          break;
-        default:
-          console.warn(`Unknown drag mode: ${mode}`);
-          return;
-      }
-    } else {
-      this.opts.dragMode = mode;
+    const parsedMode = parseDragModeString(mode);
+    if (parsedMode === null) {
+      console.warn(`Unknown drag mode: ${mode}`);
+      return;
     }
-    if (this.opts.dragMode !== 7 /* angle */) {
+    this.opts.dragMode = parsedMode;
+    if (!isAngleDragMode(this.opts.dragMode)) {
       this.resetAngleMeasurement();
     }
     this.clearActiveDragMode();
@@ -45065,13 +48127,7 @@ var Niivue = class {
       this.gl.enable(this.gl.BLEND);
       this.gl.uniform4fv(this.rectShader.uniforms.lineColor, lineColor);
       this.gl.uniform2fv(this.rectShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height]);
-      this.gl.uniform4f(
-        this.rectShader.uniforms.leftTopWidthHeight,
-        leftTopWidthHeight[0],
-        leftTopWidthHeight[1],
-        leftTopWidthHeight[2],
-        leftTopWidthHeight[3]
-      );
+      this.gl.uniform4f(this.rectShader.uniforms.leftTopWidthHeight, leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
       this.gl.bindVertexArray(this.genericVAO);
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
       this.gl.bindVertexArray(this.unusedVAO);
@@ -45081,17 +48137,8 @@ var Niivue = class {
       this.gl.enable(this.gl.BLEND);
       this.gl.uniform1f(this.rectOutlineShader.uniforms.thickness, this.opts.selectionBoxLineThickness);
       this.gl.uniform4fv(this.rectOutlineShader.uniforms.lineColor, lineColor);
-      this.gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [
-        this.gl.canvas.width,
-        this.gl.canvas.height
-      ]);
-      this.gl.uniform4f(
-        this.rectOutlineShader.uniforms.leftTopWidthHeight,
-        leftTopWidthHeight[0],
-        leftTopWidthHeight[1],
-        leftTopWidthHeight[2],
-        leftTopWidthHeight[3]
-      );
+      this.gl.uniform2fv(this.rectOutlineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height]);
+      this.gl.uniform4f(this.rectOutlineShader.uniforms.leftTopWidthHeight, leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
       this.gl.bindVertexArray(this.genericVAO);
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
       this.gl.bindVertexArray(this.unusedVAO);
@@ -45126,13 +48173,7 @@ var Niivue = class {
     this.gl.enable(this.gl.BLEND);
     this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor);
     this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height]);
-    this.gl.uniform4f(
-      this.circleShader.uniforms.leftTopWidthHeight,
-      leftTopWidthHeight[0],
-      leftTopWidthHeight[1],
-      leftTopWidthHeight[2],
-      leftTopWidthHeight[3]
-    );
+    this.gl.uniform4f(this.circleShader.uniforms.leftTopWidthHeight, leftTopWidthHeight[0], leftTopWidthHeight[1], leftTopWidthHeight[2], leftTopWidthHeight[3]);
     this.gl.uniform1f(this.circleShader.uniforms.fillPercent, fillPercent);
     this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor);
     this.gl.bindVertexArray(this.genericVAO);
@@ -45156,86 +48197,54 @@ var Niivue = class {
    * @internal
    */
   effectiveCanvasHeight() {
-    let regionH = this.gl.canvas.height;
-    if (this.opts.bounds) {
-      const [[, y1], [, y2]] = this.opts.bounds;
-      const yTop = Math.round(y1 * this.gl.canvas.height);
-      const yBot = Math.round(y2 * this.gl.canvas.height);
-      regionH = yBot - yTop;
-    }
-    return regionH - this.colorbarHeight;
+    return calculateEffectiveCanvasHeight({
+      canvasHeight: this.gl.canvas.height,
+      bounds: this.opts.bounds,
+      colorbarHeight: this.colorbarHeight
+    });
   }
   /**
    * Get canvas width available for tiles (excludes legend panel).
    * @internal
    */
   effectiveCanvasWidth() {
-    let regionW = this.gl.canvas.width;
-    if (this.opts.bounds) {
-      const [[x1], [x2]] = this.opts.bounds;
-      regionW = Math.round((x2 - x1) * this.gl.canvas.width);
-    }
-    return regionW - this.getLegendPanelWidth();
+    return calculateEffectiveCanvasWidth({
+      canvasWidth: this.gl.canvas.width,
+      bounds: this.opts.bounds,
+      legendPanelWidth: this.getLegendPanelWidth()
+    });
   }
   /**
    * Get all 3D labels from document and connectome meshes.
    * @internal
    */
   getAllLabels() {
-    const connectomes = this.meshes.filter((m) => m.type === "connectome" /* CONNECTOME */);
-    const meshNodes = connectomes.flatMap((m) => m.nodes);
-    const meshLabels = meshNodes.map((n) => n.label);
-    const definedMeshLabels = meshLabels.filter((l) => l !== void 0);
-    const labels = [...this.document.labels, ...definedMeshLabels];
-    return labels;
+    return getAllLabels({
+      meshes: this.meshes,
+      documentLabels: this.document.labels
+    });
   }
   /**
    * Get all visible connectome and non-anchored mesh labels.
    * @internal
    */
   getConnectomeLabels() {
-    const connectomes = this.meshes.filter((m) => m.type === "connectome" /* CONNECTOME */ && m.showLegend !== false);
-    const meshNodes = connectomes.flatMap((m) => m.nodes);
-    const meshLabels = meshNodes.map((n) => n.label);
-    const definedMeshLabels = meshLabels.filter((l) => l !== void 0 && l.text !== "");
-    const nonAnchoredLabels = this.document.labels.filter((l) => l.anchor == null || l.anchor === 0 /* NONE */);
-    const nonAnchoredLabelSet = new Set(definedMeshLabels);
-    for (const label of nonAnchoredLabels) {
-      nonAnchoredLabelSet.add(label);
-    }
-    const meshes = this.meshes.filter((m) => m.type === "mesh" /* MESH */);
-    for (let i = 0; i < meshes.length; i++) {
-      for (let j = 0; j < meshes[i].layers.length; j++) {
-        if (meshes[i].layers[j].labels) {
-          for (let k = 0; k < meshes[i].layers[j].labels.length; k++) {
-            nonAnchoredLabelSet.add(meshes[i].layers[j].labels[k]);
-          }
-        }
-      }
-    }
-    return Array.from(nonAnchoredLabelSet);
+    return getConnectomeLabels({
+      meshes: this.meshes,
+      documentLabels: this.document.labels
+    });
   }
   /**
    * Calculate bullet margin width based on widest bullet scale and tallest label height.
    * @internal
    */
   getBulletMarginWidth() {
-    let bulletMargin = 0;
     const labels = this.getConnectomeLabels();
-    if (labels.length === 0) {
-      return 0;
-    }
-    const widestBulletScale = labels.length === 1 ? labels[0].style.bulletScale : labels.reduce((a, b) => a.style.bulletScale > b.style.bulletScale ? a : b).style.bulletScale;
-    const tallestLabel = labels.length === 1 ? labels[0] : labels.reduce((a, b) => {
-      const aSize = this.fontPx * a.style.textScale;
-      const bSize = this.fontPx * b.style.textScale;
-      const taller = this.textHeight(aSize, a.text) > this.textHeight(bSize, b.text) ? a : b;
-      return taller;
+    return calculateBulletMarginWidth({
+      labels,
+      fontPx: this.fontPx,
+      textHeight: (fontSize, text) => this.textHeight(fontSize, text)
     });
-    const size = this.fontPx * tallestLabel.style.textScale;
-    bulletMargin = this.textHeight(size, tallestLabel.text) * widestBulletScale;
-    bulletMargin += size;
-    return bulletMargin;
   }
   /**
    * Calculate width of legend panel based on labels and bullet margin.
@@ -45244,29 +48253,14 @@ var Niivue = class {
    */
   getLegendPanelWidth() {
     const labels = this.getConnectomeLabels();
-    if (!this.opts.showLegend || labels.length === 0) {
-      return 0;
-    }
-    const scale6 = 1;
-    const horizontalMargin = this.fontPx * scale6;
-    let width = 0;
-    const longestLabel = labels.reduce((a, b) => {
-      const aSize = this.fontPx * a.style.textScale;
-      const bSize = this.fontPx * b.style.textScale;
-      const longer = this.textWidth(aSize, a.text) > this.textWidth(bSize, b.text) ? a : b;
-      return longer;
+    return calculateLegendPanelWidth({
+      labels,
+      showLegend: this.opts.showLegend,
+      fontPx: this.fontPx,
+      canvasWidth: this.gl.canvas.width,
+      textWidth: (fontSize, text) => this.textWidth(fontSize, text),
+      getBulletMarginWidth: () => this.getBulletMarginWidth()
     });
-    const longestTextSize = this.fontPx * longestLabel.style.textScale;
-    const longestTextLength = this.textWidth(longestTextSize, longestLabel.text);
-    const bulletMargin = this.getBulletMarginWidth();
-    if (longestTextLength) {
-      width = bulletMargin + longestTextLength;
-      width += horizontalMargin * 2;
-    }
-    if (width >= this.gl.canvas.width) {
-      return 0;
-    }
-    return width;
   }
   /**
    * Calculate legend panel height based on labels and scale.
@@ -45274,17 +48268,12 @@ var Niivue = class {
    */
   getLegendPanelHeight(panelScale = 1) {
     const labels = this.getConnectomeLabels();
-    let height = 0;
-    const verticalMargin = this.fontPx;
-    for (const label of labels) {
-      const labelSize = this.fontPx * label.style.textScale * panelScale;
-      const textHeight = this.textHeight(labelSize, label.text);
-      height += textHeight;
-    }
-    if (height) {
-      height += verticalMargin / 2 * (labels.length + 1) * panelScale;
-    }
-    return height;
+    return calculateLegendPanelHeight({
+      labels,
+      fontPx: this.fontPx,
+      panelScale,
+      textHeight: (fontSize, text) => this.textHeight(fontSize, text)
+    });
   }
   /**
    * Calculate and reserve canvas area for colorbar panel,
@@ -45292,23 +48281,13 @@ var Niivue = class {
    * @internal
    */
   reserveColorbarPanel() {
-    const fullHt = 3 * this.fontPx;
-    if (fullHt < 0) {
-      return [0, 0, 0, 0];
-    }
-    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
-    const widthPercentage = this.opts.colorbarWidth > 0 && this.opts.colorbarWidth <= 1 ? this.opts.colorbarWidth : 1;
-    const width = widthPercentage * regionW;
-    const leftTopWidthHeight = [
-      regionX + (regionW - width) / 2,
-      // center within region
-      regionY + regionH - fullHt,
-      // top within region
-      width,
-      fullHt
-    ];
-    this.colorbarHeight = leftTopWidthHeight[3] + 1;
-    return leftTopWidthHeight;
+    const result = calculateColorbarPanel({
+      fontPx: this.fontPx,
+      boundsRegion: this.getBoundsRegion(),
+      colorbarWidth: this.opts.colorbarWidth
+    });
+    this.colorbarHeight = result.colorbarHeight;
+    return result.leftTopWidthHeight;
   }
   /**
    * Render a single colorbar with optional negative coloring and alpha threshold ticks.
@@ -45344,7 +48323,7 @@ var Niivue = class {
       throw new Error("colorbarShader undefined");
     }
     this.colorbarShader.use(this.gl);
-    this.gl.activeTexture(TEXTURE1_COLORMAPS);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE1_COLORMAPS);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
@@ -45394,12 +48373,7 @@ var Niivue = class {
       tic += spacing;
     }
     if (thresholdTic !== 0) {
-      const tticLTWH = [
-        barLTWH[0] + (thresholdTic - min4) / range2 * barLTWH[2],
-        barLTWH[1] - barLTWH[3] * 0.25,
-        2,
-        barLTWH[3] * 1.5
-      ];
+      const tticLTWH = [barLTWH[0] + (thresholdTic - min4) / range2 * barLTWH[2], barLTWH[1] - barLTWH[3] * 0.25, 2, barLTWH[3] * 1.5];
       this.drawRect(tticLTWH);
     }
   }
@@ -45437,14 +48411,7 @@ var Niivue = class {
       if (!maps[i].visible) {
         continue;
       }
-      this.drawColorbarCore(
-        i,
-        leftTopWidthHeight,
-        maps[i].negative,
-        maps[i].min,
-        maps[i].max,
-        maps[i].isColorbarFromZero
-      );
+      this.drawColorbarCore(i, leftTopWidthHeight, maps[i].negative, maps[i].min, maps[i].max, maps[i].isColorbarFromZero);
       leftTopWidthHeight[0] += wid;
     }
   }
@@ -45453,29 +48420,22 @@ var Niivue = class {
    * @internal
    */
   textWidth(scale6, str6) {
-    if (!str6) {
-      return 0;
-    }
-    let w = 0;
-    const bytes = new TextEncoder().encode(str6);
-    for (let i = 0; i < str6.length; i++) {
-      w += scale6 * this.fontMets.mets[bytes[i]].xadv;
-    }
-    return w;
+    return calculateTextWidth({
+      fontMets: this.fontMets,
+      scale: scale6,
+      str: str6
+    });
   }
   /**
    * Calculate pixel height of text based on tallest glyph at given scale.
    * @internal
    */
   textHeight(scale6, str6) {
-    if (!str6) {
-      return 0;
-    }
-    const byteSet = new Set(Array.from(str6));
-    const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
-    const tallest = Object.values(this.fontMets.mets).filter((_, index) => bytes.includes(index)).reduce((a, b) => a.lbwh[3] > b.lbwh[3] ? a : b);
-    const height = tallest.lbwh[3];
-    return scale6 * height;
+    return calculateTextHeight({
+      fontMets: this.fontMets,
+      scale: scale6,
+      str: str6
+    });
   }
   /**
    * Render a single character glyph at specified position and scale; returns advance width.
@@ -45586,23 +48546,10 @@ var Niivue = class {
     if (this.fontPx <= 0) {
       return;
     }
-    const xy = [(startXYendXY[0] + startXYendXY[2]) * 0.5, (startXYendXY[1] + startXYendXY[3]) * 0.5];
-    const size = this.fontPx * scale6;
-    const w = this.textWidth(size, str6);
-    xy[0] -= 0.5 * w;
-    xy[1] -= 0.5 * size;
-    const LTWH = [xy[0] - 1, xy[1] - 1, w + 2, size + 2];
-    let clr = color;
-    if (clr === null) {
-      clr = this.opts.crosshairColor;
-    }
-    if (clr && clr[0] + clr[1] + clr[2] > 0.8) {
-      clr = [0, 0, 0, 0.5];
-    } else {
-      clr = [1, 1, 1, 0.5];
-    }
-    this.drawRect(LTWH, clr);
-    this.drawText(xy, str6, scale6, color);
+    const pos = calculateTextBetweenPosition(startXYendXY, str6, this.fontPx, scale6, (size, s) => this.textWidth(size, s));
+    const bgColor = getTextBetweenBackgroundColor(color, this.opts.crosshairColor);
+    this.drawRect(pos.rectLTWH, bgColor);
+    this.drawText([pos.textX, pos.textY], str6, scale6, color);
   }
   /**
    * Draw text horizontally centered below a specified (x,y) position with canvas boundary clamping.
@@ -45615,17 +48562,8 @@ var Niivue = class {
     if (!this.canvas) {
       throw new Error("canvas undefined");
     }
-    let size = this.fontPx * scale6;
-    let width = this.textWidth(size, str6);
-    if (width > this.canvas.width) {
-      scale6 *= (this.canvas.width - 2) / width;
-      size = this.fontPx * scale6;
-      width = this.textWidth(size, str6);
-    }
-    xy[0] -= 0.5 * this.textWidth(size, str6);
-    xy[0] = Math.max(xy[0], 1);
-    xy[0] = Math.min(xy[0], this.canvas.width - width - 1);
-    this.drawText(xy, str6, scale6, color);
+    const pos = calculateTextBelowPosition({ xy, str: str6, fontPx: this.fontPx, scale: scale6, canvasWidth: this.canvas.width }, (size, s) => this.textWidth(size, s));
+    this.drawText([pos.x, pos.y], str6, pos.scale, color);
   }
   /**
    * Draw text horizontally centered above the given coordinates.
@@ -45638,40 +48576,21 @@ var Niivue = class {
     if (!this.canvas) {
       throw new Error("canvas undefined");
     }
-    let size = this.fontPx * scale6;
-    let width = this.textWidth(size, str6);
-    if (width > this.canvas.width) {
-      scale6 *= (this.canvas.width - 2) / width;
-      size = this.fontPx * scale6;
-      width = this.textWidth(size, str6);
-    }
-    xy[0] -= 0.5 * this.textWidth(size, str6);
-    xy[0] = Math.max(xy[0], 1);
-    xy[0] = Math.min(xy[0], this.canvas.width - width - 1);
-    xy[1] -= size;
-    this.drawText(xy, str6, scale6, color);
+    const pos = calculateTextAbovePosition({ xy, str: str6, fontPx: this.fontPx, scale: scale6, canvasWidth: this.canvas.width }, (size, s) => this.textWidth(size, s));
+    this.drawText([pos.x, pos.y], str6, pos.scale, color);
   }
   /**
    * Update texture interpolation mode (nearest or linear) for background or overlay layer.
    * @internal
    */
   updateInterpolation(layer, isForceLinear = false) {
-    let interp = this.gl.LINEAR;
-    if (!isForceLinear && this.opts.isNearestInterpolation) {
-      interp = this.gl.NEAREST;
-    }
-    if (layer === 0) {
-      this.gl.activeTexture(TEXTURE0_BACK_VOL);
-    } else {
-      this.gl.activeTexture(TEXTURE2_OVERLAY_VOL);
-    }
-    if (this.opts.is2DSliceShader) {
-      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, interp);
-      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, interp);
-    } else {
-      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MIN_FILTER, interp);
-      this.gl.texParameteri(this.gl.TEXTURE_3D, this.gl.TEXTURE_MAG_FILTER, interp);
-    }
+    updateInterpolation({
+      gl: this.gl,
+      layer,
+      isForceLinear,
+      isNearestInterpolation: this.opts.isNearestInterpolation,
+      is2DSliceShader: this.opts.is2DSliceShader
+    });
   }
   /**
    * Enable or disable atlas outline overlay
@@ -45766,12 +48685,7 @@ var Niivue = class {
    * @internal
    */
   swizzleVec3MM(v3, axCorSag) {
-    if (axCorSag === 1 /* CORONAL */) {
-      v3 = swizzleVec3(v3, [0, 2, 1]);
-    } else if (axCorSag === 2 /* SAGITTAL */) {
-      v3 = swizzleVec3(v3, [1, 2, 0]);
-    }
-    return v3;
+    return swizzleVec3MM(v3, axCorSag);
   }
   /**
    * Returns the swizzled field of view for the given slice orientation.
@@ -45886,18 +48800,12 @@ var Niivue = class {
     if (!isNaN(padLeftTop[0])) {
       const ht = this.fontPx + 2;
       if (padLeftTop[1] > ht) {
-        this.drawTextBelow(
-          [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + padLeftTop[1] - ht],
-          topText
-        );
+        this.drawTextBelow([leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + padLeftTop[1] - ht], topText);
         drawBelow = false;
       }
       const wid = this.textWidth(ht, leftText) + 2;
       if (padLeftTop[0] > wid) {
-        this.drawTextRight(
-          [leftTopWidthHeight[0] + padLeftTop[0] - wid, leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5],
-          leftText
-        );
+        this.drawTextRight([leftTopWidthHeight[0] + padLeftTop[0] - wid, leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText);
         drawRight = false;
       }
     }
@@ -45908,16 +48816,10 @@ var Niivue = class {
       this.drawTextRight([leftTopWidthHeight[0], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], leftText);
     }
     if (drawAbove) {
-      this.drawTextAbove(
-        [leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]],
-        bottomText
-      );
+      this.drawTextAbove([leftTopWidthHeight[0] + leftTopWidthHeight[2] * 0.5, leftTopWidthHeight[1] + leftTopWidthHeight[3]], bottomText);
     }
     if (drawLeft) {
-      this.drawTextLeft(
-        [leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5],
-        rightText
-      );
+      this.drawTextLeft([leftTopWidthHeight[0] + leftTopWidthHeight[2], leftTopWidthHeight[1] + leftTopWidthHeight[3] * 0.5], rightText);
     }
   }
   /**
@@ -45925,37 +48827,12 @@ var Niivue = class {
    * @internal
    */
   xyMM2xyzMM(axCorSag, sliceFrac) {
-    let sliceDim = 2;
-    if (axCorSag === 1 /* CORONAL */) {
-      sliceDim = 1;
-    }
-    if (axCorSag === 2 /* SAGITTAL */) {
-      sliceDim = 0;
-    }
-    let a = [0, 0, 0];
-    let b = [1, 1, 0];
-    let c = [1, 0, 1];
-    a[sliceDim] = sliceFrac;
-    b[sliceDim] = sliceFrac;
-    c[sliceDim] = sliceFrac;
-    a = this.frac2mm(a);
-    b = this.frac2mm(b);
-    c = this.frac2mm(c);
-    a = this.swizzleVec3MM(vec3_exports.fromValues(a[0], a[1], a[2]), axCorSag);
-    b = this.swizzleVec3MM(vec3_exports.fromValues(b[0], b[1], b[2]), axCorSag);
-    c = this.swizzleVec3MM(vec3_exports.fromValues(c[0], c[1], c[2]), axCorSag);
-    const denom = (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]);
-    let yMult = (b[0] - a[0]) * (c[2] - a[2]) - (c[0] - a[0]) * (b[2] - a[2]);
-    yMult /= denom;
-    let xMult = (b[1] - a[1]) * (c[2] - a[2]) - (c[1] - a[1]) * (b[2] - a[2]);
-    xMult /= denom;
-    const AxyzMxy = [0, 0, 0, 0, 0];
-    AxyzMxy[0] = a[0];
-    AxyzMxy[1] = a[1];
-    AxyzMxy[2] = a[2];
-    AxyzMxy[3] = xMult;
-    AxyzMxy[4] = yMult;
-    return AxyzMxy;
+    return calculateXyMM2xyzMM({
+      axCorSag,
+      sliceFrac,
+      frac2mm: (frac) => this.frac2mm(frac),
+      swizzleVec3MM: (v3, acs) => this.swizzleVec3MM(v3, acs)
+    });
   }
   /**
    * Draw a 2D slice tile with appropriate orientation, zoom, pan, and optional mesh overlay.
@@ -46041,34 +48918,13 @@ var Niivue = class {
     }
     const sliceMM = mm[sliceDim];
     const flippedY = gl.canvas.height - leftTopWidthHeight[1] - leftTopWidthHeight[3];
-    const glLTWH = [
-      leftTopWidthHeight[0],
-      flippedY,
-      leftTopWidthHeight[2],
-      leftTopWidthHeight[3]
-    ];
+    const glLTWH = [leftTopWidthHeight[0], flippedY, leftTopWidthHeight[2], leftTopWidthHeight[3]];
     this.clearBounds(gl.DEPTH_BUFFER_BIT, glLTWH);
     gl.viewport(glLTWH[0], glLTWH[1], glLTWH[2], glLTWH[3]);
-    let obj = this.calculateMvpMatrix2D(
-      leftTopWidthHeight,
-      screen.mnMM,
-      screen.mxMM,
-      Infinity,
-      0,
-      azimuth,
-      elevation,
-      isRadiolgical
-    );
+    let obj = this.calculateMvpMatrix2D(leftTopWidthHeight, screen.mnMM, screen.mxMM, Infinity, 0, azimuth, elevation, isRadiolgical);
     if (customMM === Infinity || customMM === -Infinity) {
       const ltwh = leftTopWidthHeight.slice();
-      this.draw3D(
-        leftTopWidthHeight,
-        obj.modelViewProjectionMatrix,
-        obj.modelMatrix,
-        obj.normalMatrix,
-        azimuth,
-        elevation
-      );
+      this.draw3D(leftTopWidthHeight, obj.modelViewProjectionMatrix, obj.modelMatrix, obj.normalMatrix, azimuth, elevation);
       const tile = this.screenSlices[this.screenSlices.length - 1];
       tile.leftTopWidthHeight = ltwh;
       tile.axCorSag = axCorSag;
@@ -46136,16 +48992,7 @@ var Niivue = class {
     }
     if (this.opts.meshThicknessOn2D > 0) {
       if (this.opts.meshThicknessOn2D !== Infinity) {
-        obj = this.calculateMvpMatrix2D(
-          leftTopWidthHeight,
-          screen.mnMM,
-          screen.mxMM,
-          this.opts.meshThicknessOn2D,
-          sliceMM,
-          azimuth,
-          elevation,
-          isRadiolgical
-        );
+        obj = this.calculateMvpMatrix2D(leftTopWidthHeight, screen.mnMM, screen.mxMM, this.opts.meshThicknessOn2D, sliceMM, azimuth, elevation, isRadiolgical);
       }
       const mx = mat4_exports.clone(obj.modelViewProjectionMatrix);
       mat4_exports.multiply(mx, mx, mesh2ortho);
@@ -46224,37 +49071,18 @@ var Niivue = class {
    * @internal
    */
   calculateMvpMatrix(_unused, leftTopWidthHeight = [0, 0, 0, 0], azimuth, elevation) {
-    const gl = this.gl;
-    if (leftTopWidthHeight[2] === 0 || leftTopWidthHeight[3] === 0) {
-      leftTopWidthHeight = [0, 0, gl.canvas.width, gl.canvas.height];
-    }
-    const whratio = leftTopWidthHeight[2] / leftTopWidthHeight[3];
-    let scale6 = this.furthestFromPivot;
-    const origin = this.pivot3D;
-    const projectionMatrix = mat4_exports.create();
-    scale6 = 0.8 * scale6 / this.scene.volScaleMultiplier;
-    if (whratio < 1) {
-      mat4_exports.ortho(projectionMatrix, -scale6, scale6, -scale6 / whratio, scale6 / whratio, scale6 * 8, scale6 * 0.01);
-    } else {
-      mat4_exports.ortho(projectionMatrix, -scale6 * whratio, scale6 * whratio, -scale6, scale6, scale6 * 8, scale6 * 0.01);
-    }
-    const modelMatrix = mat4_exports.create();
-    modelMatrix[0] = -1;
-    const translateVec3 = vec3_exports.fromValues(0, 0, -scale6 * 1.8);
-    mat4_exports.translate(modelMatrix, modelMatrix, translateVec3);
-    if (this.position) {
-      mat4_exports.translate(modelMatrix, modelMatrix, this.position);
-    }
-    mat4_exports.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
-    mat4_exports.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180));
-    mat4_exports.translate(modelMatrix, modelMatrix, [-origin[0], -origin[1], -origin[2]]);
-    const iModelMatrix = mat4_exports.create();
-    mat4_exports.invert(iModelMatrix, modelMatrix);
-    const normalMatrix = mat4_exports.create();
-    mat4_exports.transpose(normalMatrix, iModelMatrix);
-    const modelViewProjectionMatrix = mat4_exports.create();
-    mat4_exports.multiply(modelViewProjectionMatrix, projectionMatrix, modelMatrix);
-    return [modelViewProjectionMatrix, modelMatrix, normalMatrix];
+    const result = calculateMvpMatrix({
+      canvasWidth: this.gl.canvas.width,
+      canvasHeight: this.gl.canvas.height,
+      leftTopWidthHeight,
+      azimuth,
+      elevation,
+      furthestFromPivot: this.furthestFromPivot,
+      pivot3D: this.pivot3D,
+      volScaleMultiplier: this.scene.volScaleMultiplier,
+      position: this.position
+    });
+    return [result.mvpMatrix, result.modelMatrix, result.normalMatrix];
   }
   /**
    * Computes the model transformation matrix for the given azimuth and elevation.
@@ -46265,15 +49093,11 @@ var Niivue = class {
     if (!this.back) {
       throw new Error("back undefined");
     }
-    const modelMatrix = mat4_exports.create();
-    modelMatrix[0] = -1;
-    mat4_exports.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
-    mat4_exports.rotateZ(modelMatrix, modelMatrix, deg2rad(azimuth - 180));
-    if (this.back.obliqueRAS) {
-      const oblique = mat4_exports.clone(this.back.obliqueRAS);
-      mat4_exports.multiply(modelMatrix, modelMatrix, oblique);
-    }
-    return modelMatrix;
+    return calculateModelMatrix({
+      azimuth,
+      elevation,
+      obliqueRAS: this.back.obliqueRAS
+    });
   }
   /**
    * Returns the normalized near-to-far ray direction for the given view angles.
@@ -46282,27 +49106,11 @@ var Niivue = class {
    * @internal
    */
   calculateRayDirection(azimuth, elevation) {
-    const dirClip = vec3_exports.fromValues(0, 0, -1);
-    const modelMatrix = this.calculateModelMatrix(azimuth, elevation);
-    const proj3 = mat3_exports.fromValues(1, 0, 0, 0, -1, 0, 0, 0, -1);
-    const dirAfterProj = vec3_exports.create();
-    vec3_exports.transformMat3(dirAfterProj, dirClip, proj3);
-    const model3 = mat3_exports.create();
-    mat3_exports.fromMat4(model3, modelMatrix);
-    const invModel3 = mat3_exports.create();
-    if (!mat3_exports.invert(invModel3, model3)) {
-      return vec3_exports.fromValues(0, 0, 1);
-    }
-    const worldRay = vec3_exports.create();
-    vec3_exports.transformMat3(worldRay, dirAfterProj, invModel3);
-    vec3_exports.normalize(worldRay, worldRay);
-    const tiny = 5e-5;
-    for (let i = 0; i < 3; i++) {
-      if (Math.abs(worldRay[i]) < tiny) {
-        worldRay[i] = Math.sign(worldRay[i]) * tiny || tiny;
-      }
-    }
-    return worldRay;
+    return calculateRayDirection({
+      azimuth,
+      elevation,
+      obliqueRAS: this.back?.obliqueRAS
+    });
   }
   /**
    * Returns the scene's min, max, and range extents in mm or voxel space.
@@ -46310,54 +49118,14 @@ var Niivue = class {
    * @internal
    */
   sceneExtentsMinMax(isSliceMM = true) {
-    let mn = vec3_exports.fromValues(0, 0, 0);
-    let mx = vec3_exports.fromValues(0, 0, 0);
-    if (this.volumes.length > 0) {
-      if (!this.volumeObject3D) {
-        throw new Error("volumeObject3D undefined");
-      }
-      mn = vec3_exports.fromValues(
-        this.volumeObject3D.extentsMin[0],
-        this.volumeObject3D.extentsMin[1],
-        this.volumeObject3D.extentsMin[2]
-      );
-      mx = vec3_exports.fromValues(
-        this.volumeObject3D.extentsMax[0],
-        this.volumeObject3D.extentsMax[1],
-        this.volumeObject3D.extentsMax[2]
-      );
-      if (!isSliceMM) {
-        mn = vec3_exports.fromValues(
-          this.volumes[0].extentsMinOrtho[0],
-          this.volumes[0].extentsMinOrtho[1],
-          this.volumes[0].extentsMinOrtho[2]
-        );
-        mx = vec3_exports.fromValues(
-          this.volumes[0].extentsMaxOrtho[0],
-          this.volumes[0].extentsMaxOrtho[1],
-          this.volumes[0].extentsMaxOrtho[2]
-        );
-      }
-    }
-    if (this.meshes.length > 0) {
-      if (this.volumes.length < 1) {
-        const minExtents = this.meshes[0].extentsMin;
-        const maxExtents = this.meshes[0].extentsMax;
-        mn = vec3_exports.fromValues(minExtents[0], minExtents[1], minExtents[2]);
-        mx = vec3_exports.fromValues(maxExtents[0], maxExtents[1], maxExtents[2]);
-      }
-      for (let i = 0; i < this.meshes.length; i++) {
-        const minExtents = this.meshes[i].extentsMin;
-        const maxExtents = this.meshes[i].extentsMax;
-        const vmn = vec3_exports.fromValues(minExtents[0], minExtents[1], minExtents[2]);
-        vec3_exports.min(mn, mn, vmn);
-        const vmx = vec3_exports.fromValues(maxExtents[0], maxExtents[1], maxExtents[2]);
-        vec3_exports.max(mx, mx, vmx);
-      }
-    }
-    const range2 = vec3_exports.create();
-    vec3_exports.subtract(range2, mx, mn);
-    return [mn, mx, range2];
+    return sceneExtentsMinMax(
+      {
+        volumes: this.volumes,
+        meshes: this.meshes,
+        volumeObject3D: this.volumeObject3D
+      },
+      isSliceMM
+    );
   }
   /**
    * Sets the 3D pivot point and scene scale based on volume and mesh extents.
@@ -46365,28 +49133,18 @@ var Niivue = class {
    */
   setPivot3D() {
     const [mn, mx] = this.sceneExtentsMinMax();
-    const pivot = vec3_exports.create();
-    vec3_exports.add(pivot, mn, mx);
-    vec3_exports.scale(pivot, pivot, 0.5);
-    this.pivot3D = [pivot[0], pivot[1], pivot[2]];
-    vec3_exports.subtract(pivot, mx, mn);
-    this.extentsMin = mn;
-    this.extentsMax = mx;
-    this.furthestFromPivot = vec3_exports.length(pivot) * 0.5;
+    const result = calculatePivot3D({ sceneMin: mn, sceneMax: mx });
+    this.pivot3D = result.pivot3D;
+    this.furthestFromPivot = result.furthestFromPivot;
+    this.extentsMin = result.extentsMin;
+    this.extentsMax = result.extentsMax;
   }
   /**
    * Returns the maximum number of 4D volumes across all loaded images.
    * @internal
    */
   getMaxVols() {
-    if (this.volumes.length < 1) {
-      return 0;
-    }
-    let maxVols = 0;
-    for (let i = 0; i < this.volumes.length; i++) {
-      maxVols = Math.max(maxVols, this.volumes[i].nFrame4D);
-    }
-    return maxVols;
+    return getMaxVols({ volumes: this.volumes });
   }
   /**
    * Returns true if any loaded 4D volume is missing frames.
@@ -46592,11 +49350,7 @@ var Niivue = class {
     const halfThick = 0.5 * graph.gridLineThickness;
     while (lineH <= mx) {
       const y = plotBottom - (lineH - mn) * scaleH;
-      this.drawLine(
-        [plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.gridLineThickness, y],
-        graph.gridLineThickness,
-        graph.lineColor
-      );
+      this.drawLine([plotLTWH[0] - halfThick, y, plotLTWH[0] + plotLTWH[2] + graph.gridLineThickness, y], graph.gridLineThickness, graph.lineColor);
       const str6 = lineH.toFixed(digits);
       if (fntSize > 0) {
         this.drawTextLeft([plotLTWH[0] - 6, y], str6, fntScale, graph.textColor);
@@ -46631,39 +49385,19 @@ var Niivue = class {
         const x1 = i * scaleW;
         const y0 = (graph.lines[j][i - 1] - mn) * scaleH;
         const y1 = (graph.lines[j][i] - mn) * scaleH;
-        const LTWH = [
-          plotLTWH[0] + x0,
-          plotLTWH[1] + plotLTWH[3] - y0,
-          plotLTWH[0] + x1,
-          plotLTWH[1] + plotLTWH[3] - y1
-        ];
+        const LTWH = [plotLTWH[0] + x0, plotLTWH[1] + plotLTWH[3] - y0, plotLTWH[0] + x1, plotLTWH[1] + plotLTWH[3] - y1];
         this.drawLine(LTWH, graph.lineThickness, lineRGBA);
       }
     }
     if (graph.selectedColumn >= 0 && graph.selectedColumn < graph.lines[0].length) {
       const x = graph.selectedColumn * scaleW + plotLTWH[0];
-      this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], graph.lineThickness, [
-        graph.lineRGB[0][0],
-        graph.lineRGB[0][1],
-        graph.lineRGB[0][2],
-        selectedLineAlpha
-      ]);
+      this.drawLine([x, plotLTWH[1], x, plotLTWH[1] + plotLTWH[3]], graph.lineThickness, [graph.lineRGB[0][0], graph.lineRGB[0][1], graph.lineRGB[0][2], selectedLineAlpha]);
     }
     if (fntSize > 0 && graph.LTWH[1] + graph.LTWH[3] > plotLTWH[1] + plotLTWH[3] + fntSize * 2.4) {
-      this.drawTextBelow(
-        [plotLTWH[0] + 0.5 * plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 1.2],
-        "Volume",
-        fntScale,
-        graph.textColor
-      );
+      this.drawTextBelow([plotLTWH[0] + 0.5 * plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 1.2], "Volume", fntScale, graph.textColor);
     }
     if (this.detectPartialllyLoaded4D()) {
-      this.drawTextBelow(
-        [plotLTWH[0] + plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 0.5],
-        "...",
-        fntScale,
-        graph.textColor
-      );
+      this.drawTextBelow([plotLTWH[0] + plotLTWH[2], plotLTWH[1] + plotLTWH[3] + fntSize * 0.5], "...", fntScale, graph.textColor);
     }
   }
   /**
@@ -46718,66 +49452,30 @@ var Niivue = class {
    * @internal
    */
   drawImage3D(mvpMatrix, azimuth, elevation) {
-    if (this.volumes.length === 0) {
-      return;
-    }
-    const gl = this.gl;
-    const rayDir = this.calculateRayDirection(azimuth, elevation);
-    const object3D = this.volumeObject3D;
-    if (object3D) {
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      gl.enable(gl.CULL_FACE);
-      gl.cullFace(gl.FRONT);
-      let shader = this.renderShader;
-      if (this.uiData.mouseDepthPicker) {
-        shader = this.pickingImageShader;
-      }
-      shader.use(this.gl);
-      gl.uniform1i(shader.uniforms.backgroundMasksOverlays, this.backgroundMasksOverlays);
-      if (this.gradientTextureAmount > 0 && shader.uniforms.normMtx && this.gradientTexture) {
-        gl.activeTexture(TEXTURE6_GRADIENT);
-        gl.bindTexture(gl.TEXTURE_3D, this.gradientTexture);
-        const modelMatrix = this.calculateModelMatrix(azimuth, elevation);
-        const iModelMatrix = mat4_exports.create();
-        mat4_exports.invert(iModelMatrix, modelMatrix);
-        const normalMatrix = mat4_exports.create();
-        mat4_exports.transpose(normalMatrix, iModelMatrix);
-        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normalMatrix);
-      }
-      if (this.drawBitmap && this.drawBitmap.length > 8) {
-        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, this.drawOpacity);
-      } else {
-        gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, this.renderDrawAmbientOcclusion, 0);
-      }
-      this.gl.uniform4fv(shader.uniforms.paqdUniforms, this.opts.paqdUniforms);
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix);
-      gl.uniformMatrix4fv(shader.uniforms.matRAS, false, this.back.matRAS);
-      gl.uniform3fv(shader.uniforms.rayDir, rayDir);
-      if (this.gradientTextureAmount < 0) {
-        gl.uniform4fv(shader.uniforms.clipPlane, [
-          this.scene.crosshairPos[0],
-          this.scene.crosshairPos[1],
-          this.scene.crosshairPos[2],
-          30
-        ]);
-      } else {
-        const MAX_CLIP_PLANES = 6;
-        const arr = new Float32Array(4 * MAX_CLIP_PLANES).fill(2);
-        for (let i = 0; i < this.scene.clipPlaneDepthAziElevs.length; i++) {
-          const dae = this.scene.clipPlaneDepthAziElevs[i];
-          const v = this.sph2cartDeg(dae[1] + 180, dae[2]);
-          const planeI = [v[0], v[1], v[2], dae[0]];
-          arr.set(planeI, i * 4);
-        }
-        this.gl.uniform4fv(shader.uniforms.clipPlanes, arr);
-      }
-      gl.uniform1f(shader.uniforms.drawOpacity, 1);
-      gl.uniform1i(shader.uniforms.isClipCutaway, this.opts.isClipPlanesCutaway ? 1 : 0);
-      gl.bindVertexArray(object3D.vao);
-      gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
-      gl.bindVertexArray(this.unusedVAO);
-    }
+    drawImage3D({
+      gl: this.gl,
+      mvpMatrix,
+      azimuth,
+      elevation,
+      volumesLength: this.volumes.length,
+      volumeObject3D: this.volumeObject3D,
+      unusedVAO: this.unusedVAO,
+      renderShader: this.renderShader,
+      pickingImageShader: this.pickingImageShader,
+      mouseDepthPicker: this.uiData.mouseDepthPicker,
+      backgroundMasksOverlays: this.backgroundMasksOverlays,
+      gradientTextureAmount: this.gradientTextureAmount,
+      gradientTexture: this.gradientTexture,
+      drawBitmap: this.drawBitmap,
+      renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
+      drawOpacity: this.drawOpacity,
+      paqdUniforms: this.opts.paqdUniforms,
+      matRAS: this.back.matRAS,
+      crosshairPos: this.scene.crosshairPos,
+      clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
+      isClipPlanesCutaway: this.opts.isClipPlanesCutaway,
+      obliqueRAS: this.back?.obliqueRAS
+    });
   }
   /**
    * Draw a small orientation cube indicating L/R, A/P, I/S directions in the given tile area with specified azimuth and elevation.
@@ -46804,11 +49502,7 @@ var Niivue = class {
     if (leftTopWidthHeight[1] === 0) {
       translateUpForColorbar = gl.canvas.height - this.effectiveCanvasHeight();
     }
-    mat4_exports.translate(modelMatrix, modelMatrix, [
-      1.8 * sz + leftTopWidthHeight[0],
-      translateUpForColorbar + 1.8 * sz + leftTopWidthHeight[1],
-      0
-    ]);
+    mat4_exports.translate(modelMatrix, modelMatrix, [1.8 * sz + leftTopWidthHeight[0], translateUpForColorbar + 1.8 * sz + leftTopWidthHeight[1], 0]);
     mat4_exports.scale(modelMatrix, modelMatrix, [sz, sz, sz]);
     mat4_exports.rotateX(modelMatrix, modelMatrix, deg2rad(270 - elevation));
     mat4_exports.rotateZ(modelMatrix, modelMatrix, deg2rad(-azimuth));
@@ -47038,12 +49732,7 @@ var Niivue = class {
     for (const point of points) {
       const screenPoint = this.calculateScreenPoint(point, mvpMatrix, leftTopWidthHeight);
       if (!secondPass) {
-        this.draw3DLine(
-          pos,
-          [screenPoint[0], screenPoint[1], screenPoint[2]],
-          label.style.lineWidth,
-          label.style.lineColor
-        );
+        this.draw3DLine(pos, [screenPoint[0], screenPoint[1], screenPoint[2]], label.style.lineWidth, label.style.lineColor);
       } else {
         this.drawDottedLine([...pos, screenPoint[0], screenPoint[1]], label.style.lineWidth, label.style.lineColor);
       }
@@ -47122,16 +49811,7 @@ var Niivue = class {
       gl.depthFunc(gl.LEQUAL);
     }
     for (const label of labels) {
-      this.draw3DLabel(
-        label,
-        [left, top],
-        mvpMatrix,
-        leftTopWidthHeight,
-        bulletMargin,
-        panelWidth,
-        secondPass,
-        this.legendFontScaling
-      );
+      this.draw3DLabel(label, [left, top], mvpMatrix, leftTopWidthHeight, bulletMargin, panelWidth, secondPass, this.legendFontScaling);
       const labelSize = this.fontPx * label.style.textScale;
       const textHeight = this.textHeight(labelSize, label.text) * this.legendFontScaling;
       top += textHeight;
@@ -47186,10 +49866,7 @@ var Niivue = class {
         top = this.canvas.height - textHeight - verticalMargin;
         rectVerticalOffset -= verticalMargin / 4;
       }
-      this.drawRect(
-        [left + rectHorizontalOffset, top + rectVerticalOffset, textWidth + rectWidthDiff, textHeight + rectHeightDiff],
-        label.style.backgroundColor
-      );
+      this.drawRect([left + rectHorizontalOffset, top + rectVerticalOffset, textWidth + rectWidthDiff, textHeight + rectHeightDiff], label.style.backgroundColor);
       this.draw3DLabel(label, [left, top]);
     }
   }
@@ -47274,127 +49951,30 @@ var Niivue = class {
     if (this.meshes.length < 1) {
       return;
     }
-    const gl = this.gl;
     if (!m) {
       ;
-      [m, modelMtx, normMtx] = this.calculateMvpMatrix(
-        this.volumeObject3D,
-        void 0,
-        this.scene.renderAzimuth,
-        this.scene.renderElevation
-      );
+      [m, modelMtx, normMtx] = this.calculateMvpMatrix(this.volumeObject3D, void 0, this.scene.renderAzimuth, this.scene.renderElevation);
     }
-    gl.enable(gl.DEPTH_TEST);
-    if (isDepthTest) {
-      gl.depthFunc(gl.LEQUAL);
-    } else {
-      gl.depthFunc(gl.ALWAYS);
-    }
-    gl.cullFace(gl.BACK);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    let hasFibers = false;
-    for (const mesh of this.meshes) {
-      if (!mesh.visible || mesh.opacity <= 0 || mesh.indexCount < 3) {
-        continue;
-      }
-      const meshAlpha = mesh.opacity * alpha;
-      let shader = this.meshShaders[mesh.meshShaderIndex].shader;
-      if (this.uiData.mouseDepthPicker) {
-        shader = this.pickingMeshShader;
-      }
-      shader.use(gl);
-      if (shader.isCrosscut) {
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.CULL_FACE);
-        const mm = this.frac2mm(this.scene.crosshairPos, 0, this.opts.isSliceMM);
-        gl.uniformMatrix4fv(shader.uniforms.modelMtx, false, modelMtx);
-        if (is2D) {
-          const OUT_OF_RANGE = 1e9;
-          if (Math.abs(modelMtx[2]) + Math.abs(modelMtx[4]) + Math.abs(modelMtx[9]) >= 2.95) {
-            mm[1] = OUT_OF_RANGE;
-            mm[2] = OUT_OF_RANGE;
-          }
-          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[6]) + Math.abs(modelMtx[9]) >= 2.95) {
-            mm[0] = OUT_OF_RANGE;
-            mm[2] = OUT_OF_RANGE;
-          }
-          if (Math.abs(modelMtx[0]) + Math.abs(modelMtx[5]) + Math.abs(modelMtx[10]) >= 2.95) {
-            mm[0] = OUT_OF_RANGE;
-            mm[1] = OUT_OF_RANGE;
-          }
-        }
-        let meshThicknessMM = Number(this.opts.meshThicknessOn2D);
-        if (!Number.isFinite(meshThicknessMM)) {
-          meshThicknessMM = 1;
-        }
-        gl.uniform4fv(shader.uniforms.sliceMM, [mm[0], mm[1], mm[2], meshThicknessMM]);
-      } else {
-        gl.enable(gl.CULL_FACE);
-        gl.enable(gl.DEPTH_TEST);
-      }
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
-      gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
-      gl.uniform1f(shader.uniforms.opacity, meshAlpha);
-      if (meshAlpha >= 1) {
-        gl.disable(gl.BLEND);
-        gl.depthMask(true);
-      } else {
-        gl.enable(gl.BLEND);
-        gl.depthMask(false);
-      }
-      if (mesh.offsetPt0 && (mesh.fiberSides < 3 || mesh.fiberRadius <= 0)) {
-        hasFibers = true;
-        continue;
-      }
-      if (shader.isMatcap) {
-        gl.activeTexture(TEXTURE5_MATCAP);
-        gl.bindTexture(gl.TEXTURE_2D, this.matCapTexture);
-      }
-      gl.bindVertexArray(mesh.vao);
-      gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
-      gl.bindVertexArray(this.unusedVAO);
-    }
-    gl.enable(gl.CULL_FACE);
-    if (this.opts.meshXRay > 0 && !hasFibers) {
-      gl.enable(gl.BLEND);
-      gl.depthMask(false);
-      gl.depthFunc(gl.ALWAYS);
-      for (const mesh of this.meshes) {
-        if (!mesh.visible || mesh.indexCount < 3) {
-          continue;
-        }
-        const shader = this.meshShaders[mesh.meshShaderIndex].shader;
-        shader.use(gl);
-        gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
-        gl.uniformMatrix4fv(shader.uniforms.normMtx, false, normMtx);
-        gl.uniform1f(shader.uniforms.opacity, mesh.opacity * alpha * this.opts.meshXRay);
-        gl.bindVertexArray(mesh.vao);
-        gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, 0);
-        gl.bindVertexArray(this.unusedVAO);
-      }
-      gl.depthMask(true);
-      gl.depthFunc(gl.GREATER);
-      gl.disable(gl.BLEND);
-    }
-    if (hasFibers) {
-      const shader = this.fiberShader;
-      shader.use(gl);
-      gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, m);
-      gl.uniform1f(shader.uniforms.opacity, alpha);
-      for (const mesh of this.meshes) {
-        if (!mesh.offsetPt0) {
-          continue;
-        }
-        if (mesh.fiberSides >= 3 && mesh.fiberRadius > 0) {
-          continue;
-        }
-        gl.bindVertexArray(mesh.vaoFiber);
-        gl.drawElements(gl.LINE_STRIP, mesh.indexCount, gl.UNSIGNED_INT, 0);
-        gl.bindVertexArray(this.unusedVAO);
-      }
-    }
-    gl.depthMask(true);
-    gl.disable(gl.BLEND);
+    drawMesh3D({
+      gl: this.gl,
+      meshes: this.meshes,
+      isDepthTest,
+      alpha,
+      mvpMatrix: m,
+      modelMatrix: modelMtx,
+      normalMatrix: normMtx,
+      is2D,
+      meshShaders: this.meshShaders,
+      pickingMeshShader: this.pickingMeshShader,
+      fiberShader: this.fiberShader,
+      mouseDepthPicker: this.uiData.mouseDepthPicker,
+      matCapTexture: this.matCapTexture,
+      unusedVAO: this.unusedVAO,
+      meshXRay: this.opts.meshXRay,
+      meshThicknessOn2D: this.opts.meshThicknessOn2D,
+      frac2mm: (pos) => this.frac2mm(pos, 0, this.opts.isSliceMM),
+      crosshairPos: this.scene.crosshairPos
+    });
     this.readyForSync = true;
   }
   /**
@@ -47442,12 +50022,7 @@ var Niivue = class {
     crosshairsShader.use(this.gl);
     if (mvpMtx == null) {
       ;
-      [mvpMtx] = this.calculateMvpMatrix(
-        this.crosshairs3D,
-        void 0,
-        this.scene.renderAzimuth,
-        this.scene.renderElevation
-      );
+      [mvpMtx] = this.calculateMvpMatrix(this.crosshairs3D, void 0, this.scene.renderAzimuth, this.scene.renderElevation);
     }
     gl.uniformMatrix4fv(crosshairsShader.uniforms.mvpMtx, false, mvpMtx);
     gl.disable(gl.CULL_FACE);
@@ -47479,46 +50054,27 @@ var Niivue = class {
    * @internal
    */
   mm2frac(mm, volIdx = 0, isForceSliceMM = false) {
-    if (this.volumes.length < 1) {
-      const frac = vec3_exports.fromValues(0.1, 0.5, 0.5);
-      const [mn, _mx, range2] = this.sceneExtentsMinMax();
-      frac[0] = (mm[0] - mn[0]) / range2[0];
-      frac[1] = (mm[1] - mn[1]) / range2[1];
-      frac[2] = (mm[2] - mn[2]) / range2[2];
-      if (!isFinite(frac)) {
-        if (!isFinite(frac[0])) {
-          frac[0] = 0.5;
-        }
-        if (!isFinite(frac[1])) {
-          frac[1] = 0.5;
-        }
-        if (!isFinite(frac[2])) {
-          frac[2] = 0.5;
-        }
-        if (this.meshes.length < 1) {
-          log.error("mm2frac() not finite: objects not (yet) loaded.");
-        }
-      }
-      return frac;
-    }
-    return this.volumes[volIdx].convertMM2Frac(mm, isForceSliceMM || this.opts.isSliceMM);
+    return mm2frac(mm, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      volIdx,
+      isSliceMM: isForceSliceMM || this.opts.isSliceMM
+    });
   }
   /**
    * Convert voxel coordinates to fractional volume coordinates for the specified volume.
    * @internal
    */
   vox2frac(vox, volIdx = 0) {
-    return this.volumes[volIdx].convertVox2Frac(vox);
+    return vox2frac(vox, this.volumes, volIdx);
   }
   /**
    * Convert fractional volume coordinates to voxel coordinates for the specified volume.
    * @internal
    */
   frac2vox(frac, volIdx = 0) {
-    if (this.volumes.length <= volIdx) {
-      return [0, 0, 0];
-    }
-    return this.volumes[volIdx].convertFrac2Vox(frac);
+    return frac2vox(frac, this.volumes, volIdx);
   }
   /**
    * move crosshair a fixed number of voxels (not mm)
@@ -47529,17 +50085,17 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/draw2.html | live demo usage}
    */
   moveCrosshairInVox(x, y, z) {
-    const vox = this.frac2vox(this.scene.crosshairPos);
-    const vox2 = vox[2];
-    vox[0] += x;
-    vox[1] += y;
-    vox[2] += z;
-    vox[0] = clamp(vox[0], 0, this.volumes[0].dimsRAS[1] - 1);
-    vox[1] = clamp(vox[1], 0, this.volumes[0].dimsRAS[2] - 1);
-    vox[2] = clamp(vox[2], 0, this.volumes[0].dimsRAS[3] - 1);
-    this.scene.crosshairPos = this.vox2frac(vox);
+    const currentVox = this.frac2vox(this.scene.crosshairPos);
+    const result = calculateMoveCrosshairInVox({
+      x,
+      y,
+      z,
+      currentVox,
+      dimsRAS: this.volumes[0].dimsRAS
+    });
+    this.scene.crosshairPos = this.vox2frac(result.newVox);
     this.createOnLocationChange();
-    if (this.opts.is2DSliceShader && vox2 !== vox[2]) {
+    if (this.opts.is2DSliceShader && result.zChanged) {
       this.updateGLVolume();
       this.refreshDrawing(false);
     }
@@ -47550,222 +50106,66 @@ var Niivue = class {
    * @internal
    */
   frac2mm(frac, volIdx = 0, isForceSliceMM = false) {
-    const pos = vec4_exports.fromValues(frac[0], frac[1], frac[2], 1);
-    if (this.volumes.length > 0) {
-      return this.volumes[volIdx].convertFrac2MM(frac, isForceSliceMM || this.opts.isSliceMM);
-    } else {
-      const [mn, mx] = this.sceneExtentsMinMax();
-      const lerp4 = (x, y, a) => x * (1 - a) + y * a;
-      pos[0] = lerp4(mn[0], mx[0], frac[0]);
-      pos[1] = lerp4(mn[1], mx[1], frac[1]);
-      pos[2] = lerp4(mn[2], mx[2], frac[2]);
-    }
-    return pos;
+    return frac2mm(frac, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      volIdx,
+      isSliceMM: isForceSliceMM || this.opts.isSliceMM
+    });
   }
   /**
    * Convert screen pixel coordinates to texture fractional coordinates for the given slice index.
    * @internal
    */
   screenXY2TextureFrac(x, y, i, restrict0to1 = true) {
-    const texFrac = vec3_exports.fromValues(-1, -1, -1);
-    const axCorSag = this.screenSlices[i].axCorSag;
-    if (axCorSag > 2 /* SAGITTAL */) {
-      return texFrac;
-    }
-    const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
-    let isMirror = false;
-    if (ltwh[2] < 0) {
-      isMirror = true;
-      ltwh[0] += ltwh[2];
-      ltwh[2] = -ltwh[2];
-    }
-    let fracX = (x - ltwh[0]) / ltwh[2];
-    if (isMirror) {
-      fracX = 1 - fracX;
-    }
-    const fracY = 1 - (y - ltwh[1]) / ltwh[3];
-    if (fracX < 0 || fracX > 1 || fracY < 0 || fracY > 1) {
-      return texFrac;
-    }
-    if (this.screenSlices[i].AxyzMxy.length < 4) {
-      return texFrac;
-    }
-    let xyzMM = vec3_exports.fromValues(0, 0, 0);
-    xyzMM[0] = this.screenSlices[i].leftTopMM[0] + fracX * this.screenSlices[i].fovMM[0];
-    xyzMM[1] = this.screenSlices[i].leftTopMM[1] + fracY * this.screenSlices[i].fovMM[1];
-    const v = this.screenSlices[i].AxyzMxy;
-    xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-    if (axCorSag === 1 /* CORONAL */) {
-      xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
-    }
-    if (axCorSag === 2 /* SAGITTAL */) {
-      xyzMM = swizzleVec3(xyzMM, [2, 0, 1]);
-    }
-    const xyz = this.mm2frac(xyzMM);
-    if (restrict0to1) {
-      if (xyz[0] < 0 || xyz[0] > 1 || xyz[1] < 0 || xyz[1] > 1 || xyz[2] < 0 || xyz[2] > 1) {
-        return texFrac;
-      }
-    }
-    return xyz;
+    return screenXY2TextureFrac(x, y, this.screenSlices, i, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      restrict0to1
+    });
   }
   /**
    * Converts a canvas position to fractional texture coordinates.
    * @internal
    */
   canvasPos2frac(canvasPos) {
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const texFrac = this.screenXY2TextureFrac(canvasPos[0], canvasPos[1], i);
-      if (texFrac[0] >= 0) {
-        return texFrac;
-      }
-    }
-    return [-1, -1, -1];
+    return canvasPos2frac(canvasPos, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM
+    });
   }
-  /**
-   * Convert fractional volume coordinates to canvas pixel coordinates.
-   * Returns the first valid screen slice that contains the fractional coordinates.
-   * @internal
-   */
   /**
    * Convert fractional volume coordinates to canvas pixel coordinates with tile information.
    * Returns both canvas position and the tile index for validation.
    * @internal
    */
   frac2canvasPosWithTile(frac, preferredSliceType) {
-    const worldMM = this.frac2mm(frac);
-    let bestMatch = { index: -1, distance: Infinity };
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const axCorSag = this.screenSlices[i].axCorSag;
-      if (axCorSag > 2 /* SAGITTAL */) {
-        continue;
-      }
-      if (this.screenSlices[i].AxyzMxy.length < 4) {
-        continue;
-      }
-      if (preferredSliceType !== void 0 && axCorSag !== preferredSliceType) {
-        continue;
-      }
-      let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
-      if (axCorSag === 1 /* CORONAL */) {
-        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
-      }
-      if (axCorSag === 2 /* SAGITTAL */) {
-        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
-      }
-      const v = this.screenSlices[i].AxyzMxy;
-      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-      const distance4 = Math.abs(xyzMM[2] - expectedZ);
-      const tolerance = this.opts.sliceType === 3 /* MULTIPLANAR */ ? 1 : 0.1;
-      if (distance4 < bestMatch.distance) {
-        bestMatch = { index: i, distance: distance4 };
-      }
-      if (distance4 <= tolerance) {
-        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0];
-        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1];
-        if (fracX >= 0 && fracX <= 1 && fracY >= 0 && fracY <= 1) {
-          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
-          let isMirror = false;
-          if (ltwh[2] < 0) {
-            isMirror = true;
-            ltwh[0] += ltwh[2];
-            ltwh[2] = -ltwh[2];
-          }
-          let screenFracX = fracX;
-          if (isMirror) {
-            screenFracX = 1 - fracX;
-          }
-          const screenFracY = 1 - fracY;
-          const screenX = ltwh[0] + screenFracX * ltwh[2];
-          const screenY = ltwh[1] + screenFracY * ltwh[3];
-          return { pos: [screenX, screenY], tileIndex: i };
-        }
-      }
-    }
-    return null;
+    return frac2canvasPosWithTile(frac, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      preferredSliceType
+    });
   }
+  /**
+   * Convert fractional volume coordinates to canvas pixel coordinates.
+   * Returns the first valid screen slice that contains the fractional coordinates.
+   * @internal
+   */
   frac2canvasPos(frac) {
-    const worldMM = this.frac2mm(frac);
-    let bestMatch = { index: -1, distance: Infinity };
-    for (let i = 0; i < this.screenSlices.length; i++) {
-      const axCorSag = this.screenSlices[i].axCorSag;
-      if (axCorSag > 2 /* SAGITTAL */) {
-        continue;
-      }
-      if (this.screenSlices[i].AxyzMxy.length < 4) {
-        continue;
-      }
-      let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
-      if (axCorSag === 1 /* CORONAL */) {
-        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
-      }
-      if (axCorSag === 2 /* SAGITTAL */) {
-        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
-      }
-      const v = this.screenSlices[i].AxyzMxy;
-      const expectedZ = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-      const distance4 = Math.abs(xyzMM[2] - expectedZ);
-      const tolerance = this.opts.sliceType === 3 /* MULTIPLANAR */ ? 1 : 0.1;
-      if (distance4 < bestMatch.distance) {
-        bestMatch = { index: i, distance: distance4 };
-      }
-      if (distance4 <= tolerance) {
-        const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0];
-        const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1];
-        if (fracX >= 0 && fracX <= 1 && fracY >= 0 && fracY <= 1) {
-          const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
-          let isMirror = false;
-          if (ltwh[2] < 0) {
-            isMirror = true;
-            ltwh[0] += ltwh[2];
-            ltwh[2] = -ltwh[2];
-          }
-          let screenFracX = fracX;
-          if (isMirror) {
-            screenFracX = 1 - fracX;
-          }
-          const screenFracY = 1 - fracY;
-          const screenX = ltwh[0] + screenFracX * ltwh[2];
-          const screenY = ltwh[1] + screenFracY * ltwh[3];
-          return [screenX, screenY];
-        }
-      }
-    }
-    if (bestMatch.index >= 0 && bestMatch.distance < 2) {
-      const i = bestMatch.index;
-      const axCorSag = this.screenSlices[i].axCorSag;
-      let xyzMM = vec3_exports.fromValues(worldMM[0], worldMM[1], worldMM[2]);
-      if (axCorSag === 1 /* CORONAL */) {
-        xyzMM = swizzleVec3(xyzMM, [0, 2, 1]);
-      }
-      if (axCorSag === 2 /* SAGITTAL */) {
-        xyzMM = swizzleVec3(xyzMM, [1, 2, 0]);
-      }
-      const v = this.screenSlices[i].AxyzMxy;
-      xyzMM[2] = v[2] + v[4] * (xyzMM[1] - v[1]) - v[3] * (xyzMM[0] - v[0]);
-      const fracX = (xyzMM[0] - this.screenSlices[i].leftTopMM[0]) / this.screenSlices[i].fovMM[0];
-      const fracY = (xyzMM[1] - this.screenSlices[i].leftTopMM[1]) / this.screenSlices[i].fovMM[1];
-      if (fracX >= -0.1 && fracX <= 1.1 && fracY >= -0.1 && fracY <= 1.1) {
-        const clampedFracX = Math.max(0, Math.min(1, fracX));
-        const clampedFracY = Math.max(0, Math.min(1, fracY));
-        const ltwh = this.screenSlices[i].leftTopWidthHeight.slice();
-        let isMirror = false;
-        if (ltwh[2] < 0) {
-          isMirror = true;
-          ltwh[0] += ltwh[2];
-          ltwh[2] = -ltwh[2];
-        }
-        let screenFracX = clampedFracX;
-        if (isMirror) {
-          screenFracX = 1 - clampedFracX;
-        }
-        const screenFracY = 1 - clampedFracY;
-        const screenX = ltwh[0] + screenFracX * ltwh[2];
-        const screenY = ltwh[1] + screenFracY * ltwh[3];
-        return [screenX, screenY];
-      }
-    }
-    return null;
+    return frac2canvasPos(frac, this.screenSlices, {
+      volumes: this.volumes,
+      meshes: this.meshes,
+      volumeObject3D: this.volumeObject3D,
+      isSliceMM: this.opts.isSliceMM,
+      sliceType: this.opts.sliceType
+    });
   }
   /**
    * Calculates scaled slice dimensions and position within the canvas.
@@ -47795,15 +50195,10 @@ var Niivue = class {
     this.bmpShader.use(this.gl);
     const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
     this.gl.uniform2f(this.bmpShader.uniforms.canvasWidthHeight, regionW, regionH);
-    let h = regionH;
-    let w = regionH * this.bmpTextureWH;
-    if (w > regionW) {
-      h = regionW / this.bmpTextureWH;
-      w = regionW;
-    }
-    const left = regionX + (regionW - w) / 2;
-    const top = regionY + (regionH - h) / 2;
-    this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, w, h);
+    const thumb = calculateThumbnailDimensions(regionW, regionH, this.bmpTextureWH);
+    const left = regionX + thumb.left;
+    const top = regionY + thumb.top;
+    this.gl.uniform4f(this.bmpShader.uniforms.leftTopWidthHeight, left, top, thumb.width, thumb.height);
     this.gl.bindVertexArray(this.genericVAO);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     this.gl.bindVertexArray(this.unusedVAO);
@@ -47864,37 +50259,13 @@ var Niivue = class {
     this.lineShader.use(this.gl);
     const dottedLineColor = lineColor[3] < 0 ? [...this.opts.crosshairColor] : [...lineColor];
     dottedLineColor[3] = 0.3;
-    const segment = vec2_exports.fromValues(startXYendXY[2] - startXYendXY[0], startXYendXY[3] - startXYendXY[1]);
-    const totalLength = vec2_exports.length(segment);
-    vec2_exports.normalize(segment, segment);
-    const scale6 = 1;
-    const size = this.fontPx * scale6;
-    vec2_exports.scale(segment, segment, size / 2);
-    const segmentLength = vec2_exports.length(segment);
-    let segmentCount = Math.floor(totalLength / segmentLength);
-    if (totalLength % segmentLength) {
-      segmentCount++;
-    }
-    const currentSegmentXY = [startXYendXY[0], startXYendXY[1]];
     this.gl.uniform4fv(this.lineShader.uniforms.lineColor, dottedLineColor);
     this.gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [this.gl.canvas.width, this.gl.canvas.height]);
     this.gl.uniform1f(this.lineShader.uniforms.thickness, thickness);
-    for (let i = 0; i < segmentCount - 1; i++) {
-      if (i % 2) {
-        currentSegmentXY[0] += segment[0];
-        currentSegmentXY[1] += segment[1];
-        continue;
-      }
-      const segmentStartXYendXY = [
-        currentSegmentXY[0],
-        currentSegmentXY[1],
-        currentSegmentXY[0] + segment[0],
-        currentSegmentXY[1] + segment[1]
-      ];
-      this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentStartXYendXY);
+    const segments = calculateDottedLineSegments(startXYendXY, this.fontPx, 1);
+    for (const seg of segments) {
+      this.gl.uniform4fv(this.lineShader.uniforms.startXYendXY, [seg.startX, seg.startY, seg.endX, seg.endY]);
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-      currentSegmentXY[0] += segment[0];
-      currentSegmentXY[1] += segment[1];
     }
     this.gl.bindVertexArray(this.unusedVAO);
   }
@@ -47922,22 +50293,14 @@ var Niivue = class {
     if (sliceFrac === Infinity) {
       sliceFrac = 0.5;
     }
-    let linesH = corMM.slice();
-    let linesV = sagMM.slice();
+    const { linesH, linesV } = getCrossLinesForSliceType(axCorSag, axiMM, corMM, sagMM);
     const thick = Math.max(1, this.opts.crosshairWidth);
-    if (axCorSag === 1 /* CORONAL */) {
-      linesH = axiMM.slice();
-    }
-    if (axCorSag === 2 /* SAGITTAL */) {
-      linesH = axiMM.slice();
-      linesV = corMM.slice();
-    }
-    function mm2screen(mm) {
+    const mm2screen = (mm) => {
       const screenXY = vec2_exports.fromValues(0, 0);
       screenXY[0] = tile.leftTopWidthHeight[0] + (mm[0] - tile.leftTopMM[0]) / tile.fovMM[0] * tile.leftTopWidthHeight[2];
       screenXY[1] = tile.leftTopWidthHeight[1] + tile.leftTopWidthHeight[3] - (mm[1] - tile.leftTopMM[1]) / tile.fovMM[1] * tile.leftTopWidthHeight[3];
       return screenXY;
-    }
+    };
     if (linesH.length > 0 && axCorSag === 0) {
       const fracZ = sliceFrac;
       const dimV = 1;
@@ -48056,15 +50419,7 @@ var Niivue = class {
       return this.drawCrossLinesMM(sliceIndex, axCorSag, axiMM, corMM, sagMM);
     }
     const tile = this.screenSlices[sliceIndex];
-    let linesH = corMM.slice();
-    let linesV = sagMM.slice();
-    if (axCorSag === 1 /* CORONAL */) {
-      linesH = axiMM.slice();
-    }
-    if (axCorSag === 2 /* SAGITTAL */) {
-      linesH = axiMM.slice();
-      linesV = corMM.slice();
-    }
+    const { linesH, linesV } = getCrossLinesForSliceType(axCorSag, axiMM, corMM, sagMM);
     if (linesH.length > 0) {
       const LTWH = tile.leftTopWidthHeight.slice();
       let sliceDim = 2;
@@ -48080,7 +50435,7 @@ var Niivue = class {
     }
     if (linesV.length > 0) {
       const LTWH = tile.leftTopWidthHeight.slice();
-      const isRadiolgical = tile.fovMM[0] < 0;
+      const isRadiological2 = tile.fovMM[0] < 0;
       let sliceDim = 0;
       if (axCorSag === 2 /* SAGITTAL */) {
         sliceDim = 1;
@@ -48089,7 +50444,7 @@ var Niivue = class {
       for (let i = 0; i < linesV.length; i++) {
         mm[sliceDim] = linesV[i];
         const frac = this.mm2frac(mm);
-        if (isRadiolgical) {
+        if (isRadiological2) {
           this.drawRect([LTWH[0] + (LTWH[2] - frac[sliceDim] * LTWH[2]), LTWH[1], 1, LTWH[3]]);
         } else {
           this.drawRect([LTWH[0] + frac[sliceDim] * LTWH[2], LTWH[1], 1, LTWH[3]]);
@@ -48214,12 +50569,7 @@ var Niivue = class {
             }
           }
         } else {
-          const ltwh = [
-            regionX + marginLeft + scale6 * left,
-            regionY + marginTop + scale6 * top,
-            scale6 * w,
-            scale6 * h
-          ];
+          const ltwh = [regionX + marginLeft + scale6 * left, regionY + marginTop + scale6 * top, scale6 * w, scale6 * h];
           this.fontPx = isLabel ? labelSize : 0;
           if (isRender) {
             let inf = sliceMM < 0 ? -Infinity : Infinity;
@@ -48263,34 +50613,7 @@ var Niivue = class {
    * @internal
    */
   calculateWidthHeight(sliceType, volScale, containerWidth, containerHeight) {
-    let xScale, yScale;
-    switch (sliceType) {
-      case 0 /* AXIAL */:
-        xScale = volScale[0];
-        yScale = volScale[1];
-        break;
-      case 1 /* CORONAL */:
-        xScale = volScale[0];
-        yScale = volScale[2];
-        break;
-      case 2 /* SAGITTAL */:
-        xScale = volScale[1];
-        yScale = volScale[2];
-        break;
-      default:
-        return [containerWidth, containerHeight];
-    }
-    const aspectRatio = xScale / yScale;
-    const containerAspect = containerWidth / containerHeight;
-    let actualWidth, actualHeight;
-    if (aspectRatio > containerAspect) {
-      actualWidth = containerWidth;
-      actualHeight = containerWidth / aspectRatio;
-    } else {
-      actualHeight = containerHeight;
-      actualWidth = containerHeight * aspectRatio;
-    }
-    return [actualWidth, actualHeight];
+    return calculateSliceDimensions(sliceType, volScale, containerWidth, containerHeight);
   }
   /**
    * Convert opts.bounds into CSS pixel coordinates (for hit testing).
@@ -48298,20 +50621,14 @@ var Niivue = class {
    */
   getBoundsRegionCSS() {
     const rect = this.gl.canvas.getBoundingClientRect();
-    if (!this.opts.bounds) {
-      return [0, 0, rect.width, rect.height];
-    }
-    const [[x1, y1], [x2, y2]] = this.opts.bounds;
-    const regionX = Math.round(x1 * rect.width);
-    const regionW = Math.round((x2 - x1) * rect.width);
-    const yTop = Math.round(y1 * rect.height);
-    const yBot = Math.round(y2 * rect.height);
-    const regionH = yBot - yTop;
-    const regionY = rect.height - yBot;
-    return [regionX, regionY, regionW, regionH];
+    return calculateBoundsRegionCSS({
+      bounds: this.opts.bounds,
+      rectWidth: rect.width,
+      rectHeight: rect.height
+    });
   }
   /**
-   * Returns true if a mouse/touch event happened inside this instance’s bounds.
+   * Returns true if a mouse/touch event happened inside this instance's bounds.
    */
   eventInBounds(evt) {
     const rect = this.gl.canvas.getBoundingClientRect();
@@ -48333,8 +50650,11 @@ var Niivue = class {
     }
     const cssX = clientX - rect.left;
     const cssY = clientY - rect.top;
-    const [bx, by, bw, bh] = this.getBoundsRegionCSS();
-    return cssX >= bx && cssX <= bx + bw && cssY >= by && cssY <= by + bh;
+    return isPointInBoundsCSS({
+      x: cssX,
+      y: cssY,
+      boundsRegion: this.getBoundsRegionCSS()
+    });
   }
   /**
    * Check whether the last known mouse cursor position is inside this instance's bounds.
@@ -48346,12 +50666,11 @@ var Niivue = class {
    * @internal
    */
   cursorInBounds() {
-    if (this.mousePos[0] < 0 || this.mousePos[1] < 0) {
-      return false;
-    }
-    const [regionX, regionY, regionW, regionH] = this.getBoundsRegion();
-    const [mx, my] = this.mousePos;
-    return mx >= regionX && mx <= regionX + regionW && my >= regionY && my <= regionY + regionH;
+    return isCursorInBounds({
+      mouseX: this.mousePos[0],
+      mouseY: this.mousePos[1],
+      boundsRegion: this.getBoundsRegion()
+    });
   }
   /**
    * Compute the current drawing region from opts.bounds.
@@ -48361,52 +50680,45 @@ var Niivue = class {
     const gl = this.gl;
     const dpr = this.uiData?.dpr || window.devicePixelRatio || 1;
     const canvas = gl.canvas;
-    const cssW = canvas.clientWidth;
-    const cssH = canvas.clientHeight;
-    if (!this.opts.bounds) {
-      return [0, 0, gl.canvas.width, gl.canvas.height];
-    }
-    const [[x1, y1], [x2, y2]] = this.opts.bounds;
-    const regionX = Math.floor(x1 * cssW * dpr);
-    const regionW = Math.ceil((x2 - x1) * cssW * dpr);
-    let regionY = Math.floor((1 - y2) * cssH * dpr);
-    let regionH = Math.ceil((y2 - y1) * cssH * dpr);
-    if (regionY < 0) {
-      regionH += regionY;
-      regionY = 0;
-    }
-    if (regionY + regionH > gl.canvas.height) {
-      regionH = gl.canvas.height - regionY;
-    }
-    return [regionX, regionY, regionW, regionH];
+    return calculateBoundsRegion({
+      bounds: this.opts.bounds,
+      canvasWidth: gl.canvas.width,
+      canvasHeight: gl.canvas.height,
+      cssWidth: canvas.clientWidth,
+      cssHeight: canvas.clientHeight,
+      dpr
+    });
   }
   /**
    * Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
    */
   inBounds(x, y) {
-    const [vpX, vpY, vpW, vpH] = this.getBoundsRegion();
-    const glX = x * this.uiData.dpr;
-    const glY = this.gl.canvas.height - y * this.uiData.dpr;
-    return glX >= vpX && glX <= vpX + vpW && glY >= vpY && glY <= vpY + vpH;
+    return isInBounds({
+      x,
+      y,
+      dpr: this.uiData.dpr,
+      canvasHeight: this.gl.canvas.height,
+      boundsRegion: this.getBoundsRegion()
+    });
   }
   /**
    * Rebind all textures for this instance.
    * Call this at the start of every draw pass if multiple instances share a GL context.
    */
   bindTextures() {
-    this.gl.activeTexture(TEXTURE0_BACK_VOL);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
-    this.gl.activeTexture(TEXTURE2_OVERLAY_VOL);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE2_OVERLAY_VOL);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
-    this.gl.activeTexture(TEXTURE8_PAQD);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE8_PAQD);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.paqdTexture);
-    this.gl.activeTexture(TEXTURE3_FONT);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE3_FONT);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.fontTexture);
-    this.gl.activeTexture(TEXTURE1_COLORMAPS);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE1_COLORMAPS);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture);
-    this.gl.activeTexture(TEXTURE5_MATCAP);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE5_MATCAP);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.matCapTexture);
-    this.gl.activeTexture(TEXTURE6_GRADIENT);
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE6_GRADIENT);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.gradientTexture);
   }
   /**
@@ -48479,15 +50791,22 @@ var Niivue = class {
       this.drawLoadingText(this.opts.loadingText);
       return;
     }
-    if (this.uiData.isDragging && this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][0] < 1.8 && this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
-      const x = this.uiData.dragStart[0] - this.uiData.dragEnd[0];
-      const y = this.uiData.dragStart[1] - this.uiData.dragEnd[1];
-      const depthAziElev = this.uiData.dragClipPlaneStartDepthAziElev.slice();
-      depthAziElev[1] -= x;
-      depthAziElev[1] = depthAziElev[1] % 360;
-      depthAziElev[2] += y;
-      if (depthAziElev[1] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][1] || depthAziElev[2] !== this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex][2]) {
-        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = depthAziElev;
+    const activeDepth = this.scene.clipPlaneDepthAziElevs?.[this.uiData.activeClipPlaneIndex]?.[0] ?? 2;
+    const shouldUpdateClipDrag = shouldUpdateClipPlaneDrag({
+      isDragging: this.uiData.isDragging,
+      activeClipPlaneDepth: activeDepth,
+      dragStartTileIndex: this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1])
+    });
+    if (shouldUpdateClipDrag) {
+      const dragDeltaX = this.uiData.dragStart[0] - this.uiData.dragEnd[0];
+      const dragDeltaY = this.uiData.dragStart[1] - this.uiData.dragEnd[1];
+      const dragResult = calculateClipPlaneDrag({
+        startDepthAziElev: this.uiData.dragClipPlaneStartDepthAziElev,
+        dragDeltaX,
+        dragDeltaY
+      });
+      if (dragResult.changed) {
+        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = dragResult.depthAziElev;
         return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
       }
     }
@@ -48518,12 +50837,7 @@ var Niivue = class {
         const { volScale } = this.sliceScale();
         for (const view of this.customLayout) {
           const { sliceType, position, sliceMM } = view;
-          const leftTopWidthHeight = [
-            vpX + position[0] * vpW,
-            vpY + position[1] * vpH,
-            position[2] * vpW,
-            position[3] * vpH
-          ];
+          const leftTopWidthHeight = [vpX + position[0] * vpW, vpY + position[1] * vpH, position[2] * vpW, position[3] * vpH];
           if (leftTopWidthHeight[0] + leftTopWidthHeight[2] > vpX + vpW) {
             log.warn("adjusting slice width because it would have been clipped");
             leftTopWidthHeight[2] = vpX + vpW - leftTopWidthHeight[0];
@@ -48535,24 +50849,14 @@ var Niivue = class {
           if (sliceType === 4 /* RENDER */) {
             this.draw3D(leftTopWidthHeight);
           } else {
-            const actualDimensions = this.calculateWidthHeight(
-              sliceType,
-              volScale,
-              leftTopWidthHeight[2],
-              leftTopWidthHeight[3]
-            );
+            const actualDimensions = this.calculateWidthHeight(sliceType, volScale, leftTopWidthHeight[2], leftTopWidthHeight[3]);
             this.draw2D(leftTopWidthHeight, sliceType, sliceMM ?? NaN, actualDimensions);
           }
         }
       } else if (this.opts.sliceType === 0 /* AXIAL */ || this.opts.sliceType === 1 /* CORONAL */ || this.opts.sliceType === 2 /* SAGITTAL */) {
         const { volScale } = this.sliceScale();
         const leftTopWidthHeight = [vpX, vpY, vpW, vpH];
-        const actualDimensions = this.calculateWidthHeight(
-          this.opts.sliceType,
-          volScale,
-          leftTopWidthHeight[2],
-          leftTopWidthHeight[3]
-        );
+        const actualDimensions = this.calculateWidthHeight(this.opts.sliceType, volScale, leftTopWidthHeight[2], leftTopWidthHeight[3]);
         this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN, actualDimensions);
       } else {
         let padPixelsWH = function(cols, rows) {
@@ -48600,25 +50904,10 @@ var Niivue = class {
           }
           canvasWH = [canvasWH[0] - heroImageWH[0], canvasWH[1] - heroImageWH[1]];
         }
-        const ltwh2x2 = this.scaleSlice(
-          volScale[0] + volScale[1],
-          volScale[1] + volScale[2],
-          padPixelsWH(2, 2),
-          canvasWH
-        );
+        const ltwh2x2 = this.scaleSlice(volScale[0] + volScale[1], volScale[1] + volScale[2], padPixelsWH(2, 2), canvasWH);
         const mx = Math.max(Math.max(volScale[1], volScale[2]), volScale[0]);
-        const ltwh3x1 = this.scaleSlice(
-          volScale[0] + volScale[0] + volScale[1],
-          Math.max(volScale[1], volScale[2]),
-          padPixelsWH(3, 1),
-          canvasWH
-        );
-        const ltwh4x1 = this.scaleSlice(
-          volScale[0] + volScale[0] + volScale[1] + mx,
-          Math.max(volScale[1], volScale[2]),
-          padPixelsWH(4, 1),
-          canvasWH
-        );
+        const ltwh3x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1], Math.max(volScale[1], volScale[2]), padPixelsWH(3, 1), canvasWH);
+        const ltwh4x1 = this.scaleSlice(volScale[0] + volScale[0] + volScale[1] + mx, Math.max(volScale[1], volScale[2]), padPixelsWH(4, 1), canvasWH);
         const ltwh1x3 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2], padPixelsWH(1, 3), canvasWH);
         const ltwh1x4 = this.scaleSlice(mx, volScale[1] + volScale[2] + volScale[2] + mx, padPixelsWH(1, 4), canvasWH);
         let isDraw3D = !isDrawPenDown && (maxVols < 2 || !isDrawGraph);
@@ -48680,28 +50969,16 @@ var Niivue = class {
         const actualZ = actualScale[2] * ltwh[4];
         if (isDrawColumn) {
           this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], 0 /* AXIAL */, NaN, [actualX, actualY]);
-          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad, sX, sZ], 1 /* CORONAL */, NaN, [
-            actualX,
-            actualZ
-          ]);
-          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2 /* SAGITTAL */, NaN, [
-            actualY,
-            actualZ
-          ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad, sX, sZ], 1 /* CORONAL */, NaN, [actualX, actualZ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sY + pad + sZ + pad, sY, sZ], 2 /* SAGITTAL */, NaN, [actualY, actualZ]);
           if (isDraw3D) {
             const sMx = mx * ltwh[4];
             this.draw3D([regionX + ltwh[0], regionY + ltwh[1] + sY + sZ + sZ + pad * 3, sMx, sMx]);
           }
         } else if (isDrawRow) {
           this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sY], 0 /* AXIAL */, NaN, [actualX, actualY]);
-          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sX, sZ], 1 /* CORONAL */, NaN, [
-            actualX,
-            actualZ
-          ]);
-          this.draw2D([regionX + ltwh[0] + sX + sX + pad * 2, regionY + ltwh[1], sY, sZ], 2 /* SAGITTAL */, NaN, [
-            actualY,
-            actualZ
-          ]);
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sX, sZ], 1 /* CORONAL */, NaN, [actualX, actualZ]);
+          this.draw2D([regionX + ltwh[0] + sX + sX + pad * 2, regionY + ltwh[1], sY, sZ], 2 /* SAGITTAL */, NaN, [actualY, actualZ]);
           if (isDraw3D) {
             const sMx = mx * ltwh[4];
             this.draw3D([regionX + ltwh[0] + sX + sX + sY + pad * 3, regionY + ltwh[1], sMx, sMx]);
@@ -48716,15 +50993,9 @@ var Niivue = class {
           if (isHeroImage) {
             isDraw3D = false;
           }
-          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sZ + pad, sX, sY], 0 /* AXIAL */, NaN, [
-            actualX,
-            actualY
-          ]);
+          this.draw2D([regionX + ltwh[0], regionY + ltwh[1] + sZ + pad, sX, sY], 0 /* AXIAL */, NaN, [actualX, actualY]);
           this.draw2D([regionX + ltwh[0], regionY + ltwh[1], sX, sZ], 1 /* CORONAL */, NaN, [actualX, actualZ]);
-          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sY, sZ], 2 /* SAGITTAL */, NaN, [
-            actualY,
-            actualZ
-          ]);
+          this.draw2D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1], sY, sZ], 2 /* SAGITTAL */, NaN, [actualY, actualZ]);
           if (isDraw3D) {
             this.draw3D([regionX + ltwh[0] + sX + pad, regionY + ltwh[1] + sZ + pad, sY, sY]);
           }
@@ -48742,42 +51013,22 @@ var Niivue = class {
     }
     if (this.uiData.isDragging) {
       if (this.uiData.mouseButtonCenterDown) {
-        this.dragForCenterButton([
-          this.uiData.dragStart[0],
-          this.uiData.dragStart[1],
-          this.uiData.dragEnd[0],
-          this.uiData.dragEnd[1]
-        ]);
+        this.dragForCenterButton([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
         return;
       }
       if (this.getCurrentDragMode() === 4 /* slicer3D */) {
-        this.dragForSlicer3D([
-          this.uiData.dragStart[0],
-          this.uiData.dragStart[1],
-          this.uiData.dragEnd[0],
-          this.uiData.dragEnd[1]
-        ]);
+        this.dragForSlicer3D([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
         return;
       }
       if (this.getCurrentDragMode() === 3 /* pan */) {
-        this.dragForPanZoom([
-          this.uiData.dragStart[0],
-          this.uiData.dragStart[1],
-          this.uiData.dragEnd[0],
-          this.uiData.dragEnd[1]
-        ]);
+        this.dragForPanZoom([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
         return;
       }
       if (this.inRenderTile(this.uiData.dragStart[0], this.uiData.dragStart[1]) >= 0) {
         return;
       }
       if (this.getCurrentDragMode() === 2 /* measurement */) {
-        this.drawMeasurementTool([
-          this.uiData.dragStart[0],
-          this.uiData.dragStart[1],
-          this.uiData.dragEnd[0],
-          this.uiData.dragEnd[1]
-        ]);
+        this.drawMeasurementTool([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
       }
       if (this.getCurrentDragMode() === 7 /* angle */) {
         this.drawAngleMeasurementTool();
@@ -48786,12 +51037,7 @@ var Niivue = class {
       if (currentDragMode === 1 /* contrast */ || currentDragMode === 6 /* roiSelection */) {
         const width = Math.abs(this.uiData.dragStart[0] - this.uiData.dragEnd[0]);
         const height = Math.abs(this.uiData.dragStart[1] - this.uiData.dragEnd[1]);
-        this.drawSelectionBox([
-          Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]),
-          Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]),
-          width,
-          height
-        ]);
+        this.drawSelectionBox([Math.min(this.uiData.dragStart[0], this.uiData.dragEnd[0]), Math.min(this.uiData.dragStart[1], this.uiData.dragEnd[1]), width, height]);
       }
     }
     for (const measurement of this.document.completedMeasurements) {
@@ -48801,12 +51047,7 @@ var Niivue = class {
         const startCanvasResult = this.frac2canvasPosWithTile(startFrac, measurement.sliceType);
         const endCanvasResult = this.frac2canvasPosWithTile(endFrac, measurement.sliceType);
         if (startCanvasResult && endCanvasResult && startCanvasResult.tileIndex === endCanvasResult.tileIndex) {
-          this.drawMeasurementTool([
-            startCanvasResult.pos[0],
-            startCanvasResult.pos[1],
-            endCanvasResult.pos[0],
-            endCanvasResult.pos[1]
-          ]);
+          this.drawMeasurementTool([startCanvasResult.pos[0], startCanvasResult.pos[1], endCanvasResult.pos[0], endCanvasResult.pos[1]]);
         }
       }
     }
@@ -48823,37 +51064,11 @@ var Niivue = class {
         const secondLineStartCanvasResult = this.frac2canvasPosWithTile(secondLineStartFrac, angle3.sliceType);
         const secondLineEndCanvasResult = this.frac2canvasPosWithTile(secondLineEndFrac, angle3.sliceType);
         if (firstLineStartCanvasResult && firstLineEndCanvasResult && secondLineStartCanvasResult && secondLineEndCanvasResult && firstLineStartCanvasResult.tileIndex === firstLineEndCanvasResult.tileIndex && firstLineStartCanvasResult.tileIndex === secondLineStartCanvasResult.tileIndex && firstLineStartCanvasResult.tileIndex === secondLineEndCanvasResult.tileIndex) {
-          this.drawMeasurementTool(
-            [
-              firstLineStartCanvasResult.pos[0],
-              firstLineStartCanvasResult.pos[1],
-              firstLineEndCanvasResult.pos[0],
-              firstLineEndCanvasResult.pos[1]
-            ],
-            false
-          );
-          this.drawMeasurementTool(
-            [
-              secondLineStartCanvasResult.pos[0],
-              secondLineStartCanvasResult.pos[1],
-              secondLineEndCanvasResult.pos[0],
-              secondLineEndCanvasResult.pos[1]
-            ],
-            false
-          );
+          this.drawMeasurementTool([firstLineStartCanvasResult.pos[0], firstLineStartCanvasResult.pos[1], firstLineEndCanvasResult.pos[0], firstLineEndCanvasResult.pos[1]], false);
+          this.drawMeasurementTool([secondLineStartCanvasResult.pos[0], secondLineStartCanvasResult.pos[1], secondLineEndCanvasResult.pos[0], secondLineEndCanvasResult.pos[1]], false);
           const angleForText = {
-            firstLine: [
-              firstLineStartCanvasResult.pos[0],
-              firstLineStartCanvasResult.pos[1],
-              firstLineEndCanvasResult.pos[0],
-              firstLineEndCanvasResult.pos[1]
-            ],
-            secondLine: [
-              secondLineStartCanvasResult.pos[0],
-              secondLineStartCanvasResult.pos[1],
-              secondLineEndCanvasResult.pos[0],
-              secondLineEndCanvasResult.pos[1]
-            ],
+            firstLine: [firstLineStartCanvasResult.pos[0], firstLineStartCanvasResult.pos[1], firstLineEndCanvasResult.pos[0], firstLineEndCanvasResult.pos[1]],
+            secondLine: [secondLineStartCanvasResult.pos[0], secondLineStartCanvasResult.pos[1], secondLineEndCanvasResult.pos[0], secondLineEndCanvasResult.pos[1]],
             sliceIndex: angle3.sliceIndex,
             sliceType: angle3.sliceType,
             slicePosition: angle3.slicePosition
@@ -48889,6 +51104,105 @@ var Niivue = class {
       posString = this.drawScene();
     }
     return posString;
+  }
+  /**
+   * Creates a 3D 1-component uint8 texture on the GPU with given dimensions.
+   * @internal
+   */
+  r8Tex(texID, activeID, dims, isInit = false) {
+    return r8Tex(this.gl, texID, activeID, dims, isInit);
+  }
+  /**
+   * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
+   * @internal
+   */
+  r16Tex(texID, activeID, dims, img16) {
+    return r16Tex(this.gl, texID, activeID, dims, img16);
+  }
+  /**
+   * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
+   * @internal
+   */
+  rgbaTex2D(texID, activeID, dims, data = null, isFlipVertical = true) {
+    return rgbaTex2D(this.gl, texID, activeID, dims, data, isFlipVertical);
+  }
+  /**
+   * Creates a 3D 4-component (RGBA) uint8 texture on the GPU, optionally initializing with empty data.
+   * @internal
+   */
+  rgbaTex(texID, activeID, dims, isInit = false) {
+    return rgbaTex(this.gl, texID, activeID, dims, isInit);
+  }
+  /**
+   * Create or recreate a 3D RGBA16UI texture on the GPU with given dimensions.
+   * Deletes existing texture if provided, then allocates storage and optionally initializes with zeros.
+   * @internal
+   */
+  rgba16Tex(texID, activeID, dims, isInit = false) {
+    return rgba16Tex(this.gl, texID, activeID, dims, isInit);
+  }
+  /**
+   * Remove cross-origin attribute from image if its URL is not from the same origin as the current page.
+   * @internal
+   */
+  requestCORSIfNotSameOrigin(img, url) {
+    requestCORSIfNotSameOrigin(img, url);
+  }
+  /**
+   * Loads a PNG image from a URL and creates a 4-component (RGBA) uint8 WebGL texture.
+   * Binds texture to a specific texture unit depending on textureNum and sets texture parameters.
+   * Automatically handles CORS and draws scene if needed.
+   * @internal
+   */
+  async loadPngAsTexture(pngUrl, textureNum) {
+    const texture = await loadPngAsTexture(
+      this.gl,
+      pngUrl,
+      textureNum,
+      this.fontShader,
+      this.bmpShader,
+      this.fontTexture,
+      this.bmpTexture,
+      this.matCapTexture,
+      (widthHeightRatio) => {
+        this.bmpTextureWH = widthHeightRatio;
+      },
+      () => {
+        this.drawScene();
+      }
+    );
+    if (textureNum === 3) {
+      this.fontTexture = texture;
+    } else if (textureNum === 4) {
+      this.bmpTexture = texture;
+    } else if (textureNum === 5) {
+      this.matCapTexture = texture;
+    }
+    return texture;
+  }
+  /**
+   * Loads a font stored as a PNG bitmap into texture unit 3.
+   * @internal
+   */
+  async loadFontTexture(fontUrl) {
+    return this.loadPngAsTexture(fontUrl, 3);
+  }
+  /**
+   * Loads a PNG bitmap into texture unit 4.
+   * @internal
+   */
+  async loadBmpTexture(bmpUrl) {
+    return this.loadPngAsTexture(bmpUrl, 4);
+  }
+  /**
+   * Load matcap for illumination model.
+   * @param bmpUrl - name of matcap to load ("Shiny", "Cortex", "Cream")
+   * @example
+   * niivue.loadMatCapTexture("Cortex");
+   * @see {@link https://niivue.com/demos/features/shiny.volumes.html | live demo usage}
+   */
+  async loadMatCapTexture(bmpUrl) {
+    return this.loadPngAsTexture(bmpUrl, 5);
   }
   /**
    * Getter for WebGL2 rendering context; throws error if context is unavailable.
@@ -48932,16 +51246,7 @@ var Niivue = class {
     const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] };
     const imageData = this.back.img;
     const maxVal = this.back.global_max;
-    interpolateMaskSlices(
-      this.drawBitmap,
-      dims,
-      imageData,
-      maxVal,
-      sliceIndexLow,
-      sliceIndexHigh,
-      options,
-      () => this.refreshDrawing(true)
-    );
+    interpolateMaskSlices(this.drawBitmap, dims, imageData, maxVal, sliceIndexLow, sliceIndexHigh, options, () => this.refreshDrawing(true));
   }
 };
 _eventsController = new WeakMap();
@@ -48953,6 +51258,7 @@ export {
   LabelAnchorPoint,
   LabelLineTerminator,
   LabelTextAlignment,
+  MESH_EXTENSIONS,
   MULTIPLANAR_TYPE,
   NVDocument,
   NVImage,
@@ -48970,6 +51276,17 @@ export {
   SHOW_RENDER,
   SLICE_TYPE,
   cmapper,
-  ColorTables as colortables
+  ColorTables as colortables,
+  getFileExt,
+  getLoader,
+  getMediaByUrl,
+  handleDragEnter,
+  handleDragOver,
+  isDicomExtension,
+  isMeshExt,
+  readDirectory,
+  readFileAsDataURL2 as readFileAsDataURL,
+  registerLoader,
+  traverseFileTree
 };
 //# sourceMappingURL=index.js.map

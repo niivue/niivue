@@ -1,37 +1,7 @@
 # Type Alias: DicomLoader
 
 ```ts
-type DicomLoader = object;
+type DicomLoader = FileLoader.DicomLoader;
 ```
 
-Defined in: [niivue/index.ts:354](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L354)
-
-## Properties
-
-### loader()
-
-```ts
-loader: (data: DicomLoaderInput) => Promise<object[]>;
-```
-
-Defined in: [niivue/index.ts:355](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L355)
-
-#### Parameters
-
-| Parameter | Type                                      |
-| --------- | ----------------------------------------- |
-| `data`    | [`DicomLoaderInput`](DicomLoaderInput.md) |
-
-#### Returns
-
-`Promise`\<`object`[]\>
-
----
-
-### toExt
-
-```ts
-toExt: string;
-```
-
-Defined in: [niivue/index.ts:356](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L356)
+Defined in: [niivue/index.ts:131](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L131)

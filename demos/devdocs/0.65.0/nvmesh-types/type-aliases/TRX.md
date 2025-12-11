@@ -4,7 +4,7 @@
 type TRX = object;
 ```
 
-Defined in: [nvmesh-types.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L43)
+Defined in: [nvmesh-types.ts:34](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L34)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:43](https://github.com/niivue/niivue/blob/main/pack
 dpg: ValuesArray;
 ```
 
-Defined in: [nvmesh-types.ts:46](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L46)
+Defined in: [nvmesh-types.ts:37](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L37)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh-types.ts:46](https://github.com/niivue/niivue/blob/main/pack
 dps: ValuesArray;
 ```
 
-Defined in: [nvmesh-types.ts:47](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L47)
+Defined in: [nvmesh-types.ts:38](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L38)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvmesh-types.ts:47](https://github.com/niivue/niivue/blob/main/pack
 dpv: ValuesArray;
 ```
 
-Defined in: [nvmesh-types.ts:48](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L48)
+Defined in: [nvmesh-types.ts:39](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L39)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvmesh-types.ts:48](https://github.com/niivue/niivue/blob/main/pack
 groups: ValuesArray;
 ```
 
-Defined in: [nvmesh-types.ts:49](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L49)
+Defined in: [nvmesh-types.ts:40](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L40)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvmesh-types.ts:49](https://github.com/niivue/niivue/blob/main/pack
 header: unknown;
 ```
 
-Defined in: [nvmesh-types.ts:50](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L50)
+Defined in: [nvmesh-types.ts:41](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L41)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvmesh-types.ts:50](https://github.com/niivue/niivue/blob/main/pack
 offsetPt0: Uint32Array;
 ```
 
-Defined in: [nvmesh-types.ts:45](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L45)
+Defined in: [nvmesh-types.ts:36](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L36)
 
 ---
 
@@ -74,4 +74,4 @@ Defined in: [nvmesh-types.ts:45](https://github.com/niivue/niivue/blob/main/pack
 pts: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:44](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L44)
+Defined in: [nvmesh-types.ts:35](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L35)

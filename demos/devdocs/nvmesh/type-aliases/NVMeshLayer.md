@@ -4,7 +4,7 @@
 type NVMeshLayer = object;
 ```
 
-Defined in: [nvmesh.ts:35](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L35)
+Defined in: [nvmesh.ts:22](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L22)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh.ts:35](https://github.com/niivue/niivue/blob/main/packages/n
 optional atlasValues: AnyNumberArray;
 ```
 
-Defined in: [nvmesh.ts:64](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L64)
+Defined in: [nvmesh.ts:51](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L51)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [nvmesh.ts:64](https://github.com/niivue/niivue/blob/main/packages/n
 optional base64: string;
 ```
 
-Defined in: [nvmesh.ts:59](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L59)
+Defined in: [nvmesh.ts:46](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L46)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [nvmesh.ts:59](https://github.com/niivue/niivue/blob/main/packages/n
 cal_max: number;
 ```
 
-Defined in: [nvmesh.ts:49](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L49)
+Defined in: [nvmesh.ts:36](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L36)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [nvmesh.ts:49](https://github.com/niivue/niivue/blob/main/packages/n
 cal_maxNeg: number;
 ```
 
-Defined in: [nvmesh.ts:51](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L51)
+Defined in: [nvmesh.ts:38](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L38)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [nvmesh.ts:51](https://github.com/niivue/niivue/blob/main/packages/n
 cal_min: number;
 ```
 
-Defined in: [nvmesh.ts:48](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L48)
+Defined in: [nvmesh.ts:35](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L35)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [nvmesh.ts:48](https://github.com/niivue/niivue/blob/main/packages/n
 cal_minNeg: number;
 ```
 
-Defined in: [nvmesh.ts:50](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L50)
+Defined in: [nvmesh.ts:37](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L37)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [nvmesh.ts:50](https://github.com/niivue/niivue/blob/main/packages/n
 optional colorbarVisible: boolean;
 ```
 
-Defined in: [nvmesh.ts:61](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L61)
+Defined in: [nvmesh.ts:48](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L48)
 
 ---
 
@@ -84,7 +84,7 @@ Defined in: [nvmesh.ts:61](https://github.com/niivue/niivue/blob/main/packages/n
 colormap: string;
 ```
 
-Defined in: [nvmesh.ts:41](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L41)
+Defined in: [nvmesh.ts:28](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L28)
 
 ---
 
@@ -94,7 +94,7 @@ Defined in: [nvmesh.ts:41](https://github.com/niivue/niivue/blob/main/packages/n
 optional colormapInvert: boolean;
 ```
 
-Defined in: [nvmesh.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L43)
+Defined in: [nvmesh.ts:30](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L30)
 
 ---
 
@@ -106,7 +106,7 @@ optional colormapLabel:
   | LUT;
 ```
 
-Defined in: [nvmesh.ts:44](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L44)
+Defined in: [nvmesh.ts:31](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L31)
 
 ---
 
@@ -116,7 +116,7 @@ Defined in: [nvmesh.ts:44](https://github.com/niivue/niivue/blob/main/packages/n
 optional colormapNegative: string;
 ```
 
-Defined in: [nvmesh.ts:42](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L42)
+Defined in: [nvmesh.ts:29](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L29)
 
 ---
 
@@ -126,7 +126,7 @@ Defined in: [nvmesh.ts:42](https://github.com/niivue/niivue/blob/main/packages/n
 optional colormapType: number;
 ```
 
-Defined in: [nvmesh.ts:58](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L58)
+Defined in: [nvmesh.ts:45](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L45)
 
 ---
 
@@ -136,7 +136,7 @@ Defined in: [nvmesh.ts:58](https://github.com/niivue/niivue/blob/main/packages/n
 frame4D: number;
 ```
 
-Defined in: [nvmesh.ts:53](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L53)
+Defined in: [nvmesh.ts:40](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L40)
 
 ---
 
@@ -146,7 +146,7 @@ Defined in: [nvmesh.ts:53](https://github.com/niivue/niivue/blob/main/packages/n
 optional global_max: number;
 ```
 
-Defined in: [nvmesh.ts:47](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L47)
+Defined in: [nvmesh.ts:34](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L34)
 
 ---
 
@@ -156,7 +156,7 @@ Defined in: [nvmesh.ts:47](https://github.com/niivue/niivue/blob/main/packages/n
 optional global_min: number;
 ```
 
-Defined in: [nvmesh.ts:46](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L46)
+Defined in: [nvmesh.ts:33](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L33)
 
 ---
 
@@ -166,7 +166,7 @@ Defined in: [nvmesh.ts:46](https://github.com/niivue/niivue/blob/main/packages/n
 optional headers: Record<string, string>;
 ```
 
-Defined in: [nvmesh.ts:39](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L39)
+Defined in: [nvmesh.ts:26](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L26)
 
 ---
 
@@ -176,7 +176,7 @@ Defined in: [nvmesh.ts:39](https://github.com/niivue/niivue/blob/main/packages/n
 optional isAdditiveBlend: boolean;
 ```
 
-Defined in: [nvmesh.ts:52](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L52)
+Defined in: [nvmesh.ts:39](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L39)
 
 ---
 
@@ -186,7 +186,7 @@ Defined in: [nvmesh.ts:52](https://github.com/niivue/niivue/blob/main/packages/n
 optional isTransparentBelowCalMin: boolean;
 ```
 
-Defined in: [nvmesh.ts:57](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L57)
+Defined in: [nvmesh.ts:44](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L44)
 
 ---
 
@@ -196,7 +196,7 @@ Defined in: [nvmesh.ts:57](https://github.com/niivue/niivue/blob/main/packages/n
 optional key: string;
 ```
 
-Defined in: [nvmesh.ts:37](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L37)
+Defined in: [nvmesh.ts:24](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L24)
 
 ---
 
@@ -206,7 +206,7 @@ Defined in: [nvmesh.ts:37](https://github.com/niivue/niivue/blob/main/packages/n
 optional labels: NVLabel3D[];
 ```
 
-Defined in: [nvmesh.ts:63](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L63)
+Defined in: [nvmesh.ts:50](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L50)
 
 ---
 
@@ -216,7 +216,7 @@ Defined in: [nvmesh.ts:63](https://github.com/niivue/niivue/blob/main/packages/n
 optional name: string;
 ```
 
-Defined in: [nvmesh.ts:36](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L36)
+Defined in: [nvmesh.ts:23](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L23)
 
 ---
 
@@ -226,7 +226,7 @@ Defined in: [nvmesh.ts:36](https://github.com/niivue/niivue/blob/main/packages/n
 nFrame4D: number;
 ```
 
-Defined in: [nvmesh.ts:54](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L54)
+Defined in: [nvmesh.ts:41](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L41)
 
 ---
 
@@ -236,7 +236,7 @@ Defined in: [nvmesh.ts:54](https://github.com/niivue/niivue/blob/main/packages/n
 opacity: number;
 ```
 
-Defined in: [nvmesh.ts:40](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L40)
+Defined in: [nvmesh.ts:27](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L27)
 
 ---
 
@@ -246,7 +246,7 @@ Defined in: [nvmesh.ts:40](https://github.com/niivue/niivue/blob/main/packages/n
 optional outlineBorder: number;
 ```
 
-Defined in: [nvmesh.ts:56](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L56)
+Defined in: [nvmesh.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L43)
 
 ---
 
@@ -256,7 +256,7 @@ Defined in: [nvmesh.ts:56](https://github.com/niivue/niivue/blob/main/packages/n
 optional showLegend: boolean;
 ```
 
-Defined in: [nvmesh.ts:62](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L62)
+Defined in: [nvmesh.ts:49](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L49)
 
 ---
 
@@ -266,7 +266,7 @@ Defined in: [nvmesh.ts:62](https://github.com/niivue/niivue/blob/main/packages/n
 optional url: string;
 ```
 
-Defined in: [nvmesh.ts:38](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L38)
+Defined in: [nvmesh.ts:25](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L25)
 
 ---
 
@@ -276,7 +276,7 @@ Defined in: [nvmesh.ts:38](https://github.com/niivue/niivue/blob/main/packages/n
 optional useNegativeCmap: boolean;
 ```
 
-Defined in: [nvmesh.ts:45](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L45)
+Defined in: [nvmesh.ts:32](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L32)
 
 ---
 
@@ -286,4 +286,4 @@ Defined in: [nvmesh.ts:45](https://github.com/niivue/niivue/blob/main/packages/n
 values: AnyNumberArray;
 ```
 
-Defined in: [nvmesh.ts:55](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L55)
+Defined in: [nvmesh.ts:42](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L42)

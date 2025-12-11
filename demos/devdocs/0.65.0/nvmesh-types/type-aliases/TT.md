@@ -4,7 +4,7 @@
 type TT = object;
 ```
 
-Defined in: [nvmesh-types.ts:38](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L38)
+Defined in: [nvmesh-types.ts:29](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L29)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [nvmesh-types.ts:38](https://github.com/niivue/niivue/blob/main/pack
 offsetPt0: Uint32Array;
 ```
 
-Defined in: [nvmesh-types.ts:40](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L40)
+Defined in: [nvmesh-types.ts:31](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L31)
 
 ---
 
@@ -24,4 +24,4 @@ Defined in: [nvmesh-types.ts:40](https://github.com/niivue/niivue/blob/main/pack
 pts: Float32Array;
 ```
 
-Defined in: [nvmesh-types.ts:39](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L39)
+Defined in: [nvmesh-types.ts:30](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh-types.ts#L30)

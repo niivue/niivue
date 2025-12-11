@@ -6,7 +6,7 @@ function uncompressStream(
 ): Promise<ReadableStream<Uint8Array>>;
 ```
 
-Defined in: [nvimage/utils.ts:620](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L620)
+Defined in: [nvimage/utils.ts:612](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L612)
 
 ## Parameters
 

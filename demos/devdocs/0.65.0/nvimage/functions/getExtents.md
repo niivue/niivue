@@ -4,7 +4,7 @@
 function getExtents(positions: number[], forceOriginInVolume: boolean): Extents;
 ```
 
-Defined in: [nvimage/utils.ts:540](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L540)
+Defined in: [nvimage/utils.ts:532](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/utils.ts#L532)
 
 ## Parameters
 

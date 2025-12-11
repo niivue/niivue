@@ -1,6 +1,6 @@
 # Class: Zip
 
-Defined in: [nvutilities.ts:71](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L71)
+Defined in: [nvutilities.ts:63](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L63)
 
 ## Constructors
 
@@ -10,7 +10,7 @@ Defined in: [nvutilities.ts:71](https://github.com/niivue/niivue/blob/main/packa
 new Zip(arrayBuffer: ArrayBuffer): Zip;
 ```
 
-Defined in: [nvutilities.ts:78](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L78)
+Defined in: [nvutilities.ts:70](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L70)
 
 #### Parameters
 
@@ -32,7 +32,7 @@ Defined in: [nvutilities.ts:78](https://github.com/niivue/niivue/blob/main/packa
 get entries(): Entry[];
 ```
 
-Defined in: [nvutilities.ts:245](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L245)
+Defined in: [nvutilities.ts:235](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L235)
 
 ##### Returns
 
@@ -46,7 +46,7 @@ Defined in: [nvutilities.ts:245](https://github.com/niivue/niivue/blob/main/pack
 extract(entry: Entry): Promise<Uint8Array>;
 ```
 
-Defined in: [nvutilities.ts:83](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L83)
+Defined in: [nvutilities.ts:75](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvutilities.ts#L75)
 
 #### Parameters
 
