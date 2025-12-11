@@ -49,6 +49,11 @@
         "electron-store": "^10.0.1"
     },
     "devDependencies": {
-        "@types/electron-store": "^1.3.1"
+        "@types/electron-store": "^1.3.1",
+        "@types/node": "^25.0.0",
+        "electron": "31.0.2"
+    },
+    "overrides": {
+        "@types/responselike": "1.0.0"
     }
 }
