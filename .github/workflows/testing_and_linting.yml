@@ -17,8 +17,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          cache: npm
-          node-version: 20
+          # cache: npm
+          node-version: 25
       - run: npm ci
       - run: npm run lint:niivue
 
@@ -28,8 +28,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          cache: npm
-          node-version: 20
+          # cache: npm
+          node-version: 25
       - run: npm ci
       - run: npm run test:unit
 
@@ -43,8 +43,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          cache: npm
-          node-version: 20
+          # cache: npm
+          node-version: 25
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright Browsers
@@ -56,13 +56,13 @@ jobs:
           free -h || true
           echo "Disk space:"
           df -h || true
-  
+
       - name: Run Playwright tests (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
           npm run test:e2e
-  
+
       - name: Run Playwright tests (Non-Linux)
         if: matrix.os != 'ubuntu-latest'
         run: npm run test:e2e
@@ -79,8 +79,8 @@ jobs:
         uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          cache: npm
-          node-version: 20
+          # cache: npm
+          node-version: 25
       - name: Install and Build
         run: |
           npm ci
@@ -94,8 +94,8 @@ jobs:
         uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          cache: npm
-          node-version: 20
+          # cache: npm
+          node-version: 25
       - name: Install and Build
         env:
           PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
