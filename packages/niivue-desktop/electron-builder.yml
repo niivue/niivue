@@ -1,4 +1,5 @@
 appId: com.electron.app
+electronVersion: "31.0.2"
 productName: niivue-desktop
 afterPack: ./scripts/clean-xattrs-afterpack.js
 afterSign: ./scripts/afterSign-clean.cjs
