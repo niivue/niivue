@@ -62,7 +62,9 @@ test('niivue broadcastTo can be turned off', async ({ page }) => {
     let scenes = await scenesHandle.jsonValue()
     expect(scenes[0].crosshairPos[0]).toBe(scenes[1].crosshairPos[0])
     expect(scenes[0].crosshairPos[1]).toBe(scenes[1].crosshairPos[1])
-    expect(scenes[0].pan2Dxyzmm).toEqual(expect.arrayContaining([...Array.from(scenes[1].pan2Dxyzmm)]))
+    // After disabling broadcast, nv1's pan change should NOT propagate to nv2
+    expect(Object.values(scenes[0].pan2Dxyzmm)).toEqual(expect.arrayContaining([5, -4, 2, 1.5]))
+    expect(Object.values(scenes[1].pan2Dxyzmm)).toEqual(expect.arrayContaining([0, 0, 0, 1]))
     await page.mouse.click(100, 200)
     scenes = await scenesHandle.jsonValue()
     expect(Object.values(scenes[0].pan2Dxyzmm)).toEqual(expect.arrayContaining([5, -4, 2, 1.5]))

@@ -33,12 +33,13 @@ test('niivue frac2mm', async ({ page }) => {
             ]
             await nv.loadVolumes(volumeList)
             const mm = nv.frac2mm(testOptions.frac)
-            return mm
+            return Array.from(mm)
         },
         { ...TEST_OPTIONS, frac: vec3.fromValues(0.5000415009576917, 0.5017796754837036, 0.6023715706758721) }
     )
     const expected = [0.20249909162521362, -16.400001525878906, 23.377498626708984]
-    for (let i = 0; i < mm.length; i++) {
+    // frac2mm returns vec4, but we only check x, y, z coordinates (first 3 elements)
+    for (let i = 0; i < expected.length; i++) {
         expect(mm[i]).toBeCloseTo(expected[i])
     }
 })
