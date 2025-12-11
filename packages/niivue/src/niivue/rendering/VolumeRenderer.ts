@@ -6,7 +6,7 @@
  */
 
 import { mat3, mat4, vec3 } from 'gl-matrix'
-import { NiftiHeader } from '@/nvimage/nifti'
+import { NiftiHeader } from '@/types'
 import { Shader } from '@/shader'
 import { NiivueObject3D } from '@/niivue-object3D'
 import { deg2rad } from '@/utils'
