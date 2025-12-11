@@ -836,7 +836,7 @@ var init_blosc = __esm({
             G[d >> 2] = e;
             return 0;
           }
-        }, Y = function() {
+        }, Y = (function() {
           function a(c) {
             Y = c.exports;
             y = Y.w;
@@ -864,7 +864,7 @@ var init_blosc = __esm({
             a(c.instance);
           }).catch(q);
           return {};
-        }(), mb = (a) => (mb = Y.y)(a), W = (a) => (W = Y.z)(a), Ta = (a) => (Ta = Y.B)(a);
+        })(), mb = (a) => (mb = Y.y)(a), W = (a) => (W = Y.z)(a), Ta = (a) => (Ta = Y.B)(a);
         f.dynCall_jiji = (a, b, c, d, e) => (f.dynCall_jiji = Y.D)(a, b, c, d, e);
         var Z;
         J = function pb() {
@@ -1654,7 +1654,7 @@ var init_lz4 = __esm({
               return true;
           }
           return false;
-        } }, Y = function() {
+        } }, Y = (function() {
           function a(c) {
             Y = c.exports;
             z = Y.r;
@@ -1682,7 +1682,7 @@ var init_lz4 = __esm({
             a(c.instance);
           }).catch(t);
           return {};
-        }(), fb = (a) => (fb = Y.t)(a), W = (a) => (W = Y.u)(a), Ra = (a) => (Ra = Y.v)(a), Z;
+        })(), fb = (a) => (fb = Y.t)(a), W = (a) => (W = Y.u)(a), Ra = (a) => (Ra = Y.v)(a), Z;
         L = function ib() {
           Z || jb();
           Z || (L = ib);
@@ -2424,7 +2424,7 @@ var init_zstd = __esm({
               return true;
           }
           return false;
-        } }, X = function() {
+        } }, X = (function() {
           function a(c) {
             X = c.exports;
             u = X.o;
@@ -2450,7 +2450,7 @@ var init_zstd = __esm({
             a(c.instance);
           }).catch(q);
           return {};
-        }(), ob = (a) => (ob = X.q)(a), W = (a) => (W = X.r)(a), Sa = (a) => (Sa = X.s)(a), pa = () => (pa = X.u)(), mb = (a) => (mb = X.v)(a), kb = (a) => (kb = X.w)(a), jb = () => (jb = X.x)(), ib = (a) => (ib = X.y)(a), hb = (a) => (hb = X.z)(a), fb = (a) => (fb = X.A)(a), lb = (a, b, c) => (lb = X.B)(a, b, c), Z;
+        })(), ob = (a) => (ob = X.q)(a), W = (a) => (W = X.r)(a), Sa = (a) => (Sa = X.s)(a), pa = () => (pa = X.u)(), mb = (a) => (mb = X.v)(a), kb = (a) => (kb = X.w)(a), jb = () => (jb = X.x)(), ib = (a) => (ib = X.y)(a), hb = (a) => (hb = X.z)(a), fb = (a) => (fb = X.A)(a), lb = (a, b, c) => (lb = X.B)(a, b, c), Z;
         I = function rb() {
           Z || sb();
           Z || (I = rb);
@@ -4600,7 +4600,7 @@ var dist = distance;
 var sqrDist = squaredDistance;
 var len = length;
 var sqrLen = squaredLength;
-var forEach = function() {
+var forEach = (function() {
   var vec = create3();
   return function(a, stride, offset, count, fn, arg) {
     var i, l;
@@ -4626,7 +4626,7 @@ var forEach = function() {
     }
     return a;
   };
-}();
+})();
 
 // ../../node_modules/gl-matrix/esm/vec4.js
 var vec4_exports = {};
@@ -4940,7 +4940,7 @@ var dist2 = distance2;
 var sqrDist2 = squaredDistance2;
 var len2 = length2;
 var sqrLen2 = squaredLength2;
-var forEach2 = function() {
+var forEach2 = (function() {
   var vec = create4();
   return function(a, stride, offset, count, fn, arg) {
     var i, l;
@@ -4968,7 +4968,7 @@ var forEach2 = function() {
     }
     return a;
   };
-}();
+})();
 
 // ../../node_modules/gl-matrix/esm/vec2.js
 var vec2_exports = {};
@@ -5220,7 +5220,7 @@ var div3 = divide3;
 var dist3 = distance3;
 var sqrDist3 = squaredDistance3;
 var sqrLen3 = squaredLength3;
-var forEach3 = function() {
+var forEach3 = (function() {
   var vec = create5();
   return function(a, stride, offset, count, fn, arg) {
     var i, l;
@@ -5244,7 +5244,7 @@ var forEach3 = function() {
     }
     return a;
   };
-}();
+})();
 
 // package.json
 var package_default = {
@@ -19833,7 +19833,7 @@ for (i = 0; i < 32768; ++i) {
 }
 var x;
 var i;
-var hMap = function(cd, mb, r) {
+var hMap = (function(cd, mb, r) {
   var s = cd.length;
   var i = 0;
   var l = new u16(mb);
@@ -19868,7 +19868,7 @@ var hMap = function(cd, mb, r) {
     }
   }
   return co;
-};
+});
 var flt = new u8(288);
 for (i = 0; i < 144; ++i)
   flt[i] = 8;
@@ -20104,7 +20104,7 @@ var zls = function(d, dict) {
     err(6, "invalid zlib data: " + (d[1] & 32 ? "need" : "unexpected") + " dictionary");
   return (d[1] >> 3 & 4) + 2;
 };
-var Inflate = /* @__PURE__ */ function() {
+var Inflate = /* @__PURE__ */ (function() {
   function Inflate2(opts, cb) {
     if (typeof opts == "function")
       cb = opts, opts = {};
@@ -20140,11 +20140,11 @@ var Inflate = /* @__PURE__ */ function() {
     this.e(chunk), this.c(final);
   };
   return Inflate2;
-}();
+})();
 function inflateSync(data, opts) {
   return inflt(data, { i: 2 }, opts && opts.out, opts && opts.dictionary);
 }
-var Gunzip = /* @__PURE__ */ function() {
+var Gunzip = /* @__PURE__ */ (function() {
   function Gunzip2(opts, cb) {
     this.v = 1;
     this.r = 0;
@@ -20173,7 +20173,7 @@ var Gunzip = /* @__PURE__ */ function() {
     }
   };
   return Gunzip2;
-}();
+})();
 function gunzipSync(data, opts) {
   var st = gzs(data);
   if (st + 8 > data.length)
@@ -25592,12 +25592,12 @@ var _UnicodeStringArray = class _UnicodeStringArray {
     } else {
       const values = x;
       const d = new _UnicodeStringArray(chars, 1);
-      __privateSet(this, _data, new Int32Array(function* () {
+      __privateSet(this, _data, new Int32Array((function* () {
         for (let str6 of values) {
           d.set(0, str6);
           yield* __privateGet(d, _data);
         }
-      }()));
+      })()));
     }
   }
   get BYTES_PER_ELEMENT() {
