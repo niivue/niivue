@@ -11,65 +11,96 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  lint:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
         with:
           cache: npm
           node-version: 24
+      - run: npm ci
+      - run: npm run lint:niivue
 
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          cache: npm
+          node-version: 24
+      - run: npm ci
+      - run: npm run test:unit
+
+  test-e2e:
+    timeout-minutes: 60
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          cache: npm
+          node-version: 24
       - name: Install dependencies
         run: npm ci
-
-      # ----- LINT -----
-      - name: Lint niivue
-        run: npm run lint:niivue
-
-      # ----- UNIT TESTS -----
-      - name: Unit tests
-        run: npm run test:unit
-
-      # ----- E2E TESTS -----
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-
       - name: Debug system info (Linux only)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           echo "Free memory:"
           free -h || true
           echo "Disk space:"
           df -h || true
 
-      - name: Run Playwright tests
+      - name: Run Playwright tests (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
           npm run test:e2e
 
-      - name: Upload Playwright report
+      - name: Run Playwright tests (Non-Linux)
+        if: matrix.os != 'ubuntu-latest'
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-ubuntu-latest
+          name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 30
-
-      # ----- BUILD DEMOS -----
-      - name: Build demos (github + docs)
+  build-demos-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          cache: npm
+          node-version: 24
+      - name: Install and Build
         run: |
+          npm ci
           npm run build:github
           npm run build:docs
 
-      # ----- BUILD DOCUSAURUS -----
-      - name: Build docusaurus
+  build-docusaurus-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          cache: npm
+          node-version: 24
+      - name: Install and Build
         env:
           PUBLIC_POSTHOG_KEY: ${{ secrets.PUBLIC_POSTHOG_KEY }}
           PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
         run: |
+          npm ci
           npm run build:niivue
           npm run build:docusaurus
