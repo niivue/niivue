@@ -8,6 +8,7 @@
     ],
     "scripts": {
         "build:niivue": "npm run build -w @niivue/niivue",
+        "build:desktop": "npm run build -w niivue-desktop",
         "build:docs": "npm run docs -w @niivue/niivue",
         "build:github": "npm run build:forTests -w @niivue/niivue",
         "build:docusaurus": "npm run build:docs && npm run build -w @niivue/docs",

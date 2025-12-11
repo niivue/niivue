@@ -6,9 +6,6 @@
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
-  "workspaces": [
-    "../packages/*"
-  ],
   "type": "module",
   "scripts": {
     "format": "prettier --write .",
@@ -21,8 +18,9 @@
     "ensure-dcm2niix": "node scripts/ensure-dcm2niix.cjs",
     "dev": "npm run ensure-niimath && npm run ensure-dcm2niix && electron-vite dev",
     "prebuild": "node ./scripts/prebuild-clean-helpers.cjs",
-    "build": "npm run typecheck && electron-vite build",
+    "build": "npm run build:deps && npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
+    "build:deps": "node ../../scripts/build-workspace-deps.cjs --only=@niivue/niivue,@niivue/dicom-loader",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "electron-vite build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",

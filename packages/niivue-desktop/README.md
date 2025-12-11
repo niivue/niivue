@@ -10,7 +10,12 @@ This is the cross-platform desktop application for NiiVue. It supports Windows, 
 
 ```bash
 # from the root of the monorepo
+npm run build:desktop
 npm run dev:desktop
+
+# from niivue-desktop
+npm run build
+npm run dev
 ```
 
 ## Packaging
