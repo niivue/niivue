@@ -1041,7 +1041,7 @@ function MeshHeaderView({
                     <div className="text-xs max-h-48 overflow-auto">
                       {image.labels!.slice(0, 200).map((lab, i) => (
                         <div key={i}>
-                          <strong>{lab.value ?? i}:</strong> {lab.name ?? lab.label ?? 'unnamed'}
+                          <strong>{i}</strong> {lab.text ?? 'unnamed'}
                         </div>
                       ))}
                       {image.labels!.length > 200 && <div>... (truncated)</div>}
