@@ -271,6 +271,7 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     hdr.dims[0] = hdr.dims[4] > 1 ? 4 : 3
 
     // Set pixel dimensions directly onto nvImage.hdr (using abs)
+    hdr.pixDims[0] = 1
     hdr.pixDims[1] = Math.abs(spacingX)
     hdr.pixDims[2] = Math.abs(spacingY)
     hdr.pixDims[3] = Math.abs(spacingZ)

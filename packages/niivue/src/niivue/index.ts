@@ -4803,8 +4803,16 @@ export class Niivue {
     async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
         const ext = this.getFileExt(meshOptions.url)
         if (ext === 'JCON' || ext === 'JSON') {
-            const response = await fetch(meshOptions.url, {})
-            const json = await response.json()
+            let json: any
+            if (meshOptions.buffer) {
+                const view = ArrayBuffer.isView(meshOptions.buffer) ? meshOptions.buffer : new Uint8Array(meshOptions.buffer)
+
+                const text = new TextDecoder('utf-8').decode(view)
+                json = JSON.parse(text)
+            } else {
+                const response = await fetch(meshOptions.url)
+                json = await response.json()
+            }
             const mesh = this.loadConnectomeAsMesh(json)
             this.mediaUrlMap.set(mesh, meshOptions.url)
             this.onMeshAddedFromUrl(meshOptions, mesh)
@@ -5893,7 +5901,7 @@ export class Niivue {
      * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
      * @param id - id of mesh to change
      * @param meshShaderNameOrNumber - identify shader for usage
-     * @example niivue.setMeshShader('toon');
+     * @example niivue.setMeshShader(niivue.meshes[0].id, 'toon');
      * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
      */
     setMeshShader(id: number | string, meshShaderNameOrNumber: number | string = 2): void {
@@ -5956,9 +5964,39 @@ export class Niivue {
     setCustomMeshShader(fragmentShaderText = '', name = 'Custom'): number {
         const m = this.createCustomMeshShader(fragmentShaderText, name)
         this.meshShaders.push(m)
-
         this.onCustomMeshShaderAdded(fragmentShaderText, name)
         return this.meshShaders.length - 1
+    }
+
+    /**
+     * Fetch GLSL fragment shader source from a URL and register it as a custom mesh shader.
+     * @async
+     * @param url - URL pointing to a plain-text GLSL fragment shader file
+     * @param name - a descriptive label for the shader (used in menus or debugging)
+     * @returns {Promise<number>} the index of the new shader (use with {@link setMeshShader})
+     * @throws {Error} when the fetch fails or the response is not OK
+     * @see {@link https://niivue.com/demos/features/web.extras.html | live demo usage}
+     */
+    async setCustomMeshShaderFromUrl(url: string, name = ''): Promise<number> {
+        try {
+            const response = await fetch(url)
+            if (!response.ok) {
+                throw new Error(`Failed to fetch shader from ${url}: ${response.status} ${response.statusText}`)
+            }
+            const txt = await response.text()
+            // If name not provided, derive from filename (strip extension)
+            if (!name || name.trim() === '') {
+                const base = url.split('/').pop() ?? url // drop parent paths
+                const noQuery = base.split('?')[0].split('#')[0] // strip ?query and #hash
+                name = noQuery.replace(/\.[^/.]+$/, '') // remove last extension
+            }
+            // Delegate to the synchronous helper which creates and registers the shader
+            const index = this.setCustomMeshShader(txt, name)
+            return index
+        } catch (err) {
+            // Re-throw with a clearer message while preserving original error information
+            throw new Error(`setCustomMeshShaderFromUrl(${url}) failed: ${(err as Error).message}`)
+        }
     }
 
     /**
@@ -9713,7 +9751,7 @@ export class Niivue {
         let deci = dynamicDecimals(fov * 0.001)
         const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
         function flt2str(flt: number, decimals = 0): number {
-            return parseFloat(flt.toFixed(decimals))
+            return parseFloat(Number(flt).toFixed(decimals))
         }
         let str = flt2str(mm[0], deci) + '×' + flt2str(mm[1], deci) + '×' + flt2str(mm[2], deci)
         if (this.volumes.length > 0 && this.volumes[0].nFrame4D! > 0) {

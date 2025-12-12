@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      &nbsp;
+      <label for="fontSelect">Fonts:</label>
+      <select id="fontSelect">
+        <option value="" disabled selected hidden></option>
+      </select>
+      &nbsp;
+      <label for="cmapSelect">Colormaps:</label>
+      <select id="cmapSelect">
+        <option value="" disabled selected hidden></option>
+      </select>
+      &nbsp;
+      <label for="matSelect">Matcaps:</label>
+      <select id="matSelect">
+        <option value="" disabled selected hidden></option>
+      </select>
+      &nbsp;
+      <label for="mat2Select">More Matcaps:</label>
+      <select id="mat2Select">
+        <option value="" disabled selected hidden></option>
+      </select>
+      &nbsp;
+      <label for="shaderSelect">Shader:</label>
+      <select id="shaderSelect">
+        <option value="" disabled selected hidden></option>
+      </select>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="colormaps"></label>
+    </footer>
+</html>
+<script type="module" async>
+  import * as niivue from "../dist/index.js"
+  var nv1 = new niivue.Niivue({show3Dcrosshair: true})
+  await nv1.attachToCanvas(gl1)
+  nv1.opts.crosshairGap = 6
+  nv1.opts.isColorbar = true
+  nv1.opts.fontMinPx = 24
+  nv1.setClipPlane([0, 180, 20])
+  nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+  await nv1.loadVolumes([{ url: "../images/mni152.nii.gz" }])
+  await nv1.loadMeshes([
+    { url: "../images/BrainMesh_ICBM152.lh.mz3"},
+    { url: "../images/connectome.jcon"},
+  ])
+  nv1.setMeshShader(nv1.meshes[0].id, "Matcap")
+  async  function addColormapFromURL(url, key = "") {
+    const response = await fetch(url)
+    const json = await response.json()
+    if (!key) {
+      const cleanURL = url.split('?')[0].split('#')[0]
+      const filename = cleanURL.split('/').pop() || ""
+      key = filename.replace(/\.[^/.]+$/, "")
+    }
+    nv1.addColormap(key, json)
+  }
+  async function loadManifest(url) {
+    const response = await fetch(url + 'manifest.json')
+    const manifest = await response.json()
+    const items = []
+    for (const file of manifest) {
+      items.push(file)
+    }
+    return items
+  }
+  function populateSelect(selectId, items) {
+    items.forEach(item => {
+      const option = document.createElement("option")
+      option.textContent = item
+      selectId.appendChild(option)
+    })
+  }
+  //fonts
+  const fontUrl = "https://raw.githubusercontent.com/niivue/fonts/main/fonts/"
+  const fontItems = await loadManifest(fontUrl)
+  populateSelect(fontSelect, fontItems)
+  fontSelect.onchange = async function () {
+    let fontName = fontUrl + fontSelect.value
+    nv1.loadFont(fontName + ".png", fontName + ".json")
+  }
+  //colormaps
+  const cmapUrl = "https://raw.githubusercontent.com/niivue/Py2NiiVueColormaps/main/SciPy/"
+  const cmapItems = await loadManifest(cmapUrl)
+  populateSelect(cmapSelect, cmapItems)
+  for (const cmap of cmapItems) {
+    addColormapFromURL(cmapUrl + cmap + ".json")
+  }
+  cmapSelect.onchange = async function () {
+    nv1.setColormap(nv1.volumes[0].id, cmapSelect.value)
+  }
+  //matcaps
+  const matUrl = "https://raw.githubusercontent.com/niivue/matcaps/main/matcaps/"
+  const matItems = await loadManifest(matUrl)
+  populateSelect(matSelect, matItems)
+  matSelect.onchange = function () {
+    nv1.loadMatCapTexture(matUrl + matSelect.value + ".jpg")
+    mat2Select.selectedIndex = -1
+  }
+  // even more matcaps
+  const mat2Items = ["302721_CAC1BB_7A706A_91959B", "0404E8_0404B5_0404CB_3333FC", "045C5C_0DBDBD_049393_04A4A4", "046363_0CC3C3_049B9B_04ACAC", "0489C5_0DDDF9_04C3EE_04AFE1", "04989A_0CE3E4_04D2D5_04C7C8", "04C455_0EFABC_04F097_04E17A", "04CC77_0CF7CA_04E9A7_04AB54", "04E804_04B504_04CB04_33FC33", "04E8E8_04B5B5_04CCCC_33FCFC", "050505_747474_4C4C4C_333333", "070B0C_B2C7CE_728FA3_5B748B", "090909_9C9C9C_555555_7C7C7C", "0A0A0A_A9A9A9_525252_747474", "0C0CC3_04049F_040483_04045C", "0C430C_257D25_439A43_3C683C", "0D0DBD_040497_04047B_040455", "0D0DE3_040486_0404AF_0404CF", "0DBD0D_049704_047B04_045504", "0F0F0F_4B4B4B_1C1C1C_2C2C2C", "0F990F_047B04_044604_046704"]
+  populateSelect(mat2Select, mat2Items)
+  mat2Select.onchange = function () {
+    let matName = "https://makio135.com/matcaps/64/"+mat2Select.value+"-64px.png"
+    nv1.loadMatCapTexture(matName)
+    console.log(mat2Select.value)
+    matSelect.selectedIndex = -1
+  }
+  //custom shaders
+  const shaderUrl = "https://raw.githubusercontent.com/niivue/shaders/main/shaders/"
+  const shaderItems = await loadManifest(shaderUrl)
+  populateSelect(shaderSelect, shaderItems)
+  shaderSelect.onchange = async function () {
+    const shaderIdx = await nv1.setCustomMeshShaderFromUrl(shaderUrl + shaderSelect.value  + ".txt")
+    nv1.setMeshShader( nv1.meshes[1].id, shaderIdx)
+  }
+  // force font resize
+  nv1.resizeListener()
+</script>
