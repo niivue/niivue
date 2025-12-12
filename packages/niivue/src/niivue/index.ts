@@ -4803,17 +4803,15 @@ export class Niivue {
     async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
         const ext = this.getFileExt(meshOptions.url)
         if (ext === 'JCON' || ext === 'JSON') {
-            let json: any;
+            let json: any
             if (meshOptions.buffer) {
-              const view = ArrayBuffer.isView(meshOptions.buffer)
-                ? meshOptions.buffer
-                : new Uint8Array(meshOptions.buffer);
-            
-              const text = new TextDecoder("utf-8").decode(view);
-              json = JSON.parse(text);
+                const view = ArrayBuffer.isView(meshOptions.buffer) ? meshOptions.buffer : new Uint8Array(meshOptions.buffer)
+
+                const text = new TextDecoder('utf-8').decode(view)
+                json = JSON.parse(text)
             } else {
-              const response = await fetch(meshOptions.url);
-              json = await response.json();
+                const response = await fetch(meshOptions.url)
+                json = await response.json()
             }
             const mesh = this.loadConnectomeAsMesh(json)
             this.mediaUrlMap.set(mesh, meshOptions.url)
@@ -5980,25 +5978,25 @@ export class Niivue {
      * @see {@link https://niivue.com/demos/features/web.extras.html | live demo usage}
      */
     async setCustomMeshShaderFromUrl(url: string, name = ''): Promise<number> {
-      try {
-        const response = await fetch(url)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch shader from ${url}: ${response.status} ${response.statusText}`)
+        try {
+            const response = await fetch(url)
+            if (!response.ok) {
+                throw new Error(`Failed to fetch shader from ${url}: ${response.status} ${response.statusText}`)
+            }
+            const txt = await response.text()
+            // If name not provided, derive from filename (strip extension)
+            if (!name || name.trim() === '') {
+                const base = url.split('/').pop() ?? url // drop parent paths
+                const noQuery = base.split('?')[0].split('#')[0] // strip ?query and #hash
+                name = noQuery.replace(/\.[^/.]+$/, '') // remove last extension
+            }
+            // Delegate to the synchronous helper which creates and registers the shader
+            const index = this.setCustomMeshShader(txt, name)
+            return index
+        } catch (err) {
+            // Re-throw with a clearer message while preserving original error information
+            throw new Error(`setCustomMeshShaderFromUrl(${url}) failed: ${(err as Error).message}`)
         }
-        const txt = await response.text()
-        // If name not provided, derive from filename (strip extension)
-        if (!name || name.trim() === '') {
-          const base = url.split('/').pop() ?? url;         // drop parent paths
-          const noQuery = base.split('?')[0].split('#')[0]; // strip ?query and #hash
-          name = noQuery.replace(/\.[^/.]+$/, '');          // remove last extension
-        }
-        // Delegate to the synchronous helper which creates and registers the shader
-        const index = this.setCustomMeshShader(txt, name)
-        return index
-      } catch (err) {
-        // Re-throw with a clearer message while preserving original error information
-        throw new Error(`setCustomMeshShaderFromUrl(${url}) failed: ${(err as Error).message}`)
-      }
     }
 
     /**
@@ -9753,7 +9751,7 @@ export class Niivue {
         let deci = dynamicDecimals(fov * 0.001)
         const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
         function flt2str(flt: number, decimals = 0): number {
-            return parseFloat(flt.toFixed(decimals))
+            return parseFloat(Number(flt).toFixed(decimals))
         }
         let str = flt2str(mm[0], deci) + '×' + flt2str(mm[1], deci) + '×' + flt2str(mm[2], deci)
         if (this.volumes.length > 0 && this.volumes[0].nFrame4D! > 0) {

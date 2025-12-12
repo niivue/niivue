@@ -1029,6 +1029,22 @@ export class NVMeshLoaders {
                 })
                 return layer
             }
+            if (ext === 'NII') {
+                const vals = (await NVMeshLoaders.readNII(buffer, nvmesh.pts, '')) as Float32Array
+                // const npt = nvmesh.pts.length / 3
+                const mn = vals.reduce((acc, current) => Math.min(acc, current))
+                const mx = vals.reduce((acc, current) => Math.max(acc, current))
+                nvmesh.dpv.push({
+                    id: tag,
+                    vals: Float32Array.from(vals.slice()),
+                    global_min: mn,
+                    global_max: mx,
+                    cal_min: mn,
+                    cal_max: mx
+                })
+                // console.log(`>>> ${tag} got ${vals.length} expected ${nvmesh.pts.length / 3}`)
+                return layer
+            }
             if (ext !== 'TSF') {
                 throw new Error('readLayer for streamlines only supports TSF and TXT files.')
             }
@@ -3179,7 +3195,7 @@ export class NVMeshLoaders {
         }
         log.debug(`Layer Range ${mn}..${mx} slope ${scl_slope} inter ${scl_inter}`)
         if (is3D) {
-            const f32 = new Float32Array(n_vox)
+            const f32 = new Float32Array(n_mesh_vert)
             // Sample voxel intensities at mesh vertices
             log.warn('Sampling voxel intensities at mesh vertices (assumes precise alignment).')
             if (qform_code > sform_code || sform_code <= 0) {
