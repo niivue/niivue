@@ -451,7 +451,7 @@ Defined in: [niivue/index.ts:671](https://github.com/niivue/niivue/blob/main/pac
 addColormap(key: string, cmap: ColorMap): void;
 ```
 
-Defined in: [niivue/index.ts:6697](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6697)
+Defined in: [niivue/index.ts:6735](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6735)
 
 create a new colormap
 
@@ -483,7 +483,7 @@ addLabel(
    onClick?: (label: NVLabel3D) => void): NVLabel3D;
 ```
 
-Defined in: [niivue/index.ts:9821](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9821)
+Defined in: [niivue/index.ts:9859](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9859)
 
 Add a 3D Label
 
@@ -548,7 +548,7 @@ niivue.addMesh(NVMesh.loadFromUrl({ url: "../someURL.gii" }));
 addMeshesFromUrl(meshOptions: LoadFromUrlParams[]): Promise<NVMesh[]>;
 ```
 
-Defined in: [niivue/index.ts:4824](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4824)
+Defined in: [niivue/index.ts:4832](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4832)
 
 Add mesh and notify subscribers
 
@@ -831,7 +831,7 @@ niivue.cleanup();
 clearAllMeasurements(): void;
 ```
 
-Defined in: [niivue/index.ts:8047](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8047)
+Defined in: [niivue/index.ts:8085](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8085)
 
 Clear all persistent measurements and angles from the canvas.
 
@@ -853,7 +853,7 @@ nv.clearAllMeasurements();
 clearAngles(): void;
 ```
 
-Defined in: [niivue/index.ts:8035](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8035)
+Defined in: [niivue/index.ts:8073](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8073)
 
 Clear all persistent angle measurements from the canvas.
 
@@ -875,7 +875,7 @@ nv.clearAngles();
 clearBounds(mask: number, ltwh?: [number, number, number, number]): void;
 ```
 
-Defined in: [niivue/index.ts:11115](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11115)
+Defined in: [niivue/index.ts:11153](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11153)
 
 Clear a rectangular region of this instance's canvas.
 
@@ -914,7 +914,7 @@ Clear custom layout and rely on built-in layouts
 clearMeasurements(): void;
 ```
 
-Defined in: [niivue/index.ts:8023](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8023)
+Defined in: [niivue/index.ts:8061](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8061)
 
 Clear all persistent measurement lines from the canvas.
 
@@ -967,7 +967,7 @@ niivue.cloneVolume(0);
 closeDrawing(): void;
 ```
 
-Defined in: [niivue/index.ts:5644](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5644)
+Defined in: [niivue/index.ts:5652](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5652)
 
 close drawing: make sure you have saved any changes before calling this!
 
@@ -993,7 +993,7 @@ niivue.closeDrawing();
 colormap(lutName: string, isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [niivue/index.ts:7086](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7086)
+Defined in: [niivue/index.ts:7124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7124)
 
 Retrieve a colormap with optional inversion
 
@@ -1022,7 +1022,7 @@ the RGBA colormap as a Uint8ClampedArray
 colormaps(): string[];
 ```
 
-Defined in: [niivue/index.ts:6687](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6687)
+Defined in: [niivue/index.ts:6725](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6725)
 
 query all available color maps that can be applied to volumes
 
@@ -1056,7 +1056,7 @@ conform(
 isRobustMinMax: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:6866](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6866)
+Defined in: [niivue/index.ts:6904](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6904)
 
 FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
 
@@ -1090,7 +1090,7 @@ createConnectedLabelImage(
 onlyLargestClusterPerClass: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:6792](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6792)
+Defined in: [niivue/index.ts:6830](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6830)
 
 Create a connected component label map from a volume
 
@@ -1121,7 +1121,7 @@ a new NVImage with labeled clusters, using random colormap
 createCustomMeshShader(fragmentShaderText: string, name: string): object;
 ```
 
-Defined in: [niivue/index.ts:5920](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5920)
+Defined in: [niivue/index.ts:5928](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5928)
 
 #### Parameters
 
@@ -1138,9 +1138,9 @@ created custom mesh shader
 
 | Name      | Type                                       | Defined in                                                                                                   |
 | --------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `Frag`    | `string`                                   | [niivue/index.ts:5924](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5924) |
-| `Name`    | `string`                                   | [niivue/index.ts:5924](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5924) |
-| `shader?` | [`Shader`](../../shader/classes/Shader.md) | [niivue/index.ts:5924](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5924) |
+| `Frag`    | `string`                                   | [niivue/index.ts:5932](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5932) |
+| `Name`    | `string`                                   | [niivue/index.ts:5932](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5932) |
+| `shader?` | [`Shader`](../../shader/classes/Shader.md) | [niivue/index.ts:5932](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5932) |
 
 ---
 
@@ -1150,7 +1150,7 @@ created custom mesh shader
 createEmptyDrawing(): void;
 ```
 
-Defined in: [niivue/index.ts:4981](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4981)
+Defined in: [niivue/index.ts:4989](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4989)
 
 generate a blank canvas for the pen tool
 
@@ -1181,7 +1181,7 @@ createNiftiArray(
 img: Uint8Array): Promise<Uint8Array>;
 ```
 
-Defined in: [niivue/index.ts:6822](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6822)
+Defined in: [niivue/index.ts:6860](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6860)
 
 Create a binary NIfTI file as a Uint8Array, including header and image data
 
@@ -1213,7 +1213,7 @@ a Uint8Array representing a complete NIfTI file
 createOnLocationChange(axCorSag: number): void;
 ```
 
-Defined in: [niivue/index.ts:9705](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9705)
+Defined in: [niivue/index.ts:9743](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9743)
 
 Internal utility to generate human-readable location strings for the onLocationChange callback
 
@@ -1298,7 +1298,7 @@ Defined in: [niivue/index.ts:863](https://github.com/niivue/niivue/blob/main/pac
 drawGrowCut(): void;
 ```
 
-Defined in: [niivue/index.ts:5008](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5008)
+Defined in: [niivue/index.ts:5016](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5016)
 
 dilate drawing so all voxels are colored.
 works on drawing with multiple colors
@@ -1325,7 +1325,7 @@ niivue.drawGrowCut();
 drawingBinaryDilationWithSeed(seedXYZ: number[], neighbors: 6 | 18 | 26): void;
 ```
 
-Defined in: [niivue/index.ts:5234](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5234)
+Defined in: [niivue/index.ts:5242](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5242)
 
 Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
 
@@ -1348,7 +1348,7 @@ Performs a 1-voxel binary dilation on a connected cluster within the drawing mas
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:10802](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10802)
+Defined in: [niivue/index.ts:10840](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10840)
 
 display a lightbox or montage view
 
@@ -1438,7 +1438,7 @@ niivue.drawUndo();
 eventInBounds(evt: MouseEvent | TouchEvent | Touch): boolean;
 ```
 
-Defined in: [niivue/index.ts:10994](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10994)
+Defined in: [niivue/index.ts:11032](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11032)
 
 Returns true if a mouse/touch event happened inside this instance's bounds.
 
@@ -1460,7 +1460,7 @@ Returns true if a mouse/touch event happened inside this instance's bounds.
 findDrawingBoundarySlices(sliceType: SLICE_TYPE): object;
 ```
 
-Defined in: [niivue/index.ts:11774](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11774)
+Defined in: [niivue/index.ts:11812](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11812)
 
 Find the first and last slices containing drawing data along a given axis
 
@@ -1478,8 +1478,8 @@ Object containing first and last slice indices, or null if no data found
 
 | Name    | Type     | Defined in                                                                                                     |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `first` | `number` | [niivue/index.ts:11774](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11774) |
-| `last`  | `number` | [niivue/index.ts:11774](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11774) |
+| `first` | `number` | [niivue/index.ts:11812](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11812) |
+| `last`  | `number` | [niivue/index.ts:11812](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11812) |
 
 ---
 
@@ -1575,7 +1575,7 @@ The current custom layout or null if using built-in layouts
 getDescriptives(options: object): Descriptive;
 ```
 
-Defined in: [niivue/index.ts:6264](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6264)
+Defined in: [niivue/index.ts:6302](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6302)
 
 basic statistics for selected voxel-based image
 
@@ -1638,7 +1638,7 @@ Get the currently assigned DICOM loader.
 getFrame4D(id: string): number;
 ```
 
-Defined in: [niivue/index.ts:7067](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7067)
+Defined in: [niivue/index.ts:7105](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7105)
 
 determine active 3D volume from 4D time series
 
@@ -1672,7 +1672,7 @@ nv1.getFrame4D(nv1.volumes[0].id);
 getGradientTextureData(): Float32Array;
 ```
 
-Defined in: [niivue/index.ts:6157](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6157)
+Defined in: [niivue/index.ts:6195](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6195)
 
 Get the gradient texture produced by gradientGL as a TypedArray
 
@@ -1730,7 +1730,7 @@ The mesh index, or -1 if not found or out of range.
 getMouseEventConfig(): MouseEventConfig;
 ```
 
-Defined in: [niivue/index.ts:8116](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8116)
+Defined in: [niivue/index.ts:8154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8154)
 
 Get current mouse event configuration.
 
@@ -1805,7 +1805,7 @@ let rc = niivue.getRadiologicalConvention();
 getTouchEventConfig(): TouchEventConfig;
 ```
 
-Defined in: [niivue/index.ts:8124](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8124)
+Defined in: [niivue/index.ts:8162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8162)
 
 Get current touch event configuration.
 
@@ -1852,7 +1852,7 @@ niivue.getVolumeIndexByID(someVolume.id);
 inBounds(x: number, y: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:11066](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11066)
+Defined in: [niivue/index.ts:11104](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11104)
 
 Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
 
@@ -1919,7 +1919,7 @@ interpolateMaskSlices(
    options?: object): void;
 ```
 
-Defined in: [niivue/index.ts:11789](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11789)
+Defined in: [niivue/index.ts:11827](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11827)
 
 Interpolate between mask slices using geometric or intensity-guided methods
 
@@ -1967,7 +1967,7 @@ loadConnectome(json:
   | LegacyConnectome): this;
 ```
 
-Defined in: [niivue/index.ts:4967](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4967)
+Defined in: [niivue/index.ts:4975](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4975)
 
 load a connectome specified by json
 
@@ -1995,7 +1995,7 @@ Niivue instance
 loadConnectomeFromUrl(url: string, headers: object): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4910](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4910)
+Defined in: [niivue/index.ts:4918](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4918)
 
 Load a connectome from a given URL and initialize it.
 
@@ -2024,7 +2024,7 @@ the `Niivue` instance (for method chaining)
 loadDeferred4DVolumes(id: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:7011](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7011)
+Defined in: [niivue/index.ts:7049](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7049)
 
 Load all volumes for image opened with `limitFrames4D`, the user can also click the `...` on a 4D timeline to load deferred volumes
 
@@ -2175,7 +2175,7 @@ niivue.loadDrawingFromUrl("../images/lesion.nii.gz");
 loadFont(fontSheetUrl: any, metricsUrl: object): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:5833](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5833)
+Defined in: [niivue/index.ts:5841](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5841)
 
 Load typeface for colorbars, measurements and orientation text.
 
@@ -2226,7 +2226,7 @@ niivue.loadFont("./Roboto.png", "./Roboto.json");
 loadFreeSurferConnectome(json: FreeSurferConnectome): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4935](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4935)
+Defined in: [niivue/index.ts:4943](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4943)
 
 load a connectome specified by json
 
@@ -2254,7 +2254,7 @@ Niivue instance
 loadFreeSurferConnectomeFromUrl(url: string, headers: object): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4923](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4923)
+Defined in: [niivue/index.ts:4931](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4931)
 
 Load a FreeSurfer-style connectome from a given URL and initialize it.
 
@@ -2338,7 +2338,7 @@ a Promise that resolves when the file has been loaded and added to the scene
 loadFromUrl(fnm: string): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:6847](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6847)
+Defined in: [niivue/index.ts:6885](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6885)
 
 Load a NIfTI image from a URL and convert it to an NVImage object
 
@@ -2400,7 +2400,7 @@ Automatically dispatches each item to either volume or mesh loader based on file
 loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:11746](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11746)
+Defined in: [niivue/index.ts:11784](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11784)
 
 Load matcap for illumination model.
 
@@ -2432,7 +2432,7 @@ niivue.loadMatCapTexture("Cortex");
 loadMeshes(meshList: LoadFromUrlParams[]): Promise<Niivue>;
 ```
 
-Defined in: [niivue/index.ts:4884](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4884)
+Defined in: [niivue/index.ts:4892](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L4892)
 
 load an array of meshes
 
@@ -2502,7 +2502,7 @@ niivue.loadVolumes([{url: 'someImage.nii.gz}, {url: 'anotherImage.nii.gz'}])
 meshShaderNames(sort: boolean): string[];
 ```
 
-Defined in: [niivue/index.ts:5971](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5971)
+Defined in: [niivue/index.ts:6009](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6009)
 
 retrieve all currently loaded meshes
 
@@ -2539,7 +2539,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:10389](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10389)
+Defined in: [niivue/index.ts:10427](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10427)
 
 move crosshair a fixed number of voxels (not mm)
 
@@ -2689,7 +2689,7 @@ niivue.moveVolumeUp(this.volumes[0]); // move the background image to the second
 niftiArray2NVImage(bytes: Uint8Array): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:6837](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6837)
+Defined in: [niivue/index.ts:6875](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6875)
 
 Convert a binary NIfTI file (as a Uint8Array) to an NVImage object
 
@@ -2717,7 +2717,7 @@ a Promise resolving to an NVImage object
 refreshColormaps(): Niivue;
 ```
 
-Defined in: [niivue/index.ts:7141](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7141)
+Defined in: [niivue/index.ts:7179](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7179)
 
 Rebuild and upload all colormap textures for volumes and meshes
 
@@ -2739,7 +2739,7 @@ the current NiiVue instance, or undefined if no colormaps are used
 refreshDrawing(isForceRedraw: boolean, useClickToSegmentBitmap: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:5658](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5658)
+Defined in: [niivue/index.ts:5666](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5666)
 
 copy drawing bitmap from CPU to GPU storage and redraw the screen
 
@@ -3162,7 +3162,7 @@ niivue.isAdditiveBlend(true);
 setAtlasOutline(isOutline: number): void;
 ```
 
-Defined in: [niivue/index.ts:8673](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8673)
+Defined in: [niivue/index.ts:8711](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8711)
 
 Enable or disable atlas outline overlay
 
@@ -3370,7 +3370,7 @@ Use [setClipPlanes](#setclipplanes) instead, which generalizes clip plane config
 setColormap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:6709](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6709)
+Defined in: [niivue/index.ts:6747](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6747)
 
 update the colormap of an image given its ID
 
@@ -3403,7 +3403,7 @@ niivue.setColormap(niivue.volumes[0].id,, 'red')
 setColorMap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:6952](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6952)
+Defined in: [niivue/index.ts:6990](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6990)
 
 #### Parameters
 
@@ -3428,7 +3428,7 @@ Use [setColormap](#setcolormap) instead. This alias is retained for compatibilit
 setColormapNegative(id: string, colormapNegative: string): void;
 ```
 
-Defined in: [niivue/index.ts:6965](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6965)
+Defined in: [niivue/index.ts:7003](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7003)
 
 use given color map for negative voxels in image
 
@@ -3559,7 +3559,7 @@ niivue.crosshairWidth(2);
 setCustomGradientTexture(data: Float32Array | Uint8Array, dims?: number[]): void;
 ```
 
-Defined in: [niivue/index.ts:6183](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6183)
+Defined in: [niivue/index.ts:6221](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6221)
 
 Set a custom gradient texture to use instead of the one produced by gradientGL
 When a custom gradient texture is set, the useCustomGradientTexture flag is set to true
@@ -3650,7 +3650,7 @@ produces:
 setCustomMeshShader(fragmentShaderText: string, name: string): number;
 ```
 
-Defined in: [niivue/index.ts:5956](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5956)
+Defined in: [niivue/index.ts:5964](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5964)
 
 Define a new GLSL shader program to influence mesh coloration
 
@@ -3670,6 +3670,41 @@ the index of the new shader (use with [setMeshShader](#setmeshshader))
 #### See
 
 [live demo usage](https://niivue.com/demos/features/mesh.atlas.html)
+
+---
+
+### setCustomMeshShaderFromUrl()
+
+```ts
+setCustomMeshShaderFromUrl(url: string, name: string): Promise<number>;
+```
+
+Defined in: [niivue/index.ts:5980](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5980)
+
+Fetch GLSL fragment shader source from a URL and register it as a custom mesh shader.
+
+#### Parameters
+
+| Parameter | Type     | Default value | Description                                                     |
+| --------- | -------- | ------------- | --------------------------------------------------------------- |
+| `url`     | `string` | `undefined`   | URL pointing to a plain-text GLSL fragment shader file          |
+| `name`    | `string` | `''`          | a descriptive label for the shader (used in menus or debugging) |
+
+#### Returns
+
+`Promise`\<`number`\>
+
+the index of the new shader (use with [setMeshShader](#setmeshshader))
+
+#### Async
+
+#### Throws
+
+when the fetch fails or the response is not OK
+
+#### See
+
+[live demo usage](https://niivue.com/demos/features/web.extras.html)
 
 ---
 
@@ -3713,7 +3748,7 @@ niivue.nv1.setDefaults(opts, true);
 setDragMode(mode: string | DRAG_MODE): void;
 ```
 
-Defined in: [niivue/index.ts:8057](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8057)
+Defined in: [niivue/index.ts:8095](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8095)
 
 Set the drag mode for mouse interactions.
 
@@ -3819,7 +3854,7 @@ niivue.setDrawOpacity(0.7);
 setFrame4D(id: string, frame4D: number): void;
 ```
 
-Defined in: [niivue/index.ts:7043](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7043)
+Defined in: [niivue/index.ts:7081](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7081)
 
 show desired 3D volume from 4D time series
 
@@ -3852,7 +3887,7 @@ nv1.setFrame4D(nv1.volumes[0].id, 42);
 setGamma(gamma: number): void;
 ```
 
-Defined in: [niivue/index.ts:7002](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7002)
+Defined in: [niivue/index.ts:7040](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7040)
 
 adjust screen gamma. Low values emphasize shadows but can appear flat, high gamma hides shadow details.
 
@@ -3981,7 +4016,7 @@ niivue.setHighResolutionCapable(true);
 setInterpolation(isNearest: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:8685](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8685)
+Defined in: [niivue/index.ts:8723](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8723)
 
 select between nearest and linear interpolation for voxel based images
 
@@ -4152,7 +4187,7 @@ niivue.setMeshProperty(niivue.meshes[0].id, "fiberLength", 42);
 setMeshShader(id: string | number, meshShaderNameOrNumber: string | number): void;
 ```
 
-Defined in: [niivue/index.ts:5899](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5899)
+Defined in: [niivue/index.ts:5907](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L5907)
 
 select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
 
@@ -4170,7 +4205,7 @@ select new shader for triangulated meshes and connectomes. Note that this functi
 #### Example
 
 ```ts
-niivue.setMeshShader("toon");
+niivue.setMeshShader(niivue.meshes[0].id, "toon");
 ```
 
 #### See
@@ -4220,7 +4255,7 @@ setModulationImage(
    modulateAlpha: number): void;
 ```
 
-Defined in: [niivue/index.ts:6980](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6980)
+Defined in: [niivue/index.ts:7018](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7018)
 
 modulate intensity of one image based on intensity of another
 
@@ -4255,7 +4290,7 @@ niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
 setMouseEventConfig(config: MouseEventConfig): void;
 ```
 
-Defined in: [niivue/index.ts:8089](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8089)
+Defined in: [niivue/index.ts:8127](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8127)
 
 Set custom mouse event configuration for button mappings.
 
@@ -4515,7 +4550,7 @@ niivue.setRenderAzimuthElevation(45, 15);
 setRenderDrawAmbientOcclusion(ao: number): void;
 ```
 
-Defined in: [niivue/index.ts:6936](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6936)
+Defined in: [niivue/index.ts:6974](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6974)
 
 darken crevices and brighten corners when 3D rendering drawings.
 
@@ -4731,7 +4766,7 @@ niivue.setSliceType(Niivue.sliceTypeMultiplanar);
 setTouchEventConfig(config: TouchEventConfig): void;
 ```
 
-Defined in: [niivue/index.ts:8106](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8106)
+Defined in: [niivue/index.ts:8144](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8144)
 
 Set custom touch event configuration for touch gesture mappings.
 
@@ -4893,7 +4928,7 @@ niivue.unwatchOptsChanges();
 updateGLVolume(): void;
 ```
 
-Defined in: [niivue/index.ts:6211](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6211)
+Defined in: [niivue/index.ts:6249](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L6249)
 
 update the webGL 2.0 scene after making changes to the array of volumes. It's always good to call this method after altering one or more volumes manually (outside of Niivue setter methods)
 

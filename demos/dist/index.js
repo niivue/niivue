@@ -16669,6 +16669,20 @@ var NVMeshLoaders = class _NVMeshLoaders {
         });
         return layer;
       }
+      if (ext === "NII") {
+        const vals2 = await _NVMeshLoaders.readNII(buffer, nvmesh.pts, "");
+        const mn3 = vals2.reduce((acc, current) => Math.min(acc, current));
+        const mx3 = vals2.reduce((acc, current) => Math.max(acc, current));
+        nvmesh.dpv.push({
+          id: tag,
+          vals: Float32Array.from(vals2.slice()),
+          global_min: mn3,
+          global_max: mx3,
+          cal_min: mn3,
+          cal_max: mx3
+        });
+        return layer;
+      }
       if (ext !== "TSF") {
         throw new Error("readLayer for streamlines only supports TSF and TXT files.");
       }
@@ -18670,7 +18684,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
         out[2] = m[8] * xyz[0] + m[9] * xyz[1] + m[10] * xyz[2] + m[11];
         return out;
       };
-      const f32 = new Float32Array(n_vox);
+      const f32 = new Float32Array(n_mesh_vert);
       log.warn("Sampling voxel intensities at mesh vertices (assumes precise alignment).");
       if (qform_code > sform_code || sform_code <= 0) {
         log.warn(`Requires valid sform (sform_code = ${sform_code})`);
@@ -23364,6 +23378,7 @@ async function readMgh(nvImage, buffer) {
   hdr.dims[3] = depth;
   hdr.dims[4] = Math.max(1, nframes);
   hdr.dims[0] = hdr.dims[4] > 1 ? 4 : 3;
+  hdr.pixDims[0] = 1;
   hdr.pixDims[1] = Math.abs(spacingX);
   hdr.pixDims[2] = Math.abs(spacingY);
   hdr.pixDims[3] = Math.abs(spacingZ);
@@ -23980,6 +23995,7 @@ async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
     vec3_exports.subtract(mm010, mm010, mm000);
     const mm001 = nvImage.vox2mm([0, 0, 1], mat);
     vec3_exports.subtract(mm001, mm001, mm000);
+    hdr.pixDims[0] = 1;
     hdr.pixDims[1] = vec3_exports.length(mm100);
     hdr.pixDims[2] = vec3_exports.length(mm010);
     hdr.pixDims[3] = vec3_exports.length(mm001);
@@ -45259,8 +45275,15 @@ var Niivue = class {
   async addMeshFromUrl(meshOptions) {
     const ext = this.getFileExt(meshOptions.url);
     if (ext === "JCON" || ext === "JSON") {
-      const response = await fetch(meshOptions.url, {});
-      const json = await response.json();
+      let json;
+      if (meshOptions.buffer) {
+        const view = ArrayBuffer.isView(meshOptions.buffer) ? meshOptions.buffer : new Uint8Array(meshOptions.buffer);
+        const text = new TextDecoder("utf-8").decode(view);
+        json = JSON.parse(text);
+      } else {
+        const response = await fetch(meshOptions.url);
+        json = await response.json();
+      }
       const mesh2 = this.loadConnectomeAsMesh(json);
       this.mediaUrlMap.set(mesh2, meshOptions.url);
       this.onMeshAddedFromUrl(meshOptions, mesh2);
@@ -46181,7 +46204,7 @@ var Niivue = class {
    * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
    * @param id - id of mesh to change
    * @param meshShaderNameOrNumber - identify shader for usage
-   * @example niivue.setMeshShader('toon');
+   * @example niivue.setMeshShader(niivue.meshes[0].id, 'toon');
    * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
    */
   setMeshShader(id, meshShaderNameOrNumber = 2) {
@@ -46239,6 +46262,33 @@ var Niivue = class {
     this.meshShaders.push(m);
     this.onCustomMeshShaderAdded(fragmentShaderText, name);
     return this.meshShaders.length - 1;
+  }
+  /**
+   * Fetch GLSL fragment shader source from a URL and register it as a custom mesh shader.
+   * @async
+   * @param url - URL pointing to a plain-text GLSL fragment shader file
+   * @param name - a descriptive label for the shader (used in menus or debugging)
+   * @returns {Promise<number>} the index of the new shader (use with {@link setMeshShader})
+   * @throws {Error} when the fetch fails or the response is not OK
+   * @see {@link https://niivue.com/demos/features/web.extras.html | live demo usage}
+   */
+  async setCustomMeshShaderFromUrl(url, name = "") {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch shader from ${url}: ${response.status} ${response.statusText}`);
+      }
+      const txt = await response.text();
+      if (!name || name.trim() === "") {
+        const base = url.split("/").pop() ?? url;
+        const noQuery = base.split("?")[0].split("#")[0];
+        name = noQuery.replace(/\.[^/.]+$/, "");
+      }
+      const index = this.setCustomMeshShader(txt, name);
+      return index;
+    } catch (err2) {
+      throw new Error(`setCustomMeshShaderFromUrl(${url}) failed: ${err2.message}`);
+    }
   }
   /**
    * retrieve all currently loaded meshes
@@ -49528,7 +49578,7 @@ var Niivue = class {
     let deci = dynamicDecimals(fov * 1e-3);
     const mm = this.frac2mm(this.scene.crosshairPos, 0, true);
     function flt2str(flt2, decimals = 0) {
-      return parseFloat(flt2.toFixed(decimals));
+      return parseFloat(Number(flt2).toFixed(decimals));
     }
     let str6 = flt2str(mm[0], deci) + "\xD7" + flt2str(mm[1], deci) + "\xD7" + flt2str(mm[2], deci);
     if (this.volumes.length > 0 && this.volumes[0].nFrame4D > 0) {

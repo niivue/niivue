@@ -3567,7 +3567,7 @@ declare class Niivue {
      * select new shader for triangulated meshes and connectomes. Note that this function requires the mesh is fully loaded: you may want use `await` with loadMeshes (as seen in live demo).
      * @param id - id of mesh to change
      * @param meshShaderNameOrNumber - identify shader for usage
-     * @example niivue.setMeshShader('toon');
+     * @example niivue.setMeshShader(niivue.meshes[0].id, 'toon');
      * @see {@link https://niivue.com/demos/features/meshes.html | live demo usage}
      */
     setMeshShader(id: number | string, meshShaderNameOrNumber?: number | string): void;
@@ -3597,6 +3597,16 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/mesh.atlas.html | live demo usage}
      */
     setCustomMeshShader(fragmentShaderText?: string, name?: string): number;
+    /**
+     * Fetch GLSL fragment shader source from a URL and register it as a custom mesh shader.
+     * @async
+     * @param url - URL pointing to a plain-text GLSL fragment shader file
+     * @param name - a descriptive label for the shader (used in menus or debugging)
+     * @returns {Promise<number>} the index of the new shader (use with {@link setMeshShader})
+     * @throws {Error} when the fetch fails or the response is not OK
+     * @see {@link https://niivue.com/demos/features/web.extras.html | live demo usage}
+     */
+    setCustomMeshShaderFromUrl(url: string, name?: string): Promise<number>;
     /**
      * retrieve all currently loaded meshes
      * @param sort - sort output alphabetically
