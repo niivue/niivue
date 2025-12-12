@@ -4803,8 +4803,18 @@ export class Niivue {
     async addMeshFromUrl(meshOptions: LoadFromUrlParams): Promise<NVMesh> {
         const ext = this.getFileExt(meshOptions.url)
         if (ext === 'JCON' || ext === 'JSON') {
-            const response = await fetch(meshOptions.url, {})
-            const json = await response.json()
+            let json: any;
+            if (meshOptions.buffer) {
+              const view = ArrayBuffer.isView(meshOptions.buffer)
+                ? meshOptions.buffer
+                : new Uint8Array(meshOptions.buffer);
+            
+              const text = new TextDecoder("utf-8").decode(view);
+              json = JSON.parse(text);
+            } else {
+              const response = await fetch(meshOptions.url);
+              json = await response.json();
+            }
             const mesh = this.loadConnectomeAsMesh(json)
             this.mediaUrlMap.set(mesh, meshOptions.url)
             this.onMeshAddedFromUrl(meshOptions, mesh)
