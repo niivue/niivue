@@ -295,41 +295,6 @@ export function renderToOutputTexture(params: RenderToOutputTextureParams): void
 }
 
 /**
- * Parameters for updating gradient texture
- */
-export interface UpdateGradientTextureParams {
-    gl: WebGL2RenderingContext
-    hdr: any
-    gradientTextureAmount: number
-    useCustomGradientTexture: boolean
-    gradientTexture: WebGLTexture | null
-    gradientGL: (hdr: any) => void
-    genericVAO: WebGLVertexArrayObject | null
-}
-
-/**
- * Update gradient texture for lighting in 3D rendering (layer 0 only).
- * @param params - Gradient texture parameters
- * @returns Updated gradient texture
- */
-export function updateGradientTexture(params: UpdateGradientTextureParams): WebGLTexture | null {
-    const { gl, hdr, gradientTextureAmount, useCustomGradientTexture, gradientTexture, gradientGL, genericVAO } = params
-
-    if (gradientTextureAmount > 0.0 && !useCustomGradientTexture) {
-        gradientGL(hdr)
-        gl.bindVertexArray(genericVAO)
-        return gradientTexture
-    } else if (gradientTextureAmount <= 0.0) {
-        if (gradientTexture !== null) {
-            gl.deleteTexture(gradientTexture)
-        }
-        return null
-    }
-
-    return gradientTexture
-}
-
-/**
  * Parameters for updating shader uniforms
  */
 export interface UpdateShaderUniformsParams {

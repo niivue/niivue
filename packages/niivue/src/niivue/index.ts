@@ -4259,7 +4259,6 @@ export class Niivue {
                 this.renderShader = this.renderSliceShader
             }
         }
-        await this.refreshLayers(this.volumes[0], 0)
         this.initRenderShader(this.renderShader!, gradientAmount)
         this.renderShader!.use(this.gl)
         this.setClipPlaneColor(this.opts.clipPlaneColor)
@@ -4271,6 +4270,7 @@ export class Niivue {
         if (this.volumes.length < 1) {
             return
         } // issue1158
+        await this.refreshLayers(this.volumes[0], 0)
         this.drawScene()
     }
 
@@ -6641,14 +6641,20 @@ export class Niivue {
         // Update gradient texture for layer 0
         if (layer === 0) {
             this.volumeTexture = outTexture
-            this.gradientTexture = VolumeLayerRenderer.updateGradientTexture({
+            this.gradientTexture = VolumeRenderer.gradientGL({
                 gl: this.gl,
                 hdr,
-                gradientTextureAmount: this.gradientTextureAmount,
-                useCustomGradientTexture: this.useCustomGradientTexture,
+                genericVAO: this.genericVAO,
+                unusedVAO: this.unusedVAO,
+                volumeTexture: this.volumeTexture,
+                paqdTexture: this.paqdTexture,
                 gradientTexture: this.gradientTexture,
-                gradientGL: this.gradientGL.bind(this),
-                genericVAO: this.genericVAO
+                gradientOrder: this.opts.gradientOrder,
+                blurShader: this.blurShader!,
+                sobelBlurShader: this.sobelBlurShader!,
+                sobelFirstOrderShader: this.sobelFirstOrderShader!,
+                sobelSecondOrderShader: this.sobelSecondOrderShader!,
+                rgbaTex: this.rgbaTex.bind(this)
             })
         }
         // Update shader uniforms after texture operations
