@@ -303,7 +303,7 @@ export interface UpdateGradientTextureParams {
     gradientTextureAmount: number
     useCustomGradientTexture: boolean
     gradientTexture: WebGLTexture | null
-    gradientGL: (hdr: any) => void
+    gradientGL: (hdr: any) => WebGLTexture
     genericVAO: WebGLVertexArrayObject | null
 }
 
