@@ -4259,7 +4259,6 @@ export class Niivue {
                 this.renderShader = this.renderSliceShader
             }
         }
-        await this.refreshLayers(this.volumes[0], 0)
         this.initRenderShader(this.renderShader!, gradientAmount)
         this.renderShader!.use(this.gl)
         this.setClipPlaneColor(this.opts.clipPlaneColor)
@@ -4271,6 +4270,7 @@ export class Niivue {
         if (this.volumes.length < 1) {
             return
         } // issue1158
+        await this.refreshLayers(this.volumes[0], 0)
         this.drawScene()
     }
 
@@ -6161,8 +6161,8 @@ export class Niivue {
      * Generates gradient texture from volume data using GPU shaders and framebuffers.
      * @internal
      */
-    gradientGL(hdr: NiftiHeader): void {
-        this.gradientTexture = VolumeRenderer.gradientGL({
+    gradientGL(hdr: NiftiHeader): WebGLTexture {
+        return VolumeRenderer.gradientGL({
             gl: this.gl,
             hdr,
             genericVAO: this.genericVAO,

@@ -316,17 +316,15 @@ export function updateGradientTexture(params: UpdateGradientTextureParams): WebG
     const { gl, hdr, gradientTextureAmount, useCustomGradientTexture, gradientTexture, gradientGL, genericVAO } = params
 
     if (gradientTextureAmount > 0.0 && !useCustomGradientTexture) {
-        gradientGL(hdr)
+        const tex = gradientGL(hdr)
         gl.bindVertexArray(genericVAO)
-        return gradientTexture
+        return tex
     } else if (gradientTextureAmount <= 0.0) {
         if (gradientTexture !== null) {
             gl.deleteTexture(gradientTexture)
         }
         return null
     }
-
-    return gradientTexture
 }
 
 /**
