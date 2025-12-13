@@ -33,7 +33,7 @@ export const GestureDemo = ({ images = defaultImages, nvOpts = {} }) => {
 
   const handleDrag1Change = (e) => {
     const isContrast = e.target.selectedIndex === 1;
-    niivueRef.current.opts.dragModePrimary = isContrast ? 1 : 0;
+    niivueRef.current.opts.dragModePrimary = isContrast ? 1 : 8;
   };
 
   const handleDrag2Change = (e) => {

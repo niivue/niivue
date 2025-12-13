@@ -1,4 +1,5 @@
 import { vec3 } from 'gl-matrix'
+import { LUT } from '@/colortables'
 
 type Extents = {
     mxDx: number
@@ -49,51 +50,164 @@ export class NVMeshUtilities {
         return result
     }
 
-    static createMZ3(vertices: Float32Array, indices: Uint32Array, compress: boolean = false, colors: Uint8Array | null = null): ArrayBuffer {
-        // generate binary MZ3 format mesh
-        // n.b. small, precise and small but support is not widespread
-        // n.b. result can be compressed with gzip
-        // https://github.com/neurolabusc/surf-ice/tree/master/mz3
+    static createMZ3(
+        vertices: Float32Array,
+        indices: Uint32Array,
+        compress: boolean = false,
+        colors: Uint8Array | null = null,
+        scalars: Float32Array | null = null,
+        colormapLabel: LUT | null = null
+    ): ArrayBuffer {
+        // ATTR bit flags (per mz3 spec)
+        const IS_FACE = 1 // 0x01
+        const IS_VERT = 2 // 0x02
+        const IS_RGBA = 4 // 0x04
+        const IS_SCALAR = 8 // 0x08
+        const IS_LOOKUP = 64 // 0x40
 
-        const magic = 23117
-        const isRGBA = colors instanceof Uint8Array && colors.length === (vertices.length / 3) * 4
-        const attr = isRGBA ? 7 : 3
-        const nface = indices.length / 3
-        const nvert = vertices.length / 3
-        const nskip = 0
-        // Calculate buffer size
+        const MAGIC = 23117 // 0x4D5A
+
+        const nface = indices ? indices.length / 3 : 0
+        const nvert = vertices ? vertices.length / 3 : 0
+
+        // Basic validation (keeps behavior similar to original)
+        if (!Number.isInteger(nface) || nface < 0) {
+            throw new Error('indices length must be a multiple of 3')
+        }
+        if (!Number.isInteger(nvert) || nvert < 0) {
+            throw new Error('vertices length must be a multiple of 3')
+        }
+
+        const isFace = indices && indices.length > 0
+        const isVert = vertices && vertices.length > 0
+        const isRGBA = colors instanceof Uint8Array && colors.length === nvert * 4
+
+        // Prepare lookup (colormapLabel) bytes if provided
+        let lookupBytes: Uint8Array | null = null
+        let nskip = 0
+        if (colormapLabel != null) {
+            const lookupJson = typeof colormapLabel === 'string' ? colormapLabel : JSON.stringify(colormapLabel)
+            lookupBytes = new TextEncoder().encode(lookupJson)
+            nskip = lookupBytes.byteLength
+        }
+
+        // scalars: must be Float32Array and its length must be positive multiple of nvert
+        let isScalars = false
+        let nScalarLayers = 0
+        if (scalars != null) {
+            if (!(scalars instanceof Float32Array)) {
+                throw new Error('scalars must be a Float32Array or null/undefined')
+            }
+            if (nvert === 0) {
+                throw new Error('cannot have scalars without vertices (nvert === 0)')
+            }
+            if (scalars.length > 0 && scalars.length % nvert === 0) {
+                isScalars = true
+                nScalarLayers = scalars.length / nvert
+            } else {
+                throw new Error(`scalars.length (${scalars.length}) must be a positive integer multiple of nvert (${nvert})`)
+            }
+        }
+
+        // Build ATTR bitfield (minimal change from original: use bit flags)
+        let attr = 0
+        if (isFace) {
+            attr |= IS_FACE
+        }
+        if (isVert) {
+            attr |= IS_VERT
+        }
+        if (isRGBA) {
+            attr |= IS_RGBA
+        }
+        if (isScalars) {
+            attr |= IS_SCALAR
+        }
+        if (lookupBytes) {
+            attr |= IS_LOOKUP
+        }
+
+        // header and block sizes
         const headerSize = 16
-        const indexSize = nface * 3 * 4 // Uint32Array
-        const vertexSize = nvert * 3 * 4 // Float32Array
-        const colorSize = isRGBA ? colors.length : 0
-        const totalSize = headerSize + indexSize + vertexSize + colorSize
+
+        const indexSize = isFace ? nface * 3 * 4 : 0 // Uint32 indices
+        const vertexSize = isVert ? nvert * 3 * 4 : 0 // Float32 vertices
+        const colorSize = isRGBA ? nvert * 4 : 0 // RGBA uint8 per vertex
+        const scalarSize = isScalars ? nScalarLayers * nvert * 4 : 0 // NSCALAR * NVERT * 4 bytes (Float32)
+
+        const totalSize = headerSize + nskip + indexSize + vertexSize + colorSize + scalarSize
+
         const buffer = new ArrayBuffer(totalSize)
         const writer = new DataView(buffer)
-        // Write header
-        writer.setUint16(0, magic, true)
-        writer.setUint16(2, attr, true)
-        writer.setUint32(4, nface, true)
-        writer.setUint32(8, nvert, true)
-        writer.setUint32(12, nskip, true)
-        // Write indices
+
+        // Write header (all little-endian)
+        let pos = 0
+        writer.setUint16(pos, MAGIC, true)
+        pos += 2
+        writer.setUint16(pos, attr, true)
+        pos += 2
+        writer.setUint32(pos, nface, true)
+        pos += 4
+        writer.setUint32(pos, nvert, true)
+        pos += 4
+        writer.setUint32(pos, nskip, true)
+        pos += 4
+        // pos === headerSize
+
+        // Helper cursor
         let offset = headerSize
-        new Uint32Array(buffer, offset, indices.length).set(indices)
-        offset += indexSize
-        // Write vertices
-        new Float32Array(buffer, offset, vertices.length).set(vertices)
-        // Write colors
-        if (isRGBA) {
-            offset += vertexSize
-            new Uint8Array(buffer, offset, colors.length).set(colors)
+
+        // Write NSKIP (lookup JSON) directly after header if present
+        if (nskip > 0 && lookupBytes) {
+            new Uint8Array(buffer, offset, lookupBytes.length).set(lookupBytes)
+            offset += nskip
         }
+
+        // Write indices
+        if (isFace) {
+            new Uint32Array(buffer, offset, indices.length).set(indices)
+            offset += indexSize
+        }
+
+        // Write vertices
+        if (isVert) {
+            new Float32Array(buffer, offset, vertices.length).set(vertices)
+            offset += vertexSize
+        }
+
+        // Write colors (RGBA)
+        if (isRGBA) {
+            new Uint8Array(buffer, offset, colors!.length).set(colors!)
+            offset += colorSize
+        }
+
+        // Write scalars (if any)
+        if (isScalars) {
+            new Float32Array(buffer, offset, scalars!.length).set(scalars!)
+            offset += scalarSize
+        }
+
+        // sanity check
+        if (offset !== totalSize) {
+            throw new Error(`mz3 internal size mismatch: offset ${offset} !== totalSize ${totalSize}`)
+        }
+
         if (compress) {
             throw new Error('Call async createMZ3Async() for compression')
         }
+
         return buffer
     }
 
-    static async createMZ3Async(vertices: Float32Array, indices: Uint32Array, compress: boolean = false, colors: Uint8Array | null = null): Promise<ArrayBuffer> {
-        const buffer = this.createMZ3(vertices, indices, compress, colors)
+    static async createMZ3Async(
+        vertices: Float32Array,
+        indices: Uint32Array,
+        compress: boolean = false,
+        colors: Uint8Array | null = null,
+        scalars: Float32Array | null = null,
+        colormapLabel: LUT | null = null
+    ): Promise<ArrayBuffer> {
+        const buffer = this.createMZ3(vertices, indices, compress, colors, scalars, colormapLabel)
         if (compress) {
             return await this.gzip(new Uint8Array(buffer))
         }

@@ -4853,9 +4853,9 @@ export class Niivue {
                         throw new Error(`Failed to load url ${url}: ${error}`)
                     }
                 }
-                const { positions, indices, colors = null } = await this.loaders[ext].loader(itemToLoad)
+                const { positions, indices, colors = null, scalars = null, colormapLabel = null } = await this.loaders[ext].loader(itemToLoad)
                 meshItem.name = `${name}.${toExt}`
-                const mz3 = await NVMeshUtilities.createMZ3Async(positions, indices, false, colors)
+                const mz3 = await NVMeshUtilities.createMZ3Async(positions, indices, false, colors, scalars, colormapLabel)
                 meshItem.buffer = mz3
                 // return await this.loadFromArrayBuffer(mz3, meshItem.name)
             }
