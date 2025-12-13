@@ -15008,40 +15008,113 @@ var NVMeshUtilities = class {
     await closePromise;
     return result;
   }
-  static createMZ3(vertices, indices, compress = false, colors = null) {
-    const magic = 23117;
-    const isRGBA = colors instanceof Uint8Array && colors.length === vertices.length / 3 * 4;
-    const attr = isRGBA ? 7 : 3;
-    const nface = indices.length / 3;
-    const nvert = vertices.length / 3;
-    const nskip = 0;
+  static createMZ3(vertices, indices, compress = false, colors = null, scalars = null, colormapLabel = null) {
+    const IS_FACE = 1;
+    const IS_VERT = 2;
+    const IS_RGBA = 4;
+    const IS_SCALAR = 8;
+    const IS_LOOKUP = 64;
+    const MAGIC = 23117;
+    const nface = indices ? indices.length / 3 : 0;
+    const nvert = vertices ? vertices.length / 3 : 0;
+    if (!Number.isInteger(nface) || nface < 0) {
+      throw new Error("indices length must be a multiple of 3");
+    }
+    if (!Number.isInteger(nvert) || nvert < 0) {
+      throw new Error("vertices length must be a multiple of 3");
+    }
+    const isFace = indices && indices.length > 0;
+    const isVert = vertices && vertices.length > 0;
+    const isRGBA = colors instanceof Uint8Array && colors.length === nvert * 4;
+    let lookupBytes = null;
+    let nskip = 0;
+    if (colormapLabel != null) {
+      const lookupJson = typeof colormapLabel === "string" ? colormapLabel : JSON.stringify(colormapLabel);
+      lookupBytes = new TextEncoder().encode(lookupJson);
+      nskip = lookupBytes.byteLength;
+    }
+    let isScalars = false;
+    let nScalarLayers = 0;
+    if (scalars != null) {
+      if (!(scalars instanceof Float32Array)) {
+        throw new Error("scalars must be a Float32Array or null/undefined");
+      }
+      if (nvert === 0) {
+        throw new Error("cannot have scalars without vertices (nvert === 0)");
+      }
+      if (scalars.length > 0 && scalars.length % nvert === 0) {
+        isScalars = true;
+        nScalarLayers = scalars.length / nvert;
+      } else {
+        throw new Error(`scalars.length (${scalars.length}) must be a positive integer multiple of nvert (${nvert})`);
+      }
+    }
+    let attr = 0;
+    if (isFace) {
+      attr |= IS_FACE;
+    }
+    if (isVert) {
+      attr |= IS_VERT;
+    }
+    if (isRGBA) {
+      attr |= IS_RGBA;
+    }
+    if (isScalars) {
+      attr |= IS_SCALAR;
+    }
+    if (lookupBytes) {
+      attr |= IS_LOOKUP;
+    }
     const headerSize = 16;
-    const indexSize = nface * 3 * 4;
-    const vertexSize = nvert * 3 * 4;
-    const colorSize = isRGBA ? colors.length : 0;
-    const totalSize = headerSize + indexSize + vertexSize + colorSize;
+    const indexSize = isFace ? nface * 3 * 4 : 0;
+    const vertexSize = isVert ? nvert * 3 * 4 : 0;
+    const colorSize = isRGBA ? nvert * 4 : 0;
+    const scalarSize = isScalars ? nScalarLayers * nvert * 4 : 0;
+    const totalSize = headerSize + nskip + indexSize + vertexSize + colorSize + scalarSize;
     const buffer = new ArrayBuffer(totalSize);
     const writer = new DataView(buffer);
-    writer.setUint16(0, magic, true);
-    writer.setUint16(2, attr, true);
-    writer.setUint32(4, nface, true);
-    writer.setUint32(8, nvert, true);
-    writer.setUint32(12, nskip, true);
+    let pos = 0;
+    writer.setUint16(pos, MAGIC, true);
+    pos += 2;
+    writer.setUint16(pos, attr, true);
+    pos += 2;
+    writer.setUint32(pos, nface, true);
+    pos += 4;
+    writer.setUint32(pos, nvert, true);
+    pos += 4;
+    writer.setUint32(pos, nskip, true);
+    pos += 4;
     let offset = headerSize;
-    new Uint32Array(buffer, offset, indices.length).set(indices);
-    offset += indexSize;
-    new Float32Array(buffer, offset, vertices.length).set(vertices);
-    if (isRGBA) {
+    if (nskip > 0 && lookupBytes) {
+      new Uint8Array(buffer, offset, lookupBytes.length).set(lookupBytes);
+      offset += nskip;
+    }
+    if (isFace) {
+      new Uint32Array(buffer, offset, indices.length).set(indices);
+      offset += indexSize;
+    }
+    if (isVert) {
+      new Float32Array(buffer, offset, vertices.length).set(vertices);
       offset += vertexSize;
+    }
+    if (isRGBA) {
       new Uint8Array(buffer, offset, colors.length).set(colors);
+      offset += colorSize;
+    }
+    if (isScalars) {
+      new Float32Array(buffer, offset, scalars.length).set(scalars);
+      offset += scalarSize;
+    }
+    if (offset !== totalSize) {
+      throw new Error(`mz3 internal size mismatch: offset ${offset} !== totalSize ${totalSize}`);
     }
     if (compress) {
       throw new Error("Call async createMZ3Async() for compression");
     }
     return buffer;
   }
-  static async createMZ3Async(vertices, indices, compress = false, colors = null) {
-    const buffer = this.createMZ3(vertices, indices, compress, colors);
+  static async createMZ3Async(vertices, indices, compress = false, colors = null, scalars = null, colormapLabel = null) {
+    const buffer = this.createMZ3(vertices, indices, compress, colors, scalars, colormapLabel);
     if (compress) {
       return await this.gzip(new Uint8Array(buffer));
     }
@@ -45319,9 +45392,9 @@ var Niivue = class {
             throw new Error(`Failed to load url ${url}: ${error}`);
           }
         }
-        const { positions, indices, colors = null } = await this.loaders[ext].loader(itemToLoad);
+        const { positions, indices, colors = null, scalars = null, colormapLabel = null } = await this.loaders[ext].loader(itemToLoad);
         meshItem.name = `${name}.${toExt}`;
-        const mz3 = await NVMeshUtilities.createMZ3Async(positions, indices, false, colors);
+        const mz3 = await NVMeshUtilities.createMZ3Async(positions, indices, false, colors, scalars, colormapLabel);
         meshItem.buffer = mz3;
       }
       if (ext === "JCON" || ext === "JSON") {

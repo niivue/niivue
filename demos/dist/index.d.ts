@@ -1788,8 +1788,8 @@ type Extents = {
 declare class NVMeshUtilities {
     static getClusterBoundaryU8(u8: Uint8Array, faces: number[] | Uint32Array): boolean[];
     static gzip(data: Uint8Array): Promise<Uint8Array>;
-    static createMZ3(vertices: Float32Array, indices: Uint32Array, compress?: boolean, colors?: Uint8Array | null): ArrayBuffer;
-    static createMZ3Async(vertices: Float32Array, indices: Uint32Array, compress?: boolean, colors?: Uint8Array | null): Promise<ArrayBuffer>;
+    static createMZ3(vertices: Float32Array, indices: Uint32Array, compress?: boolean, colors?: Uint8Array | null, scalars?: Float32Array | null, colormapLabel?: LUT | null): ArrayBuffer;
+    static createMZ3Async(vertices: Float32Array, indices: Uint32Array, compress?: boolean, colors?: Uint8Array | null, scalars?: Float32Array | null, colormapLabel?: LUT | null): Promise<ArrayBuffer>;
     static createOBJ(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
     static createSTL(vertices: Float32Array, indices: Uint32Array): ArrayBuffer;
     static downloadArrayBuffer(buffer: ArrayBuffer, filename: string): void;
