@@ -4,85 +4,124 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>NiiVue</title>
+    <title>Gradient Opacity</title>
     <link rel="stylesheet" href="niivue.css" />
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
   </head>
+  <body>
+    <noscript>
+      <strong>niivue requires JavaScript.</strong>
+    </noscript>
     <header>
-      &nbsp;
-      <label for="dragMode">Drag mode</label>
-      <select id="dragMode">
-        <option value="contrast">contrast</option>
-        <option value="measurement">measurement</option>
-        <option value="none">none</option>
-        <option value="pan" selected>pan/zoom</option>
+      <button id="openBtn">Choose an image with a dialog</button>
+      <section>
+        <label id="images"></label>
+      </section>
+      <label for="gradientOpacity">Gradient Opacity</label>
+      <input type="range" min="0" max="10" value="10" class="slider" id="gradientOpacity">
+      <label for="silhouetteEnhancement">Silhouette Enhancement</label>
+      <input type="range" min="0" max="19" value="19" class="slider" id="silhouetteEnhancement">
+      <label for="gradientOrder">Gradient Order</label>
+      <select id="gradientOrder">
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
       </select>
-      &nbsp; 
-      <label for="thickSelect">&nbsp; Thickness</label>
-      <select id="thickSelect">
-        <option>0.5</option>
-        <option>1.0</option>
-        <option>1.5</option>
-        <option selected>2.0</option>
-        <option>2.5</option>
-        <option>3.0</option>
-      </select>
+      <label for="illumination">Illumination</label>
+      <input type="range" min="0" max="10" value="7" class="slider" id="illumination">
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
-        <canvas id="gl1"></canvas>
+        <canvas id="gl1" height="1024"></canvas>
       </div>
     </main>
-    <footer>
-      <label id="statusBar">&nbsp; </label>
-    </footer>
-</html>
-<script type="module" async>
-  import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
-  thickSelect.onchange = function() {
-    nv1.setMeshThicknessOn2D(parseFloat(this.options[this.selectedIndex].text))
-  }
-  dragMode.onchange = function () {
-    switch (this.value) {
-      case "none":
-        nv1.opts.dragMode = nv1.dragModes.none
-        break
-      case "contrast":
-        nv1.opts.dragMode = nv1.dragModes.contrast
-        break
-      case "measurement":
-        nv1.opts.dragMode = nv1.dragModes.measurement
-        break
-      case "pan":
-        nv1.opts.dragMode = nv1.dragModes.pan
-        break
-    }
-  }
-  var volumeList1 = [
-    { url: "../demos/images/fs/brainmask.mgz" },
-  ]
-  const onLocationChange = (data) => {
-    statusBar.innerHTML = data.string
-  }
-  let defaults = {
-    loglevel: 'debug',
-    show3Dcrosshair: true,
-    onLocationChange: onLocationChange,
-  }
-  var nv1 = new Niivue(defaults)
-  await nv1.attachToCanvas(gl1)
-  nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
-  nv1.opts.isOrientCube = true
-  nv1.opts.yoke3Dto2DZoom = true
-  nv1.opts.dragMode = nv1.dragModes.pan
-  nv1.opts.crosshairGap = 6
-  await nv1.loadVolumes(volumeList1)
+    <footer id="intensity">&nbsp;</footer>
+    <script type="module" async>
+      import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
+      async function addVolumeFromFiles(f) {
+        console.log('attempting to open ', f[0].name)
+        console.log('details', f[0])
+        nv1.removeVolume(nv1.volumes[0])
+        nv1.loadFromFile(f[0])
+      }
+      openBtn.onclick = function () {
+        let input = document.createElement('input')
+        input.style.display = 'none'
+        input.type = 'file'
+        document.body.appendChild(input)
+        input.onchange = function (event) {
+          addVolumeFromFiles(event.target.files)
+        }
+        input.click()
+      }
+      gradientOpacity.oninput = function () {
+        nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
+      }
+      silhouetteEnhancement.oninput = function () {
+        nv1.setGradientOpacity(gradientOpacity.value * 0.1, silhouetteEnhancement.value * 0.05)
+      }
+      illumination.oninput = function () {
+        nv1.setVolumeRenderIllumination(this.value * 0.1)
+      }
+      gradientOrder.onchange = function () {
+        nv1.opts.gradientOrder = parseInt(this.value)
+        nv1.updateGLVolume()
+      }
+      var volumeList1 = [{ url: '../demos/images/mni152.nii.gz' }]
 
-  await nv1.loadMeshes([
-    { url: "../demos/images/fs/rh.white", rgba255: [255, 0, 255, 255] },
-    { url: "../demos/images/fs/rh.pial", rgba255: [0, 255, 64, 255] },
-  ])
-  nv1.setMeshShader(nv1.meshes[0].id, 'crosscut')
-  nv1.setMeshShader(nv1.meshes[1].id, 'crosscut')
-  nv1.setClipPlane([0.0, 180, 20])
-</script>
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML = data.string
+      }
+      const clipPlane = [0.35, 290, 0]
+      const defaults = {
+        backColor: [0.5, 0.5, 1, 1],
+        show3Dcrosshair: true,
+        loglevel: 'debug',
+        isRuler: true,
+        gradientOpacity: 0.7,
+        onLocationChange: handleIntensityChange,
+      }
+      var nv1 = new Niivue(defaults)
+      await nv1.attachToCanvas(gl1)
+      nv1.loadVolumes(volumeList1)
+      nv1.setSliceType(nv1.sliceTypeRender)
+      nv1.setClipPlane(clipPlane)
+      nv1.opts.gradientOrder = 2
+      nv1.setVolumeRenderIllumination(0.7)
+      silhouetteEnhancement.oninput()
+
+      let imgs = [
+        "chris_MRA",
+        "chris_PD",
+        "chris_t1",
+        "chris_t2",
+        "CT_Abdo",
+        "CT_AVM",
+        "CT_Electrodes",
+        "CT_Philips",
+        "CT_pitch",
+        "fmri_pitch",
+        "Iguana",
+        "mni152",
+        "MR_Gd",
+        "pcasl",
+        "spm152",
+        "spmMotor",
+        "visiblehuman",
+      ]
+      let imgEl = document.getElementById("images")
+      for (let i = 0; i < imgs.length; i++) {
+        let btn = document.createElement("button")
+        btn.innerHTML = imgs[i]
+        btn.onclick = function () {
+          let root = "https://niivue.github.io/niivue-demo-images/"
+          let img = root + imgs[i] + ".nii.gz"
+          console.log("Loading: " + img)
+          volumeList1[0].url = img
+          nv1.removeVolume(nv1.volumes[0])
+          nv1.loadVolumes(volumeList1)
+          nv1.updateGLVolume()
+        }
+        imgEl.appendChild(btn)
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  </head>
+    <header>
+      &nbsp;
+      <label for="dragMode">Drag mode</label>
+      <select id="dragMode">
+        <option value="contrast">contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="none">none</option>
+        <option value="pan" selected>pan/zoom</option>
+      </select>
+      &nbsp; 
+      <label for="thickSelect">&nbsp; Thickness</label>
+      <select id="thickSelect">
+        <option>0.5</option>
+        <option>1.0</option>
+        <option>1.5</option>
+        <option selected>2.0</option>
+        <option>2.5</option>
+        <option>3.0</option>
+      </select>
+    </header>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">&nbsp; </label>
+    </footer>
+</html>
+<script type="module" async>
+  import { Niivue, NVImage, NVMesh, NVMeshLoaders, SHOW_RENDER, DRAG_MODE, SLICE_TYPE } from './niivue/index.ts'
+  thickSelect.onchange = function() {
+    nv1.setMeshThicknessOn2D(parseFloat(this.options[this.selectedIndex].text))
+  }
+  dragMode.onchange = function () {
+    switch (this.value) {
+      case "none":
+        nv1.opts.dragMode = nv1.dragModes.none
+        break
+      case "contrast":
+        nv1.opts.dragMode = nv1.dragModes.contrast
+        break
+      case "measurement":
+        nv1.opts.dragMode = nv1.dragModes.measurement
+        break
+      case "pan":
+        nv1.opts.dragMode = nv1.dragModes.pan
+        break
+    }
+  }
+  var volumeList1 = [
+    { url: "../demos/images/fs/brainmask.mgz" },
+  ]
+  const onLocationChange = (data) => {
+    statusBar.innerHTML = data.string
+  }
+  let defaults = {
+    loglevel: 'debug',
+    show3Dcrosshair: true,
+    onLocationChange: onLocationChange,
+  }
+  var nv1 = new Niivue(defaults)
+  await nv1.attachToCanvas(gl1)
+  nv1.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+  nv1.opts.isOrientCube = true
+  nv1.opts.yoke3Dto2DZoom = true
+  nv1.opts.dragMode = nv1.dragModes.pan
+  nv1.opts.crosshairGap = 6
+  await nv1.loadVolumes(volumeList1)
+
+  await nv1.loadMeshes([
+    { url: "../demos/images/fs/rh.white", rgba255: [255, 0, 255, 255] },
+    { url: "../demos/images/fs/rh.pial", rgba255: [0, 255, 64, 255] },
+  ])
+  nv1.setMeshShader(nv1.meshes[0].id, 'crosscut')
+  nv1.setMeshShader(nv1.meshes[1].id, 'crosscut')
+  nv1.setClipPlane([0.0, 180, 20])
+</script>
