@@ -13,7 +13,7 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     /* Retry on CI, or once locally for flaky tests */
     retries: process.env.CI ? 2 : 1,
-    workers: process.env.CI ? 4 : undefined,
+    workers: process.env.CI ? 2 : undefined,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
     reporter: [['html', { open: 'never' }]],
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -42,7 +42,7 @@ export default defineConfig({
                 ...devices['Desktop Chrome'],
                 headless: true,
                 launchOptions: {
-                    args: isCI ? ['--window-size=1280,720'] : ['--window-size=1280,720', '--use-gl=angle']
+                    args: isCI ? ['--window-size=1280,720'] : ['--window-size=1280,720', '--use-gl=angle', '--enable-unsafe-swiftshader']
                 }
             }
         }
