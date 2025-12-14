@@ -1,6 +1,10 @@
 name: Publish Niivue to NPM
 on:
   workflow_dispatch:
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+
 jobs:
   publish:
     runs-on: ubuntu-latest
