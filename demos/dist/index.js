@@ -5249,7 +5249,7 @@ var forEach3 = (function() {
 // package.json
 var package_default = {
   name: "@niivue/niivue",
-  version: "0.65.0",
+  version: "0.66.0",
   description: "minimal webgl2 nifti image viewer",
   types: "./build/niivue/index.d.ts",
   main: "./build/niivue/index.js",
@@ -36270,20 +36270,6 @@ function renderToOutputTexture(params) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }
-function updateGradientTexture(params) {
-  const { gl, hdr, gradientTextureAmount, useCustomGradientTexture, gradientTexture, gradientGL: gradientGL2, genericVAO } = params;
-  if (gradientTextureAmount > 0 && !useCustomGradientTexture) {
-    gradientGL2(hdr);
-    gl.bindVertexArray(genericVAO);
-    return gradientTexture;
-  } else if (gradientTextureAmount <= 0) {
-    if (gradientTexture !== null) {
-      gl.deleteTexture(gradientTexture);
-    }
-    return null;
-  }
-  return gradientTexture;
-}
 function updateShaderUniforms(params) {
   const { gl, renderShader, pickingImageShader, sliceShader, overlaysLength, clipPlaneColor, backOpacity, renderOverlayBlend, clipPlane, texVox, volScale, drawOpacity, paqdUniforms } = params;
   renderShader.use(gl);
@@ -44896,7 +44882,6 @@ var Niivue = class {
         this.renderShader = this.renderSliceShader;
       }
     }
-    await this.refreshLayers(this.volumes[0], 0);
     this.initRenderShader(this.renderShader, gradientAmount);
     this.renderShader.use(this.gl);
     this.setClipPlaneColor(this.opts.clipPlaneColor);
@@ -44908,6 +44893,7 @@ var Niivue = class {
     if (this.volumes.length < 1) {
       return;
     }
+    await this.refreshLayers(this.volumes[0], 0);
     this.drawScene();
   }
   /**
@@ -46918,14 +46904,20 @@ var Niivue = class {
     this.gl.deleteFramebuffer(fb);
     if (layer === 0) {
       this.volumeTexture = outTexture;
-      this.gradientTexture = updateGradientTexture({
+      this.gradientTexture = gradientGL({
         gl: this.gl,
         hdr,
-        gradientTextureAmount: this.gradientTextureAmount,
-        useCustomGradientTexture: this.useCustomGradientTexture,
+        genericVAO: this.genericVAO,
+        unusedVAO: this.unusedVAO,
+        volumeTexture: this.volumeTexture,
+        paqdTexture: this.paqdTexture,
         gradientTexture: this.gradientTexture,
-        gradientGL: this.gradientGL.bind(this),
-        genericVAO: this.genericVAO
+        gradientOrder: this.opts.gradientOrder,
+        blurShader: this.blurShader,
+        sobelBlurShader: this.sobelBlurShader,
+        sobelFirstOrderShader: this.sobelFirstOrderShader,
+        sobelSecondOrderShader: this.sobelSecondOrderShader,
+        rgbaTex: this.rgbaTex.bind(this)
       });
     }
     if (!this.renderShader) {
