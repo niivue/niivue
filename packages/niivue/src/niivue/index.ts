@@ -1804,7 +1804,7 @@ export class Niivue {
         if (this.uiData.mousedown) {
             // lag YIKES!!!!
             // TH: only makes a difference on Chrome (no impact on Firefox or Safari)
-            this.drawScene()
+            // this.drawScene()
         }
 
         const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
