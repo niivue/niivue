@@ -27,6 +27,8 @@
       </select>
       <label for="illumination">Illumination</label>
       <input type="range" min="0" max="10" value="7" class="slider" id="illumination">
+      <button id="animateBtn">Stop Animation</button>
+      <span id="fpsCounter" style="margin-left: 10px; font-weight: bold;">FPS: --</span>
     </header>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
@@ -121,6 +123,41 @@
         }
         imgEl.appendChild(btn)
       }
+
+      // Animation with FPS counter
+      let isAnimating = true
+      let azimuth = 0
+      const elevation = 15
+      let lastTime = performance.now()
+      let frameCount = 0
+      let fps = 0
+
+      function animate(currentTime) {
+        if (isAnimating) {
+          frameCount++
+          const elapsed = currentTime - lastTime
+          if (elapsed >= 1000) {
+            fps = Math.round((frameCount * 1000) / elapsed)
+            document.getElementById('fpsCounter').textContent = `FPS: ${fps}`
+            frameCount = 0
+            lastTime = currentTime
+          }
+          azimuth = (azimuth + 1) % 360
+          nv1.setRenderAzimuthElevation(azimuth, elevation)
+        }
+        requestAnimationFrame(animate)
+      }
+
+      animateBtn.onclick = function () {
+        isAnimating = !isAnimating
+        animateBtn.textContent = isAnimating ? 'Stop Animation' : 'Start Animation'
+        if (isAnimating) {
+          lastTime = performance.now()
+          frameCount = 0
+        }
+      }
+
+      requestAnimationFrame(animate)
     </script>
   </body>
 </html>

@@ -1803,6 +1803,7 @@ export class Niivue {
         // we need to do this when we have multiple instances
         if (this.uiData.mousedown) {
             // lag YIKES!!!!
+            // TH: only makes a difference on Chrome (no impact on Firefox or Safari)
             this.drawScene()
         }
 
