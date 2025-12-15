@@ -567,11 +567,12 @@ export const fragRenderGradientShader =
 				const float diffuse = 0.8;
 				const float specular = 1.0;
 				const float shininess = 10.0;
-				vec3 l = normalize(vec3(0.0, 0.5, -0.5));
+				vec3 l = normalize(vec3(0.0, -0.5, 0.5));
+				vec3 viewDir = vec3(0.0, 0.0, -1.0);
 				float ldn = dot(n, l);
 				float a = ambient;
-				vec3 d = max(ldn, 0.0) * colorSample.rgb * diffuse;
-				float s = pow(max(dot(reflect(l, n), rayDir), 0.0), shininess) * specular;
+				vec3 d = abs(ldn) * colorSample.rgb * diffuse;
+				float s = pow(max(dot(reflect(l, n), viewDir), 0.0), shininess) * specular;
 				vec4 ads = vec4(a + d + s, 1.0);
 				ads = mix(vec4(1.0), ads, gradientAmount);
 				// highlight viewer-based edges
