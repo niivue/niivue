@@ -70,7 +70,6 @@
       function handleIntensityChange(data) {
         document.getElementById("intensity").innerHTML = data.string
       }
-      const clipPlane = [0.35, 290, 0]
       const defaults = {
         backColor: [0.5, 0.5, 1, 1],
         show3Dcrosshair: true,
@@ -83,7 +82,6 @@
       await nv1.attachToCanvas(gl1)
       nv1.loadVolumes(volumeList1)
       nv1.setSliceType(nv1.sliceTypeRender)
-      nv1.setClipPlane(clipPlane)
       nv1.opts.gradientOrder = 2
       nv1.setVolumeRenderIllumination(0.7)
       silhouetteEnhancement.oninput()
