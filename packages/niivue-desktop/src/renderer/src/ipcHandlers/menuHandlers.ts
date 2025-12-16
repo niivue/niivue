@@ -147,3 +147,31 @@ export const registerLabelManagerDialogHandler = (
     setOpen(true)
   })
 }
+
+// add near the other register* handlers in your renderer handlers file
+export const registerToggleColorBarsHandler = (
+  nv: Niivue,
+  setShowColorBars?: (v: boolean) => void
+): void => {
+  // main process will send ('toggle-color-bars', boolean)
+  electron.ipcRenderer.on('toggle-color-bars', (_: any, checked: boolean) => {
+    const show = Boolean(checked)
+
+    // 1) Update Niivue's internal option so the native colorbar (if used) updates
+    try {
+      nv.opts.isColorbar = show
+      // prefer updateGLVolume which re-uploads uniforms / textures used by the GL renderer
+      if (typeof nv.updateGLVolume === 'function') nv.updateGLVolume()
+      else if (typeof nv.drawScene === 'function') nv.drawScene()
+    } catch (err) {
+      // guard against NV not being initialized yet
+      // console.warn('Failed to set nv colorbar option:', err)
+    }
+
+    // 2) Call optional React state setter so the app can show a dedicated ColorBars panel
+    if (typeof setShowColorBars === 'function') {
+      setShowColorBars(show)
+    }
+  })
+}
+
