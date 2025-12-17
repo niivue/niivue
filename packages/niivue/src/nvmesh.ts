@@ -771,8 +771,9 @@ export class NVMesh {
                 if (!groupVisible[i]) {
                     continue
                 } // this group is not visible
-                for (let v = 0; v < this.groups[i].vals.length; v++) {
-                    streamlineVisible[this.groups[i].vals[v]] = i
+                const group = this.groups[i]
+                for (let v = 0; v < group.vals.length; v++) {
+                    streamlineVisible[group.vals[v]] = i
                 }
             }
             for (let i = 0; i < n_count; i++) {
