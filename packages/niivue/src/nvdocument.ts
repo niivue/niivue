@@ -1023,7 +1023,6 @@ export class NVDocument {
     static async loadFromFile(file: Blob): Promise<NVDocument> {
         const arrayBuffer = await NVUtilities.readFileAsync(file)
         let dataString: string
-        const document = new NVDocument()
 
         if (NVUtilities.isArrayBufferCompressed(arrayBuffer)) {
             dataString = await NVUtilities.decompressArrayBuffer(arrayBuffer)
@@ -1031,15 +1030,10 @@ export class NVDocument {
             const utf8decoder = new TextDecoder()
             dataString = utf8decoder.decode(arrayBuffer)
         }
-        document.data = JSON.parse(dataString)
 
-        if (document.data.opts.meshThicknessOn2D === 'infinity') {
-            document.data.opts.meshThicknessOn2D = Infinity
-        }
-        document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document.data.sceneData }
+        const documentData = JSON.parse(dataString) as DocumentData;
 
-        NVDocument.deserializeMeshDataObjects(document)
-        return document
+        return NVDocument.loadFromJSON(documentData)
     }
 
     /**
