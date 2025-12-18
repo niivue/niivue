@@ -61,9 +61,9 @@
       await nv1.loadVolumes(volumeList1)
       await nv1.loadMeshes([{ url: "../images/yeh2022.trx"}])
       let cmapEl = document.getElementById("status")
-      for (let i = 0; i < nv1.meshes[0].dpg.length; i++) {
+      for (let i = 0; i < nv1.meshes[0].groups.length; i++) {
         let btn = document.createElement("button")
-        btn.innerHTML = nv1.meshes[0].dpg[i].id
+        btn.innerHTML = nv1.meshes[0].groups[i].id
         btn.onclick = function () {
           let cmap = {
                 R: [192],
