@@ -28881,6 +28881,7 @@ var NVDocument = class _NVDocument {
         rgba255: Uint8Array.from(mesh.rgba255),
         opacity: mesh.opacity,
         connectome: mesh.connectome,
+        groups: mesh.groups,
         dpg: mesh.dpg,
         dps: mesh.dps,
         dpv: mesh.dpv,
@@ -29701,8 +29702,9 @@ var NVMesh3 = class _NVMesh {
         if (!groupVisible[i]) {
           continue;
         }
-        for (let v = 0; v < this.groups[i].vals.length; v++) {
-          streamlineVisible[this.groups[i].vals[v]] = i;
+        const group = this.groups[i];
+        for (let v = 0; v < group.vals.length; v++) {
+          streamlineVisible[group.vals[v]] = i;
         }
       }
       for (let i = 0; i < n_count; i++) {
