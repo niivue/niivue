@@ -1031,7 +1031,7 @@ export class NVDocument {
             dataString = utf8decoder.decode(arrayBuffer)
         }
 
-        const documentData = JSON.parse(dataString) as DocumentData;
+        const documentData = JSON.parse(dataString) as DocumentData
 
         return NVDocument.loadFromJSON(documentData)
     }
