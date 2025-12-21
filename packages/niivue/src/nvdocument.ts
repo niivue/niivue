@@ -906,6 +906,7 @@ export class NVDocument {
                 rgba255: Uint8Array.from(mesh.rgba255),
                 opacity: mesh.opacity,
                 connectome: mesh.connectome,
+                groups: mesh.groups,
                 dpg: mesh.dpg,
                 dps: mesh.dps,
                 dpv: mesh.dpv,
