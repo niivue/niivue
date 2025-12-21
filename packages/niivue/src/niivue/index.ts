@@ -6519,7 +6519,7 @@ export class Niivue {
                 rgbaTex: this.rgbaTex.bind(this),
                 paqdTexture: this.paqdTexture,
                 TEXTURE8_PAQD: TEXTURE_CONSTANTS.TEXTURE8_PAQD,
-                TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE8_PAQD
+                TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE9_ORIENT
             })
             orientShader = rgba32Result.orientShader
             if (rgba32Result.outTexture !== null) {
