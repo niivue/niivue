@@ -547,6 +547,18 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Show colorbar',
+          type: 'checkbox',
+          id: 'colorbar',
+          checked: DEFAULT_OPTIONS.isColorbar,
+          click: (menuItem: Electron.MenuItem): void => {
+            const state = menuItem ? !!menuItem.checked : false
+            if (win && win.webContents) {
+              win.webContents.send('toggle-color-bars', state)
+            }
+          }
+        },
         ...createSliceTypeSubmenu(win),
         // separator
         { type: 'separator' }

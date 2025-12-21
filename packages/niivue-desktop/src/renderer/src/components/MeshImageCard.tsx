@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { ContextMenu, Card, Text, Popover, Select, Button } from '@radix-ui/themes'
 import { NVMesh, NVMeshLayerDefaults } from '@niivue/niivue'
 import { baseName } from '../utils/baseName.js'
@@ -19,40 +19,78 @@ export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.
   const [visible, setVisible] = useState<boolean>(true)
   const [shaders, setShaders] = useState<string[]>([])
   const [shader, setShader] = useState<string>('Phong')
+  const imageRef = useRef(image) // keep latest image available to the handler
   const instance = useSelectedInstance()
   const nv = instance?.nvRef.current
   const setMeshes = instance?.setMeshes
   if (!nv || !setMeshes) return <></>
 
-  useEffect(() => {
-    electron.ipcRenderer.once('openMeshFileDialogResult', async (_, path) => {
-      console.log('openMeshFileDialogResult', path)
-      // // ICBM152.lh.motor.mz3 mesh
-      const layerBase64 = await electron.ipcRenderer.invoke('loadFromFile', path)
-      const layer = {
-        url: path,
-        name: path,
-        opacity: 1,
-        colormap: 'warm',
-        base64: layerBase64
-      }
-      const layerOptions = {
-        ...NVMeshLayerDefaults,
-        ...layer
-      }
-      await NVMesh.loadLayer(layerOptions, image)
-      // patch for missing url and name properties in the NVMeshLayer once it is added to the mesh object.
-      // TODO: fix this in Niivue
-      image.layers[image.layers.length - 1].url = path
-      image.layers[image.layers.length - 1].name = path
-      // update the mesh and set meshes
-      setMeshes((prev) => {
-        const idx = prev.findIndex((m) => m.id === image.id)
-        prev[idx] = image
-        return [...prev]
-      })
-    })
-  }, [])
+  // keep ref in sync whenever `image` changes
+useEffect(() => {
+  imageRef.current = image
+}, [image])
+
+useEffect(() => {
+  // handler that can run many times (for multiple layers)
+  const handler = async (_: any, path: string): Promise<void> => {
+  try {
+    console.log('openMeshFileDialogResult', path)
+
+    const layerBase64 = await electron.ipcRenderer.invoke('loadFromFile', path)
+
+    const layerOptions = {
+      ...NVMeshLayerDefaults,
+      // help Niivue if it copies these, but don't rely on it
+      name: path,
+      url: path,
+      opacity: 1,
+      colormap: 'warm',
+      base64: layerBase64
+    }
+
+    // use the latest instance
+    const img = imageRef.current
+
+    // loadLayer mutates img in-place and returns void
+    await NVMesh.loadLayer(layerOptions, img)
+
+    // ensure the last layer exists and explicitly set its name/url
+    if (!img.layers || img.layers.length === 0) {
+      console.warn('No layers present after loadLayer', img)
+    } else {
+      const lastIdx = img.layers.length - 1
+      const lastLayer = img.layers[lastIdx]
+
+      // explicitly assign name/url onto the real layer object
+      lastLayer.name = path
+      lastLayer.url = path
+
+      // If you want to make a shallow copy of that single layer (so child components
+      // that depend on identity update) you can replace it with a new object:
+      // img.layers[lastIdx] = { ...lastLayer }
+      // But don't clone the whole `img` (that loses NVMesh prototype/methods)
+    }
+
+    // Put the exact mutated NVMesh instance into state (preserve prototype & methods)
+    setMeshes((prev: NVMesh[]) => prev.map((m) => (m.id === img.id ? img : m)))
+
+    // helpful debug
+    console.log('mesh layers after load:', img.layers)
+  } catch (err) {
+    console.error('Failed to load mesh layer:', err)
+  }
+}
+
+
+
+  // register the listener (many times allowed)
+  electron.ipcRenderer.on('openMeshFileDialogResult', handler)
+
+  // cleanup on unmount
+  return () => {
+    electron.ipcRenderer.removeListener('openMeshFileDialogResult', handler)
+  }
+}, []) // run once on mount
 
   useEffect(() => {
     setShaders(nv.meshShaderNames())

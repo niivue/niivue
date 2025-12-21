@@ -7,7 +7,8 @@ import {
   registerSliceTypeHandler,
   registerLabelManagerDialogHandler,
   registerResetPreferencesHandler,
-  registerDragModeHandler
+  registerDragModeHandler,
+  registerToggleColorBarsHandler
 } from './menuHandlers.js'
 import { registerLoadMeshHandler } from './loadMesh.js'
 import { registerLoadVolumeHandler } from './loadVolume.js'
@@ -72,6 +73,7 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('loadOverlay')
   electron.ipcRenderer.removeAllListeners('draw-command')
   electron.ipcRenderer.removeAllListeners('setDragMode')
+  electron.ipcRenderer.removeAllListeners('toggle-color-bars')
 
   // 🔌 Register core handlers (now all driven by getTarget)
   registerLoadStandardHandler({ getTarget, onDocumentLoaded })
@@ -87,6 +89,10 @@ export const registerAllIpcHandlers = ({
   registerLabelManagerDialogHandler(setLabelDialogOpen, setLabelEditMode)
   registerResetPreferencesHandler()
   registerRunNiimathHandler(nv, setVolumes, modeMap, indexMap)
+
+  // register the colorbar toggle handler so menu toggles update Niivue + optional UI
+  registerToggleColorBarsHandler(nv)
+
 
   // 💾 Save → HTML
   registerSaveHTMLHandler(nv, docId, getTitle)
