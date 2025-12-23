@@ -15,7 +15,6 @@ if (!fs.existsSync(destDir)) {
     try {
       fs.unlinkSync(fp)
     } catch (err) {
-      // be noisy but continue
       console.error('Failed to remove', fp, err)
     }
   }
@@ -25,12 +24,7 @@ if (!fs.existsSync(destDir)) {
 function rewriteImportsAndWrite(srcPath, destPath) {
   let content = fs.readFileSync(srcPath, 'utf8')
 
-  // Replace absolute (or repo-rooted) imports referencing helpers with a relative import.
-  // Examples matched:
-  //   import helpers from '/Users/.../playwright/tests-out/helpers.js'
-  //   import * as helpers from '/absolute/path/helpers'
-  //   const helpers = require('/abs/path/helpers.js')
-  // We replace them with: import helpers from './helpers.js' (or require('./helpers.js'))
+  // Normalize imports that reference helpers (absolute paths) to './helpers.js'
   content = content.replace(
     /([iI]mport\s+[^'"]+['"])(?:\/[^'"]*\/)?helpers(?:\.js)?(['"])/g,
     "$1./helpers.js$2"
@@ -43,21 +37,35 @@ function rewriteImportsAndWrite(srcPath, destPath) {
   fs.writeFileSync(destPath, content, 'utf8')
 }
 
-// Copy files we care about (.js and .ts). Keep same filename.
+// Copy files we care about EXCLUDING TypeScript source files (.ts).
+// This avoids copying .ts into tests-out and then having tsc emit .js there,
+// which would produce duplicate test files (.ts + .js) and duplicate titles.
 fs.readdirSync(srcDir).forEach((file) => {
   const lower = file.toLowerCase()
-  if (lower.endsWith('.js') || lower.endsWith('.ts')) {
-    const src = path.join(srcDir, file)
-    const dest = path.join(destDir, file)
+  // Skip .ts sources; allow everything else (images, json, .js helpers if present, etc.)
+  if (lower.endsWith('.ts')) {
+    // skip TypeScript source files to avoid duplicates
+    return
+  }
 
-    try {
-      // rewrite imports in text files to prefer ./helpers.js
-      rewriteImportsAndWrite(src, dest)
-      console.log('copied', src, '->', dest)
-    } catch (err) {
-      // fallback to a raw copy if something goes wrong
-      console.warn('rewrite failed for', src, '; falling back to copy. error:', err)
-      fs.copyFileSync(src, dest)
+  const src = path.join(srcDir, file)
+  const dest = path.join(destDir, file)
+
+  try {
+    // For text files (.js, .json, .html, etc.) try to rewrite imports and write
+    const stat = fs.statSync(src)
+    if (stat.isFile()) {
+      // attempt a rewrite for text files; if binary, fallback to copy
+      try {
+        rewriteImportsAndWrite(src, dest)
+        console.log('copied (rewrote)', src, '->', dest)
+      } catch (err) {
+        // fallback to raw copy (binary files, etc.)
+        fs.copyFileSync(src, dest)
+        console.log('copied (raw)', src, '->', dest)
+      }
     }
+  } catch (err) {
+    console.warn('skipping', src, 'error:', err)
   }
 })
