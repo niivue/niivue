@@ -79,31 +79,65 @@ jobs:
         working-directory: packages/niivue
         run: npx playwright test --list || true
 
-      - name: Run Playwright tests (Linux, snapshot)
+      - name: Run Playwright tests (Linux, snapshot via symlink)
         if: matrix.os == 'ubuntu-latest'
+        working-directory: packages/niivue
+        run: |
+          set -euo pipefail
+
+          SNAP=/tmp/tests-out-snapshot-$(date +%s)
+          echo "Creating snapshot at $SNAP"
+          mkdir -p "$SNAP"
+          cp -a playwright/tests-out/. "$SNAP"/ || true
+          echo "Snapshot contents:"
+          ls -la "$SNAP" || true
+
+          # Make an atomic symlink so Playwright runs from package dir (node_modules available)
+          ORIGINAL=playwright/tests-out
+          BACKUP="${ORIGINAL}.bak-$(date +%s)"
+          echo "Temporarily moving $ORIGINAL -> $BACKUP"
+          # move original out of the way (if it exists) and symlink snapshot
+          if [ -e "$ORIGINAL" ] && [ ! -L "$ORIGINAL" ]; then
+            mv "$ORIGINAL" "$BACKUP"
+            echo "Moved original to $BACKUP"
+          fi
+          ln -sfn "$SNAP" "$ORIGINAL"
+          echo "Symlinked $ORIGINAL -> $SNAP"
+
+          # Run Playwright from package dir so node_modules are resolvable
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
+            npx playwright test --workers=1 --reporter=list --trace=on-first-retry
+
+          # Cleanup: restore original if we moved it, or remove symlink
+          echo "Cleaning up symlink"
+          rm -f "$ORIGINAL"
+          if [ -e "$BACKUP" ]; then
+            mv "$BACKUP" "$ORIGINAL"
+            echo "Restored original tests-out from $BACKUP"
+          fi
+        env:
+          DEBUG: pw:api,pw:protocol
+          
+      - name: Run Playwright tests (Non-Linux, snapshot via symlink)
+        if: matrix.os != 'ubuntu-latest'
         working-directory: packages/niivue
         run: |
           set -euo pipefail
           SNAP=/tmp/tests-out-snapshot-$(date +%s)
           mkdir -p "$SNAP"
           cp -a playwright/tests-out/. "$SNAP"/ || true
-          echo "Snapshot contents:"
           ls -la "$SNAP" || true
-          # run Playwright from inside the snapshot so it discovers tests there
-          bash -lc "cd $SNAP && xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' npx playwright test --workers=1 --reporter=list --trace=on-first-retry"
-        env:
-          DEBUG: pw:api,pw:protocol
-
-
-      - name: Run Playwright tests (Non-Linux, snapshot)
-        if: matrix.os != 'ubuntu-latest'
-        working-directory: packages/niivue
-        run: |
-          SNAP=/tmp/tests-out-snapshot-$(date +%s)
-          mkdir -p "$SNAP"
-          cp -a playwright/tests-out/. "$SNAP"/ || true
-          ls -la "$SNAP" || true
-          bash -lc "cd $SNAP && npx playwright test --workers=1 --reporter=list --trace=on-first-retry"
+          ORIGINAL=playwright/tests-out
+          BACKUP="${ORIGINAL}.bak-$(date +%s)"
+          if [ -e "$ORIGINAL" ] && [ ! -L "$ORIGINAL" ]; then
+            mv "$ORIGINAL" "$BACKUP"
+          fi
+          ln -sfn "$SNAP" "$ORIGINAL"
+          npx playwright test --workers=1 --reporter=list --trace=on-first-retry
+          rm -f "$ORIGINAL"
+          if [ -e "$BACKUP" ]; then
+            mv "$BACKUP" "$ORIGINAL"
+          fi
 
       - name: Snapshot tests-out AFTER run (debug)
         if: always()
