@@ -44,14 +44,30 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
           cache: npm
           node-version: 24
+
       - name: Install dependencies
         run: npm ci
-      - name: Install Playwright Browsers
+
+      - name: Deterministic build, compile & generate Playwright tests
+        run: |
+          echo "=== Build: compile libs and demos ==="
+          npm run build:forTests
+
+          echo "=== Generate Playwright tests (preplaywrighttest.cjs) ==="
+          node preplaywrighttest.cjs || true
+
+          echo "=== TS build for e2e (solution/build mode) ==="
+          npx tsc --build playwright/e2e/tsconfig.json --force
+
+      - name: Install Playwright browsers
         run: npx playwright install --with-deps
+
       - name: Debug system info (Linux only)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -60,21 +76,36 @@ jobs:
           echo "Disk space:"
           df -h || true
 
+      - name: List Playwright tests (diagnostic)
+        run: npx playwright test --list || true
+
       - name: Run Playwright tests (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
-          npm run test:e2e
+            npx playwright test --workers=1 --reporter=list --trace=on-first-retry
+        env:
+          DEBUG: pw:api,pw:protocol
 
       - name: Run Playwright tests (Non-Linux)
         if: matrix.os != 'ubuntu-latest'
-        run: npm run test:e2e
+        run: npx playwright test --workers=1 --reporter=list --trace=on-first-retry
+
+      - name: Snapshot tests-out after run (debug)
+        if: always()
+        run: |
+          echo "=== files in playwright/tests-out ==="
+          ls -la playwright/tests-out || true
+          echo "=== md5sums ==="
+          find playwright/tests-out -type f -exec md5sum {} \; || true
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 30
+
   build-demos-dry-run:
     runs-on: ubuntu-latest
     steps:
