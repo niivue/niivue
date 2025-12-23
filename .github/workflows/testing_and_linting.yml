@@ -65,6 +65,16 @@ jobs:
         working-directory: packages/niivue
         run: npx playwright install --with-deps
 
+      - name: Snapshot tests-out BEFORE Playwright collection
+        working-directory: packages/niivue
+        run: |
+          echo "=== files BEFORE ==="
+          ls -la playwright/tests-out || true
+          echo "=== mtimes BEFORE ==="
+          stat -c '%n %s %y' playwright/tests-out/* || true
+          echo "=== md5sums BEFORE ==="
+          find playwright/tests-out -type f -exec md5sum {} \; > /tmp/md5_before.txt || true
+
       - name: List Playwright tests (diagnostic)
         working-directory: packages/niivue
         run: npx playwright test --list || true
@@ -83,14 +93,18 @@ jobs:
         working-directory: packages/niivue
         run: npx playwright test --workers=1 --reporter=list --trace=on-first-retry
 
-
-      - name: Snapshot tests-out after run (debug)
+      - name: Snapshot tests-out AFTER run (debug)
         if: always()
+        working-directory: packages/niivue
         run: |
-          echo "=== files in playwright/tests-out ==="
+          echo "=== files AFTER ==="
           ls -la playwright/tests-out || true
-          echo "=== md5sums ==="
-          find playwright/tests-out -type f -exec md5sum {} \; || true
+          echo "=== mtimes AFTER ==="
+          stat -c '%n %s %y' playwright/tests-out/* || true
+          echo "=== md5sums AFTER ==="
+          find playwright/tests-out -type f -exec md5sum {} \; > /tmp/md5_after.txt || true
+          echo "=== diff md5 (before vs after) ==="
+          diff -u /tmp/md5_before.txt /tmp/md5_after.txt || true
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -98,6 +112,7 @@ jobs:
           name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 30
+
 
   build-demos-dry-run:
     runs-on: ubuntu-latest
