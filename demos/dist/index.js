@@ -28988,20 +28988,14 @@ var NVDocument = class _NVDocument {
   static async loadFromFile(file) {
     const arrayBuffer = await NVUtilities.readFileAsync(file);
     let dataString;
-    const document2 = new _NVDocument();
     if (NVUtilities.isArrayBufferCompressed(arrayBuffer)) {
       dataString = await NVUtilities.decompressArrayBuffer(arrayBuffer);
     } else {
       const utf8decoder = new TextDecoder();
       dataString = utf8decoder.decode(arrayBuffer);
     }
-    document2.data = JSON.parse(dataString);
-    if (document2.data.opts.meshThicknessOn2D === "infinity") {
-      document2.data.opts.meshThicknessOn2D = Infinity;
-    }
-    document2.scene.sceneData = { ...INITIAL_SCENE_DATA, ...document2.data.sceneData };
-    _NVDocument.deserializeMeshDataObjects(document2);
-    return document2;
+    const documentData = JSON.parse(dataString);
+    return _NVDocument.loadFromJSON(documentData);
   }
   /**
    * Factory method to return an instance of NVDocument from JSON.
