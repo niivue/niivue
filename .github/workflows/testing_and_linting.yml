@@ -79,89 +79,31 @@ jobs:
         working-directory: packages/niivue
         run: npx playwright test --list || true
 
-      - name: Run Playwright tests (Linux, snapshot via copy)
+      - name: Run Playwright tests (Linux)
         if: matrix.os == 'ubuntu-latest'
         working-directory: packages/niivue
         run: |
           set -euo pipefail
+          echo "Using hoisted playwright binary:"
+          ls -la ../../node_modules/.bin/playwright || true
+          # Diagnostics (optional)
+          ../../node_modules/.bin/playwright --version
+          node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
 
-          SNAP=/tmp/tests-out-snapshot-$(date +%s)
-          echo "Creating snapshot at $SNAP"
-          mkdir -p "$SNAP"
-          cp -a playwright/tests-out/. "$SNAP"/ || true
-
-          # Ensure ESM works in snapshot
-          if [ -f package.json ]; then
-            cp package.json "$SNAP"/package.json
-          else
-            echo '{"type":"module"}' > "$SNAP"/package.json
-          fi
-
-          ORIGINAL=playwright/tests-out
-          BACKUP="${ORIGINAL}.bak-$(date +%s)"
-
-          # Move the original tests-out out of the way (if exists)
-          if [ -e "$ORIGINAL" ] && [ ! -L "$ORIGINAL" ]; then
-            mv "$ORIGINAL" "$BACKUP"
-            echo "Moved original to $BACKUP"
-          fi
-
-          # Copy snapshot *into* the package path so node_modules resolves from there
-          rm -rf "$ORIGINAL"
-          mkdir -p "$ORIGINAL"
-          cp -a "$SNAP"/. "$ORIGINAL"/
-          echo "Copied snapshot into $ORIGINAL (physical files)"
-
-          # Run Playwright from package dir so node_modules resolve correctly
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
-            npx playwright test --workers=1 --reporter=list --trace=on-first-retry
-
-          # Cleanup: restore original if we moved it, otherwise remove copied snapshot
-          echo "Cleaning up"
-          rm -rf "$ORIGINAL"
-          if [ -e "$BACKUP" ]; then
-            mv "$BACKUP" "$ORIGINAL"
-            echo "Restored original tests-out from $BACKUP"
-          fi
+          # Run tests (snapshot/copy logic if present should remain)
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --workers=1 --reporter=list --trace=on-first-retry
         env:
           DEBUG: pw:api,pw:protocol
 
-
-
-      - name: Run Playwright tests (Non-Linux, snapshot via copy)
+      - name: Run Playwright tests (Non-Linux)
         if: matrix.os != 'ubuntu-latest'
         working-directory: packages/niivue
         run: |
           set -euo pipefail
-
-          SNAP=/tmp/tests-out-snapshot-$(date +%s)
-          mkdir -p "$SNAP"
-          cp -a playwright/tests-out/. "$SNAP"/ || true
-
-          if [ -f package.json ]; then
-            cp package.json "$SNAP"/package.json
-          else
-            echo '{"type":"module"}' > "$SNAP"/package.json
-          fi
-
-          ORIGINAL=playwright/tests-out
-          BACKUP="${ORIGINAL}.bak-$(date +%s)"
-
-          if [ -e "$ORIGINAL" ] && [ ! -L "$ORIGINAL" ]; then
-            mv "$ORIGINAL" "$BACKUP"
-          fi
-
-          rm -rf "$ORIGINAL"
-          mkdir -p "$ORIGINAL"
-          cp -a "$SNAP"/. "$ORIGINAL"/
-
-          npx playwright test --workers=1 --reporter=list --trace=on-first-retry
-
-          rm -rf "$ORIGINAL"
-          if [ -e "$BACKUP" ]; then
-            mv "$BACKUP" "$ORIGINAL"
-          fi
-
+          ls -la ../../node_modules/.bin/playwright || true
+          ../../node_modules/.bin/playwright --version
+          node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --workers=1 --reporter=list --trace=on-first-retry
 
       - name: Snapshot tests-out AFTER run (debug)
         if: always()
