@@ -79,19 +79,32 @@ jobs:
         working-directory: packages/niivue
         run: npx playwright test --list || true
 
-      - name: Run Playwright tests (Linux)
+      - name: Run Playwright tests (Linux, snapshot)
         if: matrix.os == 'ubuntu-latest'
         working-directory: packages/niivue
         run: |
+          set -euo pipefail
+          SNAP=/tmp/tests-out-snapshot-$(date +%s)
+          echo "Creating snapshot at $SNAP"
+          mkdir -p "$SNAP"
+          # copy compiled tests into snapshot (preserve mode)
+          cp -a playwright/tests-out/. "$SNAP"/ || true
+          echo "Snapshot contents:"
+          ls -la "$SNAP" || true
           xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
-            npx playwright test --workers=1 --reporter=list --trace=on-first-retry
+            npx playwright test "$SNAP" --workers=1 --reporter=list --trace=on-first-retry
         env:
           DEBUG: pw:api,pw:protocol
 
-      - name: Run Playwright tests (Non-Linux)
+      - name: Run Playwright tests (Non-Linux, snapshot)
         if: matrix.os != 'ubuntu-latest'
         working-directory: packages/niivue
-        run: npx playwright test --workers=1 --reporter=list --trace=on-first-retry
+        run: |
+          SNAP=/tmp/tests-out-snapshot-$(date +%s)
+          mkdir -p "$SNAP"
+          cp -a playwright/tests-out/. "$SNAP"/ || true
+          ls -la "$SNAP" || true
+          npx playwright test "$SNAP" --workers=1 --reporter=list --trace=on-first-retry
 
       - name: Snapshot tests-out AFTER run (debug)
         if: always()
@@ -112,7 +125,6 @@ jobs:
           name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 30
-
 
   build-demos-dry-run:
     runs-on: ubuntu-latest
