@@ -79,7 +79,7 @@ jobs:
         working-directory: packages/niivue
         run: npx playwright test --list || true
 
-      - name: Run Playwright tests (Linux, snapshot via symlink)
+      - name: Run Playwright tests (Linux, snapshot via copy)
         if: matrix.os == 'ubuntu-latest'
         working-directory: packages/niivue
         run: |
@@ -90,32 +90,35 @@ jobs:
           mkdir -p "$SNAP"
           cp -a playwright/tests-out/. "$SNAP"/ || true
 
-          # Copy package.json into the snapshot so Node treats files as ESM if your package uses "type":"module"
+          # Ensure ESM works in snapshot
           if [ -f package.json ]; then
-            echo "Copying package.json into snapshot to preserve module type"
             cp package.json "$SNAP"/package.json
           else
-            # fallback: create minimal package.json marking ESM if needed
             echo '{"type":"module"}' > "$SNAP"/package.json
           fi
 
-          echo "Snapshot contents:"
-          ls -la "$SNAP" || true
-
           ORIGINAL=playwright/tests-out
           BACKUP="${ORIGINAL}.bak-$(date +%s)"
+
+          # Move the original tests-out out of the way (if exists)
           if [ -e "$ORIGINAL" ] && [ ! -L "$ORIGINAL" ]; then
             mv "$ORIGINAL" "$BACKUP"
             echo "Moved original to $BACKUP"
           fi
-          ln -sfn "$SNAP" "$ORIGINAL"
-          echo "Symlinked $ORIGINAL -> $SNAP"
 
+          # Copy snapshot *into* the package path so node_modules resolves from there
+          rm -rf "$ORIGINAL"
+          mkdir -p "$ORIGINAL"
+          cp -a "$SNAP"/. "$ORIGINAL"/
+          echo "Copied snapshot into $ORIGINAL (physical files)"
+
+          # Run Playwright from package dir so node_modules resolve correctly
           xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
             npx playwright test --workers=1 --reporter=list --trace=on-first-retry
 
-          echo "Cleaning up symlink"
-          rm -f "$ORIGINAL"
+          # Cleanup: restore original if we moved it, otherwise remove copied snapshot
+          echo "Cleaning up"
+          rm -rf "$ORIGINAL"
           if [ -e "$BACKUP" ]; then
             mv "$BACKUP" "$ORIGINAL"
             echo "Restored original tests-out from $BACKUP"
@@ -124,47 +127,39 @@ jobs:
           DEBUG: pw:api,pw:protocol
 
 
-      - name: Run Playwright tests (Non-Linux, snapshot via symlink)
+
+      - name: Run Playwright tests (Non-Linux, snapshot via copy)
         if: matrix.os != 'ubuntu-latest'
         working-directory: packages/niivue
         run: |
           set -euo pipefail
 
           SNAP=/tmp/tests-out-snapshot-$(date +%s)
-          echo "Creating snapshot at $SNAP"
           mkdir -p "$SNAP"
           cp -a playwright/tests-out/. "$SNAP"/ || true
 
-          # Ensure Node treats snapshot JS files as ESM
           if [ -f package.json ]; then
-            echo "Copying package.json into snapshot for ESM support"
             cp package.json "$SNAP"/package.json
           else
             echo '{"type":"module"}' > "$SNAP"/package.json
           fi
-
-          echo "Snapshot contents:"
-          ls -la "$SNAP" || true
 
           ORIGINAL=playwright/tests-out
           BACKUP="${ORIGINAL}.bak-$(date +%s)"
 
           if [ -e "$ORIGINAL" ] && [ ! -L "$ORIGINAL" ]; then
             mv "$ORIGINAL" "$BACKUP"
-            echo "Moved original to $BACKUP"
           fi
 
-          ln -sfn "$SNAP" "$ORIGINAL"
-          echo "Symlinked $ORIGINAL -> $SNAP"
+          rm -rf "$ORIGINAL"
+          mkdir -p "$ORIGINAL"
+          cp -a "$SNAP"/. "$ORIGINAL"/
 
-          # Run Playwright from package dir so node_modules resolve correctly
           npx playwright test --workers=1 --reporter=list --trace=on-first-retry
 
-          echo "Cleaning up symlink"
-          rm -f "$ORIGINAL"
+          rm -rf "$ORIGINAL"
           if [ -e "$BACKUP" ]; then
             mv "$BACKUP" "$ORIGINAL"
-            echo "Restored original tests-out from $BACKUP"
           fi
 
 
