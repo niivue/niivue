@@ -1,71 +1,77 @@
-// preplaywrighttest.cjs
-/* eslint-disable @typescript-eslint/no-var-requires */
-const fs = require('fs')
-const path = require('path')
+// preplaywrighttest.cjs  (suggested)
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
 
-const srcDir = path.join(__dirname, 'playwright', 'e2e')
-const destDir = path.join(__dirname, 'playwright', 'tests-out')
+const srcDir = path.join(__dirname, 'playwright', 'e2e');
+const destDir = path.join(__dirname, 'playwright', 'tests-out');
 
-// ensure dest exists; if not, create it; else empty it
-if (!fs.existsSync(destDir)) {
-  fs.mkdirSync(destDir, { recursive: true })
-} else {
-  for (const file of fs.readdirSync(destDir)) {
-    const fp = path.join(destDir, file)
-    try {
-      fs.unlinkSync(fp)
-    } catch (err) {
-      console.error('Failed to remove', fp, err)
-    }
-  }
+if (fs.existsSync(destDir)) {
+  fs.rmSync(destDir, { recursive: true, force: true });
 }
+fs.mkdirSync(destDir, { recursive: true });
 
-// helper to rewrite import paths so they are relative to tests-out
-function rewriteImportsAndWrite(srcPath, destPath) {
-  let content = fs.readFileSync(srcPath, 'utf8')
+// try esbuild (fast, bundles TS -> ESM)
+try {
+  console.log('Trying esbuild to compile TS -> tests-out');
+  execSync(
+  'npx esbuild "playwright/e2e/**/*.ts" ' +
+  '--bundle ' +
+  '--platform=node ' +
+  '--packages=external ' +                          // externalize most node_modules automatically
+  '--external:fsevents ' +                          // native addon -> leave to Node
+  '--external:playwright-core ' +                   // Playwright internals
+  '--external:chromium-bidi ' +                     // base package external
+  '--external:chromium-bidi/lib/cjs/bidiMapper/BidiMapper ' + // exact problematic path
+  '--external:chromium-bidi/lib/cjs/cdp/CdpConnection ' +    // exact problematic path
+  '--external:@playwright/* ' +                     // single-wildcard for @playwright scoped pkgs
+  '--format=esm ' +
+  '--outdir=playwright/tests-out ' +
+  '--target=es2020 ' +
+  '--sourcemap',
+  { stdio: 'inherit' }
+);
 
-  // Normalize imports that reference helpers (absolute paths) to './helpers.js'
-  content = content.replace(
-    /([iI]mport\s+[^'"]+['"])(?:\/[^'"]*\/)?helpers(?:\.js)?(['"])/g,
-    "$1./helpers.js$2"
-  )
-  content = content.replace(
-    /(require\(\s*['"])(?:\/[^'"]*\/)?helpers(?:\.js)?(['"]\s*\))/g,
-    "$1./helpers.js$2"
-  )
 
-  fs.writeFileSync(destPath, content, 'utf8')
-}
 
-// Copy files we care about EXCLUDING TypeScript source files (.ts).
-// This avoids copying .ts into tests-out and then having tsc emit .js there,
-// which would produce duplicate test files (.ts + .js) and duplicate titles.
-fs.readdirSync(srcDir).forEach((file) => {
-  const lower = file.toLowerCase()
-  // Skip .ts sources; allow everything else (images, json, .js helpers if present, etc.)
-  if (lower.endsWith('.ts')) {
-    // skip TypeScript source files to avoid duplicates
-    return
-  }
-
-  const src = path.join(srcDir, file)
-  const dest = path.join(destDir, file)
-
+} catch (err) {
+  console.log('esbuild failed or not available, falling back to tsc');
+  // ensure tsc outputs into tests-out
   try {
-    // For text files (.js, .json, .html, etc.) try to rewrite imports and write
-    const stat = fs.statSync(src)
-    if (stat.isFile()) {
-      // attempt a rewrite for text files; if binary, fallback to copy
-      try {
-        rewriteImportsAndWrite(src, dest)
-        console.log('copied (rewrote)', src, '->', dest)
-      } catch (err) {
-        // fallback to raw copy (binary files, etc.)
-        fs.copyFileSync(src, dest)
-        console.log('copied (raw)', src, '->', dest)
-      }
-    }
-  } catch (err) {
-    console.warn('skipping', src, 'error:', err)
+    execSync('npx tsc --project playwright/e2e/tsconfig.json --outDir playwright/tests-out --rootDir playwright/e2e', { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('tsc compile failed; continuing to copy existing compiled files if any');
   }
-})
+}
+
+// copy non-ts assets (helpers.js, static files)
+function copyAll(src, dest) {
+  if (!fs.existsSync(src)) return;
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  for (const ent of entries) {
+    const s = path.join(src, ent.name);
+    const d = path.join(dest, ent.name);
+    if (ent.isDirectory()) {
+      copyAll(s, d);
+    } else {
+      fs.mkdirSync(path.dirname(d), { recursive: true });
+      fs.copyFileSync(s, d);
+    }
+  }
+}
+copyAll(srcDir, destDir);
+
+// sanitize all .js files (rewrite imports and strip stray % in sourceMappingURL)
+const files = fs.readdirSync(destDir);
+for (const f of files) {
+  const fp = path.join(destDir, f);
+  if (!fp.endsWith('.js')) continue;
+  let c = fs.readFileSync(fp, 'utf8');
+  c = c.replace(/([iI]mport\s+[^'"]+['"])(?:\/[^'"]*\/)?helpers(?:\.js)?(['"])/g, "$1./helpers.js$2");
+  c = c.replace(/(require\(['"])(?:\/[^'"]*\/)?helpers(?:\.js)?(['"]\))/g, "$1./helpers.js$2");
+  c = c.replace(/(\/\/#\s*sourceMappingURL=.*?)(%+)\s*$/m, '$1');
+  c = c.replace(/[\u0000-\u001F\u007F]+$/m, '');
+  fs.writeFileSync(fp, c, 'utf8');
+  console.log('sanitized', fp);
+}
+console.log('preplaywrighttest complete. files in', destDir);

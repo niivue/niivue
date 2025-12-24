@@ -61,9 +61,11 @@ jobs:
           node preplaywrighttest.cjs || true
           npx tsc --build playwright/e2e/tsconfig.json --force
 
-      - name: Install Playwright browsers
+      - name: Install Playwright browsers (use the hoisted binary to avoid npx installing another copy)
         working-directory: packages/niivue
-        run: npx playwright install --with-deps
+        run: |
+          # run the repo-root hoisted playwright binary so the collector/worker use the same module
+          ../../node_modules/.bin/playwright install --with-deps
 
       - name: Snapshot tests-out BEFORE Playwright collection
         working-directory: packages/niivue
@@ -75,9 +77,26 @@ jobs:
           echo "=== md5sums BEFORE ==="
           find playwright/tests-out -type f -exec md5sum {} \; > /tmp/md5_before.txt || true
 
-      - name: List Playwright tests (diagnostic)
+      - name: List Playwright tests (diagnostic) - ensure we're using the same binary
         working-directory: packages/niivue
-        run: npx playwright test --list || true
+        run: |
+          echo "Playwright binary:"
+          ls -la ../../node_modules/.bin/playwright || true
+          ../../node_modules/.bin/playwright --version || true
+          # produce JSON so we can inspect counts; fail if 0 tests listed
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --list --reporter=json > /tmp/list_testsout.json 2> /tmp/playwright_collect.err || true
+          echo "collector stderr (first 200 lines):"
+          sed -n '1,200p' /tmp/playwright_collect.err || true
+          echo "collected stats:"
+          jq -r '.stats' /tmp/list_testsout.json || true
+          # fail fast if no tests collected
+          expected=$(jq -r '.stats.expected // 0' /tmp/list_testsout.json)
+          skipped=$(jq -r '.stats.skipped // 0' /tmp/list_testsout.json)
+          if [ "$expected" -eq 0 ] && [ "$skipped" -eq 0 ];  then
+            echo "::error::No tests collected from playwright/tests-out — aborting."
+            cat /tmp/playwright_collect.err || true
+            exit 1
+          fi
 
       - name: Run Playwright tests (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -86,14 +105,11 @@ jobs:
           set -euo pipefail
           echo "Using hoisted playwright binary:"
           ls -la ../../node_modules/.bin/playwright || true
-          # Diagnostics (optional)
           ../../node_modules/.bin/playwright --version
           node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
 
-          # Run tests (snapshot/copy logic if present should remain)
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --workers=1 --reporter=list --trace=on-first-retry
-        env:
-          DEBUG: pw:api,pw:protocol
+          # Run tests using the hoisted binary (guarantees same module instance in collector and worker)
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js
 
       - name: Run Playwright tests (Non-Linux)
         if: matrix.os != 'ubuntu-latest'
@@ -103,7 +119,7 @@ jobs:
           ls -la ../../node_modules/.bin/playwright || true
           ../../node_modules/.bin/playwright --version
           node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --workers=1 --reporter=list --trace=on-first-retry
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js
 
       - name: Snapshot tests-out AFTER run (debug)
         if: always()
@@ -124,6 +140,7 @@ jobs:
           name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 30
+
 
   build-demos-dry-run:
     runs-on: ubuntu-latest
