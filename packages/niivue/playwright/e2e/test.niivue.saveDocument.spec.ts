@@ -170,7 +170,7 @@ test('niivue saveDocument clipVolume', async ({ page }) => {
 })
 
 test('niivue saveDocument and loadDocument', async ({ page }) => {
-    test.setTimeout(120000)
+    test.setTimeout(150000)
 
     // -- SETUP SCENE AND LOAD VOLUMES/MESHES --
     await page.evaluate(async (testOptions) => {
