@@ -109,9 +109,7 @@ jobs:
           node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
 
           # Run tests using the hoisted binary (guarantees same module instance in collector and worker)
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --workers=1 --reporter=list --trace=on-first-retry
-        env:
-          DEBUG: pw:api,pw:protocol
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js
 
       - name: Run Playwright tests (Non-Linux)
         if: matrix.os != 'ubuntu-latest'
@@ -121,7 +119,7 @@ jobs:
           ls -la ../../node_modules/.bin/playwright || true
           ../../node_modules/.bin/playwright --version
           node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --workers=1 --reporter=list --trace=on-first-retry
+          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js
 
       - name: Snapshot tests-out AFTER run (debug)
         if: always()
