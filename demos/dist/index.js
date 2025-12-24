@@ -17757,6 +17757,12 @@ var NVMeshLoaders = class _NVMeshLoaders {
     let indexPaddingBytes = 0;
     let nIndexPadding = 0;
     let nface = 0;
+    const vertexProps = [];
+    let currVertPropOffset = 0;
+    let redOffset = -1;
+    let greenOffset = -1;
+    let blueOffset = -1;
+    let hasColors = false;
     while (pos < len4 && !line.startsWith("end_header")) {
       line = readStr();
       if (line.startsWith("comment")) {
@@ -17767,14 +17773,30 @@ var NVMeshLoaders = class _NVMeshLoaders {
         nvert = parseInt(items[items.length - 1]);
         line = readStr();
         items = line.split(/\s/);
+        currVertPropOffset = 0;
+        vertexProps.length = 0;
         while (line.startsWith("property")) {
           const datatype = items[1];
-          if (items[2] === "x" && datatype.startsWith("double")) {
+          const propName = items[2];
+          vertexProps.push(propName);
+          if (propName === "red") {
+            redOffset = currVertPropOffset;
+            hasColors = true;
+          } else if (propName === "green") {
+            greenOffset = currVertPropOffset;
+            hasColors = true;
+          } else if (propName === "blue") {
+            blueOffset = currVertPropOffset;
+            hasColors = true;
+          }
+          if (propName === "x" && datatype.startsWith("double")) {
             vertIsDouble = true;
-          } else if (items[2] === "x" && !datatype.startsWith("float")) {
+          } else if (propName === "x" && !datatype.startsWith("float")) {
             log.error("Error: expect ply xyz to be float or double: " + line);
           }
-          vertStride += dataTypeBytes(datatype);
+          const bytes2 = dataTypeBytes(datatype);
+          vertStride += bytes2;
+          currVertPropOffset += bytes2;
           line = readStr();
           items = line.split(/\s/);
         }
@@ -17806,13 +17828,36 @@ var NVMeshLoaders = class _NVMeshLoaders {
         log.error(`Malformed ply format: faces ${nface} `);
       }
       const positions2 = new Float32Array(nvert * 3);
+      let colors2;
+      const idxX = vertexProps.indexOf("x");
+      const idxY = vertexProps.indexOf("y");
+      const idxZ = vertexProps.indexOf("z");
+      const idxR = vertexProps.indexOf("red");
+      const idxG = vertexProps.indexOf("green");
+      const idxB = vertexProps.indexOf("blue");
+      if (idxR !== -1 && idxG !== -1 && idxB !== -1) {
+        colors2 = new Float32Array(nvert * 3);
+        hasColors = true;
+      }
       let v = 0;
       for (let i = 0; i < nvert; i++) {
         line = readStr();
         const items = line.split(/\s/);
-        positions2[v] = parseFloat(items[0]);
-        positions2[v + 1] = parseFloat(items[1]);
-        positions2[v + 2] = parseFloat(items[2]);
+        const tx = idxX >= 0 ? parseFloat(items[idxX]) : parseFloat(items[0]);
+        const ty = idxY >= 0 ? parseFloat(items[idxY]) : parseFloat(items[1]);
+        const tz = idxZ >= 0 ? parseFloat(items[idxZ]) : parseFloat(items[2]);
+        positions2[v] = tx;
+        positions2[v + 1] = ty;
+        positions2[v + 2] = tz;
+        if (hasColors && colors2) {
+          const rr = idxR >= 0 ? parseInt(items[idxR]) : 0;
+          const gg = idxG >= 0 ? parseInt(items[idxG]) : 0;
+          const bb = idxB >= 0 ? parseInt(items[idxB]) : 0;
+          const vi = i * 3;
+          colors2[vi] = rr / 255;
+          colors2[vi + 1] = gg / 255;
+          colors2[vi + 2] = bb / 255;
+        }
         v += 3;
       }
       let indices2 = new Uint32Array(nface * 3);
@@ -17843,16 +17888,24 @@ var NVMeshLoaders = class _NVMeshLoaders {
       if (indices2.length !== f) {
         indices2 = indices2.slice(0, f);
       }
-      return {
+      const out2 = {
         positions: positions2,
         indices: indices2
       };
+      if (hasColors) {
+        out2.colors = typeof colors2 !== "undefined" ? colors2 : void 0;
+      }
+      return out2;
     }
     if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1) {
       log.warn(`Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`);
     }
     const reader = new DataView(buffer);
     let positions;
+    let colors;
+    if (hasColors) {
+      colors = new Float32Array(nvert * 3);
+    }
     if (pos % 4 === 0 && vertStride === 12 && isLittleEndian) {
       positions = new Float32Array(buffer, pos, nvert * 3);
       pos += nvert * vertStride;
@@ -17868,6 +17921,16 @@ var NVMeshLoaders = class _NVMeshLoaders {
           positions[v] = reader.getFloat32(pos, isLittleEndian);
           positions[v + 1] = reader.getFloat32(pos + 4, isLittleEndian);
           positions[v + 2] = reader.getFloat32(pos + 8, isLittleEndian);
+        }
+        if (hasColors && colors) {
+          const base = pos;
+          const r = redOffset >= 0 ? reader.getUint8(base + redOffset) : 0;
+          const g = greenOffset >= 0 ? reader.getUint8(base + greenOffset) : 0;
+          const b = blueOffset >= 0 ? reader.getUint8(base + blueOffset) : 0;
+          const vi = i * 3;
+          colors[vi] = r / 255;
+          colors[vi + 1] = g / 255;
+          colors[vi + 2] = b / 255;
         }
         v += 3;
         pos += vertStride;
@@ -17924,10 +17987,14 @@ var NVMeshLoaders = class _NVMeshLoaders {
     if (!isTriangular) {
       log.warn("Only able to read PLY meshes limited to triangles.");
     }
-    return {
+    const out = {
       positions,
       indices
     };
+    if (hasColors && typeof colors !== "undefined") {
+      out.colors = colors;
+    }
+    return out;
   }
   // readPLY()
   // FreeSurfer can convert meshes to ICO/TRI format text files
@@ -23855,6 +23922,7 @@ async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
   }
   const hdr = nvImage.hdr;
   hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims = [0, 0, 0, 0, 0, 0, 0, 0];
   const len4 = dataBuffer.byteLength;
   let txt = null;
   const bytes = new Uint8Array(dataBuffer);
@@ -23912,7 +23980,7 @@ async function readNrrd(nvImage, dataBuffer, pairedImgData = null) {
         } else if (value.includes("gz")) {
           isGz = true;
         } else {
-          log.error("Unsupported NRRD encoding");
+          log.error(`Unsupported NRRD encoding : ${value}`);
           return null;
         }
         break;
@@ -27429,6 +27497,12 @@ var NVImage = class _NVImage {
     if (!this.hdr || !imgRaw) {
       return;
     }
+    if (this.hdr.dims[1] === 0 && this.hdr.dims[2] === 0 && this.hdr.dims[3] === 0) {
+      log.warn("Invalid volume: First three dimensions are all zero");
+    }
+    this.hdr.dims[1] = Math.max(this.hdr.dims[1], 1);
+    this.hdr.dims[2] = Math.max(this.hdr.dims[2], 1);
+    this.hdr.dims[3] = Math.max(this.hdr.dims[3], 1);
     this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3];
     const bytesPerVol = this.nVox3D * (this.hdr.numBitsPerVoxel / 8);
     const nVol4D = imgRaw.byteLength / bytesPerVol;
@@ -46796,7 +46870,7 @@ var Niivue = class {
         rgbaTex: this.rgbaTex.bind(this),
         paqdTexture: this.paqdTexture,
         TEXTURE8_PAQD: TEXTURE_CONSTANTS.TEXTURE8_PAQD,
-        TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE8_PAQD
+        TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE9_ORIENT
       });
       orientShader = rgba32Result.orientShader;
       if (rgba32Result.outTexture !== null) {
