@@ -90,7 +90,9 @@ jobs:
           echo "collected stats:"
           jq -r '.stats' /tmp/list_testsout.json || true
           # fail fast if no tests collected
-          if [ "$(jq -r '.stats.expected' /tmp/list_testsout.json)" = "0" ]; then
+          expected=$(jq -r '.stats.expected // 0' /tmp/list_testsout.json)
+          skipped=$(jq -r '.stats.skipped // 0' /tmp/list_testsout.json)
+          if [ "$expected" -eq 0 ] && [ "$skipped" -eq 0 ];  then
             echo "::error::No tests collected from playwright/tests-out — aborting."
             cat /tmp/playwright_collect.err || true
             exit 1
