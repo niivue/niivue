@@ -20,7 +20,7 @@ export async function readNrrd(nvImage: NVImage, dataBuffer: ArrayBuffer, paired
     }
     const hdr = nvImage.hdr // Use nvImage.hdr directly
     hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0]
-
+    hdr.dims = [0, 0, 0, 0, 0, 0, 0, 0]
     const len = dataBuffer.byteLength
     let txt: string | null = null
     const bytes = new Uint8Array(dataBuffer)
@@ -85,7 +85,7 @@ export async function readNrrd(nvImage: NVImage, dataBuffer: ArrayBuffer, paired
                 } else if (value.includes('gz')) {
                     isGz = true
                 } else {
-                    log.error('Unsupported NRRD encoding')
+                    log.error(`Unsupported NRRD encoding : ${value}`)
                     return null
                 }
                 break

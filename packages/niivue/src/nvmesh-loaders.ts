@@ -2120,6 +2120,12 @@ export class NVMeshLoaders {
         let indexPaddingBytes = 0
         let nIndexPadding = 0
         let nface = 0
+        const vertexProps: string[] = []
+        let currVertPropOffset = 0
+        let redOffset = -1
+        let greenOffset = -1
+        let blueOffset = -1
+        let hasColors = false
         while (pos < len && !line.startsWith('end_header')) {
             line = readStr()
             if (line.startsWith('comment')) {
@@ -2132,14 +2138,32 @@ export class NVMeshLoaders {
                 // read vertex properties:
                 line = readStr()
                 items = line.split(/\s/)
+                currVertPropOffset = 0
+                vertexProps.length = 0
                 while (line.startsWith('property')) {
                     const datatype = items[1]
-                    if (items[2] === 'x' && datatype.startsWith('double')) {
+                    const propName = items[2]
+                    // record property name (for ASCII token mapping)
+                    vertexProps.push(propName)
+                    // record offsets for color components (for binary parsing)
+                    if (propName === 'red') {
+                        redOffset = currVertPropOffset
+                        hasColors = true
+                    } else if (propName === 'green') {
+                        greenOffset = currVertPropOffset
+                        hasColors = true
+                    } else if (propName === 'blue') {
+                        blueOffset = currVertPropOffset
+                        hasColors = true
+                    }
+                    if (propName === 'x' && datatype.startsWith('double')) {
                         vertIsDouble = true
-                    } else if (items[2] === 'x' && !datatype.startsWith('float')) {
+                    } else if (propName === 'x' && !datatype.startsWith('float')) {
                         log.error('Error: expect ply xyz to be float or double: ' + line)
                     }
-                    vertStride += dataTypeBytes(datatype)
+                    const bytes = dataTypeBytes(datatype)
+                    vertStride += bytes
+                    currVertPropOffset += bytes
                     line = readStr()
                     items = line.split(/\s/)
                 }
@@ -2173,13 +2197,38 @@ export class NVMeshLoaders {
                 log.error(`Malformed ply format: faces ${nface} `)
             }
             const positions = new Float32Array(nvert * 3)
+            let colors: Float32Array | undefined
+            // find ascii token indices for x,y,z and rgb if present
+            const idxX = vertexProps.indexOf('x')
+            const idxY = vertexProps.indexOf('y')
+            const idxZ = vertexProps.indexOf('z')
+            const idxR = vertexProps.indexOf('red')
+            const idxG = vertexProps.indexOf('green')
+            const idxB = vertexProps.indexOf('blue')
+            if (idxR !== -1 && idxG !== -1 && idxB !== -1) {
+                colors = new Float32Array(nvert * 3)
+                hasColors = true
+            }
             let v = 0
             for (let i = 0; i < nvert; i++) {
                 line = readStr()
                 const items = line.split(/\s/)
-                positions[v] = parseFloat(items[0])
-                positions[v + 1] = parseFloat(items[1])
-                positions[v + 2] = parseFloat(items[2])
+                // read xyz using property indices (fallback to 0,1,2 if not found)
+                const tx = idxX >= 0 ? parseFloat(items[idxX]) : parseFloat(items[0])
+                const ty = idxY >= 0 ? parseFloat(items[idxY]) : parseFloat(items[1])
+                const tz = idxZ >= 0 ? parseFloat(items[idxZ]) : parseFloat(items[2])
+                positions[v] = tx
+                positions[v + 1] = ty
+                positions[v + 2] = tz
+                if (hasColors && colors) {
+                    const rr = idxR >= 0 ? parseInt(items[idxR]) : 0
+                    const gg = idxG >= 0 ? parseInt(items[idxG]) : 0
+                    const bb = idxB >= 0 ? parseInt(items[idxB]) : 0
+                    const vi = i * 3
+                    colors[vi] = rr / 255.0
+                    colors[vi + 1] = gg / 255.0
+                    colors[vi + 2] = bb / 255.0
+                }
                 v += 3
             }
             let indices = new Uint32Array(nface * 3)
@@ -2210,21 +2259,31 @@ export class NVMeshLoaders {
             if (indices.length !== f) {
                 indices = indices.slice(0, f)
             }
-            return {
+            const out: DefaultMeshType = {
                 positions,
                 indices
             }
+            if (hasColors) {
+                // colors was created only when we detected rgb properties
+                out.colors = typeof colors !== 'undefined' ? colors : undefined
+            }
+            return out
         } // if isAscii
         if (vertStride < 12 || indexCountBytes < 1 || indexBytes < 1 || nface < 1) {
             log.warn(`Malformed ply format: stride ${vertStride} count ${indexCountBytes} iBytes ${indexBytes} iStrideBytes ${indexStrideBytes} iPadBytes ${indexPaddingBytes} faces ${nface}`)
         }
         const reader = new DataView(buffer)
         let positions
+        let colors: Float32Array | undefined
+        if (hasColors) {
+            colors = new Float32Array(nvert * 3)
+        }
         if (pos % 4 === 0 && vertStride === 12 && isLittleEndian) {
             // optimization: vertices only store xyz position as float
             // n.b. start offset of Float32Array must be a multiple of 4
             positions = new Float32Array(buffer, pos, nvert * 3)
             pos += nvert * vertStride
+            // if colors are present they wouldn't be in this optimized path (vertStride would be >12)
         } else {
             positions = new Float32Array(nvert * 3)
             let v = 0
@@ -2237,6 +2296,17 @@ export class NVMeshLoaders {
                     positions[v] = reader.getFloat32(pos, isLittleEndian)
                     positions[v + 1] = reader.getFloat32(pos + 4, isLittleEndian)
                     positions[v + 2] = reader.getFloat32(pos + 8, isLittleEndian)
+                }
+                if (hasColors && colors) {
+                    // read uchar rgb at recorded offsets (if set)
+                    const base = pos
+                    const r = redOffset >= 0 ? reader.getUint8(base + redOffset) : 0
+                    const g = greenOffset >= 0 ? reader.getUint8(base + greenOffset) : 0
+                    const b = blueOffset >= 0 ? reader.getUint8(base + blueOffset) : 0
+                    const vi = i * 3
+                    colors[vi] = r / 255.0
+                    colors[vi + 1] = g / 255.0
+                    colors[vi + 2] = b / 255.0
                 }
                 v += 3
                 pos += vertStride
@@ -2295,10 +2365,14 @@ export class NVMeshLoaders {
         if (!isTriangular) {
             log.warn('Only able to read PLY meshes limited to triangles.')
         }
-        return {
+        const out: DefaultMeshType = {
             positions,
             indices
         }
+        if (hasColors && typeof colors !== 'undefined') {
+            out.colors = colors
+        }
+        return out
     } // readPLY()
 
     // FreeSurfer can convert meshes to ICO/TRI format text files

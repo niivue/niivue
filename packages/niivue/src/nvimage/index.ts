@@ -220,6 +220,13 @@ export class NVImage {
         if (!this.hdr || !imgRaw) {
             return
         }
+        if (this.hdr.dims[1] === 0 && this.hdr.dims[2] === 0 && this.hdr.dims[3] === 0) {
+            log.warn('Invalid volume: First three dimensions are all zero')
+        }
+        // e.g. 2D image has 1 slice, so dim[3] should be at least 1
+        this.hdr.dims[1] = Math.max(this.hdr.dims[1], 1)
+        this.hdr.dims[2] = Math.max(this.hdr.dims[2], 1)
+        this.hdr.dims[3] = Math.max(this.hdr.dims[3], 1)
 
         this.nVox3D = this.hdr.dims[1] * this.hdr.dims[2] * this.hdr.dims[3]
         const bytesPerVol = this.nVox3D * (this.hdr.numBitsPerVoxel / 8)
