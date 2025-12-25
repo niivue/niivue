@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
-    <title>Basic Multiplanar</title>
+    <title>Voxel Quality vs Speed</title>
     <link rel="stylesheet" href="niivue.css" />
   </head>
   <body>
@@ -13,8 +13,17 @@
       <strong>niivue requires JavaScript.</strong>
     </noscript>
     <header>
+      <label for="animateCheck">Animate</label>
+      <input type="checkbox" id="animateCheck"/>
+      &nbsp;
+      <label for="multiplanarCheck">Multiplanar</label>
+      <input type="checkbox" id="multiplanarCheck"/>
+      &nbsp;
       <label for="aaCheck">AntiAlias</label>
       <input type="checkbox" id="aaCheck" checked />
+      &nbsp;
+      <label for="hugeCheck">HugeVolume</label>
+      <input type="checkbox" id="hugeCheck"/>
       &nbsp;
       <label for="dpiCheck">HighDPI</label>
       <input type="checkbox" id="dpiCheck" checked />
@@ -26,6 +35,7 @@
         <option value="0.3">low</option>
         <option value="0.6" selected>medium</option>
         <option value="1.0">high</option>
+        <option value="2.0">translucent</option>
       </select>
       &nbsp;&nbsp;&nbsp;
       <label for="atlasSlider">Atlas</label>
@@ -49,6 +59,7 @@
       />
       <button id="aboutBtn">About</button>
       &nbsp;
+      <span id="fpsCounter" style="margin-left: 10px; font-weight: bold;">FPS: --</span>
     </header>
     <main id="canvas-container">
       <canvas id="gl1"></canvas>
@@ -60,7 +71,7 @@
   import * as niivue from "../dist/index.js"
   var nv1
   const volumeList1 = [
-    { url: "../images/mni152.nii.gz"},
+    { url: "?"},
     {url: "../images/aal.nii.gz"},
     { url: "../images/stats.nv_demo_mskd.nii.gz", colormap: "warm", colormapNegative: "winter", frame4D: 1, cal_min: 3.3641, cal_max: 6},
   ]
@@ -75,11 +86,57 @@
   aboutBtn.onclick = async function () {
       window.alert("This page shows features that may provide poor volume rendering performance on slow devices. Using anti-aliaing, high-DPI, and reflective volume rendering modes all impact performance.")
   }
+  // Animation with FPS counter
+  let isAnimating = false
+  let azimuth = 0
+  const elevation = 15
+  let lastTime = performance.now()
+  let frameCount = 0
+  let fps = 0
+  function animate(currentTime) {
+    if (isAnimating) {
+      frameCount++
+      const elapsed = currentTime - lastTime
+      if (elapsed >= 1000) {
+        fps = Math.round((frameCount * 1000) / elapsed)
+        document.getElementById('fpsCounter').textContent = `FPS: ${fps}`
+        frameCount = 0
+        lastTime = currentTime
+      }
+      azimuth = (azimuth + 1) % 360
+      nv1.setRenderAzimuthElevation(azimuth, elevation)
+    }
+    requestAnimationFrame(animate)
+  }
+  animateCheck.onclick = function () {
+    isAnimating = this.checked
+    if (isAnimating) {
+      lastTime = performance.now()
+      frameCount = 0
+    }
+  }
+  multiplanarCheck.onclick = function() {
+    if (this.checked)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+    else
+      nv1.setSliceType(nv1.sliceTypeRender)
+  }
   dpiCheck.onclick = function () {
     nv1.setHighResolutionCapable(this.checked)
   }
   renderMode.onchange = function () {
-    nv1.setVolumeRenderIllumination(parseFloat(this.value))
+    let mode = parseFloat(this.value)
+    let gradientOpacity = 0.0
+    let renderSilhouette = 0.0
+    if (mode > 1.0) {
+      gradientOpacity = 0.95
+      renderSilhouette = 0.95
+      mode = 1.0
+    }
+    nv1.setVolumeRenderIllumination(mode)
+    if ((nv1.opts.gradientOpacity !== gradientOpacity) || (nv1.opts.renderSilhouette !== renderSilhouette)) {
+      nv1.setGradientOpacity(gradientOpacity, renderSilhouette)
+    }
   }
   atlasSlider.oninput = function () {
     nv1.setOpacity(1, this.value / 255.0)
@@ -87,7 +144,16 @@
   statSlider.oninput = function () {
     nv1.setOpacity(2, this.value / 255.0)
   }
+  hugeCheck.onclick = async function () {
+    aaCheck.onclick()
+  }
   aaCheck.onclick = async function () {
+    const isHuge = hugeCheck.checked
+    if (isHuge) {
+      volumeList1[0].url = "https://niivue.github.io/niivue-demo-images/mni152hr.nii.gz"
+    } else {
+      volumeList1[0].url = "../images/mni152.nii.gz"
+    }
     const isAntiAlias = this.checked
     const oldCanvas = document.getElementById("gl1")
     oldCanvas.remove()
@@ -102,10 +168,12 @@
     })
     await nv1.attachToCanvas(newCanvas, isAntiAlias)
     nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+    nv1.setSliceType(nv1.sliceTypeRender)
     await nv1.loadVolumes(volumeList1)
     let cmap = await fetchJSON("../images/aal.json")
+    console.log(`For Apple Safari, frame rate influenced by "Prefer Page Rendering Updates Near 60fps"`)
+    console.log(`Resolution ${nv1.volumes[0].dims[1]}×${nv1.volumes[0].dims[2]}×${nv1.volumes[0].dims[3]}`)
     nv1.volumes[1].setColormapLabel(cmap)
-    nv1.setSliceType(nv1.sliceTypeMultiplanar)
     nv1.volumes[0].colorbarVisible = false; //hide colorbar for anatomical scan
     nv1.volumes[1].colorbarVisible = false; //hide colorbar for atlas
     nv1.opts.isColorbar = true
@@ -115,4 +183,5 @@
     statSlider.oninput()
   }
   aaCheck.onclick()
+  requestAnimationFrame(animate)
 </script>

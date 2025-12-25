@@ -32,6 +32,7 @@ npm run dev
 - [fideus](https://fideus.io/) has developed the [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/) plugins.
 - FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
 - [Galaxy](https://github.com/galaxyproject/galaxy) is a web platform for research that embeds [NiiVue](https://github.com/galaxyproject/galaxy/pull/19995)
+- [huggingface](https://github.com/huggingface/datasets/pull/7885) integrates NiiVue.
 - [The Insight Journal](https://insight-journal.org/) uses NiiVue to embed interactive illustrations
 - [ipyniivue](https://github.com/niivue/ipyniivue) allows NiiVue to be used in Jupyter Notebooks including [py.cafe](https://py.cafe/kolibril13/niivue-neuroimaging-with-python)
 - [LAMBADA (OpenBrainAtlas)](https://lambada.icm-institute.org/) – A reference [atlas](https://lambada.icm-institute.org/atlases/5) of the developing postnatal mouse brain, created using tissue clearing and light-sheet microscopy at the Paris Brain Institute (Institut du Cerveau). It uses NiiVue for 2D/3D visualization of brain structures, volume overlays, and mesh rendering.
