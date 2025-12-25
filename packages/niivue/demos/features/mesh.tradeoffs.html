@@ -10,6 +10,9 @@
   </head>
     <body>
       <header>
+        <label for="animateCheck">Animate</label>
+        <input type="checkbox" id="animateCheck"/>
+        &nbsp;
         <label for="aaCheck">AntiAlias</label>
         <input type="checkbox" id="aaCheck" checked />
         &nbsp;
@@ -84,6 +87,8 @@
         <input type="checkbox" id="statCheck" unchecked />
         &nbsp;&nbsp;&nbsp;
         <button id="aboutBtn">About</button>
+        &nbsp;
+        <span id="fpsCounter" style="margin-left: 10px; font-weight: bold;">FPS: --</span>
       </header>
       <main id="canvas-container">
         <canvas id="gl1"></canvas>
@@ -108,6 +113,34 @@
       },
     ]
     var nv1
+    let isAnimating = false
+    let azimuth = 0
+    const elevation = 15
+    let lastTime = performance.now()
+    let frameCount = 0
+    let fps = 0
+    function animate(currentTime) {
+      if (isAnimating) {
+        frameCount++
+        const elapsed = currentTime - lastTime
+        if (elapsed >= 1000) {
+          fps = Math.round((frameCount * 1000) / elapsed)
+          document.getElementById('fpsCounter').textContent = `FPS: ${fps}`
+          frameCount = 0
+          lastTime = currentTime
+        }
+        azimuth = (azimuth + 1) % 360
+        nv1.setRenderAzimuthElevation(azimuth, elevation)
+      }
+      requestAnimationFrame(animate)
+    }
+    animateCheck.onclick = function () {
+      isAnimating = this.checked
+      if (isAnimating) {
+        lastTime = performance.now()
+        frameCount = 0
+      }
+    }
     aboutBtn.onclick = async function () {
         window.alert("This page shows features that may provide poor performance on slow devices. Using anti-aliaing, high-DPI, alpha translucency and x-ray all impact performance.")
     }
@@ -213,5 +246,6 @@
       statCheck.onclick()
     }
     aaCheck.onclick()
+    requestAnimationFrame(animate)
   </script>
 </html>
