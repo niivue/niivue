@@ -1802,6 +1802,7 @@ export class Niivue {
 
         // we need to do this when we have multiple instances
         if (this.uiData.mousedown) {
+            // lag : we should try to remove if redundant
             this.drawScene()
         }
 
@@ -1821,14 +1822,18 @@ export class Niivue {
             if (tile !== this.uiData.clickedTile) {
                 return
             }
-
             // Use the active drag mode to determine how to handle mouse movement
             const activeDragMode = this.getCurrentDragMode()
 
             if (activeDragMode === DRAG_MODE.crosshair) {
                 this.mouseMove(pos.x, pos.y)
+                const isChanged = !this.mouseClick(pos.x, pos.y)
+                if (!isChanged && this.uiData.prevX === this.uiData.currX && this.uiData.prevY === this.uiData.currY) {
+                    // lag
+                    return
+                }
                 this.mouseClick(pos.x, pos.y)
-                this.drawScene()
+                // lag this.drawScene()
                 this.uiData.prevX = this.uiData.currX
                 this.uiData.prevY = this.uiData.currY
                 return
@@ -3862,11 +3867,9 @@ export class Niivue {
             currentMousePos: this.mousePos as [number, number]
         })
         this.mousePos = result.mousePos
-
         if (this.inRenderTile(result.scaledX, result.scaledY) < 0) {
             return
         }
-
         // Check if drag is significant enough to update camera
         if (!CameraController.shouldUpdateCameraRotation({ dx: result.dx, dy: result.dy })) {
             return
@@ -3879,10 +3882,14 @@ export class Niivue {
             deltaX: result.dx,
             deltaY: result.dy
         })
+        if ((this.scene.renderAzimuth = rotation.azimuth) && this.scene.renderElevation === rotation.elevation) {
+            // lag
+            return
+        }
         this.scene.renderAzimuth = rotation.azimuth
         this.scene.renderElevation = rotation.elevation
 
-        this.drawScene()
+        // lag this.drawScene()
     }
 
     /**
@@ -4462,7 +4469,6 @@ export class Niivue {
 
         await this.setGradientOpacity(this.opts.gradientOpacity)
         await this.setVolumeRenderIllumination(this.opts.gradientAmount)
-
         this.updateGLVolume()
         this.drawScene()
         this.onDocumentLoaded(document)
@@ -7515,7 +7521,7 @@ export class Niivue {
      * Supports thumbnail loading, graph interaction, 3D slice scrolling, and click-to-segment with flood fill.
      * @internal
      */
-    mouseClick(x: number, y: number, posChange = 0, isDelta = true): void {
+    mouseClick(x: number, y: number, posChange = 0, isDelta = true): boolean {
         x *= this.uiData.dpr!
         y *= this.uiData.dpr!
         this.canvas!.focus()
@@ -7524,7 +7530,7 @@ export class Niivue {
             Promise.all([this.loadVolumes(this.deferredVolumes), this.loadMeshes(this.deferredMeshes)]).catch((e) => {
                 throw e
             })
-            return
+            return true
         }
         if (this.inGraphTile(x, y)) {
             if (!this.graph.plotLTWH) {
@@ -7535,27 +7541,29 @@ export class Niivue {
             if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
                 const vol = Math.round(pos[0] * (this.volumes[0].nFrame4D! - 1))
                 this.setFrame4D(this.volumes[0].id, vol)
-                return
+                return true
             }
             if (pos[0] > 0.5 && pos[1] > 1.0) {
                 this.loadDeferred4DVolumes(this.volumes[0].id).catch((e) => {
                     throw e
                 })
             }
-            return
+            return false
         }
         if (this.inRenderTile(x, y) >= 0) {
+            if (posChange === 0) {
+                return false
+            }
             this.sliceScroll3D(posChange)
             this.drawScene()
-            return
+            return true
         }
         if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) {
-            return
+            return false
         }
 
         for (let i = 0; i < this.screenSlices.length; i++) {
             const axCorSag = this.screenSlices[i].axCorSag
-
             if (this.drawPenAxCorSag >= 0 && this.drawPenAxCorSag !== axCorSag) {
                 continue
             }
@@ -7576,7 +7584,7 @@ export class Niivue {
                         this.drawScene()
                         this.createOnLocationChange(axCorSag)
                     }
-                    return
+                    return true
                 }
 
                 const posNeg = posChange < 0 ? -1 : 1
@@ -7586,14 +7594,18 @@ export class Niivue {
                     xyz[2 - axCorSag] = posNeg
                     this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2])
                 }
-                return
+                return true
             }
 
-            if (this.opts.isForceMouseClickToVoxelCenters) {
-                this.scene.crosshairPos = vec3.clone(this.vox2frac(this.frac2vox(texFrac)))
-            } else {
-                this.scene.crosshairPos = vec3.clone(texFrac)
+            // lag
+            const nextPos = this.opts.isForceMouseClickToVoxelCenters ? this.vox2frac(this.frac2vox(texFrac)) : texFrac
+            // vec3.equals does deep component comparison
+            const isPosChanged = !vec3.equals(this.scene.crosshairPos, nextPos)
+            if (!isPosChanged && !this.opts.drawingEnabled) {
+                // lag
+                return false
             }
+            this.scene.crosshairPos = vec3.clone(nextPos)
 
             if (this.opts.drawingEnabled) {
                 const pt = this.frac2vox(this.scene.crosshairPos) as [number, number, number]
@@ -7617,7 +7629,7 @@ export class Niivue {
                     this.drawFloodFill(pt, floodFillNewColor, growMode, NaN, NaN, this.opts.floodFillNeighbors, Number.POSITIVE_INFINITY, false, this.drawBitmap, isGrowTool)
                     this.drawScene()
                     this.createOnLocationChange(axCorSag)
-                    return
+                    return true
                 } else if (this.opts.clickToSegment) {
                     if (axCorSag <= SLICE_TYPE.SAGITTAL) {
                         // Only on 2D slices
@@ -7631,7 +7643,7 @@ export class Niivue {
                     // Note: doClickToSegment handles refresh and redraw for the apply case.
                     // We still need createOnLocationChange below, but return here.
                     this.createOnLocationChange(axCorSag)
-                    return
+                    return true
                 }
 
                 // Standard Pen Drawing (if not flood fill and not clickToSegment)
@@ -7647,7 +7659,7 @@ export class Niivue {
                                 // No drawing needed, but still redraw scene and update location
                                 this.drawScene()
                                 this.createOnLocationChange(axCorSag)
-                                return
+                                return true
                             }
                             this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue)
                         }
@@ -7687,9 +7699,10 @@ export class Niivue {
             // Redraw scene & update location (happens after drawing or if drawing is disabled but click was valid)
             this.drawScene()
             this.createOnLocationChange(axCorSag)
-            return // Click handled for this slice 'i'
+            return true // Click handled for this slice 'i'
         } // End loop through screenSlices
         // If loop finishes without finding a slice, the click was outside all valid slices
+        return false
     }
 
     /**
