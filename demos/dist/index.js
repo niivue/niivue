@@ -33830,34 +33830,46 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
-			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
-			//if (grad.a < prevGrad.a)
-			//	grad.rgb = prevGrad.rgb;
-			//prevGrad = grad;
-			vec3 n = mat3(normMtx) * grad.rgb;
-			n.y = - n.y;
-			vec4 mc = vec4(texture(matCap, n.xy * 0.5 + 0.5).rgb, 1.0) * brighten;
-			mc = mix(vec4(1.0), mc, gradientAmount);
-			if (abs(samplePos.a - clipClose) > clipCloseThresh)
-				colorSample.rgb *= mc.rgb;
-			if (firstHit.a > len)
-				firstHit = samplePos;
-			backNearest = min(backNearest, samplePos.a);
-			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			int gradIdx = int(grad.a * ${gradientOpacityLutCount}.0);
-			colorSample.a *= gradientOpacity[gradIdx];
-			float lightNormDot = dot(grad.rgb, rayDir);
-			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
- 			colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
- 			float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
- 			// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
- 			// Cull voxels that are too aligned with the view direction
- 			if (viewAlign > silhouetteThreshold)
- 				colorSample.a = 0.0;
-			colorSample.rgb *= colorSample.a;
-			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
-			if ( colAcc.a > earlyTermination )
-				break;
+			grad.a = gradientOpacity[gradIdx];
+			if (grad.a > 0.0) {
+				grad.rgb = normalize(grad.rgb*2.0 - 1.0);
+				vec3 n = mat3(normMtx) * grad.rgb;
+				// compute phong ads illumination
+				const float ambient = 0.2;
+				const float diffuse = 0.8;
+				const float specular = 1.0;
+				const float shininess = 10.0;
+				vec3 l = normalize(vec3(0.0, -0.5, 0.5));
+				vec3 viewDir = vec3(0.0, 0.0, -1.0);
+				float ldn = dot(n, l);
+				float a = ambient;
+				vec3 d = abs(ldn) * colorSample.rgb * diffuse;
+				float s = pow(max(dot(reflect(l, n), viewDir), 0.0), shininess) * specular;
+				vec4 ads = vec4(a + d + s, 1.0);
+				ads = mix(vec4(1.0), ads, gradientAmount);
+				// highlight viewer-based edges
+				// for opacity, light direction is ray direction
+				float lightNormDot = dot(grad.rgb, rayDir);
+				// n.b. "lightNormDot" is cosTheta, "silhouettePower" is Fresnel effect exponent
+				if (abs(samplePos.a - clipClose) > clipCloseThresh)
+					colorSample.rgb *= ads.rgb;
+				if (firstHit.a > len)
+					firstHit = samplePos;
+				backNearest = min(backNearest, samplePos.a);
+				colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
+				colorSample.a *= grad.a;
+				colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
+				float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
+				// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
+				// Cull voxels that are too aligned with the view direction
+				if (viewAlign > silhouetteThreshold)
+					colorSample.a = 0.0;
+				colorSample.rgb *= colorSample.a;
+				colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+				if ( colAcc.a > earlyTermination )
+					break;
+			}
 		}
 		samplePos += deltaDir; //advance ray position
 	}
@@ -42897,8 +42909,11 @@ var Niivue = class {
       const activeDragMode = this.getCurrentDragMode();
       if (activeDragMode === 8 /* crosshair */) {
         this.mouseMove(pos.x, pos.y);
+        const isChanged = !this.mouseClick(pos.x, pos.y);
+        if (!isChanged && this.uiData.prevX === this.uiData.currX && this.uiData.prevY === this.uiData.currY) {
+          return;
+        }
         this.mouseClick(pos.x, pos.y);
-        this.drawScene();
         this.uiData.prevX = this.uiData.currX;
         this.uiData.prevY = this.uiData.currY;
         return;
@@ -44614,9 +44629,11 @@ var Niivue = class {
       deltaX: result.dx,
       deltaY: result.dy
     });
+    if ((this.scene.renderAzimuth = rotation.azimuth) && this.scene.renderElevation === rotation.elevation) {
+      return;
+    }
     this.scene.renderAzimuth = rotation.azimuth;
     this.scene.renderElevation = rotation.elevation;
-    this.drawScene();
   }
   /**
    * convert spherical AZIMUTH, ELEVATION to Cartesian
@@ -47749,7 +47766,7 @@ var Niivue = class {
       Promise.all([this.loadVolumes(this.deferredVolumes), this.loadMeshes(this.deferredMeshes)]).catch((e) => {
         throw e;
       });
-      return;
+      return true;
     }
     if (this.inGraphTile(x, y)) {
       if (!this.graph.plotLTWH) {
@@ -47759,22 +47776,25 @@ var Niivue = class {
       if (pos[0] > 0 && pos[1] > 0 && pos[0] <= 1 && pos[1] <= 1) {
         const vol = Math.round(pos[0] * (this.volumes[0].nFrame4D - 1));
         this.setFrame4D(this.volumes[0].id, vol);
-        return;
+        return true;
       }
       if (pos[0] > 0.5 && pos[1] > 1) {
         this.loadDeferred4DVolumes(this.volumes[0].id).catch((e) => {
           throw e;
         });
       }
-      return;
+      return false;
     }
     if (this.inRenderTile(x, y) >= 0) {
+      if (posChange === 0) {
+        return false;
+      }
       this.sliceScroll3D(posChange);
       this.drawScene();
-      return;
+      return true;
     }
     if (this.screenSlices.length < 1 || this.gl.canvas.height < 1 || this.gl.canvas.width < 1) {
-      return;
+      return false;
     }
     for (let i = 0; i < this.screenSlices.length; i++) {
       const axCorSag = this.screenSlices[i].axCorSag;
@@ -47795,7 +47815,7 @@ var Niivue = class {
             this.drawScene();
             this.createOnLocationChange(axCorSag);
           }
-          return;
+          return true;
         }
         const posNeg = posChange < 0 ? -1 : 1;
         const xyz = [0, 0, 0];
@@ -47803,13 +47823,14 @@ var Niivue = class {
           xyz[2 - axCorSag] = posNeg;
           this.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
         }
-        return;
+        return true;
       }
-      if (this.opts.isForceMouseClickToVoxelCenters) {
-        this.scene.crosshairPos = vec3_exports.clone(this.vox2frac(this.frac2vox(texFrac)));
-      } else {
-        this.scene.crosshairPos = vec3_exports.clone(texFrac);
+      const nextPos = this.opts.isForceMouseClickToVoxelCenters ? this.vox2frac(this.frac2vox(texFrac)) : texFrac;
+      const isPosChanged = !vec3_exports.equals(this.scene.crosshairPos, nextPos);
+      if (!isPosChanged && !this.opts.drawingEnabled) {
+        return false;
       }
+      this.scene.crosshairPos = vec3_exports.clone(nextPos);
       if (this.opts.drawingEnabled) {
         const pt = this.frac2vox(this.scene.crosshairPos);
         if (!isFinite(this.opts.penValue) || this.opts.penValue < 0 || Object.is(this.opts.penValue, -0)) {
@@ -47827,7 +47848,7 @@ var Niivue = class {
           this.drawFloodFill(pt, floodFillNewColor, growMode, NaN, NaN, this.opts.floodFillNeighbors, Number.POSITIVE_INFINITY, false, this.drawBitmap, isGrowTool);
           this.drawScene();
           this.createOnLocationChange(axCorSag);
-          return;
+          return true;
         } else if (this.opts.clickToSegment) {
           if (axCorSag <= 2 /* SAGITTAL */) {
             this.clickToSegmentIsGrowing = false;
@@ -47838,7 +47859,7 @@ var Niivue = class {
             });
           }
           this.createOnLocationChange(axCorSag);
-          return;
+          return true;
         } else {
           if (this.opts.penType === 0 /* PEN */) {
             if (isNaN(this.drawPenLocation[0])) {
@@ -47849,7 +47870,7 @@ var Niivue = class {
               if (pt[0] === this.drawPenLocation[0] && pt[1] === this.drawPenLocation[1] && pt[2] === this.drawPenLocation[2]) {
                 this.drawScene();
                 this.createOnLocationChange(axCorSag);
-                return;
+                return true;
               }
               this.drawPenLine(pt, this.drawPenLocation, this.opts.penValue);
             }
@@ -47881,8 +47902,9 @@ var Niivue = class {
       }
       this.drawScene();
       this.createOnLocationChange(axCorSag);
-      return;
+      return true;
     }
+    return false;
   }
   /**
    * Draws a 10cm ruler on a 2D slice tile based on screen FOV and slice dimensions.

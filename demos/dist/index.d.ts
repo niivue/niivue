@@ -3952,7 +3952,7 @@ declare class Niivue {
      * Supports thumbnail loading, graph interaction, 3D slice scrolling, and click-to-segment with flood fill.
      * @internal
      */
-    mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): void;
+    mouseClick(x: number, y: number, posChange?: number, isDelta?: boolean): boolean;
     /**
      * Draws a 10cm ruler on a 2D slice tile based on screen FOV and slice dimensions.
      * @internal
