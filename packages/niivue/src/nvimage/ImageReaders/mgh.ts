@@ -232,8 +232,11 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     const ca = reader.getFloat32(82, false)
     const cs = reader.getFloat32(86, false)
 
-    if (version !== 1) {
+    if (version !== 1 && version !== 257) {
         log.warn(`Unexpected MGH version: ${version}.`)
+    }
+    if (version === 257) {
+        hdr.intent_code = 1002
     }
     if (width <= 0 || height <= 0 || depth <= 0) {
         log.error(`Invalid MGH dimensions: ${width}x${height}x${depth}`)
