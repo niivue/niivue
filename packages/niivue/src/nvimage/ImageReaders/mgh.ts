@@ -326,7 +326,7 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     const expectedBytes = nVoxels * nBytesPerVoxel
     // Return only the raw image data buffer
     const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes)
-    if (isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
+    if (version === 257 || isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
         return optimizeFreeSurferLabels(hdr, imgRaw)
     }
     return imgRaw
