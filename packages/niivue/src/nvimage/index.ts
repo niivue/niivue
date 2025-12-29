@@ -344,7 +344,7 @@ export class NVImage {
                 break
             case NVIMAGE_TYPE.MGH:
             case NVIMAGE_TYPE.MGZ:
-                imgRaw = await ImageReaders.Mgh.readMgh(newImg, dataBuffer as ArrayBuffer)
+                imgRaw = await ImageReaders.Mgh.readMgh(newImg, dataBuffer as ArrayBuffer, name)
                 if (imgRaw === null) {
                     throw new Error(`Failed to parse MGH/MGZ file ${name}`)
                 }
