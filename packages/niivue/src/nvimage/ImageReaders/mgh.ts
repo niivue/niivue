@@ -180,9 +180,10 @@ export function isFreeSurferLabelImage(raw: ArrayBuffer, hdr: NIFTI1 | NIFTI2, e
  * and returning the raw image data buffer.
  * @param nvImage - The NVImage instance whose header will be modified.
  * @param buffer - ArrayBuffer containing the MGH/MGZ file data.
+ * @param name - optional name of image, allowing label detection.
  * @returns Promise resolving to the imgRaw ArrayBuffer or null on critical error.
  */
-export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<ArrayBuffer | null> {
+export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer, name: string = ''): Promise<ArrayBuffer | null> {
     if (!nvImage.hdr) {
         log.debug('readMgh called before nvImage.hdr was initialized. Creating default.')
         nvImage.hdr = new NIFTI1() // Ensure header object exists
@@ -232,7 +233,7 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     const ca = reader.getFloat32(82, false)
     const cs = reader.getFloat32(86, false)
 
-    if (version !== 1) {
+    if (version !== 1 && version !== 257) {
         log.warn(`Unexpected MGH version: ${version}.`)
     }
     if (width <= 0 || height <= 0 || depth <= 0) {
@@ -323,7 +324,70 @@ export async function readMgh(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     const expectedBytes = nVoxels * nBytesPerVoxel
     // Return only the raw image data buffer
     const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes)
-    if (isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
+    // label detection based on:
+    // https://github.com/pwighton/mgz-optimize/blob/main/mgz_optimize.py
+    // option 1: detect label by version number
+    let isLabel = version === 257
+    // option 2: detect label by filename
+    if (!isLabel) {
+        const mgLabelFiles = [
+            'aparc.DKTatlas+aseg.deep.mg',
+            'aparc+aseg.mg',
+            'aparc.DKTatlas+aseg.mg',
+            'aparc.a2005s+aseg.mg',
+            'aparc.a2009s+aseg.mg',
+            'apas+head.mg',
+            'apas+head.samseg.mg',
+            'aseg.auto.mg',
+            'aseg.auto_noCCseg.mg',
+            'aseg.mg',
+            'aseg.presurf.hypos.mg',
+            'aseg.presurf.mg',
+            'brainstemSsLabels.v13.FSvoxelSpace.mg',
+            'brainstemSsLabels.v13.mg',
+            'ctrl_pts.mg',
+            'filled.auto.mg',
+            'filled.mg',
+            'gtmseg.mg',
+            'hypothalamic_subunits_seg.v1.mg',
+            'lh.hippoAmygLabels-T1.v22.CA.FSvoxelSpace.mg',
+            'lh.hippoAmygLabels-T1.v22.CA.mg',
+            'lh.hippoAmygLabels-T1.v22.FS60.FSvoxelSpace.mg',
+            'lh.hippoAmygLabels-T1.v22.FS60.mg',
+            'lh.hippoAmygLabels-T1.v22.FSvoxelSpace.mg',
+            'lh.hippoAmygLabels-T1.v22.HBT.FSvoxelSpace.mg',
+            'lh.hippoAmygLabels-T1.v22.HBT.mg',
+            'lh.hippoAmygLabels-T1.v22.mg',
+            'lh.ribbon.mg',
+            'mca-dura.mg',
+            'rh.hippoAmygLabels-T1.v22.CA.FSvoxelSpace.mg',
+            'rh.hippoAmygLabels-T1.v22.CA.mg',
+            'rh.hippoAmygLabels-T1.v22.FS60.FSvoxelSpace.mg',
+            'rh.hippoAmygLabels-T1.v22.FS60.mg',
+            'rh.hippoAmygLabels-T1.v22.FSvoxelSpace.mg',
+            'rh.hippoAmygLabels-T1.v22.HBT.FSvoxelSpace.mg',
+            'rh.hippoAmygLabels-T1.v22.HBT.mg',
+            'rh.hippoAmygLabels-T1.v22.mg',
+            'rh.ribbon.mg',
+            'ribbon.mg',
+            'synthseg.mg',
+            'synthseg.rca.mg',
+            'vsinus.mg',
+            'subcort.mask.1mm.mg',
+            'subcort.mask.mg',
+            'surface.defects.mg',
+            'ThalamicNuclei.v13.T1.FSvoxelSpace.mg',
+            'ThalamicNuclei.v13.T1.mg',
+            'wm.asegedit.mg',
+            'wmparc.mg'
+        ]
+        isLabel = mgLabelFiles.some((label) => name.includes(label))
+    }
+    // option 3: detect label using MGH footer
+    if (!isLabel) {
+        isLabel = isFreeSurferLabelImage(raw, hdr, expectedBytes)
+    }
+    if (isLabel) {
         return optimizeFreeSurferLabels(hdr, imgRaw)
     }
     return imgRaw
