@@ -23443,7 +23443,7 @@ function isFreeSurferLabelImage(raw, hdr, expectedBytes) {
   const tag3 = readTag(new DataView(raw), footerStart, footerLength, 3);
   return tag3.includes("mri_label2vol");
 }
-async function readMgh(nvImage, buffer) {
+async function readMgh(nvImage, buffer, name = "") {
   if (!nvImage.hdr) {
     log.debug("readMgh called before nvImage.hdr was initialized. Creating default.");
     nvImage.hdr = new NIFTI1();
@@ -23486,7 +23486,7 @@ async function readMgh(nvImage, buffer) {
   const cr = reader.getFloat32(78, false);
   const ca = reader.getFloat32(82, false);
   const cs = reader.getFloat32(86, false);
-  if (version2 !== 1) {
+  if (version2 !== 1 && version2 !== 257) {
     log.warn(`Unexpected MGH version: ${version2}.`);
   }
   if (width <= 0 || height <= 0 || depth <= 0) {
@@ -23565,7 +23565,65 @@ async function readMgh(nvImage, buffer) {
   const nVoxels = width * height * depth * hdr.dims[4];
   const expectedBytes = nVoxels * nBytesPerVoxel;
   const imgRaw = raw.slice(hdr.vox_offset, hdr.vox_offset + expectedBytes);
-  if (isFreeSurferLabelImage(raw, hdr, expectedBytes)) {
+  let isLabel = version2 === 257;
+  if (!isLabel) {
+    const mgLabelFiles = [
+      "aparc.DKTatlas+aseg.deep.mg",
+      "aparc+aseg.mg",
+      "aparc.DKTatlas+aseg.mg",
+      "aparc.a2005s+aseg.mg",
+      "aparc.a2009s+aseg.mg",
+      "apas+head.mg",
+      "apas+head.samseg.mg",
+      "aseg.auto.mg",
+      "aseg.auto_noCCseg.mg",
+      "aseg.mg",
+      "aseg.presurf.hypos.mg",
+      "aseg.presurf.mg",
+      "brainstemSsLabels.v13.FSvoxelSpace.mg",
+      "brainstemSsLabels.v13.mg",
+      "ctrl_pts.mg",
+      "filled.auto.mg",
+      "filled.mg",
+      "gtmseg.mg",
+      "hypothalamic_subunits_seg.v1.mg",
+      "lh.hippoAmygLabels-T1.v22.CA.FSvoxelSpace.mg",
+      "lh.hippoAmygLabels-T1.v22.CA.mg",
+      "lh.hippoAmygLabels-T1.v22.FS60.FSvoxelSpace.mg",
+      "lh.hippoAmygLabels-T1.v22.FS60.mg",
+      "lh.hippoAmygLabels-T1.v22.FSvoxelSpace.mg",
+      "lh.hippoAmygLabels-T1.v22.HBT.FSvoxelSpace.mg",
+      "lh.hippoAmygLabels-T1.v22.HBT.mg",
+      "lh.hippoAmygLabels-T1.v22.mg",
+      "lh.ribbon.mg",
+      "mca-dura.mg",
+      "rh.hippoAmygLabels-T1.v22.CA.FSvoxelSpace.mg",
+      "rh.hippoAmygLabels-T1.v22.CA.mg",
+      "rh.hippoAmygLabels-T1.v22.FS60.FSvoxelSpace.mg",
+      "rh.hippoAmygLabels-T1.v22.FS60.mg",
+      "rh.hippoAmygLabels-T1.v22.FSvoxelSpace.mg",
+      "rh.hippoAmygLabels-T1.v22.HBT.FSvoxelSpace.mg",
+      "rh.hippoAmygLabels-T1.v22.HBT.mg",
+      "rh.hippoAmygLabels-T1.v22.mg",
+      "rh.ribbon.mg",
+      "ribbon.mg",
+      "synthseg.mg",
+      "synthseg.rca.mg",
+      "vsinus.mg",
+      "subcort.mask.1mm.mg",
+      "subcort.mask.mg",
+      "surface.defects.mg",
+      "ThalamicNuclei.v13.T1.FSvoxelSpace.mg",
+      "ThalamicNuclei.v13.T1.mg",
+      "wm.asegedit.mg",
+      "wmparc.mg"
+    ];
+    isLabel = mgLabelFiles.some((label) => name.includes(label));
+  }
+  if (!isLabel) {
+    isLabel = isFreeSurferLabelImage(raw, hdr, expectedBytes);
+  }
+  if (isLabel) {
     return optimizeFreeSurferLabels(hdr, imgRaw);
   }
   return imgRaw;
@@ -27586,7 +27644,7 @@ var NVImage = class _NVImage {
         break;
       case NVIMAGE_TYPE.MGH:
       case NVIMAGE_TYPE.MGZ:
-        imgRaw = await mgh_exports.readMgh(newImg, dataBuffer);
+        imgRaw = await mgh_exports.readMgh(newImg, dataBuffer, name);
         if (imgRaw === null) {
           throw new Error(`Failed to parse MGH/MGZ file ${name}`);
         }
