@@ -51,96 +51,57 @@ jobs:
           cache: npm
           node-version: 24
 
-      - name: Install dependencies
+      - name: Install package dependencies
+        working-directory: ./packages/niivue
         run: npm ci
 
-      - name: Deterministic build; compile & generate Playwright tests
-        working-directory: packages/niivue
+      - name: Build runtime artifacts required by tests
+        working-directory: ./packages/niivue
         run: |
+          set -euo pipefail
+          # build the package artifacts that tests import (dist/index.js)
           npm run build:forTests
-          node preplaywrighttest.cjs || true
-          npx tsc --build playwright/e2e/tsconfig.json --force
 
-      - name: Install Playwright browsers (use the hoisted binary to avoid npx installing another copy)
-        working-directory: packages/niivue
+      - name: Install Playwright browsers
+        working-directory: ./packages/niivue
         run: |
-          # run the repo-root hoisted playwright binary so the collector/worker use the same module
-          ../../node_modules/.bin/playwright install --with-deps
+          set -euo pipefail
+          # install browsers for Playwright
+          npx playwright install --with-deps
 
-      - name: Snapshot tests-out BEFORE Playwright collection
-        working-directory: packages/niivue
+      - name: List Playwright tests (diagnostic) and require at least 1 test
+        working-directory: ./packages/niivue
         run: |
-          echo "=== files BEFORE ==="
-          ls -la playwright/tests-out || true
-          echo "=== mtimes BEFORE ==="
-          stat -c '%n %s %y' playwright/tests-out/* || true
-          echo "=== md5sums BEFORE ==="
-          find playwright/tests-out -type f -exec md5sum {} \; > /tmp/md5_before.txt || true
-
-      - name: List Playwright tests (diagnostic) - ensure we're using the same binary
-        working-directory: packages/niivue
-        run: |
-          echo "Playwright binary:"
-          ls -la ../../node_modules/.bin/playwright || true
-          ../../node_modules/.bin/playwright --version || true
+          set -euo pipefail
+          echo "Using package-local Playwright and config to list tests"
           # produce JSON so we can inspect counts; fail if 0 tests listed
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js --list --reporter=json > /tmp/list_testsout.json 2> /tmp/playwright_collect.err || true
+          npx playwright test --config=./playwright.config.ts --list --reporter=json > /tmp/list_tests.json 2> /tmp/playwright_list.err || true
           echo "collector stderr (first 200 lines):"
-          sed -n '1,200p' /tmp/playwright_collect.err || true
+          sed -n '1,200p' /tmp/playwright_list.err || true
           echo "collected stats:"
-          jq -r '.stats' /tmp/list_testsout.json || true
-          # fail fast if no tests collected
-          expected=$(jq -r '.stats.expected // 0' /tmp/list_testsout.json)
-          skipped=$(jq -r '.stats.skipped // 0' /tmp/list_testsout.json)
-          if [ "$expected" -eq 0 ] && [ "$skipped" -eq 0 ];  then
-            echo "::error::No tests collected from playwright/tests-out — aborting."
-            cat /tmp/playwright_collect.err || true
+          jq -r '.stats' /tmp/list_tests.json || true
+
+          expected=$(jq -r '.stats.expected // 0' /tmp/list_tests.json)
+          skipped=$(jq -r '.stats.skipped // 0' /tmp/list_tests.json)
+          if [ "$expected" -eq 0 ] && [ "$skipped" -eq 0 ]; then
+            echo "::error::No tests collected from playwright/e2e — aborting."
+            cat /tmp/playwright_list.err || true
             exit 1
           fi
 
-      - name: Run Playwright tests (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        working-directory: packages/niivue
+      - name: Run Playwright tests
+        working-directory: ./packages/niivue
         run: |
           set -euo pipefail
-          echo "Using hoisted playwright binary:"
-          ls -la ../../node_modules/.bin/playwright || true
-          ../../node_modules/.bin/playwright --version
-          node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
-
-          # Run tests using the hoisted binary (guarantees same module instance in collector and worker)
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js
-
-      - name: Run Playwright tests (Non-Linux)
-        if: matrix.os != 'ubuntu-latest'
-        working-directory: packages/niivue
-        run: |
-          set -euo pipefail
-          ls -la ../../node_modules/.bin/playwright || true
-          ../../node_modules/.bin/playwright --version
-          node -e "console.log('require.resolve @playwright/test ->', require.resolve('@playwright/test'))"
-          ../../node_modules/.bin/playwright test playwright/tests-out --config=playwright.config.js
-
-      - name: Snapshot tests-out AFTER run (debug)
-        if: always()
-        working-directory: packages/niivue
-        run: |
-          echo "=== files AFTER ==="
-          ls -la playwright/tests-out || true
-          echo "=== mtimes AFTER ==="
-          stat -c '%n %s %y' playwright/tests-out/* || true
-          echo "=== md5sums AFTER ==="
-          find playwright/tests-out -type f -exec md5sum {} \; > /tmp/md5_after.txt || true
-          echo "=== diff md5 (before vs after) ==="
-          diff -u /tmp/md5_before.txt /tmp/md5_after.txt || true
+          echo "Running Playwright tests (source .ts via package-local config)"
+          npx playwright test --config=./playwright.config.ts
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report-${{ matrix.os }}
-          path: playwright-report/
+          path: packages/niivue/playwright-report/
           retention-days: 30
-
 
   build-demos-dry-run:
     runs-on: ubuntu-latest
