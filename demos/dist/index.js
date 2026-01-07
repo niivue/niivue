@@ -29020,19 +29020,8 @@ var NVDocument = class _NVDocument {
         dpv: mesh.dpv,
         meshShaderIndex: mesh.meshShaderIndex,
         layers: mesh.layers.map((layer) => ({
-          values: layer.values,
-          nFrame4D: layer.nFrame4D,
-          frame4D: 0,
-          outlineBorder: layer.outlineBorder,
-          global_min: layer.global_min,
-          global_max: layer.global_max,
-          cal_min: layer.cal_min,
-          cal_max: layer.cal_max,
-          opacity: layer.opacity,
-          colormap: layer.colormap,
-          colormapNegative: layer.colormapNegative,
-          colormapLabel: layer.colormapLabel,
-          useNegativeCmap: layer.useNegativeCmap
+          ...layer
+          // rename colormap to colorMap for backwards compatibility
         })),
         hasConnectome: mesh.hasConnectome,
         edgeColormap: mesh.edgeColormap,
