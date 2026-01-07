@@ -19,6 +19,7 @@
     <button id="clear">Clear</button>
     <button id="update">Update</button>
     <button id="info">Info</button>
+    <button id="toggleLegend">Toggle Legend</button>
   </header>
   <main id="canvas-container">
     <canvas id="gl1"></canvas>
@@ -31,6 +32,12 @@
       console.log("document on save", nv1.document);
       
       nv1.saveDocument("atlas.nvd");      
+    }
+
+    toggleLegend.onclick = function () {
+      nv1.opts.showLegend = !nv1.opts.showLegend;
+      // nv1.updateGLVolume();
+      nv1.drawScene();
     }
 
     clear.onclick = async function () {      
@@ -49,6 +56,9 @@
       for(const vol of nv1.volumes) {
         console.log('vol', vol);
       }
+      for(const mesh of nv1.meshes) {
+        console.log('mesh', mesh);
+      }
     }
     var volumeList1 = [
       { url: "../images/mni152.nii.gz" }, 
@@ -57,7 +67,8 @@
       backColor: [0, 0, 0, 1],
       show3Dcrosshair: true,
       onLocationChange: handleLocationChange,
-      onDocumentLoaded: handleDocumentLoaded
+      onDocumentLoaded: handleDocumentLoaded,
+      showLegend: true,
     };
     async function fetchJSON(fnm) {
       const response = await fetch(fnm)
@@ -102,7 +113,7 @@
       },
       { url: "../images/CIT168.mz3", rgba255: [0, 0, 255, 255] },
     ])
-    nv1.opts.showLegend = false
+    // nv1.opts.showLegend = falsea
     nv1.setClipPlane([-0.12, 180, 40]);
     nv1.setRenderAzimuthElevation(230,15)
     nv1.setSliceType(nv1.sliceTypeMultiplanar);
