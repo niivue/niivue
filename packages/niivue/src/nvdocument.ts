@@ -912,8 +912,8 @@ export class NVDocument {
                 dpv: mesh.dpv,
                 meshShaderIndex: mesh.meshShaderIndex,
                 layers: mesh.layers.map((layer) => ({
-                   ...layer
-                   // rename colormap to colorMap for backwards compatibility
+                    ...layer
+                    // rename colormap to colorMap for backwards compatibility
                 })),
                 hasConnectome: mesh.hasConnectome,
                 edgeColormap: mesh.edgeColormap,
