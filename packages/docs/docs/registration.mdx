@@ -1,0 +1,205 @@
+---
+title: Manual Registration
+sidebar_position: 17
+---
+
+import { RegistrationDemo } from '../src/components/RegistrationDemo';
+import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
+
+Manual image registration allows users to align two volumes by applying transformations (translation, rotation, and scale) to one volume relative to another. A key use case is aligning in-vivo scans with ex-vivo high-resolution images of the same tissue. Ex-vivo imaging provides exceptional anatomical detail but occurs after tissue extraction and fixation, which can cause geometric distortions.
+
+NiiVue provides a simple API for modifying a volume's affine matrix at runtime, enabling real-time visual feedback as the user adjusts the alignment. The interactive demo below illustrates the concept using example images (these are only for illustration purposes. Ideally you would use data that actually requires manual registration).
+
+<NiivueBrowserWrapper>
+  <RegistrationDemo />
+</NiivueBrowserWrapper>
+
+## The Affine Matrix
+
+The affine matrix is a 4x4 transformation matrix that defines how voxel coordinates map to world (scanner/RAS) coordinates. By modifying this matrix, you can translate, rotate, and scale a volume in 3D space.
+
+```javascript
+// Example affine matrix (4x4)
+const affine = [
+  [1, 0, 0, -90],   // row 0: X rotation/scale components + X translation
+  [0, 1, 0, -126],  // row 1: Y rotation/scale components + Y translation
+  [0, 0, 1, -72],   // row 2: Z rotation/scale components + Z translation
+  [0, 0, 0, 1]
+];
+```
+
+## Getting and Setting the Affine
+
+You can retrieve and modify a volume's affine matrix using these methods:
+
+```javascript
+// Get a deep copy of the current affine matrix
+const affine = nv.getVolumeAffine(volumeIndex);
+
+// Modify the affine (e.g., translate 10mm in X)
+affine[0][3] += 10;
+
+// Apply the modified affine
+nv.setVolumeAffine(volumeIndex, affine);
+```
+
+## Using Transforms
+
+For most registration tasks, it's easier to work with decomposed transforms (translation, rotation, scale) rather than manipulating the affine matrix directly. NiiVue provides utility functions and methods for this approach.
+
+### The AffineTransform Interface
+
+```javascript
+import { identityTransform } from '@niivue/niivue';
+
+// An AffineTransform has three components:
+const transform = {
+  translation: [0, 0, 0],  // X, Y, Z in millimeters
+  rotation: [0, 0, 0],     // Euler angles in degrees (X, Y, Z order)
+  scale: [1, 1, 1]         // Scale factors for each axis
+};
+
+// You can start with the identity transform (no change)
+console.log(identityTransform);
+// { translation: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }
+```
+
+### Applying a Transform
+
+Use `applyVolumeTransform()` to apply a transform to a volume. The transform is applied in world coordinate space (translation happens after rotation and scale):
+
+```javascript
+// Rotate overlay 15 degrees around Y axis and translate 5mm in X
+nv.applyVolumeTransform(1, {
+  translation: [5, 0, 0],   // 5mm right
+  rotation: [0, 15, 0],     // 15 degrees around Y
+  scale: [1, 1, 1]          // no scaling
+});
+```
+
+### Resetting to Original
+
+Each volume stores its original affine matrix when loaded. You can reset to this state:
+
+```javascript
+// Reset overlay (volume index 1) to original position
+nv.resetVolumeAffine(1);
+```
+
+## Utility Functions
+
+NiiVue exports several utility functions for working with affine matrices:
+
+```javascript
+import {
+  copyAffine,           // Deep copy a 2D affine array
+  createTransformMatrix, // Create mat4 from AffineTransform
+  multiplyAffine,       // Apply mat4 transform to affine
+  arrayToMat4,          // Convert 2D array to gl-matrix mat4
+  mat4ToArray,          // Convert mat4 back to 2D array
+  transformsEqual       // Compare two transforms
+} from '@niivue/niivue';
+
+// Deep copy an affine matrix
+const affineCopy = copyAffine(originalAffine);
+
+// Compare transforms with epsilon tolerance
+const areEqual = transformsEqual(transform1, transform2, 0.001);
+```
+
+## Building a Registration UI
+
+Here's a complete example of implementing manual registration with a slider-based UI:
+
+```javascript
+import { Niivue, copyAffine } from '@niivue/niivue';
+
+// Initialize NiiVue with two volumes
+const nv = new Niivue();
+await nv.attachTo('gl1');
+await nv.loadVolumes([
+  { url: 'underlay.nii.gz', colormap: 'gray' },
+  { url: 'overlay.nii.gz', colormap: 'hot', opacity: 0.5 }
+]);
+
+// Store the original affine of the overlay
+let originalAffine = nv.getVolumeAffine(1);
+
+// Current cumulative transform
+let currentTransform = {
+  translation: [0, 0, 0],
+  rotation: [0, 0, 0],
+  scale: [1, 1, 1]
+};
+
+// Function to apply transform (called on slider change)
+function updateTransform(newTransform) {
+  currentTransform = newTransform;
+
+  // Reset to original first (for cumulative transforms)
+  nv.volumes[1].hdr.affine = copyAffine(originalAffine);
+  nv.volumes[1].calculateRAS();
+
+  // Apply the cumulative transform
+  nv.applyVolumeTransform(1, currentTransform);
+}
+
+// Example: Connect to a slider for X translation
+document.getElementById('xTranslate').oninput = (e) => {
+  currentTransform.translation[0] = parseFloat(e.target.value);
+  updateTransform(currentTransform);
+};
+
+// Reset function
+function resetRegistration() {
+  currentTransform = {
+    translation: [0, 0, 0],
+    rotation: [0, 0, 0],
+    scale: [1, 1, 1]
+  };
+  nv.resetVolumeAffine(1);
+  originalAffine = nv.getVolumeAffine(1);
+}
+```
+
+## Low-Level API
+
+For more control, you can work directly with the NVImage methods:
+
+```javascript
+// Access the volume directly
+const overlay = nv.volumes[1];
+
+// Get/set affine on the volume
+const affine = overlay.getAffine();
+overlay.setAffine(modifiedAffine);
+
+// Apply transform to volume (without auto-updating scene)
+overlay.applyTransform(transform);
+
+// Reset to original
+overlay.resetAffine();
+
+// After any direct modification, update the scene manually
+nv.updateGLVolume();
+```
+
+## Tips for Manual Registration
+
+1. **Start with translation**: Align the centers of the images first before applying rotations.
+
+2. **Use multiplanar view**: The multiplanar view (axial, coronal, sagittal) helps you assess alignment in all three planes simultaneously.
+
+3. **Adjust overlay opacity**: Setting the overlay opacity to 0.5-0.7 makes it easier to see both volumes during alignment.
+
+4. **Save your transform**: Store the final transform values so you can reapply them later or use them in processing pipelines.
+
+```javascript
+// Save transform for later use
+const savedTransform = JSON.stringify(currentTransform);
+localStorage.setItem('registrationTransform', savedTransform);
+
+// Restore transform
+const loaded = JSON.parse(localStorage.getItem('registrationTransform'));
+updateTransform(loaded);
+```
