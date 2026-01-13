@@ -60,6 +60,7 @@ import {
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '@/nvlabel'
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
+import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
 import {
@@ -91,6 +92,7 @@ export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
 
 export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
+export * from '@/nvimage/affineUtils'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '@/nvdocument'
 export { NVUtilities } from '@/nvutilities'
@@ -4192,6 +4194,74 @@ export class Niivue {
      */
     setOpacity(volIdx: number, newOpacity: number): void {
         VolumeManager.setOpacity(this.volumes, volIdx, newOpacity)
+        this.updateGLVolume()
+    }
+
+    /**
+     * Get the current affine matrix of a volume.
+     * @param volIdx - index of volume (0 = base image, 1+ = overlays)
+     * @returns A deep copy of the 4x4 affine matrix as a 2D array (row-major)
+     * @example
+     * const affine = niivue.getVolumeAffine(1) // get affine of first overlay
+     */
+    getVolumeAffine(volIdx: number): number[][] {
+        if (volIdx < 0 || volIdx >= this.volumes.length) {
+            throw new Error(`Volume index ${volIdx} out of range`)
+        }
+        return this.volumes[volIdx].getAffine()
+    }
+
+    /**
+     * Set the affine matrix of a volume and update the scene.
+     * @param volIdx - index of volume to modify (0 = base image, 1+ = overlays)
+     * @param affine - new 4x4 affine matrix as a 2D array (row-major)
+     * @example
+     * // Shift volume 10mm in X direction
+     * const affine = niivue.getVolumeAffine(1)
+     * affine[0][3] += 10
+     * niivue.setVolumeAffine(1, affine)
+     */
+    setVolumeAffine(volIdx: number, affine: number[][]): void {
+        if (volIdx < 0 || volIdx >= this.volumes.length) {
+            throw new Error(`Volume index ${volIdx} out of range`)
+        }
+        this.volumes[volIdx].setAffine(affine)
+        this.updateGLVolume()
+    }
+
+    /**
+     * Apply a transform (translation, rotation, scale) to a volume's affine and update the scene.
+     * Useful for manual image registration between volumes.
+     * @param volIdx - index of volume to modify (0 = base image, 1+ = overlays)
+     * @param transform - transform to apply with translation (mm), rotation (degrees), and scale
+     * @example
+     * // Rotate overlay 15 degrees around Y axis and translate 5mm in X
+     * niivue.applyVolumeTransform(1, {
+     *   translation: [5, 0, 0],
+     *   rotation: [0, 15, 0],
+     *   scale: [1, 1, 1]
+     * })
+     * @see {@link https://niivue.com/demos/features/manual.registration.html | live demo usage}
+     */
+    applyVolumeTransform(volIdx: number, transform: AffineTransform): void {
+        if (volIdx < 0 || volIdx >= this.volumes.length) {
+            throw new Error(`Volume index ${volIdx} out of range`)
+        }
+        this.volumes[volIdx].applyTransform(transform)
+        this.updateGLVolume()
+    }
+
+    /**
+     * Reset a volume's affine matrix to its original state when first loaded.
+     * @param volIdx - index of volume to reset (0 = base image, 1+ = overlays)
+     * @example
+     * niivue.resetVolumeAffine(1) // reset overlay to original position
+     */
+    resetVolumeAffine(volIdx: number): void {
+        if (volIdx < 0 || volIdx >= this.volumes.length) {
+            throw new Error(`Volume index ${volIdx} out of range`)
+        }
+        this.volumes[volIdx].resetAffine()
         this.updateGLVolume()
     }
 

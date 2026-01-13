@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Manual Registration</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <style>
+      .container {
+        display: flex;
+        flex: 1;
+        gap: 10px;
+      }
+      .viewer-container {
+        flex: 1;
+        position: relative;
+        background: #000;
+      }
+      .gizmo-panel {
+        width: 280px;
+        background: #303030;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        border-radius: 8px;
+      }
+      .gizmo-title {
+        font-size: 14px;
+        font-weight: bold;
+        color: #fff;
+        margin: 0;
+      }
+      .mode-buttons {
+        display: flex;
+        gap: 5px;
+      }
+      .mode-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 4px;
+        background: #505050;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.2s;
+      }
+      .mode-btn:hover {
+        background: #606060;
+      }
+      .mode-btn.active {
+        background: #7a7;
+        color: #fff;
+      }
+      .gizmo-svg-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #252525;
+        border-radius: 8px;
+        padding: 10px;
+      }
+      .gizmo-svg {
+        cursor: default;
+      }
+      .gizmo-axis {
+        cursor: grab;
+      }
+      .gizmo-axis:active {
+        cursor: grabbing;
+      }
+      .transform-values {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .transform-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .transform-label {
+        width: 70px;
+        font-size: 12px;
+        color: #aaa;
+      }
+      .transform-inputs {
+        display: flex;
+        gap: 4px;
+        flex: 1;
+      }
+      .transform-input {
+        width: 55px;
+        padding: 4px 6px;
+        border: 1px solid #555;
+        border-radius: 3px;
+        background: #404040;
+        color: #fff;
+        font-size: 12px;
+        text-align: center;
+      }
+      .transform-input:focus {
+        outline: none;
+        border-color: #7a7;
+      }
+      .axis-label {
+        font-size: 10px;
+        color: #888;
+        width: 55px;
+        text-align: center;
+      }
+      .axis-labels {
+        display: flex;
+        gap: 4px;
+        margin-left: 78px;
+      }
+      .action-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .action-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.2s;
+      }
+      .reset-btn {
+        background: #664;
+        color: #fff;
+      }
+      .reset-btn:hover {
+        background: #885;
+      }
+      .download-btn {
+        background: #466;
+        color: #fff;
+      }
+      .download-btn:hover {
+        background: #588;
+      }
+      .gizmo-hint {
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        margin-top: 5px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+      header label {
+        font-size: 13px;
+      }
+      .volume-select {
+        padding: 6px 10px;
+        border-radius: 4px;
+        border: 1px solid #555;
+        background: #404040;
+        color: #fff;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label>
+        Target Volume:
+        <select id="volumeSelect" class="volume-select">
+          <option value="1">Overlay (FLAIR)</option>
+          <option value="0">Underlay (mni152)</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="showOverlay" checked />
+        Show Overlay
+      </label>
+    </header>
+    <main class="container">
+      <div class="viewer-container">
+        <canvas id="gl1"></canvas>
+      </div>
+      <div class="gizmo-panel">
+        <p class="gizmo-title">Transform Gizmo</p>
+
+        <div class="mode-buttons">
+          <button class="mode-btn active" id="btnTranslate">Move</button>
+          <button class="mode-btn" id="btnRotate">Rotate</button>
+          <button class="mode-btn" id="btnScale">Scale</button>
+        </div>
+
+        <div class="gizmo-svg-container">
+          <svg id="gizmoSvg" class="gizmo-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
+        </div>
+
+        <p class="gizmo-hint" id="gizmoHint">Drag arrows to move</p>
+
+        <div class="transform-values">
+          <div class="axis-labels">
+            <span class="axis-label">X</span>
+            <span class="axis-label">Y</span>
+            <span class="axis-label">Z</span>
+          </div>
+          <div class="transform-row">
+            <span class="transform-label">Translation</span>
+            <div class="transform-inputs">
+              <input type="number" class="transform-input" id="tx" value="0" step="0.5" />
+              <input type="number" class="transform-input" id="ty" value="0" step="0.5" />
+              <input type="number" class="transform-input" id="tz" value="0" step="0.5" />
+            </div>
+          </div>
+          <div class="transform-row">
+            <span class="transform-label">Rotation</span>
+            <div class="transform-inputs">
+              <input type="number" class="transform-input" id="rx" value="0" step="1" />
+              <input type="number" class="transform-input" id="ry" value="0" step="1" />
+              <input type="number" class="transform-input" id="rz" value="0" step="1" />
+            </div>
+          </div>
+          <div class="transform-row">
+            <span class="transform-label">Scale</span>
+            <div class="transform-inputs">
+              <input type="number" class="transform-input" id="sx" value="1" step="0.01" />
+              <input type="number" class="transform-input" id="sy" value="1" step="0.01" />
+              <input type="number" class="transform-input" id="sz" value="1" step="0.01" />
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="action-btn reset-btn" id="resetBtn">Reset Transform</button>
+          <button class="action-btn download-btn" id="downloadBtn">Download</button>
+        </div>
+      </div>
+    </main>
+    <footer id="location">&nbsp;</footer>
+
+    <script type="module">
+      import * as niivue from "../dist/index.js"
+
+      // ============================================================
+      // Transform Gizmo Class (Vanilla JS)
+      // ============================================================
+      class TransformGizmo {
+        constructor(svgElement, options = {}) {
+          this.svg = svgElement
+          this.size = 200
+          this.center = this.size / 2
+          this.axisLength = this.size * 0.35
+          this.arrowSize = 10
+
+          this.mode = 'translate' // 'translate' | 'rotate' | 'scale'
+          this.transform = {
+            translation: [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: [1, 1, 1]
+          }
+
+          this.onTransformChange = options.onTransformChange || (() => {})
+
+          this.activeAxis = null
+          this.hoveredAxis = null
+          this.dragStart = null
+          this.initialTransform = null
+
+          // Axis colors
+          this.axisColors = { x: '#ff4444', y: '#44cc44', z: '#4488ff' }
+          this.axisHoverColors = { x: '#ff8888', y: '#88ee88', z: '#88bbff' }
+
+          // Sensitivity per pixel
+          this.sensitivity = {
+            translate: 0.5,
+            rotate: 0.5,
+            scale: 0.005
+          }
+
+          this.render()
+          this.attachEvents()
+        }
+
+        setMode(mode) {
+          this.mode = mode
+          this.render()
+        }
+
+        setTransform(transform) {
+          this.transform = {
+            translation: [...transform.translation],
+            rotation: [...transform.rotation],
+            scale: [...transform.scale]
+          }
+        }
+
+        getAxisEndpoint(axis) {
+          switch (axis) {
+            case 'x': return { x: this.center + this.axisLength, y: this.center }
+            case 'y': return { x: this.center, y: this.center - this.axisLength }
+            case 'z': return { x: this.center + this.axisLength * 0.6, y: this.center + this.axisLength * 0.6 }
+          }
+        }
+
+        render() {
+          this.svg.innerHTML = ''
+
+          // Center origin marker
+          const centerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+          centerCircle.setAttribute('cx', this.center)
+          centerCircle.setAttribute('cy', this.center)
+          centerCircle.setAttribute('r', 6)
+          centerCircle.setAttribute('fill', '#888')
+          this.svg.appendChild(centerCircle)
+
+          // Render rotation arcs if in rotate mode
+          if (this.mode === 'rotate') {
+            this.renderRotationArcs()
+          }
+
+          // Render axes (z first so x and y are on top)
+          ['z', 'y', 'x'].forEach(axis => this.renderAxis(axis))
+        }
+
+        renderAxis(axis) {
+          const endpoint = this.getAxisEndpoint(axis)
+          const isActive = this.activeAxis === axis
+          const isHovered = this.hoveredAxis === axis
+          const color = (isActive || isHovered) ? this.axisHoverColors[axis] : this.axisColors[axis]
+
+          const dx = endpoint.x - this.center
+          const dy = endpoint.y - this.center
+          const len = Math.sqrt(dx * dx + dy * dy)
+          const nx = dx / len
+          const ny = dy / len
+
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+          g.setAttribute('class', 'gizmo-axis')
+          g.dataset.axis = axis
+
+          // Axis line
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+          line.setAttribute('x1', this.center)
+          line.setAttribute('y1', this.center)
+          line.setAttribute('x2', endpoint.x - nx * this.arrowSize)
+          line.setAttribute('y2', endpoint.y - ny * this.arrowSize)
+          line.setAttribute('stroke', color)
+          line.setAttribute('stroke-width', (isActive || isHovered) ? 4 : 3)
+          line.setAttribute('stroke-linecap', 'round')
+          g.appendChild(line)
+
+          // Arrowhead
+          const arrowBase1 = {
+            x: endpoint.x - nx * this.arrowSize - ny * (this.arrowSize / 2),
+            y: endpoint.y - ny * this.arrowSize + nx * (this.arrowSize / 2)
+          }
+          const arrowBase2 = {
+            x: endpoint.x - nx * this.arrowSize + ny * (this.arrowSize / 2),
+            y: endpoint.y - ny * this.arrowSize - nx * (this.arrowSize / 2)
+          }
+
+          const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
+          arrow.setAttribute('points', `${endpoint.x},${endpoint.y} ${arrowBase1.x},${arrowBase1.y} ${arrowBase2.x},${arrowBase2.y}`)
+          arrow.setAttribute('fill', color)
+          g.appendChild(arrow)
+
+          // Invisible hit area
+          const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+          hitArea.setAttribute('x1', this.center)
+          hitArea.setAttribute('y1', this.center)
+          hitArea.setAttribute('x2', endpoint.x)
+          hitArea.setAttribute('y2', endpoint.y)
+          hitArea.setAttribute('stroke', 'transparent')
+          hitArea.setAttribute('stroke-width', 20)
+          hitArea.setAttribute('stroke-linecap', 'round')
+          g.appendChild(hitArea)
+
+          // Axis label
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+          text.setAttribute('x', endpoint.x + nx * 15)
+          text.setAttribute('y', endpoint.y + ny * 15)
+          text.setAttribute('fill', color)
+          text.setAttribute('font-size', '14')
+          text.setAttribute('font-weight', 'bold')
+          text.setAttribute('text-anchor', 'middle')
+          text.setAttribute('dominant-baseline', 'middle')
+          text.textContent = axis.toUpperCase()
+          g.appendChild(text)
+
+          this.svg.appendChild(g)
+        }
+
+        renderRotationArcs() {
+          const arcRadius = this.axisLength * 0.6
+
+          const renderArc = (axis, startAngle, endAngle, transform) => {
+            const isActive = this.activeAxis === axis
+            const isHovered = this.hoveredAxis === axis
+            const color = (isActive || isHovered) ? this.axisHoverColors[axis] : this.axisColors[axis]
+
+            const startRad = (startAngle * Math.PI) / 180
+            const endRad = (endAngle * Math.PI) / 180
+
+            const startX = this.center + arcRadius * Math.cos(startRad)
+            const startY = this.center + arcRadius * Math.sin(startRad)
+            const endX = this.center + arcRadius * Math.cos(endRad)
+            const endY = this.center + arcRadius * Math.sin(endRad)
+
+            const largeArc = (endAngle - startAngle) > 180 ? 1 : 0
+
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+            g.setAttribute('class', 'gizmo-axis')
+            g.dataset.axis = axis
+            if (transform) g.setAttribute('transform', transform)
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+            path.setAttribute('d', `M ${startX} ${startY} A ${arcRadius} ${arcRadius} 0 ${largeArc} 1 ${endX} ${endY}`)
+            path.setAttribute('fill', 'none')
+            path.setAttribute('stroke', color)
+            path.setAttribute('stroke-width', (isActive || isHovered) ? 4 : 2)
+            path.setAttribute('stroke-linecap', 'round')
+            g.appendChild(path)
+
+            // Hit area
+            const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+            hitPath.setAttribute('d', `M ${startX} ${startY} A ${arcRadius} ${arcRadius} 0 ${largeArc} 1 ${endX} ${endY}`)
+            hitPath.setAttribute('fill', 'none')
+            hitPath.setAttribute('stroke', 'transparent')
+            hitPath.setAttribute('stroke-width', 15)
+            g.appendChild(hitPath)
+
+            this.svg.appendChild(g)
+          }
+
+          renderArc('x', -60, 60, `rotate(-90, ${this.center}, ${this.center})`)
+          renderArc('y', -60, 60, null)
+          renderArc('z', 120, 240, null)
+        }
+
+        attachEvents() {
+          this.svg.addEventListener('pointerdown', this.handlePointerDown.bind(this))
+          this.svg.addEventListener('pointermove', this.handlePointerMove.bind(this))
+          this.svg.addEventListener('pointerup', this.handlePointerUp.bind(this))
+          this.svg.addEventListener('pointerleave', this.handlePointerUp.bind(this))
+
+          // Hover effects
+          this.svg.addEventListener('mouseover', (e) => {
+            const axis = e.target.closest('.gizmo-axis')?.dataset.axis
+            if (axis && axis !== this.hoveredAxis) {
+              this.hoveredAxis = axis
+              this.render()
+            }
+          })
+          this.svg.addEventListener('mouseout', (e) => {
+            if (!e.target.closest('.gizmo-axis')) {
+              this.hoveredAxis = null
+              this.render()
+            }
+          })
+        }
+
+        handlePointerDown(e) {
+          const axisGroup = e.target.closest('.gizmo-axis')
+          if (!axisGroup) return
+
+          const axis = axisGroup.dataset.axis
+          this.activeAxis = axis
+          this.dragStart = { x: e.clientX, y: e.clientY }
+          this.initialTransform = {
+            translation: [...this.transform.translation],
+            rotation: [...this.transform.rotation],
+            scale: [...this.transform.scale]
+          }
+
+          this.svg.setPointerCapture(e.pointerId)
+          this.render()
+        }
+
+        handlePointerMove(e) {
+          if (!this.dragStart || !this.activeAxis) return
+
+          const deltaX = e.clientX - this.dragStart.x
+          const deltaY = e.clientY - this.dragStart.y
+
+          let axisDelta
+          switch (this.activeAxis) {
+            case 'x': axisDelta = deltaX; break
+            case 'y': axisDelta = -deltaY; break
+            case 'z': axisDelta = (deltaX + deltaY) / 2; break
+          }
+
+          const axisIndex = { x: 0, y: 1, z: 2 }[this.activeAxis]
+
+          switch (this.mode) {
+            case 'translate':
+              this.transform.translation[axisIndex] =
+                this.initialTransform.translation[axisIndex] + axisDelta * this.sensitivity.translate
+              break
+            case 'rotate':
+              this.transform.rotation[axisIndex] =
+                this.initialTransform.rotation[axisIndex] + axisDelta * this.sensitivity.rotate
+              break
+            case 'scale':
+              this.transform.scale[axisIndex] = Math.max(0.1,
+                this.initialTransform.scale[axisIndex] + axisDelta * this.sensitivity.scale)
+              break
+          }
+
+          this.onTransformChange(this.transform)
+        }
+
+        handlePointerUp(e) {
+          if (this.activeAxis) {
+            this.svg.releasePointerCapture(e.pointerId)
+            this.activeAxis = null
+            this.dragStart = null
+            this.initialTransform = null
+            this.render()
+          }
+        }
+      }
+
+      // ============================================================
+      // Main Application
+      // ============================================================
+
+      // State
+      let currentTransform = {
+        translation: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1]
+      }
+      let targetVolumeIndex = 1 // Default to overlay
+      let originalAffine = null
+
+      // Initialize NiiVue
+      const nv = new niivue.Niivue({
+        dragAndDropEnabled: true,
+        onLocationChange: (data) => {
+          document.getElementById('location').innerHTML = '&nbsp;&nbsp;' + data.string
+        }
+      })
+
+      await nv.attachTo('gl1')
+
+      // Load volumes
+      await nv.loadVolumes([
+        { url: '../images/mni152.nii.gz', colormap: 'gray', opacity: 1 },
+        { url: '../images/FLAIR.nii.gz', colormap: 'gray', opacity: 0.7 }
+      ])
+
+      nv.setSliceType(nv.sliceTypeMultiplanar)
+
+      // Store original affine of overlay
+      originalAffine = nv.getVolumeAffine(targetVolumeIndex)
+
+      // Initialize Gizmo
+      const gizmo = new TransformGizmo(document.getElementById('gizmoSvg'), {
+        onTransformChange: handleTransformChange
+      })
+
+      // UI Elements
+      const btnTranslate = document.getElementById('btnTranslate')
+      const btnRotate = document.getElementById('btnRotate')
+      const btnScale = document.getElementById('btnScale')
+      const gizmoHint = document.getElementById('gizmoHint')
+      const resetBtn = document.getElementById('resetBtn')
+      const downloadBtn = document.getElementById('downloadBtn')
+      const volumeSelect = document.getElementById('volumeSelect')
+      const showOverlay = document.getElementById('showOverlay')
+
+      // Transform input elements
+      const inputs = {
+        tx: document.getElementById('tx'),
+        ty: document.getElementById('ty'),
+        tz: document.getElementById('tz'),
+        rx: document.getElementById('rx'),
+        ry: document.getElementById('ry'),
+        rz: document.getElementById('rz'),
+        sx: document.getElementById('sx'),
+        sy: document.getElementById('sy'),
+        sz: document.getElementById('sz')
+      }
+
+      // Mode button handlers
+      function setMode(mode) {
+        gizmo.setMode(mode)
+        btnTranslate.classList.toggle('active', mode === 'translate')
+        btnRotate.classList.toggle('active', mode === 'rotate')
+        btnScale.classList.toggle('active', mode === 'scale')
+
+        const hints = {
+          translate: 'Drag arrows to move',
+          rotate: 'Drag arcs to rotate',
+          scale: 'Drag arrows to scale'
+        }
+        gizmoHint.textContent = hints[mode]
+      }
+
+      btnTranslate.onclick = () => setMode('translate')
+      btnRotate.onclick = () => setMode('rotate')
+      btnScale.onclick = () => setMode('scale')
+
+      // Handle transform changes from gizmo
+      function handleTransformChange(transform) {
+        currentTransform = transform
+        updateInputs()
+        applyTransform()
+      }
+
+      // Update input fields to reflect current transform
+      function updateInputs() {
+        inputs.tx.value = currentTransform.translation[0].toFixed(1)
+        inputs.ty.value = currentTransform.translation[1].toFixed(1)
+        inputs.tz.value = currentTransform.translation[2].toFixed(1)
+        inputs.rx.value = currentTransform.rotation[0].toFixed(1)
+        inputs.ry.value = currentTransform.rotation[1].toFixed(1)
+        inputs.rz.value = currentTransform.rotation[2].toFixed(1)
+        inputs.sx.value = currentTransform.scale[0].toFixed(2)
+        inputs.sy.value = currentTransform.scale[1].toFixed(2)
+        inputs.sz.value = currentTransform.scale[2].toFixed(2)
+      }
+
+      // Apply current transform to volume
+      function applyTransform() {
+        // Reset to original first, then apply cumulative transform
+        nv.volumes[targetVolumeIndex].hdr.affine = niivue.copyAffine(originalAffine)
+        nv.volumes[targetVolumeIndex].calculateRAS()
+
+        // Apply transform
+        nv.applyVolumeTransform(targetVolumeIndex, currentTransform)
+      }
+
+      // Handle manual input changes
+      function handleInputChange() {
+        currentTransform = {
+          translation: [
+            parseFloat(inputs.tx.value) || 0,
+            parseFloat(inputs.ty.value) || 0,
+            parseFloat(inputs.tz.value) || 0
+          ],
+          rotation: [
+            parseFloat(inputs.rx.value) || 0,
+            parseFloat(inputs.ry.value) || 0,
+            parseFloat(inputs.rz.value) || 0
+          ],
+          scale: [
+            parseFloat(inputs.sx.value) || 1,
+            parseFloat(inputs.sy.value) || 1,
+            parseFloat(inputs.sz.value) || 1
+          ]
+        }
+        gizmo.setTransform(currentTransform)
+        applyTransform()
+      }
+
+      // Attach input event listeners
+      Object.values(inputs).forEach(input => {
+        input.addEventListener('change', handleInputChange)
+      })
+
+      // Reset button
+      resetBtn.onclick = () => {
+        currentTransform = {
+          translation: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1]
+        }
+        gizmo.setTransform(currentTransform)
+        updateInputs()
+        nv.resetVolumeAffine(targetVolumeIndex)
+        // Update originalAffine to the reset state
+        originalAffine = nv.getVolumeAffine(targetVolumeIndex)
+      }
+
+      // Download button - save transformed overlay
+      downloadBtn.onclick = async () => {
+        await nv.saveImage({
+          filename: 'registered.nii.gz',
+          volumeByIndex: targetVolumeIndex
+        })
+      }
+
+      // Volume selector
+      volumeSelect.onchange = () => {
+        // Reset current transform for old volume
+        nv.resetVolumeAffine(targetVolumeIndex)
+
+        // Switch to new volume
+        targetVolumeIndex = parseInt(volumeSelect.value)
+        originalAffine = nv.getVolumeAffine(targetVolumeIndex)
+
+        // Reset transform state
+        currentTransform = {
+          translation: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1]
+        }
+        gizmo.setTransform(currentTransform)
+        updateInputs()
+      }
+
+      // Show/hide overlay
+      showOverlay.onchange = () => {
+        nv.setOpacity(1, showOverlay.checked ? 0.7 : 0)
+      }
+
+      // Initialize inputs
+      updateInputs()
+    </script>
+  </body>
+</html>

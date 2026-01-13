@@ -18,6 +18,7 @@ import * as ImageDataProcessor from '@/nvimage/ImageDataProcessor'
 import * as AffineProcessor from '@/nvimage/AffineProcessor'
 import * as ZarrProcessor from '@/nvimage/ZarrProcessor'
 import * as StreamingLoader from '@/nvimage/StreamingLoader'
+import { AffineTransform, copyAffine, createTransformMatrix, multiplyAffine } from '@/nvimage/affineUtils'
 
 export * from '@/nvimage/utils'
 export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
@@ -102,6 +103,9 @@ export class NVImage {
     urlImgData?: string
     isManifest?: boolean
     limitFrames4D?: number
+
+    // Original affine matrix stored at load time for reset functionality
+    originalAffine?: number[][]
 
     constructor(
         // can be an array of Typed arrays or just a typed array. If an array of Typed arrays then it is assumed you are loading DICOM (perhaps the only real use case?)
@@ -265,6 +269,8 @@ export class NVImage {
             this.hdr.numBitsPerVoxel = conversionResult.updatedNumBitsPerVoxel
         }
         this.calculateRAS()
+        // Store original affine for reset functionality
+        this.originalAffine = copyAffine(this.hdr.affine)
         if (!isNaN(cal_min)) {
             this.hdr.cal_min = cal_min
         }
@@ -637,6 +643,61 @@ export class NVImage {
     // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
     calculateRAS(): void {
         ImageOrientation.calculateRAS(this)
+    }
+
+    /**
+     * Get a deep copy of the current affine matrix.
+     * @returns A 4x4 affine matrix as a 2D array (row-major)
+     */
+    getAffine(): number[][] {
+        if (!this.hdr) {
+            throw new Error('Image header not loaded')
+        }
+        return copyAffine(this.hdr.affine)
+    }
+
+    /**
+     * Set a new affine matrix and recalculate all derived RAS matrices.
+     * Call updateGLVolume() on the Niivue instance after this to update rendering.
+     * @param affine - A 4x4 affine matrix as a 2D array (row-major)
+     */
+    setAffine(affine: number[][]): void {
+        if (!this.hdr) {
+            throw new Error('Image header not loaded')
+        }
+        this.hdr.affine = copyAffine(affine)
+        this.calculateRAS()
+    }
+
+    /**
+     * Apply a transform (translation, rotation, scale) to the current affine matrix.
+     * The transform is applied in world coordinate space: newAffine = transform * currentAffine
+     * Call updateGLVolume() on the Niivue instance after this to update rendering.
+     * @param transform - Transform to apply with translation (mm), rotation (degrees), and scale
+     */
+    applyTransform(transform: AffineTransform): void {
+        if (!this.hdr) {
+            throw new Error('Image header not loaded')
+        }
+        const transformMatrix = createTransformMatrix(transform)
+        const newAffine = multiplyAffine(this.hdr.affine, transformMatrix)
+        this.hdr.affine = newAffine
+        this.calculateRAS()
+    }
+
+    /**
+     * Reset the affine matrix to its original state when the image was first loaded.
+     * Call updateGLVolume() on the Niivue instance after this to update rendering.
+     */
+    resetAffine(): void {
+        if (!this.hdr) {
+            throw new Error('Image header not loaded')
+        }
+        if (!this.originalAffine) {
+            throw new Error('Original affine not stored')
+        }
+        this.hdr.affine = copyAffine(this.originalAffine)
+        this.calculateRAS()
     }
 
     // Reorient raw header data to RAS
