@@ -9,4 +9,4 @@ type TypedVoxelArray =
   | Uint16Array;
 ```
 
-Defined in: [nvimage/index.ts:23](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L23)
+Defined in: [nvimage/index.ts:24](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L24)

@@ -287,6 +287,57 @@ type ImageMetadata = {
 };
 declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: any) => ImageFromUrlOptions;
 
+/**
+ * Represents an affine transformation in decomposed form.
+ */
+interface AffineTransform {
+    translation: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+}
+/**
+ * Identity transform with no translation, rotation, or scale change.
+ */
+declare const identityTransform: AffineTransform;
+/**
+ * Convert degrees to radians.
+ */
+declare function degToRad(degrees: number): number;
+/**
+ * Create a rotation matrix from Euler angles (XYZ order).
+ * Angles are in degrees.
+ */
+declare function eulerToRotationMatrix(rx: number, ry: number, rz: number): mat4;
+/**
+ * Create a 4x4 transformation matrix from decomposed transform components.
+ * Order: Scale -> Rotate -> Translate
+ */
+declare function createTransformMatrix(transform: AffineTransform): mat4;
+/**
+ * Convert a 2D array (row-major, as used by NIfTI) to gl-matrix mat4 (column-major).
+ */
+declare function arrayToMat4(arr: number[][]): mat4;
+/**
+ * Convert gl-matrix mat4 (column-major) to 2D array (row-major, as used by NIfTI).
+ */
+declare function mat4ToArray(m: mat4): number[][];
+/**
+ * Multiply a transformation matrix by an affine matrix (as 2D array).
+ * Returns the result as a 2D array.
+ *
+ * The transform is applied to the left: result = transform * original
+ * This means the transform happens in world coordinate space.
+ */
+declare function multiplyAffine(original: number[][], transform: mat4): number[][];
+/**
+ * Deep copy a 2D affine matrix array.
+ */
+declare function copyAffine(affine: number[][]): number[][];
+/**
+ * Check if two transforms are approximately equal.
+ */
+declare function transformsEqual(a: AffineTransform, b: AffineTransform, epsilon?: number): boolean;
+
 type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
 /**
  * a NVImage encapsulates some image data and provides methods to query and operate on images
@@ -356,6 +407,7 @@ declare class NVImage {
     urlImgData?: string;
     isManifest?: boolean;
     limitFrames4D?: number;
+    originalAffine?: number[][];
     constructor(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number);
     init(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, _pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number, imgRaw?: ArrayBuffer | ArrayBufferLike | null): void;
     static new(dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name: string, colormap: string, opacity: number, pairedImgData: ArrayBuffer | null, cal_min: number, cal_max: number, trustCalMinMax: boolean, percentileFrac: number, ignoreZeroVoxels: boolean, useQFormNotSForm: boolean, colormapNegative: string, frame4D: number, imageType: ImageType, cal_minNeg: number, cal_maxNeg: number, colorbarVisible: boolean, colormapLabel: LUT | null, colormapType: number, zarrData: null | unknown): Promise<NVImage>;
@@ -377,6 +429,29 @@ declare class NVImage {
     readMHA(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     readMIF(buffer: ArrayBuffer, pairedImgData: ArrayBuffer | null): Promise<ArrayBuffer>;
     calculateRAS(): void;
+    /**
+     * Get a deep copy of the current affine matrix.
+     * @returns A 4x4 affine matrix as a 2D array (row-major)
+     */
+    getAffine(): number[][];
+    /**
+     * Set a new affine matrix and recalculate all derived RAS matrices.
+     * Call updateGLVolume() on the Niivue instance after this to update rendering.
+     * @param affine - A 4x4 affine matrix as a 2D array (row-major)
+     */
+    setAffine(affine: number[][]): void;
+    /**
+     * Apply a transform (translation, rotation, scale) to the current affine matrix.
+     * The transform is applied in world coordinate space: newAffine = transform * currentAffine
+     * Call updateGLVolume() on the Niivue instance after this to update rendering.
+     * @param transform - Transform to apply with translation (mm), rotation (degrees), and scale
+     */
+    applyTransform(transform: AffineTransform): void;
+    /**
+     * Reset the affine matrix to its original state when the image was first loaded.
+     * Call updateGLVolume() on the Niivue instance after this to update rendering.
+     */
+    resetAffine(): void;
     hdr2RAS(nVolumes?: number): Promise<NIFTI1 | NIFTI2>;
     img2RAS(nVolume?: number): TypedVoxelArray;
     vox2mm(XYZ: number[], mtx: mat4): vec3;
@@ -3176,6 +3251,47 @@ declare class Niivue {
      */
     setOpacity(volIdx: number, newOpacity: number): void;
     /**
+     * Get the current affine matrix of a volume.
+     * @param volIdx - index of volume (0 = base image, 1+ = overlays)
+     * @returns A deep copy of the 4x4 affine matrix as a 2D array (row-major)
+     * @example
+     * const affine = niivue.getVolumeAffine(1) // get affine of first overlay
+     */
+    getVolumeAffine(volIdx: number): number[][];
+    /**
+     * Set the affine matrix of a volume and update the scene.
+     * @param volIdx - index of volume to modify (0 = base image, 1+ = overlays)
+     * @param affine - new 4x4 affine matrix as a 2D array (row-major)
+     * @example
+     * // Shift volume 10mm in X direction
+     * const affine = niivue.getVolumeAffine(1)
+     * affine[0][3] += 10
+     * niivue.setVolumeAffine(1, affine)
+     */
+    setVolumeAffine(volIdx: number, affine: number[][]): void;
+    /**
+     * Apply a transform (translation, rotation, scale) to a volume's affine and update the scene.
+     * Useful for manual image registration between volumes.
+     * @param volIdx - index of volume to modify (0 = base image, 1+ = overlays)
+     * @param transform - transform to apply with translation (mm), rotation (degrees), and scale
+     * @example
+     * // Rotate overlay 15 degrees around Y axis and translate 5mm in X
+     * niivue.applyVolumeTransform(1, {
+     *   translation: [5, 0, 0],
+     *   rotation: [0, 15, 0],
+     *   scale: [1, 1, 1]
+     * })
+     * @see {@link https://niivue.com/demos/features/manual.registration.html | live demo usage}
+     */
+    applyVolumeTransform(volIdx: number, transform: AffineTransform): void;
+    /**
+     * Reset a volume's affine matrix to its original state when first loaded.
+     * @param volIdx - index of volume to reset (0 = base image, 1+ = overlays)
+     * @example
+     * niivue.resetVolumeAffine(1) // reset overlay to original position
+     */
+    resetVolumeAffine(volIdx: number): void;
+    /**
      * set the scale of the 3D rendering. Larger numbers effectively zoom.
      * @param scale - the new scale value
      * @example
@@ -4681,4 +4797,4 @@ declare class Niivue {
     }): void;
 }
 
-export { COLORMAP_TYPE, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, cmapper, ColorTables as colortables, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, isDicomExtension, isMeshExt, readDirectory, readFileAsDataURL, registerLoader, traverseFileTree };
+export { type AffineTransform, COLORMAP_TYPE, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };

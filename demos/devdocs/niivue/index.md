@@ -10,6 +10,7 @@
 
 | Interface                                                  | Description                                                                                                                                                        |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [AffineTransform](interfaces/AffineTransform.md)           | Represents an affine transformation in decomposed form.                                                                                                            |
 | [CustomLoader](interfaces/CustomLoader.md)                 | Custom file loader configuration. The loader function can return either: - ArrayBuffer for volume data - MeshLoaderResult for mesh data with positions and indices |
 | [GetFileExtOptions](interfaces/GetFileExtOptions.md)       | Options for getFileExt function                                                                                                                                    |
 | [LoaderRegistry](interfaces/LoaderRegistry.md)             | Collection of registered custom loaders by file extension                                                                                                          |
@@ -25,25 +26,34 @@
 
 ## Variables
 
-| Variable                                        | Description                              |
-| ----------------------------------------------- | ---------------------------------------- |
-| [MESH_EXTENSIONS](variables/MESH_EXTENSIONS.md) | Mesh file extensions supported by Niivue |
+| Variable                                            | Description                                                        |
+| --------------------------------------------------- | ------------------------------------------------------------------ |
+| [identityTransform](variables/identityTransform.md) | Identity transform with no translation, rotation, or scale change. |
+| [MESH_EXTENSIONS](variables/MESH_EXTENSIONS.md)     | Mesh file extensions supported by Niivue                           |
 
 ## Functions
 
-| Function                                            | Description                                                                            |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [getFileExt](functions/getFileExt.md)               | Extracts and normalizes the file extension, handling special cases like .gz and .cbor. |
-| [getLoader](functions/getLoader.md)                 | Get a loader for a specific file extension                                             |
-| [getMediaByUrl](functions/getMediaByUrl.md)         | Get media (volume or mesh) by URL from a media URL map                                 |
-| [handleDragEnter](functions/handleDragEnter.md)     | Simple drag enter event handler that prevents default behavior                         |
-| [handleDragOver](functions/handleDragOver.md)       | Simple drag over event handler that prevents default behavior                          |
-| [isDicomExtension](functions/isDicomExtension.md)   | Check if a DICOM loader error should be thrown                                         |
-| [isMeshExt](functions/isMeshExt.md)                 | Check if a URL/filename has a mesh file extension                                      |
-| [readDirectory](functions/readDirectory.md)         | Read all entries from a directory                                                      |
-| [readFileAsDataURL](functions/readFileAsDataURL.md) | Read a file as a data URL                                                              |
-| [registerLoader](functions/registerLoader.md)       | Register a custom loader for a specific file extension                                 |
-| [traverseFileTree](functions/traverseFileTree.md)   | Recursively traverse a file tree and collect all files                                 |
+| Function                                                    | Description                                                                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| [arrayToMat4](functions/arrayToMat4.md)                     | Convert a 2D array (row-major, as used by NIfTI) to gl-matrix mat4 (column-major).                           |
+| [copyAffine](functions/copyAffine.md)                       | Deep copy a 2D affine matrix array.                                                                          |
+| [createTransformMatrix](functions/createTransformMatrix.md) | Create a 4x4 transformation matrix from decomposed transform components. Order: Scale -> Rotate -> Translate |
+| [degToRad](functions/degToRad.md)                           | Convert degrees to radians.                                                                                  |
+| [eulerToRotationMatrix](functions/eulerToRotationMatrix.md) | Create a rotation matrix from Euler angles (XYZ order). Angles are in degrees.                               |
+| [getFileExt](functions/getFileExt.md)                       | Extracts and normalizes the file extension, handling special cases like .gz and .cbor.                       |
+| [getLoader](functions/getLoader.md)                         | Get a loader for a specific file extension                                                                   |
+| [getMediaByUrl](functions/getMediaByUrl.md)                 | Get media (volume or mesh) by URL from a media URL map                                                       |
+| [handleDragEnter](functions/handleDragEnter.md)             | Simple drag enter event handler that prevents default behavior                                               |
+| [handleDragOver](functions/handleDragOver.md)               | Simple drag over event handler that prevents default behavior                                                |
+| [isDicomExtension](functions/isDicomExtension.md)           | Check if a DICOM loader error should be thrown                                                               |
+| [isMeshExt](functions/isMeshExt.md)                         | Check if a URL/filename has a mesh file extension                                                            |
+| [mat4ToArray](functions/mat4ToArray.md)                     | Convert gl-matrix mat4 (column-major) to 2D array (row-major, as used by NIfTI).                             |
+| [multiplyAffine](functions/multiplyAffine.md)               | Multiply a transformation matrix by an affine matrix (as 2D array). Returns the result as a 2D array.        |
+| [readDirectory](functions/readDirectory.md)                 | Read all entries from a directory                                                                            |
+| [readFileAsDataURL](functions/readFileAsDataURL.md)         | Read a file as a data URL                                                                                    |
+| [registerLoader](functions/registerLoader.md)               | Register a custom loader for a specific file extension                                                       |
+| [transformsEqual](functions/transformsEqual.md)             | Check if two transforms are approximately equal.                                                             |
+| [traverseFileTree](functions/traverseFileTree.md)           | Recursively traverse a file tree and collect all files                                                       |
 
 ## References
 

@@ -27410,6 +27410,93 @@ async function fetchPairedImageData(urlImgData, headers = {}) {
   }
 }
 
+// src/nvimage/affineUtils.ts
+var identityTransform = {
+  translation: [0, 0, 0],
+  rotation: [0, 0, 0],
+  scale: [1, 1, 1]
+};
+function degToRad(degrees) {
+  return degrees * Math.PI / 180;
+}
+function eulerToRotationMatrix(rx, ry, rz) {
+  const out = mat4_exports.create();
+  const radX = degToRad(rx);
+  const radY = degToRad(ry);
+  const radZ = degToRad(rz);
+  mat4_exports.rotateX(out, out, radX);
+  mat4_exports.rotateY(out, out, radY);
+  mat4_exports.rotateZ(out, out, radZ);
+  return out;
+}
+function createTransformMatrix(transform) {
+  const out = mat4_exports.create();
+  mat4_exports.translate(out, out, transform.translation);
+  const rotation = eulerToRotationMatrix(transform.rotation[0], transform.rotation[1], transform.rotation[2]);
+  mat4_exports.multiply(out, out, rotation);
+  mat4_exports.scale(out, out, transform.scale);
+  return out;
+}
+function arrayToMat4(arr) {
+  return mat4_exports.fromValues(
+    arr[0][0],
+    arr[1][0],
+    arr[2][0],
+    arr[3][0],
+    // column 0
+    arr[0][1],
+    arr[1][1],
+    arr[2][1],
+    arr[3][1],
+    // column 1
+    arr[0][2],
+    arr[1][2],
+    arr[2][2],
+    arr[3][2],
+    // column 2
+    arr[0][3],
+    arr[1][3],
+    arr[2][3],
+    arr[3][3]
+    // column 3
+  );
+}
+function mat4ToArray(m) {
+  return [
+    [m[0], m[4], m[8], m[12]],
+    // row 0
+    [m[1], m[5], m[9], m[13]],
+    // row 1
+    [m[2], m[6], m[10], m[14]],
+    // row 2
+    [m[3], m[7], m[11], m[15]]
+    // row 3
+  ];
+}
+function multiplyAffine(original, transform) {
+  const originalMat = arrayToMat4(original);
+  const result = mat4_exports.create();
+  mat4_exports.multiply(result, transform, originalMat);
+  return mat4ToArray(result);
+}
+function copyAffine(affine) {
+  return affine.map((row) => [...row]);
+}
+function transformsEqual(a, b, epsilon = 1e-4) {
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(a.translation[i] - b.translation[i]) > epsilon) {
+      return false;
+    }
+    if (Math.abs(a.rotation[i] - b.rotation[i]) > epsilon) {
+      return false;
+    }
+    if (Math.abs(a.scale[i] - b.scale[i]) > epsilon) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // src/nvimage/index.ts
 var NVImage = class _NVImage {
   constructor(dataBuffer = null, name = "", colormap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0) {
@@ -27488,6 +27575,8 @@ var NVImage = class _NVImage {
     __publicField(this, "urlImgData");
     __publicField(this, "isManifest");
     __publicField(this, "limitFrames4D");
+    // Original affine matrix stored at load time for reset functionality
+    __publicField(this, "originalAffine");
     this.init(
       dataBuffer,
       name,
@@ -27589,6 +27678,7 @@ var NVImage = class _NVImage {
       this.hdr.numBitsPerVoxel = conversionResult.updatedNumBitsPerVoxel;
     }
     this.calculateRAS();
+    this.originalAffine = copyAffine(this.hdr.affine);
     if (!isNaN(cal_min)) {
       this.hdr.cal_min = cal_min;
     }
@@ -27918,6 +28008,57 @@ var NVImage = class _NVImage {
   // Transform to orient NIfTI image to Left->Right,Posterior->Anterior,Inferior->Superior (48 possible permutations)
   calculateRAS() {
     calculateRAS(this);
+  }
+  /**
+   * Get a deep copy of the current affine matrix.
+   * @returns A 4x4 affine matrix as a 2D array (row-major)
+   */
+  getAffine() {
+    if (!this.hdr) {
+      throw new Error("Image header not loaded");
+    }
+    return copyAffine(this.hdr.affine);
+  }
+  /**
+   * Set a new affine matrix and recalculate all derived RAS matrices.
+   * Call updateGLVolume() on the Niivue instance after this to update rendering.
+   * @param affine - A 4x4 affine matrix as a 2D array (row-major)
+   */
+  setAffine(affine) {
+    if (!this.hdr) {
+      throw new Error("Image header not loaded");
+    }
+    this.hdr.affine = copyAffine(affine);
+    this.calculateRAS();
+  }
+  /**
+   * Apply a transform (translation, rotation, scale) to the current affine matrix.
+   * The transform is applied in world coordinate space: newAffine = transform * currentAffine
+   * Call updateGLVolume() on the Niivue instance after this to update rendering.
+   * @param transform - Transform to apply with translation (mm), rotation (degrees), and scale
+   */
+  applyTransform(transform) {
+    if (!this.hdr) {
+      throw new Error("Image header not loaded");
+    }
+    const transformMatrix = createTransformMatrix(transform);
+    const newAffine = multiplyAffine(this.hdr.affine, transformMatrix);
+    this.hdr.affine = newAffine;
+    this.calculateRAS();
+  }
+  /**
+   * Reset the affine matrix to its original state when the image was first loaded.
+   * Call updateGLVolume() on the Niivue instance after this to update rendering.
+   */
+  resetAffine() {
+    if (!this.hdr) {
+      throw new Error("Image header not loaded");
+    }
+    if (!this.originalAffine) {
+      throw new Error("Original affine not stored");
+    }
+    this.hdr.affine = copyAffine(this.originalAffine);
+    this.calculateRAS();
   }
   // Reorient raw header data to RAS
   // assume single volume, use nVolumes to specify, set nVolumes = 0 for same as input
@@ -44951,6 +45092,70 @@ var Niivue = class {
     this.updateGLVolume();
   }
   /**
+   * Get the current affine matrix of a volume.
+   * @param volIdx - index of volume (0 = base image, 1+ = overlays)
+   * @returns A deep copy of the 4x4 affine matrix as a 2D array (row-major)
+   * @example
+   * const affine = niivue.getVolumeAffine(1) // get affine of first overlay
+   */
+  getVolumeAffine(volIdx) {
+    if (volIdx < 0 || volIdx >= this.volumes.length) {
+      throw new Error(`Volume index ${volIdx} out of range`);
+    }
+    return this.volumes[volIdx].getAffine();
+  }
+  /**
+   * Set the affine matrix of a volume and update the scene.
+   * @param volIdx - index of volume to modify (0 = base image, 1+ = overlays)
+   * @param affine - new 4x4 affine matrix as a 2D array (row-major)
+   * @example
+   * // Shift volume 10mm in X direction
+   * const affine = niivue.getVolumeAffine(1)
+   * affine[0][3] += 10
+   * niivue.setVolumeAffine(1, affine)
+   */
+  setVolumeAffine(volIdx, affine) {
+    if (volIdx < 0 || volIdx >= this.volumes.length) {
+      throw new Error(`Volume index ${volIdx} out of range`);
+    }
+    this.volumes[volIdx].setAffine(affine);
+    this.updateGLVolume();
+  }
+  /**
+   * Apply a transform (translation, rotation, scale) to a volume's affine and update the scene.
+   * Useful for manual image registration between volumes.
+   * @param volIdx - index of volume to modify (0 = base image, 1+ = overlays)
+   * @param transform - transform to apply with translation (mm), rotation (degrees), and scale
+   * @example
+   * // Rotate overlay 15 degrees around Y axis and translate 5mm in X
+   * niivue.applyVolumeTransform(1, {
+   *   translation: [5, 0, 0],
+   *   rotation: [0, 15, 0],
+   *   scale: [1, 1, 1]
+   * })
+   * @see {@link https://niivue.com/demos/features/manual.registration.html | live demo usage}
+   */
+  applyVolumeTransform(volIdx, transform) {
+    if (volIdx < 0 || volIdx >= this.volumes.length) {
+      throw new Error(`Volume index ${volIdx} out of range`);
+    }
+    this.volumes[volIdx].applyTransform(transform);
+    this.updateGLVolume();
+  }
+  /**
+   * Reset a volume's affine matrix to its original state when first loaded.
+   * @param volIdx - index of volume to reset (0 = base image, 1+ = overlays)
+   * @example
+   * niivue.resetVolumeAffine(1) // reset overlay to original position
+   */
+  resetVolumeAffine(volIdx) {
+    if (volIdx < 0 || volIdx >= this.volumes.length) {
+      throw new Error(`Volume index ${volIdx} out of range`);
+    }
+    this.volumes[volIdx].resetAffine();
+    this.updateGLVolume();
+  }
+  /**
    * set the scale of the 3D rendering. Larger numbers effectively zoom.
    * @param scale - the new scale value
    * @example
@@ -51530,18 +51735,27 @@ export {
   PEN_TYPE,
   SHOW_RENDER,
   SLICE_TYPE,
+  arrayToMat4,
   cmapper,
   ColorTables as colortables,
+  copyAffine,
+  createTransformMatrix,
+  degToRad,
+  eulerToRotationMatrix,
   getFileExt,
   getLoader,
   getMediaByUrl,
   handleDragEnter,
   handleDragOver,
+  identityTransform,
   isDicomExtension,
   isMeshExt,
+  mat4ToArray,
+  multiplyAffine,
   readDirectory,
   readFileAsDataURL2 as readFileAsDataURL,
   registerLoader,
+  transformsEqual,
   traverseFileTree
 };
 //# sourceMappingURL=index.js.map
