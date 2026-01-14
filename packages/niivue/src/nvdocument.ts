@@ -112,6 +112,7 @@ export type NVConfigOptions = {
     colorbarWidth: number
     showColorbarBorder: boolean
     crosshairWidth: number
+    dragAndDropSensitivity?: number // Renamed from 'sensitivity'
     crosshairWidthUnit: 'voxels' | 'mm' | 'percent'
     crosshairGap: number
     rulerWidth: number
@@ -224,6 +225,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     colorbarWidth: -1,
     showColorbarBorder: true,
     crosshairWidth: 1,
+    dragAndDropSensitivity: 1, // Added default value (1 = normal speed)
     crosshairWidthUnit: 'voxels',
     crosshairGap: 0,
     rulerWidth: 4,
@@ -301,9 +303,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     clickToSegment: false,
     clickToSegmentRadius: 3,
     clickToSegmentBright: true,
-    clickToSegmentAutoIntensity: false,
-    clickToSegmentIntensityMax: NaN,
-    clickToSegmentIntensityMin: NaN,
+    clickToSegmentAutoIntensity: false, // new option, but keep clickToSegmentBright for backwards compatibility
+    clickToSegmentIntensityMax: NaN, // NaN will use auto threshold (default flood fill behavior from before)
+    clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
     clickToSegmentPercent: 0,
     clickToSegmentMaxDistanceMM: Number.POSITIVE_INFINITY,
     clickToSegmentIs2D: false,
