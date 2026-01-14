@@ -89,6 +89,7 @@ export interface CalculateWindowingParams {
     currentCalMax: number
     globalMin: number
     globalMax: number
+    sensitivity?: number
 }
 
 /**
@@ -319,32 +320,24 @@ export function calculateSlicer3DZoomFromDrag(params: CalculateSlicer3DZoomParam
  * @returns Windowing result with adjusted cal_min and cal_max
  */
 export function calculateWindowingAdjustment(params: CalculateWindowingParams): WindowingAdjustmentResult {
-    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params
+    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax, sensitivity = 1 } = params
 
     let mn = currentCalMin
     let mx = currentCalMax
 
+    // Calculate delta based on mouse movement and sensitivity
+    // Note: windowY - y is used because moving mouse UP (decreasing Y) typically increases brightness
+    const deltaY = (windowY - y) * sensitivity
+    const deltaX = (x - windowX) * sensitivity
+
     // Adjust level based on vertical movement
-    if (y < windowY) {
-        // increase level if mouse moves up
-        mn += 1
-        mx += 1
-    } else if (y > windowY) {
-        // decrease level if mouse moves down
-        mn -= 1
-        mx -= 1
-    }
+    mn += deltaY
+    mx += deltaY
 
     // Adjust window width based on horizontal movement
-    if (x > windowX) {
-        // increase window width if mouse moves right
-        mn -= 1
-        mx += 1
-    } else if (x < windowX) {
-        // decrease window width if mouse moves left
-        mn += 1
-        mx -= 1
-    }
+    // Moving right (positive deltaX) increases window width
+    mn -= deltaX
+    mx += deltaX
 
     // Ensure window width is at least 1
     if (mx - mn < 1) {

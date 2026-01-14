@@ -1726,7 +1726,7 @@ export class Niivue {
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
-        // Calculate windowing adjustments using helper
+      // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
             y,
@@ -1735,7 +1735,8 @@ export class Niivue {
             currentCalMin: this.volumes[0].cal_min!,
             currentCalMax: this.volumes[0].cal_max!,
             globalMin: this.volumes[0].global_min!,
-            globalMax: this.volumes[0].global_max!
+            globalMax: this.volumes[0].global_max!,
+            sensitivity: this.opts.dragAndDropSensitivity // Use the real option name
         })
 
         this.volumes[volIdx].cal_min = result.calMin
@@ -4486,7 +4487,7 @@ export class Niivue {
                 meshInit.pts,
                 meshInit.tris!,
                 meshInit.name,
-                meshInit.rgba255,
+                meshInit.rgba255 as any,
                 meshInit.opacity,
                 meshInit.visible,
                 this.gl,
@@ -7036,16 +7037,16 @@ export class Niivue {
             scaleParams.dst_max = 1
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg32 = ImageProcessing.scalecropFloat32(outImg, 0, 1, srcMin, scale)
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer))
+            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer) as any)
         } else {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8)
+           bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any)
         }
 
-        return this.niftiArray2NVImage(bytes)
+        return this.niftiArray2NVImage(bytes as any)
     }
 
     /**
