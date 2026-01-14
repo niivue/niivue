@@ -1499,7 +1499,7 @@ Returns true if a mouse/touch event happened inside this instance's bounds.
 findDrawingBoundarySlices(sliceType: SLICE_TYPE): object;
 ```
 
-Defined in: [niivue/index.ts:11901](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11901)
+Defined in: [niivue/index.ts:11910](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11910)
 
 Find the first and last slices containing drawing data along a given axis
 
@@ -1517,8 +1517,8 @@ Object containing first and last slice indices, or null if no data found
 
 | Name    | Type     | Defined in                                                                                                     |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `first` | `number` | [niivue/index.ts:11901](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11901) |
-| `last`  | `number` | [niivue/index.ts:11901](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11901) |
+| `first` | `number` | [niivue/index.ts:11910](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11910) |
+| `last`  | `number` | [niivue/index.ts:11910](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11910) |
 
 ---
 
@@ -1988,7 +1988,7 @@ interpolateMaskSlices(
    options?: object): void;
 ```
 
-Defined in: [niivue/index.ts:11916](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11916)
+Defined in: [niivue/index.ts:11925](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11925)
 
 Interpolate between mask slices using geometric or intensity-guided methods
 
@@ -2469,7 +2469,7 @@ Automatically dispatches each item to either volume or mesh loader based on file
 loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:11873](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11873)
+Defined in: [niivue/index.ts:11882](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11882)
 
 Load matcap for illumination model.
 

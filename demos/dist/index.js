@@ -51266,8 +51266,15 @@ var Niivue = class {
         dragDeltaY
       });
       if (dragResult.changed) {
-        this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = dragResult.depthAziElev;
-        return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]);
+        const idx2 = this.uiData.activeClipPlaneIndex;
+        this.scene.clipPlaneDepthAziElevs[idx2] = dragResult.depthAziElev;
+        const clipPlane = depthAziElevToClipPlane({
+          depth: dragResult.depthAziElev[0],
+          azimuth: dragResult.depthAziElev[1],
+          elevation: dragResult.depthAziElev[2]
+        });
+        this.scene.clipPlanes[idx2] = clipPlane;
+        this.onClipPlaneChange(clipPlane);
       }
     }
     if (this.sliceMosaicString.length < 1 && this.opts.sliceType === 4 /* RENDER */) {
