@@ -11339,8 +11339,17 @@ export class Niivue {
             })
 
             if (dragResult.changed) {
-                this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = dragResult.depthAziElev
-                return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
+                const idx = this.uiData.activeClipPlaneIndex
+                this.scene.clipPlaneDepthAziElevs[idx] = dragResult.depthAziElev
+                // Update clip plane directly without calling setClipPlane (which triggers drawScene recursively)
+                const clipPlane = ClipPlaneManager.depthAziElevToClipPlane({
+                    depth: dragResult.depthAziElev[0],
+                    azimuth: dragResult.depthAziElev[1],
+                    elevation: dragResult.depthAziElev[2]
+                })
+                this.scene.clipPlanes[idx] = clipPlane
+                this.onClipPlaneChange(clipPlane)
+                // Don't return - let drawScene continue naturally
             }
         }
 
