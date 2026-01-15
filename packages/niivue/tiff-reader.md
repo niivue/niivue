@@ -136,6 +136,37 @@ The TIFF viewer now supports:
 - ✅ Deep zoom into very large WSI images (zoom up to 10,000x)
 - ✅ Hysteresis to prevent rapid level switching at zoom boundaries
 
+## Bug Fixes
+
+### Panning Infinite Loop Fix (Jan 2026)
+
+**Problem**: Right-clicking to initiate a pan gesture triggered runaway tile fetching (thousands of requests) before any actual drag movement occurred.
+
+**Root Cause**: The `dragForPanZoom()` method was called during every `drawScene()` while dragging. It unconditionally called `setViewportState()`, which after completing would call `drawScene()` again via its `.then()` callback, creating an infinite loop:
+
+```
+drawScene() → dragForPanZoom() → setViewportState() → updateTexture()
+    → .then() → drawScene() → dragForPanZoom() → ... (infinite)
+```
+
+**Fixes Applied**:
+
+1. **Loop prevention in `dragForPanZoom()`** (`src/niivue/index.ts`):
+   - Skip update when `deltaX === 0 && deltaY === 0` (click without movement)
+   - Skip update when new center position ≈ current center (prevents loop after drag stops)
+
+2. **Debouncing fix in `updateTexture()`** (`src/nvimage/tiff/NVTiffImage.ts`):
+   - Moved `pendingUpdate = false` to AFTER `compositeVisibleTiles()` completes
+   - Prevents concurrent tile fetch operations during rapid panning
+
+3. **Auto pyramid level selection** (`src/nvimage/tiff/NVTiffImage.ts`):
+   - Added automatic level selection to `setViewportState()`
+   - Ensures optimal pyramid level is maintained during pan operations
+
+4. **Safety guard in `getVisibleTiles()`** (`src/nvimage/tiff/TiffViewport.ts`):
+   - Added MAX_TILES = 100 cap to prevent runaway requests
+   - Logs warning if cap is reached (indicates suboptimal pyramid level)
+
 ## Potential Future Enhancements
 
 - **Tile prefetching**: Preload tiles for adjacent pyramid levels during zoom

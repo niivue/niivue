@@ -236,6 +236,7 @@ export class TiffViewport {
      * Get the tiles needed to cover the visible region
      */
     getVisibleTiles(): TileCoord[] {
+        const MAX_TILES = 100 // Reasonable limit for viewport to prevent runaway requests
         const region = this.getVisibleRegion()
         const level = this.getCurrentLevel()
         const tiles: TileCoord[] = []
@@ -253,6 +254,11 @@ export class TiffViewport {
                     x,
                     y
                 })
+                // Safety guard: cap tile count to prevent excessive requests
+                if (tiles.length >= MAX_TILES) {
+                    console.warn(`TIFF: Tile count capped at ${MAX_TILES}. Consider using a lower resolution pyramid level.`)
+                    return tiles
+                }
             }
         }
 

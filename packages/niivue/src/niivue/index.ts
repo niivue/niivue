@@ -8007,6 +8007,11 @@ export class Niivue {
             const deltaX = startXYendXY[2] - startXYendXY[0]
             const deltaY = startXYendXY[3] - startXYendXY[1]
 
+            // Skip update if there's no actual movement (prevents infinite loop on click)
+            if (deltaX === 0 && deltaY === 0) {
+                return
+            }
+
             // Get the effective scale to convert screen pixels to image coordinates
             const viewportState = this.tiffImage.getViewportState()
             const pyramidInfo = this.tiffImage.getPyramidInfo()
@@ -8020,6 +8025,11 @@ export class Niivue {
             // (negative because dragging right should move viewport left in image space)
             const newCenterX = this.tiffCenterAtMouseDown.x - deltaX / effectiveScale
             const newCenterY = this.tiffCenterAtMouseDown.y - deltaY / effectiveScale
+
+            // Skip update if center position hasn't actually changed (prevents loop after drag stops)
+            if (Math.abs(newCenterX - viewportState.centerX) < 0.001 && Math.abs(newCenterY - viewportState.centerY) < 0.001) {
+                return
+            }
 
             // Update viewport state with new center
             this.tiffImage

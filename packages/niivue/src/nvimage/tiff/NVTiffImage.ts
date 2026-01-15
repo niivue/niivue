@@ -299,10 +299,28 @@ export class NVTiffImage {
     }
 
     /**
-     * Set viewport state
+     * Set viewport state with automatic pyramid level selection
      */
     async setViewportState(state: Partial<TiffViewportState>): Promise<void> {
         this.viewport.setState(state)
+
+        // Auto-select optimal pyramid level for current zoom
+        const currentLevel = this.viewport.getState().pyramidLevel
+        const bestLevel = this.viewport.getBestLevelForZoomWithHysteresis(currentLevel)
+
+        if (bestLevel !== currentLevel) {
+            this.viewport.setLevel(bestLevel)
+
+            // Fire level change callback
+            const levelInfo = this.pyramidInfo.levels[bestLevel]
+            this.onLevelChange?.({
+                level: bestLevel,
+                totalLevels: this.pyramidInfo.levels.length,
+                levelWidth: levelInfo.width,
+                levelHeight: levelInfo.height
+            })
+        }
+
         await this.updateTexture()
     }
 
@@ -338,7 +356,7 @@ export class NVTiffImage {
      * Update the texture by fetching and compositing visible tiles
      */
     private async updateTexture(): Promise<void> {
-        // Debounce rapid updates
+        // Debounce rapid updates - prevents concurrent tile fetching during rapid pan/zoom
         if (this.pendingUpdate) {
             return
         }
@@ -351,13 +369,14 @@ export class NVTiffImage {
             })
         })
 
-        this.pendingUpdate = false
-
         // Clear NVImage.img with background color (dark blue: #1a1a2e = rgb(26, 26, 46))
         this.clearImageData(26, 26, 46, 255)
 
         // Load and draw visible tiles directly to NVImage.img
         await this.compositeVisibleTiles()
+
+        // Reset pendingUpdate AFTER compositing completes to prevent concurrent operations
+        this.pendingUpdate = false
     }
 
     /**
