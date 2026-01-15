@@ -245,6 +245,9 @@ export type NVConfigOptions = {
     bounds: [[number, number], [number, number]] | null
     showBoundsBorder?: boolean
     boundsBorderColor?: number[] // [r,g,b,a]
+    // Pyramidal TIFF options
+    /** Tile cache size for pyramidal TIFF viewing (default 500) */
+    tiffCacheSize: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -361,7 +364,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     is2DSliceShader: false,
     bounds: null,
     showBoundsBorder: false,
-    boundsBorderColor: [1, 1, 1, 1] // white border by default
+    boundsBorderColor: [1, 1, 1, 1], // white border by default
+    // Pyramidal TIFF options
+    tiffCacheSize: 500
 }
 
 type SceneData = {
