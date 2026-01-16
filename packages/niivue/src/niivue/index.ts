@@ -7042,7 +7042,7 @@ export class Niivue {
     // Interpolation is linear (default) or nearest neighbor
     // asFloat32 determines if output is Float32 with range 0..255 or Uint8 with range 0..255
 
-    /**
+/**
      * FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
      * @param volume - input volume to be re-oriented, intensity-scaled and resliced
      * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
@@ -7054,6 +7054,10 @@ export class Niivue {
     async conform(volume: NVImage, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false): Promise<NVImage> {
         const outDim = 256
         const outMM = 1
+
+        // FIX: Detect if input is 2D (has less than 2 slices)
+        const is2D = volume.hdr!.dims![3] < 2
+        const finalZ = is2D ? 1 : outDim
 
         // Compute voxel-to-voxel transform
         const { outAffine, invVox2vox } = ImageProcessing.conformVox2Vox({
@@ -7073,7 +7077,7 @@ export class Niivue {
             }
         }
 
-        // Resample volume
+        // Resample volume (this creates a 256^3 buffer)
         const outImg = ImageProcessing.resampleVolume({
             inImg,
             inDims: volume.hdr!.dims!,
@@ -7099,18 +7103,43 @@ export class Niivue {
 
         // Scale and create output NIfTI
         let bytes: Uint8Array
+        // Calculate the size of the final data buffer (slice vs volume)
+        // If 2D, we only grab the first slice (256*256 pixels)
+        const sliceSize = outDim * outDim
+        const bufferSize = is2D ? sliceSize : sliceSize * outDim
+
         if (asFloat32) {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 1
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg32 = ImageProcessing.scalecropFloat32(outImg, 0, 1, srcMin, scale)
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer) as any)
+            
+            // FIX: Slice the buffer to match dimensions
+            const finalBuffer = is2D ? outImg32.subarray(0, bufferSize) : outImg32
+            
+            bytes = await this.createNiftiArray(
+                [outDim, outDim, finalZ], 
+                [outMM, outMM, outMM], 
+                Array.from(outAffine), 
+                NiiDataType.DT_FLOAT32, 
+                new Uint8Array(finalBuffer.buffer) as any
+            )
         } else {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-           bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any )
+            
+            // FIX: Slice the buffer to match dimensions
+            const finalBuffer = is2D ? outImg8.subarray(0, bufferSize) : outImg8
+
+            bytes = await this.createNiftiArray(
+                [outDim, outDim, finalZ], 
+                [outMM, outMM, outMM], 
+                Array.from(outAffine), 
+                NiiDataType.DT_UINT8, 
+                finalBuffer as any
+            )
         }
 
         return this.niftiArray2NVImage(bytes as any)
