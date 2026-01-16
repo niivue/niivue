@@ -795,7 +795,7 @@ export class NVDocument {
      * Serialise the document.
      *
      * @param embedImages  If false, encodedImageBlobs is left empty
-     *                     (imageOptionsArray still records the URL / name).
+     * (imageOptionsArray still records the URL / name).
      * @param embedDrawing  If false, encodedDrawingBlob is left empty
      */
     json(embedImages = true, embedDrawing = true): ExportDocumentData {
@@ -907,6 +907,8 @@ export class NVDocument {
                 name: mesh.name,
                 rgba255: Uint8Array.from(mesh.rgba255),
                 opacity: mesh.opacity,
+                visible: mesh.visible, 
+                colorbarVisible: mesh.colorbarVisible, 
                 connectome: mesh.connectome,
                 groups: mesh.groups,
                 dpg: mesh.dpg,
