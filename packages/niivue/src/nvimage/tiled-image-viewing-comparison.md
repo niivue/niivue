@@ -1,5 +1,7 @@
 # TIFF vs Zarr Image Viewing: Comparison
 
+Zarr datasets: https://github.com/InsightSoftwareConsortium/OMEZarrOpenSciVisDatasets
+
 This document compares the OME TIFF and OME Zarr image viewing implementations in NiiVue, highlighting their similarities and key differences.
 
 ## Architectural Similarities
