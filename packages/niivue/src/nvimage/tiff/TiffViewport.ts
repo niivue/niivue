@@ -63,9 +63,15 @@ export class TiffViewport {
      * Update viewport state
      */
     setState(newState: Partial<TiffViewportState>): void {
-        if (newState.centerX !== undefined) this.state.centerX = newState.centerX
-        if (newState.centerY !== undefined) this.state.centerY = newState.centerY
-        if (newState.zoom !== undefined) this.state.zoom = Math.max(0.1, Math.min(10000, newState.zoom))
+        if (newState.centerX !== undefined) {
+            this.state.centerX = newState.centerX
+        }
+        if (newState.centerY !== undefined) {
+            this.state.centerY = newState.centerY
+        }
+        if (newState.zoom !== undefined) {
+            this.state.zoom = Math.max(0.1, Math.min(10000, newState.zoom))
+        }
         if (newState.pyramidLevel !== undefined) {
             this.state.pyramidLevel = Math.max(0, Math.min(this.pyramidInfo.levels.length - 1, newState.pyramidLevel))
         }

@@ -107,9 +107,7 @@ export class NVTiffImage {
 
         // Create small canvas for extracting pixel data from tiles
         // Size it to the largest tile dimension we might encounter
-        const maxTileSize = Math.max(
-            ...instance.pyramidInfo.levels.map((l) => Math.max(l.tileWidth, l.tileHeight))
-        )
+        const maxTileSize = Math.max(...instance.pyramidInfo.levels.map((l) => Math.max(l.tileWidth, l.tileHeight)))
         instance.tileCanvas = new OffscreenCanvas(maxTileSize, maxTileSize)
         const ctx = instance.tileCanvas.getContext('2d')
         if (!ctx) {
@@ -501,8 +499,14 @@ export class NVTiffImage {
         this.tileCtx.clearRect(0, 0, drawW, drawH)
         this.tileCtx.drawImage(
             bitmap,
-            srcOffsetX, srcOffsetY, srcWidth, srcHeight, // source rectangle
-            0, 0, drawW, drawH // destination (scaled)
+            srcOffsetX,
+            srcOffsetY,
+            srcWidth,
+            srcHeight, // source rectangle
+            0,
+            0,
+            drawW,
+            drawH // destination (scaled)
         )
 
         // Extract pixel data from tile canvas

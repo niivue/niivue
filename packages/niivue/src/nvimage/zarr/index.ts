@@ -12,13 +12,7 @@
 
 export { ZarrChunkCache, type TypedArray } from './ZarrChunkCache.js'
 
-export {
-  ZarrChunkClient,
-  type ZarrChunkClientConfig,
-  type ZarrPyramidLevel,
-  type ZarrPyramidInfo,
-  type ChunkCoord
-} from './ZarrChunkClient.js'
+export { ZarrChunkClient, type ZarrChunkClientConfig, type ZarrPyramidLevel, type ZarrPyramidInfo, type ChunkCoord } from './ZarrChunkClient.js'
 
 export { ZarrViewport, type ZarrViewportState, type VirtualVolumeDimensions } from './ZarrViewport.js'
 

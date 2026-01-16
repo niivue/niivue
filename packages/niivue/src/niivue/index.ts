@@ -5073,10 +5073,10 @@ export class Niivue {
 
         this.tiffImage = await NVTiffImage.create({
             tileServerUrl: serverUrl,
-            imageName: imageName,
+            imageName,
             textureWidth: options.textureWidth ?? canvasWidth,
             textureHeight: options.textureHeight ?? canvasHeight,
-            maxTextureSize: maxTextureSize,
+            maxTextureSize,
             cacheSize: this.opts.tiffCacheSize,
             tileUrlPattern: options.tileUrlPattern,
             infoUrlPattern: options.infoUrlPattern,
