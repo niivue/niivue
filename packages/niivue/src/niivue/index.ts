@@ -1726,7 +1726,7 @@ export class Niivue {
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
-      // Calculate windowing adjustments using helper
+        // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
             y,
@@ -1825,7 +1825,7 @@ export class Niivue {
             if (tile !== this.uiData.clickedTile) {
                 return
             }
-                      // Use the active drag mode to determine how to handle mouse movement
+            // Use the active drag mode to determine how to handle mouse movement
             const activeDragMode = this.getCurrentDragMode()
 
             if (activeDragMode === DRAG_MODE.crosshair) {
@@ -1841,7 +1841,7 @@ export class Niivue {
                 this.uiData.prevY = this.uiData.currY
                 return
             }
-            
+
             if (activeDragMode === DRAG_MODE.windowing) {
                 this.windowingHandler(pos.x, pos.y)
                 this.drawScene()
@@ -1861,7 +1861,6 @@ export class Niivue {
             this.drawScene()
             this.uiData.prevX = this.uiData.currX
             this.uiData.prevY = this.uiData.currY
-            
         } else if (this.getCurrentDragMode() === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line') {
             // Handle angle measurement second line tracking
             const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
@@ -7042,7 +7041,7 @@ export class Niivue {
     // Interpolation is linear (default) or nearest neighbor
     // asFloat32 determines if output is Float32 with range 0..255 or Uint8 with range 0..255
 
-/**
+    /**
      * FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
      * @param volume - input volume to be re-oriented, intensity-scaled and resliced
      * @param toRAS - reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).
@@ -7113,33 +7112,21 @@ export class Niivue {
             scaleParams.dst_max = 1
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg32 = ImageProcessing.scalecropFloat32(outImg, 0, 1, srcMin, scale)
-            
+
             // FIX: Slice the buffer to match dimensions
             const finalBuffer = is2D ? outImg32.subarray(0, bufferSize) : outImg32
-            
-            bytes = await this.createNiftiArray(
-                [outDim, outDim, finalZ], 
-                [outMM, outMM, outMM], 
-                Array.from(outAffine), 
-                NiiDataType.DT_FLOAT32, 
-                new Uint8Array(finalBuffer.buffer) as any
-            )
+
+            bytes = await this.createNiftiArray([outDim, outDim, finalZ], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(finalBuffer.buffer) as any)
         } else {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-            
+
             // FIX: Slice the buffer to match dimensions
             const finalBuffer = is2D ? outImg8.subarray(0, bufferSize) : outImg8
 
-            bytes = await this.createNiftiArray(
-                [outDim, outDim, finalZ], 
-                [outMM, outMM, outMM], 
-                Array.from(outAffine), 
-                NiiDataType.DT_UINT8, 
-                finalBuffer as any
-            )
+            bytes = await this.createNiftiArray([outDim, outDim, finalZ], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, finalBuffer as any)
         }
 
         return this.niftiArray2NVImage(bytes as any)
