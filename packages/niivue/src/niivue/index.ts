@@ -1825,7 +1825,7 @@ export class Niivue {
             if (tile !== this.uiData.clickedTile) {
                 return
             }
-            // Use the active drag mode to determine how to handle mouse movement
+                      // Use the active drag mode to determine how to handle mouse movement
             const activeDragMode = this.getCurrentDragMode()
 
             if (activeDragMode === DRAG_MODE.crosshair) {
@@ -1841,6 +1841,7 @@ export class Niivue {
                 this.uiData.prevY = this.uiData.currY
                 return
             }
+            
             if (activeDragMode === DRAG_MODE.windowing) {
                 this.windowingHandler(pos.x, pos.y)
                 this.drawScene()
@@ -1848,11 +1849,19 @@ export class Niivue {
                 this.uiData.prevY = this.uiData.currY
                 return
             }
-            // Handle all other drag modes that need drag tracking
+
+            // Handle all other drag modes that need drag tracking (slicer3D, pan, zoom, measurement)
             this.setDragEnd(pos.x, pos.y)
+
+            // FIX: sync when dragging in slicer3D mode (Issue #1400)
+            if (activeDragMode === DRAG_MODE.slicer3D) {
+                this.sync()
+            }
+
             this.drawScene()
             this.uiData.prevX = this.uiData.currX
             this.uiData.prevY = this.uiData.currY
+            
         } else if (this.getCurrentDragMode() === DRAG_MODE.angle && this.uiData.angleState === 'drawing_second_line') {
             // Handle angle measurement second line tracking
             const pos = this.getNoPaddingNoBorderCanvasRelativeMousePosition(e, this.gl.canvas)
@@ -7043,7 +7052,7 @@ export class Niivue {
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-           bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any)
+           bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any )
         }
 
         return this.niftiArray2NVImage(bytes as any)
