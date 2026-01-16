@@ -32,6 +32,13 @@ export interface ZarrLevelChangeInfo {
   levelDepth?: number
 }
 
+export interface TileBounds {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 export interface NVZarrImageOptions {
   /** Zarr store URL (e.g., "http://localhost:8090/lightsheet.zarr") */
   storeUrl: string
@@ -39,12 +46,18 @@ export interface NVZarrImageOptions {
   maxVolumeSize?: number
   /** Maximum texture size from WebGL (typically 2048 for 3D) */
   maxTextureSize?: number
+  /** Canvas width in device pixels (for coordinate scaling) */
+  canvasWidth?: number
+  /** Canvas height in device pixels (for coordinate scaling) */
+  canvasHeight?: number
   /** Chunk cache size (default 500) */
   cacheSize?: number
   /** Callback when chunks are loaded */
   onChunkLoad?: (info: ChunkLoadInfo) => void
   /** Callback when pyramid level changes */
   onLevelChange?: (info: ZarrLevelChangeInfo) => void
+  /** Callback to get the current tile bounds for coordinate conversion */
+  getTileBounds?: () => TileBounds | null
 }
 
 /**
@@ -127,6 +140,11 @@ export class NVZarrImage {
   private onChunkLoad?: (info: ChunkLoadInfo) => void
   private onLevelChange?: (info: ZarrLevelChangeInfo) => void
   private pendingUpdate: boolean = false
+  // Canvas dimensions for coordinate scaling (screen coords -> volume coords)
+  private canvasWidth: number = 256
+  private canvasHeight: number = 256
+  // Callback to get tile bounds for accurate coordinate conversion
+  private getTileBounds?: () => TileBounds | null
 
   private constructor() {
     // Private constructor - use static create() method
@@ -178,6 +196,14 @@ export class NVZarrImage {
     // Store callbacks
     instance.onChunkLoad = options.onChunkLoad
     instance.onLevelChange = options.onLevelChange
+
+    // Store canvas dimensions for coordinate scaling
+    // Default to volume dimensions if not specified (1:1 mapping)
+    instance.canvasWidth = options.canvasWidth ?? instance.volumeDims.width
+    instance.canvasHeight = options.canvasHeight ?? instance.volumeDims.height
+
+    // Store tile bounds callback for coordinate conversion
+    instance.getTileBounds = options.getTileBounds
 
     // Create the underlying NVImage with FIXED dimensions
     instance.createNVImage()
@@ -299,10 +325,30 @@ export class NVZarrImage {
    * @param screenX - Screen X coordinate (canvas/texture pixels)
    * @param screenY - Screen Y coordinate (canvas/texture pixels)
    * @param screenZ - Screen Z coordinate (optional, for 3D)
+   * @param tileBounds - Optional tile bounds for accurate coordinate conversion
    */
-  async zoomAt(factor: number, screenX: number, screenY: number, screenZ?: number): Promise<void> {
-    // Apply zoom at screen point
-    this.viewport.zoomAt(factor, screenX, screenY, screenZ)
+  async zoomAt(factor: number, screenX: number, screenY: number, screenZ?: number, tileBounds?: TileBounds): Promise<void> {
+    // Use provided tile bounds, fall back to callback, then to canvas dimensions
+    const tile = tileBounds ?? this.getTileBounds?.()
+
+    let volumeX: number
+    let volumeY: number
+
+    if (tile && tile.width > 0 && tile.height > 0) {
+      // Convert canvas coords to tile-local coords, then scale to volume texture coords
+      // This correctly handles cases where the image doesn't fill the entire canvas
+      const tileX = screenX - tile.left
+      const tileY = screenY - tile.top
+      volumeX = tileX * (this.volumeDims.width / tile.width)
+      volumeY = tileY * (this.volumeDims.height / tile.height)
+    } else {
+      // Fallback: scale by canvas dimensions (less accurate)
+      volumeX = screenX * (this.volumeDims.width / this.canvasWidth)
+      volumeY = screenY * (this.volumeDims.height / this.canvasHeight)
+    }
+
+    // Apply zoom at volume point
+    this.viewport.zoomAt(factor, volumeX, volumeY, screenZ)
 
     // Auto-select best level with hysteresis
     const currentLevel = this.viewport.getState().pyramidLevel
@@ -329,9 +375,26 @@ export class NVZarrImage {
    * @param deltaX - Delta X in screen pixels
    * @param deltaY - Delta Y in screen pixels
    * @param deltaZ - Delta Z in screen pixels (optional)
+   * @param tileBounds - Optional tile bounds for accurate coordinate conversion
    */
-  async panBy(deltaX: number, deltaY: number, deltaZ: number = 0): Promise<void> {
-    this.viewport.pan(deltaX, deltaY, deltaZ)
+  async panBy(deltaX: number, deltaY: number, deltaZ: number = 0, tileBounds?: TileBounds): Promise<void> {
+    // Use provided tile bounds, fall back to callback, then to canvas dimensions
+    const tile = tileBounds ?? this.getTileBounds?.()
+
+    let volumeDeltaX: number
+    let volumeDeltaY: number
+
+    if (tile && tile.width > 0 && tile.height > 0) {
+      // Scale deltas by tile size to volume size ratio
+      volumeDeltaX = deltaX * (this.volumeDims.width / tile.width)
+      volumeDeltaY = deltaY * (this.volumeDims.height / tile.height)
+    } else {
+      // Fallback: scale by canvas dimensions
+      volumeDeltaX = deltaX * (this.volumeDims.width / this.canvasWidth)
+      volumeDeltaY = deltaY * (this.volumeDims.height / this.canvasHeight)
+    }
+
+    this.viewport.pan(volumeDeltaX, volumeDeltaY, deltaZ)
     await this.updateVolume()
   }
 
@@ -418,6 +481,24 @@ export class NVZarrImage {
    */
   getBaseScale(): number {
     return this.viewport.getBaseScale()
+  }
+
+  /**
+   * Set canvas dimensions for coordinate scaling.
+   * Call this when the canvas is resized.
+   * @param width - Canvas width in device pixels
+   * @param height - Canvas height in device pixels
+   */
+  setCanvasDimensions(width: number, height: number): void {
+    this.canvasWidth = width
+    this.canvasHeight = height
+  }
+
+  /**
+   * Get current canvas dimensions
+   */
+  getCanvasDimensions(): { width: number; height: number } {
+    return { width: this.canvasWidth, height: this.canvasHeight }
   }
 
   /**

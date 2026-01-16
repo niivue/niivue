@@ -22,4 +22,4 @@ export {
 
 export { ZarrViewport, type ZarrViewportState, type VirtualVolumeDimensions } from './ZarrViewport.js'
 
-export { NVZarrImage, type NVZarrImageOptions, type ChunkLoadInfo, type ZarrLevelChangeInfo } from './NVZarrImage.js'
+export { NVZarrImage, type NVZarrImageOptions, type ChunkLoadInfo, type ZarrLevelChangeInfo, type TileBounds } from './NVZarrImage.js'

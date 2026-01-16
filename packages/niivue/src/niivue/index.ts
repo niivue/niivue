@@ -61,7 +61,7 @@ import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, Lab
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
 import { NVTiffImage, type TileLoadInfo, type LevelChangeInfo } from '@/nvimage/tiff'
-import { NVZarrImage, type ChunkLoadInfo, type ZarrLevelChangeInfo } from '@/nvimage/zarr'
+import { NVZarrImage, type ChunkLoadInfo, type ZarrLevelChangeInfo, type TileBounds } from '@/nvimage/zarr'
 import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
@@ -97,7 +97,7 @@ export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
 export { NVTiffImage, TiffTileClient, TiffTileCache, TiffViewport } from '@/nvimage/tiff'
 export type { TileLoadInfo, LevelChangeInfo, PyramidInfo, PyramidLevel, TileCoord, TiffViewportState } from '@/nvimage/tiff'
 export { NVZarrImage, ZarrChunkClient, ZarrChunkCache, ZarrViewport } from '@/nvimage/zarr'
-export type { ChunkLoadInfo, ZarrLevelChangeInfo, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord, ZarrViewportState } from '@/nvimage/zarr'
+export type { ChunkLoadInfo, ZarrLevelChangeInfo, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord, ZarrViewportState, TileBounds } from '@/nvimage/zarr'
 export * from '@/nvimage/affineUtils'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '@/nvdocument'
@@ -1133,6 +1133,12 @@ export class Niivue {
         this.canvas.height = resizeResult.height
 
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+
+        // Update zarr image canvas dimensions for coordinate scaling
+        if (this.zarrImage) {
+            this.zarrImage.setCanvasDimensions(resizeResult.width, resizeResult.height)
+        }
+
         this.textSizePoints()
         this.drawScene()
     }
@@ -2338,11 +2344,19 @@ export class Niivue {
             const screenX = (e.clientX - rect.left) * this.uiData.dpr!
             const screenY = (e.clientY - rect.top) * this.uiData.dpr!
 
+            // Find which tile the mouse is in and get its bounds
+            const tileIdx = this.tileIndex(screenX, screenY)
+            let tileBounds: TileBounds | undefined
+            if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+                const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+                tileBounds = { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
+            }
+
             // Zoom factor: scroll down = zoom out (0.9), scroll up = zoom in (1.1)
             const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
 
             this.zarrImage
-                .zoomAt(zoomFactor, screenX, screenY)
+                .zoomAt(zoomFactor, screenX, screenY, undefined, tileBounds)
                 .then(() => {
                     this.updateGLVolume()
                     this.drawScene()
@@ -4249,9 +4263,17 @@ export class Niivue {
 
         // Zarr images use their own zoom system - redirect scroll to Zarr viewport
         if (this.zarrImage) {
+            // Find which tile the mouse is in and get its bounds
+            const tileIdx = this.tileIndex(x, y)
+            let tileBounds: TileBounds | undefined
+            if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+                const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+                tileBounds = { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
+            }
+
             const zoomFactor = posChange > 0 ? 0.9 : 1.1
             this.zarrImage
-                .zoomAt(zoomFactor, x, y)
+                .zoomAt(zoomFactor, x, y, undefined, tileBounds)
                 .then(() => {
                     this.updateGLVolume()
                     this.drawScene()
@@ -5109,10 +5131,16 @@ export class Niivue {
         // Get WebGL 3D texture size limit
         const max3DTextureSize = this.gl?.getParameter(this.gl.MAX_3D_TEXTURE_SIZE) ?? 2048
 
+        // Get canvas dimensions for coordinate scaling
+        const canvasWidth = this.canvas?.width ?? 256
+        const canvasHeight = this.canvas?.height ?? 256
+
         this.zarrImage = await NVZarrImage.create({
             storeUrl,
             maxVolumeSize: options.maxVolumeSize ?? 256,
             maxTextureSize: max3DTextureSize,
+            canvasWidth,
+            canvasHeight,
             cacheSize: this.opts.zarrCacheSize ?? 500,
             onChunkLoad: (info) => {
                 this.onZarrChunkLoadProgress(info)
@@ -5121,6 +5149,15 @@ export class Niivue {
             },
             onLevelChange: (info) => {
                 this.onZarrLevelChange(info)
+            },
+            getTileBounds: () => {
+                // Get tile bounds from screenSlices for accurate coordinate conversion
+                // Usually tile 0 contains the main view for zarr/2D images
+                if (this.screenSlices.length > 0) {
+                    const ltwh = this.screenSlices[0].leftTopWidthHeight
+                    return { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
+                }
+                return null
             }
         })
 
