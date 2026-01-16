@@ -248,6 +248,9 @@ export type NVConfigOptions = {
     // Pyramidal TIFF options
     /** Tile cache size for pyramidal TIFF viewing (default 500) */
     tiffCacheSize: number
+    // Zarr options
+    /** Chunk cache size for zarr viewing (default 500) */
+    zarrCacheSize: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -366,7 +369,9 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     showBoundsBorder: false,
     boundsBorderColor: [1, 1, 1, 1], // white border by default
     // Pyramidal TIFF options
-    tiffCacheSize: 500
+    tiffCacheSize: 500,
+    // Zarr options
+    zarrCacheSize: 500
 }
 
 type SceneData = {

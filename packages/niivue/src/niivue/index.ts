@@ -61,6 +61,7 @@ import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, Lab
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
 import { NVTiffImage, type TileLoadInfo, type LevelChangeInfo } from '@/nvimage/tiff'
+import { NVZarrImage, type ChunkLoadInfo, type ZarrLevelChangeInfo } from '@/nvimage/zarr'
 import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
@@ -95,6 +96,8 @@ export { ColorTables as colortables, cmapper } from '@/colortables'
 export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
 export { NVTiffImage, TiffTileClient, TiffTileCache, TiffViewport } from '@/nvimage/tiff'
 export type { TileLoadInfo, LevelChangeInfo, PyramidInfo, PyramidLevel, TileCoord, TiffViewportState } from '@/nvimage/tiff'
+export { NVZarrImage, ZarrChunkClient, ZarrChunkCache, ZarrViewport } from '@/nvimage/zarr'
+export type { ChunkLoadInfo, ZarrLevelChangeInfo, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord, ZarrViewportState } from '@/nvimage/zarr'
 export * from '@/nvimage/affineUtils'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '@/nvdocument'
@@ -588,6 +591,30 @@ export class Niivue {
 
     /** TIFF viewport center position at mouse down (for drag calculations) */
     private tiffCenterAtMouseDown: { x: number; y: number } | null = null
+
+    /** Active zarr image (null if not in zarr viewing mode) */
+    zarrImage: NVZarrImage | null = null
+
+    /** Zarr viewport center position at mouse down (for drag calculations) */
+    private zarrCenterAtMouseDown: { x: number; y: number; z: number } | null = null
+
+    /**
+     * Callback triggered when pyramid level changes for zarr images.
+     * @example
+     * niivue.onZarrLevelChange = (info) => {
+     *   console.log('level: ', info.level, '/', info.totalLevels)
+     * }
+     */
+    onZarrLevelChange: (info: ZarrLevelChangeInfo) => void = () => {}
+
+    /**
+     * Callback triggered when chunks are loaded for zarr images.
+     * @example
+     * niivue.onZarrChunkLoadProgress = (info) => {
+     *   console.log('loaded: ', info.chunksLoaded, '/', info.chunksTotal)
+     * }
+     */
+    onZarrChunkLoadProgress: (info: ChunkLoadInfo) => void = () => {}
 
     document = new NVDocument()
 
@@ -1392,6 +1419,11 @@ export class Niivue {
                     const state = this.tiffImage.getViewportState()
                     this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
                 }
+                // Store Zarr viewport center at drag start
+                if (this.zarrImage) {
+                    const state = this.zarrImage.getViewportState()
+                    this.zarrCenterAtMouseDown = { x: state.centerX, y: state.centerY, z: state.centerZ }
+                }
             }
             this.uiData.isDragging = true
             this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
@@ -2025,6 +2057,11 @@ export class Niivue {
                     const state = this.tiffImage.getViewportState()
                     this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
                 }
+                // Store Zarr viewport center at drag start
+                if (this.zarrImage) {
+                    const state = this.zarrImage.getViewportState()
+                    this.zarrCenterAtMouseDown = { x: state.centerX, y: state.centerY, z: state.centerZ }
+                }
             }
             this.uiData.isDragging = true
 
@@ -2290,6 +2327,28 @@ export class Niivue {
                 })
                 .catch((err) => {
                     log.error('Failed to zoom TIFF:', err)
+                })
+            return
+        }
+
+        // Handle wheel for Zarr zoom (zoom towards cursor position, auto-selects pyramid level)
+        if (this.zarrImage) {
+            const rect = this.canvas!.getBoundingClientRect()
+            // Convert CSS pixels to canvas pixels (account for device pixel ratio)
+            const screenX = (e.clientX - rect.left) * this.uiData.dpr!
+            const screenY = (e.clientY - rect.top) * this.uiData.dpr!
+
+            // Zoom factor: scroll down = zoom out (0.9), scroll up = zoom in (1.1)
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
+
+            this.zarrImage
+                .zoomAt(zoomFactor, screenX, screenY)
+                .then(() => {
+                    this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to zoom Zarr:', err)
                 })
             return
         }
@@ -4188,6 +4247,21 @@ export class Niivue {
             return
         }
 
+        // Zarr images use their own zoom system - redirect scroll to Zarr viewport
+        if (this.zarrImage) {
+            const zoomFactor = posChange > 0 ? 0.9 : 1.1
+            this.zarrImage
+                .zoomAt(zoomFactor, x, y)
+                .then(() => {
+                    this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to zoom Zarr:', err)
+                })
+            return
+        }
+
         // Check if the canvas has focus
         if (
             !SliceNavigation.shouldProcessScroll({
@@ -5008,6 +5082,62 @@ export class Niivue {
 
         // Update GL volume (creates volumeObject3D and draws scene)
         this.updateGLVolume()
+
+        return this
+    }
+
+    /**
+     * Load a zarr dataset from a remote store.
+     *
+     * Creates a virtual NIfTI volume from the zarr data, enabling full
+     * multiplanar and volume rendering capabilities for large datasets.
+     *
+     * @param storeUrl - URL of the zarr store (e.g., "http://localhost:8090/lightsheet.zarr")
+     * @param options - Optional configuration
+     * @param options.maxVolumeSize - Maximum dimension for virtual volume (default 256)
+     * @returns Promise resolving to this Niivue instance
+     *
+     * @example
+     * await niivue.loadZarrFromServer('http://localhost:8090/lightsheet.zarr')
+     */
+    async loadZarrFromServer(
+        storeUrl: string,
+        options: {
+            maxVolumeSize?: number
+        } = {}
+    ): Promise<this> {
+        // Get WebGL 3D texture size limit
+        const max3DTextureSize = this.gl?.getParameter(this.gl.MAX_3D_TEXTURE_SIZE) ?? 2048
+
+        this.zarrImage = await NVZarrImage.create({
+            storeUrl,
+            maxVolumeSize: options.maxVolumeSize ?? 256,
+            maxTextureSize: max3DTextureSize,
+            cacheSize: this.opts.zarrCacheSize ?? 500,
+            onChunkLoad: (info) => {
+                this.onZarrChunkLoadProgress(info)
+                // Update the GL texture when chunks are loaded
+                this.updateGLVolume()
+            },
+            onLevelChange: (info) => {
+                this.onZarrLevelChange(info)
+            }
+        })
+
+        // Set the NVImage as the single volume and back reference
+        const nvImage = this.zarrImage.getNVImage()
+        this.volumes = [nvImage]
+        this.back = nvImage
+
+        // Reset NiiVue's zoom/pan state
+        this.scene.pan2Dxyzmm = [0, 0, 0, 1]
+        this.scene.volScaleMultiplier = 1
+
+        // Update GL volume (creates volumeObject3D and draws scene)
+        this.updateGLVolume()
+
+        // Trigger resize to ensure coordinate transforms are properly initialized
+        this.resizeListener()
 
         return this
     }
@@ -8035,11 +8165,50 @@ export class Niivue {
             this.tiffImage
                 .setViewportState({ centerX: newCenterX, centerY: newCenterY })
                 .then(() => {
-                    this.updateGLVolume()
+                    // this.updateGLVolume()
                     this.drawScene()
                 })
                 .catch((err) => {
                     log.error('Failed to pan TIFF:', err)
+                })
+            this.canvas!.focus()
+            return
+        }
+
+        // Handle Zarr images with their own pan/zoom system
+        if (this.zarrImage && this.zarrCenterAtMouseDown) {
+            // Calculate cumulative delta from drag start to current position
+            const deltaX = startXYendXY[2] - startXYendXY[0]
+            const deltaY = startXYendXY[3] - startXYendXY[1]
+
+            // Skip update if there's no actual movement (prevents infinite loop on click)
+            if (deltaX === 0 && deltaY === 0) {
+                return
+            }
+
+            // Get the effective scale to convert screen pixels to image coordinates
+            const viewportState = this.zarrImage.getViewportState()
+            const effectiveScale = this.zarrImage.getEffectiveScale()
+
+            // Calculate new center: startingCenter + delta/scale
+            // (positive to match standard NiiVue pan direction)
+            const newCenterX = this.zarrCenterAtMouseDown.x - deltaX / effectiveScale
+            const newCenterY = this.zarrCenterAtMouseDown.y - deltaY / effectiveScale
+
+            // Skip update if center position hasn't actually changed (prevents loop after drag stops)
+            if (Math.abs(newCenterX - viewportState.centerX) < 0.001 && Math.abs(newCenterY - viewportState.centerY) < 0.001) {
+                return
+            }
+
+            // Update viewport state with new center
+            this.zarrImage
+                .setViewportState({ centerX: newCenterX, centerY: newCenterY })
+                .then(() => {
+                    // this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to pan Zarr:', err)
                 })
             this.canvas!.focus()
             return
