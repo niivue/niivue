@@ -338,7 +338,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     clickToSegmentBright: true,
     clickToSegmentAutoIntensity: false, // new option, but keep clickToSegmentBright for backwards compatibility
     clickToSegmentIntensityMax: NaN, // NaN will use auto threshold (default flood fill behavior from before)
-       clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
+    clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
     // 0 will use auto threshold (default flood fill behavior from before)
     // Take the voxel intensity at the click point and use this percentage +/- to threshold the flood fill operation.
     // If greater than 0, clickedVoxelIntensity +/- clickedVoxelIntensity * clickToSegmentPercent will be used
