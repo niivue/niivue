@@ -9963,24 +9963,39 @@ export class Niivue {
         return label
     }
 
-    /**
+/**
      * Calculate the 2D screen coordinates of a 3D point using the provided MVP matrix and tile position/size.
+     * Use manual matrix multiplication to avoid gl-matrix import conflicts.
      * @internal
      */
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4 {
-        const screenPoint = vec4.create()
-        // Multiply the 3D point by the model-view-projection matrix
-        vec4.transformMat4(screenPoint, [...point, 1.0], mvpMatrix)
-        // Convert the 4D point to 2D screen coordinates
-        if (screenPoint[3] !== 0.0) {
-            screenPoint[0] = (screenPoint[0] / screenPoint[3] + 1.0) * 0.5 * leftTopWidthHeight[2]
-            screenPoint[1] = (1.0 - screenPoint[1] / screenPoint[3]) * 0.5 * leftTopWidthHeight[3]
-            screenPoint[2] /= screenPoint[3]
+        const [x, y, z] = point;
+        const m = mvpMatrix;
 
-            screenPoint[0] += leftTopWidthHeight[0]
-            screenPoint[1] += leftTopWidthHeight[1]
+        // 1. Manual Matrix Vector Multiplication (Column Major)
+        // out = M * [x, y, z, 1]
+        const w = x * m[3] + y * m[7] + z * m[11] + m[15];
+        const clipX = x * m[0] + y * m[4] + z * m[8] + m[12];
+        const clipY = x * m[1] + y * m[5] + z * m[9] + m[13];
+        const clipZ = x * m[2] + y * m[6] + z * m[10] + m[14];
+
+        // 2. Perspective Division (Clip Space -> NDC)
+        // Initialize with 0 in case w is 0 to avoid Infinity
+        let ndcX = 0, ndcY = 0, ndcZ = 0;
+        if (w !== 0) {
+            ndcX = clipX / w;
+            ndcY = clipY / w;
+            ndcZ = clipZ / w;
         }
-        return screenPoint
+
+        // 3. Viewport Mapping (NDC -> Screen)
+        const screenX = (ndcX + 1.0) * 0.5 * leftTopWidthHeight[2] + leftTopWidthHeight[0];
+        
+        // Flip Y for Canvas (Top-Left origin) vs WebGL (Bottom-Left origin)
+        const screenY = (1.0 - ndcY) * 0.5 * leftTopWidthHeight[3] + leftTopWidthHeight[1];
+
+        // Return standard Float32Array (vec4 format)
+        return new Float32Array([screenX, screenY, ndcZ, w]);
     }
 
     /**
