@@ -539,7 +539,7 @@ export const fragRenderGradientShader =
     kFragRenderGradientDecl +
     kRenderFunc +
     kRenderInit +
-`
+    `
 	float startPos = samplePos.a;
 	float clipCloseThresh = 5.0 * deltaDir.a;
 	float clipClose = sampleRange.x;
@@ -590,7 +590,7 @@ export const fragRenderGradientShader =
 		samplePos += deltaDir; //advance ray position
 	}
 ` +
-    kRenderTail 
+    kRenderTail
 
 export const fragRenderGradientValuesShader =
     kFragRenderGradientDecl +
