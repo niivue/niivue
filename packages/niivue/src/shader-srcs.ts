@@ -534,84 +534,12 @@ uniform float gradientOpacity[${gradientOpacityLutCount}];
 in vec3 vColor;
 out vec4 fColor;
 `
-// This gradient shader uses phong shading
 
 export const fragRenderGradientShader =
     kFragRenderGradientDecl +
     kRenderFunc +
     kRenderInit +
-    `
-	float startPos = samplePos.a;
-	float clipCloseThresh = 5.0 * deltaDir.a;
-	float clipClose = sampleRange.x;
-	if (isClipCutaway)
-		clipClose = sampleRange.y;
-	if (!isClip)
-		clipClose = -1.0;
-	float brighten = 2.0; //modulating makes average intensity darker 0.5 * 0.5 = 0.25
-	//vec4 prevGrad = vec4(0.0);
-	float silhouetteThreshold = 1.0 - silhouettePower;
-	while (samplePos.a <= len) {
-		if (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway) {
-			samplePos += deltaDirFast;
-			continue;
-		}
-		vec4 colorSample = texture(volume, samplePos.xyz);
-		if (colorSample.a >= 0.0) {
-			vec4 grad = texture(gradient, samplePos.xyz);
-			int gradIdx = int(grad.a * ${gradientOpacityLutCount}.0);
-			grad.a = gradientOpacity[gradIdx];
-			if (grad.a > 0.0) {
-				grad.rgb = normalize(grad.rgb*2.0 - 1.0);
-				vec3 n = mat3(normMtx) * grad.rgb;
-				// compute phong ads illumination
-				const float ambient = 0.2;
-				const float diffuse = 0.8;
-				const float specular = 1.0;
-				const float shininess = 10.0;
-				vec3 l = normalize(vec3(0.0, -0.5, 0.5));
-				vec3 viewDir = vec3(0.0, 0.0, -1.0);
-				float ldn = dot(n, l);
-				float a = ambient;
-				vec3 d = abs(ldn) * colorSample.rgb * diffuse;
-				float s = pow(max(dot(reflect(l, n), viewDir), 0.0), shininess) * specular;
-				vec4 ads = vec4(a + d + s, 1.0);
-				ads = mix(vec4(1.0), ads, gradientAmount);
-				// highlight viewer-based edges
-				// for opacity, light direction is ray direction
-				float lightNormDot = dot(grad.rgb, rayDir);
-				// n.b. "lightNormDot" is cosTheta, "silhouettePower" is Fresnel effect exponent
-				if (abs(samplePos.a - clipClose) > clipCloseThresh)
-					colorSample.rgb *= ads.rgb;
-				if (firstHit.a > len)
-					firstHit = samplePos;
-				backNearest = min(backNearest, samplePos.a);
-				colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-				colorSample.a *= grad.a;
-				colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
-				float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
-				// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
-				// Cull voxels that are too aligned with the view direction
-				if (viewAlign > silhouetteThreshold)
-					colorSample.a = 0.0;
-				colorSample.rgb *= colorSample.a;
-				colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
-				if ( colAcc.a > earlyTermination )
-					break;
-			}
-		}
-		samplePos += deltaDir; //advance ray position
-	}
-` +
-    kRenderTail
-
-/*
-// this uses Matcap instead of phong shading, requiring extra texture reads
-export const fragRenderGradientShader =
-    kFragRenderGradientDecl +
-    kRenderFunc +
-    kRenderInit +
-    `
+`
 	float startPos = samplePos.a;
 	float clipCloseThresh = 5.0 * deltaDir.a;
 	float clipClose = sampleRange.x;
@@ -662,7 +590,7 @@ export const fragRenderGradientShader =
 		samplePos += deltaDir; //advance ray position
 	}
 ` +
-    kRenderTail */
+    kRenderTail 
 
 export const fragRenderGradientValuesShader =
     kFragRenderGradientDecl +
