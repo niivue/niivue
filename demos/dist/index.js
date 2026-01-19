@@ -16000,98 +16000,37 @@ var NVMeshLoaders = class _NVMeshLoaders {
   // readTT
   /**
    * Assemble dpg from a map-of-groups into a ValuesArray ordered by groups[].
+   * Missing group data or tags are padded with NaN to maintain group alignment.
    *
    * @param dpgMap - map from groupId -> ValuesArray (entries for that group)
-   * @param groups - ValuesArray describing groups; groups[i].id defines the ordering
-   * @returns ValuesArray - one entry per tag where vals is the concatenation of each group's vals in groups[] order
-   *
-   * @throws Error when:
-   *  - groups is empty or missing
-   *  - any group in groups is missing from dpgMap
-   *  - any group contains duplicate entries for a tag
-   *  - tag coverage differs between groups (missing tag in any group)
-   *  - any entry has invalid/unconvertible vals
+   * @param groups - ValuesArray describing groups; defines the result ordering
+   * @returns ValuesArray - one entry per unique tag found across all groups
+   * @throws Error if "groups" is empty or missing
    */
   static assembleDpgFromMap(dpgMap, groups) {
     if (!Array.isArray(groups) || groups.length === 0) {
       throw new Error('assembleDpgFromMap: "groups" is empty or missing; cannot assemble dpg.');
     }
-    for (let gi = 0; gi < groups.length; gi++) {
-      const gid = String(groups[gi].id);
-      if (!dpgMap[gid]) {
-        throw new Error(`assembleDpgFromMap: missing dpgMap entry for group "${gid}".`);
-      }
-      if (!Array.isArray(dpgMap[gid])) {
-        throw new Error(`assembleDpgFromMap: dpgMap["${gid}"] is not an array.`);
-      }
-    }
-    const firstGroupId = String(groups[0].id);
-    const firstEntries = dpgMap[firstGroupId];
-    const tagOrder = [];
-    const tagSet = /* @__PURE__ */ new Set();
-    for (const e of firstEntries) {
-      if (!e || typeof e.id !== "string") {
-        throw new Error(`assembleDpgFromMap: invalid entry in group "${firstGroupId}".`);
-      }
-      if (tagSet.has(e.id)) {
-        throw new Error(`assembleDpgFromMap: duplicate tag "${e.id}" in group "${firstGroupId}".`);
-      }
-      tagSet.add(e.id);
-      tagOrder.push(e.id);
-    }
-    if (tagSet.size === 0) {
-      throw new Error(`assembleDpgFromMap: no tags found in group "${firstGroupId}".`);
-    }
-    for (let gi = 1; gi < groups.length; gi++) {
-      const gid = String(groups[gi].id);
-      const entries = dpgMap[gid];
-      const idsSeen = /* @__PURE__ */ new Map();
-      for (const e of entries) {
-        if (!e || typeof e.id !== "string") {
-          throw new Error(`assembleDpgFromMap: invalid entry in group "${gid}".`);
-        }
-        idsSeen.set(e.id, (idsSeen.get(e.id) || 0) + 1);
-      }
-      for (const [id, count] of idsSeen.entries()) {
-        if (count > 1) {
-          throw new Error(`assembleDpgFromMap: multiple entries for tag "${id}" in group "${gid}".`);
-        }
-      }
-      if (idsSeen.size !== tagSet.size) {
-        throw new Error(`assembleDpgFromMap: tag coverage mismatch for group "${gid}". Expected ${tagSet.size} tags but found ${idsSeen.size}.`);
-      }
-      for (const t of tagSet) {
-        if (!idsSeen.has(t)) {
-          throw new Error(`assembleDpgFromMap: group "${gid}" missing tag "${t}".`);
-        }
-      }
+    const allTags = /* @__PURE__ */ new Set();
+    for (const gid in dpgMap) {
+      dpgMap[gid].forEach((entry) => allTags.add(entry.id));
     }
     const result = [];
-    for (const tag of tagOrder) {
+    for (const tag of allTags) {
       const perGroupArrays = [];
       let totalLen = 0;
       for (let gi = 0; gi < groups.length; gi++) {
         const gid = String(groups[gi].id);
-        const entries = dpgMap[gid];
-        const matches = entries.filter((e) => e.id === tag);
-        if (matches.length === 0) {
-          throw new Error(`assembleDpgFromMap: missing tag "${tag}" for group "${gid}".`);
-        }
-        if (matches.length > 1) {
-          throw new Error(`assembleDpgFromMap: multiple entries for tag "${tag}" in group "${gid}".`);
-        }
-        const entry = matches[0];
-        if (entry.vals instanceof Float32Array) {
-          perGroupArrays.push(entry.vals);
-          totalLen += entry.vals.length;
+        const entries = dpgMap[gid] || [];
+        const entry = entries.find((e) => e.id === tag);
+        if (entry) {
+          const vals = entry.vals instanceof Float32Array ? entry.vals : Float32Array.from(entry.vals);
+          perGroupArrays.push(vals);
+          totalLen += vals.length;
         } else {
-          try {
-            const conv = Float32Array.from(entry.vals);
-            perGroupArrays.push(conv);
-            totalLen += conv.length;
-          } catch (err2) {
-            throw new Error(`assembleDpgFromMap: invalid vals for tag "${tag}" in group "${gid}".`);
-          }
+          const fallback = new Float32Array([NaN]);
+          perGroupArrays.push(fallback);
+          totalLen += fallback.length;
         }
       }
       const merged = new Float32Array(totalLen);
@@ -16100,12 +16039,7 @@ var NVMeshLoaders = class _NVMeshLoaders {
         merged.set(arr, off);
         off += arr.length;
       }
-      result.push({
-        id: tag,
-        vals: merged
-        // Note: global_min/global_max/cal_min/cal_max are not computed here.
-        // If you want to propagate or compute them, add logic to compute per-tag aggregated values.
-      });
+      result.push({ id: tag, vals: merged });
     }
     return result;
   }
@@ -34018,46 +33952,34 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
+			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
+			//if (grad.a < prevGrad.a)
+			//	grad.rgb = prevGrad.rgb;
+			//prevGrad = grad;
+			vec3 n = mat3(normMtx) * grad.rgb;
+			n.y = - n.y;
+			vec4 mc = vec4(texture(matCap, n.xy * 0.5 + 0.5).rgb, 1.0) * brighten;
+			mc = mix(vec4(1.0), mc, gradientAmount);
+			if (abs(samplePos.a - clipClose) > clipCloseThresh)
+				colorSample.rgb *= mc.rgb;
+			if (firstHit.a > len)
+				firstHit = samplePos;
+			backNearest = min(backNearest, samplePos.a);
+			colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
 			int gradIdx = int(grad.a * ${gradientOpacityLutCount}.0);
-			grad.a = gradientOpacity[gradIdx];
-			if (grad.a > 0.0) {
-				grad.rgb = normalize(grad.rgb*2.0 - 1.0);
-				vec3 n = mat3(normMtx) * grad.rgb;
-				// compute phong ads illumination
-				const float ambient = 0.2;
-				const float diffuse = 0.8;
-				const float specular = 1.0;
-				const float shininess = 10.0;
-				vec3 l = normalize(vec3(0.0, -0.5, 0.5));
-				vec3 viewDir = vec3(0.0, 0.0, -1.0);
-				float ldn = dot(n, l);
-				float a = ambient;
-				vec3 d = abs(ldn) * colorSample.rgb * diffuse;
-				float s = pow(max(dot(reflect(l, n), viewDir), 0.0), shininess) * specular;
-				vec4 ads = vec4(a + d + s, 1.0);
-				ads = mix(vec4(1.0), ads, gradientAmount);
-				// highlight viewer-based edges
-				// for opacity, light direction is ray direction
-				float lightNormDot = dot(grad.rgb, rayDir);
-				// n.b. "lightNormDot" is cosTheta, "silhouettePower" is Fresnel effect exponent
-				if (abs(samplePos.a - clipClose) > clipCloseThresh)
-					colorSample.rgb *= ads.rgb;
-				if (firstHit.a > len)
-					firstHit = samplePos;
-				backNearest = min(backNearest, samplePos.a);
-				colorSample.a = 1.0-pow((1.0 - colorSample.a), opacityCorrection);
-				colorSample.a *= grad.a;
-				colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
-				float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
-				// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
-				// Cull voxels that are too aligned with the view direction
-				if (viewAlign > silhouetteThreshold)
-					colorSample.a = 0.0;
-				colorSample.rgb *= colorSample.a;
-				colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
-				if ( colAcc.a > earlyTermination )
-					break;
-			}
+			colorSample.a *= gradientOpacity[gradIdx];
+			float lightNormDot = dot(grad.rgb, rayDir);
+			// n.b. "lightNormDor" is cosTheta, "silhouettePower" is Fresnel effect exponent
+ 			colorSample.a *= pow(1.0 - abs(lightNormDot), silhouettePower);
+ 			float viewAlign = abs(lightNormDot); // 0 = perpendicular, 1 = aligned
+ 			// linearly map silhouettePower (0..1) to a threshold range, e.g., [1.0, 0.0]
+ 			// Cull voxels that are too aligned with the view direction
+ 			if (viewAlign > silhouetteThreshold)
+ 				colorSample.a = 0.0;
+			colorSample.rgb *= colorSample.a;
+			colAcc= (1.0 - colAcc.a) * colorSample + colAcc;
+			if ( colAcc.a > earlyTermination )
+				break;
 		}
 		samplePos += deltaDir; //advance ray position
 	}

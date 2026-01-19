@@ -1803,17 +1803,12 @@ declare class NVMeshLoaders {
     static readTT(buffer: ArrayBuffer): Promise<TT>;
     /**
      * Assemble dpg from a map-of-groups into a ValuesArray ordered by groups[].
+     * Missing group data or tags are padded with NaN to maintain group alignment.
      *
      * @param dpgMap - map from groupId -> ValuesArray (entries for that group)
-     * @param groups - ValuesArray describing groups; groups[i].id defines the ordering
-     * @returns ValuesArray - one entry per tag where vals is the concatenation of each group's vals in groups[] order
-     *
-     * @throws Error when:
-     *  - groups is empty or missing
-     *  - any group in groups is missing from dpgMap
-     *  - any group contains duplicate entries for a tag
-     *  - tag coverage differs between groups (missing tag in any group)
-     *  - any entry has invalid/unconvertible vals
+     * @param groups - ValuesArray describing groups; defines the result ordering
+     * @returns ValuesArray - one entry per unique tag found across all groups
+     * @throws Error if "groups" is empty or missing
      */
     static assembleDpgFromMap(dpgMap: Record<string, ValuesArray>, groups: ValuesArray): ValuesArray;
     static readTRX(buffer: ArrayBuffer): Promise<TRX>;
