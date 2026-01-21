@@ -905,7 +905,9 @@ export class NVDocument {
                 pts: mesh.pts,
                 tris: mesh.tris,
                 name: mesh.name,
-                rgba255: Uint8Array.from(mesh.rgba255),
+                visible: mesh.visible,
+                colorbarVisible: mesh.colorbarVisible,
+                rgba255: Array.from(mesh.rgba255),
                 opacity: mesh.opacity,
                 connectome: mesh.connectome,
                 groups: mesh.groups,
@@ -914,8 +916,19 @@ export class NVDocument {
                 dpv: mesh.dpv,
                 meshShaderIndex: mesh.meshShaderIndex,
                 layers: mesh.layers.map((layer) => ({
-                    ...layer
-                    // rename colormap to colorMap for backwards compatibility
+                    url: layer.url || '',
+                    opacity: layer.opacity,
+                    colormap: layer.colormap,
+                    colormapNegative: layer.colormapNegative,
+                    useNegativeCmap: layer.useNegativeCmap,
+                    cal_min: layer.cal_min,
+                    cal_max: layer.cal_max,
+                    outlineBorder: layer.outlineBorder,
+                    global_min: layer.global_min,
+                    global_max: layer.global_max,
+                    isTransparentBelowCalMin: layer.isTransparentBelowCalMin,
+                    colormapInvert: layer.colormapInvert,
+                    values: layer.values ? Array.from(layer.values) : undefined
                 })),
                 hasConnectome: mesh.hasConnectome,
                 edgeColormap: mesh.edgeColormap,
@@ -963,13 +976,10 @@ export class NVDocument {
         NVUtilities.download(payload, fileName, mime)
     }
 
-    /**
-     * Deserialize mesh data objects
-     */
     static deserializeMeshDataObjects(document: NVDocument): void {
         if (!document.data.meshesString || document.data.meshesString === '[]') {
             document.meshDataObjects = []
-            return // ← early-exit
+            return
         }
 
         if (document.data.meshesString) {
@@ -984,6 +994,12 @@ export class NVDocument {
                         layer.colormapNegative = layer.colorMapNegative as string
                         delete layer.colorMapNegative
                     }
+                    if (layer.values && Array.isArray(layer.values)) {
+                        layer.values = new Float32Array(layer.values)
+                    }
+                }
+                if (mesh.rgba255 && Array.isArray(mesh.rgba255)) {
+                    mesh.rgba255 = new Uint8Array(mesh.rgba255)
                 }
             }
         }

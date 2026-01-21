@@ -1726,7 +1726,7 @@ export class Niivue {
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
-        // Calculate windowing adjustments using helper
+      // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
             y,
@@ -1841,7 +1841,6 @@ export class Niivue {
                 this.uiData.prevY = this.uiData.currY
                 return
             }
-
             if (activeDragMode === DRAG_MODE.windowing) {
                 this.windowingHandler(pos.x, pos.y)
                 this.drawScene()
@@ -1849,15 +1848,8 @@ export class Niivue {
                 this.uiData.prevY = this.uiData.currY
                 return
             }
-
-            // Handle all other drag modes that need drag tracking (slicer3D, pan, zoom, measurement)
+            // Handle all other drag modes that need drag tracking
             this.setDragEnd(pos.x, pos.y)
-
-            // FIX: sync when dragging in slicer3D mode (Issue #1400)
-            if (activeDragMode === DRAG_MODE.slicer3D) {
-                this.sync()
-            }
-
             this.drawScene()
             this.uiData.prevX = this.uiData.currX
             this.uiData.prevY = this.uiData.currY
@@ -6996,10 +6988,6 @@ export class Niivue {
         const outDim = 256
         const outMM = 1
 
-        // FIX: Detect if input is 2D (has less than 2 slices)
-        const is2D = volume.hdr!.dims![3] < 2
-        const finalZ = is2D ? 1 : outDim
-
         // Compute voxel-to-voxel transform
         const { outAffine, invVox2vox } = ImageProcessing.conformVox2Vox({
             inDims: volume.hdr!.dims!,
@@ -7018,7 +7006,7 @@ export class Niivue {
             }
         }
 
-        // Resample volume (this creates a 256^3 buffer)
+        // Resample volume
         const outImg = ImageProcessing.resampleVolume({
             inImg,
             inDims: volume.hdr!.dims!,
@@ -7044,31 +7032,18 @@ export class Niivue {
 
         // Scale and create output NIfTI
         let bytes: Uint8Array
-        // Calculate the size of the final data buffer (slice vs volume)
-        // If 2D, we only grab the first slice (256*256 pixels)
-        const sliceSize = outDim * outDim
-        const bufferSize = is2D ? sliceSize : sliceSize * outDim
-
         if (asFloat32) {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 1
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg32 = ImageProcessing.scalecropFloat32(outImg, 0, 1, srcMin, scale)
-
-            // FIX: Slice the buffer to match dimensions
-            const finalBuffer = is2D ? outImg32.subarray(0, bufferSize) : outImg32
-
-            bytes = await this.createNiftiArray([outDim, outDim, finalZ], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(finalBuffer.buffer) as any)
+            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer) as any)
         } else {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-
-            // FIX: Slice the buffer to match dimensions
-            const finalBuffer = is2D ? outImg8.subarray(0, bufferSize) : outImg8
-
-            bytes = await this.createNiftiArray([outDim, outDim, finalZ], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, finalBuffer as any)
+           bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any)
         }
 
         return this.niftiArray2NVImage(bytes as any)
@@ -11364,17 +11339,8 @@ export class Niivue {
             })
 
             if (dragResult.changed) {
-                const idx = this.uiData.activeClipPlaneIndex
-                this.scene.clipPlaneDepthAziElevs[idx] = dragResult.depthAziElev
-                // Update clip plane directly without calling setClipPlane (which triggers drawScene recursively)
-                const clipPlane = ClipPlaneManager.depthAziElevToClipPlane({
-                    depth: dragResult.depthAziElev[0],
-                    azimuth: dragResult.depthAziElev[1],
-                    elevation: dragResult.depthAziElev[2]
-                })
-                this.scene.clipPlanes[idx] = clipPlane
-                this.onClipPlaneChange(clipPlane)
-                // Don't return - let drawScene continue naturally
+                this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex] = dragResult.depthAziElev
+                return this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex])
             }
         }
 
