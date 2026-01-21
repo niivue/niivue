@@ -1,3 +1,5 @@
+// nvdocument.ts (patched)
+// --- imports (unchanged)
 import { serialize, deserialize } from '@ungap/structured-clone'
 import { vec3, vec4 } from 'gl-matrix'
 import { NVUtilities } from '@/nvutilities'
@@ -364,13 +366,32 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     boundsBorderColor: [1, 1, 1, 1] // white border by default
 }
 
+//
+// -- NEW: Recursive encoded type for NVConfigOptions JSON-safe form
+//
+
+// Recursively replace number with number | string (works for arrays and nested objects)
+type EncodeNumbersIn<T> =
+    T extends number ? number | string :
+    T extends (infer U)[] ? EncodeNumbersIn<U>[] :
+    T extends object ? { [K in keyof T]: EncodeNumbersIn<T[K]> } :
+    T
+
+type EncodedNVConfigOptions = EncodeNumbersIn<NVConfigOptions>
+
+//
+// Utility encode/decode helpers
+//
+
+export const DEFAULT_SCENE_DATA = {} // placeholder if needed elsewhere (kept for completeness)
+
 type SceneData = {
     gamma: number
     azimuth: number
     elevation: number
     crosshairPos: vec3
-    clipPlanes: number[][] // array of vec4 planes
-    clipPlaneDepthAziElevs: number[][] // optional per-plane orientation
+    clipPlanes: number[][]
+    clipPlaneDepthAziElevs: number[][]
     volScaleMultiplier: number
     pan2Dxyzmm: vec4
 }
@@ -380,8 +401,8 @@ export const INITIAL_SCENE_DATA = {
     azimuth: 110,
     elevation: 10,
     crosshairPos: vec3.fromValues(0.5, 0.5, 0.5),
-    clipPlanes: [[0, 0, 0, 0]], // start with no planes
-    clipPlaneDepthAziElevs: [[2, 0, 0]], // empty by default
+    clipPlanes: [[0, 0, 0, 0]],
+    clipPlaneDepthAziElevs: [[2, 0, 0]],
     volScaleMultiplier: 1.0,
     pan2Dxyzmm: vec4.fromValues(0, 0, 0, 1)
 }
@@ -396,7 +417,6 @@ export type Scene = {
     crosshairPos: vec3
     clipPlane: number[]
     clipPlanes: number[][]
-    // clipPlaneDepthAziElev: number[]
     clipPlaneDepthAziElevs: number[][]
     pan2Dxyzmm: vec4
     _elevation?: number
@@ -404,11 +424,14 @@ export type Scene = {
     gamma?: number
 }
 
+/**
+ * DocumentData / ExportDocumentData types (kept minimal here)
+ */
 export type DocumentData = {
     title?: string
     imageOptionsArray?: ImageFromUrlOptions[]
     meshOptionsArray?: unknown[]
-    opts?: Partial<NVConfigOptions>
+    opts?: Partial<EncodedNVConfigOptions> | Partial<NVConfigOptions>
     previewImageDataURL?: string
     labels?: NVLabel3D[]
     encodedImageBlobs?: string[]
@@ -422,23 +445,15 @@ export type DocumentData = {
 }
 
 export type ExportDocumentData = {
-    // base64 encoded images
     encodedImageBlobs: string[]
-    // base64 encoded drawing
     encodedDrawingBlob: string
-    // dataURL of the preview image
     previewImageDataURL: string
-    // map of image ids to image options
     imageOptionsMap: Map<string, number>
-    // array of image options to recreate images
     imageOptionsArray: ImageFromUrlOptions[]
-    // data to recreate a scene
     sceneData: Partial<SceneData>
-    // configuration options of {@link Niivue} instance
-    opts: NVConfigOptions
-    // encoded meshes
+    opts: EncodedNVConfigOptions | Partial<EncodedNVConfigOptions>
     meshesString: string
-    // TODO the following fields were missing in the typedef
+    meshOptionsArray?: unknown[]
     labels: NVLabel3D[]
     connectomes: string[]
     customData: string
@@ -449,15 +464,6 @@ export type ExportDocumentData = {
 /**
  * Returns a partial configuration object containing only the fields in the provided
  * options that differ from the DEFAULT_OPTIONS.
- *
- * This is used to reduce the size of the saved document by omitting any fields
- * that match the default values.
- *
- * Array fields are compared element-wise, and any mismatch will result in the
- * entire array being included in the diff.
- *
- * @param opts - The configuration options to compare against DEFAULT_OPTIONS
- * @returns A Partial<NVConfigOptions> object with only the differing fields
  */
 function diffOptions(opts: NVConfigOptions, defaults: NVConfigOptions): Partial<NVConfigOptions> {
     const diff: Partial<NVConfigOptions> = {}
@@ -474,15 +480,14 @@ function diffOptions(opts: NVConfigOptions, defaults: NVConfigOptions): Partial<
 }
 
 /**
- * Creates and instance of NVDocument
- * @ignore
+ * NVDocument class (main)
  */
 export class NVDocument {
     data: DocumentData = {
         title: 'Untitled document',
         imageOptionsArray: [],
         meshOptionsArray: [],
-        opts: { ...DEFAULT_OPTIONS },
+        opts: { ...DEFAULT_OPTIONS } as any,
         previewImageDataURL: '',
         labels: [],
         encodedImageBlobs: [],
@@ -555,13 +560,6 @@ export class NVDocument {
                 this.sceneData.clipPlanes[0] = clipPlane
             },
 
-            // get clipPlaneDepthAziElev(): number[] {
-            //   return this.sceneData.clipPlaneDepthAziElevs[0] ?? []
-            // },
-            // set clipPlaneDepthAziElev(clipPlaneDepthAziElev: number[]) {
-            //   this.sceneData.clipPlaneDepthAziElevs[0] = clipPlaneDepthAziElev
-            // },
-
             get clipPlanes(): number[][] {
                 return this.sceneData.clipPlanes
             },
@@ -580,9 +578,6 @@ export class NVDocument {
                 return this.sceneData.pan2Dxyzmm
             },
 
-            /**
-             * Sets current 2D pan in 3D mm
-             */
             set pan2Dxyzmm(pan2Dxyzmm) {
                 this.sceneData.pan2Dxyzmm = pan2Dxyzmm
             },
@@ -591,9 +586,6 @@ export class NVDocument {
                 return this.sceneData.gamma
             },
 
-            /**
-             * Sets current gamma
-             */
             set gamma(newGamma) {
                 this.sceneData.gamma = newGamma
             }
@@ -643,7 +635,6 @@ export class NVDocument {
 
     /**
      * Gets the base 64 encoded blob of the associated drawing
-     * TODO the return type was marked as string[] here, was that an error?
      */
     get encodedDrawingBlob(): string {
         return this.data.encodedDrawingBlob
@@ -663,7 +654,7 @@ export class NVDocument {
      * Sets the options of the {@link Niivue} instance
      */
     set opts(opts) {
-        this.data.opts = { ...opts }
+        this.data.opts = { ...opts } as any
         this._optsProxy = null // Force recreation of proxy
     }
 
@@ -749,8 +740,6 @@ export class NVDocument {
 
     /**
      * Fetch any image data that is missing from this document.
-     * This includes loading image blobs for `ImageFromUrlOptions` with valid `url` fields.
-     * After calling this, `volumes` and `imageOptionsMap` will be populated.
      */
     async fetchLinkedData(): Promise<void> {
         this.data.encodedImageBlobs = []
@@ -789,168 +778,286 @@ export class NVDocument {
         return this.imageOptionsMap.has(image.id) ? this.data.imageOptionsArray[this.imageOptionsMap.get(image.id)] : null
     }
 
+    //
+    // JSON number encode/decode helpers
+    //
+
+    static encodeNumberForJSON(v: number | null | undefined): number | string | undefined {
+        if (v === undefined) return undefined
+        if (v === null) return null
+        if (Number.isFinite(v)) return v
+        if (v === Infinity) return 'infinity'
+        if (v === -Infinity) return '-infinity'
+        return 'NaN'
+    }
+
+    static decodeNumberFromJSON(v: any): number | null | undefined {
+        if (v === undefined) return undefined
+        if (v === null) return null
+        if (typeof v === 'number') return v
+        if (v === 'NaN') return NaN
+        if (v === 'infinity') return Infinity
+        if (v === '-infinity') return -Infinity
+        const n = Number(v)
+        return Number.isNaN(n) ? NaN : n
+    }
+
+    // encode recursively numbers inside an object/array -> number|string
+    static encodeOptsForJSON(opts: Partial<NVConfigOptions> | undefined): Partial<EncodedNVConfigOptions> | undefined {
+        if (opts === undefined) return undefined
+
+        const encodeRecursive = (v: any): any => {
+            if (v === undefined) return undefined
+            if (v === null) return null
+            if (typeof v === 'number') return NVDocument.encodeNumberForJSON(v)
+            if (Array.isArray(v)) return v.map((el: any) => encodeRecursive(el))
+            if (typeof v === 'object') {
+                const out: any = {}
+                for (const k of Object.keys(v)) {
+                    out[k] = encodeRecursive(v[k])
+                }
+                return out
+            }
+            return v
+        }
+
+        const out: any = {}
+        for (const k of Object.keys(opts)) {
+            const val = (opts as any)[k]
+            if (val === undefined) continue
+            out[k] = encodeRecursive(val)
+        }
+        return out as Partial<EncodedNVConfigOptions>
+    }
+
+    // decode recursively strings representing special numbers back to numbers
+    static decodeOptsFromJSON(opts: Partial<EncodedNVConfigOptions> | Partial<NVConfigOptions> | undefined): Partial<NVConfigOptions> | undefined {
+        if (opts === undefined) return undefined
+
+        const decodeRecursive = (v: any): any => {
+            if (v === undefined) return undefined
+            if (v === null) return null
+            if (typeof v === 'number') return v
+            if (typeof v === 'string') {
+                // possible encoded number string
+                const dec = NVDocument.decodeNumberFromJSON(v)
+                // decodeNumberFromJSON returns NaN for unknown strings - keep NaN
+                return dec
+            }
+            if (Array.isArray(v)) return v.map((el: any) => decodeRecursive(el))
+            if (typeof v === 'object') {
+                const out: any = {}
+                for (const k of Object.keys(v)) {
+                    out[k] = decodeRecursive(v[k])
+                }
+                return out
+            }
+            return v
+        }
+
+        const out: any = {}
+        for (const k of Object.keys(opts)) {
+            const val = (opts as any)[k]
+            if (val === undefined) continue
+            out[k] = decodeRecursive(val)
+        }
+        return out as Partial<NVConfigOptions>
+    }
+
     /**
      * Serialise the document.
-     *
-     * @param embedImages  If false, encodedImageBlobs is left empty
-     *                     (imageOptionsArray still records the URL / name).
-     * @param embedDrawing  If false, encodedDrawingBlob is left empty
      */
-    json(embedImages = true, embedDrawing = true): ExportDocumentData {
-        const data: Partial<ExportDocumentData> = {
-            encodedImageBlobs: [],
-            previewImageDataURL: this.data.previewImageDataURL,
-            imageOptionsMap: new Map()
-        }
-        const imageOptionsArray = []
-        // save our scene object
-        data.sceneData = { ...this.scene.sceneData }
-
-        // Ensure we don’t accidentally persist legacy single-plane props
-        delete (data.sceneData as any).clipPlane
-        delete (data.sceneData as any).clipPlaneDepthAziElev
-        delete (data.sceneData as any).clipThick
-        delete (data.sceneData as any).clipVolumeLow
-        delete (data.sceneData as any).clipVolumeHigh
-
-        // save our options
-        data.opts = diffOptions(this.opts, DEFAULT_OPTIONS) as NVConfigOptions
-        if (this.opts.meshThicknessOn2D === Infinity) {
-            data.opts.meshThicknessOn2D = 'infinity'
-        }
-        // infinity is a symbol
-        if (this.opts.meshThicknessOn2D === Infinity) {
-            data.opts.meshThicknessOn2D = 'infinity'
-        }
-
-        data.labels = [...this.data.labels]
-
-        // remove any handlers
-        for (const label of data.labels) {
-            delete label.onClick
-        }
-
-        data.customData = this.customData
-
-        // Serialize completedMeasurements and completedAngles
-        data.completedMeasurements = [...this.completedMeasurements]
-        data.completedAngles = [...this.completedAngles]
-
-        // volumes
-        // TODO move this to a per-volume export function in NVImage?
-        if (this.volumes.length) {
-            for (let i = 0; i < this.volumes.length; i++) {
-                const volume = this.volumes[i]
-                let imageOptions = this.getImageOptions(volume)
-                if (imageOptions === null) {
-                    log.warn('no options found for image, using options from the volume directly')
-                    imageOptions = {
-                        name: volume?.name ?? '',
-                        colormap: volume?._colormap ?? 'gray',
-                        opacity: volume?._opacity ?? 1.0,
-                        pairedImgData: null,
-                        cal_min: volume?.cal_min ?? NaN,
-                        cal_max: volume?.cal_max ?? NaN,
-                        trustCalMinMax: volume?.trustCalMinMax ?? true,
-                        percentileFrac: volume?.percentileFrac ?? 0.02,
-                        ignoreZeroVoxels: volume?.ignoreZeroVoxels ?? false,
-                        useQFormNotSForm: volume?.useQFormNotSForm ?? false,
-                        colormapNegative: volume?.colormapNegative ?? '',
-                        colormapLabel: volume?.colormapLabel ?? null,
-                        imageType: volume?.imageType ?? NVIMAGE_TYPE.NII,
-                        frame4D: volume?.frame4D ?? 0,
-                        limitFrames4D: volume?.limitFrames4D ?? NaN,
-                        url: volume?.url ?? '',
-                        urlImageData: volume?.urlImgData ?? '',
-                        alphaThreshold: false,
-                        cal_minNeg: volume?.cal_minNeg ?? NaN,
-                        cal_maxNeg: volume?.cal_maxNeg ?? NaN,
-                        colorbarVisible: volume?.colorbarVisible ?? true
-                    }
-                } else {
-                    if (!('imageType' in imageOptions)) {
-                        imageOptions.imageType = NVIMAGE_TYPE.NII
-                    }
-                }
-                // update image options on current image settings
-                imageOptions.colormap = volume.colormap
-                imageOptions.colormapLabel = volume.colormapLabel
-                imageOptions.opacity = volume.opacity
-                imageOptions.cal_max = volume.cal_max ?? NaN
-                imageOptions.cal_min = volume.cal_min ?? NaN
-
-                imageOptionsArray.push(imageOptions)
-
-                if (embedImages) {
-                    const blob = NVUtilities.uint8tob64(volume.toUint8Array())
-                    data.encodedImageBlobs!.push(blob)
-                }
-                data.imageOptionsMap!.set(volume.id, i)
-            }
-        }
-        // Add it even if it's empty
-        data.imageOptionsArray = [...imageOptionsArray]
-
-        // meshes
-        const meshes = []
-        data.connectomes = []
-        for (const mesh of this.meshes) {
-            if (mesh.type === MeshType.CONNECTOME) {
-                data.connectomes.push(JSON.stringify((mesh as NVConnectome).json()))
-                continue
-            }
-            const copyMesh: Mutable<any> = {
-                pts: mesh.pts,
-                tris: mesh.tris,
-                name: mesh.name,
-                rgba255: Uint8Array.from(mesh.rgba255),
-                opacity: mesh.opacity,
-                connectome: mesh.connectome,
-                groups: mesh.groups,
-                dpg: mesh.dpg,
-                dps: mesh.dps,
-                dpv: mesh.dpv,
-                meshShaderIndex: mesh.meshShaderIndex,
-                layers: mesh.layers.map((layer) => ({
-                    ...layer
-                    // rename colormap to colorMap for backwards compatibility
-                })),
-                hasConnectome: mesh.hasConnectome,
-                edgeColormap: mesh.edgeColormap,
-                edgeColormapNegative: mesh.edgeColormapNegative,
-                edgeMax: mesh.edgeMax,
-                edgeMin: mesh.edgeMin,
-                edges: mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [],
-                extentsMax: mesh.extentsMax,
-                extentsMin: mesh.extentsMin,
-                furthestVertexFromOrigin: mesh.furthestVertexFromOrigin,
-                nodeColormap: mesh.nodeColormap,
-                nodeColormapNegative: mesh.nodeColormapNegative,
-                nodeMaxColor: mesh.nodeMaxColor,
-                nodeMinColor: mesh.nodeMinColor,
-                nodeScale: mesh.nodeScale,
-                legendLineThickness: mesh.legendLineThickness,
-                offsetPt0: mesh.offsetPt0,
-                nodes: mesh.nodes
-            }
-            if (mesh.offsetPt0 && mesh.offsetPt0.length > 0) {
-                copyMesh.offsetPt0 = mesh.offsetPt0
-                copyMesh.fiberGroupColormap = mesh.fiberGroupColormap
-                copyMesh.fiberColor = mesh.fiberColor
-                copyMesh.fiberDither = mesh.fiberDither
-                copyMesh.fiberRadius = mesh.fiberRadius
-                copyMesh.colormap = mesh.colormap
-            }
-            meshes.push(copyMesh)
-        }
-        data.meshesString = JSON.stringify(serialize(meshes))
-        // Serialize drawBitmap
-        if (embedDrawing && this.drawBitmap) {
-            data.encodedDrawingBlob = NVUtilities.uint8tob64(this.drawBitmap)
-        }
-
-        return data as ExportDocumentData
+    /**
+   * json() — patched layer encoding:
+   *
+   * When serializing each mesh, encode layer numeric fields using encodeNumberForJSON
+   * so that NaN/Infinity/-Infinity round-trip reliably.
+   */
+  json(embedImages = true, embedDrawing = true): ExportDocumentData {
+    const data: Partial<ExportDocumentData> = {
+      encodedImageBlobs: [],
+      previewImageDataURL: this.data.previewImageDataURL,
+      imageOptionsMap: new Map()
     }
+    const imageOptionsArray = []
+    data.sceneData = { ...this.scene.sceneData }
+
+    // remove legacy single-plane fields if present
+    delete (data.sceneData as any).clipPlane
+    delete (data.sceneData as any).clipPlaneDepthAziElev
+    delete (data.sceneData as any).clipThick
+    delete (data.sceneData as any).clipVolumeLow
+    delete (data.sceneData as any).clipVolumeHigh
+
+    // save our options as before (kept minimal)
+    data.opts = diffOptions(this.opts, DEFAULT_OPTIONS) as NVConfigOptions
+    if (this.opts.meshThicknessOn2D === Infinity) {
+      data.opts.meshThicknessOn2D = 'infinity'
+    }
+
+    data.labels = [...this.data.labels]
+    for (const label of data.labels) {
+      delete label.onClick
+    }
+
+    data.customData = this.customData
+    data.completedMeasurements = [...this.completedMeasurements]
+    data.completedAngles = [...this.completedAngles]
+
+    // volumes (kept as you had)
+    if (this.volumes.length) {
+      for (let i = 0; i < this.volumes.length; i++) {
+        const volume = this.volumes[i]
+        let imageOptions = this.getImageOptions(volume)
+        if (imageOptions === null) {
+          log.warn('no options found for image, using options from the volume directly')
+          imageOptions = {
+            name: volume?.name ?? '',
+            colormap: volume?._colormap ?? 'gray',
+            opacity: volume?._opacity ?? 1.0,
+            pairedImgData: null,
+            cal_min: volume?.cal_min ?? NaN,
+            cal_max: volume?.cal_max ?? NaN,
+            trustCalMinMax: volume?.trustCalMinMax ?? true,
+            percentileFrac: volume?.percentileFrac ?? 0.02,
+            ignoreZeroVoxels: volume?.ignoreZeroVoxels ?? false,
+            useQFormNotSForm: volume?.useQFormNotSForm ?? false,
+            colormapNegative: volume?.colormapNegative ?? '',
+            colormapLabel: volume?.colormapLabel ?? null,
+            imageType: volume?.imageType ?? NVIMAGE_TYPE.NII,
+            frame4D: volume?.frame4D ?? 0,
+            limitFrames4D: volume?.limitFrames4D ?? NaN,
+            url: volume?.url ?? '',
+            urlImageData: volume?.urlImgData ?? '',
+            alphaThreshold: false,
+            cal_minNeg: volume?.cal_minNeg ?? NaN,
+            cal_maxNeg: volume?.cal_maxNeg ?? NaN,
+            colorbarVisible: volume?.colorbarVisible ?? true
+          }
+        } else {
+          if (!('imageType' in imageOptions)) {
+            imageOptions.imageType = NVIMAGE_TYPE.NII
+          }
+        }
+
+        imageOptions.colormap = volume.colormap
+        imageOptions.colormapLabel = volume.colormapLabel
+        imageOptions.opacity = volume.opacity
+        imageOptions.cal_max = volume.cal_max ?? NaN
+        imageOptions.cal_min = volume.cal_min ?? NaN
+
+        imageOptionsArray.push(imageOptions)
+
+        if (embedImages) {
+          const blob = NVUtilities.uint8tob64(volume.toUint8Array())
+          data.encodedImageBlobs!.push(blob)
+        }
+        data.imageOptionsMap!.set(volume.id, i)
+      }
+    }
+    data.imageOptionsArray = [...imageOptionsArray]
+
+    // meshes — patched: encode layers numeric fields
+    const meshes = []
+    data.connectomes = []
+
+    for (const mesh of this.meshes) {
+      if (mesh.type === MeshType.CONNECTOME) {
+        data.connectomes.push(JSON.stringify((mesh as NVConnectome).json()))
+        continue
+      }
+
+      // copy mesh metadata; encode layers carefully
+      const copyMesh: Mutable<any> = {
+        pts: mesh.pts,
+        tris: mesh.tris,
+        name: mesh.name,
+        rgba255: Uint8Array.from(mesh.rgba255),
+        opacity: mesh.opacity,
+        connectome: mesh.connectome,
+        groups: mesh.groups,
+        dpg: mesh.dpg,
+        dps: mesh.dps,
+        dpv: mesh.dpv,
+        meshShaderIndex: mesh.meshShaderIndex,
+        // encode layers: make sure numeric fields are JSON-safe via encodeNumberForJSON
+        layers: (Array.isArray(mesh.layers) ? mesh.layers : []).map((layer: any) => {
+          const safeLayer: any = {
+            // copy simple fields
+            name: layer?.name,
+            key: layer?.key,
+            url: layer?.url,
+            headers: layer?.headers,
+            opacity: layer?.opacity,
+            // colormap fields: prefer canonical colormap, but keep compatibility
+            colormap: layer?.colormap !== undefined ? layer.colormap : layer?.colorMap,
+            colormapNegative: layer?.colormapNegative !== undefined ? layer.colormapNegative : layer?.colorMapNegative,
+            colormapInvert: layer?.colormapInvert,
+            colormapLabel: layer?.colormapLabel,
+            useNegativeCmap: layer?.useNegativeCmap,
+            isAdditiveBlend: layer?.isAdditiveBlend,
+            frame4D: layer?.frame4D,
+            nFrame4D: layer?.nFrame4D,
+            outlineBorder: layer?.outlineBorder,
+            isTransparentBelowCalMin: layer?.isTransparentBelowCalMin,
+            colormapType: layer?.colormapType,
+            base64: layer?.base64,
+            colorbarVisible: layer?.colorbarVisible,
+            showLegend: layer?.showLegend,
+            labels: Array.isArray(layer?.labels) ? layer.labels.map((l: any) => ({ ...(l || {}) })) : layer?.labels,
+            atlasValues: (layer?.atlasValues instanceof Float32Array || Array.isArray(layer?.atlasValues)) ? Array.from(layer.atlasValues) : layer?.atlasValues,
+            values: (layer?.values instanceof Float32Array || Array.isArray(layer?.values)) ? Array.from(layer.values) : layer?.values
+          }
+
+          // numeric fields: use encoder so NaN/Infinity survive JSON.stringify
+          safeLayer.global_min = NVDocument.encodeNumberForJSON(layer?.global_min)
+          safeLayer.global_max = NVDocument.encodeNumberForJSON(layer?.global_max)
+          safeLayer.cal_min = NVDocument.encodeNumberForJSON(layer?.cal_min)
+          safeLayer.cal_max = NVDocument.encodeNumberForJSON(layer?.cal_max)
+          safeLayer.cal_minNeg = NVDocument.encodeNumberForJSON(layer?.cal_minNeg)
+          safeLayer.cal_maxNeg = NVDocument.encodeNumberForJSON(layer?.cal_maxNeg)
+
+          return safeLayer
+        }),
+        hasConnectome: mesh.hasConnectome,
+        edgeColormap: mesh.edgeColormap,
+        edgeColormapNegative: mesh.edgeColormapNegative,
+        edgeMax: mesh.edgeMax,
+        edgeMin: mesh.edgeMin,
+        edges: mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [],
+        extentsMax: mesh.extentsMax,
+        extentsMin: mesh.extentsMin,
+        furthestVertexFromOrigin: mesh.furthestVertexFromOrigin,
+        nodeColormap: mesh.nodeColormap,
+        nodeColormapNegative: mesh.nodeColormapNegative,
+        nodeMaxColor: mesh.nodeMaxColor,
+        nodeMinColor: mesh.nodeMinColor,
+        nodeScale: mesh.nodeScale,
+        legendLineThickness: mesh.legendLineThickness,
+        offsetPt0: mesh.offsetPt0,
+        nodes: mesh.nodes ? (Array.isArray(mesh.nodes) ? [...mesh.nodes] : mesh.nodes) : undefined
+      }
+
+      if (mesh.offsetPt0 && mesh.offsetPt0.length > 0) {
+        copyMesh.offsetPt0 = mesh.offsetPt0
+        copyMesh.fiberGroupColormap = mesh.fiberGroupColormap
+        copyMesh.fiberColor = mesh.fiberColor
+        copyMesh.fiberDither = mesh.fiberDither
+        copyMesh.fiberRadius = mesh.fiberRadius
+        copyMesh.colormap = mesh.colormap
+      }
+
+      meshes.push(copyMesh)
+    }
+
+    data.meshesString = JSON.stringify(serialize(meshes))
+
+    if (embedDrawing && this.drawBitmap) {
+      data.encodedDrawingBlob = NVUtilities.uint8tob64(this.drawBitmap)
+    }
+
+    return data as ExportDocumentData
+  }
 
     async download(fileName: string, compress: boolean, opts: { embedImages: boolean } = { embedImages: true }): Promise<void> {
         const data = this.json(opts.embedImages)
@@ -962,25 +1069,35 @@ export class NVDocument {
     }
 
     /**
-     * Deserialize mesh data objects
+     * Deserialize mesh data objects (minimal)
      */
     static deserializeMeshDataObjects(document: NVDocument): void {
         if (!document.data.meshesString || document.data.meshesString === '[]') {
             document.meshDataObjects = []
-            return // ← early-exit
+            return
         }
 
         if (document.data.meshesString) {
             document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
             for (const mesh of document.meshDataObjects!) {
-                for (const layer of mesh.layers) {
-                    if ('colorMap' in layer) {
-                        layer.colormap = layer.colorMap as string
-                        delete layer.colorMap
-                    }
-                    if ('colorMapNegative' in layer) {
-                        layer.colormapNegative = layer.colorMapNegative as string
-                        delete layer.colorMapNegative
+                if (Array.isArray(mesh.layers)) {
+                    for (const layer of mesh.layers) {
+                        if ('colorMap' in layer) {
+                            layer.colormap = layer.colorMap as string
+                            delete layer.colorMap
+                        }
+                        if ('colorMapNegative' in layer) {
+                            layer.colormapNegative = layer.colorMapNegative as string
+                            delete layer.colorMapNegative
+                        }
+
+                        // decode numeric fields that were encoded at save-time
+                        layer.global_min = NVDocument.decodeNumberFromJSON(layer.global_min)
+                        layer.global_max = NVDocument.decodeNumberFromJSON(layer.global_max)
+                        layer.cal_min = NVDocument.decodeNumberFromJSON(layer.cal_min)
+                        layer.cal_max = NVDocument.decodeNumberFromJSON(layer.cal_max)
+                        layer.cal_minNeg = NVDocument.decodeNumberFromJSON(layer.cal_minNeg)
+                        layer.cal_maxNeg = NVDocument.decodeNumberFromJSON(layer.cal_maxNeg)
                     }
                 }
             }
@@ -996,7 +1113,6 @@ export class NVDocument {
         let documentData: DocumentData
 
         if (NVUtilities.isArrayBufferCompressed(buffer)) {
-            // The file is gzip compressed
             const documentText = await NVUtilities.decompressArrayBuffer(buffer)
             documentData = JSON.parse(documentText)
         } else {
@@ -1007,9 +1123,6 @@ export class NVDocument {
         return NVDocument.loadFromJSON(documentData)
     }
 
-    /**
-     * Factory method to return an instance of NVDocument from a File object
-     */
     static async loadFromFile(file: Blob): Promise<NVDocument> {
         const arrayBuffer = await NVUtilities.readFileAsync(file)
         let dataString: string
@@ -1022,25 +1135,15 @@ export class NVDocument {
         }
 
         const documentData = JSON.parse(dataString) as DocumentData
-
         return NVDocument.loadFromJSON(documentData)
     }
 
     /**
      * Factory method to return an instance of NVDocument from JSON.
-     *
-     * This will merge any saved configuration options (`opts`) with the DEFAULT_OPTIONS,
-     * ensuring any missing values are filled with defaults. It also restores special-case
-     * fields like `meshThicknessOn2D` when serialized as the string "infinity".
-     *
-     * @param data - A serialized DocumentData object
-     * @returns A reconstructed NVDocument instance
      */
     static loadFromJSON(data: DocumentData): NVDocument {
-        // 1. start with a fresh document
         const document = new NVDocument()
 
-        // 2. copy *all* top-level saved fields over
         Object.assign(document.data, {
             ...data,
             imageOptionsArray: data.imageOptionsArray ?? [],
@@ -1054,23 +1157,23 @@ export class NVDocument {
             title: data.title ?? 'untitled'
         })
 
-        // 3. merge opts with DEFAULT_OPTIONS
+        // decode opts if present
+        const decodedOpts = NVDocument.decodeOptsFromJSON((data as any).opts as any)
         document.data.opts = {
             ...DEFAULT_OPTIONS,
-            ...(data.opts || {})
+            ...(decodedOpts || {})
         } as NVConfigOptions
 
-        if (document.data.opts.meshThicknessOn2D === 'infinity') {
-            document.data.opts.meshThicknessOn2D = Infinity
+        if ((document.data.opts as any).meshThicknessOn2D === 'infinity') {
+            (document.data.opts as any).meshThicknessOn2D = Infinity
         }
 
-        // 4. merge sceneData
+        // merge sceneData
         document.scene.sceneData = {
             ...INITIAL_SCENE_DATA,
             ...(data.sceneData || {})
         }
 
-        // 4a. migrate legacy single-plane fields → new arrays
         const sceneData: any = data.sceneData || {}
         if (sceneData.clipPlane && !sceneData.clipPlanes) {
             document.scene.sceneData.clipPlanes = [sceneData.clipPlane]
@@ -1079,7 +1182,7 @@ export class NVDocument {
             document.scene.sceneData.clipPlaneDepthAziElevs = [sceneData.clipPlaneDepthAziElev]
         }
 
-        // 5. restore completedMeasurements / completedAngles
+        // restored completed measurements/angles
         if (data.completedMeasurements) {
             document.completedMeasurements = data.completedMeasurements.map((m) => ({
                 ...m,
@@ -1101,7 +1204,7 @@ export class NVDocument {
             }))
         }
 
-        // 6. deserialize meshes
+        // deserialize meshes
         if (document.data.meshesString) {
             NVDocument.deserializeMeshDataObjects(document)
         }
@@ -1110,13 +1213,19 @@ export class NVDocument {
     }
 
     /**
-     * Factory method to return an instance of NVDocument from JSON
+     * old loader (minimal)
      */
     static oldloadFromJSON(data: DocumentData): NVDocument {
         const document = new NVDocument()
         document.data = data
-        if (document.data.opts.meshThicknessOn2D === 'infinity') {
-            document.data.opts.meshThicknessOn2D = Infinity
+        const decodedOpts = NVDocument.decodeOptsFromJSON((data as any).opts as any)
+        document.data.opts = {
+            ...DEFAULT_OPTIONS,
+            ...(decodedOpts || {})
+        } as NVConfigOptions
+
+        if ((document.data.opts as any).meshThicknessOn2D === 'infinity') {
+            (document.data.opts as any).meshThicknessOn2D = Infinity
         }
         document.scene.sceneData = { ...INITIAL_SCENE_DATA, ...data.sceneData }
         NVDocument.deserializeMeshDataObjects(document)
