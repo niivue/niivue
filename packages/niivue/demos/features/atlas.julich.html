@@ -50,7 +50,7 @@
     nv1.setOpacity(2, this.value / 255)
   }
   clipBtn.onclick = function() {
-    const depth = nv1.scene.clipPlaneDepthAziElev[0]
+    const depth = nv1.scene.clipPlaneDepthAziElevs[0]
     if (depth >= 1.0) {
       nv1.setClipPlane([-0.15, 180, 30])
     } else {
