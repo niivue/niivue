@@ -1726,7 +1726,7 @@ export class Niivue {
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
-      // Calculate windowing adjustments using helper
+        // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
             y,
@@ -7043,7 +7043,7 @@ export class Niivue {
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-           bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any)
+            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8 as any)
         }
 
         return this.niftiArray2NVImage(bytes as any)
@@ -9963,39 +9963,41 @@ export class Niivue {
         return label
     }
 
-/**
+    /**
      * Calculate the 2D screen coordinates of a 3D point using the provided MVP matrix and tile position/size.
      * Use manual matrix multiplication to avoid gl-matrix import conflicts.
      * @internal
      */
     calculateScreenPoint(point: [number, number, number], mvpMatrix: mat4, leftTopWidthHeight: number[]): vec4 {
-        const [x, y, z] = point;
-        const m = mvpMatrix;
+        const [x, y, z] = point
+        const m = mvpMatrix
 
         // 1. Manual Matrix Vector Multiplication (Column Major)
         // out = M * [x, y, z, 1]
-        const w = x * m[3] + y * m[7] + z * m[11] + m[15];
-        const clipX = x * m[0] + y * m[4] + z * m[8] + m[12];
-        const clipY = x * m[1] + y * m[5] + z * m[9] + m[13];
-        const clipZ = x * m[2] + y * m[6] + z * m[10] + m[14];
+        const w = x * m[3] + y * m[7] + z * m[11] + m[15]
+        const clipX = x * m[0] + y * m[4] + z * m[8] + m[12]
+        const clipY = x * m[1] + y * m[5] + z * m[9] + m[13]
+        const clipZ = x * m[2] + y * m[6] + z * m[10] + m[14]
 
         // 2. Perspective Division (Clip Space -> NDC)
         // Initialize with 0 in case w is 0 to avoid Infinity
-        let ndcX = 0, ndcY = 0, ndcZ = 0;
+        let ndcX = 0
+        let ndcY = 0
+        let ndcZ = 0
         if (w !== 0) {
-            ndcX = clipX / w;
-            ndcY = clipY / w;
-            ndcZ = clipZ / w;
+            ndcX = clipX / w
+            ndcY = clipY / w
+            ndcZ = clipZ / w
         }
 
         // 3. Viewport Mapping (NDC -> Screen)
-        const screenX = (ndcX + 1.0) * 0.5 * leftTopWidthHeight[2] + leftTopWidthHeight[0];
-        
+        const screenX = (ndcX + 1.0) * 0.5 * leftTopWidthHeight[2] + leftTopWidthHeight[0]
+
         // Flip Y for Canvas (Top-Left origin) vs WebGL (Bottom-Left origin)
-        const screenY = (1.0 - ndcY) * 0.5 * leftTopWidthHeight[3] + leftTopWidthHeight[1];
+        const screenY = (1.0 - ndcY) * 0.5 * leftTopWidthHeight[3] + leftTopWidthHeight[1]
 
         // Return standard Float32Array (vec4 format)
-        return new Float32Array([screenX, screenY, ndcZ, w]);
+        return new Float32Array([screenX, screenY, ndcZ, w])
     }
 
     /**
