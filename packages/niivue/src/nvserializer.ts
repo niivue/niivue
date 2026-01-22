@@ -6,7 +6,7 @@ import { NVConnectome } from '@/nvconnectome'
 import { log } from '@/logger'
 import { NVDocument, DEFAULT_OPTIONS, DocumentData, ExportDocumentData, INITIAL_SCENE_DATA } from '@/nvdocument'
 import { vec3, vec4 } from 'gl-matrix'
-
+import { migrateLegacyDocument, normalizeMeshForRehydrate } from '@/utils/legacy-migrate' // shared migration utility
 
 /** Helpers for special numeric encoding */
 function encodeNumberForJSON(v: number | null | undefined): number | string | undefined {
@@ -40,6 +40,60 @@ function toPlainArray<T>(maybe: any): T[] | undefined {
   }
 }
 
+/** 
+ * Convert array-like to Float32Array.
+ * Returns undefined if input is null/undefined.
+ */
+function toFloat32Array(maybe: any): Float32Array | undefined {
+  if (maybe === undefined || maybe === null) return undefined
+  if (maybe instanceof Float32Array) return maybe
+  if (Array.isArray(maybe)) return new Float32Array(maybe)
+  if (ArrayBuffer.isView(maybe)) {
+    return new Float32Array(Array.from(maybe as unknown as Iterable<number>))
+  }
+  try {
+    return new Float32Array(Array.from(maybe as unknown as Iterable<number>))
+  } catch (e) {
+    return undefined
+  }
+}
+
+/** 
+ * Convert array-like to Uint32Array.
+ * Returns undefined if input is null/undefined.
+ */
+function toUint32Array(maybe: any): Uint32Array | undefined {
+  if (maybe === undefined || maybe === null) return undefined
+  if (maybe instanceof Uint32Array) return maybe
+  if (Array.isArray(maybe)) return new Uint32Array(maybe)
+  if (ArrayBuffer.isView(maybe)) {
+    return new Uint32Array(Array.from(maybe as unknown as Iterable<number>))
+  }
+  try {
+    return new Uint32Array(Array.from(maybe as unknown as Iterable<number>))
+  } catch (e) {
+    return undefined
+  }
+}
+
+/** 
+ * Convert array-like to Uint8Array.
+ * Returns undefined if input is null/undefined.
+ */
+function toUint8Array(maybe: any): Uint8Array | undefined {
+  if (maybe === undefined || maybe === null) return undefined
+  if (maybe instanceof Uint8Array) return maybe
+  if (Array.isArray(maybe)) return new Uint8Array(maybe)
+  if (ArrayBuffer.isView(maybe)) {
+    return new Uint8Array(Array.from(maybe as unknown as Iterable<number>))
+  }
+  try {
+    return new Uint8Array(Array.from(maybe as unknown as Iterable<number>))
+  } catch (e) {
+    return undefined
+  }
+}
+
 /** replacer to convert typed arrays / array buffers to plain arrays for JSON.stringify */
 function jsonReplacer(_key: string, value: any): any {
   if (typeof value === 'function') return undefined
@@ -63,7 +117,7 @@ function jsonReplacer(_key: string, value: any): any {
 
 export class NVSerializer {
 
-     /**
+  /**
    * Decode/normalize "opts" encoded form into NVConfigOptions shape.
    * Move the decodeOptsFromJSON logic here (serializer owns encoding/decoding).
    */
@@ -79,8 +133,7 @@ export class NVSerializer {
         if (v === 'NaN') return NaN
         if (v === 'infinity') return Infinity
         if (v === '-infinity') return -Infinity
-        const n = Number(v)
-        return Number.isNaN(n) ? NaN : n
+        return v
       }
       if (Array.isArray(v)) return v.map((el) => decodeRecursive(el))
       if (typeof v === 'object') {
@@ -278,6 +331,37 @@ export class NVSerializer {
       out.encodedDrawingBlob = document.encodedDrawingBlob ?? ''
     }
 
+    out.title = document.title ?? 'untitled'
+    out.customData = document.customData ?? ''
+    out.labels = Array.isArray(document.labels) ? document.labels.map((l: any) => {
+      const copy = { ...(l || {}) }
+      delete copy.onClick
+      return copy
+    }) : []
+
+    // Export completed measurements & angles (clone vectors/objects so they survive JSON roundtrip)
+    out.completedMeasurements = (document.completedMeasurements || []).map((m: any) => ({
+      ...m,
+      startMM: Array.isArray(m.startMM) ? [...m.startMM] : m.startMM,
+      endMM: Array.isArray(m.endMM) ? [...m.endMM] : m.endMM
+    }))
+
+    out.completedAngles = (document.completedAngles || []).map((a: any) => ({
+      ...a,
+      firstLineMM: {
+        start: Array.isArray(a.firstLineMM?.start) ? [...a.firstLineMM.start] : a.firstLineMM?.start,
+        end: Array.isArray(a.firstLineMM?.end) ? [...a.firstLineMM.end] : a.firstLineMM?.end
+      },
+      secondLineMM: {
+        start: Array.isArray(a.secondLineMM?.start) ? [...a.secondLineMM.start] : a.secondLineMM?.start,
+        end: Array.isArray(a.secondLineMM?.end) ? [...a.secondLineMM.end] : a.secondLineMM?.end
+      }
+    }))
+
+    // Make sure sceneData and opts are included (you already had these, but double-check)
+    out.sceneData = out.sceneData ?? { ...(document.scene?.sceneData ?? {}) }
+    out.opts = out.opts ?? (document.opts ? { ...(document.opts as any) } : {})
+
     return out as ExportDocumentData
   }
 
@@ -285,9 +369,14 @@ export class NVSerializer {
    * Rehydrate images into NVImage instances using NVImage.new
    */
   static async rehydrateImages(documentData: DocumentData): Promise<NVImage[]> {
+    console.log('NVSerializer.rehydrateImages: start')
     const imgs: NVImage[] = []
-    const encoded = documentData.encodedImageBlobs ?? []
-    const optsArr = documentData.imageOptionsArray ?? []
+
+    // Normalize legacy shapes first
+    const migrated = await migrateLegacyDocument(documentData)
+
+    const encoded = migrated.encodedImageBlobs ?? []
+    const optsArr = migrated.imageOptionsArray ?? []
 
     for (let i = 0; i < optsArr.length; i++) {
       const imageOptions = { ...(optsArr[i] || {}) } as any
@@ -301,8 +390,22 @@ export class NVSerializer {
         if (!u8) { log.warn('NVSerializer.rehydrateImages: b64toUint8 returned empty for index', i); continue }
 
         const name = imageOptions.name ?? imageOptions.url ?? `image-${i}`
-        const colormap = imageOptions.colormap ?? imageOptions.colorMap ?? ''
+        // Ensure colormap keys are strings when we call color-table lookups.
+        // Legacy data sometimes stores colormaps in typed-array / object shapes —
+        // guard against that so colormapFromKey(name) doesn't throw.
+        let colormap: string | any[] = imageOptions.colormap ?? imageOptions.colorMap ?? ''
+        if (typeof colormap !== 'string') {
+        // Prefer the explicitly provided colorMap string if present
+        if (typeof imageOptions.colorMap === 'string') {
+            colormap = imageOptions.colorMap
+        } else {
+            // otherwise treat as "no named colormap" so colour-table lookup won't be attempted
+            colormap = ''
+        }
+        }
+
         const opacity = imageOptions.opacity ?? 1.0
+
         const pairedImgData = imageOptions.pairedImgData ? (typeof imageOptions.pairedImgData === 'string' ? (await NVUtilities.b64toUint8(imageOptions.pairedImgData)).buffer : imageOptions.pairedImgData) : null
         const cal_min = decodeNumberFromJSON(imageOptions.cal_min)
         const cal_max = decodeNumberFromJSON(imageOptions.cal_max)
@@ -321,12 +424,20 @@ export class NVSerializer {
         const zarrData = imageOptions.zarrData ?? null
 
         // ensure ArrayBuffer argument
-        const bufferArg = u8.buffer.byteLength === u8.length ? u8.buffer : u8.slice().buffer
+        console.log(`Image ${i} buffer length: ${u8.byteLength}`);
+
+        // Check if the data is actually all zeros before Niivue gets it
+        const isAllZeros = !u8.some(val => val !== 0);
+        if (isAllZeros) {
+          console.error(`CRITICAL: Base64 decoding for ${name} resulted in an all-zero array!`);
+        }
+
+        const bufferArg = u8.slice().buffer;
 
         const img = await NVImage.new(
           bufferArg,
           name,
-          colormap,
+          colormap as string,
           opacity,
           pairedImgData,
           cal_min as any,
@@ -356,15 +467,37 @@ export class NVSerializer {
   /**
    * Rehydrate meshes into runtime NVMesh instances.
    * If gl is provided and callUpdateMesh=true, updateMesh(gl) will be called.
+   *
+   * CRITICAL FIX: Properly convert arrays to TypedArrays before passing to NVMesh constructor
+   * to avoid "underspecified mesh" warnings.
    */
-  /**
-   * Rehydrate meshes: create plain object meshes and/or NVMesh instances depending on gl presence.
-   * If `gl` is provided and callUpdateMesh true, this will construct NVMesh instances and call updateMesh.
-   * If gl is not provided, returns plain object mesh descriptors (so loading in test environment works).
-   */
-  static rehydrateMeshes(documentData: DocumentData, gl?: WebGL2RenderingContext, callUpdateMesh = false): Array<NVMesh | any> {
+  static async rehydrateMeshes(documentData: DocumentData, gl?: WebGL2RenderingContext, callUpdateMesh = false): Promise<Array<NVMesh | any>> {
+    console.log('NVSerializer.rehydrateMeshes: start')
     const out: Array<NVMesh | any> = []
-    const meshesString = documentData.meshesString ?? '[]'
+
+    // Normalize legacy shapes first
+    const migrated = await migrateLegacyDocument(documentData)
+
+    // Defensive logging: show what migrated contains at a glance
+    try {
+    console.log('NVSerializer.rehydrateMeshes: migrated keys:', Object.keys(migrated || {}).slice(0, 20))
+    } catch (e) {
+    console.warn('NVSerializer.rehydrateMeshes: error logging migrated', e)
+    }
+
+    const meshesString = migrated.meshesString ?? '[]'
+
+    // Diagnostic logging to capture the exact string being parsed in the unit test
+    try {
+    if (typeof meshesString === 'string') {
+        const preview = meshesString.length > 200 ? meshesString.slice(0, 200) + '…' : meshesString
+        console.log('NVSerializer.rehydrateMeshes: meshesString preview:', preview)
+    } else {
+        console.log('NVSerializer.rehydrateMeshes: meshesString is non-string of type', typeof meshesString, meshesString)
+    }
+    } catch (e) {
+    console.warn('NVSerializer.rehydrateMeshes: error logging meshesString', e)
+    }
 
     let parsed: any[] = []
     try {
@@ -375,15 +508,16 @@ export class NVSerializer {
     }
 
     for (let i = 0; i < parsed.length; i++) {
-      const m = parsed[i] || {}
+      let m = parsed[i] || {}
       try {
+        m = normalizeMeshForRehydrate(m)
+        console.log(`NVSerializer.rehydrateMeshes: processing mesh index ${i} name="${m.name}"`, m)
         // Normalize layer keys and numeric encodings (colorMap -> colormap etc.)
         if (Array.isArray(m.layers)) {
           for (const layer of m.layers) {
             if (!layer) continue
             if ('colorMap' in layer && !('colormap' in layer)) {
               layer.colormap = layer.colorMap
-              // keep legacy key if you need it; tests may expect the converted field to exist
               delete layer.colorMap
             }
             if ('colorMapNegative' in layer && !('colormapNegative' in layer)) {
@@ -399,20 +533,28 @@ export class NVSerializer {
             layer.cal_minNeg = decodeNumberFromJSON(layer.cal_minNeg)
             layer.cal_maxNeg = decodeNumberFromJSON(layer.cal_maxNeg)
 
-            // ensure values/atlasValues are plain arrays
+            // ensure values/atlasValues are plain arrays (migration already attempted to normalize)
             if (layer.values != null && !Array.isArray(layer.values)) {
-              layer.values = Array.from(layer.values)
+              try { layer.values = Array.from(layer.values) } catch (e) { /* leave as-is */ }
             }
             if (layer.atlasValues != null && !Array.isArray(layer.atlasValues)) {
-              layer.atlasValues = Array.from(layer.atlasValues)
+              try { layer.atlasValues = Array.from(layer.atlasValues) } catch (e) { /* leave as-is */ }
             }
           }
         }
 
-        // convert arrays back to typed arrays where appropriate
-        if (Array.isArray(m.rgba255)) {
-          m.rgba255 = Uint8Array.from(m.rgba255)
-        }
+        // CRITICAL: Convert arrays to proper TypedArrays BEFORE creating NVMesh
+        // This prevents the "underspecified mesh" warning in updateMesh
+
+        // Convert rgba255 to Uint8Array
+        const rgba255 = toUint8Array(m.rgba255) ?? new Uint8Array([255, 255, 255, 255])
+
+        // Convert pts to Float32Array (vertex positions)
+        const pts = toFloat32Array(m.pts)
+
+        // Convert tris to Uint32Array (triangle indices)
+        let tris = toUint32Array(m.tris)
+
         // ensure nodes/edges plain arrays
         if (Array.isArray(m.nodes)) {
           m.nodes = m.nodes.length > 0 && typeof m.nodes[0] === 'object' ? m.nodes.map((n:any)=>({...n})) : m.nodes.slice()
@@ -426,34 +568,40 @@ export class NVSerializer {
 
         // If no GL provided, keep as plain object (tests may parse/expect object form)
         if (!gl) {
+          // For test environments, keep arrays as-is
           out.push(m)
           continue
         }
 
-        // If gl is provided, try to construct an NVMesh instance
-        const meshInit = { gl, ...m } as any
-
-        // if offsetPt0 exists (fiber), convert to Uint32Array for tris (this matches your prior behavior)
+        // Handle fiber meshes: offsetPt0 becomes tris
         if (Array.isArray(m.offsetPt0) && m.offsetPt0.length > 0) {
-          meshInit.rgba255 = meshInit.rgba255 || new Uint8Array([255,255,255,255])
-          meshInit.rgba255[3] = 0
-          meshInit.tris = new Uint32Array(m.offsetPt0)
+          tris = new Uint32Array(m.offsetPt0)
+          // Set alpha to 0 for fibers
+          if (rgba255) {
+            rgba255[3] = 0
+          }
         }
 
-        // Construct NVMesh (constructor expects data arrays / typed arrays)
+        // Construct NVMesh with proper TypedArrays
+        // 1. Ensure we have a Uint8Array.
+        // 2. If it's already a Uint8Array, we wrap it to ensure the buffer type matches.
+        const finalizedRgba = Array.isArray(rgba255)
+          ? new Uint8Array(rgba255)
+          : new Uint8Array((rgba255 as Uint8Array).buffer)
+
         const meshInstance = new NVMesh(
-          meshInit.pts,
-          meshInit.tris,
-          meshInit.name,
-          meshInit.rgba255,
-          meshInit.opacity,
-          meshInit.visible,
+          pts,
+          tris,
+          m.name,
+          finalizedRgba as Uint8Array<ArrayBuffer>,
+          m.opacity,
+          m.visible,
           gl,
-          meshInit.connectome,
-          meshInit.dpg,
-          meshInit.dps,
-          meshInit.dpv
-        )
+          m.connectome,
+          m.dpg,
+          m.dps,
+          m.dpv
+        );
 
         // restore preserved id (overwrite generated id)
         if (persistedId !== null) {
@@ -463,7 +611,7 @@ export class NVSerializer {
         // fiber metadata
         if (Array.isArray(m.offsetPt0) && m.offsetPt0.length > 0) {
           meshInstance.fiberGroupColormap = m.fiberGroupColormap
-          meshInstance.fiberColor = m.fiberColor
+          meshInstance.fiberColor = m.fiberColor ? m.fiberColor : undefined
           meshInstance.fiberDither = m.fiberDither
           meshInstance.fiberRadius = m.fiberRadius
           meshInstance.colormap = m.colormap
@@ -489,87 +637,109 @@ export class NVSerializer {
       }
     }
 
+    // Defensive: guarantee an array is returned for all (possibly-legacy) inputs.
+    try {
+    // Defensive: guarantee an array is returned for all (possibly-legacy) inputs.
+    if (!Array.isArray(out)) {
+        console.warn('NVSerializer.rehydrateMeshes: unexpected non-array output, coercing to array', {
+        typeofOut: typeof out,
+        isArray: Array.isArray(out),
+        outPreview: out && (typeof out === 'object' ? Object.keys(out).slice(0,10) : out)
+        })
+        return out ? [out] : []
+    }
+
+    console.log('NVSerializer.rehydrateMeshes: completed successfully, returning array length=', out.length)
     return out
+    } catch (err) {
+    console.error('NVSerializer.rehydrateMeshes: final-return error', err)
+    return []
+    }
+
+
   }
 
   static async deserializeDocument(documentData: DocumentData): Promise<NVDocument> {
+    // run migration to normalize legacy shapes up-front
+    const migrated = await migrateLegacyDocument(documentData)
+
     // Create a fresh NVDocument
     const document = new NVDocument()
 
     // Basic top-level fields (preserve defaults where missing)
     Object.assign(document.data, {
-        ...documentData,
-        imageOptionsArray: documentData.imageOptionsArray ?? [],
-        encodedImageBlobs: documentData.encodedImageBlobs ?? [],
-        labels: documentData.labels ?? [],
-        meshOptionsArray: documentData.meshOptionsArray ?? [],
-        connectomes: documentData.connectomes ?? [],
-        encodedDrawingBlob: documentData.encodedDrawingBlob ?? '',
-        previewImageDataURL: documentData.previewImageDataURL ?? '',
-        customData: documentData.customData ?? '',
-        title: documentData.title ?? 'untitled'
+      ...migrated,
+      imageOptionsArray: migrated.imageOptionsArray ?? [],
+      encodedImageBlobs: migrated.encodedImageBlobs ?? [],
+      labels: migrated.labels ?? [],
+      meshOptionsArray: migrated.meshOptionsArray ?? [],
+      connectomes: migrated.connectomes ?? [],
+      encodedDrawingBlob: migrated.encodedDrawingBlob ?? '',
+      previewImageDataURL: migrated.previewImageDataURL ?? '',
+      customData: migrated.customData ?? '',
+      title: migrated.title ?? 'untitled'
     })
 
     // decode opts and merge with defaults
-    const decodedOpts = NVSerializer.decodeOptsFromJSON((documentData as any).opts as any)
+    const decodedOpts = NVSerializer.decodeOptsFromJSON((migrated as any).opts as any)
     document.data.opts = {
-        ...DEFAULT_OPTIONS,
-        ...(decodedOpts || {})
+      ...DEFAULT_OPTIONS,
+      ...(decodedOpts || {})
     } as any
 
     if ((document.data.opts as any).meshThicknessOn2D === 'infinity') {
-        (document.data.opts as any).meshThicknessOn2D = Infinity
+      (document.data.opts as any).meshThicknessOn2D = Infinity
     }
 
     // scene data (merge with initial scene)
     document.scene.sceneData = {
-        ...INITIAL_SCENE_DATA,
-        ...(documentData.sceneData || {})
+      ...INITIAL_SCENE_DATA,
+      ...(migrated.sceneData || {})
     }
 
     // back-compat: single clipPlane fields -> arrays
-    const sceneDataAny: any = documentData.sceneData || {}
+    const sceneDataAny: any = migrated.sceneData || {}
     if (sceneDataAny.clipPlane && !sceneDataAny.clipPlanes) {
-        document.scene.sceneData.clipPlanes = [sceneDataAny.clipPlane]
+      document.scene.sceneData.clipPlanes = [sceneDataAny.clipPlane]
     }
     if (sceneDataAny.clipPlaneDepthAziElev && !sceneDataAny.clipPlaneDepthAziElevs) {
-        document.scene.sceneData.clipPlaneDepthAziElevs = [sceneDataAny.clipPlaneDepthAziElev]
+      document.scene.sceneData.clipPlaneDepthAziElevs = [sceneDataAny.clipPlaneDepthAziElev]
     }
 
     // restore completed measurements & angles (clone vectors)
-    if (documentData.completedMeasurements) {
-        document.completedMeasurements = documentData.completedMeasurements.map((m: any) => ({
+    if (migrated.completedMeasurements) {
+      document.completedMeasurements = migrated.completedMeasurements.map((m: any) => ({
         ...m,
         startMM: vec3.clone(m.startMM),
         endMM: vec3.clone(m.endMM)
-        }))
+      }))
     }
-    if (documentData.completedAngles) {
-        document.completedAngles = documentData.completedAngles.map((a: any) => ({
+    if (migrated.completedAngles) {
+      document.completedAngles = migrated.completedAngles.map((a: any) => ({
         ...a,
         firstLineMM: {
-            start: vec3.clone(a.firstLineMM.start),
-            end: vec3.clone(a.firstLineMM.end)
+          start: vec3.clone(a.firstLineMM.start),
+          end: vec3.clone(a.firstLineMM.end)
         },
         secondLineMM: {
-            start: vec3.clone(a.secondLineMM.start),
-            end: vec3.clone(a.secondLineMM.end)
+          start: vec3.clone(a.secondLineMM.start),
+          end: vec3.clone(a.secondLineMM.end)
         }
-        }))
+      }))
     }
 
     // keep other runtime lists in sync
     // preserve connectome strings (Niivue.loadDocument adds them as runtime meshes later)
-    document.data.connectomes = documentData.connectomes ?? []
+    document.data.connectomes = migrated.connectomes ?? []
 
     // drawing blob stays as encoded base64 (consumer will decode)
-    document.data.encodedDrawingBlob = documentData.encodedDrawingBlob ?? ''
+    document.data.encodedDrawingBlob = migrated.encodedDrawingBlob ?? ''
 
     // preview image
-    document.data.previewImageDataURL = documentData.previewImageDataURL ?? ''
+    document.data.previewImageDataURL = migrated.previewImageDataURL ?? ''
 
     return document
-    }
+  }
 }
 
 export default NVSerializer

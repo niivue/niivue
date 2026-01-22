@@ -416,6 +416,7 @@ export type DocumentData = {
 }
 
 export type ExportDocumentData = {
+    title?: string
     encodedImageBlobs: string[]
     encodedDrawingBlob: string
     previewImageDataURL: string
