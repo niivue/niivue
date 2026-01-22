@@ -782,25 +782,39 @@ export class NVDocument {
     // JSON number encode/decode helpers
     //
 
+    // -------- helper encoding/decoding (already present, keep these) --------
     static encodeNumberForJSON(v: number | null | undefined): number | string | undefined {
-        if (v === undefined) return undefined
-        if (v === null) return null
-        if (Number.isFinite(v)) return v
-        if (v === Infinity) return 'infinity'
-        if (v === -Infinity) return '-infinity'
-        return 'NaN'
+        if (v === undefined) return undefined;
+        if (v === null) return null;
+        if (Number.isFinite(v)) return v;
+        if (v === Infinity) return 'infinity';
+        if (v === -Infinity) return '-infinity';
+        return 'NaN';
     }
 
     static decodeNumberFromJSON(v: any): number | null | undefined {
-        if (v === undefined) return undefined
-        if (v === null) return null
-        if (typeof v === 'number') return v
-        if (v === 'NaN') return NaN
-        if (v === 'infinity') return Infinity
-        if (v === '-infinity') return -Infinity
-        const n = Number(v)
-        return Number.isNaN(n) ? NaN : n
+        if (v === undefined) return undefined;
+        if (v === null) return null;
+        if (typeof v === 'number') return v;
+        if (v === 'NaN') return NaN;
+        if (v === 'infinity') return Infinity;
+        if (v === '-infinity') return -Infinity;
+        const n = Number(v);
+        return Number.isNaN(n) ? NaN : n;
     }
+
+    // small normalizer to avoid float32 artifacts in exported arrays
+    // small helper to coerce float32 artifacts into stable JS numbers for export
+    static _normalizeExportNumber(n: number): number {
+        // preserve integer-ish values untouched
+        if (Number.isInteger(n)) return n;
+        // round to 12 decimal places to remove float32 noise
+        const rounded = Math.round(n * 1e12) / 1e12;
+        // if -0, make 0
+        return Object.is(rounded, -0) ? 0 : rounded;
+    }
+
+
 
     // encode recursively numbers inside an object/array -> number|string
     static encodeOptsForJSON(opts: Partial<NVConfigOptions> | undefined): Partial<EncodedNVConfigOptions> | undefined {
@@ -967,34 +981,34 @@ export class NVDocument {
         continue
       }
 
-      // copy mesh metadata; encode layers carefully
-      const copyMesh: Mutable<any> = {
-        pts: mesh.pts,
-        tris: mesh.tris,
-        name: mesh.name,
-        rgba255: Uint8Array.from(mesh.rgba255),
-        opacity: mesh.opacity,
-        connectome: mesh.connectome,
-        groups: mesh.groups,
-        dpg: mesh.dpg,
-        dps: mesh.dps,
-        dpv: mesh.dpv,
-        meshShaderIndex: mesh.meshShaderIndex,
-        // encode layers: make sure numeric fields are JSON-safe via encodeNumberForJSON
-        layers: (Array.isArray(mesh.layers) ? mesh.layers : []).map((layer: any) => {
-          const safeLayer: any = {
-            // copy simple fields
+      // inside the meshes loop in json(), when creating the exported mesh copy:
+    // --- build layersForExport ---
+        const layersForExport = (mesh.layers || []).map((layer: any) => {
+        // Resolve canonical colormap names (prefer legacy colorMap value if present)
+        const resolvedColormap = layer?.colorMap !== undefined ? layer.colorMap : layer?.colormap
+        const resolvedColormapNegative = layer?.colorMapNegative !== undefined ? layer.colorMapNegative : layer?.colormapNegative
+
+        // Start with an explicit shallow copy (do NOT blindly spread legacy keys)
+        const exportedLayer: any = {
+            // canonical fields (copy common primitives explicitly)
             name: layer?.name,
             key: layer?.key,
             url: layer?.url,
             headers: layer?.headers,
             opacity: layer?.opacity,
-            // colormap fields: prefer canonical colormap, but keep compatibility
-            colormap: layer?.colormap !== undefined ? layer.colormap : layer?.colorMap,
-            colormapNegative: layer?.colormapNegative !== undefined ? layer.colormapNegative : layer?.colorMapNegative,
+            colormap: resolvedColormap,
+            colormapNegative: resolvedColormapNegative,
             colormapInvert: layer?.colormapInvert,
             colormapLabel: layer?.colormapLabel,
             useNegativeCmap: layer?.useNegativeCmap,
+            // encode numeric meta fields so JSON preserves NaN/Infinity as strings
+            global_min: NVDocument.encodeNumberForJSON(layer?.global_min),
+            global_max: NVDocument.encodeNumberForJSON(layer?.global_max),
+            cal_min: NVDocument.encodeNumberForJSON(layer?.cal_min),
+            cal_max: NVDocument.encodeNumberForJSON(layer?.cal_max),
+            cal_minNeg: NVDocument.encodeNumberForJSON(layer?.cal_minNeg),
+            cal_maxNeg: NVDocument.encodeNumberForJSON(layer?.cal_maxNeg),
+
             isAdditiveBlend: layer?.isAdditiveBlend,
             frame4D: layer?.frame4D,
             nFrame4D: layer?.nFrame4D,
@@ -1003,40 +1017,58 @@ export class NVDocument {
             colormapType: layer?.colormapType,
             base64: layer?.base64,
             colorbarVisible: layer?.colorbarVisible,
-            showLegend: layer?.showLegend,
-            labels: Array.isArray(layer?.labels) ? layer.labels.map((l: any) => ({ ...(l || {}) })) : layer?.labels,
-            atlasValues: (layer?.atlasValues instanceof Float32Array || Array.isArray(layer?.atlasValues)) ? Array.from(layer.atlasValues) : layer?.atlasValues,
-            values: (layer?.values instanceof Float32Array || Array.isArray(layer?.values)) ? Array.from(layer.values) : layer?.values
-          }
+            showLegend: layer?.showLegend
+        }
 
-          // numeric fields: use encoder so NaN/Infinity survive JSON.stringify
-          safeLayer.global_min = NVDocument.encodeNumberForJSON(layer?.global_min)
-          safeLayer.global_max = NVDocument.encodeNumberForJSON(layer?.global_max)
-          safeLayer.cal_min = NVDocument.encodeNumberForJSON(layer?.cal_min)
-          safeLayer.cal_max = NVDocument.encodeNumberForJSON(layer?.cal_max)
-          safeLayer.cal_minNeg = NVDocument.encodeNumberForJSON(layer?.cal_minNeg)
-          safeLayer.cal_maxNeg = NVDocument.encodeNumberForJSON(layer?.cal_maxNeg)
+        // values: ensure plain array and normalize floats to remove float32 artefacting
+        if (layer?.values != null) {
+            const valuesArr = Array.isArray(layer.values) ? layer.values.slice() : Array.from(layer.values);
+            exportedLayer.values = valuesArr.map((v: any) => {
+                const num = Number(v);
+                return Number.isFinite(num) ? NVDocument._normalizeExportNumber(num) : num;
+            });
+        }
 
-          return safeLayer
-        }),
-        hasConnectome: mesh.hasConnectome,
-        edgeColormap: mesh.edgeColormap,
-        edgeColormapNegative: mesh.edgeColormapNegative,
-        edgeMax: mesh.edgeMax,
-        edgeMin: mesh.edgeMin,
-        edges: mesh.edges && Array.isArray(mesh.edges) ? [...mesh.edges] : [],
-        extentsMax: mesh.extentsMax,
-        extentsMin: mesh.extentsMin,
-        furthestVertexFromOrigin: mesh.furthestVertexFromOrigin,
-        nodeColormap: mesh.nodeColormap,
-        nodeColormapNegative: mesh.nodeColormapNegative,
-        nodeMaxColor: mesh.nodeMaxColor,
-        nodeMinColor: mesh.nodeMinColor,
-        nodeScale: mesh.nodeScale,
-        legendLineThickness: mesh.legendLineThickness,
-        offsetPt0: mesh.offsetPt0,
-        nodes: mesh.nodes ? (Array.isArray(mesh.nodes) ? [...mesh.nodes] : mesh.nodes) : undefined
-      }
+        // atlasValues: persist as plain array (integers)
+        if (layer?.atlasValues != null) {
+            exportedLayer.atlasValues = Array.isArray(layer.atlasValues)
+            ? layer.atlasValues.slice()
+            : Array.from(layer.atlasValues)
+        }
+
+        // labels / other arrays: shallow-copy element objects
+        if (Array.isArray(layer?.labels)) {
+            exportedLayer.labels = layer.labels.map((l: any) => ({ ...(l || {}) }))
+        } else if (layer?.labels != null) {
+            exportedLayer.labels = Array.from(layer.labels)
+        }
+
+        return exportedLayer
+        })
+
+
+
+      // copy mesh metadata; encode layers carefully
+     const copyMesh: Mutable<any> = {
+        // start with a shallow copy of everything
+        ...mesh,
+
+        // override fields that must be cloned / normalized / encoded
+
+        // typed array → new typed array
+        rgba255: Uint8Array.from(mesh.rgba255),
+
+        // layers must be explicitly rebuilt (numeric encoding + colormap normalization)
+        layers: layersForExport,
+
+        // arrays / objects that should not share references
+        edges: Array.isArray(mesh.edges) ? [...mesh.edges] : [],
+        nodes: Array.isArray(mesh.nodes) ? [...mesh.nodes] : mesh.nodes,
+
+        // offsetPt0 should be preserved as-is (or shallow-copied if you prefer)
+        offsetPt0: Array.isArray(mesh.offsetPt0) ? [...mesh.offsetPt0] : mesh.offsetPt0
+    }
+
 
       if (mesh.offsetPt0 && mesh.offsetPt0.length > 0) {
         copyMesh.offsetPt0 = mesh.offsetPt0
@@ -1071,38 +1103,84 @@ export class NVDocument {
     /**
      * Deserialize mesh data objects (minimal)
      */
-    static deserializeMeshDataObjects(document: NVDocument): void {
-        if (!document.data.meshesString || document.data.meshesString === '[]') {
-            document.meshDataObjects = []
-            return
-        }
+    // --------- deserializeMeshDataObjects patch ---------
+static deserializeMeshDataObjects(document: NVDocument): void {
+    if (!document.data.meshesString || document.data.meshesString === '[]') {
+        document.meshDataObjects = []
+        document.meshes = []
+        return
+    }
 
-        if (document.data.meshesString) {
-            document.meshDataObjects = deserialize(JSON.parse(document.data.meshesString))
-            for (const mesh of document.meshDataObjects!) {
-                if (Array.isArray(mesh.layers)) {
-                    for (const layer of mesh.layers) {
-                        if ('colorMap' in layer) {
-                            layer.colormap = layer.colorMap as string
-                            delete layer.colorMap
-                        }
-                        if ('colorMapNegative' in layer) {
-                            layer.colormapNegative = layer.colorMapNegative as string
-                            delete layer.colorMapNegative
-                        }
+    try {
+        const parsed = JSON.parse(document.data.meshesString!)
+        const deserialized = deserialize(parsed) as any[] // structured-clone result
+        // Post-process: normalize layers, decode numeric special strings, convert arrays -> plain arrays
+        document.meshDataObjects = deserialized.map((mesh: any) => {
+            if (Array.isArray(mesh.layers)) {
+                for (const layer of mesh.layers) {
+                    // back-compat migration
+                    if (layer && 'colorMap' in layer) {
+                        layer.colormap = layer.colorMap as string
+                        delete layer.colorMap
+                    }
+                    if (layer && 'colorMapNegative' in layer) {
+                        layer.colormapNegative = layer.colorMapNegative as string
+                        delete layer.colorMapNegative
+                    }
 
-                        // decode numeric fields that were encoded at save-time
-                        layer.global_min = NVDocument.decodeNumberFromJSON(layer.global_min)
-                        layer.global_max = NVDocument.decodeNumberFromJSON(layer.global_max)
-                        layer.cal_min = NVDocument.decodeNumberFromJSON(layer.cal_min)
-                        layer.cal_max = NVDocument.decodeNumberFromJSON(layer.cal_max)
-                        layer.cal_minNeg = NVDocument.decodeNumberFromJSON(layer.cal_minNeg)
-                        layer.cal_maxNeg = NVDocument.decodeNumberFromJSON(layer.cal_maxNeg)
+                    // decode numeric meta fields that may have been encoded as strings
+                    layer.global_min = NVDocument.decodeNumberFromJSON(layer.global_min)
+                    layer.global_max = NVDocument.decodeNumberFromJSON(layer.global_max)
+                    layer.cal_min = NVDocument.decodeNumberFromJSON(layer.cal_min)
+                    layer.cal_max = NVDocument.decodeNumberFromJSON(layer.cal_max)
+                    layer.cal_minNeg = NVDocument.decodeNumberFromJSON(layer.cal_minNeg)
+                    layer.cal_maxNeg = NVDocument.decodeNumberFromJSON(layer.cal_maxNeg)
+
+                    // ensure values/atlasValues are plain arrays
+                    if (layer.values != null && !(Array.isArray(layer.values))) {
+                        layer.values = Array.from(layer.values)
+                    }
+                    if (layer.atlasValues != null && !(Array.isArray(layer.atlasValues))) {
+                        layer.atlasValues = Array.from(layer.atlasValues)
                     }
                 }
             }
-        }
+
+            // convert persisted rgba255 number[] -> Uint8Array for runtime
+            if (Array.isArray(mesh.rgba255)) {
+                mesh.rgba255 = Uint8Array.from(mesh.rgba255)
+            }
+
+            // ensure offsetPt0 is a cloned number[] (keep as plain array)
+            if (Array.isArray(mesh.offsetPt0)) {
+                mesh.offsetPt0 = mesh.offsetPt0.slice()
+            }
+
+            // nodes/edges: shallow-clone element objects
+            if (Array.isArray(mesh.nodes)) {
+                mesh.nodes = mesh.nodes.length > 0 && typeof mesh.nodes[0] === 'object'
+                    ? mesh.nodes.map((n: any) => ({ ...(n || {}) }))
+                    : mesh.nodes.slice()
+            }
+
+            if (Array.isArray(mesh.edges)) {
+                mesh.edges = mesh.edges.length > 0 && typeof mesh.edges[0] === 'object'
+                    ? mesh.edges.map((e: any) => ({ ...(e || {}) }))
+                    : mesh.edges.slice()
+            }
+
+            return mesh
+        })
+
+        // keep other runtime lists in sync
+        document.meshes = document.meshDataObjects.slice()
+    } catch (err) {
+        console.warn('Failed to parse/deserialize meshes:', err)
+        document.meshDataObjects = []
+        document.meshes = []
     }
+}
+
 
     /**
      * Factory method to return an instance of NVDocument from a URL

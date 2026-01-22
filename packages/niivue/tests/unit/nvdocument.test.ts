@@ -1,7 +1,11 @@
 import { readFileSync } from 'fs'
 import { assert, expect, test } from 'vitest'
 import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js'
-import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
+// import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
+
+const nvd = JSON.parse(
+  readFileSync('tests/images/document/niivue.mesh-old-colorMap.json', 'utf-8')
+)
 
 test('loadFromFile loads a valid document', async () => {
   // Load the JSON document as a Blob
@@ -109,4 +113,167 @@ test('nvdocument penType defaults to pen', () => {
   const doc = new NVDocument()
   expect(doc.opts.penType).toBe(0)
   expect(DEFAULT_OPTIONS.penType).toBe(0)
+})
+
+test('nvdocument preserves mesh and mesh-layer properties through json roundtrip', () => {
+  const src = new NVDocument()
+
+  // Create a runtime mesh with many properties set (typed arrays, NaN/Infinity, fiber fields, offsetPt0, nodes/edges)
+  const mesh: any = {
+    id: 'mesh-1',
+    name: 'test-mesh',
+    pts: [0, 0, 0, 1, 1, 1],
+    tris: [0, 1, 2],
+    rgba255: new Uint8Array([10, 20, 30, 40]),
+    opacity: 0.8,
+    meshShaderIndex: 2,
+    groups: [0],
+    dpg: null,
+    dps: null,
+    dpv: null,
+    hasConnectome: false,
+    edgeColormap: 'jet',
+    edgeColormapNegative: 'cool',
+    edgeMax: 255,
+    edgeMin: 0,
+    edges: [{ a: 1 }],
+    extentsMax: [1, 1, 1],
+    extentsMin: [0, 0, 0],
+    furthestVertexFromOrigin: 1.732,
+    nodeColormap: 'hot',
+    nodeColormapNegative: 'winter',
+    nodeMaxColor: [1, 1, 1],
+    nodeMinColor: [0, 0, 0],
+    nodeScale: 1.0,
+    legendLineThickness: 2,
+    offsetPt0: [5, 6, 7],
+    nodes: [{ id: 42 }],
+    // fiber/connectome fields (should be preserved when offsetPt0 present)
+    fiberGroupColormap: [0, 1, 2],
+    fiberColor: [1, 0, 0],
+    fiberDither: 0.5,
+    fiberRadius: 0.2,
+    colormap: 'hot',
+    // layers: include typed arrays + special numeric values
+    layers: [
+      {
+        name: 'layer1',
+        key: 'l1',
+        opacity: 1.0,
+        // use typed arrays for values and atlasValues
+        values: new Float32Array([0.1, 0.2]),
+        atlasValues: new Uint8Array([3, 4]),
+        // numeric edge cases
+        global_min: NaN,
+        global_max: Infinity,
+        cal_min: -Infinity,
+        cal_max: 42,
+        cal_minNeg: NaN,
+        cal_maxNeg: -Infinity,
+        // backward compat fields
+        colorMap: undefined,
+        colorMapNegative: undefined,
+        colormap: 'hot',
+        colormapNegative: 'cool',
+        labels: [{ name: 'a' }]
+      }
+    ]
+  }
+
+  // put mesh into doc runtime meshes
+  src.meshes.push(mesh)
+
+  // Serialize out
+  const exported = src.json(true, true)
+
+  // Sanity: meshesString must be present
+  expect(exported.meshesString).toBeDefined()
+  // Create new doc from json string (simulate loadFromFile behavior)
+  const doc2 = NVDocument.loadFromJSON({
+    meshesString: exported.meshesString as string
+  } as DocumentData)
+
+  // Ensure meshes were deserialized
+  expect(doc2.meshDataObjects).toBeDefined()
+  expect(doc2.meshDataObjects!.length).toBe(1)
+
+  const loaded = doc2.meshDataObjects![0]
+
+  // rgba255 should be a Uint8Array and equal original bytes
+  expect(loaded.rgba255).toBeInstanceOf(Uint8Array)
+  expect(Array.from(loaded.rgba255 as Uint8Array)).toEqual([10, 20, 30, 40])
+
+  // offsetPt0 preserved
+  expect(Array.isArray(loaded.offsetPt0)).toBe(true)
+  expect(loaded.offsetPt0).toEqual([5, 6, 7])
+
+  // nodes/edges preserved and deep-cloned into plain objects
+  expect(Array.isArray(loaded.nodes)).toBe(true)
+  expect(loaded.nodes[0]).toEqual({ id: 42 })
+  expect(Array.isArray(loaded.edges)).toBe(true)
+  expect(loaded.edges[0]).toEqual({ a: 1 })
+
+  // fiber fields preserved (because offsetPt0 was present)
+  expect(loaded.fiberColor).toEqual([1, 0, 0])
+  expect(loaded.fiberDither).toBeCloseTo(0.5)
+  expect(loaded.fiberRadius).toBeCloseTo(0.2)
+  expect(loaded.fiberGroupColormap).toEqual([0, 1, 2])
+
+  // layers restored
+  expect(Array.isArray(loaded.layers)).toBe(true)
+  const l = loaded.layers[0]
+
+  // colormap fields preserved (and colorMap / colorMapNegative renamed if present)
+  expect(l.colormap).toBe('hot')
+  expect(l.colormapNegative).toBe('cool')
+
+  // numeric special cases restored
+  expect(Number.isNaN(l.global_min)).toBe(true)
+  expect(Object.is(l.global_max, Infinity)).toBe(true)
+  expect(Object.is(l.cal_min, -Infinity)).toBe(true)
+  expect(Object.is(l.cal_max, 42)).toBe(true)
+  expect(Number.isNaN(l.cal_minNeg)).toBe(true)
+  expect(Object.is(l.cal_maxNeg, -Infinity)).toBe(true)
+
+  // values and atlasValues preserved as arrays with same entries
+  expect(Array.isArray(l.values)).toBe(true)
+  expect(l.values).toEqual([0.1, 0.2])
+  expect(Array.isArray(l.atlasValues)).toBe(true)
+  expect(l.atlasValues).toEqual([3, 4])
+})
+
+test('nvdocument roundtrip keeps colorMap -> colormap conversion and numeric encodings for layers', () => {
+  // Build a mesh object that uses legacy colorMap property and special numbers
+  const src = new NVDocument()
+  const mesh: any = {
+    id: 'mesh-legacy',
+    name: 'legacy',
+    pts: [0],
+    tris: [0],
+    rgba255: new Uint8Array([255, 0, 0, 255]),
+    layers: [
+      {
+        name: 'legacyLayer',
+        colorMap: 'warm', // legacy field name that should be converted
+        colorMapNegative: 'cool', // legacy negative
+        global_min: 'NaN',
+        global_max: 'infinity',
+        cal_min: '-infinity',
+        cal_max: 100
+      }
+    ]
+  }
+  src.meshes.push(mesh)
+
+  const exported = src.json()
+  const loadedDoc = NVDocument.loadFromJSON({ meshesString: exported.meshesString as string } as DocumentData)
+  expect(loadedDoc.meshDataObjects).toBeDefined()
+  const lm = loadedDoc.meshDataObjects![0]
+  expect(lm.layers[0].colormap).toBe('warm')
+  expect(lm.layers[0].colormapNegative).toBe('cool')
+  // decoded numeric coercion should have been attempted
+  expect(Number.isNaN(lm.layers[0].global_min)).toBe(true)
+  expect(Object.is(lm.layers[0].global_max, Infinity)).toBe(true)
+  expect(Object.is(lm.layers[0].cal_min, -Infinity)).toBe(true)
+  expect(lm.layers[0].cal_max).toBe(100)
 })
