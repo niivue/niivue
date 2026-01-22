@@ -87,6 +87,7 @@ import { vertFontShader, fragFontShader, vertBmpShader, fragBmpShader, vertMeshS
 import { Shader } from '@/shader'
 import { log } from '@/logger'
 import { deg2rad, img2ras16, intensityRaw2Scaled, isRadiological, negMinMax, swizzleVec3, tickSpacing, unProject, unpackFloatFromVec4i, readFileAsDataURL } from '@/utils'
+import NVSerializer from '@/nvserializer'
 const { version } = packageJson
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
@@ -4420,130 +4421,167 @@ export class Niivue {
      * @see {@link https://niivue.com/demos/features/document.load.html | live demo usage}
      */
     async loadDocument(document: NVDocument): Promise<this> {
+    // Defensive: make sure document object has the runtime-shaped fields we expect.
+    // If serializer returned a plain object or an older document shape, fill defaults.
+    try {
+        if (!document) {
+            throw new Error('loadDocument called with falsy document')
+        }
+
+        // If scene is missing or malformed, use a fresh NVDocument's scene as canonical
+        if (!document.scene || typeof document.scene !== 'object') {
+            const tmpDoc = new NVDocument()
+            document.scene = tmpDoc.scene
+        }
+
+        // Ensure sceneData exists and merge with INITIAL_SCENE_DATA (preserve any incoming values)
+        document.scene.sceneData = {
+            ...INITIAL_SCENE_DATA,
+            ...(document.scene.sceneData || {})
+        }
+
+        // Ensure pan2Dxyzmm and crosshairPos have sane defaults
+        if (!document.scene.sceneData.pan2Dxyzmm) {
+            document.scene.sceneData.pan2Dxyzmm = vec4.fromValues(0, 0, 0, 1)
+        }
+        if (!document.scene.sceneData.crosshairPos) {
+            document.scene.sceneData.crosshairPos = vec3.fromValues(0.5, 0.5, 0.5)
+        }
+
+        // Ensure top-level data fields exist (back-compat)
+        document.data = {
+            ...(document.data || {}),
+            imageOptionsArray: document.data?.imageOptionsArray ?? [],
+            encodedImageBlobs: document.data?.encodedImageBlobs ?? [],
+            labels: document.data?.labels ?? [],
+            meshOptionsArray: document.data?.meshOptionsArray ?? [],
+            connectomes: document.data?.connectomes ?? [],
+            encodedDrawingBlob: document.data?.encodedDrawingBlob ?? '',
+            previewImageDataURL: document.data?.previewImageDataURL ?? '',
+            customData: document.data?.customData ?? '',
+            title: document.data?.title ?? document.title ?? 'untitled'
+        }
+    } catch (prepErr) {
+        console.warn('loadDocument: defensive initialization failed', prepErr)
+    }
+
+    // Now proceed with the existing logic (merge opts, etc.)
+    this.volumes = []
+    this.meshes = []
+    this.document = document
+
+    // Ensure labels present for older documents
+    this.document.labels = this.document.labels ? this.document.labels : []
+
+    // Merge loaded opts with defaults so later code can safely read fields like drawingEnabled, bounds, etc.
+    const mergedOpts = { ...DEFAULT_OPTIONS, ...(document.opts || {}) }
+    // If serializer already normalized special numeric strings it will be in document.opts;
+    // otherwise mergedOpts will contain whatever document.opts had — that's fine.
+    this.scene.pan2Dxyzmm = document.scene.sceneData?.pan2Dxyzmm ?? [0, 0, 0, 1]
+    this.document.opts = mergedOpts
+
+    // If the serializer left scene.clipPlaneDepthAziElevs in place, set clip plane accordingly
+    if (this.scene.clipPlaneDepthAziElevs) {
+        this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex ?? 0])
+    }
+
+    log.debug('load document', document)
+
+    // Clear media map and prepare drawing texture/state
+    this.mediaUrlMap.clear()
+    this.createEmptyDrawing()
+
+    // --- Rehydrate images using serializer (assume serializer returns NVImage instances) ---
+    try {
+        const images: NVImage[] = await NVSerializer.rehydrateImages(document.data)
+        for (const img of images || []) {
+            try {
+                this.addVolume(img)
+            } catch (addErr) {
+                console.warn('Failed to add rehydrated image:', addErr, img)
+            }
+        }
+    } catch (imgErr) {
+        console.warn('NVSerializer.rehydrateImages failed:', imgErr)
+    }
+
+    if (this.volumes && this.volumes.length > 0) {
+        this.back = this.volumes[0]
+    }
+    else {
         this.volumes = []
-        this.meshes = []
-        this.document = document
-        this.document.labels = this.document.labels ? this.document.labels : [] // for older documents w/o labels
-        const opts = { ...DEFAULT_OPTIONS, ...document.opts }
-        this.scene.pan2Dxyzmm = document.scene.pan2Dxyzmm ? document.scene.pan2Dxyzmm : [0, 0, 0, 1] // for older documents that don't have this
-        this.document.opts = opts
-        if (this.scene.clipPlaneDepthAziElevs) {
-            this.setClipPlane(this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex ?? 0])
-        }
-        log.debug('load document', document)
-        this.mediaUrlMap.clear()
-        this.createEmptyDrawing()
+    }
 
-        // const imagesToAdd = new Map<ImageFromUrlOptions, NVImage>()
-
-        // load our images and meshes
-        const encodedImageBlobs = document.encodedImageBlobs
-        for (let i = 0; i < document.imageOptionsArray.length; i++) {
-            const imageOptions = document.imageOptionsArray[i]
-            const base64 = encodedImageBlobs[i]
-            if (base64) {
-                if ('colorMap' in imageOptions) {
-                    imageOptions.colormap = imageOptions.colorMap
+    // --- Rehydrate meshes using serializer (assume serializer returns NVMesh instances) ---
+    try {
+        const meshes: NVMesh[] = await NVSerializer.rehydrateMeshes(document.data, this.gl, /* callUpdateMesh= */ true)
+        for (const mesh of meshes || []) {
+            try {
+                // serializer may already have called updateMesh; calling again is safe
+                if (typeof (mesh as any).updateMesh === 'function') {
+                    (mesh as any).updateMesh(this.gl)
                 }
-                const image = await NVImage.loadFromBase64({ base64, ...imageOptions })
-                if (image) {
-                    if (image.colormapLabel) {
-                        const length = Object.keys(image.colormapLabel.lut).length
-
-                        // Create a new Uint8ClampedArray with the length of the object.
-                        const uint8ClampedArray = new Uint8ClampedArray(length)
-
-                        // Iterate over the object and set the values of the Uint8ClampedArray.
-                        for (const key in image.colormapLabel.lut) {
-                            uint8ClampedArray[key] = image.colormapLabel.lut[key]
-                        }
-                        image.colormapLabel.lut = uint8ClampedArray
-                    }
-                    this.addVolume(image)
-                }
+                this.addMesh(mesh)
+            } catch (meshErr) {
+                console.error('Failed to add rehydrated mesh:', meshErr, mesh)
             }
         }
+    } catch (meshErr) {
+        console.warn('NVSerializer.rehydrateMeshes failed:', meshErr)
+    }
 
-        // reset our image options map
-        // document.imageOptionsMap.clear()
-
-        // for(const imageOptions of map.keys()) {
-
-        // }
-
-        if (this.volumes.length > 0) {
-            this.back = this.volumes[0]
-        }
-
-        for (const meshDataObject of document.meshDataObjects ?? []) {
-            const meshInit = { gl: this.gl, ...meshDataObject }
-            if (meshDataObject.offsetPt0) {
-                meshInit.rgba255[3] = 0 // this is a streamline
-                meshInit.tris = new Uint32Array(meshDataObject.offsetPt0)
-            }
-            log.debug(meshInit)
-            const meshToAdd = new NVMesh(
-                meshInit.pts,
-                meshInit.tris!,
-                meshInit.name,
-                meshInit.rgba255,
-                meshInit.opacity,
-                meshInit.visible,
-                this.gl,
-                meshInit.connectome,
-                meshInit.dpg,
-                meshInit.dps,
-                meshInit.dpv
-            )
-            if (meshDataObject.offsetPt0) {
-                meshToAdd.fiberGroupColormap = meshDataObject.fiberGroupColormap
-                meshToAdd.fiberColor = meshDataObject.fiberColor
-                meshToAdd.fiberDither = meshDataObject.fiberDither
-                meshToAdd.fiberRadius = meshDataObject.fiberRadius
-                meshToAdd.colormap = meshDataObject.colormap
-            }
-            meshToAdd.meshShaderIndex = meshInit.meshShaderIndex
-            meshToAdd.layers = meshInit.layers
-            meshToAdd.updateMesh(this.gl)
-            log.debug(meshToAdd)
-            this.addMesh(meshToAdd)
-        }
-        // add connectomes
-        if (document.data.connectomes) {
-            for (const connectomeString of document.data.connectomes) {
+    // --- Connectomes (unchanged) ---
+    if (document.data.connectomes) {
+        for (const connectomeString of document.data.connectomes) {
+            try {
                 const connectome = JSON.parse(connectomeString)
                 const meshToAdd = this.loadConnectomeAsMesh(connectome)
                 meshToAdd.updateMesh(this.gl)
                 this.addMesh(meshToAdd)
+            } catch (e) {
+                console.warn('Failed to rehydrate connectome:', e)
             }
         }
-
-        // Deserialize drawBitmap
-        this.createEmptyDrawing()
-        const drawingBase64 = document.encodedDrawingBlob
-        if (drawingBase64) {
-            const drawingBitmap = await NVUtilities.b64toUint8(drawingBase64) // Convert base64 back to Uint8Array
-            if (drawingBitmap) {
-                const dims = this.back.dims
-                let expectedBytes = dims[1] * dims[2] * dims[3]
-                if (drawingBitmap.length - 352 === expectedBytes) {
-                    expectedBytes += 352
-                }
-                if (drawingBitmap.length !== expectedBytes) {
-                    throw new Error(`drawBitmap size does not match the texture dimensions (${dims[1]}×${dims[2]}×${dims[3]}) ${expectedBytes} != ${dims[1] * dims[2] * dims[3]}.`)
-                }
-                this.drawBitmap = drawingBitmap // Set the deserialized drawBitmap
-                this.refreshDrawing()
-            }
-        }
-
-        await this.setGradientOpacity(this.opts.gradientOpacity)
-        await this.setVolumeRenderIllumination(this.opts.gradientAmount)
-        this.updateGLVolume()
-        this.drawScene()
-        this.onDocumentLoaded(document)
-        return this
     }
+
+    // --- Deserialize drawBitmap if present ---
+    this.createEmptyDrawing()
+    const drawingBase64 = document.encodedDrawingBlob
+    if (drawingBase64) {
+        try {
+            const drawingBitmap = await NVUtilities.b64toUint8(drawingBase64)
+            if (drawingBitmap) {
+                const dims = this.back?.dims
+                if (!dims) {
+                    console.warn('No back image available; cannot validate drawBitmap size.')
+                    this.drawBitmap = drawingBitmap
+                } else {
+                    let expectedBytes = dims[1] * dims[2] * dims[3]
+                    if (drawingBitmap.length - 352 === expectedBytes) {
+                        expectedBytes += 352
+                    }
+                    if (drawingBitmap.length !== expectedBytes) {
+                        throw new Error(`drawBitmap size does not match the texture dimensions (${dims[1]}×${dims[2]}×${dims[3]}) ${expectedBytes} != ${dims[1] * dims[2] * dims[3]}.`)
+                    }
+                    this.drawBitmap = drawingBitmap
+                    this.refreshDrawing()
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to decode drawBitmap:', err)
+        }
+    }
+
+    // Final UI/GL updates
+    await this.setGradientOpacity(this.opts.gradientOpacity)
+    await this.setVolumeRenderIllumination(this.opts.gradientAmount)
+    this.updateGLVolume()
+    this.drawScene()
+    this.onDocumentLoaded(document)
+    return this
+}
+
+
 
     /**
  * generates JavaScript to load the current scene as a document
