@@ -182,27 +182,124 @@ test('NVSerializer.deserializeDocument preserves top-level fields (opts, sceneDa
   expect((newDoc.data as any).meshesString).toBeDefined()
 })
 
-/*
-  ======= LEGACY TESTS — COMMENTED OUT =======
-  The tests below validate the old legacy deserialization behavior (colorMap -> colormap
-  renaming and structured-clone shaped meshes). They are intentionally left here
-  commented so you can reference them or re-enable them once the legacy migration
-  path is fully reconciled.
+/**
+ * Test: legacy layer keys + numeric encodings
+ * - colorMap -> colormap normalization
+ * - numeric strings 'NaN' / 'infinity' / '-infinity' decode back to JS numbers
+ * - values/atlasValues preserved as arrays
+ */
+test('NVSerializer.rehydrateMeshes decodes legacy colorMap and numeric encodings (no GL)', async () => {
+  const legacyMesh = {
+    name: 'legacy-layer-test',
+    pts: [0, 0, 0],
+    tris: [0],
+    rgba255: [255, 0, 0, 255],
+    layers: [
+      {
+        // legacy field names intentionally used here
+        colorMap: 'warm',
+        colorMapNegative: 'winter',
+        // numeric encodings as strings (what older serializers produced)
+        global_min: 'NaN',
+        global_max: 'infinity',
+        cal_min: '-infinity',
+        cal_max: 42,
+        // arrays (already plain arrays, but ensure still preserved)
+        values: [0.1, 0.2],
+        atlasValues: [3, 4]
+      }
+    ]
+  }
 
-  (Contents of legacy tests omitted here for brevity; keep them in your original file
-   if you want exact previous text.)
-*/
+  const doc: DocumentData = {
+    meshesString: JSON.stringify([legacyMesh]),
+    imageOptionsArray: [],
+    encodedImageBlobs: [],
+    sceneData: {},
+    opts: {}
+  }
 
-/* OLD LEGACY TESTS (commented)
-test('nvdocument convert colorMap and colorMapNegative to colormap and colormapNegative', async () => {
-  ...
+  const rehydrated = await NVSerializer.rehydrateMeshes(doc, undefined, false)
+
+  expect(Array.isArray(rehydrated)).toBe(true)
+  expect(rehydrated.length).toBe(1)
+
+  const m0 = rehydrated[0] as any
+  expect(m0.layers).toBeDefined()
+  const l = m0.layers[0]
+
+  // legacy keys should be normalized
+  expect(l.colormap).toBe('warm')
+  expect(l.colormapNegative).toBe('winter')
+  expect(('colorMap' in l)).toBe(false)
+  expect(('colorMapNegative' in l)).toBe(false)
+
+  // numeric decodings
+  expect(Number.isNaN(l.global_min)).toBe(true)
+  expect(Object.is(l.global_max, Infinity)).toBe(true)
+  expect(Object.is(l.cal_min, -Infinity)).toBe(true)
+  expect(l.cal_max).toBe(42)
+
+  // values & atlasValues preserved as arrays with same entries
+  expect(Array.isArray(l.values)).toBe(true)
+  expect(l.values).toEqual([0.1, 0.2])
+  expect(Array.isArray(l.atlasValues)).toBe(true)
+  expect(l.atlasValues).toEqual([3, 4])
 })
 
-test('nvdocument preserves mesh and mesh-layer properties through json roundtrip', async () => {
-  ...
-})
+/**
+ * Test: meshesString that looks like a structured-clone wrapper or a wrapper object
+ * Ensures normalizeMeshesString path is exercised and that resulting layers are normalized.
+ */
+test('NVSerializer.rehydrateMeshes handles wrapped/structured-clone-like meshesString (no GL)', async () => {
+  // Simulate a wrapper shape (old code sometimes wrapped the array in { value: [...] } )
+  const inner = [
+    {
+      name: 'wrapped-mesh',
+      pts: [0],
+      tris: [0],
+      rgba255: [10, 20, 30, 40],
+      layers: [
+        {
+          // already modern name present; ensure it's preserved
+          colormap: 'hot',
+          global_min: 'NaN',
+          global_max: 'infinity',
+          cal_min: '-infinity',
+          cal_max: 3.14,
+          values: [1.5],
+          atlasValues: [7]
+        }
+      ]
+    }
+  ]
+  // wrapper object
+  const wrapper = { value: inner }
+  const doc: DocumentData = {
+    meshesString: JSON.stringify(wrapper),
+    imageOptionsArray: [],
+    encodedImageBlobs: [],
+    sceneData: {},
+    opts: {}
+  }
 
-test('nvdocument roundtrip keeps colorMap -> colormap conversion and numeric encodings for layers', async () => {
-  ...
+  const rehydrated = await NVSerializer.rehydrateMeshes(doc, undefined, false)
+
+  expect(Array.isArray(rehydrated)).toBe(true)
+  expect(rehydrated.length).toBe(1)
+
+  const m0 = rehydrated[0] as any
+  expect(m0.name).toBe('wrapped-mesh')
+  const l = m0.layers[0]
+
+  expect(l.colormap).toBe('hot')
+  expect(Number.isNaN(l.global_min)).toBe(true)
+  expect(Object.is(l.global_max, Infinity)).toBe(true)
+  expect(Object.is(l.cal_min, -Infinity)).toBe(true)
+  expect(l.cal_max).toBe(3.14)
+
+  expect(Array.isArray(l.values)).toBe(true)
+  expect(l.values).toEqual([1.5])
+  expect(Array.isArray(l.atlasValues)).toBe(true)
+  expect(l.atlasValues).toEqual([7])
 })
-*/

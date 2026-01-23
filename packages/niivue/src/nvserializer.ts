@@ -472,32 +472,15 @@ export class NVSerializer {
    * to avoid "underspecified mesh" warnings.
    */
   static async rehydrateMeshes(documentData: DocumentData, gl?: WebGL2RenderingContext, callUpdateMesh = false): Promise<Array<NVMesh | any>> {
-    console.log('NVSerializer.rehydrateMeshes: start')
     const out: Array<NVMesh | any> = []
 
     // Normalize legacy shapes first
     const migrated = await migrateLegacyDocument(documentData)
 
-    // Defensive logging: show what migrated contains at a glance
-    try {
-    console.log('NVSerializer.rehydrateMeshes: migrated keys:', Object.keys(migrated || {}).slice(0, 20))
-    } catch (e) {
-    console.warn('NVSerializer.rehydrateMeshes: error logging migrated', e)
-    }
-
+   
     const meshesString = migrated.meshesString ?? '[]'
 
-    // Diagnostic logging to capture the exact string being parsed in the unit test
-    try {
-    if (typeof meshesString === 'string') {
-        const preview = meshesString.length > 200 ? meshesString.slice(0, 200) + '…' : meshesString
-        console.log('NVSerializer.rehydrateMeshes: meshesString preview:', preview)
-    } else {
-        console.log('NVSerializer.rehydrateMeshes: meshesString is non-string of type', typeof meshesString, meshesString)
-    }
-    } catch (e) {
-    console.warn('NVSerializer.rehydrateMeshes: error logging meshesString', e)
-    }
+   
 
     let parsed: any[] = []
     try {
@@ -511,7 +494,6 @@ export class NVSerializer {
       let m = parsed[i] || {}
       try {
         m = normalizeMeshForRehydrate(m)
-        console.log(`NVSerializer.rehydrateMeshes: processing mesh index ${i} name="${m.name}"`, m)
         // Normalize layer keys and numeric encodings (colorMap -> colormap etc.)
         if (Array.isArray(m.layers)) {
           for (const layer of m.layers) {
@@ -649,7 +631,6 @@ export class NVSerializer {
         return out ? [out] : []
     }
 
-    console.log('NVSerializer.rehydrateMeshes: completed successfully, returning array length=', out.length)
     return out
     } catch (err) {
     console.error('NVSerializer.rehydrateMeshes: final-return error', err)

@@ -150,13 +150,23 @@ export function normalizeMeshForRehydrate(meshIn: any): any {
     m.edges = m.edges.length > 0 && typeof m.edges[0] === 'object' ? m.edges.map((e:any)=>({...e})) : m.edges.slice()
   }
 
-  // 6) normalize layers: rename legacy keys and extract values arrays
+    // 6) normalize layers: rename legacy keys and extract values arrays
   if (Array.isArray(m.layers)) {
     m.layers = m.layers.map((layer: any) => {
       if (!layer || typeof layer !== 'object') return layer
       const lcopy: any = { ...(layer || {}) }
-      if ('colorMap' in lcopy && !('colormap' in lcopy)) { lcopy.colormap = lcopy.colorMap }
-      if ('colorMapNegative' in lcopy && !('colormapNegative' in lcopy)) { lcopy.colormapNegative = lcopy.colorMapNegative }
+
+      // Normalize legacy colormap keys to modern names, but prefer any already-present modern keys.
+      if ('colorMap' in lcopy) {
+        if (!('colormap' in lcopy)) lcopy.colormap = lcopy.colorMap
+        // remove legacy key
+        delete lcopy.colorMap
+      }
+      if ('colorMapNegative' in lcopy) {
+        if (!('colormapNegative' in lcopy)) lcopy.colormapNegative = lcopy.colorMapNegative
+        // remove legacy key
+        delete lcopy.colorMapNegative
+      }
 
       // decode numeric strings if present (lightweight)
       for (const k of ['global_min','global_max','cal_min','cal_max','cal_minNeg','cal_maxNeg']) {
@@ -187,6 +197,7 @@ export function normalizeMeshForRehydrate(meshIn: any): any {
       return lcopy
     })
   }
+
 
   return m
 }
