@@ -49,7 +49,6 @@ import {
     PEN_TYPE,
     SHOW_RENDER,
     DRAG_MODE,
-    COLORMAP_TYPE,
     MULTIPLANAR_TYPE,
     DEFAULT_OPTIONS,
     ExportDocumentData,
@@ -57,6 +56,7 @@ import {
     MouseEventConfig,
     TouchEventConfig
 } from '@/nvdocument'
+import { COLORMAP_TYPE } from '@/colortables'
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '@/nvlabel'
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
