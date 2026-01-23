@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
-import { assert, expect, test } from 'vitest'
-import { NVDocument, DocumentData } from '../../src/niivue/index.js'
+import { expect, test } from 'vitest'
+import { NVDocument, DocumentData } from '../../src/nvdocument'
 import NVSerializer from '../../src/nvserializer' // adjust path if needed
 
 // Keep the old legacy test fixture JSON handy (old tests commented out below)
