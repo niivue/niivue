@@ -1,6 +1,12 @@
 import * as cmaps from '@/cmaps'
 import { log } from '@/logger'
 
+export enum COLORMAP_TYPE {
+    MIN_TO_MAX = 0,
+    ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
+    ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 2
+}
+
 export type ColorMap = {
     R: number[]
     G: number[]

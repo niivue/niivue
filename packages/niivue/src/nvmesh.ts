@@ -9,7 +9,7 @@ import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from '@/nvlabel'
 
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from '@/types'
 import { DefaultMeshType, GII, MZ3, TCK, TRACT, TRK, TT, TRX, VTK, ValuesArray, X3D, AnyNumberArray } from '@/nvmesh-types'
-import { COLORMAP_TYPE } from '@/nvdocument'
+import { COLORMAP_TYPE } from '@/colortables'
 
 /** Enum for text alignment
  */
