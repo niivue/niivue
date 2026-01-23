@@ -1,14 +1,13 @@
 // nvdocument.ts (updated)
 // --- imports
-import { NVSerializer } from '@/nvserializer'   // adjust path if needed
-
 import { vec3, vec4 } from 'gl-matrix'
+import { NVSerializer } from '@/nvserializer' // adjust path if needed
+
 import { NVUtilities } from '@/nvutilities'
 import { ImageFromUrlOptions, NVIMAGE_TYPE, NVImage } from '@/nvimage'
-import { MeshType, NVMesh } from '@/nvmesh'
+import { NVMesh } from '@/nvmesh'
 import { NVLabel3D } from '@/nvlabel'
 import { NVConnectome } from '@/nvconnectome'
-import { log } from '@/logger'
 
 /**
  * Represents a completed measurement between two points
@@ -99,12 +98,6 @@ export interface MouseEventConfig {
 export interface TouchEventConfig {
     singleTouch: DRAG_MODE
     doubleTouch: DRAG_MODE
-}
-
-
-// make mutable type
-type Mutable<T> = {
-    -readonly [P in keyof T]: T[P]
 }
 
 /**
@@ -337,11 +330,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
 //
 // -- NEW: Recursive encoded type for NVConfigOptions JSON-safe form
 //
-type EncodeNumbersIn<T> =
-    T extends number ? number | string :
-    T extends (infer U)[] ? EncodeNumbersIn<U>[] :
-    T extends object ? { [K in keyof T]: EncodeNumbersIn<T[K]> } :
-    T
+type EncodeNumbersIn<T> = T extends number ? number | string : T extends Array<infer U> ? Array<EncodeNumbersIn<U>> : T extends object ? { [K in keyof T]: EncodeNumbersIn<T[K]> } : T
 
 type EncodedNVConfigOptions = EncodeNumbersIn<NVConfigOptions>
 
@@ -432,19 +421,19 @@ export type ExportDocumentData = {
  * Returns a partial configuration object containing only the fields in the provided
  * options that differ from the DEFAULT_OPTIONS.
  */
-function diffOptions(opts: NVConfigOptions, defaults: NVConfigOptions): Partial<NVConfigOptions> {
-    const diff: Partial<NVConfigOptions> = {}
-    for (const key in opts) {
-        const value = opts[key]
-        const def = defaults[key]
-        const isArray = Array.isArray(value) && Array.isArray(def)
+// function diffOptions(opts: NVConfigOptions, defaults: NVConfigOptions): Partial<NVConfigOptions> {
+//     const diff: Partial<NVConfigOptions> = {}
+//     for (const key in opts) {
+//         const value = opts[key]
+//         const def = defaults[key]
+//         const isArray = Array.isArray(value) && Array.isArray(def)
 
-        if ((isArray && value.some((v, i) => v !== def[i])) || (!isArray && value !== def)) {
-            diff[key] = value
-        }
-    }
-    return diff
-}
+//         if ((isArray && value.some((v, i) => v !== def[i])) || (!isArray && value !== def)) {
+//             diff[key] = value
+//         }
+//     }
+//     return diff
+// }
 
 /**
  * NVDocument class (main)
@@ -745,7 +734,6 @@ export class NVDocument {
         return this.imageOptionsMap.has(image.id) ? this.data.imageOptionsArray[this.imageOptionsMap.get(image.id)] : null
     }
 
-  
     /**
      * Serialise the document by delegating to NVSerializer.
      */
@@ -806,8 +794,6 @@ export class NVDocument {
     static async loadFromJSON(data: DocumentData): Promise<NVDocument> {
         return await NVSerializer.deserializeDocument(data)
     }
-
-   
 
     /**
      * Sets the callback function to be called when opts properties change
