@@ -1,7 +1,7 @@
 // src/nvserializer.ts
-import { vec3, vec4 } from 'gl-matrix'
+import { vec3 } from 'gl-matrix'
 import { NVUtilities } from '@/nvutilities'
-import { NVImage, NVIMAGE_TYPE, ImageFromUrlOptions } from '@/nvimage'
+import { NVImage, NVIMAGE_TYPE } from '@/nvimage'
 import { NVMesh, MeshType } from '@/nvmesh'
 import { NVConnectome } from '@/nvconnectome'
 import { log } from '@/logger'
