@@ -33,7 +33,7 @@ test('niivue load meta-document and fetch linked nifti', async ({ page }) => {
             title: 'meta'
         }
 
-        const doc = NVDocument.loadFromJSON(meta)
+        const doc = await NVDocument.loadFromJSON(meta)
         await doc.fetchLinkedData()
 
         const nv = new Niivue(testOptions)

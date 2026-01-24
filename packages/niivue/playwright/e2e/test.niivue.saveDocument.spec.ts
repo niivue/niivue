@@ -49,7 +49,7 @@ test('niivue saveDocument nifti volume', async ({ page }) => {
     try {
         if (typeof data === 'string') {
             const json = JSON.parse(data)
-            const doc = NVDocument.loadFromJSON(json)
+            const doc = await NVDocument.loadFromJSON(json)
             expect(doc.data.encodedImageBlobs.length).toBe(2)
             expect(doc.data.opts.sliceType).toBe(2)
             expect(doc.scene.crosshairPos).toEqual([0.1, 0.2, 0.3])
@@ -84,7 +84,7 @@ test('niivue saveDocument mesh mz3', async ({ page }) => {
     try {
         if (typeof data === 'string') {
             const json = JSON.parse(data)
-            const doc = NVDocument.loadFromJSON(json)
+            const doc = await NVDocument.loadFromJSON(json)
             expect(doc.meshDataObjects!.length).toBe(1)
             expect(doc.data.opts.sliceType).toBe(4)
             expect(doc.data.opts.show3Dcrosshair).toBe(true)
@@ -157,7 +157,7 @@ test('niivue saveDocument clipVolume', async ({ page }) => {
     try {
         if (typeof data === 'string') {
             const json = JSON.parse(data)
-            const doc = NVDocument.loadFromJSON(json)
+            const doc = await NVDocument.loadFromJSON(json)
             expect(doc.opts.rulerWidth).toBe(2)
             // expect(doc.opts.clipThick).toBe(0.42)
             // expect(doc.opts.clipVolumeLow).toBe([0.46, 0.42, 0.31])
@@ -248,7 +248,7 @@ test('niivue saveDocument and loadDocument', async ({ page }) => {
         async ({ options, documentJSON }) => {
             window.nv = new Niivue(options)
             await window.nv.attachTo('gl')
-            const doc = NVDocument.loadFromJSON(documentJSON as DocumentData)
+            const doc = await NVDocument.loadFromJSON(documentJSON as DocumentData)
             window.nv.loadDocument(doc)
         },
         { options: TEST_OPTIONS, documentJSON }
@@ -313,8 +313,8 @@ test('niivue saveDocument and loadDocument with atlas', async ({ page }) => {
         async ({ options, documentJSON }) => {
             window.nv = new Niivue(options)
             await window.nv.attachTo('gl')
-            const doc = NVDocument.loadFromJSON(documentJSON as DocumentData)
-            window.nv.loadDocument(doc)
+            const doc = await NVDocument.loadFromJSON(documentJSON as DocumentData)
+            await window.nv.loadDocument(doc)
         },
         { options: TEST_OPTIONS, documentJSON }
     )

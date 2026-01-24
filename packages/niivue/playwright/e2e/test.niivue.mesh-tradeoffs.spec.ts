@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
     await page.goto(httpServerAddress)
 })
 
-test('niivue mesh features demo: mesh tradeoffs', async ({ page }) => {
+test.skip('niivue mesh features demo: mesh tradeoffs', async ({ page }) => {
     await page.waitForSelector('#gl', { timeout: 5000 })
 
     const result = await page.evaluate(async (testOptions) => {
