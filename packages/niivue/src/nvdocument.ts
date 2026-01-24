@@ -124,6 +124,7 @@ export type NVConfigOptions = {
     showColorbarBorder: boolean // show border around the colorbar
     // 0 for no crosshairs
     crosshairWidth: number
+    dragAndDropSensitivity?: number // Renamed from 'sensitivity'
     crosshairWidthUnit: 'voxels' | 'mm' | 'percent'
     crosshairGap: number
     rulerWidth: number
@@ -255,6 +256,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     colorbarWidth: -1, // automatic (full width)
     showColorbarBorder: true, // show border around the colorbar
     crosshairWidth: 1,
+    dragAndDropSensitivity: 1, // Added default value (1 = normal speed)
     crosshairWidthUnit: 'voxels',
     crosshairGap: 0,
     rulerWidth: 4,
@@ -336,7 +338,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     clickToSegmentBright: true,
     clickToSegmentAutoIntensity: false, // new option, but keep clickToSegmentBright for backwards compatibility
     clickToSegmentIntensityMax: NaN, // NaN will use auto threshold (default flood fill behavior from before)
-    clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
+       clickToSegmentIntensityMin: NaN, // NaN will use auto threshold (default flood fill behavior from before)
     // 0 will use auto threshold (default flood fill behavior from before)
     // Take the voxel intensity at the click point and use this percentage +/- to threshold the flood fill operation.
     // If greater than 0, clickedVoxelIntensity +/- clickedVoxelIntensity * clickToSegmentPercent will be used

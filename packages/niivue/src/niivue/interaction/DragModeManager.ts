@@ -66,6 +66,8 @@ export interface CalculateSlicer3DZoomParams {
     currentPan2Dxyzmm: vec4 | number[] | ArrayLike<number>
     crosshairMM: number[] | ArrayLike<number>
     yoke3Dto2DZoom: boolean
+    windowY?: number // Optional for simple zoom calc
+    volScaleMultiplier?: number // Optional for simple zoom calc
 }
 
 /**
@@ -89,6 +91,7 @@ export interface CalculateWindowingParams {
     currentCalMax: number
     globalMin: number
     globalMax: number
+    sensitivity?: number // Added sensitivity parameter
 }
 
 /**
@@ -313,38 +316,47 @@ export function calculateSlicer3DZoomFromDrag(params: CalculateSlicer3DZoomParam
 }
 
 /**
+ * Calculates new volume scale multiplier based on mouse drag (Slicer3D).
+ *
+ * @param params - Parameters for zoom calculation
+ * @returns New volume scale multiplier
+ */
+export function calculateSlicer3DVolScaleFromDrag(params: CalculateSlicer3DZoomParams): number {
+    const { startY, endY, volScaleMultiplier } = params
+    let newScale = volScaleMultiplier || 1
+    if (endY < startY) {
+        newScale += 0.01
+    } else if (endY > startY) {
+        newScale -= 0.01
+    }
+    return Math.max(0.1, newScale)
+}
+
+/**
  * Calculates windowing (cal_min/cal_max) adjustment from mouse/touch drag.
  *
  * @param params - Parameters for windowing calculation
  * @returns Windowing result with adjusted cal_min and cal_max
  */
 export function calculateWindowingAdjustment(params: CalculateWindowingParams): WindowingAdjustmentResult {
-    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params
+    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax, sensitivity = 1 } = params
 
     let mn = currentCalMin
     let mx = currentCalMax
 
+    // Calculate delta based on mouse movement and sensitivity
+    // Note: windowY - y is used because moving mouse UP (decreasing Y) typically increases brightness
+    const deltaY = (windowY - y) * sensitivity
+    const deltaX = (x - windowX) * sensitivity
+
     // Adjust level based on vertical movement
-    if (y < windowY) {
-        // increase level if mouse moves up
-        mn += 1
-        mx += 1
-    } else if (y > windowY) {
-        // decrease level if mouse moves down
-        mn -= 1
-        mx -= 1
-    }
+    mn += deltaY
+    mx += deltaY
 
     // Adjust window width based on horizontal movement
-    if (x > windowX) {
-        // increase window width if mouse moves right
-        mn -= 1
-        mx += 1
-    } else if (x < windowX) {
-        // decrease window width if mouse moves left
-        mn += 1
-        mx -= 1
-    }
+    // Moving right (positive deltaX) increases window width
+    mn -= deltaX
+    mx += deltaX
 
     // Ensure window width is at least 1
     if (mx - mn < 1) {
