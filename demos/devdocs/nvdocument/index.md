@@ -2,11 +2,16 @@
 
 ## Enumerations
 
-| Enumeration                                    | Description |
-| ---------------------------------------------- | ----------- |
-| [COLORMAP_TYPE](enumerations/COLORMAP_TYPE.md) | -           |
-| [PEN_TYPE](enumerations/PEN_TYPE.md)           | -           |
-| [SHOW_RENDER](enumerations/SHOW_RENDER.md)     | -           |
+| Enumeration                                | Description |
+| ------------------------------------------ | ----------- |
+| [PEN_TYPE](enumerations/PEN_TYPE.md)       | -           |
+| [SHOW_RENDER](enumerations/SHOW_RENDER.md) | -           |
+
+## Classes
+
+| Class                               | Description             |
+| ----------------------------------- | ----------------------- |
+| [NVDocument](classes/NVDocument.md) | NVDocument class (main) |
 
 ## Interfaces
 
@@ -19,16 +24,17 @@
 
 ## Type Aliases
 
-| Type Alias                                               | Description     |
-| -------------------------------------------------------- | --------------- |
-| [DocumentData](type-aliases/DocumentData.md)             | -               |
-| [ExportDocumentData](type-aliases/ExportDocumentData.md) | -               |
-| [NVConfigOptions](type-aliases/NVConfigOptions.md)       | NVConfigOptions |
-| [Scene](type-aliases/Scene.md)                           | -               |
+| Type Alias                                               | Description                                                 |
+| -------------------------------------------------------- | ----------------------------------------------------------- |
+| [DocumentData](type-aliases/DocumentData.md)             | DocumentData / ExportDocumentData types (kept minimal here) |
+| [ExportDocumentData](type-aliases/ExportDocumentData.md) | -                                                           |
+| [NVConfigOptions](type-aliases/NVConfigOptions.md)       | NVConfigOptions                                             |
+| [Scene](type-aliases/Scene.md)                           | -                                                           |
 
 ## Variables
 
 | Variable                                              | Description |
 | ----------------------------------------------------- | ----------- |
 | [DEFAULT_OPTIONS](variables/DEFAULT_OPTIONS.md)       | -           |
+| [DEFAULT_SCENE_DATA](variables/DEFAULT_SCENE_DATA.md) | -           |
 | [INITIAL_SCENE_DATA](variables/INITIAL_SCENE_DATA.md) | -           |

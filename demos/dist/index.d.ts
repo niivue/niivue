@@ -1,6 +1,11 @@
 import { mat4, vec3, vec4, vec2 } from 'gl-matrix';
 import { NIFTI1, NIFTI2, NIFTIEXTENSION } from 'nifti-reader-js';
 
+declare enum COLORMAP_TYPE {
+    MIN_TO_MAX = 0,
+    ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
+    ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 2
+}
 type ColorMap = {
     R: number[];
     G: number[];
@@ -720,11 +725,6 @@ interface TouchEventConfig {
     singleTouch: DRAG_MODE;
     doubleTouch: DRAG_MODE;
 }
-declare enum COLORMAP_TYPE {
-    MIN_TO_MAX = 0,
-    ZERO_TO_MAX_TRANSPARENT_BELOW_MIN = 1,
-    ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 2
-}
 /**
  * NVConfigOptions
  */
@@ -839,6 +839,11 @@ type NVConfigOptions = {
     boundsBorderColor?: number[];
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
+type EncodeNumbersIn<T> = T extends number ? number | string : T extends Array<infer U> ? Array<EncodeNumbersIn<U>> : T extends object ? {
+    [K in keyof T]: EncodeNumbersIn<T[K]>;
+} : T;
+type EncodedNVConfigOptions = EncodeNumbersIn<NVConfigOptions>;
+declare const DEFAULT_SCENE_DATA: {};
 type SceneData = {
     gamma: number;
     azimuth: number;
@@ -875,11 +880,14 @@ type Scene = {
     _azimuth?: number;
     gamma?: number;
 };
+/**
+ * DocumentData / ExportDocumentData types (kept minimal here)
+ */
 type DocumentData = {
     title?: string;
     imageOptionsArray?: ImageFromUrlOptions[];
     meshOptionsArray?: unknown[];
-    opts?: Partial<NVConfigOptions>;
+    opts?: Partial<EncodedNVConfigOptions> | Partial<NVConfigOptions>;
     previewImageDataURL?: string;
     labels?: NVLabel3D[];
     encodedImageBlobs?: string[];
@@ -892,14 +900,16 @@ type DocumentData = {
     completedAngles?: CompletedAngle[];
 };
 type ExportDocumentData = {
+    title?: string;
     encodedImageBlobs: string[];
     encodedDrawingBlob: string;
     previewImageDataURL: string;
     imageOptionsMap: Map<string, number>;
     imageOptionsArray: ImageFromUrlOptions[];
     sceneData: Partial<SceneData>;
-    opts: NVConfigOptions;
+    opts: EncodedNVConfigOptions | Partial<EncodedNVConfigOptions>;
     meshesString: string;
+    meshOptionsArray?: unknown[];
     labels: NVLabel3D[];
     connectomes: string[];
     customData: string;
@@ -907,8 +917,11 @@ type ExportDocumentData = {
     completedAngles: CompletedAngle[];
 };
 /**
- * Creates and instance of NVDocument
- * @ignore
+ * Returns a partial configuration object containing only the fields in the provided
+ * options that differ from the DEFAULT_OPTIONS.
+ */
+/**
+ * NVDocument class (main)
  */
 declare class NVDocument {
     data: DocumentData;
@@ -949,7 +962,6 @@ declare class NVDocument {
     get encodedImageBlobs(): string[];
     /**
      * Gets the base 64 encoded blob of the associated drawing
-     * TODO the return type was marked as string[] here, was that an error?
      */
     get encodedDrawingBlob(): string;
     /**
@@ -988,8 +1000,6 @@ declare class NVDocument {
     removeImage(image: NVImage): void;
     /**
      * Fetch any image data that is missing from this document.
-     * This includes loading image blobs for `ImageFromUrlOptions` with valid `url` fields.
-     * After calling this, `volumes` and `imageOptionsMap` will be populated.
      */
     fetchLinkedData(): Promise<void>;
     /**
@@ -997,43 +1007,23 @@ declare class NVDocument {
      */
     getImageOptions(image: NVImage): ImageFromUrlOptions | null;
     /**
-     * Serialise the document.
-     *
-     * @param embedImages  If false, encodedImageBlobs is left empty
-     *                     (imageOptionsArray still records the URL / name).
-     * @param embedDrawing  If false, encodedDrawingBlob is left empty
+     * Serialise the document by delegating to NVSerializer.
      */
     json(embedImages?: boolean, embedDrawing?: boolean): ExportDocumentData;
     download(fileName: string, compress: boolean, opts?: {
         embedImages: boolean;
     }): Promise<void>;
     /**
-     * Deserialize mesh data objects
-     */
-    static deserializeMeshDataObjects(document: NVDocument): void;
-    /**
      * Factory method to return an instance of NVDocument from a URL
      */
     static loadFromUrl(url: string): Promise<NVDocument>;
-    /**
-     * Factory method to return an instance of NVDocument from a File object
-     */
     static loadFromFile(file: Blob): Promise<NVDocument>;
     /**
      * Factory method to return an instance of NVDocument from JSON.
-     *
-     * This will merge any saved configuration options (`opts`) with the DEFAULT_OPTIONS,
-     * ensuring any missing values are filled with defaults. It also restores special-case
-     * fields like `meshThicknessOn2D` when serialized as the string "infinity".
-     *
-     * @param data - A serialized DocumentData object
-     * @returns A reconstructed NVDocument instance
+     * Delegates the main parsing to NVSerializer, then applies NVDocument-specific
+     * post-processing (opts decode, scene defaults, clone measurements/angles).
      */
-    static loadFromJSON(data: DocumentData): NVDocument;
-    /**
-     * Factory method to return an instance of NVDocument from JSON
-     */
-    static oldloadFromJSON(data: DocumentData): NVDocument;
+    static loadFromJSON(data: DocumentData): Promise<NVDocument>;
     /**
      * Sets the callback function to be called when opts properties change
      */
@@ -4792,4 +4782,4 @@ declare class Niivue {
     }): void;
 }
 
-export { type AffineTransform, COLORMAP_TYPE, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };
+export { type AffineTransform, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DEFAULT_SCENE_DATA, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };

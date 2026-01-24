@@ -1,6 +1,6 @@
 # Class: NVMeshFromUrlOptions
 
-Defined in: [nvmesh.ts:70](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L70)
+Defined in: [nvmesh.ts:69](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L69)
 
 ## Constructors
 
@@ -19,7 +19,7 @@ new NVMeshFromUrlOptions(
    meshShaderIndex: number): NVMeshFromUrlOptions;
 ```
 
-Defined in: [nvmesh.ts:81](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L81)
+Defined in: [nvmesh.ts:80](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L80)
 
 #### Parameters
 
@@ -43,12 +43,12 @@ Defined in: [nvmesh.ts:81](https://github.com/niivue/niivue/blob/main/packages/n
 
 | Property                                       | Type                                              | Defined in                                                                                   |
 | ---------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| <a id="colorbarvisible"></a> `colorbarVisible` | `boolean`                                         | [nvmesh.ts:78](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L78) |
-| <a id="gl"></a> `gl`                           | `WebGL2RenderingContext`                          | [nvmesh.ts:72](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L72) |
-| <a id="layers"></a> `layers`                   | [`NVMeshLayer`](../type-aliases/NVMeshLayer.md)[] | [nvmesh.ts:77](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L77) |
-| <a id="meshshaderindex"></a> `meshShaderIndex` | `number`                                          | [nvmesh.ts:79](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L79) |
-| <a id="name"></a> `name`                       | `string`                                          | [nvmesh.ts:73](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L73) |
-| <a id="opacity"></a> `opacity`                 | `number`                                          | [nvmesh.ts:74](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L74) |
-| <a id="rgba255"></a> `rgba255`                 | `Uint8Array`                                      | [nvmesh.ts:75](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L75) |
-| <a id="url"></a> `url`                         | `string`                                          | [nvmesh.ts:71](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L71) |
-| <a id="visible"></a> `visible`                 | `boolean`                                         | [nvmesh.ts:76](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L76) |
+| <a id="colorbarvisible"></a> `colorbarVisible` | `boolean`                                         | [nvmesh.ts:77](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L77) |
+| <a id="gl"></a> `gl`                           | `WebGL2RenderingContext`                          | [nvmesh.ts:71](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L71) |
+| <a id="layers"></a> `layers`                   | [`NVMeshLayer`](../type-aliases/NVMeshLayer.md)[] | [nvmesh.ts:76](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L76) |
+| <a id="meshshaderindex"></a> `meshShaderIndex` | `number`                                          | [nvmesh.ts:78](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L78) |
+| <a id="name"></a> `name`                       | `string`                                          | [nvmesh.ts:72](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L72) |
+| <a id="opacity"></a> `opacity`                 | `number`                                          | [nvmesh.ts:73](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L73) |
+| <a id="rgba255"></a> `rgba255`                 | `Uint8Array`                                      | [nvmesh.ts:74](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L74) |
+| <a id="url"></a> `url`                         | `string`                                          | [nvmesh.ts:70](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L70) |
+| <a id="visible"></a> `visible`                 | `boolean`                                         | [nvmesh.ts:75](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvmesh.ts#L75) |

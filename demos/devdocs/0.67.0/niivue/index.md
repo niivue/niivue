@@ -63,12 +63,6 @@ Re-exports [cmapper](../colortables/variables/cmapper.md)
 
 ---
 
-### COLORMAP_TYPE
-
-Re-exports [COLORMAP_TYPE](../nvdocument/enumerations/COLORMAP_TYPE.md)
-
----
-
 ### ColormapListEntry
 
 Re-exports [ColormapListEntry](../types/type-aliases/ColormapListEntry.md)
@@ -108,6 +102,12 @@ Re-exports [ConnectomeOptions](../types/type-aliases/ConnectomeOptions.md)
 ### DEFAULT_OPTIONS
 
 Re-exports [DEFAULT_OPTIONS](../nvdocument/variables/DEFAULT_OPTIONS.md)
+
+---
+
+### DEFAULT_SCENE_DATA
+
+Re-exports [DEFAULT_SCENE_DATA](../nvdocument/variables/DEFAULT_SCENE_DATA.md)
 
 ---
 
@@ -222,6 +222,12 @@ Re-exports [NiiVueLocationValue](../types/type-aliases/NiiVueLocationValue.md)
 ### NVConfigOptions
 
 Re-exports [NVConfigOptions](../nvdocument/type-aliases/NVConfigOptions.md)
+
+---
+
+### NVDocument
+
+Re-exports [NVDocument](../nvdocument/classes/NVDocument.md)
 
 ---
 

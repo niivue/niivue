@@ -1,5 +1,11 @@
 # colortables
 
+## Enumerations
+
+| Enumeration                                    | Description |
+| ---------------------------------------------- | ----------- |
+| [COLORMAP_TYPE](enumerations/COLORMAP_TYPE.md) | -           |
+
 ## Classes
 
 | Class                                 | Description |

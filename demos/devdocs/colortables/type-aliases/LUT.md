@@ -4,7 +4,7 @@
 type LUT = object;
 ```
 
-Defined in: [colortables.ts:16](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L16)
+Defined in: [colortables.ts:22](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L22)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [colortables.ts:16](https://github.com/niivue/niivue/blob/main/packa
 optional labels: string[];
 ```
 
-Defined in: [colortables.ts:20](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L20)
+Defined in: [colortables.ts:26](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L26)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [colortables.ts:20](https://github.com/niivue/niivue/blob/main/packa
 lut: Uint8ClampedArray;
 ```
 
-Defined in: [colortables.ts:17](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L17)
+Defined in: [colortables.ts:23](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L23)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [colortables.ts:17](https://github.com/niivue/niivue/blob/main/packa
 optional max: number;
 ```
 
-Defined in: [colortables.ts:19](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L19)
+Defined in: [colortables.ts:25](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L25)
 
 ---
 
@@ -44,4 +44,4 @@ Defined in: [colortables.ts:19](https://github.com/niivue/niivue/blob/main/packa
 optional min: number;
 ```
 
-Defined in: [colortables.ts:18](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L18)
+Defined in: [colortables.ts:24](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L24)

@@ -4,7 +4,7 @@
 type ColorMap = object;
 ```
 
-Defined in: [colortables.ts:4](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L4)
+Defined in: [colortables.ts:10](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L10)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [colortables.ts:4](https://github.com/niivue/niivue/blob/main/packag
 A: number[];
 ```
 
-Defined in: [colortables.ts:8](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L8)
+Defined in: [colortables.ts:14](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L14)
 
 ---
 
@@ -24,7 +24,7 @@ Defined in: [colortables.ts:8](https://github.com/niivue/niivue/blob/main/packag
 B: number[];
 ```
 
-Defined in: [colortables.ts:7](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L7)
+Defined in: [colortables.ts:13](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L13)
 
 ---
 
@@ -34,7 +34,7 @@ Defined in: [colortables.ts:7](https://github.com/niivue/niivue/blob/main/packag
 G: number[];
 ```
 
-Defined in: [colortables.ts:6](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L6)
+Defined in: [colortables.ts:12](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L12)
 
 ---
 
@@ -44,7 +44,7 @@ Defined in: [colortables.ts:6](https://github.com/niivue/niivue/blob/main/packag
 I: number[];
 ```
 
-Defined in: [colortables.ts:9](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L9)
+Defined in: [colortables.ts:15](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L15)
 
 ---
 
@@ -54,7 +54,7 @@ Defined in: [colortables.ts:9](https://github.com/niivue/niivue/blob/main/packag
 optional labels: string[];
 ```
 
-Defined in: [colortables.ts:13](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L13)
+Defined in: [colortables.ts:19](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L19)
 
 ---
 
@@ -64,7 +64,7 @@ Defined in: [colortables.ts:13](https://github.com/niivue/niivue/blob/main/packa
 optional max: number;
 ```
 
-Defined in: [colortables.ts:12](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L12)
+Defined in: [colortables.ts:18](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L18)
 
 ---
 
@@ -74,7 +74,7 @@ Defined in: [colortables.ts:12](https://github.com/niivue/niivue/blob/main/packa
 optional min: number;
 ```
 
-Defined in: [colortables.ts:11](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L11)
+Defined in: [colortables.ts:17](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L17)
 
 ---
 
@@ -84,4 +84,4 @@ Defined in: [colortables.ts:11](https://github.com/niivue/niivue/blob/main/packa
 R: number[];
 ```
 
-Defined in: [colortables.ts:5](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L5)
+Defined in: [colortables.ts:11](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L11)

@@ -1,6 +1,6 @@
 # Class: ColorTables
 
-Defined in: [colortables.ts:23](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L23)
+Defined in: [colortables.ts:29](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L29)
 
 ## Constructors
 
@@ -10,7 +10,7 @@ Defined in: [colortables.ts:23](https://github.com/niivue/niivue/blob/main/packa
 new ColorTables(): ColorTables;
 ```
 
-Defined in: [colortables.ts:31](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L31)
+Defined in: [colortables.ts:37](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L37)
 
 Sets cluts to alphabetically sorted cmaps
 
@@ -22,9 +22,9 @@ Sets cluts to alphabetically sorted cmaps
 
 | Property                       | Type                                                            | Default value | Defined in                                                                                             |
 | ------------------------------ | --------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------ |
-| <a id="cluts"></a> `cluts`     | `Record`\<`string`, [`ColorMap`](../type-aliases/ColorMap.md)\> | `{}`          | [colortables.ts:26](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L26) |
-| <a id="gamma"></a> `gamma`     | `number`                                                        | `1.0`         | [colortables.ts:24](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L24) |
-| <a id="version"></a> `version` | `number`                                                        | `0.1`         | [colortables.ts:25](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L25) |
+| <a id="cluts"></a> `cluts`     | `Record`\<`string`, [`ColorMap`](../type-aliases/ColorMap.md)\> | `{}`          | [colortables.ts:32](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L32) |
+| <a id="gamma"></a> `gamma`     | `number`                                                        | `1.0`         | [colortables.ts:30](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L30) |
+| <a id="version"></a> `version` | `number`                                                        | `0.1`         | [colortables.ts:31](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L31) |
 
 ## Methods
 
@@ -34,7 +34,7 @@ Sets cluts to alphabetically sorted cmaps
 addColormap(key: string, cmap: ColorMap): void;
 ```
 
-Defined in: [colortables.ts:43](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L43)
+Defined in: [colortables.ts:49](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L49)
 
 #### Parameters
 
@@ -55,7 +55,7 @@ Defined in: [colortables.ts:43](https://github.com/niivue/niivue/blob/main/packa
 colormap(key: string, isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [colortables.ts:83](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L83)
+Defined in: [colortables.ts:89](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L89)
 
 #### Parameters
 
@@ -76,7 +76,7 @@ Defined in: [colortables.ts:83](https://github.com/niivue/niivue/blob/main/packa
 colormapFromKey(name: string): ColorMap;
 ```
 
-Defined in: [colortables.ts:57](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L57)
+Defined in: [colortables.ts:63](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L63)
 
 #### Parameters
 
@@ -96,7 +96,7 @@ Defined in: [colortables.ts:57](https://github.com/niivue/niivue/blob/main/packa
 colormaps(): string[];
 ```
 
-Defined in: [colortables.ts:47](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L47)
+Defined in: [colortables.ts:53](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L53)
 
 #### Returns
 
@@ -110,7 +110,7 @@ Defined in: [colortables.ts:47](https://github.com/niivue/niivue/blob/main/packa
 colorMaps(): string[];
 ```
 
-Defined in: [colortables.ts:52](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L52)
+Defined in: [colortables.ts:58](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L58)
 
 #### Returns
 
@@ -124,7 +124,7 @@ Defined in: [colortables.ts:52](https://github.com/niivue/niivue/blob/main/packa
 makeDrawLut(name: string | ColorMap): LUT;
 ```
 
-Defined in: [colortables.ts:162](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L162)
+Defined in: [colortables.ts:168](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L168)
 
 #### Parameters
 
@@ -147,7 +147,7 @@ makeLabelLut(
    maxIdx: number): LUT;
 ```
 
-Defined in: [colortables.ts:88](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L88)
+Defined in: [colortables.ts:94](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L94)
 
 #### Parameters
 
@@ -172,7 +172,7 @@ makeLabelLutFromUrl(
 maxIdx: number): Promise<LUT>;
 ```
 
-Defined in: [colortables.ts:154](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L154)
+Defined in: [colortables.ts:160](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L160)
 
 #### Parameters
 
@@ -200,7 +200,7 @@ makeLut(
    isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [colortables.ts:208](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L208)
+Defined in: [colortables.ts:214](https://github.com/niivue/niivue/blob/main/packages/niivue/src/colortables.ts#L214)
 
 #### Parameters
 
