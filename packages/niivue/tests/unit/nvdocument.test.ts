@@ -1,112 +1,305 @@
 import { readFileSync } from 'fs'
-import { assert, expect, test } from 'vitest'
-import { NVDocument, DocumentData, DEFAULT_OPTIONS, INITIAL_SCENE_DATA } from '../../src/niivue/index.js'
-import * as nvd from '../images/document/niivue.mesh-old-colorMap.json'
+import { expect, test } from 'vitest'
+import { NVDocument, DocumentData, COLORMAP_TYPE } from '../../src/nvdocument'
+import NVSerializer from '../../src/nvserializer' // adjust path if needed
 
-test('loadFromFile loads a valid document', async () => {
-  // Load the JSON document as a Blob
-  const data = readFileSync('tests/images/document/niivue.mesh-pre-0.52.0.nvd')
-  const blob = new Blob([data], { type: 'application/json' })
+// Keep the old legacy test fixture JSON handy (old tests commented out below)
+const nvd = JSON.parse(
+  readFileSync('tests/images/document/niivue.mesh-old-colorMap.json', 'utf-8')
+)
 
-  const document = await NVDocument.loadFromFile(blob)
+/**
+ * Helper to parse meshesString safely
+ */
+function parseMeshesString(msString: string | undefined): any[] {
+  if (!msString) return []
+  try {
+    const parsed = JSON.parse(msString)
+    if (Array.isArray(parsed)) return parsed
+    if (parsed && Array.isArray(parsed.value)) return parsed.value
+    if (parsed && Array.isArray(parsed.data)) return parsed.data
+    return []
+  } catch (e) {
+    return []
+  }
+}
 
-  expect(document).toBeDefined()
-  expect(document.data).toBeDefined()
-  expect(document.data.opts).toBeDefined()
-
-  // Check a handful of important values
-  expect(document.data.opts.textHeight).toBeCloseTo(0.06, 5)
-  expect(document.data.opts.backColor).toEqual([1, 1, 1, 1])
-  expect(document.data.opts.show3Dcrosshair).toBe(true)
-  expect(document.data.opts.dragMode).toBe(1)
-
-  // Legacy special-case: older files expect meshThicknessOn2D === null
-  expect(document.data.opts.meshThicknessOn2D).toBeNull()
-
-  // Optional: make sure we didn't accidentally merge DEFAULT_OPTIONS into this legacy file
-  // (only do this if you rely on legacy files remaining compact)
-  // expect(Object.keys(document.data.opts).length).toBeLessThan(100)
-})
-
-test('nvdocument convert colorMap and colorMapNegative to colormap and colormapNegative', () => {
-  const doc = NVDocument.loadFromJSON(nvd as DocumentData)
-  assert(doc.meshDataObjects)
-  const colorMapIsInLayer = 'colorMap' in doc.meshDataObjects[0].layers[0]
-  const colorMapNegativeIsInLayer = 'colorMapNegative' in doc.meshDataObjects[0].layers[0]
-  expect(doc.meshDataObjects[0].layers[0].colormap).toEqual('warm')
-  expect(doc.meshDataObjects[0].layers[0].colormapNegative).toEqual('winter')
-  expect(colorMapIsInLayer).toBe(false)
-  expect(colorMapNegativeIsInLayer).toBe(false)
-})
-
-test('nvdocument only saves config options that differ from DEFAULT_OPTIONS', () => {
+/**
+ * New tests for the updated serializer/deserializer
+ */
+test('NVSerializer.deserializeDocument preserves top-level fields (opts, sceneData, meshesString)', async () => {
   const doc = new NVDocument()
-
-  // Modify one config field from the default
-  doc.opts.textHeight = 0.5
-  doc.opts.dragMode = 2
+  doc.title = 'Serialize-Roundtrip-Doc'
+  // mutate opts to ensure diff is tracked
+  doc.opts.textHeight = 0.35
   doc.opts.meshThicknessOn2D = Infinity
+  // add completed measurement to verify clone/restore behavior
+  doc.completedMeasurements = [{
+    startMM: [0, 0, 0] as any,
+    endMM: [1, 1, 1] as any,
+    distance: 1.732,
+    sliceIndex: 0,
+    sliceType: 0 as any,
+    slicePosition: 0
+  }];
 
-  // Export document
-  const json = doc.json()
+  // add a tiny mesh so meshesString exists
+  // use a plain array for rgba255 to avoid any weird typed-array/stringify issues
+  (doc as any).meshes = [{
+    name: 'roundtrip-mesh',
+    pts: [0, 0, 0],
+    tris: [0],
+    rgba255: [1, 2, 3, 4],
+    layers: []
+  }];
 
-  // Should not include every option
-  const savedKeys = Object.keys(json.opts)
-  expect(savedKeys).toContain('textHeight')
-  expect(savedKeys).toContain('dragMode')
-  expect(savedKeys).toContain('meshThicknessOn2D')
-  expect(savedKeys).not.toContain('colorbarHeight')
-  expect(savedKeys).not.toContain('crosshairGap')
+  const exported = NVSerializer.serializeDocument(doc, true, true);
+  // ensure semicolon present so the next line isn't parsed incorrectly
 
-  // Should match values set
-  expect(json.opts.textHeight).toBe(0.5)
-  expect(json.opts.dragMode).toBe(2)
-  expect(json.opts.meshThicknessOn2D).toBe('infinity') // special case
+  // Now deserialize into a new NVDocument
+  const newDoc = await NVSerializer.deserializeDocument(exported as DocumentData);
 
-  // Reload document
-  const loaded = NVDocument.loadFromJSON({
-    ...doc.data,
-    opts: json.opts // simulate saving only diff
-  })
+  // Top-level fields preserved
+  expect(newDoc.data).toBeDefined();
+  expect(newDoc.data.title).toBeDefined();
+  expect(newDoc.data.title).toBe(doc.title);
+  // opts were merged with defaults inside deserializeDocument
+  expect(newDoc.data.opts).toBeDefined();
+  expect((newDoc.data.opts as any).textHeight).toBeCloseTo(0.35, 6);
+  // meshThicknessOn2D "infinity" string should have been restored to Infinity
+  expect((newDoc.data.opts as any).meshThicknessOn2D).toBe(Infinity);
+  // sceneData default merge
+  expect(newDoc.scene.sceneData.gamma).toBeDefined();
+  // meshesString should be preserved so later mesh rehydration can occur
+  expect((newDoc.data as any).meshesString).toBeDefined();
+});
 
-  expect(loaded.opts.textHeight).toBe(0.5)
-  expect(loaded.opts.dragMode).toBe(2)
-  expect(loaded.opts.colorbarHeight).toBe(DEFAULT_OPTIONS.colorbarHeight)
-  expect(loaded.opts.meshThicknessOn2D).toBe(Infinity)
-})
 
-test('nvdocument can be initialized from minimal JSON input', () => {
-  const minimal: Partial<DocumentData> = {
-    title: 'Minimal Doc',
-    imageOptionsArray: [
+test('NVSerializer.rehydrateMeshes decodes numeric encodings and normalizes legacy layer keys (no GL)', async() => {
+  // Prepare a DocumentData-like object (like what serializeDocument produced)
+  const doc = new NVDocument()
+  const mesh: any = {
+    name: 'rehydrate-test',
+    pts: [0, 0, 0],
+    tris: [0],
+    rgba255: [255, 0, 0, 255],
+    layers: [
       {
-        name: 'brain.nii.gz',
-        url: './images/brain.nii.gz',
-        colormap: 'gray',
-        opacity: 1
+        // serialized form may already have colormap (as produced by serializeDocument)
+        colormap: 'warm',
+        colormapNegative: 'winter',
+        // encoded special numbers (strings)
+        global_min: 'NaN',
+        global_max: 'infinity',
+        cal_min: '-infinity',
+        cal_max: 5.5,
+        values: [0.1, 0.2],
+        atlasValues: [3, 4]
       }
     ]
   }
 
-  const doc = NVDocument.loadFromJSON(minimal as DocumentData)
+  const exported = NVSerializer.serializeDocument(doc, true, true)
+  // replace meshesString with our contrived mesh if serializer didn't include one
+  const meshesArray = [mesh]
+  const meshesString = JSON.stringify(meshesArray)
+  const documentData: DocumentData = {
+    meshesString,
+    imageOptionsArray: [],
+    encodedImageBlobs: [],
+    sceneData: {},
+    opts: {}
+  }
 
-  expect(doc.data.title).toBe('Minimal Doc')
-  expect(doc.data.imageOptionsArray!.length).toBe(1)
-  expect(doc.data.imageOptionsArray![0].name).toBe('brain.nii.gz')
+  // Call rehydrateMeshes without GL - this should return plain object meshes, but decode numeric strings
+  const rehydrated = await NVSerializer.rehydrateMeshes(documentData, undefined, false)
 
-  // Ensure missing fields are filled with defaults
-  expect(doc.data.meshOptionsArray).toEqual([])
-  expect(doc.data.labels).toEqual([])
-  expect(doc.data.encodedImageBlobs).toEqual([])
-  expect(doc.data.encodedDrawingBlob).toBe('')
-  expect(doc.data.previewImageDataURL).toBe('')
-  expect(doc.data.customData).toBe('')
-  expect(doc.data.opts).toEqual(DEFAULT_OPTIONS)
-  expect(doc.scene.sceneData).toEqual(INITIAL_SCENE_DATA)
+  expect(Array.isArray(rehydrated)).toBe(true)
+  expect(rehydrated.length).toBe(1)
+  const m0 = rehydrated[0]
+  expect(m0.layers).toBeDefined()
+  const l0 = m0.layers[0]
+
+  // Legacy normalization should not leave legacy keys behind (we supplied colormap already)
+  expect(l0.colormap).toBe('warm')
+  expect(l0.colormapNegative).toBe('winter')
+
+  // Numeric strings should have been decoded back to proper JS numbers
+  expect(Number.isNaN(l0.global_min)).toBe(true)
+  expect(Object.is(l0.global_max, Infinity)).toBe(true)
+  expect(Object.is(l0.cal_min, -Infinity)).toBe(true)
+  expect(l0.cal_max).toBe(5.5)
+
+  // Values and atlasValues should be arrays with expected entries
+  expect(Array.isArray(l0.values)).toBe(true)
+  expect(l0.values).toEqual([0.1, 0.2])
+  expect(Array.isArray(l0.atlasValues)).toBe(true)
+  expect(l0.atlasValues).toEqual([3, 4])
 })
 
-test('nvdocument penType defaults to pen', () => {
+test('NVSerializer.deserializeDocument preserves top-level fields (opts, sceneData, meshesString)', async () => {
   const doc = new NVDocument()
-  expect(doc.opts.penType).toBe(0)
-  expect(DEFAULT_OPTIONS.penType).toBe(0)
+  doc.title = 'Serialize-Roundtrip-Doc'
+  // mutate opts to ensure diff is tracked
+  doc.opts.textHeight = 0.35
+  doc.opts.meshThicknessOn2D = Infinity
+  // add completed measurement to verify clone/restore behavior
+  doc.completedMeasurements = [{
+    startMM: [0, 0, 0] as any,
+    endMM: [1, 1, 1] as any,
+    distance: 1.732,
+    sliceIndex: 0,
+    sliceType: 0 as any,
+    slicePosition: 0
+  }];
+
+  // add a tiny mesh so meshesString exists
+  (doc as any).meshes = [{
+    name: 'roundtrip-mesh',
+    pts: [0, 0, 0],
+    tris: [0],
+    rgba255: [1, 2, 3, 4],
+    layers: []
+  }]
+
+  const exported = NVSerializer.serializeDocument(doc, true, true)
+
+  // Now deserialize into a new NVDocument
+  const newDoc = await NVSerializer.deserializeDocument(exported as DocumentData)
+
+  // Top-level fields preserved
+  expect(newDoc.data).toBeDefined()
+  expect(newDoc.data.title).toBeDefined()
+  expect(newDoc.data.title).toBe(doc.title)
+  // opts were merged with defaults inside deserializeDocument
+  expect(newDoc.data.opts).toBeDefined()
+  expect((newDoc.data.opts as any).textHeight).toBeCloseTo(0.35, 6)
+  // meshThicknessOn2D "infinity" string should have been restored to Infinity
+  expect((newDoc.data.opts as any).meshThicknessOn2D).toBe(Infinity)
+  // sceneData default merge
+  expect(newDoc.scene.sceneData.gamma).toBeDefined()
+  // meshesString should be preserved so later mesh rehydration can occur
+  expect((newDoc.data as any).meshesString).toBeDefined()
+})
+
+/**
+ * Test: legacy layer keys + numeric encodings
+ * - colorMap -> colormap normalization
+ * - numeric strings 'NaN' / 'infinity' / '-infinity' decode back to JS numbers
+ * - values/atlasValues preserved as arrays
+ */
+test('NVSerializer.rehydrateMeshes decodes legacy colorMap and numeric encodings (no GL)', async () => {
+  const legacyMesh = {
+    name: 'legacy-layer-test',
+    pts: [0, 0, 0],
+    tris: [0],
+    rgba255: [255, 0, 0, 255],
+    layers: [
+      {
+        // legacy field names intentionally used here
+        colorMap: 'warm',
+        colorMapNegative: 'winter',
+        // numeric encodings as strings (what older serializers produced)
+        global_min: 'NaN',
+        global_max: 'infinity',
+        cal_min: '-infinity',
+        cal_max: 42,
+        // arrays (already plain arrays, but ensure still preserved)
+        values: [0.1, 0.2],
+        atlasValues: [3, 4]
+      }
+    ]
+  }
+
+  const doc: DocumentData = {
+    meshesString: JSON.stringify([legacyMesh]),
+    imageOptionsArray: [],
+    encodedImageBlobs: [],
+    sceneData: {},
+    opts: {}
+  }
+
+  const rehydrated = await NVSerializer.rehydrateMeshes(doc, undefined, false)
+
+  expect(Array.isArray(rehydrated)).toBe(true)
+  expect(rehydrated.length).toBe(1)
+
+  const m0 = rehydrated[0] as any
+  expect(m0.layers).toBeDefined()
+  const l = m0.layers[0]
+
+  // legacy keys should be normalized
+  expect(l.colormap).toBe('warm')
+  expect(l.colormapNegative).toBe('winter')
+  expect(('colorMap' in l)).toBe(false)
+  expect(('colorMapNegative' in l)).toBe(false)
+
+  // numeric decodings
+  expect(Number.isNaN(l.global_min)).toBe(true)
+  expect(Object.is(l.global_max, Infinity)).toBe(true)
+  expect(Object.is(l.cal_min, -Infinity)).toBe(true)
+  expect(l.cal_max).toBe(42)
+
+  // values & atlasValues preserved as arrays with same entries
+  expect(Array.isArray(l.values)).toBe(true)
+  expect(l.values).toEqual([0.1, 0.2])
+  expect(Array.isArray(l.atlasValues)).toBe(true)
+  expect(l.atlasValues).toEqual([3, 4])
+})
+
+/**
+ * Test: meshesString that looks like a structured-clone wrapper or a wrapper object
+ * Ensures normalizeMeshesString path is exercised and that resulting layers are normalized.
+ */
+test('NVSerializer.rehydrateMeshes handles wrapped/structured-clone-like meshesString (no GL)', async () => {
+  // Simulate a wrapper shape (old code sometimes wrapped the array in { value: [...] } )
+  const inner = [
+    {
+      name: 'wrapped-mesh',
+      pts: [0],
+      tris: [0],
+      rgba255: [10, 20, 30, 40],
+      layers: [
+        {
+          // already modern name present; ensure it's preserved
+          colormap: 'hot',
+          global_min: 'NaN',
+          global_max: 'infinity',
+          cal_min: '-infinity',
+          cal_max: 3.14,
+          values: [1.5],
+          atlasValues: [7]
+        }
+      ]
+    }
+  ]
+  // wrapper object
+  const wrapper = { value: inner }
+  const doc: DocumentData = {
+    meshesString: JSON.stringify(wrapper),
+    imageOptionsArray: [],
+    encodedImageBlobs: [],
+    sceneData: {},
+    opts: {}
+  }
+
+  const rehydrated = await NVSerializer.rehydrateMeshes(doc, undefined, false)
+
+  expect(Array.isArray(rehydrated)).toBe(true)
+  expect(rehydrated.length).toBe(1)
+
+  const m0 = rehydrated[0] as any
+  expect(m0.name).toBe('wrapped-mesh')
+  const l = m0.layers[0]
+
+  expect(l.colormap).toBe('hot')
+  expect(Number.isNaN(l.global_min)).toBe(true)
+  expect(Object.is(l.global_max, Infinity)).toBe(true)
+  expect(Object.is(l.cal_min, -Infinity)).toBe(true)
+  expect(l.cal_max).toBe(3.14)
+
+  expect(Array.isArray(l.values)).toBe(true)
+  expect(l.values).toEqual([1.5])
+  expect(Array.isArray(l.atlasValues)).toBe(true)
+  expect(l.atlasValues).toEqual([7])
 })

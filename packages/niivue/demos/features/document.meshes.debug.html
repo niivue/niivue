@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Niivue Mesh JSON Round-Trip</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+
+  <body style="font-family: sans-serif">
+    <noscript>
+      <strong>
+        niivue doesn't work properly without JavaScript enabled. Please enable it
+        to continue.
+      </strong>
+    </noscript>
+
+    <header>
+      <div class="dropdown">
+        <button class="dropbtn">
+          File <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="ExportJSON">Export Document JSON (console)</a>
+          <a class="linker" href="https://github.com/niivue/niivue">About</a>
+        </div>
+      </div>
+
+      <div class="dropdown" id="MeshDropDown">
+        <button class="dropbtn">
+          Mesh <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="ToggleMesh">Toggle Mesh</a>
+        </div>
+      </div>
+
+      <div class="dropdown" id="ShadersDropDown">
+        <button class="dropbtn">
+          Shaders <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content" id="shadersDropDownContent"></div>
+      </div>
+
+      <div class="dropdown">
+        <button class="dropbtn">
+          Help <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <section class="help-text">
+            <p>
+              This demo round-trips the current NVDocument via JSON in-memory
+              (no .nvd download) and deep-compares mesh state before vs after.
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="vertical-divider"></div>
+
+      <span class="slidecontainer">
+        Mesh Layer Intensity Threshold
+        <input
+          type="range"
+          min="0"
+          max="10"
+          value="2"
+          class="slider"
+          id="meshSlider"
+        />
+      </span>
+
+      <span class="slidecontainer">
+        Mesh Layer Opacity
+        <input
+          type="range"
+          min="1"
+          max="10"
+          value="7"
+          class="slider"
+          id="meshSlider2"
+        />
+      </span>
+
+      <div class="dropdown">
+        <button class="dropbtn">
+          Debug <i class="fa fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content">
+          <a class="viewBtn" id="LogMesh">Log Mesh Snapshot</a>
+          <a class="viewBtn" id="RoundTripJSON">
+            Round-trip JSON (export → loadJSON → diff)
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="demo1" style="width: 90%; height: 400px">
+        <canvas id="gl1" style="width: 800px; height: 400px"></canvas>
+      </div>
+    </main>
+
+    <script type="module">
+      import * as niivue from "../dist/index.js";
+
+      let nv1;
+      let mesh;
+
+      // ----------------------------
+      // Mesh snapshot + diff helpers
+      // ----------------------------
+
+      function norm(v) {
+        if (v === undefined) return undefined;
+        if (v === null) return null;
+        if (
+          v instanceof Uint8Array ||
+          v instanceof Int8Array ||
+          v instanceof Uint16Array ||
+          v instanceof Int16Array ||
+          v instanceof Uint32Array ||
+          v instanceof Int32Array ||
+          v instanceof Float32Array ||
+          v instanceof Float64Array
+        ) {
+          return Array.from(v);
+        }
+        if (v instanceof ArrayBuffer) return Array.from(new Uint8Array(v));
+        if (v instanceof DataView) return Array.from(new Uint8Array(v.buffer));
+        if (Array.isArray(v)) return v.map((e) => norm(e));
+        return v;
+      }
+
+      function deepSort(x) {
+        if (Array.isArray(x)) return x.map(deepSort);
+        if (x && typeof x === "object") {
+          const out = {};
+          for (const k of Object.keys(x).sort()) out[k] = deepSort(x[k]);
+          return out;
+        }
+        return x;
+      }
+
+      // Canonical snapshot focused on persisted/runtime-important mesh fields.
+      function snapshotMesh(mesh) {
+        if (!mesh) return null;
+
+        return deepSort({
+          name: mesh.name,
+          id: mesh.id,
+
+          // render-ish props
+          meshShaderIndex: mesh.meshShaderIndex,
+          meshXRay: mesh.meshXRay,
+          opacity: mesh.opacity,
+          colormap: mesh.colormap,
+          rgba255: norm(mesh.rgba255),
+
+          // geometry
+          pts: norm(mesh.pts),
+          tris: norm(mesh.tris),
+          normals: norm(mesh.normals),
+
+          // layers — preserve the same fields that the NVDocument.json() writes
+          layers: (mesh.layers || []).map((l) => {
+            // leave properties explicitly present as undefined if they were undefined at runtime
+            const makeLabelClone = (lbl) =>
+              lbl && typeof lbl === "object" ? { ...(lbl || {}) } : lbl;
+
+            return {
+              // identity / source
+              name: l?.name,
+              key: l?.key,
+              url: l?.url,
+              headers: l?.headers,
+
+              // display
+              opacity: l?.opacity,
+              // legacy / alias names preserved
+              colormap: l?.colormap,
+              colorMap: l?.colorMap,
+              colormapNegative: l?.colormapNegative,
+              colorMapNegative: l?.colorMapNegative,
+              colormapInvert: l?.colormapInvert,
+              colormapLabel: l?.colormapLabel,
+              useNegativeCmap: l?.useNegativeCmap,
+              global_min: l?.global_min,
+              global_max: l?.global_max,
+              cal_min: l?.cal_min,
+              cal_max: l?.cal_max,
+              cal_minNeg: l?.cal_minNeg,
+              cal_maxNeg: l?.cal_maxNeg,
+              isAdditiveBlend: l?.isAdditiveBlend,
+              frame4D: l?.frame4D,
+              nFrame4D: l?.nFrame4D,
+
+              // numeric arrays / typed arrays normalized
+              values: norm(l?.values),
+              atlasValues: norm(l?.atlasValues),
+
+              outlineBorder: l?.outlineBorder,
+              isTransparentBelowCalMin: l?.isTransparentBelowCalMin,
+              colormapType: l?.colormapType,
+
+              // optional inlined layer source
+              base64: l?.base64,
+
+              // UI flags
+              colorbarVisible: l?.colorbarVisible,
+              showLegend: l?.showLegend,
+
+              // labels shallow-cloned to avoid references
+              labels: Array.isArray(l?.labels) ? l.labels.map(makeLabelClone) : l?.labels,
+            };
+          }),
+
+          // connectome / fibers
+          offsetPt0: norm(mesh.offsetPt0),
+          fiberGroupColormap: mesh.fiberGroupColormap,
+          fiberColor: mesh.fiberColor,
+          fiberRadius: mesh.fiberRadius,
+          fiberDither: mesh.fiberDither,
+
+          // nodes / edges
+          nodes: mesh.nodes ? deepSort(mesh.nodes) : null,
+          edges: norm(mesh.edges),
+
+          // misc metadata
+          groups: mesh.groups,
+          dpg: mesh.dpg,
+          dps: mesh.dps,
+          dpv: mesh.dpv,
+          extentsMin: norm(mesh.extentsMin),
+          extentsMax: norm(mesh.extentsMax),
+          furthestVertexFromOrigin: mesh.furthestVertexFromOrigin,
+        });
+      }
+
+      function deepDiff(a, b, path = "") {
+        const diffs = [];
+        if (a === b) return diffs;
+
+        // treat undefined and null as different (explicit)
+        if ((a === undefined || a === null) || (b === undefined || b === null)) {
+          if (a !== b) {
+            diffs.push({ path, a, b });
+          }
+          return diffs;
+        }
+
+        if (typeof a !== typeof b) {
+          diffs.push({ path, a, b });
+          return diffs;
+        }
+
+        if (Array.isArray(a)) {
+          if (!Array.isArray(b)) {
+            diffs.push({ path, a, b });
+            return diffs;
+          }
+          if (a.length !== b.length) {
+            diffs.push({ path: path + ".length", a: a.length, b: b.length });
+          }
+          const n = Math.min(a.length, b.length);
+          for (let i = 0; i < n; i++) {
+            diffs.push(...deepDiff(a[i], b[i], `${path}[${i}]`));
+          }
+          return diffs;
+        }
+
+        if (typeof a === "object") {
+          const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+          for (const k of keys) {
+            diffs.push(...deepDiff(a[k], b[k], path ? `${path}.${k}` : k));
+          }
+          return diffs;
+        }
+
+        // primitives: use Object.is for strict equality (treats NaN === NaN)
+        // and allow tiny numeric tolerance for finite numbers to avoid float jitter diffs
+        if (typeof a === "number" && typeof b === "number") {
+          if (Object.is(a, b)) return diffs;
+          const tol = 1e-12;
+          if (Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol) {
+            return diffs;
+          }
+        } else {
+          if (Object.is(a, b)) return diffs;
+        }
+
+        if (a !== b) diffs.push({ path, a, b });
+        return diffs;
+      }
+
+      // -----------------------------------------
+      // NVDocument JSON export + JSON load helpers
+      // -----------------------------------------
+
+      function exportDocumentJSON() {
+        // Niivue commonly keeps a doc at nv1.document (NVDocument).
+        if (!nv1.document || typeof nv1.document.json !== "function") {
+          throw new Error(
+            "nv1.document.json(...) not available in this build. " +
+              "Ensure Niivue exposes nv1.document (NVDocument) with a json() method."
+          );
+        }
+        // Use embedImages=false, embedDrawing=false to keep it lightweight for mesh testing.
+        const exported = nv1.document.json(false, false);
+        return exported;
+      }
+
+      async function applyDocumentJSON(exported) {
+        // We want to “load” the JSON like NVDocument.loadFromJSON would,
+        // and then apply it to the Niivue instance.
+
+        // 1) If NVDocument is exported from your bundle, use it:
+        if (niivue.NVDocument && typeof niivue.NVDocument.loadFromJSON === "function") {
+          const doc = await niivue.NVDocument.loadFromJSON(exported, nv1.gl);
+          // Now apply the doc to Niivue.
+          // Different builds name this differently, so detect:
+          await nv1.loadDocument(doc);
+          
+          if (typeof nv1.loadDocumentFromJSON === "function") {
+            await nv1.loadDocumentFromJSON(exported);
+            return;
+          }
+          if (typeof nv1.loadJSON === "function") {
+            await nv1.loadJSON(exported);
+            return;
+          }
+
+          // Last-resort: replace nv1.document and try a refresh hook if present.
+          nv1.document = doc;
+          if (typeof nv1.refreshScene === "function") nv1.refreshScene();
+          if (typeof nv1.drawScene === "function") nv1.drawScene();
+          return;
+        }
+
+        // 2) Otherwise, try direct Niivue helpers (if your build exposes them):
+        if (typeof nv1.loadDocumentFromJSON === "function") {
+          await nv1.loadDocumentFromJSON(exported);
+          return;
+        }
+        if (typeof nv1.loadJSON === "function") {
+          await nv1.loadJSON(exported);
+          return;
+        }
+
+        throw new Error(
+          "No JSON load path found. Expected one of: " +
+            "niivue.NVDocument.loadFromJSON + nv1.loadDocument(doc), or nv1.loadDocumentFromJSON(data), or nv1.loadJSON(data)."
+        );
+      }
+
+      // -------------------------
+      // UI actions
+      // -------------------------
+
+      function toggleMesh() {
+        if (nv1.meshes.length === 0 && mesh) {
+          nv1.addMesh(mesh);
+        } else {
+          mesh = nv1.meshes[0];
+          nv1.removeMesh(mesh);
+        }
+      }
+
+      function checkShader(id) {
+        const cmapEl = document.getElementById("shadersDropDownContent");
+        for (const child of cmapEl.children) {
+          if (id === child.id) child.classList.add("dropdown-item-checked");
+          else child.classList.remove("dropdown-item-checked");
+        }
+      }
+
+      function initShaders() {
+        const cmaps = nv1.meshShaderNames();
+        const cmapEl = document.getElementById("shadersDropDownContent");
+        cmapEl.innerHTML = "";
+
+        for (let i = 0; i < cmaps.length; i++) {
+          const buttonLink = document.createElement("a");
+          buttonLink.className = "viewBtn";
+          buttonLink.innerHTML = cmaps[i];
+          buttonLink.id = "shader-" + i;
+          buttonLink.onclick = function (event) {
+            checkShader(event.srcElement.id);
+            if (nv1.meshes[0]) nv1.setMeshShader(nv1.meshes[0].id, cmaps[i]);
+          };
+          cmapEl.appendChild(buttonLink);
+        }
+        checkShader("shader-0");
+      }
+
+      async function roundTripJSONAndDiff() {
+        console.group("🧪 NVDocument JSON round-trip (mesh compare)");
+
+        const pre = snapshotMesh(nv1.meshes[0]);
+        console.log("Pre-roundtrip mesh snapshot:", pre);
+
+        let exported;
+        try {
+          exported = exportDocumentJSON();
+        } catch (e) {
+          console.error(e);
+          console.groupEnd();
+          return;
+        }
+
+        console.log("Exported NVDocument JSON:", exported);
+
+        try {
+          await applyDocumentJSON(exported);
+        } catch (e) {
+          console.error(e);
+          console.groupEnd();
+          return;
+        }
+
+        // give Niivue a tick to rebuild internal runtime objects if needed
+        setTimeout(() => {
+          const post = snapshotMesh(nv1.meshes[0]);
+          console.log("Post-roundtrip mesh snapshot:", post);
+
+          const diffs = deepDiff(pre, post);
+          if (diffs.length === 0) {
+            console.log("✅ Mesh snapshots MATCH after JSON round-trip");
+          } else {
+            console.error(`❌ Mesh snapshots DIFFER (${diffs.length})`);
+            console.table(diffs);
+          }
+          console.groupEnd();
+        }, 0);
+      }
+
+      async function onButtonClick(event) {
+        switch (event.target.id) {
+          case "ExportJSON": {
+            try {
+              const exported = exportDocumentJSON();
+              console.log("📦 NVDocument JSON export:", exported);
+            } catch (e) {
+              console.error(e);
+            }
+            break;
+          }
+          case "ToggleMesh":
+            toggleMesh();
+            break;
+          case "LogMesh":
+            console.log("🧠 Mesh snapshot:", snapshotMesh(nv1.meshes[0]));
+            break;
+          case "RoundTripJSON":
+            await roundTripJSONAndDiff();
+            break;
+        }
+      }
+
+      // -------------------------
+      // Sliders
+      // -------------------------
+
+      document.getElementById("meshSlider").oninput = function () {
+        if (!nv1.meshes[0]) return;
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "cal_min", this.value * 0.5);
+      };
+
+      document.getElementById("meshSlider2").oninput = function () {
+        if (!nv1.meshes[0]) return;
+        nv1.setMeshLayerProperty(nv1.meshes[0].id, 0, "opacity", this.value * 0.1);
+      };
+
+      // -------------------------
+      // Init NiiVue
+      // -------------------------
+
+      nv1 = new niivue.Niivue({ show3Dcrosshair: true });
+      nv1.setSliceType(nv1.sliceTypeRender);
+      await nv1.attachTo("gl1");
+
+      const meshLHLayersList1 = [
+        {
+          url: "../images/BrainMesh_ICBM152.lh.motor.mz3",
+          cal_min: 0.5,
+          cal_max: 5.5,
+          useNegativeCmap: true,
+          opacity: 0.7,
+        },
+      ];
+
+      nv1.loadMeshes([
+        {
+          url: "../images/BrainMesh_ICBM152.lh.mz3",
+          rgba255: [255, 255, 255, 255],
+          layers: meshLHLayersList1,
+        },
+      ]);
+
+      nv1.setClipPlane([-0.1, 270, 0]);
+
+      const buttons = document.getElementsByClassName("viewBtn");
+      for (let i = 0; i < buttons.length; i++) {
+        buttons[i].addEventListener("click", onButtonClick, false);
+      }
+
+      initShaders();
+      mesh = nv1.meshes[0];
+    </script>
+  </body>
+</html>
