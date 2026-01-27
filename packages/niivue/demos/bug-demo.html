@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Orientation Label Bug Demo</title>
+    <style>
+      body { margin: 0; padding: 20px; font-family: sans-serif; background: #1a1a2e; color: white; }
+      #container { width: 600px; height: 500px; margin: 20px auto; }
+      #gl1 { width: 100%; height: 100%; }
+      .controls { text-align: center; margin-bottom: 20px; }
+      button { margin: 5px; padding: 10px 20px; cursor: pointer; }
+      h2 { text-align: center; margin-bottom: 5px; }
+      p { text-align: center; color: #888; margin-top: 5px; }
+    </style>
+  </head>
+  <body>
+    <h2>Orientation Label Bug - AFTER Fix</h2>
+    <p>Notice the "L" label position when switching between Multiplanar and Axial views</p>
+    <div class="controls">
+      <button onclick="setMultiplanar()">Multiplanar (A+C+S)</button>
+      <button onclick="setAxial()">Axial Only</button>
+    </div>
+    <main id="container">
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module">
+      import * as niivue from '../../dist/index.js'
+
+      window.nv1 = new niivue.Niivue({
+        dragAndDropEnabled: true,
+        backColor: [0.1, 0.1, 0.2, 1],
+        show3Dcrosshair: true
+      })
+
+      await window.nv1.attachTo('gl1')
+      await window.nv1.loadVolumes([{
+        url: './images/mni152.nii.gz',
+        colormap: 'gray',
+        visible: true,
+        opacity: 1
+      }])
+
+      // Use CENTERED labels (not corner) - this is where the bug appears
+      window.nv1.setCornerOrientationText(false)
+      window.nv1.setSliceType(window.nv1.sliceTypeMultiplanar)
+
+      window.setMultiplanar = () => {
+        window.nv1.setSliceType(window.nv1.sliceTypeMultiplanar)
+      }
+
+      window.setAxial = () => {
+        window.nv1.setSliceType(window.nv1.sliceTypeAxial)
+      }
+    </script>
+  </body>
+</html>

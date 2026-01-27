@@ -9348,8 +9348,9 @@ export class Niivue {
             return
         }
 
+        // Draw orientation text at image bounds (not tile bounds) for single-plane views
         if (ltwh[2] !== 0 && ltwh[3] !== 0 && this.opts.isOrientationTextVisible) {
-            this.drawSliceOrientationText(ltwh, axCorSag, padLeftTop)
+            this.drawSliceOrientationText(ltwh, axCorSag)
         }
     }
 
