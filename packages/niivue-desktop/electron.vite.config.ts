@@ -22,7 +22,7 @@ export default defineConfig({
       outDir: 'out/main',
       // Keep native/Node modules external in the main process build
       rollupOptions: {
-        external: ['zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
+        external: ['electron', 'zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
       },
       // If you want to prevent hoisting / externalization of certain deps,
       // tune externalizeDeps here. Some electron-vite versions expose an
@@ -38,7 +38,7 @@ export default defineConfig({
     build: (({
       outDir: 'out/preload',
       rollupOptions: {
-        external: ['zlib', 'node:zlib', 'fflate', 'pako']
+        external: ['electron', 'zlib', 'node:zlib', 'fflate', 'pako']
       },
       externalizeDeps: {
         exclude: []

@@ -1,0 +1,31 @@
+{
+  "labels": [
+    {
+      "value": 0,
+      "name": "Background",
+      "color": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "value": 1,
+      "name": "Gray Matter",
+      "color": [
+        128,
+        128,
+        128
+      ]
+    },
+    {
+      "value": 2,
+      "name": "White Matter",
+      "color": [
+        255,
+        255,
+        255
+      ]
+    }
+  ]
+}

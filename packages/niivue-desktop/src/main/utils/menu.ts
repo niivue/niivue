@@ -349,9 +349,15 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           label: 'Open Standard',
           submenu: [
             {
-              label: 'mni152.nii.gz',
+              label: 'mni152.nii.gz (skull stripped)',
               click: (): void => {
                 win.webContents.send('loadStandard', 'mni152.nii.gz')
+              }
+            },
+            {
+              label: 'chris_t1.nii.gz (with skull)',
+              click: (): void => {
+                win.webContents.send('loadStandard', 'chris_t1.nii.gz')
               }
             },
             {
@@ -692,6 +698,75 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           click: (): void => {
             win.webContents.send('openLabelManagerDialog')
           }
+        }
+      ]
+    },
+    // { role: 'toolsMenu' }
+    {
+      label: 'Tools',
+      submenu: [
+        {
+          label: 'Brain Segmentation',
+          submenu: [
+            {
+              label: 'Load Sample Brain (MNI152 - Skull Stripped)',
+              click: (): void => {
+                win.webContents.send('loadStandard', 'mni152.nii.gz')
+              }
+            },
+            {
+              label: 'Load Sample Brain (T1 with Skull)',
+              click: (): void => {
+                win.webContents.send('loadStandard', 'chris_t1.nii.gz')
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Tissue Segmentation (Light)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'tissue-seg-light')
+              }
+            },
+            {
+              label: 'Tissue Segmentation (Full)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'tissue-seg-full')
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Brain Extraction (Light)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'brain-extract-light')
+              }
+            },
+            {
+              label: 'Brain Extraction (Full)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'brain-extract-full')
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Parcellation (50 regions)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'parcellation-50')
+              }
+            },
+            {
+              label: 'Parcellation (104 regions)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'parcellation-104')
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Show Segmentation Panel',
+              click: (): void => {
+                win.webContents.send('toggle-segmentation-panel')
+              }
+            }
+          ]
         }
       ]
     },

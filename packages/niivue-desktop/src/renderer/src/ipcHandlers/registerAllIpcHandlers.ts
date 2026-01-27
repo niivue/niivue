@@ -13,12 +13,12 @@ import {
 import { registerLoadMeshHandler } from './loadMesh.js'
 import { registerLoadVolumeHandler } from './loadVolume.js'
 import { registerLoadDocumentHandler } from './loadDocument.js'
-import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
 import { registerRunNiimathHandler } from './runNiimathCommand.js'
 import { registerSaveHTMLHandler } from './saveHTML.js'
 import { registerLoadOverlayHandler } from './loadOverlay.js'
 import { registerDrawHandler } from './draw.js'
 import { registerAddMeshHandler } from './addMesh.js'
+import { registerSegmentationHandlers } from './segmentation.js'
 
 const electron = window.electron
 
@@ -67,7 +67,6 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('addMesh')
   electron.ipcRenderer.removeAllListeners('loadDocument')
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
-  electron.ipcRenderer.removeAllListeners('convertDICOM')
   electron.ipcRenderer.removeAllListeners('runNiimath')
   electron.ipcRenderer.removeAllListeners('saveHTML')
   electron.ipcRenderer.removeAllListeners('loadOverlay')
@@ -81,7 +80,6 @@ export const registerAllIpcHandlers = ({
   registerLoadMeshHandler({ getTarget })
   registerLoadVolumeHandler({ getTarget })
   registerLoadDocumentHandler({ getTarget, onDocumentLoaded })
-  registerLoadDicomFolderHandler({ getTarget })
   registerAddMeshHandler({ nv, setMeshes })
 
   // menu & misc
@@ -103,4 +101,10 @@ export const registerAllIpcHandlers = ({
   // ✍️ Drawing commands → updateDocument(opts)
   registerDrawHandler(nv)
   registerDragModeHandler(nv)
+
+  // 🧠 Brain segmentation handlers
+  registerSegmentationHandlers({
+    nv,
+    setVolumes
+  })
 }

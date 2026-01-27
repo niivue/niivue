@@ -243,4 +243,47 @@ export const registerIpcHandlers = (): void => {
       }
     }
   )
+
+  // Load brainchop model files
+  ipcMain.handle('load-brainchop-model', async (_event, modelPath: string) => {
+    try {
+      const fullPath = path.join(RESOURCES_DIR, modelPath)
+      console.log('[Main] Loading brainchop model from:', fullPath)
+
+      // Read model.json
+      const modelJsonPath = path.join(fullPath, 'model.json')
+      const modelJson = await fs.promises.readFile(modelJsonPath, 'utf-8')
+
+      // Return the model JSON and the base path for weights
+      return {
+        modelJson: JSON.parse(modelJson),
+        basePath: fullPath
+      }
+    } catch (error) {
+      console.error('[Main] Error loading brainchop model:', error)
+      throw error
+    }
+  })
+
+  // Load brainchop weight file
+  ipcMain.handle('load-brainchop-weights', async (_event, weightPath: string) => {
+    try {
+      console.log('[Main] Loading weight file:', weightPath)
+      const buffer = await fs.promises.readFile(weightPath)
+      console.log('[Main] Weight file size:', buffer.byteLength, 'bytes')
+
+      // Convert Node.js Buffer to ArrayBuffer explicitly
+      // This ensures proper serialization across IPC boundary
+      const arrayBuffer = buffer.buffer.slice(
+        buffer.byteOffset,
+        buffer.byteOffset + buffer.byteLength
+      )
+
+      console.log('[Main] Returning ArrayBuffer of size:', arrayBuffer.byteLength, 'bytes')
+      return arrayBuffer
+    } catch (error) {
+      console.error('[Main] Error loading weight file:', error)
+      throw error
+    }
+  })
 }

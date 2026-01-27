@@ -13,6 +13,9 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 import { NiimathToolbar } from './components/NiimathToolbar.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
+import { SegmentationPanel } from './components/SegmentationPanel.js'
+import { SegmentationDialog } from './components/SegmentationDialog.js'
+import { brainchopService } from './services/brainchop/index.js'
 
 const electron = window.electron
 
@@ -57,6 +60,14 @@ function MainApp(): JSX.Element {
   const selected = useSelectedInstance()
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
+
+  // Segmentation state
+  const [segmentationPanelOpen, setSegmentationPanelOpen] = useState(false)
+  const [segmentationRunning, setSegmentationRunning] = useState(false)
+  const [segmentationProgress, setSegmentationProgress] = useState(0)
+  const [segmentationStatus, setSegmentationStatus] = useState('')
+  const [segmentationModelName, setSegmentationModelName] = useState('')
+  const availableModels = brainchopService.getAvailableModels()
 
   const getTarget = async (): Promise<NiivueInstanceContext> => {
     if (!selected) throw new Error('no document!')
@@ -151,6 +162,69 @@ function MainApp(): JSX.Element {
     })
   }, [selected])
 
+  // Segmentation handlers
+  const handleRunSegmentation = async (modelId: string, useSubvolumes: boolean): Promise<void> => {
+    if (!selected || selected.volumes.length === 0) {
+      alert('Please load a volume first')
+      return
+    }
+
+    const nv = selected.nvRef.current
+    const baseVolume = nv.volumes[0]
+    const modelInfo = brainchopService.getModelInfo(modelId)
+
+    if (!modelInfo) {
+      alert(`Model not found: ${modelId}`)
+      return
+    }
+
+    try {
+      // Initialize if needed
+      if (!brainchopService.isReady()) {
+        setSegmentationStatus('Initializing TensorFlow.js...')
+        setSegmentationProgress(0)
+        setSegmentationRunning(true)
+        setSegmentationModelName(modelInfo.name)
+        await brainchopService.initialize()
+      }
+
+      setSegmentationRunning(true)
+      setSegmentationProgress(0)
+      setSegmentationStatus('Starting segmentation...')
+      setSegmentationModelName(modelInfo.name)
+
+      const result = await brainchopService.runSegmentation(baseVolume, modelId, {
+        onProgress: (progress, status) => {
+          setSegmentationProgress(progress)
+          setSegmentationStatus(status || '')
+        },
+        useSubvolumes,
+        normalizeIntensity: true
+      })
+
+      // Add result as overlay
+      nv.addVolume(result.volume)
+      nv.setOpacity(nv.volumes.length - 1, 0.5)
+      selected.setVolumes([...nv.volumes])
+      nv.updateGLVolume()
+      updateDocument(selected.id, { isDirty: true })
+
+      setSegmentationRunning(false)
+      alert(
+        `Segmentation complete!\nModel: ${result.modelInfo.name}\nTime: ${(result.inferenceTimeMs / 1000).toFixed(2)}s`
+      )
+    } catch (error) {
+      setSegmentationRunning(false)
+      console.error('Segmentation failed:', error)
+      alert(`Segmentation failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleCancelSegmentation = (): void => {
+    // Cancellation is handled via AbortController in the IPC handler
+    setSegmentationRunning(false)
+  }
+
   // Open Label Manager from menu
   const [labelDialogOpen, setLabelDialogOpen] = useState<boolean>(false)
   const [labelEditMode, setLabelEditMode] = useState<boolean>(false)
@@ -162,6 +236,17 @@ function MainApp(): JSX.Element {
     electron.ipcRenderer.on('openLabelManagerDialog', openLM)
     return (): void => {
       electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
+    }
+  }, [])
+
+  // Toggle Segmentation Panel from menu
+  useEffect((): (() => void) => {
+    const togglePanel = (): void => {
+      setSegmentationPanelOpen((prev) => !prev)
+    }
+    electron.ipcRenderer.on('toggle-segmentation-panel', togglePanel)
+    return (): void => {
+      electron.ipcRenderer.removeAllListeners('toggle-segmentation-panel')
     }
   }, [])
 
@@ -588,7 +673,7 @@ function MainApp(): JSX.Element {
         {selected && showNiimathToolbar && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
       </div>
 
-      {/* 3) Main content: sidebar & viewer */}
+      {/* 3) Main content: sidebar & viewer & segmentation panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar (left) */}
         <div className="flex-shrink-0 overflow-auto">
@@ -602,7 +687,7 @@ function MainApp(): JSX.Element {
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         </div>
-        {/* Viewer (right) */}
+        {/* Viewer (center) */}
         <div className="flex-1 relative overflow-hidden">
           {documents.map((doc) => (
             <div
@@ -614,6 +699,16 @@ function MainApp(): JSX.Element {
             </div>
           ))}
         </div>
+        {/* Segmentation Panel (right) */}
+        {segmentationPanelOpen && (
+          <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
+            <SegmentationPanel
+              onRunSegmentation={handleRunSegmentation}
+              availableModels={availableModels}
+              isRunning={segmentationRunning}
+            />
+          </div>
+        )}
       </div>
       {/* Status bar (optional footer) */}
       {showStatusBar && <StatusBar location={cursorLocation} />}
@@ -626,6 +721,14 @@ function MainApp(): JSX.Element {
         setEditMode={setLabelEditMode}
       />
       <DicomImportDialog />
+      <SegmentationDialog
+        open={segmentationRunning}
+        progress={segmentationProgress}
+        status={segmentationStatus}
+        modelName={segmentationModelName}
+        onCancel={handleCancelSegmentation}
+        canCancel={true}
+      />
     </div>
   )
 }

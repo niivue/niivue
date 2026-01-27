@@ -1,0 +1,83 @@
+{
+  "models": [
+    {
+      "id": "tissue-seg-light",
+      "name": "Tissue Segmentation (Light)",
+      "type": "tissue-segmentation",
+      "category": "Tissue Segmentation",
+      "description": "Fast tissue segmentation into gray matter and white matter (model5_gw_ae)",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 3,
+      "modelPath": "brainchop-models/tissue-seg-light",
+      "labelsPath": "brainchop-models/tissue-seg-light/labels.json",
+      "estimatedTimeSeconds": 3,
+      "memoryRequirementMB": 400
+    },
+    {
+      "id": "tissue-seg-full",
+      "name": "Tissue Segmentation (Full)",
+      "type": "tissue-segmentation",
+      "category": "Tissue Segmentation",
+      "description": "High accuracy tissue segmentation with 20 channels (model20chan3cls)",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 3,
+      "modelPath": "brainchop-models/tissue-seg-full",
+      "labelsPath": "brainchop-models/tissue-seg-full/labels.json",
+      "estimatedTimeSeconds": 8,
+      "memoryRequirementMB": 1200
+    },
+    {
+      "id": "brain-extract-light",
+      "name": "Brain Extraction (Light)",
+      "type": "brain-extraction",
+      "category": "Brain Extraction",
+      "description": "Fast brain/skull separation using 5 filter model",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 2,
+      "modelPath": "brainchop-models/brain-extract-light",
+      "labelsPath": "brainchop-models/brain-extract-light/labels.json",
+      "estimatedTimeSeconds": 3,
+      "memoryRequirementMB": 400
+    },
+    {
+      "id": "brain-extract-full",
+      "name": "Brain Extraction (Full)",
+      "type": "brain-extraction",
+      "category": "Brain Extraction",
+      "description": "Accurate brain mask with 11 filters (model11_gw_ae)",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 2,
+      "modelPath": "brainchop-models/brain-extract-full",
+      "labelsPath": "brainchop-models/brain-extract-full/labels.json",
+      "estimatedTimeSeconds": 6,
+      "memoryRequirementMB": 800
+    },
+    {
+      "id": "parcellation-50",
+      "name": "Parcellation (50 regions)",
+      "type": "parcellation",
+      "category": "Regional Parcellation",
+      "description": "Aparc+Aseg 50-class cortical parcellation (model30chan50cls)",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 51,
+      "modelPath": "brainchop-models/parcellation-50",
+      "labelsPath": "brainchop-models/parcellation-50/labels.json",
+      "estimatedTimeSeconds": 15,
+      "memoryRequirementMB": 1800
+    },
+    {
+      "id": "parcellation-104",
+      "name": "Parcellation (104 regions)",
+      "type": "parcellation",
+      "category": "Regional Parcellation",
+      "description": "Desikan-Killiany 104-class atlas parcellation (model21_104class)",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 105,
+      "modelPath": "brainchop-models/parcellation-104",
+      "labelsPath": "brainchop-models/parcellation-104/labels.json",
+      "estimatedTimeSeconds": 20,
+      "memoryRequirementMB": 2000
+    }
+  ]
+}
+
