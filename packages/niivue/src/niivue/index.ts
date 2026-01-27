@@ -650,7 +650,7 @@ export class Niivue extends EventTarget {
 
     /**
      * Type-safe addEventListener for Niivue events.
-     * Supports all standard EventTarget options: { once: true }, AbortController, etc.
+     * Supports all standard EventTarget options including once, capture, passive, and signal with AbortController.
      * @param type - Event name
      * @param listener - Event listener function
      * @param options - Event listener options (capture, once, passive, signal)
@@ -660,7 +660,7 @@ export class Niivue extends EventTarget {
      *   console.log('Location changed:', event.detail)
      * })
      *
-     * // With options
+     * // With once option
      * niivue.addEventListener('imageLoaded', handler, { once: true })
      *
      * // With AbortController
