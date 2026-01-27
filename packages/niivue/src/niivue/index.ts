@@ -3645,6 +3645,7 @@ export class Niivue {
         this.onAzimuthElevationChange(a, e)
         this.drawScene()
     }
+
     /**
      * Snap the 3D render camera to a specific anatomical view.
      * @param view - The target view ('Top', 'Bottom', 'Left', 'Right', 'Front', 'Back')
@@ -3657,20 +3658,26 @@ export class Niivue {
 
         // Standard anatomical views (Azimuth, Elevation)
         if (v === 'top' || v === 'superior') {
-            a = 0; e = 90;
+            a = 0
+            e = 90
         } else if (v === 'bottom' || v === 'inferior') {
-            a = 0; e = -90;
+            a = 0
+            e = -90
         } else if (v === 'left') {
-            a = 90; e = 0;
+            a = 90
+            e = 0
         } else if (v === 'right') {
-            a = -90; e = 0;
+            a = -90
+            e = 0
         } else if (v === 'front' || v === 'anterior') {
-            a = 180; e = 0;
+            a = 180
+            e = 0
         } else if (v === 'back' || v === 'posterior') {
-            a = 0; e = 0;
+            a = 0
+            e = 0
         } else {
-            console.warn('Unknown view:', view);
-            return;
+            console.warn('Unknown view:', view)
+            return
         }
 
         this.setRenderAzimuthElevation(a, e)
