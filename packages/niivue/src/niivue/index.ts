@@ -61,6 +61,7 @@ import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
 import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
+import { NiivueEventMap, NiivueEvent, NiivueEventListener, NiivueEventListenerOptions } from '@/events'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
 import {
     Connectome,
@@ -118,6 +119,8 @@ export type { LoaderRegistry, CustomLoader, GetFileExtOptions, RegisterLoaderPar
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '@/types'
+export { NiivueEvent } from '@/events'
+export type { NiivueEventMap, NiivueEventListener, NiivueEventListenerOptions } from '@/events'
 const { MESH_EXTENSIONS } = FileLoader
 const { LEFT_MOUSE_BUTTON, CENTER_MOUSE_BUTTON, RIGHT_MOUSE_BUTTON } = MouseController
 
@@ -139,7 +142,7 @@ export type DicomLoader = FileLoader.DicomLoader
  * @example
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
-export class Niivue {
+export class Niivue extends EventTarget {
     loaders: FileLoader.LoaderRegistry = {}
     // create a dicom loader
     dicomLoader: FileLoader.DicomLoader | null = null
@@ -607,6 +610,7 @@ export class Niivue {
      * @param options  - options object to set modifiable Niivue properties
      */
     constructor(options: Partial<NVConfigOptions> = DEFAULT_OPTIONS) {
+        super() // Call EventTarget constructor
         // populate Niivue with user supplied options
         for (const name in options) {
             // if the user supplied a function for a callback, use it, else use the default callback or nothing
@@ -639,8 +643,69 @@ export class Niivue {
 
         // Set up opts change watching
         this.document.setOptsChangeCallback((propertyName, newValue, oldValue) => {
+            this._emitEvent('optsChange', { propertyName, newValue, oldValue })
             this.onOptsChange(propertyName, newValue, oldValue)
         })
+    }
+
+    /**
+     * Type-safe addEventListener for Niivue events.
+     * Supports all standard EventTarget options: { once: true }, AbortController, etc.
+     * @param type - Event name
+     * @param listener - Event listener function
+     * @param options - Event listener options (capture, once, passive, signal)
+     * @example
+     * ```typescript
+     * niivue.addEventListener('locationChange', (event) => {
+     *   console.log('Location changed:', event.detail)
+     * })
+     *
+     * // With options
+     * niivue.addEventListener('imageLoaded', handler, { once: true })
+     *
+     * // With AbortController
+     * const controller = new AbortController()
+     * niivue.addEventListener('locationChange', handler, { signal: controller.signal })
+     * controller.abort() // removes the listener
+     * ```
+     */
+    addEventListener<K extends keyof NiivueEventMap>(
+        type: K,
+        listener: NiivueEventListener<K>,
+        options?: NiivueEventListenerOptions
+    ): void
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: NiivueEventListenerOptions): void {
+        super.addEventListener(type, listener as EventListener, options)
+    }
+
+    /**
+     * Type-safe removeEventListener for Niivue events.
+     * @param type - Event name
+     * @param listener - Event listener function to remove
+     * @param options - Event listener options
+     */
+    removeEventListener<K extends keyof NiivueEventMap>(
+        type: K,
+        listener: NiivueEventListener<K>,
+        options?: NiivueEventListenerOptions
+    ): void
+    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: NiivueEventListenerOptions): void {
+        super.removeEventListener(type, listener as EventListener, options)
+    }
+
+    /**
+     * Internal helper to emit events alongside legacy callbacks.
+     * Events fire BEFORE callbacks.
+     * @private
+     */
+    private _emitEvent<K extends keyof NiivueEventMap>(eventName: K, detail: NiivueEventMap[K]): void {
+        try {
+            const event = new NiivueEvent(eventName, detail)
+            this.dispatchEvent(event)
+        } catch (error) {
+            // Log event listener errors but don't break execution
+            console.error(`Error in ${eventName} event listener:`, error)
+        }
     }
 
     /**
@@ -1428,6 +1493,7 @@ export class Niivue {
         const mxScale = intensityRaw2Scaled(hdr, intensityResult.hi)
         this.volumes[volIdx].cal_min = mnScale
         this.volumes[volIdx].cal_max = mxScale
+        this._emitEvent('intensityChange', this.volumes[volIdx])
         this.onIntensityChange(this.volumes[volIdx])
     }
 
@@ -1455,7 +1521,7 @@ export class Niivue {
         const mmLength = vec3.len(v)
         const voxStart = this.frac2vox(fracStart)
         const voxEnd = this.frac2vox(fracEnd)
-        this.onDragRelease({
+        const dragReleaseParams = {
             fracStart,
             fracEnd,
             voxStart,
@@ -1465,7 +1531,9 @@ export class Niivue {
             mmLength,
             tileIdx,
             axCorSag
-        })
+        }
+        this._emitEvent('dragRelease', dragReleaseParams)
+        this.onDragRelease(dragReleaseParams)
     }
 
     /**
@@ -1516,6 +1584,7 @@ export class Niivue {
             this.drawShapePreviewBitmap = null
             this.refreshDrawing(true, false)
         }
+        this._emitEvent('mouseUp', uiData)
         if (MouseController.isFunction(this.onMouseUp)) {
             this.onMouseUp(uiData)
         }
@@ -1949,6 +2018,7 @@ export class Niivue {
         }
         this.volumes[0].cal_min = this.volumes[0].robust_min
         this.volumes[0].cal_max = this.volumes[0].robust_max
+        this._emitEvent('intensityChange', this.volumes[0])
         this.onIntensityChange(this.volumes[0])
         this.refreshLayers(this.volumes[0], 0)
         this.drawScene()
@@ -2428,6 +2498,7 @@ export class Niivue {
         this.document.addImageOptions(volume, imageOptions)
         volume.onColormapChange = this.onColormapChange
         this.mediaUrlMap.set(volume, imageOptions.url)
+        this._emitEvent('volumeAddedFromUrl', { imageOptions, volume })
         if (this.onVolumeAddedFromUrl) {
             this.onVolumeAddedFromUrl(imageOptions, volume)
         }
@@ -2488,6 +2559,7 @@ export class Niivue {
             this.document.addImageOptions(volume, imageOptions)
             volume.onColormapChange = this.onColormapChange
             this.mediaUrlMap.set(volume, imageOptions.url)
+            this._emitEvent('volumeAddedFromUrl', { imageOptions, volume })
             if (this.onVolumeAddedFromUrl) {
                 this.onVolumeAddedFromUrl(imageOptions, volume)
             }
@@ -2852,6 +2924,7 @@ export class Niivue {
                 })
             )
             const loadedNvImages = await Promise.all(promises)
+            this._emitEvent('dicomLoaderFinished', { files: loadedNvImages })
             await this.onDicomLoaderFinishedWithImages(loadedNvImages)
         } catch (err) {
             console.error('Error loading DICOM files:', err)
@@ -3134,6 +3207,7 @@ export class Niivue {
         const result = VolumeManager.addVolume(this.volumes, volume)
         this.volumes = result.volumes
         this.setVolume(volume, result.index)
+        this._emitEvent('imageLoaded', volume)
         this.onImageLoaded(volume)
         log.debug('loaded volume', volume.name)
         log.debug(volume)
@@ -3151,6 +3225,7 @@ export class Niivue {
         const result = MeshManager.addMesh(this.meshes, mesh)
         this.meshes = result.meshes
         this.setMesh(mesh, result.index)
+        this._emitEvent('meshLoaded', mesh)
         this.onMeshLoaded(mesh)
     }
 
@@ -3537,6 +3612,7 @@ export class Niivue {
             return
         }
         this.updateGLVolume()
+        this._emitEvent('meshPropertyChanged', { meshIndex: idx, key, value: val })
         this.onMeshPropertyChanged(idx, key, val)
     }
 
@@ -3642,6 +3718,7 @@ export class Niivue {
     setRenderAzimuthElevation(a: number, e: number): void {
         this.scene.renderAzimuth = a
         this.scene.renderElevation = e
+        this._emitEvent('azimuthElevationChange', { azimuth: a, elevation: e })
         this.onAzimuthElevationChange(a, e)
         this.drawScene()
     }
@@ -3713,6 +3790,7 @@ export class Niivue {
         if (this.mediaUrlMap.has(volume)) {
             const url = this.mediaUrlMap.get(volume)!
             // notify subscribers that we are about to remove a volume
+            this._emitEvent('volumeWithUrlRemoved', { url })
             this.onVolumeWithUrlRemoved(url)
 
             this.mediaUrlMap.delete(volume)
@@ -3748,6 +3826,7 @@ export class Niivue {
         this.setMesh(mesh, -1)
         if (this.mediaUrlMap.has(mesh)) {
             const url = this.mediaUrlMap.get(mesh)!
+            this._emitEvent('meshWithUrlRemoved', { url })
             this.onMeshWithUrlRemoved(url)
             this.mediaUrlMap.delete(mesh)
         }
@@ -3764,6 +3843,7 @@ export class Niivue {
         if (mesh) {
             this.removeMesh(mesh as NVMesh)
             this.mediaUrlMap.delete(mesh)
+            this._emitEvent('meshWithUrlRemoved', { url })
             this.onMeshWithUrlRemoved(url)
         }
     }
@@ -3958,6 +4038,7 @@ export class Niivue {
         this.scene.clipPlanes = result.clipPlanes
         this.scene.clipPlaneDepthAziElevs = result.clipPlaneDepthAziElevs
 
+        this._emitEvent('clipPlaneChange', { clipPlane: result.clipPlane })
         this.onClipPlaneChange(result.clipPlane)
         this.drawScene()
     }
@@ -4575,6 +4656,7 @@ export class Niivue {
         await this.setVolumeRenderIllumination(this.opts.gradientAmount)
         this.updateGLVolume()
         this.drawScene()
+        this._emitEvent('documentLoaded', document)
         this.onDocumentLoaded(document)
         return this
     }
@@ -4849,6 +4931,7 @@ export class Niivue {
         if (nvImages.length === 1) {
             this.addVolume(nvImages[0])
         } else {
+            this._emitEvent('dicomLoaderFinished', { files: nvImages })
             this.onDicomLoaderFinishedWithImages(nvImages)
         }
         return this
@@ -4925,12 +5008,14 @@ export class Niivue {
             }
             const mesh = this.loadConnectomeAsMesh(json)
             this.mediaUrlMap.set(mesh, meshOptions.url)
+            this._emitEvent('meshAddedFromUrl', { meshOptions, mesh })
             this.onMeshAddedFromUrl(meshOptions, mesh)
             this.addMesh(mesh)
             return mesh
         }
         const mesh = await NVMesh.loadFromUrl({ ...meshOptions, gl: this.gl })
         this.mediaUrlMap.set(mesh, meshOptions.url)
+        this._emitEvent('meshAddedFromUrl', { meshOptions, mesh })
         this.onMeshAddedFromUrl(meshOptions, mesh)
         this.addMesh(mesh)
         return mesh
@@ -4974,11 +5059,13 @@ export class Niivue {
                 const json = await response.json()
                 const mesh = this.loadConnectomeAsMesh(json)
                 this.mediaUrlMap.set(mesh, meshItem.url)
+                this._emitEvent('meshAddedFromUrl', { meshOptions: meshItem, mesh })
                 this.onMeshAddedFromUrl(meshItem, mesh)
                 return mesh
             }
             const mesh = await NVMesh.loadFromUrl({ ...meshItem, gl: this.gl })
             this.mediaUrlMap.set(mesh, meshItem.url)
+            this._emitEvent('meshAddedFromUrl', { meshOptions: meshItem, mesh })
             this.onMeshAddedFromUrl(meshItem, mesh)
             return mesh
         })
@@ -6026,6 +6113,7 @@ export class Niivue {
             return
         }
         this.updateGLVolume()
+        this._emitEvent('meshShaderChanged', { meshIndex: result.meshIndex, shaderIndex: result.shaderIndex })
         this.onMeshShaderChanged(result.meshIndex, result.shaderIndex)
     }
 
@@ -6074,6 +6162,7 @@ export class Niivue {
     setCustomMeshShader(fragmentShaderText = '', name = 'Custom'): number {
         const m = this.createCustomMeshShader(fragmentShaderText, name)
         this.meshShaders.push(m)
+        this._emitEvent('customMeshShaderAdded', { fragmentShaderText, name })
         this.onCustomMeshShaderAdded(fragmentShaderText, name)
         return this.meshShaders.length - 1
     }
@@ -6382,6 +6471,7 @@ export class Niivue {
             }
         }
 
+        this._emitEvent('volumeUpdated', undefined)
         if (this.onVolumeUpdated) {
             this.onVolumeUpdated()
         }
@@ -7206,6 +7296,7 @@ export class Niivue {
         // Check if frame actually changed
         if (this.volumes[idx].frame4D !== oldFrame) {
             this.updateGLVolume()
+            this._emitEvent('frameChange', { volume: this.volumes[idx], index: this.volumes[idx].frame4D! })
             this.onFrameChange(this.volumes[idx], this.volumes[idx].frame4D!)
             this.createOnLocationChange()
         }
@@ -7613,7 +7704,9 @@ export class Niivue {
                     masks: [],
                     drawingIsMask: true // Use the final this.drawBitmap
                 })
-                this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 })
+                const segmentData = { mL: info.volumeML, mm3: info.volumeMM3 }
+                this._emitEvent('clickToSegment', segmentData)
+                this.onClickToSegment(segmentData)
             }
         }
         // should probably happen regardless of growing state
@@ -9966,6 +10059,7 @@ export class Niivue {
             string: str
         }
 
+        this._emitEvent('locationChange', msg)
         this.onLocationChange(msg)
     }
 
@@ -11381,6 +11475,7 @@ export class Niivue {
                     elevation: dragResult.depthAziElev[2]
                 })
                 this.scene.clipPlanes[idx] = clipPlane
+                this._emitEvent('clipPlaneChange', { clipPlane })
                 this.onClipPlaneChange(clipPlane)
                 // Don't return - let drawScene continue naturally
             }
