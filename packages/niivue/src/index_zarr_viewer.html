@@ -241,6 +241,7 @@
     statusBar.textContent = 'Discovering zarr structure...'
 
     try {
+      
       await nv.loadZarrFromServer(storeUrl, {
         maxVolumeSize: maxVolSize,
       })

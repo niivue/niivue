@@ -5141,6 +5141,7 @@ export class Niivue {
             maxTextureSize: max3DTextureSize,
             canvasWidth,
             canvasHeight,
+            channel: 1,
             cacheSize: this.opts.zarrCacheSize ?? 1000,
             prefetchRings: this.opts.zarrPrefetchRings ?? 10,
             onChunkLoad: (info) => {
