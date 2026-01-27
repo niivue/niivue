@@ -251,6 +251,8 @@ export type NVConfigOptions = {
     // Zarr options
     /** Chunk cache size for zarr viewing (default 500) */
     zarrCacheSize: number
+    /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
+    zarrPrefetchRings: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -371,7 +373,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     // Pyramidal TIFF options
     tiffCacheSize: 500,
     // Zarr options
-    zarrCacheSize: 500
+    zarrCacheSize: 1000,
+    zarrPrefetchRings: 10
 }
 
 type SceneData = {

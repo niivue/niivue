@@ -58,10 +58,7 @@ export class ZarrViewport {
         // If NO level fits (single huge level, no pyramid), we need to zoom in
         // so that renderScale >= 1.0, showing a volumeDims-sized window at 1:1 pixels.
         const bestLevelDims = this.getLevelDimensions(bestLevel)
-        const levelFits =
-            bestLevelDims.width <= volumeDims.width &&
-            bestLevelDims.height <= volumeDims.height &&
-            bestLevelDims.depth <= volumeDims.depth
+        const levelFits = bestLevelDims.width <= volumeDims.width && bestLevelDims.height <= volumeDims.height && bestLevelDims.depth <= volumeDims.depth
         let initialZoom = 1.0
         if (!levelFits) {
             // baseScale = min(volDim / level0Dim) for each axis
@@ -69,11 +66,7 @@ export class ZarrViewport {
             // effectiveScale = baseScale * zoom
             // levelScale = levelDim / level0Dim (for the best level)
             const levelScale = this.getLevelScaleForLevel(bestLevel)
-            const baseScale = Math.min(
-                volumeDims.width / level0Dims.width,
-                volumeDims.height / level0Dims.height,
-                volumeDims.depth / level0Dims.depth
-            )
+            const baseScale = Math.min(volumeDims.width / level0Dims.width, volumeDims.height / level0Dims.height, volumeDims.depth / level0Dims.depth)
             // We need: baseScale * zoom / levelScale >= 1.0
             // zoom >= levelScale / baseScale
             initialZoom = levelScale / baseScale
@@ -467,6 +460,81 @@ export class ZarrViewport {
 
         // Sort chunks by distance from viewport center (closest first)
         // so that progressive rendering shows center content first
+        const centerChunkX = (startChunkX + endChunkX) / 2
+        const centerChunkY = (startChunkY + endChunkY) / 2
+        const centerChunkZ = (startChunkZ + endChunkZ) / 2
+
+        chunks.sort((a, b) => {
+            const distA = (a.x - centerChunkX) ** 2 + (a.y - centerChunkY) ** 2 + ((a.z ?? 0) - centerChunkZ) ** 2
+            const distB = (b.x - centerChunkX) ** 2 + (b.y - centerChunkY) ** 2 + ((b.z ?? 0) - centerChunkZ) ** 2
+            return distA - distB
+        })
+
+        return chunks
+    }
+
+    /**
+     * Get chunks in the "ring" around the visible region for prefetching.
+     * Returns chunks sorted by distance from viewport center, excluding visible chunks.
+     * @param rings - Number of chunk rings to expand beyond the visible region
+     */
+    getPrefetchChunks(rings: number = 1): ChunkCoord[] {
+        const MAX_PREFETCH_CHUNKS = 200
+        const region = this.getVisibleRegion()
+        const chunkDims = this.getCurrentChunkDimensions()
+        const levelDims = this.getCurrentLevelDimensions()
+        const level = this.state.pyramidLevel
+
+        // Calculate visible chunk bounds (same math as getVisibleChunks)
+        const startChunkX = Math.max(0, Math.floor(region.minX / chunkDims.width))
+        const startChunkY = Math.max(0, Math.floor(region.minY / chunkDims.height))
+        const startChunkZ = Math.max(0, Math.floor(region.minZ / chunkDims.depth))
+        const endChunkX = Math.min(Math.ceil(levelDims.width / chunkDims.width), Math.ceil(region.maxX / chunkDims.width))
+        const endChunkY = Math.min(Math.ceil(levelDims.height / chunkDims.height), Math.ceil(region.maxY / chunkDims.height))
+        const endChunkZ = Math.min(Math.ceil(levelDims.depth / chunkDims.depth), Math.ceil(region.maxZ / chunkDims.depth))
+
+        // Expand bounds by `rings` chunks in each direction, clamped to level bounds
+        const maxChunkX = Math.ceil(levelDims.width / chunkDims.width)
+        const maxChunkY = Math.ceil(levelDims.height / chunkDims.height)
+        const maxChunkZ = Math.ceil(levelDims.depth / chunkDims.depth)
+
+        const prefetchStartX = Math.max(0, startChunkX - rings)
+        const prefetchStartY = Math.max(0, startChunkY - rings)
+        const prefetchStartZ = Math.max(0, startChunkZ - rings)
+        const prefetchEndX = Math.min(maxChunkX, endChunkX + rings)
+        const prefetchEndY = Math.min(maxChunkY, endChunkY + rings)
+        const prefetchEndZ = Math.min(maxChunkZ, endChunkZ + rings)
+
+        const chunks: ChunkCoord[] = []
+
+        for (let z = prefetchStartZ; z < prefetchEndZ; z++) {
+            for (let y = prefetchStartY; y < prefetchEndY; y++) {
+                for (let x = prefetchStartX; x < prefetchEndX; x++) {
+                    // Skip chunks inside the visible bounds
+                    if (x >= startChunkX && x < endChunkX && y >= startChunkY && y < endChunkY && z >= startChunkZ && z < endChunkZ) {
+                        continue
+                    }
+
+                    if (this.pyramidInfo.is3D) {
+                        chunks.push({ level, x, y, z })
+                    } else {
+                        chunks.push({ level, x, y })
+                    }
+
+                    if (chunks.length >= MAX_PREFETCH_CHUNKS) {
+                        break
+                    }
+                }
+                if (chunks.length >= MAX_PREFETCH_CHUNKS) {
+                    break
+                }
+            }
+            if (chunks.length >= MAX_PREFETCH_CHUNKS) {
+                break
+            }
+        }
+
+        // Sort by distance from viewport center (closest first)
         const centerChunkX = (startChunkX + endChunkX) / 2
         const centerChunkY = (startChunkY + endChunkY) / 2
         const centerChunkZ = (startChunkZ + endChunkZ) / 2

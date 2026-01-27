@@ -54,6 +54,10 @@ export interface NVZarrImageOptions {
     cacheSize?: number
     /** Channel index to display for multi-channel datasets (default 0) */
     channel?: number
+    /** Number of chunk rings to prefetch around the visible region (0 disables, default 1) */
+    prefetchRings?: number
+    /** Maximum concurrent prefetch requests (default 3) */
+    prefetchConcurrency?: number
     /** Callback when chunks are loaded */
     onChunkLoad?: (info: ChunkLoadInfo) => void
     /** Callback when pyramid level changes */
@@ -171,6 +175,10 @@ export class NVZarrImage {
     private nonSpatialCoords: Record<string, number> = {}
     // Callback to get tile bounds for accurate coordinate conversion
     private getTileBounds?: () => TileBounds | null
+    // Prefetch configuration
+    private prefetchRings: number = 10
+    private prefetchConcurrency: number = 100
+    private prefetchAbortController: AbortController | null = null
 
     private constructor() {
         // Private constructor - use static create() method
@@ -240,6 +248,10 @@ export class NVZarrImage {
             }
             // Other non-spatial axes (e.g., time) stay at default 0
         }
+
+        // Store prefetch configuration
+        instance.prefetchRings = options.prefetchRings ?? 10
+        instance.prefetchConcurrency = options.prefetchConcurrency ?? 100
 
         // Create the underlying NVImage with FIXED dimensions
         instance.createNVImage()
@@ -549,43 +561,49 @@ export class NVZarrImage {
             this.needsUpdate = true
             // Abort in-flight fetches so the current cycle finishes quickly
             this.currentAbortController?.abort()
+            this.cancelPrefetch()
             return
         }
 
         this.isUpdating = true
+        this.cancelPrefetch()
 
-        do {
-            this.needsUpdate = false
+        try {
+            do {
+                this.needsUpdate = false
 
-            // Abort any previous in-flight fetches
-            this.currentAbortController?.abort()
-            const abortController = new AbortController()
-            this.currentAbortController = abortController
+                // Abort any previous in-flight fetches
+                this.currentAbortController?.abort()
+                const abortController = new AbortController()
+                this.currentAbortController = abortController
 
-            // Reset running calibration for this cycle
-            this.runningMin = Infinity
-            this.runningMax = -Infinity
+                // Reset running calibration for this cycle
+                this.runningMin = Infinity
+                this.runningMax = -Infinity
 
-            // Wait for next animation frame to coalesce rapid calls
-            await new Promise<void>((resolve) => {
-                requestAnimationFrame(() => {
-                    resolve()
+                // Wait for next animation frame to coalesce rapid calls
+                await new Promise<void>((resolve) => {
+                    requestAnimationFrame(() => {
+                        resolve()
+                    })
                 })
-            })
 
-            // If another update was requested during the rAF wait, skip this cycle
-            if (this.needsUpdate) {
-                continue
-            }
+                // If another update was requested during the rAF wait, skip this cycle
+                if (this.needsUpdate) {
+                    continue
+                }
 
-            // Clear volume buffer, then immediately assemble cached chunks and render
-            this.clearVolumeData()
+                // Clear volume buffer, then immediately assemble cached chunks and render
+                this.clearVolumeData()
 
-            // Fetch and assemble visible chunks (progressive rendering)
-            await this.assembleVisibleChunks(abortController.signal)
-        } while (this.needsUpdate)
+                // Fetch and assemble visible chunks (progressive rendering)
+                await this.assembleVisibleChunks(abortController.signal)
+            } while (this.needsUpdate)
+        } finally {
+            this.isUpdating = false
+        }
 
-        this.isUpdating = false
+        this.startPrefetch()
     }
 
     /**
@@ -656,10 +674,7 @@ export class NVZarrImage {
                 this.chunkCache.startLoading(key)
 
                 try {
-                    const data = await this.chunkClient.fetchChunk(
-                        chunk.level, chunk.x, chunk.y, chunk.z,
-                        this.nonSpatialCoords, signal
-                    )
+                    const data = await this.chunkClient.fetchChunk(chunk.level, chunk.x, chunk.y, chunk.z, this.nonSpatialCoords, signal)
 
                     this.chunkCache.doneLoading(key)
 
@@ -808,6 +823,125 @@ export class NVZarrImage {
             this.image.robust_max = this.runningMax
             this.image.global_min = this.runningMin
             this.image.global_max = this.runningMax
+        }
+    }
+
+    /**
+     * Cancel any in-progress prefetch operation
+     */
+    private cancelPrefetch(): void {
+        if (this.prefetchAbortController) {
+            this.prefetchAbortController.abort()
+            this.prefetchAbortController = null
+        }
+    }
+
+    /**
+     * Start prefetching chunks in the ring around the visible region.
+     * Prefetched chunks are only stored in the cache - no volume assembly or render.
+     * When the user pans to that region, cached chunks are picked up by Phase 1
+     * of assembleVisibleChunks().
+     */
+    private startPrefetch(): void {
+        if (this.prefetchRings === 0) {
+            return
+        }
+
+        this.cancelPrefetch()
+        const abortController = new AbortController()
+        this.prefetchAbortController = abortController
+
+        // Launch prefetch as fire-and-forget async operation.
+        // No setTimeout — workers begin executing synchronously up to their first
+        // await, so the fetch requests are initiated before any queued macrotask
+        // (like a residual mouse event) can call cancelPrefetch().
+        this.executePrefetch(abortController).catch(() => {})
+    }
+
+    /**
+     * Execute prefetch workers. Separated from startPrefetch so we can
+     * use async/await cleanly while keeping startPrefetch synchronous.
+     */
+    private async executePrefetch(abortController: AbortController): Promise<void> {
+        const signal = abortController.signal
+
+        // Capture current level for staleness check
+        const capturedLevel = this.viewport.getState().pyramidLevel
+        const name = this.pyramidInfo.name
+
+        // Get prefetch chunks from viewport
+        const chunks = this.viewport.getPrefetchChunks(this.prefetchRings)
+
+        // Filter out chunks already cached or loading
+        const toFetch = chunks.filter((chunk) => {
+            const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z)
+            return !this.chunkCache.has(key) && !this.chunkCache.isLoading(key)
+        })
+
+        if (toFetch.length === 0) {
+            return
+        }
+
+        // Semaphore pattern: N concurrent workers
+        let nextIndex = 0
+        const worker = async (): Promise<void> => {
+            while (nextIndex < toFetch.length) {
+                // Check abort and level staleness
+                if (signal.aborted) {
+                    return
+                }
+                if (this.viewport.getState().pyramidLevel !== capturedLevel) {
+                    return
+                }
+
+                const chunk = toFetch[nextIndex++]
+                const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z)
+
+                // Skip if it became cached or is loading since the initial filter
+                if (this.chunkCache.has(key) || this.chunkCache.isLoading(key)) {
+                    continue
+                }
+
+                this.chunkCache.startLoading(key)
+                try {
+                    const data = await this.chunkClient.fetchChunk(chunk.level, chunk.x, chunk.y, chunk.z, this.nonSpatialCoords, signal)
+
+                    this.chunkCache.doneLoading(key)
+
+                    if (data && !signal.aborted) {
+                        this.chunkCache.set(key, data)
+                    }
+                } catch {
+                    // Silently ignore all prefetch errors (abort, network, etc.)
+                    this.chunkCache.doneLoading(key)
+                }
+            }
+        }
+
+        const workers: Array<Promise<void>> = []
+        for (let i = 0; i < this.prefetchConcurrency; i++) {
+            workers.push(worker())
+        }
+        await Promise.all(workers)
+    }
+
+    /**
+     * Set the number of prefetch rings at runtime (0 disables prefetching)
+     */
+    setPrefetchRings(rings: number): void {
+        this.prefetchRings = rings
+        if (rings === 0) {
+            this.cancelPrefetch()
+        }
+    }
+
+    /**
+     * Get the current prefetch configuration
+     */
+    getPrefetchConfig(): { rings: number; concurrency: number } {
+        return {
+            rings: this.prefetchRings,
+            concurrency: this.prefetchConcurrency
         }
     }
 

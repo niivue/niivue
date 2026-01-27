@@ -5141,11 +5141,13 @@ export class Niivue {
             maxTextureSize: max3DTextureSize,
             canvasWidth,
             canvasHeight,
-            cacheSize: this.opts.zarrCacheSize ?? 500,
+            cacheSize: this.opts.zarrCacheSize ?? 1000,
+            prefetchRings: this.opts.zarrPrefetchRings ?? 10,
             onChunkLoad: (info) => {
                 this.onZarrChunkLoadProgress(info)
                 // Update the GL texture when chunks are loaded
                 this.updateGLVolume()
+                // this.drawScene()
             },
             onLevelChange: (info) => {
                 this.onZarrLevelChange(info)
