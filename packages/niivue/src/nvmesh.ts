@@ -2,14 +2,13 @@ import { vec3, vec4 } from 'gl-matrix'
 import { v4 as uuidv4 } from '@lukeed/uuid'
 import { log } from '@/logger'
 import { NiivueObject3D } from '@/niivue-object3D'
-import { ColorMap, LUT, cmapper } from '@/colortables'
+import { ColorMap, LUT, cmapper, COLORMAP_TYPE } from '@/colortables'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
 import { NVMeshLoaders } from '@/nvmesh-loaders'
 import { NVLabel3D, LabelTextAlignment, LabelLineTerminator } from '@/nvlabel'
 
 import { LegacyConnectome, LegacyNodes, NVConnectomeEdge, NVConnectomeNode, Point } from '@/types'
 import { DefaultMeshType, GII, MZ3, TCK, TRACT, TRK, TT, TRX, VTK, ValuesArray, X3D, AnyNumberArray } from '@/nvmesh-types'
-import { COLORMAP_TYPE } from '@/nvdocument'
 
 /** Enum for text alignment
  */
