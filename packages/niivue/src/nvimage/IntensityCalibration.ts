@@ -8,9 +8,9 @@
  */
 
 import type { NVImage } from './index'
-import { log } from '@/logger'
-import { cmapper } from '@/colortables'
-import { NiiIntentCode } from '@/nvimage/utils'
+import { log } from '../logger'
+import { cmapper } from '../colortables'
+import { NiiIntentCode } from './utils'
 
 /**
  * Convert voxel intensity from stored value to scaled intensity.
@@ -70,52 +70,65 @@ export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINI
     let nZero = 0
     let nNan = 0
     let nVox3D = nvImage.hdr.dims[1] * nvImage.hdr.dims[2] * nvImage.hdr.dims[3]
+    
     // n.b. due to limitFrames4D nVol may not equal dims[4]
     const nVol = Math.floor(nvImage.img.length / nVox3D)
-    if (vol >= nVol) {
-        vol = nvImage.frame4D
+    
+    // --- FIX FOR ISSUE 1521 ---
+    let startVol = 0
+    let endVol = nVol
+    if (vol >= 0) {
+        if (vol >= nVol) {
+            vol = nvImage.frame4D
+        }
+        startVol = Math.min(vol, nVol - 1)
+        endVol = startVol + 1
     }
-    vol = Math.min(vol, nVol - 1)
-    const skipVox = vol * nVox3D
+    // ---------------------------
+    
     let img = []
     if (!isBorder) {
-        img = new (nvImage.img.constructor as new (length: number) => any)(nVox3D)
-        for (let i = 0; i < nVox3D; i++) {
-            img[i] = nvImage.img[i + skipVox]
+        // Use correct size based on frame count
+        img = new (nvImage.img.constructor as new (length: number) => any)(nVox3D * (endVol - startVol))
+        let k = 0
+        for (let v = startVol; v < endVol; v++) {
+            const skipVox = v * nVox3D
+            for (let i = 0; i < nVox3D; i++) {
+                img[k++] = nvImage.img[i + skipVox]
+            }
         }
     } else {
         const borderFrac = 0.25
         const borders = [Math.floor(borderFrac * nvImage.hdr.dims[1]), Math.floor(borderFrac * nvImage.hdr.dims[2]), Math.floor(borderFrac * nvImage.hdr.dims[3])]
         const dims = [nvImage.hdr.dims[1] - 2 * borders[0], nvImage.hdr.dims[2] - 2 * borders[1], nvImage.hdr.dims[3] - 2 * borders[2]]
         const bordersHi = [dims[0] + borders[0], dims[1] + borders[1], dims[2] + borders[2]]
-        nVox3D = dims[0] * dims[1] * dims[2]
-        img = new (nvImage.img.constructor as new (length: number) => any)(nVox3D)
-        let j = -1
-        let i = 0
-        for (let z = 0; z < nvImage.hdr.dims[3]; z++) {
-            for (let y = 0; y < nvImage.hdr.dims[2]; y++) {
-                for (let x = 0; x < nvImage.hdr.dims[1]; x++) {
-                    j++
-                    if (x < borders[0] || y < borders[1] || z < borders[2]) {
-                        continue
+        const nVox3DCropped = dims[0] * dims[1] * dims[2]
+        img = new (nvImage.img.constructor as new (length: number) => any)(nVox3DCropped * (endVol - startVol))
+        let k = 0
+        for (let v = startVol; v < endVol; v++) {
+            const skipVox = v * nVox3D
+            let j = -1
+            for (let z = 0; z < nvImage.hdr.dims[3]; z++) {
+                for (let y = 0; y < nvImage.hdr.dims[2]; y++) {
+                    for (let x = 0; x < nvImage.hdr.dims[1]; x++) {
+                        j++
+                        if (x < borders[0] || y < borders[1] || z < borders[2]) {
+                            continue
+                        }
+                        if (x >= bordersHi[0] || y >= bordersHi[1] || z >= bordersHi[2]) {
+                            continue
+                        }
+                        img[k++] = nvImage.img[j + skipVox]
                     }
-                    if (x >= bordersHi[0] || y >= bordersHi[1] || z >= bordersHi[2]) {
-                        continue
-                    }
-                    img[i] = nvImage.img[j + skipVox]
-                    i++
                 }
             }
         }
     }
-    /* for (let i = 0; i < nVox3D; i++) {
-    img[i] = nvImage.img[i + skipVox]
-  } */
+    
     // we can accelerate loops for integer data (which can not store NaN)
-    // n.b. do to stack size, we can not use Math.max.apply()
     const isFastCalc = img.constructor !== Float64Array && img.constructor !== Float32Array && nvImage.ignoreZeroVoxels
     if (isFastCalc) {
-        for (let i = 0; i < nVox3D; i++) {
+        for (let i = 0; i < img.length; i++) {
             mn = Math.min(img[i], mn)
             mx = Math.max(img[i], mx)
             if (img[i] === 0) {
@@ -123,7 +136,7 @@ export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINI
             }
         }
     } else {
-        for (let i = 0; i < nVox3D; i++) {
+        for (let i = 0; i < img.length; i++) {
             if (isNaN(img[i])) {
                 nNan++
                 continue
@@ -169,7 +182,7 @@ export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINI
         nvImage.robust_max = nvImage.cal_max
         return [cmMin, cmMax, cmMin, cmMax]
     }
-    const percentZero = (100 * nZero) / (nVox3D - 0)
+    const percentZero = (100 * nZero) / (img.length - 0)
     let isOverrideIgnoreZeroVoxels = false
     if (percentZero > 60 && !nvImage.ignoreZeroVoxels) {
         log.warn(`${Math.round(percentZero)}% of voxels are zero: ignoring zeros for cal_max`)
@@ -180,7 +193,7 @@ export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINI
         nZero = 0
     }
     nZero += nNan
-    const n2pct = Math.round((nVox3D - 0 - nZero) * nvImage.percentileFrac)
+    const n2pct = Math.round((img.length - 0 - nZero) * nvImage.percentileFrac)
     if (n2pct < 1 || mn === mx) {
         if (isBorder) {
             // central region has no variability: explore entire image
@@ -202,11 +215,11 @@ export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINI
         hist[i] = 0
     }
     if (isFastCalc) {
-        for (let i = 0; i < nVox3D; i++) {
+        for (let i = 0; i < img.length; i++) {
             hist[Math.round((img[i] - mn) * scl)]++
         }
     } else if (nvImage.ignoreZeroVoxels) {
-        for (let i = 0; i < nVox3D; i++) {
+        for (let i = 0; i < img.length; i++) {
             if (img[i] === 0) {
                 continue
             }
@@ -216,7 +229,7 @@ export function calMinMax(nvImage: NVImage, vol: number = Number.POSITIVE_INFINI
             hist[Math.round((img[i] - mn) * scl)]++
         }
     } else {
-        for (let i = 0; i < nVox3D; i++) {
+        for (let i = 0; i < img.length; i++) {
             if (isNaN(img[i])) {
                 continue
             }
