@@ -3645,6 +3645,36 @@ export class Niivue {
         this.onAzimuthElevationChange(a, e)
         this.drawScene()
     }
+    /**
+     * Snap the 3D render camera to a specific anatomical view.
+     * @param view - The target view ('Top', 'Bottom', 'Left', 'Right', 'Front', 'Back')
+     * @see {@link https://github.com/niivue/niivue/issues/1464 | Issue 1464}
+     */
+    setRenderView(view: string): void {
+        const v = view.toLowerCase()
+        let a = this.scene.renderAzimuth
+        let e = this.scene.renderElevation
+
+        // Standard anatomical views (Azimuth, Elevation)
+        if (v === 'top' || v === 'superior') {
+            a = 0; e = 90;
+        } else if (v === 'bottom' || v === 'inferior') {
+            a = 0; e = -90;
+        } else if (v === 'left') {
+            a = 90; e = 0;
+        } else if (v === 'right') {
+            a = -90; e = 0;
+        } else if (v === 'front' || v === 'anterior') {
+            a = 180; e = 0;
+        } else if (v === 'back' || v === 'posterior') {
+            a = 0; e = 0;
+        } else {
+            console.warn('Unknown view:', view);
+            return;
+        }
+
+        this.setRenderAzimuthElevation(a, e)
+    }
 
     /**
      * get the index of an overlay by its unique id. unique ids are assigned to the NVImage.id property when a new NVImage is created.
