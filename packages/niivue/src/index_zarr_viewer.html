@@ -88,10 +88,12 @@
           value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/present.ome.zarr"
           style="width: 400px"
         /> -->
+        <!-- use https if developing with an http/2 server -->
+        <!-- use http if developing with a standard http/ server -->
         <input
           type="text"
           id="storeUrl"
-          value="http://localhost:3001/K_HE_2_ome.zarr"
+          value="https://localhost:3000/K_HE_2_ome.zarr"
           style="width: 400px"
         />
 
@@ -128,7 +130,7 @@
   </body>
 </html>
 <script type="module" async>
-  import { Niivue, DRAG_MODE, SLICE_TYPE, SHOW_RENDER } from './niivue/index.ts'
+  import { Niivue, DRAG_MODE, SLICE_TYPE, SHOW_RENDER, MULTIPLANAR_TYPE } from './niivue/index.ts'
 
   const storeUrlInput = document.getElementById('storeUrl')
   const maxVolSizeSelect = document.getElementById('maxVolSize')
@@ -148,6 +150,7 @@
     isColorbar: true,
     isOrientCube: true,
     backColor: [0.1, 0.1, 0.15, 1],
+    multiplanarLayout: MULTIPLANAR_TYPE.GRID ,
     onZarrLevelChange: (info) => {
       let status = `Level ${info.level + 1}/${info.totalLevels} (${info.levelWidth} x ${info.levelHeight}`
       if (info.levelDepth && info.levelDepth > 1) {
