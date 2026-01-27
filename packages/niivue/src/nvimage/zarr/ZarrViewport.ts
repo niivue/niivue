@@ -53,12 +53,38 @@ export class ZarrViewport {
         // Find the best initial pyramid level where data fits in volume
         const bestLevel = this.findBestInitialLevel()
 
-        // Start centered on the volume, with zoom = 1.0 (fit to texture)
+        // Calculate initial zoom:
+        // If the best level fits in the volume, zoom=1.0 shows the whole image.
+        // If NO level fits (single huge level, no pyramid), we need to zoom in
+        // so that renderScale >= 1.0, showing a volumeDims-sized window at 1:1 pixels.
+        const bestLevelDims = this.getLevelDimensions(bestLevel)
+        const levelFits =
+            bestLevelDims.width <= volumeDims.width &&
+            bestLevelDims.height <= volumeDims.height &&
+            bestLevelDims.depth <= volumeDims.depth
+        let initialZoom = 1.0
+        if (!levelFits) {
+            // baseScale = min(volDim / level0Dim) for each axis
+            // We need effectiveScale / levelScale >= 1.0
+            // effectiveScale = baseScale * zoom
+            // levelScale = levelDim / level0Dim (for the best level)
+            const levelScale = this.getLevelScaleForLevel(bestLevel)
+            const baseScale = Math.min(
+                volumeDims.width / level0Dims.width,
+                volumeDims.height / level0Dims.height,
+                volumeDims.depth / level0Dims.depth
+            )
+            // We need: baseScale * zoom / levelScale >= 1.0
+            // zoom >= levelScale / baseScale
+            initialZoom = levelScale / baseScale
+        }
+
+        // Start centered on the volume
         this.state = {
             centerX: level0Dims.width / 2,
             centerY: level0Dims.height / 2,
             centerZ: level0Dims.depth / 2,
-            zoom: 1.0,
+            zoom: initialZoom,
             pyramidLevel: bestLevel
         }
     }

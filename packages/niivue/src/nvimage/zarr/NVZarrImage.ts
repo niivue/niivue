@@ -52,6 +52,8 @@ export interface NVZarrImageOptions {
     canvasHeight?: number
     /** Chunk cache size (default 500) */
     cacheSize?: number
+    /** Channel index to display for multi-channel datasets (default 0) */
+    channel?: number
     /** Callback when chunks are loaded */
     onChunkLoad?: (info: ChunkLoadInfo) => void
     /** Callback when pyramid level changes */
@@ -159,6 +161,10 @@ export class NVZarrImage {
     // Canvas dimensions for coordinate scaling (screen coords -> volume coords)
     private canvasWidth: number = 256
     private canvasHeight: number = 256
+    // Channel index for multi-channel datasets
+    private channel: number = 0
+    // Non-spatial coordinate overrides for chunk fetching (derived from channel)
+    private nonSpatialCoords: Record<string, number> = {}
     // Callback to get tile bounds for accurate coordinate conversion
     private getTileBounds?: () => TileBounds | null
 
@@ -220,6 +226,16 @@ export class NVZarrImage {
 
         // Store tile bounds callback for coordinate conversion
         instance.getTileBounds = options.getTileBounds
+
+        // Store channel selection and build non-spatial coord overrides
+        instance.channel = options.channel ?? 0
+        const axisMapping = instance.pyramidInfo.axisMapping
+        for (const nsa of axisMapping.nonSpatialAxes) {
+            if (nsa.name === 'c') {
+                instance.nonSpatialCoords[nsa.name] = instance.channel
+            }
+            // Other non-spatial axes (e.g., time) stay at default 0
+        }
 
         // Create the underlying NVImage with FIXED dimensions
         instance.createNVImage()
@@ -593,7 +609,7 @@ export class NVZarrImage {
                 const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z)
                 this.chunkCache.startLoading(key)
 
-                const data = await this.chunkClient.fetchChunk(chunk.level, chunk.x, chunk.y, chunk.z)
+                const data = await this.chunkClient.fetchChunk(chunk.level, chunk.x, chunk.y, chunk.z, this.nonSpatialCoords)
 
                 this.chunkCache.doneLoading(key)
 

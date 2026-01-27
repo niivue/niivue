@@ -17,12 +17,25 @@ export interface ZarrPyramidLevel {
     index: number
     /** Path to this level in the zarr hierarchy (e.g., "/0", "/1") */
     path: string
-    /** Array shape [X, Y] for 2D or [X, Y, Z] or other orderings for 3D+ */
+    /** Spatial-only shape in [Z, Y, X] or [Y, X] order (non-spatial dims stripped) */
     shape: number[]
-    /** Chunk dimensions matching shape order */
+    /** Spatial-only chunk dimensions matching shape order */
     chunks: number[]
     /** Data type (e.g., "uint8", "uint16", "float32") */
     dtype: string
+}
+
+/**
+ * Mapping from spatial chunk coordinates (z, y, x) to full zarr array chunk coordinates.
+ * Handles non-spatial dimensions like channel (c) and time (t).
+ */
+export interface AxisMapping {
+    /** Total number of dimensions in the original zarr array */
+    originalNdim: number
+    /** Indices of spatial axes in the original array, ordered [Z, Y, X] or [Y, X] */
+    spatialIndices: number[]
+    /** Non-spatial axes: their index in the original array, chunk size, and default chunk coord */
+    nonSpatialAxes: Array<{ index: number; name: string; chunkSize: number; defaultChunkCoord: number }>
 }
 
 export interface ZarrPyramidInfo {
@@ -30,10 +43,12 @@ export interface ZarrPyramidInfo {
     name: string
     /** Pyramid levels (index 0 = highest resolution) */
     levels: ZarrPyramidLevel[]
-    /** Whether this is a 3D dataset */
+    /** Whether this is a 3D dataset (based on spatial dimensions) */
     is3D: boolean
-    /** Number of dimensions (2 or 3 typically) */
+    /** Number of spatial dimensions (2 or 3) */
     ndim: number
+    /** Mapping from spatial to full array coordinates */
+    axisMapping: AxisMapping
 }
 
 export interface ChunkCoord {
@@ -72,6 +87,8 @@ export class ZarrChunkClient {
     private arrays: Map<number, ZarrArray> = new Map()
     /** Maps level index to actual path in the zarr store */
     private levelPaths: Map<number, string> = new Map()
+    /** Axis mapping for coordinate translation */
+    private axisMapping: AxisMapping | null = null
 
     constructor(config: ZarrChunkClientConfig) {
         this.baseUrl = config.baseUrl
@@ -84,16 +101,19 @@ export class ZarrChunkClient {
      */
     async fetchInfo(): Promise<ZarrPyramidInfo> {
         const root = zarr.root(this.store)
-        const levels: ZarrPyramidLevel[] = []
+
+        // Raw levels before axis stripping (with full original shapes)
+        const rawLevels: Array<{ index: number; path: string; shape: number[]; chunks: number[]; dtype: string }> = []
+        let omeAxes: Array<{ name: string; type: string }> | null = null
 
         // Try to open as a single array first (non-pyramidal case)
         try {
             const arr = await zarr.open(root, { kind: 'array' })
-            levels.push({
+            rawLevels.push({
                 index: 0,
                 path: '/',
-                shape: arr.shape,
-                chunks: arr.chunks,
+                shape: [...arr.shape],
+                chunks: [...arr.chunks],
                 dtype: arr.dtype
             })
             this.arrays.set(0, arr)
@@ -119,6 +139,11 @@ export class ZarrChunkClient {
                 // Could not open as group
             }
 
+            // Extract OME axes metadata if available
+            if (omeMultiscales?.axes && Array.isArray(omeMultiscales.axes)) {
+                omeAxes = omeMultiscales.axes
+            }
+
             if (omeMultiscales && omeMultiscales.datasets && omeMultiscales.datasets.length > 0) {
                 // Use OME multiscales paths
                 for (let i = 0; i < omeMultiscales.datasets.length; i++) {
@@ -127,11 +152,11 @@ export class ZarrChunkClient {
                     try {
                         const loc = root.resolve(path)
                         const arr = await zarr.open(loc, { kind: 'array' })
-                        levels.push({
+                        rawLevels.push({
                             index: i,
                             path,
-                            shape: arr.shape,
-                            chunks: arr.chunks,
+                            shape: [...arr.shape],
+                            chunks: [...arr.chunks],
                             dtype: arr.dtype
                         })
                         this.arrays.set(i, arr)
@@ -147,11 +172,11 @@ export class ZarrChunkClient {
                     try {
                         const loc = root.resolve(path)
                         const arr = await zarr.open(loc, { kind: 'array' })
-                        levels.push({
+                        rawLevels.push({
                             index: i,
                             path,
-                            shape: arr.shape,
-                            chunks: arr.chunks,
+                            shape: [...arr.shape],
+                            chunks: [...arr.chunks],
                             dtype: arr.dtype
                         })
                         this.arrays.set(i, arr)
@@ -164,21 +189,96 @@ export class ZarrChunkClient {
             }
         }
 
-        if (levels.length === 0) {
+        if (rawLevels.length === 0) {
             throw new Error(`No zarr arrays found at ${this.baseUrl}`)
         }
 
-        // Determine dimensionality from the first level
-        const level0 = levels[0]
-        const ndim = level0.shape.length
-        const is3D = ndim >= 3
+        // Build axis mapping: identify spatial vs non-spatial dimensions
+        const originalNdim = rawLevels[0].shape.length
+        const axisMapping = this.buildAxisMapping(originalNdim, rawLevels[0].chunks, omeAxes)
+        this.axisMapping = axisMapping
+
+        // Strip non-spatial dimensions from shape and chunks
+        const levels: ZarrPyramidLevel[] = rawLevels.map((raw) => ({
+            index: raw.index,
+            path: raw.path,
+            shape: axisMapping.spatialIndices.map((i) => raw.shape[i]),
+            chunks: axisMapping.spatialIndices.map((i) => raw.chunks[i]),
+            dtype: raw.dtype
+        }))
+
+        // Determine dimensionality from spatial axes
+        const spatialNdim = axisMapping.spatialIndices.length
+        const is3D = spatialNdim >= 3
+
+        console.log(
+            `Zarr axis mapping: original ndim=${originalNdim}, spatial ndim=${spatialNdim}, ` +
+                `spatial indices=${JSON.stringify(axisMapping.spatialIndices)}, ` +
+                `non-spatial=${JSON.stringify(axisMapping.nonSpatialAxes.map((a) => a.name))}`
+        )
 
         return {
             name: this.baseUrl,
             levels,
             is3D,
-            ndim
+            ndim: spatialNdim,
+            axisMapping
         }
+    }
+
+    /**
+     * Build axis mapping from OME axes metadata or infer from array dimensions.
+     * Identifies spatial (x, y, z) vs non-spatial (c, t) dimensions and returns
+     * indices for extracting spatial-only shape/chunks.
+     */
+    private buildAxisMapping(originalNdim: number, originalChunks: number[], omeAxes: Array<{ name: string; type: string }> | null): AxisMapping {
+        const spatialIndices: number[] = []
+        const nonSpatialAxes: AxisMapping['nonSpatialAxes'] = []
+
+        if (omeAxes && omeAxes.length === originalNdim) {
+            // Use OME axes metadata to identify spatial vs non-spatial
+            for (let i = 0; i < omeAxes.length; i++) {
+                const axis = omeAxes[i]
+                if (axis.type === 'space') {
+                    spatialIndices.push(i)
+                } else {
+                    nonSpatialAxes.push({
+                        index: i,
+                        name: axis.name,
+                        chunkSize: originalChunks[i],
+                        defaultChunkCoord: 0
+                    })
+                }
+            }
+        } else {
+            // No OME axes metadata — infer from ndim.
+            // OME convention: leading dims are non-spatial (t, c), trailing are spatial (z, y, x)
+            if (originalNdim <= 3) {
+                // 2D [Y, X] or 3D [Z, Y, X] — all spatial
+                for (let i = 0; i < originalNdim; i++) {
+                    spatialIndices.push(i)
+                }
+            } else if (originalNdim === 4) {
+                // Assume [C, Z, Y, X]
+                nonSpatialAxes.push({ index: 0, name: 'c', chunkSize: originalChunks[0], defaultChunkCoord: 0 })
+                spatialIndices.push(1, 2, 3)
+            } else if (originalNdim === 5) {
+                // Assume [T, C, Z, Y, X]
+                nonSpatialAxes.push({ index: 0, name: 't', chunkSize: originalChunks[0], defaultChunkCoord: 0 })
+                nonSpatialAxes.push({ index: 1, name: 'c', chunkSize: originalChunks[1], defaultChunkCoord: 0 })
+                spatialIndices.push(2, 3, 4)
+            } else {
+                // Unknown layout — treat last 3 as spatial, rest as non-spatial
+                for (let i = 0; i < originalNdim - 3; i++) {
+                    nonSpatialAxes.push({ index: i, name: `dim${i}`, chunkSize: originalChunks[i], defaultChunkCoord: 0 })
+                }
+                for (let i = originalNdim - 3; i < originalNdim; i++) {
+                    spatialIndices.push(i)
+                }
+            }
+        }
+
+        return { originalNdim, spatialIndices, nonSpatialAxes }
     }
 
     /**
@@ -213,27 +313,74 @@ export class ZarrChunkClient {
     }
 
     /**
-     * Fetch a single chunk by coordinates.
-     * Returns the decoded TypedArray data.
+     * Fetch a single chunk by spatial coordinates.
+     * Uses the axis mapping to build full chunk coordinates including non-spatial dims.
+     * Returns the spatial-only decoded TypedArray data.
+     *
+     * @param level - Pyramid level
+     * @param x - Spatial X chunk index
+     * @param y - Spatial Y chunk index
+     * @param z - Spatial Z chunk index (for 3D)
+     * @param nonSpatialCoords - Optional overrides for non-spatial dimensions (e.g., channel index)
      */
-    async fetchChunk(level: number, x: number, y: number, z?: number): Promise<TypedArray | null> {
+    async fetchChunk(level: number, x: number, y: number, z?: number, nonSpatialCoords?: Record<string, number>): Promise<TypedArray | null> {
         try {
             const arr = await this.openLevel(level)
+            const mapping = this.axisMapping
 
-            // Build chunk coordinates based on array dimensions
             let chunkCoords: number[]
-            if (z !== undefined && arr.shape.length >= 3) {
-                // 3D case - order depends on zarr array layout
-                // Common orderings: [Z, Y, X] or [X, Y, Z] or [C, Z, Y, X]
-                // For now, assume [Z, Y, X] which is common for microscopy data
-                chunkCoords = [z, y, x]
+
+            if (mapping && mapping.originalNdim > mapping.spatialIndices.length) {
+                // Build full chunk coordinates using axis mapping
+                chunkCoords = new Array(mapping.originalNdim).fill(0)
+
+                // Set non-spatial axes to default values (or overrides)
+                for (const nsa of mapping.nonSpatialAxes) {
+                    chunkCoords[nsa.index] = nonSpatialCoords?.[nsa.name] ?? nsa.defaultChunkCoord
+                }
+
+                // Set spatial axes — spatialIndices are in [Z, Y, X] or [Y, X] order
+                const spatialCoords = z !== undefined && mapping.spatialIndices.length >= 3 ? [z, y, x] : [y, x]
+
+                for (let i = 0; i < spatialCoords.length && i < mapping.spatialIndices.length; i++) {
+                    chunkCoords[mapping.spatialIndices[i]] = spatialCoords[i]
+                }
             } else {
-                // 2D case - assume [Y, X] order
-                chunkCoords = [y, x]
+                // No non-spatial dims — use spatial coords directly
+                if (z !== undefined && arr.shape.length >= 3) {
+                    chunkCoords = [z, y, x]
+                } else {
+                    chunkCoords = [y, x]
+                }
             }
 
             const chunk = await arr.getChunk(chunkCoords)
-            return chunk.data as TypedArray
+            let data = chunk.data as TypedArray
+
+            // If there are non-spatial dimensions, extract the spatial-only slice.
+            // For non-spatial chunk sizes of 1 (common case), data starts at offset 0
+            // and has exactly spatialSize elements — no slicing needed.
+            if (mapping && mapping.nonSpatialAxes.length > 0) {
+                const spatialSize = mapping.spatialIndices.reduce((acc, idx) => acc * arr.chunks[idx], 1)
+                if (data.length > spatialSize) {
+                    // Compute offset for the requested non-spatial chunk coords
+                    // Data is in row-major order: leading dims have largest strides
+                    let offset = 0
+                    let stride = data.length
+                    for (let d = 0; d < mapping.originalNdim; d++) {
+                        stride = Math.floor(stride / arr.chunks[d])
+                        const isSpatial = mapping.spatialIndices.includes(d)
+                        if (!isSpatial) {
+                            // Use 0 within the chunk (we fetched the right chunk coord already)
+                            // This handles the case where non-spatial chunk size > 1
+                            offset += 0 * stride
+                        }
+                    }
+                    data = data.subarray(offset, offset + spatialSize) as TypedArray
+                }
+            }
+
+            return data
         } catch (err) {
             console.warn(`Failed to fetch chunk at level ${level}, x=${x}, y=${y}, z=${z}:`, err)
             return null
@@ -262,6 +409,7 @@ export class ZarrChunkClient {
     /**
      * Fetch a rectangular region using zarr.get with slices.
      * Useful for fetching exact viewport regions rather than whole chunks.
+     * Uses axis mapping to handle non-spatial dimensions.
      */
     async fetchRegion(
         level: number,
@@ -276,20 +424,51 @@ export class ZarrChunkClient {
     ): Promise<{ data: TypedArray; shape: number[] } | null> {
         try {
             const arr = await this.openLevel(level)
+            const mapping = this.axisMapping
 
-            // Build slices based on array dimensions
-            // Assume [Z, Y, X] or [Y, X] order
-            let result
-            if (region.zStart !== undefined && region.zEnd !== undefined && arr.shape.length >= 3) {
-                const zSlice = zarr.slice(region.zStart, region.zEnd)
-                const ySlice = zarr.slice(region.yStart, region.yEnd)
-                const xSlice = zarr.slice(region.xStart, region.xEnd)
-                result = await zarr.get(arr, [zSlice, ySlice, xSlice])
+            // Build slice selections for all dimensions
+            const selections: Array<ReturnType<typeof zarr.slice> | number> = []
+
+            if (mapping && mapping.originalNdim > mapping.spatialIndices.length) {
+                // Build full selections with non-spatial dims fixed to 0
+                for (let d = 0; d < mapping.originalNdim; d++) {
+                    const spatialIdx = mapping.spatialIndices.indexOf(d)
+                    if (spatialIdx === -1) {
+                        // Non-spatial dim — select index 0
+                        selections.push(0)
+                    } else if (mapping.spatialIndices.length >= 3) {
+                        // Spatial dim in [Z, Y, X] order
+                        if (spatialIdx === 0 && region.zStart !== undefined && region.zEnd !== undefined) {
+                            selections.push(zarr.slice(region.zStart, region.zEnd))
+                        } else if (spatialIdx === 1) {
+                            selections.push(zarr.slice(region.yStart, region.yEnd))
+                        } else if (spatialIdx === 2) {
+                            selections.push(zarr.slice(region.xStart, region.xEnd))
+                        } else {
+                            selections.push(zarr.slice(0, arr.shape[d]))
+                        }
+                    } else {
+                        // 2D spatial: [Y, X]
+                        if (spatialIdx === 0) {
+                            selections.push(zarr.slice(region.yStart, region.yEnd))
+                        } else {
+                            selections.push(zarr.slice(region.xStart, region.xEnd))
+                        }
+                    }
+                }
             } else {
-                const ySlice = zarr.slice(region.yStart, region.yEnd)
-                const xSlice = zarr.slice(region.xStart, region.xEnd)
-                result = await zarr.get(arr, [ySlice, xSlice])
+                // No non-spatial dims — use spatial coords directly
+                if (region.zStart !== undefined && region.zEnd !== undefined && arr.shape.length >= 3) {
+                    selections.push(zarr.slice(region.zStart, region.zEnd))
+                    selections.push(zarr.slice(region.yStart, region.yEnd))
+                    selections.push(zarr.slice(region.xStart, region.xEnd))
+                } else {
+                    selections.push(zarr.slice(region.yStart, region.yEnd))
+                    selections.push(zarr.slice(region.xStart, region.xEnd))
+                }
             }
+
+            const result = await zarr.get(arr, selections)
             return {
                 data: result.data as TypedArray,
                 shape: result.shape

@@ -82,10 +82,16 @@
     <header>
       <div id="controls">
         <label for="storeUrl">Zarr URL:</label>
-        <input
+        <!-- <input
           type="text"
           id="storeUrl"
           value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/present.ome.zarr"
+          style="width: 400px"
+        /> -->
+        <input
+          type="text"
+          id="storeUrl"
+          value="http://localhost:3001/K_HE_2_ome.zarr"
           style="width: 400px"
         />
 
@@ -135,7 +141,7 @@
   const infoPanel = document.getElementById('infoPanel')
   const levelSelect = document.getElementById('levelSelect')
 
-  // Create NiiVue instance
+  // Create NiiVue instance (exposed on window for debugging)
   const nv = new Niivue({
     logLevel: 'debug',
     dragMode: DRAG_MODE.pan,
@@ -171,6 +177,7 @@
   // Attach to canvas
   await nv.attachToCanvas(document.getElementById('gl1'))
   nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+  window.nv = nv
 
   // Update info panel with current viewport state
   function updateInfoPanel() {
@@ -234,7 +241,7 @@
       await nv.loadZarrFromServer(storeUrl, {
         maxVolumeSize: maxVolSize,
       })
-      nv.setColormap(nv.volumes[0].id)
+      nv.setColormap(nv.volumes[0].id, 'gray')
 
       // Show navigation controls
       navControls.style.display = 'flex'
