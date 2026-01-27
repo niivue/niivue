@@ -157,7 +157,11 @@ export class NVZarrImage {
     private datatypeCode: number
     private onChunkLoad?: (info: ChunkLoadInfo) => void
     private onLevelChange?: (info: ZarrLevelChangeInfo) => void
-    private pendingUpdate: boolean = false
+    private isUpdating: boolean = false
+    private needsUpdate: boolean = false
+    private currentAbortController: AbortController | null = null
+    private runningMin: number = Infinity
+    private runningMax: number = -Infinity
     // Canvas dimensions for coordinate scaling (screen coords -> volume coords)
     private canvasWidth: number = 256
     private canvasHeight: number = 256
@@ -534,29 +538,54 @@ export class NVZarrImage {
     }
 
     /**
-     * Update the virtual volume by fetching and assembling chunks
+     * Update the virtual volume by fetching and assembling chunks.
+     * Uses coalesce-and-retry debouncing: if called while already updating,
+     * the current fetch cycle is aborted and the latest viewport state is
+     * guaranteed to be rendered after the current cycle finishes.
      */
     private async updateVolume(): Promise<void> {
-        // Debounce rapid updates
-        if (this.pendingUpdate) {
+        // If already updating, mark that we need another pass and abort current fetches
+        if (this.isUpdating) {
+            this.needsUpdate = true
+            // Abort in-flight fetches so the current cycle finishes quickly
+            this.currentAbortController?.abort()
             return
         }
-        this.pendingUpdate = true
 
-        // Wait for next animation frame
-        await new Promise<void>((resolve) => {
-            requestAnimationFrame(() => {
-                resolve()
+        this.isUpdating = true
+
+        do {
+            this.needsUpdate = false
+
+            // Abort any previous in-flight fetches
+            this.currentAbortController?.abort()
+            const abortController = new AbortController()
+            this.currentAbortController = abortController
+
+            // Reset running calibration for this cycle
+            this.runningMin = Infinity
+            this.runningMax = -Infinity
+
+            // Wait for next animation frame to coalesce rapid calls
+            await new Promise<void>((resolve) => {
+                requestAnimationFrame(() => {
+                    resolve()
+                })
             })
-        })
 
-        // Clear volume buffer
-        this.clearVolumeData()
+            // If another update was requested during the rAF wait, skip this cycle
+            if (this.needsUpdate) {
+                continue
+            }
 
-        // Fetch and assemble visible chunks
-        await this.assembleVisibleChunks()
+            // Clear volume buffer, then immediately assemble cached chunks and render
+            this.clearVolumeData()
 
-        this.pendingUpdate = false
+            // Fetch and assemble visible chunks (progressive rendering)
+            await this.assembleVisibleChunks(abortController.signal)
+        } while (this.needsUpdate)
+
+        this.isUpdating = false
     }
 
     /**
@@ -574,12 +603,16 @@ export class NVZarrImage {
     }
 
     /**
-     * Fetch visible chunks and assemble them into the volume
+     * Fetch visible chunks and assemble them into the volume.
+     * Implements progressive rendering: cached chunks are assembled and rendered
+     * immediately, then uncached chunks are fetched individually with each one
+     * triggering a render as it arrives.
      */
-    private async assembleVisibleChunks(): Promise<void> {
+    private async assembleVisibleChunks(signal?: AbortSignal): Promise<void> {
         const chunks = this.viewport.getVisibleChunks()
         const level = this.viewport.getState().pyramidLevel
         const name = this.pyramidInfo.name
+        const total = chunks.length
 
         // Separate cached and uncached chunks
         const cachedChunks: ChunkCoord[] = []
@@ -594,7 +627,7 @@ export class NVZarrImage {
             }
         }
 
-        // Assemble cached chunks immediately
+        // Phase 1: Assemble all cached chunks synchronously (no black flash)
         for (const chunk of cachedChunks) {
             const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z)
             const data = this.chunkCache.get(key)
@@ -603,55 +636,83 @@ export class NVZarrImage {
             }
         }
 
-        // Fetch uncached chunks in parallel
-        if (uncachedChunks.length > 0) {
-            const loadPromises = uncachedChunks.map(async (chunk) => {
-                const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z)
-                this.chunkCache.startLoading(key)
-
-                const data = await this.chunkClient.fetchChunk(chunk.level, chunk.x, chunk.y, chunk.z, this.nonSpatialCoords)
-
-                this.chunkCache.doneLoading(key)
-
-                if (data) {
-                    this.chunkCache.set(key, data)
-                    // Assemble chunk if still at same level
-                    if (this.viewport.getState().pyramidLevel === chunk.level) {
-                        this.assembleChunkIntoVolume(chunk, data)
-                    }
-                }
-            })
-
-            // Report progress
-            let loaded = cachedChunks.length
-            const total = chunks.length
-
-            for (const promise of loadPromises) {
-                await promise
-                loaded++
-                this.onChunkLoad?.({
-                    level,
-                    chunksLoaded: loaded,
-                    chunksTotal: total
-                })
-            }
-        } else {
-            // All chunks were cached
+        // Render cached data immediately so user never sees a black frame
+        if (cachedChunks.length > 0) {
+            this.updateCalibration()
             this.onChunkLoad?.({
                 level,
-                chunksLoaded: chunks.length,
-                chunksTotal: chunks.length
+                chunksLoaded: cachedChunks.length,
+                chunksTotal: total
             })
         }
 
-        // Update calibration based on data
-        this.updateCalibration()
+        // Phase 2: Fetch uncached chunks with progressive rendering
+        if (uncachedChunks.length > 0) {
+            let loaded = cachedChunks.length
+
+            // Fire all fetches independently (not awaited sequentially)
+            const fetchPromises = uncachedChunks.map(async (chunk) => {
+                const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z)
+                this.chunkCache.startLoading(key)
+
+                try {
+                    const data = await this.chunkClient.fetchChunk(
+                        chunk.level, chunk.x, chunk.y, chunk.z,
+                        this.nonSpatialCoords, signal
+                    )
+
+                    this.chunkCache.doneLoading(key)
+
+                    // Skip assembly if this request was aborted
+                    if (signal?.aborted) {
+                        return
+                    }
+
+                    if (data) {
+                        this.chunkCache.set(key, data)
+                        // Assemble chunk if still at same level
+                        if (this.viewport.getState().pyramidLevel === chunk.level) {
+                            this.assembleChunkIntoVolume(chunk, data)
+                            // Progressive render: update calibration and notify per-chunk
+                            this.updateCalibration()
+                            loaded++
+                            this.onChunkLoad?.({
+                                level,
+                                chunksLoaded: loaded,
+                                chunksTotal: total
+                            })
+                        }
+                    } else {
+                        loaded++
+                    }
+                } catch (err: unknown) {
+                    // Always clean up loading state
+                    this.chunkCache.doneLoading(key)
+                    // Silently ignore abort errors; log others
+                    if (err instanceof DOMException && err.name === 'AbortError') {
+                        return
+                    }
+                    console.warn(`Failed to fetch chunk ${key}:`, err)
+                }
+            })
+
+            // Wait for all fetches to settle (they render progressively above)
+            await Promise.all(fetchPromises)
+        } else if (cachedChunks.length === 0) {
+            // No chunks at all — still report completion
+            this.onChunkLoad?.({
+                level,
+                chunksLoaded: 0,
+                chunksTotal: 0
+            })
+        }
     }
 
     /**
      * Assemble a single chunk into the virtual volume with scaling.
      * Uses the center-based coordinate system where data is scaled
      * to fill the texture based on the current zoom level.
+     * Also tracks running min/max for incremental calibration.
      */
     private assembleChunkIntoVolume(chunk: ChunkCoord, data: TypedArray): void {
         const placement = this.viewport.getChunkPlacement(chunk.x, chunk.y, chunk.z)
@@ -663,6 +724,19 @@ export class NVZarrImage {
         // Skip if nothing to copy
         if (placement.copyWidth <= 0 || placement.copyHeight <= 0 || placement.copyDepth <= 0) {
             return
+        }
+
+        // Track min/max from this chunk's data for incremental calibration
+        // Scan the chunk data (small) rather than the full volume buffer
+        const step = Math.max(1, Math.floor(data.length / 2000))
+        for (let i = 0; i < data.length; i += step) {
+            const val = data[i]
+            if (val < this.runningMin) {
+                this.runningMin = val
+            }
+            if (val > this.runningMax) {
+                this.runningMax = val
+            }
         }
 
         // Calculate the destination size after scaling
@@ -723,32 +797,17 @@ export class NVZarrImage {
     }
 
     /**
-     * Update calibration values based on actual data
+     * Update calibration values using running min/max tracked during chunk assembly.
+     * Avoids rescanning the entire volume buffer on every call.
      */
     private updateCalibration(): void {
-        const img = this.image.img as TypedArray
-        let min = Infinity
-        let max = -Infinity
-
-        // Sample the data to find min/max (don't scan entire volume for performance)
-        const step = Math.max(1, Math.floor(img.length / 10000))
-        for (let i = 0; i < img.length; i += step) {
-            const val = img[i]
-            if (val < min) {
-                min = val
-            }
-            if (val > max) {
-                max = val
-            }
-        }
-
-        if (min < Infinity && max > -Infinity) {
-            this.image.cal_min = min
-            this.image.cal_max = max
-            this.image.robust_min = min
-            this.image.robust_max = max
-            this.image.global_min = min
-            this.image.global_max = max
+        if (this.runningMin < Infinity && this.runningMax > -Infinity) {
+            this.image.cal_min = this.runningMin
+            this.image.cal_max = this.runningMax
+            this.image.robust_min = this.runningMin
+            this.image.robust_max = this.runningMax
+            this.image.global_min = this.runningMin
+            this.image.global_max = this.runningMax
         }
     }
 

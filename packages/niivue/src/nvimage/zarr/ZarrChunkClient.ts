@@ -323,7 +323,7 @@ export class ZarrChunkClient {
      * @param z - Spatial Z chunk index (for 3D)
      * @param nonSpatialCoords - Optional overrides for non-spatial dimensions (e.g., channel index)
      */
-    async fetchChunk(level: number, x: number, y: number, z?: number, nonSpatialCoords?: Record<string, number>): Promise<TypedArray | null> {
+    async fetchChunk(level: number, x: number, y: number, z?: number, nonSpatialCoords?: Record<string, number>, signal?: AbortSignal): Promise<TypedArray | null> {
         try {
             const arr = await this.openLevel(level)
             const mapping = this.axisMapping
@@ -354,7 +354,7 @@ export class ZarrChunkClient {
                 }
             }
 
-            const chunk = await arr.getChunk(chunkCoords)
+            const chunk = await arr.getChunk(chunkCoords, { signal })
             let data = chunk.data as TypedArray
 
             // If there are non-spatial dimensions, extract the spatial-only slice.

@@ -453,11 +453,29 @@ export class ZarrViewport {
 
                     if (chunks.length >= MAX_CHUNKS) {
                         console.warn(`Zarr: Chunk count capped at ${MAX_CHUNKS}. Consider using a lower resolution level.`)
-                        return chunks
+                        break
                     }
                 }
+                if (chunks.length >= MAX_CHUNKS) {
+                    break
+                }
+            }
+            if (chunks.length >= MAX_CHUNKS) {
+                break
             }
         }
+
+        // Sort chunks by distance from viewport center (closest first)
+        // so that progressive rendering shows center content first
+        const centerChunkX = (startChunkX + endChunkX) / 2
+        const centerChunkY = (startChunkY + endChunkY) / 2
+        const centerChunkZ = (startChunkZ + endChunkZ) / 2
+
+        chunks.sort((a, b) => {
+            const distA = (a.x - centerChunkX) ** 2 + (a.y - centerChunkY) ** 2 + ((a.z ?? 0) - centerChunkZ) ** 2
+            const distB = (b.x - centerChunkX) ** 2 + (b.y - centerChunkY) ** 2 + ((b.z ?? 0) - centerChunkZ) ** 2
+            return distA - distB
+        })
 
         return chunks
     }
