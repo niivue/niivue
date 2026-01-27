@@ -59,6 +59,8 @@ import {
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '@/nvlabel'
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
+import { NVTiffImage, type TileLoadInfo, type LevelChangeInfo } from '@/nvimage/tiff'
+import { NVZarrImage, type ChunkLoadInfo, type ZarrLevelChangeInfo, type TileBounds } from '@/nvimage/zarr'
 import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
@@ -92,6 +94,10 @@ export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
 
 export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
+export { NVTiffImage, TiffTileClient, TiffTileCache, TiffViewport } from '@/nvimage/tiff'
+export type { TileLoadInfo, LevelChangeInfo, PyramidInfo, PyramidLevel, TileCoord, TiffViewportState } from '@/nvimage/tiff'
+export { NVZarrImage, ZarrChunkClient, ZarrChunkCache, ZarrViewport } from '@/nvimage/zarr'
+export type { ChunkLoadInfo, ZarrLevelChangeInfo, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord, ZarrViewportState, TileBounds } from '@/nvimage/zarr'
 export * from '@/nvimage/affineUtils'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '@/nvdocument'
@@ -559,6 +565,56 @@ export class Niivue {
      * @param oldValue - The previous value of the option.
      */
     onOptsChange: (propertyName: keyof NVConfigOptions, newValue: NVConfigOptions[keyof NVConfigOptions], oldValue: NVConfigOptions[keyof NVConfigOptions]) => void = () => {}
+
+    /**
+     * Callback when the pyramid level changes during TIFF pyramid viewing.
+     * @example
+     * niivue.onPyramidLevelChange = (info) => {
+     *   console.log('level: ', info.level)
+     *   console.log('total levels: ', info.totalLevels)
+     *   console.log('dimensions: ', info.levelWidth, 'x', info.levelHeight)
+     * }
+     */
+    onPyramidLevelChange: (info: LevelChangeInfo) => void = () => {}
+
+    /**
+     * Callback when tiles are loaded during TIFF pyramid viewing.
+     * @example
+     * niivue.onTileLoadProgress = (info) => {
+     *   console.log('loaded: ', info.tilesLoaded, '/', info.tilesTotal)
+     * }
+     */
+    onTileLoadProgress: (info: TileLoadInfo) => void = () => {}
+
+    /** Active pyramidal TIFF image (null if not in TIFF viewing mode) */
+    tiffImage: NVTiffImage | null = null
+
+    /** TIFF viewport center position at mouse down (for drag calculations) */
+    private tiffCenterAtMouseDown: { x: number; y: number } | null = null
+
+    /** Active zarr image (null if not in zarr viewing mode) */
+    zarrImage: NVZarrImage | null = null
+
+    /** Zarr viewport center position at mouse down (for drag calculations) */
+    private zarrCenterAtMouseDown: { x: number; y: number; z: number } | null = null
+
+    /**
+     * Callback triggered when pyramid level changes for zarr images.
+     * @example
+     * niivue.onZarrLevelChange = (info) => {
+     *   console.log('level: ', info.level, '/', info.totalLevels)
+     * }
+     */
+    onZarrLevelChange: (info: ZarrLevelChangeInfo) => void = () => {}
+
+    /**
+     * Callback triggered when chunks are loaded for zarr images.
+     * @example
+     * niivue.onZarrChunkLoadProgress = (info) => {
+     *   console.log('loaded: ', info.chunksLoaded, '/', info.chunksTotal)
+     * }
+     */
+    onZarrChunkLoadProgress: (info: ChunkLoadInfo) => void = () => {}
 
     document = new NVDocument()
 
@@ -1077,6 +1133,12 @@ export class Niivue {
         this.canvas.height = resizeResult.height
 
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+
+        // Update zarr image canvas dimensions for coordinate scaling
+        if (this.zarrImage) {
+            this.zarrImage.setCanvasDimensions(resizeResult.width, resizeResult.height)
+        }
+
         this.textSizePoints()
         this.drawScene()
     }
@@ -1358,6 +1420,16 @@ export class Niivue {
             this.setDragStart(pos.x, pos.y)
             if (!this.uiData.isDragging) {
                 this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
+                // Store TIFF viewport center at drag start
+                if (this.tiffImage) {
+                    const state = this.tiffImage.getViewportState()
+                    this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
+                }
+                // Store Zarr viewport center at drag start
+                if (this.zarrImage) {
+                    const state = this.zarrImage.getViewportState()
+                    this.zarrCenterAtMouseDown = { x: state.centerX, y: state.centerY, z: state.centerZ }
+                }
             }
             this.uiData.isDragging = true
             this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
@@ -1986,6 +2058,16 @@ export class Niivue {
             // Initialize drag state if not already dragging
             if (!this.uiData.isDragging) {
                 this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
+                // Store TIFF viewport center at drag start
+                if (this.tiffImage) {
+                    const state = this.tiffImage.getViewportState()
+                    this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
+                }
+                // Store Zarr viewport center at drag start
+                if (this.zarrImage) {
+                    const state = this.zarrImage.getViewportState()
+                    this.zarrCenterAtMouseDown = { x: state.centerX, y: state.centerY, z: state.centerZ }
+                }
             }
             this.uiData.isDragging = true
 
@@ -2232,6 +2314,58 @@ export class Niivue {
 
         e.preventDefault()
         e.stopPropagation()
+
+        // Handle wheel for TIFF zoom (zoom towards cursor position, auto-selects pyramid level)
+        if (this.tiffImage) {
+            const rect = this.canvas!.getBoundingClientRect()
+            // Convert CSS pixels to canvas pixels (account for device pixel ratio)
+            const screenX = (e.clientX - rect.left) * this.uiData.dpr!
+            const screenY = (e.clientY - rect.top) * this.uiData.dpr!
+
+            // Zoom factor: scroll down = zoom out (0.9), scroll up = zoom in (1.1)
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
+
+            this.tiffImage
+                .zoomAt(zoomFactor, screenX, screenY)
+                .then(() => {
+                    this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to zoom TIFF:', err)
+                })
+            return
+        }
+
+        // Handle wheel for Zarr zoom (zoom towards cursor position, auto-selects pyramid level)
+        if (this.zarrImage) {
+            const rect = this.canvas!.getBoundingClientRect()
+            // Convert CSS pixels to canvas pixels (account for device pixel ratio)
+            const screenX = (e.clientX - rect.left) * this.uiData.dpr!
+            const screenY = (e.clientY - rect.top) * this.uiData.dpr!
+
+            // Find which tile the mouse is in and get its bounds
+            const tileIdx = this.tileIndex(screenX, screenY)
+            let tileBounds: TileBounds | undefined
+            if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+                const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+                tileBounds = { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
+            }
+
+            // Zoom factor: scroll down = zoom out (0.9), scroll up = zoom in (1.1)
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
+
+            this.zarrImage
+                .zoomAt(zoomFactor, screenX, screenY, undefined, tileBounds)
+                .then(() => {
+                    this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to zoom Zarr:', err)
+                })
+            return
+        }
 
         // ROI Selection logic
         if (
@@ -4112,6 +4246,44 @@ export class Niivue {
      * @internal
      */
     sliceScroll2D(posChange: number, x: number, y: number, isDelta = true): void {
+        // TIFF images use their own zoom system - redirect scroll to TIFF viewport
+        if (this.tiffImage) {
+            const zoomFactor = posChange > 0 ? 0.9 : 1.1
+            this.tiffImage
+                .zoomAt(zoomFactor, x, y)
+                .then(() => {
+                    this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to zoom TIFF:', err)
+                })
+            return
+        }
+
+        // Zarr images use their own zoom system - redirect scroll to Zarr viewport
+        if (this.zarrImage) {
+            // Find which tile the mouse is in and get its bounds
+            const tileIdx = this.tileIndex(x, y)
+            let tileBounds: TileBounds | undefined
+            if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
+                const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
+                tileBounds = { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
+            }
+
+            const zoomFactor = posChange > 0 ? 0.9 : 1.1
+            this.zarrImage
+                .zoomAt(zoomFactor, x, y, undefined, tileBounds)
+                .then(() => {
+                    this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to zoom Zarr:', err)
+                })
+            return
+        }
+
         // Check if the canvas has focus
         if (
             !SliceNavigation.shouldProcessScroll({
@@ -4905,6 +5077,143 @@ export class Niivue {
         // }
         // await this.addVolumeFromUrl(imageOptions)
         // return this
+    }
+
+    /**
+     * Load a pyramidal TIFF image from a tile server.
+     * NiiVue acts as a tile client, fetching tiles on demand from the server.
+     * Use shift+scroll wheel to change pyramid levels.
+     * @param serverUrl - Base URL of the tile server (e.g., "http://localhost:3000")
+     * @param imageName - Name/path of the image on the server
+     * @param options - Optional configuration overrides
+     * @returns Promise that resolves when the TIFF is loaded
+     * @example
+     * await niivue.loadTiffFromServer('http://localhost:3000', 'slide.tif')
+     */
+    async loadTiffFromServer(
+        serverUrl: string,
+        imageName: string,
+        options: {
+            textureWidth?: number
+            textureHeight?: number
+            tileUrlPattern?: string
+            infoUrlPattern?: string
+        } = {}
+    ): Promise<this> {
+        // Get canvas dimensions for texture size
+        const canvasWidth = this.canvas?.width ?? 1024
+        const canvasHeight = this.canvas?.height ?? 1024
+        const maxTextureSize = this.gl?.getParameter(this.gl.MAX_TEXTURE_SIZE) ?? 8192
+
+        this.tiffImage = await NVTiffImage.create({
+            tileServerUrl: serverUrl,
+            imageName,
+            textureWidth: options.textureWidth ?? canvasWidth,
+            textureHeight: options.textureHeight ?? canvasHeight,
+            maxTextureSize,
+            cacheSize: this.opts.tiffCacheSize,
+            tileUrlPattern: options.tileUrlPattern,
+            infoUrlPattern: options.infoUrlPattern,
+            onTileLoad: (info) => {
+                this.onTileLoadProgress(info)
+                // Update the GL texture when tiles are loaded
+                this.updateGLVolume()
+            },
+            onLevelChange: (info) => {
+                this.onPyramidLevelChange(info)
+            }
+        })
+
+        // Set the NVImage as the single volume and back reference
+        const nvImage = this.tiffImage.getNVImage()
+        this.volumes = [nvImage]
+        this.back = nvImage
+
+        // Configure for 2D axial viewing BEFORE updateGLVolume (which calls drawScene)
+        this.opts.sliceType = SLICE_TYPE.AXIAL
+
+        // Reset NiiVue's zoom/pan state - TIFF uses its own viewport system
+        this.scene.pan2Dxyzmm = [0, 0, 0, 1] // Reset pan and zoom to default
+        this.scene.volScaleMultiplier = 1 // Reset 3D zoom multiplier
+
+        // Update GL volume (creates volumeObject3D and draws scene)
+        this.updateGLVolume()
+
+        return this
+    }
+
+    /**
+     * Load a zarr dataset from a remote store.
+     *
+     * Creates a virtual NIfTI volume from the zarr data, enabling full
+     * multiplanar and volume rendering capabilities for large datasets.
+     *
+     * @param storeUrl - URL of the zarr store (e.g., "http://localhost:8090/lightsheet.zarr")
+     * @param options - Optional configuration
+     * @param options.maxVolumeSize - Maximum dimension for virtual volume (default 256)
+     * @returns Promise resolving to this Niivue instance
+     *
+     * @example
+     * await niivue.loadZarrFromServer('http://localhost:8090/lightsheet.zarr')
+     */
+    async loadZarrFromServer(
+        storeUrl: string,
+        options: {
+            maxVolumeSize?: number
+        } = {}
+    ): Promise<this> {
+        // Get WebGL 3D texture size limit
+        const max3DTextureSize = this.gl?.getParameter(this.gl.MAX_3D_TEXTURE_SIZE) ?? 2048
+
+        // Get canvas dimensions for coordinate scaling
+        const canvasWidth = this.canvas?.width ?? 256
+        const canvasHeight = this.canvas?.height ?? 256
+
+        this.zarrImage = await NVZarrImage.create({
+            storeUrl,
+            maxVolumeSize: options.maxVolumeSize ?? 256,
+            maxTextureSize: max3DTextureSize,
+            canvasWidth,
+            canvasHeight,
+            channel: 1,
+            cacheSize: this.opts.zarrCacheSize ?? 1000,
+            prefetchRings: this.opts.zarrPrefetchRings ?? 10,
+            onChunkLoad: (info) => {
+                this.onZarrChunkLoadProgress(info)
+                // Update the GL texture when chunks are loaded
+                this.updateGLVolume()
+                // this.drawScene()
+            },
+            onLevelChange: (info) => {
+                this.onZarrLevelChange(info)
+            },
+            getTileBounds: () => {
+                // Get tile bounds from screenSlices for accurate coordinate conversion
+                // Usually tile 0 contains the main view for zarr/2D images
+                if (this.screenSlices.length > 0) {
+                    const ltwh = this.screenSlices[0].leftTopWidthHeight
+                    return { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
+                }
+                return null
+            }
+        })
+
+        // Set the NVImage as the single volume and back reference
+        const nvImage = this.zarrImage.getNVImage()
+        this.volumes = [nvImage]
+        this.back = nvImage
+
+        // Reset NiiVue's zoom/pan state
+        this.scene.pan2Dxyzmm = [0, 0, 0, 1]
+        this.scene.volScaleMultiplier = 1
+
+        // Update GL volume (creates volumeObject3D and draws scene)
+        this.updateGLVolume()
+
+        // Trigger resize to ensure coordinate transforms are properly initialized
+        this.resizeListener()
+
+        return this
     }
 
     /**
@@ -6517,11 +6826,11 @@ export class Niivue {
             if (isAboveMax2D) {
                 log.error(`Image dimensions exceed maximum texture size of hardware.`)
             }
-            if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
-                log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
-                // high res 2D image
+            // Use 2D texture for any single-slice RGBA image (TIFF tiles, histology, etc.)
+            if (hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
+                log.info(`RGBA 2D image (${hdr.dims[1]}×${hdr.dims[2]}) using Texture2D`)
                 this.opts.is2DSliceShader = true
-                outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array)
+                this.volumeTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array, false)
                 return
             }
             if (isAboveMax3D) {
@@ -7896,6 +8205,89 @@ export class Niivue {
      * @internal
      */
     dragForPanZoom(startXYendXY: number[]): void {
+        // Handle TIFF images with their own pan/zoom system
+        if (this.tiffImage && this.tiffCenterAtMouseDown) {
+            // Calculate cumulative delta from drag start to current position
+            const deltaX = startXYendXY[2] - startXYendXY[0]
+            const deltaY = startXYendXY[3] - startXYendXY[1]
+
+            // Skip update if there's no actual movement (prevents infinite loop on click)
+            if (deltaX === 0 && deltaY === 0) {
+                return
+            }
+
+            // Get the effective scale to convert screen pixels to image coordinates
+            const viewportState = this.tiffImage.getViewportState()
+            const pyramidInfo = this.tiffImage.getPyramidInfo()
+            const level0 = pyramidInfo.levels[0]
+            const textureWidth = this.canvas?.width ?? 1024
+            const textureHeight = this.canvas?.height ?? 1024
+            const baseScale = Math.min(textureWidth / level0.width, textureHeight / level0.height)
+            const effectiveScale = baseScale * viewportState.zoom
+
+            // Calculate new center: startingCenter - delta/scale
+            // (negative because dragging right should move viewport left in image space)
+            const newCenterX = this.tiffCenterAtMouseDown.x - deltaX / effectiveScale
+            const newCenterY = this.tiffCenterAtMouseDown.y - deltaY / effectiveScale
+
+            // Skip update if center position hasn't actually changed (prevents loop after drag stops)
+            if (Math.abs(newCenterX - viewportState.centerX) < 0.001 && Math.abs(newCenterY - viewportState.centerY) < 0.001) {
+                return
+            }
+
+            // Update viewport state with new center
+            this.tiffImage
+                .setViewportState({ centerX: newCenterX, centerY: newCenterY })
+                .then(() => {
+                    // this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to pan TIFF:', err)
+                })
+            this.canvas!.focus()
+            return
+        }
+
+        // Handle Zarr images with their own pan/zoom system
+        if (this.zarrImage && this.zarrCenterAtMouseDown) {
+            // Calculate cumulative delta from drag start to current position
+            const deltaX = startXYendXY[2] - startXYendXY[0]
+            const deltaY = startXYendXY[3] - startXYendXY[1]
+
+            // Skip update if there's no actual movement (prevents infinite loop on click)
+            if (deltaX === 0 && deltaY === 0) {
+                return
+            }
+
+            // Get the effective scale to convert screen pixels to image coordinates
+            const viewportState = this.zarrImage.getViewportState()
+            const effectiveScale = this.zarrImage.getEffectiveScale()
+
+            // Calculate new center: startingCenter + delta/scale
+            // (positive to match standard NiiVue pan direction)
+            const newCenterX = this.zarrCenterAtMouseDown.x - deltaX / effectiveScale
+            const newCenterY = this.zarrCenterAtMouseDown.y - deltaY / effectiveScale
+
+            // Skip update if center position hasn't actually changed (prevents loop after drag stops)
+            if (Math.abs(newCenterX - viewportState.centerX) < 0.001 && Math.abs(newCenterY - viewportState.centerY) < 0.001) {
+                return
+            }
+
+            // Update viewport state with new center
+            this.zarrImage
+                .setViewportState({ centerX: newCenterX, centerY: newCenterY })
+                .then(() => {
+                    // this.updateGLVolume()
+                    this.drawScene()
+                })
+                .catch((err) => {
+                    log.error('Failed to pan Zarr:', err)
+                })
+            this.canvas!.focus()
+            return
+        }
+
         const endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3])
         if (isNaN(endMM[0])) {
             return
@@ -11239,9 +11631,13 @@ export class Niivue {
      * Call this at the start of every draw pass if multiple instances share a GL context.
      */
     private bindTextures(): void {
-        // Volume (3D texture)
+        // Volume texture (2D or 3D depending on is2DSliceShader)
         this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL) // == gl.TEXTURE0
-        this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
+        if (this.opts.is2DSliceShader) {
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.volumeTexture)
+        } else {
+            this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
+        }
 
         // Overlay (3D texture)
         this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE2_OVERLAY_VOL) // == gl.TEXTURE2

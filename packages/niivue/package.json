@@ -41,10 +41,10 @@
     "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
     "pub": "npm run build && npm publish --access public",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .ts",
     "lint:ts": "tsc --noEmit",
-    "lint:fix": "eslint --fix .",
-    "lint:debug": "DEBUG=eslint:cli-engine eslint .",
+    "lint:fix": "eslint --fix . --ext .ts",
+    "lint:debug": "DEBUG=eslint:cli-engine eslint . --ext .ts",
     "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
     "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
