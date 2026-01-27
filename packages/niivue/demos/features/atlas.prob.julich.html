@@ -62,7 +62,7 @@
      window.alert("Probabilistic Julich-Brain Atlas v3.1 2024-06-23 DOI: 10.25493/KNSN-XB4")
   }
   clipBtn.onclick = function() {
-    const depth = nv1.scene.clipPlaneDepthAziElev[0]
+    const depth = nv1.scene.clipPlaneDepthAziElevs[0]
     if (depth >= 1.0) {
       nv1.setClipPlane([0.0, 180, 30])
     } else {
