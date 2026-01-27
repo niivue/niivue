@@ -669,11 +669,8 @@ export class Niivue extends EventTarget {
      * controller.abort() // removes the listener
      * ```
      */
-    addEventListener<K extends keyof NiivueEventMap>(
-        type: K,
-        listener: NiivueEventListener<K>,
-        options?: NiivueEventListenerOptions
-    ): void
+    addEventListener<K extends keyof NiivueEventMap>(type: K, listener: NiivueEventListener<K>, options?: NiivueEventListenerOptions): void
+
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: NiivueEventListenerOptions): void {
         super.addEventListener(type, listener as EventListener, options)
     }
@@ -684,11 +681,8 @@ export class Niivue extends EventTarget {
      * @param listener - Event listener function to remove
      * @param options - Event listener options
      */
-    removeEventListener<K extends keyof NiivueEventMap>(
-        type: K,
-        listener: NiivueEventListener<K>,
-        options?: NiivueEventListenerOptions
-    ): void
+    removeEventListener<K extends keyof NiivueEventMap>(type: K, listener: NiivueEventListener<K>, options?: NiivueEventListenerOptions): void
+
     removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: NiivueEventListenerOptions): void {
         super.removeEventListener(type, listener as EventListener, options)
     }
