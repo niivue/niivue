@@ -39,13 +39,10 @@ export class BrainchopService {
    */
   async initialize(): Promise<void> {
     if (this.state.isInitialized) {
-      console.log('BrainchopService already initialized')
       return
     }
 
     try {
-      console.log('Initializing BrainchopService...')
-
       // Initialize TensorFlow.js and model manager
       await this.modelManager.initialize()
 
@@ -54,8 +51,6 @@ export class BrainchopService {
       this.state.availableMemoryMB = memory.numBytes / 1024 / 1024
 
       this.state.isInitialized = true
-      console.log('BrainchopService initialized successfully')
-      console.log(`Available GPU memory: ${this.state.availableMemoryMB.toFixed(2)} MB`)
     } catch (error) {
       console.error('Failed to initialize BrainchopService:', error)
       throw new Error(`BrainchopService initialization failed: ${error}`)
@@ -204,7 +199,6 @@ export class BrainchopService {
       originalShape[0] !== 256 || originalShape[1] !== 256 || originalShape[2] !== 256
 
     if (needsResampling) {
-      console.log('[BrainchopService] Resampling segmentation back to original space:', originalShape)
       data = await this.imagePreprocessor.resampleToOriginalSpace(
         data,
         originalShape,
@@ -212,7 +206,6 @@ export class BrainchopService {
       )
     }
 
-    // Log raw model output statistics
     // Find min/max without spread operator (to avoid stack overflow)
     let dataMin = data[0]
     let dataMax = data[0]
@@ -221,13 +214,6 @@ export class BrainchopService {
       if (data[i] > dataMax) dataMax = data[i]
     }
 
-    console.log('[BrainchopService] Raw model output:', {
-      min: dataMin,
-      max: dataMax,
-      length: data.length,
-      sample: Array.from(data.slice(0, 10))
-    })
-
     // Convert Float32Array to Uint8Array for label data
     // If data is in 0-1 range (probabilities), scale to 0-255
     // If data is already integer labels, keep as is
@@ -235,23 +221,15 @@ export class BrainchopService {
 
     if (dataMax <= 1.0 && dataMax > 0) {
       // Probability output - threshold at 0.5 and convert to binary mask
-      console.log('[BrainchopService] Model output appears to be probabilities, thresholding at 0.5')
       for (let i = 0; i < data.length; i++) {
         uint8Data[i] = data[i] > 0.5 ? 1 : 0
       }
     } else {
       // Integer labels - round to nearest integer
-      console.log('[BrainchopService] Model output appears to be integer labels')
       for (let i = 0; i < data.length; i++) {
         uint8Data[i] = Math.round(data[i])
       }
     }
-
-    console.log('[BrainchopService] Segmentation data:', {
-      length: uint8Data.length,
-      nonZeroCount: uint8Data.filter(v => v > 0).length,
-      uniqueValues: [...new Set(uint8Data)].sort((a, b) => a - b)
-    })
 
     // Clone the source volume - this preserves all transformations automatically
     const overlayVolume = sourceVolume.clone()
@@ -272,6 +250,14 @@ export class BrainchopService {
       overlayVolume.hdr.scl_slope = 1
     }
 
+    // Set cal_min and cal_max for proper display
+    overlayVolume.cal_min = 0
+    overlayVolume.cal_max = dataMax
+
+    // Update global_min and global_max
+    overlayVolume.global_min = dataMin
+    overlayVolume.global_max = dataMax
+
     // Set colormap
     if (modelInfo.type === 'parcellation') {
       overlayVolume.colormap = 'freesurfer'
@@ -280,12 +266,6 @@ export class BrainchopService {
     } else {
       overlayVolume.colormap = 'actc'
     }
-
-    console.log('[BrainchopService] Created overlay volume:', {
-      name: overlayVolume.name,
-      dims: overlayVolume.dims,
-      colormap: overlayVolume.colormap
-    })
 
     return overlayVolume
   }
@@ -375,7 +355,6 @@ export class BrainchopService {
     this.state.isInitialized = false
     this.state.isRunning = false
     this.state.currentModel = null
-    console.log('BrainchopService disposed')
   }
 }
 

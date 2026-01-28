@@ -27,14 +27,6 @@ export class ImagePreprocessor {
     // Extract volume data - volume should already be conformed to 256^3 @ 1mm by NiiVue's conform()
     const volumeData = this.extractVolumeData(volume)
 
-    // Debug: log all available dimension info
-    console.log('[ImagePreprocessor] Volume dimension sources:', {
-      'volume.dims': volume.dims,
-      'volume.hdr?.dims': volume.hdr?.dims,
-      'dataLength': volumeData.length,
-      'expected256³': 256 * 256 * 256
-    })
-
     // Extract original shape
     let originalShape: number[]
     if (volume.hdr?.dims && volume.hdr.dims.length > 3) {
@@ -49,33 +41,21 @@ export class ImagePreprocessor {
       throw new Error('Cannot determine volume dimensions')
     }
 
-    console.log('[ImagePreprocessor] Original shape:', originalShape)
-
     // Extract original voxel size
     const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
     const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
-
-    console.log('[ImagePreprocessor] Original voxel size:', originalVoxelSize)
-
-    // Log affine matrix for debugging
-    const affine = this.extractAffineMatrix(volume)
-    console.log('[ImagePreprocessor] Affine matrix:', affine)
 
     // Check if volume needs resampling to 256³
     let processedData = volumeData
     let finalShape = originalShape
 
     if (volumeData.length !== 256 * 256 * 256) {
-      console.log('[ImagePreprocessor] Volume is not 256³, resampling...')
       onProgress?.(10, 'Resampling to 256³ @ 1mm')
 
       // Resample to 256³
       processedData = await this.resampleVolume(volumeData, originalShape, volume)
       finalShape = [256, 256, 256]
-
-      console.log('[ImagePreprocessor] Resampled to 256³')
     } else {
-      console.log('[ImagePreprocessor] Volume is already 256³')
       finalShape = [256, 256, 256]
     }
 
@@ -184,8 +164,6 @@ export class ImagePreprocessor {
       originalAffine[2][0] * inCenter[0] + originalAffine[2][1] * inCenter[1] + originalAffine[2][2] * inCenter[2] + originalAffine[2][3]
     ]
 
-    console.log('[ImagePreprocessor] Input center in physical space:', Pxyz_c)
-
     // 2. Extract pure rotation (divide out voxel size)
     const rotation: number[][] = []
     for (let i = 0; i < 3; i++) {
@@ -213,16 +191,12 @@ export class ImagePreprocessor {
       MdcD[2][0] * outCenter[0] + MdcD[2][1] * outCenter[1] + MdcD[2][2] * outCenter[2]
     ]
 
-    console.log('[ImagePreprocessor] Output center in physical space:', vol_center)
-
     // 5. Translation = input_center - output_center
     const translate = [
       Pxyz_c[0] - vol_center[0],
       Pxyz_c[1] - vol_center[1],
       Pxyz_c[2] - vol_center[2]
     ]
-
-    console.log('[ImagePreprocessor] Translation:', translate)
 
     // 6. Build output affine
     const newAffine: number[][] = [
@@ -231,8 +205,6 @@ export class ImagePreprocessor {
       [MdcD[2][0], MdcD[2][1], MdcD[2][2], translate[2]],
       [0, 0, 0, 1]
     ]
-
-    console.log('[ImagePreprocessor] New affine matrix:', newAffine)
 
     return newAffine
   }
@@ -285,15 +257,6 @@ export class ImagePreprocessor {
 
     // Calculate physical center of target volume (in mm)
     const targetCenterPhysical = [targetX / 2, targetY / 2, targetZ / 2]
-
-    console.log('[ImagePreprocessor] Resampling with centering:', {
-      originalShape: [origX, origY, origZ],
-      originalPhysicalCenter: origCenterPhysical,
-      targetPhysicalCenter: targetCenterPhysical,
-      voxelSize,
-      originalPhysicalExtent: [origX * voxelSize[0], origY * voxelSize[1], origZ * voxelSize[2]],
-      targetPhysicalExtent: [targetX, targetY, targetZ]
-    })
 
     const resampled = new Float32Array(targetX * targetY * targetZ)
 
@@ -499,12 +462,6 @@ export class ImagePreprocessor {
     ]
 
     const targetCenterPhysical = [targetX / 2, targetY / 2, targetZ / 2]
-
-    console.log('[ImagePreprocessor] Reverse resampling with centering:', {
-      originalPhysicalCenter: origCenterPhysical,
-      targetPhysicalCenter: targetCenterPhysical,
-      originalVoxelSize
-    })
 
     const resampled = new Float32Array(origX * origY * origZ)
 

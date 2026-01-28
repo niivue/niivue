@@ -81,7 +81,6 @@ export class InferenceEngine {
       if (inputShape && inputShape.length === 5 && inputTensor.shape.length === 4) {
         // Expand dims to add channel dimension: [1, 256, 256, 256] -> [1, 256, 256, 256, 1]
         modelInput = tf.expandDims(inputTensor, -1) as any
-        console.log('[InferenceEngine] Expanded input shape from', inputTensor.shape, 'to', modelInput.shape)
       }
 
       // Run model prediction

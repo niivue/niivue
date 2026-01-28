@@ -18,10 +18,6 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
       // Load model.json via IPC
       const { modelJson, basePath } = await window.electron.loadBrainchopModel(this.modelPath)
 
-      console.log('[ElectronIPCModelLoader] Model JSON loaded')
-      console.log('[ElectronIPCModelLoader] Base path:', basePath)
-      console.log('[ElectronIPCModelLoader] Weights manifest:', JSON.stringify(modelJson.weightsManifest, null, 2))
-
       // Extract weight specs and paths from model.json
       const weightsManifest = modelJson.weightsManifest
       if (!weightsManifest || weightsManifest.length === 0) {
@@ -41,9 +37,6 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
         }
       }
 
-      console.log('[ElectronIPCModelLoader] Weight specs count:', weightSpecs.length)
-      console.log('[ElectronIPCModelLoader] Weight files to load:', weightFiles)
-
       // Calculate expected total size from weight specs
       let expectedSize = 0
       for (const spec of weightSpecs) {
@@ -53,24 +46,18 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
         const bytesPerValue = dtype === 'float32' ? 4 : dtype === 'int32' ? 4 : 1
         expectedSize += size * bytesPerValue
       }
-      console.log('[ElectronIPCModelLoader] Expected weight data size:', expectedSize, 'bytes')
 
       // Load all weight files via IPC
       const weightBuffers: ArrayBuffer[] = []
 
       for (const weightFile of weightFiles) {
         const weightPath = `${basePath}/${weightFile}`
-        console.log('[ElectronIPCModelLoader] Loading weight file:', weightPath)
         const buffer = await window.electron.loadBrainchopWeights(weightPath)
-        console.log('[ElectronIPCModelLoader] Loaded buffer size:', buffer.byteLength, 'bytes')
         weightBuffers.push(buffer)
       }
 
       // Concatenate all weight buffers
       const totalSize = weightBuffers.reduce((sum, buf) => sum + buf.byteLength, 0)
-      console.log('[ElectronIPCModelLoader] Total actual size:', totalSize, 'bytes')
-      console.log('[ElectronIPCModelLoader] Size match:', totalSize === expectedSize ? 'YES' : `NO (expected ${expectedSize}, got ${totalSize})`)
-
       const weightData = new ArrayBuffer(totalSize)
       const weightDataView = new Uint8Array(weightData)
 
@@ -79,8 +66,6 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
         weightDataView.set(new Uint8Array(buffer), offset)
         offset += buffer.byteLength
       }
-
-      console.log('[ElectronIPCModelLoader] Weight data concatenated successfully')
 
       // Return model artifacts
       return {
@@ -121,14 +106,7 @@ export class ModelManager {
       await tf.setBackend('webgl')
       await tf.ready()
 
-      // Enable memory growth to avoid OOM issues
-      const backend = tf.backend() as any
-      if (backend && backend.numDataIds) {
-        console.log(`TensorFlow.js initialized with ${backend.numDataIds()} tensors`)
-      }
-
       this.isInitialized = true
-      console.log('ModelManager initialized successfully')
     } catch (error) {
       console.error('Failed to initialize TensorFlow.js:', error)
       throw new Error(`ModelManager initialization failed: ${error}`)
@@ -175,7 +153,6 @@ export class ModelManager {
     const cached = this.modelCache.get(modelId)
     if (cached) {
       cached.lastUsed = new Date()
-      console.log(`Returning cached model: ${modelId}`)
       return cached.model
     }
 
@@ -186,14 +163,10 @@ export class ModelManager {
     }
 
     // Load model from resources
-    console.log(`Loading model: ${modelId} from ${modelInfo.modelPath}`)
-
     try {
       // Use custom IPC-based IOHandler for Electron
       // This is more reliable than file:// protocol in Electron renderer
       const modelPath = modelInfo.modelPath
-      console.log(`Loading model via IPC: ${modelPath}`)
-
       const ioHandler = new ElectronIPCModelLoader(modelPath)
       const model = await tf.loadLayersModel(ioHandler)
 
@@ -212,7 +185,6 @@ export class ModelManager {
       }
       this.modelCache.set(modelId, cacheEntry)
 
-      console.log(`Model ${modelId} loaded successfully (${(memorySize / 1024 / 1024).toFixed(2)} MB)`)
       return model
     } catch (error) {
       console.error(`Failed to load model ${modelId}:`, error)
@@ -235,7 +207,6 @@ export class ModelManager {
     if (cached) {
       cached.model.dispose()
       this.modelCache.delete(modelId)
-      console.log(`Model ${modelId} unloaded from cache`)
     }
   }
 
@@ -245,10 +216,8 @@ export class ModelManager {
   clearCache(): void {
     for (const [modelId, entry] of this.modelCache.entries()) {
       entry.model.dispose()
-      console.log(`Disposed model: ${modelId}`)
     }
     this.modelCache.clear()
-    console.log('Model cache cleared')
   }
 
   /**
@@ -301,7 +270,6 @@ export class ModelManager {
   dispose(): void {
     this.clearCache()
     this.isInitialized = false
-    console.log('ModelManager disposed')
   }
 
   /**
@@ -325,7 +293,6 @@ export class ModelManager {
 
     // Remove oldest model
     if (oldestModelId) {
-      console.log(`Cache full, removing least recently used model: ${oldestModelId}`)
       this.unloadModel(oldestModelId)
     }
   }
