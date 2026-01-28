@@ -193,6 +193,14 @@ function MainApp(): JSX.Element {
       setSegmentationStatus('Starting segmentation...')
       setSegmentationModelName(modelInfo.name)
 
+      console.log('[MainApp] Running segmentation on volume:', {
+        dims: baseVolume.dims,
+        'hdr.dims': baseVolume.hdr?.dims,
+        pixDims: baseVolume.pixDims,
+        'img.length': baseVolume.img?.length
+      })
+
+      // Run segmentation - ImagePreprocessor will automatically resample to 256³ @ 1mm
       const result = await brainchopService.runSegmentation(baseVolume, modelId, {
         onProgress: (progress, status) => {
           setSegmentationProgress(progress)

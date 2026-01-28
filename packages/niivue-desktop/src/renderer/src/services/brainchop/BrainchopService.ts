@@ -150,8 +150,8 @@ export class BrainchopService {
         outputTensor,
         volume,
         modelInfo,
-        preprocessResult.affineMatrix,
-        preprocessResult.paddingOffset
+        preprocessResult.originalShape,
+        preprocessResult.originalVoxelSize
       )
 
       // Clean up tensors
@@ -187,138 +187,107 @@ export class BrainchopService {
 
   /**
    * Create an NVImage from the segmentation output tensor
+   * Following brainchop's callBackImg approach exactly: clone source volume and replace image data
    */
   private async createSegmentationVolume(
     outputTensor: tf.Tensor4D,
     sourceVolume: NVImage,
     modelInfo: ModelInfo,
-    affineMatrix: number[][],
-    paddingOffset: [number, number, number]
+    originalShape: number[],
+    originalVoxelSize: number[]
   ): Promise<NVImage> {
-    // Convert tensor to Float32Array
-    const data = await this.imagePreprocessor.tensorToVolumeData(outputTensor)
+    // Convert tensor to Float32Array (this will be 256³)
+    let data = await this.imagePreprocessor.tensorToVolumeData(outputTensor)
 
-    // Get output dimensions from tensor (256x256x256 @ 1mm)
-    const [, width, height, depth] = outputTensor.shape
+    // Check if we need to resample back to original space
+    const needsResampling =
+      originalShape[0] !== 256 || originalShape[1] !== 256 || originalShape[2] !== 256
 
-    // Convert Float32Array to Uint8Array for label data and calculate min/max
+    if (needsResampling) {
+      console.log('[BrainchopService] Resampling segmentation back to original space:', originalShape)
+      data = await this.imagePreprocessor.resampleToOriginalSpace(
+        data,
+        originalShape,
+        originalVoxelSize
+      )
+    }
+
+    // Log raw model output statistics
+    // Find min/max without spread operator (to avoid stack overflow)
+    let dataMin = data[0]
+    let dataMax = data[0]
+    for (let i = 1; i < data.length; i++) {
+      if (data[i] < dataMin) dataMin = data[i]
+      if (data[i] > dataMax) dataMax = data[i]
+    }
+
+    console.log('[BrainchopService] Raw model output:', {
+      min: dataMin,
+      max: dataMax,
+      length: data.length,
+      sample: Array.from(data.slice(0, 10))
+    })
+
+    // Convert Float32Array to Uint8Array for label data
+    // If data is in 0-1 range (probabilities), scale to 0-255
+    // If data is already integer labels, keep as is
     const uint8Data = new Uint8Array(data.length)
-    let minVal = 255
-    let maxVal = 0
-    for (let i = 0; i < data.length; i++) {
-      const val = Math.round(data[i])
-      uint8Data[i] = val
-      if (val < minVal) minVal = val
-      if (val > maxVal) maxVal = val
-    }
 
-    console.log('[BrainchopService] Creating segmentation volume:', {
-      dims: [width, height, depth],
-      dataType: 'UINT8',
-      minValue: minVal,
-      maxValue: maxVal,
-      uniqueValues: new Set(Array.from(uint8Data.slice(0, 10000))).size
-    })
-
-    console.log('[BrainchopService] Source volume info:', {
-      sourceDims: sourceVolume.dims,
-      sourceMatRAS: sourceVolume.matRAS ? Array.from(sourceVolume.matRAS) : null,
-      sourcePixDims: sourceVolume.pixDims
-    })
-
-    console.log('[BrainchopService] Affine matrix (from preprocessing):', affineMatrix)
-    console.log('[BrainchopService] Padding offset:', paddingOffset)
-
-    // Adjust affine matrix for padding offset
-    // If we padded by [px, py, pz], voxel [0,0,0] in segmentation = voxel [-px,-py,-pz] in resampled space
-    const adjustedAffine = affineMatrix.map((row) => [...row]) // Deep copy
-
-    // Calculate the shift in RAS coordinates
-    const shiftX = affineMatrix[0][0] * paddingOffset[0] + affineMatrix[0][1] * paddingOffset[1] + affineMatrix[0][2] * paddingOffset[2]
-    const shiftY = affineMatrix[1][0] * paddingOffset[0] + affineMatrix[1][1] * paddingOffset[1] + affineMatrix[1][2] * paddingOffset[2]
-    const shiftZ = affineMatrix[2][0] * paddingOffset[0] + affineMatrix[2][1] * paddingOffset[1] + affineMatrix[2][2] * paddingOffset[2]
-
-    // Adjust translation (last column)
-    adjustedAffine[0][3] = affineMatrix[0][3] - shiftX
-    adjustedAffine[1][3] = affineMatrix[1][3] - shiftY
-    adjustedAffine[2][3] = affineMatrix[2][3] - shiftZ
-
-    console.log('[BrainchopService] Adjusted affine matrix:', adjustedAffine)
-
-    // Create a minimal NVImage and set properties directly
-    const segmentationVolume = new NVImage(null, `${sourceVolume.name}_${modelInfo.id}`)
-
-    // Set image data
-    segmentationVolume.img = uint8Data
-
-    // Copy and update header from source
-    if (sourceVolume.hdr) {
-      segmentationVolume.hdr = JSON.parse(JSON.stringify(sourceVolume.hdr))
-      if (segmentationVolume.hdr) {
-        segmentationVolume.hdr.dims = [3, width, height, depth, 1, 1, 1, 1]
-        segmentationVolume.hdr.pixDims = [1, 1, 1, 1, 0, 0, 0, 0] // 1mm isotropic
-        segmentationVolume.hdr.datatypeCode = 2 // DT_UINT8
-        segmentationVolume.hdr.numBitsPerVoxel = 8
+    if (dataMax <= 1.0 && dataMax > 0) {
+      // Probability output - threshold at 0.5 and convert to binary mask
+      console.log('[BrainchopService] Model output appears to be probabilities, thresholding at 0.5')
+      for (let i = 0; i < data.length; i++) {
+        uint8Data[i] = data[i] > 0.5 ? 1 : 0
       }
-    }
-
-    // Set dims (256x256x256 @ 1mm)
-    segmentationVolume.dims = [width, height, depth]
-    segmentationVolume.nVox3D = width * height * depth
-    segmentationVolume.pixDims = [1, 1, 1] // 1mm isotropic
-
-    // Set intensity statistics (already calculated above)
-    segmentationVolume.global_min = minVal
-    segmentationVolume.global_max = maxVal
-    segmentationVolume.robust_min = minVal
-    segmentationVolume.robust_max = maxVal
-
-    // Set image type
-    segmentationVolume.imageType = 4 // NVIMAGE_TYPE.NII
-
-    // Calculate transformation matrices (this may set matRAS from header, but we'll override it)
-    segmentationVolume.calculateRAS()
-
-    // Set affine matrix (use adjusted affine that accounts for resampling and padding)
-    // IMPORTANT: Set this AFTER calculateRAS() so our custom affine is used for rendering
-    const mat4 = new Float32Array(16)
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        mat4[i * 4 + j] = adjustedAffine[i][j]
-      }
-    }
-    segmentationVolume.matRAS = mat4 as any
-
-    console.log('[BrainchopService] Final matRAS set:', Array.from(segmentationVolume.matRAS))
-
-    // Calculate intensity calibration (required for rendering)
-    segmentationVolume.calMinMax()
-
-    // Set appropriate colormap based on model type
-    if (modelInfo.type === 'parcellation') {
-      segmentationVolume.colormap = 'freesurfer'
-    } else if (modelInfo.type === 'brain-extraction') {
-      segmentationVolume.colormap = 'red' // Use a distinct colormap for brain mask
     } else {
-      segmentationVolume.colormap = 'actc'
+      // Integer labels - round to nearest integer
+      console.log('[BrainchopService] Model output appears to be integer labels')
+      for (let i = 0; i < data.length; i++) {
+        uint8Data[i] = Math.round(data[i])
+      }
     }
 
-    // Force calibration range to ensure labels are visible
-    segmentationVolume.cal_min = 0
-    segmentationVolume.cal_max = modelInfo.outputClasses - 1
-
-    console.log('[BrainchopService] Segmentation volume created:', {
-      name: segmentationVolume.name,
-      dims: segmentationVolume.dims,
-      colormap: segmentationVolume.colormap,
-      cal_min: segmentationVolume.cal_min,
-      cal_max: segmentationVolume.cal_max
+    console.log('[BrainchopService] Segmentation data:', {
+      length: uint8Data.length,
+      nonZeroCount: uint8Data.filter(v => v > 0).length,
+      uniqueValues: [...new Set(uint8Data)].sort((a, b) => a - b)
     })
 
-    // TODO: Load labels if available (needs IPC handler for file:// access)
-    // Labels are optional and not critical for visualization
+    // Clone the source volume - this preserves all transformations automatically
+    const overlayVolume = sourceVolume.clone()
 
-    return segmentationVolume
+    // Update the name
+    overlayVolume.name = `${sourceVolume.name}_${modelInfo.id}`
+
+    // Zero the image
+    overlayVolume.zeroImage()
+
+    // Replace with segmentation data
+    overlayVolume.img = uint8Data
+
+    // Set NIFTI intent code and scaling
+    if (overlayVolume.hdr) {
+      overlayVolume.hdr.intent_code = 1002 // NIFTI_INTENT_LABEL
+      overlayVolume.hdr.scl_inter = 0
+      overlayVolume.hdr.scl_slope = 1
+    }
+
+    // Set colormap
+    if (modelInfo.type === 'parcellation') {
+      overlayVolume.colormap = 'freesurfer'
+    } else if (modelInfo.type === 'brain-extraction') {
+      overlayVolume.colormap = 'red'
+    } else {
+      overlayVolume.colormap = 'actc'
+    }
+
+    console.log('[BrainchopService] Created overlay volume:', {
+      name: overlayVolume.name,
+      dims: overlayVolume.dims,
+      colormap: overlayVolume.colormap
+    })
+
+    return overlayVolume
   }
 
 

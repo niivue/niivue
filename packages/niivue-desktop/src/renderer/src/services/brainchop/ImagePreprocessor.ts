@@ -24,73 +24,82 @@ export class ImagePreprocessor {
 
     onProgress?.(0, 'Preparing volume data')
 
-    // Extract volume data and metadata
+    // Extract volume data - volume should already be conformed to 256^3 @ 1mm by NiiVue's conform()
     const volumeData = this.extractVolumeData(volume)
-    const dims = volume.dims
-    if (!dims) {
-      throw new Error('Volume dimensions not available')
-    }
-    const originalShape = [dims[1], dims[2], dims[3]] // [width, height, depth]
 
-    // Get original voxel size
+    // Debug: log all available dimension info
+    console.log('[ImagePreprocessor] Volume dimension sources:', {
+      'volume.dims': volume.dims,
+      'volume.hdr?.dims': volume.hdr?.dims,
+      'dataLength': volumeData.length,
+      'expected256³': 256 * 256 * 256
+    })
+
+    // Extract original shape
+    let originalShape: number[]
+    if (volume.hdr?.dims && volume.hdr.dims.length > 3) {
+      originalShape = [volume.hdr.dims[1], volume.hdr.dims[2], volume.hdr.dims[3]]
+    } else if (volume.dims && volume.dims.length >= 3) {
+      if (volume.dims[0] <= 7 && volume.dims.length > 3) {
+        originalShape = [volume.dims[1], volume.dims[2], volume.dims[3]]
+      } else {
+        originalShape = [volume.dims[0], volume.dims[1], volume.dims[2]]
+      }
+    } else {
+      throw new Error('Cannot determine volume dimensions')
+    }
+
+    console.log('[ImagePreprocessor] Original shape:', originalShape)
+
+    // Extract original voxel size
     const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
     const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
 
-    let affineMatrix = this.extractAffineMatrix(volume)
+    console.log('[ImagePreprocessor] Original voxel size:', originalVoxelSize)
 
-    onProgress?.(20, 'Checking if resampling needed')
+    // Log affine matrix for debugging
+    const affine = this.extractAffineMatrix(volume)
+    console.log('[ImagePreprocessor] Affine matrix:', affine)
 
-    // Check if resampling is needed
-    const needsResampling = this.checkIfResamplingNeeded(volume)
-
+    // Check if volume needs resampling to 256³
     let processedData = volumeData
-    let processedShape = originalShape
+    let finalShape = originalShape
 
-    if (needsResampling) {
-      onProgress?.(30, 'Resampling to 1mm isotropic')
+    if (volumeData.length !== 256 * 256 * 256) {
+      console.log('[ImagePreprocessor] Volume is not 256³, resampling...')
+      onProgress?.(10, 'Resampling to 256³ @ 1mm')
 
-      console.log('[ImagePreprocessor] Original voxel size:', originalVoxelSize)
-      console.log('[ImagePreprocessor] Original affine matrix:', affineMatrix)
-
+      // Resample to 256³
       processedData = await this.resampleVolume(volumeData, originalShape, volume)
-      processedShape = [256, 256, 256] // Update shape after resampling to target size
+      finalShape = [256, 256, 256]
 
-      // Update affine matrix to reflect 1mm isotropic voxels
-      // The rotation/scaling part (first 3x3) needs to be adjusted
-      affineMatrix = this.adjustAffineForResampling(affineMatrix, originalVoxelSize, originalShape)
-
-      console.log('[ImagePreprocessor] Adjusted affine matrix for 1mm isotropic:', affineMatrix)
-
-      onProgress?.(60, 'Resampling complete')
+      console.log('[ImagePreprocessor] Resampled to 256³')
     } else {
-      onProgress?.(60, 'No resampling needed')
+      console.log('[ImagePreprocessor] Volume is already 256³')
+      finalShape = [256, 256, 256]
     }
 
-    onProgress?.(70, 'Converting to tensor')
+    onProgress?.(30, 'Converting to tensor')
 
-    // Convert to tensor with correct shape (either original or resampled)
-    let tensor = this.dataToTensor(processedData, processedShape)
-
-    // Pad or crop to target shape
-    onProgress?.(80, 'Adjusting to target shape')
-    const { tensor: adjustedTensor, paddingOffset } = this.adjustToTargetShape(tensor)
-    tensor = adjustedTensor
+    // Convert to tensor
+    let tensor = this.dataToTensor(processedData, finalShape)
 
     // Normalize intensity if requested
     if (normalizeIntensity) {
-      onProgress?.(90, 'Normalizing intensity')
+      onProgress?.(60, 'Normalizing intensity')
       tensor = this.normalizeIntensity(tensor)
     }
 
     onProgress?.(100, 'Preprocessing complete')
 
+    // Return result
     return {
       tensor: tensor as tf.Tensor4D,
-      originalShape,
-      originalVoxelSize,
-      affineMatrix,
-      needsResampling,
-      paddingOffset
+      originalShape: originalShape,
+      originalVoxelSize: originalVoxelSize,
+      affineMatrix: this.extractAffineMatrix(volume),
+      needsResampling: false,
+      paddingOffset: [0, 0, 0]
     }
   }
 
@@ -252,8 +261,8 @@ export class ImagePreprocessor {
   }
 
   /**
-   * Resample volume to 1mm isotropic resolution
-   * Uses trilinear interpolation
+   * Resample volume to 256³ @ 1mm isotropic resolution
+   * Centers the volume in the 256³ space to match brainchop/FastSurfer conform
    */
   private async resampleVolume(
     data: Float32Array,
@@ -264,23 +273,53 @@ export class ImagePreprocessor {
     const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
     const voxelSize = [pixDims[1], pixDims[2], pixDims[3]]
 
-    // Simple resampling: target voxel i maps to source voxel i * voxelSize
-    // This preserves the origin (voxel 0 → voxel 0)
-    const scaleFactors = [...voxelSize]
-
     const [targetX, targetY, targetZ] = this.targetShape
     const [origX, origY, origZ] = originalShape
 
+    // Calculate physical center of original volume (in mm)
+    const origCenterPhysical = [
+      (origX * voxelSize[0]) / 2,
+      (origY * voxelSize[1]) / 2,
+      (origZ * voxelSize[2]) / 2
+    ]
+
+    // Calculate physical center of target volume (in mm)
+    const targetCenterPhysical = [targetX / 2, targetY / 2, targetZ / 2]
+
+    console.log('[ImagePreprocessor] Resampling with centering:', {
+      originalShape: [origX, origY, origZ],
+      originalPhysicalCenter: origCenterPhysical,
+      targetPhysicalCenter: targetCenterPhysical,
+      voxelSize,
+      originalPhysicalExtent: [origX * voxelSize[0], origY * voxelSize[1], origZ * voxelSize[2]],
+      targetPhysicalExtent: [targetX, targetY, targetZ]
+    })
+
     const resampled = new Float32Array(targetX * targetY * targetZ)
 
-    // Trilinear interpolation
+    // Trilinear interpolation with proper centering
     for (let z = 0; z < targetZ; z++) {
       for (let y = 0; y < targetY; y++) {
         for (let x = 0; x < targetX; x++) {
-          // Map target voxel to source coordinates
-          const srcX = x * scaleFactors[0]
-          const srcY = y * scaleFactors[1]
-          const srcZ = z * scaleFactors[2]
+          // Target physical coordinate (mm) - voxel center
+          const targetPhysX = (x + 0.5) * 1.0
+          const targetPhysY = (y + 0.5) * 1.0
+          const targetPhysZ = (z + 0.5) * 1.0
+
+          // Offset from target center
+          const offsetX = targetPhysX - targetCenterPhysical[0]
+          const offsetY = targetPhysY - targetCenterPhysical[1]
+          const offsetZ = targetPhysZ - targetCenterPhysical[2]
+
+          // Source physical coordinate (centered)
+          const srcPhysX = origCenterPhysical[0] + offsetX
+          const srcPhysY = origCenterPhysical[1] + offsetY
+          const srcPhysZ = origCenterPhysical[2] + offsetZ
+
+          // Convert to source voxel coordinates (find voxel center that matches)
+          const srcX = (srcPhysX / voxelSize[0]) - 0.5
+          const srcY = (srcPhysY / voxelSize[1]) - 0.5
+          const srcZ = (srcPhysZ / voxelSize[2]) - 0.5
 
           // Get integer and fractional parts
           const x0 = Math.floor(srcX)
@@ -333,14 +372,23 @@ export class ImagePreprocessor {
 
   /**
    * Convert Float32Array to TensorFlow tensor
+   * Brainchop models expect 5D tensors with shape [batch, width, height, depth, channels]
    */
   private dataToTensor(data: Float32Array, shape: number[]): tf.Tensor4D {
-    // TensorFlow expects [batch, depth, height, width, channels]
-    // But for medical imaging we typically use [batch, width, height, depth]
     const [width, height, depth] = shape
 
-    // Reshape to 4D tensor [1, width, height, depth]
-    return tf.tensor4d(Array.from(data), [1, width, height, depth])
+    // First ensure the shape matches 256^3
+    if (width !== 256 || height !== 256 || depth !== 256) {
+      console.warn(`[ImagePreprocessor] Volume is not 256^3: [${width}, ${height}, ${depth}]`)
+      console.warn('[ImagePreprocessor] Volume should be conformed before preprocessing')
+    }
+
+    // Create 5D tensor [batch, width, height, depth, channels]
+    // Brainchop models expect this format
+    const tensor5d = tf.tensor5d(Array.from(data), [1, width, height, depth, 1])
+
+    // Return as Tensor4D for type compatibility (TensorFlow will handle it)
+    return tensor5d as any as tf.Tensor4D
   }
 
   /**
@@ -433,7 +481,7 @@ export class ImagePreprocessor {
 
   /**
    * Resample segmentation back to original volume dimensions
-   * Inverse of preprocessVolume resampling
+   * Inverse of the centered resampling in preprocessVolume
    */
   async resampleToOriginalSpace(
     data: Float32Array,
@@ -443,24 +491,51 @@ export class ImagePreprocessor {
     const [origX, origY, origZ] = originalShape
     const [targetX, targetY, targetZ] = this.targetShape
 
-    // Inverse scale factors: original voxel i came from resampled voxel i * voxelSize
-    const scaleFactors = [...originalVoxelSize]
+    // Calculate physical centers (same as forward resampling)
+    const origCenterPhysical = [
+      (origX * originalVoxelSize[0]) / 2,
+      (origY * originalVoxelSize[1]) / 2,
+      (origZ * originalVoxelSize[2]) / 2
+    ]
+
+    const targetCenterPhysical = [targetX / 2, targetY / 2, targetZ / 2]
+
+    console.log('[ImagePreprocessor] Reverse resampling with centering:', {
+      originalPhysicalCenter: origCenterPhysical,
+      targetPhysicalCenter: targetCenterPhysical,
+      originalVoxelSize
+    })
 
     const resampled = new Float32Array(origX * origY * origZ)
 
-    // Nearest neighbor interpolation for label data (to preserve integer labels)
+    // Nearest neighbor interpolation for label data (preserves integer labels)
     for (let z = 0; z < origZ; z++) {
       for (let y = 0; y < origY; y++) {
         for (let x = 0; x < origX; x++) {
-          // Map original voxel to resampled coordinates
-          const resampX = x * scaleFactors[0]
-          const resampY = y * scaleFactors[1]
-          const resampZ = z * scaleFactors[2]
+          // Original voxel physical coordinate (mm) - voxel center
+          const origPhysX = (x + 0.5) * originalVoxelSize[0]
+          const origPhysY = (y + 0.5) * originalVoxelSize[1]
+          const origPhysZ = (z + 0.5) * originalVoxelSize[2]
+
+          // Offset from original center
+          const offsetX = origPhysX - origCenterPhysical[0]
+          const offsetY = origPhysY - origCenterPhysical[1]
+          const offsetZ = origPhysZ - origCenterPhysical[2]
+
+          // Target physical coordinate (centered)
+          const targetPhysX = targetCenterPhysical[0] + offsetX
+          const targetPhysY = targetCenterPhysical[1] + offsetY
+          const targetPhysZ = targetCenterPhysical[2] + offsetZ
+
+          // Convert to target voxel coordinates (1mm isotropic) - find voxel index
+          const targetVoxX = (targetPhysX / 1.0) - 0.5
+          const targetVoxY = (targetPhysY / 1.0) - 0.5
+          const targetVoxZ = (targetPhysZ / 1.0) - 0.5
 
           // Nearest neighbor
-          const nearX = Math.min(Math.round(resampX), targetX - 1)
-          const nearY = Math.min(Math.round(resampY), targetY - 1)
-          const nearZ = Math.min(Math.round(resampZ), targetZ - 1)
+          const nearX = Math.round(targetVoxX)
+          const nearY = Math.round(targetVoxY)
+          const nearZ = Math.round(targetVoxZ)
 
           // Bounds check
           if (nearX >= 0 && nearX < targetX && nearY >= 0 && nearY < targetY && nearZ >= 0 && nearZ < targetZ) {
@@ -476,12 +551,30 @@ export class ImagePreprocessor {
 
   /**
    * Convert tensor back to NVImage format
+   * Handles both 4D and 5D tensors (with channel dimension)
    */
   async tensorToVolumeData(tensor: tf.Tensor4D): Promise<Float32Array> {
-    // Remove batch dimension and convert to array
-    const squeezed = tf.squeeze(tensor, [0])
+    // Squeeze out batch and channel dimensions if present
+    // Shape can be [1, W, H, D] or [1, W, H, D, 1]
+    let squeezed = tensor
+
+    // Remove batch dimension (axis 0)
+    if (tensor.shape[0] === 1) {
+      squeezed = tf.squeeze(squeezed, [0]) as any
+    }
+
+    // Remove channel dimension (last axis) if present
+    const lastDim = squeezed.shape[squeezed.shape.length - 1]
+    if (lastDim === 1) {
+      squeezed = tf.squeeze(squeezed, [squeezed.shape.length - 1]) as any
+    }
+
     const data = await squeezed.data()
-    squeezed.dispose()
+
+    // Only dispose if we created a new tensor
+    if (squeezed !== tensor) {
+      squeezed.dispose()
+    }
 
     return new Float32Array(data)
   }
