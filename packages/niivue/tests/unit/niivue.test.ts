@@ -147,3 +147,27 @@ test('penType can be set to ellipse', () => {
   nv.document.opts.penType = PEN_TYPE.ELLIPSE
   expect(nv.document.opts.penType).toBe(PEN_TYPE.ELLIPSE)
 })
+
+test('setRenderView snaps to anatomical views', async () => {
+    const niivue = new Niivue()
+    
+    // Test Top/Superior
+    niivue.setRenderView('Top')
+    expect(niivue.scene.renderElevation).toBe(90)
+    niivue.setRenderView('Superior')
+    expect(niivue.scene.renderElevation).toBe(90)
+
+    // Test Left
+    niivue.setRenderView('Left')
+    expect(niivue.scene.renderAzimuth).toBe(90)
+    expect(niivue.scene.renderElevation).toBe(0)
+
+    // Test Anterior (Front)
+    niivue.setRenderView('Anterior')
+    expect(niivue.scene.renderAzimuth).toBe(180)
+
+    // Test Unknown view
+    const consoleSpy = vi.spyOn(console, 'warn')
+    niivue.setRenderView('NotAView')
+    expect(consoleSpy).toHaveBeenCalledWith('Unknown view:', 'NotAView')
+  })
