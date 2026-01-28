@@ -2,393 +2,141 @@
 title: Event System (EventTarget API)
 sidebar_position: 15
 ---
-import { NiivueBrowserWrapper } from '../src/components/NiivueBrowserWrapper';
-import { EventsDemo } from '../src/components/EventsDemo';
 
-NiiVue implements the browser-native EventTarget API, providing a modern, flexible event system that supports multiple listeners, standard options like `{ once: true }`, and AbortController for dynamic listener management. This system works alongside the existing callback properties for full backward compatibility.
+NiiVue implements the browser-native [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) API. This supports multiple listeners per event, standard options (`once`, `signal`), and coexists with legacy callback properties.
 
-## Live Demo
+## Usage
 
-Try the interactive demo below to see the event system in action:
-
-<NiivueBrowserWrapper>
-  <EventsDemo />
-</NiivueBrowserWrapper>
-
-## Why Use Events?
-
-The EventTarget API provides several advantages over the legacy callback system:
-
-- **Multiple Listeners**: Attach multiple handlers to the same event
-- **Standard Options**: Use `once`, `capture`, `passive`, and `signal` options
-- **AbortController**: Dynamically remove listeners without keeping references
-- **Type Safety**: Full TypeScript support with typed event details
-- **Familiar API**: Uses the same pattern as DOM elements and Web APIs
-
-## Basic Usage
-
-### Adding Event Listeners
+### Adding and removing listeners
 
 ```javascript
-import { Niivue } from '@niivue/niivue';
-
 const nv = new Niivue();
 nv.attachToCanvas(document.getElementById('gl'));
 
-// Add an event listener
-nv.addEventListener('locationChange', (event) => {
-  console.log('Crosshair moved to:', event.detail.mm);
-});
-
-// Add multiple listeners for the same event
-nv.addEventListener('imageLoaded', (event) => {
-  console.log('Image 1 handler:', event.detail.name);
-});
-
-nv.addEventListener('imageLoaded', (event) => {
-  console.log('Image 2 handler:', event.detail.name);
-});
-```
-
-### Removing Event Listeners
-
-```javascript
-// Define the handler function
-const locationHandler = (event) => {
+// Add a listener
+const handler = (event) => {
   console.log('Location:', event.detail);
 };
+nv.addEventListener('locationChange', handler);
 
-// Add it
-nv.addEventListener('locationChange', locationHandler);
-
-// Remove it later
-nv.removeEventListener('locationChange', locationHandler);
+// Remove it
+nv.removeEventListener('locationChange', handler);
 ```
 
-## Advanced Features
-
-### Using `{ once: true }`
-
-Fire an event listener only once, then automatically remove it:
+### One-time listeners
 
 ```javascript
 nv.addEventListener('imageLoaded', (event) => {
   console.log('First image loaded:', event.detail.name);
-  // This listener is automatically removed after firing once
 }, { once: true });
 ```
 
-### Using AbortController
+### AbortController
 
-Dynamically manage multiple listeners without keeping references:
+Use an `AbortController` to remove multiple listeners at once:
 
 ```javascript
 const controller = new AbortController();
 
-// Add multiple listeners with the same signal
 nv.addEventListener('locationChange', handler1, { signal: controller.signal });
 nv.addEventListener('intensityChange', handler2, { signal: controller.signal });
-nv.addEventListener('frameChange', handler3, { signal: controller.signal });
 
-// Remove all listeners at once
+// Remove all listeners registered with this signal
 controller.abort();
 ```
 
-This is particularly useful for component cleanup in React, Vue, or other frameworks:
-
-```javascript
-// React example
-useEffect(() => {
-  const nv = new Niivue();
-  nv.attachToCanvas(canvasRef.current);
-
-  const controller = new AbortController();
-
-  // Add all listeners with abort signal
-  nv.addEventListener('locationChange', handleLocation, { signal: controller.signal });
-  nv.addEventListener('imageLoaded', handleImage, { signal: controller.signal });
-
-  return () => {
-    // Cleanup: abort all listeners
-    controller.abort();
-  };
-}, []);
-```
-
-### Async Event Listeners
-
-Event listeners can be async functions:
-
-```javascript
-nv.addEventListener('imageLoaded', async (event) => {
-  console.log('Image loaded, processing...');
-  await processImage(event.detail);
-  console.log('Processing complete');
-});
-```
-
-Note: `dispatchEvent` is synchronous, but individual listeners can be async.
-
 ## Available Events
 
-NiiVue emits 28 different event types. All events are strongly typed when using TypeScript.
-
-### User Interaction Events
+### User Interaction
 
 | Event | Detail Type | Description |
 |-------|------------|-------------|
-| `dragRelease` | `DragReleaseParams` | Fired when a drag operation is released |
-| `mouseUp` | `Partial<UIData>` | Fired when mouse button is released |
-| `locationChange` | `unknown` | Fired when the crosshair location changes |
-| `intensityChange` | `NVImage` | Fired when intensity values change |
-| `clickToSegment` | `{ mm3: number; mL: number }` | Fired when click-to-segment completes |
+| `dragRelease` | `DragReleaseParams` | Drag operation released |
+| `mouseUp` | `Partial<UIData>` | Mouse button released |
+| `locationChange` | `unknown` | Crosshair location changed |
+| `intensityChange` | `NVImage` | Intensity values changed |
+| `clickToSegment` | `{ mm3: number; mL: number }` | Click-to-segment completed |
 
-### Loading Events
-
-| Event | Detail Type | Description |
-|-------|------------|-------------|
-| `imageLoaded` | `NVImage` | Fired when an image/volume is loaded |
-| `meshLoaded` | `NVMesh` | Fired when a mesh is loaded |
-| `volumeAddedFromUrl` | `{ imageOptions, volume }` | Fired when a volume is added from URL |
-| `volumeWithUrlRemoved` | `{ url: string }` | Fired when a URL-loaded volume is removed |
-| `volumeUpdated` | `void` | Fired when a volume is updated |
-| `meshAddedFromUrl` | `{ meshOptions, mesh }` | Fired when a mesh is added from URL |
-| `meshAdded` | `void` | Fired when a mesh is added |
-| `meshWithUrlRemoved` | `{ url: string }` | Fired when a URL-loaded mesh is removed |
-| `documentLoaded` | `NVDocument` | Fired when a document is loaded |
-| `dicomLoaderFinished` | `{ files: (NVImage\|NVMesh)[] }` | Fired when DICOM loader finishes |
-
-### Playback Events
+### Loading
 
 | Event | Detail Type | Description |
 |-------|------------|-------------|
-| `frameChange` | `{ volume: NVImage; index: number }` | Fired when 4D frame changes |
+| `imageLoaded` | `NVImage` | Image/volume loaded |
+| `meshLoaded` | `NVMesh` | Mesh loaded |
+| `volumeAddedFromUrl` | `{ imageOptions, volume }` | Volume added from URL |
+| `volumeWithUrlRemoved` | `{ url: string }` | URL-loaded volume removed |
+| `volumeUpdated` | `void` | Volume updated |
+| `meshAddedFromUrl` | `{ meshOptions, mesh }` | Mesh added from URL |
+| `meshAdded` | `void` | Mesh added |
+| `meshWithUrlRemoved` | `{ url: string }` | URL-loaded mesh removed |
+| `documentLoaded` | `NVDocument` | Document loaded |
+| `dicomLoaderFinished` | `{ files: (NVImage\|NVMesh)[] }` | DICOM loader finished |
 
-### View Control Events
-
-| Event | Detail Type | Description |
-|-------|------------|-------------|
-| `azimuthElevationChange` | `{ azimuth: number; elevation: number }` | Fired when 3D view rotation changes |
-| `zoom3DChange` | `{ zoom: number }` | Fired when 3D zoom level changes |
-| `clipPlaneChange` | `{ clipPlane: number[] }` | Fired when clip plane changes |
-
-### Shader Events
-
-| Event | Detail Type | Description |
-|-------|------------|-------------|
-| `customMeshShaderAdded` | `{ fragmentShaderText, name }` | Fired when custom shader is added |
-| `meshShaderChanged` | `{ meshIndex, shaderIndex }` | Fired when mesh shader changes |
-| `meshPropertyChanged` | `{ meshIndex, key, value }` | Fired when mesh property changes |
-
-### Rendering Events
+### Playback
 
 | Event | Detail Type | Description |
 |-------|------------|-------------|
-| `colormapChange` | `void` | Fired when colormap changes |
+| `frameChange` | `{ volume: NVImage; index: number }` | 4D frame changed |
 
-### Configuration Events
-
-| Event | Detail Type | Description |
-|-------|------------|-------------|
-| `optsChange` | `{ propertyName, newValue, oldValue }` | Fired when options change |
-
-### Logging Events
+### View Control
 
 | Event | Detail Type | Description |
 |-------|------------|-------------|
-| `error` | `{ message?: string }` | Fired on error messages |
-| `info` | `{ message?: string }` | Fired on info messages |
-| `warn` | `{ message?: string }` | Fired on warning messages |
-| `debug` | `{ message?: string }` | Fired on debug messages |
+| `azimuthElevationChange` | `{ azimuth: number; elevation: number }` | 3D view rotation changed |
+| `zoom3DChange` | `{ zoom: number }` | 3D zoom level changed |
+| `clipPlaneChange` | `{ clipPlane: number[] }` | Clip plane changed |
 
-## TypeScript Support
+### Shaders
 
-When using TypeScript, events are fully typed with proper event detail types:
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `customMeshShaderAdded` | `{ fragmentShaderText, name }` | Custom shader added |
+| `meshShaderChanged` | `{ meshIndex, shaderIndex }` | Mesh shader changed |
+| `meshPropertyChanged` | `{ meshIndex, key, value }` | Mesh property changed |
+
+### Rendering
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `colormapChange` | `void` | Colormap changed |
+
+### Configuration
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `optsChange` | `{ propertyName, newValue, oldValue }` | Options changed |
+
+### Logging
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `error` | `{ message?: string }` | Error |
+| `info` | `{ message?: string }` | Info |
+| `warn` | `{ message?: string }` | Warning |
+| `debug` | `{ message?: string }` | Debug |
+
+## TypeScript
+
+Events are fully typed. The detail type is inferred from the event name:
 
 ```typescript
-import { Niivue, NiivueEvent } from '@niivue/niivue';
-
-const nv = new Niivue();
-
-// TypeScript knows event.detail is { azimuth: number; elevation: number }
 nv.addEventListener('azimuthElevationChange', (event) => {
   const { azimuth, elevation } = event.detail;
-  console.log(`Azimuth: ${azimuth}, Elevation: ${elevation}`);
 });
 
-// TypeScript knows event.detail is NVImage
 nv.addEventListener('imageLoaded', (event) => {
-  console.log(`Loaded: ${event.detail.name}`);
-  console.log(`Dimensions: ${event.detail.dims}`);
+  console.log(event.detail.name, event.detail.dims);
 });
 ```
 
 ## Backward Compatibility
 
-The event system works alongside existing callbacks with zero breaking changes:
+Legacy callback properties continue to work. When both are registered, events fire before callbacks:
 
 ```javascript
-// Legacy callback (still works!)
-nv.onLocationChange = (location) => {
-  console.log('Callback:', location);
-};
-
-// Modern event listener
-nv.addEventListener('locationChange', (event) => {
-  console.log('Event:', event.detail);
-});
-
-// Both will be called when location changes
-// Events fire BEFORE callbacks
-```
-
-You can gradually migrate to the event system without affecting existing code.
-
-## Migrating from Callbacks
-
-Here's how to migrate from the legacy callback system:
-
-### Before (Callbacks)
-
-```javascript
-const nv = new Niivue();
-
-nv.onLocationChange = (location) => {
-  console.log('Location changed:', location);
-};
-
-nv.onImageLoaded = (volume) => {
-  console.log('Image loaded:', volume.name);
-};
-```
-
-### After (Events)
-
-```javascript
-const nv = new Niivue();
-
-nv.addEventListener('locationChange', (event) => {
-  console.log('Location changed:', event.detail);
-});
-
-nv.addEventListener('imageLoaded', (event) => {
-  console.log('Image loaded:', event.detail.name);
-});
-```
-
-### Key Differences
-
-1. **Access data via `event.detail`** instead of direct parameters
-2. **Use `addEventListener`** instead of property assignment
-3. **Multiple listeners** are supported (not possible with callbacks)
-4. **Remove with `removeEventListener`** (callbacks were hard to clean up)
-
-## Best Practices
-
-### 1. Use AbortController for Cleanup
-
-Instead of managing listener references:
-
-```javascript
-// ❌ Old way - managing references
-const handler1 = (e) => { /* ... */ };
-const handler2 = (e) => { /* ... */ };
-nv.addEventListener('locationChange', handler1);
-nv.addEventListener('imageLoaded', handler2);
-// Later...
-nv.removeEventListener('locationChange', handler1);
-nv.removeEventListener('imageLoaded', handler2);
-
-// ✅ Better way - use AbortController
-const controller = new AbortController();
-nv.addEventListener('locationChange', handler1, { signal: controller.signal });
-nv.addEventListener('imageLoaded', handler2, { signal: controller.signal });
-// Later...
-controller.abort(); // Removes all listeners at once
-```
-
-### 2. Use `once` for One-Time Events
-
-```javascript
-// ✅ Automatically removes after first fire
-nv.addEventListener('imageLoaded', (event) => {
-  console.log('First image loaded');
-}, { once: true });
-```
-
-### 3. Prefer Events Over Callbacks for New Code
-
-```javascript
-// ❌ Old pattern (single listener only)
-nv.onLocationChange = handler;
-
-// ✅ Modern pattern (multiple listeners, better control)
-nv.addEventListener('locationChange', handler);
-```
-
-### 4. Use Typed Events in TypeScript
-
-```typescript
-import { NiivueEvent, NiivueEventMap } from '@niivue/niivue';
-
-// Type-safe event handler
-function handleImageLoad(event: NiivueEvent<'imageLoaded'>) {
-  // event.detail is typed as NVImage
-  console.log(event.detail.name);
-}
-
-nv.addEventListener('imageLoaded', handleImageLoad);
-```
-
-## Example: Building a Custom Event Monitor
-
-Here's a complete example of a custom event monitoring component:
-
-```javascript
-class NiivueEventMonitor {
-  constructor(niivue) {
-    this.nv = niivue;
-    this.controller = new AbortController();
-    this.eventCounts = {};
-    this.startMonitoring();
-  }
-
-  startMonitoring() {
-    const signal = this.controller.signal;
-
-    // Monitor all events
-    const events = [
-      'locationChange', 'imageLoaded', 'meshLoaded',
-      'frameChange', 'intensityChange', 'optsChange'
-    ];
-
-    events.forEach(eventName => {
-      this.nv.addEventListener(eventName, (event) => {
-        this.eventCounts[eventName] = (this.eventCounts[eventName] || 0) + 1;
-        console.log(`${eventName}: ${this.eventCounts[eventName]} times`);
-      }, { signal });
-    });
-  }
-
-  stop() {
-    this.controller.abort();
-    console.log('Monitoring stopped');
-  }
-
-  getStats() {
-    return { ...this.eventCounts };
-  }
-}
-
-// Usage
-const nv = new Niivue();
-nv.attachToCanvas(document.getElementById('gl'));
-
-const monitor = new NiivueEventMonitor(nv);
-
-// Later...
-monitor.stop();
-console.log('Event statistics:', monitor.getStats());
+nv.onLocationChange = (location) => { /* callback */ };
+nv.addEventListener('locationChange', (event) => { /* event */ });
+// Both fire; event first, then callback
 ```
 
 ## See Also
