@@ -120,16 +120,60 @@ export class BrainchopService {
 
       onProgress?.(30, 'Running inference')
 
+      // For parcellation models, use CPU backend to avoid WebGL texture size limits
+      // These models require full 256³ input and can't be processed in subvolumes
+      const isParcellation = modelInfo.type === 'parcellation'
+      const currentBackend = tf.getBackend()
+
+      if (isParcellation) {
+        console.log('[BrainchopService] Parcellation model detected, switching to CPU backend')
+        onProgress?.(30, 'Switching to CPU backend for large model...')
+        await tf.setBackend('cpu')
+        await tf.ready()
+        console.log('[BrainchopService] CPU backend ready, current backend:', tf.getBackend())
+      }
+
       // Run inference
-      const outputTensor = await this.inferenceEngine.runInference(preprocessResult.tensor, model, {
-        useSubvolumes,
-        subvolumeSize,
-        onProgress: (progress, status) => {
-          const scaledProgress = 30 + (progress / 100) * 60 // Scale to 30-90%
-          onProgress?.(scaledProgress, status)
-        },
-        abortSignal
-      })
+      let outputTensor: tf.Tensor4D
+      try {
+        // Use subvolumes only for non-parcellation models if requested
+        const shouldUseSubvolumes = !isParcellation && useSubvolumes
+        const effectiveSubvolumeSize = shouldUseSubvolumes ? (subvolumeSize || 64) : 256
+
+        console.log('[BrainchopService] Running inference:', {
+          isParcellation,
+          shouldUseSubvolumes,
+          effectiveSubvolumeSize,
+          backend: tf.getBackend()
+        })
+
+        outputTensor = await this.inferenceEngine.runInference(preprocessResult.tensor, model, {
+          useSubvolumes: shouldUseSubvolumes,
+          subvolumeSize: effectiveSubvolumeSize,
+          onProgress: (progress, status) => {
+            const scaledProgress = 30 + (progress / 100) * 60 // Scale to 30-90%
+            onProgress?.(scaledProgress, status)
+          },
+          abortSignal
+        })
+
+        console.log('[BrainchopService] Inference complete, output shape:', outputTensor.shape)
+      } catch (error) {
+        console.error('[BrainchopService] Inference error:', error)
+        // Restore original backend on error
+        if (isParcellation && tf.getBackend() === 'cpu') {
+          console.log('[BrainchopService] Restoring backend to:', currentBackend)
+          await tf.setBackend(currentBackend)
+        }
+        throw error
+      }
+
+      // Restore WebGL backend after parcellation inference
+      if (isParcellation && tf.getBackend() === 'cpu') {
+        console.log('[BrainchopService] Restoring backend to:', currentBackend)
+        await tf.setBackend(currentBackend)
+        console.log('[BrainchopService] Backend restored to:', tf.getBackend())
+      }
 
       // Check for cancellation
       if (abortSignal?.aborted) {

@@ -106,6 +106,13 @@ export class ModelManager {
       await tf.setBackend('webgl')
       await tf.ready()
 
+      // Configure WebGL for better memory handling
+      // Pack tensors more efficiently and avoid large textures
+      tf.env().set('WEBGL_PACK', true)
+      tf.env().set('WEBGL_PACK_DEPTHWISECONV', true)
+      tf.env().set('WEBGL_FORCE_F16_TEXTURES', false)
+      tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0)
+
       this.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize TensorFlow.js:', error)
@@ -168,7 +175,29 @@ export class ModelManager {
       // This is more reliable than file:// protocol in Electron renderer
       const modelPath = modelInfo.modelPath
       const ioHandler = new ElectronIPCModelLoader(modelPath)
-      const model = await tf.loadLayersModel(ioHandler)
+
+      // For very large models (parcellation), try CPU backend to avoid WebGL texture size limits
+      let model: tf.LayersModel
+      try {
+        model = await tf.loadLayersModel(ioHandler)
+      } catch (error) {
+        // If loading fails with texture size error, try CPU backend
+        if (error instanceof Error && error.message.includes('texture size')) {
+          console.warn(`Model ${modelId} exceeds WebGL limits, switching to CPU backend`)
+          const currentBackend = tf.getBackend()
+          await tf.setBackend('cpu')
+          try {
+            model = await tf.loadLayersModel(ioHandler)
+            console.log(`Model ${modelId} loaded successfully on CPU backend`)
+          } catch (cpuError) {
+            // Restore original backend
+            await tf.setBackend(currentBackend)
+            throw cpuError
+          }
+        } else {
+          throw error
+        }
+      }
 
       // Calculate model memory size
       const memorySize = this.calculateModelMemorySize(model)

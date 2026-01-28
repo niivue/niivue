@@ -66,6 +66,10 @@ export class InferenceEngine {
     abortSignal?: AbortSignal,
     session?: TensorSession
   ): Promise<tf.Tensor4D> {
+    console.log('[InferenceEngine] Starting full volume inference')
+    console.log('[InferenceEngine] Input tensor shape:', inputTensor.shape)
+    console.log('[InferenceEngine] Backend:', tf.getBackend())
+
     return tf.tidy(() => {
       onProgress?.(20, 'Running full volume inference')
 
@@ -78,13 +82,20 @@ export class InferenceEngine {
       // Most brainchop models expect [batch, width, height, depth, channels]
       let modelInput = inputTensor
       const inputShape = model.inputs[0].shape
+      console.log('[InferenceEngine] Model expects input shape:', inputShape)
+
       if (inputShape && inputShape.length === 5 && inputTensor.shape.length === 4) {
         // Expand dims to add channel dimension: [1, 256, 256, 256] -> [1, 256, 256, 256, 1]
         modelInput = tf.expandDims(inputTensor, -1) as any
+        console.log('[InferenceEngine] Expanded input shape:', modelInput.shape)
       }
+
+      console.log('[InferenceEngine] Running model.predict...')
 
       // Run model prediction
       const prediction = model.predict(modelInput) as tf.Tensor
+
+      console.log('[InferenceEngine] Prediction complete, output shape:', prediction.shape)
 
       onProgress?.(80, 'Processing output')
 
@@ -94,7 +105,9 @@ export class InferenceEngine {
         // [batch, width, height, depth, classes]
         // Take argmax over classes dimension
         // argMax already preserves the batch dimension, so result is [batch, width, height, depth]
+        console.log('[InferenceEngine] Taking argMax over classes dimension')
         output = tf.argMax(prediction, -1) as tf.Tensor4D
+        console.log('[InferenceEngine] ArgMax output shape:', output.shape)
       } else if (prediction.shape.length === 4) {
         output = prediction as tf.Tensor4D
       } else {
@@ -105,6 +118,8 @@ export class InferenceEngine {
       if (session) {
         session.tensors.push(output)
       }
+
+      console.log('[InferenceEngine] Full volume inference complete')
 
       return output
     })
@@ -122,7 +137,11 @@ export class InferenceEngine {
     abortSignal?: AbortSignal,
     session?: TensorSession
   ): Promise<tf.Tensor4D> {
-    const [, width, height, depth] = inputTensor.shape
+    // Check if tensor is actually 5D (has channel dimension)
+    const is5D = inputTensor.shape.length === 5
+    const [, width, height, depth] = is5D ?
+      [inputTensor.shape[0], inputTensor.shape[1], inputTensor.shape[2], inputTensor.shape[3]] :
+      inputTensor.shape
 
     // Calculate number of subvolumes needed
     const strideSize = Math.floor(subvolumeSize * 0.75) // 25% overlap
@@ -166,11 +185,25 @@ export class InferenceEngine {
 
           // Extract subvolume
           const subvolume = tf.tidy(() => {
-            const sliced = tf.slice4d(inputTensor, [0, startX, startY, startZ], [1, sizeX, sizeY, sizeZ])
+            // Use appropriate slice function based on tensor rank
+            let sliced: tf.Tensor
+            if (is5D) {
+              // For 5D tensors: [batch, width, height, depth, channels]
+              sliced = tf.slice(inputTensor, [0, startX, startY, startZ, 0], [1, sizeX, sizeY, sizeZ, (inputTensor.shape as number[])[4]])
+            } else {
+              // For 4D tensors: [batch, width, height, depth]
+              sliced = tf.slice4d(inputTensor, [0, startX, startY, startZ], [1, sizeX, sizeY, sizeZ])
+            }
 
             // Pad to subvolumeSize if needed
             if (sizeX < subvolumeSize || sizeY < subvolumeSize || sizeZ < subvolumeSize) {
-              const paddings: Array<[number, number]> = [
+              const paddings: Array<[number, number]> = is5D ? [
+                [0, 0],
+                [0, subvolumeSize - sizeX],
+                [0, subvolumeSize - sizeY],
+                [0, subvolumeSize - sizeZ],
+                [0, 0]
+              ] : [
                 [0, 0],
                 [0, subvolumeSize - sizeX],
                 [0, subvolumeSize - sizeY],
@@ -184,7 +217,7 @@ export class InferenceEngine {
 
           // Run inference on subvolume
           const prediction = tf.tidy(() => {
-            // Add channel dimension if model expects 5D input
+            // Add channel dimension if model expects 5D input and we don't have it
             let modelInput = subvolume
             const inputShape = model.inputs[0].shape
             if (inputShape && inputShape.length === 5 && subvolume.shape.length === 4) {
@@ -202,7 +235,7 @@ export class InferenceEngine {
               processed = pred as tf.Tensor4D
             }
 
-            // Crop back to actual size
+            // Crop back to actual size if we padded
             if (sizeX < subvolumeSize || sizeY < subvolumeSize || sizeZ < subvolumeSize) {
               return tf.slice4d(processed, [0, 0, 0, 0], [1, sizeX, sizeY, sizeZ])
             }
