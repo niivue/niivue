@@ -1,6 +1,6 @@
 import type { NVImage, ImageFromUrlOptions } from '@/nvimage'
 import type { NVMesh, LoadFromUrlParams } from '@/nvmesh'
-import type { NVDocument, NVConfigOptions } from '@/nvdocument'
+import type { NVDocument, NVConfigOptions, CompletedMeasurement, CompletedAngle, SLICE_TYPE } from '@/nvdocument'
 import type { DragReleaseParams, UIData } from '@/types'
 
 /**
@@ -28,6 +28,10 @@ export interface NiivueEventMap {
     intensityChange: NVImage
     /** Fired when a click-to-segment operation completes */
     clickToSegment: { mm3: number; mL: number }
+    /** Fired when a distance measurement is completed */
+    measurementCompleted: CompletedMeasurement
+    /** Fired when an angle measurement is completed */
+    angleCompleted: CompletedAngle
 
     // Loading events
     /** Fired when an image/volume is loaded */
@@ -38,6 +42,8 @@ export interface NiivueEventMap {
     volumeAddedFromUrl: { imageOptions: ImageFromUrlOptions; volume: NVImage }
     /** Fired when a volume loaded from a URL is removed */
     volumeWithUrlRemoved: { url: string }
+    /** Fired when any volume is removed from the scene */
+    volumeRemoved: { volume: NVImage; index: number }
     /** Fired when a volume is updated */
     volumeUpdated: void
     /** Fired when a mesh is added from a URL */
@@ -46,6 +52,8 @@ export interface NiivueEventMap {
     meshAdded: void
     /** Fired when a mesh loaded from a URL is removed */
     meshWithUrlRemoved: { url: string }
+    /** Fired when any mesh is removed from the scene */
+    meshRemoved: { mesh: NVMesh }
     /** Fired when a document is loaded */
     documentLoaded: NVDocument
     /** Fired when DICOM loader finishes processing images */
@@ -62,6 +70,8 @@ export interface NiivueEventMap {
     zoom3DChange: { zoom: number }
     /** Fired when clip plane changes */
     clipPlaneChange: { clipPlane: number[] }
+    /** Fired when the slice type (view layout) changes */
+    sliceTypeChange: { sliceType: SLICE_TYPE }
 
     // Shader events
     /** Fired when a custom mesh shader is added */
@@ -74,6 +84,22 @@ export interface NiivueEventMap {
     // Rendering events
     /** Fired when the colormap changes */
     colormapChange: void
+    /** Fired when volume stacking order changes */
+    volumeOrderChanged: { volumes: NVImage[] }
+
+    // Drawing events
+    /** Fired when the drawing pen value changes */
+    penValueChanged: { penValue: number; isFilledPen: boolean }
+    /** Fired when the active drawing tool changes (high-level interpretation of pen value and drawing state) */
+    drawingToolChanged: {
+        tool: 'off' | 'draw' | 'erase' | 'eraseCluster' | 'growCluster' | 'growClusterBright' | 'growClusterDark' | 'clickToSegment'
+        penValue: number
+        isFilledPen: boolean
+    }
+    /** Fired when the drawing bitmap materially changes (commit, undo, load, close) */
+    drawingChanged: { action: 'draw' | 'undo' | 'load' | 'close' | 'clear' }
+    /** Fired when drawing mode is toggled on or off */
+    drawingEnabled: { enabled: boolean }
 
     // Configuration events
     /** Fired when visualization options change */

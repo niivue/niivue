@@ -56,6 +56,9 @@ controller.abort();
 | `locationChange` | `unknown` | Crosshair location changed |
 | `intensityChange` | `NVImage` | Intensity values changed |
 | `clickToSegment` | `{ mm3: number; mL: number }` | Click-to-segment completed |
+| `measurementCompleted` | `CompletedMeasurement` | Distance measurement line completed |
+| `angleCompleted` | `CompletedAngle` | Angle measurement completed |
+| `frameChange` | `{ volume: NVImage; index: number }` | 4D frame changed |
 
 ### Loading
 
@@ -65,18 +68,14 @@ controller.abort();
 | `meshLoaded` | `NVMesh` | Mesh loaded |
 | `volumeAddedFromUrl` | `{ imageOptions, volume }` | Volume added from URL |
 | `volumeWithUrlRemoved` | `{ url: string }` | URL-loaded volume removed |
+| `volumeRemoved` | `{ volume: NVImage; index: number }` | Any volume removed from scene |
 | `volumeUpdated` | `void` | Volume updated |
 | `meshAddedFromUrl` | `{ meshOptions, mesh }` | Mesh added from URL |
 | `meshAdded` | `void` | Mesh added |
 | `meshWithUrlRemoved` | `{ url: string }` | URL-loaded mesh removed |
+| `meshRemoved` | `{ mesh: NVMesh }` | Any mesh removed from scene |
 | `documentLoaded` | `NVDocument` | Document loaded |
 | `dicomLoaderFinished` | `{ files: (NVImage\|NVMesh)[] }` | DICOM loader finished |
-
-### Playback
-
-| Event | Detail Type | Description |
-|-------|------------|-------------|
-| `frameChange` | `{ volume: NVImage; index: number }` | 4D frame changed |
 
 ### View Control
 
@@ -85,6 +84,7 @@ controller.abort();
 | `azimuthElevationChange` | `{ azimuth: number; elevation: number }` | 3D view rotation changed |
 | `zoom3DChange` | `{ zoom: number }` | 3D zoom level changed |
 | `clipPlaneChange` | `{ clipPlane: number[] }` | Clip plane changed |
+| `sliceTypeChange` | `{ sliceType: SLICE_TYPE }` | View layout changed (axial, coronal, etc.) |
 
 ### Shaders
 
@@ -99,6 +99,16 @@ controller.abort();
 | Event | Detail Type | Description |
 |-------|------------|-------------|
 | `colormapChange` | `void` | Colormap changed |
+| `volumeOrderChanged` | `{ volumes: NVImage[] }` | Volume stacking order changed |
+
+### Drawing
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `penValueChanged` | `{ penValue: number; isFilledPen: boolean }` | Drawing pen value changed |
+| `drawingToolChanged` | `{ tool: string; penValue: number; isFilledPen: boolean }` | Active drawing tool changed (high-level interpretation) |
+| `drawingChanged` | `{ action: string }` | Drawing bitmap materially changed (`'draw'`, `'undo'`, `'load'`, `'close'`, `'clear'`) |
+| `drawingEnabled` | `{ enabled: boolean }` | Drawing mode toggled on or off |
 
 ### Configuration
 

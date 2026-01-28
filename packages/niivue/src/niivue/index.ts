@@ -54,7 +54,9 @@ import {
     ExportDocumentData,
     INITIAL_SCENE_DATA,
     MouseEventConfig,
-    TouchEventConfig
+    TouchEventConfig,
+    CompletedMeasurement,
+    CompletedAngle
 } from '@/nvdocument'
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '@/nvlabel'
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
@@ -562,6 +564,36 @@ export class Niivue extends EventTarget {
      * @param oldValue - The previous value of the option.
      */
     onOptsChange: (propertyName: keyof NVConfigOptions, newValue: NVConfigOptions[keyof NVConfigOptions], oldValue: NVConfigOptions[keyof NVConfigOptions]) => void = () => {}
+
+    /** Callback when a distance measurement is completed */
+    onMeasurementCompleted: (measurement: CompletedMeasurement) => void = () => {}
+
+    /** Callback when an angle measurement is completed */
+    onAngleCompleted: (angle: CompletedAngle) => void = () => {}
+
+    /** Callback when the drawing pen value changes */
+    onPenValueChanged: (penValue: number, isFilledPen: boolean) => void = () => {}
+
+    /** Callback when the active drawing tool changes */
+    onDrawingToolChanged: (tool: string, penValue: number, isFilledPen: boolean) => void = () => {}
+
+    /** Callback when any volume is removed from the scene */
+    onVolumeRemoved: (volume: NVImage, index: number) => void = () => {}
+
+    /** Callback when any mesh is removed from the scene */
+    onMeshRemoved: (mesh: NVMesh) => void = () => {}
+
+    /** Callback when the slice type (view layout) changes */
+    onSliceTypeChange: (sliceType: SLICE_TYPE) => void = () => {}
+
+    /** Callback when the drawing bitmap materially changes */
+    onDrawingChanged: (action: string) => void = () => {}
+
+    /** Callback when drawing mode is toggled on or off */
+    onDrawingEnabled: (enabled: boolean) => void = () => {}
+
+    /** Callback when volume stacking order changes */
+    onVolumeOrderChanged: (volumes: NVImage[]) => void = () => {}
 
     document = new NVDocument()
 
@@ -1402,6 +1434,8 @@ export class Niivue extends EventTarget {
                         }
 
                         this.document.completedAngles.push(angleToSave)
+                        this._emitEvent('angleCompleted', angleToSave)
+                        this.onAngleCompleted(angleToSave)
                     }
 
                     this.resetAngleMeasurement()
@@ -1558,6 +1592,8 @@ export class Niivue extends EventTarget {
             this.drawPenFilled()
         } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
             this.drawAddUndoBitmap()
+            this._emitEvent('drawingChanged', { action: 'draw' })
+            this.onDrawingChanged('draw')
         } else if (this.opts.drawingEnabled && !isNaN(this.drawShapeStartLocation[0]) && (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE)) {
             // Finalize rectangle or ellipse drawing - the shape is already drawn in drawBitmap
             if (this.opts.penValue === 0) {
@@ -1568,6 +1604,8 @@ export class Niivue extends EventTarget {
             }
             // Clean up preview bitmap since we're keeping the final drawing
             this.drawShapePreviewBitmap = null
+            this._emitEvent('drawingChanged', { action: 'draw' })
+            this.onDrawingChanged('draw')
         }
         this.drawPenLocation = [NaN, NaN, NaN]
         this.drawPenAxCorSag = -1
@@ -1641,14 +1679,17 @@ export class Niivue extends EventTarget {
                     const startMM = this.frac2mm(startFrac)
                     const endMM = this.frac2mm(endFrac)
 
-                    this.document.completedMeasurements.push({
+                    const measurement: CompletedMeasurement = {
                         startMM: vec3.fromValues(startMM[0], startMM[1], startMM[2]),
                         endMM: vec3.fromValues(endMM[0], endMM[1], endMM[2]),
                         sliceIndex: sliceInfo.sliceIndex,
                         sliceType: sliceInfo.sliceType,
                         slicePosition: sliceInfo.slicePosition,
                         distance: vec3.distance(vec3.fromValues(startMM[0], startMM[1], startMM[2]), vec3.fromValues(endMM[0], endMM[1], endMM[2]))
-                    })
+                    }
+                    this.document.completedMeasurements.push(measurement)
+                    this._emitEvent('measurementCompleted', measurement)
+                    this.onMeasurementCompleted(measurement)
                 }
 
                 this.clearActiveDragMode()
@@ -3281,6 +3322,8 @@ export class Niivue extends EventTarget {
         this.drawBitmap = drawBitmap
         this.currentDrawUndoBitmap = currentDrawUndoBitmap
         this.refreshDrawing(true)
+        this._emitEvent('drawingChanged', { action: 'undo' })
+        this.onDrawingChanged('undo')
     }
 
     /**
@@ -3338,6 +3381,8 @@ export class Niivue extends EventTarget {
 
         this.drawAddUndoBitmap()
         this.refreshDrawing(false)
+        this._emitEvent('drawingChanged', { action: 'load' })
+        this.onDrawingChanged('load')
         this.drawScene()
         return true
     }
@@ -3775,10 +3820,14 @@ export class Niivue extends EventTarget {
      * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
      */
     removeVolume(volume: NVImage): void {
+        const removedIndex = this.volumes.indexOf(volume)
         const result = VolumeManager.removeVolume(this.volumes, volume)
         this.volumes = result.volumes
         this.back = this.volumes.length > 0 ? this.volumes[0] : null
         this.overlays = this.volumes.slice(1)
+
+        this._emitEvent('volumeRemoved', { volume, index: removedIndex })
+        this.onVolumeRemoved(volume, removedIndex)
 
         // check if we have a url for this volume
         if (this.mediaUrlMap.has(volume)) {
@@ -3816,6 +3865,8 @@ export class Niivue extends EventTarget {
      * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
      */
     removeMesh(mesh: NVMesh): void {
+        this._emitEvent('meshRemoved', { mesh })
+        this.onMeshRemoved(mesh)
         mesh.unloadMesh(this.gl)
         this.setMesh(mesh, -1)
         if (this.mediaUrlMap.has(mesh)) {
@@ -3855,6 +3906,8 @@ export class Niivue extends EventTarget {
         this.back = result.back
         this.overlays = result.overlays
         this.updateGLVolume()
+        this._emitEvent('volumeOrderChanged', { volumes: this.volumes })
+        this.onVolumeOrderChanged(this.volumes)
     }
 
     /**
@@ -3870,6 +3923,8 @@ export class Niivue extends EventTarget {
         this.back = result.back
         this.overlays = result.overlays
         this.updateGLVolume()
+        this._emitEvent('volumeOrderChanged', { volumes: this.volumes })
+        this.onVolumeOrderChanged(this.volumes)
     }
 
     /**
@@ -3885,6 +3940,8 @@ export class Niivue extends EventTarget {
         this.back = result.back
         this.overlays = result.overlays
         this.updateGLVolume()
+        this._emitEvent('volumeOrderChanged', { volumes: this.volumes })
+        this.onVolumeOrderChanged(this.volumes)
     }
 
     /**
@@ -3900,6 +3957,8 @@ export class Niivue extends EventTarget {
         this.back = result.back
         this.overlays = result.overlays
         this.updateGLVolume()
+        this._emitEvent('volumeOrderChanged', { volumes: this.volumes })
+        this.onVolumeOrderChanged(this.volumes)
     }
 
     /**
@@ -4090,6 +4149,8 @@ export class Niivue extends EventTarget {
      */
     setDrawingEnabled(trueOrFalse: boolean): void {
         this.opts.drawingEnabled = trueOrFalse
+        this._emitEvent('drawingEnabled', { enabled: trueOrFalse })
+        this.onDrawingEnabled(trueOrFalse)
         if (this.opts.drawingEnabled) {
             if (!this.drawBitmap) {
                 this.createEmptyDrawing()
@@ -4117,6 +4178,10 @@ export class Niivue extends EventTarget {
             if (resetState.needsRefresh) {
                 this.refreshDrawing(true, false)
             }
+            // Emit tool changed to 'off' when drawing is disabled
+            const tool = this._deriveDrawingTool(this.opts.penValue)
+            this._emitEvent('drawingToolChanged', { tool, penValue: this.opts.penValue, isFilledPen: this.opts.isFilledPen })
+            this.onDrawingToolChanged(tool, this.opts.penValue, this.opts.isFilledPen)
         }
         this.drawScene() // Redraw needed in both cases
     }
@@ -4131,7 +4196,41 @@ export class Niivue extends EventTarget {
     setPenValue(penValue: number, isFilledPen = false): void {
         this.opts.penValue = penValue
         this.opts.isFilledPen = isFilledPen
+        this._emitEvent('penValueChanged', { penValue, isFilledPen })
+        this.onPenValueChanged(penValue, isFilledPen)
+        const tool = this._deriveDrawingTool(penValue)
+        this._emitEvent('drawingToolChanged', { tool, penValue, isFilledPen })
+        this.onDrawingToolChanged(tool, penValue, isFilledPen)
         this.drawScene()
+    }
+
+    /**
+     * Derives the high-level drawing tool name from a pen value and the current drawing state.
+     * @internal
+     */
+    private _deriveDrawingTool(penValue: number): 'off' | 'draw' | 'erase' | 'eraseCluster' | 'growCluster' | 'growClusterBright' | 'growClusterDark' | 'clickToSegment' {
+        if (!this.opts.drawingEnabled) {
+            return 'off'
+        }
+        if (this.opts.clickToSegment) {
+            return 'clickToSegment'
+        }
+        if (Object.is(penValue, -0)) {
+            return 'eraseCluster'
+        }
+        if (isNaN(penValue)) {
+            return 'growCluster'
+        }
+        if (penValue === Number.POSITIVE_INFINITY) {
+            return 'growClusterBright'
+        }
+        if (penValue === Number.NEGATIVE_INFINITY) {
+            return 'growClusterDark'
+        }
+        if (penValue === 0) {
+            return 'erase'
+        }
+        return 'draw'
     }
 
     /**
@@ -4254,6 +4353,8 @@ export class Niivue extends EventTarget {
      */
     setSliceType(st: SLICE_TYPE): this {
         this.opts.sliceType = st
+        this._emitEvent('sliceTypeChange', { sliceType: st })
+        this.onSliceTypeChange(st)
         this.drawScene()
         return this
     }
@@ -5833,6 +5934,8 @@ export class Niivue extends EventTarget {
         this.drawPenFillPts = []
         this.drawAddUndoBitmap()
         this.refreshDrawing(false)
+        this._emitEvent('drawingChanged', { action: 'draw' })
+        this.onDrawingChanged('draw')
     }
 
     /**
@@ -5845,6 +5948,8 @@ export class Niivue extends EventTarget {
         this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true)
         this.drawBitmap = null
         this.clickToSegmentGrowingBitmap = null
+        this._emitEvent('drawingChanged', { action: 'close' })
+        this.onDrawingChanged('close')
         this.drawScene()
     }
 
