@@ -269,6 +269,141 @@ describe('Niivue EventTarget API', () => {
                 expect(event.detail).toHaveProperty('mesh')
             })
         })
+
+        it('should provide correct event detail types for measurementCompleted', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('startMM')
+                expect(event.detail).toHaveProperty('endMM')
+                expect(event.detail).toHaveProperty('distance')
+                expect(event.detail).toHaveProperty('sliceIndex')
+                expect(event.detail).toHaveProperty('sliceType')
+            })
+            nv.addEventListener('measurementCompleted', listener)
+            const event = new NiivueEvent('measurementCompleted', {
+                startMM: [0, 0, 0],
+                endMM: [10, 10, 10],
+                distance: 17.32,
+                sliceIndex: 0,
+                sliceType: 2
+            })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for angleCompleted', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('firstLineMM')
+                expect(event.detail).toHaveProperty('secondLineMM')
+                expect(event.detail).toHaveProperty('angle')
+                expect(event.detail).toHaveProperty('sliceIndex')
+                expect(event.detail).toHaveProperty('sliceType')
+            })
+            nv.addEventListener('angleCompleted', listener)
+            const event = new NiivueEvent('angleCompleted', {
+                firstLineMM: { start: [0, 0, 0], end: [10, 0, 0] },
+                secondLineMM: { start: [0, 0, 0], end: [0, 10, 0] },
+                angle: 90,
+                sliceIndex: 0,
+                sliceType: 2
+            })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for volumeRemoved', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('volume')
+                expect(event.detail).toHaveProperty('index')
+                expect(typeof event.detail.index).toBe('number')
+            })
+            nv.addEventListener('volumeRemoved', listener)
+            const event = new NiivueEvent('volumeRemoved', { volume: {} as any, index: 0 })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for meshRemoved', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('mesh')
+            })
+            nv.addEventListener('meshRemoved', listener)
+            const event = new NiivueEvent('meshRemoved', { mesh: {} as any })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for sliceTypeChange', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('sliceType')
+                expect(typeof event.detail.sliceType).toBe('number')
+            })
+            nv.addEventListener('sliceTypeChange', listener)
+            const event = new NiivueEvent('sliceTypeChange', { sliceType: 2 })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for volumeOrderChanged', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('volumes')
+                expect(Array.isArray(event.detail.volumes)).toBe(true)
+            })
+            nv.addEventListener('volumeOrderChanged', listener)
+            const event = new NiivueEvent('volumeOrderChanged', { volumes: [] })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for penValueChanged', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('penValue')
+                expect(event.detail).toHaveProperty('isFilledPen')
+                expect(typeof event.detail.penValue).toBe('number')
+                expect(typeof event.detail.isFilledPen).toBe('boolean')
+            })
+            nv.addEventListener('penValueChanged', listener)
+            const event = new NiivueEvent('penValueChanged', { penValue: 1, isFilledPen: false })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for drawingToolChanged', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('tool')
+                expect(event.detail).toHaveProperty('penValue')
+                expect(event.detail).toHaveProperty('isFilledPen')
+            })
+            nv.addEventListener('drawingToolChanged', listener)
+            const event = new NiivueEvent('drawingToolChanged', {
+                tool: 'draw',
+                penValue: 1,
+                isFilledPen: false
+            })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for drawingChanged', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('action')
+                expect(['draw', 'undo', 'load', 'close', 'clear']).toContain(event.detail.action)
+            })
+            nv.addEventListener('drawingChanged', listener)
+            const event = new NiivueEvent('drawingChanged', { action: 'draw' })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should provide correct event detail types for drawingEnabled', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('enabled')
+                expect(typeof event.detail.enabled).toBe('boolean')
+            })
+            nv.addEventListener('drawingEnabled', listener)
+            const event = new NiivueEvent('drawingEnabled', { enabled: true })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
     })
 
     describe('All Event Types', () => {
@@ -300,7 +435,17 @@ describe('Niivue EventTarget API', () => {
             'error',
             'info',
             'warn',
-            'debug'
+            'debug',
+            'measurementCompleted',
+            'angleCompleted',
+            'volumeRemoved',
+            'meshRemoved',
+            'sliceTypeChange',
+            'volumeOrderChanged',
+            'penValueChanged',
+            'drawingToolChanged',
+            'drawingChanged',
+            'drawingEnabled'
         ]
 
         it.each(eventTypes)('should support %s event type', (eventType) => {
