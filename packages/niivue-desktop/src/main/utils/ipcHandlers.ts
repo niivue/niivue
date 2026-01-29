@@ -265,6 +265,19 @@ export const registerIpcHandlers = (): void => {
     }
   })
 
+  // Load brainchop labels file
+  ipcMain.handle('load-brainchop-labels', async (_event, labelsPath: string) => {
+    try {
+      const fullPath = path.join(RESOURCES_DIR, labelsPath)
+      console.log('[Main] Loading brainchop labels from:', fullPath)
+      const json = await fs.promises.readFile(fullPath, 'utf-8')
+      return JSON.parse(json)
+    } catch (error) {
+      console.error('[Main] Error loading brainchop labels:', error)
+      throw error
+    }
+  })
+
   // Load brainchop weight file
   ipcMain.handle('load-brainchop-weights', async (_event, weightPath: string) => {
     try {

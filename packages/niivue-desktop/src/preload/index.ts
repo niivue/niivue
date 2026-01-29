@@ -26,6 +26,9 @@ const api = {
   },
   loadBrainchopWeights: (weightPath: string): Promise<ArrayBuffer> => {
     return ipcRenderer.invoke('load-brainchop-weights', weightPath)
+  },
+  loadBrainchopLabels: (labelsPath: string): Promise<any> => {
+    return ipcRenderer.invoke('load-brainchop-labels', labelsPath)
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -98,13 +98,22 @@ export const registerSegmentationHandlers = ({
       // Set opacity for overlay visibility
       nv.setOpacity(overlayIndex, 0.7) // 70% opacity for better visibility
 
-      // Ensure the overlay is visible by setting proper intensity range
-      // For parcellation models, we want to show all labels
-      if (result.modelInfo.type === 'parcellation') {
-        console.log('[Renderer] Configuring parcellation overlay display')
-        // FreeSurfer colormap should show all labels from 0 to max
-        // TODO: Fix setScale API - currently has incorrect signature
-        // nv.setScale(overlayIndex, [0, result.volume.cal_max])
+      // For parcellation models, apply colormap labels for atlas display
+      if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
+        console.log('[Renderer] Loading parcellation labels from:', result.modelInfo.labelsPath)
+        try {
+          const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
+          result.volume.setColormapLabel(labelsJson)
+          if (result.volume.colormapLabel?.lut) {
+            // Keep background transparent, set other labels to semi-transparent
+            result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
+              i % 4 === 3 ? (v === 0 ? 0 : 178) : v
+            )
+          }
+          console.log('[Renderer] Applied parcellation colormap labels')
+        } catch (err) {
+          console.error('[Renderer] Failed to load parcellation labels:', err)
+        }
       }
 
       // Update React state

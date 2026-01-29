@@ -211,7 +211,24 @@ function MainApp(): JSX.Element {
 
       // Add result as overlay
       nv.addVolume(result.volume)
-      nv.setOpacity(nv.volumes.length - 1, 0.5)
+      const overlayIndex = nv.volumes.length - 1
+      nv.setOpacity(overlayIndex, 0.5)
+
+      // For parcellation models, apply colormap labels for atlas display
+      if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
+        try {
+          const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
+          result.volume.setColormapLabel(labelsJson)
+          if (result.volume.colormapLabel?.lut) {
+            result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
+              i % 4 === 3 ? (v === 0 ? 0 : 178) : v
+            )
+          }
+        } catch (err) {
+          console.error('Failed to load parcellation labels:', err)
+        }
+      }
+
       selected.setVolumes([...nv.volumes])
       nv.updateGLVolume()
       updateDocument(selected.id, { isDirty: true })
