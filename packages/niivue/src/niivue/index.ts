@@ -1849,6 +1849,9 @@ export class Niivue {
             }
             // Handle all other drag modes that need drag tracking
             this.setDragEnd(pos.x, pos.y)
+            if (activeDragMode === DRAG_MODE.slicer3D) {
+                this.sync()
+            }
             this.drawScene()
             this.uiData.prevX = this.uiData.currX
             this.uiData.prevY = this.uiData.currY
