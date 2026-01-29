@@ -31,6 +31,8 @@ export interface ModelInfo {
   autoThreshold: number
   enableQuantileNorm: boolean
   enableTranspose: boolean
+  remoteUrl?: string
+  isBundled?: boolean
 }
 
 /**

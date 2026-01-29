@@ -29,6 +29,17 @@ const api = {
   },
   loadBrainchopLabels: (labelsPath: string): Promise<any> => {
     return ipcRenderer.invoke('load-brainchop-labels', labelsPath)
+  },
+  selectModelFolder: (): Promise<{
+    folderPath: string
+    modelJson: any
+    hasLabels: boolean
+    folderName: string
+  } | null> => {
+    return ipcRenderer.invoke('select-model-folder')
+  },
+  selectColormapFile: (): Promise<string | null> => {
+    return ipcRenderer.invoke('select-colormap-file')
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

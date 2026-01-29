@@ -95,6 +95,7 @@ export class ModelManager {
   private modelCache: Map<string, ModelCacheEntry> = new Map()
   private readonly maxCacheSize = 2 // Maximum number of models to keep in memory
   private isInitialized = false
+  private userModels: ModelInfo[] = []
 
   /**
    * Initialize the ModelManager and TensorFlow.js backend
@@ -212,14 +213,23 @@ export class ModelManager {
    * Get all available models from the registry
    */
   getAvailableModels(): ModelInfo[] {
-    return modelsRegistry.models as ModelInfo[]
+    return [...(modelsRegistry.models as ModelInfo[]), ...this.userModels]
+  }
+
+  /**
+   * Register a user-loaded model at runtime
+   */
+  registerUserModel(model: ModelInfo): void {
+    // Avoid duplicates
+    if (this.userModels.some((m) => m.id === model.id)) return
+    this.userModels.push(model)
   }
 
   /**
    * Get model information by ID
    */
   getModelInfo(modelId: string): ModelInfo | undefined {
-    return modelsRegistry.models.find(model => model.id === modelId) as ModelInfo | undefined
+    return this.getAvailableModels().find(model => model.id === modelId)
   }
 
   /**
@@ -523,6 +533,33 @@ export class ModelManager {
    */
   getTensorFlowMemoryInfo(): tf.MemoryInfo {
     return tf.memory()
+  }
+
+  /**
+   * Check if a model is available locally (bundled or previously downloaded)
+   */
+  async isModelAvailable(modelId: string): Promise<boolean> {
+    const modelInfo = this.getModelInfo(modelId)
+    if (!modelInfo) return false
+    if (modelInfo.isBundled !== false) return true
+    // TODO: check if model has been downloaded to app data directory
+    return false
+  }
+
+  /**
+   * Download a remote model to local storage
+   */
+  async downloadModel(modelId: string, onProgress?: (progress: number) => void): Promise<void> {
+    const modelInfo = this.getModelInfo(modelId)
+    if (!modelInfo) throw new Error(`Model not found: ${modelId}`)
+    if (!modelInfo.remoteUrl) throw new Error(`Model ${modelId} has no remote URL`)
+    // TODO: implement download via Electron IPC
+    // 1. Fetch model.json from remoteUrl
+    // 2. Parse weightsManifest to get weight file paths
+    // 3. Download weight files
+    // 4. Save to app data directory
+    // 5. Optionally download colormapUrl / labels
+    throw new Error('Remote model download not yet implemented')
   }
 
   /**

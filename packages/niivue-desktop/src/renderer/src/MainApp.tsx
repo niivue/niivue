@@ -52,7 +52,7 @@ function MainApp(): JSX.Element {
   } = useAppContext()
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>('layers')
   const { showStatusBar } = useAppContext()
   const [cursorLocation, setCursorLocation] = useState<string>('')
   const lastSyncedDoc = useRef<string | null>(null)
@@ -67,7 +67,10 @@ function MainApp(): JSX.Element {
   const [segmentationProgress, setSegmentationProgress] = useState(0)
   const [segmentationStatus, setSegmentationStatus] = useState('')
   const [segmentationModelName, setSegmentationModelName] = useState('')
+  const [modelsVersion, setModelsVersion] = useState(0)
   const availableModels = brainchopService.getAvailableModels()
+  // modelsVersion is used to trigger re-render when user adds models via wizard
+  void modelsVersion
 
   const getTarget = async (): Promise<NiivueInstanceContext> => {
     if (!selected) throw new Error('no document!')
@@ -702,8 +705,11 @@ function MainApp(): JSX.Element {
             onMoveVolumeUp={handleMoveVolumeUp}
             onMoveVolumeDown={handleMoveVolumeDown}
             onReplaceVolume={handleReplaceVolume}
-            collapsed={sidebarCollapsed}
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            activePanel={activeLeftPanel}
+            onSetActivePanel={setActiveLeftPanel}
+            availableModels={availableModels}
+            onRunSegmentation={handleRunSegmentation}
+            onModelsChanged={() => setModelsVersion((v) => v + 1)}
           />
         </div>
         {/* Viewer (center) */}
@@ -716,7 +722,7 @@ function MainApp(): JSX.Element {
             >
               <Viewer
                 doc={doc}
-                collapsed={sidebarCollapsed}
+                sidebarCollapsed={activeLeftPanel === null}
                 rightPanelOpen={rightPanelOpen}
                 onToggleRightPanel={() => setRightPanelOpen((prev) => !prev)}
               />

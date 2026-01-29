@@ -16,7 +16,8 @@
       "cropPadding": 18,
       "autoThreshold": 0.02,
       "enableQuantileNorm": false,
-      "enableTranspose": true
+      "enableTranspose": true,
+      "isBundled": true
     },
     {
       "id": "tissue-seg-full",
@@ -34,7 +35,8 @@
       "cropPadding": 0,
       "autoThreshold": 0,
       "enableQuantileNorm": false,
-      "enableTranspose": true
+      "enableTranspose": true,
+      "isBundled": true
     },
     {
       "id": "brain-extract-light",
@@ -52,7 +54,8 @@
       "cropPadding": 18,
       "autoThreshold": 0.02,
       "enableQuantileNorm": false,
-      "enableTranspose": true
+      "enableTranspose": true,
+      "isBundled": true
     },
     {
       "id": "brain-extract-full",
@@ -70,7 +73,8 @@
       "cropPadding": 0,
       "autoThreshold": 0,
       "enableQuantileNorm": false,
-      "enableTranspose": true
+      "enableTranspose": true,
+      "isBundled": true
     },
     {
       "id": "parcellation-50",
@@ -88,7 +92,8 @@
       "cropPadding": 0,
       "autoThreshold": 0,
       "enableQuantileNorm": true,
-      "enableTranspose": true
+      "enableTranspose": true,
+      "isBundled": true
     },
     {
       "id": "parcellation-104",
@@ -106,7 +111,8 @@
       "cropPadding": 0,
       "autoThreshold": 0,
       "enableQuantileNorm": true,
-      "enableTranspose": true
+      "enableTranspose": true,
+      "isBundled": true
     }
   ]
 }

@@ -13,6 +13,13 @@ declare global {
       }>
       loadBrainchopWeights: (weightPath: string) => Promise<ArrayBuffer>
       loadBrainchopLabels: (labelsPath: string) => Promise<any>
+      selectModelFolder: () => Promise<{
+        folderPath: string
+        modelJson: any
+        hasLabels: boolean
+        folderName: string
+      } | null>
+      selectColormapFile: () => Promise<string | null>
     }
     api: unknown
   }

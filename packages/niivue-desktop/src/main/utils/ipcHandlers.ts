@@ -244,10 +244,53 @@ export const registerIpcHandlers = (): void => {
     }
   )
 
+  // Select a local model folder (must contain model.json)
+  ipcMain.handle('select-model-folder', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Model Folder',
+      properties: ['openDirectory'],
+      message: 'Select a folder containing a TensorFlow.js model (model.json + weights)'
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const folderPath = result.filePaths[0]
+
+    // Validate: must contain model.json
+    const modelJsonPath = path.join(folderPath, 'model.json')
+    if (!fs.existsSync(modelJsonPath)) {
+      throw new Error('Selected folder does not contain a model.json file')
+    }
+
+    // Read model.json to extract metadata
+    const modelJson = JSON.parse(fs.readFileSync(modelJsonPath, 'utf-8'))
+
+    // Check for labels.json
+    const labelsPath = path.join(folderPath, 'labels.json')
+    const hasLabels = fs.existsSync(labelsPath)
+
+    return {
+      folderPath,
+      modelJson,
+      hasLabels,
+      folderName: path.basename(folderPath)
+    }
+  })
+
+  // Select a local colormap label JSON file
+  ipcMain.handle('select-colormap-file', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Colormap Label File',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      message: 'Select a colormap label JSON file'
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
   // Load brainchop model files
   ipcMain.handle('load-brainchop-model', async (_event, modelPath: string) => {
     try {
-      const fullPath = path.join(RESOURCES_DIR, modelPath)
+      const fullPath = path.isAbsolute(modelPath) ? modelPath : path.join(RESOURCES_DIR, modelPath)
       console.log('[Main] Loading brainchop model from:', fullPath)
 
       // Read model.json
@@ -268,7 +311,7 @@ export const registerIpcHandlers = (): void => {
   // Load brainchop labels file
   ipcMain.handle('load-brainchop-labels', async (_event, labelsPath: string) => {
     try {
-      const fullPath = path.join(RESOURCES_DIR, labelsPath)
+      const fullPath = path.isAbsolute(labelsPath) ? labelsPath : path.join(RESOURCES_DIR, labelsPath)
       console.log('[Main] Loading brainchop labels from:', fullPath)
       const json = await fs.promises.readFile(fullPath, 'utf-8')
       return JSON.parse(json)

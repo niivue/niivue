@@ -7,13 +7,13 @@ const electron = window.electron
 
 interface ViewerProps {
   doc: NiivueInstanceContext
-  collapsed: boolean
+  sidebarCollapsed: boolean
   rightPanelOpen?: boolean
   onToggleRightPanel?: () => void
 }
 
 // src/components/Viewer.tsx
-export function Viewer({ doc, collapsed, rightPanelOpen, onToggleRightPanel }: ViewerProps): JSX.Element {
+export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPanel }: ViewerProps): JSX.Element {
   const nv = doc.nvRef.current
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hasInit = useRef(false)
@@ -51,10 +51,10 @@ export function Viewer({ doc, collapsed, rightPanelOpen, onToggleRightPanel }: V
       ro.disconnect()
       hasInit.current = false
     }
-  }, [doc.id, collapsed, nv])
+  }, [doc.id, sidebarCollapsed, nv])
 
   return (
-    <div className={`flex flex-col bg-black h-full ${collapsed ? 'basis-5/6' : 'basis-2/3'}`}>
+    <div className={`flex flex-col bg-black h-full ${sidebarCollapsed ? 'basis-5/6' : 'basis-2/3'}`}>
       <div className="h-12 bg-black flex items-center justify-end px-3 gap-2">
         {onToggleRightPanel && (
           <button
