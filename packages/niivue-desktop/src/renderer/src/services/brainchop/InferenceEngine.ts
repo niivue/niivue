@@ -133,6 +133,8 @@ export class InferenceEngine {
 
       const progress = 10 + Math.floor((i / loopEnd) * 70)
       onProgress?.(progress, `Layer ${i}/${loopEnd}`)
+      // Yield to event loop so React can render progress updates
+      await new Promise(resolve => setTimeout(resolve, 0))
       console.log(`[InferenceEngine] Layer ${i} output shape:`, currentTensor.shape)
     }
 

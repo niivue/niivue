@@ -429,6 +429,23 @@ export class ModelManager {
   }
 
   /**
+   * Load raw model artifacts (topology + weights) without constructing a live model.
+   * Used to transfer model data to a web worker where it can be reconstructed
+   * via tf.loadLayersModel(tf.io.fromMemory(artifacts)).
+   */
+  async loadModelArtifacts(modelId: string): Promise<{ artifacts: tf.io.ModelArtifacts; modelInfo: ModelInfo }> {
+    const modelInfo = this.getModelInfo(modelId)
+    if (!modelInfo) {
+      throw new Error(`Model not found: ${modelId}`)
+    }
+
+    const ioHandler = new ElectronIPCModelLoader(modelInfo.modelPath)
+    const artifacts = await ioHandler.load()
+
+    return { artifacts, modelInfo }
+  }
+
+  /**
    * Preload a model into cache
    */
   async preloadModel(modelId: string): Promise<void> {

@@ -28,7 +28,6 @@ export type {
   ProgressInfo,
   BrainchopServiceState,
   // Advanced types
-  InferenceOptions,
   PreprocessingResult,
   ModelCacheEntry,
   TensorSession

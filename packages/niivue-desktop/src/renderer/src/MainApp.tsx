@@ -158,7 +158,8 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
-      onMosaicStringChange: selected.setSliceMosaicString
+      onMosaicStringChange: selected.setSliceMosaicString,
+      onToggleSegmentationPanel: () => setSegmentationPanelOpen((prev) => !prev)
     })
   }, [selected])
 
@@ -245,16 +246,8 @@ function MainApp(): JSX.Element {
     }
   }, [])
 
-  // Toggle Segmentation Panel from menu
-  useEffect((): (() => void) => {
-    const togglePanel = (): void => {
-      setSegmentationPanelOpen((prev) => !prev)
-    }
-    electron.ipcRenderer.on('toggle-segmentation-panel', togglePanel)
-    return (): void => {
-      electron.ipcRenderer.removeAllListeners('toggle-segmentation-panel')
-    }
-  }, [])
+  // Toggle Segmentation Panel is handled via registerSegmentationHandlers
+  // (onTogglePanel passed through registerAllIpcHandlers)
 
   // Clear scene command
   useEffect((): (() => void) => {
@@ -710,8 +703,11 @@ function MainApp(): JSX.Element {
           <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
             <SegmentationPanel
               onRunSegmentation={handleRunSegmentation}
+              onCancelSegmentation={handleCancelSegmentation}
               availableModels={availableModels}
               isRunning={segmentationRunning}
+              progress={segmentationProgress}
+              status={segmentationStatus}
             />
           </div>
         )}

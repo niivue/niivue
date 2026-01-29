@@ -41,6 +41,7 @@ export interface IpcHandlerProps {
   setLabelEditMode: (v: boolean) => void
   onDocumentLoaded: (title: string, targetId: string) => void
   onMosaicStringChange?: (sliceMosaicString: string) => void
+  onToggleSegmentationPanel?: () => void
 }
 
 export const registerAllIpcHandlers = ({
@@ -55,7 +56,8 @@ export const registerAllIpcHandlers = ({
   setLabelDialogOpen,
   setLabelEditMode,
   onDocumentLoaded,
-  onMosaicStringChange
+  onMosaicStringChange,
+  onToggleSegmentationPanel
 }: IpcHandlerProps): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
@@ -105,6 +107,7 @@ export const registerAllIpcHandlers = ({
   // 🧠 Brain segmentation handlers
   registerSegmentationHandlers({
     nv,
-    setVolumes
+    setVolumes,
+    onTogglePanel: onToggleSegmentationPanel
   })
 }

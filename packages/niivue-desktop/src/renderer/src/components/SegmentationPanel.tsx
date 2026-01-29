@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
-import { Button, Flex, Text, Select, Separator, Card, Badge } from '@radix-ui/themes'
+import { Button, Flex, Text, Select, Separator, Card, Badge, Progress } from '@radix-ui/themes'
 import { useSelectedInstance } from '../AppContext.js'
 import type { ModelInfo, ModelCategory } from '../services/brainchop/types.js'
 
 interface SegmentationPanelProps {
   onRunSegmentation: (modelId: string) => void
+  onCancelSegmentation?: () => void
   availableModels: ModelInfo[]
   isRunning: boolean
+  progress: number
+  status: string
 }
 
 export function SegmentationPanel({
   onRunSegmentation,
+  onCancelSegmentation,
   availableModels,
-  isRunning
+  isRunning,
+  progress,
+  status
 }: SegmentationPanelProps): JSX.Element {
   const instance = useSelectedInstance()
   const [selectedModelId, setSelectedModelId] = useState<string>('')
@@ -98,7 +104,7 @@ export function SegmentationPanel({
       </Flex>
 
       {/* Model Info Card */}
-      {selectedModel && (
+      {selectedModel && !isRunning && (
         <Card size="1">
           <Flex direction="column" gap="2">
             <Text size="2" weight="bold">
@@ -116,19 +122,51 @@ export function SegmentationPanel({
         </Card>
       )}
 
+      {/* Progress display when running */}
+      {isRunning && (
+        <Card size="1">
+          <Flex direction="column" gap="3">
+            <Flex justify="between" align="center">
+              <Text size="2" weight="bold">
+                Processing
+              </Text>
+              <Text size="2" weight="bold">
+                {Math.round(progress)}%
+              </Text>
+            </Flex>
+            <Progress value={progress} max={100} size="3" />
+            <Text size="1" color="gray">
+              {status || 'Starting...'}
+            </Text>
+          </Flex>
+        </Card>
+      )}
+
       <Separator size="4" />
 
-      {/* Run Button */}
+      {/* Run / Cancel Button */}
       <Flex direction="column" gap="2">
-        <Button
-          size="3"
-          onClick={handleRun}
-          disabled={!canRun}
-          style={{ width: '100%' }}
-          color={isRunning ? 'gray' : 'blue'}
-        >
-          {isRunning ? 'Running...' : 'Run Segmentation'}
-        </Button>
+        {isRunning ? (
+          <Button
+            size="3"
+            onClick={onCancelSegmentation}
+            style={{ width: '100%' }}
+            color="red"
+            variant="soft"
+          >
+            Cancel
+          </Button>
+        ) : (
+          <Button
+            size="3"
+            onClick={handleRun}
+            disabled={!canRun}
+            style={{ width: '100%' }}
+            color="blue"
+          >
+            Run Segmentation
+          </Button>
+        )}
 
         {!hasVolume && (
           <Text size="1" color="red">
@@ -138,30 +176,32 @@ export function SegmentationPanel({
       </Flex>
 
       {/* Info Section */}
-      <Card size="1" variant="surface">
-        <Flex direction="column" gap="2">
-          <Text size="2" weight="bold">
-            How to use
-          </Text>
-          <Text size="1" color="gray">
-            1. Load a T1-weighted MRI scan
-            <br />
-            &nbsp;&nbsp;&nbsp;(Try: Tools → Brain Segmentation → Load Sample Brain)
-            <br />
-            &nbsp;&nbsp;&nbsp;• MNI152 (skull stripped) - for tissue segmentation
-            <br />
-            &nbsp;&nbsp;&nbsp;• T1 with Skull - for brain extraction
-            <br />
-            2. Select a segmentation model
-            <br />
-            3. Click "Run Segmentation"
-            <br />
-            4. Wait for processing to complete
-            <br />
-            5. View results as an overlay
-          </Text>
-        </Flex>
-      </Card>
+      {!isRunning && (
+        <Card size="1" variant="surface">
+          <Flex direction="column" gap="2">
+            <Text size="2" weight="bold">
+              How to use
+            </Text>
+            <Text size="1" color="gray">
+              1. Load a T1-weighted MRI scan
+              <br />
+              &nbsp;&nbsp;&nbsp;(Try: Tools &rarr; Brain Segmentation &rarr; Load Sample Brain)
+              <br />
+              &nbsp;&nbsp;&nbsp;&bull; MNI152 (skull stripped) - for tissue segmentation
+              <br />
+              &nbsp;&nbsp;&nbsp;&bull; T1 with Skull - for brain extraction
+              <br />
+              2. Select a segmentation model
+              <br />
+              3. Click &quot;Run Segmentation&quot;
+              <br />
+              4. Wait for processing to complete
+              <br />
+              5. View results as an overlay
+            </Text>
+          </Flex>
+        </Card>
+      )}
     </div>
   )
 }

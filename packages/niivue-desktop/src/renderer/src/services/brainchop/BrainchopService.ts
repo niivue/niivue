@@ -11,7 +11,7 @@ import type {
 
 /**
  * Main service for brain segmentation using TensorFlow.js models.
- * Follows brainchop's reference implementation for the inference pipeline.
+ * Runs inference on the main thread with periodic yields so the UI can update.
  */
 export class BrainchopService {
   private modelManager: ModelManager
@@ -48,10 +48,11 @@ export class BrainchopService {
 
   /**
    * Run segmentation on a volume.
-   * Pipeline follows brainchop's runFullVolumeInference:
-   * 1. Extract and normalize volume data as 3D tensor
-   * 2. Pass to InferenceEngine which handles cropping, layer-by-layer inference, and restoration
-   * 3. Convert output labels to NVImage overlay
+   * Pipeline:
+   * 1. Load model
+   * 2. Extract and normalize volume data as 3D tensor
+   * 3. Run inference (crop, layer-by-layer, restore)
+   * 4. Convert output labels to NVImage overlay
    */
   async runSegmentation(
     volume: NVImage,
@@ -78,6 +79,8 @@ export class BrainchopService {
       }
 
       onProgress?.(0, 'Loading model')
+      // Yield so the progress bar renders
+      await yieldToUI()
 
       const modelInfo = this.modelManager.getModelInfo(modelId)
       if (!modelInfo) {
@@ -91,26 +94,10 @@ export class BrainchopService {
       }
 
       onProgress?.(10, 'Preprocessing volume')
+      await yieldToUI()
 
       // Extract volume data as Float32Array
       const volumeData = this.extractVolumeData(volume)
-
-      // Get original dimensions for resampling back
-      let originalShape: number[]
-      if (volume.hdr?.dims && volume.hdr.dims.length > 3) {
-        originalShape = [volume.hdr.dims[1], volume.hdr.dims[2], volume.hdr.dims[3]]
-      } else if (volume.dims && volume.dims.length >= 3) {
-        if (volume.dims[0] <= 7 && volume.dims.length > 3) {
-          originalShape = [volume.dims[1], volume.dims[2], volume.dims[3]]
-        } else {
-          originalShape = [volume.dims[0], volume.dims[1], volume.dims[2]]
-        }
-      } else {
-        throw new Error('Cannot determine volume dimensions')
-      }
-
-      const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
-      const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
 
       // Create 3D tensor - volume should be conformed to 256^3 already
       let slices3d: tf.Tensor3D
@@ -119,12 +106,17 @@ export class BrainchopService {
       } else {
         // Resample to 256^3 if needed
         console.warn('[BrainchopService] Volume not 256^3, resampling')
+        const originalShape = this.getVolumeShape(volume)
+        const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
+        const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
         const resampled = this.resampleTo256(volumeData, originalShape, originalVoxelSize)
         slices3d = tf.tensor3d(Array.from(resampled), [256, 256, 256])
       }
 
-      // Normalize following brainchop's approach
+      // Normalize
       onProgress?.(15, 'Normalizing')
+      await yieldToUI()
+
       let normalizedSlices: tf.Tensor3D
       if (modelInfo.enableQuantileNorm) {
         normalizedSlices = await this.quantileNormalize(slices3d)
@@ -139,8 +131,9 @@ export class BrainchopService {
       }
 
       onProgress?.(20, 'Running inference')
+      await yieldToUI()
 
-      // Run inference - InferenceEngine handles cropping, layer-by-layer, and restoration
+      // Run inference with periodic UI yields built into the layer loop
       const outputLabels = await this.inferenceEngine.runInference(normalizedSlices, model, {
         modelInfo,
         onProgress: (progress, status) => {
@@ -157,24 +150,23 @@ export class BrainchopService {
       }
 
       onProgress?.(92, 'Creating segmentation volume')
+      await yieldToUI()
 
       // Convert 3D label tensor to volume data
       let labelData = new Float32Array(await outputLabels.data())
       outputLabels.dispose()
 
       // Resample back to original space if needed
+      const originalShape = this.getVolumeShape(volume)
       const needsResampling =
         originalShape[0] !== 256 || originalShape[1] !== 256 || originalShape[2] !== 256
       if (needsResampling) {
-        labelData = this.resampleLabelsToOriginal(labelData, originalShape, originalVoxelSize)
+        const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
+        labelData = this.resampleLabelsToOriginal(labelData, originalShape, [pixDims[1], pixDims[2], pixDims[3]])
       }
 
       // Create overlay volume
-      const segmentationVolume = this.createSegmentationVolume(
-        labelData,
-        volume,
-        modelInfo
-      )
+      const segmentationVolume = this.createSegmentationVolume(labelData, volume, modelInfo)
 
       const endTime = performance.now()
       const memoryInfo = tf.memory()
@@ -202,6 +194,18 @@ export class BrainchopService {
     if (!img) throw new Error('Volume image data not available')
     if (img instanceof Float32Array) return img
     return new Float32Array(img)
+  }
+
+  private getVolumeShape(volume: NVImage): number[] {
+    if (volume.hdr?.dims && volume.hdr.dims.length > 3) {
+      return [volume.hdr.dims[1], volume.hdr.dims[2], volume.hdr.dims[3]]
+    } else if (volume.dims && volume.dims.length >= 3) {
+      if (volume.dims[0] <= 7 && volume.dims.length > 3) {
+        return [volume.dims[1], volume.dims[2], volume.dims[3]]
+      }
+      return [volume.dims[0], volume.dims[1], volume.dims[2]]
+    }
+    throw new Error('Cannot determine volume dimensions')
   }
 
   private async minMaxNormalize(tensor: tf.Tensor3D): Promise<tf.Tensor3D> {
@@ -316,7 +320,6 @@ export class BrainchopService {
 
   /**
    * Create an NVImage overlay from segmentation label data.
-   * Following brainchop's callBackImg approach: clone source volume and replace image data.
    */
   private createSegmentationVolume(
     data: Float32Array,
@@ -429,6 +432,11 @@ export class BrainchopService {
     this.state.isRunning = false
     this.state.currentModel = null
   }
+}
+
+/** Yield to the event loop so React can re-render (progress updates, etc.) */
+function yieldToUI(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 export const brainchopService = new BrainchopService()
