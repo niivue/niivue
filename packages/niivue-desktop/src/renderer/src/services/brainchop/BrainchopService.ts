@@ -1,7 +1,6 @@
 import * as tf from '@tensorflow/tfjs'
 import { NVImage } from '@niivue/niivue'
 import { modelManager, ModelManager } from './ModelManager.js'
-import { imagePreprocessor, ImagePreprocessor } from './ImagePreprocessor.js'
 import { inferenceEngine, InferenceEngine } from './InferenceEngine.js'
 import type {
   ModelInfo,
@@ -11,18 +10,16 @@ import type {
 } from './types.js'
 
 /**
- * Main service for brain segmentation using TensorFlow.js models
- * Integrates model loading, preprocessing, inference, and postprocessing
+ * Main service for brain segmentation using TensorFlow.js models.
+ * Follows brainchop's reference implementation for the inference pipeline.
  */
 export class BrainchopService {
   private modelManager: ModelManager
-  private imagePreprocessor: ImagePreprocessor
   private inferenceEngine: InferenceEngine
   private state: BrainchopServiceState
 
   constructor() {
     this.modelManager = modelManager
-    this.imagePreprocessor = imagePreprocessor
     this.inferenceEngine = inferenceEngine
 
     this.state = {
@@ -33,23 +30,15 @@ export class BrainchopService {
     }
   }
 
-  /**
-   * Initialize the brainchop service
-   * Must be called before running segmentation
-   */
   async initialize(): Promise<void> {
     if (this.state.isInitialized) {
       return
     }
 
     try {
-      // Initialize TensorFlow.js and model manager
       await this.modelManager.initialize()
-
-      // Get available memory
       const memory = tf.memory()
       this.state.availableMemoryMB = memory.numBytes / 1024 / 1024
-
       this.state.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize BrainchopService:', error)
@@ -58,7 +47,11 @@ export class BrainchopService {
   }
 
   /**
-   * Run segmentation on a volume
+   * Run segmentation on a volume.
+   * Pipeline follows brainchop's runFullVolumeInference:
+   * 1. Extract and normalize volume data as 3D tensor
+   * 2. Pass to InferenceEngine which handles cropping, layer-by-layer inference, and restoration
+   * 3. Convert output labels to NVImage overlay
    */
   async runSegmentation(
     volume: NVImage,
@@ -75,20 +68,17 @@ export class BrainchopService {
 
     this.state.isRunning = true
     this.state.currentModel = modelId
-
     const startTime = performance.now()
 
     try {
-      const { onProgress, abortSignal, useSubvolumes = false, subvolumeSize = 64, normalizeIntensity = true } = options
+      const { onProgress, abortSignal } = options
 
-      // Validate volume
       if (!volume || !volume.img || volume.img.length === 0) {
         throw new Error('Invalid or empty volume')
       }
 
       onProgress?.(0, 'Loading model')
 
-      // Load model
       const modelInfo = this.modelManager.getModelInfo(modelId)
       if (!modelInfo) {
         throw new Error(`Model not found: ${modelId}`)
@@ -96,125 +86,108 @@ export class BrainchopService {
 
       const model = await this.modelManager.loadModel(modelId)
 
-      // Check for cancellation
       if (abortSignal?.aborted) {
         throw new Error('Segmentation cancelled by user')
       }
 
       onProgress?.(10, 'Preprocessing volume')
 
-      // Preprocess volume
-      const preprocessResult = await this.imagePreprocessor.preprocessVolume(volume, {
-        normalizeIntensity,
-        onProgress: (progress, status) => {
-          const scaledProgress = 10 + (progress / 100) * 20 // Scale to 10-30%
-          onProgress?.(scaledProgress, status)
-        }
-      })
+      // Extract volume data as Float32Array
+      const volumeData = this.extractVolumeData(volume)
 
-      // Check for cancellation
+      // Get original dimensions for resampling back
+      let originalShape: number[]
+      if (volume.hdr?.dims && volume.hdr.dims.length > 3) {
+        originalShape = [volume.hdr.dims[1], volume.hdr.dims[2], volume.hdr.dims[3]]
+      } else if (volume.dims && volume.dims.length >= 3) {
+        if (volume.dims[0] <= 7 && volume.dims.length > 3) {
+          originalShape = [volume.dims[1], volume.dims[2], volume.dims[3]]
+        } else {
+          originalShape = [volume.dims[0], volume.dims[1], volume.dims[2]]
+        }
+      } else {
+        throw new Error('Cannot determine volume dimensions')
+      }
+
+      const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
+      const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
+
+      // Create 3D tensor - volume should be conformed to 256^3 already
+      let slices3d: tf.Tensor3D
+      if (volumeData.length === 256 * 256 * 256) {
+        slices3d = tf.tensor3d(Array.from(volumeData), [256, 256, 256])
+      } else {
+        // Resample to 256^3 if needed
+        console.warn('[BrainchopService] Volume not 256^3, resampling')
+        const resampled = this.resampleTo256(volumeData, originalShape, originalVoxelSize)
+        slices3d = tf.tensor3d(Array.from(resampled), [256, 256, 256])
+      }
+
+      // Normalize following brainchop's approach
+      onProgress?.(15, 'Normalizing')
+      let normalizedSlices: tf.Tensor3D
+      if (modelInfo.enableQuantileNorm) {
+        normalizedSlices = await this.quantileNormalize(slices3d)
+      } else {
+        normalizedSlices = await this.minMaxNormalize(slices3d)
+      }
+      slices3d.dispose()
+
       if (abortSignal?.aborted) {
-        preprocessResult.tensor.dispose()
+        normalizedSlices.dispose()
         throw new Error('Segmentation cancelled by user')
       }
 
-      onProgress?.(30, 'Running inference')
+      onProgress?.(20, 'Running inference')
 
-      // For parcellation models, use CPU backend to avoid WebGL texture size limits
-      // These models require full 256³ input and can't be processed in subvolumes
-      const isParcellation = modelInfo.type === 'parcellation'
-      const currentBackend = tf.getBackend()
-
-      if (isParcellation) {
-        console.log('[BrainchopService] Parcellation model detected, switching to CPU backend')
-        onProgress?.(30, 'Switching to CPU backend for large model...')
-        await tf.setBackend('cpu')
-        await tf.ready()
-        console.log('[BrainchopService] CPU backend ready, current backend:', tf.getBackend())
-      }
-
-      // Run inference
-      let outputTensor: tf.Tensor4D
-      try {
-        // Use subvolumes only for non-parcellation models if requested
-        const shouldUseSubvolumes = !isParcellation && useSubvolumes
-        const effectiveSubvolumeSize = shouldUseSubvolumes ? (subvolumeSize || 64) : 256
-
-        console.log('[BrainchopService] Running inference:', {
-          isParcellation,
-          shouldUseSubvolumes,
-          effectiveSubvolumeSize,
-          backend: tf.getBackend()
-        })
-
-        outputTensor = await this.inferenceEngine.runInference(preprocessResult.tensor, model, {
-          useSubvolumes: shouldUseSubvolumes,
-          subvolumeSize: effectiveSubvolumeSize,
-          onProgress: (progress, status) => {
-            const scaledProgress = 30 + (progress / 100) * 60 // Scale to 30-90%
-            onProgress?.(scaledProgress, status)
-          },
-          abortSignal
-        })
-
-        console.log('[BrainchopService] Inference complete, output shape:', outputTensor.shape)
-      } catch (error) {
-        console.error('[BrainchopService] Inference error:', error)
-        // Restore original backend on error
-        if (isParcellation && tf.getBackend() === 'cpu') {
-          console.log('[BrainchopService] Restoring backend to:', currentBackend)
-          await tf.setBackend(currentBackend)
-        }
-        throw error
-      }
-
-      // Restore WebGL backend after parcellation inference
-      if (isParcellation && tf.getBackend() === 'cpu') {
-        console.log('[BrainchopService] Restoring backend to:', currentBackend)
-        await tf.setBackend(currentBackend)
-        console.log('[BrainchopService] Backend restored to:', tf.getBackend())
-      }
-
-      // Check for cancellation
-      if (abortSignal?.aborted) {
-        preprocessResult.tensor.dispose()
-        outputTensor.dispose()
-        throw new Error('Segmentation cancelled by user')
-      }
-
-      onProgress?.(90, 'Creating segmentation volume')
-
-      // Convert output tensor to NVImage
-      const segmentationVolume = await this.createSegmentationVolume(
-        outputTensor,
-        volume,
+      // Run inference - InferenceEngine handles cropping, layer-by-layer, and restoration
+      const outputLabels = await this.inferenceEngine.runInference(normalizedSlices, model, {
         modelInfo,
-        preprocessResult.originalShape,
-        preprocessResult.originalVoxelSize
+        onProgress: (progress, status) => {
+          const scaledProgress = 20 + (progress / 100) * 70
+          onProgress?.(scaledProgress, status)
+        },
+        abortSignal
+      })
+      normalizedSlices.dispose()
+
+      if (abortSignal?.aborted) {
+        outputLabels.dispose()
+        throw new Error('Segmentation cancelled by user')
+      }
+
+      onProgress?.(92, 'Creating segmentation volume')
+
+      // Convert 3D label tensor to volume data
+      let labelData = new Float32Array(await outputLabels.data())
+      outputLabels.dispose()
+
+      // Resample back to original space if needed
+      const needsResampling =
+        originalShape[0] !== 256 || originalShape[1] !== 256 || originalShape[2] !== 256
+      if (needsResampling) {
+        labelData = this.resampleLabelsToOriginal(labelData, originalShape, originalVoxelSize)
+      }
+
+      // Create overlay volume
+      const segmentationVolume = this.createSegmentationVolume(
+        labelData,
+        volume,
+        modelInfo
       )
 
-      // Clean up tensors
-      preprocessResult.tensor.dispose()
-      outputTensor.dispose()
-
       const endTime = performance.now()
-      const inferenceTimeMs = endTime - startTime
-
-      // Get memory usage
       const memoryInfo = tf.memory()
-      const memoryUsedMB = memoryInfo.numBytes / 1024 / 1024
 
       onProgress?.(100, 'Segmentation complete')
 
-      const result: SegmentationResult = {
+      return {
         volume: segmentationVolume,
         modelInfo,
-        inferenceTimeMs,
-        memoryUsedMB,
+        inferenceTimeMs: endTime - startTime,
+        memoryUsedMB: memoryInfo.numBytes / 1024 / 1024,
         timestamp: new Date()
       }
-
-      return result
     } catch (error) {
       console.error('Segmentation failed:', error)
       throw error
@@ -224,85 +197,177 @@ export class BrainchopService {
     }
   }
 
-  /**
-   * Create an NVImage from the segmentation output tensor
-   * Following brainchop's callBackImg approach exactly: clone source volume and replace image data
-   */
-  private async createSegmentationVolume(
-    outputTensor: tf.Tensor4D,
-    sourceVolume: NVImage,
-    modelInfo: ModelInfo,
+  private extractVolumeData(volume: NVImage): Float32Array {
+    const img = volume.img
+    if (!img) throw new Error('Volume image data not available')
+    if (img instanceof Float32Array) return img
+    return new Float32Array(img)
+  }
+
+  private async minMaxNormalize(tensor: tf.Tensor3D): Promise<tf.Tensor3D> {
+    const max = tensor.max()
+    const min = tensor.min()
+    const result = tensor.sub(min).div(max.sub(min)) as tf.Tensor3D
+    max.dispose()
+    min.dispose()
+    return result
+  }
+
+  private async quantileNormalize(tensor: tf.Tensor3D, lower = 0.05, upper = 0.95): Promise<tf.Tensor3D> {
+    const flatArray = await tensor.flatten().array() as number[]
+    flatArray.sort((a, b) => a - b)
+    const lowIdx = Math.floor(flatArray.length * lower)
+    const highIdx = Math.ceil(flatArray.length * upper) - 1
+    const qmin = flatArray[lowIdx]
+    const qmax = flatArray[highIdx]
+    const qminScalar = tf.scalar(qmin)
+    const qmaxScalar = tf.scalar(qmax)
+    const result = tensor.sub(qminScalar).div(qmaxScalar.sub(qminScalar)) as tf.Tensor3D
+    qminScalar.dispose()
+    qmaxScalar.dispose()
+    return result
+  }
+
+  private resampleTo256(
+    data: Float32Array,
+    shape: number[],
+    voxelSize: number[]
+  ): Float32Array {
+    const [origX, origY, origZ] = shape
+    const targetSize = 256
+    const origCenter = [
+      (origX * voxelSize[0]) / 2,
+      (origY * voxelSize[1]) / 2,
+      (origZ * voxelSize[2]) / 2
+    ]
+    const targetCenter = [targetSize / 2, targetSize / 2, targetSize / 2]
+    const resampled = new Float32Array(targetSize * targetSize * targetSize)
+
+    for (let z = 0; z < targetSize; z++) {
+      for (let y = 0; y < targetSize; y++) {
+        for (let x = 0; x < targetSize; x++) {
+          const offsetX = (x + 0.5) - targetCenter[0]
+          const offsetY = (y + 0.5) - targetCenter[1]
+          const offsetZ = (z + 0.5) - targetCenter[2]
+          const srcX = (origCenter[0] + offsetX) / voxelSize[0] - 0.5
+          const srcY = (origCenter[1] + offsetY) / voxelSize[1] - 0.5
+          const srcZ = (origCenter[2] + offsetZ) / voxelSize[2] - 0.5
+          const x0 = Math.floor(srcX)
+          const y0 = Math.floor(srcY)
+          const z0 = Math.floor(srcZ)
+          if (x0 < 0 || x0 >= origX || y0 < 0 || y0 >= origY || z0 < 0 || z0 >= origZ) continue
+          const x1 = Math.min(x0 + 1, origX - 1)
+          const y1 = Math.min(y0 + 1, origY - 1)
+          const z1 = Math.min(z0 + 1, origZ - 1)
+          const xf = srcX - x0, yf = srcY - y0, zf = srcZ - z0
+          const c000 = data[z0 * origX * origY + y0 * origX + x0]
+          const c001 = data[z0 * origX * origY + y0 * origX + x1]
+          const c010 = data[z0 * origX * origY + y1 * origX + x0]
+          const c011 = data[z0 * origX * origY + y1 * origX + x1]
+          const c100 = data[z1 * origX * origY + y0 * origX + x0]
+          const c101 = data[z1 * origX * origY + y0 * origX + x1]
+          const c110 = data[z1 * origX * origY + y1 * origX + x0]
+          const c111 = data[z1 * origX * origY + y1 * origX + x1]
+          const c00 = c000 * (1 - xf) + c001 * xf
+          const c01 = c010 * (1 - xf) + c011 * xf
+          const c10 = c100 * (1 - xf) + c101 * xf
+          const c11 = c110 * (1 - xf) + c111 * xf
+          const c0 = c00 * (1 - yf) + c01 * yf
+          const c1 = c10 * (1 - yf) + c11 * yf
+          resampled[z * targetSize * targetSize + y * targetSize + x] = c0 * (1 - zf) + c1 * zf
+        }
+      }
+    }
+    return resampled
+  }
+
+  private resampleLabelsToOriginal(
+    data: Float32Array,
     originalShape: number[],
     originalVoxelSize: number[]
-  ): Promise<NVImage> {
-    // Convert tensor to Float32Array (this will be 256³)
-    let data = await this.imagePreprocessor.tensorToVolumeData(outputTensor)
+  ): Float32Array {
+    const [origX, origY, origZ] = originalShape
+    const targetSize = 256
+    const origCenter = [
+      (origX * originalVoxelSize[0]) / 2,
+      (origY * originalVoxelSize[1]) / 2,
+      (origZ * originalVoxelSize[2]) / 2
+    ]
+    const targetCenter = [targetSize / 2, targetSize / 2, targetSize / 2]
+    const resampled = new Float32Array(origX * origY * origZ)
 
-    // Check if we need to resample back to original space
-    const needsResampling =
-      originalShape[0] !== 256 || originalShape[1] !== 256 || originalShape[2] !== 256
-
-    if (needsResampling) {
-      data = await this.imagePreprocessor.resampleToOriginalSpace(
-        data,
-        originalShape,
-        originalVoxelSize
-      )
+    for (let z = 0; z < origZ; z++) {
+      for (let y = 0; y < origY; y++) {
+        for (let x = 0; x < origX; x++) {
+          const offsetX = (x + 0.5) * originalVoxelSize[0] - origCenter[0]
+          const offsetY = (y + 0.5) * originalVoxelSize[1] - origCenter[1]
+          const offsetZ = (z + 0.5) * originalVoxelSize[2] - origCenter[2]
+          const nearX = Math.round((targetCenter[0] + offsetX) - 0.5)
+          const nearY = Math.round((targetCenter[1] + offsetY) - 0.5)
+          const nearZ = Math.round((targetCenter[2] + offsetZ) - 0.5)
+          if (nearX >= 0 && nearX < targetSize && nearY >= 0 && nearY < targetSize && nearZ >= 0 && nearZ < targetSize) {
+            resampled[z * origX * origY + y * origX + x] = data[nearZ * targetSize * targetSize + nearY * targetSize + nearX]
+          }
+        }
+      }
     }
+    return resampled
+  }
 
-    // Find min/max without spread operator (to avoid stack overflow)
+  /**
+   * Create an NVImage overlay from segmentation label data.
+   * Following brainchop's callBackImg approach: clone source volume and replace image data.
+   */
+  private createSegmentationVolume(
+    data: Float32Array,
+    sourceVolume: NVImage,
+    modelInfo: ModelInfo
+  ): NVImage {
     let dataMin = data[0]
     let dataMax = data[0]
     for (let i = 1; i < data.length; i++) {
       if (data[i] < dataMin) dataMin = data[i]
       if (data[i] > dataMax) dataMax = data[i]
     }
+    console.log('[BrainchopService] Raw output data range:', { min: dataMin, max: dataMax })
 
-    // Convert Float32Array to Uint8Array for label data
-    // If data is in 0-1 range (probabilities), scale to 0-255
-    // If data is already integer labels, keep as is
     const uint8Data = new Uint8Array(data.length)
-
     if (dataMax <= 1.0 && dataMax > 0) {
-      // Probability output - threshold at 0.5 and convert to binary mask
       for (let i = 0; i < data.length; i++) {
         uint8Data[i] = data[i] > 0.5 ? 1 : 0
       }
     } else {
-      // Integer labels - round to nearest integer
       for (let i = 0; i < data.length; i++) {
         uint8Data[i] = Math.round(data[i])
       }
     }
 
-    // Clone the source volume - this preserves all transformations automatically
+    let labelMin = uint8Data[0]
+    let labelMax = uint8Data[0]
+    let nonZeroCount = 0
+    for (let i = 1; i < uint8Data.length; i++) {
+      if (uint8Data[i] < labelMin) labelMin = uint8Data[i]
+      if (uint8Data[i] > labelMax) labelMax = uint8Data[i]
+      if (uint8Data[i] !== 0) nonZeroCount++
+    }
+    console.log('[BrainchopService] Labels:', { min: labelMin, max: labelMax, nonZero: nonZeroCount })
+
     const overlayVolume = sourceVolume.clone()
-
-    // Update the name
     overlayVolume.name = `${sourceVolume.name}_${modelInfo.id}`
-
-    // Zero the image
     overlayVolume.zeroImage()
-
-    // Replace with segmentation data
     overlayVolume.img = uint8Data
 
-    // Set NIFTI intent code and scaling
     if (overlayVolume.hdr) {
-      overlayVolume.hdr.intent_code = 1002 // NIFTI_INTENT_LABEL
+      overlayVolume.hdr.intent_code = 1002
       overlayVolume.hdr.scl_inter = 0
       overlayVolume.hdr.scl_slope = 1
     }
 
-    // Set cal_min and cal_max for proper display
-    overlayVolume.cal_min = 0
-    overlayVolume.cal_max = dataMax
+    overlayVolume.cal_min = labelMin
+    overlayVolume.cal_max = labelMax
+    overlayVolume.global_min = labelMin
+    overlayVolume.global_max = labelMax
 
-    // Update global_min and global_max
-    overlayVolume.global_min = dataMin
-    overlayVolume.global_max = dataMax
-
-    // Set colormap
     if (modelInfo.type === 'parcellation') {
       overlayVolume.colormap = 'freesurfer'
     } else if (modelInfo.type === 'brain-extraction') {
@@ -314,68 +379,38 @@ export class BrainchopService {
     return overlayVolume
   }
 
-
-  /**
-   * Get all available models
-   */
   getAvailableModels(): ModelInfo[] {
     return this.modelManager.getAvailableModels()
   }
 
-  /**
-   * Get model information by ID
-   */
   getModelInfo(modelId: string): ModelInfo | undefined {
     return this.modelManager.getModelInfo(modelId)
   }
 
-  /**
-   * Get models by category
-   */
   getModelsByCategory(category: string): ModelInfo[] {
     return this.modelManager.getModelsByCategory(category)
   }
 
-  /**
-   * Get models by type
-   */
   getModelsByType(type: string): ModelInfo[] {
     return this.modelManager.getModelsByType(type)
   }
 
-  /**
-   * Preload a model into cache
-   */
   async preloadModel(modelId: string): Promise<void> {
     if (!this.state.isInitialized) {
       throw new Error('BrainchopService not initialized')
     }
-
     await this.modelManager.preloadModel(modelId)
   }
 
-  /**
-   * Get current service state
-   */
   getState(): BrainchopServiceState {
     return { ...this.state }
   }
 
-  /**
-   * Check if service is ready to run segmentation
-   */
   isReady(): boolean {
     return this.state.isInitialized && !this.state.isRunning
   }
 
-  /**
-   * Get memory statistics
-   */
-  getMemoryStats(): {
-    tensorflow: tf.MemoryInfo
-    modelCache: ReturnType<ModelManager['getCacheStats']>
-    inference: ReturnType<InferenceEngine['getMemoryStats']>
-  } {
+  getMemoryStats() {
     return {
       tensorflow: tf.memory(),
       modelCache: this.modelManager.getCacheStats(),
@@ -383,16 +418,10 @@ export class BrainchopService {
     }
   }
 
-  /**
-   * Clear model cache to free memory
-   */
   clearModelCache(): void {
     this.modelManager.clearCache()
   }
 
-  /**
-   * Dispose all resources and cleanup
-   */
   dispose(): void {
     this.modelManager.dispose()
     this.inferenceEngine.dispose()
@@ -402,5 +431,4 @@ export class BrainchopService {
   }
 }
 
-// Export singleton instance
 export const brainchopService = new BrainchopService()

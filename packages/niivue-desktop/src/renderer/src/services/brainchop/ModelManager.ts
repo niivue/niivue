@@ -1,4 +1,7 @@
 import * as tf from '@tensorflow/tfjs'
+import '@tensorflow/tfjs-backend-wasm'
+import '@tensorflow/tfjs-backend-webgpu'
+import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm'
 import type { ModelInfo, ModelCacheEntry } from './types.js'
 import modelsRegistry from './models/models.json' assert { type: 'json' }
 
@@ -102,16 +105,101 @@ export class ModelManager {
     }
 
     try {
-      // Set TensorFlow.js backend to WebGL for GPU acceleration
-      await tf.setBackend('webgl')
-      await tf.ready()
+      // Initialize WebGPU backend first (best for large models)
+      console.log('[ModelManager] Initializing WebGPU backend...')
+      try {
+        await tf.setBackend('webgpu')
+        await tf.ready()
 
-      // Configure WebGL for better memory handling
-      // Pack tensors more efficiently and avoid large textures
-      tf.env().set('WEBGL_PACK', true)
-      tf.env().set('WEBGL_PACK_DEPTHWISECONV', true)
-      tf.env().set('WEBGL_FORCE_F16_TEXTURES', false)
-      tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0)
+        // Enable float16 support for reduced memory usage
+        // This halves the memory footprint of parcellation models
+        tf.env().set('WEBGPU_USE_IMPORT_POLYFILL', false)
+        console.log('[ModelManager] WebGPU backend initialized successfully')
+        console.log('[ModelManager] WebGPU float16 support:', tf.env().getBool('WEBGPU_CPU_FORWARD'))
+      } catch (webgpuError) {
+        console.warn('[ModelManager] WebGPU backend not available:', webgpuError)
+        console.log('[ModelManager] Falling back to WebGL backend')
+
+        // Fallback to WebGL
+        await tf.setBackend('webgl')
+        await tf.ready()
+
+        // Configure WebGL for better memory handling
+        tf.env().set('WEBGL_PACK', true)
+        tf.env().set('WEBGL_PACK_DEPTHWISECONV', true)
+        tf.env().set('WEBGL_FORCE_F16_TEXTURES', false)
+        tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0)
+      }
+
+      // Initialize WASM backend for large models
+      // Configure WASM file paths for Electron/Vite environment
+      // In development: Vite serves from public folder at root URL
+      // In production: Files are in out/renderer directory
+      console.log('[ModelManager] Configuring WASM backend...')
+
+      // Determine base path for WASM files
+      // In Electron renderer, we're either on:
+      // - Development: http://localhost:5173/ (Vite dev server)
+      // - Production: file:///path/to/out/renderer/index.html
+      const isDev = import.meta.env.DEV
+      const wasmPath = isDev
+        ? '/' // Vite serves public files at root in dev
+        : './' // Relative to index.html in production
+
+      console.log('[ModelManager] WASM path:', wasmPath, '(isDev:', isDev, ')')
+
+      // Log the actual URLs that will be used
+      const expectedWasmUrl = `${wasmPath}tfjs-backend-wasm.wasm`
+      console.log('[ModelManager] Expected WASM URL:', expectedWasmUrl)
+      console.log('[ModelManager] Current location:', window.location.href)
+
+      // Test if WASM file is accessible
+      try {
+        console.log('[ModelManager] Testing WASM file accessibility...')
+        const testUrl = new URL(expectedWasmUrl, window.location.href).href
+        console.log('[ModelManager] Full WASM URL:', testUrl)
+        const response = await fetch(testUrl, { method: 'HEAD' })
+        console.log('[ModelManager] WASM file accessible:', response.ok, 'Status:', response.status)
+      } catch (fetchError) {
+        console.error('[ModelManager] WASM file NOT accessible:', fetchError)
+        console.warn('[ModelManager] This may cause WASM backend to fail')
+      }
+
+      setWasmPaths(wasmPath)
+
+      // Disable SIMD to reduce memory usage - parcellation models are very large
+      // SIMD uses more memory and may cause hangs
+      tf.env().set('WASM_HAS_SIMD_SUPPORT', false)
+      tf.env().set('WASM_HAS_MULTITHREAD_SUPPORT', false)
+      console.log('[ModelManager] WASM SIMD disabled to reduce memory usage')
+
+      // Note: WASM memory limits are browser-controlled and cannot be increased from JavaScript
+      // If parcellation models exceed WASM memory, they will automatically fall back to CPU
+
+      // Pre-load WASM backend
+      console.log('[ModelManager] Loading WASM backend...')
+      try {
+        await tf.setBackend('wasm')
+        await tf.ready()
+        console.log('[ModelManager] WASM backend loaded successfully')
+        console.log('[ModelManager] WASM backend ready:', tf.getBackend() === 'wasm')
+
+        // Test WASM backend with a simple operation
+        console.log('[ModelManager] Testing WASM backend with simple operation...')
+        const testTensor = tf.tensor1d([1, 2, 3, 4])
+        const testResult = testTensor.square()
+        await testResult.data()
+        testTensor.dispose()
+        testResult.dispose()
+        console.log('[ModelManager] WASM backend test successful')
+      } catch (wasmError) {
+        console.error('[ModelManager] WASM backend failed to load or test:', wasmError)
+        console.warn('[ModelManager] Parcellation models may fail. Consider using smaller models.')
+      }
+
+      // Switch back to WebGL as default backend (WebGPU produces zero output)
+      await tf.setBackend('webgl')
+      console.log('[ModelManager] Switched to webgl as default')
 
       this.isInitialized = true
     } catch (error) {
@@ -156,17 +244,53 @@ export class ModelManager {
       throw new Error('ModelManager not initialized. Call initialize() first.')
     }
 
-    // Check cache first
-    const cached = this.modelCache.get(modelId)
-    if (cached) {
-      cached.lastUsed = new Date()
-      return cached.model
-    }
-
-    // Get model info
+    // Get model info first to determine target backend
     const modelInfo = this.getModelInfo(modelId)
     if (!modelInfo) {
       throw new Error(`Model not found: ${modelId}`)
+    }
+
+    // Determine target backend BEFORE checking cache
+    const isParcellation = modelInfo.type === 'parcellation'
+    const currentBackend = tf.getBackend()
+
+    // Backend selection strategy:
+    // For parcellation models: WebGPU (handles large models) > WASM > CPU
+    // For other models: WebGPU/WebGL (whatever GPU is available)
+    let targetBackend: string
+    if (isParcellation) {
+      // Use WebGL for parcellation models - WebGPU produces all-zero output
+      if (tf.findBackend('webgl')) {
+        targetBackend = 'webgl'
+        console.log('[ModelManager] Using WebGL for parcellation model')
+      } else if (tf.findBackend('wasm')) {
+        targetBackend = 'wasm'
+        console.log('[ModelManager] Using WASM for parcellation model (WebGL not available)')
+      } else {
+        targetBackend = 'cpu'
+        console.warn('[ModelManager] Using CPU for parcellation model (WebGL and WASM not available)')
+      }
+    } else {
+      // For smaller models, use WebGL (WebGPU produces zero output)
+      targetBackend = 'webgl'
+    }
+
+    console.log(`[ModelManager] Model type: ${modelInfo.type}, isParcellation: ${isParcellation}, targetBackend: ${targetBackend}`)
+
+    // Switch to target backend BEFORE checking cache
+    // This ensures we're on the correct backend when accessing cached models
+    if (currentBackend !== targetBackend) {
+      console.log(`[ModelManager] Switching to ${targetBackend} backend before accessing model ${modelId}`)
+      await tf.setBackend(targetBackend)
+      await tf.ready()
+    }
+
+    // Check cache AFTER switching to target backend
+    const cached = this.modelCache.get(modelId)
+    if (cached) {
+      cached.lastUsed = new Date()
+      console.log(`[ModelManager] Returning cached model ${modelId} on ${targetBackend} backend`)
+      return cached.model
     }
 
     // Load model from resources
@@ -176,43 +300,126 @@ export class ModelManager {
       const modelPath = modelInfo.modelPath
       const ioHandler = new ElectronIPCModelLoader(modelPath)
 
-      // For very large models (parcellation), try CPU backend to avoid WebGL texture size limits
-      let model: tf.LayersModel
+      let model: tf.LayersModel | undefined
+      let modelBackend: string = targetBackend
+
       try {
         model = await tf.loadLayersModel(ioHandler)
+        // modelBackend is already set to targetBackend
+
+        // Log model details
+        console.log(`[ModelManager] Model ${modelId} loaded on ${targetBackend} backend`)
+        console.log(`[ModelManager] Model input shape:`, model.inputs[0].shape)
+        console.log(`[ModelManager] Model output shape:`, model.outputs[0].shape)
+        console.log(`[ModelManager] Model total parameters:`, model.countParams())
+
+        // Check if model weights are actually loaded (diagnose zero output issue)
+        const weights = model.getWeights()
+        console.log(`[ModelManager] Model has ${weights.length} weight tensors`)
+        if (weights.length > 0) {
+          const firstWeight = weights[0]
+          const weightData = await firstWeight.data()
+          const sampleData = Array.from(weightData.slice(0, 1000)) as number[]
+          const weightStats = {
+            shape: firstWeight.shape,
+            min: Math.min(...sampleData),
+            max: Math.max(...sampleData),
+            mean: sampleData.reduce((a: number, b: number) => a + b, 0) / Math.min(1000, weightData.length)
+          }
+          console.log(`[ModelManager] First weight tensor stats (sample):`, weightStats)
+
+          // Check if weights are all zeros (would explain zero output)
+          const allZeros = sampleData.every((v: number) => v === 0)
+          if (allZeros) {
+            console.error(`[ModelManager] WARNING: Model weights appear to be all zeros! Model may not have loaded correctly.`)
+          }
+        }
       } catch (error) {
-        // If loading fails with texture size error, try CPU backend
-        if (error instanceof Error && error.message.includes('texture size')) {
-          console.warn(`Model ${modelId} exceeds WebGL limits, switching to CPU backend`)
-          const currentBackend = tf.getBackend()
-          await tf.setBackend('cpu')
-          try {
-            model = await tf.loadLayersModel(ioHandler)
-            console.log(`Model ${modelId} loaded successfully on CPU backend`)
-          } catch (cpuError) {
-            // Restore original backend
+        const errorMessage = error instanceof Error ? error.message : String(error)
+
+        // Fallback chain for loading failures
+        // Try different backends in order: WebGPU → WASM → CPU
+        if (errorMessage.includes('texture size') || errorMessage.includes('memory') || errorMessage.includes('out of bounds')) {
+          console.warn(`[ModelManager] Model ${modelId} failed on ${targetBackend}: ${errorMessage}`)
+
+          // Try fallback backends in order
+          const fallbackBackends: string[] = []
+          if (targetBackend === 'webgpu') {
+            fallbackBackends.push('wasm', 'cpu')
+          } else if (targetBackend === 'webgl') {
+            if (tf.findBackend('webgpu')) fallbackBackends.push('webgpu')
+            fallbackBackends.push('wasm', 'cpu')
+          } else if (targetBackend === 'wasm') {
+            fallbackBackends.push('cpu')
+          }
+
+          for (const fallbackBackend of fallbackBackends) {
+            try {
+              console.log(`[ModelManager] Trying fallback backend: ${fallbackBackend}`)
+              await tf.setBackend(fallbackBackend)
+              await tf.ready()
+
+              model = await tf.loadLayersModel(ioHandler)
+              modelBackend = fallbackBackend
+              console.log(`[ModelManager] Model ${modelId} loaded successfully on ${fallbackBackend} backend`)
+              break
+            } catch (fallbackError) {
+              console.warn(`[ModelManager] Fallback to ${fallbackBackend} also failed:`, fallbackError)
+              continue
+            }
+          }
+
+          if (!model) {
+            // All fallbacks failed, restore original backend and throw
             await tf.setBackend(currentBackend)
-            throw cpuError
+            throw new Error(`Failed to load model ${modelId} on all backends. Original error: ${errorMessage}`)
           }
         } else {
+          // Restore original backend on other errors
+          if (tf.getBackend() !== currentBackend) {
+            await tf.setBackend(currentBackend)
+          }
           throw error
         }
       }
 
+      // For WASM models, keep on WASM to avoid triggering WebGL texture allocation
+      // For WebGL models, we're already on WebGL
+      // This means the app might stay on WASM after loading a parcellation model,
+      // but we'll switch back to WebGL when needed (preprocessing, loading other models)
+      console.log(`[ModelManager] Keeping backend on ${tf.getBackend()} for model ${modelId}`)
+
+      // At this point, model must be defined (we threw an error if it wasn't)
+      if (!model) {
+        throw new Error(`Model ${modelId} failed to load - this should not happen`)
+      }
+
       // Calculate model memory size
       const memorySize = this.calculateModelMemorySize(model)
+      console.log(`[ModelManager] Model ${modelId} estimated memory: ${(memorySize / 1024 / 1024).toFixed(2)} MB`)
+
+      // Check TensorFlow memory state
+      const tfMemory = tf.memory()
+      console.log(`[ModelManager] TensorFlow.js memory after model load:`, {
+        numTensors: tfMemory.numTensors,
+        numBytes: tfMemory.numBytes,
+        numBytesMB: (tfMemory.numBytes / 1024 / 1024).toFixed(2)
+      })
 
       // Manage cache size
       await this.manageCacheSize()
 
-      // Cache the model
+      // Cache the model with its backend
       const cacheEntry: ModelCacheEntry = {
         model,
         loadedAt: new Date(),
         lastUsed: new Date(),
-        memorySize
+        memorySize,
+        backend: modelBackend
       }
       this.modelCache.set(modelId, cacheEntry)
+
+      console.log(`[ModelManager] Model ${modelId} cached on ${modelBackend} backend`)
 
       return model
     } catch (error) {
@@ -226,6 +433,14 @@ export class ModelManager {
    */
   async preloadModel(modelId: string): Promise<void> {
     await this.loadModel(modelId)
+  }
+
+  /**
+   * Get the backend for a cached model
+   */
+  getModelBackend(modelId: string): string | undefined {
+    const cached = this.modelCache.get(modelId)
+    return cached?.backend
   }
 
   /**
@@ -243,7 +458,7 @@ export class ModelManager {
    * Clear all cached models
    */
   clearCache(): void {
-    for (const [modelId, entry] of this.modelCache.entries()) {
+    for (const entry of this.modelCache.values()) {
       entry.model.dispose()
     }
     this.modelCache.clear()

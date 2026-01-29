@@ -163,7 +163,7 @@ function MainApp(): JSX.Element {
   }, [selected])
 
   // Segmentation handlers
-  const handleRunSegmentation = async (modelId: string, useSubvolumes: boolean): Promise<void> => {
+  const handleRunSegmentation = async (modelId: string): Promise<void> => {
     if (!selected || selected.volumes.length === 0) {
       alert('Please load a volume first')
       return
@@ -200,14 +200,12 @@ function MainApp(): JSX.Element {
         'img.length': baseVolume.img?.length
       })
 
-      // Run segmentation - ImagePreprocessor will automatically resample to 256³ @ 1mm
+      // Run segmentation - volume should be conformed to 256³ @ 1mm
       const result = await brainchopService.runSegmentation(baseVolume, modelId, {
         onProgress: (progress, status) => {
           setSegmentationProgress(progress)
           setSegmentationStatus(status || '')
-        },
-        useSubvolumes,
-        normalizeIntensity: true
+        }
       })
 
       // Add result as overlay

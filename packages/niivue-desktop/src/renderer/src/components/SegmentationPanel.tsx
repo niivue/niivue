@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Button, Flex, Text, Select, Switch, Separator, Card, Badge } from '@radix-ui/themes'
-import * as Accordion from '@radix-ui/react-accordion'
-import { ChevronDownIcon } from '@radix-ui/react-icons'
+import { Button, Flex, Text, Select, Separator, Card, Badge } from '@radix-ui/themes'
 import { useSelectedInstance } from '../AppContext.js'
 import type { ModelInfo, ModelCategory } from '../services/brainchop/types.js'
 
 interface SegmentationPanelProps {
-  onRunSegmentation: (modelId: string, useSubvolumes: boolean) => void
+  onRunSegmentation: (modelId: string) => void
   availableModels: ModelInfo[]
   isRunning: boolean
 }
@@ -18,7 +16,6 @@ export function SegmentationPanel({
 }: SegmentationPanelProps): JSX.Element {
   const instance = useSelectedInstance()
   const [selectedModelId, setSelectedModelId] = useState<string>('')
-  const [useSubvolumes, setUseSubvolumes] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<ModelCategory | 'All'>('All')
 
   // Get unique categories
@@ -35,7 +32,6 @@ export function SegmentationPanel({
   // Set default model when models are loaded
   useEffect(() => {
     if (availableModels.length > 0 && !selectedModelId) {
-      // Default to tissue segmentation light model
       const defaultModel =
         availableModels.find((m) => m.id === 'tissue-seg-light') || availableModels[0]
       setSelectedModelId(defaultModel.id)
@@ -50,7 +46,7 @@ export function SegmentationPanel({
 
   const handleRun = (): void => {
     if (canRun) {
-      onRunSegmentation(selectedModelId, useSubvolumes)
+      onRunSegmentation(selectedModelId)
     }
   }
 
@@ -119,31 +115,6 @@ export function SegmentationPanel({
           </Flex>
         </Card>
       )}
-
-      {/* Options Accordion */}
-      <Accordion.Root type="single" collapsible>
-        <Accordion.Item value="options">
-          <Accordion.Trigger className="flex items-center justify-between w-full py-2">
-            <Text size="2" weight="medium">
-              Advanced Options
-            </Text>
-            <ChevronDownIcon />
-          </Accordion.Trigger>
-          <Accordion.Content className="pt-2">
-            <Flex direction="column" gap="3">
-              <Flex justify="between" align="center">
-                <Flex direction="column" gap="1">
-                  <Text size="2">Use Subvolumes</Text>
-                  <Text size="1" color="gray">
-                    Process in smaller chunks for memory-constrained systems
-                  </Text>
-                </Flex>
-                <Switch checked={useSubvolumes} onCheckedChange={setUseSubvolumes} />
-              </Flex>
-            </Flex>
-          </Accordion.Content>
-        </Accordion.Item>
-      </Accordion.Root>
 
       <Separator size="4" />
 

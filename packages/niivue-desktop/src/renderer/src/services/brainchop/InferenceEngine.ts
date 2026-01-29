@@ -1,413 +1,519 @@
 import * as tf from '@tensorflow/tfjs'
-import type { InferenceOptions, TensorSession } from './types.js'
+import type { InferenceOptions, ModelInfo } from './types.js'
 
 /**
- * Inference engine for running TensorFlow.js models
- * Supports both full volume and subvolume-based inference
+ * Inference engine following brainchop's reference implementation.
+ * Key features:
+ * - Crops volume to brain bounding box before inference (reduces tensor size)
+ * - Runs layer-by-layer instead of model.predict() (allows intermediate disposal)
+ * - Uses SequentialConvLayer for final layer of large models (avoids texture limits)
+ * - Restores output to 256^3 after inference
  */
 export class InferenceEngine {
-  private activeSessions: Set<TensorSession> = new Set()
-
   /**
-   * Run inference on a preprocessed volume
+   * Run inference on a preprocessed 3D volume tensor (256^3).
+   * Following brainchop's runFullVolumeInference pattern.
    */
   async runInference(
-    inputTensor: tf.Tensor4D,
+    slices3d: tf.Tensor3D,
     model: tf.LayersModel,
     options: InferenceOptions
-  ): Promise<tf.Tensor4D> {
-    const { useSubvolumes, subvolumeSize, onProgress, abortSignal } = options
+  ): Promise<tf.Tensor3D> {
+    const { modelInfo, onProgress, abortSignal } = options
 
-    // Check for cancellation
+    onProgress?.(0, 'Starting inference')
+
     if (abortSignal?.aborted) {
       throw new Error('Inference cancelled by user')
     }
 
-    // Create tensor session for memory tracking
-    const session = this.createSession()
-
-    try {
-      onProgress?.(0, 'Starting inference')
-
-      let outputTensor: tf.Tensor4D
-
-      if (useSubvolumes) {
-        // Use subvolume-based inference for memory efficiency
-        outputTensor = await this.runSubvolumeInference(
-          inputTensor,
-          model,
-          subvolumeSize,
-          onProgress,
-          abortSignal,
-          session
-        )
-      } else {
-        // Run inference on full volume
-        outputTensor = await this.runFullVolumeInference(inputTensor, model, onProgress, abortSignal, session)
-      }
-
-      onProgress?.(100, 'Inference complete')
-
-      return outputTensor
-    } catch (error) {
-      // Clean up session on error
-      session.dispose()
-      throw error
+    // 1. Create brain mask and crop
+    onProgress?.(5, 'Cropping to brain region')
+    let mask3d: tf.Tensor3D
+    if (modelInfo.autoThreshold > 0) {
+      mask3d = await applyMriThreshold(slices3d, modelInfo.autoThreshold)
+    } else {
+      mask3d = slices3d.greater([0]).asType('bool') as tf.Tensor3D
     }
-  }
 
-  /**
-   * Run inference on full volume
-   */
-  private async runFullVolumeInference(
-    inputTensor: tf.Tensor4D,
-    model: tf.LayersModel,
-    onProgress?: (progress: number, status?: string) => void,
-    abortSignal?: AbortSignal,
-    session?: TensorSession
-  ): Promise<tf.Tensor4D> {
-    console.log('[InferenceEngine] Starting full volume inference')
-    console.log('[InferenceEngine] Input tensor shape:', inputTensor.shape)
-    console.log('[InferenceEngine] Backend:', tf.getBackend())
+    const { cropped, corner } = await cropAndGetCorner(slices3d, mask3d, modelInfo.cropPadding)
+    mask3d.dispose()
 
-    return tf.tidy(() => {
-      onProgress?.(20, 'Running full volume inference')
+    let croppedInput = cropped
+    if (modelInfo.enableTranspose) {
+      croppedInput = cropped.transpose() as tf.Tensor3D
+      cropped.dispose()
+      console.log('[InferenceEngine] Input transposed for pre-model')
+    }
 
-      // Check for cancellation
+    console.log('[InferenceEngine] Cropped shape:', croppedInput.shape)
+
+    // 2. Determine channel ordering
+    const isChannelLast = await isModelChnlLast(model)
+    console.log('[InferenceEngine] Model is channel-last:', isChannelLast)
+
+    // 3. Adjust model input shape to match cropped volume
+    if (isChannelLast) {
+      model.layers[0].batchInputShape[1] = croppedInput.shape[0]
+      model.layers[0].batchInputShape[2] = croppedInput.shape[1]
+      model.layers[0].batchInputShape[3] = croppedInput.shape[2]
+    } else {
+      model.layers[0].batchInputShape[2] = croppedInput.shape[0]
+      model.layers[0].batchInputShape[3] = croppedInput.shape[1]
+      model.layers[0].batchInputShape[4] = croppedInput.shape[2]
+    }
+
+    // 4. Reshape to 5D [batch, D, H, W, channels] or [batch, channels, D, H, W]
+    let inputShape: number[]
+    if (isChannelLast) {
+      inputShape = [1, croppedInput.shape[0], croppedInput.shape[1], croppedInput.shape[2], 1]
+    } else {
+      inputShape = [1, 1, croppedInput.shape[0], croppedInput.shape[1], croppedInput.shape[2]]
+    }
+    let currentTensor: tf.Tensor = croppedInput.reshape(inputShape)
+    croppedInput.dispose()
+
+    // 5. Layer-by-layer inference
+    const layersLength = model.layers.length
+    const loopEnd = modelInfo.enableSeqConv ? layersLength - 2 : layersLength - 1
+    const syncEvery = modelInfo.enableSeqConv ? 1 : 15
+
+    console.log(`[InferenceEngine] Running ${layersLength} layers (loopEnd=${loopEnd}, seqConv=${modelInfo.enableSeqConv})`)
+
+    for (let i = 1; i <= loopEnd; i++) {
       if (abortSignal?.aborted) {
+        currentTensor.dispose()
         throw new Error('Inference cancelled by user')
       }
 
-      // Add channel dimension if model expects 5D input
-      // Most brainchop models expect [batch, width, height, depth, channels]
-      let modelInput = inputTensor
-      const inputShape = model.inputs[0].shape
-      console.log('[InferenceEngine] Model expects input shape:', inputShape)
+      try {
+        let nextTensor: tf.Tensor
+        const layer = model.layers[i]
 
-      if (inputShape && inputShape.length === 5 && inputTensor.shape.length === 4) {
-        // Expand dims to add channel dimension: [1, 256, 256, 256] -> [1, 256, 256, 256, 1]
-        modelInput = tf.expandDims(inputTensor, -1) as any
-        console.log('[InferenceEngine] Expanded input shape:', modelInput.shape)
-      }
-
-      console.log('[InferenceEngine] Running model.predict...')
-
-      // Run model prediction
-      const prediction = model.predict(modelInput) as tf.Tensor
-
-      console.log('[InferenceEngine] Prediction complete, output shape:', prediction.shape)
-
-      onProgress?.(80, 'Processing output')
-
-      // Ensure output is 4D
-      let output: tf.Tensor4D
-      if (prediction.shape.length === 5) {
-        // [batch, width, height, depth, classes]
-        // Take argmax over classes dimension
-        // argMax already preserves the batch dimension, so result is [batch, width, height, depth]
-        console.log('[InferenceEngine] Taking argMax over classes dimension')
-        output = tf.argMax(prediction, -1) as tf.Tensor4D
-        console.log('[InferenceEngine] ArgMax output shape:', output.shape)
-      } else if (prediction.shape.length === 4) {
-        output = prediction as tf.Tensor4D
-      } else {
-        throw new Error(`Unexpected output shape: ${prediction.shape}`)
-      }
-
-      // Track tensor in session
-      if (session) {
-        session.tensors.push(output)
-      }
-
-      console.log('[InferenceEngine] Full volume inference complete')
-
-      return output
-    })
-  }
-
-  /**
-   * Run inference on subvolumes for memory efficiency
-   * Divides volume into smaller overlapping patches
-   */
-  private async runSubvolumeInference(
-    inputTensor: tf.Tensor4D,
-    model: tf.LayersModel,
-    subvolumeSize: number,
-    onProgress?: (progress: number, status?: string) => void,
-    abortSignal?: AbortSignal,
-    session?: TensorSession
-  ): Promise<tf.Tensor4D> {
-    // Check if tensor is actually 5D (has channel dimension)
-    const is5D = inputTensor.shape.length === 5
-    const [, width, height, depth] = is5D ?
-      [inputTensor.shape[0], inputTensor.shape[1], inputTensor.shape[2], inputTensor.shape[3]] :
-      inputTensor.shape
-
-    // Calculate number of subvolumes needed
-    const strideSize = Math.floor(subvolumeSize * 0.75) // 25% overlap
-    const numSubvolumesX = Math.ceil(width / strideSize)
-    const numSubvolumesY = Math.ceil(height / strideSize)
-    const numSubvolumesZ = Math.ceil(depth / strideSize)
-    const totalSubvolumes = numSubvolumesX * numSubvolumesY * numSubvolumesZ
-
-    onProgress?.(5, `Processing ${totalSubvolumes} subvolumes`)
-
-    // Create output tensor filled with zeros
-    const outputShape: [number, number, number, number] = [1, width, height, depth]
-    let outputTensor = tf.zeros(outputShape)
-    let weightsTensor = tf.zeros(outputShape) // For weighted averaging of overlaps
-
-    let processedCount = 0
-
-    // Process each subvolume
-    for (let z = 0; z < numSubvolumesZ; z++) {
-      for (let y = 0; y < numSubvolumesY; y++) {
-        for (let x = 0; x < numSubvolumesX; x++) {
-          // Check for cancellation
-          if (abortSignal?.aborted) {
-            outputTensor.dispose()
-            weightsTensor.dispose()
-            throw new Error('Inference cancelled by user')
-          }
-
-          // Calculate subvolume boundaries
-          const startX = x * strideSize
-          const startY = y * strideSize
-          const startZ = z * strideSize
-
-          const endX = Math.min(startX + subvolumeSize, width)
-          const endY = Math.min(startY + subvolumeSize, height)
-          const endZ = Math.min(startZ + subvolumeSize, depth)
-
-          const sizeX = endX - startX
-          const sizeY = endY - startY
-          const sizeZ = endZ - startZ
-
-          // Extract subvolume
-          const subvolume = tf.tidy(() => {
-            // Use appropriate slice function based on tensor rank
-            let sliced: tf.Tensor
-            if (is5D) {
-              // For 5D tensors: [batch, width, height, depth, channels]
-              sliced = tf.slice(inputTensor, [0, startX, startY, startZ, 0], [1, sizeX, sizeY, sizeZ, (inputTensor.shape as number[])[4]])
-            } else {
-              // For 4D tensors: [batch, width, height, depth]
-              sliced = tf.slice4d(inputTensor, [0, startX, startY, startZ], [1, sizeX, sizeY, sizeZ])
+        if (modelInfo.enableSeqConv && layer.activation?.getClassName() === 'linear') {
+          const weights = layer.getWeights()
+          const convFn = layer.name.endsWith('_gn')
+            ? gnConvByOutputChannelAndInputSlicing
+            : convByOutputChannelAndInputSlicing
+          nextTensor = await convFn(
+            currentTensor,
+            weights[0],
+            weights[1],
+            (layer as any).strides,
+            (layer as any).padding,
+            (layer as any).dilationRate,
+            3
+          )
+        } else {
+          nextTensor = tf.tidy(() => {
+            let result = layer.apply(currentTensor) as tf.Tensor
+            if (layer.name.endsWith('_gn')) {
+              result = layerNormInPlace(result)
             }
-
-            // Pad to subvolumeSize if needed
-            if (sizeX < subvolumeSize || sizeY < subvolumeSize || sizeZ < subvolumeSize) {
-              const paddings: Array<[number, number]> = is5D ? [
-                [0, 0],
-                [0, subvolumeSize - sizeX],
-                [0, subvolumeSize - sizeY],
-                [0, subvolumeSize - sizeZ],
-                [0, 0]
-              ] : [
-                [0, 0],
-                [0, subvolumeSize - sizeX],
-                [0, subvolumeSize - sizeY],
-                [0, subvolumeSize - sizeZ]
-              ]
-              return tf.pad(sliced, paddings)
-            }
-
-            return sliced
+            return result
           })
-
-          // Run inference on subvolume
-          const prediction = tf.tidy(() => {
-            // Add channel dimension if model expects 5D input and we don't have it
-            let modelInput = subvolume
-            const inputShape = model.inputs[0].shape
-            if (inputShape && inputShape.length === 5 && subvolume.shape.length === 4) {
-              modelInput = tf.expandDims(subvolume, -1) as any
-            }
-
-            const pred = model.predict(modelInput) as tf.Tensor
-
-            // Handle different output formats
-            let processed: tf.Tensor4D
-            if (pred.shape.length === 5) {
-              // argMax already preserves the batch dimension, so result is [batch, width, height, depth]
-              processed = tf.argMax(pred, -1) as tf.Tensor4D
-            } else {
-              processed = pred as tf.Tensor4D
-            }
-
-            // Crop back to actual size if we padded
-            if (sizeX < subvolumeSize || sizeY < subvolumeSize || sizeZ < subvolumeSize) {
-              return tf.slice4d(processed, [0, 0, 0, 0], [1, sizeX, sizeY, sizeZ])
-            }
-
-            return processed
-          })
-
-          // Create weight tensor for blending (higher weight in center)
-          const weights = this.createBlendingWeights(sizeX, sizeY, sizeZ)
-
-          // Add prediction to output with blending
-          outputTensor = tf.tidy(() => {
-            const oldOutput = outputTensor
-
-            // Pad prediction and weights to full size
-            const predPaddings: Array<[number, number]> = [
-              [0, 0],
-              [startX, width - endX],
-              [startY, height - endY],
-              [startZ, depth - endZ]
-            ]
-
-            const paddedPred = tf.pad(prediction, predPaddings)
-            const paddedWeights = tf.pad(weights, predPaddings)
-
-            // Weighted sum
-            const weightedPred = tf.mul(paddedPred, paddedWeights)
-            const newOutput = tf.add(oldOutput, weightedPred)
-
-            oldOutput.dispose()
-            paddedPred.dispose()
-            paddedWeights.dispose()
-            weightedPred.dispose()
-
-            return newOutput
-          })
-
-          // Add to weights
-          weightsTensor = tf.tidy(() => {
-            const oldWeights = weightsTensor
-
-            const predPaddings: Array<[number, number]> = [
-              [0, 0],
-              [startX, width - endX],
-              [startY, height - endY],
-              [startZ, depth - endZ]
-            ]
-
-            const paddedWeights = tf.pad(weights, predPaddings)
-            const newWeights = tf.add(oldWeights, paddedWeights)
-
-            oldWeights.dispose()
-            paddedWeights.dispose()
-
-            return newWeights
-          })
-
-          // Clean up
-          subvolume.dispose()
-          prediction.dispose()
-          weights.dispose()
-
-          // Update progress
-          processedCount++
-          const progress = 5 + Math.floor((processedCount / totalSubvolumes) * 90)
-          onProgress?.(progress, `Processed ${processedCount}/${totalSubvolumes} subvolumes`)
         }
+
+        currentTensor.dispose()
+        currentTensor = nextTensor
+      } catch (err) {
+        currentTensor.dispose()
+        throw new Error(`Inference failed at layer ${i}: ${err instanceof Error ? err.message : String(err)}`)
       }
+
+      // Sync GPU periodically to prevent timeout and update progress
+      if (i % syncEvery === 0) {
+        const firstEl = currentTensor.slice(
+          Array(currentTensor.shape.length).fill(0),
+          Array(currentTensor.shape.length).fill(1)
+        )
+        await firstEl.data()
+        firstEl.dispose()
+      }
+
+      const progress = 10 + Math.floor((i / loopEnd) * 70)
+      onProgress?.(progress, `Layer ${i}/${loopEnd}`)
+      console.log(`[InferenceEngine] Layer ${i} output shape:`, currentTensor.shape)
     }
 
-    // Normalize by weights (weighted average)
-    const finalOutput = tf.tidy(() => {
-      // Avoid division by zero
-      const safeWeights = tf.maximum(weightsTensor, tf.scalar(1e-8))
-      const result = tf.div(outputTensor, safeWeights) as tf.Tensor4D
+    // 6. Final layer processing
+    onProgress?.(85, 'Processing final layer')
+    let outLabelVolume: tf.Tensor3D
 
-      outputTensor.dispose()
-      weightsTensor.dispose()
-
-      return result
-    })
-
-    if (session) {
-      session.tensors.push(finalOutput)
+    if (modelInfo.enableSeqConv) {
+      console.log('[InferenceEngine] Using SequentialConvLayer for final layer')
+      outLabelVolume = await sequentialConvLayerApply(currentTensor, model, isChannelLast, onProgress)
+      currentTensor.dispose()
+    } else {
+      console.log('[InferenceEngine] Using argMax for final layer')
+      outLabelVolume = tf.tidy(() => {
+        const axis = isChannelLast ? -1 : 1
+        const argmax = tf.argMax(currentTensor, axis)
+        return tf.squeeze(argmax) as tf.Tensor3D
+      })
+      currentTensor.dispose()
     }
 
-    return finalOutput
-  }
+    console.log('[InferenceEngine] Output label shape:', outLabelVolume.shape)
 
-  /**
-   * Create blending weights for smooth transitions between subvolumes
-   * Higher weights in the center, lower at edges
-   */
-  private createBlendingWeights(sizeX: number, sizeY: number, sizeZ: number): tf.Tensor4D {
-    return tf.tidy(() => {
-      // Create 1D weight arrays using cosine window
-      const createWindow = (size: number): Float32Array => {
-        const window = new Float32Array(size)
-        for (let i = 0; i < size; i++) {
-          // Cosine window (Hann window)
-          window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (size - 1)))
-        }
-        return window
-      }
-
-      const windowX = createWindow(sizeX)
-      const windowY = createWindow(sizeY)
-      const windowZ = createWindow(sizeZ)
-
-      // Create 3D weight tensor by outer product
-      const weights = new Float32Array(sizeX * sizeY * sizeZ)
-
-      for (let z = 0; z < sizeZ; z++) {
-        for (let y = 0; y < sizeY; y++) {
-          for (let x = 0; x < sizeX; x++) {
-            const idx = z * sizeX * sizeY + y * sizeX + x
-            weights[idx] = windowX[x] * windowY[y] * windowZ[z]
-          }
-        }
-      }
-
-      return tf.tensor4d(Array.from(weights), [1, sizeX, sizeY, sizeZ])
-    })
-  }
-
-  /**
-   * Create a tensor session for memory tracking
-   */
-  private createSession(): TensorSession {
-    const session: TensorSession = {
-      tensors: [],
-      dispose: () => {
-        for (const tensor of session.tensors) {
-          if (!tensor.isDisposed) {
-            tensor.dispose()
-          }
-        }
-        session.tensors = []
-        this.activeSessions.delete(session)
-      }
+    // 7. Transpose back if needed
+    if (modelInfo.enableTranspose) {
+      const transposed = outLabelVolume.transpose() as tf.Tensor3D
+      outLabelVolume.dispose()
+      outLabelVolume = transposed
+      console.log('[InferenceEngine] Output transposed back')
     }
 
-    this.activeSessions.add(session)
-    return session
+    // 8. Restore to 256^3
+    onProgress?.(95, 'Restoring to full volume')
+    const restored = await restoreTo256Cube(outLabelVolume, corner)
+    outLabelVolume.dispose()
+
+    console.log('[InferenceEngine] Restored shape:', restored.shape)
+    onProgress?.(100, 'Inference complete')
+
+    return restored
   }
 
-  /**
-   * Get memory usage statistics
-   */
-  getMemoryStats(): {
-    numTensors: number
-    numBytes: number
-    numActiveSessions: number
-  } {
+  getMemoryStats() {
     const memory = tf.memory()
     return {
       numTensors: memory.numTensors,
       numBytes: memory.numBytes,
-      numActiveSessions: this.activeSessions.size
+      numActiveSessions: 0
     }
   }
 
-  /**
-   * Dispose all active sessions and cleanup
-   */
   dispose(): void {
-    for (const session of this.activeSessions) {
-      session.dispose()
-    }
-    this.activeSessions.clear()
+    // No persistent state to dispose
   }
 }
 
-// Export singleton instance
+// --- Utility functions ported from brainchop's tensor-utils.js ---
+
+async function applyMriThreshold(tensor: tf.Tensor3D, percentage: number): Promise<tf.Tensor3D> {
+  const maxTensor = tensor.max()
+  const thresholdTensor = maxTensor.mul(percentage)
+  const threshold = await thresholdTensor.data()
+  maxTensor.dispose()
+  thresholdTensor.dispose()
+  return tf.tidy(() => {
+    return tensor.greater(threshold[0]).asType('bool') as tf.Tensor3D
+  })
+}
+
+async function firstLastNonZero(tensor3D: tf.Tensor3D, dim: number): Promise<[number, number]> {
+  let mxs: number[]
+  if (dim === 0) {
+    mxs = await (tensor3D.max(2).max(1) as tf.Tensor).arraySync() as number[]
+  } else if (dim === 1) {
+    mxs = await (tensor3D.max(2).max(0) as tf.Tensor).arraySync() as number[]
+  } else {
+    mxs = await (tensor3D.max(1).max(0) as tf.Tensor).arraySync() as number[]
+  }
+  let mn = mxs.length
+  let mx = 0
+  for (let i = 0; i < mxs.length; i++) {
+    if (mxs[i] > 0) { mn = i; break }
+  }
+  for (let i = mxs.length - 1; i >= 0; i--) {
+    if (mxs[i] > 0) { mx = i; break }
+  }
+  return [mn, mx]
+}
+
+async function firstLastNonZero3D(tensor3D: tf.Tensor3D): Promise<number[]> {
+  const [row_min, row_max] = await firstLastNonZero(tensor3D, 0)
+  const [col_min, col_max] = await firstLastNonZero(tensor3D, 1)
+  const [depth_min, depth_max] = await firstLastNonZero(tensor3D, 2)
+  console.log('[InferenceEngine] Bounding box:', { row_min, row_max, col_min, col_max, depth_min, depth_max })
+  return [row_min, row_max, col_min, col_max, depth_min, depth_max]
+}
+
+async function cropAndGetCorner(
+  tensor3d: tf.Tensor3D,
+  mask3d: tf.Tensor3D,
+  userPadding: number
+): Promise<{ cropped: tf.Tensor3D; corner: [number, number, number] }> {
+  const [row_min, row_max, col_min, col_max, depth_min, depth_max] = await firstLastNonZero3D(mask3d)
+
+  const adjustCorner = (min: number, max: number, pad: number): [number, number] => {
+    const startPad = Math.min(min, pad)
+    const endPad = Math.min(255 - max, pad)
+    const newStart = Math.max(0, min - startPad)
+    const newEnd = Math.min(255, max + endPad)
+    return [newStart, newEnd]
+  }
+
+  const [safeRowStart, safeRowEnd] = adjustCorner(row_min, row_max, userPadding)
+  const [safeColStart, safeColEnd] = adjustCorner(col_min, col_max, userPadding)
+  const [safeDepthStart, safeDepthEnd] = adjustCorner(depth_min, depth_max, userPadding)
+
+  const cropped = tensor3d.slice(
+    [safeRowStart, safeColStart, safeDepthStart],
+    [safeRowEnd - safeRowStart + 1, safeColEnd - safeColStart + 1, safeDepthEnd - safeDepthStart + 1]
+  ) as tf.Tensor3D
+
+  return { cropped, corner: [safeRowStart, safeColStart, safeDepthStart] }
+}
+
+async function restoreTo256Cube(tensor3d: tf.Tensor3D, corner: [number, number, number]): Promise<tf.Tensor3D> {
+  const [row_min, col_min, depth_min] = corner
+  const [height, width, depth] = tensor3d.shape
+
+  const paddings: [number, number][] = [
+    [row_min, Math.max(0, 256 - height - row_min)],
+    [col_min, Math.max(0, 256 - width - col_min)],
+    [depth_min, Math.max(0, 256 - depth - depth_min)]
+  ]
+
+  return tensor3d.pad(paddings) as tf.Tensor3D
+}
+
+function isModelChnlLast(modelObj: tf.LayersModel): boolean {
+  for (let layerIdx = 0; layerIdx < modelObj.layers.length; layerIdx++) {
+    const layer = (modelObj as any).layersByDepth?.[layerIdx]?.[0]
+    if (layer?.dataFormat) {
+      return layer.dataFormat === 'channelsLast'
+    }
+  }
+  return true // default to channels last
+}
+
+function layerNormInPlace(x: tf.Tensor, epsilon = 1e-5): tf.Tensor {
+  return tf.tidy(() => {
+    const { mean, variance } = tf.moments(x, [1, 2, 3], true)
+    const invStd = tf.rsqrt(tf.add(variance, epsilon))
+    return tf.mul(tf.sub(x, mean), invStd)
+  })
+}
+
+function instanceNorm(x: tf.Tensor, epsilon = 1e-5): tf.Tensor {
+  return tf.tidy(() => {
+    const { mean, variance } = tf.moments(x, [1, 2, 3], true)
+    const invStd = tf.rsqrt(variance.add(epsilon))
+    return x.sub(mean).mul(invStd)
+  })
+}
+
+async function convByOutputChannelAndInputSlicing(
+  input: tf.Tensor,
+  filter: tf.Tensor,
+  biases: tf.Tensor | undefined,
+  stride: number[],
+  pad: string,
+  dilationRate: number[],
+  sliceSize: number
+): Promise<tf.Tensor> {
+  const inChannels = input.shape[4]!
+  const outChannels = filter.shape[4]!
+  let outputChannels: tf.Tensor | null = null
+
+  for (let channel = 0; channel < outChannels; channel++) {
+    const numSlices = Math.ceil(inChannels / sliceSize)
+    let outputChannel: tf.Tensor | null = null
+
+    for (let i = 0; i < numSlices; i++) {
+      const startChannel = i * sliceSize
+      const endChannel = Math.min((i + 1) * sliceSize, inChannels)
+      if (startChannel < inChannels) {
+        const resultSlice = tf.tidy(() => {
+          const inputSlice = input.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, endChannel - startChannel])
+          const filterSlice = filter.slice([0, 0, 0, startChannel, channel], [-1, -1, -1, endChannel - startChannel, 1])
+          return tf.conv3d(inputSlice as tf.Tensor5D, filterSlice as tf.Tensor5D, stride as any, pad as any, 'NDHWC', dilationRate as any)
+        })
+        if (outputChannel === null) {
+          outputChannel = resultSlice
+        } else {
+          const updated = outputChannel.add(resultSlice)
+          outputChannel.dispose()
+          resultSlice.dispose()
+          outputChannel = updated
+        }
+      }
+    }
+
+    let biasedOutputChannel: tf.Tensor
+    if (biases) {
+      const biasesSlice = biases.slice([channel], [1])
+      biasedOutputChannel = outputChannel!.add(biasesSlice)
+      outputChannel!.dispose()
+      biasesSlice.dispose()
+    } else {
+      biasedOutputChannel = outputChannel!
+    }
+
+    if (outputChannels === null) {
+      outputChannels = biasedOutputChannel
+    } else {
+      const updated = await tf.concat([outputChannels, biasedOutputChannel], 4)
+      biasedOutputChannel.dispose()
+      outputChannels.dispose()
+      outputChannels = updated
+    }
+  }
+
+  return outputChannels!
+}
+
+async function gnConvByOutputChannelAndInputSlicing(
+  input: tf.Tensor,
+  filter: tf.Tensor,
+  biases: tf.Tensor | undefined,
+  stride: number[],
+  pad: string,
+  dilationRate: number[],
+  sliceSize: number
+): Promise<tf.Tensor> {
+  const inChannels = input.shape[4]!
+  const outChannels = filter.shape[4]!
+  let outputChannels: tf.Tensor | null = null
+
+  for (let channel = 0; channel < outChannels; channel++) {
+    const numSlices = Math.ceil(inChannels / sliceSize)
+    let outputChannel: tf.Tensor | null = null
+
+    for (let i = 0; i < numSlices; i++) {
+      const startChannel = i * sliceSize
+      const endChannel = Math.min((i + 1) * sliceSize, inChannels)
+      if (startChannel < inChannels) {
+        const resultSlice = tf.tidy(() => {
+          const inputSlice = input.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, endChannel - startChannel])
+          const filterSlice = filter.slice([0, 0, 0, startChannel, channel], [-1, -1, -1, endChannel - startChannel, 1])
+          return tf.conv3d(inputSlice as tf.Tensor5D, filterSlice as tf.Tensor5D, stride as any, pad as any, 'NDHWC', dilationRate as any)
+        })
+        if (outputChannel === null) {
+          outputChannel = resultSlice
+        } else {
+          const updated = outputChannel.add(resultSlice)
+          outputChannel.dispose()
+          resultSlice.dispose()
+          outputChannel = updated
+        }
+      }
+    }
+
+    let biasedOutputChannel: tf.Tensor
+    if (biases) {
+      const biasesSlice = biases.slice([channel], [1])
+      biasedOutputChannel = outputChannel!.add(biasesSlice)
+      outputChannel!.dispose()
+      biasesSlice.dispose()
+    } else {
+      biasedOutputChannel = outputChannel!
+    }
+
+    const normalizedChannel = instanceNorm(biasedOutputChannel)
+    biasedOutputChannel.dispose()
+
+    if (outputChannels === null) {
+      outputChannels = normalizedChannel
+    } else {
+      const updated = await tf.concat([outputChannels, normalizedChannel], 4)
+      normalizedChannel.dispose()
+      outputChannels.dispose()
+      outputChannels = updated
+    }
+  }
+
+  return outputChannels!
+}
+
+function processTensorInChunks(inputTensor: tf.Tensor, filterWeights: tf.Tensor, chunkSize: number): tf.Tensor {
+  const inChannels = inputTensor.shape[4]!
+  const numSlices = Math.ceil(inChannels / chunkSize)
+  let accumulatedResult: tf.Tensor | null = null
+
+  for (let i = 0; i < numSlices; i++) {
+    const startChannel = i * chunkSize
+    const endChannel = Math.min((i + 1) * chunkSize, inChannels)
+    const channels = endChannel - startChannel
+
+    const inputSlice = tf.tidy(() => inputTensor.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, channels]))
+    const filterSlice = tf.tidy(() => filterWeights.slice([0, 0, 0, startChannel, 0], [-1, -1, -1, channels, -1]))
+
+    const resultSlice = tf.conv3d(inputSlice as tf.Tensor5D, filterSlice as tf.Tensor5D, 1, 'valid', 'NDHWC', 1)
+    inputSlice.dispose()
+    filterSlice.dispose()
+
+    const squeezed = tf.squeeze(resultSlice)
+    resultSlice.dispose()
+
+    if (accumulatedResult === null) {
+      accumulatedResult = squeezed
+    } else {
+      const newResult = accumulatedResult.add(squeezed)
+      accumulatedResult.dispose()
+      squeezed.dispose()
+      accumulatedResult = newResult
+    }
+  }
+
+  return accumulatedResult!
+}
+
+async function sequentialConvLayerApply(
+  inputTensor: tf.Tensor,
+  model: tf.LayersModel,
+  isChannelLast: boolean,
+  onProgress?: (progress: number, status?: string) => void
+): Promise<tf.Tensor3D> {
+  const convLayer = model.layers[model.layers.length - 1]
+  const weights = convLayer.getWeights()[0]
+  const biases = convLayer.getWeights()[1]
+  const outChannels = weights.shape[4]!
+
+  const outputShape = isChannelLast
+    ? (inputTensor.shape as number[]).slice(1, -1)
+    : (inputTensor.shape as number[]).slice(2)
+
+  let outB = tf.mul(tf.ones(outputShape), -10000)
+  let outC = tf.zeros(outputShape)
+
+  const CHUNK_SIZE = 3
+  const chunks = Math.ceil(outChannels / CHUNK_SIZE)
+
+  for (let chunk = 0; chunk < chunks; chunk++) {
+    const startIdx = chunk * CHUNK_SIZE
+    const endIdx = Math.min((chunk + 1) * CHUNK_SIZE, outChannels)
+
+    const [newOutB, newOutC] = tf.tidy(() => {
+      let currentOutB = outB
+      let currentOutC = outC
+
+      for (let chIdx = startIdx; chIdx < endIdx; chIdx++) {
+        const filterWeights = weights.slice([0, 0, 0, 0, chIdx], [-1, -1, -1, -1, 1])
+        const filterBiases = biases.slice([chIdx], [1])
+
+        const outA = processTensorInChunks(
+          inputTensor,
+          filterWeights,
+          Math.min(10, outChannels)
+        ).add(filterBiases) as tf.Tensor
+
+        const greater = tf.greater(outA, currentOutB)
+        currentOutB = tf.where(greater, outA, currentOutB)
+        currentOutC = tf.where(greater, tf.fill(currentOutC.shape, chIdx), currentOutC)
+      }
+
+      return [currentOutB, currentOutC] as [tf.Tensor, tf.Tensor]
+    })
+
+    tf.dispose([outB, outC])
+    outB = newOutB
+    outC = newOutC
+
+    const progress = 85 + Math.floor(((chunk + 1) / chunks) * 10)
+    onProgress?.(progress, `Final layer chunk ${chunk + 1}/${chunks}`)
+
+    // Allow UI update
+    await new Promise(resolve => setTimeout(resolve, 0))
+  }
+
+  const result = outC.clone() as tf.Tensor3D
+  tf.dispose([outB, outC])
+
+  return result
+}
+
 export const inferenceEngine = new InferenceEngine()

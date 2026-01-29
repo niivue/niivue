@@ -26,22 +26,21 @@ export interface ModelInfo {
   labelsPath?: string
   estimatedTimeSeconds: number
   memoryRequirementMB: number
+  enableSeqConv: boolean
+  cropPadding: number
+  autoThreshold: number
+  enableQuantileNorm: boolean
+  enableTranspose: boolean
 }
 
 /**
  * Options for running segmentation
  */
 export interface SegmentationOptions {
-  /** Use subvolume processing for memory-constrained systems */
-  useSubvolumes?: boolean
-  /** Size of subvolumes (default: 64) */
-  subvolumeSize?: number
   /** Progress callback (0-100) */
   onProgress?: (progress: number, status?: string) => void
   /** Abort signal for cancellation */
   abortSignal?: AbortSignal
-  /** Normalize intensity values */
-  normalizeIntensity?: boolean
 }
 
 /**
@@ -73,8 +72,7 @@ export interface ProgressInfo {
  * Inference engine options
  */
 export interface InferenceOptions {
-  useSubvolumes: boolean
-  subvolumeSize: number
+  modelInfo: ModelInfo
   onProgress?: (progress: number, status?: string) => void
   abortSignal?: AbortSignal
 }
@@ -123,6 +121,7 @@ export interface ModelCacheEntry {
   loadedAt: Date
   lastUsed: Date
   memorySize: number
+  backend: string // Backend this model is loaded on ('webgl', 'wasm', 'cpu')
 }
 
 /**

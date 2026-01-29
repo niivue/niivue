@@ -11,7 +11,12 @@
       "modelPath": "brainchop-models/tissue-seg-light",
       "labelsPath": "brainchop-models/tissue-seg-light/labels.json",
       "estimatedTimeSeconds": 3,
-      "memoryRequirementMB": 400
+      "memoryRequirementMB": 400,
+      "enableSeqConv": false,
+      "cropPadding": 18,
+      "autoThreshold": 0.02,
+      "enableQuantileNorm": false,
+      "enableTranspose": true
     },
     {
       "id": "tissue-seg-full",
@@ -24,7 +29,12 @@
       "modelPath": "brainchop-models/tissue-seg-full",
       "labelsPath": "brainchop-models/tissue-seg-full/labels.json",
       "estimatedTimeSeconds": 8,
-      "memoryRequirementMB": 1200
+      "memoryRequirementMB": 1200,
+      "enableSeqConv": true,
+      "cropPadding": 0,
+      "autoThreshold": 0,
+      "enableQuantileNorm": false,
+      "enableTranspose": true
     },
     {
       "id": "brain-extract-light",
@@ -37,7 +47,12 @@
       "modelPath": "brainchop-models/brain-extract-light",
       "labelsPath": "brainchop-models/brain-extract-light/labels.json",
       "estimatedTimeSeconds": 3,
-      "memoryRequirementMB": 400
+      "memoryRequirementMB": 400,
+      "enableSeqConv": false,
+      "cropPadding": 18,
+      "autoThreshold": 0.02,
+      "enableQuantileNorm": false,
+      "enableTranspose": true
     },
     {
       "id": "brain-extract-full",
@@ -50,7 +65,12 @@
       "modelPath": "brainchop-models/brain-extract-full",
       "labelsPath": "brainchop-models/brain-extract-full/labels.json",
       "estimatedTimeSeconds": 6,
-      "memoryRequirementMB": 800
+      "memoryRequirementMB": 800,
+      "enableSeqConv": true,
+      "cropPadding": 0,
+      "autoThreshold": 0,
+      "enableQuantileNorm": false,
+      "enableTranspose": true
     },
     {
       "id": "parcellation-50",
@@ -63,7 +83,12 @@
       "modelPath": "brainchop-models/parcellation-50",
       "labelsPath": "brainchop-models/parcellation-50/labels.json",
       "estimatedTimeSeconds": 15,
-      "memoryRequirementMB": 1800
+      "memoryRequirementMB": 1800,
+      "enableSeqConv": true,
+      "cropPadding": 0,
+      "autoThreshold": 0,
+      "enableQuantileNorm": true,
+      "enableTranspose": true
     },
     {
       "id": "parcellation-104",
@@ -76,8 +101,12 @@
       "modelPath": "brainchop-models/parcellation-104",
       "labelsPath": "brainchop-models/parcellation-104/labels.json",
       "estimatedTimeSeconds": 20,
-      "memoryRequirementMB": 2000
+      "memoryRequirementMB": 2000,
+      "enableSeqConv": true,
+      "cropPadding": 0,
+      "autoThreshold": 0,
+      "enableQuantileNorm": true,
+      "enableTranspose": true
     }
   ]
 }
-

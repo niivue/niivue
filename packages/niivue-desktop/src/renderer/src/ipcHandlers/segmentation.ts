@@ -51,8 +51,9 @@ export const registerSegmentationHandlers = ({
         return
       }
 
-      // Get the base volume (first volume)
-      const baseVolume = nv.volumes[0]
+      // Get the base volume (first volume) and conform to 256³ @ 1mm isotropic
+      // Brainchop models expect this specific format
+      const baseVolume = await nv.conform(nv.volumes[0], true)
 
       // Initialize brainchop service if needed
       if (!brainchopService.isReady()) {
@@ -73,22 +74,47 @@ export const registerSegmentationHandlers = ({
           console.log(`[Renderer] Segmentation progress: ${progress}% - ${status}`)
           onSegmentationProgress?.(progress, status || '')
         },
-        abortSignal: abortController.signal,
-        useSubvolumes: false, // Default to false, can be configured via UI
-        normalizeIntensity: true
+        abortSignal: abortController.signal
       })
 
       console.log('[Renderer] Segmentation complete:', result)
+      console.log('[Renderer] Segmentation volume details:', {
+        name: result.volume.name,
+        dims: result.volume.dims,
+        cal_min: result.volume.cal_min,
+        cal_max: result.volume.cal_max,
+        colormap: result.volume.colormap,
+        dataType: result.volume.img?.constructor.name,
+        dataLength: result.volume.img?.length
+      })
 
       // Add segmentation as overlay
       nv.addVolume(result.volume)
-      nv.setOpacity(nv.volumes.length - 1, 0.5) // Set 50% opacity for overlay
+      const overlayIndex = nv.volumes.length - 1
+
+      console.log('[Renderer] Added overlay at index:', overlayIndex)
+      console.log('[Renderer] Total volumes:', nv.volumes.length)
+
+      // Set opacity for overlay visibility
+      nv.setOpacity(overlayIndex, 0.7) // 70% opacity for better visibility
+
+      // Ensure the overlay is visible by setting proper intensity range
+      // For parcellation models, we want to show all labels
+      if (result.modelInfo.type === 'parcellation') {
+        console.log('[Renderer] Configuring parcellation overlay display')
+        // FreeSurfer colormap should show all labels from 0 to max
+        // TODO: Fix setScale API - currently has incorrect signature
+        // nv.setScale(overlayIndex, [0, result.volume.cal_max])
+      }
 
       // Update React state
       setVolumes((prev) => [...prev, result.volume])
 
-      // Redraw scene
+      // Force redraw
       nv.updateGLVolume()
+      nv.drawScene()
+
+      console.log('[Renderer] Scene redrawn with overlay')
 
       // Notify UI
       onSegmentationComplete?.(result)
