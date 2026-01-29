@@ -1735,7 +1735,8 @@ export class Niivue {
             currentCalMin: this.volumes[0].cal_min!,
             currentCalMax: this.volumes[0].cal_max!,
             globalMin: this.volumes[0].global_min!,
-            globalMax: this.volumes[0].global_max!
+            globalMax: this.volumes[0].global_max!,
+            sensitivity: this.opts.dragAndDropSensitivity
         })
 
         this.volumes[volIdx].cal_min = result.calMin
