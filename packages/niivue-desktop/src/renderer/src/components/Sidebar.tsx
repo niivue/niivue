@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { ScrollArea, Text } from '@radix-ui/themes'
-import { SceneTabs } from './SceneTabs.js'
 import { VolumeImageCard } from './VolumeImageCard.js'
 import { MeshImageCard } from './MeshImageCard.js'
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
@@ -80,9 +79,8 @@ export function Sidebar({
         <DragDropContext onDragEnd={handleDragEnd}>
           <ScrollArea
             style={{
-              height: '50%',
-              paddingRight: '10px',
-              marginBottom: '12px'
+              height: '100%',
+              paddingRight: '10px'
             }}
           >
             <Text size="2" weight="bold">
@@ -132,8 +130,6 @@ export function Sidebar({
               <MeshImageCard key={idx} image={mesh} onRemoveMesh={onRemoveMesh} />
             ))}
           </ScrollArea>
-
-          <SceneTabs />
         </DragDropContext>
       )}
     </aside>

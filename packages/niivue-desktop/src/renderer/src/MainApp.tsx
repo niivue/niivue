@@ -10,10 +10,9 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { fmriEvents, getColorForTrialType } from './types/events.js'
 // import { loadDroppedFiles } from './utils/dragAndDrop.js'
 // import { layouts } from '../../common/layouts.js'
-import { NiimathToolbar } from './components/NiimathToolbar.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
-import { SegmentationPanel } from './components/SegmentationPanel.js'
+import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
 
@@ -54,15 +53,16 @@ function MainApp(): JSX.Element {
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const { showNiimathToolbar, showStatusBar } = useAppContext()
+  const { showStatusBar } = useAppContext()
   const [cursorLocation, setCursorLocation] = useState<string>('')
   const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
 
-  // Segmentation state
-  const [segmentationPanelOpen, setSegmentationPanelOpen] = useState(false)
+  // Right panel state
+  const [rightPanelOpen, setRightPanelOpen] = useState(false)
+  const [rightPanelTab, setRightPanelTab] = useState('controls')
   const [segmentationRunning, setSegmentationRunning] = useState(false)
   const [segmentationProgress, setSegmentationProgress] = useState(0)
   const [segmentationStatus, setSegmentationStatus] = useState('')
@@ -159,7 +159,15 @@ function MainApp(): JSX.Element {
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
       onMosaicStringChange: selected.setSliceMosaicString,
-      onToggleSegmentationPanel: () => setSegmentationPanelOpen((prev) => !prev)
+      onToggleSegmentationPanel: () => {
+        setRightPanelTab('segmentation')
+        setRightPanelOpen((prev) => !prev)
+      },
+      onOpenRightPanelTab: (tab: string) => {
+        setRightPanelTab(tab)
+        setRightPanelOpen(true)
+      },
+      onHideRightPanel: () => setRightPanelOpen(false)
     })
   }, [selected])
 
@@ -684,12 +692,7 @@ function MainApp(): JSX.Element {
         {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
       </div>
 
-      {/* 2) Toolbar full width */}
-      <div className="flex-none">
-        {selected && showNiimathToolbar && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
-      </div>
-
-      {/* 3) Main content: sidebar & viewer & segmentation panel */}
+      {/* 2) Main content: sidebar & viewer & right panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar (left) */}
         <div className="flex-shrink-0 overflow-auto">
@@ -711,20 +714,29 @@ function MainApp(): JSX.Element {
               className="absolute inset-0"
               style={{ display: doc.id === selectedDocId ? 'block' : 'none' }}
             >
-              <Viewer doc={doc} collapsed={sidebarCollapsed} />
+              <Viewer
+                doc={doc}
+                collapsed={sidebarCollapsed}
+                rightPanelOpen={rightPanelOpen}
+                onToggleRightPanel={() => setRightPanelOpen((prev) => !prev)}
+              />
             </div>
           ))}
         </div>
-        {/* Segmentation Panel (right) */}
-        {segmentationPanelOpen && (
+        {/* Right Panel (controls, volume, mesh, atlas, segmentation) */}
+        {rightPanelOpen && (
           <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
-            <SegmentationPanel
+            <RightPanel
+              activeTab={rightPanelTab}
+              onTabChange={setRightPanelTab}
               onRunSegmentation={handleRunSegmentation}
               onCancelSegmentation={handleCancelSegmentation}
               availableModels={availableModels}
               isRunning={segmentationRunning}
               progress={segmentationProgress}
               status={segmentationStatus}
+              modeMap={modeMap}
+              indexMap={indexMap}
             />
           </div>
         )}

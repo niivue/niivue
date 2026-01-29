@@ -567,6 +567,62 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         },
         ...createSliceTypeSubmenu(win),
         // separator
+        { type: 'separator' },
+        {
+          label: 'Panel',
+          submenu: [
+            {
+              label: 'Controls',
+              accelerator: 'CommandOrControl+1',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'controls')
+              }
+            },
+            {
+              label: 'Volume',
+              accelerator: 'CommandOrControl+2',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'volume')
+              }
+            },
+            {
+              label: 'Mesh',
+              accelerator: 'CommandOrControl+3',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'mesh')
+              }
+            },
+            {
+              label: 'Atlas',
+              accelerator: 'CommandOrControl+4',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'atlas')
+              }
+            },
+            {
+              label: 'Segmentation',
+              accelerator: 'CommandOrControl+5',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'segmentation')
+              }
+            },
+            {
+              label: 'Niimath',
+              accelerator: 'CommandOrControl+6',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'niimath')
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Hide Panel',
+              accelerator: 'CommandOrControl+B',
+              click: (): void => {
+                win.webContents.send('hide-right-panel')
+              }
+            }
+          ]
+        },
         { type: 'separator' }
         // TODO(cdrake): re-enable menu
         // {

@@ -42,6 +42,8 @@ export interface IpcHandlerProps {
   onDocumentLoaded: (title: string, targetId: string) => void
   onMosaicStringChange?: (sliceMosaicString: string) => void
   onToggleSegmentationPanel?: () => void
+  onOpenRightPanelTab?: (tab: string) => void
+  onHideRightPanel?: () => void
 }
 
 export const registerAllIpcHandlers = ({
@@ -57,7 +59,9 @@ export const registerAllIpcHandlers = ({
   setLabelEditMode,
   onDocumentLoaded,
   onMosaicStringChange,
-  onToggleSegmentationPanel
+  onToggleSegmentationPanel,
+  onOpenRightPanelTab,
+  onHideRightPanel
 }: IpcHandlerProps): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
@@ -75,6 +79,8 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('draw-command')
   electron.ipcRenderer.removeAllListeners('setDragMode')
   electron.ipcRenderer.removeAllListeners('toggle-color-bars')
+  electron.ipcRenderer.removeAllListeners('open-right-panel-tab')
+  electron.ipcRenderer.removeAllListeners('hide-right-panel')
 
   // 🔌 Register core handlers (now all driven by getTarget)
   registerLoadStandardHandler({ getTarget, onDocumentLoaded })
@@ -109,5 +115,13 @@ export const registerAllIpcHandlers = ({
     nv,
     setVolumes,
     onTogglePanel: onToggleSegmentationPanel
+  })
+
+  // Right panel from menu
+  electron.ipcRenderer.on('open-right-panel-tab', (_event: unknown, tab: string) => {
+    onOpenRightPanelTab?.(tab)
+  })
+  electron.ipcRenderer.on('hide-right-panel', () => {
+    onHideRightPanel?.()
   })
 }
