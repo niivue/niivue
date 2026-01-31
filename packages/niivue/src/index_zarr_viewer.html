@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>NiiVue - Zarr Viewer (Unified Zoom)</title>
+    <title>NiiVue - Zarr Viewer</title>
     <link rel="stylesheet" href="niivue.css" />
     <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
     <style>
@@ -37,15 +37,6 @@
       #loadBtn:disabled {
         background: #666;
         cursor: not-allowed;
-      }
-      #progressContainer {
-        display: none;
-        align-items: center;
-        gap: 8px;
-      }
-      #progressBar {
-        width: 100px;
-        height: 8px;
       }
       #navControls {
         display: none;
@@ -82,20 +73,14 @@
     <header>
       <div id="controls">
         <label for="storeUrl">Zarr URL:</label>
-        <!-- <input
-          type="text"
-          id="storeUrl"
-          value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/present.ome.zarr"
-          style="width: 400px"
-        /> -->
-        <!-- use https if developing with an http/2 server -->
-        <!-- use http if developing with a standard http/ server -->
         <input
           type="text"
           id="storeUrl"
-          value="https://localhost:3000/K_HE_2_ome.zarr"
+          value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/pawpawsaurus.ome.zarr"
           style="width: 400px"
         />
+        <!-- https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/pawpawsaurus.ome.zarr -->
+         <!-- https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/chameleon.ome.zarr -->
 
         <label for="maxVolSize">Max Volume Size:</label>
         <select id="maxVolSize">
@@ -104,16 +89,21 @@
           <option value="512">512</option>
         </select>
 
+        <label for="zarrLevel">Level:</label>
+        <select id="zarrLevel">
+          <option value="0" selected>0 (highest res)</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+
         <button id="loadBtn">Load Zarr</button>
 
-        <div id="progressContainer">
-          <progress id="progressBar" value="0" max="100"></progress>
-          <span id="progressText">0%</span>
-        </div>
-
         <div id="navControls">
-          <span class="hint">Scroll to zoom, drag to pan</span>
-          <label for="levelSelect">Manual level:</label>
+          <span class="hint">Drag to pan</span>
+          <label for="levelSelect">Switch level:</label>
           <select id="levelSelect"></select>
         </div>
       </div>
@@ -134,67 +124,42 @@
 
   const storeUrlInput = document.getElementById('storeUrl')
   const maxVolSizeSelect = document.getElementById('maxVolSize')
+  const zarrLevelSelect = document.getElementById('zarrLevel')
   const loadBtn = document.getElementById('loadBtn')
-  const progressContainer = document.getElementById('progressContainer')
-  const progressBar = document.getElementById('progressBar')
-  const progressText = document.getElementById('progressText')
   const statusBar = document.getElementById('statusBar')
   const navControls = document.getElementById('navControls')
   const infoPanel = document.getElementById('infoPanel')
   const levelSelect = document.getElementById('levelSelect')
 
-  // Create NiiVue instance (exposed on window for debugging)
+  // Create NiiVue instance
   const nv = new Niivue({
+    show3Dcrosshair: true,
     logLevel: 'debug',
     dragMode: DRAG_MODE.pan,
     isColorbar: true,
     isOrientCube: true,
     backColor: [0.1, 0.1, 0.15, 1],
-    multiplanarLayout: MULTIPLANAR_TYPE.GRID ,
-    onZarrLevelChange: (info) => {
-      let status = `Level ${info.level + 1}/${info.totalLevels} (${info.levelWidth} x ${info.levelHeight}`
-      if (info.levelDepth && info.levelDepth > 1) {
-        status += ` x ${info.levelDepth}`
-      }
-      status += ') - Auto'
-      statusBar.textContent = status
-
-      // Update level selector to match auto-selected level
-      levelSelect.value = info.level
-
-      updateInfoPanel()
-    },
-    onZarrChunkLoadProgress: (info) => {
-      const percent = Math.round((info.chunksLoaded / info.chunksTotal) * 100)
-      progressBar.value = percent
-      progressText.textContent = `${percent}%`
-
-      if (info.chunksLoaded >= info.chunksTotal) {
-        setTimeout(() => {
-          progressContainer.style.display = 'none'
-        }, 500)
-      }
-    }
+    multiplanarLayout: MULTIPLANAR_TYPE.GRID
   })
 
-  // Attach to canvas
   await nv.attachToCanvas(document.getElementById('gl1'))
   nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
   window.nv = nv
 
-  // Update info panel with current viewport state
   function updateInfoPanel() {
-    if (!nv.zarrImage) {
+    const helper = nv.back?.zarrHelper
+    if (!helper) {
       infoPanel.style.display = 'none'
       return
     }
 
-    const state = nv.zarrImage.getViewportState()
-    const pyramidInfo = nv.zarrImage.getPyramidInfo()
-    const volDims = nv.zarrImage.getVolumeDimensions()
+    const state = helper.getViewportState()
+    const pyramidInfo = helper.getPyramidInfo()
+    const volDims = helper.getVolumeDims()
+    const levelDims = helper.getLevelDims()
 
     const level0Dims = pyramidInfo.levels[0].shape
-    const currentLevel = pyramidInfo.levels[state.pyramidLevel]
+    const currentLevel = pyramidInfo.levels[state.level]
 
     const wasHidden = infoPanel.style.display === 'none' || infoPanel.style.display === ''
     infoPanel.style.display = 'block'
@@ -202,22 +167,21 @@
       <strong>Dataset:</strong> ${pyramidInfo.name}<br>
       <strong>Full size:</strong> ${level0Dims.join(' x ')} (${pyramidInfo.is3D ? '3D' : '2D'})<br>
       <strong>Pyramid levels:</strong> ${pyramidInfo.levels.length}<br>
-      <strong>Current level:</strong> ${state.pyramidLevel} (${currentLevel.shape.join(' x ')})<br>
-      <strong>Zoom:</strong> ${state.zoom.toFixed(2)}x<br>
-      <strong>Center (Level 0):</strong> X=${state.centerX.toFixed(1)}, Y=${state.centerY.toFixed(1)}, Z=${state.centerZ.toFixed(1)}<br>
+      <strong>Current level:</strong> ${state.level} (${currentLevel.shape.join(' x ')})<br>
+      <strong>Center:</strong> X=${state.centerX.toFixed(1)}, Y=${state.centerY.toFixed(1)}, Z=${state.centerZ.toFixed(1)}<br>
       <strong>Virtual volume:</strong> ${volDims.width} x ${volDims.height} x ${volDims.depth}
     `
-    // Notify NiiVue of layout change so mouse coordinates are recalculated
     if (wasHidden) {
       nv.resizeListener()
     }
   }
 
-  // Manual level select handler (for testing/debugging)
+  // Manual level select handler
   levelSelect.addEventListener('change', async () => {
-    if (!nv.zarrImage) return
+    const helper = nv.back?.zarrHelper
+    if (!helper) return
     const level = parseInt(levelSelect.value)
-    await nv.zarrImage.setPyramidLevel(level)
+    await helper.setPyramidLevel(level)
     nv.updateGLVolume()
     nv.drawScene()
     updateInfoPanel()
@@ -232,48 +196,51 @@
     }
 
     const maxVolSize = parseInt(maxVolSizeSelect.value)
+    const level = parseInt(zarrLevelSelect.value)
 
     loadBtn.disabled = true
     loadBtn.textContent = 'Loading...'
-    progressContainer.style.display = 'flex'
-    progressBar.value = 0
-    progressText.textContent = '0%'
     statusBar.textContent = 'Discovering zarr structure...'
 
     try {
-      
-      await nv.loadZarrFromServer(storeUrl, {
-        maxVolumeSize: maxVolSize,
-      })
+      // Use standard loadVolumes API
+      await nv.loadVolumes([
+        { url: "../demos/images/mni152.nii.gz" }, 
+        {
+          url: storeUrl,
+          zarrLevel: level,
+          zarrMaxVolumeSize: maxVolSize,
+          cal_min: 30_000,
+          cal_max: 50_000
+        },
+      ])
       nv.setColormap(nv.volumes[0].id, 'gray')
 
       // Show navigation controls
       navControls.style.display = 'flex'
 
-      // Populate level selector
-      if (nv.zarrImage) {
-        const pyramidInfo = nv.zarrImage.getPyramidInfo()
+      const helper = nv.back?.zarrHelper
+      if (helper) {
+        const pyramidInfo = helper.getPyramidInfo()
         levelSelect.innerHTML = ''
-        pyramidInfo.levels.forEach((level, idx) => {
+        pyramidInfo.levels.forEach((lvl, idx) => {
           const option = document.createElement('option')
           option.value = idx
-          option.textContent = `${idx}: ${level.shape.join('x')}`
-          if (idx === nv.zarrImage.getPyramidLevel()) {
+          option.textContent = `${idx}: ${lvl.shape.join('x')}`
+          if (idx === helper.getPyramidLevel()) {
             option.selected = true
           }
           levelSelect.appendChild(option)
         })
 
-        // Update status and info
-        const state = nv.zarrImage.getViewportState()
-        const dims = pyramidInfo.levels[state.pyramidLevel].shape
-        statusBar.textContent = `Level ${state.pyramidLevel + 1}/${pyramidInfo.levels.length} (${dims.join(' x ')})`
+        const state = helper.getViewportState()
+        const dims = pyramidInfo.levels[state.level].shape
+        statusBar.textContent = `Level ${state.level + 1}/${pyramidInfo.levels.length} (${dims.join(' x ')})`
         updateInfoPanel()
       }
     } catch (err) {
       console.error('Failed to load Zarr:', err)
       statusBar.textContent = `Error: ${err.message}`
-      progressContainer.style.display = 'none'
       navControls.style.display = 'none'
       infoPanel.style.display = 'none'
     } finally {
@@ -283,15 +250,11 @@
   })
 
   console.log(`
-  Zarr Viewer (Unified Zoom) Controls:
-  - Mouse wheel: Zoom in/out (automatically selects pyramid level)
+  Zarr Viewer Controls:
   - Left-click drag: Pan the view
-  - Level dropdown: Manual level override (for debugging)
-  - NiiVue standard controls for slice navigation
+  - Level dropdown: Switch pyramid level
+  - Standard NiiVue controls for slice navigation
 
-  The zoom system follows the TIFF pattern:
-  - All coordinates are in Level 0 (full resolution) space
-  - Virtual volume size is FIXED - data is scaled to fill it
-  - Smooth zooming with automatic level selection via hysteresis
+  Uses standard loadVolumes() API with zarrLevel option.
   `)
 </script>

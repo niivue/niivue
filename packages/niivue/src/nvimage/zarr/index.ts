@@ -14,6 +14,4 @@ export { ZarrChunkCache, type TypedArray } from './ZarrChunkCache.js'
 
 export { ZarrChunkClient, type ZarrChunkClientConfig, type ZarrPyramidLevel, type ZarrPyramidInfo, type ChunkCoord, type AxisMapping } from './ZarrChunkClient.js'
 
-export { ZarrViewport, type ZarrViewportState, type VirtualVolumeDimensions } from './ZarrViewport.js'
-
-export { NVZarrImage, type NVZarrImageOptions, type ChunkLoadInfo, type ZarrLevelChangeInfo, type TileBounds } from './NVZarrImage.js'
+export { NVZarrHelper, type NVZarrHelperOptions } from './NVZarrHelper.js'

@@ -60,7 +60,6 @@ import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, Lab
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
 import { NVTiffImage, type TileLoadInfo, type LevelChangeInfo } from '@/nvimage/tiff'
-import { NVZarrImage, type ChunkLoadInfo, type ZarrLevelChangeInfo, type TileBounds } from '@/nvimage/zarr'
 import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
@@ -96,8 +95,8 @@ export { ColorTables as colortables, cmapper } from '@/colortables'
 export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
 export { NVTiffImage, TiffTileClient, TiffTileCache, TiffViewport } from '@/nvimage/tiff'
 export type { TileLoadInfo, LevelChangeInfo, PyramidInfo, PyramidLevel, TileCoord, TiffViewportState } from '@/nvimage/tiff'
-export { NVZarrImage, ZarrChunkClient, ZarrChunkCache, ZarrViewport } from '@/nvimage/zarr'
-export type { ChunkLoadInfo, ZarrLevelChangeInfo, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord, ZarrViewportState, TileBounds } from '@/nvimage/zarr'
+export { NVZarrHelper, ZarrChunkClient, ZarrChunkCache } from '@/nvimage/zarr'
+export type { NVZarrHelperOptions, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord } from '@/nvimage/zarr'
 export * from '@/nvimage/affineUtils'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '@/nvdocument'
@@ -591,30 +590,6 @@ export class Niivue {
 
     /** TIFF viewport center position at mouse down (for drag calculations) */
     private tiffCenterAtMouseDown: { x: number; y: number } | null = null
-
-    /** Active zarr image (null if not in zarr viewing mode) */
-    zarrImage: NVZarrImage | null = null
-
-    /** Zarr viewport center position at mouse down (for drag calculations) */
-    private zarrCenterAtMouseDown: { x: number; y: number; z: number } | null = null
-
-    /**
-     * Callback triggered when pyramid level changes for zarr images.
-     * @example
-     * niivue.onZarrLevelChange = (info) => {
-     *   console.log('level: ', info.level, '/', info.totalLevels)
-     * }
-     */
-    onZarrLevelChange: (info: ZarrLevelChangeInfo) => void = () => {}
-
-    /**
-     * Callback triggered when chunks are loaded for zarr images.
-     * @example
-     * niivue.onZarrChunkLoadProgress = (info) => {
-     *   console.log('loaded: ', info.chunksLoaded, '/', info.chunksTotal)
-     * }
-     */
-    onZarrChunkLoadProgress: (info: ChunkLoadInfo) => void = () => {}
 
     document = new NVDocument()
 
@@ -1134,11 +1109,6 @@ export class Niivue {
 
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
 
-        // Update zarr image canvas dimensions for coordinate scaling
-        if (this.zarrImage) {
-            this.zarrImage.setCanvasDimensions(resizeResult.width, resizeResult.height)
-        }
-
         this.textSizePoints()
         this.drawScene()
     }
@@ -1426,10 +1396,7 @@ export class Niivue {
                     this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
                 }
                 // Store Zarr viewport center at drag start
-                if (this.zarrImage) {
-                    const state = this.zarrImage.getViewportState()
-                    this.zarrCenterAtMouseDown = { x: state.centerX, y: state.centerY, z: state.centerZ }
-                }
+                this.back?.zarrHelper?.beginDrag()
             }
             this.uiData.isDragging = true
             this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
@@ -2064,10 +2031,7 @@ export class Niivue {
                     this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
                 }
                 // Store Zarr viewport center at drag start
-                if (this.zarrImage) {
-                    const state = this.zarrImage.getViewportState()
-                    this.zarrCenterAtMouseDown = { x: state.centerX, y: state.centerY, z: state.centerZ }
-                }
+                this.back?.zarrHelper?.beginDrag()
             }
             this.uiData.isDragging = true
 
@@ -2337,36 +2301,6 @@ export class Niivue {
             return
         }
 
-        // Handle wheel for Zarr zoom (zoom towards cursor position, auto-selects pyramid level)
-        if (this.zarrImage) {
-            const rect = this.canvas!.getBoundingClientRect()
-            // Convert CSS pixels to canvas pixels (account for device pixel ratio)
-            const screenX = (e.clientX - rect.left) * this.uiData.dpr!
-            const screenY = (e.clientY - rect.top) * this.uiData.dpr!
-
-            // Find which tile the mouse is in and get its bounds
-            const tileIdx = this.tileIndex(screenX, screenY)
-            let tileBounds: TileBounds | undefined
-            if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
-                const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
-                tileBounds = { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
-            }
-
-            // Zoom factor: scroll down = zoom out (0.9), scroll up = zoom in (1.1)
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
-
-            this.zarrImage
-                .zoomAt(zoomFactor, screenX, screenY, undefined, tileBounds)
-                .then(() => {
-                    this.updateGLVolume()
-                    this.drawScene()
-                })
-                .catch((err) => {
-                    log.error('Failed to zoom Zarr:', err)
-                })
-            return
-        }
-
         // ROI Selection logic
         if (
             WheelController.isValidRoiResize({
@@ -2616,7 +2550,10 @@ export class Niivue {
                 isManifest: imageItem.isManifest,
                 frame4D: imageItem.frame4D,
                 limitFrames4D: imageItem.limitFrames4D || this.opts.limitFrames4D,
-                colorbarVisible: imageItem.colorbarVisible
+                colorbarVisible: imageItem.colorbarVisible,
+                zarrLevel: imageItem.zarrLevel,
+                zarrMaxVolumeSize: imageItem.zarrMaxVolumeSize,
+                zarrChannel: imageItem.zarrChannel
             }
             const volume = await NVImage.loadFromUrl(imageOptions)
             this.document.addImageOptions(volume, imageOptions)
@@ -3269,6 +3206,13 @@ export class Niivue {
         this.volumes = result.volumes
         this.setVolume(volume, result.index)
         this.onImageLoaded(volume)
+        // Hook zarr chunk updates to trigger GL refresh
+        if (volume.zarrHelper) {
+            volume.zarrHelper.onChunksUpdated = (): void => {
+                this.updateGLVolume()
+                this.drawScene()
+            }
+        }
         log.debug('loaded volume', volume.name)
         log.debug(volume)
     }
@@ -4261,29 +4205,6 @@ export class Niivue {
             return
         }
 
-        // Zarr images use their own zoom system - redirect scroll to Zarr viewport
-        if (this.zarrImage) {
-            // Find which tile the mouse is in and get its bounds
-            const tileIdx = this.tileIndex(x, y)
-            let tileBounds: TileBounds | undefined
-            if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
-                const ltwh = this.screenSlices[tileIdx].leftTopWidthHeight
-                tileBounds = { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
-            }
-
-            const zoomFactor = posChange > 0 ? 0.9 : 1.1
-            this.zarrImage
-                .zoomAt(zoomFactor, x, y, undefined, tileBounds)
-                .then(() => {
-                    this.updateGLVolume()
-                    this.drawScene()
-                })
-                .catch((err) => {
-                    log.error('Failed to zoom Zarr:', err)
-                })
-            return
-        }
-
         // Check if the canvas has focus
         if (
             !SliceNavigation.shouldProcessScroll({
@@ -5138,80 +5059,6 @@ export class Niivue {
 
         // Update GL volume (creates volumeObject3D and draws scene)
         this.updateGLVolume()
-
-        return this
-    }
-
-    /**
-     * Load a zarr dataset from a remote store.
-     *
-     * Creates a virtual NIfTI volume from the zarr data, enabling full
-     * multiplanar and volume rendering capabilities for large datasets.
-     *
-     * @param storeUrl - URL of the zarr store (e.g., "http://localhost:8090/lightsheet.zarr")
-     * @param options - Optional configuration
-     * @param options.maxVolumeSize - Maximum dimension for virtual volume (default 256)
-     * @returns Promise resolving to this Niivue instance
-     *
-     * @example
-     * await niivue.loadZarrFromServer('http://localhost:8090/lightsheet.zarr')
-     */
-    async loadZarrFromServer(
-        storeUrl: string,
-        options: {
-            maxVolumeSize?: number
-        } = {}
-    ): Promise<this> {
-        // Get WebGL 3D texture size limit
-        const max3DTextureSize = this.gl?.getParameter(this.gl.MAX_3D_TEXTURE_SIZE) ?? 2048
-
-        // Get canvas dimensions for coordinate scaling
-        const canvasWidth = this.canvas?.width ?? 256
-        const canvasHeight = this.canvas?.height ?? 256
-
-        this.zarrImage = await NVZarrImage.create({
-            storeUrl,
-            maxVolumeSize: options.maxVolumeSize ?? 256,
-            maxTextureSize: max3DTextureSize,
-            canvasWidth,
-            canvasHeight,
-            channel: 1,
-            cacheSize: this.opts.zarrCacheSize ?? 1000,
-            prefetchRings: this.opts.zarrPrefetchRings ?? 10,
-            onChunkLoad: (info) => {
-                this.onZarrChunkLoadProgress(info)
-                // Update the GL texture when chunks are loaded
-                this.updateGLVolume()
-                // this.drawScene()
-            },
-            onLevelChange: (info) => {
-                this.onZarrLevelChange(info)
-            },
-            getTileBounds: () => {
-                // Get tile bounds from screenSlices for accurate coordinate conversion
-                // Usually tile 0 contains the main view for zarr/2D images
-                if (this.screenSlices.length > 0) {
-                    const ltwh = this.screenSlices[0].leftTopWidthHeight
-                    return { left: ltwh[0], top: ltwh[1], width: ltwh[2], height: ltwh[3] }
-                }
-                return null
-            }
-        })
-
-        // Set the NVImage as the single volume and back reference
-        const nvImage = this.zarrImage.getNVImage()
-        this.volumes = [nvImage]
-        this.back = nvImage
-
-        // Reset NiiVue's zoom/pan state
-        this.scene.pan2Dxyzmm = [0, 0, 0, 1]
-        this.scene.volScaleMultiplier = 1
-
-        // Update GL volume (creates volumeObject3D and draws scene)
-        this.updateGLVolume()
-
-        // Trigger resize to ensure coordinate transforms are properly initialized
-        this.resizeListener()
 
         return this
     }
@@ -8249,36 +8096,63 @@ export class Niivue {
             return
         }
 
-        // Handle Zarr images with their own pan/zoom system
-        if (this.zarrImage && this.zarrCenterAtMouseDown) {
-            // Calculate cumulative delta from drag start to current position
-            const deltaX = startXYendXY[2] - startXYendXY[0]
-            const deltaY = startXYendXY[3] - startXYendXY[1]
+        // Handle Zarr images with chunked pan
+        const zarrHelper = this.back?.zarrHelper
+        if (zarrHelper && zarrHelper.centerAtDragStart) {
+            const screenDeltaX = startXYendXY[2] - startXYendXY[0]
+            const screenDeltaY = startXYendXY[3] - startXYendXY[1]
 
-            // Skip update if there's no actual movement (prevents infinite loop on click)
-            if (deltaX === 0 && deltaY === 0) {
+            if (screenDeltaX === 0 && screenDeltaY === 0) {
                 return
             }
 
-            // Get the effective scale to convert screen pixels to image coordinates
-            const viewportState = this.zarrImage.getViewportState()
-            const effectiveScale = this.zarrImage.getEffectiveScale()
+            // Determine which slice the drag is happening on to map screen axes to volume axes
+            let axCorSag = SLICE_TYPE.AXIAL
+            for (const slice of this.screenSlices) {
+                if (slice.axCorSag > SLICE_TYPE.SAGITTAL) {
+                    continue
+                }
+                const ltwh = slice.leftTopWidthHeight
+                const mx = startXYendXY[0]
+                const my = startXYendXY[1]
+                if (mx >= ltwh[0] && my >= ltwh[1] && mx <= ltwh[0] + ltwh[2] && my <= ltwh[1] + ltwh[3]) {
+                    axCorSag = slice.axCorSag
+                    break
+                }
+            }
 
-            // Calculate new center: startingCenter + delta/scale
-            // (positive to match standard NiiVue pan direction)
-            const newCenterX = this.zarrCenterAtMouseDown.x - deltaX / effectiveScale
-            const newCenterY = this.zarrCenterAtMouseDown.y - deltaY / effectiveScale
+            // Map screen deltas to zarr volume axes based on slice orientation
+            // Zarr center axes: X=width (dim1), Y=height (dim2), Z=depth (dim3)
+            // After calculateRAS with our diagonal affine, the RAS mapping is:
+            //   AXIAL view shows dim1 (X) and dim2 (Y) → drag maps to centerX, centerY
+            //   CORONAL view shows dim1 (X) and dim3 (Z) → drag maps to centerX, centerZ
+            //   SAGITTAL view shows dim2 (Y) and dim3 (Z) → drag maps to centerY, centerZ
+            let newCenterX = zarrHelper.centerAtDragStart.x
+            let newCenterY = zarrHelper.centerAtDragStart.y
+            let newCenterZ = zarrHelper.centerAtDragStart.z
+            if (axCorSag === SLICE_TYPE.AXIAL) {
+                newCenterX -= screenDeltaX
+                newCenterY -= screenDeltaY
+            } else if (axCorSag === SLICE_TYPE.CORONAL) {
+                newCenterX -= screenDeltaX
+                newCenterZ -= screenDeltaY
+            } else if (axCorSag === SLICE_TYPE.SAGITTAL) {
+                newCenterY -= screenDeltaX
+                newCenterZ -= screenDeltaY
+            }
 
-            // Skip update if center position hasn't actually changed (prevents loop after drag stops)
-            if (Math.abs(newCenterX - viewportState.centerX) < 0.001 && Math.abs(newCenterY - viewportState.centerY) < 0.001) {
+            const state = zarrHelper.getViewportState()
+            if (
+                Math.abs(newCenterX - state.centerX) < 0.001 &&
+                Math.abs(newCenterY - state.centerY) < 0.001 &&
+                Math.abs(newCenterZ - state.centerZ) < 0.001
+            ) {
                 return
             }
 
-            // Update viewport state with new center
-            this.zarrImage
-                .setViewportState({ centerX: newCenterX, centerY: newCenterY })
+            zarrHelper
+                .panTo(newCenterX, newCenterY, newCenterZ)
                 .then(() => {
-                    // this.updateGLVolume()
                     this.drawScene()
                 })
                 .catch((err) => {

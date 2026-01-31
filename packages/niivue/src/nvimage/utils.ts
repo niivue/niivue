@@ -204,6 +204,10 @@ export type ImageFromUrlOptions = {
     isManifest?: boolean
     urlImgData?: string
     buffer?: ArrayBuffer
+    // Zarr chunked loading options
+    zarrLevel?: number
+    zarrMaxVolumeSize?: number
+    zarrChannel?: number
 }
 
 // TODO centralize shared options

@@ -23,6 +23,8 @@ export interface ZarrPyramidLevel {
     chunks: number[]
     /** Data type (e.g., "uint8", "uint16", "float32") */
     dtype: string
+    /** Physical scale factors per spatial axis in [Z, Y, X] or [Y, X] order from OME coordinateTransformations */
+    scales?: number[]
 }
 
 /**
@@ -105,6 +107,7 @@ export class ZarrChunkClient {
         // Raw levels before axis stripping (with full original shapes)
         const rawLevels: Array<{ index: number; path: string; shape: number[]; chunks: number[]; dtype: string }> = []
         let omeAxes: Array<{ name: string; type: string }> | null = null
+        let omeMultiscales: OmeMultiscales | null = null
 
         // Try to open as a single array first (non-pyramidal case)
         try {
@@ -120,7 +123,6 @@ export class ZarrChunkClient {
             this.levelPaths.set(0, '/')
         } catch {
             // Not a single array, try to open as a group and read OME metadata
-            let omeMultiscales: OmeMultiscales | null = null
 
             try {
                 const group = await zarr.open(root, { kind: 'group' })
@@ -198,14 +200,28 @@ export class ZarrChunkClient {
         const axisMapping = this.buildAxisMapping(originalNdim, rawLevels[0].chunks, omeAxes)
         this.axisMapping = axisMapping
 
-        // Strip non-spatial dimensions from shape and chunks
-        const levels: ZarrPyramidLevel[] = rawLevels.map((raw) => ({
-            index: raw.index,
-            path: raw.path,
-            shape: axisMapping.spatialIndices.map((i) => raw.shape[i]),
-            chunks: axisMapping.spatialIndices.map((i) => raw.chunks[i]),
-            dtype: raw.dtype
-        }))
+        // Strip non-spatial dimensions from shape and chunks, and extract per-level scales
+        const levels: ZarrPyramidLevel[] = rawLevels.map((raw) => {
+            const level: ZarrPyramidLevel = {
+                index: raw.index,
+                path: raw.path,
+                shape: axisMapping.spatialIndices.map((i) => raw.shape[i]),
+                chunks: axisMapping.spatialIndices.map((i) => raw.chunks[i]),
+                dtype: raw.dtype
+            }
+
+            // Extract spatial scale factors from OME coordinateTransformations
+            if (omeMultiscales?.datasets?.[raw.index]?.coordinateTransformations) {
+                const transforms = omeMultiscales.datasets[raw.index].coordinateTransformations!
+                const scaleTransform = transforms.find((t) => t.type === 'scale' && t.scale)
+                if (scaleTransform?.scale) {
+                    // Extract scales for spatial axes only, in the reordered [Z, Y, X] order
+                    level.scales = axisMapping.spatialIndices.map((i) => scaleTransform.scale![i])
+                }
+            }
+
+            return level
+        })
 
         // Determine dimensionality from spatial axes
         const spatialNdim = axisMapping.spatialIndices.length
@@ -237,10 +253,12 @@ export class ZarrChunkClient {
 
         if (omeAxes && omeAxes.length === originalNdim) {
             // Use OME axes metadata to identify spatial vs non-spatial
+            // Collect spatial axes with their names for reordering
+            const spatialAxesWithNames: Array<{ index: number; name: string }> = []
             for (let i = 0; i < omeAxes.length; i++) {
                 const axis = omeAxes[i]
                 if (axis.type === 'space') {
-                    spatialIndices.push(i)
+                    spatialAxesWithNames.push({ index: i, name: axis.name.toLowerCase() })
                 } else {
                     nonSpatialAxes.push({
                         index: i,
@@ -250,9 +268,46 @@ export class ZarrChunkClient {
                     })
                 }
             }
+
+            // Reorder spatial indices to ensure [Z, Y, X] (3D) or [Y, X] (2D) order
+            // based on axis names from the OME metadata
+            if (spatialAxesWithNames.length >= 3) {
+                const zAxis = spatialAxesWithNames.find((a) => a.name === 'z')
+                const yAxis = spatialAxesWithNames.find((a) => a.name === 'y')
+                const xAxis = spatialAxesWithNames.find((a) => a.name === 'x')
+                if (zAxis && yAxis && xAxis) {
+                    spatialIndices.push(zAxis.index, yAxis.index, xAxis.index)
+                } else {
+                    // Unrecognized axis names — keep original order and warn
+                    console.warn(
+                        `OME spatial axis names not recognized as z/y/x: ${spatialAxesWithNames.map((a) => a.name).join(', ')}. ` +
+                            `Assuming order is [Z, Y, X].`
+                    )
+                    for (const a of spatialAxesWithNames) {
+                        spatialIndices.push(a.index)
+                    }
+                }
+            } else if (spatialAxesWithNames.length === 2) {
+                const yAxis = spatialAxesWithNames.find((a) => a.name === 'y')
+                const xAxis = spatialAxesWithNames.find((a) => a.name === 'x')
+                if (yAxis && xAxis) {
+                    spatialIndices.push(yAxis.index, xAxis.index)
+                } else {
+                    for (const a of spatialAxesWithNames) {
+                        spatialIndices.push(a.index)
+                    }
+                }
+            } else {
+                for (const a of spatialAxesWithNames) {
+                    spatialIndices.push(a.index)
+                }
+            }
         } else {
             // No OME axes metadata — infer from ndim.
             // OME convention: leading dims are non-spatial (t, c), trailing are spatial (z, y, x)
+            if (omeAxes === null) {
+                console.warn('No OME axes metadata found — inferring axis layout from array dimensions')
+            }
             if (originalNdim <= 3) {
                 // 2D [Y, X] or 3D [Z, Y, X] — all spatial
                 for (let i = 0; i < originalNdim; i++) {
