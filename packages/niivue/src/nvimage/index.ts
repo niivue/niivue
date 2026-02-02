@@ -864,7 +864,8 @@ export class NVImage {
         buffer = new ArrayBuffer(0),
         zarrLevel,
         zarrMaxVolumeSize,
-        zarrChannel
+        zarrChannel,
+        zarrConvertUnits
     }: Partial<Omit<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
         if (url === '') {
             throw Error('url must not be empty')
@@ -921,6 +922,7 @@ export class NVImage {
                     level: zarrLevel,
                     maxVolumeSize: zarrMaxVolumeSize,
                     channel: zarrChannel,
+                    convertUnitsToMm: zarrConvertUnits,
                     colormap,
                     opacity
                 })
@@ -1009,6 +1011,7 @@ export class NVImage {
             maxTextureSize?: number
             channel?: number
             cacheSize?: number
+            convertUnitsToMm?: boolean
             colormap?: string
             opacity?: number
         }
@@ -1020,7 +1023,8 @@ export class NVImage {
             maxVolumeSize: options.maxVolumeSize,
             maxTextureSize: options.maxTextureSize,
             channel: options.channel,
-            cacheSize: options.cacheSize
+            cacheSize: options.cacheSize,
+            convertUnitsToMm: options.convertUnitsToMm
         })
         if (options.colormap) {
             nvimage._colormap = options.colormap

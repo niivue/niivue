@@ -1396,7 +1396,7 @@ export class Niivue {
                     this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
                 }
                 // Store Zarr viewport center at drag start
-                this.back?.zarrHelper?.beginDrag()
+                this.getZarrVolume()?.zarrHelper?.beginDrag()
             }
             this.uiData.isDragging = true
             this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
@@ -2031,7 +2031,7 @@ export class Niivue {
                     this.tiffCenterAtMouseDown = { x: state.centerX, y: state.centerY }
                 }
                 // Store Zarr viewport center at drag start
-                this.back?.zarrHelper?.beginDrag()
+                this.getZarrVolume()?.zarrHelper?.beginDrag()
             }
             this.uiData.isDragging = true
 
@@ -2553,7 +2553,8 @@ export class Niivue {
                 colorbarVisible: imageItem.colorbarVisible,
                 zarrLevel: imageItem.zarrLevel,
                 zarrMaxVolumeSize: imageItem.zarrMaxVolumeSize,
-                zarrChannel: imageItem.zarrChannel
+                zarrChannel: imageItem.zarrChannel,
+                zarrConvertUnits: imageItem.zarrConvertUnits
             }
             const volume = await NVImage.loadFromUrl(imageOptions)
             this.document.addImageOptions(volume, imageOptions)
@@ -8097,8 +8098,9 @@ export class Niivue {
         }
 
         // Handle Zarr images with chunked pan
-        const zarrHelper = this.back?.zarrHelper
-        if (zarrHelper && zarrHelper.centerAtDragStart) {
+        const zarrVol = this.getZarrVolume()
+        const zarrHelper = zarrVol?.zarrHelper
+        if (zarrVol && zarrHelper && zarrHelper.centerAtDragStart) {
             const screenDeltaX = startXYendXY[2] - startXYendXY[0]
             const screenDeltaY = startXYendXY[3] - startXYendXY[1]
 
@@ -8121,32 +8123,55 @@ export class Niivue {
                 }
             }
 
-            // Map screen deltas to zarr volume axes based on slice orientation
-            // Zarr center axes: X=width (dim1), Y=height (dim2), Z=depth (dim3)
-            // After calculateRAS with our diagonal affine, the RAS mapping is:
-            //   AXIAL view shows dim1 (X) and dim2 (Y) → drag maps to centerX, centerY
-            //   CORONAL view shows dim1 (X) and dim3 (Z) → drag maps to centerX, centerZ
-            //   SAGITTAL view shows dim2 (Y) and dim3 (Z) → drag maps to centerY, centerZ
-            let newCenterX = zarrHelper.centerAtDragStart.x
-            let newCenterY = zarrHelper.centerAtDragStart.y
-            let newCenterZ = zarrHelper.centerAtDragStart.z
-            if (axCorSag === SLICE_TYPE.AXIAL) {
-                newCenterX -= screenDeltaX
-                newCenterY -= screenDeltaY
-            } else if (axCorSag === SLICE_TYPE.CORONAL) {
-                newCenterX -= screenDeltaX
-                newCenterZ -= screenDeltaY
-            } else if (axCorSag === SLICE_TYPE.SAGITTAL) {
-                newCenterY -= screenDeltaX
-                newCenterZ -= screenDeltaY
+            // Map screen deltas to zarr volume axes using the actual affine matrix.
+            // The affine maps NIfTI columns (0=width/centerX, 1=height/centerY, 2=depth/centerZ)
+            // to physical axes (row 0=x, row 1=y, row 2=z). When OME axis names permute axes,
+            // the affine won't be diagonal, so we must derive the mapping dynamically.
+            const affine = zarrVol.hdr!.affine
+            // For each physical axis (row), find which NIfTI column dominates
+            // physToCol[physAxis] = { col, sign } where col is the center index (0=X,1=Y,2=Z)
+            const physToCol: Array<{ col: number; sign: number }> = [
+                { col: 0, sign: -1 },
+                { col: 1, sign: -1 },
+                { col: 2, sign: -1 }
+            ]
+            for (let row = 0; row < 3; row++) {
+                let maxVal = 0
+                for (let col = 0; col < 3; col++) {
+                    const val = Math.abs(affine[row][col])
+                    if (val > maxVal) {
+                        maxVal = val
+                        physToCol[row] = { col, sign: affine[row][col] < 0 ? -1 : 1 }
+                    }
+                }
             }
 
+            // Each slice type shows two physical axes on screen:
+            //   AXIAL:    horizontal=x(0), vertical=y(1)
+            //   CORONAL:  horizontal=x(0), vertical=z(2)
+            //   SAGITTAL: horizontal=y(1), vertical=z(2)
+            let hPhys: number
+            let vPhys: number
+            if (axCorSag === SLICE_TYPE.AXIAL) {
+                hPhys = 0
+                vPhys = 1
+            } else if (axCorSag === SLICE_TYPE.CORONAL) {
+                hPhys = 0
+                vPhys = 2
+            } else {
+                hPhys = 1
+                vPhys = 2
+            }
+
+            const centers = [zarrHelper.centerAtDragStart.x, zarrHelper.centerAtDragStart.y, zarrHelper.centerAtDragStart.z]
+            centers[physToCol[hPhys].col] += screenDeltaX * physToCol[hPhys].sign
+            centers[physToCol[vPhys].col] += screenDeltaY * physToCol[vPhys].sign
+            const newCenterX = centers[0]
+            const newCenterY = centers[1]
+            const newCenterZ = centers[2]
+
             const state = zarrHelper.getViewportState()
-            if (
-                Math.abs(newCenterX - state.centerX) < 0.001 &&
-                Math.abs(newCenterY - state.centerY) < 0.001 &&
-                Math.abs(newCenterZ - state.centerZ) < 0.001
-            ) {
+            if (Math.abs(newCenterX - state.centerX) < 0.001 && Math.abs(newCenterY - state.centerY) < 0.001 && Math.abs(newCenterZ - state.centerZ) < 0.001) {
                 return
             }
 
@@ -8587,6 +8612,15 @@ export class Niivue {
             this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
             this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
         }
+    }
+
+    getZarrVolume(): NVImage | null {
+        for (const vol of this.volumes) {
+            if (vol.zarrHelper) {
+                return vol
+            }
+        }
+        return null
     }
 
     private drawBoundsBox(leftTopWidthHeight: number[], color: number[], thickness = 2): void {

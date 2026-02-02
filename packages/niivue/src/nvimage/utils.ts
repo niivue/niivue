@@ -208,6 +208,8 @@ export type ImageFromUrlOptions = {
     zarrLevel?: number
     zarrMaxVolumeSize?: number
     zarrChannel?: number
+    /** Convert OME spatial units to millimeters for NIfTI compatibility (default: true) */
+    zarrConvertUnits?: boolean
 }
 
 // TODO centralize shared options

@@ -1,9 +1,20 @@
+import { copyAffine } from '../affineUtils'
+
 /**
  * NVZarrHelper - Simplified zarr chunk management for NVImage.
  *
  * Attaches to a host NVImage and manages chunked loading of OME-Zarr data.
  * No zoom, no prefetching - just pan and level switching.
  * All coordinates are in current-level pixel space.
+ *
+ * Spatial dimensions are kept in OME metadata order throughout.
+ * The mapping to NIfTI layout is:
+ *   - OME dim[0] (slowest in C-order) → NIfTI dim 3 (depth, slowest in Fortran-order)
+ *   - OME dim[1]                       → NIfTI dim 2 (height)
+ *   - OME dim[2] (fastest in C-order)  → NIfTI dim 1 (width, fastest in Fortran-order)
+ * This means chunk data can be copied directly without stride remapping.
+ * The affine matrix maps NIfTI (i, j, k) indices to physical (x, y, z) space
+ * using the OME axis names.
  */
 
 import { NIFTI1 } from 'nifti-reader-js'
@@ -21,6 +32,8 @@ export interface NVZarrHelperOptions {
     maxTextureSize?: number
     channel?: number
     cacheSize?: number
+    /** Convert OME spatial units to millimeters for NIfTI compatibility (default: true) */
+    convertUnitsToMm?: boolean
 }
 
 /**
@@ -95,6 +108,36 @@ function createTypedVoxelArray(datatypeCode: number, size: number): TypedVoxelAr
     }
 }
 
+/**
+ * Convert a value from an OME spatial unit to millimeters.
+ * Returns the value unchanged if the unit is unrecognized or absent.
+ */
+function omeUnitToMm(value: number, unit?: string): number {
+    if (!unit) {
+        return value
+    }
+    switch (unit.toLowerCase()) {
+        case 'micrometer':
+        case 'um':
+        case 'µm':
+            return value / 1000
+        case 'nanometer':
+        case 'nm':
+            return value / 1_000_000
+        case 'millimeter':
+        case 'mm':
+            return value
+        case 'centimeter':
+        case 'cm':
+            return value * 10
+        case 'meter':
+        case 'm':
+            return value * 1000
+        default:
+            return value
+    }
+}
+
 export class NVZarrHelper {
     private hostImage: NVImage
     private chunkClient: ZarrChunkClient
@@ -103,11 +146,17 @@ export class NVZarrHelper {
     private datatypeCode: number
 
     private pyramidLevel: number
+    /** Level dimensions in OME metadata order: depth=dim[0], height=dim[1], width=dim[2] */
     private levelDims: { width: number; height: number; depth: number }
     private volumeDims: { width: number; height: number; depth: number }
     private chunkSize: { width: number; height: number; depth: number }
 
+    /** Voxel scales in OME metadata order: depth=dim[0], height=dim[1], width=dim[2] */
     private voxelScales: { width: number; height: number; depth: number }
+    /** Voxel translations in OME metadata order */
+    private voxelTranslations: { width: number; height: number; depth: number }
+    private hasTranslations: boolean
+    private convertUnitsToMm: boolean
 
     private centerX: number
     private centerY: number
@@ -137,6 +186,9 @@ export class NVZarrHelper {
         this.volumeDims = { width: 0, height: 0, depth: 0 }
         this.chunkSize = { width: 0, height: 0, depth: 0 }
         this.voxelScales = { width: 1, height: 1, depth: 1 }
+        this.voxelTranslations = { width: 0, height: 0, depth: 0 }
+        this.hasTranslations = false
+        this.convertUnitsToMm = true
         this.centerX = 0
         this.centerY = 0
         this.centerZ = 0
@@ -152,13 +204,30 @@ export class NVZarrHelper {
 
         const maxTexSize = options.maxTextureSize ?? 2048
         const maxDim = options.maxVolumeSize ?? 256
-        helper.volumeDims = {
-            width: Math.min(maxDim, maxTexSize),
-            height: Math.min(maxDim, maxTexSize),
-            depth: Math.min(maxDim, maxTexSize)
+
+        // Check if level 0 (highest resolution) fits within the max volume size.
+        // If so, use the actual dimensions directly instead of a virtual volume.
+        const level0 = helper.pyramidInfo.levels[0]
+        const level0Shape = level0.shape
+        const level0FitsInVolume = level0Shape.every((dim) => dim <= maxDim && dim <= maxTexSize)
+
+        if (level0FitsInVolume) {
+            // Full dataset fits — use exact dimensions (reversed: depth=dim[0], height=dim[1], width=dim[2])
+            if (helper.pyramidInfo.is3D && level0Shape.length >= 3) {
+                helper.volumeDims = { depth: level0Shape[0], height: level0Shape[1], width: level0Shape[2] }
+            } else {
+                helper.volumeDims = { height: level0Shape[0], width: level0Shape[1], depth: 1 }
+            }
+        } else {
+            helper.volumeDims = {
+                width: Math.min(maxDim, maxTexSize),
+                height: Math.min(maxDim, maxTexSize),
+                depth: Math.min(maxDim, maxTexSize)
+            }
         }
 
         helper.datatypeCode = zarrDtypeToNifti(helper.pyramidInfo.levels[0].dtype)
+        helper.convertUnitsToMm = options.convertUnitsToMm ?? true
 
         helper.channel = options.channel ?? 0
         const axisMapping = helper.pyramidInfo.axisMapping
@@ -190,6 +259,7 @@ export class NVZarrHelper {
     private updateLevelInfo(): void {
         const levelInfo = this.pyramidInfo.levels[this.pyramidLevel]
         const shape = levelInfo.shape
+        // Map OME spatial dims to NIfTI: dim[0]→depth (slowest), dim[1]→height, dim[2]→width (fastest)
         if (this.pyramidInfo.is3D && shape.length >= 3) {
             this.levelDims = { depth: shape[0], height: shape[1], width: shape[2] }
         } else {
@@ -203,8 +273,7 @@ export class NVZarrHelper {
             this.chunkSize = { height: chunks[0], width: chunks[1], depth: 1 }
         }
 
-        // Extract physical voxel scales from OME coordinateTransformations
-        // scales are in [Z, Y, X] or [Y, X] order (matching spatial shape order)
+        // Extract physical voxel scales from OME coordinateTransformations (in metadata order)
         if (levelInfo.scales) {
             if (this.pyramidInfo.is3D && levelInfo.scales.length >= 3) {
                 this.voxelScales = { depth: levelInfo.scales[0], height: levelInfo.scales[1], width: levelInfo.scales[2] }
@@ -214,21 +283,32 @@ export class NVZarrHelper {
         } else {
             this.voxelScales = { width: 1, height: 1, depth: 1 }
         }
+
+        // Extract physical voxel translations from OME coordinateTransformations (in metadata order)
+        if (levelInfo.translations) {
+            if (this.pyramidInfo.is3D && levelInfo.translations.length >= 3) {
+                this.voxelTranslations = { depth: levelInfo.translations[0], height: levelInfo.translations[1], width: levelInfo.translations[2] }
+            } else if (levelInfo.translations.length >= 2) {
+                this.voxelTranslations = { height: levelInfo.translations[0], width: levelInfo.translations[1], depth: 0 }
+            }
+            this.hasTranslations = true
+        } else {
+            this.voxelTranslations = { width: 0, height: 0, depth: 0 }
+            this.hasTranslations = false
+        }
     }
 
     private configureHostImage(): void {
         const { width, height, depth } = this.volumeDims
         const bytesPerVoxel = getBytesPerVoxel(this.datatypeCode)
 
-        // Use physical voxel scales from OME coordinateTransformations (default 1.0)
-        const sx = this.voxelScales.width
-        const sy = this.voxelScales.height
-        const sz = this.voxelScales.depth
+        // Get unit-converted scales for pixDims
+        const { scaleW, scaleH, scaleD } = this.getConvertedScales()
 
         const hdr = new NIFTI1()
         hdr.littleEndian = true
         hdr.dims = [3, width, height, depth, 1, 0, 0, 0]
-        hdr.pixDims = [1, sx, sy, sz, 1, 0, 0, 0]
+        hdr.pixDims = [1, scaleW, scaleH, scaleD, 1, 0, 0, 0]
         hdr.datatypeCode = this.datatypeCode
         hdr.numBitsPerVoxel = bytesPerVoxel * 8
         hdr.scl_inter = 0
@@ -237,12 +317,11 @@ export class NVZarrHelper {
         hdr.magic = 'n+1'
         hdr.vox_offset = 352
 
-        // Build affine with physical scales and Y/Z negation
-        // Consistent with the non-chunked zarr path (ImageReaders/zarr.ts)
+        // Placeholder affine — updateAffine() will set the real one
         hdr.affine = [
-            [sx, 0, 0, -(width - 2) * 0.5 * sx],
-            [0, -sy, 0, (height - 2) * 0.5 * sy],
-            [0, 0, -sz, (depth - 2) * 0.5 * sz],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
             [0, 0, 0, 1]
         ]
 
@@ -257,22 +336,129 @@ export class NVZarrHelper {
         img.nTotalFrame4D = 1
         img.nVox3D = width * height * depth
         img.dims = [width, height, depth]
-        img.pixDims = [sx, sy, sz]
+        img.pixDims = [scaleW, scaleH, scaleD]
 
         img.img = createTypedVoxelArray(this.datatypeCode, width * height * depth)
 
-        // Use the standard NIfTI orientation pipeline to derive all coordinate
-        // matrices (matRAS, toRAS, toRASvox, frac2mm, frac2mmOrtho, extents, etc.)
-        // from the affine. This ensures crosshair positioning is consistent between
-        // 2D slices and the 3D render.
-        img.calculateRAS()
+        // Set the affine based on current center position and call calculateRAS()
+        this.updateAffine()
 
-        img.cal_min = 0
-        img.cal_max = 255
-        img.robust_min = 0
-        img.robust_max = 255
-        img.global_min = 0
-        img.global_max = 255
+        // Store original affine so resetVolumeAffine() works on zarr volumes
+        img.originalAffine = copyAffine(hdr.affine)
+
+        img.cal_min = NaN
+        img.cal_max = NaN
+        img.robust_min = NaN
+        img.robust_max = NaN
+        img.global_min = NaN
+        img.global_max = NaN
+    }
+
+    /** Get unit-converted voxel scales */
+    private getConvertedScales(): { scaleW: number; scaleH: number; scaleD: number } {
+        const units = this.pyramidInfo.spatialUnits
+        let scaleD = this.voxelScales.depth
+        let scaleH = this.voxelScales.height
+        let scaleW = this.voxelScales.width
+        if (this.convertUnitsToMm && units) {
+            if (units.length >= 3) {
+                scaleD = omeUnitToMm(scaleD, units[0])
+                scaleH = omeUnitToMm(scaleH, units[1])
+                scaleW = omeUnitToMm(scaleW, units[2])
+            } else if (units.length >= 2) {
+                scaleH = omeUnitToMm(scaleH, units[0])
+                scaleW = omeUnitToMm(scaleW, units[1])
+            }
+        }
+        return { scaleW, scaleH, scaleD }
+    }
+
+    /** Get unit-converted voxel translations */
+    private getConvertedTranslations(): { transW: number; transH: number; transD: number } {
+        const units = this.pyramidInfo.spatialUnits
+        let transD = this.voxelTranslations.depth
+        let transH = this.voxelTranslations.height
+        let transW = this.voxelTranslations.width
+        if (this.convertUnitsToMm && units) {
+            if (units.length >= 3) {
+                transD = omeUnitToMm(transD, units[0])
+                transH = omeUnitToMm(transH, units[1])
+                transW = omeUnitToMm(transW, units[2])
+            } else if (units.length >= 2) {
+                transH = omeUnitToMm(transH, units[0])
+                transW = omeUnitToMm(transW, units[1])
+            }
+        }
+        return { transW, transH, transD }
+    }
+
+    /**
+     * Build the NIfTI affine from OME axis names, scales, and translations.
+     *
+     * NIfTI dimensions map to OME spatial dimensions as:
+     *   i (dim 1, width)  = OME spatial[-1] (last, fastest in C-order)
+     *   j (dim 2, height) = OME spatial[-2]
+     *   k (dim 3, depth)  = OME spatial[-3] (first, slowest in C-order)
+     *
+     * The affine maps (i, j, k) → physical (x, y, z):
+     *   physical_axis = scale * nifti_dim + translation
+     * where nifti_dim is the column index (0=i, 1=j, 2=k) and
+     * physical_axis row is determined by the OME axis name.
+     */
+    private updateAffine(): void {
+        const hdr = this.hostImage.hdr
+        if (!hdr) {
+            return
+        }
+
+        const { width, height, depth } = this.volumeDims
+        const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames
+
+        if (this.hasTranslations && axisNames.length >= 3) {
+            const { scaleW, scaleH, scaleD } = this.getConvertedScales()
+            const { transW, transH, transD } = this.getConvertedTranslations()
+
+            // Volume window offsets in level coords
+            const volStartW = this.centerX - width / 2 // width = last OME dim
+            const volStartH = this.centerY - height / 2 // height = middle OME dim
+            const volStartD = this.centerZ - depth / 2 // depth = first OME dim
+
+            // Scale + offset for each OME spatial dimension, indexed by NIfTI column:
+            //   column 0 (i=width)  → OME dim[-1]: scaleW, transW + volStartW * scaleW
+            //   column 1 (j=height) → OME dim[-2]: scaleH, transH + volStartH * scaleH
+            //   column 2 (k=depth)  → OME dim[-3]: scaleD, transD + volStartD * scaleD
+            const niftiCols = [
+                { name: axisNames[axisNames.length - 1], scale: scaleW, trans: transW + volStartW * scaleW },
+                { name: axisNames[axisNames.length - 2], scale: scaleH, trans: transH + volStartH * scaleH },
+                { name: axisNames[axisNames.length - 3], scale: scaleD, trans: transD + volStartD * scaleD }
+            ]
+
+            // Map physical axis name → affine row: x→0, y→1, z→2
+            const affine: number[][] = [
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 1]
+            ]
+            for (let col = 0; col < 3; col++) {
+                const row = niftiCols[col].name === 'x' ? 0 : niftiCols[col].name === 'y' ? 1 : 2
+                affine[row][col] = niftiCols[col].scale
+                affine[row][3] = niftiCols[col].trans
+            }
+            hdr.affine = affine
+        } else {
+            // No OME translations — use center-based offset.
+            // For datasets without full OME metadata, assume diagonal affine.
+            const { scaleW, scaleH, scaleD } = this.getConvertedScales()
+            hdr.affine = [
+                [scaleW, 0, 0, -(width - 2) * 0.5 * scaleW],
+                [0, -scaleH, 0, (height - 2) * 0.5 * scaleH],
+                [0, 0, -scaleD, (depth - 2) * 0.5 * scaleD],
+                [0, 0, 0, 1]
+            ]
+        }
+
+        this.hostImage.calculateRAS()
     }
 
     beginDrag(): void {
@@ -284,6 +470,7 @@ export class NVZarrHelper {
         this.centerY -= dy
         this.centerZ -= dz
         this.clampCenter()
+        this.updateAffine()
         await this.updateVolume()
     }
 
@@ -294,6 +481,7 @@ export class NVZarrHelper {
             this.centerZ = newCenterZ
         }
         this.clampCenter()
+        this.updateAffine()
         await this.updateVolume()
     }
 
@@ -313,6 +501,7 @@ export class NVZarrHelper {
         this.centerY = (this.centerY / oldDims.height) * newDims.height
         this.centerZ = (this.centerZ / oldDims.depth) * newDims.depth
         this.clampCenter()
+        this.updateAffine()
 
         await this.updateVolume()
     }
@@ -558,8 +747,17 @@ export class NVZarrHelper {
             }
         }
 
-        // Copy chunk data into volume (no scaling - 1:1 pixel mapping)
-        // Zarr chunk layout: [Z, Y, X], NIfTI: X + Y*width + Z*width*height
+        // Copy chunk data into volume (no scaling - 1:1 pixel mapping).
+        // Since spatial indices are kept in OME metadata order (not reordered),
+        // the zarr C-order layout naturally aligns with NIfTI Fortran-order:
+        //   - dz iterates depth  = OME dim[0] (slowest in both C-order and NIfTI)
+        //   - dy iterates height = OME dim[1]
+        //   - dx iterates width  = OME dim[2] (fastest in both C-order and NIfTI)
+        // srcIdx uses C-order strides based on the actual chunk data dimensions.
+        // Edge chunks may be padded (full chunk size) or truncated.
+        const fullChunkVol = this.chunkSize.width * this.chunkSize.height * this.chunkSize.depth
+        const srcChunkW = data.length >= fullChunkVol ? this.chunkSize.width : actualChunkW
+        const srcChunkH = data.length >= fullChunkVol ? this.chunkSize.height : actualChunkH
         for (let dz = 0; dz < actualChunkD; dz++) {
             const vZ = destZ + dz
             if (vZ < 0 || vZ >= depth) {
@@ -575,7 +773,7 @@ export class NVZarrHelper {
                     if (vX < 0 || vX >= width) {
                         continue
                     }
-                    const srcIdx = dz * this.chunkSize.height * this.chunkSize.width + dy * this.chunkSize.width + dx
+                    const srcIdx = dz * srcChunkH * srcChunkW + dy * srcChunkW + dx
                     const dstIdx = vX + vY * width + vZ * width * height
                     if (srcIdx >= 0 && srcIdx < data.length && dstIdx >= 0 && dstIdx < img.length) {
                         img[dstIdx] = data[srcIdx]
@@ -586,14 +784,14 @@ export class NVZarrHelper {
     }
 
     private updateCalibration(): void {
-        // if (this.runningMin < Infinity && this.runningMax > -Infinity) {
-        //     this.hostImage.cal_min = this.runningMin
-        //     this.hostImage.cal_max = this.runningMax
-        //     this.hostImage.robust_min = this.runningMin
-        //     this.hostImage.robust_max = this.runningMax
-        //     this.hostImage.global_min = this.runningMin
-        //     this.hostImage.global_max = this.runningMax
-        // }
+        if (this.runningMin < Infinity && this.runningMax > -Infinity) {
+            this.hostImage.cal_min = this.runningMin
+            this.hostImage.cal_max = this.runningMax
+            this.hostImage.robust_min = this.runningMin
+            this.hostImage.robust_max = this.runningMax
+            this.hostImage.global_min = this.runningMin
+            this.hostImage.global_max = this.runningMax
+        }
     }
 
     clearCache(): void {

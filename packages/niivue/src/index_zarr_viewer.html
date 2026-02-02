@@ -67,6 +67,58 @@
         font-size: 11px;
         font-style: italic;
       }
+      #affineControls {
+        display: none;
+        padding: 8px 12px;
+        background: #1e1e2e;
+        border-top: 1px solid #333;
+      }
+      #affineControls h3 {
+        color: #ccc;
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      #affineControls h3 button {
+        background: #c44;
+        border: none;
+        color: white;
+        padding: 2px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 11px;
+      }
+      #affineControls h3 button:hover {
+        background: #d55;
+      }
+      .affine-group {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+      }
+      .affine-group label {
+        color: #999;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .affine-slider {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .affine-slider input[type="range"] {
+        width: 120px;
+      }
+      .affine-slider .val {
+        color: #6cf;
+        font-family: monospace;
+        font-size: 11px;
+        min-width: 50px;
+        text-align: right;
+      }
     </style>
   </head>
   <body>
@@ -109,6 +161,66 @@
       </div>
     </header>
     <div id="infoPanel"></div>
+    <div id="affineControls">
+      <h3>
+        Registration Controls (Zarr Volume)
+        <button id="affineResetBtn">Reset</button>
+      </h3>
+      <div class="affine-group">
+        <label>Translate (mm):</label>
+        <div class="affine-slider">
+          <label>X</label>
+          <input type="range" id="txSlider" min="-100" max="100" step="0.5" value="0" />
+          <span class="val" id="txVal">0.0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Y</label>
+          <input type="range" id="tySlider" min="-100" max="100" step="0.5" value="0" />
+          <span class="val" id="tyVal">0.0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Z</label>
+          <input type="range" id="tzSlider" min="-100" max="100" step="0.5" value="0" />
+          <span class="val" id="tzVal">0.0</span>
+        </div>
+      </div>
+      <div class="affine-group">
+        <label>Rotate (deg):</label>
+        <div class="affine-slider">
+          <label>X</label>
+          <input type="range" id="rxSlider" min="-180" max="180" step="1" value="0" />
+          <span class="val" id="rxVal">0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Y</label>
+          <input type="range" id="rySlider" min="-180" max="180" step="1" value="0" />
+          <span class="val" id="ryVal">0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Z</label>
+          <input type="range" id="rzSlider" min="-180" max="180" step="1" value="0" />
+          <span class="val" id="rzVal">0</span>
+        </div>
+      </div>
+      <div class="affine-group">
+        <label>Scale:</label>
+        <div class="affine-slider">
+          <label>X</label>
+          <input type="range" id="sxSlider" min="0.5" max="2.0" step="0.01" value="1.0" />
+          <span class="val" id="sxVal">1.00</span>
+        </div>
+        <div class="affine-slider">
+          <label>Y</label>
+          <input type="range" id="sySlider" min="0.5" max="2.0" step="0.01" value="1.0" />
+          <span class="val" id="syVal">1.00</span>
+        </div>
+        <div class="affine-slider">
+          <label>Z</label>
+          <input type="range" id="szSlider" min="0.5" max="2.0" step="0.01" value="1.0" />
+          <span class="val" id="szVal">1.00</span>
+        </div>
+      </div>
+    </div>
     <main id="canvas-container">
       <div style="display: flex; width: 100%; height: 100%">
         <canvas id="gl1"></canvas>
@@ -120,7 +232,9 @@
   </body>
 </html>
 <script type="module" async>
-  import { Niivue, DRAG_MODE, SLICE_TYPE, SHOW_RENDER, MULTIPLANAR_TYPE } from './niivue/index.ts'
+  import { Niivue, DRAG_MODE, SLICE_TYPE, SHOW_RENDER, MULTIPLANAR_TYPE, copyAffine } from './niivue/index.ts'
+  import * as ngffZarr from "@fideus-labs/ngff-zarr";
+  import { fromNgffZarr } from "@fideus-labs/ngff-zarr"; 
 
   const storeUrlInput = document.getElementById('storeUrl')
   const maxVolSizeSelect = document.getElementById('maxVolSize')
@@ -130,6 +244,76 @@
   const navControls = document.getElementById('navControls')
   const infoPanel = document.getElementById('infoPanel')
   const levelSelect = document.getElementById('levelSelect')
+  const affineControls = document.getElementById('affineControls')
+  const affineResetBtn = document.getElementById('affineResetBtn')
+
+  // Affine slider elements
+  const sliders = {
+    tx: document.getElementById('txSlider'),
+    ty: document.getElementById('tySlider'),
+    tz: document.getElementById('tzSlider'),
+    rx: document.getElementById('rxSlider'),
+    ry: document.getElementById('rySlider'),
+    rz: document.getElementById('rzSlider'),
+    sx: document.getElementById('sxSlider'),
+    sy: document.getElementById('sySlider'),
+    sz: document.getElementById('szSlider'),
+  }
+  const valDisplays = {
+    tx: document.getElementById('txVal'),
+    ty: document.getElementById('tyVal'),
+    tz: document.getElementById('tzVal'),
+    rx: document.getElementById('rxVal'),
+    ry: document.getElementById('ryVal'),
+    rz: document.getElementById('rzVal'),
+    sx: document.getElementById('sxVal'),
+    sy: document.getElementById('syVal'),
+    sz: document.getElementById('szVal'),
+  }
+
+  const ZARR_VOL_IDX = 1
+
+  function applyAffineFromSliders() {
+    if (nv.volumes.length <= ZARR_VOL_IDX) return
+    const transform = {
+      translation: [parseFloat(sliders.tx.value), parseFloat(sliders.ty.value), parseFloat(sliders.tz.value)],
+      rotation: [parseFloat(sliders.rx.value), parseFloat(sliders.ry.value), parseFloat(sliders.rz.value)],
+      scale: [parseFloat(sliders.sx.value), parseFloat(sliders.sy.value), parseFloat(sliders.sz.value)],
+    }
+    // Reset to original before applying cumulative transform
+    nv.resetVolumeAffine(ZARR_VOL_IDX)
+    nv.applyVolumeTransform(ZARR_VOL_IDX, transform)
+  }
+
+  function resetAffineSliders() {
+    sliders.tx.value = 0; sliders.ty.value = 0; sliders.tz.value = 0
+    sliders.rx.value = 0; sliders.ry.value = 0; sliders.rz.value = 0
+    sliders.sx.value = 1; sliders.sy.value = 1; sliders.sz.value = 1
+    for (const key of ['tx', 'ty', 'tz']) valDisplays[key].textContent = '0.0'
+    for (const key of ['rx', 'ry', 'rz']) valDisplays[key].textContent = '0'
+    for (const key of ['sx', 'sy', 'sz']) valDisplays[key].textContent = '1.00'
+  }
+
+  // Wire up slider input events
+  for (const [key, slider] of Object.entries(sliders)) {
+    slider.addEventListener('input', () => {
+      const val = parseFloat(slider.value)
+      if (key.startsWith('s')) {
+        valDisplays[key].textContent = val.toFixed(2)
+      } else if (key.startsWith('r')) {
+        valDisplays[key].textContent = val.toFixed(0)
+      } else {
+        valDisplays[key].textContent = val.toFixed(1)
+      }
+      applyAffineFromSliders()
+    })
+  }
+
+  affineResetBtn.addEventListener('click', () => {
+    if (nv.volumes.length <= ZARR_VOL_IDX) return
+    nv.resetVolumeAffine(ZARR_VOL_IDX)
+    resetAffineSliders()
+  })
 
   // Create NiiVue instance
   const nv = new Niivue({
@@ -138,8 +322,9 @@
     dragMode: DRAG_MODE.pan,
     isColorbar: true,
     isOrientCube: true,
-    backColor: [0.1, 0.1, 0.15, 1],
-    multiplanarLayout: MULTIPLANAR_TYPE.GRID
+    backColor: [0.5, 0.5, 0.5, 1],
+    multiplanarLayout: MULTIPLANAR_TYPE.GRID,
+    // isSliceMM: true
   })
 
   await nv.attachToCanvas(document.getElementById('gl1'))
@@ -147,7 +332,7 @@
   window.nv = nv
 
   function updateInfoPanel() {
-    const helper = nv.back?.zarrHelper
+    const helper = nv.getZarrVolume()?.zarrHelper
     if (!helper) {
       infoPanel.style.display = 'none'
       return
@@ -178,7 +363,7 @@
 
   // Manual level select handler
   levelSelect.addEventListener('change', async () => {
-    const helper = nv.back?.zarrHelper
+    const helper = nv.getZarrVolume()?.zarrHelper
     if (!helper) return
     const level = parseInt(levelSelect.value)
     await helper.setPyramidLevel(level)
@@ -204,22 +389,30 @@
 
     try {
       // Use standard loadVolumes API
+      const remoteMultiscales = await fromNgffZarr(
+        "http://localhost:8080/mni152.ome.zarr"
+      );
+      console.log(remoteMultiscales)
       await nv.loadVolumes([
-        { url: "../demos/images/mni152.nii.gz" }, 
+        { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
         {
           url: storeUrl,
+          // url: "http://localhost:8080/mni152_axial.ome.zarr",
           zarrLevel: level,
           zarrMaxVolumeSize: maxVolSize,
-          cal_min: 30_000,
-          cal_max: 50_000
+          opacity: 0.4,
+          colormap: "red"
         },
       ])
+      // await nv.addVolumeFromUrl({ url: "../demos/images/mni152.nii.gz", opacity: 0.4,colormap: "red" })
       nv.setColormap(nv.volumes[0].id, 'gray')
 
-      // Show navigation controls
+      // Show navigation and affine controls
       navControls.style.display = 'flex'
+      affineControls.style.display = 'block'
+      resetAffineSliders()
 
-      const helper = nv.back?.zarrHelper
+      const helper = nv.getZarrVolume()?.zarrHelper
       if (helper) {
         const pyramidInfo = helper.getPyramidInfo()
         levelSelect.innerHTML = ''
@@ -243,6 +436,7 @@
       statusBar.textContent = `Error: ${err.message}`
       navControls.style.display = 'none'
       infoPanel.style.display = 'none'
+      affineControls.style.display = 'none'
     } finally {
       loadBtn.disabled = false
       loadBtn.textContent = 'Load Zarr'
