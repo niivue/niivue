@@ -444,13 +444,21 @@
       await nv.loadVolumes([
         { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
         {
-          url: storeUrl,
-          // url: "http://localhost:8080/mni152_axial.ome.zarr",
+          // url: storeUrl,
+          url: "http://localhost:8080/mni152_axial.ome.zarr",
           zarrLevel: level,
           zarrMaxVolumeSize: maxVolSize,
-          opacity: 0.4,
+          opacity: 1.0,
           colormap: "red"
         },
+        // {
+        //   // url: storeUrl,
+        //   url: "http://localhost:8080/mni152.ome.zarr",
+        //   zarrLevel: level,
+        //   zarrMaxVolumeSize: maxVolSize,
+        //   opacity: 1.0,
+        //   colormap: "green"
+        // },
       ])
       // await nv.addVolumeFromUrl({ url: "../demos/images/mni152.nii.gz", opacity: 0.4,colormap: "red" })
       nv.setColormap(nv.volumes[0].id, 'gray')

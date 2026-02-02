@@ -8165,7 +8165,7 @@ export class Niivue {
 
             const centers = [zarrHelper.centerAtDragStart.x, zarrHelper.centerAtDragStart.y, zarrHelper.centerAtDragStart.z]
             centers[physToCol[hPhys].col] += screenDeltaX * physToCol[hPhys].sign
-            centers[physToCol[vPhys].col] += screenDeltaY * physToCol[vPhys].sign
+            centers[physToCol[vPhys].col] += -screenDeltaY * physToCol[vPhys].sign
             const newCenterX = centers[0]
             const newCenterY = centers[1]
             const newCenterZ = centers[2]
