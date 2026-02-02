@@ -459,6 +459,11 @@ export class NVZarrHelper {
         }
 
         this.hostImage.calculateRAS()
+
+        // Keep originalAffine in sync so resetVolumeAffine() restores the
+        // current zarr-computed affine (correct for this level/pan), not the
+        // one from initial load.
+        this.hostImage.originalAffine = copyAffine(this.hostImage.hdr.affine)
     }
 
     beginDrag(): void {

@@ -93,6 +93,12 @@
       #affineControls h3 button:hover {
         background: #d55;
       }
+      #affineSaveBtn, #affineLoadBtn {
+        background: #4a9eff !important;
+      }
+      #affineSaveBtn:hover, #affineLoadBtn:hover {
+        background: #3a8eef !important;
+      }
       .affine-group {
         display: flex;
         gap: 16px;
@@ -165,6 +171,8 @@
       <h3>
         Registration Controls (Zarr Volume)
         <button id="affineResetBtn">Reset</button>
+        <button id="affineSaveBtn">Save</button>
+        <button id="affineLoadBtn">Load</button>
       </h3>
       <div class="affine-group">
         <label>Translate (mm):</label>
@@ -246,6 +254,8 @@
   const levelSelect = document.getElementById('levelSelect')
   const affineControls = document.getElementById('affineControls')
   const affineResetBtn = document.getElementById('affineResetBtn')
+  const affineSaveBtn = document.getElementById('affineSaveBtn')
+  const affineLoadBtn = document.getElementById('affineLoadBtn')
 
   // Affine slider elements
   const sliders = {
@@ -313,6 +323,51 @@
     if (nv.volumes.length <= ZARR_VOL_IDX) return
     nv.resetVolumeAffine(ZARR_VOL_IDX)
     resetAffineSliders()
+  })
+
+  function getZarrUrl() {
+    if (nv.volumes.length <= ZARR_VOL_IDX) return null
+    return nv.volumes[ZARR_VOL_IDX].url || storeUrlInput.value.trim()
+  }
+
+  function getSliderValues() {
+    return {
+      tx: parseFloat(sliders.tx.value), ty: parseFloat(sliders.ty.value), tz: parseFloat(sliders.tz.value),
+      rx: parseFloat(sliders.rx.value), ry: parseFloat(sliders.ry.value), rz: parseFloat(sliders.rz.value),
+      sx: parseFloat(sliders.sx.value), sy: parseFloat(sliders.sy.value), sz: parseFloat(sliders.sz.value),
+    }
+  }
+
+  function setSliderValues(vals) {
+    for (const key of Object.keys(sliders)) {
+      sliders[key].value = vals[key]
+      const v = vals[key]
+      if (key.startsWith('s')) valDisplays[key].textContent = v.toFixed(2)
+      else if (key.startsWith('r')) valDisplays[key].textContent = v.toFixed(0)
+      else valDisplays[key].textContent = v.toFixed(1)
+    }
+  }
+
+  affineSaveBtn.addEventListener('click', () => {
+    const url = getZarrUrl()
+    if (!url) return
+    const vals = getSliderValues()
+    localStorage.setItem(url, JSON.stringify(vals))
+    statusBar.textContent = `Affine saved for ${url}`
+  })
+
+  affineLoadBtn.addEventListener('click', () => {
+    const url = getZarrUrl()
+    if (!url) return
+    const stored = localStorage.getItem(url)
+    if (!stored) {
+      statusBar.textContent = `No saved affine found for ${url}`
+      return
+    }
+    const vals = JSON.parse(stored)
+    setSliderValues(vals)
+    applyAffineFromSliders()
+    statusBar.textContent = `Affine loaded for ${url}`
   })
 
   // Create NiiVue instance
