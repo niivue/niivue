@@ -20,7 +20,7 @@ export class ZarrChunkCache {
 
     /**
      * Generate a unique key for a chunk.
-     * Format: "{name}:{level}/{x}/{y}" for 2D or "{name}:{level}/{x}/{y}/{z}" for 3D
+     * Format: "name:level/x/y" for 2D or "name:level/x/y/z" for 3D
      */
     static getKey(name: string, level: number, x: number, y: number, z?: number): string {
         if (z !== undefined) {
