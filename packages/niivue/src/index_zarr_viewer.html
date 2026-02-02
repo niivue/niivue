@@ -241,8 +241,6 @@
 </html>
 <script type="module" async>
   import { Niivue, DRAG_MODE, SLICE_TYPE, SHOW_RENDER, MULTIPLANAR_TYPE, copyAffine } from './niivue/index.ts'
-  import * as ngffZarr from "@fideus-labs/ngff-zarr";
-  import { fromNgffZarr } from "@fideus-labs/ngff-zarr"; 
 
   const storeUrlInput = document.getElementById('storeUrl')
   const maxVolSizeSelect = document.getElementById('maxVolSize')
@@ -443,11 +441,6 @@
     statusBar.textContent = 'Discovering zarr structure...'
 
     try {
-      // Use standard loadVolumes API
-      const remoteMultiscales = await fromNgffZarr(
-        "http://localhost:8080/mni152.ome.zarr"
-      );
-      console.log(remoteMultiscales)
       await nv.loadVolumes([
         { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
         {

@@ -71,7 +71,6 @@
   },
   "homepage": "https://github.com/niivue/niivue#readme",
   "dependencies": {
-    "@fideus-labs/ngff-zarr": "^0.2.8",
     "@lukeed/uuid": "^2.0.1",
     "@ungap/structured-clone": "^1.2.0",
     "array-equal": "^1.0.2",
