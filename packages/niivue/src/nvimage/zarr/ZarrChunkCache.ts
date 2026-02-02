@@ -1,7 +1,7 @@
 /**
  * ZarrChunkCache - LRU cache for zarr chunks (TypedArrays).
  *
- * Similar to TiffTileCache but stores TypedArrays instead of ImageBitmaps.
+ * LRU cache that stores TypedArrays.
  * TypedArrays are garbage collected automatically, so no explicit cleanup needed.
  */
 
