@@ -1,5 +1,3 @@
-import { copyAffine } from '../affineUtils'
-
 /**
  * NVZarrHelper - Simplified zarr chunk management for NVImage.
  *
@@ -20,6 +18,7 @@ import { copyAffine } from '../affineUtils'
 import { NIFTI1 } from 'nifti-reader-js'
 
 import { v4 as uuidv4 } from '@lukeed/uuid'
+import { copyAffine } from '../affineUtils'
 import { ZarrChunkClient, type ZarrPyramidInfo, type ChunkCoord } from './ZarrChunkClient.js'
 import { ZarrChunkCache, type TypedArray } from './ZarrChunkCache.js'
 import { NiiDataType } from '@/nvimage/utils.js'
