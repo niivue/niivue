@@ -7,20 +7,28 @@ import type { PreprocessingResult } from './types.js'
  * Handles volume harmonization, resampling, and intensity normalization
  */
 export class ImagePreprocessor {
-  private readonly targetShape = [256, 256, 256] as const
+  private targetShape: [number, number, number] = [256, 256, 256]
 
   /**
    * Preprocess a volume for inference
-   * Conforms to 256×256×256, 1mm isotropic resolution
+   * @param volume - The NVImage volume to preprocess
+   * @param options - Preprocessing options including target shape from model settings
    */
   async preprocessVolume(
     volume: NVImage,
     options: {
       normalizeIntensity?: boolean
       onProgress?: (progress: number, status?: string) => void
+      /** Target shape from model's expectedInputShape [batch, depth, height, width] */
+      expectedInputShape?: [number, number, number, number]
     } = {}
   ): Promise<PreprocessingResult> {
-    const { normalizeIntensity = true, onProgress } = options
+    const { normalizeIntensity = true, onProgress, expectedInputShape } = options
+
+    // Update target shape if provided (extract [depth, height, width] from [batch, d, h, w])
+    if (expectedInputShape && expectedInputShape.length === 4) {
+      this.targetShape = [expectedInputShape[1], expectedInputShape[2], expectedInputShape[3]]
+    }
 
     onProgress?.(0, 'Preparing volume data')
 
@@ -45,18 +53,20 @@ export class ImagePreprocessor {
     const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
     const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
 
-    // Check if volume needs resampling to 256³
+    // Check if volume needs resampling to target shape
+    const [targetX, targetY, targetZ] = this.targetShape
+    const targetVoxelCount = targetX * targetY * targetZ
     let processedData = volumeData
     let finalShape = originalShape
 
-    if (volumeData.length !== 256 * 256 * 256) {
-      onProgress?.(10, 'Resampling to 256³ @ 1mm')
+    if (volumeData.length !== targetVoxelCount) {
+      onProgress?.(10, `Resampling to ${targetX}×${targetY}×${targetZ} @ 1mm`)
 
-      // Resample to 256³
+      // Resample to target shape
       processedData = await this.resampleVolume(volumeData, originalShape, volume)
-      finalShape = [256, 256, 256]
+      finalShape = [targetX, targetY, targetZ]
     } else {
-      finalShape = [256, 256, 256]
+      finalShape = [targetX, targetY, targetZ]
     }
 
     onProgress?.(30, 'Converting to tensor')

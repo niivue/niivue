@@ -13,6 +13,7 @@ declare global {
         modelJson: any
         hasLabels: boolean
         folderName: string
+        settings: any | null
       } | null>
       selectColormapFile: () => Promise<string | null>
     }

@@ -4,6 +4,7 @@ import { Button, Text, Select, Theme, Checkbox, Flex } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import type { ModelInfo, ModelType, ModelCategory } from '../services/brainchop/types.js'
 import { modelManager } from '../services/brainchop/ModelManager.js'
+import { parseModelSettings, getCategoryForType } from '../services/brainchop/settingsSchema.js'
 
 interface AddModelWizardProps {
   open: boolean
@@ -90,14 +91,47 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
     try {
       const result = await window.electron.selectModelFolder()
       if (!result) return
-      setState((prev) => ({
-        ...prev,
-        sourceType: 'folder',
-        folderPath: result.folderPath,
-        hasLabelsFile: result.hasLabels,
-        name: result.folderName,
-        labelsPath: result.hasLabels ? `${result.folderPath}/labels.json` : ''
-      }))
+
+      // Try to parse settings.json if present
+      const settings = result.settings ? parseModelSettings(result.settings) : null
+
+      if (settings) {
+        // Auto-populate all fields from settings.json
+        setState((prev) => ({
+          ...prev,
+          sourceType: 'folder',
+          folderPath: result.folderPath,
+          hasLabelsFile: result.hasLabels,
+          name: settings.name,
+          description: settings.description,
+          type: settings.type,
+          category: getCategoryForType(settings.type),
+          outputClasses: settings.outputClasses,
+          inputShape: settings.expectedInputShape,
+          enableSeqConv: settings.inference.enableSeqConv,
+          cropPadding: settings.inference.cropPadding,
+          autoThreshold: settings.inference.autoThreshold,
+          enableQuantileNorm: settings.inference.enableQuantileNorm,
+          enableTranspose: settings.inference.enableTranspose,
+          estimatedTimeSeconds: settings.performance.estimatedTimeSeconds,
+          memoryRequirementMB: settings.performance.memoryRequirementMB,
+          labelsPath: settings.files?.labels
+            ? `${result.folderPath}/${settings.files.labels}`
+            : result.hasLabels
+              ? `${result.folderPath}/labels.json`
+              : ''
+        }))
+      } else {
+        // No settings.json, just set basic folder info
+        setState((prev) => ({
+          ...prev,
+          sourceType: 'folder',
+          folderPath: result.folderPath,
+          hasLabelsFile: result.hasLabels,
+          name: result.folderName,
+          labelsPath: result.hasLabels ? `${result.folderPath}/labels.json` : ''
+        }))
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }

@@ -267,11 +267,23 @@ export const registerIpcHandlers = (): void => {
     const labelsPath = path.join(folderPath, 'labels.json')
     const hasLabels = fs.existsSync(labelsPath)
 
+    // Check for settings.json
+    const settingsPath = path.join(folderPath, 'settings.json')
+    let settings = null
+    if (fs.existsSync(settingsPath)) {
+      try {
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+      } catch (e) {
+        console.warn('[Main] Failed to parse settings.json:', e)
+      }
+    }
+
     return {
       folderPath,
       modelJson,
       hasLabels,
-      folderName: path.basename(folderPath)
+      folderName: path.basename(folderPath),
+      settings
     }
   })
 
