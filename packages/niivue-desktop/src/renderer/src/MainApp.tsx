@@ -1,6 +1,6 @@
 // src/MainApp.tsx
 import React, { useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, NiiVueLocation, Niivue } from '@niivue/niivue'
+import { NVImage, NVMesh, NiiVueLocation, Niivue, NVDocument } from '@niivue/niivue'
 import { Sidebar } from './components/Sidebar.js'
 import { Viewer } from './components/Viewer.js'
 import { PreferencesDialog } from './components/PreferencesDialog.js'
@@ -57,6 +57,9 @@ function MainApp(): JSX.Element {
   const [cursorLocation, setCursorLocation] = useState<string>('')
   const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
+  // Use ref to always get latest selected, avoiding stale closures in IPC handlers
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
 
@@ -73,9 +76,13 @@ function MainApp(): JSX.Element {
   void modelsVersion
 
   const getTarget = async (): Promise<NiivueInstanceContext> => {
-    if (!selected) throw new Error('no document!')
-    const hasContent = selected.volumes.length > 0 || selected.meshes.length > 0
-    if (!hasContent) return selected
+    // Use ref to get latest selected, avoiding stale closures
+    const current = selectedRef.current
+    if (!current) throw new Error('no document!')
+    // Check actual Niivue instance state, not React state (which may be stale)
+    const nv = current.nvRef.current
+    const hasContent = nv.volumes.length > 0 || nv.meshes.length > 0
+    if (!hasContent) return current
     return createDocument()
   }
 
@@ -277,28 +284,46 @@ function MainApp(): JSX.Element {
   // Clear scene command
   useEffect((): (() => void) => {
     const handleClear = (): void => {
-      if (!selected) return
-      const nv = selected.nvRef.current
+      // Use ref to get latest selected, avoiding stale closures
+      const current = selectedRef.current
+      if (!current) return
+      const nv = current.nvRef.current
+
+      // Create fresh document to reset all internal state
+      nv.document = new NVDocument()
+
+      // Clear arrays
       nv.volumes = []
       nv.meshes = []
+
+      // Clear derived volume state (back/overlays reference old volumes)
+      nv.back = null
+      nv.overlays = []
+
+      // Clear other state
       nv.mediaUrlMap.clear()
       nv.createEmptyDrawing()
-      nv.drawScene()
-      selected.setVolumes([])
-      selected.setMeshes([])
-      selected.setSelectedImage(null)
-      updateDocument(selected.id, {
+
+      // Refresh WebGL textures to clear any cached overlay data
+      nv.updateGLVolume()
+
+      // Update React state
+      current.setVolumes([])
+      current.setMeshes([])
+      current.setSelectedImage(null)
+
+      updateDocument(current.id, {
         volumes: [],
         meshes: [],
         selectedImage: null,
-        isDirty: true
+        isDirty: false // Cleared scene is not dirty
       })
     }
     electron.ipcRenderer.on('clear-scene', handleClear)
     return (): void => {
       electron.ipcRenderer.removeAllListeners('clear-scene')
     }
-  }, [selected])
+  }, [])
 
   useEffect(() => {
     // define once, with `selected` & `updateDocument` in scope
