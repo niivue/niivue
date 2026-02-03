@@ -245,9 +245,6 @@ function MainApp(): JSX.Element {
       updateDocument(selected.id, { isDirty: true })
 
       setSegmentationRunning(false)
-      alert(
-        `Segmentation complete!\nModel: ${result.modelInfo.name}\nTime: ${(result.inferenceTimeMs / 1000).toFixed(2)}s`
-      )
     } catch (error) {
       setSegmentationRunning(false)
       console.error('Segmentation failed:', error)
