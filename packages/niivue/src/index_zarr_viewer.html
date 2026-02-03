@@ -54,6 +54,27 @@
       #navControls button:hover {
         background: #555;
       }
+      #levelSelectorsContainer {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .level-selector {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        background: #333;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      .level-selector label {
+        color: #aaa;
+        font-size: 11px;
+      }
+      .level-selector select {
+        padding: 2px 4px;
+      }
       #infoPanel {
         padding: 8px;
         background: #1a1a2e;
@@ -161,8 +182,7 @@
 
         <div id="navControls">
           <span class="hint">Drag to pan</span>
-          <label for="levelSelect">Switch level:</label>
-          <select id="levelSelect"></select>
+          <div id="levelSelectorsContainer"></div>
         </div>
       </div>
     </header>
@@ -249,7 +269,7 @@
   const statusBar = document.getElementById('statusBar')
   const navControls = document.getElementById('navControls')
   const infoPanel = document.getElementById('infoPanel')
-  const levelSelect = document.getElementById('levelSelect')
+  const levelSelectorsContainer = document.getElementById('levelSelectorsContainer')
   const affineControls = document.getElementById('affineControls')
   const affineResetBtn = document.getElementById('affineResetBtn')
   const affineSaveBtn = document.getElementById('affineSaveBtn')
@@ -414,16 +434,61 @@
     }
   }
 
-  // Manual level select handler
-  levelSelect.addEventListener('change', async () => {
-    const helper = nv.getZarrVolume()?.zarrHelper
-    if (!helper) return
-    const level = parseInt(levelSelect.value)
-    await helper.setPyramidLevel(level)
-    nv.updateGLVolume()
-    nv.drawScene()
-    updateInfoPanel()
-  })
+  // Create level selectors for all zarr volumes
+  function createLevelSelectors() {
+    levelSelectorsContainer.innerHTML = ''
+    const zarrVolumes = nv.getZarrVolumes()
+
+    if (zarrVolumes.length === 0) return
+
+    zarrVolumes.forEach((vol, volIdx) => {
+      const helper = vol.zarrHelper
+      if (!helper) return
+
+      const pyramidInfo = helper.getPyramidInfo()
+      const currentLevel = helper.getPyramidLevel()
+
+      // Create container for this volume's level selector
+      const selectorDiv = document.createElement('div')
+      selectorDiv.className = 'level-selector'
+
+      // Create label
+      const label = document.createElement('label')
+      const volName = pyramidInfo.name || `Zarr ${volIdx + 1}`
+      label.textContent = `${volName}:`
+      selectorDiv.appendChild(label)
+
+      // Create select element
+      const select = document.createElement('select')
+      select.dataset.volumeIndex = volIdx
+
+      pyramidInfo.levels.forEach((lvl, idx) => {
+        const option = document.createElement('option')
+        option.value = idx
+        option.textContent = `${idx}: ${lvl.shape.join('x')}`
+        if (idx === currentLevel) {
+          option.selected = true
+        }
+        select.appendChild(option)
+      })
+
+      // Add change handler for this select
+      select.addEventListener('change', async () => {
+        const targetVolIdx = parseInt(select.dataset.volumeIndex)
+        const targetVol = nv.getZarrVolumes()[targetVolIdx]
+        if (!targetVol?.zarrHelper) return
+
+        const level = parseInt(select.value)
+        await targetVol.zarrHelper.setPyramidLevel(level)
+        nv.updateGLVolume()
+        nv.drawScene()
+        updateInfoPanel()
+      })
+
+      selectorDiv.appendChild(select)
+      levelSelectorsContainer.appendChild(selectorDiv)
+    })
+  }
 
   // Load button handler
   loadBtn.addEventListener('click', async () => {
@@ -442,14 +507,31 @@
 
     try {
       await nv.loadVolumes([
-        { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+        // mni image
+        // { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+        // LSM image
+        // {
+        //   // url: storeUrl,
+        //   // url: "http://localhost:8080/mni152_axial.ome.zarr",
+        //   // url: "http://localhost:3000/K_HE_2_ome.zarr",
+        //   // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
+        //   // url: "http://localhost:3000/test-image.zarr",
+        //   zarrLevel: level,
+        //   zarrMaxVolumeSize: maxVolSize,
+        //   opacity: 1.0,
+        //   colormap: "gray"
+        // },
+        // WSI image
         {
           // url: storeUrl,
-          url: "http://localhost:8080/mni152_axial.ome.zarr",
+          // url: "http://localhost:8080/mni152_axial.ome.zarr",
+          // url: "http://localhost:3000/K_HE_2_ome.zarr",
+          url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
           zarrLevel: level,
           zarrMaxVolumeSize: maxVolSize,
+          channel: 0,
           opacity: 1.0,
-          colormap: "red"
+          colormap: "gray"
         },
         // {
         //   // url: storeUrl,
@@ -461,30 +543,28 @@
         // },
       ])
       // await nv.addVolumeFromUrl({ url: "../demos/images/mni152.nii.gz", opacity: 0.4,colormap: "red" })
-      nv.setColormap(nv.volumes[0].id, 'gray')
+      // nv.setColormap(nv.volumes[0].id, 'gray')
 
       // Show navigation and affine controls
       navControls.style.display = 'flex'
       affineControls.style.display = 'block'
       resetAffineSliders()
 
-      const helper = nv.getZarrVolume()?.zarrHelper
-      if (helper) {
-        const pyramidInfo = helper.getPyramidInfo()
-        levelSelect.innerHTML = ''
-        pyramidInfo.levels.forEach((lvl, idx) => {
-          const option = document.createElement('option')
-          option.value = idx
-          option.textContent = `${idx}: ${lvl.shape.join('x')}`
-          if (idx === helper.getPyramidLevel()) {
-            option.selected = true
-          }
-          levelSelect.appendChild(option)
-        })
+      // Create level selectors for all zarr volumes
+      createLevelSelectors()
 
-        const state = helper.getViewportState()
-        const dims = pyramidInfo.levels[state.level].shape
-        statusBar.textContent = `Level ${state.level + 1}/${pyramidInfo.levels.length} (${dims.join(' x ')})`
+      const zarrVolumes = nv.getZarrVolumes()
+      if (zarrVolumes.length > 0) {
+        const statusParts = zarrVolumes.map((vol, idx) => {
+          const helper = vol.zarrHelper
+          if (!helper) return ''
+          const pyramidInfo = helper.getPyramidInfo()
+          const state = helper.getViewportState()
+          const dims = pyramidInfo.levels[state.level].shape
+          const name = pyramidInfo.name || `Zarr ${idx + 1}`
+          return `${name}: L${state.level + 1}/${pyramidInfo.levels.length}`
+        }).filter(s => s).join(' | ')
+        statusBar.textContent = statusParts
         updateInfoPanel()
       }
     } catch (err) {

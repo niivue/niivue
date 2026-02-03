@@ -446,15 +446,44 @@ export class NVZarrHelper {
             }
             hdr.affine = affine
         } else {
-            // No OME translations — use center-based offset.
-            // For datasets without full OME metadata, assume diagonal affine.
+            // No OME translations — calculate offset based on pan position
             const { scaleW, scaleH, scaleD } = this.getConvertedScales()
-            hdr.affine = [
-                [scaleW, 0, 0, -(width - 2) * 0.5 * scaleW],
-                [0, -scaleH, 0, (height - 2) * 0.5 * scaleH],
-                [0, 0, -scaleD, (depth - 2) * 0.5 * scaleD],
-                [0, 0, 0, 1]
-            ]
+
+            // Volume window offsets in level coords (same calculation as 3D path)
+            const volStartW = this.centerX - width / 2
+            const volStartH = this.centerY - height / 2
+            const volStartD = this.centerZ - depth / 2
+
+            if (axisNames.length >= 2) {
+                // Build affine based on axis names for 2D data
+                // NIfTI cols: 0=width (last spatial), 1=height (2nd-to-last), 2=depth
+                const niftiCols = [
+                    { name: axisNames[axisNames.length - 1], scale: scaleW, trans: volStartW * scaleW },
+                    { name: axisNames[axisNames.length - 2], scale: scaleH, trans: volStartH * scaleH },
+                    { name: 'z', scale: scaleD, trans: volStartD * scaleD }
+                ]
+
+                const affine: number[][] = [
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 1]
+                ]
+                for (let col = 0; col < 3; col++) {
+                    const row = niftiCols[col].name === 'x' ? 0 : niftiCols[col].name === 'y' ? 1 : 2
+                    affine[row][col] = niftiCols[col].scale
+                    affine[row][3] = niftiCols[col].trans
+                }
+                hdr.affine = affine
+            } else {
+                // Fallback: simple diagonal affine with pan position
+                hdr.affine = [
+                    [scaleW, 0, 0, volStartW * scaleW],
+                    [0, -scaleH, 0, volStartH * scaleH],
+                    [0, 0, -scaleD, volStartD * scaleD],
+                    [0, 0, 0, 1]
+                ]
+            }
         }
 
         this.hostImage.calculateRAS()

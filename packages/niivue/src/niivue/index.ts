@@ -1361,8 +1361,10 @@ export class Niivue {
             this.setDragStart(pos.x, pos.y)
             if (!this.uiData.isDragging) {
                 this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
-                // Store Zarr viewport center at drag start
-                this.getZarrVolume()?.zarrHelper?.beginDrag()
+                // Store Zarr viewport center at drag start for all zarr volumes
+                for (const vol of this.getZarrVolumes()) {
+                    vol.zarrHelper?.beginDrag()
+                }
             }
             this.uiData.isDragging = true
             this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
@@ -1991,8 +1993,10 @@ export class Niivue {
             // Initialize drag state if not already dragging
             if (!this.uiData.isDragging) {
                 this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
-                // Store Zarr viewport center at drag start
-                this.getZarrVolume()?.zarrHelper?.beginDrag()
+                // Store Zarr viewport center at drag start for all zarr volumes
+                for (const vol of this.getZarrVolumes()) {
+                    vol.zarrHelper?.beginDrag()
+                }
             }
             this.uiData.isDragging = true
 
@@ -7915,9 +7919,10 @@ export class Niivue {
      */
     dragForPanZoom(startXYendXY: number[]): void {
         // Handle Zarr images with chunked pan
-        const zarrVol = this.getZarrVolume()
-        const zarrHelper = zarrVol?.zarrHelper
-        if (zarrVol && zarrHelper && zarrHelper.centerAtDragStart) {
+        const zarrVolumes = this.getZarrVolumes()
+        const activeZarrVolumes = zarrVolumes.filter((vol) => vol.zarrHelper?.centerAtDragStart)
+
+        if (activeZarrVolumes.length > 0) {
             const screenDeltaX = startXYendXY[2] - startXYendXY[0]
             const screenDeltaY = startXYendXY[3] - startXYendXY[1]
 
@@ -7940,29 +7945,6 @@ export class Niivue {
                 }
             }
 
-            // Map screen deltas to zarr volume axes using the actual affine matrix.
-            // The affine maps NIfTI columns (0=width/centerX, 1=height/centerY, 2=depth/centerZ)
-            // to physical axes (row 0=x, row 1=y, row 2=z). When OME axis names permute axes,
-            // the affine won't be diagonal, so we must derive the mapping dynamically.
-            const affine = zarrVol.hdr!.affine
-            // For each physical axis (row), find which NIfTI column dominates
-            // physToCol[physAxis] = { col, sign } where col is the center index (0=X,1=Y,2=Z)
-            const physToCol: Array<{ col: number; sign: number }> = [
-                { col: 0, sign: -1 },
-                { col: 1, sign: -1 },
-                { col: 2, sign: -1 }
-            ]
-            for (let row = 0; row < 3; row++) {
-                let maxVal = 0
-                for (let col = 0; col < 3; col++) {
-                    const val = Math.abs(affine[row][col])
-                    if (val > maxVal) {
-                        maxVal = val
-                        physToCol[row] = { col, sign: affine[row][col] < 0 ? -1 : 1 }
-                    }
-                }
-            }
-
             // Each slice type shows two physical axes on screen:
             //   AXIAL:    horizontal=x(0), vertical=y(1)
             //   CORONAL:  horizontal=x(0), vertical=z(2)
@@ -7980,26 +7962,62 @@ export class Niivue {
                 vPhys = 2
             }
 
-            const centers = [zarrHelper.centerAtDragStart.x, zarrHelper.centerAtDragStart.y, zarrHelper.centerAtDragStart.z]
-            centers[physToCol[hPhys].col] += screenDeltaX * physToCol[hPhys].sign
-            centers[physToCol[vPhys].col] += -screenDeltaY * physToCol[vPhys].sign
-            const newCenterX = centers[0]
-            const newCenterY = centers[1]
-            const newCenterZ = centers[2]
+            // Pan all zarr volumes simultaneously
+            const panPromises: Array<Promise<void>> = []
+            for (const zarrVol of activeZarrVolumes) {
+                const zarrHelper = zarrVol.zarrHelper!
 
-            const state = zarrHelper.getViewportState()
-            if (Math.abs(newCenterX - state.centerX) < 0.001 && Math.abs(newCenterY - state.centerY) < 0.001 && Math.abs(newCenterZ - state.centerZ) < 0.001) {
-                return
+                // Map screen deltas to zarr volume axes using the actual affine matrix.
+                // The affine maps NIfTI columns (0=width/centerX, 1=height/centerY, 2=depth/centerZ)
+                // to physical axes (row 0=x, row 1=y, row 2=z). When OME axis names permute axes,
+                // the affine won't be diagonal, so we must derive the mapping dynamically.
+                const affine = zarrVol.hdr!.affine
+                // For each physical axis (row), find which NIfTI column dominates
+                // physToCol[physAxis] = { col, sign } where col is the center index (0=X,1=Y,2=Z)
+                const physToCol: Array<{ col: number; sign: number }> = [
+                    { col: 0, sign: -1 },
+                    { col: 1, sign: -1 },
+                    { col: 2, sign: -1 }
+                ]
+                for (let row = 0; row < 3; row++) {
+                    let maxVal = 0
+                    for (let col = 0; col < 3; col++) {
+                        const val = Math.abs(affine[row][col])
+                        if (val > maxVal) {
+                            maxVal = val
+                            physToCol[row] = { col, sign: affine[row][col] < 0 ? -1 : 1 }
+                        }
+                    }
+                }
+
+                const dragStart = zarrHelper.centerAtDragStart!
+                const centers = [dragStart.x, dragStart.y, dragStart.z]
+                centers[physToCol[hPhys].col] += screenDeltaX * physToCol[hPhys].sign
+                centers[physToCol[vPhys].col] += -screenDeltaY * physToCol[vPhys].sign
+                const newCenterX = centers[0]
+                const newCenterY = centers[1]
+                const newCenterZ = centers[2]
+
+                const state = zarrHelper.getViewportState()
+                const dx = Math.abs(newCenterX - state.centerX)
+                const dy = Math.abs(newCenterY - state.centerY)
+                const dz = Math.abs(newCenterZ - state.centerZ)
+                if (dx < 0.001 && dy < 0.001 && dz < 0.001) {
+                    continue
+                }
+
+                panPromises.push(zarrHelper.panTo(newCenterX, newCenterY, newCenterZ))
             }
 
-            zarrHelper
-                .panTo(newCenterX, newCenterY, newCenterZ)
-                .then(() => {
-                    this.drawScene()
-                })
-                .catch((err) => {
-                    log.error('Failed to pan Zarr:', err)
-                })
+            if (panPromises.length > 0) {
+                Promise.all(panPromises)
+                    .then(() => {
+                        this.drawScene()
+                    })
+                    .catch((err) => {
+                        log.error('Failed to pan Zarr:', err)
+                    })
+            }
             this.canvas!.focus()
             return
         }
@@ -8438,6 +8456,10 @@ export class Niivue {
             }
         }
         return null
+    }
+
+    getZarrVolumes(): NVImage[] {
+        return this.volumes.filter((vol) => vol.zarrHelper)
     }
 
     private drawBoundsBox(leftTopWidthHeight: number[], color: number[], thickness = 2): void {
