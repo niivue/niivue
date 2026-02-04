@@ -45,8 +45,10 @@ jobs:
             libcairo2 \
             libatspi2.0-0
 
-      - name: Clean stale node_modules
-        run: rm -rf node_modules packages/*/node_modules
+      - name: Clean stale caches
+        run: |
+          rm -rf node_modules packages/*/node_modules
+          npm cache clean --force
 
       - name: Install dependencies (workspace-aware)
         # use npm ci for reproducible installs; `--workspaces` ensures workspace symlinks are created
