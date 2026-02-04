@@ -54,10 +54,11 @@ export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPan
   }, [doc.id, sidebarCollapsed, nv])
 
   return (
-    <div className={`flex flex-col bg-black h-full ${sidebarCollapsed ? 'basis-5/6' : 'basis-2/3'}`}>
+    <div data-testid="viewer" className={`flex flex-col bg-black h-full ${sidebarCollapsed ? 'basis-5/6' : 'basis-2/3'}`}>
       <div className="h-12 bg-black flex items-center justify-end px-3 gap-2">
         {onToggleRightPanel && (
           <button
+            data-testid="toggle-right-panel"
             onClick={onToggleRightPanel}
             className="text-gray-400 hover:text-white transition-colors p-1.5 rounded hover:bg-gray-700"
             title={rightPanelOpen ? 'Close panel' : 'Open panel'}
@@ -70,6 +71,7 @@ export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPan
         )}
       </div>
       <canvas
+        data-testid="viewer-canvas"
         id={`gl-canvas-${doc.id}`}
         ref={canvasRef}
         className="w-full h-[calc(100%-48px)] block outline-none"

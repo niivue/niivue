@@ -792,12 +792,13 @@ function MainApp(): JSX.Element {
 
   function renderTabs(nv: Niivue): JSX.Element {
     return (
-      <div className="flex flex-row bg-gray-800 text-white px-2">
+      <div data-testid="tab-bar" className="flex flex-row bg-gray-800 text-white px-2">
         {documents.map((doc) => {
           const isEditing = doc.id === editingDocId
           return (
             <div
               key={doc.id}
+              data-testid="tab"
               className={`group relative px-4 py-2 cursor-pointer ${
                 doc.id === selectedDocId ? 'bg-gray-700' : ''
               }`}
@@ -855,6 +856,7 @@ function MainApp(): JSX.Element {
           )
         })}
         <div
+          data-testid="new-tab-button"
           className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
           onClick={() => void createDocument()}
         >

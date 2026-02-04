@@ -109,9 +109,9 @@ export function Sidebar({
   const isExpanded = activePanel !== null
 
   return (
-    <div className="flex h-full">
+    <div data-testid="sidebar" className="flex h-full">
       {/* Activity Bar */}
-      <div className="flex flex-col items-center w-12 bg-gray-800 py-2 gap-1 flex-shrink-0">
+      <div data-testid="activity-bar" className="flex flex-col items-center w-12 bg-gray-800 py-2 gap-1 flex-shrink-0">
         {panels.map((panel) => (
           <Tooltip key={panel.id} content={panel.title} side="right">
             <button
