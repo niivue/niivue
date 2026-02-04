@@ -61,6 +61,9 @@ const api = {
   headlessWriteStdout: (base64Data: string): Promise<void> => {
     return ipcRenderer.invoke('headless:write-stdout', base64Data)
   },
+  headlessLoadLabelJson: (labelJsonPath: string): Promise<unknown> => {
+    return ipcRenderer.invoke('headless:load-label-json', labelJsonPath)
+  },
   headlessComplete: (): void => {
     ipcRenderer.send('headless:complete')
   },

@@ -30,6 +30,10 @@ export interface CLIOptions {
   invert: boolean
   /** Output as binary mask for extract command */
   binarize: boolean
+  /** Path to label.json file for named label lookup */
+  labelJson: string | null
+  /** Comma-separated label names to extract (requires labelJson) */
+  labelNames: string | null
   /** Show help */
   help: boolean
 }
@@ -104,6 +108,8 @@ export function getDefaultCLIOptions(): CLIOptions {
     range: [],
     invert: false,
     binarize: false,
+    labelJson: null,
+    labelNames: null,
     help: false
   }
 }

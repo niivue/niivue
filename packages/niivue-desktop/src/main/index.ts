@@ -105,6 +105,14 @@ function parseCLIArgs(): CLIOptions {
       case '--binarize':
         options.binarize = true
         break
+      case '--label-json':
+      case '-j':
+        options.labelJson = args[++i] || null
+        break
+      case '--label-names':
+      case '-n':
+        options.labelNames = args[++i] || null
+        break
     }
   }
 
@@ -151,19 +159,30 @@ niivue-desktop extract - Extract subvolume using label mask
 
 Usage:
   niivue-desktop extract --input <volume> --labels <labels|-> --values <n,n,...> --output <path|->
+  niivue-desktop extract --input <volume> --labels <labels> --label-json <json> --label-names <names> --output <path>
 
 Options:
-  --input, -i     Base volume to extract from (file, URL)
-  --labels, -l    Label/mask volume (file, URL, or "-" for stdin base64)
-  --output, -o    Output extracted volume (file or "-" for stdout base64)
-  --values, -v    Comma-separated label values (e.g., "1,2,3")
-  --range, -r     Label range (e.g., "10-20"), can be used multiple times
-  --invert        Invert selection (exclude specified labels)
-  --binarize      Output as binary mask (0/1)
+  --input, -i         Base volume to extract from (file, URL)
+  --labels, -l        Label/mask volume (file, URL, or "-" for stdin base64)
+  --output, -o        Output extracted volume (file or "-" for stdout base64)
+  --values, -v        Comma-separated label values (e.g., "1,2,3")
+  --range, -r         Label range (e.g., "10-20"), can be used multiple times
+  --label-json, -j    Path to label.json file for named label lookup
+  --label-names, -n   Comma-separated label names (requires --label-json)
+  --invert            Invert selection (exclude specified labels)
+  --binarize          Output as binary mask (0/1)
 
 Examples:
+  # Extract by numeric label values
   niivue-desktop extract --input brain.nii.gz --labels parcels.nii.gz --values 17,53 --output hippocampus.nii.gz
-  niivue-desktop segment --input brain.nii.gz --model parcellation-104 --output - | \\
+
+  # Extract by label names using label.json
+  niivue-desktop extract --input brain.nii.gz --labels tissue_seg.nii.gz \\
+    --label-json tissue-seg-light/labels.json --label-names "Gray Matter,White Matter" \\
+    --output gm_wm.nii.gz
+
+  # Pipeline: segment then extract by value
+  niivue-desktop segment --input brain.nii.gz --model tissue-seg-light --output - | \\
     niivue-desktop extract --input brain.nii.gz --labels - --values 2 --output gray_matter.nii.gz
 `)
   } else if (subcommand === 'dcm2niix') {
@@ -346,6 +365,13 @@ ipcMain.handle('headless:save-nifti', async (_event, base64Data: string, outputP
   } catch (error) {
     return { success: false, error: String(error) }
   }
+})
+
+ipcMain.handle('headless:load-label-json', async (_event, labelJsonPath: string) => {
+  const { resolveInput } = await import('./utils/inputResolver.js')
+  const resolved = await resolveInput(labelJsonPath, process.cwd())
+  const jsonStr = Buffer.from(resolved.base64, 'base64').toString('utf-8')
+  return JSON.parse(jsonStr)
 })
 
 ipcMain.handle('headless:write-stdout', async (_event, base64Data: string) => {

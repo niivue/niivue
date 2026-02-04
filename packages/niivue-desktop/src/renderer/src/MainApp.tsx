@@ -15,6 +15,7 @@ import { DicomImportDialog } from './components/DicomImportDialog.js'
 import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
+import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 
 const electron = window.electron
 
@@ -435,8 +436,17 @@ function MainApp(): JSX.Element {
       if (!options.output) {
         throw new Error('extract command requires --output')
       }
-      if (!options.values && options.range.length === 0) {
-        throw new Error('extract command requires --values or --range')
+
+      // Check that we have at least one way to select labels
+      const hasNumericSelection = options.values || options.range.length > 0
+      const hasNamedSelection = options.labelNames
+      if (!hasNumericSelection && !hasNamedSelection) {
+        throw new Error('extract command requires --values, --range, or --label-names')
+      }
+
+      // If using label names, require label-json
+      if (hasNamedSelection && !options.labelJson) {
+        throw new Error('--label-names requires --label-json')
       }
 
       // Load base volume (no NiiVue instance needed - direct volume manipulation)
@@ -456,6 +466,27 @@ function MainApp(): JSX.Element {
       // Parse label values and ranges
       const selectedLabels = new Set<number>()
 
+      // Load and parse label.json if provided
+      if (options.labelJson) {
+        console.error(`[niivue] Loading label.json: ${options.labelJson}`)
+        const labelJson = await window.electron.headlessLoadLabelJson(options.labelJson)
+        const labelIndex = parseLabelJson(labelJson)
+
+        // Resolve label names to numeric values
+        if (options.labelNames) {
+          const names = options.labelNames.split(',').map((n) => n.trim())
+          const { found, notFound } = resolveLabels(names, labelIndex)
+
+          if (notFound.length > 0) {
+            console.error(`[niivue] Warning: labels not found: ${notFound.join(', ')}`)
+          }
+
+          found.forEach((v) => selectedLabels.add(v))
+          console.error(`[niivue] Resolved label names to values: ${found.join(', ')}`)
+        }
+      }
+
+      // Parse numeric values
       if (options.values) {
         options.values.split(',').forEach((v) => {
           const num = parseInt(v.trim(), 10)
@@ -463,6 +494,7 @@ function MainApp(): JSX.Element {
         })
       }
 
+      // Parse numeric ranges
       for (const rangeStr of options.range) {
         const [start, end] = rangeStr.split('-').map((s) => parseInt(s.trim(), 10))
         if (!isNaN(start) && !isNaN(end)) {

@@ -31,6 +31,7 @@ declare global {
       headlessSaveOutput: (data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
       headlessSaveNifti: (base64Data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
       headlessWriteStdout: (base64Data: string) => Promise<void>
+      headlessLoadLabelJson: (labelJsonPath: string) => Promise<unknown>
       headlessComplete: () => void
       headlessError: (message: string, exitCode?: number) => void
       onHeadlessStart: (callback: () => void) => void
