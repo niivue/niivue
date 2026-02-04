@@ -46,9 +46,12 @@ jobs:
             libcairo2 \
             libatspi2.0-0
 
+      - name: Clean stale node_modules
+        run: rm -rf node_modules packages/*/node_modules
+
       - name: Install dependencies (workspace-aware)
         # use npm ci for reproducible installs; `--workspaces` ensures workspace symlinks are created
-        run: npm ci --workspaces
+        run: npm ci
 
       - name: Debug workspace layout (helpful if build fails)
         run: |
