@@ -170,9 +170,16 @@ export class NVZarrHelper {
     private runningMin = Infinity
     private runningMax = -Infinity
 
+    // Debounce state for batching chunk updates
+    private updateDebounceTimer: ReturnType<typeof setTimeout> | null = null
+    private readonly UPDATE_DEBOUNCE_MS = 50 // Batch chunks arriving within 50ms
+    private pendingChunkCount = 0
+    private lastRenderedChunkCount = 0
+
     centerAtDragStart: { x: number; y: number; z: number } | null = null
 
     onChunksUpdated?: () => void
+    onAllChunksLoaded?: () => void
 
     private constructor(hostImage: NVImage) {
         this.hostImage = hostImage
@@ -672,6 +679,16 @@ export class NVZarrHelper {
                 img[i] = 0
             }
         }
+
+        // Reset chunk counters for the new update cycle
+        this.pendingChunkCount = 0
+        this.lastRenderedChunkCount = 0
+
+        // Clear any pending debounce timer
+        if (this.updateDebounceTimer !== null) {
+            clearTimeout(this.updateDebounceTimer)
+            this.updateDebounceTimer = null
+        }
     }
 
     private async assembleVisibleChunks(signal?: AbortSignal): Promise<void> {
@@ -697,6 +714,7 @@ export class NVZarrHelper {
             const data = this.chunkCache.get(key)
             if (data) {
                 this.assembleChunkIntoVolume(chunk, data)
+                this.pendingChunkCount++
             }
         }
 
@@ -723,8 +741,9 @@ export class NVZarrHelper {
                         this.chunkCache.set(key, data)
                         if (this.pyramidLevel === level) {
                             this.assembleChunkIntoVolume(chunk, data)
-                            this.updateCalibration()
-                            this.onChunksUpdated?.()
+                            this.pendingChunkCount++
+                            // Use debounced callback to batch multiple chunk updates
+                            this.scheduleChunksUpdated()
                         }
                     }
                 } catch (err: unknown) {
@@ -737,6 +756,19 @@ export class NVZarrHelper {
             })
 
             await Promise.all(fetchPromises)
+
+            // After all chunks are fetched, clear any pending debounce and trigger final update
+            if (this.updateDebounceTimer !== null) {
+                clearTimeout(this.updateDebounceTimer)
+                this.updateDebounceTimer = null
+            }
+            // Ensure final calibration and update if any chunks were loaded
+            if (this.pendingChunkCount > this.lastRenderedChunkCount) {
+                this.lastRenderedChunkCount = this.pendingChunkCount
+                this.updateCalibration()
+                this.onChunksUpdated?.()
+            }
+            this.onAllChunksLoaded?.()
         }
     }
 
@@ -825,6 +857,29 @@ export class NVZarrHelper {
             this.hostImage.global_min = this.runningMin
             this.hostImage.global_max = this.runningMax
         }
+    }
+
+    /**
+     * Schedule a debounced chunks update callback.
+     * Batches multiple chunk arrivals within UPDATE_DEBOUNCE_MS into a single GPU update.
+     */
+    private scheduleChunksUpdated(): void {
+        // Skip if no new chunks since last render
+        if (this.pendingChunkCount === this.lastRenderedChunkCount) {
+            return
+        }
+
+        // Clear existing timer and schedule new one
+        if (this.updateDebounceTimer !== null) {
+            clearTimeout(this.updateDebounceTimer)
+        }
+
+        this.updateDebounceTimer = setTimeout(() => {
+            this.updateDebounceTimer = null
+            this.lastRenderedChunkCount = this.pendingChunkCount
+            this.updateCalibration()
+            this.onChunksUpdated?.()
+        }, this.UPDATE_DEBOUNCE_MS)
     }
 
     clearCache(): void {

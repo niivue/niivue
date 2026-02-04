@@ -507,13 +507,39 @@
 
     try {
       await nv.loadVolumes([
-        // mni image
-        // { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+        // mni zarr (LSM simulated)
+        {
+          // url: storeUrl,
+          url: "http://localhost:8080/mni152.ome.zarr",
+          zarrLevel: level,
+          zarrMaxVolumeSize: maxVolSize,
+          opacity: 1.0,
+          colormap: "grey"
+        },
+        // mni nifti
+        { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+        // mni WSI image
+        {
+          // url: storeUrl,
+          url: "http://localhost:8080/mni152_axial.ome.zarr",
+          // url: "http://localhost:3000/K_HE_2_ome.zarr",
+          // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
+          zarrLevel: level,
+          zarrMaxVolumeSize: maxVolSize,
+          channel: 0,
+          opacity: 1.0,
+          colormap: "red"
+        },
+        // {
+        //   url: "http://localhost:3000/export/nifti?zarr_path=K_HE_2_ome.zarr&scale=virtual_scale1&c=0&z=0&y=0&x=0&xdim=128&ydim=128&zdim=128",
+        //   name: "nifti.nii.gz"
+        // }
         // LSM image
         // {
         //   // url: storeUrl,
         //   // url: "http://localhost:8080/mni152_axial.ome.zarr",
-        //   // url: "http://localhost:3000/K_HE_2_ome.zarr",
+        //   url: "http://localhost:3000/K_HE_2_ome.zarr",
+        //   // url: "https://dandiarchive.s3.amazonaws.com/zarr/7723d02f-1f71-4553-a7b0-47bda1ae8b42",
         //   // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
         //   // url: "http://localhost:3000/test-image.zarr",
         //   zarrLevel: level,
@@ -521,26 +547,8 @@
         //   opacity: 1.0,
         //   colormap: "gray"
         // },
-        // WSI image
-        {
-          // url: storeUrl,
-          // url: "http://localhost:8080/mni152_axial.ome.zarr",
-          // url: "http://localhost:3000/K_HE_2_ome.zarr",
-          url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
-          zarrLevel: level,
-          zarrMaxVolumeSize: maxVolSize,
-          channel: 0,
-          opacity: 1.0,
-          colormap: "gray"
-        },
-        // {
-        //   // url: storeUrl,
-        //   url: "http://localhost:8080/mni152.ome.zarr",
-        //   zarrLevel: level,
-        //   zarrMaxVolumeSize: maxVolSize,
-        //   opacity: 1.0,
-        //   colormap: "green"
-        // },
+        
+        
       ])
       // await nv.addVolumeFromUrl({ url: "../demos/images/mni152.nii.gz", opacity: 0.4,colormap: "red" })
       // nv.setColormap(nv.volumes[0].id, 'gray')
