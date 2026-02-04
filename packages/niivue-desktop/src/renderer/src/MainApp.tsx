@@ -281,150 +281,354 @@ function MainApp(): JSX.Element {
   // Toggle Segmentation Panel is handled via registerSegmentationHandlers
   // (onTogglePanel passed through registerAllIpcHandlers)
 
-  // Headless mode workflow
+  // Headless mode workflow - Subcommand architecture
   useEffect(() => {
+    // Helper: Wait for NiiVue instance to be ready
+    const waitForDocument = (): Promise<NiivueInstanceContext> => {
+      return new Promise((resolve) => {
+        const check = (): void => {
+          const current = selectedRef.current
+          if (current && current.nvRef.current) {
+            resolve(current)
+          } else {
+            setTimeout(check, 100)
+          }
+        }
+        check()
+      })
+    }
+
+    // Helper: Load volume from resolved input
+    const loadVolume = async (
+      nv: Niivue,
+      doc: NiivueInstanceContext,
+      input: string
+    ): Promise<NVImage> => {
+      const resolved = await window.electron.headlessResolveInput(input)
+      const volume = await NVImage.loadFromBase64({ base64: resolved.base64, name: resolved.filename })
+      nv.addVolume(volume)
+      doc.setVolumes([...nv.volumes])
+      nv.updateGLVolume()
+      await new Promise((r) => requestAnimationFrame(r))
+      return volume
+    }
+
+    // Helper: Convert Uint8Array to base64 (chunked to avoid call stack limits)
+    const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+      const CHUNK_SIZE = 0x8000 // 32KB chunks
+      let binary = ''
+      for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+        const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.length))
+        binary += String.fromCharCode.apply(null, chunk as unknown as number[])
+      }
+      return btoa(binary)
+    }
+
+    // Helper: Save volume to output (file or stdout)
+    const saveVolumeOutput = async (volume: NVImage, output: string): Promise<void> => {
+      const isStdout = output === '-' || output.toLowerCase() === 'stdout'
+      // Get volume data as NIfTI
+      const niftiData = volume.toUint8Array()
+      const base64 = uint8ArrayToBase64(niftiData)
+
+      if (isStdout) {
+        await window.electron.headlessWriteStdout(base64)
+      } else {
+        const saveResult = await window.electron.headlessSaveNifti(base64, output)
+        if (!saveResult.success) {
+          throw new Error(`Failed to save NIfTI: ${saveResult.error}`)
+        }
+      }
+    }
+
+    // Helper: Save screenshot
+    const saveScreenshot = async (nv: Niivue, output: string): Promise<void> => {
+      const canvas = nv.gl?.canvas as HTMLCanvasElement
+      if (!canvas) {
+        throw new Error('Canvas not available for screenshot')
+      }
+      nv.drawScene()
+      const dataUrl = canvas.toDataURL('image/png')
+      const saveResult = await window.electron.headlessSaveOutput(dataUrl, output)
+      if (!saveResult.success) {
+        throw new Error(`Failed to save PNG: ${saveResult.error}`)
+      }
+    }
+
+    // VIEW command: Load and render volume, output screenshot or pass-through
+    const runViewCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('view command requires --input')
+      }
+      if (!options.output) {
+        throw new Error('view command requires --output')
+      }
+
+      const doc = await waitForDocument()
+      const nv = doc.nvRef.current
+      const volume = await loadVolume(nv, doc, options.input)
+
+      const isPng = options.output.toLowerCase().endsWith('.png')
+      if (isPng) {
+        await saveScreenshot(nv, options.output)
+      } else {
+        await saveVolumeOutput(volume, options.output)
+      }
+    }
+
+    // SEGMENT command: Run brain segmentation model
+    const runSegmentCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('segment command requires --input')
+      }
+      if (!options.model) {
+        throw new Error('segment command requires --model')
+      }
+      if (!options.output) {
+        throw new Error('segment command requires --output')
+      }
+
+      const doc = await waitForDocument()
+      const nv = doc.nvRef.current
+
+      // Load input volume
+      await loadVolume(nv, doc, options.input)
+
+      // Initialize brainchop if needed
+      if (!brainchopService.isReady()) {
+        await brainchopService.initialize()
+      }
+
+      const baseVolume = nv.volumes[0]
+      if (!baseVolume) {
+        throw new Error('No volume loaded for segmentation')
+      }
+
+      console.error(`[niivue] Running segmentation model: ${options.model}`)
+      const result = await brainchopService.runSegmentation(baseVolume, options.model, {
+        onProgress: (progress, status) => {
+          console.error(`[niivue] Progress: ${progress}% - ${status}`)
+        }
+      })
+
+      // Wait for processing
+      await new Promise((r) => setTimeout(r, 500))
+
+      // Output the segmentation result
+      await saveVolumeOutput(result.volume, options.output)
+    }
+
+    // EXTRACT command: Extract subvolume using label mask
+    const runExtractCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('extract command requires --input (base volume)')
+      }
+      if (!options.labels) {
+        throw new Error('extract command requires --labels (label volume)')
+      }
+      if (!options.output) {
+        throw new Error('extract command requires --output')
+      }
+      if (!options.values && options.range.length === 0) {
+        throw new Error('extract command requires --values or --range')
+      }
+
+      // Load base volume (no NiiVue instance needed - direct volume manipulation)
+      const baseResolved = await window.electron.headlessResolveInput(options.input)
+      const baseVolume = await NVImage.loadFromBase64({
+        base64: baseResolved.base64,
+        name: baseResolved.filename
+      })
+
+      // Load label volume
+      const labelResolved = await window.electron.headlessResolveInput(options.labels)
+      const labelVolume = await NVImage.loadFromBase64({
+        base64: labelResolved.base64,
+        name: labelResolved.filename
+      })
+
+      // Parse label values and ranges
+      const selectedLabels = new Set<number>()
+
+      if (options.values) {
+        options.values.split(',').forEach((v) => {
+          const num = parseInt(v.trim(), 10)
+          if (!isNaN(num)) selectedLabels.add(num)
+        })
+      }
+
+      for (const rangeStr of options.range) {
+        const [start, end] = rangeStr.split('-').map((s) => parseInt(s.trim(), 10))
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = start; i <= end; i++) {
+            selectedLabels.add(i)
+          }
+        }
+      }
+
+      console.error(`[niivue] Extracting labels: ${[...selectedLabels].join(', ')}`)
+
+      // Get raw data arrays
+      const baseData = baseVolume.img as Float32Array | Int16Array | Uint8Array
+      const labelData = labelVolume.img as Float32Array | Int16Array | Uint8Array
+
+      if (baseData.length !== labelData.length) {
+        throw new Error('Base volume and label volume dimensions must match')
+      }
+
+      // Create output array
+      const outputData = new Float32Array(baseData.length)
+
+      // Extract voxels where label matches
+      for (let i = 0; i < labelData.length; i++) {
+        const labelValue = Math.round(labelData[i])
+        const matches = selectedLabels.has(labelValue)
+        const include = options.invert ? !matches : matches
+
+        if (include) {
+          outputData[i] = options.binarize ? 1 : baseData[i]
+        } else {
+          outputData[i] = 0
+        }
+      }
+
+      // Create new volume with extracted data
+      const extractedVolume = baseVolume.clone()
+      extractedVolume.img = outputData
+      extractedVolume.name = 'extracted.nii.gz'
+
+      await saveVolumeOutput(extractedVolume, options.output)
+    }
+
+    // DCM2NIIX command: Convert DICOM to NIfTI
+    const runDcm2niixCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('dcm2niix command requires --input (DICOM directory)')
+      }
+
+      const mode = options.subcommandMode || 'convert'
+
+      if (mode === 'list') {
+        // List DICOM series
+        const series = await window.electron.headlessDcm2niixList(options.input)
+        const json = JSON.stringify(series, null, 2)
+        process.stdout?.write?.(json) // Direct stdout for JSON
+        // Also use IPC fallback
+        await window.electron.headlessSaveOutput(json, options.output || '-')
+      } else if (mode === 'convert') {
+        if (!options.output) {
+          throw new Error('dcm2niix convert requires --output')
+        }
+        if (!options.series) {
+          throw new Error('dcm2niix convert requires --series')
+        }
+
+        // Parse series numbers
+        let seriesNumbers: number[] = []
+        if (options.series === 'all') {
+          const series = await window.electron.headlessDcm2niixList(options.input)
+          seriesNumbers = series.map((s: { seriesNumber: number }) => s.seriesNumber).filter((n: number) => n != null)
+        } else {
+          seriesNumbers = options.series.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+        }
+
+        console.error(`[niivue] Converting DICOM series: ${seriesNumbers.join(', ')}`)
+
+        const results = await window.electron.headlessDcm2niixConvert({
+          dicomDir: options.input,
+          seriesNumbers,
+          outputDir: options.output === '-' ? undefined : options.output,
+          compress: options.compress,
+          bids: options.bids
+        })
+
+        // If output is stdout, read first result file and output as base64
+        if (options.output === '-' && results.length > 0 && results[0].files.length > 0) {
+          const firstFile = `${results[0].outDir}/${results[0].files[0]}`
+          const resolved = await window.electron.headlessResolveInput(firstFile)
+          await window.electron.headlessWriteStdout(resolved.base64)
+        } else {
+          console.error(`[niivue] Converted ${results.length} series to ${options.output}`)
+        }
+      }
+    }
+
+    // NIIMATH command: Apply niimath operations
+    const runNiimathCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('niimath command requires --input')
+      }
+      if (!options.ops) {
+        throw new Error('niimath command requires --ops')
+      }
+      if (!options.output) {
+        throw new Error('niimath command requires --output')
+      }
+
+      // Resolve input
+      const resolved = await window.electron.headlessResolveInput(options.input)
+
+      console.error(`[niivue] Running niimath: ${options.ops}`)
+
+      // Run niimath
+      const result = await window.electron.headlessNiimath(resolved.base64, resolved.filename, options.ops)
+
+      // Output result
+      const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
+      if (isStdout) {
+        await window.electron.headlessWriteStdout(result.base64)
+      } else {
+        const saveResult = await window.electron.headlessSaveNifti(result.base64, options.output)
+        if (!saveResult.success) {
+          throw new Error(`Failed to save niimath result: ${saveResult.error}`)
+        }
+      }
+    }
+
+    // Main headless workflow dispatcher
     const runHeadlessWorkflow = async (): Promise<void> => {
       try {
         const options = await window.electron.headlessGetOptions()
-        if (!options.headless) return
 
-        console.log('[Headless] Starting with options:', options)
+        // No subcommand means GUI mode
+        if (!options.subcommand) return
 
-        // Wait for document to be ready
-        const waitForDocument = (): Promise<NiivueInstanceContext> => {
-          return new Promise((resolve) => {
-            const check = (): void => {
-              const current = selectedRef.current
-              if (current && current.nvRef.current) {
-                resolve(current)
-              } else {
-                setTimeout(check, 100)
-              }
-            }
-            check()
-          })
+        console.error(`[niivue] Running subcommand: ${options.subcommand}`)
+
+        switch (options.subcommand) {
+          case 'view':
+            await runViewCommand(options)
+            break
+          case 'segment':
+            await runSegmentCommand(options)
+            break
+          case 'extract':
+            await runExtractCommand(options)
+            break
+          case 'dcm2niix':
+            await runDcm2niixCommand(options)
+            break
+          case 'niimath':
+            await runNiimathCommand(options)
+            break
+          default:
+            throw new Error(`Unknown subcommand: ${options.subcommand}`)
         }
 
-        const doc = await waitForDocument()
-        const nv = doc.nvRef.current
-
-        // Load input file
-        if (options.input) {
-          console.log('[Headless] Loading input:', options.input)
-
-          // Determine if input is a standard name or file path
-          const isStandardName = !options.input.includes('/') && !options.input.includes('\\')
-          let inputPath = options.input
-
-          // Standard names map to .nii.gz files in resources/images/standard/
-          if (isStandardName) {
-            if (!inputPath.endsWith('.nii.gz')) {
-              inputPath = `${inputPath}.nii.gz`
-            }
-            // Resolve to full path in resources directory
-            const resourcesPath = window.electron.getResourcesPath()
-            inputPath = `${resourcesPath}/images/standard/${inputPath}`
-          }
-
-          console.log('[Headless] Resolved input path:', inputPath)
-
-          // Load the volume from file
-          const base64: string = await window.electron.ipcRenderer.invoke('loadFromFile', inputPath)
-
-          if (!base64) {
-            throw new Error(`Failed to load input: ${inputPath}`)
-          }
-
-          const volume = await NVImage.loadFromBase64({ base64, name: inputPath })
-          nv.addVolume(volume)
-          doc.setVolumes([...nv.volumes])
-          nv.updateGLVolume()
-
-          // Wait a frame for WebGL to settle
-          await new Promise((r) => requestAnimationFrame(r))
-        }
-
-        // Run model if specified
-        if (options.model) {
-          console.log('[Headless] Running model:', options.model)
-
-          // Initialize brainchop if needed
-          if (!brainchopService.isReady()) {
-            await brainchopService.initialize()
-          }
-
-          const baseVolume = nv.volumes[0]
-          if (!baseVolume) {
-            throw new Error('No volume loaded for segmentation')
-          }
-
-          const result = await brainchopService.runSegmentation(baseVolume, options.model, {
-            onProgress: (progress, status) => {
-              console.log(`[Headless] Progress: ${progress}% - ${status}`)
-            }
-          })
-
-          // Add result as overlay
-          nv.addVolume(result.volume)
-          const overlayIndex = nv.volumes.length - 1
-          nv.setOpacity(overlayIndex, 0.5)
-
-          // Apply colormap labels for parcellation
-          if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
-            try {
-              const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
-              result.volume.setColormapLabel(labelsJson)
-              if (result.volume.colormapLabel?.lut) {
-                result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
-                  i % 4 === 3 ? (v === 0 ? 0 : 178) : v
-                )
-              }
-            } catch (err) {
-              console.error('[Headless] Failed to load parcellation labels:', err)
-            }
-          }
-
-          doc.setVolumes([...nv.volumes])
-          nv.updateGLVolume()
-
-          // Wait for render to complete
-          await new Promise((r) => requestAnimationFrame(r))
-          await new Promise((r) => setTimeout(r, 500))
-        }
-
-        // Save output
-        if (options.output) {
-          console.log('[Headless] Saving output:', options.output)
-          const ext = options.output.toLowerCase().split('.').pop()
-
-          if (ext === 'png') {
-            // Capture screenshot from canvas
-            const canvas = nv.gl?.canvas as HTMLCanvasElement
-            if (!canvas) {
-              throw new Error('Canvas not available for screenshot')
-            }
-            nv.drawScene()
-            const dataUrl = canvas.toDataURL('image/png')
-            const saveResult = await window.electron.headlessSaveOutput(dataUrl, options.output)
-            if (!saveResult.success) {
-              throw new Error(`Failed to save PNG: ${saveResult.error}`)
-            }
-          } else if (ext === 'nvd') {
-            // Save as NVDocument
-            const jsonStr = JSON.stringify(nv.document.json())
-            const saveResult = await window.electron.headlessSaveOutput(jsonStr, options.output)
-            if (!saveResult.success) {
-              throw new Error(`Failed to save NVD: ${saveResult.error}`)
-            }
-          } else {
-            throw new Error(`Unsupported output format: ${ext}`)
-          }
-        }
-
-        console.log('[Headless] Workflow completed successfully')
+        console.error('[niivue] Completed successfully')
         window.electron.headlessComplete()
       } catch (error) {
-        console.error('[Headless] Workflow failed:', error)
+        console.error('[niivue] Error:', error)
         window.electron.headlessError(error instanceof Error ? error.message : String(error))
       }
     }
