@@ -15,6 +15,26 @@ declare global {
       }>
       loadBrainchopWeights: (weightPath: string) => Promise<ArrayBuffer>
       loadBrainchopLabels: (labelsPath: string) => Promise<any>
+      loadBrainchopPreview: (previewPath: string) => Promise<string | null>
+      selectModelFolder: () => Promise<{
+        folderPath: string
+        modelJson: any
+        hasLabels: boolean
+        folderName: string
+        settings: any | null
+      } | null>
+      selectColormapFile: () => Promise<string | null>
+      // Headless mode
+      headlessGetOptions: () => Promise<{
+        headless: boolean
+        input: string | null
+        model: string | null
+        output: string | null
+      }>
+      headlessSaveOutput: (data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
+      headlessComplete: () => void
+      headlessError: (message: string) => void
+      onHeadlessStart: (callback: () => void) => void
     }
   }
 }

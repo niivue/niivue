@@ -8,7 +8,7 @@
     "enableSeqConv": true,
     "cropPadding": 0,
     "autoThreshold": 0,
-    "enableQuantileNorm": false,
+    "enableQuantileNorm": true,
     "enableTranspose": true
   },
   "performance": {

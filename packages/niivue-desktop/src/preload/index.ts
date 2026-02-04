@@ -30,6 +30,9 @@ const api = {
   loadBrainchopLabels: (labelsPath: string): Promise<any> => {
     return ipcRenderer.invoke('load-brainchop-labels', labelsPath)
   },
+  loadBrainchopPreview: (previewPath: string): Promise<string | null> => {
+    return ipcRenderer.invoke('load-brainchop-preview', previewPath)
+  },
   selectModelFolder: (): Promise<{
     folderPath: string
     modelJson: any
@@ -40,6 +43,27 @@ const api = {
   },
   selectColormapFile: (): Promise<string | null> => {
     return ipcRenderer.invoke('select-colormap-file')
+  },
+  // Headless mode methods
+  headlessGetOptions: (): Promise<{
+    headless: boolean
+    input: string | null
+    model: string | null
+    output: string | null
+  }> => {
+    return ipcRenderer.invoke('headless:get-options')
+  },
+  headlessSaveOutput: (data: string, outputPath: string): Promise<{ success: boolean; error?: string }> => {
+    return ipcRenderer.invoke('headless:save-output', data, outputPath)
+  },
+  headlessComplete: (): void => {
+    ipcRenderer.send('headless:complete')
+  },
+  headlessError: (message: string): void => {
+    ipcRenderer.send('headless:error', message)
+  },
+  onHeadlessStart: (callback: () => void): void => {
+    ipcRenderer.on('headless:start', callback)
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

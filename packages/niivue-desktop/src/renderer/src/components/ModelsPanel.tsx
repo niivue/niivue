@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ScrollArea, Text, Select, Badge } from '@radix-ui/themes'
 import type { ModelInfo } from '../services/brainchop/types.js'
 import { AddModelWizard } from './AddModelWizard.js'
@@ -85,8 +85,56 @@ function ModelCard({
   const hasRemote = !!model.remoteUrl
   const isUserLocal = !isBundled && !hasRemote
 
+  // State for preview image
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  // Load preview image on mount
+  useEffect(() => {
+    if (!model.previewPath) return
+
+    let cancelled = false
+    setPreviewLoading(true)
+
+    window.electron
+      .loadBrainchopPreview(model.previewPath)
+      .then((base64) => {
+        if (cancelled) return
+        if (base64) {
+          setPreviewSrc(`data:image/png;base64,${base64}`)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load preview:', err)
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [model.previewPath])
+
   return (
     <div className="bg-white rounded-md border border-gray-200 p-3 flex flex-col gap-1.5">
+      {/* Preview image */}
+      {model.previewPath && (
+        <div className="w-full h-36 bg-gray-100 rounded overflow-hidden mb-1">
+          {previewLoading ? (
+            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+              Loading...
+            </div>
+          ) : previewSrc ? (
+            <img src={previewSrc} alt={`${model.name} preview`} className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+              No preview
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <Text size="2" weight="bold" className="leading-tight">
           {model.name}

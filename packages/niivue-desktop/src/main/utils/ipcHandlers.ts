@@ -333,6 +333,26 @@ export const registerIpcHandlers = (): void => {
     }
   })
 
+  // Load brainchop preview image
+  ipcMain.handle('load-brainchop-preview', async (_event, previewPath: string) => {
+    try {
+      const fullPath = path.isAbsolute(previewPath) ? previewPath : path.join(RESOURCES_DIR, previewPath)
+      console.log('[Main] Loading brainchop preview from:', fullPath)
+
+      // Check if file exists
+      if (!fs.existsSync(fullPath)) {
+        console.log('[Main] Preview file not found:', fullPath)
+        return null
+      }
+
+      const buffer = await fs.promises.readFile(fullPath)
+      return buffer.toString('base64')
+    } catch (error) {
+      console.error('[Main] Error loading brainchop preview:', error)
+      return null
+    }
+  })
+
   // Load brainchop weight file
   ipcMain.handle('load-brainchop-weights', async (_event, weightPath: string) => {
     try {

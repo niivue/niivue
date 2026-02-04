@@ -24,6 +24,7 @@ export interface ModelInfo {
   outputClasses: number
   modelPath: string
   labelsPath?: string
+  previewPath?: string
   estimatedTimeSeconds: number
   memoryRequirementMB: number
   enableSeqConv: boolean

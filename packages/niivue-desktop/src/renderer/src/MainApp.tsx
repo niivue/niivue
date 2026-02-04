@@ -281,6 +281,160 @@ function MainApp(): JSX.Element {
   // Toggle Segmentation Panel is handled via registerSegmentationHandlers
   // (onTogglePanel passed through registerAllIpcHandlers)
 
+  // Headless mode workflow
+  useEffect(() => {
+    const runHeadlessWorkflow = async (): Promise<void> => {
+      try {
+        const options = await window.electron.headlessGetOptions()
+        if (!options.headless) return
+
+        console.log('[Headless] Starting with options:', options)
+
+        // Wait for document to be ready
+        const waitForDocument = (): Promise<NiivueInstanceContext> => {
+          return new Promise((resolve) => {
+            const check = (): void => {
+              const current = selectedRef.current
+              if (current && current.nvRef.current) {
+                resolve(current)
+              } else {
+                setTimeout(check, 100)
+              }
+            }
+            check()
+          })
+        }
+
+        const doc = await waitForDocument()
+        const nv = doc.nvRef.current
+
+        // Load input file
+        if (options.input) {
+          console.log('[Headless] Loading input:', options.input)
+
+          // Determine if input is a standard name or file path
+          const isStandardName = !options.input.includes('/') && !options.input.includes('\\')
+          let inputPath = options.input
+
+          // Standard names map to .nii.gz files in resources/images/standard/
+          if (isStandardName) {
+            if (!inputPath.endsWith('.nii.gz')) {
+              inputPath = `${inputPath}.nii.gz`
+            }
+            // Resolve to full path in resources directory
+            const resourcesPath = window.electron.getResourcesPath()
+            inputPath = `${resourcesPath}/images/standard/${inputPath}`
+          }
+
+          console.log('[Headless] Resolved input path:', inputPath)
+
+          // Load the volume from file
+          const base64: string = await window.electron.ipcRenderer.invoke('loadFromFile', inputPath)
+
+          if (!base64) {
+            throw new Error(`Failed to load input: ${inputPath}`)
+          }
+
+          const volume = await NVImage.loadFromBase64({ base64, name: inputPath })
+          nv.addVolume(volume)
+          doc.setVolumes([...nv.volumes])
+          nv.updateGLVolume()
+
+          // Wait a frame for WebGL to settle
+          await new Promise((r) => requestAnimationFrame(r))
+        }
+
+        // Run model if specified
+        if (options.model) {
+          console.log('[Headless] Running model:', options.model)
+
+          // Initialize brainchop if needed
+          if (!brainchopService.isReady()) {
+            await brainchopService.initialize()
+          }
+
+          const baseVolume = nv.volumes[0]
+          if (!baseVolume) {
+            throw new Error('No volume loaded for segmentation')
+          }
+
+          const result = await brainchopService.runSegmentation(baseVolume, options.model, {
+            onProgress: (progress, status) => {
+              console.log(`[Headless] Progress: ${progress}% - ${status}`)
+            }
+          })
+
+          // Add result as overlay
+          nv.addVolume(result.volume)
+          const overlayIndex = nv.volumes.length - 1
+          nv.setOpacity(overlayIndex, 0.5)
+
+          // Apply colormap labels for parcellation
+          if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
+            try {
+              const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
+              result.volume.setColormapLabel(labelsJson)
+              if (result.volume.colormapLabel?.lut) {
+                result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
+                  i % 4 === 3 ? (v === 0 ? 0 : 178) : v
+                )
+              }
+            } catch (err) {
+              console.error('[Headless] Failed to load parcellation labels:', err)
+            }
+          }
+
+          doc.setVolumes([...nv.volumes])
+          nv.updateGLVolume()
+
+          // Wait for render to complete
+          await new Promise((r) => requestAnimationFrame(r))
+          await new Promise((r) => setTimeout(r, 500))
+        }
+
+        // Save output
+        if (options.output) {
+          console.log('[Headless] Saving output:', options.output)
+          const ext = options.output.toLowerCase().split('.').pop()
+
+          if (ext === 'png') {
+            // Capture screenshot from canvas
+            const canvas = nv.gl?.canvas as HTMLCanvasElement
+            if (!canvas) {
+              throw new Error('Canvas not available for screenshot')
+            }
+            nv.drawScene()
+            const dataUrl = canvas.toDataURL('image/png')
+            const saveResult = await window.electron.headlessSaveOutput(dataUrl, options.output)
+            if (!saveResult.success) {
+              throw new Error(`Failed to save PNG: ${saveResult.error}`)
+            }
+          } else if (ext === 'nvd') {
+            // Save as NVDocument
+            const jsonStr = JSON.stringify(nv.document.json())
+            const saveResult = await window.electron.headlessSaveOutput(jsonStr, options.output)
+            if (!saveResult.success) {
+              throw new Error(`Failed to save NVD: ${saveResult.error}`)
+            }
+          } else {
+            throw new Error(`Unsupported output format: ${ext}`)
+          }
+        }
+
+        console.log('[Headless] Workflow completed successfully')
+        window.electron.headlessComplete()
+      } catch (error) {
+        console.error('[Headless] Workflow failed:', error)
+        window.electron.headlessError(error instanceof Error ? error.message : String(error))
+      }
+    }
+
+    // Listen for headless start event
+    window.electron.onHeadlessStart(() => {
+      runHeadlessWorkflow()
+    })
+  }, [])
+
   // Clear scene command
   useEffect((): (() => void) => {
     const handleClear = (): void => {

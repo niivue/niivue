@@ -25,6 +25,7 @@ interface WizardState {
   category: ModelCategory
   outputClasses: number
   labelsPath: string
+  previewPath: string
   // Inference settings
   inputShape: [number, number, number, number]
   enableSeqConv: boolean
@@ -48,6 +49,7 @@ const defaultState: WizardState = {
   category: 'Tissue Segmentation',
   outputClasses: 3,
   labelsPath: '',
+  previewPath: '',
   inputShape: [1, 256, 256, 256],
   enableSeqConv: false,
   cropPadding: 18,
@@ -119,7 +121,8 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
             ? `${result.folderPath}/${settings.files.labels}`
             : result.hasLabels
               ? `${result.folderPath}/labels.json`
-              : ''
+              : '',
+          previewPath: settings.files?.preview ? `${result.folderPath}/${settings.files.preview}` : ''
         }))
       } else {
         // No settings.json, just set basic folder info
@@ -148,6 +151,7 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
       outputClasses: state.outputClasses,
       modelPath: state.sourceType === 'folder' ? state.folderPath : '',
       labelsPath: state.labelsPath || undefined,
+      previewPath: state.previewPath || undefined,
       estimatedTimeSeconds: state.estimatedTimeSeconds,
       memoryRequirementMB: state.memoryRequirementMB,
       enableSeqConv: state.enableSeqConv,

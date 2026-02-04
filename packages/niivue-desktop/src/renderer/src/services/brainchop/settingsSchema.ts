@@ -23,6 +23,7 @@ export interface ModelSettings {
   }
   files?: {
     labels?: string // relative path to labels.json
+    preview?: string // relative path to preview.png
   }
 }
 
@@ -79,7 +80,7 @@ export function parseModelSettings(json: unknown): ModelSettings | null {
       memoryRequirementMB:
         typeof performance.memoryRequirementMB === 'number' ? performance.memoryRequirementMB : 800
     },
-    files: obj.files as { labels?: string } | undefined
+    files: obj.files as { labels?: string; preview?: string } | undefined
   }
 }
 
