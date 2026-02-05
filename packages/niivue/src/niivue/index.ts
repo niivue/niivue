@@ -3173,7 +3173,7 @@ export class Niivue {
             }
             // Load initial chunks now (with callback registered).
             // Not awaited — progressive rendering via onChunksUpdated handles GPU updates.
-            volume.zarrHelper.loadInitialChunks()
+            volume.zarrHelper.loadInitialChunks().catch((err) => log.error('Failed to load initial zarr chunks', err))
         }
         log.debug('loaded volume', volume.name)
         log.debug(volume)
