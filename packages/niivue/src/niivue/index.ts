@@ -258,6 +258,8 @@ export class Niivue {
 
     readyForSync = false
 
+    private _skipDragInDraw = false
+
     // UI Data
     uiData: UIData = {
         mousedown: false,
@@ -1528,6 +1530,9 @@ export class Niivue {
         }
         if (this.uiData.isDragging) {
             this.uiData.isDragging = false
+            for (const vol of this.getZarrVolumes()) {
+                vol.zarrHelper?.endDrag()
+            }
 
             // Handle angle measurement workflow
             if (currentDragMode === DRAG_MODE.angle) {
@@ -1713,6 +1718,9 @@ export class Niivue {
         // Handle drag completion
         if (this.uiData.isDragging) {
             this.uiData.isDragging = false
+            for (const vol of this.getZarrVolumes()) {
+                vol.zarrHelper?.endDrag()
+            }
             // if drag mode is contrast, and the user double taps and drags...
             if (this.getCurrentDragMode() === DRAG_MODE.contrast) {
                 this.calculateNewRange()
@@ -1791,6 +1799,9 @@ export class Niivue {
         if (this.uiData.isDragging || this.uiData.mousedown) {
             log.debug('Mouse left canvas during drag, resetting drag state.')
             this.uiData.isDragging = false
+            for (const vol of this.getZarrVolumes()) {
+                vol.zarrHelper?.endDrag()
+            }
             const resetState = MouseController.createResetButtonState()
             this.uiData.mouseButtonLeftDown = resetState.mouseButtonLeftDown
             this.uiData.mouseButtonCenterDown = resetState.mouseButtonCenterDown
@@ -3156,7 +3167,9 @@ export class Niivue {
         if (volume.zarrHelper) {
             volume.zarrHelper.onChunksUpdated = (): void => {
                 this.updateGLVolume()
+                this._skipDragInDraw = true
                 this.drawScene()
+                this._skipDragInDraw = false
             }
             // Load initial chunks now (with callback registered).
             // Not awaited — progressive rendering via onChunksUpdated handles GPU updates.
@@ -8017,7 +8030,9 @@ export class Niivue {
             if (panPromises.length > 0) {
                 Promise.all(panPromises)
                     .then(() => {
+                        this._skipDragInDraw = true
                         this.drawScene()
+                        this._skipDragInDraw = false
                     })
                     .catch((err) => {
                         log.error('Failed to pan Zarr:', err)
@@ -11805,7 +11820,7 @@ export class Niivue {
                 this.dragForSlicer3D([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
                 return
             }
-            if (this.getCurrentDragMode() === DRAG_MODE.pan) {
+            if (this.getCurrentDragMode() === DRAG_MODE.pan && !this._skipDragInDraw) {
                 this.dragForPanZoom([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
                 return
             }

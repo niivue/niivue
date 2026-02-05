@@ -511,6 +511,10 @@ export class NVZarrHelper {
         this.centerAtDragStart = { x: this.centerX, y: this.centerY, z: this.centerZ }
     }
 
+    endDrag(): void {
+        this.centerAtDragStart = null
+    }
+
     async panBy(dx: number, dy: number, dz: number = 0): Promise<void> {
         this.centerX -= dx
         this.centerY -= dy
@@ -521,12 +525,24 @@ export class NVZarrHelper {
     }
 
     async panTo(newCenterX: number, newCenterY: number, newCenterZ?: number): Promise<void> {
+        const prevX = this.centerX
+        const prevY = this.centerY
+        const prevZ = this.centerZ
+
         this.centerX = newCenterX
         this.centerY = newCenterY
         if (newCenterZ !== undefined) {
             this.centerZ = newCenterZ
         }
         this.clampCenter()
+
+        // Skip if clamped position is same as before (prevents infinite loop at boundaries)
+        if (Math.abs(this.centerX - prevX) < 0.001 &&
+            Math.abs(this.centerY - prevY) < 0.001 &&
+            Math.abs(this.centerZ - prevZ) < 0.001) {
+            return
+        }
+
         this.updateAffine()
         await this.updateVolume()
     }
