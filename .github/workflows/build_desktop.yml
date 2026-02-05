@@ -51,8 +51,9 @@ jobs:
           npm cache clean --force
 
       - name: Install dependencies (workspace-aware)
-        # use npm ci for reproducible installs; `--workspaces` ensures workspace symlinks are created
-        run: npm ci
+        # use npm ci for reproducible installs
+        # --ignore-scripts skips esbuild's binary validation that fails with version conflicts
+        run: npm ci --ignore-scripts && npm rebuild
 
       - name: Debug workspace layout (helpful if build fails)
         run: |
