@@ -291,6 +291,7 @@
         </select>
 
         <button id="loadBtn">Load Zarr</button>
+        <button id="toggleAffineBtn" style="display:none;background:#222;border:1px solid #444;color:#eee;padding:8px 12px;cursor:pointer;border-radius:4px;font-size:13px;">Registration</button>
 
         <div id="navControls">
           <span class="hint">Drag to pan</span>
@@ -387,6 +388,14 @@
   const affineResetBtn = document.getElementById('affineResetBtn')
   const affineSaveBtn = document.getElementById('affineSaveBtn')
   const affineLoadBtn = document.getElementById('affineLoadBtn')
+  const toggleAffineBtn = document.getElementById('toggleAffineBtn')
+
+  toggleAffineBtn.addEventListener('click', () => {
+    const visible = affineControls.style.display === 'block'
+    affineControls.style.display = visible ? 'none' : 'block'
+    toggleAffineBtn.textContent = visible ? 'Registration' : 'Hide Registration'
+    nv.resizeListener()
+  })
 
   // Affine slider elements
   const sliders = {
@@ -711,9 +720,11 @@
       // await nv.addVolumeFromUrl({ url: "../demos/images/mni152.nii.gz", opacity: 0.4,colormap: "red" })
       // nv.setColormap(nv.volumes[0].id, 'gray')
 
-      // Show navigation and affine controls
+      // Show navigation controls and registration toggle
       navControls.style.display = 'flex'
-      affineControls.style.display = 'block'
+      toggleAffineBtn.style.display = 'inline-block'
+      affineControls.style.display = 'none'
+      toggleAffineBtn.textContent = 'Registration'
       resetAffineSliders()
 
       // Create level selectors for all zarr volumes
@@ -739,6 +750,7 @@
       navControls.style.display = 'none'
       infoPanel.style.display = 'none'
       affineControls.style.display = 'none'
+      toggleAffineBtn.style.display = 'none'
     } finally {
       loadBtn.disabled = false
       loadBtn.textContent = 'Load Zarr'
