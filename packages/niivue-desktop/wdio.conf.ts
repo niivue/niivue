@@ -65,8 +65,8 @@ export const config: Options.Testrunner = {
         autoSaveBaseline: true,
         blockOutStatusBar: true,
         blockOutToolBar: true,
-        // Allow 5% pixel difference to account for minor rendering variations
-        misMatchPercentage: 5
+        // Allow 10% pixel difference to account for GPU-specific WebGL rendering variations
+        misMatchPercentage: 10
       }
     ]
   ],

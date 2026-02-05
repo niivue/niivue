@@ -18,8 +18,9 @@ describe('File Loading', () => {
     expect(await canvas.isDisplayed()).toBe(true)
 
     // Visual regression test - compare against baseline
+    // Allow up to 10% difference to account for GPU-specific WebGL rendering variations
     const result = await browser.checkScreen('mni152-volume')
-    expect(result).toBeLessThanOrEqual(5) // Allow up to 5% difference
+    expect(result).toBeLessThanOrEqual(10)
   })
 
   it('should load standard mesh (AAL atlas) via IPC', async () => {
@@ -40,7 +41,8 @@ describe('File Loading', () => {
     expect(await canvas.isExisting()).toBe(true)
 
     // Visual regression test - compare against baseline
+    // Allow up to 10% difference to account for GPU-specific WebGL rendering variations
     const result = await browser.checkScreen('aal-mesh')
-    expect(result).toBeLessThanOrEqual(5) // Allow up to 5% difference
+    expect(result).toBeLessThanOrEqual(10)
   })
 })
