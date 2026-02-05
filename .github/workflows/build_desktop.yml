@@ -106,13 +106,13 @@ jobs:
         run: npm run -w packages/niivue-desktop test:e2e
 
       - name: Upload E2E visual regression artifacts
-        if: failure() && matrix.os == 'macos-latest'
+        if: always() && matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: visual-regression-diff
+          name: visual-regression-artifacts
           path: |
-            packages/niivue-desktop/test/screenshots/actual/
-            packages/niivue-desktop/test/screenshots/diff/
+            packages/niivue-desktop/test/baselines/
+            packages/niivue-desktop/test/screenshots/
           retention-days: 7
 
       - name: build-mac
