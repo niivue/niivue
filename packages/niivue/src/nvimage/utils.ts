@@ -204,6 +204,12 @@ export type ImageFromUrlOptions = {
     isManifest?: boolean
     urlImgData?: string
     buffer?: ArrayBuffer
+    // Zarr chunked loading options
+    zarrLevel?: number
+    zarrMaxVolumeSize?: number
+    zarrChannel?: number
+    /** Convert OME spatial units to millimeters for NIfTI compatibility (default: true) */
+    zarrConvertUnits?: boolean
 }
 
 // TODO centralize shared options
