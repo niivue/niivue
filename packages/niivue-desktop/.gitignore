@@ -13,3 +13,6 @@ out
 
 # downloaded niimath binaries
 native-binaries/
+
+# e2e test screenshots (uploaded as CI artifacts instead)
+test/screenshots/*.png
