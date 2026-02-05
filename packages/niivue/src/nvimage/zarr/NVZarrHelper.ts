@@ -249,9 +249,9 @@ export class NVZarrHelper {
         helper.updateLevelInfo()
 
         // Center on the level
-        helper.centerX = helper.levelDims.width / 2
-        helper.centerY = helper.levelDims.height / 2
-        helper.centerZ = helper.levelDims.depth / 2
+        helper.centerX = helper.volumeDims.width / 2
+        helper.centerY = helper.volumeDims.height / 2
+        helper.centerZ = helper.volumeDims.depth / 2
 
         // Configure the host NVImage
         helper.configureHostImage()

@@ -12,30 +12,40 @@
         display: flex;
         gap: 16px;
         align-items: center;
-        padding: 8px;
-        background: #2a2a2a;
+        padding: 10px 12px;
+        background: #111;
         flex-wrap: wrap;
+        border-bottom: 1px solid #222;
       }
       #controls label {
-        color: #ccc;
+        color: #999;
+        font-size: 13px;
       }
       #controls input,
       #controls select {
-        padding: 4px 8px;
+        padding: 5px 8px;
+        background: #222;
+        color: #eee;
+        border: 1px solid #444;
+        border-radius: 3px;
       }
       #loadBtn {
-        background: #4a9eff;
+        background: #fff;
         border: none;
-        color: white;
+        color: #000;
         padding: 8px 16px;
         cursor: pointer;
         border-radius: 4px;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.01em;
       }
       #loadBtn:hover {
-        background: #3a8eef;
+        background: #ddd;
       }
       #loadBtn:disabled {
-        background: #666;
+        background: #555;
+        color: #888;
         cursor: not-allowed;
       }
       #navControls {
@@ -44,15 +54,15 @@
         align-items: center;
       }
       #navControls button {
-        background: #444;
-        border: 1px solid #666;
-        color: white;
+        background: #222;
+        border: 1px solid #444;
+        color: #eee;
         padding: 4px 12px;
         cursor: pointer;
-        border-radius: 4px;
+        border-radius: 3px;
       }
       #navControls button:hover {
-        background: #555;
+        background: #333;
       }
       #levelSelectorsContainer {
         display: flex;
@@ -64,38 +74,44 @@
         display: flex;
         gap: 4px;
         align-items: center;
-        background: #333;
+        background: #1a1a1a;
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: 3px;
+        border: 1px solid #333;
       }
       .level-selector label {
-        color: #aaa;
+        color: #777;
         font-size: 11px;
       }
       .level-selector select {
         padding: 2px 4px;
+        background: #222;
+        color: #eee;
+        border: 1px solid #444;
+        border-radius: 3px;
       }
       #infoPanel {
-        padding: 8px;
-        background: #1a1a2e;
-        color: #aaa;
+        padding: 8px 12px;
+        background: #0a0a0a;
+        color: #999;
         font-family: monospace;
         font-size: 12px;
         display: none;
+        border-bottom: 1px solid #222;
       }
       .hint {
-        color: #888;
+        color: #666;
         font-size: 11px;
         font-style: italic;
       }
       #affineControls {
         display: none;
         padding: 8px 12px;
-        background: #1e1e2e;
-        border-top: 1px solid #333;
+        background: #0d0d0d;
+        border-top: 1px solid #222;
       }
       #affineControls h3 {
-        color: #ccc;
+        color: #bbb;
         margin: 0 0 8px 0;
         font-size: 13px;
         display: flex;
@@ -103,22 +119,26 @@
         gap: 12px;
       }
       #affineControls h3 button {
-        background: #c44;
-        border: none;
-        color: white;
+        background: #333;
+        border: 1px solid #555;
+        color: #eee;
         padding: 2px 10px;
         cursor: pointer;
         border-radius: 3px;
         font-size: 11px;
       }
       #affineControls h3 button:hover {
-        background: #d55;
+        background: #444;
       }
       #affineSaveBtn, #affineLoadBtn {
-        background: #4a9eff !important;
+        background: #fff !important;
+        color: #000 !important;
+        border-color: #fff !important;
+        font-weight: 600;
       }
       #affineSaveBtn:hover, #affineLoadBtn:hover {
-        background: #3a8eef !important;
+        background: #ddd !important;
+        border-color: #ddd !important;
       }
       .affine-group {
         display: flex;
@@ -127,7 +147,7 @@
         margin-bottom: 4px;
       }
       .affine-group label {
-        color: #999;
+        color: #777;
         font-size: 11px;
         font-family: monospace;
       }
@@ -140,7 +160,7 @@
         width: 120px;
       }
       .affine-slider .val {
-        color: #6cf;
+        color: #ccc;
         font-family: monospace;
         font-size: 11px;
         min-width: 50px;
@@ -399,7 +419,6 @@
     multiplanarLayout: MULTIPLANAR_TYPE.GRID,
     // isSliceMM: true
   })
-
   await nv.attachToCanvas(document.getElementById('gl1'))
   nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
   window.nv = nv
@@ -507,46 +526,50 @@
 
     try {
       await nv.loadVolumes([
-        // mni zarr (LSM simulated)
-        {
-          // url: storeUrl,
-          url: "http://localhost:8080/mni152.ome.zarr",
-          zarrLevel: level,
-          zarrMaxVolumeSize: maxVolSize,
-          opacity: 1.0,
-          colormap: "grey"
-        },
         // mni nifti
-        { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+        // { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+
+        // mni zarr (LSM simulated)
+        // {
+        //   // url: storeUrl,
+        //   url: "http://localhost:8080/K_HE_2_multiscale.zarr",
+        //   zarrLevel: level,
+        //   zarrMaxVolumeSize: maxVolSize,
+        //   opacity: 1.0,
+        //   channel:1,
+        //   colormap: "gray",
+        //   cal_min:150,
+        //   cal_max: 261
+        // },
         // mni WSI image
-        {
-          // url: storeUrl,
-          url: "http://localhost:8080/mni152_axial.ome.zarr",
-          // url: "http://localhost:3000/K_HE_2_ome.zarr",
-          // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
-          zarrLevel: level,
-          zarrMaxVolumeSize: maxVolSize,
-          channel: 0,
-          opacity: 1.0,
-          colormap: "red"
-        },
+        // {
+        //   // url: storeUrl,
+        //   url: "http://localhost:8080/mni152_axial.ome.zarr",
+        //   // url: "http://localhost:3000/K_HE_2_ome.zarr",
+        //   // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
+        //   zarrLevel: level,
+        //   zarrMaxVolumeSize: maxVolSize,
+        //   channel: 0,
+        //   opacity: 1.0,
+        //   colormap: "red"
+        // },
         // {
         //   url: "http://localhost:3000/export/nifti?zarr_path=K_HE_2_ome.zarr&scale=virtual_scale1&c=0&z=0&y=0&x=0&xdim=128&ydim=128&zdim=128",
         //   name: "nifti.nii.gz"
         // }
         // LSM image
-        // {
-        //   // url: storeUrl,
-        //   // url: "http://localhost:8080/mni152_axial.ome.zarr",
-        //   url: "http://localhost:3000/K_HE_2_ome.zarr",
-        //   // url: "https://dandiarchive.s3.amazonaws.com/zarr/7723d02f-1f71-4553-a7b0-47bda1ae8b42",
-        //   // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
-        //   // url: "http://localhost:3000/test-image.zarr",
-        //   zarrLevel: level,
-        //   zarrMaxVolumeSize: maxVolSize,
-        //   opacity: 1.0,
-        //   colormap: "gray"
-        // },
+        {
+          url: storeUrl,
+          // url: "http://localhost:8080/mni152_axial.ome.zarr",
+          // url: "http://localhost:3000/K_HE_2_ome.zarr",
+          // url: "https://dandiarchive.s3.amazonaws.com/zarr/7723d02f-1f71-4553-a7b0-47bda1ae8b42",
+          // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
+          // url: "http://localhost:3000/test-image.zarr",
+          zarrLevel: level,
+          zarrMaxVolumeSize: maxVolSize,
+          opacity: 1.0,
+          colormap: "gray"
+        },
         
         
       ])
