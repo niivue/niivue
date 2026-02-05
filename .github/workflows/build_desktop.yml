@@ -56,7 +56,9 @@ jobs:
 
       - name: Install dependencies (workspace-aware)
         # ESBUILD_BINARY_PATH env var skips esbuild's binary version validation
-        run: npm ci
+        run: |
+          npm ci
+          npm run -w packages/niivue-desktop postinstall
 
       - name: Debug workspace layout (helpful if build fails)
         run: |
