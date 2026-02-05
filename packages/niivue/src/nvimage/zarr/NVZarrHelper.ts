@@ -537,9 +537,7 @@ export class NVZarrHelper {
         this.clampCenter()
 
         // Skip if clamped position is same as before (prevents infinite loop at boundaries)
-        if (Math.abs(this.centerX - prevX) < 0.001 &&
-            Math.abs(this.centerY - prevY) < 0.001 &&
-            Math.abs(this.centerZ - prevZ) < 0.001) {
+        if (Math.abs(this.centerX - prevX) < 0.001 && Math.abs(this.centerY - prevY) < 0.001 && Math.abs(this.centerZ - prevZ) < 0.001) {
             return
         }
 
