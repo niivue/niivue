@@ -3150,12 +3150,17 @@ export class Niivue {
         this.volumes = result.volumes
         this.setVolume(volume, result.index)
         this.onImageLoaded(volume)
-        // Hook zarr chunk updates to trigger GL refresh
+        // Hook zarr chunk updates to trigger GL refresh.
+        // Register the callback BEFORE loading initial chunks so the first
+        // batch of data triggers a proper GPU upload and render.
         if (volume.zarrHelper) {
             volume.zarrHelper.onChunksUpdated = (): void => {
                 this.updateGLVolume()
                 this.drawScene()
             }
+            // Load initial chunks now (with callback registered).
+            // Not awaited — progressive rendering via onChunksUpdated handles GPU updates.
+            volume.zarrHelper.loadInitialChunks()
         }
         log.debug('loaded volume', volume.name)
         log.debug(volume)

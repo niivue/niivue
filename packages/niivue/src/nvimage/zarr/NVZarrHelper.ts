@@ -95,9 +95,11 @@ function createTypedVoxelArray(datatypeCode: number, size: number): TypedVoxelAr
         case NiiDataType.DT_UINT16:
             return new Uint16Array(size)
         case NiiDataType.DT_INT16:
-        case NiiDataType.DT_INT32:
             return new Int16Array(size)
+        case NiiDataType.DT_INT32:
+            return new Int32Array(size)
         case NiiDataType.DT_UINT32:
+            return new Uint32Array(size)
         case NiiDataType.DT_FLOAT32:
             return new Float32Array(size)
         case NiiDataType.DT_FLOAT64:
@@ -256,10 +258,14 @@ export class NVZarrHelper {
         // Configure the host NVImage
         helper.configureHostImage()
 
-        // Load initial chunks
-        await helper.updateVolume()
+        // Don't load chunks here — loadInitialChunks() must be called after
+        // the onChunksUpdated callback is registered (see addVolume in Niivue).
 
         return helper
+    }
+
+    async loadInitialChunks(): Promise<void> {
+        await this.updateVolume()
     }
 
     private updateLevelInfo(): void {
@@ -352,12 +358,12 @@ export class NVZarrHelper {
         // Store original affine so resetVolumeAffine() works on zarr volumes
         img.originalAffine = copyAffine(hdr.affine)
 
-        img.cal_min = NaN
-        img.cal_max = NaN
-        img.robust_min = NaN
-        img.robust_max = NaN
-        img.global_min = NaN
-        img.global_max = NaN
+        img.cal_min = 0
+        img.cal_max = 0
+        img.robust_min = 0
+        img.robust_max = 0
+        img.global_min = 0
+        img.global_max = 0
     }
 
     /** Get unit-converted voxel scales */

@@ -22,7 +22,7 @@ import { NVZarrHelper } from '@/nvimage/zarr/NVZarrHelper'
 import { AffineTransform, copyAffine, createTransformMatrix, multiplyAffine } from '@/nvimage/affineUtils'
 
 export * from '@/nvimage/utils'
-export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
+export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array | Int32Array | Uint32Array
 
 /**
  * a NVImage encapsulates some image data and provides methods to query and operate on images
