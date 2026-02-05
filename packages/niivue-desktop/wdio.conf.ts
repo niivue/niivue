@@ -35,7 +35,12 @@ export const config: Options.Testrunner = {
           '--enable-webgl',
           '--ignore-gpu-blocklist',
           '--enable-gpu-rasterization'
-        ]
+        ],
+        // Fixed window size for consistent visual regression tests
+        browserWindowOptions: {
+          width: 1280,
+          height: 800
+        }
       }
     }
   ],
