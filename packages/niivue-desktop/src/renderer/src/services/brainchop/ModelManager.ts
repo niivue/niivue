@@ -549,7 +549,7 @@ export class ModelManager {
   /**
    * Download a remote model to local storage
    */
-  async downloadModel(modelId: string, onProgress?: (progress: number) => void): Promise<void> {
+  async downloadModel(modelId: string, _onProgress?: (progress: number) => void): Promise<void> {
     const modelInfo = this.getModelInfo(modelId)
     if (!modelInfo) throw new Error(`Model not found: ${modelId}`)
     if (!modelInfo.remoteUrl) throw new Error(`Model ${modelId} has no remote URL`)

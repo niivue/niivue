@@ -14,6 +14,10 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-22.04]
 
+    env:
+      # Skip esbuild binary validation to avoid version conflicts between nested packages
+      ESBUILD_BINARY_PATH: esbuild
+
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
@@ -24,7 +28,7 @@ jobs:
           node-version: 24
 
       - name: Install Linux dependencies for Electron
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -51,9 +55,8 @@ jobs:
           npm cache clean --force
 
       - name: Install dependencies (workspace-aware)
-        # use npm ci for reproducible installs
-        # --ignore-scripts skips esbuild's binary validation that fails with version conflicts
-        run: npm ci --ignore-scripts && npm rebuild
+        # ESBUILD_BINARY_PATH env var skips esbuild's binary version validation
+        run: npm ci
 
       - name: Debug workspace layout (helpful if build fails)
         run: |

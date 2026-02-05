@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs'
-import type { InferenceOptions, ModelInfo } from './types.js'
+import type { InferenceOptions } from './types.js'
 
 /**
  * Inference engine following brainchop's reference implementation.
@@ -90,7 +90,7 @@ export class InferenceEngine {
         let nextTensor: tf.Tensor
         const layer = model.layers[i]
 
-        if (modelInfo.enableSeqConv && layer.activation?.getClassName() === 'linear') {
+        if (modelInfo.enableSeqConv && (layer as any).activation?.getClassName() === 'linear') {
           const weights = layer.getWeights()
           const convFn = layer.name.endsWith('_gn')
             ? gnConvByOutputChannelAndInputSlicing
