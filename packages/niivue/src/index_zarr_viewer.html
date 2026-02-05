@@ -272,6 +272,24 @@
           <option value="5">5</option>
         </select>
 
+        <label for="colormapSelect">Colormap:</label>
+        <select id="colormapSelect"></select>
+
+        <label for="primaryDrag">Left Drag:</label>
+        <select id="primaryDrag">
+          <option value="crosshair">crosshair</option>
+          <option value="contrast">brightness/contrast</option>
+        </select>
+
+        <label for="secondaryDrag">Right Drag:</label>
+        <select id="secondaryDrag">
+          <option value="contrast">contrast</option>
+          <option value="pan" selected>pan</option>
+          <option value="measurement">measurement</option>
+          <option value="slicer3D">slicer3D</option>
+          <option value="none">none</option>
+        </select>
+
         <button id="loadBtn">Load Zarr</button>
 
         <div id="navControls">
@@ -510,6 +528,34 @@
   await nv.attachToCanvas(document.getElementById('gl1'))
   nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
   window.nv = nv
+
+  // Populate colormap select
+  const colormapSelect = document.getElementById('colormapSelect')
+  const maps = nv.colormaps()
+  for (const name of maps) {
+    const opt = document.createElement('option')
+    opt.value = name
+    opt.textContent = name
+    if (name === 'gray') opt.selected = true
+    colormapSelect.appendChild(opt)
+  }
+  colormapSelect.addEventListener('change', () => {
+    if (nv.volumes.length > 0) {
+      nv.setColormap(nv.volumes[0].id, colormapSelect.value)
+    }
+  })
+
+  // Primary drag (left mouse button)
+  document.getElementById('primaryDrag').addEventListener('change', (e) => {
+    nv.opts.dragModePrimary = e.target.value === 'contrast' ? 1 : 8
+  })
+
+  // Secondary drag (right mouse button)
+  document.getElementById('secondaryDrag').addEventListener('change', (e) => {
+    if (nv.dragModes[e.target.value] !== undefined) {
+      nv.opts.dragMode = nv.dragModes[e.target.value]
+    }
+  })
 
   function updateInfoPanel() {
     const helper = nv.getZarrVolume()?.zarrHelper
