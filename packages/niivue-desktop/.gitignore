@@ -14,5 +14,6 @@ out
 # downloaded niimath binaries
 native-binaries/
 
-# e2e test screenshots (uploaded as CI artifacts instead)
-test/screenshots/*.png
+# e2e test screenshots - actual/diff images (uploaded as CI artifacts)
+# Note: test/baselines/ is tracked in git (baseline images for visual regression)
+test/screenshots/

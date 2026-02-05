@@ -46,7 +46,23 @@ export const config: Options.Testrunner = {
   connectionRetryTimeout: 120000,
   connectionRetryCount: 3,
 
-  services: ['electron'],
+  services: [
+    'electron',
+    [
+      'visual',
+      {
+        baselineFolder: path.join(__dirname, 'test/baselines'),
+        formatImageName: '{tag}',
+        screenshotPath: path.join(__dirname, 'test/screenshots'),
+        savePerInstance: true,
+        autoSaveBaseline: true,
+        blockOutStatusBar: true,
+        blockOutToolBar: true,
+        // Allow 5% pixel difference to account for minor rendering variations
+        misMatchPercentage: 5
+      }
+    ]
+  ],
   framework: 'mocha',
   reporters: ['spec'],
 

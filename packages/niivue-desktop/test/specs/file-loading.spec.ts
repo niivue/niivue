@@ -1,5 +1,3 @@
-const screenshotsDir = './test/screenshots'
-
 describe('File Loading', () => {
   it('should load standard MNI152 volume via IPC', async () => {
     // Send loadStandard event to renderer
@@ -19,8 +17,9 @@ describe('File Loading', () => {
     await canvas.waitForDisplayed({ timeout: 5000 })
     expect(await canvas.isDisplayed()).toBe(true)
 
-    // Capture screenshot after loading volume
-    await browser.saveScreenshot(`${screenshotsDir}/mni152-volume.png`)
+    // Visual regression test - compare against baseline
+    const result = await browser.checkScreen('mni152-volume')
+    expect(result).toBeLessThanOrEqual(5) // Allow up to 5% difference
   })
 
   it('should load standard mesh (AAL atlas) via IPC', async () => {
@@ -40,7 +39,8 @@ describe('File Loading', () => {
     await canvas.waitForExist({ timeout: 5000 })
     expect(await canvas.isExisting()).toBe(true)
 
-    // Capture screenshot after loading mesh
-    await browser.saveScreenshot(`${screenshotsDir}/aal-mesh.png`)
+    // Visual regression test - compare against baseline
+    const result = await browser.checkScreen('aal-mesh')
+    expect(result).toBeLessThanOrEqual(5) // Allow up to 5% difference
   })
 })
