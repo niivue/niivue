@@ -34,7 +34,9 @@ export const config: Options.Testrunner = {
           '--no-sandbox',
           '--enable-webgl',
           '--ignore-gpu-blocklist',
-          '--enable-gpu-rasterization'
+          '--enable-gpu-rasterization',
+          // Force consistent DPI for visual regression (matches CI environment)
+          '--force-device-scale-factor=1'
         ],
         // Fixed window size for consistent visual regression tests
         browserWindowOptions: {
