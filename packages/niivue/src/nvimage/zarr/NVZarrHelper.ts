@@ -593,6 +593,77 @@ export class NVZarrHelper {
         return { ...this.volumeDims }
     }
 
+    /**
+     * Convert physical (mm) coordinates back to real zarr level pixel coordinates.
+     * Inverts the affine: levelPixel = (mm - OME_translation) / scale
+     */
+    mmToLevelCoords(
+        mmX: number,
+        mmY: number,
+        mmZ: number
+    ): {
+        width: number
+        height: number
+        depth: number
+        level: number
+        levelDims: { width: number; height: number; depth: number }
+    } {
+        const { scaleW, scaleH, scaleD } = this.getConvertedScales()
+        const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames
+
+        // Map physical mm (x/y/z) to OME spatial dimensions (width/height/depth)
+        // The affine maps NIfTI cols to physical rows by axis name:
+        //   col 0 (width)  → axis[-1], col 1 (height) → axis[-2], col 2 (depth) → axis[-3]
+        // We need the reverse: given physical x/y/z, find which OME dim it maps to
+        const mmByAxis: Record<string, number> = { x: mmX, y: mmY, z: mmZ }
+
+        let levelW = 0
+        let levelH = 0
+        let levelD = 0
+
+        if (axisNames.length >= 2) {
+            // Width maps to last spatial axis name
+            const wAxisName = axisNames[axisNames.length - 1]
+            const hAxisName = axisNames[axisNames.length - 2]
+            const dAxisName = axisNames.length >= 3 ? axisNames[axisNames.length - 3] : 'z'
+
+            const mmW = mmByAxis[wAxisName] ?? mmX
+            const mmH = mmByAxis[hAxisName] ?? mmY
+            const mmD = mmByAxis[dAxisName] ?? mmZ
+
+            if (this.hasTranslations) {
+                const { transW, transH, transD } = this.getConvertedTranslations()
+                levelW = scaleW !== 0 ? (mmW - transW) / scaleW : 0
+                levelH = scaleH !== 0 ? (mmH - transH) / scaleH : 0
+                levelD = scaleD !== 0 ? (mmD - transD) / scaleD : 0
+            } else {
+                levelW = scaleW !== 0 ? mmW / scaleW : 0
+                levelH = scaleH !== 0 ? mmH / scaleH : 0
+                levelD = scaleD !== 0 ? mmD / scaleD : 0
+            }
+        } else {
+            // Fallback: simple diagonal
+            if (this.hasTranslations) {
+                const { transW, transH, transD } = this.getConvertedTranslations()
+                levelW = scaleW !== 0 ? (mmX - transW) / scaleW : 0
+                levelH = scaleH !== 0 ? (mmY - transH) / scaleH : 0
+                levelD = scaleD !== 0 ? (mmZ - transD) / scaleD : 0
+            } else {
+                levelW = scaleW !== 0 ? mmX / scaleW : 0
+                levelH = scaleH !== 0 ? mmY / scaleH : 0
+                levelD = scaleD !== 0 ? mmZ / scaleD : 0
+            }
+        }
+
+        return {
+            width: Math.round(levelW),
+            height: Math.round(levelH),
+            depth: Math.round(levelD),
+            level: this.pyramidLevel,
+            levelDims: { ...this.levelDims }
+        }
+    }
+
     private clampCenter(): void {
         const halfW = this.volumeDims.width / 2
         const halfH = this.volumeDims.height / 2

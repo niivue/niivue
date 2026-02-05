@@ -538,6 +538,23 @@
   nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
   window.nv = nv
 
+  nv.onLocationChange = (data) => {
+    let text = data.string
+    const zarrVolumes = nv.getZarrVolumes()
+    for (const vol of zarrVolumes) {
+      const helper = vol.zarrHelper
+      if (!helper) continue
+      const coords = helper.mmToLevelCoords(data.mm[0], data.mm[1], data.mm[2])
+      const dims = coords.levelDims
+      const inBounds = coords.width >= 0 && coords.width < dims.width &&
+                       coords.height >= 0 && coords.height < dims.height &&
+                       coords.depth >= 0 && coords.depth < dims.depth
+      const coordStr = `L${coords.level}: ${coords.width}, ${coords.height}, ${coords.depth} / ${dims.width}x${dims.height}x${dims.depth}`
+      text += `  [${coordStr}${inBounds ? '' : ' OOB'}]`
+    }
+    statusBar.textContent = text
+  }
+
   // Populate colormap select
   const colormapSelect = document.getElementById('colormapSelect')
   const maps = nv.colormaps()
