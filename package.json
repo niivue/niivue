@@ -54,6 +54,7 @@
         "electron": "31.0.2"
     },
     "overrides": {
-        "@types/responselike": "1.0.0"
+        "@types/responselike": "1.0.0",
+        "esbuild": "^0.25.0"
     }
 }
