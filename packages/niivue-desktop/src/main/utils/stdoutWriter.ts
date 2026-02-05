@@ -1,8 +1,20 @@
 /**
- * Write base64-encoded data to stdout
+ * Write base64-encoded data to stdout with proper backpressure handling
+ * For large data, we need to wait for drain events to avoid truncation
  */
-export function writeBase64ToStdout(base64Data: string): void {
-  process.stdout.write(base64Data)
+export async function writeBase64ToStdout(base64Data: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Write synchronously using fs to ensure all data is written
+    // process.stdout.write can return false for large data and cause truncation
+    const ok = process.stdout.write(base64Data, (err) => {
+      if (err) reject(err)
+      else resolve()
+    })
+    // If write returns false, we need to wait for drain
+    if (!ok) {
+      process.stdout.once('drain', resolve)
+    }
+  })
 }
 
 /**

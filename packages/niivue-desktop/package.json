@@ -38,7 +38,8 @@
     "build-release:win": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:win",
     "build-release:mac": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:mac",
     "build-release:linux": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:linux",
-    "test:e2e": "env -u ELECTRON_RUN_AS_NODE wdio run wdio.conf.ts"
+    "test:e2e": "env -u ELECTRON_RUN_AS_NODE wdio run wdio.conf.ts",
+    "test:cli": "vitest run --config vitest.cli.config.ts"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -91,6 +92,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.5.2",
     "vite": "^7.2.7",
+    "vitest": "^3.1.3",
     "wdio-electron-service": "^9.2.1"
   }
 }

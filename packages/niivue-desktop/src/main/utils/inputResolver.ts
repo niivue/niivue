@@ -102,11 +102,15 @@ export async function resolveInput(input: string, cwd: string): Promise<Resolved
   if (isStdin(input)) {
     process.stderr.write('[niivue] Reading from stdin...\n')
     const data = await readStdin()
+    // Detect format from magic bytes - gzip starts with 0x1f 0x8b
+    const buffer = Buffer.from(data, 'base64')
+    const isGzip = buffer.length >= 2 && buffer[0] === 0x1f && buffer[1] === 0x8b
+    const filename = isGzip ? 'stdin.nii.gz' : 'stdin.nii'
     return {
       type: 'stdin',
       originalPath: '-',
       base64: data,
-      filename: 'stdin.nii.gz'
+      filename
     }
   }
 

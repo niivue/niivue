@@ -284,6 +284,16 @@ if (cliOptions.help) {
 // Determine if running in headless mode (any subcommand = headless)
 const isHeadless = cliOptions.subcommand !== null
 
+// In headless mode, redirect console.log to stderr to keep stdout clean for data output
+if (isHeadless) {
+  console.log = (...args: unknown[]) => {
+    process.stderr.write(args.map(String).join(' ') + '\n')
+  }
+  // Also redirect console.info and console.debug
+  console.info = console.log
+  console.debug = console.log
+}
+
 let mainWindow: BrowserWindow | null = null // Global variable to store the window instance
 if (process.platform === 'darwin') {
   app.setName('NiiVue Desktop')
@@ -376,7 +386,7 @@ ipcMain.handle('headless:load-label-json', async (_event, labelJsonPath: string)
 
 ipcMain.handle('headless:write-stdout', async (_event, base64Data: string) => {
   const { writeBase64ToStdout } = await import('./utils/stdoutWriter.js')
-  writeBase64ToStdout(base64Data)
+  await writeBase64ToStdout(base64Data)
 })
 
 ipcMain.handle('headless:niimath', async (_event, inputBase64: string, inputName: string, operations: string) => {
