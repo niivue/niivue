@@ -172,6 +172,7 @@ export class NVZarrHelper {
     private currentAbortController: AbortController | null = null
     private runningMin = Infinity
     private runningMax = -Infinity
+    private calibrationDone = false
 
     // Debounce state for batching chunk updates
     private updateDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -796,9 +797,6 @@ export class NVZarrHelper {
                 const abortController = new AbortController()
                 this.currentAbortController = abortController
 
-                this.runningMin = Infinity
-                this.runningMax = -Infinity
-
                 await new Promise<void>((resolve) => {
                     requestAnimationFrame(() => resolve())
                 })
@@ -945,15 +943,17 @@ export class NVZarrHelper {
             return
         }
 
-        // Track min/max for calibration
-        const step = Math.max(1, Math.floor(data.length / 2000))
-        for (let i = 0; i < data.length; i += step) {
-            const val = data[i]
-            if (val < this.runningMin) {
-                this.runningMin = val
-            }
-            if (val > this.runningMax) {
-                this.runningMax = val
+        // Track min/max for initial calibration (skipped once calibration is done)
+        if (!this.calibrationDone) {
+            const step = Math.max(1, Math.floor(data.length / 2000))
+            for (let i = 0; i < data.length; i += step) {
+                const val = data[i]
+                if (val < this.runningMin) {
+                    this.runningMin = val
+                }
+                if (val > this.runningMax) {
+                    this.runningMax = val
+                }
             }
         }
 
@@ -994,6 +994,9 @@ export class NVZarrHelper {
     }
 
     private updateCalibration(): void {
+        if (this.calibrationDone) {
+            return
+        }
         if (this.runningMin < Infinity && this.runningMax > -Infinity) {
             this.hostImage.cal_min = this.runningMin
             this.hostImage.cal_max = this.runningMax
@@ -1001,6 +1004,7 @@ export class NVZarrHelper {
             this.hostImage.robust_max = this.runningMax
             this.hostImage.global_min = this.runningMin
             this.hostImage.global_max = this.runningMax
+            this.calibrationDone = true
         }
     }
 
