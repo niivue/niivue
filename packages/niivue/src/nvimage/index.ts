@@ -89,6 +89,7 @@ export class NVImage {
     onOpacityChange: (img: NVImage) => void = () => {}
 
     zarrHelper: NVZarrHelper | null = null
+    _hasExplicitZarrCenter = false
 
     mm000?: vec3
     mm100?: vec3
@@ -865,7 +866,8 @@ export class NVImage {
         zarrLevel,
         zarrMaxVolumeSize,
         zarrChannel,
-        zarrConvertUnits
+        zarrConvertUnits,
+        zarrCenterMM
     }: Partial<Omit<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
         if (url === '') {
             throw Error('url must not be empty')
@@ -924,7 +926,8 @@ export class NVImage {
                     channel: zarrChannel,
                     convertUnitsToMm: zarrConvertUnits,
                     colormap,
-                    opacity
+                    opacity,
+                    zarrCenterMM
                 })
             }
             // Light path: load entire array (unchanged)
@@ -1014,6 +1017,7 @@ export class NVImage {
             convertUnitsToMm?: boolean
             colormap?: string
             opacity?: number
+            zarrCenterMM?: [number, number, number]
         }
     ): Promise<NVImage> {
         const nvimage = new NVImage()
@@ -1026,6 +1030,10 @@ export class NVImage {
             cacheSize: options.cacheSize,
             convertUnitsToMm: options.convertUnitsToMm
         })
+        if (options.zarrCenterMM) {
+            nvimage.zarrHelper.setWorldCenter(options.zarrCenterMM)
+            nvimage._hasExplicitZarrCenter = true
+        }
         if (options.colormap) {
             nvimage._colormap = options.colormap
         }

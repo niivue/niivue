@@ -158,6 +158,7 @@ export class NVZarrHelper {
     private voxelTranslations: { width: number; height: number; depth: number }
     private hasTranslations: boolean
     private convertUnitsToMm: boolean
+    private worldOffsetMM: [number, number, number] = [0, 0, 0]
 
     private centerX: number
     private centerY: number
@@ -250,10 +251,10 @@ export class NVZarrHelper {
         helper.pyramidLevel = level
         helper.updateLevelInfo()
 
-        // Center on the level
-        helper.centerX = helper.volumeDims.width / 2
-        helper.centerY = helper.volumeDims.height / 2
-        helper.centerZ = helper.volumeDims.depth / 2
+        // Center on the level (use levelDims so initial view shows the center of the zarr)
+        helper.centerX = helper.levelDims.width / 2
+        helper.centerY = helper.levelDims.height / 2
+        helper.centerZ = helper.levelDims.depth / 2
 
         // Configure the host NVImage
         helper.configureHostImage()
@@ -457,6 +458,9 @@ export class NVZarrHelper {
                 affine[row][col] = niftiCols[col].scale
                 affine[row][3] = niftiCols[col].trans
             }
+            affine[0][3] += this.worldOffsetMM[0]
+            affine[1][3] += this.worldOffsetMM[1]
+            affine[2][3] += this.worldOffsetMM[2]
             hdr.affine = affine
         } else {
             // No OME translations — calculate offset based on pan position
@@ -487,13 +491,16 @@ export class NVZarrHelper {
                     affine[row][col] = niftiCols[col].scale
                     affine[row][3] = niftiCols[col].trans
                 }
+                affine[0][3] += this.worldOffsetMM[0]
+                affine[1][3] += this.worldOffsetMM[1]
+                affine[2][3] += this.worldOffsetMM[2]
                 hdr.affine = affine
             } else {
                 // Fallback: simple diagonal affine with pan position
                 hdr.affine = [
-                    [scaleW, 0, 0, volStartW * scaleW],
-                    [0, -scaleH, 0, volStartH * scaleH],
-                    [0, 0, -scaleD, volStartD * scaleD],
+                    [scaleW, 0, 0, volStartW * scaleW + this.worldOffsetMM[0]],
+                    [0, -scaleH, 0, volStartH * scaleH + this.worldOffsetMM[1]],
+                    [0, 0, -scaleD, volStartD * scaleD + this.worldOffsetMM[2]],
                     [0, 0, 0, 1]
                 ]
             }
@@ -591,6 +598,48 @@ export class NVZarrHelper {
         return { ...this.volumeDims }
     }
 
+    getWorldOffset(): [number, number, number] {
+        return [...this.worldOffsetMM]
+    }
+
+    /**
+     * Set the world-space offset so the full level's center maps to targetMM in world space.
+     * Computes the native physical center of the zarr level, then sets worldOffsetMM
+     * so that center aligns with targetMM. Also centers the viewport on the level center.
+     */
+    setWorldCenter(targetMM: [number, number, number]): void {
+        const { scaleW, scaleH, scaleD } = this.getConvertedScales()
+        const { transW, transH, transD } = this.getConvertedTranslations()
+        const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames
+
+        // Native physical center per OME dim (width=last, height=2nd-to-last, depth=3rd-to-last)
+        const physW = (this.levelDims.width / 2) * scaleW + transW
+        const physH = (this.levelDims.height / 2) * scaleH + transH
+        const physD = (this.levelDims.depth / 2) * scaleD + transD
+
+        // Map OME dims to x/y/z rows using axis names
+        const nativeCenter: [number, number, number] = [0, 0, 0]
+        const dims = [
+            { name: axisNames[axisNames.length - 1], phys: physW },
+            { name: axisNames[axisNames.length - 2], phys: physH },
+            { name: axisNames.length >= 3 ? axisNames[axisNames.length - 3] : 'z', phys: physD }
+        ]
+        for (const d of dims) {
+            const row = d.name === 'x' ? 0 : d.name === 'y' ? 1 : 2
+            nativeCenter[row] = d.phys
+        }
+
+        this.worldOffsetMM = [targetMM[0] - nativeCenter[0], targetMM[1] - nativeCenter[1], targetMM[2] - nativeCenter[2]]
+
+        // Center viewport on level center so visible region is at the target
+        this.centerX = this.levelDims.width / 2
+        this.centerY = this.levelDims.height / 2
+        this.centerZ = this.levelDims.depth / 2
+        this.clampCenter()
+
+        this.updateAffine()
+    }
+
     /**
      * Convert physical (mm) coordinates back to real zarr level pixel coordinates.
      * Inverts the affine: levelPixel = (mm - OME_translation) / scale
@@ -606,6 +655,11 @@ export class NVZarrHelper {
         level: number
         levelDims: { width: number; height: number; depth: number }
     } {
+        // Subtract world offset to convert from offset world-space back to native zarr space
+        mmX -= this.worldOffsetMM[0]
+        mmY -= this.worldOffsetMM[1]
+        mmZ -= this.worldOffsetMM[2]
+
         const { scaleW, scaleH, scaleD } = this.getConvertedScales()
         const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames
 

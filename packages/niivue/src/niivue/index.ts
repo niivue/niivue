@@ -2508,7 +2508,8 @@ export class Niivue {
                 zarrLevel: imageItem.zarrLevel,
                 zarrMaxVolumeSize: imageItem.zarrMaxVolumeSize,
                 zarrChannel: imageItem.zarrChannel,
-                zarrConvertUnits: imageItem.zarrConvertUnits
+                zarrConvertUnits: imageItem.zarrConvertUnits,
+                zarrCenterMM: imageItem.zarrCenterMM
             }
             const volume = await NVImage.loadFromUrl(imageOptions)
             this.document.addImageOptions(volume, imageOptions)
@@ -3165,6 +3166,22 @@ export class Niivue {
         // Register the callback BEFORE loading initial chunks so the first
         // batch of data triggers a proper GPU upload and render.
         if (volume.zarrHelper) {
+            // Auto-center zarr overlay on background volume if no explicit position was given
+            if (!volume._hasExplicitZarrCenter && this.back && this.back !== volume && this.back.hdr?.dims) {
+                const bg = this.back
+                const dims = bg.hdr.dims
+                const affine = bg.hdr.affine
+                const ci = (dims[1] - 1) / 2
+                const cj = (dims[2] - 1) / 2
+                const ck = (dims[3] - 1) / 2
+                const bgCenter: [number, number, number] = [
+                    affine[0][0] * ci + affine[0][1] * cj + affine[0][2] * ck + affine[0][3],
+                    affine[1][0] * ci + affine[1][1] * cj + affine[1][2] * ck + affine[1][3],
+                    affine[2][0] * ci + affine[2][1] * cj + affine[2][2] * ck + affine[2][3]
+                ]
+                volume.zarrHelper.setWorldCenter(bgCenter)
+            }
+
             volume.zarrHelper.onChunksUpdated = (): void => {
                 this.updateGLVolume()
                 this._skipDragInDraw = true
