@@ -1835,7 +1835,7 @@ export class Niivue {
                     return
                 }
                 this.mouseClick(pos.x, pos.y)
-                // lag this.drawScene()
+                this.drawScene()
                 this.uiData.prevX = this.uiData.currX
                 this.uiData.prevY = this.uiData.currY
                 return
@@ -3884,14 +3884,12 @@ export class Niivue {
             deltaX: result.dx,
             deltaY: result.dy
         })
-        if ((this.scene.renderAzimuth = rotation.azimuth) && this.scene.renderElevation === rotation.elevation) {
-            // lag
+        if (this.scene.renderAzimuth === rotation.azimuth && this.scene.renderElevation === rotation.elevation) {
             return
         }
         this.scene.renderAzimuth = rotation.azimuth
         this.scene.renderElevation = rotation.elevation
-
-        // lag this.drawScene()
+        this.drawScene()
     }
 
     /**
