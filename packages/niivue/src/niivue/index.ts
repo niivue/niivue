@@ -1835,7 +1835,7 @@ export class Niivue {
                     return
                 }
                 this.mouseClick(pos.x, pos.y)
-                // lag this.drawScene()
+                this.drawScene()
                 this.uiData.prevX = this.uiData.currX
                 this.uiData.prevY = this.uiData.currY
                 return
@@ -3884,14 +3884,12 @@ export class Niivue {
             deltaX: result.dx,
             deltaY: result.dy
         })
-        if ((this.scene.renderAzimuth = rotation.azimuth) && this.scene.renderElevation === rotation.elevation) {
-            // lag
+        if (this.scene.renderAzimuth === rotation.azimuth && this.scene.renderElevation === rotation.elevation) {
             return
         }
         this.scene.renderAzimuth = rotation.azimuth
         this.scene.renderElevation = rotation.elevation
-
-        // lag this.drawScene()
+        this.drawScene()
     }
 
     /**
@@ -7015,17 +7013,27 @@ export class Niivue {
      * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
      * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
      * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
+     * @param targetShape - output dimensions [x, y, z] (default [256, 256, 256]).
+     * @param targetVoxelSize - output voxel size in mm (default 1.0).
      * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
      */
-    async conform(volume: NVImage, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false): Promise<NVImage> {
-        const outDim = 256
-        const outMM = 1
+    async conform(
+        volume: NVImage,
+        toRAS = false,
+        isLinear = true,
+        asFloat32 = false,
+        isRobustMinMax = false,
+        targetShape: [number, number, number] = [256, 256, 256],
+        targetVoxelSize = 1.0
+    ): Promise<NVImage> {
+        const [outDimX, outDimY, outDimZ] = targetShape
+        const outMM = targetVoxelSize
 
         // Compute voxel-to-voxel transform
         const { outAffine, invVox2vox } = ImageProcessing.conformVox2Vox({
             inDims: volume.hdr!.dims!,
             inAffine: volume.hdr!.affine.flat(),
-            outDim,
+            outDims: [outDimX, outDimY, outDimZ],
             outMM,
             toRAS
         })
@@ -7043,7 +7051,7 @@ export class Niivue {
         const outImg = ImageProcessing.resampleVolume({
             inImg,
             inDims: volume.hdr!.dims!,
-            outDim,
+            outDims: [outDimX, outDimY, outDimZ],
             invVox2vox,
             isLinear
         })
@@ -7070,13 +7078,13 @@ export class Niivue {
             scaleParams.dst_max = 1
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg32 = ImageProcessing.scalecropFloat32(outImg, 0, 1, srcMin, scale)
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer))
+            bytes = await this.createNiftiArray([outDimX, outDimY, outDimZ], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_FLOAT32, new Uint8Array(outImg32.buffer))
         } else {
             scaleParams.dst_min = 0
             scaleParams.dst_max = 255
             const [srcMin, scale] = ImageProcessing.getScale(scaleParams)
             const outImg8 = ImageProcessing.scalecropUint8(outImg, 0, 255, srcMin, scale)
-            bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8)
+            bytes = await this.createNiftiArray([outDimX, outDimY, outDimZ], [outMM, outMM, outMM], Array.from(outAffine), NiiDataType.DT_UINT8, outImg8)
         }
 
         return this.niftiArray2NVImage(bytes)

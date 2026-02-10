@@ -243,4 +243,135 @@ export const registerIpcHandlers = (): void => {
       }
     }
   )
+
+  // Select a local model folder (must contain model.json)
+  ipcMain.handle('select-model-folder', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Model Folder',
+      properties: ['openDirectory'],
+      message: 'Select a folder containing a TensorFlow.js model (model.json + weights)'
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const folderPath = result.filePaths[0]
+
+    // Validate: must contain model.json
+    const modelJsonPath = path.join(folderPath, 'model.json')
+    if (!fs.existsSync(modelJsonPath)) {
+      throw new Error('Selected folder does not contain a model.json file')
+    }
+
+    // Read model.json to extract metadata
+    const modelJson = JSON.parse(fs.readFileSync(modelJsonPath, 'utf-8'))
+
+    // Check for labels.json
+    const labelsPath = path.join(folderPath, 'labels.json')
+    const hasLabels = fs.existsSync(labelsPath)
+
+    // Check for settings.json
+    const settingsPath = path.join(folderPath, 'settings.json')
+    let settings = null
+    if (fs.existsSync(settingsPath)) {
+      try {
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+      } catch (e) {
+        console.warn('[Main] Failed to parse settings.json:', e)
+      }
+    }
+
+    return {
+      folderPath,
+      modelJson,
+      hasLabels,
+      folderName: path.basename(folderPath),
+      settings
+    }
+  })
+
+  // Select a local colormap label JSON file
+  ipcMain.handle('select-colormap-file', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Colormap Label File',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      message: 'Select a colormap label JSON file'
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
+  // Load brainchop model files
+  ipcMain.handle('load-brainchop-model', async (_event, modelPath: string) => {
+    try {
+      const fullPath = path.isAbsolute(modelPath) ? modelPath : path.join(RESOURCES_DIR, modelPath)
+      console.log('[Main] Loading brainchop model from:', fullPath)
+
+      // Read model.json
+      const modelJsonPath = path.join(fullPath, 'model.json')
+      const modelJson = await fs.promises.readFile(modelJsonPath, 'utf-8')
+
+      // Return the model JSON and the base path for weights
+      return {
+        modelJson: JSON.parse(modelJson),
+        basePath: fullPath
+      }
+    } catch (error) {
+      console.error('[Main] Error loading brainchop model:', error)
+      throw error
+    }
+  })
+
+  // Load brainchop labels file
+  ipcMain.handle('load-brainchop-labels', async (_event, labelsPath: string) => {
+    try {
+      const fullPath = path.isAbsolute(labelsPath) ? labelsPath : path.join(RESOURCES_DIR, labelsPath)
+      console.log('[Main] Loading brainchop labels from:', fullPath)
+      const json = await fs.promises.readFile(fullPath, 'utf-8')
+      return JSON.parse(json)
+    } catch (error) {
+      console.error('[Main] Error loading brainchop labels:', error)
+      throw error
+    }
+  })
+
+  // Load brainchop preview image
+  ipcMain.handle('load-brainchop-preview', async (_event, previewPath: string) => {
+    try {
+      const fullPath = path.isAbsolute(previewPath) ? previewPath : path.join(RESOURCES_DIR, previewPath)
+      console.log('[Main] Loading brainchop preview from:', fullPath)
+
+      // Check if file exists
+      if (!fs.existsSync(fullPath)) {
+        console.log('[Main] Preview file not found:', fullPath)
+        return null
+      }
+
+      const buffer = await fs.promises.readFile(fullPath)
+      return buffer.toString('base64')
+    } catch (error) {
+      console.error('[Main] Error loading brainchop preview:', error)
+      return null
+    }
+  })
+
+  // Load brainchop weight file
+  ipcMain.handle('load-brainchop-weights', async (_event, weightPath: string) => {
+    try {
+      console.log('[Main] Loading weight file:', weightPath)
+      const buffer = await fs.promises.readFile(weightPath)
+      console.log('[Main] Weight file size:', buffer.byteLength, 'bytes')
+
+      // Convert Node.js Buffer to ArrayBuffer explicitly
+      // This ensures proper serialization across IPC boundary
+      const arrayBuffer = buffer.buffer.slice(
+        buffer.byteOffset,
+        buffer.byteOffset + buffer.byteLength
+      )
+
+      console.log('[Main] Returning ArrayBuffer of size:', arrayBuffer.byteLength, 'bytes')
+      return arrayBuffer
+    } catch (error) {
+      console.error('[Main] Error loading weight file:', error)
+      throw error
+    }
+  })
 }
