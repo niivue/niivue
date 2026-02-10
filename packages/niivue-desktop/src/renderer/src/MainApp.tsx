@@ -16,6 +16,7 @@ import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
+import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 
 const electron = window.electron
 
@@ -72,6 +73,8 @@ function MainApp(): JSX.Element {
   const [segmentationStatus, setSegmentationStatus] = useState('')
   const [segmentationModelName, setSegmentationModelName] = useState('')
   const [modelsVersion, setModelsVersion] = useState(0)
+  const [extractSubvolumeEnabled, setExtractSubvolumeEnabled] = useState(false)
+  const [selectedExtractLabels, setSelectedExtractLabels] = useState<Set<number>>(new Set())
   const availableModels = brainchopService.getAvailableModels()
   // modelsVersion is used to trigger re-render when user adds models via wizard
   void modelsVersion
@@ -228,23 +231,38 @@ function MainApp(): JSX.Element {
         }
       })
 
-      // Add result as overlay
-      nv.addVolume(result.volume)
-      const overlayIndex = nv.volumes.length - 1
-      nv.setOpacity(overlayIndex, 0.5)
+      if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
+        // Extract subvolume: create masked intensity volume
+        const extractedVolume = extractSubvolumeUtil(baseVolume, result.volume, selectedExtractLabels)
 
-      // For parcellation models, apply colormap labels for atlas display
-      if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
-        try {
-          const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
-          result.volume.setColormapLabel(labelsJson)
-          if (result.volume.colormapLabel?.lut) {
-            result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
-              i % 4 === 3 ? (v === 0 ? 0 : 178) : v
-            )
+        // Build descriptive name
+        const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
+        const labelCount = selectedExtractLabels.size
+        const labelSummary = labelCount <= 3
+          ? [...selectedExtractLabels].join('-')
+          : `${labelCount}labels`
+        extractedVolume.name = `${baseName}_extract_${labelSummary}.nii.gz`
+
+        nv.addVolume(extractedVolume)
+      } else {
+        // Default behavior: add label overlay
+        nv.addVolume(result.volume)
+        const overlayIndex = nv.volumes.length - 1
+        nv.setOpacity(overlayIndex, 0.5)
+
+        // For parcellation models, apply colormap labels for atlas display
+        if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
+          try {
+            const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
+            result.volume.setColormapLabel(labelsJson)
+            if (result.volume.colormapLabel?.lut) {
+              result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
+                i % 4 === 3 ? (v === 0 ? 0 : 178) : v
+              )
+            }
+          } catch (err) {
+            console.error('Failed to load parcellation labels:', err)
           }
-        } catch (err) {
-          console.error('Failed to load parcellation labels:', err)
         }
       }
 
@@ -1157,6 +1175,10 @@ function MainApp(): JSX.Element {
               status={segmentationStatus}
               modeMap={modeMap}
               indexMap={indexMap}
+              extractSubvolume={extractSubvolumeEnabled}
+              onExtractSubvolumeChange={setExtractSubvolumeEnabled}
+              selectedExtractLabels={selectedExtractLabels}
+              onSelectedExtractLabelsChange={setSelectedExtractLabels}
             />
           </div>
         )}

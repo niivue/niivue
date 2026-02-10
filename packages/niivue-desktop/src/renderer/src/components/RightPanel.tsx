@@ -18,6 +18,10 @@ interface RightPanelProps {
   status: string
   modeMap: Map<string, 'replace' | 'overlay'>
   indexMap: Map<string, number>
+  extractSubvolume: boolean
+  onExtractSubvolumeChange: (enabled: boolean) => void
+  selectedExtractLabels: Set<number>
+  onSelectedExtractLabelsChange: (labels: Set<number>) => void
 }
 
 const tabs = [
@@ -101,7 +105,11 @@ export function RightPanel({
   progress,
   status,
   modeMap,
-  indexMap
+  indexMap,
+  extractSubvolume,
+  onExtractSubvolumeChange,
+  selectedExtractLabels,
+  onSelectedExtractLabelsChange
 }: RightPanelProps): JSX.Element {
   const activeTitle = tabs.find((t) => t.id === activeTab)?.title ?? ''
 
@@ -145,6 +153,10 @@ export function RightPanel({
             isRunning={isRunning}
             progress={progress}
             status={status}
+            extractSubvolume={extractSubvolume}
+            onExtractSubvolumeChange={onExtractSubvolumeChange}
+            selectedExtractLabels={selectedExtractLabels}
+            onSelectedExtractLabelsChange={onSelectedExtractLabelsChange}
           />
         )}
         {activeTab === 'niimath' && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}

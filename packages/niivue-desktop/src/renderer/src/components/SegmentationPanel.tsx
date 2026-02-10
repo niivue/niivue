@@ -1,7 +1,25 @@
-import { useState, useEffect } from 'react'
-import { Button, Flex, Text, Select, Separator, Card, Badge, Progress } from '@radix-ui/themes'
+import { useState, useEffect, useMemo } from 'react'
+import {
+  Button,
+  Flex,
+  Text,
+  Select,
+  Separator,
+  Card,
+  Badge,
+  Progress,
+  Checkbox,
+  TextField,
+  ScrollArea
+} from '@radix-ui/themes'
 import { useSelectedInstance } from '../AppContext.js'
+import { parseLabelJson } from '../../../common/labelResolver.js'
+import type { LabelEntry } from '../../../common/labelResolver.js'
 import type { ModelInfo, ModelCategory } from '../services/brainchop/types.js'
+
+interface LabelDisplayEntry extends LabelEntry {
+  color: [number, number, number]
+}
 
 interface SegmentationPanelProps {
   onRunSegmentation: (modelId: string) => void
@@ -10,6 +28,62 @@ interface SegmentationPanelProps {
   isRunning: boolean
   progress: number
   status: string
+  extractSubvolume: boolean
+  onExtractSubvolumeChange: (enabled: boolean) => void
+  selectedExtractLabels: Set<number>
+  onSelectedExtractLabelsChange: (labels: Set<number>) => void
+}
+
+/**
+ * Parse label JSON into display entries with colors.
+ * Handles both object format (tissue/brain) and array format (parcellation).
+ */
+function parseLabelDisplayEntries(json: unknown): LabelDisplayEntry[] {
+  const index = parseLabelJson(json)
+  const entries: LabelDisplayEntry[] = []
+
+  // Object format: { labels: [{value, name, color}, ...] }
+  if (
+    typeof json === 'object' &&
+    json !== null &&
+    Array.isArray((json as Record<string, unknown>).labels) &&
+    (json as Record<string, unknown>).labels.length > 0 &&
+    typeof ((json as Record<string, unknown>).labels as unknown[])[0] === 'object'
+  ) {
+    const objLabels = (json as { labels: Array<{ value: number; name: string; color?: number[] }> })
+      .labels
+    for (const entry of objLabels) {
+      entries.push({
+        value: entry.value,
+        name: entry.name,
+        color: (entry.color as [number, number, number]) || [128, 128, 128]
+      })
+    }
+    return entries
+  }
+
+  // Array format: { labels: [...], R: [...], G: [...], B: [...] }
+  const arrJson = json as { labels: string[]; R?: number[]; G?: number[]; B?: number[] }
+  if (arrJson.R && arrJson.G && arrJson.B) {
+    for (const entry of index.entries) {
+      entries.push({
+        value: entry.value,
+        name: entry.name,
+        color: [
+          arrJson.R[entry.value] ?? 128,
+          arrJson.G[entry.value] ?? 128,
+          arrJson.B[entry.value] ?? 128
+        ]
+      })
+    }
+    return entries
+  }
+
+  // Fallback: no color info
+  for (const entry of index.entries) {
+    entries.push({ value: entry.value, name: entry.name, color: [128, 128, 128] })
+  }
+  return entries
 }
 
 export function SegmentationPanel({
@@ -18,11 +92,17 @@ export function SegmentationPanel({
   availableModels,
   isRunning,
   progress,
-  status
+  status,
+  extractSubvolume,
+  onExtractSubvolumeChange,
+  selectedExtractLabels,
+  onSelectedExtractLabelsChange
 }: SegmentationPanelProps): JSX.Element {
   const instance = useSelectedInstance()
   const [selectedModelId, setSelectedModelId] = useState<string>('')
   const [selectedCategory, setSelectedCategory] = useState<ModelCategory | 'All'>('All')
+  const [labelEntries, setLabelEntries] = useState<LabelDisplayEntry[]>([])
+  const [labelFilter, setLabelFilter] = useState('')
 
   // Get unique categories
   const categories = ['All', ...new Set(availableModels.map((m) => m.category))] as Array<
@@ -45,6 +125,64 @@ export function SegmentationPanel({
   }, [availableModels, selectedModelId])
 
   const selectedModel = availableModels.find((m) => m.id === selectedModelId)
+
+  // Load labels when extract mode is enabled and model changes
+  useEffect(() => {
+    if (!extractSubvolume || !selectedModel?.labelsPath) {
+      setLabelEntries([])
+      return
+    }
+
+    let cancelled = false
+    const loadLabels = async (): Promise<void> => {
+      try {
+        const labelsJson = await window.electron.loadBrainchopLabels(selectedModel.labelsPath!)
+        if (cancelled) return
+        const entries = parseLabelDisplayEntries(labelsJson)
+        setLabelEntries(entries)
+        // Auto-select all non-background labels
+        const nonBgValues = new Set(entries.filter((e) => e.value !== 0).map((e) => e.value))
+        onSelectedExtractLabelsChange(nonBgValues)
+      } catch (err) {
+        console.error('Failed to load labels for extract mode:', err)
+        if (!cancelled) setLabelEntries([])
+      }
+    }
+    loadLabels()
+    return () => {
+      cancelled = true
+    }
+  }, [extractSubvolume, selectedModel?.id])
+
+  // Non-background labels for display
+  const nonBgLabels = useMemo(() => labelEntries.filter((e) => e.value !== 0), [labelEntries])
+
+  // Filtered labels (for parcellation search)
+  const filteredLabels = useMemo(() => {
+    if (!labelFilter) return nonBgLabels
+    const lower = labelFilter.toLowerCase()
+    return nonBgLabels.filter((e) => e.name.toLowerCase().includes(lower))
+  }, [nonBgLabels, labelFilter])
+
+  const showSearch = nonBgLabels.length > 10
+
+  const handleToggleLabel = (value: number, checked: boolean): void => {
+    const next = new Set(selectedExtractLabels)
+    if (checked) {
+      next.add(value)
+    } else {
+      next.delete(value)
+    }
+    onSelectedExtractLabelsChange(next)
+  }
+
+  const handleSelectAll = (): void => {
+    onSelectedExtractLabelsChange(new Set(nonBgLabels.map((e) => e.value)))
+  }
+
+  const handleDeselectAll = (): void => {
+    onSelectedExtractLabelsChange(new Set())
+  }
 
   // Check if there's a volume to segment
   const hasVolume = instance && instance.volumes.length > 0
@@ -122,6 +260,103 @@ export function SegmentationPanel({
         </Card>
       )}
 
+      {/* Extract Subvolume Option */}
+      {!isRunning && selectedModel && (
+        <>
+          <Separator size="4" />
+          <Flex direction="column" gap="3">
+            <Flex align="center" gap="2" asChild>
+              <label>
+                <Checkbox
+                  checked={extractSubvolume}
+                  onCheckedChange={(checked) => {
+                    onExtractSubvolumeChange(checked === true)
+                  }}
+                />
+                <Text size="2" weight="medium">
+                  Extract Subvolume
+                </Text>
+              </label>
+            </Flex>
+            {extractSubvolume && (
+              <Text size="1" color="gray">
+                Extract original MRI intensities for selected labels instead of a label overlay.
+              </Text>
+            )}
+
+            {/* Label Checklist */}
+            {extractSubvolume && nonBgLabels.length > 0 && (
+              <Flex direction="column" gap="2">
+                <Flex justify="between" align="center">
+                  <Text size="1" weight="medium">
+                    Labels ({selectedExtractLabels.size}/{nonBgLabels.length})
+                  </Text>
+                  <Flex gap="2">
+                    <Text
+                      size="1"
+                      color="blue"
+                      style={{ cursor: 'pointer' }}
+                      onClick={handleSelectAll}
+                    >
+                      All
+                    </Text>
+                    <Text
+                      size="1"
+                      color="gray"
+                      style={{ cursor: 'pointer' }}
+                      onClick={handleDeselectAll}
+                    >
+                      None
+                    </Text>
+                  </Flex>
+                </Flex>
+
+                {/* Search filter for parcellation models */}
+                {showSearch && (
+                  <TextField.Root
+                    size="1"
+                    placeholder="Filter labels..."
+                    value={labelFilter}
+                    onChange={(e) => setLabelFilter(e.target.value)}
+                  />
+                )}
+
+                <ScrollArea style={{ maxHeight: 200 }} scrollbars="vertical">
+                  <Flex direction="column" gap="1">
+                    {filteredLabels.map((entry) => (
+                      <Flex key={entry.value} align="center" gap="2" asChild>
+                        <label style={{ cursor: 'pointer' }}>
+                          <Checkbox
+                            size="1"
+                            checked={selectedExtractLabels.has(entry.value)}
+                            onCheckedChange={(checked) =>
+                              handleToggleLabel(entry.value, checked === true)
+                            }
+                          />
+                          <div
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: 2,
+                              backgroundColor: `rgb(${entry.color[0]}, ${entry.color[1]}, ${entry.color[2]})`,
+                              border: '1px solid rgba(0,0,0,0.2)',
+                              flexShrink: 0
+                            }}
+                          />
+                          <Text size="1" truncate>
+                            {entry.name}
+                          </Text>
+                        </label>
+                      </Flex>
+                    ))}
+                  </Flex>
+                </ScrollArea>
+              </Flex>
+            )}
+          </Flex>
+        </>
+      )}
+
       {/* Progress display when running */}
       {isRunning && (
         <Card size="1">
@@ -164,7 +399,7 @@ export function SegmentationPanel({
             style={{ width: '100%' }}
             color="blue"
           >
-            Run Segmentation
+            {extractSubvolume ? 'Run & Extract' : 'Run Segmentation'}
           </Button>
         )}
 
