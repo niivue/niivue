@@ -15,10 +15,17 @@ import { DicomImportDialog } from './components/DicomImportDialog.js'
 import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
+import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 
 const electron = window.electron
+
+interface LabelCacheEntry {
+  labelVolume: NVImage
+  baseVolumeId: string
+  modelInfo: ModelInfo
+}
 
 // function overrideDrawGraph(nv: Niivue): void {
 //   const originalDrawGraph = nv.drawGraph.bind(nv)
@@ -64,6 +71,7 @@ function MainApp(): JSX.Element {
   selectedRef.current = selected
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
+  const labelCache = useRef(new Map<string, LabelCacheEntry>()).current
 
   // Right panel state
   const [rightPanelOpen, setRightPanelOpen] = useState(false)
@@ -202,38 +210,65 @@ function MainApp(): JSX.Element {
     }
 
     try {
-      // Initialize if needed
-      if (!brainchopService.isReady()) {
-        setSegmentationStatus('Initializing TensorFlow.js...')
-        setSegmentationProgress(0)
+      // Check label cache for a hit (same model + same base volume)
+      const cached = labelCache.get(modelId)
+      const cacheHit = cached && cached.baseVolumeId === baseVolume.id
+      let labelVolume: NVImage
+      let resultModelInfo: ModelInfo
+
+      if (cacheHit) {
+        // Cache hit: show brief feedback and use cached result
         setSegmentationRunning(true)
-        setSegmentationModelName(modelInfo.name)
-        await brainchopService.initialize()
-      }
-
-      setSegmentationRunning(true)
-      setSegmentationProgress(0)
-      setSegmentationStatus('Starting segmentation...')
-      setSegmentationModelName(modelInfo.name)
-
-      console.log('[MainApp] Running segmentation on volume:', {
-        dims: baseVolume.dims,
-        'hdr.dims': baseVolume.hdr?.dims,
-        pixDims: baseVolume.pixDims,
-        'img.length': baseVolume.img?.length
-      })
-
-      // Run segmentation - volume should be conformed to 256³ @ 1mm
-      const result = await brainchopService.runSegmentation(baseVolume, modelId, {
-        onProgress: (progress, status) => {
-          setSegmentationProgress(progress)
-          setSegmentationStatus(status || '')
+        setSegmentationProgress(100)
+        setSegmentationStatus('Using cached segmentation result')
+        setSegmentationModelName(cached.modelInfo.name)
+        await new Promise((r) => setTimeout(r, 600))
+        labelVolume = cached.labelVolume
+        resultModelInfo = cached.modelInfo
+      } else {
+        // Cache miss: run full segmentation
+        if (!brainchopService.isReady()) {
+          setSegmentationStatus('Initializing TensorFlow.js...')
+          setSegmentationProgress(0)
+          setSegmentationRunning(true)
+          setSegmentationModelName(modelInfo.name)
+          await brainchopService.initialize()
         }
-      })
+
+        setSegmentationRunning(true)
+        setSegmentationProgress(0)
+        setSegmentationStatus('Starting segmentation...')
+        setSegmentationModelName(modelInfo.name)
+
+        console.log('[MainApp] Running segmentation on volume:', {
+          dims: baseVolume.dims,
+          'hdr.dims': baseVolume.hdr?.dims,
+          pixDims: baseVolume.pixDims,
+          'img.length': baseVolume.img?.length
+        })
+
+        // Run segmentation - volume should be conformed to 256³ @ 1mm
+        const result = await brainchopService.runSegmentation(baseVolume, modelId, {
+          onProgress: (progress, status) => {
+            setSegmentationProgress(progress)
+            setSegmentationStatus(status || '')
+          }
+        })
+
+        labelVolume = result.volume
+        resultModelInfo = result.modelInfo
+
+        // Always cache the result for future re-extraction
+        labelCache.set(modelId, {
+          labelVolume,
+          baseVolumeId: baseVolume.id,
+          modelInfo: resultModelInfo
+        })
+      }
 
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
-        const extractedVolume = extractSubvolumeUtil(baseVolume, result.volume, selectedExtractLabels)
+        const extractedVolume = extractSubvolumeUtil(baseVolume, labelVolume, selectedExtractLabels)
 
         // Build descriptive name
         const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
@@ -245,18 +280,19 @@ function MainApp(): JSX.Element {
 
         nv.addVolume(extractedVolume)
       } else {
-        // Default behavior: add label overlay
-        nv.addVolume(result.volume)
+        // Default behavior: add label overlay (clone to keep cache pristine)
+        const overlayVolume = labelVolume.clone()
+        nv.addVolume(overlayVolume)
         const overlayIndex = nv.volumes.length - 1
         nv.setOpacity(overlayIndex, 0.5)
 
         // For parcellation models, apply colormap labels for atlas display
-        if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
+        if (resultModelInfo.type === 'parcellation' && resultModelInfo.labelsPath) {
           try {
-            const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
-            result.volume.setColormapLabel(labelsJson)
-            if (result.volume.colormapLabel?.lut) {
-              result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
+            const labelsJson = await window.electron.loadBrainchopLabels(resultModelInfo.labelsPath)
+            overlayVolume.setColormapLabel(labelsJson)
+            if (overlayVolume.colormapLabel?.lut) {
+              overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
                 i % 4 === 3 ? (v === 0 ? 0 : 178) : v
               )
             }
@@ -711,6 +747,9 @@ function MainApp(): JSX.Element {
       // Clear other state
       nv.mediaUrlMap.clear()
       nv.createEmptyDrawing()
+
+      // Clear label cache to free memory
+      labelCache.clear()
 
       // Refresh WebGL textures to clear any cached overlay data
       nv.updateGLVolume()
