@@ -20,7 +20,7 @@ const REQUIRED_MODELS = [
   'parcellation-104'
 ]
 
-const REQUIRED_FILES_PER_MODEL = ['model.json', 'labels.json']
+const REQUIRED_FILES_PER_MODEL = ['model.json', 'labels.json', 'settings.json', 'preview.png']
 
 async function checkModelExists(modelId) {
   const modelDir = join(__dirname, '..', 'resources', 'brainchop-models', modelId)
