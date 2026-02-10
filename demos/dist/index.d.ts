@@ -3909,9 +3909,11 @@ declare class Niivue {
      * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
      * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
      * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
+     * @param targetShape - output dimensions [x, y, z] (default [256, 256, 256]).
+     * @param targetVoxelSize - output voxel size in mm (default 1.0).
      * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
      */
-    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean, isRobustMinMax?: boolean): Promise<NVImage>;
+    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean, isRobustMinMax?: boolean, targetShape?: [number, number, number], targetVoxelSize?: number): Promise<NVImage>;
     /**
      * darken crevices and brighten corners when 3D rendering drawings.
      * @param ao - amount of ambient occlusion (default 0.4)

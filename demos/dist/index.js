@@ -41782,7 +41782,8 @@ function getScale(params) {
   return [src_min, scale6];
 }
 function conformVox2Vox(params) {
-  const { inDims, inAffine, outDim = 256, outMM = 1, toRAS = false } = params;
+  const { inDims, inAffine, outDim = 256, outDims, outMM = 1, toRAS = false } = params;
+  const [outDimX, outDimY, outDimZ] = outDims ?? [outDim, outDim, outDim];
   const a = inAffine.flat();
   const affine = mat4_exports.fromValues(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]);
   const half = vec4_exports.fromValues(inDims[1] / 2, inDims[2] / 2, inDims[3] / 2, 1);
@@ -41797,7 +41798,7 @@ function conformVox2Vox(params) {
     Mdc = mat4_exports.fromValues(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
   }
   mat4_exports.transpose(Mdc, Mdc);
-  const dims = vec4_exports.fromValues(outDim, outDim, outDim, 1);
+  const dims = vec4_exports.fromValues(outDimX, outDimY, outDimZ, 1);
   const MdcD = mat4_exports.create();
   mat4_exports.scale(MdcD, Mdc, delta);
   const vol_center = vec4_exports.fromValues(dims[0], dims[1], dims[2], 1);
@@ -41819,8 +41820,9 @@ function conformVox2Vox(params) {
   return { outAffine, vox2vox, invVox2vox };
 }
 function resampleVolume(params) {
-  const { inImg, inDims, outDim, invVox2vox, isLinear } = params;
-  const outNvox = outDim * outDim * outDim;
+  const { inImg, inDims, outDim, outDims, invVox2vox, isLinear } = params;
+  const [outDimX, outDimY, outDimZ] = outDims ?? [outDim ?? 256, outDim ?? 256, outDim ?? 256];
+  const outNvox = outDimX * outDimY * outDimZ;
   const outImg = new Float32Array(outNvox);
   const dimX = inDims[1];
   const dimY = inDims[2];
@@ -41834,12 +41836,12 @@ function resampleVolume(params) {
   const inv8 = invVox2vox[8];
   let i = -1;
   if (isLinear) {
-    for (let z = 0; z < outDim; z++) {
-      for (let y = 0; y < outDim; y++) {
+    for (let z = 0; z < outDimZ; z++) {
+      for (let y = 0; y < outDimY; y++) {
         const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3];
         const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7];
         const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11];
-        for (let x = 0; x < outDim; x++) {
+        for (let x = 0; x < outDimX; x++) {
           const ix = x * inv0 + ixYZ;
           const iy = x * inv4 + iyYZ;
           const iz = x * inv8 + izYZ;
@@ -41877,12 +41879,12 @@ function resampleVolume(params) {
       }
     }
   } else {
-    for (let z = 0; z < outDim; z++) {
-      for (let y = 0; y < outDim; y++) {
+    for (let z = 0; z < outDimZ; z++) {
+      for (let y = 0; y < outDimY; y++) {
         const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3];
         const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7];
         const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11];
-        for (let x = 0; x < outDim; x++) {
+        for (let x = 0; x < outDimX; x++) {
           const ix = Math.round(x * inv0 + ixYZ);
           const iy = Math.round(x * inv4 + iyYZ);
           const iz = Math.round(x * inv8 + izYZ);
@@ -43547,6 +43549,7 @@ var Niivue = class {
           return;
         }
         this.mouseClick(pos.x, pos.y);
+        this.drawScene();
         this.uiData.prevX = this.uiData.currX;
         this.uiData.prevY = this.uiData.currY;
         return;
@@ -45262,11 +45265,12 @@ var Niivue = class {
       deltaX: result.dx,
       deltaY: result.dy
     });
-    if ((this.scene.renderAzimuth = rotation.azimuth) && this.scene.renderElevation === rotation.elevation) {
+    if (this.scene.renderAzimuth === rotation.azimuth && this.scene.renderElevation === rotation.elevation) {
       return;
     }
     this.scene.renderAzimuth = rotation.azimuth;
     this.scene.renderElevation = rotation.elevation;
+    this.drawScene();
   }
   /**
    * convert spherical AZIMUTH, ELEVATION to Cartesian
@@ -47942,15 +47946,17 @@ var Niivue = class {
    * @param isLinear - reslice with linear rather than nearest-neighbor interpolation (default true).
    * @param asFloat32 - use Float32 datatype rather than Uint8 (default false).
    * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
+   * @param targetShape - output dimensions [x, y, z] (default [256, 256, 256]).
+   * @param targetVoxelSize - output voxel size in mm (default 1.0).
    * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
    */
-  async conform(volume, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false) {
-    const outDim = 256;
-    const outMM = 1;
+  async conform(volume, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false, targetShape = [256, 256, 256], targetVoxelSize = 1) {
+    const [outDimX, outDimY, outDimZ] = targetShape;
+    const outMM = targetVoxelSize;
     const { outAffine, invVox2vox } = conformVox2Vox({
       inDims: volume.hdr.dims,
       inAffine: volume.hdr.affine.flat(),
-      outDim,
+      outDims: [outDimX, outDimY, outDimZ],
       outMM,
       toRAS
     });
@@ -47964,7 +47970,7 @@ var Niivue = class {
     const outImg = resampleVolume({
       inImg,
       inDims: volume.hdr.dims,
-      outDim,
+      outDims: [outDimX, outDimY, outDimZ],
       invVox2vox,
       isLinear
     });
@@ -47987,13 +47993,13 @@ var Niivue = class {
       scaleParams.dst_max = 1;
       const [srcMin, scale6] = getScale(scaleParams);
       const outImg32 = scalecropFloat32(outImg, 0, 1, srcMin, scale6);
-      bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), 16 /* DT_FLOAT32 */, new Uint8Array(outImg32.buffer));
+      bytes = await this.createNiftiArray([outDimX, outDimY, outDimZ], [outMM, outMM, outMM], Array.from(outAffine), 16 /* DT_FLOAT32 */, new Uint8Array(outImg32.buffer));
     } else {
       scaleParams.dst_min = 0;
       scaleParams.dst_max = 255;
       const [srcMin, scale6] = getScale(scaleParams);
       const outImg8 = scalecropUint8(outImg, 0, 255, srcMin, scale6);
-      bytes = await this.createNiftiArray([outDim, outDim, outDim], [outMM, outMM, outMM], Array.from(outAffine), 2 /* DT_UINT8 */, outImg8);
+      bytes = await this.createNiftiArray([outDimX, outDimY, outDimZ], [outMM, outMM, outMM], Array.from(outAffine), 2 /* DT_UINT8 */, outImg8);
     }
     return this.niftiArray2NVImage(bytes);
   }
