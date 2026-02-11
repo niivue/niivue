@@ -404,6 +404,53 @@ describe('Niivue EventTarget API', () => {
             nv.dispatchEvent(event)
             expect(listener).toHaveBeenCalled()
         })
+
+        it('should provide correct event detail types for zoom3DChange', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('zoom')
+                expect(typeof event.detail.zoom).toBe('number')
+            })
+            nv.addEventListener('zoom3DChange', listener)
+            const event = new NiivueEvent('zoom3DChange', { zoom: 1.5 })
+            nv.dispatchEvent(event)
+            expect(listener).toHaveBeenCalled()
+        })
+
+        it('should emit zoom3DChange event when volScaleMultiplier changes', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('zoom')
+                expect(event.detail.zoom).toBe(1.5)
+            })
+            const callback = vi.fn()
+
+            nv.addEventListener('zoom3DChange', listener)
+            nv.onZoom3DChange = callback
+
+            // Change the zoom scale
+            nv.scene.volScaleMultiplier = 1.5
+
+            expect(listener).toHaveBeenCalledTimes(1)
+            expect(callback).toHaveBeenCalledTimes(1)
+            expect(callback).toHaveBeenCalledWith(1.5)
+        })
+
+        it('should emit zoom3DChange event when setScale is called', () => {
+            const listener = vi.fn((event) => {
+                expect(event.detail).toHaveProperty('zoom')
+                expect(event.detail.zoom).toBe(2.0)
+            })
+            const callback = vi.fn()
+
+            nv.addEventListener('zoom3DChange', listener)
+            nv.onZoom3DChange = callback
+
+            // Use setScale method
+            nv.setScale(2.0)
+
+            expect(listener).toHaveBeenCalledTimes(1)
+            expect(callback).toHaveBeenCalledTimes(1)
+            expect(callback).toHaveBeenCalledWith(2.0)
+        })
     })
 
     describe('All Event Types', () => {
