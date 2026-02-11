@@ -110,6 +110,7 @@ export interface NiivueEventMap {
     }
 
     // Logging events
+    // NOTE: These are placeholder event types for future use and are not currently emitted
     /** Fired on error messages */
     error: { message?: string }
     /** Fired on info messages */
