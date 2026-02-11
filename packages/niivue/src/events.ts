@@ -68,6 +68,8 @@ export interface NiivueEventMap {
     clipPlaneChange: { clipPlane: number[] }
     /** Fired when the slice type (view layout) changes */
     sliceTypeChange: { sliceType: SLICE_TYPE }
+    /** Fired when 3D zoom level changes */
+    zoom3DChange: { zoom: number }
 
     // Shader events
     /** Fired when a custom mesh shader is added */
