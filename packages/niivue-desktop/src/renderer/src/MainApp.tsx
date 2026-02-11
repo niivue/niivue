@@ -215,6 +215,7 @@ function MainApp(): JSX.Element {
       const cacheHit = cached && cached.baseVolumeId === baseVolume.id
       let labelVolume: NVImage
       let resultModelInfo: ModelInfo
+      let conformedVolume: NVImage | undefined
 
       if (cacheHit) {
         // Cache hit: show brief feedback and use cached result
@@ -240,15 +241,19 @@ function MainApp(): JSX.Element {
         setSegmentationStatus('Starting segmentation...')
         setSegmentationModelName(modelInfo.name)
 
-        console.log('[MainApp] Running segmentation on volume:', {
-          dims: baseVolume.dims,
-          'hdr.dims': baseVolume.hdr?.dims,
-          pixDims: baseVolume.pixDims,
-          'img.length': baseVolume.img?.length
+        // Conform volume to 256³ @ 1mm before segmentation
+        // rawFloat32=true: preserve original intensity values (no rescaling) for ML inference
+        conformedVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
+
+        console.log('[MainApp] Running segmentation on conformed volume:', {
+          dims: conformedVolume.dims,
+          'hdr.dims': conformedVolume.hdr?.dims,
+          pixDims: conformedVolume.pixDims,
+          'img.length': conformedVolume.img?.length
         })
 
-        // Run segmentation - volume should be conformed to 256³ @ 1mm
-        const result = await brainchopService.runSegmentation(baseVolume, modelId, {
+        // Run segmentation on conformed volume
+        const result = await brainchopService.runSegmentation(conformedVolume, modelId, {
           onProgress: (progress, status) => {
             setSegmentationProgress(progress)
             setSegmentationStatus(status || '')
@@ -268,7 +273,9 @@ function MainApp(): JSX.Element {
 
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
-        const extractedVolume = extractSubvolumeUtil(baseVolume, labelVolume, selectedExtractLabels)
+        // For cache hits, conform the volume to match the label space
+        const sourceVolume = cacheHit ? await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true) : conformedVolume!
+        const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
 
         // Build descriptive name
         const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
@@ -465,8 +472,12 @@ function MainApp(): JSX.Element {
         throw new Error('No volume loaded for segmentation')
       }
 
+      // Conform volume to 256³ @ 1mm before segmentation
+      // rawFloat32=true: preserve original intensity values (no rescaling) for ML inference
+      const conformedVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
+
       console.error(`[niivue] Running segmentation model: ${options.model}`)
-      const result = await brainchopService.runSegmentation(baseVolume, options.model, {
+      const result = await brainchopService.runSegmentation(conformedVolume, options.model, {
         onProgress: (progress, status) => {
           console.error(`[niivue] Progress: ${progress}% - ${status}`)
         }

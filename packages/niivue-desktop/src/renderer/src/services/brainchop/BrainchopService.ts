@@ -99,19 +99,14 @@ export class BrainchopService {
       // Extract volume data as Float32Array
       const volumeData = this.extractVolumeData(volume)
 
-      // Create 3D tensor - volume should be conformed to 256^3 already
-      let slices3d: tf.Tensor3D
-      if (volumeData.length === 256 * 256 * 256) {
-        slices3d = tf.tensor3d(Array.from(volumeData), [256, 256, 256])
-      } else {
-        // Resample to 256^3 if needed
-        console.warn('[BrainchopService] Volume not 256^3, resampling')
-        const originalShape = this.getVolumeShape(volume)
-        const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
-        const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
-        const resampled = this.resampleTo256(volumeData, originalShape, originalVoxelSize)
-        slices3d = tf.tensor3d(Array.from(resampled), [256, 256, 256])
+      // Volume must be conformed to 256³ @ 1mm by caller (via nv.conform())
+      if (volumeData.length !== 256 * 256 * 256) {
+        throw new Error(
+          `Volume must be conformed to 256³ before segmentation (got ${volumeData.length} voxels). ` +
+          'Call nv.conform(volume, true) first.'
+        )
       }
+      const slices3d = tf.tensor3d(Array.from(volumeData), [256, 256, 256])
 
       // Normalize
       onProgress?.(15, 'Normalizing')
@@ -153,17 +148,8 @@ export class BrainchopService {
       await yieldToUI()
 
       // Convert 3D label tensor to volume data
-      let labelData = new Float32Array(await outputLabels.data())
+      const labelData = new Float32Array(await outputLabels.data())
       outputLabels.dispose()
-
-      // Resample back to original space if needed
-      const originalShape = this.getVolumeShape(volume)
-      const needsResampling =
-        originalShape[0] !== 256 || originalShape[1] !== 256 || originalShape[2] !== 256
-      if (needsResampling) {
-        const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
-        labelData = this.resampleLabelsToOriginal(labelData, originalShape, [pixDims[1], pixDims[2], pixDims[3]])
-      }
 
       // Create overlay volume
       const segmentationVolume = this.createSegmentationVolume(labelData, volume, modelInfo)
@@ -196,18 +182,6 @@ export class BrainchopService {
     return new Float32Array(img)
   }
 
-  private getVolumeShape(volume: NVImage): number[] {
-    if (volume.hdr?.dims && volume.hdr.dims.length > 3) {
-      return [volume.hdr.dims[1], volume.hdr.dims[2], volume.hdr.dims[3]]
-    } else if (volume.dims && volume.dims.length >= 3) {
-      if (volume.dims[0] <= 7 && volume.dims.length > 3) {
-        return [volume.dims[1], volume.dims[2], volume.dims[3]]
-      }
-      return [volume.dims[0], volume.dims[1], volume.dims[2]]
-    }
-    throw new Error('Cannot determine volume dimensions')
-  }
-
   private async minMaxNormalize(tensor: tf.Tensor3D): Promise<tf.Tensor3D> {
     const max = tensor.max()
     const min = tensor.min()
@@ -230,92 +204,6 @@ export class BrainchopService {
     qminScalar.dispose()
     qmaxScalar.dispose()
     return result
-  }
-
-  private resampleTo256(
-    data: Float32Array,
-    shape: number[],
-    voxelSize: number[]
-  ): Float32Array {
-    const [origX, origY, origZ] = shape
-    const targetSize = 256
-    const origCenter = [
-      (origX * voxelSize[0]) / 2,
-      (origY * voxelSize[1]) / 2,
-      (origZ * voxelSize[2]) / 2
-    ]
-    const targetCenter = [targetSize / 2, targetSize / 2, targetSize / 2]
-    const resampled = new Float32Array(targetSize * targetSize * targetSize)
-
-    for (let z = 0; z < targetSize; z++) {
-      for (let y = 0; y < targetSize; y++) {
-        for (let x = 0; x < targetSize; x++) {
-          const offsetX = (x + 0.5) - targetCenter[0]
-          const offsetY = (y + 0.5) - targetCenter[1]
-          const offsetZ = (z + 0.5) - targetCenter[2]
-          const srcX = (origCenter[0] + offsetX) / voxelSize[0] - 0.5
-          const srcY = (origCenter[1] + offsetY) / voxelSize[1] - 0.5
-          const srcZ = (origCenter[2] + offsetZ) / voxelSize[2] - 0.5
-          const x0 = Math.floor(srcX)
-          const y0 = Math.floor(srcY)
-          const z0 = Math.floor(srcZ)
-          if (x0 < 0 || x0 >= origX || y0 < 0 || y0 >= origY || z0 < 0 || z0 >= origZ) continue
-          const x1 = Math.min(x0 + 1, origX - 1)
-          const y1 = Math.min(y0 + 1, origY - 1)
-          const z1 = Math.min(z0 + 1, origZ - 1)
-          const xf = srcX - x0, yf = srcY - y0, zf = srcZ - z0
-          const c000 = data[z0 * origX * origY + y0 * origX + x0]
-          const c001 = data[z0 * origX * origY + y0 * origX + x1]
-          const c010 = data[z0 * origX * origY + y1 * origX + x0]
-          const c011 = data[z0 * origX * origY + y1 * origX + x1]
-          const c100 = data[z1 * origX * origY + y0 * origX + x0]
-          const c101 = data[z1 * origX * origY + y0 * origX + x1]
-          const c110 = data[z1 * origX * origY + y1 * origX + x0]
-          const c111 = data[z1 * origX * origY + y1 * origX + x1]
-          const c00 = c000 * (1 - xf) + c001 * xf
-          const c01 = c010 * (1 - xf) + c011 * xf
-          const c10 = c100 * (1 - xf) + c101 * xf
-          const c11 = c110 * (1 - xf) + c111 * xf
-          const c0 = c00 * (1 - yf) + c01 * yf
-          const c1 = c10 * (1 - yf) + c11 * yf
-          resampled[z * targetSize * targetSize + y * targetSize + x] = c0 * (1 - zf) + c1 * zf
-        }
-      }
-    }
-    return resampled
-  }
-
-  private resampleLabelsToOriginal(
-    data: Float32Array,
-    originalShape: number[],
-    originalVoxelSize: number[]
-  ): Float32Array {
-    const [origX, origY, origZ] = originalShape
-    const targetSize = 256
-    const origCenter = [
-      (origX * originalVoxelSize[0]) / 2,
-      (origY * originalVoxelSize[1]) / 2,
-      (origZ * originalVoxelSize[2]) / 2
-    ]
-    const targetCenter = [targetSize / 2, targetSize / 2, targetSize / 2]
-    const resampled = new Float32Array(origX * origY * origZ)
-
-    for (let z = 0; z < origZ; z++) {
-      for (let y = 0; y < origY; y++) {
-        for (let x = 0; x < origX; x++) {
-          const offsetX = (x + 0.5) * originalVoxelSize[0] - origCenter[0]
-          const offsetY = (y + 0.5) * originalVoxelSize[1] - origCenter[1]
-          const offsetZ = (z + 0.5) * originalVoxelSize[2] - origCenter[2]
-          const nearX = Math.round((targetCenter[0] + offsetX) - 0.5)
-          const nearY = Math.round((targetCenter[1] + offsetY) - 0.5)
-          const nearZ = Math.round((targetCenter[2] + offsetZ) - 0.5)
-          if (nearX >= 0 && nearX < targetSize && nearY >= 0 && nearY < targetSize && nearZ >= 0 && nearZ < targetSize) {
-            resampled[z * origX * origY + y * origX + x] = data[nearZ * targetSize * targetSize + nearY * targetSize + nearX]
-          }
-        }
-      }
-    }
-    return resampled
   }
 
   /**
