@@ -386,7 +386,7 @@ describe('Niivue EventTarget API', () => {
         it('should provide correct event detail types for drawingChanged', () => {
             const listener = vi.fn((event) => {
                 expect(event.detail).toHaveProperty('action')
-                expect(['draw', 'undo', 'load', 'close', 'clear']).toContain(event.detail.action)
+                expect(['draw', 'undo', 'load', 'close']).toContain(event.detail.action)
             })
             nv.addEventListener('drawingChanged', listener)
             const event = new NiivueEvent('drawingChanged', { action: 'draw' })
@@ -419,23 +419,16 @@ describe('Niivue EventTarget API', () => {
             'volumeWithUrlRemoved',
             'volumeUpdated',
             'meshAddedFromUrl',
-            'meshAdded',
             'meshWithUrlRemoved',
             'documentLoaded',
             'dicomLoaderFinished',
             'frameChange',
             'azimuthElevationChange',
-            'zoom3DChange',
             'clipPlaneChange',
             'customMeshShaderAdded',
             'meshShaderChanged',
             'meshPropertyChanged',
-            'colormapChange',
             'optsChange',
-            'error',
-            'info',
-            'warn',
-            'debug',
             'measurementCompleted',
             'angleCompleted',
             'volumeRemoved',
