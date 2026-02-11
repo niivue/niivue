@@ -95,7 +95,7 @@ export interface NiivueEventMap {
         isFilledPen: boolean
     }
     /** Fired when the drawing bitmap materially changes (commit, undo, load, close) */
-    drawingChanged: { action: 'draw' | 'undo' | 'load' | 'close' | 'clear' }
+    drawingChanged: { action: 'draw' | 'undo' | 'load' | 'close' }
     /** Fired when drawing mode is toggled on or off */
     drawingEnabled: { enabled: boolean }
 
