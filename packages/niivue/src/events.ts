@@ -80,8 +80,6 @@ export interface NiivueEventMap {
     meshPropertyChanged: { meshIndex: number; key: string; value: unknown }
 
     // Rendering events
-    /** Fired when the colormap changes */
-    colormapChange: void
     /** Fired when volume stacking order changes */
     volumeOrderChanged: { volumes: NVImage[] }
 
