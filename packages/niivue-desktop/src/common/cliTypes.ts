@@ -3,7 +3,7 @@
  */
 export interface CLIOptions {
   /** The subcommand to execute */
-  subcommand: 'view' | 'segment' | 'extract' | 'dcm2niix' | 'niimath' | null
+  subcommand: 'view' | 'segment' | 'extract' | 'dcm2niix' | 'niimath' | 'python' | null
   /** Second-level subcommand (for dcm2niix: 'list' | 'convert') */
   subcommandMode?: string
   /** Input file path, URL, standard name, or '-' for stdin */
@@ -34,6 +34,10 @@ export interface CLIOptions {
   labelJson: string | null
   /** Comma-separated label names to extract (requires labelJson) */
   labelNames: string | null
+  /** WebSocket server port (null = auto-select) */
+  wsPort: number | null
+  /** Disable WebSocket server */
+  noWs: boolean
   /** Show help */
   help: boolean
 }
@@ -110,6 +114,8 @@ export function getDefaultCLIOptions(): CLIOptions {
     binarize: false,
     labelJson: null,
     labelNames: null,
+    wsPort: null,
+    noWs: false,
     help: false
   }
 }

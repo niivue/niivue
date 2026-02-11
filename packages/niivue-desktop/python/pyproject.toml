@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyniivue"
+version = "0.1.0"
+description = "Python client for NiiVue Desktop WebSocket API"
+requires-python = ">=3.8"
+dependencies = [
+    "websocket-client>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/niivue/niivue"
+
+[tool.setuptools.packages.find]
+include = ["pyniivue*"]

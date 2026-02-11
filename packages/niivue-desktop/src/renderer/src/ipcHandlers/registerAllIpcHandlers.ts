@@ -19,6 +19,7 @@ import { registerLoadOverlayHandler } from './loadOverlay.js'
 import { registerDrawHandler } from './draw.js'
 import { registerAddMeshHandler } from './addMesh.js'
 import { registerSegmentationHandlers } from './segmentation.js'
+import { registerWsExecutor } from './wsExecutor.js'
 
 const electron = window.electron
 
@@ -81,6 +82,7 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('toggle-color-bars')
   electron.ipcRenderer.removeAllListeners('open-right-panel-tab')
   electron.ipcRenderer.removeAllListeners('hide-right-panel')
+  electron.ipcRenderer.removeAllListeners('ws:execute')
 
   // 🔌 Register core handlers (now all driven by getTarget)
   registerLoadStandardHandler({ getTarget, onDocumentLoaded })
@@ -116,6 +118,9 @@ export const registerAllIpcHandlers = ({
     setVolumes,
     onTogglePanel: onToggleSegmentationPanel
   })
+
+  // WebSocket executor for Python scripting
+  registerWsExecutor(nv, setVolumes, setMeshes)
 
   // Right panel from menu
   electron.ipcRenderer.on('open-right-panel-tab', (_event: unknown, tab: string) => {

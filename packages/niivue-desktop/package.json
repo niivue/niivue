@@ -18,7 +18,8 @@
     "ensure-dcm2niix": "node scripts/ensure-dcm2niix.cjs",
     "download-brainchop-models": "node scripts/download-brainchop-models.js",
     "ensure-brainchop-models": "node scripts/ensure-brainchop-models.js",
-    "dev": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && electron-vite dev",
+    "ensure-python": "node scripts/ensure-python.cjs",
+    "dev": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run ensure-python && electron-vite dev",
     "prebuild": "node ./scripts/prebuild-clean-helpers.cjs",
     "build": "npm run build:deps && npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
@@ -35,9 +36,9 @@
     "fetch-dcm2niix:win": "mkdir -p native-binaries/win32 && LATEST=$(npm run --silent dcm2niix:latest-tag) && curl -sL https://github.com/rordenlab/dcm2niix/releases/latest/download/dcm2niix_win.zip -o native-binaries/dcm2niix-win.zip && unzip -j native-binaries/dcm2niix-win.zip -d native-binaries/win32 && rm native-binaries/dcm2niix-win.zip",
     "fetch-dcm2niix:mac": "mkdir -p native-binaries/darwin && LATEST=$(npm run --silent dcm2niix:latest-tag) && curl -sL https://github.com/rordenlab/dcm2niix/releases/latest/download/dcm2niix_macos.zip -o native-binaries/dcm2niix-mac.zip && unzip -j native-binaries/dcm2niix-mac.zip -d native-binaries/darwin && rm native-binaries/dcm2niix-mac.zip",
     "fetch-dcm2niix:linux": "mkdir -p native-binaries/linux && LATEST=$(npm run --silent dcm2niix:latest-tag) && curl -sL https://github.com/rordenlab/dcm2niix/releases/latest/download/dcm2niix_lnx.zip -o native-binaries/dcm2niix-linux.zip && unzip -j native-binaries/dcm2niix-linux.zip -d native-binaries/linux && rm native-binaries/dcm2niix-linux.zip",
-    "build-release:win": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:win",
-    "build-release:mac": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:mac",
-    "build-release:linux": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:linux",
+    "build-release:win": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run ensure-python && npm run build:win",
+    "build-release:mac": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run ensure-python && npm run build:mac",
+    "build-release:linux": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run ensure-python && npm run build:linux",
     "test:e2e": "env -u ELECTRON_RUN_AS_NODE wdio run wdio.conf.ts",
     "test:cli": "vitest run --config vitest.cli.config.ts"
   },
@@ -60,7 +61,8 @@
     "fflate": "^0.8.2",
     "react-beautiful-dnd": "^13.1.1",
     "react-draggable": "^4.5.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
@@ -70,6 +72,7 @@
     "@types/node": "^20.14.8",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.1",
     "@wdio/cli": "^9.23.3",
     "@wdio/local-runner": "^9.23.3",

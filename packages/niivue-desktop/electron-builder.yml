@@ -109,6 +109,20 @@ extraResources:
   - from: native-binaries/linux/dcm2niix
     to: native/dcm2niix-linux
 
+  # ─── bundled Python runtime ────────────────────────────────────────────────
+  - from: native-binaries/win32/python
+    to: native/python
+    filter:
+      - "**/*"
+  - from: native-binaries/darwin/python
+    to: native/python
+    filter:
+      - "**/*"
+  - from: native-binaries/linux/python
+    to: native/python
+    filter:
+      - "**/*"
+
   #  ─── images ───────────────────────────────────────────────────────
   - from: resources/images/
     to: images

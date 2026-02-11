@@ -11,12 +11,13 @@ import {
   EXIT_CODES,
   AVAILABLE_MODELS
 } from '../common/cliTypes.js'
+import { startWsServer, stopWsServer } from './utils/wsServer.js'
 
 // Helper to check if in development mode
 const isDev = !app.isPackaged
 
 // Valid subcommands
-const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath'] as const
+const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath', 'python'] as const
 
 // Parse CLI arguments with subcommand architecture
 function parseCLIArgs(): CLIOptions {
@@ -112,6 +113,14 @@ function parseCLIArgs(): CLIOptions {
       case '--label-names':
       case '-n':
         options.labelNames = args[++i] || null
+        break
+
+      // WebSocket options
+      case '--ws-port':
+        options.wsPort = parseInt(args[++i], 10) || null
+        break
+      case '--no-ws':
+        options.noWs = true
         break
     }
   }
@@ -209,6 +218,30 @@ Examples:
   niivue-desktop dcm2niix convert --input /dicom --series 1 --output /output/
   niivue-desktop dcm2niix convert --input /dicom --series 1 --output - | niivue-desktop segment --input - ...
 `)
+  } else if (subcommand === 'python') {
+    console.log(`
+niivue-desktop python - Run Python scripts with bundled interpreter
+
+Usage:
+  niivue-desktop python <script.py> [args...]
+  niivue-desktop python -c "<python code>"
+
+The bundled Python interpreter includes the pyniivue library for
+controlling a running NiiVue Desktop instance via WebSocket.
+
+Examples:
+  niivue-desktop python my_script.py
+  niivue-desktop python -c "import pyniivue; print('ok')"
+
+  # With NiiVue Desktop GUI running:
+  niivue-desktop python -c "
+    import pyniivue
+    with pyniivue.connect() as nv:
+        nv.load_volume('/path/to/brain.nii.gz')
+        nv.set_colormap(0, 'viridis')
+        nv.screenshot('/tmp/screenshot.png')
+  "
+`)
   } else if (subcommand === 'niimath') {
     console.log(`
 niivue-desktop niimath - Apply niimath operations
@@ -247,10 +280,13 @@ Subcommands:
   extract     Extract subvolume using label mask
   dcm2niix    Convert DICOM to NIfTI
   niimath     Apply niimath operations
+  python      Run Python scripts with bundled interpreter
 
 Universal Options:
   --input, -i     Input file, URL, standard name, or "-" for stdin
   --output, -o    Output file or "-" for stdout
+  --ws-port <n>   WebSocket server port (default: auto-select from 15555)
+  --no-ws         Disable WebSocket server in GUI mode
   --help, -h      Show help (use with subcommand for details)
 
 Examples:
@@ -281,8 +317,25 @@ if (cliOptions.help) {
   process.exit(EXIT_CODES.SUCCESS)
 }
 
-// Determine if running in headless mode (any subcommand = headless)
-const isHeadless = cliOptions.subcommand !== null
+// Handle python subcommand early — pure passthrough to bundled interpreter, no window needed
+const isPythonSubcommand = cliOptions.subcommand === 'python'
+if (isPythonSubcommand) {
+  import('./utils/runPython.js').then(({ runPythonScript }) => {
+    // Collect all args after 'python'
+    const allArgs = process.argv.slice(isDev ? 2 : 1)
+    const pythonArgIndex = allArgs.indexOf('python')
+    const pythonArgs = allArgs.slice(pythonArgIndex + 1)
+    return runPythonScript(pythonArgs)
+  }).then((code) => {
+    process.exit(code)
+  }).catch((err) => {
+    console.error('[Python] Error:', err)
+    process.exit(EXIT_CODES.GENERAL_ERROR)
+  })
+}
+
+// Determine if running in headless mode (any non-python subcommand = headless)
+const isHeadless = cliOptions.subcommand !== null && !isPythonSubcommand
 
 // In headless mode, redirect console.log to stderr to keep stdout clean for data output
 if (isHeadless) {
@@ -444,6 +497,9 @@ ipcMain.on('headless:error', (_event, message: string, exitCode?: number) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Python subcommand bypasses window creation entirely
+  if (isPythonSubcommand) return
+
   if (process.platform === 'darwin') {
     const icon = getPlatformIcon()
     if (typeof icon !== 'string') {
@@ -473,11 +529,22 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  // Start WebSocket server in GUI mode (not headless, not --no-ws)
+  if (!isHeadless && !cliOptions.noWs && mainWindow) {
+    startWsServer(mainWindow, cliOptions.wsPort).catch((err) => {
+      console.error('[WS] Failed to start WebSocket server:', err)
+    })
+  }
+
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('will-quit', () => {
+  stopWsServer()
 })
 
 app.on('window-all-closed', () => {

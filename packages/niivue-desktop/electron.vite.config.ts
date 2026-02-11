@@ -26,7 +26,7 @@ export default defineConfig({
       outDir: 'out/main',
       // Keep native/Node modules external in the main process build
       rollupOptions: {
-        external: ['electron', 'zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
+        external: ['electron', 'zlib', 'node:module', 'node:zlib', 'fflate', 'pako', 'ws']
       }
     } as any)
   },
