@@ -382,8 +382,10 @@ function MainApp(): JSX.Element {
     // Helper: Save volume to output (file or stdout)
     const saveVolumeOutput = async (volume: NVImage, output: string): Promise<void> => {
       const isStdout = output === '-' || output.toLowerCase() === 'stdout'
-      // Get volume data as NIfTI
-      const niftiData = volume.toUint8Array()
+      // Use saveToUint8Array which handles gzip compression based on filename
+      // For stdout, compress as .nii.gz so downstream commands get proper NIfTI
+      const filename = isStdout ? 'output.nii.gz' : output
+      const niftiData = await volume.saveToUint8Array(filename)
       const base64 = uint8ArrayToBase64(niftiData)
 
       if (isStdout) {
