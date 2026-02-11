@@ -48,8 +48,6 @@ export interface NiivueEventMap {
     volumeUpdated: void
     /** Fired when a mesh is added from a URL */
     meshAddedFromUrl: { meshOptions: LoadFromUrlParams; mesh: NVMesh }
-    /** Fired when a mesh is added */
-    meshAdded: void
     /** Fired when a mesh loaded from a URL is removed */
     meshWithUrlRemoved: { url: string }
     /** Fired when any mesh is removed from the scene */
