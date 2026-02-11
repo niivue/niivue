@@ -521,7 +521,13 @@ export class Niivue extends EventTarget {
     onMeshAdded: () => void = () => {}
     onMeshWithUrlRemoved: (url: string) => void = () => {}
 
-    // not implemented anywhere...
+    /**
+     * callback function to run when the 3D zoom level changes
+     * @example
+     * niivue.onZoom3DChange = (zoom) => {
+     *   console.log('3D zoom scale: ', zoom)
+     * }
+     */
     onZoom3DChange: (zoom: number) => void = () => {}
 
     /**
@@ -678,6 +684,12 @@ export class Niivue extends EventTarget {
             this._emitEvent('optsChange', { propertyName, newValue, oldValue })
             this.onOptsChange(propertyName, newValue, oldValue)
         })
+
+        // Set up scene callbacks to emit events
+        this.scene.onZoom3DChange = (zoom: number): void => {
+            this._emitEvent('zoom3DChange', { zoom })
+            this.onZoom3DChange(zoom)
+        }
     }
 
     /**
