@@ -45,7 +45,7 @@ export interface NiivueEventMap {
     /** Fired when any volume is removed from the scene */
     volumeRemoved: { volume: NVImage; index: number }
     /** Fired when a volume is updated */
-    volumeUpdated: void
+    volumeUpdated: undefined
     /** Fired when a mesh is added from a URL */
     meshAddedFromUrl: { meshOptions: LoadFromUrlParams; mesh: NVMesh }
     /** Fired when a mesh loaded from a URL is removed */
@@ -102,6 +102,17 @@ export interface NiivueEventMap {
         newValue: NVConfigOptions[keyof NVConfigOptions]
         oldValue: NVConfigOptions[keyof NVConfigOptions]
     }
+
+    // Logging events
+    // NOTE: These are placeholder event types for future use and are not currently emitted
+    /** Fired on error messages */
+    error: { message?: string }
+    /** Fired on info messages */
+    info: { message?: string }
+    /** Fired on warning messages */
+    warn: { message?: string }
+    /** Fired on debug messages */
+    debug: { message?: string }
 }
 
 /**
