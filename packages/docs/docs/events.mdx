@@ -71,7 +71,6 @@ controller.abort();
 | `volumeRemoved` | `{ volume: NVImage; index: number }` | Any volume removed from scene |
 | `volumeUpdated` | `void` | Volume updated |
 | `meshAddedFromUrl` | `{ meshOptions, mesh }` | Mesh added from URL |
-| `meshAdded` | `void` | Mesh added |
 | `meshWithUrlRemoved` | `{ url: string }` | URL-loaded mesh removed |
 | `meshRemoved` | `{ mesh: NVMesh }` | Any mesh removed from scene |
 | `documentLoaded` | `NVDocument` | Document loaded |
@@ -82,7 +81,6 @@ controller.abort();
 | Event | Detail Type | Description |
 |-------|------------|-------------|
 | `azimuthElevationChange` | `{ azimuth: number; elevation: number }` | 3D view rotation changed |
-| `zoom3DChange` | `{ zoom: number }` | 3D zoom level changed |
 | `clipPlaneChange` | `{ clipPlane: number[] }` | Clip plane changed |
 | `sliceTypeChange` | `{ sliceType: SLICE_TYPE }` | View layout changed (axial, coronal, etc.) |
 
@@ -98,7 +96,6 @@ controller.abort();
 
 | Event | Detail Type | Description |
 |-------|------------|-------------|
-| `colormapChange` | `void` | Colormap changed |
 | `volumeOrderChanged` | `{ volumes: NVImage[] }` | Volume stacking order changed |
 
 ### Drawing
@@ -107,7 +104,7 @@ controller.abort();
 |-------|------------|-------------|
 | `penValueChanged` | `{ penValue: number; isFilledPen: boolean }` | Drawing pen value changed |
 | `drawingToolChanged` | `{ tool: string; penValue: number; isFilledPen: boolean }` | Active drawing tool changed (high-level interpretation) |
-| `drawingChanged` | `{ action: string }` | Drawing bitmap materially changed (`'draw'`, `'undo'`, `'load'`, `'close'`, `'clear'`) |
+| `drawingChanged` | `{ action: string }` | Drawing bitmap materially changed (`'draw'`, `'undo'`, `'load'`, `'close'`) |
 | `drawingEnabled` | `{ enabled: boolean }` | Drawing mode toggled on or off |
 
 ### Configuration
@@ -115,15 +112,6 @@ controller.abort();
 | Event | Detail Type | Description |
 |-------|------------|-------------|
 | `optsChange` | `{ propertyName, newValue, oldValue }` | Options changed |
-
-### Logging
-
-| Event | Detail Type | Description |
-|-------|------------|-------------|
-| `error` | `{ message?: string }` | Error |
-| `info` | `{ message?: string }` | Info |
-| `warn` | `{ message?: string }` | Warning |
-| `debug` | `{ message?: string }` | Debug |
 
 ## TypeScript
 

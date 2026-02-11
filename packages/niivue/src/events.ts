@@ -64,8 +64,6 @@ export interface NiivueEventMap {
     // View control events
     /** Fired when azimuth or elevation angles change in 3D view */
     azimuthElevationChange: { azimuth: number; elevation: number }
-    /** Fired when 3D view zoom level changes */
-    zoom3DChange: { zoom: number }
     /** Fired when clip plane changes */
     clipPlaneChange: { clipPlane: number[] }
     /** Fired when the slice type (view layout) changes */
