@@ -51,9 +51,8 @@ export const registerSegmentationHandlers = ({
         return
       }
 
-      // Get the base volume (first volume) and conform to 256³ @ 1mm isotropic
-      // Brainchop models expect this specific format
-      const baseVolume = await nv.conform(nv.volumes[0], true)
+      // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
+      const baseVolume = await nv.conform(nv.volumes[0], false)
 
       // Initialize brainchop service if needed
       if (!brainchopService.isReady()) {

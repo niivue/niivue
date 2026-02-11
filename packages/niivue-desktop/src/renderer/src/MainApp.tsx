@@ -241,9 +241,8 @@ function MainApp(): JSX.Element {
         setSegmentationStatus('Starting segmentation...')
         setSegmentationModelName(modelInfo.name)
 
-        // Conform volume to 256³ @ 1mm before segmentation
-        // rawFloat32=true: preserve original intensity values (no rescaling) for ML inference
-        conformedVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
+        // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
+        conformedVolume = await nv.conform(baseVolume, false)
 
         console.log('[MainApp] Running segmentation on conformed volume:', {
           dims: conformedVolume.dims,
@@ -274,7 +273,7 @@ function MainApp(): JSX.Element {
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
         // For cache hits, conform the volume to match the label space
-        const sourceVolume = cacheHit ? await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true) : conformedVolume!
+        const sourceVolume = cacheHit ? await nv.conform(baseVolume, false) : conformedVolume!
         const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
 
         // Build descriptive name
@@ -472,9 +471,8 @@ function MainApp(): JSX.Element {
         throw new Error('No volume loaded for segmentation')
       }
 
-      // Conform volume to 256³ @ 1mm before segmentation
-      // rawFloat32=true: preserve original intensity values (no rescaling) for ML inference
-      const conformedVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
+      // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
+      const conformedVolume = await nv.conform(baseVolume, false)
 
       console.error(`[niivue] Running segmentation model: ${options.model}`)
       const result = await brainchopService.runSegmentation(conformedVolume, options.model, {
