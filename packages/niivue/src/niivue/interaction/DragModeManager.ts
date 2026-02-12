@@ -89,6 +89,7 @@ export interface CalculateWindowingParams {
     currentCalMax: number
     globalMin: number
     globalMax: number
+    gainFactor: number
 }
 
 /**
@@ -319,31 +320,34 @@ export function calculateSlicer3DZoomFromDrag(params: CalculateSlicer3DZoomParam
  * @returns Windowing result with adjusted cal_min and cal_max
  */
 export function calculateWindowingAdjustment(params: CalculateWindowingParams): WindowingAdjustmentResult {
-    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params
+    const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax, gainFactor } = params
 
     let mn = currentCalMin
     let mx = currentCalMax
 
+    const deltaY = (y - windowY) * gainFactor
+    const deltaX = (x - windowX) * gainFactor
+
     // Adjust level based on vertical movement
-    if (y < windowY) {
+    if (deltaY < 0) {
         // increase level if mouse moves up
-        mn += 1
-        mx += 1
-    } else if (y > windowY) {
+        mn += Math.abs(deltaY)
+        mx += Math.abs(deltaY)
+    } else if (deltaY > 0) {
         // decrease level if mouse moves down
-        mn -= 1
-        mx -= 1
+        mn -= deltaY
+        mx -= deltaY
     }
 
     // Adjust window width based on horizontal movement
-    if (x > windowX) {
+    if (deltaX > 0) {
         // increase window width if mouse moves right
-        mn -= 1
-        mx += 1
-    } else if (x < windowX) {
+        mn -= deltaX
+        mx += deltaX
+    } else if (deltaX < 0) {
         // decrease window width if mouse moves left
-        mn += 1
-        mx -= 1
+        mn += Math.abs(deltaX)
+        mx -= Math.abs(deltaX)
     }
 
     // Ensure window width is at least 1

@@ -1842,6 +1842,14 @@ export class Niivue extends EventTarget {
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
+        // Prevent huge delta values on the first drag when reference points
+        // are far from the current position
+        const deltaDistance = Math.sqrt((x - this.uiData.windowX) ** 2 + (y - this.uiData.windowY) ** 2)
+        if (deltaDistance > 100) {
+            this.uiData.windowX = x
+            this.uiData.windowY = y
+        }
+
         // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
@@ -1851,9 +1859,9 @@ export class Niivue extends EventTarget {
             currentCalMin: this.volumes[0].cal_min!,
             currentCalMax: this.volumes[0].cal_max!,
             globalMin: this.volumes[0].global_min!,
-            globalMax: this.volumes[0].global_max!
+            globalMax: this.volumes[0].global_max!,
+            gainFactor: this.opts.windowingGainFactor
         })
-
         this.volumes[volIdx].cal_min = result.calMin
         this.volumes[volIdx].cal_max = result.calMax
         this.refreshLayers(this.volumes[volIdx], 0)
@@ -3554,78 +3562,78 @@ export class Niivue extends EventTarget {
 // https://github.com/niivue/niivue/issues/1374
 const perm = this.volumes[0].permRAS!
 if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
-  log.debug('saving drawing')
-  const img = await this.volumes[0].saveToDisk(filename, this.drawBitmap) // createEmptyDrawing
-  return img
+log.debug('saving drawing')
+const img = await this.volumes[0].saveToDisk(filename, this.drawBitmap) // createEmptyDrawing
+return img
 } else {
-  log.debug('saving drawing')
-  const dims = this.volumes[0].hdr!.dims // reverse to original
-  // reverse RAS to native space, layout is mrtrix MIF format
-  // for details see NVImage.readMIF()
-  const layout = [0, 0, 0]
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (Math.abs(perm[i]) - 1 !== j) {
-        continue
-      }
-      layout[j] = i * Math.sign(perm[i])
-    }
-  }
-  let stride = 1
-  const instride = [1, 1, 1]
-  const inflip = [false, false, false]
-  for (let i = 0; i < layout.length; i++) {
-    for (let j = 0; j < layout.length; j++) {
-      const a = Math.abs(layout[j])
-      if (a !== i) {
-        continue
-      }
-      instride[j] = stride
-      // detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
-      if (layout[j] < 0 || Object.is(layout[j], -0)) {
-        inflip[j] = true
-      }
-      stride *= dims[j + 1]
-    }
-  }
+log.debug('saving drawing')
+const dims = this.volumes[0].hdr!.dims // reverse to original
+// reverse RAS to native space, layout is mrtrix MIF format
+// for details see NVImage.readMIF()
+const layout = [0, 0, 0]
+for (let i = 0; i < 3; i++) {
+for (let j = 0; j < 3; j++) {
+if (Math.abs(perm[i]) - 1 !== j) {
+  continue
+}
+layout[j] = i * Math.sign(perm[i])
+}
+}
+let stride = 1
+const instride = [1, 1, 1]
+const inflip = [false, false, false]
+for (let i = 0; i < layout.length; i++) {
+for (let j = 0; j < layout.length; j++) {
+const a = Math.abs(layout[j])
+if (a !== i) {
+  continue
+}
+instride[j] = stride
+// detect -0: https://medium.com/coding-at-dawn/is-negative-zero-0-a-number-in-javascript-c62739f80114
+if (layout[j] < 0 || Object.is(layout[j], -0)) {
+  inflip[j] = true
+}
+stride *= dims[j + 1]
+}
+}
 
-  let xlut = NVUtilities.range(0, dims[1] - 1, 1)
-  if (inflip[0]) {
-    xlut = NVUtilities.range(dims[1] - 1, 0, -1)
-  }
-  for (let i = 0; i < dims[1]; i++) {
-    xlut[i] *= instride[0]
-  }
-  let ylut = NVUtilities.range(0, dims[2] - 1, 1)
-  if (inflip[1]) {
-    ylut = NVUtilities.range(dims[2] - 1, 0, -1)
-  }
-  for (let i = 0; i < dims[2]; i++) {
-    ylut[i] *= instride[1]
-  }
-  let zlut = NVUtilities.range(0, dims[3] - 1, 1)
-  if (inflip[2]) {
-    zlut = NVUtilities.range(dims[3] - 1, 0, -1)
-  }
-  for (let i = 0; i < dims[3]; i++) {
-    zlut[i] *= instride[2]
-  }
-  // convert data
+let xlut = NVUtilities.range(0, dims[1] - 1, 1)
+if (inflip[0]) {
+xlut = NVUtilities.range(dims[1] - 1, 0, -1)
+}
+for (let i = 0; i < dims[1]; i++) {
+xlut[i] *= instride[0]
+}
+let ylut = NVUtilities.range(0, dims[2] - 1, 1)
+if (inflip[1]) {
+ylut = NVUtilities.range(dims[2] - 1, 0, -1)
+}
+for (let i = 0; i < dims[2]; i++) {
+ylut[i] *= instride[1]
+}
+let zlut = NVUtilities.range(0, dims[3] - 1, 1)
+if (inflip[2]) {
+zlut = NVUtilities.range(dims[3] - 1, 0, -1)
+}
+for (let i = 0; i < dims[3]; i++) {
+zlut[i] *= instride[2]
+}
+// convert data
 
-  const inVs = new Uint8Array(this.drawBitmap)
-  const outVs = new Uint8Array(dims[1] * dims[2] * dims[3])
-  let j = 0
-  for (let z = 0; z < dims[3]; z++) {
-    for (let y = 0; y < dims[2]; y++) {
-      for (let x = 0; x < dims[1]; x++) {
-        outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]]
-        j++
-      }
-    }
-  }
-  log.debug('saving drawing')
-  const img = this.volumes[0].saveToDisk(filename, outVs)
-  return img
+const inVs = new Uint8Array(this.drawBitmap)
+const outVs = new Uint8Array(dims[1] * dims[2] * dims[3])
+let j = 0
+for (let z = 0; z < dims[3]; z++) {
+for (let y = 0; y < dims[2]; y++) {
+for (let x = 0; x < dims[1]; x++) {
+  outVs[j] = inVs[xlut[x] + ylut[y] + zlut[z]]
+  j++
+}
+}
+}
+log.debug('saving drawing')
+const img = this.volumes[0].saveToDisk(filename, outVs)
+return img
 } */
         }
         log.debug('saving image')
@@ -4773,7 +4781,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
 * @example
 * const javascript = this.generateLoadDocumentJavaScript("gl1");
 * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-      ${javascript}</script></body></html>`;
+    ${javascript}</script></body></html>`;
 * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
 */
     async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
