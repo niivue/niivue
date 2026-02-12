@@ -2,7 +2,7 @@
  * Read data from stdin with timeout
  * Expects base64-encoded data for binary files
  */
-export async function readStdin(timeout = 30000): Promise<string> {
+export async function readStdin(timeout = 120000): Promise<string> {
   return new Promise((resolve, reject) => {
     // Check if stdin is a TTY (interactive terminal)
     if (process.stdin.isTTY) {
@@ -56,7 +56,7 @@ export async function readStdin(timeout = 30000): Promise<string> {
  * Read binary data from stdin (for raw NIfTI files)
  * Returns Buffer directly without base64 encoding
  */
-export async function readStdinBinary(timeout = 30000): Promise<Buffer> {
+export async function readStdinBinary(timeout = 120000): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     if (process.stdin.isTTY) {
       reject(new Error('No data piped to stdin.'))

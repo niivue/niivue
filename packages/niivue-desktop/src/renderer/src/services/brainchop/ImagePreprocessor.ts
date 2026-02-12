@@ -53,20 +53,17 @@ export class ImagePreprocessor {
     const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
     const originalVoxelSize = [pixDims[1], pixDims[2], pixDims[3]]
 
-    // Check if volume needs resampling to target shape
+    // Volume must be conformed to target shape by caller (via nv.conform())
     const [targetX, targetY, targetZ] = this.targetShape
     const targetVoxelCount = targetX * targetY * targetZ
-    let processedData = volumeData
-    let finalShape = originalShape
+    const processedData = volumeData
+    const finalShape = [targetX, targetY, targetZ]
 
     if (volumeData.length !== targetVoxelCount) {
-      onProgress?.(10, `Resampling to ${targetX}×${targetY}×${targetZ} @ 1mm`)
-
-      // Resample to target shape
-      processedData = await this.resampleVolume(volumeData, originalShape, volume)
-      finalShape = [targetX, targetY, targetZ]
-    } else {
-      finalShape = [targetX, targetY, targetZ]
+      throw new Error(
+        `Volume must be conformed to ${targetX}x${targetY}x${targetZ} before preprocessing ` +
+        `(got ${volumeData.length} voxels). Call nv.conform(volume, true) first.`
+      )
     }
 
     onProgress?.(30, 'Converting to tensor')
@@ -150,107 +147,6 @@ export class ImagePreprocessor {
   }
 
   /**
-   * Resample volume to 256³ @ 1mm isotropic resolution
-   * Centers the volume in the 256³ space to match brainchop/FastSurfer conform
-   */
-  private async resampleVolume(
-    data: Float32Array,
-    originalShape: number[],
-    volume: NVImage
-  ): Promise<Float32Array> {
-    // Get voxel spacing
-    const pixDims = volume.hdr?.pixDims || [1, 1, 1, 1, 1, 1, 1, 1]
-    const voxelSize = [pixDims[1], pixDims[2], pixDims[3]]
-
-    const [targetX, targetY, targetZ] = this.targetShape
-    const [origX, origY, origZ] = originalShape
-
-    // Calculate physical center of original volume (in mm)
-    const origCenterPhysical = [
-      (origX * voxelSize[0]) / 2,
-      (origY * voxelSize[1]) / 2,
-      (origZ * voxelSize[2]) / 2
-    ]
-
-    // Calculate physical center of target volume (in mm)
-    const targetCenterPhysical = [targetX / 2, targetY / 2, targetZ / 2]
-
-    const resampled = new Float32Array(targetX * targetY * targetZ)
-
-    // Trilinear interpolation with proper centering
-    for (let z = 0; z < targetZ; z++) {
-      for (let y = 0; y < targetY; y++) {
-        for (let x = 0; x < targetX; x++) {
-          // Target physical coordinate (mm) - voxel center
-          const targetPhysX = (x + 0.5) * 1.0
-          const targetPhysY = (y + 0.5) * 1.0
-          const targetPhysZ = (z + 0.5) * 1.0
-
-          // Offset from target center
-          const offsetX = targetPhysX - targetCenterPhysical[0]
-          const offsetY = targetPhysY - targetCenterPhysical[1]
-          const offsetZ = targetPhysZ - targetCenterPhysical[2]
-
-          // Source physical coordinate (centered)
-          const srcPhysX = origCenterPhysical[0] + offsetX
-          const srcPhysY = origCenterPhysical[1] + offsetY
-          const srcPhysZ = origCenterPhysical[2] + offsetZ
-
-          // Convert to source voxel coordinates (find voxel center that matches)
-          const srcX = (srcPhysX / voxelSize[0]) - 0.5
-          const srcY = (srcPhysY / voxelSize[1]) - 0.5
-          const srcZ = (srcPhysZ / voxelSize[2]) - 0.5
-
-          // Get integer and fractional parts
-          const x0 = Math.floor(srcX)
-          const y0 = Math.floor(srcY)
-          const z0 = Math.floor(srcZ)
-
-          const x1 = Math.min(x0 + 1, origX - 1)
-          const y1 = Math.min(y0 + 1, origY - 1)
-          const z1 = Math.min(z0 + 1, origZ - 1)
-
-          const xFrac = srcX - x0
-          const yFrac = srcY - y0
-          const zFrac = srcZ - z0
-
-          // Boundary check
-          if (x0 < 0 || x0 >= origX || y0 < 0 || y0 >= origY || z0 < 0 || z0 >= origZ) {
-            continue
-          }
-
-          // Get 8 corner values
-          const c000 = data[z0 * origX * origY + y0 * origX + x0]
-          const c001 = data[z0 * origX * origY + y0 * origX + x1]
-          const c010 = data[z0 * origX * origY + y1 * origX + x0]
-          const c011 = data[z0 * origX * origY + y1 * origX + x1]
-          const c100 = data[z1 * origX * origY + y0 * origX + x0]
-          const c101 = data[z1 * origX * origY + y0 * origX + x1]
-          const c110 = data[z1 * origX * origY + y1 * origX + x0]
-          const c111 = data[z1 * origX * origY + y1 * origX + x1]
-
-          // Interpolate along x
-          const c00 = c000 * (1 - xFrac) + c001 * xFrac
-          const c01 = c010 * (1 - xFrac) + c011 * xFrac
-          const c10 = c100 * (1 - xFrac) + c101 * xFrac
-          const c11 = c110 * (1 - xFrac) + c111 * xFrac
-
-          // Interpolate along y
-          const c0 = c00 * (1 - yFrac) + c01 * yFrac
-          const c1 = c10 * (1 - yFrac) + c11 * yFrac
-
-          // Interpolate along z
-          const value = c0 * (1 - zFrac) + c1 * zFrac
-
-          resampled[z * targetX * targetY + y * targetX + x] = value
-        }
-      }
-    }
-
-    return resampled
-  }
-
-  /**
    * Convert Float32Array to TensorFlow tensor
    * Brainchop models expect 5D tensors with shape [batch, width, height, depth, channels]
    */
@@ -298,70 +194,6 @@ export class ImagePreprocessor {
       const range = originalMax - originalMin
       return tf.add(tf.mul(tensor, tf.scalar(range)), tf.scalar(originalMin)) as tf.Tensor4D
     })
-  }
-
-  /**
-   * Resample segmentation back to original volume dimensions
-   * Inverse of the centered resampling in preprocessVolume
-   */
-  async resampleToOriginalSpace(
-    data: Float32Array,
-    originalShape: number[],
-    originalVoxelSize: number[]
-  ): Promise<Float32Array> {
-    const [origX, origY, origZ] = originalShape
-    const [targetX, targetY, targetZ] = this.targetShape
-
-    // Calculate physical centers (same as forward resampling)
-    const origCenterPhysical = [
-      (origX * originalVoxelSize[0]) / 2,
-      (origY * originalVoxelSize[1]) / 2,
-      (origZ * originalVoxelSize[2]) / 2
-    ]
-
-    const targetCenterPhysical = [targetX / 2, targetY / 2, targetZ / 2]
-
-    const resampled = new Float32Array(origX * origY * origZ)
-
-    // Nearest neighbor interpolation for label data (preserves integer labels)
-    for (let z = 0; z < origZ; z++) {
-      for (let y = 0; y < origY; y++) {
-        for (let x = 0; x < origX; x++) {
-          // Original voxel physical coordinate (mm) - voxel center
-          const origPhysX = (x + 0.5) * originalVoxelSize[0]
-          const origPhysY = (y + 0.5) * originalVoxelSize[1]
-          const origPhysZ = (z + 0.5) * originalVoxelSize[2]
-
-          // Offset from original center
-          const offsetX = origPhysX - origCenterPhysical[0]
-          const offsetY = origPhysY - origCenterPhysical[1]
-          const offsetZ = origPhysZ - origCenterPhysical[2]
-
-          // Target physical coordinate (centered)
-          const targetPhysX = targetCenterPhysical[0] + offsetX
-          const targetPhysY = targetCenterPhysical[1] + offsetY
-          const targetPhysZ = targetCenterPhysical[2] + offsetZ
-
-          // Convert to target voxel coordinates (1mm isotropic) - find voxel index
-          const targetVoxX = (targetPhysX / 1.0) - 0.5
-          const targetVoxY = (targetPhysY / 1.0) - 0.5
-          const targetVoxZ = (targetPhysZ / 1.0) - 0.5
-
-          // Nearest neighbor
-          const nearX = Math.round(targetVoxX)
-          const nearY = Math.round(targetVoxY)
-          const nearZ = Math.round(targetVoxZ)
-
-          // Bounds check
-          if (nearX >= 0 && nearX < targetX && nearY >= 0 && nearY < targetY && nearZ >= 0 && nearZ < targetZ) {
-            const value = data[nearZ * targetX * targetY + nearY * targetX + nearX]
-            resampled[z * origX * origY + y * origX + x] = value
-          }
-        }
-      }
-    }
-
-    return resampled
   }
 
   /**

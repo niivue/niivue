@@ -1,4 +1,5 @@
 import type { Options } from '@wdio/types'
+import { execSync } from 'child_process'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -9,7 +10,7 @@ const __dirname = path.dirname(__filename)
 // This can be set by VS Code or other Electron-based IDEs when running from the integrated terminal
 delete process.env.ELECTRON_RUN_AS_NODE
 
-export const config: Options.Testrunner = {
+export const config: Options.Testrunner & Record<string, unknown> = {
   runner: 'local',
   autoCompileOpts: {
     autoCompile: true,
@@ -85,5 +86,22 @@ export const config: Options.Testrunner = {
 
   onWorkerStart: function () {
     delete process.env.ELECTRON_RUN_AS_NODE
+  },
+
+  // Kill orphaned niivue-desktop Electron and chromedriver processes after tests complete.
+  // Without this, test runs can leave dozens of zombie processes behind.
+  onComplete: function () {
+    const appEntry = path.join(__dirname, 'out/main/index.js')
+    try {
+      if (process.platform === 'win32') {
+        // wmic finds processes whose command line contains our app entry point
+        execSync(`wmic process where "CommandLine like '%${appEntry.replace(/\\/g, '\\\\')}%'" call terminate 2>nul`, { stdio: 'ignore' })
+      } else {
+        execSync(`pkill -f "${appEntry}" 2>/dev/null; pkill -f "chromedriver.*mac_arm" 2>/dev/null`, { stdio: 'ignore' })
+      }
+      console.log('[wdio] Cleaned up orphaned test processes')
+    } catch {
+      // pkill exits non-zero when no processes matched — that's fine
+    }
   }
 }

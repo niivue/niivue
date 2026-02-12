@@ -23,6 +23,7 @@
         "demo": "npm run demo -w @niivue/niivue",
         "dev": "npm run dev -w @niivue/niivue",
         "predev:desktop": "npm run build:niivue",
+        "setup:desktop": "npm run setup -w niivue-desktop",
         "dev:desktop": "npm run dev -w niivue-desktop",
         "dev:docs": "npm run build:docs && npm run start -w @niivue/docs",
         "test:e2e": "npm run test-playwright -w @niivue/niivue",
