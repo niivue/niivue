@@ -447,9 +447,9 @@ Defined in: [nvimage/index.ts:1301](https://github.com/niivue/niivue/blob/main/p
 
 ```ts
 convertMM2Frac(mm:
-  | [number, number, number, number]
   | Float32Array
-  | [number, number, number], isForceSliceMM: boolean): vec3;
+  | [number, number, number]
+  | [number, number, number, number], isForceSliceMM: boolean): vec3;
 ```
 
 Defined in: [nvimage/index.ts:1311](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvimage/index.ts#L1311)
@@ -458,7 +458,7 @@ Defined in: [nvimage/index.ts:1311](https://github.com/niivue/niivue/blob/main/p
 
 | Parameter        | Type                                                                                                | Default value |
 | ---------------- | --------------------------------------------------------------------------------------------------- | ------------- |
-| `mm`             | \| \[`number`, `number`, `number`, `number`\] \| `Float32Array` \| \[`number`, `number`, `number`\] | `undefined`   |
+| `mm`             | \| `Float32Array` \| \[`number`, `number`, `number`\] \| \[`number`, `number`, `number`, `number`\] | `undefined`   |
 | `isForceSliceMM` | `boolean`                                                                                           | `false`       |
 
 #### Returns

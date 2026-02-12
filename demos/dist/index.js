@@ -42050,6 +42050,13 @@ function scaleImageData(imgRaw, slope, inter) {
   return img;
 }
 
+// src/events.ts
+var NiivueEvent = class extends CustomEvent {
+  constructor(type, detail) {
+    super(type, { detail });
+  }
+};
+
 // src/niivue/index.ts
 var { version } = package_default;
 var { MESH_EXTENSIONS: MESH_EXTENSIONS2 } = FileLoader_exports;
@@ -42060,11 +42067,12 @@ var defaultSaveImageOptions = {
   volumeByIndex: 0
 };
 var _eventsController;
-var Niivue = class {
+var Niivue = class extends EventTarget {
   /**
    * @param options  - options object to set modifiable Niivue properties
    */
   constructor(options = DEFAULT_OPTIONS) {
+    super();
     __publicField(this, "loaders", {});
     // create a dicom loader
     __publicField(this, "dicomLoader", null);
@@ -42460,7 +42468,13 @@ var Niivue = class {
     });
     __publicField(this, "onMeshWithUrlRemoved", () => {
     });
-    // not implemented anywhere...
+    /**
+     * callback function to run when the 3D zoom level changes
+     * @example
+     * niivue.onZoom3DChange = (zoom) => {
+     *   console.log('3D zoom scale: ', zoom)
+     * }
+     */
     __publicField(this, "onZoom3DChange", () => {
     });
     /**
@@ -42507,6 +42521,36 @@ var Niivue = class {
      */
     __publicField(this, "onOptsChange", () => {
     });
+    /** Callback when a distance measurement is completed */
+    __publicField(this, "onMeasurementCompleted", () => {
+    });
+    /** Callback when an angle measurement is completed */
+    __publicField(this, "onAngleCompleted", () => {
+    });
+    /** Callback when the drawing pen value changes */
+    __publicField(this, "onPenValueChanged", () => {
+    });
+    /** Callback when the active drawing tool changes */
+    __publicField(this, "onDrawingToolChanged", () => {
+    });
+    /** Callback when any volume is removed from the scene */
+    __publicField(this, "onVolumeRemoved", () => {
+    });
+    /** Callback when any mesh is removed from the scene */
+    __publicField(this, "onMeshRemoved", () => {
+    });
+    /** Callback when the slice type (view layout) changes */
+    __publicField(this, "onSliceTypeChange", () => {
+    });
+    /** Callback when the drawing bitmap materially changes */
+    __publicField(this, "onDrawingChanged", () => {
+    });
+    /** Callback when drawing mode is toggled on or off */
+    __publicField(this, "onDrawingEnabled", () => {
+    });
+    /** Callback when volume stacking order changes */
+    __publicField(this, "onVolumeOrderChanged", () => {
+    });
     __publicField(this, "document", new NVDocument());
     __publicField(this, "mediaUrlMap", /* @__PURE__ */ new Map());
     __publicField(this, "initialized", false);
@@ -42534,8 +42578,13 @@ var Niivue = class {
     }
     log.setLogLevel(this.opts.logLevel);
     this.document.setOptsChangeCallback((propertyName, newValue, oldValue) => {
+      this._emitEvent("optsChange", { propertyName, newValue, oldValue });
       this.onOptsChange(propertyName, newValue, oldValue);
     });
+    this.scene.onZoom3DChange = (zoom) => {
+      this._emitEvent("zoom3DChange", { zoom });
+      this.onZoom3DChange(zoom);
+    };
   }
   /** Get the current scene configuration. */
   get scene() {
@@ -42567,6 +42616,25 @@ var Niivue = class {
    */
   set isAlphaClipDark(newVal) {
     this.document.opts.isAlphaClipDark = newVal;
+  }
+  addEventListener(type, listener, options) {
+    super.addEventListener(type, listener, options);
+  }
+  removeEventListener(type, listener, options) {
+    super.removeEventListener(type, listener, options);
+  }
+  /**
+   * Internal helper to emit events alongside legacy callbacks.
+   * Events fire BEFORE callbacks.
+   * @private
+   */
+  _emitEvent(eventName, detail) {
+    try {
+      const event = new NiivueEvent(eventName, detail);
+      this.dispatchEvent(event);
+    } catch (error) {
+      console.error(`Error in ${eventName} event listener:`, error);
+    }
   }
   /**
    * Clean up event listeners and observers
@@ -43153,6 +43221,8 @@ var Niivue = class {
               angle: this.calculateAngleBetweenLines(this.uiData.angleFirstLine, secondLine)
             };
             this.document.completedAngles.push(angleToSave);
+            this._emitEvent("angleCompleted", angleToSave);
+            this.onAngleCompleted(angleToSave);
           }
           this.resetAngleMeasurement();
           this.uiData.angleState = "complete";
@@ -43225,6 +43295,7 @@ var Niivue = class {
     const mxScale = intensityRaw2Scaled2(hdr, intensityResult.hi);
     this.volumes[volIdx].cal_min = mnScale;
     this.volumes[volIdx].cal_max = mxScale;
+    this._emitEvent("intensityChange", this.volumes[volIdx]);
     this.onIntensityChange(this.volumes[volIdx]);
   }
   /**
@@ -43249,7 +43320,7 @@ var Niivue = class {
     const mmLength = vec3_exports.len(v);
     const voxStart = this.frac2vox(fracStart);
     const voxEnd = this.frac2vox(fracEnd);
-    this.onDragRelease({
+    const dragReleaseParams = {
       fracStart,
       fracEnd,
       voxStart,
@@ -43259,7 +43330,9 @@ var Niivue = class {
       mmLength,
       tileIdx,
       axCorSag
-    });
+    };
+    this._emitEvent("dragRelease", dragReleaseParams);
+    this.onDragRelease(dragReleaseParams);
   }
   /**
    * Handles mouse up events, finalizing drag actions, invoking callbacks, and updating contrast if needed.
@@ -43284,6 +43357,8 @@ var Niivue = class {
       this.drawPenFilled();
     } else if (this.opts.drawingEnabled && !isNaN(this.drawPenLocation[0])) {
       this.drawAddUndoBitmap();
+      this._emitEvent("drawingChanged", { action: "draw" });
+      this.onDrawingChanged("draw");
     } else if (this.opts.drawingEnabled && !isNaN(this.drawShapeStartLocation[0]) && (this.opts.penType === 1 /* RECTANGLE */ || this.opts.penType === 2 /* ELLIPSE */)) {
       if (this.opts.penValue === 0) {
         this.drawAddUndoBitmap();
@@ -43291,6 +43366,8 @@ var Niivue = class {
         this.drawAddUndoBitmap(this.drawFillOverwrites);
       }
       this.drawShapePreviewBitmap = null;
+      this._emitEvent("drawingChanged", { action: "draw" });
+      this.onDrawingChanged("draw");
     }
     this.drawPenLocation = [NaN, NaN, NaN];
     this.drawPenAxCorSag = -1;
@@ -43300,6 +43377,7 @@ var Niivue = class {
       this.drawShapePreviewBitmap = null;
       this.refreshDrawing(true, false);
     }
+    this._emitEvent("mouseUp", uiData);
     if (isFunction(this.onMouseUp)) {
       this.onMouseUp(uiData);
     }
@@ -43349,14 +43427,17 @@ var Niivue = class {
         if (startFrac[0] >= 0 && endFrac[0] >= 0) {
           const startMM = this.frac2mm(startFrac);
           const endMM = this.frac2mm(endFrac);
-          this.document.completedMeasurements.push({
+          const measurement = {
             startMM: vec3_exports.fromValues(startMM[0], startMM[1], startMM[2]),
             endMM: vec3_exports.fromValues(endMM[0], endMM[1], endMM[2]),
             sliceIndex: sliceInfo.sliceIndex,
             sliceType: sliceInfo.sliceType,
             slicePosition: sliceInfo.slicePosition,
             distance: vec3_exports.distance(vec3_exports.fromValues(startMM[0], startMM[1], startMM[2]), vec3_exports.fromValues(endMM[0], endMM[1], endMM[2]))
-          });
+          };
+          this.document.completedMeasurements.push(measurement);
+          this._emitEvent("measurementCompleted", measurement);
+          this.onMeasurementCompleted(measurement);
         }
         this.clearActiveDragMode();
         this.drawScene();
@@ -43646,6 +43727,7 @@ var Niivue = class {
     }
     this.volumes[0].cal_min = this.volumes[0].robust_min;
     this.volumes[0].cal_max = this.volumes[0].robust_max;
+    this._emitEvent("intensityChange", this.volumes[0]);
     this.onIntensityChange(this.volumes[0]);
     this.refreshLayers(this.volumes[0], 0);
     this.drawScene();
@@ -44026,6 +44108,7 @@ var Niivue = class {
     this.document.addImageOptions(volume, imageOptions);
     volume.onColormapChange = this.onColormapChange;
     this.mediaUrlMap.set(volume, imageOptions.url);
+    this._emitEvent("volumeAddedFromUrl", { imageOptions, volume });
     if (this.onVolumeAddedFromUrl) {
       this.onVolumeAddedFromUrl(imageOptions, volume);
     }
@@ -44079,6 +44162,7 @@ var Niivue = class {
       this.document.addImageOptions(volume, imageOptions);
       volume.onColormapChange = this.onColormapChange;
       this.mediaUrlMap.set(volume, imageOptions.url);
+      this._emitEvent("volumeAddedFromUrl", { imageOptions, volume });
       if (this.onVolumeAddedFromUrl) {
         this.onVolumeAddedFromUrl(imageOptions, volume);
       }
@@ -44403,6 +44487,7 @@ var Niivue = class {
         })
       );
       const loadedNvImages = await Promise.all(promises);
+      this._emitEvent("dicomLoaderFinished", { files: loadedNvImages });
       await this.onDicomLoaderFinishedWithImages(loadedNvImages);
     } catch (err2) {
       console.error("Error loading DICOM files:", err2);
@@ -44651,6 +44736,7 @@ var Niivue = class {
     const result = addVolume(this.volumes, volume);
     this.volumes = result.volumes;
     this.setVolume(volume, result.index);
+    this._emitEvent("imageLoaded", volume);
     this.onImageLoaded(volume);
     log.debug("loaded volume", volume.name);
     log.debug(volume);
@@ -44667,6 +44753,7 @@ var Niivue = class {
     const result = addMesh(this.meshes, mesh);
     this.meshes = result.meshes;
     this.setMesh(mesh, result.index);
+    this._emitEvent("meshLoaded", mesh);
     this.onMeshLoaded(mesh);
   }
   /**
@@ -44722,6 +44809,8 @@ var Niivue = class {
     this.drawBitmap = drawBitmap;
     this.currentDrawUndoBitmap = currentDrawUndoBitmap;
     this.refreshDrawing(true);
+    this._emitEvent("drawingChanged", { action: "undo" });
+    this.onDrawingChanged("undo");
   }
   /**
    * Loads a drawing overlay and aligns it with the current background image.
@@ -44768,6 +44857,8 @@ var Niivue = class {
     });
     this.drawAddUndoBitmap();
     this.refreshDrawing(false);
+    this._emitEvent("drawingChanged", { action: "load" });
+    this.onDrawingChanged("load");
     this.drawScene();
     return true;
   }
@@ -44947,6 +45038,7 @@ var Niivue = class {
       return;
     }
     this.updateGLVolume();
+    this._emitEvent("meshPropertyChanged", { meshIndex: idx2, key, value: val });
     this.onMeshPropertyChanged(idx2, key, val);
   }
   /**
@@ -45046,6 +45138,7 @@ var Niivue = class {
   setRenderAzimuthElevation(a, e) {
     this.scene.renderAzimuth = a;
     this.scene.renderElevation = e;
+    this._emitEvent("azimuthElevationChange", { azimuth: a, elevation: e });
     this.onAzimuthElevationChange(a, e);
     this.drawScene();
   }
@@ -45104,12 +45197,16 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
    */
   removeVolume(volume) {
+    const removedIndex = this.volumes.indexOf(volume);
     const result = removeVolume(this.volumes, volume);
     this.volumes = result.volumes;
     this.back = this.volumes.length > 0 ? this.volumes[0] : null;
     this.overlays = this.volumes.slice(1);
+    this._emitEvent("volumeRemoved", { volume, index: removedIndex });
+    this.onVolumeRemoved(volume, removedIndex);
     if (this.mediaUrlMap.has(volume)) {
       const url = this.mediaUrlMap.get(volume);
+      this._emitEvent("volumeWithUrlRemoved", { url });
       this.onVolumeWithUrlRemoved(url);
       this.mediaUrlMap.delete(volume);
     }
@@ -45137,10 +45234,13 @@ var Niivue = class {
    * @see {@link https://niivue.com/demos/features/connectome.html | live demo usage}
    */
   removeMesh(mesh) {
+    this._emitEvent("meshRemoved", { mesh });
+    this.onMeshRemoved(mesh);
     mesh.unloadMesh(this.gl);
     this.setMesh(mesh, -1);
     if (this.mediaUrlMap.has(mesh)) {
       const url = this.mediaUrlMap.get(mesh);
+      this._emitEvent("meshWithUrlRemoved", { url });
       this.onMeshWithUrlRemoved(url);
       this.mediaUrlMap.delete(mesh);
     }
@@ -45156,6 +45256,7 @@ var Niivue = class {
     if (mesh) {
       this.removeMesh(mesh);
       this.mediaUrlMap.delete(mesh);
+      this._emitEvent("meshWithUrlRemoved", { url });
       this.onMeshWithUrlRemoved(url);
     }
   }
@@ -45172,6 +45273,8 @@ var Niivue = class {
     this.back = result.back;
     this.overlays = result.overlays;
     this.updateGLVolume();
+    this._emitEvent("volumeOrderChanged", { volumes: this.volumes });
+    this.onVolumeOrderChanged(this.volumes);
   }
   /**
    * Move a volume up one index position in the stack of loaded volumes. This moves it up one layer
@@ -45186,6 +45289,8 @@ var Niivue = class {
     this.back = result.back;
     this.overlays = result.overlays;
     this.updateGLVolume();
+    this._emitEvent("volumeOrderChanged", { volumes: this.volumes });
+    this.onVolumeOrderChanged(this.volumes);
   }
   /**
    * Move a volume down one index position in the stack of loaded volumes. This moves it down one layer
@@ -45200,6 +45305,8 @@ var Niivue = class {
     this.back = result.back;
     this.overlays = result.overlays;
     this.updateGLVolume();
+    this._emitEvent("volumeOrderChanged", { volumes: this.volumes });
+    this.onVolumeOrderChanged(this.volumes);
   }
   /**
    * Move a volume to the top position in the stack of loaded volumes. This will be the top layer
@@ -45214,6 +45321,8 @@ var Niivue = class {
     this.back = result.back;
     this.overlays = result.overlays;
     this.updateGLVolume();
+    this._emitEvent("volumeOrderChanged", { volumes: this.volumes });
+    this.onVolumeOrderChanged(this.volumes);
   }
   /**
    * Records the current mouse position in screen space (adjusted for device pixel ratio).
@@ -45330,6 +45439,7 @@ var Niivue = class {
     });
     this.scene.clipPlanes = result.clipPlanes;
     this.scene.clipPlaneDepthAziElevs = result.clipPlaneDepthAziElevs;
+    this._emitEvent("clipPlaneChange", { clipPlane: result.clipPlane });
     this.onClipPlaneChange(result.clipPlane);
     this.drawScene();
   }
@@ -45383,6 +45493,8 @@ var Niivue = class {
    */
   setDrawingEnabled(trueOrFalse) {
     this.opts.drawingEnabled = trueOrFalse;
+    this._emitEvent("drawingEnabled", { enabled: trueOrFalse });
+    this.onDrawingEnabled(trueOrFalse);
     if (this.opts.drawingEnabled) {
       if (!this.drawBitmap) {
         this.createEmptyDrawing();
@@ -45407,6 +45519,9 @@ var Niivue = class {
       if (resetState.needsRefresh) {
         this.refreshDrawing(true, false);
       }
+      const tool = this._deriveDrawingTool(this.opts.penValue);
+      this._emitEvent("drawingToolChanged", { tool, penValue: this.opts.penValue, isFilledPen: this.opts.isFilledPen });
+      this.onDrawingToolChanged(tool, this.opts.penValue, this.opts.isFilledPen);
     }
     this.drawScene();
   }
@@ -45420,7 +45535,40 @@ var Niivue = class {
   setPenValue(penValue, isFilledPen = false) {
     this.opts.penValue = penValue;
     this.opts.isFilledPen = isFilledPen;
+    this._emitEvent("penValueChanged", { penValue, isFilledPen });
+    this.onPenValueChanged(penValue, isFilledPen);
+    const tool = this._deriveDrawingTool(penValue);
+    this._emitEvent("drawingToolChanged", { tool, penValue, isFilledPen });
+    this.onDrawingToolChanged(tool, penValue, isFilledPen);
     this.drawScene();
+  }
+  /**
+   * Derives the high-level drawing tool name from a pen value and the current drawing state.
+   * @internal
+   */
+  _deriveDrawingTool(penValue) {
+    if (!this.opts.drawingEnabled) {
+      return "off";
+    }
+    if (this.opts.clickToSegment) {
+      return "clickToSegment";
+    }
+    if (Object.is(penValue, -0)) {
+      return "eraseCluster";
+    }
+    if (isNaN(penValue)) {
+      return "growCluster";
+    }
+    if (penValue === Number.POSITIVE_INFINITY) {
+      return "growClusterBright";
+    }
+    if (penValue === Number.NEGATIVE_INFINITY) {
+      return "growClusterDark";
+    }
+    if (penValue === 0) {
+      return "erase";
+    }
+    return "draw";
   }
   /**
    * control whether drawing is transparent (0), opaque (1) or translucent (between 0 and 1).
@@ -45524,6 +45672,8 @@ var Niivue = class {
    */
   setSliceType(st) {
     this.opts.sliceType = st;
+    this._emitEvent("sliceTypeChange", { sliceType: st });
+    this.onSliceTypeChange(st);
     this.drawScene();
     return this;
   }
@@ -45875,6 +46025,7 @@ var Niivue = class {
     await this.setVolumeRenderIllumination(this.opts.gradientAmount);
     this.updateGLVolume();
     this.drawScene();
+    this._emitEvent("documentLoaded", document2);
     this.onDocumentLoaded(document2);
     return this;
   }
@@ -46119,6 +46270,7 @@ var Niivue = class {
     if (nvImages.length === 1) {
       this.addVolume(nvImages[0]);
     } else {
+      this._emitEvent("dicomLoaderFinished", { files: nvImages });
       this.onDicomLoaderFinishedWithImages(nvImages);
     }
     return this;
@@ -46160,12 +46312,14 @@ var Niivue = class {
       }
       const mesh2 = this.loadConnectomeAsMesh(json);
       this.mediaUrlMap.set(mesh2, meshOptions.url);
+      this._emitEvent("meshAddedFromUrl", { meshOptions, mesh: mesh2 });
       this.onMeshAddedFromUrl(meshOptions, mesh2);
       this.addMesh(mesh2);
       return mesh2;
     }
     const mesh = await NVMesh2.loadFromUrl({ ...meshOptions, gl: this.gl });
     this.mediaUrlMap.set(mesh, meshOptions.url);
+    this._emitEvent("meshAddedFromUrl", { meshOptions, mesh });
     this.onMeshAddedFromUrl(meshOptions, mesh);
     this.addMesh(mesh);
     return mesh;
@@ -46203,11 +46357,13 @@ var Niivue = class {
         const json = await response.json();
         const mesh2 = this.loadConnectomeAsMesh(json);
         this.mediaUrlMap.set(mesh2, meshItem.url);
+        this._emitEvent("meshAddedFromUrl", { meshOptions: meshItem, mesh: mesh2 });
         this.onMeshAddedFromUrl(meshItem, mesh2);
         return mesh2;
       }
       const mesh = await NVMesh2.loadFromUrl({ ...meshItem, gl: this.gl });
       this.mediaUrlMap.set(mesh, meshItem.url);
+      this._emitEvent("meshAddedFromUrl", { meshOptions: meshItem, mesh });
       this.onMeshAddedFromUrl(meshItem, mesh);
       return mesh;
     });
@@ -46848,6 +47004,8 @@ var Niivue = class {
     this.drawPenFillPts = [];
     this.drawAddUndoBitmap();
     this.refreshDrawing(false);
+    this._emitEvent("drawingChanged", { action: "draw" });
+    this.onDrawingChanged("draw");
   }
   /**
    * close drawing: make sure you have saved any changes before calling this!
@@ -46859,6 +47017,8 @@ var Niivue = class {
     this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true);
     this.drawBitmap = null;
     this.clickToSegmentGrowingBitmap = null;
+    this._emitEvent("drawingChanged", { action: "close" });
+    this.onDrawingChanged("close");
     this.drawScene();
   }
   /**
@@ -47093,6 +47253,7 @@ var Niivue = class {
       return;
     }
     this.updateGLVolume();
+    this._emitEvent("meshShaderChanged", { meshIndex: result.meshIndex, shaderIndex: result.shaderIndex });
     this.onMeshShaderChanged(result.meshIndex, result.shaderIndex);
   }
   /**
@@ -47134,6 +47295,7 @@ var Niivue = class {
   setCustomMeshShader(fragmentShaderText = "", name = "Custom") {
     const m = this.createCustomMeshShader(fragmentShaderText, name);
     this.meshShaders.push(m);
+    this._emitEvent("customMeshShaderAdded", { fragmentShaderText, name });
     this.onCustomMeshShaderAdded(fragmentShaderText, name);
     return this.meshShaders.length - 1;
   }
@@ -47406,6 +47568,7 @@ var Niivue = class {
         this.furthestVertexFromOrigin = Math.max(this.furthestVertexFromOrigin, this.meshes[i].furthestVertexFromOrigin);
       }
     }
+    this._emitEvent("volumeUpdated", void 0);
     if (this.onVolumeUpdated) {
       this.onVolumeUpdated();
     }
@@ -48108,6 +48271,7 @@ var Niivue = class {
     setFrame4D(this.volumes, id, frame4D);
     if (this.volumes[idx2].frame4D !== oldFrame) {
       this.updateGLVolume();
+      this._emitEvent("frameChange", { volume: this.volumes[idx2], index: this.volumes[idx2].frame4D });
       this.onFrameChange(this.volumes[idx2], this.volumes[idx2].frame4D);
       this.createOnLocationChange();
     }
@@ -48476,7 +48640,9 @@ var Niivue = class {
           drawingIsMask: true
           // Use the final this.drawBitmap
         });
-        this.onClickToSegment({ mL: info.volumeML, mm3: info.volumeMM3 });
+        const segmentData = { mL: info.volumeML, mm3: info.volumeMM3 };
+        this._emitEvent("clickToSegment", segmentData);
+        this.onClickToSegment(segmentData);
       }
     }
     this.createOnLocationChange(axCorSag);
@@ -50535,6 +50701,7 @@ var Niivue = class {
       }),
       string: str6
     };
+    this._emitEvent("locationChange", msg);
     this.onLocationChange(msg);
   }
   /**
@@ -51751,6 +51918,7 @@ var Niivue = class {
           elevation: dragResult.depthAziElev[2]
         });
         this.scene.clipPlanes[idx2] = clipPlane;
+        this._emitEvent("clipPlaneChange", { clipPlane });
         this.onClipPlaneChange(clipPlane);
       }
     }
@@ -52216,6 +52384,7 @@ export {
   NVMeshUtilities,
   NVUtilities,
   Niivue,
+  NiivueEvent,
   PEN_TYPE,
   SHOW_RENDER,
   SLICE_TYPE,

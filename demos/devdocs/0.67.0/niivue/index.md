@@ -2,9 +2,10 @@
 
 ## Classes
 
-| Class                       | Description                                                                                                                                   |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Niivue](classes/Niivue.md) | Niivue can be attached to a canvas. An instance of Niivue contains methods for loading and rendering NIFTI image data in a WebGL 2.0 context. |
+| Class                                 | Description                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Niivue](classes/Niivue.md)           | Niivue can be attached to a canvas. An instance of Niivue contains methods for loading and rendering NIFTI image data in a WebGL 2.0 context. |
+| [NiivueEvent](classes/NiivueEvent.md) | Type-safe event class for Niivue events. Extends CustomEvent with typed detail property.                                                      |
 
 ## Interfaces
 
@@ -15,14 +16,17 @@
 | [GetFileExtOptions](interfaces/GetFileExtOptions.md)       | Options for getFileExt function                                                                                                                                    |
 | [LoaderRegistry](interfaces/LoaderRegistry.md)             | Collection of registered custom loaders by file extension                                                                                                          |
 | [MeshLoaderResult](interfaces/MeshLoaderResult.md)         | Mesh data returned by custom mesh loaders                                                                                                                          |
+| [NiivueEventMap](interfaces/NiivueEventMap.md)             | Type-safe event map for all Niivue events. Maps event names to their detail types.                                                                                 |
 | [RegisterLoaderParams](interfaces/RegisterLoaderParams.md) | Parameters for registerLoader                                                                                                                                      |
 
 ## Type Aliases
 
-| Type Alias                                           | Description |
-| ---------------------------------------------------- | ----------- |
-| [DicomLoader](type-aliases/DicomLoader.md)           | -           |
-| [DicomLoaderInput](type-aliases/DicomLoaderInput.md) | -           |
+| Type Alias                                                               | Description                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [DicomLoader](type-aliases/DicomLoader.md)                               | -                                                                                                                                                                                                                                                                                                                                    |
+| [DicomLoaderInput](type-aliases/DicomLoaderInput.md)                     | -                                                                                                                                                                                                                                                                                                                                    |
+| [NiivueEventListener](type-aliases/NiivueEventListener.md)               | Type-safe event listener for Niivue events. Listeners can be synchronous or asynchronous.                                                                                                                                                                                                                                            |
+| [NiivueEventListenerOptions](type-aliases/NiivueEventListenerOptions.md) | Options for addEventListener/removeEventListener. Supports all standard EventTarget options including: - capture: boolean - Use capture phase - once: boolean - Remove listener after first invocation - passive: boolean - Listener will never call preventDefault() - signal: AbortSignal - Remove listener when signal is aborted |
 
 ## Variables
 

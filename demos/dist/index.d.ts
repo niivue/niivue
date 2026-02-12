@@ -1720,6 +1720,182 @@ declare function handleDragEnter(e: MouseEvent): void;
  */
 declare function handleDragOver(e: MouseEvent): void;
 
+/**
+ * Type-safe event map for all Niivue events.
+ * Maps event names to their detail types.
+ *
+ * @example
+ * ```typescript
+ * // Type-safe event listening
+ * niivue.addEventListener('locationChange', (event) => {
+ *   // event.detail is typed based on the event name
+ *   console.log('Location changed:', event.detail)
+ * })
+ * ```
+ */
+interface NiivueEventMap {
+    /** Fired when a drag operation is released */
+    dragRelease: DragReleaseParams;
+    /** Fired when mouse button is released */
+    mouseUp: Partial<UIData>;
+    /** Fired when the crosshair location changes */
+    locationChange: unknown;
+    /** Fired when intensity values change at the crosshair location */
+    intensityChange: NVImage;
+    /** Fired when a click-to-segment operation completes */
+    clickToSegment: {
+        mm3: number;
+        mL: number;
+    };
+    /** Fired when a distance measurement is completed */
+    measurementCompleted: CompletedMeasurement;
+    /** Fired when an angle measurement is completed */
+    angleCompleted: CompletedAngle;
+    /** Fired when an image/volume is loaded */
+    imageLoaded: NVImage;
+    /** Fired when a mesh is loaded */
+    meshLoaded: NVMesh;
+    /** Fired when a volume is added from a URL */
+    volumeAddedFromUrl: {
+        imageOptions: ImageFromUrlOptions;
+        volume: NVImage;
+    };
+    /** Fired when a volume loaded from a URL is removed */
+    volumeWithUrlRemoved: {
+        url: string;
+    };
+    /** Fired when any volume is removed from the scene */
+    volumeRemoved: {
+        volume: NVImage;
+        index: number;
+    };
+    /** Fired when a volume is updated */
+    volumeUpdated: undefined;
+    /** Fired when a mesh is added from a URL */
+    meshAddedFromUrl: {
+        meshOptions: LoadFromUrlParams;
+        mesh: NVMesh;
+    };
+    /** Fired when a mesh loaded from a URL is removed */
+    meshWithUrlRemoved: {
+        url: string;
+    };
+    /** Fired when any mesh is removed from the scene */
+    meshRemoved: {
+        mesh: NVMesh;
+    };
+    /** Fired when a document is loaded */
+    documentLoaded: NVDocument;
+    /** Fired when DICOM loader finishes processing images */
+    dicomLoaderFinished: {
+        files: Array<NVImage | NVMesh>;
+    };
+    /** Fired when the frame changes in a 4D volume */
+    frameChange: {
+        volume: NVImage;
+        index: number;
+    };
+    /** Fired when azimuth or elevation angles change in 3D view */
+    azimuthElevationChange: {
+        azimuth: number;
+        elevation: number;
+    };
+    /** Fired when clip plane changes */
+    clipPlaneChange: {
+        clipPlane: number[];
+    };
+    /** Fired when the slice type (view layout) changes */
+    sliceTypeChange: {
+        sliceType: SLICE_TYPE;
+    };
+    /** Fired when 3D zoom level changes */
+    zoom3DChange: {
+        zoom: number;
+    };
+    /** Fired when a custom mesh shader is added */
+    customMeshShaderAdded: {
+        fragmentShaderText: string;
+        name: string;
+    };
+    /** Fired when a mesh's shader is changed */
+    meshShaderChanged: {
+        meshIndex: number;
+        shaderIndex: number;
+    };
+    /** Fired when a mesh property is changed */
+    meshPropertyChanged: {
+        meshIndex: number;
+        key: string;
+        value: unknown;
+    };
+    /** Fired when volume stacking order changes */
+    volumeOrderChanged: {
+        volumes: NVImage[];
+    };
+    /** Fired when the drawing pen value changes */
+    penValueChanged: {
+        penValue: number;
+        isFilledPen: boolean;
+    };
+    /** Fired when the active drawing tool changes (high-level interpretation of pen value and drawing state) */
+    drawingToolChanged: {
+        tool: 'off' | 'draw' | 'erase' | 'eraseCluster' | 'growCluster' | 'growClusterBright' | 'growClusterDark' | 'clickToSegment';
+        penValue: number;
+        isFilledPen: boolean;
+    };
+    /** Fired when the drawing bitmap materially changes (commit, undo, load, close) */
+    drawingChanged: {
+        action: 'draw' | 'undo' | 'load' | 'close';
+    };
+    /** Fired when drawing mode is toggled on or off */
+    drawingEnabled: {
+        enabled: boolean;
+    };
+    /** Fired when visualization options change */
+    optsChange: {
+        propertyName: keyof NVConfigOptions;
+        newValue: NVConfigOptions[keyof NVConfigOptions];
+        oldValue: NVConfigOptions[keyof NVConfigOptions];
+    };
+    /** Fired on error messages */
+    error: {
+        message?: string;
+    };
+    /** Fired on info messages */
+    info: {
+        message?: string;
+    };
+    /** Fired on warning messages */
+    warn: {
+        message?: string;
+    };
+    /** Fired on debug messages */
+    debug: {
+        message?: string;
+    };
+}
+/**
+ * Type-safe event class for Niivue events.
+ * Extends CustomEvent with typed detail property.
+ */
+declare class NiivueEvent<K extends keyof NiivueEventMap> extends CustomEvent<NiivueEventMap[K]> {
+    constructor(type: K, detail: NiivueEventMap[K]);
+}
+/**
+ * Type-safe event listener for Niivue events.
+ * Listeners can be synchronous or asynchronous.
+ */
+type NiivueEventListener<K extends keyof NiivueEventMap> = (event: NiivueEvent<K>) => void | Promise<void>;
+/**
+ * Options for addEventListener/removeEventListener.
+ * Supports all standard EventTarget options including:
+ * - capture: boolean - Use capture phase
+ * - once: boolean - Remove listener after first invocation
+ * - passive: boolean - Listener will never call preventDefault()
+ * - signal: AbortSignal - Remove listener when signal is aborted
+ */
+type NiivueEventListenerOptions = boolean | AddEventListenerOptions;
+
 declare class Shader {
     program: WebGLProgram;
     uniforms: Record<string, WebGLUniformLocation | null>;
@@ -1868,7 +2044,7 @@ type DicomLoader = DicomLoader$1;
  * @example
  * let niivue = new Niivue({crosshairColor: [0,1,0,0.5], textHeight: 0.5}) // a see-through green crosshair, and larger text labels
  */
-declare class Niivue {
+declare class Niivue extends EventTarget {
     #private;
     loaders: LoaderRegistry;
     dicomLoader: DicomLoader$1 | null;
@@ -2159,6 +2335,13 @@ declare class Niivue {
     onMeshAddedFromUrl: (meshOptions: LoadFromUrlParams, mesh: NVMesh) => void;
     onMeshAdded: () => void;
     onMeshWithUrlRemoved: (url: string) => void;
+    /**
+     * callback function to run when the 3D zoom level changes
+     * @example
+     * niivue.onZoom3DChange = (zoom) => {
+     *   console.log('3D zoom scale: ', zoom)
+     * }
+     */
     onZoom3DChange: (zoom: number) => void;
     /**
      * callback function to run when the user changes the rotation of the 3D rendering
@@ -2196,6 +2379,26 @@ declare class Niivue {
      * @param oldValue - The previous value of the option.
      */
     onOptsChange: (propertyName: keyof NVConfigOptions, newValue: NVConfigOptions[keyof NVConfigOptions], oldValue: NVConfigOptions[keyof NVConfigOptions]) => void;
+    /** Callback when a distance measurement is completed */
+    onMeasurementCompleted: (measurement: CompletedMeasurement) => void;
+    /** Callback when an angle measurement is completed */
+    onAngleCompleted: (angle: CompletedAngle) => void;
+    /** Callback when the drawing pen value changes */
+    onPenValueChanged: (penValue: number, isFilledPen: boolean) => void;
+    /** Callback when the active drawing tool changes */
+    onDrawingToolChanged: (tool: string, penValue: number, isFilledPen: boolean) => void;
+    /** Callback when any volume is removed from the scene */
+    onVolumeRemoved: (volume: NVImage, index: number) => void;
+    /** Callback when any mesh is removed from the scene */
+    onMeshRemoved: (mesh: NVMesh) => void;
+    /** Callback when the slice type (view layout) changes */
+    onSliceTypeChange: (sliceType: SLICE_TYPE) => void;
+    /** Callback when the drawing bitmap materially changes */
+    onDrawingChanged: (action: string) => void;
+    /** Callback when drawing mode is toggled on or off */
+    onDrawingEnabled: (enabled: boolean) => void;
+    /** Callback when volume stacking order changes */
+    onVolumeOrderChanged: (volumes: NVImage[]) => void;
     document: NVDocument;
     /** Get the current scene configuration. */
     get scene(): Scene;
@@ -2223,6 +2426,41 @@ declare class Niivue {
      * @param options  - options object to set modifiable Niivue properties
      */
     constructor(options?: Partial<NVConfigOptions>);
+    /**
+     * Type-safe addEventListener for Niivue events.
+     * Supports all standard EventTarget options including once, capture, passive, and signal with AbortController.
+     * @param type - Event name
+     * @param listener - Event listener function
+     * @param options - Event listener options (capture, once, passive, signal)
+     * @example
+     * ```typescript
+     * niivue.addEventListener('locationChange', (event) => {
+     *   console.log('Location changed:', event.detail)
+     * })
+     *
+     * // With once option
+     * niivue.addEventListener('imageLoaded', handler, { once: true })
+     *
+     * // With AbortController
+     * const controller = new AbortController()
+     * niivue.addEventListener('locationChange', handler, { signal: controller.signal })
+     * controller.abort() // removes the listener
+     * ```
+     */
+    addEventListener<K extends keyof NiivueEventMap>(type: K, listener: NiivueEventListener<K>, options?: NiivueEventListenerOptions): void;
+    /**
+     * Type-safe removeEventListener for Niivue events.
+     * @param type - Event name
+     * @param listener - Event listener function to remove
+     * @param options - Event listener options
+     */
+    removeEventListener<K extends keyof NiivueEventMap>(type: K, listener: NiivueEventListener<K>, options?: NiivueEventListenerOptions): void;
+    /**
+     * Internal helper to emit events alongside legacy callbacks.
+     * Events fire BEFORE callbacks.
+     * @private
+     */
+    private _emitEvent;
     /**
      * Clean up event listeners and observers
      * Call this when the Niivue instance is no longer needed.
@@ -3185,6 +3423,11 @@ declare class Niivue {
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
      */
     setPenValue(penValue: number, isFilledPen?: boolean): void;
+    /**
+     * Derives the high-level drawing tool name from a pen value and the current drawing state.
+     * @internal
+     */
+    private _deriveDrawingTool;
     /**
      * control whether drawing is transparent (0), opaque (1) or translucent (between 0 and 1).
      * @param opacity - translucency of drawing
@@ -4784,4 +5027,4 @@ declare class Niivue {
     }): void;
 }
 
-export { type AffineTransform, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DEFAULT_SCENE_DATA, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };
+export { type AffineTransform, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DEFAULT_SCENE_DATA, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, NiivueEvent, type NiivueEventListener, type NiivueEventListenerOptions, type NiivueEventMap, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };

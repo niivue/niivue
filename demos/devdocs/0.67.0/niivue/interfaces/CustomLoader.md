@@ -12,5 +12,5 @@ The loader function can return either:
 
 | Property                     | Type                                                                      | Defined in                                                                                                                   |
 | ---------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| <a id="loader"></a> `loader` | (`data`: `string` \| `ArrayBuffer` \| `Uint8Array`) => `Promise`\<`any`\> | [niivue/data/FileLoader.ts:41](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/data/FileLoader.ts#L41) |
+| <a id="loader"></a> `loader` | (`data`: `string` \| `Uint8Array` \| `ArrayBuffer`) => `Promise`\<`any`\> | [niivue/data/FileLoader.ts:41](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/data/FileLoader.ts#L41) |
 | <a id="toext"></a> `toExt`   | `string`                                                                  | [niivue/data/FileLoader.ts:42](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/data/FileLoader.ts#L42) |
