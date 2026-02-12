@@ -272,8 +272,8 @@ function MainApp(): JSX.Element {
 
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
-        // For cache hits, conform the volume to match the label space
-        const sourceVolume = cacheHit ? await nv.conform(baseVolume, false) : conformedVolume!
+        // Always use rawFloat32 conform so extraction gets original-range intensities (not Uint8)
+        const sourceVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
         const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
 
         // Build descriptive name
@@ -292,18 +292,18 @@ function MainApp(): JSX.Element {
         const overlayIndex = nv.volumes.length - 1
         nv.setOpacity(overlayIndex, 0.5)
 
-        // For parcellation models, apply colormap labels for atlas display
-        if (resultModelInfo.type === 'parcellation' && resultModelInfo.labelsPath) {
+        // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
+        if (resultModelInfo.colormapPath) {
           try {
-            const labelsJson = await window.electron.loadBrainchopLabels(resultModelInfo.labelsPath)
-            overlayVolume.setColormapLabel(labelsJson)
+            const colormapJson = await window.electron.loadBrainchopLabels(resultModelInfo.colormapPath)
+            overlayVolume.setColormapLabel(colormapJson)
             if (overlayVolume.colormapLabel?.lut) {
               overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
                 i % 4 === 3 ? (v === 0 ? 0 : 178) : v
               )
             }
           } catch (err) {
-            console.error('Failed to load parcellation labels:', err)
+            console.error('Failed to load colormap labels:', err)
           }
         }
       }

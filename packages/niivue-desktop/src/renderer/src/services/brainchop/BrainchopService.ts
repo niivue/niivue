@@ -8,6 +8,7 @@ import type {
   SegmentationResult,
   BrainchopServiceState
 } from './types.js'
+import { keepLargestClusterPerClass } from './postprocess.js'
 
 /**
  * Main service for brain segmentation using TensorFlow.js models.
@@ -243,6 +244,9 @@ export class BrainchopService {
     }
     console.log('[BrainchopService] Labels:', { min: labelMin, max: labelMax, nonZero: nonZeroCount })
 
+    // Remove small disconnected clusters (skull fragments, meninges)
+    keepLargestClusterPerClass(uint8Data, [256, 256, 256])
+
     const overlayVolume = sourceVolume.clone()
     overlayVolume.name = `${sourceVolume.name}_${modelInfo.id}`
     overlayVolume.zeroImage()
@@ -258,14 +262,6 @@ export class BrainchopService {
     overlayVolume.cal_max = labelMax
     overlayVolume.global_min = labelMin
     overlayVolume.global_max = labelMax
-
-    if (modelInfo.type === 'parcellation') {
-      overlayVolume.colormap = 'freesurfer'
-    } else if (modelInfo.type === 'brain-extraction') {
-      overlayVolume.colormap = 'red'
-    } else {
-      overlayVolume.colormap = 'actc'
-    }
 
     return overlayVolume
   }

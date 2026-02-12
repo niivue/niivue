@@ -8,6 +8,7 @@
 
 import * as tf from '@tensorflow/tfjs'
 import type { ModelInfo } from './types.js'
+import { keepLargestClusterPerClass } from './postprocess.js'
 
 // ── Message protocol ────────────────────────────────────────────────────────
 
@@ -241,6 +242,16 @@ async function runInferencePipeline(
 
   const result = new Float32Array(await restored.data())
   restored.dispose()
+
+  // Remove small disconnected clusters (skull fragments, meninges)
+  const uint8Labels = new Uint8Array(result.length)
+  for (let i = 0; i < result.length; i++) {
+    uint8Labels[i] = Math.round(result[i])
+  }
+  keepLargestClusterPerClass(uint8Labels, [256, 256, 256])
+  for (let i = 0; i < result.length; i++) {
+    result[i] = uint8Labels[i]
+  }
 
   progress(100, 'Inference complete')
   return result
