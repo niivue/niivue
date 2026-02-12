@@ -3602,15 +3602,15 @@ declare class Niivue extends EventTarget {
      */
     loadDocument(document: NVDocument): Promise<this>;
     /**
- * generates JavaScript to load the current scene as a document
- * @param canvasId - id of canvas NiiVue will be attached to
- * @param esm - bundled version of NiiVue
- * @example
- * const javascript = this.generateLoadDocumentJavaScript("gl1");
- * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-        ${javascript}</script></body></html>`;
- * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
- */
+* generates JavaScript to load the current scene as a document
+* @param canvasId - id of canvas NiiVue will be attached to
+* @param esm - bundled version of NiiVue
+* @example
+* const javascript = this.generateLoadDocumentJavaScript("gl1");
+* const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
+      ${javascript}</script></body></html>`;
+* @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
+*/
     generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string>;
     /**
      * generates HTML of current scene

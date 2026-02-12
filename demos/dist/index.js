@@ -43616,6 +43616,7 @@ var Niivue = class extends EventTarget {
       return;
     }
     if (this.uiData.mousedown) {
+      this.canvas.focus();
       const x = pos.x * this.uiData.dpr;
       const y = pos.y * this.uiData.dpr;
       const tile = this.tileIndex(x, y);
@@ -46036,7 +46037,7 @@ var Niivue = class extends EventTarget {
   * @example
   * const javascript = this.generateLoadDocumentJavaScript("gl1");
   * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-         ${javascript}<\/script></body></html>`;
+        ${javascript}<\/script></body></html>`;
   * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
   */
   async generateLoadDocumentJavaScript(canvasId, esm) {

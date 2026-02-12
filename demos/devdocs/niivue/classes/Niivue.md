@@ -1693,7 +1693,7 @@ generates JavaScript to load the current scene as a document
 ```ts
 const javascript = this.generateLoadDocumentJavaScript("gl1");
 const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-       ${javascript}</script></body></html>`;
+      ${javascript}</script></body></html>`;
 ```
 
 #### See
