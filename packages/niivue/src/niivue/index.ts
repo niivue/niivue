@@ -6362,6 +6362,10 @@ export class Niivue {
         this.refreshColormaps()
         this.closePAQD()
         for (let i = 0; i < numLayers; i++) {
+            // refresh V1 tensor data with current cal_min/cal_max
+            if (this.volumes[i].v1) {
+                this.volumes[i].loadImgV1()
+            }
             // avoid trying to refresh a volume that isn't ready
             if (!this.volumes[i].toRAS) {
                 continue

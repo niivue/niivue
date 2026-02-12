@@ -80,7 +80,7 @@ export class NVImage {
     imageType?: ImageType
     img?: TypedVoxelArray
     imaginary?: Float32Array // only for complex data
-    v1?: Float32Array // only for FIB files
+    v1?: Float32Array // For FIB files or V1 vector field data
     fileObject?: File | File[]
     dims?: number[]
 

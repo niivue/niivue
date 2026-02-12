@@ -37,7 +37,10 @@ export function float32V1asRGBA(nvImage: NVImage, inImg: Float32Array): Uint8Arr
     let mn = 0.0
     let mx = 1.0
 
-    if (isFinite(nvImage.hdr.cal_min) && isFinite(nvImage.hdr.cal_max) && nvImage.hdr.cal_max > nvImage.hdr.cal_min) {
+    if (isFinite(nvImage.cal_min!) && isFinite(nvImage.cal_max!) && nvImage.cal_max! > nvImage.cal_min!) {
+        mn = nvImage.cal_min!
+        mx = nvImage.cal_max!
+    } else if (isFinite(nvImage.hdr.cal_min) && isFinite(nvImage.hdr.cal_max) && nvImage.hdr.cal_max > nvImage.hdr.cal_min) {
         mn = nvImage.hdr.cal_min
         mx = nvImage.hdr.cal_max
     } else {
@@ -108,6 +111,7 @@ export function loadImgV1(nvImage: NVImage, isFlipX: boolean = false, isFlipY: b
             v1[i] = -v1[i]
         }
     }
+    nvImage.v1 = v1
     nvImage.img = float32V1asRGBA(nvImage, v1)
     return true
 }
