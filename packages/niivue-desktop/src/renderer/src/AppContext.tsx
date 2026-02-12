@@ -91,12 +91,7 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
   }
 
   const createDocument = async (): Promise<NiivueInstanceContext> => {
-    const nv = new Niivue({
-      dragAndDropEnabled: false,
-      backColor: [0.4, 0.4, 0.4, 1],
-      show3Dcrosshair: true,
-      yoke3Dto2DZoom: true
-    })
+    const nv = new Niivue({ dragAndDropEnabled: false })
     const docId = `doc-${documents.length + 1}`
 
     // helpers to wire setState → updateDocument(...)

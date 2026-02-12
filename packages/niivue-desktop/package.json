@@ -39,6 +39,7 @@
     "build-release:win": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:win",
     "build-release:mac": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:mac",
     "build-release:linux": "npm run ensure-niimath && npm run ensure-dcm2niix && npm run ensure-brainchop-models && npm run build:linux",
+    "pretest:e2e": "node scripts/ensure-electron-symlink.cjs",
     "test:e2e": "env -u ELECTRON_RUN_AS_NODE wdio run wdio.conf.ts",
     "test:cli": "vitest run --config vitest.cli.config.ts"
   },
