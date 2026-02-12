@@ -791,15 +791,22 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             },
             { type: 'separator' },
             {
-              label: 'Brain Extraction (Light)',
-              click: (): void => {
-                win.webContents.send('run-segmentation', 'brain-extract-light')
-              }
-            },
-            {
               label: 'Brain Extraction (Full)',
               click: (): void => {
                 win.webContents.send('run-segmentation', 'brain-extract-full')
+              }
+            },
+            { type: 'separator' },
+            {
+              label: 'Subcortical Segmentation (Mini)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'subcortical-mini')
+              }
+            },
+            {
+              label: 'Subcortical Segmentation (Full)',
+              click: (): void => {
+                win.webContents.send('run-segmentation', 'subcortical-full')
               }
             },
             { type: 'separator' },

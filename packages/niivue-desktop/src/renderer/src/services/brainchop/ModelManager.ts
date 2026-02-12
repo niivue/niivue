@@ -3,6 +3,7 @@ import '@tensorflow/tfjs-backend-wasm'
 import '@tensorflow/tfjs-backend-webgpu'
 import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm'
 import type { ModelInfo, ModelCacheEntry } from './types.js'
+import { isNativeMeshNetFormat, nativeSpecToArtifacts } from './NativeMeshNetModelBuilder.js'
 import modelsRegistry from './models/models.json' assert { type: 'json' }
 
 /**
@@ -21,6 +22,17 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
       // Load model.json via IPC
       const { modelJson, basePath } = await window.electron.loadBrainchopModel(this.modelPath)
 
+      // Handle native MeshNet format (neuroneural/brainchop-models)
+      if (isNativeMeshNetFormat(modelJson)) {
+        console.log(
+          '[ElectronIPCModelLoader] Detected native MeshNet format, converting to TF.js artifacts'
+        )
+        const weightPath = `${basePath}/model.bin`
+        const weightData = await window.electron.loadBrainchopWeights(weightPath)
+        return nativeSpecToArtifacts(modelJson, weightData)
+      }
+
+      // Standard TF.js layers-model format
       // Extract weight specs and paths from model.json
       const weightsManifest = modelJson.weightsManifest
       if (!weightsManifest || weightsManifest.length === 0) {

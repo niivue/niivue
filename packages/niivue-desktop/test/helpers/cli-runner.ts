@@ -125,8 +125,9 @@ export const STANDARD_IMAGES = ['mni152', 'chris_t1'] as const
 export const AVAILABLE_MODELS = [
   'tissue-seg-light',
   'tissue-seg-full',
-  'brain-extract-light',
   'brain-extract-full',
+  'subcortical-mini',
+  'subcortical-full',
   'parcellation-50',
   'parcellation-104'
 ] as const

@@ -9,7 +9,11 @@ export type ModelType = 'tissue-segmentation' | 'brain-extraction' | 'parcellati
 /**
  * Model category for organization
  */
-export type ModelCategory = 'Tissue Segmentation' | 'Brain Extraction' | 'Regional Parcellation'
+export type ModelCategory =
+  | 'Tissue Segmentation'
+  | 'Brain Extraction'
+  | 'Subcortical Segmentation'
+  | 'Regional Parcellation'
 
 /**
  * Information about a segmentation model

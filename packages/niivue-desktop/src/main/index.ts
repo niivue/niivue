@@ -178,7 +178,7 @@ Examples:
 
   # Extract by label names using label.json
   niivue-desktop extract --input brain.nii.gz --labels tissue_seg.nii.gz \\
-    --label-json tissue-seg-light/labels.json --label-names "Gray Matter,White Matter" \\
+    --label-json labels.json --label-names "Gray Matter,White Matter" \\
     --output gm_wm.nii.gz
 
   # Pipeline: segment then extract by value

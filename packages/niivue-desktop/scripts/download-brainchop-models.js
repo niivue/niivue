@@ -1,5 +1,5 @@
 /**
- * Script to download brainchop TensorFlow.js models from GitHub
+ * Script to download brainchop MeshNet models from neuroneural/brainchop-models on GitHub
  * Run with: node scripts/download-brainchop-models.js
  */
 
@@ -10,37 +10,19 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/niivue/brainchop-models/main'
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/neuroneural/brainchop-models/main'
 
-// Every file to download per model
+// Models to download from the meshnet/ directory of the neuroneural repo.
+// Native MeshNet format models have model.json (layer specs) + model.bin (weights).
+// TF.js format models have model.json (Keras topology + weightsManifest) + weight bin file.
 const MODEL_FILES = {
-  'brain-extract-full': ['model.json', 'group1-shard1of1.bin', 'labels.json', 'preview.png', 'settings.json'],
-  'brain-extract-light': [
-    'model.json',
-    'group1-shard1of1.bin',
-    'labels.json',
-    'preview.png',
-    'settings.json',
-    'colormap.json'
-  ],
-  'parcellation-104': [
-    'model.json',
-    'group1-shard1of1.bin',
-    'labels.json',
-    'preview.png',
-    'settings.json',
-    'colormap.json'
-  ],
-  'parcellation-50': ['model.json', 'model.bin', 'labels.json', 'preview.png', 'settings.json', 'colormap.json'],
-  'tissue-seg-full': ['model.json', 'model.bin', 'labels.json', 'preview.png', 'settings.json', 'colormap.json'],
-  'tissue-seg-light': [
-    'model.json',
-    'group1-shard1of1.bin',
-    'labels.json',
-    'preview.png',
-    'settings.json',
-    'colormap3.json'
-  ]
+  'model5_gw_ae': ['model.json', 'model.bin', 'colormap.json'],
+  'model11_gw_ae': ['model.json', 'group1-shard1of1.bin'],
+  'model18cls': ['model.json', 'model.bin', 'colormap.json'],
+  'model20chan3cls': ['model.json', 'model.bin', 'colormap.json'],
+  'model21_104class': ['model.json', 'model.bin', 'colormap.json'],
+  'model30chan18cls': ['model.json', 'model.bin', 'colormap.json'],
+  'model30chan50cls': ['model.json', 'model.bin', 'colormap.json']
 }
 
 async function downloadFile(url, destPath) {
@@ -61,11 +43,11 @@ async function downloadFile(url, destPath) {
     await fs.writeFile(destPath, buffer)
 
     const sizeMB = (buffer.length / 1024 / 1024).toFixed(2)
-    console.log(`  ✓ Saved: ${destPath} (${sizeMB} MB)`)
+    console.log(`  \u2713 Saved: ${destPath} (${sizeMB} MB)`)
 
     return true
   } catch (error) {
-    console.error(`  ✗ Failed: ${error.message}`)
+    console.error(`  \u2717 Failed: ${error.message}`)
     return false
   }
 }
@@ -73,13 +55,14 @@ async function downloadFile(url, destPath) {
 async function downloadModel(modelId, files) {
   console.log(`\nDownloading model: ${modelId}`)
 
+  // Files are under meshnet/ in the neuroneural repo but stored flat locally
   const baseDir = join(__dirname, '..', 'resources', 'brainchop-models', modelId)
 
   let successCount = 0
   let failCount = 0
 
   for (const file of files) {
-    const url = `${GITHUB_RAW_BASE}/${modelId}/${file}`
+    const url = `${GITHUB_RAW_BASE}/meshnet/${modelId}/${file}`
     const destPath = join(baseDir, file)
 
     const success = await downloadFile(url, destPath)
@@ -96,7 +79,7 @@ async function downloadModel(modelId, files) {
 async function main() {
   console.log('Brainchop Model Downloader')
   console.log('===========================')
-  console.log(`Downloading from: ${GITHUB_RAW_BASE}`)
+  console.log(`Downloading from: ${GITHUB_RAW_BASE}/meshnet/`)
   console.log(`Target directory: resources/brainchop-models/`)
 
   let totalSuccess = 0
@@ -119,12 +102,12 @@ async function main() {
   console.log(`  Failed: ${totalFail}`)
 
   if (totalFail === 0) {
-    console.log('\n✓ All models downloaded successfully!')
+    console.log('\n\u2713 All models downloaded successfully!')
     console.log('\nNext steps:')
     console.log('1. Run "npm run build" to build the application')
     console.log('2. The models will be bundled into the Electron app')
   } else {
-    console.error('\n✗ Some downloads failed. Please check the errors above.')
+    console.error('\n\u2717 Some downloads failed. Please check the errors above.')
     process.exit(1)
   }
 }

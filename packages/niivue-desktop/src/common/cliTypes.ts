@@ -58,8 +58,9 @@ export interface ResolvedInput {
 export const AVAILABLE_MODELS = [
   'tissue-seg-light',
   'tissue-seg-full',
-  'brain-extract-light',
   'brain-extract-full',
+  'subcortical-mini',
+  'subcortical-full',
   'parcellation-50',
   'parcellation-104'
 ] as const

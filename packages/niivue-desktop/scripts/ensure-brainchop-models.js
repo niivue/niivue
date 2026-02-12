@@ -12,25 +12,22 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const REQUIRED_MODELS = [
-  'tissue-seg-light',
-  'tissue-seg-full',
-  'brain-extract-light',
-  'brain-extract-full',
-  'parcellation-50',
-  'parcellation-104'
+  'model5_gw_ae',
+  'model11_gw_ae',
+  'model18cls',
+  'model20chan3cls',
+  'model21_104class',
+  'model30chan18cls',
+  'model30chan50cls'
 ]
-
-const REQUIRED_FILES_PER_MODEL = ['model.json', 'labels.json', 'settings.json', 'preview.png']
 
 async function checkModelExists(modelId) {
   const modelDir = join(__dirname, '..', 'resources', 'brainchop-models', modelId)
 
   try {
-    // Check if all required files exist
-    for (const file of REQUIRED_FILES_PER_MODEL) {
-      const filePath = join(modelDir, file)
-      await fs.access(filePath)
-    }
+    // Check if model.json exists (the minimum required file)
+    const modelJsonPath = join(modelDir, 'model.json')
+    await fs.access(modelJsonPath)
     return true
   } catch {
     return false
@@ -48,11 +45,11 @@ async function main() {
   const allModelsExist = await checkAllModels()
 
   if (allModelsExist) {
-    console.log('✓ All brainchop models are already downloaded')
+    console.log('\u2713 All brainchop models are already downloaded')
     return
   }
 
-  console.log('✗ Some brainchop models are missing')
+  console.log('\u2717 Some brainchop models are missing')
   console.log('Downloading brainchop models...')
 
   // Run the download script
@@ -62,11 +59,11 @@ async function main() {
   })
 
   if (result.status !== 0) {
-    console.error('✗ Failed to download brainchop models')
+    console.error('\u2717 Failed to download brainchop models')
     process.exit(1)
   }
 
-  console.log('✓ Brainchop models are ready')
+  console.log('\u2713 Brainchop models are ready')
 }
 
 main().catch((error) => {
