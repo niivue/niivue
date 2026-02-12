@@ -34,15 +34,23 @@ export function float32V1asRGBA(nvImage: NVImage, inImg: Float32Array): Uint8Arr
     }
     nvImage.hdr.dims[0] = 3 // 3D
     const imgRaw = new Uint8Array(nvImage.nVox3D * 4) //* 3 for RGB
+    let mn = 0.0
     let mx = 1.0
-    for (let i = 0; i < nvImage.nVox3D * 3; i++) {
-        // n.b. NaN values created by dwi2tensor and tensor2metric tensors.mif -vector v1.mif
-        if (isNaN(f32[i])) {
-            continue
+
+    if (isFinite(nvImage.hdr.cal_min) && isFinite(nvImage.hdr.cal_max) && nvImage.hdr.cal_max > nvImage.hdr.cal_min) {
+        mn = nvImage.hdr.cal_min
+        mx = nvImage.hdr.cal_max
+    } else {
+        for (let i = 0; i < nvImage.nVox3D * 3; i++) {
+            // n.b. NaN values created by dwi2tensor and tensor2metric tensors.mif -vector v1.mif
+            if (isNaN(f32[i])) {
+                continue
+            }
+            mx = Math.max(mx, Math.abs(f32[i]))
         }
-        mx = Math.max(mx, Math.abs(f32[i]))
     }
-    const slope = 255 / mx
+    const range = mx - mn
+    const slope = range > 0 ? 255 / range : 255
     const nVox3D2 = nvImage.nVox3D * 2
     let j = 0
     for (let i = 0; i < nvImage.nVox3D; i++) {
@@ -50,9 +58,9 @@ export function float32V1asRGBA(nvImage: NVImage, inImg: Float32Array): Uint8Arr
         const x = f32[i]
         const y = f32[i + nvImage.nVox3D]
         const z = f32[i + nVox3D2]
-        ;(imgRaw as Uint8Array)[j] = Math.abs(x * slope)
-        ;(imgRaw as Uint8Array)[j + 1] = Math.abs(y * slope)
-        ;(imgRaw as Uint8Array)[j + 2] = Math.abs(z * slope)
+        ;(imgRaw as Uint8Array)[j] = Math.min(255, Math.max(0, (Math.abs(x) - mn) * slope))
+        ;(imgRaw as Uint8Array)[j + 1] = Math.min(255, Math.max(0, (Math.abs(y) - mn) * slope))
+        ;(imgRaw as Uint8Array)[j + 2] = Math.min(255, Math.max(0, (Math.abs(z) - mn) * slope))
         const xNeg = Number(x > 0) * 1
         const yNeg = Number(y > 0) * 2
         const zNeg = Number(z > 0) * 4
