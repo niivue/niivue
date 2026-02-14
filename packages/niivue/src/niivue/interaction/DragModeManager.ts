@@ -322,11 +322,17 @@ export function calculateSlicer3DZoomFromDrag(params: CalculateSlicer3DZoomParam
 export function calculateWindowingAdjustment(params: CalculateWindowingParams): WindowingAdjustmentResult {
     const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax, gainFactor } = params
 
+    // Ensure gainFactor is finite and non-negative to avoid propagating NaN or inverted behavior.
+    let effectiveGainFactor = Number.isFinite(gainFactor as number) ? (gainFactor as number) : 0.5
+    if (effectiveGainFactor < 0) {
+        effectiveGainFactor = 0
+    }
+
     let mn = currentCalMin
     let mx = currentCalMax
 
-    const deltaY = (y - windowY) * gainFactor
-    const deltaX = (x - windowX) * gainFactor
+    const deltaY = (y - windowY) * effectiveGainFactor
+    const deltaX = (x - windowX) * effectiveGainFactor
 
     // Adjust level based on vertical movement
     if (deltaY < 0) {
