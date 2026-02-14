@@ -1856,10 +1856,10 @@ export class Niivue extends EventTarget {
             y,
             windowX: this.uiData.windowX,
             windowY: this.uiData.windowY,
-            currentCalMin: this.volumes[0].cal_min!,
-            currentCalMax: this.volumes[0].cal_max!,
-            globalMin: this.volumes[0].global_min!,
-            globalMax: this.volumes[0].global_max!,
+            currentCalMin: this.volumes[volIdx].cal_min!,
+            currentCalMax: this.volumes[volIdx].cal_max!,
+            globalMin: this.volumes[volIdx].global_min!,
+            globalMax: this.volumes[volIdx].global_max!,
             gainFactor: this.opts.windowingGainFactor
         })
         this.volumes[volIdx].cal_min = result.calMin
