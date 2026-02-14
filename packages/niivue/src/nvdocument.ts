@@ -213,7 +213,7 @@ export type NVConfigOptions = {
     bounds: [[number, number], [number, number]] | null
     showBoundsBorder?: boolean
     boundsBorderColor?: number[]
-    windowingGainFactor?: number
+    windowingGainFactor: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
