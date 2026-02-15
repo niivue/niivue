@@ -58,8 +58,6 @@ export type AppContextType = {
   selectDocument: (id: string) => void
   updateDocument: (id: string, partial: Partial<NiivueInstanceContext>) => void
   createDocument: () => Promise<NiivueInstanceContext>
-  showNiimathToolbar: boolean
-  setShowNiimathToolbar: (val: boolean) => void
   showStatusBar: boolean
   setShowStatusBar: (val: boolean) => void
 }
@@ -69,7 +67,6 @@ const AppContext = createContext<AppContextType | null>(null)
 export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element => {
   const [documents, setDocuments] = useState<NiivueInstanceContext[]>([])
   const [selectedDocId, setSelectedDocId] = useState<string>('')
-  const [showNiimathToolbar, setShowNiimathToolbar] = useState<boolean>(false)
   const [showStatusBar, setShowStatusBar] = useState<boolean>(false)
 
   const addDocument = (doc: NiivueInstanceContext): void => {
@@ -176,8 +173,6 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
         selectDocument,
         updateDocument,
         createDocument,
-        showNiimathToolbar,
-        setShowNiimathToolbar,
         showStatusBar,
         setShowStatusBar
       }}

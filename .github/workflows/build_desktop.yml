@@ -12,7 +12,11 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [macos-latest, ubuntu-22.04]
+
+    env:
+      # Skip esbuild binary validation to avoid version conflicts between nested packages
+      ESBUILD_BINARY_PATH: esbuild
 
     steps:
       - name: Check out Git repository
@@ -21,12 +25,40 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          cache: "npm"
           node-version: 24
 
+      - name: Install Linux dependencies for Electron
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libatspi2.0-0
+
+      - name: Clean stale caches
+        run: |
+          rm -rf node_modules packages/*/node_modules
+          npm cache clean --force
+
       - name: Install dependencies (workspace-aware)
-        # use npm ci for reproducible installs; `--workspaces` ensures workspace symlinks are created
-        run: npm ci --workspaces
+        # ESBUILD_BINARY_PATH env var skips esbuild's binary version validation
+        run: |
+          npm ci
+          npm run -w packages/niivue-desktop postinstall
 
       - name: Debug workspace layout (helpful if build fails)
         run: |
@@ -56,6 +88,32 @@ jobs:
           else
             echo "No packages/dicom-loader package.json found; skipping workspace build step"
           fi
+
+      - name: Build desktop app for testing
+        run: npm run -w packages/niivue-desktop build
+
+      - name: Create electron symlink for e2e tests
+        # In npm workspaces, electron is hoisted to root node_modules but wdio-electron-service
+        # looks for it in the package's node_modules/.bin/electron
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir -p packages/niivue-desktop/node_modules/.bin
+          ln -sf ../../../../node_modules/electron/dist/Electron.app/Contents/MacOS/Electron \
+            packages/niivue-desktop/node_modules/.bin/electron
+
+      - name: Run desktop E2E tests
+        if: matrix.os == 'macos-latest'
+        run: npm run -w packages/niivue-desktop test:e2e
+
+      - name: Upload E2E visual regression artifacts
+        if: always() && matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-artifacts
+          path: |
+            packages/niivue-desktop/test/baselines/
+            packages/niivue-desktop/test/screenshots/
+          retention-days: 7
 
       - name: build-mac
         if: matrix.os == 'macos-latest'

@@ -19,10 +19,8 @@
     "moduleResolution": "nodenext",
     "paths": {
       "@renderer/*": [
-        "src/renderer/src/*",
-        
-      ],
-      "@niivue/dicom-loader": ["../../dicom-loader/dist/index.d.mts"]
+        "src/renderer/src/*"
+      ]
     }
   }
 }

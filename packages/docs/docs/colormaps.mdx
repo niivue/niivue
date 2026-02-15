@@ -139,3 +139,10 @@ const nv = new Niivue();
 nv.opts.isColorbar = true; // or false
 nv.drawScene() // to see the changes. 
 ```
+
+If you would like to hide the colorbar for a specific volume in your canvas you can use the `colorbarVisible` property.
+
+```javascript
+nv.volumes[0].colorbarVisible = false;
+nv.updateGLVolume();
+```

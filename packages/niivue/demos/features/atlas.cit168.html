@@ -68,7 +68,7 @@
      window.alert("CIT168 Probabilistic atlas of subcortical nuclei PMID: 29664465")
   }
   clipBtn.onclick = function() {
-    const depth = nv1.scene.clipPlaneDepthAziElev[0]
+    const depth = nv1.scene.clipPlaneDepthAziElevs[0]
     if (depth >= 1.0) {
       nv1.setClipPlane([-0.0, 0, 110])
     } else {

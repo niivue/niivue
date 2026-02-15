@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises'
 import volumeMni152 from '../../../resources/images/standard/mni152.nii.gz?asset'
+import volumeChrisT1 from '../../../resources/images/standard/chris_t1.nii.gz?asset'
 import meshaal from '../../../resources/images/standard/aal.mz3?asset'
 import volaal from '../../../resources/images/standard/aal.nii.gz?asset'
 import ICBM152LH from '../../../resources/images/standard/ICBM152.lh.mz3?asset'
@@ -16,6 +17,9 @@ export const readStandardFile = async (path: string): Promise<string> => {
   switch (path) {
     case 'mni152.nii.gz':
       standardFilePath = volumeMni152
+      break
+    case 'chris_t1.nii.gz':
+      standardFilePath = volumeChrisT1
       break
     case 'aal.mz3':
       standardFilePath = meshaal

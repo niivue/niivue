@@ -799,7 +799,10 @@ export interface GetScaleParams {
 export interface ConformVox2VoxParams {
     inDims: number[]
     inAffine: number[]
+    /** @deprecated Use outDims instead */
     outDim?: number
+    /** Output dimensions [x, y, z]. If not specified, uses outDim for cubic output. */
+    outDims?: [number, number, number]
     outMM?: number
     toRAS?: boolean
 }
@@ -819,7 +822,10 @@ export interface ConformVox2VoxResult {
 export interface ResampleVolumeParams {
     inImg: Float32Array
     inDims: number[]
-    outDim: number
+    /** @deprecated Use outDims instead */
+    outDim?: number
+    /** Output dimensions [x, y, z]. If not specified, uses outDim for cubic output. */
+    outDims?: [number, number, number]
     invVox2vox: mat4
     isLinear: boolean
 }
@@ -982,7 +988,10 @@ export function getScale(params: GetScaleParams): [number, number] {
  * @returns Transform matrices
  */
 export function conformVox2Vox(params: ConformVox2VoxParams): ConformVox2VoxResult {
-    const { inDims, inAffine, outDim = 256, outMM = 1, toRAS = false } = params
+    const { inDims, inAffine, outDim = 256, outDims, outMM = 1, toRAS = false } = params
+
+    // Support both outDim (cubic) and outDims (non-cubic)
+    const [outDimX, outDimY, outDimZ] = outDims ?? [outDim, outDim, outDim]
 
     const a = inAffine.flat()
     const affine = mat4.fromValues(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15])
@@ -1002,7 +1011,7 @@ export function conformVox2Vox(params: ConformVox2VoxParams): ConformVox2VoxResu
     }
     mat4.transpose(Mdc, Mdc)
 
-    const dims = vec4.fromValues(outDim, outDim, outDim, 1)
+    const dims = vec4.fromValues(outDimX, outDimY, outDimZ, 1)
     const MdcD = mat4.create()
     mat4.scale(MdcD, Mdc, delta)
 
@@ -1040,9 +1049,12 @@ export function conformVox2Vox(params: ConformVox2VoxParams): ConformVox2VoxResu
  * @returns Resampled volume as Float32Array
  */
 export function resampleVolume(params: ResampleVolumeParams): Float32Array {
-    const { inImg, inDims, outDim, invVox2vox, isLinear } = params
+    const { inImg, inDims, outDim, outDims, invVox2vox, isLinear } = params
 
-    const outNvox = outDim * outDim * outDim
+    // Support both outDim (cubic) and outDims (non-cubic)
+    const [outDimX, outDimY, outDimZ] = outDims ?? [outDim ?? 256, outDim ?? 256, outDim ?? 256]
+
+    const outNvox = outDimX * outDimY * outDimZ
     const outImg = new Float32Array(outNvox)
 
     const dimX = inDims[1]
@@ -1061,14 +1073,14 @@ export function resampleVolume(params: ResampleVolumeParams): Float32Array {
     let i = -1
 
     if (isLinear) {
-        for (let z = 0; z < outDim; z++) {
-            for (let y = 0; y < outDim; y++) {
+        for (let z = 0; z < outDimZ; z++) {
+            for (let y = 0; y < outDimY; y++) {
                 // Loop hoisting
                 const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3]
                 const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7]
                 const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11]
 
-                for (let x = 0; x < outDim; x++) {
+                for (let x = 0; x < outDimX; x++) {
                     const ix = x * inv0 + ixYZ
                     const iy = x * inv4 + iyYZ
                     const iz = x * inv8 + izYZ
@@ -1115,14 +1127,14 @@ export function resampleVolume(params: ResampleVolumeParams): Float32Array {
         }
     } else {
         // Nearest neighbor interpolation
-        for (let z = 0; z < outDim; z++) {
-            for (let y = 0; y < outDim; y++) {
+        for (let z = 0; z < outDimZ; z++) {
+            for (let y = 0; y < outDimY; y++) {
                 // Loop hoisting
                 const ixYZ = y * invVox2vox[1] + z * invVox2vox[2] + invVox2vox[3]
                 const iyYZ = y * invVox2vox[5] + z * invVox2vox[6] + invVox2vox[7]
                 const izYZ = y * invVox2vox[9] + z * invVox2vox[10] + invVox2vox[11]
 
-                for (let x = 0; x < outDim; x++) {
+                for (let x = 0; x < outDimX; x++) {
                     const ix = Math.round(x * inv0 + ixYZ)
                     const iy = Math.round(x * inv4 + iyYZ)
                     const iz = Math.round(x * inv8 + izYZ)

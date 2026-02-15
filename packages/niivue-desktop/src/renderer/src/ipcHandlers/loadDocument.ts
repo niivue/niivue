@@ -50,7 +50,7 @@ export const registerLoadDocumentHandler = ({
     if (!json) throw new Error('Invalid .nvd content')
 
     // 3️⃣ Load into Niivue
-    const doc = NVDocument.loadFromJSON(json)
+    const doc = await NVDocument.loadFromJSON(json)
     await nv.loadDocument(doc)
 
     // 4️⃣ Sync React state

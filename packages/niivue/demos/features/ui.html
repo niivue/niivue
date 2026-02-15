@@ -167,7 +167,7 @@
       nv1.drawScene();
     }
     if (event.target.id === "ClipPlane") {
-      if (nv1.scene.clipPlaneDepthAziElev[0] > 1)
+      if (nv1.scene.clipPlaneDepthAziElevs[0] > 1)
         nv1.setClipPlane([0.3, 270, 0]);
       else nv1.setClipPlane([2, 270, 0]);
       nv1.drawScene();

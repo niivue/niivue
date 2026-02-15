@@ -122,6 +122,16 @@ TCK, TRK, TRX, TSF
 4. At least one reviewer approval required
 5. Protected `main` branch
 
+## Dependency Management Guidelines
+
+**Never suggest downgrading dependencies** (Electron, Node.js, or any other package) as a solution to compatibility issues. Instead:
+- Find alternative libraries or polyfills that work with current versions
+- Add new dependencies if needed to bridge compatibility gaps
+- Modify code to use newer APIs or patterns
+- Look for configuration changes or build tool adjustments
+
+The project prioritizes staying on latest dependency versions for security and feature improvements.
+
 ## Key Dependencies
 
 ### Core Libraries

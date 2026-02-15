@@ -16,8 +16,7 @@ export const GeneralTab: React.FC = (): JSX.Element => {
   const [show3Dcrosshair, setShow3Dcrosshair] = useState<boolean>(nv.opts.show3Dcrosshair)
   const [crosshairColor, setCrosshairColor] = useState<number[]>(Array.from(nv.opts.crosshairColor))
 
-  const { showNiimathToolbar, setShowNiimathToolbar, showStatusBar, setShowStatusBar } =
-    useAppContext()
+  const { showStatusBar, setShowStatusBar } = useAppContext()
 
   const updateOption = <K extends keyof NVConfigOptions>(
     optionKey: K,
@@ -106,31 +105,6 @@ export const GeneralTab: React.FC = (): JSX.Element => {
                 checked={showStatusBar}
                 onCheckedChange={(checked) => {
                   setShowStatusBar(checked)
-                }}
-              />
-            </div>
-          </Accordion.Content>
-        </Accordion.Item>
-        <Accordion.Item value="controls-settings" className="border-b border-gray-200">
-          <Accordion.Header>
-            <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
-              <Text size="2" weight="bold">
-                Niimath
-              </Text>
-              <span className="transform transition-transform duration-200 rotate-0 group-data-[state=open]:rotate-90">
-                ▶
-              </span>
-            </Accordion.Trigger>
-          </Accordion.Header>
-          <Accordion.Content className="px-4 py-2">
-            <div className="flex items-center mb-2">
-              <Text size="2" weight="bold" className="mr-2">
-                Show Niimath Toolbar
-              </Text>
-              <Switch
-                checked={showNiimathToolbar}
-                onCheckedChange={(checked) => {
-                  setShowNiimathToolbar(checked)
                 }}
               />
             </div>
