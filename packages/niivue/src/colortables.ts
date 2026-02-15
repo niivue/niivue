@@ -117,7 +117,10 @@ export class ColorTables {
         }
 
         let As = new Uint8ClampedArray(nLabels).fill(alphaFill)
-        As[0] = 0
+        const zeroPos = idxs.indexOf(0)
+        if (zeroPos >= 0) {
+            As[zeroPos] = 0
+        }
         if (cm.A !== undefined) {
             As = Uint8ClampedArray.from(cm.A)
         }
@@ -149,8 +152,7 @@ export class ColorTables {
             } else if (nL === nLabels) {
                 cmap.labels = Array(nLabelsDense).fill('?')
                 for (let i = 0; i < nLabels; i++) {
-                    const idx = idxs[i]
-                    cmap.labels[idx] = cm.labels[i]
+                    cmap.labels[idxs[i] - mnIdx] = cm.labels[i]
                 }
             }
         }
