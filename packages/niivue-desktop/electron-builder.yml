@@ -114,3 +114,7 @@ extraResources:
     to: images
     filter:
       - "**/*.nii*"
+
+  # ─── brainchop models ───────────────────────────────────────────────────
+  - from: resources/brainchop-models
+    to: brainchop-models

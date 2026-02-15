@@ -46,7 +46,7 @@ export const registerLoadRecentFileHandler = ({
         ? ((await decompressGzipBase64ToJson(base64)) as DocumentData)
         : (base64ToJson(base64) as DocumentData)
       if (!json) throw new Error('Invalid .nvd content')
-      const doc = NVDocument.loadFromJSON(json)
+      const doc = await NVDocument.loadFromJSON(json)
       await nv.loadDocument(doc)
       // Sync state
       setVolumes(nv.volumes)

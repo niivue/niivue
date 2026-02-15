@@ -44,7 +44,7 @@ export const registerLoadVolumeHandler = ({ getTarget }: HandlerProps): void => 
     nv.addVolume(vol)
 
     // Update React state
-    setVolumes((prev) => [...prev, vol])
+    setVolumes([...nv.volumes])
 
     // Redraw scene
     nv.drawScene()

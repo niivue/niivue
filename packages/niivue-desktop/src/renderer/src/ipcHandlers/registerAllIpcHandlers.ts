@@ -13,12 +13,12 @@ import {
 import { registerLoadMeshHandler } from './loadMesh.js'
 import { registerLoadVolumeHandler } from './loadVolume.js'
 import { registerLoadDocumentHandler } from './loadDocument.js'
-import { registerLoadDicomFolderHandler } from './loadDicomFolder.js'
 import { registerRunNiimathHandler } from './runNiimathCommand.js'
 import { registerSaveHTMLHandler } from './saveHTML.js'
 import { registerLoadOverlayHandler } from './loadOverlay.js'
 import { registerDrawHandler } from './draw.js'
 import { registerAddMeshHandler } from './addMesh.js'
+import { registerSegmentationHandlers } from './segmentation.js'
 
 const electron = window.electron
 
@@ -41,6 +41,9 @@ export interface IpcHandlerProps {
   setLabelEditMode: (v: boolean) => void
   onDocumentLoaded: (title: string, targetId: string) => void
   onMosaicStringChange?: (sliceMosaicString: string) => void
+  onToggleSegmentationPanel?: () => void
+  onOpenRightPanelTab?: (tab: string) => void
+  onHideRightPanel?: () => void
 }
 
 export const registerAllIpcHandlers = ({
@@ -55,7 +58,10 @@ export const registerAllIpcHandlers = ({
   setLabelDialogOpen,
   setLabelEditMode,
   onDocumentLoaded,
-  onMosaicStringChange
+  onMosaicStringChange,
+  onToggleSegmentationPanel,
+  onOpenRightPanelTab,
+  onHideRightPanel
 }: IpcHandlerProps): void => {
   console.log('[Renderer] registerAllIpcHandlers called')
 
@@ -67,13 +73,14 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('addMesh')
   electron.ipcRenderer.removeAllListeners('loadDocument')
   electron.ipcRenderer.removeAllListeners('openLabelManagerDialog')
-  electron.ipcRenderer.removeAllListeners('convertDICOM')
   electron.ipcRenderer.removeAllListeners('runNiimath')
   electron.ipcRenderer.removeAllListeners('saveHTML')
   electron.ipcRenderer.removeAllListeners('loadOverlay')
   electron.ipcRenderer.removeAllListeners('draw-command')
   electron.ipcRenderer.removeAllListeners('setDragMode')
   electron.ipcRenderer.removeAllListeners('toggle-color-bars')
+  electron.ipcRenderer.removeAllListeners('open-right-panel-tab')
+  electron.ipcRenderer.removeAllListeners('hide-right-panel')
 
   // 🔌 Register core handlers (now all driven by getTarget)
   registerLoadStandardHandler({ getTarget, onDocumentLoaded })
@@ -81,7 +88,6 @@ export const registerAllIpcHandlers = ({
   registerLoadMeshHandler({ getTarget })
   registerLoadVolumeHandler({ getTarget })
   registerLoadDocumentHandler({ getTarget, onDocumentLoaded })
-  registerLoadDicomFolderHandler({ getTarget })
   registerAddMeshHandler({ nv, setMeshes })
 
   // menu & misc
@@ -103,4 +109,19 @@ export const registerAllIpcHandlers = ({
   // ✍️ Drawing commands → updateDocument(opts)
   registerDrawHandler(nv)
   registerDragModeHandler(nv)
+
+  // 🧠 Brain segmentation handlers
+  registerSegmentationHandlers({
+    nv,
+    setVolumes,
+    onTogglePanel: onToggleSegmentationPanel
+  })
+
+  // Right panel from menu
+  electron.ipcRenderer.on('open-right-panel-tab', (_event: unknown, tab: string) => {
+    onOpenRightPanelTab?.(tab)
+  })
+  electron.ipcRenderer.on('hide-right-panel', () => {
+    onHideRightPanel?.()
+  })
 }
