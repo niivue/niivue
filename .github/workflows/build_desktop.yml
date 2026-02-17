@@ -92,15 +92,6 @@ jobs:
       - name: Build desktop app for testing
         run: npm run -w packages/niivue-desktop build
 
-      - name: Create electron symlink for e2e tests
-        # In npm workspaces, electron is hoisted to root node_modules but wdio-electron-service
-        # looks for it in the package's node_modules/.bin/electron
-        if: matrix.os == 'macos-latest'
-        run: |
-          mkdir -p packages/niivue-desktop/node_modules/.bin
-          ln -sf ../../../../node_modules/electron/dist/Electron.app/Contents/MacOS/Electron \
-            packages/niivue-desktop/node_modules/.bin/electron
-
       - name: Run desktop E2E tests
         if: matrix.os == 'macos-latest'
         run: npm run -w packages/niivue-desktop test:e2e

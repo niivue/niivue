@@ -215,6 +215,7 @@ function MainApp(): JSX.Element {
       const cacheHit = cached && cached.baseVolumeId === baseVolume.id
       let labelVolume: NVImage
       let resultModelInfo: ModelInfo
+      let conformedVolume: NVImage | undefined
 
       if (cacheHit) {
         // Cache hit: show brief feedback and use cached result
@@ -240,15 +241,18 @@ function MainApp(): JSX.Element {
         setSegmentationStatus('Starting segmentation...')
         setSegmentationModelName(modelInfo.name)
 
-        console.log('[MainApp] Running segmentation on volume:', {
-          dims: baseVolume.dims,
-          'hdr.dims': baseVolume.hdr?.dims,
-          pixDims: baseVolume.pixDims,
-          'img.length': baseVolume.img?.length
+        // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
+        conformedVolume = await nv.conform(baseVolume, false)
+
+        console.log('[MainApp] Running segmentation on conformed volume:', {
+          dims: conformedVolume.dims,
+          'hdr.dims': conformedVolume.hdr?.dims,
+          pixDims: conformedVolume.pixDims,
+          'img.length': conformedVolume.img?.length
         })
 
-        // Run segmentation - volume should be conformed to 256³ @ 1mm
-        const result = await brainchopService.runSegmentation(baseVolume, modelId, {
+        // Run segmentation on conformed volume
+        const result = await brainchopService.runSegmentation(conformedVolume, modelId, {
           onProgress: (progress, status) => {
             setSegmentationProgress(progress)
             setSegmentationStatus(status || '')
@@ -268,7 +272,9 @@ function MainApp(): JSX.Element {
 
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
-        const extractedVolume = extractSubvolumeUtil(baseVolume, labelVolume, selectedExtractLabels)
+        // Always use rawFloat32 conform so extraction gets original-range intensities (not Uint8)
+        const sourceVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
+        const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
 
         // Build descriptive name
         const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
@@ -286,18 +292,18 @@ function MainApp(): JSX.Element {
         const overlayIndex = nv.volumes.length - 1
         nv.setOpacity(overlayIndex, 0.5)
 
-        // For parcellation models, apply colormap labels for atlas display
-        if (resultModelInfo.type === 'parcellation' && resultModelInfo.labelsPath) {
+        // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
+        if (resultModelInfo.colormapPath) {
           try {
-            const labelsJson = await window.electron.loadBrainchopLabels(resultModelInfo.labelsPath)
-            overlayVolume.setColormapLabel(labelsJson)
+            const colormapJson = await window.electron.loadBrainchopLabels(resultModelInfo.colormapPath)
+            overlayVolume.setColormapLabel(colormapJson)
             if (overlayVolume.colormapLabel?.lut) {
               overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
                 i % 4 === 3 ? (v === 0 ? 0 : 178) : v
               )
             }
           } catch (err) {
-            console.error('Failed to load parcellation labels:', err)
+            console.error('Failed to load colormap labels:', err)
           }
         }
       }
@@ -382,8 +388,10 @@ function MainApp(): JSX.Element {
     // Helper: Save volume to output (file or stdout)
     const saveVolumeOutput = async (volume: NVImage, output: string): Promise<void> => {
       const isStdout = output === '-' || output.toLowerCase() === 'stdout'
-      // Get volume data as NIfTI
-      const niftiData = volume.toUint8Array()
+      // Use saveToUint8Array which handles gzip compression based on filename
+      // For stdout, compress as .nii.gz so downstream commands get proper NIfTI
+      const filename = isStdout ? 'output.nii.gz' : output
+      const niftiData = await volume.saveToUint8Array(filename)
       const base64 = uint8ArrayToBase64(niftiData)
 
       if (isStdout) {
@@ -463,8 +471,11 @@ function MainApp(): JSX.Element {
         throw new Error('No volume loaded for segmentation')
       }
 
+      // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
+      const conformedVolume = await nv.conform(baseVolume, false)
+
       console.error(`[niivue] Running segmentation model: ${options.model}`)
-      const result = await brainchopService.runSegmentation(baseVolume, options.model, {
+      const result = await brainchopService.runSegmentation(conformedVolume, options.model, {
         onProgress: (progress, status) => {
           console.error(`[niivue] Progress: ${progress}% - ${status}`)
         }
