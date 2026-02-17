@@ -6562,6 +6562,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         this.refreshColormaps()
         this.closePAQD()
         for (let i = 0; i < numLayers; i++) {
+            // refresh V1 tensor data with current cal_min/cal_max
+            if (this.volumes[i].v1) {
+                this.volumes[i].loadImgV1()
+            }
             // avoid trying to refresh a volume that isn't ready
             if (!this.volumes[i].toRAS) {
                 continue
