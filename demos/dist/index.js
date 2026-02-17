@@ -14824,7 +14824,10 @@ var ColorTables = class {
       throw new Error(`colormap does not make sense: ${cm} Rs ${cm.R.length} Gs ${cm.G.length} Bs ${cm.B.length} Is ${idxs.length}`);
     }
     let As = new Uint8ClampedArray(nLabels).fill(alphaFill);
-    As[0] = 0;
+    const zeroPos = idxs.indexOf(0);
+    if (zeroPos >= 0) {
+      As[zeroPos] = 0;
+    }
     if (cm.A !== void 0) {
       As = Uint8ClampedArray.from(cm.A);
     }
@@ -14851,8 +14854,7 @@ var ColorTables = class {
       } else if (nL === nLabels) {
         cmap.labels = Array(nLabelsDense).fill("?");
         for (let i = 0; i < nLabels; i++) {
-          const idx2 = idxs[i];
-          cmap.labels[idx2] = cm.labels[i];
+          cmap.labels[idxs[i] - mnIdx] = cm.labels[i];
         }
       }
     }
