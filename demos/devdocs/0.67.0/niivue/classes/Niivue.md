@@ -561,7 +561,7 @@ addLabel(
    onClick?: (label: NVLabel3D) => void): NVLabel3D;
 ```
 
-Defined in: [niivue/index.ts:10195](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10195)
+Defined in: [niivue/index.ts:10214](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10214)
 
 Add a 3D Label
 
@@ -948,7 +948,7 @@ niivue.cleanup();
 clearAllMeasurements(): void;
 ```
 
-Defined in: [niivue/index.ts:8420](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8420)
+Defined in: [niivue/index.ts:8439](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8439)
 
 Clear all persistent measurements and angles from the canvas.
 
@@ -970,7 +970,7 @@ nv.clearAllMeasurements();
 clearAngles(): void;
 ```
 
-Defined in: [niivue/index.ts:8408](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8408)
+Defined in: [niivue/index.ts:8427](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8427)
 
 Clear all persistent angle measurements from the canvas.
 
@@ -992,7 +992,7 @@ nv.clearAngles();
 clearBounds(mask: number, ltwh?: [number, number, number, number]): void;
 ```
 
-Defined in: [niivue/index.ts:11489](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11489)
+Defined in: [niivue/index.ts:11508](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11508)
 
 Clear a rectangular region of this instance's canvas.
 
@@ -1031,7 +1031,7 @@ Clear custom layout and rely on built-in layouts
 clearMeasurements(): void;
 ```
 
-Defined in: [niivue/index.ts:8396](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8396)
+Defined in: [niivue/index.ts:8415](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8415)
 
 Clear all persistent measurement lines from the canvas.
 
@@ -1110,7 +1110,7 @@ niivue.closeDrawing();
 colormap(lutName: string, isInvert: boolean): Uint8ClampedArray;
 ```
 
-Defined in: [niivue/index.ts:7450](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7450)
+Defined in: [niivue/index.ts:7469](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7469)
 
 Retrieve a colormap with optional inversion
 
@@ -1172,24 +1172,26 @@ conform(
    asFloat32: boolean,
    isRobustMinMax: boolean,
    targetShape: [number, number, number],
-targetVoxelSize: number): Promise<NVImage>;
+   targetVoxelSize: number,
+rawFloat32: boolean): Promise<NVImage>;
 ```
 
-Defined in: [niivue/index.ts:7221](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7221)
+Defined in: [niivue/index.ts:7222](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7222)
 
 FreeSurfer-style conform reslices any image to a 256x256x256 volume with 1mm voxels
 
 #### Parameters
 
-| Parameter         | Type                                          | Default value | Description                                                                                          |
-| ----------------- | --------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------- |
-| `volume`          | [`NVImage`](../../nvimage/classes/NVImage.md) | `undefined`   | input volume to be re-oriented, intensity-scaled and resliced                                        |
-| `toRAS`           | `boolean`                                     | `false`       | reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false). |
-| `isLinear`        | `boolean`                                     | `true`        | reslice with linear rather than nearest-neighbor interpolation (default true).                       |
-| `asFloat32`       | `boolean`                                     | `false`       | use Float32 datatype rather than Uint8 (default false).                                              |
-| `isRobustMinMax`  | `boolean`                                     | `false`       | clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).   |
-| `targetShape`     | \[`number`, `number`, `number`\]              | `...`         | output dimensions [x, y, z] (default [256, 256, 256]).                                               |
-| `targetVoxelSize` | `number`                                      | `1.0`         | output voxel size in mm (default 1.0).                                                               |
+| Parameter         | Type                                          | Default value | Description                                                                                                                                               |
+| ----------------- | --------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `volume`          | [`NVImage`](../../nvimage/classes/NVImage.md) | `undefined`   | input volume to be re-oriented, intensity-scaled and resliced                                                                                             |
+| `toRAS`           | `boolean`                                     | `false`       | reslice to row, column slices to right-anterior-superior not left-inferior-anterior (default false).                                                      |
+| `isLinear`        | `boolean`                                     | `true`        | reslice with linear rather than nearest-neighbor interpolation (default true).                                                                            |
+| `asFloat32`       | `boolean`                                     | `false`       | use Float32 datatype rather than Uint8 (default false).                                                                                                   |
+| `isRobustMinMax`  | `boolean`                                     | `false`       | clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).                                                        |
+| `targetShape`     | \[`number`, `number`, `number`\]              | `...`         | output dimensions [x, y, z] (default [256, 256, 256]).                                                                                                    |
+| `targetVoxelSize` | `number`                                      | `1.0`         | output voxel size in mm (default 1.0).                                                                                                                    |
+| `rawFloat32`      | `boolean`                                     | `false`       | return raw resampled Float32 data without intensity rescaling (default false). Useful for ML inference where original intensity values must be preserved. |
 
 #### Returns
 
@@ -1334,7 +1336,7 @@ a Uint8Array representing a complete NIfTI file
 createOnLocationChange(axCorSag: number): void;
 ```
 
-Defined in: [niivue/index.ts:10078](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10078)
+Defined in: [niivue/index.ts:10097](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10097)
 
 Internal utility to generate human-readable location strings for the onLocationChange callback
 
@@ -1499,7 +1501,7 @@ Performs a 1-voxel binary dilation on a connected cluster within the drawing mas
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:11176](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11176)
+Defined in: [niivue/index.ts:11195](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11195)
 
 display a lightbox or montage view
 
@@ -1589,7 +1591,7 @@ niivue.drawUndo();
 eventInBounds(evt: MouseEvent | TouchEvent | Touch): boolean;
 ```
 
-Defined in: [niivue/index.ts:11368](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11368)
+Defined in: [niivue/index.ts:11387](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11387)
 
 Returns true if a mouse/touch event happened inside this instance's bounds.
 
@@ -1611,7 +1613,7 @@ Returns true if a mouse/touch event happened inside this instance's bounds.
 findDrawingBoundarySlices(sliceType: SLICE_TYPE): object;
 ```
 
-Defined in: [niivue/index.ts:12158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12158)
+Defined in: [niivue/index.ts:12177](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12177)
 
 Find the first and last slices containing drawing data along a given axis
 
@@ -1629,8 +1631,8 @@ Object containing first and last slice indices, or null if no data found
 
 | Name    | Type     | Defined in                                                                                                     |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `first` | `number` | [niivue/index.ts:12158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12158) |
-| `last`  | `number` | [niivue/index.ts:12158](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12158) |
+| `first` | `number` | [niivue/index.ts:12177](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12177) |
+| `last`  | `number` | [niivue/index.ts:12177](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12177) |
 
 ---
 
@@ -1789,7 +1791,7 @@ Get the currently assigned DICOM loader.
 getFrame4D(id: string): number;
 ```
 
-Defined in: [niivue/index.ts:7431](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7431)
+Defined in: [niivue/index.ts:7450](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7450)
 
 determine active 3D volume from 4D time series
 
@@ -1881,7 +1883,7 @@ The mesh index, or -1 if not found or out of range.
 getMouseEventConfig(): MouseEventConfig;
 ```
 
-Defined in: [niivue/index.ts:8489](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8489)
+Defined in: [niivue/index.ts:8508](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8508)
 
 Get current mouse event configuration.
 
@@ -1956,7 +1958,7 @@ let rc = niivue.getRadiologicalConvention();
 getTouchEventConfig(): TouchEventConfig;
 ```
 
-Defined in: [niivue/index.ts:8497](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8497)
+Defined in: [niivue/index.ts:8516](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8516)
 
 Get current touch event configuration.
 
@@ -2033,7 +2035,7 @@ niivue.getVolumeIndexByID(someVolume.id);
 inBounds(x: number, y: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:11440](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11440)
+Defined in: [niivue/index.ts:11459](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11459)
 
 Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
 
@@ -2100,7 +2102,7 @@ interpolateMaskSlices(
    options?: object): void;
 ```
 
-Defined in: [niivue/index.ts:12173](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12173)
+Defined in: [niivue/index.ts:12192](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12192)
 
 Interpolate between mask slices using geometric or intensity-guided methods
 
@@ -2205,7 +2207,7 @@ the `Niivue` instance (for method chaining)
 loadDeferred4DVolumes(id: string): Promise<void>;
 ```
 
-Defined in: [niivue/index.ts:7374](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7374)
+Defined in: [niivue/index.ts:7393](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7393)
 
 Load all volumes for image opened with `limitFrames4D`, the user can also click the `...` on a 4D timeline to load deferred volumes
 
@@ -2581,7 +2583,7 @@ Automatically dispatches each item to either volume or mesh loader based on file
 loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:12130](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12130)
+Defined in: [niivue/index.ts:12149](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12149)
 
 Load matcap for illumination model.
 
@@ -2720,7 +2722,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:10763](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10763)
+Defined in: [niivue/index.ts:10782](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10782)
 
 move crosshair a fixed number of voxels (not mm)
 
@@ -2898,7 +2900,7 @@ a Promise resolving to an NVImage object
 refreshColormaps(): Niivue;
 ```
 
-Defined in: [niivue/index.ts:7505](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7505)
+Defined in: [niivue/index.ts:7524](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7524)
 
 Rebuild and upload all colormap textures for volumes and meshes
 
@@ -3410,7 +3412,7 @@ niivue.isAdditiveBlend(true);
 setAtlasOutline(isOutline: number): void;
 ```
 
-Defined in: [niivue/index.ts:9046](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9046)
+Defined in: [niivue/index.ts:9065](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9065)
 
 Enable or disable atlas outline overlay
 
@@ -3651,7 +3653,7 @@ niivue.setColormap(niivue.volumes[0].id,, 'red')
 setColorMap(id: string, colormap: string): void;
 ```
 
-Defined in: [niivue/index.ts:7315](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7315)
+Defined in: [niivue/index.ts:7334](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7334)
 
 #### Parameters
 
@@ -3676,7 +3678,7 @@ Use [setColormap](#setcolormap) instead. This alias is retained for compatibilit
 setColormapNegative(id: string, colormapNegative: string): void;
 ```
 
-Defined in: [niivue/index.ts:7328](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7328)
+Defined in: [niivue/index.ts:7347](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7347)
 
 use given color map for negative voxels in image
 
@@ -3996,7 +3998,7 @@ niivue.nv1.setDefaults(opts, true);
 setDragMode(mode: string | DRAG_MODE): void;
 ```
 
-Defined in: [niivue/index.ts:8430](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8430)
+Defined in: [niivue/index.ts:8449](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8449)
 
 Set the drag mode for mouse interactions.
 
@@ -4102,7 +4104,7 @@ niivue.setDrawOpacity(0.7);
 setFrame4D(id: string, frame4D: number): void;
 ```
 
-Defined in: [niivue/index.ts:7406](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7406)
+Defined in: [niivue/index.ts:7425](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7425)
 
 show desired 3D volume from 4D time series
 
@@ -4135,7 +4137,7 @@ nv1.setFrame4D(nv1.volumes[0].id, 42);
 setGamma(gamma: number): void;
 ```
 
-Defined in: [niivue/index.ts:7365](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7365)
+Defined in: [niivue/index.ts:7384](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7384)
 
 adjust screen gamma. Low values emphasize shadows but can appear flat, high gamma hides shadow details.
 
@@ -4264,7 +4266,7 @@ niivue.setHighResolutionCapable(true);
 setInterpolation(isNearest: boolean): void;
 ```
 
-Defined in: [niivue/index.ts:9058](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9058)
+Defined in: [niivue/index.ts:9077](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L9077)
 
 select between nearest and linear interpolation for voxel based images
 
@@ -4503,7 +4505,7 @@ setModulationImage(
    modulateAlpha: number): void;
 ```
 
-Defined in: [niivue/index.ts:7343](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7343)
+Defined in: [niivue/index.ts:7362](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7362)
 
 modulate intensity of one image based on intensity of another
 
@@ -4538,7 +4540,7 @@ niivue.setModulationImage(niivue.volumes[0].id, niivue.volumes[1].id);
 setMouseEventConfig(config: MouseEventConfig): void;
 ```
 
-Defined in: [niivue/index.ts:8462](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8462)
+Defined in: [niivue/index.ts:8481](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8481)
 
 Set custom mouse event configuration for button mappings.
 
@@ -4798,7 +4800,7 @@ niivue.setRenderAzimuthElevation(45, 15);
 setRenderDrawAmbientOcclusion(ao: number): void;
 ```
 
-Defined in: [niivue/index.ts:7299](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7299)
+Defined in: [niivue/index.ts:7318](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L7318)
 
 darken crevices and brighten corners when 3D rendering drawings.
 
@@ -5014,7 +5016,7 @@ niivue.setSliceType(Niivue.sliceTypeMultiplanar);
 setTouchEventConfig(config: TouchEventConfig): void;
 ```
 
-Defined in: [niivue/index.ts:8479](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8479)
+Defined in: [niivue/index.ts:8498](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L8498)
 
 Set custom touch event configuration for touch gesture mappings.
 

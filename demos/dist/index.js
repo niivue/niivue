@@ -48112,9 +48112,10 @@ var Niivue = class extends EventTarget {
    * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
    * @param targetShape - output dimensions [x, y, z] (default [256, 256, 256]).
    * @param targetVoxelSize - output voxel size in mm (default 1.0).
+   * @param rawFloat32 - return raw resampled Float32 data without intensity rescaling (default false). Useful for ML inference where original intensity values must be preserved.
    * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
    */
-  async conform(volume, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false, targetShape = [256, 256, 256], targetVoxelSize = 1) {
+  async conform(volume, toRAS = false, isLinear = true, asFloat32 = false, isRobustMinMax = false, targetShape = [256, 256, 256], targetVoxelSize = 1, rawFloat32 = false) {
     const [outDimX, outDimY, outDimZ] = targetShape;
     const outMM = targetVoxelSize;
     const { outAffine, invVox2vox } = conformVox2Vox({
@@ -48138,27 +48139,42 @@ var Niivue = class extends EventTarget {
       invVox2vox,
       isLinear
     });
-    const f_low = isRobustMinMax ? NaN : 0;
-    const scaleParams = {
-      img: volume.img,
-      dims: volume.hdr.dims,
-      global_min: volume.global_min,
-      global_max: volume.global_max,
-      datatypeCode: volume.hdr.datatypeCode,
-      scl_slope: volume.hdr.scl_slope,
-      scl_inter: volume.hdr.scl_inter,
-      cal_min: volume.cal_min,
-      cal_max: volume.cal_max,
-      f_low
-    };
     let bytes;
-    if (asFloat32) {
+    if (rawFloat32) {
+      bytes = await this.createNiftiArray([outDimX, outDimY, outDimZ], [outMM, outMM, outMM], Array.from(outAffine), 16 /* DT_FLOAT32 */, new Uint8Array(outImg.buffer));
+    } else if (asFloat32) {
+      const f_low = isRobustMinMax ? NaN : 0;
+      const scaleParams = {
+        img: volume.img,
+        dims: volume.hdr.dims,
+        global_min: volume.global_min,
+        global_max: volume.global_max,
+        datatypeCode: volume.hdr.datatypeCode,
+        scl_slope: volume.hdr.scl_slope,
+        scl_inter: volume.hdr.scl_inter,
+        cal_min: volume.cal_min,
+        cal_max: volume.cal_max,
+        f_low
+      };
       scaleParams.dst_min = 0;
       scaleParams.dst_max = 1;
       const [srcMin, scale6] = getScale(scaleParams);
       const outImg32 = scalecropFloat32(outImg, 0, 1, srcMin, scale6);
       bytes = await this.createNiftiArray([outDimX, outDimY, outDimZ], [outMM, outMM, outMM], Array.from(outAffine), 16 /* DT_FLOAT32 */, new Uint8Array(outImg32.buffer));
     } else {
+      const f_low = isRobustMinMax ? NaN : 0;
+      const scaleParams = {
+        img: volume.img,
+        dims: volume.hdr.dims,
+        global_min: volume.global_min,
+        global_max: volume.global_max,
+        datatypeCode: volume.hdr.datatypeCode,
+        scl_slope: volume.hdr.scl_slope,
+        scl_inter: volume.hdr.scl_inter,
+        cal_min: volume.cal_min,
+        cal_max: volume.cal_max,
+        f_low
+      };
       scaleParams.dst_min = 0;
       scaleParams.dst_max = 255;
       const [srcMin, scale6] = getScale(scaleParams);

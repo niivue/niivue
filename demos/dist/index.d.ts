@@ -4154,9 +4154,10 @@ declare class Niivue extends EventTarget {
      * @param isRobustMinMax - clamp intensity with robust min max (~2%..98%) instead of FreeSurfer (0%..99.99%) (default false).
      * @param targetShape - output dimensions [x, y, z] (default [256, 256, 256]).
      * @param targetVoxelSize - output voxel size in mm (default 1.0).
+     * @param rawFloat32 - return raw resampled Float32 data without intensity rescaling (default false). Useful for ML inference where original intensity values must be preserved.
      * @see {@link https://niivue.com/demos/features/torso.html | live demo usage}
      */
-    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean, isRobustMinMax?: boolean, targetShape?: [number, number, number], targetVoxelSize?: number): Promise<NVImage>;
+    conform(volume: NVImage, toRAS?: boolean, isLinear?: boolean, asFloat32?: boolean, isRobustMinMax?: boolean, targetShape?: [number, number, number], targetVoxelSize?: number, rawFloat32?: boolean): Promise<NVImage>;
     /**
      * darken crevices and brighten corners when 3D rendering drawings.
      * @param ao - amount of ambient occlusion (default 0.4)
