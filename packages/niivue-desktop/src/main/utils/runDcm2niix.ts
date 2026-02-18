@@ -59,14 +59,15 @@ export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> 
     .filter(Boolean)
     .filter((l) => /^\d/.test(l))
 
-  // group by numeric series number; fallback to label if no number
-  type Group = { baseLabel: string; images?: number; count: number; sn?: number }
+  // group by CRC number; dcm2niix's -n flag expects the CRC, not the DICOM series number
+  type Group = { baseLabel: string; images?: number; count: number; crc: number; sn?: number }
   const groups = new Map<string, Group>()
 
   for (const line of lines) {
     // "CRC  rest-of-label"
     const m = /^(\d+)\s+(.+)$/.exec(line)
     if (!m) continue
+    const crc = Number(m[1])
     const raw = m[2]
 
     // strip any directory pieces (usually not present, but safe)
@@ -75,7 +76,7 @@ export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> 
     // %s may come out like "15", or "15a"/"15b" when disambiguating.
     // capture digits + optional single trailing letter
     const snm = /_(\d+)([a-z])?$/i.exec(labelFull)
-    const seriesNumber = snm ? Number(snm[1]) : undefined
+    const displaySeriesNumber = snm ? Number(snm[1]) : undefined
 
     // display label WITHOUT the trailing letter so we show one row per series
     const baseLabel = snm ? labelFull.replace(/_(\d+)[a-z]?$/i, '_$1') : labelFull
@@ -84,8 +85,8 @@ export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> 
     const imgMatch = /Images:\s*(\d+)/i.exec(line)
     const images = imgMatch ? Number(imgMatch[1]) : undefined
 
-    // grouping key: numeric series number if present, else the label itself
-    const key = typeof seriesNumber === 'number' ? String(seriesNumber) : baseLabel
+    // grouping key: CRC number
+    const key = String(crc)
     const g = groups.get(key)
 
     if (!g) {
@@ -93,7 +94,8 @@ export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> 
         baseLabel,
         images,
         count: 1,
-        sn: seriesNumber
+        crc,
+        sn: displaySeriesNumber
       })
     } else {
       // track max image count across variants
@@ -105,12 +107,12 @@ export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> 
     }
   }
 
-  // build final list; you can append a "×N" hint if there were variants
+  // build final list; seriesNumber is the CRC (used by -n flag for conversion)
   const series: DicomSeries[] = Array.from(groups.values()).map((g) => {
     const text = g.count > 1 ? `${g.baseLabel} ×${g.count}` : g.baseLabel
     return {
       text, // shown to the user
-      seriesNumber: g.sn, // numeric only, letters removed
+      seriesNumber: g.crc, // CRC number used by dcm2niix -n flag
       seriesDescription: g.baseLabel,
       images: g.images
     }

@@ -51,9 +51,8 @@ export const registerSegmentationHandlers = ({
         return
       }
 
-      // Get the base volume (first volume) and conform to 256³ @ 1mm isotropic
-      // Brainchop models expect this specific format
-      const baseVolume = await nv.conform(nv.volumes[0], true)
+      // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
+      const baseVolume = await nv.conform(nv.volumes[0], false)
 
       // Initialize brainchop service if needed
       if (!brainchopService.isReady()) {
@@ -98,21 +97,20 @@ export const registerSegmentationHandlers = ({
       // Set opacity for overlay visibility
       nv.setOpacity(overlayIndex, 0.7) // 70% opacity for better visibility
 
-      // For parcellation models, apply colormap labels for atlas display
-      if (result.modelInfo.type === 'parcellation' && result.modelInfo.labelsPath) {
-        console.log('[Renderer] Loading parcellation labels from:', result.modelInfo.labelsPath)
+      // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
+      if (result.modelInfo.colormapPath) {
+        console.log('[Renderer] Loading colormap labels from:', result.modelInfo.colormapPath)
         try {
-          const labelsJson = await window.electron.loadBrainchopLabels(result.modelInfo.labelsPath)
-          result.volume.setColormapLabel(labelsJson)
+          const colormapJson = await window.electron.loadBrainchopLabels(result.modelInfo.colormapPath)
+          result.volume.setColormapLabel(colormapJson)
           if (result.volume.colormapLabel?.lut) {
-            // Keep background transparent, set other labels to semi-transparent
             result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
               i % 4 === 3 ? (v === 0 ? 0 : 178) : v
             )
           }
-          console.log('[Renderer] Applied parcellation colormap labels')
+          console.log('[Renderer] Applied colormap labels')
         } catch (err) {
-          console.error('[Renderer] Failed to load parcellation labels:', err)
+          console.error('[Renderer] Failed to load colormap labels:', err)
         }
       }
 
