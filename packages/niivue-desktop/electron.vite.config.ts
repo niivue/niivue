@@ -1,7 +1,11 @@
 // packages/niivue-desktop/electron.vite.config.ts
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 /**
  * electron-vite + Vite typings sometimes disagree about which fields are allowed
@@ -22,14 +26,7 @@ export default defineConfig({
       outDir: 'out/main',
       // Keep native/Node modules external in the main process build
       rollupOptions: {
-        external: ['zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
-      },
-      // If you want to prevent hoisting / externalization of certain deps,
-      // tune externalizeDeps here. Some electron-vite versions expose an
-      // externalizeDeps helper — but to avoid typing mismatch we keep this
-      // block as a plain object. Adjust `exclude` / `include` to your needs.
-      externalizeDeps: {
-        exclude: []
+        external: ['electron', 'zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
       }
     } as any)
   },
@@ -38,15 +35,15 @@ export default defineConfig({
     build: (({
       outDir: 'out/preload',
       rollupOptions: {
-        external: ['zlib', 'node:zlib', 'fflate', 'pako']
-      },
-      externalizeDeps: {
-        exclude: []
+        external: ['electron', 'zlib', 'node:zlib', 'fflate', 'pako']
       }
     }) as any)
   },
 
   renderer: {
+    // Set public directory for static assets like WASM files
+    publicDir: resolve(__dirname, 'public'),
+
     // allow serving files from the monorepo root (adjust path as needed)
     server: {
       fs: {
@@ -59,7 +56,18 @@ export default defineConfig({
     },
 
     optimizeDeps: {
-      exclude: ['@niivue/niivue', '@niivue/niimath', '@niivue/dcm2niix']
+      exclude: ['@niivue/niivue', '@niivue/niimath', '@niivue/dcm2niix'],
+      include: [
+        '@tensorflow/tfjs',
+        '@tensorflow/tfjs-core',
+        '@tensorflow/tfjs-layers',
+        '@tensorflow/tfjs-converter',
+        '@tensorflow/tfjs-data',
+        '@tensorflow/tfjs-backend-cpu',
+        '@tensorflow/tfjs-backend-webgl',
+        '@tensorflow/tfjs-backend-wasm',
+        '@tensorflow/tfjs-backend-webgpu'
+      ]
     },
 
     build: (({
@@ -69,7 +77,12 @@ export default defineConfig({
       },
       rollupOptions: {
         // treat these as external for renderer builds so they are not bundled
-        external: ['zlib', 'pako', 'node:zlib', 'module']
+        external: [
+          'zlib',
+          'pako',
+          'node:zlib',
+          'module'
+        ]
       },
       // If you want to keep certain internal packages externalized, list them
       // here. Otherwise move them to `optimizeDeps.exclude` / `commonjsOptions`

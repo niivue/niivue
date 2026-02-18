@@ -292,8 +292,8 @@ export function VolumeImageCard({
                 >
                   <Select.Trigger className="truncate w-3/4 min-w-3/4" />
                   <Select.Content className="truncate">
-                    {colormaps.map((cmap, idx) => (
-                      <Select.Item key={idx} value={cmap}>
+                    {colormaps.map((cmap) => (
+                      <Select.Item key={cmap} value={cmap}>
                         {cmap}
                       </Select.Item>
                     ))}
@@ -327,8 +327,7 @@ export function VolumeImageCard({
                   value={intensity[1]}
                 />
               </div>
-            </div>
-            {image.global_min && image.global_min < 0 && (
+            {image.global_min !== undefined && image.global_min < 0 && (
               <>
                 <Text size="1">Negative values colormap</Text>
                 <div className="flex gap-1 items-center">
@@ -352,9 +351,9 @@ export function VolumeImageCard({
                   >
                     <Select.Trigger className="truncate w-3/4 min-w-3/4" />
                     <Select.Content className="truncate">
-                      <Select.Item value="none">None</Select.Item>
-                      {colormaps.map((cmap, idx) => (
-                        <Select.Item key={idx} value={cmap}>
+                      <Select.Item key="none" value="none">None</Select.Item>
+                      {colormaps.map((cmap) => (
+                        <Select.Item key={`neg-${cmap}`} value={cmap}>
                           {cmap}
                         </Select.Item>
                       ))}
@@ -367,7 +366,7 @@ export function VolumeImageCard({
                     onChange={handleMinNegChange}
                     type="number"
                     size="1"
-                    value={intensityNeg && intensityNeg[0] ? intensityNeg[0].toFixed(2) : 0}
+                    value={intensityNeg && intensityNeg[0] !== undefined ? intensityNeg[0].toFixed(2) : "0"}
                     disabled={intensity[0] < 0 || image.global_min >= 0}
                   />
                   <Slider
@@ -385,24 +384,27 @@ export function VolumeImageCard({
                     onChange={handleMaxNegChange}
                     type="number"
                     size="1"
-                    value={intensityNeg && intensityNeg[1] ? intensityNeg[1].toFixed(2) : 0}
+                    value={intensityNeg && intensityNeg[1] !== undefined ? intensityNeg[1].toFixed(2) : "0"}
                     disabled={intensity[0] < 0 || image.global_min >= 0}
                   />
                 </div>
               </>
             )}
-            <Text size="1">Opacity</Text>
-            <div className="flex gap-1 items-center">
-              <Slider
-                size="1"
-                min={0}
-                max={1}
-                step={0.1}
-                defaultValue={[1.0]}
-                value={[opacity]}
-                onValueChange={handleOpacityChange}
-                disabled={isOpacityDisabled}
-              />
+              <>
+                <Text size="1">Volume opacity</Text>
+                <div className="flex gap-1 items-center">
+                  <Slider
+                    size="1"
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    defaultValue={[1.0]}
+                    value={[opacity]}
+                    onValueChange={handleOpacityChange}
+                    disabled={isOpacityDisabled}
+                  />
+                </div>
+              </>
             </div>
           </Popover.Content>
         </Popover.Root>

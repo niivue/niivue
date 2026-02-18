@@ -1,0 +1,144 @@
+---
+title: Event System (EventTarget API)
+sidebar_position: 15
+---
+
+NiiVue implements the browser-native [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) API. This supports multiple listeners per event, standard options (`once`, `signal`), and coexists with legacy callback properties.
+
+## Usage
+
+### Adding and removing listeners
+
+```javascript
+const nv = new Niivue();
+nv.attachToCanvas(document.getElementById('gl'));
+
+// Add a listener
+const handler = (event) => {
+  console.log('Location:', event.detail);
+};
+nv.addEventListener('locationChange', handler);
+
+// Remove it
+nv.removeEventListener('locationChange', handler);
+```
+
+### One-time listeners
+
+```javascript
+nv.addEventListener('imageLoaded', (event) => {
+  console.log('First image loaded:', event.detail.name);
+}, { once: true });
+```
+
+### AbortController
+
+Use an `AbortController` to remove multiple listeners at once:
+
+```javascript
+const controller = new AbortController();
+
+nv.addEventListener('locationChange', handler1, { signal: controller.signal });
+nv.addEventListener('intensityChange', handler2, { signal: controller.signal });
+
+// Remove all listeners registered with this signal
+controller.abort();
+```
+
+## Available Events
+
+### User Interaction
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `dragRelease` | `DragReleaseParams` | Drag operation released |
+| `mouseUp` | `Partial<UIData>` | Mouse button released |
+| `locationChange` | `unknown` | Crosshair location changed |
+| `intensityChange` | `NVImage` | Intensity values changed |
+| `clickToSegment` | `{ mm3: number; mL: number }` | Click-to-segment completed |
+| `measurementCompleted` | `CompletedMeasurement` | Distance measurement line completed |
+| `angleCompleted` | `CompletedAngle` | Angle measurement completed |
+| `frameChange` | `{ volume: NVImage; index: number }` | 4D frame changed |
+
+### Loading
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `imageLoaded` | `NVImage` | Image/volume loaded |
+| `meshLoaded` | `NVMesh` | Mesh loaded |
+| `volumeAddedFromUrl` | `{ imageOptions, volume }` | Volume added from URL |
+| `volumeWithUrlRemoved` | `{ url: string }` | URL-loaded volume removed |
+| `volumeRemoved` | `{ volume: NVImage; index: number }` | Any volume removed from scene |
+| `volumeUpdated` | `void` | Volume updated |
+| `meshAddedFromUrl` | `{ meshOptions, mesh }` | Mesh added from URL |
+| `meshWithUrlRemoved` | `{ url: string }` | URL-loaded mesh removed |
+| `meshRemoved` | `{ mesh: NVMesh }` | Any mesh removed from scene |
+| `documentLoaded` | `NVDocument` | Document loaded |
+| `dicomLoaderFinished` | `{ files: (NVImage\|NVMesh)[] }` | DICOM loader finished |
+
+### View Control
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `azimuthElevationChange` | `{ azimuth: number; elevation: number }` | 3D view rotation changed |
+| `clipPlaneChange` | `{ clipPlane: number[] }` | Clip plane changed |
+| `sliceTypeChange` | `{ sliceType: SLICE_TYPE }` | View layout changed (axial, coronal, etc.) |
+
+### Shaders
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `customMeshShaderAdded` | `{ fragmentShaderText, name }` | Custom shader added |
+| `meshShaderChanged` | `{ meshIndex, shaderIndex }` | Mesh shader changed |
+| `meshPropertyChanged` | `{ meshIndex, key, value }` | Mesh property changed |
+
+### Rendering
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `volumeOrderChanged` | `{ volumes: NVImage[] }` | Volume stacking order changed |
+
+### Drawing
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `penValueChanged` | `{ penValue: number; isFilledPen: boolean }` | Drawing pen value changed |
+| `drawingToolChanged` | `{ tool: string; penValue: number; isFilledPen: boolean }` | Active drawing tool changed (high-level interpretation) |
+| `drawingChanged` | `{ action: string }` | Drawing bitmap materially changed (`'draw'`, `'undo'`, `'load'`, `'close'`) |
+| `drawingEnabled` | `{ enabled: boolean }` | Drawing mode toggled on or off |
+
+### Configuration
+
+| Event | Detail Type | Description |
+|-------|------------|-------------|
+| `optsChange` | `{ propertyName, newValue, oldValue }` | Options changed |
+
+## TypeScript
+
+Events are fully typed. The detail type is inferred from the event name:
+
+```typescript
+nv.addEventListener('azimuthElevationChange', (event) => {
+  const { azimuth, elevation } = event.detail;
+});
+
+nv.addEventListener('imageLoaded', (event) => {
+  console.log(event.detail.name, event.detail.dims);
+});
+```
+
+## Backward Compatibility
+
+Legacy callback properties continue to work. When both are registered, events fire before callbacks:
+
+```javascript
+nv.onLocationChange = (location) => { /* callback */ };
+nv.addEventListener('locationChange', (event) => { /* event */ });
+// Both fire; event first, then callback
+```
+
+## See Also
+
+- [MDN: EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget)
+- [MDN: AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController)
+- [NiiVue API Documentation](/api)

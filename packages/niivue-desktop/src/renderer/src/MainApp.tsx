@@ -1,6 +1,6 @@
 // src/MainApp.tsx
 import React, { useEffect, useRef, useState } from 'react'
-import { NVImage, NVMesh, NiiVueLocation, Niivue } from '@niivue/niivue'
+import { NVImage, NVMesh, NiiVueLocation, Niivue, NVDocument } from '@niivue/niivue'
 import { Sidebar } from './components/Sidebar.js'
 import { Viewer } from './components/Viewer.js'
 import { PreferencesDialog } from './components/PreferencesDialog.js'
@@ -10,11 +10,22 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { fmriEvents, getColorForTrialType } from './types/events.js'
 // import { loadDroppedFiles } from './utils/dragAndDrop.js'
 // import { layouts } from '../../common/layouts.js'
-import { NiimathToolbar } from './components/NiimathToolbar.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
+import { RightPanel } from './components/RightPanel.js'
+import { SegmentationDialog } from './components/SegmentationDialog.js'
+import { brainchopService } from './services/brainchop/index.js'
+import type { ModelInfo } from './services/brainchop/types.js'
+import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
+import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 
 const electron = window.electron
+
+interface LabelCacheEntry {
+  labelVolume: NVImage
+  baseVolumeId: string
+  modelInfo: ModelInfo
+}
 
 // function overrideDrawGraph(nv: Niivue): void {
 //   const originalDrawGraph = nv.drawGraph.bind(nv)
@@ -50,18 +61,40 @@ function MainApp(): JSX.Element {
   } = useAppContext()
   const [editingDocId, setEditingDocId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const { showNiimathToolbar, showStatusBar } = useAppContext()
+  const [activeLeftPanel, setActiveLeftPanel] = useState<string | null>('layers')
+  const { showStatusBar } = useAppContext()
   const [cursorLocation, setCursorLocation] = useState<string>('')
   const lastSyncedDoc = useRef<string | null>(null)
   const selected = useSelectedInstance()
+  // Use ref to always get latest selected, avoiding stale closures in IPC handlers
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
   const modeMap = useRef(new Map<string, 'replace' | 'overlay'>()).current
   const indexMap = useRef(new Map<string, number>()).current
+  const labelCache = useRef(new Map<string, LabelCacheEntry>()).current
+
+  // Right panel state
+  const [rightPanelOpen, setRightPanelOpen] = useState(false)
+  const [rightPanelTab, setRightPanelTab] = useState('controls')
+  const [segmentationRunning, setSegmentationRunning] = useState(false)
+  const [segmentationProgress, setSegmentationProgress] = useState(0)
+  const [segmentationStatus, setSegmentationStatus] = useState('')
+  const [segmentationModelName, setSegmentationModelName] = useState('')
+  const [modelsVersion, setModelsVersion] = useState(0)
+  const [extractSubvolumeEnabled, setExtractSubvolumeEnabled] = useState(false)
+  const [selectedExtractLabels, setSelectedExtractLabels] = useState<Set<number>>(new Set())
+  const availableModels = brainchopService.getAvailableModels()
+  // modelsVersion is used to trigger re-render when user adds models via wizard
+  void modelsVersion
 
   const getTarget = async (): Promise<NiivueInstanceContext> => {
-    if (!selected) throw new Error('no document!')
-    const hasContent = selected.volumes.length > 0 || selected.meshes.length > 0
-    if (!hasContent) return selected
+    // Use ref to get latest selected, avoiding stale closures
+    const current = selectedRef.current
+    if (!current) throw new Error('no document!')
+    // Check actual Niivue instance state, not React state (which may be stale)
+    const nv = current.nvRef.current
+    const hasContent = nv.volumes.length > 0 || nv.meshes.length > 0
+    if (!hasContent) return current
     return createDocument()
   }
 
@@ -147,9 +180,144 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
-      onMosaicStringChange: selected.setSliceMosaicString
+      onMosaicStringChange: selected.setSliceMosaicString,
+      onToggleSegmentationPanel: () => {
+        setRightPanelTab('segmentation')
+        setRightPanelOpen((prev) => !prev)
+      },
+      onOpenRightPanelTab: (tab: string) => {
+        setRightPanelTab(tab)
+        setRightPanelOpen(true)
+      },
+      onHideRightPanel: () => setRightPanelOpen(false)
     })
   }, [selected])
+
+  // Segmentation handlers
+  const handleRunSegmentation = async (modelId: string): Promise<void> => {
+    if (!selected || selected.volumes.length === 0) {
+      alert('Please load a volume first')
+      return
+    }
+
+    const nv = selected.nvRef.current
+    const baseVolume = nv.volumes[0]
+    const modelInfo = brainchopService.getModelInfo(modelId)
+
+    if (!modelInfo) {
+      alert(`Model not found: ${modelId}`)
+      return
+    }
+
+    try {
+      // Check label cache for a hit (same model + same base volume)
+      const cached = labelCache.get(modelId)
+      const cacheHit = cached && cached.baseVolumeId === baseVolume.id
+      let labelVolume: NVImage
+      let resultModelInfo: ModelInfo
+
+      if (cacheHit) {
+        // Cache hit: show brief feedback and use cached result
+        setSegmentationRunning(true)
+        setSegmentationProgress(100)
+        setSegmentationStatus('Using cached segmentation result')
+        setSegmentationModelName(cached.modelInfo.name)
+        await new Promise((r) => setTimeout(r, 600))
+        labelVolume = cached.labelVolume
+        resultModelInfo = cached.modelInfo
+      } else {
+        // Cache miss: run full segmentation
+        if (!brainchopService.isReady()) {
+          setSegmentationStatus('Initializing TensorFlow.js...')
+          setSegmentationProgress(0)
+          setSegmentationRunning(true)
+          setSegmentationModelName(modelInfo.name)
+          await brainchopService.initialize()
+        }
+
+        setSegmentationRunning(true)
+        setSegmentationProgress(0)
+        setSegmentationStatus('Starting segmentation...')
+        setSegmentationModelName(modelInfo.name)
+
+        console.log('[MainApp] Running segmentation on volume:', {
+          dims: baseVolume.dims,
+          'hdr.dims': baseVolume.hdr?.dims,
+          pixDims: baseVolume.pixDims,
+          'img.length': baseVolume.img?.length
+        })
+
+        // Run segmentation - volume should be conformed to 256³ @ 1mm
+        const result = await brainchopService.runSegmentation(baseVolume, modelId, {
+          onProgress: (progress, status) => {
+            setSegmentationProgress(progress)
+            setSegmentationStatus(status || '')
+          }
+        })
+
+        labelVolume = result.volume
+        resultModelInfo = result.modelInfo
+
+        // Always cache the result for future re-extraction
+        labelCache.set(modelId, {
+          labelVolume,
+          baseVolumeId: baseVolume.id,
+          modelInfo: resultModelInfo
+        })
+      }
+
+      if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
+        // Extract subvolume: create masked intensity volume
+        const extractedVolume = extractSubvolumeUtil(baseVolume, labelVolume, selectedExtractLabels)
+
+        // Build descriptive name
+        const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
+        const labelCount = selectedExtractLabels.size
+        const labelSummary = labelCount <= 3
+          ? [...selectedExtractLabels].join('-')
+          : `${labelCount}labels`
+        extractedVolume.name = `${baseName}_extract_${labelSummary}.nii.gz`
+
+        nv.addVolume(extractedVolume)
+      } else {
+        // Default behavior: add label overlay (clone to keep cache pristine)
+        const overlayVolume = labelVolume.clone()
+        nv.addVolume(overlayVolume)
+        const overlayIndex = nv.volumes.length - 1
+        nv.setOpacity(overlayIndex, 0.5)
+
+        // For parcellation models, apply colormap labels for atlas display
+        if (resultModelInfo.type === 'parcellation' && resultModelInfo.labelsPath) {
+          try {
+            const labelsJson = await window.electron.loadBrainchopLabels(resultModelInfo.labelsPath)
+            overlayVolume.setColormapLabel(labelsJson)
+            if (overlayVolume.colormapLabel?.lut) {
+              overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
+                i % 4 === 3 ? (v === 0 ? 0 : 178) : v
+              )
+            }
+          } catch (err) {
+            console.error('Failed to load parcellation labels:', err)
+          }
+        }
+      }
+
+      selected.setVolumes([...nv.volumes])
+      nv.updateGLVolume()
+      updateDocument(selected.id, { isDirty: true })
+
+      setSegmentationRunning(false)
+    } catch (error) {
+      setSegmentationRunning(false)
+      console.error('Segmentation failed:', error)
+      alert(`Segmentation failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  const handleCancelSegmentation = (): void => {
+    // Cancellation is handled via AbortController in the IPC handler
+    setSegmentationRunning(false)
+  }
 
   // Open Label Manager from menu
   const [labelDialogOpen, setLabelDialogOpen] = useState<boolean>(false)
@@ -165,31 +333,444 @@ function MainApp(): JSX.Element {
     }
   }, [])
 
+  // Toggle Segmentation Panel is handled via registerSegmentationHandlers
+  // (onTogglePanel passed through registerAllIpcHandlers)
+
+  // Headless mode workflow - Subcommand architecture
+  useEffect(() => {
+    // Helper: Wait for NiiVue instance to be ready
+    const waitForDocument = (): Promise<NiivueInstanceContext> => {
+      return new Promise((resolve) => {
+        const check = (): void => {
+          const current = selectedRef.current
+          if (current && current.nvRef.current) {
+            resolve(current)
+          } else {
+            setTimeout(check, 100)
+          }
+        }
+        check()
+      })
+    }
+
+    // Helper: Load volume from resolved input
+    const loadVolume = async (
+      nv: Niivue,
+      doc: NiivueInstanceContext,
+      input: string
+    ): Promise<NVImage> => {
+      const resolved = await window.electron.headlessResolveInput(input)
+      const volume = await NVImage.loadFromBase64({ base64: resolved.base64, name: resolved.filename })
+      nv.addVolume(volume)
+      doc.setVolumes([...nv.volumes])
+      nv.updateGLVolume()
+      await new Promise((r) => requestAnimationFrame(r))
+      return volume
+    }
+
+    // Helper: Convert Uint8Array to base64 (chunked to avoid call stack limits)
+    const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+      const CHUNK_SIZE = 0x8000 // 32KB chunks
+      let binary = ''
+      for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+        const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.length))
+        binary += String.fromCharCode.apply(null, chunk as unknown as number[])
+      }
+      return btoa(binary)
+    }
+
+    // Helper: Save volume to output (file or stdout)
+    const saveVolumeOutput = async (volume: NVImage, output: string): Promise<void> => {
+      const isStdout = output === '-' || output.toLowerCase() === 'stdout'
+      // Get volume data as NIfTI
+      const niftiData = volume.toUint8Array()
+      const base64 = uint8ArrayToBase64(niftiData)
+
+      if (isStdout) {
+        await window.electron.headlessWriteStdout(base64)
+      } else {
+        const saveResult = await window.electron.headlessSaveNifti(base64, output)
+        if (!saveResult.success) {
+          throw new Error(`Failed to save NIfTI: ${saveResult.error}`)
+        }
+      }
+    }
+
+    // Helper: Save screenshot
+    const saveScreenshot = async (nv: Niivue, output: string): Promise<void> => {
+      const canvas = nv.gl?.canvas as HTMLCanvasElement
+      if (!canvas) {
+        throw new Error('Canvas not available for screenshot')
+      }
+      nv.drawScene()
+      const dataUrl = canvas.toDataURL('image/png')
+      const saveResult = await window.electron.headlessSaveOutput(dataUrl, output)
+      if (!saveResult.success) {
+        throw new Error(`Failed to save PNG: ${saveResult.error}`)
+      }
+    }
+
+    // VIEW command: Load and render volume, output screenshot or pass-through
+    const runViewCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('view command requires --input')
+      }
+      if (!options.output) {
+        throw new Error('view command requires --output')
+      }
+
+      const doc = await waitForDocument()
+      const nv = doc.nvRef.current
+      const volume = await loadVolume(nv, doc, options.input)
+
+      const isPng = options.output.toLowerCase().endsWith('.png')
+      if (isPng) {
+        await saveScreenshot(nv, options.output)
+      } else {
+        await saveVolumeOutput(volume, options.output)
+      }
+    }
+
+    // SEGMENT command: Run brain segmentation model
+    const runSegmentCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('segment command requires --input')
+      }
+      if (!options.model) {
+        throw new Error('segment command requires --model')
+      }
+      if (!options.output) {
+        throw new Error('segment command requires --output')
+      }
+
+      const doc = await waitForDocument()
+      const nv = doc.nvRef.current
+
+      // Load input volume
+      await loadVolume(nv, doc, options.input)
+
+      // Initialize brainchop if needed
+      if (!brainchopService.isReady()) {
+        await brainchopService.initialize()
+      }
+
+      const baseVolume = nv.volumes[0]
+      if (!baseVolume) {
+        throw new Error('No volume loaded for segmentation')
+      }
+
+      console.error(`[niivue] Running segmentation model: ${options.model}`)
+      const result = await brainchopService.runSegmentation(baseVolume, options.model, {
+        onProgress: (progress, status) => {
+          console.error(`[niivue] Progress: ${progress}% - ${status}`)
+        }
+      })
+
+      // Wait for processing
+      await new Promise((r) => setTimeout(r, 500))
+
+      // Output the segmentation result
+      await saveVolumeOutput(result.volume, options.output)
+    }
+
+    // EXTRACT command: Extract subvolume using label mask
+    const runExtractCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('extract command requires --input (base volume)')
+      }
+      if (!options.labels) {
+        throw new Error('extract command requires --labels (label volume)')
+      }
+      if (!options.output) {
+        throw new Error('extract command requires --output')
+      }
+
+      // Check that we have at least one way to select labels
+      const hasNumericSelection = options.values || options.range.length > 0
+      const hasNamedSelection = options.labelNames
+      if (!hasNumericSelection && !hasNamedSelection) {
+        throw new Error('extract command requires --values, --range, or --label-names')
+      }
+
+      // If using label names, require label-json
+      if (hasNamedSelection && !options.labelJson) {
+        throw new Error('--label-names requires --label-json')
+      }
+
+      // Load base volume (no NiiVue instance needed - direct volume manipulation)
+      const baseResolved = await window.electron.headlessResolveInput(options.input)
+      const baseVolume = await NVImage.loadFromBase64({
+        base64: baseResolved.base64,
+        name: baseResolved.filename
+      })
+
+      // Load label volume
+      const labelResolved = await window.electron.headlessResolveInput(options.labels)
+      const labelVolume = await NVImage.loadFromBase64({
+        base64: labelResolved.base64,
+        name: labelResolved.filename
+      })
+
+      // Parse label values and ranges
+      const selectedLabels = new Set<number>()
+
+      // Load and parse label.json if provided
+      if (options.labelJson) {
+        console.error(`[niivue] Loading label.json: ${options.labelJson}`)
+        const labelJson = await window.electron.headlessLoadLabelJson(options.labelJson)
+        const labelIndex = parseLabelJson(labelJson)
+
+        // Resolve label names to numeric values
+        if (options.labelNames) {
+          const names = options.labelNames.split(',').map((n) => n.trim())
+          const { found, notFound } = resolveLabels(names, labelIndex)
+
+          if (notFound.length > 0) {
+            console.error(`[niivue] Warning: labels not found: ${notFound.join(', ')}`)
+          }
+
+          found.forEach((v) => selectedLabels.add(v))
+          console.error(`[niivue] Resolved label names to values: ${found.join(', ')}`)
+        }
+      }
+
+      // Parse numeric values
+      if (options.values) {
+        options.values.split(',').forEach((v) => {
+          const num = parseInt(v.trim(), 10)
+          if (!isNaN(num)) selectedLabels.add(num)
+        })
+      }
+
+      // Parse numeric ranges
+      for (const rangeStr of options.range) {
+        const [start, end] = rangeStr.split('-').map((s) => parseInt(s.trim(), 10))
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = start; i <= end; i++) {
+            selectedLabels.add(i)
+          }
+        }
+      }
+
+      console.error(`[niivue] Extracting labels: ${[...selectedLabels].join(', ')}`)
+
+      // Get raw data arrays
+      const baseData = baseVolume.img as Float32Array | Int16Array | Uint8Array
+      const labelData = labelVolume.img as Float32Array | Int16Array | Uint8Array
+
+      if (baseData.length !== labelData.length) {
+        throw new Error('Base volume and label volume dimensions must match')
+      }
+
+      // Create output array
+      const outputData = new Float32Array(baseData.length)
+
+      // Extract voxels where label matches
+      for (let i = 0; i < labelData.length; i++) {
+        const labelValue = Math.round(labelData[i])
+        const matches = selectedLabels.has(labelValue)
+        const include = options.invert ? !matches : matches
+
+        if (include) {
+          outputData[i] = options.binarize ? 1 : baseData[i]
+        } else {
+          outputData[i] = 0
+        }
+      }
+
+      // Create new volume with extracted data
+      const extractedVolume = baseVolume.clone()
+      extractedVolume.img = outputData
+      extractedVolume.name = 'extracted.nii.gz'
+
+      await saveVolumeOutput(extractedVolume, options.output)
+    }
+
+    // DCM2NIIX command: Convert DICOM to NIfTI
+    const runDcm2niixCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('dcm2niix command requires --input (DICOM directory)')
+      }
+
+      const mode = options.subcommandMode || 'convert'
+
+      if (mode === 'list') {
+        // List DICOM series
+        const series = await window.electron.headlessDcm2niixList(options.input)
+        const json = JSON.stringify(series, null, 2)
+        process.stdout?.write?.(json) // Direct stdout for JSON
+        // Also use IPC fallback
+        await window.electron.headlessSaveOutput(json, options.output || '-')
+      } else if (mode === 'convert') {
+        if (!options.output) {
+          throw new Error('dcm2niix convert requires --output')
+        }
+        if (!options.series) {
+          throw new Error('dcm2niix convert requires --series')
+        }
+
+        // Parse series numbers
+        let seriesNumbers: number[] = []
+        if (options.series === 'all') {
+          const series = await window.electron.headlessDcm2niixList(options.input)
+          seriesNumbers = series.map((s: { seriesNumber: number }) => s.seriesNumber).filter((n: number) => n != null)
+        } else {
+          seriesNumbers = options.series.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+        }
+
+        console.error(`[niivue] Converting DICOM series: ${seriesNumbers.join(', ')}`)
+
+        const results = await window.electron.headlessDcm2niixConvert({
+          dicomDir: options.input,
+          seriesNumbers,
+          outputDir: options.output === '-' ? undefined : options.output,
+          compress: options.compress,
+          bids: options.bids
+        })
+
+        // If output is stdout, read first result file and output as base64
+        if (options.output === '-' && results.length > 0 && results[0].files.length > 0) {
+          const firstFile = `${results[0].outDir}/${results[0].files[0]}`
+          const resolved = await window.electron.headlessResolveInput(firstFile)
+          await window.electron.headlessWriteStdout(resolved.base64)
+        } else {
+          console.error(`[niivue] Converted ${results.length} series to ${options.output}`)
+        }
+      }
+    }
+
+    // NIIMATH command: Apply niimath operations
+    const runNiimathCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('niimath command requires --input')
+      }
+      if (!options.ops) {
+        throw new Error('niimath command requires --ops')
+      }
+      if (!options.output) {
+        throw new Error('niimath command requires --output')
+      }
+
+      // Resolve input
+      const resolved = await window.electron.headlessResolveInput(options.input)
+
+      console.error(`[niivue] Running niimath: ${options.ops}`)
+
+      // Run niimath
+      const result = await window.electron.headlessNiimath(resolved.base64, resolved.filename, options.ops)
+
+      // Output result
+      const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
+      if (isStdout) {
+        await window.electron.headlessWriteStdout(result.base64)
+      } else {
+        const saveResult = await window.electron.headlessSaveNifti(result.base64, options.output)
+        if (!saveResult.success) {
+          throw new Error(`Failed to save niimath result: ${saveResult.error}`)
+        }
+      }
+    }
+
+    // Main headless workflow dispatcher
+    const runHeadlessWorkflow = async (): Promise<void> => {
+      try {
+        const options = await window.electron.headlessGetOptions()
+
+        // No subcommand means GUI mode
+        if (!options.subcommand) return
+
+        console.error(`[niivue] Running subcommand: ${options.subcommand}`)
+
+        switch (options.subcommand) {
+          case 'view':
+            await runViewCommand(options)
+            break
+          case 'segment':
+            await runSegmentCommand(options)
+            break
+          case 'extract':
+            await runExtractCommand(options)
+            break
+          case 'dcm2niix':
+            await runDcm2niixCommand(options)
+            break
+          case 'niimath':
+            await runNiimathCommand(options)
+            break
+          default:
+            throw new Error(`Unknown subcommand: ${options.subcommand}`)
+        }
+
+        console.error('[niivue] Completed successfully')
+        window.electron.headlessComplete()
+      } catch (error) {
+        console.error('[niivue] Error:', error)
+        window.electron.headlessError(error instanceof Error ? error.message : String(error))
+      }
+    }
+
+    // Listen for headless start event
+    window.electron.onHeadlessStart(() => {
+      runHeadlessWorkflow()
+    })
+  }, [])
+
   // Clear scene command
   useEffect((): (() => void) => {
     const handleClear = (): void => {
-      if (!selected) return
-      const nv = selected.nvRef.current
+      // Use ref to get latest selected, avoiding stale closures
+      const current = selectedRef.current
+      if (!current) return
+      const nv = current.nvRef.current
+
+      // Create fresh document to reset all internal state
+      nv.document = new NVDocument()
+
+      // Clear arrays
       nv.volumes = []
       nv.meshes = []
+
+      // Clear derived volume state (back/overlays reference old volumes)
+      nv.back = null
+      nv.overlays = []
+
+      // Clear other state
       nv.mediaUrlMap.clear()
       nv.createEmptyDrawing()
-      nv.drawScene()
-      selected.setVolumes([])
-      selected.setMeshes([])
-      selected.setSelectedImage(null)
-      updateDocument(selected.id, {
+
+      // Clear label cache to free memory
+      labelCache.clear()
+
+      // Refresh WebGL textures to clear any cached overlay data
+      nv.updateGLVolume()
+
+      // Update React state
+      current.setVolumes([])
+      current.setMeshes([])
+      current.setSelectedImage(null)
+
+      updateDocument(current.id, {
         volumes: [],
         meshes: [],
         selectedImage: null,
-        isDirty: true
+        isDirty: false // Cleared scene is not dirty
       })
     }
     electron.ipcRenderer.on('clear-scene', handleClear)
     return (): void => {
       electron.ipcRenderer.removeAllListeners('clear-scene')
     }
-  }, [selected])
+  }, [])
 
   useEffect(() => {
     // define once, with `selected` & `updateDocument` in scope
@@ -504,12 +1085,13 @@ function MainApp(): JSX.Element {
 
   function renderTabs(nv: Niivue): JSX.Element {
     return (
-      <div className="flex flex-row bg-gray-800 text-white px-2">
+      <div data-testid="tab-bar" className="flex flex-row bg-gray-800 text-white px-2">
         {documents.map((doc) => {
           const isEditing = doc.id === editingDocId
           return (
             <div
               key={doc.id}
+              data-testid="tab"
               className={`group relative px-4 py-2 cursor-pointer ${
                 doc.id === selectedDocId ? 'bg-gray-700' : ''
               }`}
@@ -567,6 +1149,7 @@ function MainApp(): JSX.Element {
           )
         })}
         <div
+          data-testid="new-tab-button"
           className="px-4 py-2 cursor-pointer bg-green-700 hover:bg-green-600"
           onClick={() => void createDocument()}
         >
@@ -583,12 +1166,7 @@ function MainApp(): JSX.Element {
         {selected?.nvRef.current && renderTabs(selected.nvRef.current)}
       </div>
 
-      {/* 2) Toolbar full width */}
-      <div className="flex-none">
-        {selected && showNiimathToolbar && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
-      </div>
-
-      {/* 3) Main content: sidebar & viewer */}
+      {/* 2) Main content: sidebar & viewer & right panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar (left) */}
         <div className="flex-shrink-0 overflow-auto">
@@ -598,11 +1176,14 @@ function MainApp(): JSX.Element {
             onMoveVolumeUp={handleMoveVolumeUp}
             onMoveVolumeDown={handleMoveVolumeDown}
             onReplaceVolume={handleReplaceVolume}
-            collapsed={sidebarCollapsed}
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            activePanel={activeLeftPanel}
+            onSetActivePanel={setActiveLeftPanel}
+            availableModels={availableModels}
+            onRunSegmentation={handleRunSegmentation}
+            onModelsChanged={() => setModelsVersion((v) => v + 1)}
           />
         </div>
-        {/* Viewer (right) */}
+        {/* Viewer (center) */}
         <div className="flex-1 relative overflow-hidden">
           {documents.map((doc) => (
             <div
@@ -610,10 +1191,36 @@ function MainApp(): JSX.Element {
               className="absolute inset-0"
               style={{ display: doc.id === selectedDocId ? 'block' : 'none' }}
             >
-              <Viewer doc={doc} collapsed={sidebarCollapsed} />
+              <Viewer
+                doc={doc}
+                sidebarCollapsed={activeLeftPanel === null}
+                rightPanelOpen={rightPanelOpen}
+                onToggleRightPanel={() => setRightPanelOpen((prev) => !prev)}
+              />
             </div>
           ))}
         </div>
+        {/* Right Panel (controls, volume, mesh, atlas, segmentation) */}
+        {rightPanelOpen && (
+          <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
+            <RightPanel
+              activeTab={rightPanelTab}
+              onTabChange={setRightPanelTab}
+              onRunSegmentation={handleRunSegmentation}
+              onCancelSegmentation={handleCancelSegmentation}
+              availableModels={availableModels}
+              isRunning={segmentationRunning}
+              progress={segmentationProgress}
+              status={segmentationStatus}
+              modeMap={modeMap}
+              indexMap={indexMap}
+              extractSubvolume={extractSubvolumeEnabled}
+              onExtractSubvolumeChange={setExtractSubvolumeEnabled}
+              selectedExtractLabels={selectedExtractLabels}
+              onSelectedExtractLabelsChange={setSelectedExtractLabels}
+            />
+          </div>
+        )}
       </div>
       {/* Status bar (optional footer) */}
       {showStatusBar && <StatusBar location={cursorLocation} />}
@@ -626,6 +1233,14 @@ function MainApp(): JSX.Element {
         setEditMode={setLabelEditMode}
       />
       <DicomImportDialog />
+      <SegmentationDialog
+        open={segmentationRunning}
+        progress={segmentationProgress}
+        status={segmentationStatus}
+        modelName={segmentationModelName}
+        onCancel={handleCancelSegmentation}
+        canCancel={true}
+      />
     </div>
   )
 }
