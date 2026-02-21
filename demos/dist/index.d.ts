@@ -240,6 +240,13 @@ type ImageFromUrlOptions = {
     isManifest?: boolean;
     urlImgData?: string;
     buffer?: ArrayBuffer;
+    zarrLevel?: number;
+    zarrMaxVolumeSize?: number;
+    zarrChannel?: number;
+    /** Convert OME spatial units to millimeters for NIfTI compatibility (default: true) */
+    zarrConvertUnits?: boolean;
+    /** World-space center [x, y, z] in mm where the zarr volume center should be positioned */
+    zarrCenterMM?: [number, number, number];
 };
 type ImageFromFileOptions = {
     file: File | File[];
@@ -293,6 +300,360 @@ type ImageMetadata = {
 declare const NVImageFromUrlOptions: (url: string, urlImageData?: string, name?: string, colormap?: string, opacity?: number, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, alphaThreshold?: boolean, colormapLabel?: any) => ImageFromUrlOptions;
 
 /**
+ * ZarrChunkCache - LRU cache for zarr chunks (TypedArrays).
+ *
+ * LRU cache that stores TypedArrays.
+ * TypedArrays are garbage collected automatically, so no explicit cleanup needed.
+ */
+type TypedArray = Uint8Array | Uint16Array | Int16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
+declare class ZarrChunkCache {
+    private cache;
+    private loadingSet;
+    private maxChunks;
+    constructor(maxChunks?: number);
+    /**
+     * Generate a unique key for a chunk.
+     * Format: "name:level/x/y" for 2D or "name:level/x/y/z" for 3D
+     */
+    static getKey(name: string, level: number, x: number, y: number, z?: number): string;
+    /**
+     * Check if a chunk is in the cache
+     */
+    has(key: string): boolean;
+    /**
+     * Get a chunk from the cache.
+     * Also moves the entry to the end (most recently used).
+     */
+    get(key: string): TypedArray | undefined;
+    /**
+     * Store a chunk in the cache.
+     * Evicts oldest entries if capacity is exceeded.
+     */
+    set(key: string, chunk: TypedArray): void;
+    /**
+     * Check if a chunk is currently being loaded
+     */
+    isLoading(key: string): boolean;
+    /**
+     * Mark a chunk as loading (to prevent duplicate requests)
+     */
+    startLoading(key: string): void;
+    /**
+     * Mark a chunk as done loading
+     */
+    doneLoading(key: string): void;
+    /**
+     * Get the number of cached chunks
+     */
+    get size(): number;
+    /**
+     * Get the number of chunks currently loading
+     */
+    get loadingCount(): number;
+    /**
+     * Clear the entire cache
+     */
+    clear(): void;
+    /**
+     * Delete a specific chunk from cache
+     */
+    delete(key: string): boolean;
+    /**
+     * Get all cached keys
+     */
+    keys(): IterableIterator<string>;
+}
+
+/**
+ * ZarrChunkClient - HTTP client for fetching zarr array data using zarrita.js.
+ *
+ * Handles pyramid discovery and chunk fetching for OME-ZARR and regular zarr stores.
+ */
+
+interface ZarrChunkClientConfig {
+    /** Base URL for zarr store (e.g., "http://localhost:8090/lightsheet.zarr") */
+    baseUrl: string;
+}
+interface ZarrPyramidLevel {
+    /** Level index (0 = highest resolution) */
+    index: number;
+    /** Path to this level in the zarr hierarchy (e.g., "/0", "/1") */
+    path: string;
+    /** Spatial-only shape in OME metadata order (non-spatial dims stripped) */
+    shape: number[];
+    /** Spatial-only chunk dimensions matching shape order */
+    chunks: number[];
+    /** Data type (e.g., "uint8", "uint16", "float32") */
+    dtype: string;
+    /** Physical scale factors per spatial axis in OME metadata order from coordinateTransformations */
+    scales?: number[];
+    /** Physical translation offsets per spatial axis in OME metadata order from coordinateTransformations */
+    translations?: number[];
+}
+/**
+ * Mapping from spatial chunk coordinates to full zarr array chunk coordinates.
+ * Handles non-spatial dimensions like channel (c) and time (t).
+ */
+interface AxisMapping {
+    /** Total number of dimensions in the original zarr array */
+    originalNdim: number;
+    /** Indices of spatial axes in the original array, in OME metadata order */
+    spatialIndices: number[];
+    /** Names of spatial axes in OME metadata order (e.g., ['x', 'y', 'z'] or ['z', 'y', 'x']) */
+    spatialAxisNames: string[];
+    /** Non-spatial axes: their index in the original array, chunk size, and default chunk coord */
+    nonSpatialAxes: Array<{
+        index: number;
+        name: string;
+        chunkSize: number;
+        defaultChunkCoord: number;
+    }>;
+}
+interface ZarrPyramidInfo {
+    /** Name/URL of the zarr store */
+    name: string;
+    /** Pyramid levels (index 0 = highest resolution) */
+    levels: ZarrPyramidLevel[];
+    /** Whether this is a 3D dataset (based on spatial dimensions) */
+    is3D: boolean;
+    /** Number of spatial dimensions (2 or 3) */
+    ndim: number;
+    /** Mapping from spatial to full array coordinates */
+    axisMapping: AxisMapping;
+    /** Units for spatial axes in OME metadata order (e.g., "micrometer", "millimeter") */
+    spatialUnits?: string[];
+}
+interface ChunkCoord {
+    /** Pyramid level */
+    level: number;
+    /** Chunk X index */
+    x: number;
+    /** Chunk Y index */
+    y: number;
+    /** Chunk Z index (for 3D) */
+    z?: number;
+}
+declare class ZarrChunkClient {
+    private store;
+    private baseUrl;
+    private arrays;
+    /** Maps level index to actual path in the zarr store */
+    private levelPaths;
+    /** Axis mapping for coordinate translation */
+    private axisMapping;
+    constructor(config: ZarrChunkClientConfig);
+    /**
+     * Discover pyramid structure by reading OME-ZARR multiscales metadata,
+     * or falling back to probing for arrays at /0, /1, /2, etc.
+     */
+    fetchInfo(): Promise<ZarrPyramidInfo>;
+    /**
+     * Build axis mapping from OME axes metadata or infer from array dimensions.
+     * Identifies spatial (x, y, z) vs non-spatial (c, t) dimensions and returns
+     * indices for extracting spatial-only shape/chunks.
+     * Spatial indices are kept in the original OME metadata order (NOT reordered).
+     */
+    private buildAxisMapping;
+    /**
+     * Open a zarr array at a specific pyramid level.
+     * Uses cached arrays when available.
+     */
+    private openLevel;
+    /**
+     * Fetch a single chunk by spatial coordinates.
+     * Uses the axis mapping to build full chunk coordinates including non-spatial dims.
+     * Returns the spatial-only decoded TypedArray data.
+     *
+     * @param level - Pyramid level
+     * @param x - Spatial X chunk index
+     * @param y - Spatial Y chunk index
+     * @param z - Spatial Z chunk index (for 3D)
+     * @param nonSpatialCoords - Optional overrides for non-spatial dimensions (e.g., channel index)
+     */
+    fetchChunk(level: number, x: number, y: number, z?: number, nonSpatialCoords?: Record<string, number>, signal?: AbortSignal): Promise<TypedArray | null>;
+    /**
+     * Fetch multiple chunks in parallel.
+     * Returns a Map from chunk key to TypedArray.
+     */
+    fetchChunks(name: string, level: number, coords: ChunkCoord[]): Promise<Map<string, TypedArray>>;
+    /**
+     * Fetch a rectangular region using zarr.get with slices.
+     * Useful for fetching exact viewport regions rather than whole chunks.
+     * Uses axis mapping to handle non-spatial dimensions.
+     */
+    fetchRegion(level: number, region: {
+        xStart: number;
+        xEnd: number;
+        yStart: number;
+        yEnd: number;
+        zStart?: number;
+        zEnd?: number;
+    }): Promise<{
+        data: TypedArray;
+        shape: number[];
+    } | null>;
+    /**
+     * Get the zarr store URL
+     */
+    getUrl(): string;
+    /**
+     * Clear cached array references
+     */
+    clearArrayCache(): void;
+}
+
+/**
+ * NVZarrHelper - Simplified zarr chunk management for NVImage.
+ *
+ * Attaches to a host NVImage and manages chunked loading of OME-Zarr data.
+ * No zoom, no prefetching - just pan and level switching.
+ * All coordinates are in current-level pixel space.
+ *
+ * Spatial dimensions are kept in OME metadata order throughout.
+ * The mapping to NIfTI layout is:
+ *   - OME dim[0] (slowest in C-order) → NIfTI dim 3 (depth, slowest in Fortran-order)
+ *   - OME dim[1]                       → NIfTI dim 2 (height)
+ *   - OME dim[2] (fastest in C-order)  → NIfTI dim 1 (width, fastest in Fortran-order)
+ * This means chunk data can be copied directly without stride remapping.
+ * The affine matrix maps NIfTI (i, j, k) indices to physical (x, y, z) space
+ * using the OME axis names.
+ */
+
+interface NVZarrHelperOptions {
+    url: string;
+    level: number;
+    maxVolumeSize?: number;
+    maxTextureSize?: number;
+    channel?: number;
+    cacheSize?: number;
+    /** Convert OME spatial units to millimeters for NIfTI compatibility (default: true) */
+    convertUnitsToMm?: boolean;
+}
+declare class NVZarrHelper {
+    private hostImage;
+    private chunkClient;
+    private chunkCache;
+    private pyramidInfo;
+    private datatypeCode;
+    private pyramidLevel;
+    /** Level dimensions in OME metadata order: depth=dim[0], height=dim[1], width=dim[2] */
+    private levelDims;
+    private volumeDims;
+    private chunkSize;
+    /** Voxel scales in OME metadata order: depth=dim[0], height=dim[1], width=dim[2] */
+    private voxelScales;
+    /** Voxel translations in OME metadata order */
+    private voxelTranslations;
+    private hasTranslations;
+    private convertUnitsToMm;
+    private worldOffsetMM;
+    private centerX;
+    private centerY;
+    private centerZ;
+    private channel;
+    private nonSpatialCoords;
+    private isUpdating;
+    private needsUpdate;
+    private currentAbortController;
+    private runningMin;
+    private runningMax;
+    private calibrationDone;
+    private updateDebounceTimer;
+    private readonly UPDATE_DEBOUNCE_MS;
+    private pendingChunkCount;
+    private lastRenderedChunkCount;
+    centerAtDragStart: {
+        x: number;
+        y: number;
+        z: number;
+    } | null;
+    onChunksUpdated?: () => void;
+    onAllChunksLoaded?: () => void;
+    private constructor();
+    static create(hostImage: NVImage, url: string, options: NVZarrHelperOptions): Promise<NVZarrHelper>;
+    loadInitialChunks(): Promise<void>;
+    private updateLevelInfo;
+    private configureHostImage;
+    /** Get unit-converted voxel scales */
+    private getConvertedScales;
+    /** Get unit-converted voxel translations */
+    private getConvertedTranslations;
+    /**
+     * Build the NIfTI affine from OME axis names, scales, and translations.
+     *
+     * NIfTI dimensions map to OME spatial dimensions as:
+     *   i (dim 1, width)  = OME spatial[-1] (last, fastest in C-order)
+     *   j (dim 2, height) = OME spatial[-2]
+     *   k (dim 3, depth)  = OME spatial[-3] (first, slowest in C-order)
+     *
+     * The affine maps (i, j, k) → physical (x, y, z):
+     *   physical_axis = scale * nifti_dim + translation
+     * where nifti_dim is the column index (0=i, 1=j, 2=k) and
+     * physical_axis row is determined by the OME axis name.
+     */
+    private updateAffine;
+    beginDrag(): void;
+    endDrag(): void;
+    panBy(dx: number, dy: number, dz?: number): Promise<void>;
+    panTo(newCenterX: number, newCenterY: number, newCenterZ?: number): Promise<void>;
+    setPyramidLevel(level: number): Promise<void>;
+    getViewportState(): {
+        centerX: number;
+        centerY: number;
+        centerZ: number;
+        level: number;
+    };
+    getPyramidInfo(): ZarrPyramidInfo;
+    getPyramidLevel(): number;
+    getLevelDims(): {
+        width: number;
+        height: number;
+        depth: number;
+    };
+    getVolumeDims(): {
+        width: number;
+        height: number;
+        depth: number;
+    };
+    getWorldOffset(): [number, number, number];
+    /**
+     * Set the world-space offset so the full level's center maps to targetMM in world space.
+     * Computes the native physical center of the zarr level, then sets worldOffsetMM
+     * so that center aligns with targetMM. Also centers the viewport on the level center.
+     */
+    setWorldCenter(targetMM: [number, number, number]): void;
+    /**
+     * Convert physical (mm) coordinates back to real zarr level pixel coordinates.
+     * Inverts the affine: levelPixel = (mm - OME_translation) / scale
+     */
+    mmToLevelCoords(mmX: number, mmY: number, mmZ: number): {
+        width: number;
+        height: number;
+        depth: number;
+        level: number;
+        levelDims: {
+            width: number;
+            height: number;
+            depth: number;
+        };
+    };
+    private clampCenter;
+    private getVisibleChunks;
+    private updateVolume;
+    private clearVolumeData;
+    private assembleVisibleChunks;
+    private assembleChunkIntoVolume;
+    private updateCalibration;
+    /**
+     * Schedule a debounced chunks update callback.
+     * Batches multiple chunk arrivals within UPDATE_DEBOUNCE_MS into a single GPU update.
+     */
+    private scheduleChunksUpdated;
+    clearCache(): void;
+    refresh(): Promise<void>;
+}
+
+/**
  * Represents an affine transformation in decomposed form.
  */
 interface AffineTransform {
@@ -343,7 +704,7 @@ declare function copyAffine(affine: number[][]): number[][];
  */
 declare function transformsEqual(a: AffineTransform, b: AffineTransform, epsilon?: number): boolean;
 
-type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array;
+type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array | Int32Array | Uint32Array;
 /**
  * a NVImage encapsulates some image data and provides methods to query and operate on images
  */
@@ -399,6 +760,8 @@ declare class NVImage {
     dims?: number[];
     onColormapChange: (img: NVImage) => void;
     onOpacityChange: (img: NVImage) => void;
+    zarrHelper: NVZarrHelper | null;
+    _hasExplicitZarrCenter: boolean;
     mm000?: vec3;
     mm100?: vec3;
     mm010?: vec3;
@@ -502,8 +865,22 @@ declare class NVImage {
     /**
      * factory function to load and return a new NVImage instance from a given URL
      */
-    static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType, colorbarVisible, buffer }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
+    static loadFromUrl({ url, urlImgData, headers, name, colormap, opacity, cal_min, cal_max, trustCalMinMax, percentileFrac, ignoreZeroVoxels, useQFormNotSForm, colormapNegative, frame4D, isManifest, limitFrames4D, imageType, colorbarVisible, buffer, zarrLevel, zarrMaxVolumeSize, zarrChannel, zarrConvertUnits, zarrCenterMM }?: Partial<Omit<ImageFromUrlOptions, 'url'>> & {
         url?: string | Uint8Array | ArrayBuffer;
+    }): Promise<NVImage>;
+    /**
+     * Factory method: create a chunked zarr NVImage with an attached NVZarrHelper.
+     */
+    static createChunkedZarr(url: string, options: {
+        level: number;
+        maxVolumeSize?: number;
+        maxTextureSize?: number;
+        channel?: number;
+        cacheSize?: number;
+        convertUnitsToMm?: boolean;
+        colormap?: string;
+        opacity?: number;
+        zarrCenterMM?: [number, number, number];
     }): Promise<NVImage>;
     static readFileAsync(file: File, bytesToLoad?: number): Promise<ArrayBuffer>;
     /**
@@ -837,6 +1214,10 @@ type NVConfigOptions = {
     bounds: [[number, number], [number, number]] | null;
     showBoundsBorder?: boolean;
     boundsBorderColor?: number[];
+    /** Chunk cache size for zarr viewing (default 500) */
+    zarrCacheSize: number;
+    /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
+    zarrPrefetchRings: number;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type EncodeNumbersIn<T> = T extends number ? number | string : T extends Array<infer U> ? Array<EncodeNumbersIn<U>> : T extends object ? {
@@ -2139,6 +2520,7 @@ declare class Niivue extends EventTarget {
     private canvasObserver;
     syncOpts: SyncOpts;
     readyForSync: boolean;
+    private _skipDragInDraw;
     uiData: UIData;
     back: NVImage | null;
     overlays: NVImage[];
@@ -4458,6 +4840,8 @@ declare class Niivue extends EventTarget {
      * @internal
      */
     drawRect(leftTopWidthHeight: number[], lineColor?: number[]): void;
+    getZarrVolume(): NVImage | null;
+    getZarrVolumes(): NVImage[];
     private drawBoundsBox;
     /**
      * Draw a circle or outline at given position with specified color or default crosshair color.
@@ -5028,4 +5412,4 @@ declare class Niivue extends EventTarget {
     }): void;
 }
 
-export { type AffineTransform, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DEFAULT_SCENE_DATA, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, NiivueEvent, type NiivueEventListener, type NiivueEventListenerOptions, type NiivueEventMap, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };
+export { type AffineTransform, type ChunkCoord, type ColormapListEntry, type CompletedAngle, type CompletedMeasurement, type Connectome, type ConnectomeOptions, type CustomLoader, DEFAULT_OPTIONS, DEFAULT_SCENE_DATA, DRAG_MODE, type Descriptive, type DicomLoader, type DicomLoaderInput, type DocumentData, type DragReleaseParams, type ExportDocumentData, type FontMetrics, type GetFileExtOptions, type Graph, INITIAL_SCENE_DATA, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, type LegacyConnectome, type LegacyNodes, type LoaderRegistry, MESH_EXTENSIONS, type MM, MULTIPLANAR_TYPE, type MeshLoaderResult, type MouseEventConfig, type MvpMatrix2D, type NVConfigOptions, type NVConnectomeEdge, type NVConnectomeNode, NVDocument, NVImage, NVImageFromUrlOptions, NVLabel3D, NVLabel3DStyle, NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults, NVMeshLoaders, NVMeshUtilities, NVUtilities, NVZarrHelper, type NVZarrHelperOptions, type NiftiHeader, type NiiVueLocation, type NiiVueLocationValue, Niivue, NiivueEvent, type NiivueEventListener, type NiivueEventListenerOptions, type NiivueEventMap, PEN_TYPE, type Point, type RegisterLoaderParams, SHOW_RENDER, SLICE_TYPE, type SaveImageOptions, type Scene, type SliceScale, type SyncOpts, type TouchEventConfig, type UIData, type Volume, ZarrChunkCache, ZarrChunkClient, type ZarrPyramidInfo, type ZarrPyramidLevel, arrayToMat4, cmapper, ColorTables as colortables, copyAffine, createTransformMatrix, degToRad, eulerToRotationMatrix, getFileExt, getLoader, getMediaByUrl, handleDragEnter, handleDragOver, identityTransform, isDicomExtension, isMeshExt, mat4ToArray, multiplyAffine, readDirectory, readFileAsDataURL, registerLoader, transformsEqual, traverseFileTree };

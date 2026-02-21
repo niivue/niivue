@@ -5249,7 +5249,7 @@ var forEach3 = (function() {
 // package.json
 var package_default = {
   name: "@niivue/niivue",
-  version: "0.67.0",
+  version: "0.68.0",
   description: "minimal webgl2 nifti image viewer",
   types: "./build/niivue/index.d.ts",
   main: "./build/niivue/index.js",
@@ -5290,10 +5290,10 @@ var package_default = {
     "test:unit": "vitest --run --coverage",
     "serve-docs": "npx http-server devdocs",
     pub: "npm run build && npm publish --access public",
-    lint: "eslint .",
+    lint: "eslint . --ext .ts",
     "lint:ts": "tsc --noEmit",
-    "lint:fix": "eslint --fix .",
-    "lint:debug": "DEBUG=eslint:cli-engine eslint .",
+    "lint:fix": "eslint --fix . --ext .ts",
+    "lint:debug": "DEBUG=eslint:cli-engine eslint . --ext .ts",
     "pretest-playwright": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json",
     "pretest-demos": "npm run build:forTests && node preplaywrighttest.cjs && tsc --incremental -p playwright/e2e/tsconfig.json"
   },
@@ -30706,6 +30706,1274 @@ function transformsEqual(a, b, epsilon = 1e-4) {
   return true;
 }
 
+// src/nvimage/zarr/ZarrChunkClient.ts
+var ZarrChunkClient = class {
+  constructor(config) {
+    __publicField(this, "store");
+    __publicField(this, "baseUrl");
+    __publicField(this, "arrays", /* @__PURE__ */ new Map());
+    /** Maps level index to actual path in the zarr store */
+    __publicField(this, "levelPaths", /* @__PURE__ */ new Map());
+    /** Axis mapping for coordinate translation */
+    __publicField(this, "axisMapping", null);
+    this.baseUrl = config.baseUrl;
+    this.store = new fetch_default(config.baseUrl);
+  }
+  /**
+   * Discover pyramid structure by reading OME-ZARR multiscales metadata,
+   * or falling back to probing for arrays at /0, /1, /2, etc.
+   */
+  async fetchInfo() {
+    const root2 = root(this.store);
+    const rawLevels = [];
+    let omeAxes = null;
+    let omeMultiscales = null;
+    try {
+      const arr = await open(root2, { kind: "array" });
+      rawLevels.push({
+        index: 0,
+        path: "/",
+        shape: [...arr.shape],
+        chunks: [...arr.chunks],
+        dtype: arr.dtype
+      });
+      this.arrays.set(0, arr);
+      this.levelPaths.set(0, "/");
+    } catch {
+      try {
+        const group = await open(root2, { kind: "group" });
+        const attrs = group.attrs;
+        if (attrs.ome && typeof attrs.ome === "object") {
+          const ome = attrs.ome;
+          if (ome.multiscales && Array.isArray(ome.multiscales) && ome.multiscales.length > 0) {
+            omeMultiscales = ome.multiscales[0];
+          }
+        } else if (attrs.multiscales && Array.isArray(attrs.multiscales) && attrs.multiscales.length > 0) {
+          omeMultiscales = attrs.multiscales[0];
+        }
+      } catch {
+      }
+      if (omeMultiscales?.axes && Array.isArray(omeMultiscales.axes)) {
+        omeAxes = omeMultiscales.axes;
+      }
+      if (omeMultiscales && omeMultiscales.datasets && omeMultiscales.datasets.length > 0) {
+        for (let i = 0; i < omeMultiscales.datasets.length; i++) {
+          const dataset = omeMultiscales.datasets[i];
+          const path = dataset.path.startsWith("/") ? dataset.path : `/${dataset.path}`;
+          try {
+            const loc = root2.resolve(path);
+            const arr = await open(loc, { kind: "array" });
+            rawLevels.push({
+              index: i,
+              path,
+              shape: [...arr.shape],
+              chunks: [...arr.chunks],
+              dtype: arr.dtype
+            });
+            this.arrays.set(i, arr);
+            this.levelPaths.set(i, path);
+          } catch (err2) {
+            console.warn(`Failed to open array at path ${path}:`, err2);
+          }
+        }
+      } else {
+        for (let i = 0; i < 20; i++) {
+          const path = `/${i}`;
+          try {
+            const loc = root2.resolve(path);
+            const arr = await open(loc, { kind: "array" });
+            rawLevels.push({
+              index: i,
+              path,
+              shape: [...arr.shape],
+              chunks: [...arr.chunks],
+              dtype: arr.dtype
+            });
+            this.arrays.set(i, arr);
+            this.levelPaths.set(i, path);
+          } catch {
+            break;
+          }
+        }
+      }
+    }
+    if (rawLevels.length === 0) {
+      throw new Error(`No zarr arrays found at ${this.baseUrl}`);
+    }
+    const originalNdim = rawLevels[0].shape.length;
+    const axisMapping = this.buildAxisMapping(originalNdim, rawLevels[0].chunks, omeAxes);
+    this.axisMapping = axisMapping;
+    let spatialUnits;
+    if (omeAxes) {
+      spatialUnits = axisMapping.spatialIndices.map((i) => omeAxes[i]?.unit ?? "");
+    }
+    const levels = rawLevels.map((raw) => {
+      const level = {
+        index: raw.index,
+        path: raw.path,
+        shape: axisMapping.spatialIndices.map((i) => raw.shape[i]),
+        chunks: axisMapping.spatialIndices.map((i) => raw.chunks[i]),
+        dtype: raw.dtype
+      };
+      if (omeMultiscales?.datasets?.[raw.index]?.coordinateTransformations) {
+        const transforms = omeMultiscales.datasets[raw.index].coordinateTransformations;
+        const scaleTransform = transforms.find((t) => t.type === "scale" && t.scale);
+        if (scaleTransform?.scale) {
+          level.scales = axisMapping.spatialIndices.map((i) => scaleTransform.scale[i]);
+        }
+        const translationTransform = transforms.find((t) => t.type === "translation" && t.translation);
+        if (translationTransform?.translation) {
+          level.translations = axisMapping.spatialIndices.map((i) => translationTransform.translation[i]);
+        }
+      }
+      return level;
+    });
+    const spatialNdim = axisMapping.spatialIndices.length;
+    const is3D = spatialNdim >= 3;
+    console.log(
+      `Zarr axis mapping: original ndim=${originalNdim}, spatial ndim=${spatialNdim}, spatial indices=${JSON.stringify(axisMapping.spatialIndices)}, non-spatial=${JSON.stringify(axisMapping.nonSpatialAxes.map((a) => a.name))}`
+    );
+    return {
+      name: this.baseUrl,
+      levels,
+      is3D,
+      ndim: spatialNdim,
+      axisMapping,
+      spatialUnits
+    };
+  }
+  /**
+   * Build axis mapping from OME axes metadata or infer from array dimensions.
+   * Identifies spatial (x, y, z) vs non-spatial (c, t) dimensions and returns
+   * indices for extracting spatial-only shape/chunks.
+   * Spatial indices are kept in the original OME metadata order (NOT reordered).
+   */
+  buildAxisMapping(originalNdim, originalChunks, omeAxes) {
+    const spatialIndices = [];
+    const spatialAxisNames = [];
+    const nonSpatialAxes = [];
+    if (omeAxes && omeAxes.length === originalNdim) {
+      for (let i = 0; i < omeAxes.length; i++) {
+        const axis = omeAxes[i];
+        if (axis.type === "space") {
+          spatialIndices.push(i);
+          spatialAxisNames.push(axis.name.toLowerCase());
+        } else {
+          nonSpatialAxes.push({
+            index: i,
+            name: axis.name,
+            chunkSize: originalChunks[i],
+            defaultChunkCoord: 0
+          });
+        }
+      }
+    } else {
+      if (omeAxes === null) {
+        console.warn("No OME axes metadata found \u2014 inferring axis layout from array dimensions");
+      }
+      if (originalNdim <= 3) {
+        const defaultNames3D = ["z", "y", "x"];
+        const defaultNames2D = ["y", "x"];
+        const names = originalNdim === 2 ? defaultNames2D : defaultNames3D.slice(3 - originalNdim);
+        for (let i = 0; i < originalNdim; i++) {
+          spatialIndices.push(i);
+          spatialAxisNames.push(names[i]);
+        }
+      } else if (originalNdim === 4) {
+        nonSpatialAxes.push({ index: 0, name: "c", chunkSize: originalChunks[0], defaultChunkCoord: 0 });
+        spatialIndices.push(1, 2, 3);
+        spatialAxisNames.push("z", "y", "x");
+      } else if (originalNdim === 5) {
+        nonSpatialAxes.push({ index: 0, name: "t", chunkSize: originalChunks[0], defaultChunkCoord: 0 });
+        nonSpatialAxes.push({ index: 1, name: "c", chunkSize: originalChunks[1], defaultChunkCoord: 0 });
+        spatialIndices.push(2, 3, 4);
+        spatialAxisNames.push("z", "y", "x");
+      } else {
+        for (let i = 0; i < originalNdim - 3; i++) {
+          nonSpatialAxes.push({ index: i, name: `dim${i}`, chunkSize: originalChunks[i], defaultChunkCoord: 0 });
+        }
+        for (let i = originalNdim - 3; i < originalNdim; i++) {
+          spatialIndices.push(i);
+          spatialAxisNames.push(["z", "y", "x"][i - (originalNdim - 3)]);
+        }
+      }
+    }
+    return { originalNdim, spatialIndices, spatialAxisNames, nonSpatialAxes };
+  }
+  /**
+   * Open a zarr array at a specific pyramid level.
+   * Uses cached arrays when available.
+   */
+  async openLevel(level) {
+    if (this.arrays.has(level)) {
+      return this.arrays.get(level);
+    }
+    const root2 = root(this.store);
+    const path = this.levelPaths.get(level) ?? (level === 0 ? "/" : `/${level}`);
+    try {
+      const loc = root2.resolve(path);
+      const arr = await open(loc, { kind: "array" });
+      this.arrays.set(level, arr);
+      this.levelPaths.set(level, path);
+      return arr;
+    } catch {
+      if (level === 0) {
+        const arr = await open(root2, { kind: "array" });
+        this.arrays.set(level, arr);
+        this.levelPaths.set(level, "/");
+        return arr;
+      }
+      throw new Error(`Cannot open zarr array at level ${level}`);
+    }
+  }
+  /**
+   * Fetch a single chunk by spatial coordinates.
+   * Uses the axis mapping to build full chunk coordinates including non-spatial dims.
+   * Returns the spatial-only decoded TypedArray data.
+   *
+   * @param level - Pyramid level
+   * @param x - Spatial X chunk index
+   * @param y - Spatial Y chunk index
+   * @param z - Spatial Z chunk index (for 3D)
+   * @param nonSpatialCoords - Optional overrides for non-spatial dimensions (e.g., channel index)
+   */
+  async fetchChunk(level, x, y, z, nonSpatialCoords, signal) {
+    try {
+      const arr = await this.openLevel(level);
+      const mapping = this.axisMapping;
+      let chunkCoords;
+      if (mapping && mapping.originalNdim > mapping.spatialIndices.length) {
+        chunkCoords = new Array(mapping.originalNdim).fill(0);
+        for (const nsa of mapping.nonSpatialAxes) {
+          chunkCoords[nsa.index] = nonSpatialCoords?.[nsa.name] ?? nsa.defaultChunkCoord;
+        }
+        const spatialCoords = z !== void 0 && mapping.spatialIndices.length >= 3 ? [z, y, x] : [y, x];
+        for (let i = 0; i < spatialCoords.length && i < mapping.spatialIndices.length; i++) {
+          chunkCoords[mapping.spatialIndices[i]] = spatialCoords[i];
+        }
+      } else {
+        if (z !== void 0 && arr.shape.length >= 3) {
+          chunkCoords = [z, y, x];
+        } else {
+          chunkCoords = [y, x];
+        }
+      }
+      const chunk = await arr.getChunk(chunkCoords, { signal });
+      let data = chunk.data;
+      if (mapping && mapping.nonSpatialAxes.length > 0) {
+        const spatialSize = mapping.spatialIndices.reduce((acc, idx2) => acc * arr.chunks[idx2], 1);
+        if (data.length > spatialSize) {
+          let offset = 0;
+          let stride = data.length;
+          for (let d = 0; d < mapping.originalNdim; d++) {
+            stride = Math.floor(stride / arr.chunks[d]);
+            const isSpatial = mapping.spatialIndices.includes(d);
+            if (!isSpatial) {
+              offset += 0 * stride;
+            }
+          }
+          data = data.subarray(offset, offset + spatialSize);
+        }
+      }
+      return data;
+    } catch (err2) {
+      console.warn(`Failed to fetch chunk at level ${level}, x=${x}, y=${y}, z=${z}:`, err2);
+      return null;
+    }
+  }
+  /**
+   * Fetch multiple chunks in parallel.
+   * Returns a Map from chunk key to TypedArray.
+   */
+  async fetchChunks(name, level, coords) {
+    const results = /* @__PURE__ */ new Map();
+    const promises = coords.map(async (coord) => {
+      const data = await this.fetchChunk(level, coord.x, coord.y, coord.z);
+      if (data) {
+        const key = coord.z !== void 0 ? `${name}:${level}/${coord.x}/${coord.y}/${coord.z}` : `${name}:${level}/${coord.x}/${coord.y}`;
+        results.set(key, data);
+      }
+    });
+    await Promise.all(promises);
+    return results;
+  }
+  /**
+   * Fetch a rectangular region using zarr.get with slices.
+   * Useful for fetching exact viewport regions rather than whole chunks.
+   * Uses axis mapping to handle non-spatial dimensions.
+   */
+  async fetchRegion(level, region) {
+    try {
+      const arr = await this.openLevel(level);
+      const mapping = this.axisMapping;
+      const selections = [];
+      if (mapping && mapping.originalNdim > mapping.spatialIndices.length) {
+        for (let d = 0; d < mapping.originalNdim; d++) {
+          const spatialIdx = mapping.spatialIndices.indexOf(d);
+          if (spatialIdx === -1) {
+            selections.push(0);
+          } else if (mapping.spatialIndices.length >= 3) {
+            if (spatialIdx === 0 && region.zStart !== void 0 && region.zEnd !== void 0) {
+              selections.push(slice(region.zStart, region.zEnd));
+            } else if (spatialIdx === 1) {
+              selections.push(slice(region.yStart, region.yEnd));
+            } else if (spatialIdx === 2) {
+              selections.push(slice(region.xStart, region.xEnd));
+            } else {
+              selections.push(slice(0, arr.shape[d]));
+            }
+          } else {
+            if (spatialIdx === 0) {
+              selections.push(slice(region.yStart, region.yEnd));
+            } else {
+              selections.push(slice(region.xStart, region.xEnd));
+            }
+          }
+        }
+      } else {
+        if (region.zStart !== void 0 && region.zEnd !== void 0 && arr.shape.length >= 3) {
+          selections.push(slice(region.zStart, region.zEnd));
+          selections.push(slice(region.yStart, region.yEnd));
+          selections.push(slice(region.xStart, region.xEnd));
+        } else {
+          selections.push(slice(region.yStart, region.yEnd));
+          selections.push(slice(region.xStart, region.xEnd));
+        }
+      }
+      const result = await get2(arr, selections);
+      return {
+        data: result.data,
+        shape: result.shape
+      };
+    } catch (err2) {
+      console.warn(`Failed to fetch region at level ${level}:`, err2);
+      return null;
+    }
+  }
+  /**
+   * Get the zarr store URL
+   */
+  getUrl() {
+    return this.baseUrl;
+  }
+  /**
+   * Clear cached array references
+   */
+  clearArrayCache() {
+    this.arrays.clear();
+    this.levelPaths.clear();
+  }
+};
+
+// src/nvimage/zarr/ZarrChunkCache.ts
+var ZarrChunkCache = class {
+  constructor(maxChunks = 500) {
+    __publicField(this, "cache");
+    __publicField(this, "loadingSet");
+    __publicField(this, "maxChunks");
+    this.cache = /* @__PURE__ */ new Map();
+    this.loadingSet = /* @__PURE__ */ new Set();
+    this.maxChunks = maxChunks;
+  }
+  /**
+   * Generate a unique key for a chunk.
+   * Format: "name:level/x/y" for 2D or "name:level/x/y/z" for 3D
+   */
+  static getKey(name, level, x, y, z) {
+    if (z !== void 0) {
+      return `${name}:${level}/${x}/${y}/${z}`;
+    }
+    return `${name}:${level}/${x}/${y}`;
+  }
+  /**
+   * Check if a chunk is in the cache
+   */
+  has(key) {
+    return this.cache.has(key);
+  }
+  /**
+   * Get a chunk from the cache.
+   * Also moves the entry to the end (most recently used).
+   */
+  get(key) {
+    const chunk = this.cache.get(key);
+    if (chunk) {
+      this.cache.delete(key);
+      this.cache.set(key, chunk);
+    }
+    return chunk;
+  }
+  /**
+   * Store a chunk in the cache.
+   * Evicts oldest entries if capacity is exceeded.
+   */
+  set(key, chunk) {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+    while (this.cache.size >= this.maxChunks) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      } else {
+        break;
+      }
+    }
+    this.cache.set(key, chunk);
+  }
+  /**
+   * Check if a chunk is currently being loaded
+   */
+  isLoading(key) {
+    return this.loadingSet.has(key);
+  }
+  /**
+   * Mark a chunk as loading (to prevent duplicate requests)
+   */
+  startLoading(key) {
+    this.loadingSet.add(key);
+  }
+  /**
+   * Mark a chunk as done loading
+   */
+  doneLoading(key) {
+    this.loadingSet.delete(key);
+  }
+  /**
+   * Get the number of cached chunks
+   */
+  get size() {
+    return this.cache.size;
+  }
+  /**
+   * Get the number of chunks currently loading
+   */
+  get loadingCount() {
+    return this.loadingSet.size;
+  }
+  /**
+   * Clear the entire cache
+   */
+  clear() {
+    this.cache.clear();
+    this.loadingSet.clear();
+  }
+  /**
+   * Delete a specific chunk from cache
+   */
+  delete(key) {
+    this.loadingSet.delete(key);
+    return this.cache.delete(key);
+  }
+  /**
+   * Get all cached keys
+   */
+  keys() {
+    return this.cache.keys();
+  }
+};
+
+// src/nvimage/zarr/NVZarrHelper.ts
+function zarrDtypeToNifti(dtype) {
+  const normalized = dtype.toLowerCase().replace(/[<>|]/g, "");
+  if (normalized === "u1" || normalized === "uint8") {
+    return 2 /* DT_UINT8 */;
+  }
+  if (normalized === "i1" || normalized === "int8") {
+    return 256 /* DT_INT8 */;
+  }
+  if (normalized === "u2" || normalized === "uint16") {
+    return 512 /* DT_UINT16 */;
+  }
+  if (normalized === "i2" || normalized === "int16") {
+    return 4 /* DT_INT16 */;
+  }
+  if (normalized === "u4" || normalized === "uint32") {
+    return 768 /* DT_UINT32 */;
+  }
+  if (normalized === "i4" || normalized === "int32") {
+    return 8 /* DT_INT32 */;
+  }
+  if (normalized === "f4" || normalized === "float32") {
+    return 16 /* DT_FLOAT32 */;
+  }
+  if (normalized === "f8" || normalized === "float64") {
+    return 64 /* DT_FLOAT64 */;
+  }
+  console.warn(`Unknown zarr dtype: ${dtype}, defaulting to uint8`);
+  return 2 /* DT_UINT8 */;
+}
+function getBytesPerVoxel(datatypeCode) {
+  switch (datatypeCode) {
+    case 2 /* DT_UINT8 */:
+    case 256 /* DT_INT8 */:
+      return 1;
+    case 512 /* DT_UINT16 */:
+    case 4 /* DT_INT16 */:
+      return 2;
+    case 768 /* DT_UINT32 */:
+    case 8 /* DT_INT32 */:
+    case 16 /* DT_FLOAT32 */:
+      return 4;
+    case 64 /* DT_FLOAT64 */:
+      return 8;
+    default:
+      return 1;
+  }
+}
+function createTypedVoxelArray(datatypeCode, size) {
+  switch (datatypeCode) {
+    case 2 /* DT_UINT8 */:
+    case 256 /* DT_INT8 */:
+      return new Uint8Array(size);
+    case 512 /* DT_UINT16 */:
+      return new Uint16Array(size);
+    case 4 /* DT_INT16 */:
+      return new Int16Array(size);
+    case 8 /* DT_INT32 */:
+      return new Int32Array(size);
+    case 768 /* DT_UINT32 */:
+      return new Uint32Array(size);
+    case 16 /* DT_FLOAT32 */:
+      return new Float32Array(size);
+    case 64 /* DT_FLOAT64 */:
+      return new Float64Array(size);
+    default:
+      return new Uint8Array(size);
+  }
+}
+function omeUnitToMm(value, unit) {
+  if (!unit) {
+    return value;
+  }
+  switch (unit.toLowerCase()) {
+    case "micrometer":
+    case "um":
+    case "\xB5m":
+      return value / 1e3;
+    case "nanometer":
+    case "nm":
+      return value / 1e6;
+    case "millimeter":
+    case "mm":
+      return value;
+    case "centimeter":
+    case "cm":
+      return value * 10;
+    case "meter":
+    case "m":
+      return value * 1e3;
+    default:
+      return value;
+  }
+}
+var NVZarrHelper = class _NVZarrHelper {
+  constructor(hostImage) {
+    __publicField(this, "hostImage");
+    __publicField(this, "chunkClient");
+    __publicField(this, "chunkCache");
+    __publicField(this, "pyramidInfo");
+    __publicField(this, "datatypeCode");
+    __publicField(this, "pyramidLevel");
+    /** Level dimensions in OME metadata order: depth=dim[0], height=dim[1], width=dim[2] */
+    __publicField(this, "levelDims");
+    __publicField(this, "volumeDims");
+    __publicField(this, "chunkSize");
+    /** Voxel scales in OME metadata order: depth=dim[0], height=dim[1], width=dim[2] */
+    __publicField(this, "voxelScales");
+    /** Voxel translations in OME metadata order */
+    __publicField(this, "voxelTranslations");
+    __publicField(this, "hasTranslations");
+    __publicField(this, "convertUnitsToMm");
+    __publicField(this, "worldOffsetMM", [0, 0, 0]);
+    __publicField(this, "centerX");
+    __publicField(this, "centerY");
+    __publicField(this, "centerZ");
+    __publicField(this, "channel");
+    __publicField(this, "nonSpatialCoords", {});
+    __publicField(this, "isUpdating", false);
+    __publicField(this, "needsUpdate", false);
+    __publicField(this, "currentAbortController", null);
+    __publicField(this, "runningMin", Infinity);
+    __publicField(this, "runningMax", -Infinity);
+    __publicField(this, "calibrationDone", false);
+    // Debounce state for batching chunk updates
+    __publicField(this, "updateDebounceTimer", null);
+    __publicField(this, "UPDATE_DEBOUNCE_MS", 50);
+    // Batch chunks arriving within 50ms
+    __publicField(this, "pendingChunkCount", 0);
+    __publicField(this, "lastRenderedChunkCount", 0);
+    __publicField(this, "centerAtDragStart", null);
+    __publicField(this, "onChunksUpdated");
+    __publicField(this, "onAllChunksLoaded");
+    this.hostImage = hostImage;
+    this.chunkClient = null;
+    this.chunkCache = null;
+    this.pyramidInfo = null;
+    this.datatypeCode = 2 /* DT_UINT8 */;
+    this.pyramidLevel = 0;
+    this.levelDims = { width: 0, height: 0, depth: 0 };
+    this.volumeDims = { width: 0, height: 0, depth: 0 };
+    this.chunkSize = { width: 0, height: 0, depth: 0 };
+    this.voxelScales = { width: 1, height: 1, depth: 1 };
+    this.voxelTranslations = { width: 0, height: 0, depth: 0 };
+    this.hasTranslations = false;
+    this.convertUnitsToMm = true;
+    this.centerX = 0;
+    this.centerY = 0;
+    this.centerZ = 0;
+    this.channel = 0;
+  }
+  static async create(hostImage, url, options) {
+    const helper = new _NVZarrHelper(hostImage);
+    helper.chunkClient = new ZarrChunkClient({ baseUrl: url });
+    helper.pyramidInfo = await helper.chunkClient.fetchInfo();
+    helper.chunkCache = new ZarrChunkCache(options.cacheSize ?? 500);
+    const maxTexSize = options.maxTextureSize ?? 2048;
+    const maxDim = options.maxVolumeSize ?? 256;
+    const level0 = helper.pyramidInfo.levels[0];
+    const level0Shape = level0.shape;
+    const level0FitsInVolume = level0Shape.every((dim) => dim <= maxDim && dim <= maxTexSize);
+    if (level0FitsInVolume) {
+      if (helper.pyramidInfo.is3D && level0Shape.length >= 3) {
+        helper.volumeDims = { depth: level0Shape[0], height: level0Shape[1], width: level0Shape[2] };
+      } else {
+        helper.volumeDims = { height: level0Shape[0], width: level0Shape[1], depth: 1 };
+      }
+    } else {
+      helper.volumeDims = {
+        width: Math.min(maxDim, maxTexSize),
+        height: Math.min(maxDim, maxTexSize),
+        depth: Math.min(maxDim, maxTexSize)
+      };
+    }
+    helper.datatypeCode = zarrDtypeToNifti(helper.pyramidInfo.levels[0].dtype);
+    helper.convertUnitsToMm = options.convertUnitsToMm ?? true;
+    helper.channel = options.channel ?? 0;
+    const axisMapping = helper.pyramidInfo.axisMapping;
+    for (const nsa of axisMapping.nonSpatialAxes) {
+      if (nsa.name === "c") {
+        helper.nonSpatialCoords[nsa.name] = helper.channel;
+      }
+    }
+    const level = Math.max(0, Math.min(options.level, helper.pyramidInfo.levels.length - 1));
+    helper.pyramidLevel = level;
+    helper.updateLevelInfo();
+    helper.centerX = helper.levelDims.width / 2;
+    helper.centerY = helper.levelDims.height / 2;
+    helper.centerZ = helper.levelDims.depth / 2;
+    helper.configureHostImage();
+    return helper;
+  }
+  async loadInitialChunks() {
+    await this.updateVolume();
+  }
+  updateLevelInfo() {
+    const levelInfo = this.pyramidInfo.levels[this.pyramidLevel];
+    const shape = levelInfo.shape;
+    if (this.pyramidInfo.is3D && shape.length >= 3) {
+      this.levelDims = { depth: shape[0], height: shape[1], width: shape[2] };
+    } else {
+      this.levelDims = { height: shape[0], width: shape[1], depth: 1 };
+    }
+    const chunks = levelInfo.chunks;
+    if (this.pyramidInfo.is3D && chunks.length >= 3) {
+      this.chunkSize = { depth: chunks[0], height: chunks[1], width: chunks[2] };
+    } else {
+      this.chunkSize = { height: chunks[0], width: chunks[1], depth: 1 };
+    }
+    if (levelInfo.scales) {
+      if (this.pyramidInfo.is3D && levelInfo.scales.length >= 3) {
+        this.voxelScales = { depth: levelInfo.scales[0], height: levelInfo.scales[1], width: levelInfo.scales[2] };
+      } else if (levelInfo.scales.length >= 2) {
+        this.voxelScales = { height: levelInfo.scales[0], width: levelInfo.scales[1], depth: 1 };
+      }
+    } else {
+      this.voxelScales = { width: 1, height: 1, depth: 1 };
+    }
+    if (levelInfo.translations) {
+      if (this.pyramidInfo.is3D && levelInfo.translations.length >= 3) {
+        this.voxelTranslations = { depth: levelInfo.translations[0], height: levelInfo.translations[1], width: levelInfo.translations[2] };
+      } else if (levelInfo.translations.length >= 2) {
+        this.voxelTranslations = { height: levelInfo.translations[0], width: levelInfo.translations[1], depth: 0 };
+      }
+      this.hasTranslations = true;
+    } else {
+      this.voxelTranslations = { width: 0, height: 0, depth: 0 };
+      this.hasTranslations = false;
+    }
+  }
+  configureHostImage() {
+    const { width, height, depth } = this.volumeDims;
+    const bytesPerVoxel = getBytesPerVoxel(this.datatypeCode);
+    const { scaleW, scaleH, scaleD } = this.getConvertedScales();
+    const hdr = new NIFTI1();
+    hdr.littleEndian = true;
+    hdr.dims = [3, width, height, depth, 1, 0, 0, 0];
+    hdr.pixDims = [1, scaleW, scaleH, scaleD, 1, 0, 0, 0];
+    hdr.datatypeCode = this.datatypeCode;
+    hdr.numBitsPerVoxel = bytesPerVoxel * 8;
+    hdr.scl_inter = 0;
+    hdr.scl_slope = 1;
+    hdr.sform_code = 2;
+    hdr.magic = "n+1";
+    hdr.vox_offset = 352;
+    hdr.affine = [
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ];
+    const img = this.hostImage;
+    img.name = `zarr:${this.pyramidInfo.name}`;
+    img.id = v4();
+    img._colormap = "gray";
+    img._opacity = 1;
+    img.hdr = hdr;
+    img.nFrame4D = 1;
+    img.frame4D = 0;
+    img.nTotalFrame4D = 1;
+    img.nVox3D = width * height * depth;
+    img.dims = [width, height, depth];
+    img.pixDims = [scaleW, scaleH, scaleD];
+    img.img = createTypedVoxelArray(this.datatypeCode, width * height * depth);
+    this.updateAffine();
+    img.originalAffine = copyAffine(hdr.affine);
+    img.cal_min = 0;
+    img.cal_max = 0;
+    img.robust_min = 0;
+    img.robust_max = 0;
+    img.global_min = 0;
+    img.global_max = 0;
+  }
+  /** Get unit-converted voxel scales */
+  getConvertedScales() {
+    const units = this.pyramidInfo.spatialUnits;
+    let scaleD = this.voxelScales.depth;
+    let scaleH = this.voxelScales.height;
+    let scaleW = this.voxelScales.width;
+    if (this.convertUnitsToMm && units) {
+      if (units.length >= 3) {
+        scaleD = omeUnitToMm(scaleD, units[0]);
+        scaleH = omeUnitToMm(scaleH, units[1]);
+        scaleW = omeUnitToMm(scaleW, units[2]);
+      } else if (units.length >= 2) {
+        scaleH = omeUnitToMm(scaleH, units[0]);
+        scaleW = omeUnitToMm(scaleW, units[1]);
+      }
+    }
+    return { scaleW, scaleH, scaleD };
+  }
+  /** Get unit-converted voxel translations */
+  getConvertedTranslations() {
+    const units = this.pyramidInfo.spatialUnits;
+    let transD = this.voxelTranslations.depth;
+    let transH = this.voxelTranslations.height;
+    let transW = this.voxelTranslations.width;
+    if (this.convertUnitsToMm && units) {
+      if (units.length >= 3) {
+        transD = omeUnitToMm(transD, units[0]);
+        transH = omeUnitToMm(transH, units[1]);
+        transW = omeUnitToMm(transW, units[2]);
+      } else if (units.length >= 2) {
+        transH = omeUnitToMm(transH, units[0]);
+        transW = omeUnitToMm(transW, units[1]);
+      }
+    }
+    return { transW, transH, transD };
+  }
+  /**
+   * Build the NIfTI affine from OME axis names, scales, and translations.
+   *
+   * NIfTI dimensions map to OME spatial dimensions as:
+   *   i (dim 1, width)  = OME spatial[-1] (last, fastest in C-order)
+   *   j (dim 2, height) = OME spatial[-2]
+   *   k (dim 3, depth)  = OME spatial[-3] (first, slowest in C-order)
+   *
+   * The affine maps (i, j, k) → physical (x, y, z):
+   *   physical_axis = scale * nifti_dim + translation
+   * where nifti_dim is the column index (0=i, 1=j, 2=k) and
+   * physical_axis row is determined by the OME axis name.
+   */
+  updateAffine() {
+    const hdr = this.hostImage.hdr;
+    if (!hdr) {
+      return;
+    }
+    const { width, height, depth } = this.volumeDims;
+    const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames;
+    if (this.hasTranslations && axisNames.length >= 3) {
+      const { scaleW, scaleH, scaleD } = this.getConvertedScales();
+      const { transW, transH, transD } = this.getConvertedTranslations();
+      const volStartW = this.centerX - width / 2;
+      const volStartH = this.centerY - height / 2;
+      const volStartD = this.centerZ - depth / 2;
+      const niftiCols = [
+        { name: axisNames[axisNames.length - 1], scale: scaleW, trans: transW + volStartW * scaleW },
+        { name: axisNames[axisNames.length - 2], scale: scaleH, trans: transH + volStartH * scaleH },
+        { name: axisNames[axisNames.length - 3], scale: scaleD, trans: transD + volStartD * scaleD }
+      ];
+      const affine = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 1]
+      ];
+      for (let col = 0; col < 3; col++) {
+        const row = niftiCols[col].name === "x" ? 0 : niftiCols[col].name === "y" ? 1 : 2;
+        affine[row][col] = niftiCols[col].scale;
+        affine[row][3] = niftiCols[col].trans;
+      }
+      affine[0][3] += this.worldOffsetMM[0];
+      affine[1][3] += this.worldOffsetMM[1];
+      affine[2][3] += this.worldOffsetMM[2];
+      hdr.affine = affine;
+    } else {
+      const { scaleW, scaleH, scaleD } = this.getConvertedScales();
+      const volStartW = this.centerX - width / 2;
+      const volStartH = this.centerY - height / 2;
+      const volStartD = this.centerZ - depth / 2;
+      if (axisNames.length >= 2) {
+        const niftiCols = [
+          { name: axisNames[axisNames.length - 1], scale: scaleW, trans: volStartW * scaleW },
+          { name: axisNames[axisNames.length - 2], scale: scaleH, trans: volStartH * scaleH },
+          { name: "z", scale: scaleD, trans: volStartD * scaleD }
+        ];
+        const affine = [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 1]
+        ];
+        for (let col = 0; col < 3; col++) {
+          const row = niftiCols[col].name === "x" ? 0 : niftiCols[col].name === "y" ? 1 : 2;
+          affine[row][col] = niftiCols[col].scale;
+          affine[row][3] = niftiCols[col].trans;
+        }
+        affine[0][3] += this.worldOffsetMM[0];
+        affine[1][3] += this.worldOffsetMM[1];
+        affine[2][3] += this.worldOffsetMM[2];
+        hdr.affine = affine;
+      } else {
+        hdr.affine = [
+          [scaleW, 0, 0, volStartW * scaleW + this.worldOffsetMM[0]],
+          [0, -scaleH, 0, volStartH * scaleH + this.worldOffsetMM[1]],
+          [0, 0, -scaleD, volStartD * scaleD + this.worldOffsetMM[2]],
+          [0, 0, 0, 1]
+        ];
+      }
+    }
+    this.hostImage.calculateRAS();
+    this.hostImage.originalAffine = copyAffine(this.hostImage.hdr.affine);
+  }
+  beginDrag() {
+    this.centerAtDragStart = { x: this.centerX, y: this.centerY, z: this.centerZ };
+  }
+  endDrag() {
+    this.centerAtDragStart = null;
+  }
+  async panBy(dx, dy, dz = 0) {
+    this.centerX -= dx;
+    this.centerY -= dy;
+    this.centerZ -= dz;
+    this.clampCenter();
+    this.updateAffine();
+    await this.updateVolume();
+  }
+  async panTo(newCenterX, newCenterY, newCenterZ) {
+    const prevX = this.centerX;
+    const prevY = this.centerY;
+    const prevZ = this.centerZ;
+    this.centerX = newCenterX;
+    this.centerY = newCenterY;
+    if (newCenterZ !== void 0) {
+      this.centerZ = newCenterZ;
+    }
+    this.clampCenter();
+    if (Math.abs(this.centerX - prevX) < 1e-3 && Math.abs(this.centerY - prevY) < 1e-3 && Math.abs(this.centerZ - prevZ) < 1e-3) {
+      return;
+    }
+    this.updateAffine();
+    await this.updateVolume();
+  }
+  async setPyramidLevel(level) {
+    const newLevel = Math.max(0, Math.min(this.pyramidInfo.levels.length - 1, level));
+    if (newLevel === this.pyramidLevel) {
+      return;
+    }
+    const oldDims = this.levelDims;
+    this.pyramidLevel = newLevel;
+    this.updateLevelInfo();
+    const newDims = this.levelDims;
+    this.centerX = this.centerX / oldDims.width * newDims.width;
+    this.centerY = this.centerY / oldDims.height * newDims.height;
+    this.centerZ = this.centerZ / oldDims.depth * newDims.depth;
+    this.clampCenter();
+    this.updateAffine();
+    await this.updateVolume();
+  }
+  getViewportState() {
+    return {
+      centerX: this.centerX,
+      centerY: this.centerY,
+      centerZ: this.centerZ,
+      level: this.pyramidLevel
+    };
+  }
+  getPyramidInfo() {
+    return this.pyramidInfo;
+  }
+  getPyramidLevel() {
+    return this.pyramidLevel;
+  }
+  getLevelDims() {
+    return { ...this.levelDims };
+  }
+  getVolumeDims() {
+    return { ...this.volumeDims };
+  }
+  getWorldOffset() {
+    return [...this.worldOffsetMM];
+  }
+  /**
+   * Set the world-space offset so the full level's center maps to targetMM in world space.
+   * Computes the native physical center of the zarr level, then sets worldOffsetMM
+   * so that center aligns with targetMM. Also centers the viewport on the level center.
+   */
+  setWorldCenter(targetMM) {
+    const { scaleW, scaleH, scaleD } = this.getConvertedScales();
+    const { transW, transH, transD } = this.getConvertedTranslations();
+    const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames;
+    const physW = this.levelDims.width / 2 * scaleW + transW;
+    const physH = this.levelDims.height / 2 * scaleH + transH;
+    const physD = this.levelDims.depth / 2 * scaleD + transD;
+    const nativeCenter = [0, 0, 0];
+    const dims = [
+      { name: axisNames[axisNames.length - 1], phys: physW },
+      { name: axisNames[axisNames.length - 2], phys: physH },
+      { name: axisNames.length >= 3 ? axisNames[axisNames.length - 3] : "z", phys: physD }
+    ];
+    for (const d of dims) {
+      const row = d.name === "x" ? 0 : d.name === "y" ? 1 : 2;
+      nativeCenter[row] = d.phys;
+    }
+    this.worldOffsetMM = [targetMM[0] - nativeCenter[0], targetMM[1] - nativeCenter[1], targetMM[2] - nativeCenter[2]];
+    this.centerX = this.levelDims.width / 2;
+    this.centerY = this.levelDims.height / 2;
+    this.centerZ = this.levelDims.depth / 2;
+    this.clampCenter();
+    this.updateAffine();
+  }
+  /**
+   * Convert physical (mm) coordinates back to real zarr level pixel coordinates.
+   * Inverts the affine: levelPixel = (mm - OME_translation) / scale
+   */
+  mmToLevelCoords(mmX, mmY, mmZ) {
+    mmX -= this.worldOffsetMM[0];
+    mmY -= this.worldOffsetMM[1];
+    mmZ -= this.worldOffsetMM[2];
+    const { scaleW, scaleH, scaleD } = this.getConvertedScales();
+    const axisNames = this.pyramidInfo.axisMapping.spatialAxisNames;
+    const mmByAxis = { x: mmX, y: mmY, z: mmZ };
+    let levelW = 0;
+    let levelH = 0;
+    let levelD = 0;
+    if (axisNames.length >= 2) {
+      const wAxisName = axisNames[axisNames.length - 1];
+      const hAxisName = axisNames[axisNames.length - 2];
+      const dAxisName = axisNames.length >= 3 ? axisNames[axisNames.length - 3] : "z";
+      const mmW = mmByAxis[wAxisName] ?? mmX;
+      const mmH = mmByAxis[hAxisName] ?? mmY;
+      const mmD = mmByAxis[dAxisName] ?? mmZ;
+      if (this.hasTranslations) {
+        const { transW, transH, transD } = this.getConvertedTranslations();
+        levelW = scaleW !== 0 ? (mmW - transW) / scaleW : 0;
+        levelH = scaleH !== 0 ? (mmH - transH) / scaleH : 0;
+        levelD = scaleD !== 0 ? (mmD - transD) / scaleD : 0;
+      } else {
+        levelW = scaleW !== 0 ? mmW / scaleW : 0;
+        levelH = scaleH !== 0 ? mmH / scaleH : 0;
+        levelD = scaleD !== 0 ? mmD / scaleD : 0;
+      }
+    } else {
+      if (this.hasTranslations) {
+        const { transW, transH, transD } = this.getConvertedTranslations();
+        levelW = scaleW !== 0 ? (mmX - transW) / scaleW : 0;
+        levelH = scaleH !== 0 ? (mmY - transH) / scaleH : 0;
+        levelD = scaleD !== 0 ? (mmZ - transD) / scaleD : 0;
+      } else {
+        levelW = scaleW !== 0 ? mmX / scaleW : 0;
+        levelH = scaleH !== 0 ? mmY / scaleH : 0;
+        levelD = scaleD !== 0 ? mmZ / scaleD : 0;
+      }
+    }
+    return {
+      width: Math.round(levelW),
+      height: Math.round(levelH),
+      depth: Math.round(levelD),
+      level: this.pyramidLevel,
+      levelDims: { ...this.levelDims }
+    };
+  }
+  clampCenter() {
+    const halfW = this.volumeDims.width / 2;
+    const halfH = this.volumeDims.height / 2;
+    const halfD = this.volumeDims.depth / 2;
+    this.centerX = Math.max(-halfW, Math.min(this.levelDims.width + halfW, this.centerX));
+    this.centerY = Math.max(-halfH, Math.min(this.levelDims.height + halfH, this.centerY));
+    this.centerZ = Math.max(-halfD, Math.min(this.levelDims.depth + halfD, this.centerZ));
+  }
+  getVisibleChunks() {
+    const MAX_CHUNKS = 1e3;
+    const { width, height, depth } = this.volumeDims;
+    const level = this.pyramidLevel;
+    const minX = Math.max(0, Math.floor(this.centerX - width / 2));
+    const maxX = Math.min(this.levelDims.width, Math.ceil(this.centerX + width / 2));
+    const minY = Math.max(0, Math.floor(this.centerY - height / 2));
+    const maxY = Math.min(this.levelDims.height, Math.ceil(this.centerY + height / 2));
+    const minZ = Math.max(0, Math.floor(this.centerZ - depth / 2));
+    const maxZ = Math.min(this.levelDims.depth, Math.ceil(this.centerZ + depth / 2));
+    const startCX = Math.max(0, Math.floor(minX / this.chunkSize.width));
+    const startCY = Math.max(0, Math.floor(minY / this.chunkSize.height));
+    const startCZ = Math.max(0, Math.floor(minZ / this.chunkSize.depth));
+    const endCX = Math.min(Math.ceil(this.levelDims.width / this.chunkSize.width), Math.ceil(maxX / this.chunkSize.width));
+    const endCY = Math.min(Math.ceil(this.levelDims.height / this.chunkSize.height), Math.ceil(maxY / this.chunkSize.height));
+    const endCZ = Math.min(Math.ceil(this.levelDims.depth / this.chunkSize.depth), Math.ceil(maxZ / this.chunkSize.depth));
+    const chunks = [];
+    for (let z = startCZ; z < endCZ; z++) {
+      for (let y = startCY; y < endCY; y++) {
+        for (let x = startCX; x < endCX; x++) {
+          if (this.pyramidInfo.is3D) {
+            chunks.push({ level, x, y, z });
+          } else {
+            chunks.push({ level, x, y });
+          }
+          if (chunks.length >= MAX_CHUNKS) {
+            break;
+          }
+        }
+        if (chunks.length >= MAX_CHUNKS) {
+          break;
+        }
+      }
+      if (chunks.length >= MAX_CHUNKS) {
+        break;
+      }
+    }
+    const centerCX = (startCX + endCX) / 2;
+    const centerCY = (startCY + endCY) / 2;
+    const centerCZ = (startCZ + endCZ) / 2;
+    chunks.sort((a, b) => {
+      const distA = (a.x - centerCX) ** 2 + (a.y - centerCY) ** 2 + ((a.z ?? 0) - centerCZ) ** 2;
+      const distB = (b.x - centerCX) ** 2 + (b.y - centerCY) ** 2 + ((b.z ?? 0) - centerCZ) ** 2;
+      return distA - distB;
+    });
+    return chunks;
+  }
+  async updateVolume() {
+    if (this.isUpdating) {
+      this.needsUpdate = true;
+      this.currentAbortController?.abort();
+      return;
+    }
+    this.isUpdating = true;
+    try {
+      do {
+        this.needsUpdate = false;
+        this.currentAbortController?.abort();
+        const abortController = new AbortController();
+        this.currentAbortController = abortController;
+        await new Promise((resolve2) => {
+          requestAnimationFrame(() => resolve2());
+        });
+        if (this.needsUpdate) {
+          continue;
+        }
+        this.clearVolumeData();
+        await this.assembleVisibleChunks(abortController.signal);
+      } while (this.needsUpdate);
+    } finally {
+      this.isUpdating = false;
+    }
+  }
+  clearVolumeData() {
+    const img = this.hostImage.img;
+    if (img.fill) {
+      img.fill(0);
+    } else {
+      for (let i = 0; i < img.length; i++) {
+        img[i] = 0;
+      }
+    }
+    this.pendingChunkCount = 0;
+    this.lastRenderedChunkCount = 0;
+    if (this.updateDebounceTimer !== null) {
+      clearTimeout(this.updateDebounceTimer);
+      this.updateDebounceTimer = null;
+    }
+  }
+  async assembleVisibleChunks(signal) {
+    const chunks = this.getVisibleChunks();
+    const name = this.pyramidInfo.name;
+    const level = this.pyramidLevel;
+    const cachedChunks = [];
+    const uncachedChunks = [];
+    for (const chunk of chunks) {
+      const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z);
+      if (this.chunkCache.has(key)) {
+        cachedChunks.push(chunk);
+      } else if (!this.chunkCache.isLoading(key)) {
+        uncachedChunks.push(chunk);
+      }
+    }
+    for (const chunk of cachedChunks) {
+      const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z);
+      const data = this.chunkCache.get(key);
+      if (data) {
+        this.assembleChunkIntoVolume(chunk, data);
+        this.pendingChunkCount++;
+      }
+    }
+    if (cachedChunks.length > 0) {
+      this.updateCalibration();
+      this.onChunksUpdated?.();
+    }
+    if (uncachedChunks.length > 0) {
+      const fetchPromises = uncachedChunks.map(async (chunk) => {
+        const key = ZarrChunkCache.getKey(name, chunk.level, chunk.x, chunk.y, chunk.z);
+        this.chunkCache.startLoading(key);
+        try {
+          const data = await this.chunkClient.fetchChunk(chunk.level, chunk.x, chunk.y, chunk.z, this.nonSpatialCoords, signal);
+          this.chunkCache.doneLoading(key);
+          if (signal?.aborted) {
+            return;
+          }
+          if (data) {
+            this.chunkCache.set(key, data);
+            if (this.pyramidLevel === level) {
+              this.assembleChunkIntoVolume(chunk, data);
+              this.pendingChunkCount++;
+              this.scheduleChunksUpdated();
+            }
+          }
+        } catch (err2) {
+          this.chunkCache.doneLoading(key);
+          if (err2 instanceof DOMException && err2.name === "AbortError") {
+            return;
+          }
+          console.warn(`Failed to fetch chunk ${key}:`, err2);
+        }
+      });
+      await Promise.all(fetchPromises);
+      if (this.updateDebounceTimer !== null) {
+        clearTimeout(this.updateDebounceTimer);
+        this.updateDebounceTimer = null;
+      }
+      if (this.pendingChunkCount > this.lastRenderedChunkCount) {
+        this.lastRenderedChunkCount = this.pendingChunkCount;
+        this.updateCalibration();
+        this.onChunksUpdated?.();
+      }
+      this.onAllChunksLoaded?.();
+    }
+  }
+  assembleChunkIntoVolume(chunk, data) {
+    const { width, height, depth } = this.volumeDims;
+    const img = this.hostImage.img;
+    const chunkStartX = chunk.x * this.chunkSize.width;
+    const chunkStartY = chunk.y * this.chunkSize.height;
+    const chunkStartZ = (chunk.z ?? 0) * this.chunkSize.depth;
+    const volStartX = this.centerX - width / 2;
+    const volStartY = this.centerY - height / 2;
+    const volStartZ = this.centerZ - depth / 2;
+    const destX = Math.round(chunkStartX - volStartX);
+    const destY = Math.round(chunkStartY - volStartY);
+    const destZ = Math.round(chunkStartZ - volStartZ);
+    const actualChunkW = Math.min(this.chunkSize.width, this.levelDims.width - chunkStartX);
+    const actualChunkH = Math.min(this.chunkSize.height, this.levelDims.height - chunkStartY);
+    const actualChunkD = Math.min(this.chunkSize.depth, this.levelDims.depth - chunkStartZ);
+    if (actualChunkW <= 0 || actualChunkH <= 0 || actualChunkD <= 0) {
+      return;
+    }
+    if (!this.calibrationDone) {
+      const step = Math.max(1, Math.floor(data.length / 2e3));
+      for (let i = 0; i < data.length; i += step) {
+        const val = data[i];
+        if (val < this.runningMin) {
+          this.runningMin = val;
+        }
+        if (val > this.runningMax) {
+          this.runningMax = val;
+        }
+      }
+    }
+    const fullChunkVol = this.chunkSize.width * this.chunkSize.height * this.chunkSize.depth;
+    const srcChunkW = data.length >= fullChunkVol ? this.chunkSize.width : actualChunkW;
+    const srcChunkH = data.length >= fullChunkVol ? this.chunkSize.height : actualChunkH;
+    for (let dz = 0; dz < actualChunkD; dz++) {
+      const vZ = destZ + dz;
+      if (vZ < 0 || vZ >= depth) {
+        continue;
+      }
+      for (let dy = 0; dy < actualChunkH; dy++) {
+        const vY = destY + dy;
+        if (vY < 0 || vY >= height) {
+          continue;
+        }
+        for (let dx = 0; dx < actualChunkW; dx++) {
+          const vX = destX + dx;
+          if (vX < 0 || vX >= width) {
+            continue;
+          }
+          const srcIdx = dz * srcChunkH * srcChunkW + dy * srcChunkW + dx;
+          const dstIdx = vX + vY * width + vZ * width * height;
+          if (srcIdx >= 0 && srcIdx < data.length && dstIdx >= 0 && dstIdx < img.length) {
+            img[dstIdx] = data[srcIdx];
+          }
+        }
+      }
+    }
+  }
+  updateCalibration() {
+    if (this.calibrationDone) {
+      return;
+    }
+    if (this.runningMin < Infinity && this.runningMax > -Infinity) {
+      this.hostImage.cal_min = this.runningMin;
+      this.hostImage.cal_max = this.runningMax;
+      this.hostImage.robust_min = this.runningMin;
+      this.hostImage.robust_max = this.runningMax;
+      this.hostImage.global_min = this.runningMin;
+      this.hostImage.global_max = this.runningMax;
+      this.calibrationDone = true;
+    }
+  }
+  /**
+   * Schedule a debounced chunks update callback.
+   * Batches multiple chunk arrivals within UPDATE_DEBOUNCE_MS into a single GPU update.
+   */
+  scheduleChunksUpdated() {
+    if (this.pendingChunkCount === this.lastRenderedChunkCount) {
+      return;
+    }
+    if (this.updateDebounceTimer !== null) {
+      clearTimeout(this.updateDebounceTimer);
+    }
+    this.updateDebounceTimer = setTimeout(() => {
+      this.updateDebounceTimer = null;
+      this.lastRenderedChunkCount = this.pendingChunkCount;
+      this.updateCalibration();
+      this.onChunksUpdated?.();
+    }, this.UPDATE_DEBOUNCE_MS);
+  }
+  clearCache() {
+    this.chunkCache.clear();
+  }
+  async refresh() {
+    await this.updateVolume();
+  }
+};
+
 // src/nvimage/index.ts
 var NVImage = class _NVImage {
   constructor(dataBuffer = null, name = "", colormap = "gray", opacity = 1, pairedImgData = null, cal_min = NaN, cal_max = NaN, trustCalMinMax = true, percentileFrac = 0.02, ignoreZeroVoxels = false, useQFormNotSForm = false, colormapNegative = "", frame4D = 0, imageType = NVIMAGE_TYPE.UNKNOWN, cal_minNeg = NaN, cal_maxNeg = NaN, colorbarVisible = true, colormapLabel = null, colormapType = 0) {
@@ -30770,6 +32038,8 @@ var NVImage = class _NVImage {
     });
     __publicField(this, "onOpacityChange", () => {
     });
+    __publicField(this, "zarrHelper", null);
+    __publicField(this, "_hasExplicitZarrCenter", false);
     __publicField(this, "mm000");
     __publicField(this, "mm100");
     __publicField(this, "mm010");
@@ -31402,7 +32672,12 @@ var NVImage = class _NVImage {
     limitFrames4D = NaN,
     imageType = NVIMAGE_TYPE.UNKNOWN,
     colorbarVisible = true,
-    buffer = new ArrayBuffer(0)
+    buffer = new ArrayBuffer(0),
+    zarrLevel,
+    zarrMaxVolumeSize,
+    zarrChannel,
+    zarrConvertUnits,
+    zarrCenterMM
   } = {}) {
     if (url === "") {
       throw Error("url must not be empty");
@@ -31448,6 +32723,17 @@ var NVImage = class _NVImage {
       }
     }
     if (imageType === NVIMAGE_TYPE.ZARR) {
+      if (zarrLevel !== void 0) {
+        return await _NVImage.createChunkedZarr(url, {
+          level: zarrLevel,
+          maxVolumeSize: zarrMaxVolumeSize,
+          channel: zarrChannel,
+          convertUnitsToMm: zarrConvertUnits,
+          colormap,
+          opacity,
+          zarrCenterMM
+        });
+      }
       const zarrResult = await loadZarrData(url);
       dataBuffer = zarrResult.dataBuffer;
       zarrData = zarrResult.zarrData;
@@ -31508,6 +32794,33 @@ var NVImage = class _NVImage {
     );
     nvimage.url = url;
     nvimage.colorbarVisible = colorbarVisible;
+    return nvimage;
+  }
+  /**
+   * Factory method: create a chunked zarr NVImage with an attached NVZarrHelper.
+   */
+  static async createChunkedZarr(url, options) {
+    const nvimage = new _NVImage();
+    nvimage.zarrHelper = await NVZarrHelper.create(nvimage, url, {
+      url,
+      level: options.level,
+      maxVolumeSize: options.maxVolumeSize,
+      maxTextureSize: options.maxTextureSize,
+      channel: options.channel,
+      cacheSize: options.cacheSize,
+      convertUnitsToMm: options.convertUnitsToMm
+    });
+    if (options.zarrCenterMM) {
+      nvimage.zarrHelper.setWorldCenter(options.zarrCenterMM);
+      nvimage._hasExplicitZarrCenter = true;
+    }
+    if (options.colormap) {
+      nvimage._colormap = options.colormap;
+    }
+    if (options.opacity !== void 0) {
+      nvimage._opacity = options.opacity;
+    }
+    nvimage.url = url;
     return nvimage;
   }
   // not included in public docs
@@ -32966,7 +34279,11 @@ var DEFAULT_OPTIONS = {
   is2DSliceShader: false,
   bounds: null,
   showBoundsBorder: false,
-  boundsBorderColor: [1, 1, 1, 1]
+  boundsBorderColor: [1, 1, 1, 1],
+  // white border by default
+  // Zarr options
+  zarrCacheSize: 1e3,
+  zarrPrefetchRings: 10
 };
 var DEFAULT_SCENE_DATA = {};
 var INITIAL_SCENE_DATA = {
@@ -37868,13 +39185,15 @@ function updateInterpolation(params) {
   }
   if (layer === 0) {
     gl.activeTexture(TEXTURE0_BACK_VOL2);
+    if (is2DSliceShader) {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, interp);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, interp);
+    } else {
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, interp);
+      gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, interp);
+    }
   } else {
     gl.activeTexture(TEXTURE2_OVERLAY_VOL2);
-  }
-  if (is2DSliceShader) {
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, interp);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, interp);
-  } else {
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, interp);
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, interp);
   }
@@ -42222,6 +43541,7 @@ var Niivue = class extends EventTarget {
       crosshair: false
     });
     __publicField(this, "readyForSync", false);
+    __publicField(this, "_skipDragInDraw", false);
     // UI Data
     __publicField(this, "uiData", {
       mousedown: false,
@@ -43238,6 +44558,9 @@ var Niivue = class extends EventTarget {
       this.setDragStart(pos.x, pos.y);
       if (!this.uiData.isDragging) {
         this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
+        for (const vol of this.getZarrVolumes()) {
+          vol.zarrHelper?.beginDrag();
+        }
       }
       this.uiData.isDragging = true;
       this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex];
@@ -43385,6 +44708,9 @@ var Niivue = class extends EventTarget {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false;
+      for (const vol of this.getZarrVolumes()) {
+        vol.zarrHelper?.endDrag();
+      }
       if (currentDragMode === 7 /* angle */) {
         if (this.uiData.angleState === "drawing_first_line") {
           this.uiData.angleFirstLine = [this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]];
@@ -43533,6 +44859,9 @@ var Niivue = class extends EventTarget {
     }
     if (this.uiData.isDragging) {
       this.uiData.isDragging = false;
+      for (const vol of this.getZarrVolumes()) {
+        vol.zarrHelper?.endDrag();
+      }
       if (this.getCurrentDragMode() === 1 /* contrast */) {
         this.calculateNewRange();
         this.refreshLayers(this.volumes[0], 0);
@@ -43592,6 +44921,9 @@ var Niivue = class extends EventTarget {
     if (this.uiData.isDragging || this.uiData.mousedown) {
       log.debug("Mouse left canvas during drag, resetting drag state.");
       this.uiData.isDragging = false;
+      for (const vol of this.getZarrVolumes()) {
+        vol.zarrHelper?.endDrag();
+      }
       const resetState = createResetButtonState();
       this.uiData.mouseButtonLeftDown = resetState.mouseButtonLeftDown;
       this.uiData.mouseButtonCenterDown = resetState.mouseButtonCenterDown;
@@ -43762,6 +45094,9 @@ var Niivue = class extends EventTarget {
       const rect = this.canvas.getBoundingClientRect();
       if (!this.uiData.isDragging) {
         this.uiData.pan2DxyzmmAtMouseDown = vec4_exports.clone(this.scene.pan2Dxyzmm);
+        for (const vol of this.getZarrVolumes()) {
+          vol.zarrHelper?.beginDrag();
+        }
       }
       this.uiData.isDragging = true;
       if (shouldUpdateDoubleTouchDrag({
@@ -44159,7 +45494,12 @@ var Niivue = class extends EventTarget {
         isManifest: imageItem.isManifest,
         frame4D: imageItem.frame4D,
         limitFrames4D: imageItem.limitFrames4D || this.opts.limitFrames4D,
-        colorbarVisible: imageItem.colorbarVisible
+        colorbarVisible: imageItem.colorbarVisible,
+        zarrLevel: imageItem.zarrLevel,
+        zarrMaxVolumeSize: imageItem.zarrMaxVolumeSize,
+        zarrChannel: imageItem.zarrChannel,
+        zarrConvertUnits: imageItem.zarrConvertUnits,
+        zarrCenterMM: imageItem.zarrCenterMM
       };
       const volume = await NVImage.loadFromUrl(imageOptions);
       this.document.addImageOptions(volume, imageOptions);
@@ -44741,6 +46081,29 @@ var Niivue = class extends EventTarget {
     this.setVolume(volume, result.index);
     this._emitEvent("imageLoaded", volume);
     this.onImageLoaded(volume);
+    if (volume.zarrHelper) {
+      if (!volume._hasExplicitZarrCenter && this.back && this.back !== volume && this.back.hdr?.dims) {
+        const bg = this.back;
+        const dims = bg.hdr.dims;
+        const affine = bg.hdr.affine;
+        const ci = (dims[1] - 1) / 2;
+        const cj = (dims[2] - 1) / 2;
+        const ck = (dims[3] - 1) / 2;
+        const bgCenter = [
+          affine[0][0] * ci + affine[0][1] * cj + affine[0][2] * ck + affine[0][3],
+          affine[1][0] * ci + affine[1][1] * cj + affine[1][2] * ck + affine[1][3],
+          affine[2][0] * ci + affine[2][1] * cj + affine[2][2] * ck + affine[2][3]
+        ];
+        volume.zarrHelper.setWorldCenter(bgCenter);
+      }
+      volume.zarrHelper.onChunksUpdated = () => {
+        this.updateGLVolume();
+        this._skipDragInDraw = true;
+        this.drawScene();
+        this._skipDragInDraw = false;
+      };
+      volume.zarrHelper.loadInitialChunks().catch((err2) => log.error("Failed to load initial zarr chunks", err2));
+    }
     log.debug("loaded volume", volume.name);
     log.debug(volume);
   }
@@ -47683,10 +49046,10 @@ var Niivue = class extends EventTarget {
       if (isAboveMax2D) {
         log.error(`Image dimensions exceed maximum texture size of hardware.`);
       }
-      if (isAboveMax3D && hdr.datatypeCode === 2304 /* DT_RGBA32 */ && hdr.dims[3] < 2) {
-        log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`);
+      if (hdr.datatypeCode === 2304 /* DT_RGBA32 */ && hdr.dims[3] < 2) {
+        log.info(`RGBA 2D image (${hdr.dims[1]}\xD7${hdr.dims[2]}) using Texture2D`);
         this.opts.is2DSliceShader = true;
-        outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS, img);
+        this.volumeTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS, img, false);
         return;
       }
       if (isAboveMax3D) {
@@ -48895,6 +50258,86 @@ var Niivue = class extends EventTarget {
    * @internal
    */
   dragForPanZoom(startXYendXY) {
+    const zarrVolumes = this.getZarrVolumes();
+    const activeZarrVolumes = zarrVolumes.filter((vol) => vol.zarrHelper?.centerAtDragStart);
+    if (activeZarrVolumes.length > 0) {
+      const screenDeltaX = startXYendXY[2] - startXYendXY[0];
+      const screenDeltaY = startXYendXY[3] - startXYendXY[1];
+      if (screenDeltaX === 0 && screenDeltaY === 0) {
+        return;
+      }
+      let axCorSag = 0 /* AXIAL */;
+      for (const slice2 of this.screenSlices) {
+        if (slice2.axCorSag > 2 /* SAGITTAL */) {
+          continue;
+        }
+        const ltwh = slice2.leftTopWidthHeight;
+        const mx = startXYendXY[0];
+        const my = startXYendXY[1];
+        if (mx >= ltwh[0] && my >= ltwh[1] && mx <= ltwh[0] + ltwh[2] && my <= ltwh[1] + ltwh[3]) {
+          axCorSag = slice2.axCorSag;
+          break;
+        }
+      }
+      let hPhys;
+      let vPhys;
+      if (axCorSag === 0 /* AXIAL */) {
+        hPhys = 0;
+        vPhys = 1;
+      } else if (axCorSag === 1 /* CORONAL */) {
+        hPhys = 0;
+        vPhys = 2;
+      } else {
+        hPhys = 1;
+        vPhys = 2;
+      }
+      const panPromises = [];
+      for (const zarrVol of activeZarrVolumes) {
+        const zarrHelper = zarrVol.zarrHelper;
+        const affine = zarrVol.hdr.affine;
+        const physToCol = [
+          { col: 0, sign: -1 },
+          { col: 1, sign: -1 },
+          { col: 2, sign: -1 }
+        ];
+        for (let row = 0; row < 3; row++) {
+          let maxVal = 0;
+          for (let col = 0; col < 3; col++) {
+            const val = Math.abs(affine[row][col]);
+            if (val > maxVal) {
+              maxVal = val;
+              physToCol[row] = { col, sign: affine[row][col] < 0 ? -1 : 1 };
+            }
+          }
+        }
+        const dragStart = zarrHelper.centerAtDragStart;
+        const centers = [dragStart.x, dragStart.y, dragStart.z];
+        centers[physToCol[hPhys].col] += screenDeltaX * physToCol[hPhys].sign;
+        centers[physToCol[vPhys].col] += -screenDeltaY * physToCol[vPhys].sign;
+        const newCenterX = centers[0];
+        const newCenterY = centers[1];
+        const newCenterZ = centers[2];
+        const state = zarrHelper.getViewportState();
+        const dx = Math.abs(newCenterX - state.centerX);
+        const dy = Math.abs(newCenterY - state.centerY);
+        const dz = Math.abs(newCenterZ - state.centerZ);
+        if (dx < 1e-3 && dy < 1e-3 && dz < 1e-3) {
+          continue;
+        }
+        panPromises.push(zarrHelper.panTo(newCenterX, newCenterY, newCenterZ));
+      }
+      if (panPromises.length > 0) {
+        Promise.all(panPromises).then(() => {
+          this._skipDragInDraw = true;
+          this.drawScene();
+          this._skipDragInDraw = false;
+        }).catch((err2) => {
+          log.error("Failed to pan Zarr:", err2);
+        });
+      }
+      this.canvas.focus();
+      return;
+    }
     const endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3]);
     if (isNaN(endMM[0])) {
       return;
@@ -49265,6 +50708,17 @@ var Niivue = class extends EventTarget {
       this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
       this.gl.bindVertexArray(this.unusedVAO);
     }
+  }
+  getZarrVolume() {
+    for (const vol of this.volumes) {
+      if (vol.zarrHelper) {
+        return vol;
+      }
+    }
+    return null;
+  }
+  getZarrVolumes() {
+    return this.volumes.filter((vol) => vol.zarrHelper);
   }
   drawBoundsBox(leftTopWidthHeight, color, thickness = 2) {
     if (!this.rectOutlineShader) {
@@ -51830,7 +53284,11 @@ var Niivue = class extends EventTarget {
    */
   bindTextures() {
     this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL);
-    this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+    if (this.opts.is2DSliceShader) {
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.volumeTexture);
+    } else {
+      this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture);
+    }
     this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE2_OVERLAY_VOL);
     this.gl.bindTexture(this.gl.TEXTURE_3D, this.overlayTexture);
     this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE8_PAQD);
@@ -52151,7 +53609,7 @@ var Niivue = class extends EventTarget {
         this.dragForSlicer3D([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
         return;
       }
-      if (this.getCurrentDragMode() === 3 /* pan */) {
+      if (this.getCurrentDragMode() === 3 /* pan */ && !this._skipDragInDraw) {
         this.dragForPanZoom([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]]);
         return;
       }
@@ -52402,11 +53860,14 @@ export {
   NVMeshLoaders,
   NVMeshUtilities,
   NVUtilities,
+  NVZarrHelper,
   Niivue,
   NiivueEvent,
   PEN_TYPE,
   SHOW_RENDER,
   SLICE_TYPE,
+  ZarrChunkCache,
+  ZarrChunkClient,
   arrayToMat4,
   cmapper,
   ColorTables as colortables,
