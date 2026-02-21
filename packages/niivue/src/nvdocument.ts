@@ -212,7 +212,12 @@ export type NVConfigOptions = {
     is2DSliceShader: boolean
     bounds: [[number, number], [number, number]] | null
     showBoundsBorder?: boolean
-    boundsBorderColor?: number[]
+    boundsBorderColor?: number[] // [r,g,b,a]
+    // Zarr options
+    /** Chunk cache size for zarr viewing (default 500) */
+    zarrCacheSize: number
+    /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
+    zarrPrefetchRings: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -324,7 +329,10 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     is2DSliceShader: false,
     bounds: null,
     showBoundsBorder: false,
-    boundsBorderColor: [1, 1, 1, 1]
+    boundsBorderColor: [1, 1, 1, 1], // white border by default
+    // Zarr options
+    zarrCacheSize: 1000,
+    zarrPrefetchRings: 10
 }
 
 //

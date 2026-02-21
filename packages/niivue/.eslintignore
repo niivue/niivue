@@ -1,9 +1,14 @@
 dist_intermediate
+dist
 demos
+demos-dist
+devdocs
+build
+coverage
 niivue.es.js
 niivue.umd.js
 
 tests
 playwright/tests-out
-playwright/e2e/*.js
+playwright/e2e
 ts-build

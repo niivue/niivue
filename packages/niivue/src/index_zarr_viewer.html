@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>NiiVue - Zarr Viewer</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <style>
+      #controls {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        padding: 10px 12px;
+        background: #111;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #222;
+      }
+      #controls label {
+        color: #999;
+        font-size: 13px;
+      }
+      #controls input,
+      #controls select {
+        padding: 5px 8px;
+        background: #222;
+        color: #eee;
+        border: 1px solid #444;
+        border-radius: 3px;
+      }
+      #datasetSelect {
+        max-width: 360px;
+      }
+      #datasetSelect option {
+        padding: 2px 4px;
+      }
+      #datasetSelect optgroup {
+        color: #aaa;
+        font-style: normal;
+      }
+      #loadBtn {
+        background: #fff;
+        border: none;
+        color: #000;
+        padding: 8px 16px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.01em;
+      }
+      #loadBtn:hover {
+        background: #ddd;
+      }
+      #loadBtn:disabled {
+        background: #555;
+        color: #888;
+        cursor: not-allowed;
+      }
+      #navControls {
+        display: none;
+        gap: 8px;
+        align-items: center;
+      }
+      #navControls button {
+        background: #222;
+        border: 1px solid #444;
+        color: #eee;
+        padding: 4px 12px;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      #navControls button:hover {
+        background: #333;
+      }
+      #levelSelectorsContainer {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .level-selector {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        background: #1a1a1a;
+        padding: 4px 8px;
+        border-radius: 3px;
+        border: 1px solid #333;
+      }
+      .level-selector label {
+        color: #777;
+        font-size: 11px;
+      }
+      .level-selector select {
+        padding: 2px 4px;
+        background: #222;
+        color: #eee;
+        border: 1px solid #444;
+        border-radius: 3px;
+      }
+      #infoPanel {
+        padding: 8px 12px;
+        background: #0a0a0a;
+        color: #999;
+        font-family: monospace;
+        font-size: 12px;
+        display: none;
+        border-bottom: 1px solid #222;
+      }
+      .hint {
+        color: #666;
+        font-size: 11px;
+        font-style: italic;
+      }
+      #affineControls {
+        display: none;
+        padding: 8px 12px;
+        background: #0d0d0d;
+        border-top: 1px solid #222;
+      }
+      #affineControls h3 {
+        color: #bbb;
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      #affineControls h3 button {
+        background: #333;
+        border: 1px solid #555;
+        color: #eee;
+        padding: 2px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 11px;
+      }
+      #affineControls h3 button:hover {
+        background: #444;
+      }
+      #affineSaveBtn, #affineLoadBtn {
+        background: #fff !important;
+        color: #000 !important;
+        border-color: #fff !important;
+        font-weight: 600;
+      }
+      #affineSaveBtn:hover, #affineLoadBtn:hover {
+        background: #ddd !important;
+        border-color: #ddd !important;
+      }
+      .affine-group {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+      }
+      .affine-group label {
+        color: #777;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .affine-slider {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .affine-slider input[type="range"] {
+        width: 120px;
+      }
+      .affine-slider .val {
+        color: #ccc;
+        font-family: monospace;
+        font-size: 11px;
+        min-width: 50px;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="controls">
+        <label for="datasetSelect"><a href="https://github.com/InsightSoftwareConsortium/OMEZarrOpenSciVisDatasets" target="_blank" rel="noopener" style="color:#999;text-decoration:underline">Dataset</a>:</label>
+        <select id="datasetSelect">
+          <option value="">-- Custom URL --</option>
+          <optgroup label="CT Scans">
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/aneurism.ome.zarr">Aneurism - head arteries, 256³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/backpack.ome.zarr">Backpack - CT of backpack, 512x512x373, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/beechnut.ome.zarr">Beechnut - microCT, 1024x1024x1546, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/bonsai.ome.zarr">Bonsai - CT of tree, 256³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/boston_teapot.ome.zarr">Boston Teapot - SIGGRAPH teapot, 256x256x178, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/bunny.ome.zarr">Bunny - Stanford Bunny CT, 512x512x361, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/carp.ome.zarr">Carp - fish CT, 256x256x512, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/chameleon.ome.zarr">Chameleon - CT, 1024x1024x1080, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/christmas_tree.ome.zarr">Christmas Tree - CT, 512x499x512, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/engine.ome.zarr">Engine - engine block CT, 256x256x128, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/foot.ome.zarr">Foot - human foot, 256³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/kingsnake.ome.zarr">Kingsnake - snake egg CT, 1024x1024x795, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/lobster.ome.zarr">Lobster - CT in resin, 301x324x56, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/pancreas.ome.zarr">Pancreas - abdominal CT, 240x512x512, int16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/pawpawsaurus.ome.zarr" selected>Pawpawsaurus - fossil CT, 958x646x1088, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/pig_heart.ome.zarr">Pig Heart - microCT, 2048x2048x2612, int16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/present.ome.zarr">Present - industrial CT, 492x492x442, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/prone.ome.zarr">Prone - abdomen CT, 512x512x463, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/skull.ome.zarr">Skull - phantom skull, 256³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/spathorhynchus.ome.zarr">Spathorhynchus - fossil CT, 1024x1024x750, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/stag_beetle.ome.zarr">Stag Beetle - industrial CT, 832x832x494, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/statue_leg.ome.zarr">Statue Leg - bronze statue CT, 341x341x93, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/stent.ome.zarr">Stent - abdomen with stent, 512x512x174, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/synthetic_truss_with_five_defects.ome.zarr">Synthetic Truss - simulated CT, 1200³, float32</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/vertebra.ome.zarr">Vertebra - angiography, 512³, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/vis_male.ome.zarr">Visible Male - head scan, 128x256x256, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/woodbranch.ome.zarr">Woodbranch - microCT, 2048³, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/zeiss.ome.zarr">Zeiss - car part CT, 680³, uint8</option>
+          </optgroup>
+          <optgroup label="MRI Scans">
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/frog.ome.zarr">Frog - MRI, 256x256x44, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/mri_ventricles.ome.zarr">MRI Ventricles - head CSF, 256x256x124, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/mri_woman.ome.zarr">MRI Woman - head MRI, 256x256x109, uint16</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/mrt_angio.ome.zarr">MRT Angio - head angiography, 416x512x112, uint16</option>
+          </optgroup>
+          <optgroup label="Microscopy">
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/marmoset_neurons.ome.zarr">Marmoset Neurons - V1 cortex, 1024x1024x314, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/neocortical_layer_1_axons.ome.zarr">Neocortical Axons - barrel cortex, 1464x1033x76, uint8</option>
+          </optgroup>
+          <optgroup label="Simulations">
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/blunt_fin.ome.zarr">Blunt Fin - flow sim, 256x128x64, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/csafe_heptane.ome.zarr">CSAFE Heptane - combustion sim, 302³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/duct.ome.zarr">Duct - wall-bounded flow, 193x194x1000, float32</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/fuel.ome.zarr">Fuel - fuel injection sim, 64³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/hcci_oh.ome.zarr">HCCI OH - autoignition sim, 560³, float32</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/hydrogen_atom.ome.zarr">Hydrogen Atom - electron dist, 128³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/jicf_q.ome.zarr">JICF Q - jet crossflow, 1408x1080x1100, float32</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/magnetic_reconnection.ome.zarr">Magnetic Reconnection - sim, 512³, float32</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/marschner_lobb.ome.zarr">Marschner-Lobb - high freq test, 41³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/miranda.ome.zarr">Miranda - Rayleigh-Taylor sim, 1024³, float32</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/neghip.ome.zarr">Neghip - protein electron dist, 64³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/nucleon.ome.zarr">Nucleon - nuclear sim, 41³, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/richtmyer_meshkov.ome.zarr">Richtmyer-Meshkov - instability, 2048x2048x1920, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/shockwave.ome.zarr">Shockwave - planar shock sim, 64x64x512, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/silicium.ome.zarr">Silicium - grid sim, 98x34x34, uint8</option>
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/tacc_turbulence.ome.zarr">TACC Turbulence - enstrophy, 256³, float32</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/tooth.ome.zarr">Tooth - 103x94x161, uint8</option>
+          </optgroup>
+        </select>
+
+        <label for="storeUrl">URL:</label>
+        <input
+          type="text"
+          id="storeUrl"
+          value="https://ome-zarr-scivis.s3.us-east-1.amazonaws.com/v0.5/96x2/pawpawsaurus.ome.zarr"
+          style="width: 400px"
+        />
+
+        <label for="maxVolSize">Max Volume Size:</label>
+        <select id="maxVolSize">
+          <option value="128">128</option>
+          <option value="256" selected>256</option>
+          <option value="512">512</option>
+        </select>
+
+        <label for="zarrLevel">Level:</label>
+        <select id="zarrLevel">
+          <option value="0" selected>0 (highest res)</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+
+        <label for="colormapSelect">Colormap:</label>
+        <select id="colormapSelect"></select>
+
+        <label for="primaryDrag">Left Drag:</label>
+        <select id="primaryDrag">
+          <option value="crosshair">crosshair</option>
+          <option value="contrast">brightness/contrast</option>
+        </select>
+
+        <label for="secondaryDrag">Right Drag:</label>
+        <select id="secondaryDrag">
+          <option value="contrast">contrast</option>
+          <option value="pan" selected>pan</option>
+          <option value="measurement">measurement</option>
+          <option value="slicer3D">slicer3D</option>
+          <option value="none">none</option>
+        </select>
+
+        <button id="loadBtn">Load Zarr</button>
+        <button id="toggleAffineBtn" style="display:none;background:#222;border:1px solid #444;color:#eee;padding:8px 12px;cursor:pointer;border-radius:4px;font-size:13px;">Registration</button>
+
+        <div id="navControls">
+          <span class="hint">Drag to pan</span>
+          <div id="levelSelectorsContainer"></div>
+        </div>
+      </div>
+    </header>
+    <div id="infoPanel"></div>
+    <div id="affineControls">
+      <h3>
+        Registration Controls (Zarr Volume)
+        <button id="affineResetBtn">Reset</button>
+        <button id="affineSaveBtn">Save</button>
+        <button id="affineLoadBtn">Load</button>
+      </h3>
+      <div class="affine-group">
+        <label>Translate (mm):</label>
+        <div class="affine-slider">
+          <label>X</label>
+          <input type="range" id="txSlider" min="-100" max="100" step="0.5" value="0" />
+          <span class="val" id="txVal">0.0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Y</label>
+          <input type="range" id="tySlider" min="-100" max="100" step="0.5" value="0" />
+          <span class="val" id="tyVal">0.0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Z</label>
+          <input type="range" id="tzSlider" min="-100" max="100" step="0.5" value="0" />
+          <span class="val" id="tzVal">0.0</span>
+        </div>
+      </div>
+      <div class="affine-group">
+        <label>Rotate (deg):</label>
+        <div class="affine-slider">
+          <label>X</label>
+          <input type="range" id="rxSlider" min="-180" max="180" step="1" value="0" />
+          <span class="val" id="rxVal">0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Y</label>
+          <input type="range" id="rySlider" min="-180" max="180" step="1" value="0" />
+          <span class="val" id="ryVal">0</span>
+        </div>
+        <div class="affine-slider">
+          <label>Z</label>
+          <input type="range" id="rzSlider" min="-180" max="180" step="1" value="0" />
+          <span class="val" id="rzVal">0</span>
+        </div>
+      </div>
+      <div class="affine-group">
+        <label>Scale:</label>
+        <div class="affine-slider">
+          <label>X</label>
+          <input type="range" id="sxSlider" min="0.5" max="2.0" step="0.01" value="1.0" />
+          <span class="val" id="sxVal">1.00</span>
+        </div>
+        <div class="affine-slider">
+          <label>Y</label>
+          <input type="range" id="sySlider" min="0.5" max="2.0" step="0.01" value="1.0" />
+          <span class="val" id="syVal">1.00</span>
+        </div>
+        <div class="affine-slider">
+          <label>Z</label>
+          <input type="range" id="szSlider" min="0.5" max="2.0" step="0.01" value="1.0" />
+          <span class="val" id="szVal">1.00</span>
+        </div>
+      </div>
+    </div>
+    <main id="canvas-container">
+      <div style="display: flex; width: 100%; height: 100%">
+        <canvas id="gl1"></canvas>
+      </div>
+    </main>
+    <footer>
+      <label id="statusBar">Enter a zarr store URL and click Load</label>
+    </footer>
+  </body>
+</html>
+<script type="module" async>
+  import { Niivue, DRAG_MODE, SLICE_TYPE, SHOW_RENDER, MULTIPLANAR_TYPE, copyAffine } from './niivue/index.ts'
+
+  const datasetSelect = document.getElementById('datasetSelect')
+  const storeUrlInput = document.getElementById('storeUrl')
+  const maxVolSizeSelect = document.getElementById('maxVolSize')
+  const zarrLevelSelect = document.getElementById('zarrLevel')
+  const loadBtn = document.getElementById('loadBtn')
+  const statusBar = document.getElementById('statusBar')
+  const navControls = document.getElementById('navControls')
+  const infoPanel = document.getElementById('infoPanel')
+  const levelSelectorsContainer = document.getElementById('levelSelectorsContainer')
+  const affineControls = document.getElementById('affineControls')
+  const affineResetBtn = document.getElementById('affineResetBtn')
+  const affineSaveBtn = document.getElementById('affineSaveBtn')
+  const affineLoadBtn = document.getElementById('affineLoadBtn')
+  const toggleAffineBtn = document.getElementById('toggleAffineBtn')
+
+  toggleAffineBtn.addEventListener('click', () => {
+    const visible = affineControls.style.display === 'block'
+    affineControls.style.display = visible ? 'none' : 'block'
+    toggleAffineBtn.textContent = visible ? 'Registration' : 'Hide Registration'
+    nv.resizeListener()
+  })
+
+  // Affine slider elements
+  const sliders = {
+    tx: document.getElementById('txSlider'),
+    ty: document.getElementById('tySlider'),
+    tz: document.getElementById('tzSlider'),
+    rx: document.getElementById('rxSlider'),
+    ry: document.getElementById('rySlider'),
+    rz: document.getElementById('rzSlider'),
+    sx: document.getElementById('sxSlider'),
+    sy: document.getElementById('sySlider'),
+    sz: document.getElementById('szSlider'),
+  }
+  const valDisplays = {
+    tx: document.getElementById('txVal'),
+    ty: document.getElementById('tyVal'),
+    tz: document.getElementById('tzVal'),
+    rx: document.getElementById('rxVal'),
+    ry: document.getElementById('ryVal'),
+    rz: document.getElementById('rzVal'),
+    sx: document.getElementById('sxVal'),
+    sy: document.getElementById('syVal'),
+    sz: document.getElementById('szVal'),
+  }
+
+  // Sync dataset select with URL input
+  datasetSelect.addEventListener('change', () => {
+    if (datasetSelect.value) {
+      storeUrlInput.value = datasetSelect.value
+    }
+  })
+
+  // When URL input is manually edited, switch dropdown to "Custom URL"
+  storeUrlInput.addEventListener('input', () => {
+    const match = [...datasetSelect.options].find(o => o.value === storeUrlInput.value.trim())
+    datasetSelect.value = match ? match.value : ''
+  })
+
+  const ZARR_VOL_IDX = 1
+
+  function applyAffineFromSliders() {
+    if (nv.volumes.length <= ZARR_VOL_IDX) return
+    const transform = {
+      translation: [parseFloat(sliders.tx.value), parseFloat(sliders.ty.value), parseFloat(sliders.tz.value)],
+      rotation: [parseFloat(sliders.rx.value), parseFloat(sliders.ry.value), parseFloat(sliders.rz.value)],
+      scale: [parseFloat(sliders.sx.value), parseFloat(sliders.sy.value), parseFloat(sliders.sz.value)],
+    }
+    // Reset to original before applying cumulative transform
+    nv.resetVolumeAffine(ZARR_VOL_IDX)
+    nv.applyVolumeTransform(ZARR_VOL_IDX, transform)
+  }
+
+  function resetAffineSliders() {
+    sliders.tx.value = 0; sliders.ty.value = 0; sliders.tz.value = 0
+    sliders.rx.value = 0; sliders.ry.value = 0; sliders.rz.value = 0
+    sliders.sx.value = 1; sliders.sy.value = 1; sliders.sz.value = 1
+    for (const key of ['tx', 'ty', 'tz']) valDisplays[key].textContent = '0.0'
+    for (const key of ['rx', 'ry', 'rz']) valDisplays[key].textContent = '0'
+    for (const key of ['sx', 'sy', 'sz']) valDisplays[key].textContent = '1.00'
+  }
+
+  // Wire up slider input events
+  for (const [key, slider] of Object.entries(sliders)) {
+    slider.addEventListener('input', () => {
+      const val = parseFloat(slider.value)
+      if (key.startsWith('s')) {
+        valDisplays[key].textContent = val.toFixed(2)
+      } else if (key.startsWith('r')) {
+        valDisplays[key].textContent = val.toFixed(0)
+      } else {
+        valDisplays[key].textContent = val.toFixed(1)
+      }
+      applyAffineFromSliders()
+    })
+  }
+
+  affineResetBtn.addEventListener('click', () => {
+    if (nv.volumes.length <= ZARR_VOL_IDX) return
+    nv.resetVolumeAffine(ZARR_VOL_IDX)
+    resetAffineSliders()
+  })
+
+  function getZarrUrl() {
+    if (nv.volumes.length <= ZARR_VOL_IDX) return null
+    return nv.volumes[ZARR_VOL_IDX].url || storeUrlInput.value.trim()
+  }
+
+  function getSliderValues() {
+    return {
+      tx: parseFloat(sliders.tx.value), ty: parseFloat(sliders.ty.value), tz: parseFloat(sliders.tz.value),
+      rx: parseFloat(sliders.rx.value), ry: parseFloat(sliders.ry.value), rz: parseFloat(sliders.rz.value),
+      sx: parseFloat(sliders.sx.value), sy: parseFloat(sliders.sy.value), sz: parseFloat(sliders.sz.value),
+    }
+  }
+
+  function setSliderValues(vals) {
+    for (const key of Object.keys(sliders)) {
+      sliders[key].value = vals[key]
+      const v = vals[key]
+      if (key.startsWith('s')) valDisplays[key].textContent = v.toFixed(2)
+      else if (key.startsWith('r')) valDisplays[key].textContent = v.toFixed(0)
+      else valDisplays[key].textContent = v.toFixed(1)
+    }
+  }
+
+  affineSaveBtn.addEventListener('click', () => {
+    const url = getZarrUrl()
+    if (!url) return
+    const vals = getSliderValues()
+    localStorage.setItem(url, JSON.stringify(vals))
+    statusBar.textContent = `Affine saved for ${url}`
+  })
+
+  affineLoadBtn.addEventListener('click', () => {
+    const url = getZarrUrl()
+    if (!url) return
+    const stored = localStorage.getItem(url)
+    if (!stored) {
+      statusBar.textContent = `No saved affine found for ${url}`
+      return
+    }
+    const vals = JSON.parse(stored)
+    setSliderValues(vals)
+    applyAffineFromSliders()
+    statusBar.textContent = `Affine loaded for ${url}`
+  })
+
+  // Create NiiVue instance
+  const nv = new Niivue({
+    show3Dcrosshair: true,
+    logLevel: 'debug',
+    dragMode: DRAG_MODE.pan,
+    isColorbar: true,
+    isOrientCube: true,
+    backColor: [0.5, 0.5, 0.5, 1],
+    multiplanarLayout: MULTIPLANAR_TYPE.GRID,
+    // isSliceMM: true
+  })
+  await nv.attachToCanvas(document.getElementById('gl1'))
+  nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+  window.nv = nv
+
+  nv.onLocationChange = (data) => {
+    let text = data.string
+    const zarrVolumes = nv.getZarrVolumes()
+    for (const vol of zarrVolumes) {
+      const helper = vol.zarrHelper
+      if (!helper) continue
+      const coords = helper.mmToLevelCoords(data.mm[0], data.mm[1], data.mm[2])
+      const dims = coords.levelDims
+      const inBounds = coords.width >= 0 && coords.width < dims.width &&
+                       coords.height >= 0 && coords.height < dims.height &&
+                       coords.depth >= 0 && coords.depth < dims.depth
+      const coordStr = `L${coords.level}: ${coords.width}, ${coords.height}, ${coords.depth} / ${dims.width}x${dims.height}x${dims.depth}`
+      text += `  [${coordStr}${inBounds ? '' : ' OOB'}]`
+    }
+    statusBar.textContent = text
+  }
+
+  // Populate colormap select
+  const colormapSelect = document.getElementById('colormapSelect')
+  const maps = nv.colormaps()
+  for (const name of maps) {
+    const opt = document.createElement('option')
+    opt.value = name
+    opt.textContent = name
+    if (name === 'gray') opt.selected = true
+    colormapSelect.appendChild(opt)
+  }
+  colormapSelect.addEventListener('change', () => {
+    if (nv.volumes.length > 0) {
+      nv.setColormap(nv.volumes[0].id, colormapSelect.value)
+    }
+  })
+
+  // Primary drag (left mouse button)
+  document.getElementById('primaryDrag').addEventListener('change', (e) => {
+    nv.opts.dragModePrimary = e.target.value === 'contrast' ? 1 : 8
+  })
+
+  // Secondary drag (right mouse button)
+  document.getElementById('secondaryDrag').addEventListener('change', (e) => {
+    if (nv.dragModes[e.target.value] !== undefined) {
+      nv.opts.dragMode = nv.dragModes[e.target.value]
+    }
+  })
+
+  function updateInfoPanel() {
+    const helper = nv.getZarrVolume()?.zarrHelper
+    if (!helper) {
+      infoPanel.style.display = 'none'
+      return
+    }
+
+    const state = helper.getViewportState()
+    const pyramidInfo = helper.getPyramidInfo()
+    const volDims = helper.getVolumeDims()
+    const levelDims = helper.getLevelDims()
+
+    const level0Dims = pyramidInfo.levels[0].shape
+    const currentLevel = pyramidInfo.levels[state.level]
+
+    const wasHidden = infoPanel.style.display === 'none' || infoPanel.style.display === ''
+    infoPanel.style.display = 'block'
+    infoPanel.innerHTML = `
+      <strong>Dataset:</strong> ${pyramidInfo.name}<br>
+      <strong>Full size:</strong> ${level0Dims.join(' x ')} (${pyramidInfo.is3D ? '3D' : '2D'})<br>
+      <strong>Pyramid levels:</strong> ${pyramidInfo.levels.length}<br>
+      <strong>Current level:</strong> ${state.level} (${currentLevel.shape.join(' x ')})<br>
+      <strong>Center:</strong> X=${state.centerX.toFixed(1)}, Y=${state.centerY.toFixed(1)}, Z=${state.centerZ.toFixed(1)}<br>
+      <strong>Virtual volume:</strong> ${volDims.width} x ${volDims.height} x ${volDims.depth}
+    `
+    if (wasHidden) {
+      nv.resizeListener()
+    }
+  }
+
+  // Create level selectors for all zarr volumes
+  function createLevelSelectors() {
+    levelSelectorsContainer.innerHTML = ''
+    const zarrVolumes = nv.getZarrVolumes()
+
+    if (zarrVolumes.length === 0) return
+
+    zarrVolumes.forEach((vol, volIdx) => {
+      const helper = vol.zarrHelper
+      if (!helper) return
+
+      const pyramidInfo = helper.getPyramidInfo()
+      const currentLevel = helper.getPyramidLevel()
+
+      // Create container for this volume's level selector
+      const selectorDiv = document.createElement('div')
+      selectorDiv.className = 'level-selector'
+
+      // Create label
+      const label = document.createElement('label')
+      const volName = pyramidInfo.name || `Zarr ${volIdx + 1}`
+      label.textContent = `${volName}:`
+      selectorDiv.appendChild(label)
+
+      // Create select element
+      const select = document.createElement('select')
+      select.dataset.volumeIndex = volIdx
+
+      pyramidInfo.levels.forEach((lvl, idx) => {
+        const option = document.createElement('option')
+        option.value = idx
+        option.textContent = `${idx}: ${lvl.shape.join('x')}`
+        if (idx === currentLevel) {
+          option.selected = true
+        }
+        select.appendChild(option)
+      })
+
+      // Add change handler for this select
+      select.addEventListener('change', async () => {
+        const targetVolIdx = parseInt(select.dataset.volumeIndex)
+        const targetVol = nv.getZarrVolumes()[targetVolIdx]
+        if (!targetVol?.zarrHelper) return
+
+        const level = parseInt(select.value)
+        await targetVol.zarrHelper.setPyramidLevel(level)
+        nv.updateGLVolume()
+        nv.drawScene()
+        updateInfoPanel()
+      })
+
+      selectorDiv.appendChild(select)
+      levelSelectorsContainer.appendChild(selectorDiv)
+    })
+  }
+
+  // Load button handler
+  loadBtn.addEventListener('click', async () => {
+    const storeUrl = storeUrlInput.value.trim()
+    if (!storeUrl) {
+      alert('Please enter a zarr store URL')
+      return
+    }
+
+    const maxVolSize = parseInt(maxVolSizeSelect.value)
+    const level = parseInt(zarrLevelSelect.value)
+
+    loadBtn.disabled = true
+    loadBtn.textContent = 'Loading...'
+    statusBar.textContent = 'Discovering zarr structure...'
+
+    try {
+      await nv.loadVolumes([
+        // mni nifti
+        // { url: "../demos/images/mni152.nii.gz", opacity: 1,colormap: "gray" }, 
+
+        // mni zarr (LSM simulated)
+        // {
+        //   // url: storeUrl,
+        //   url: "http://localhost:8080/K_HE_2_multiscale.zarr",
+        //   zarrLevel: level,
+        //   zarrMaxVolumeSize: maxVolSize,
+        //   opacity: 1.0,
+        //   channel:1,
+        //   colormap: "gray",
+        //   cal_min:150,
+        //   cal_max: 261
+        // },
+        // mni WSI image
+        // {
+        //   // url: storeUrl,
+        //   url: "http://localhost:8080/mni152_axial.ome.zarr",
+        //   // url: "http://localhost:3000/K_HE_2_ome.zarr",
+        //   // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
+        //   zarrLevel: level,
+        //   zarrMaxVolumeSize: maxVolSize,
+        //   channel: 0,
+        //   opacity: 1.0,
+        //   colormap: "red"
+        // },
+        // {
+        //   url: "http://localhost:3000/export/nifti?zarr_path=K_HE_2_ome.zarr&scale=virtual_scale1&c=0&z=0&y=0&x=0&xdim=128&ydim=128&zdim=128",
+        //   name: "nifti.nii.gz"
+        // }
+        // LSM image
+        {
+          url: storeUrl,
+          // url: "http://localhost:8080/mni152_axial.ome.zarr",
+          // url: "http://localhost:3000/K_HE_2_ome.zarr",
+          // url: "https://dandiarchive.s3.amazonaws.com/zarr/7723d02f-1f71-4553-a7b0-47bda1ae8b42",
+          // url: "http://localhost:3000/E23191_25-1A.1.ome.zarr",
+          // url: "http://localhost:3000/test-image.zarr",
+          zarrLevel: level,
+          zarrMaxVolumeSize: maxVolSize,
+          opacity: 1.0,
+          colormap: "gray",
+          name: "demo.ome.zarr"
+        },
+        
+        
+      ])
+      // await nv.addVolumeFromUrl({ url: "../demos/images/mni152.nii.gz", opacity: 0.4,colormap: "red" })
+      // nv.setColormap(nv.volumes[0].id, 'gray')
+
+      // Show navigation controls and registration toggle
+      navControls.style.display = 'flex'
+      toggleAffineBtn.style.display = 'inline-block'
+      affineControls.style.display = 'none'
+      toggleAffineBtn.textContent = 'Registration'
+      resetAffineSliders()
+
+      // Create level selectors for all zarr volumes
+      createLevelSelectors()
+
+      const zarrVolumes = nv.getZarrVolumes()
+      if (zarrVolumes.length > 0) {
+        const statusParts = zarrVolumes.map((vol, idx) => {
+          const helper = vol.zarrHelper
+          if (!helper) return ''
+          const pyramidInfo = helper.getPyramidInfo()
+          const state = helper.getViewportState()
+          const dims = pyramidInfo.levels[state.level].shape
+          const name = pyramidInfo.name || `Zarr ${idx + 1}`
+          return `${name}: L${state.level + 1}/${pyramidInfo.levels.length}`
+        }).filter(s => s).join(' | ')
+        statusBar.textContent = statusParts
+        updateInfoPanel()
+      }
+    } catch (err) {
+      console.error('Failed to load Zarr:', err)
+      statusBar.textContent = `Error: ${err.message}`
+      navControls.style.display = 'none'
+      infoPanel.style.display = 'none'
+      affineControls.style.display = 'none'
+      toggleAffineBtn.style.display = 'none'
+    } finally {
+      loadBtn.disabled = false
+      loadBtn.textContent = 'Load Zarr'
+    }
+  })
+
+  console.log(`
+  Zarr Viewer Controls:
+  - Left-click drag: Pan the view
+  - Level dropdown: Switch pyramid level
+  - Standard NiiVue controls for slice navigation
+
+  Uses standard loadVolumes() API with zarrLevel option.
+  `)
+</script>

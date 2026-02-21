@@ -95,6 +95,8 @@ export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
 
 export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
+export { NVZarrHelper, ZarrChunkClient, ZarrChunkCache } from '@/nvimage/zarr'
+export type { NVZarrHelperOptions, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord } from '@/nvimage/zarr'
 export * from '@/nvimage/affineUtils'
 // address rollup error - https://github.com/rollup/plugins/issues/71
 export * from '@/nvdocument'
@@ -260,6 +262,8 @@ export class Niivue extends EventTarget {
     }
 
     readyForSync = false
+
+    private _skipDragInDraw = false
 
     // UI Data
     uiData: UIData = {
@@ -1180,6 +1184,7 @@ export class Niivue extends EventTarget {
         this.canvas.height = resizeResult.height
 
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)
+
         this.textSizePoints()
         this.drawScene()
     }
@@ -1463,6 +1468,10 @@ export class Niivue extends EventTarget {
             this.setDragStart(pos.x, pos.y)
             if (!this.uiData.isDragging) {
                 this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
+                // Store Zarr viewport center at drag start for all zarr volumes
+                for (const vol of this.getZarrVolumes()) {
+                    vol.zarrHelper?.beginDrag()
+                }
             }
             this.uiData.isDragging = true
             this.uiData.dragClipPlaneStartDepthAziElev = this.scene.clipPlaneDepthAziElevs[this.uiData.activeClipPlaneIndex]
@@ -1634,6 +1643,9 @@ export class Niivue extends EventTarget {
         }
         if (this.uiData.isDragging) {
             this.uiData.isDragging = false
+            for (const vol of this.getZarrVolumes()) {
+                vol.zarrHelper?.endDrag()
+            }
 
             // Handle angle measurement workflow
             if (currentDragMode === DRAG_MODE.angle) {
@@ -1822,6 +1834,9 @@ export class Niivue extends EventTarget {
         // Handle drag completion
         if (this.uiData.isDragging) {
             this.uiData.isDragging = false
+            for (const vol of this.getZarrVolumes()) {
+                vol.zarrHelper?.endDrag()
+            }
             // if drag mode is contrast, and the user double taps and drags...
             if (this.getCurrentDragMode() === DRAG_MODE.contrast) {
                 this.calculateNewRange()
@@ -1900,6 +1915,9 @@ export class Niivue extends EventTarget {
         if (this.uiData.isDragging || this.uiData.mousedown) {
             log.debug('Mouse left canvas during drag, resetting drag state.')
             this.uiData.isDragging = false
+            for (const vol of this.getZarrVolumes()) {
+                vol.zarrHelper?.endDrag()
+            }
             const resetState = MouseController.createResetButtonState()
             this.uiData.mouseButtonLeftDown = resetState.mouseButtonLeftDown
             this.uiData.mouseButtonCenterDown = resetState.mouseButtonCenterDown
@@ -2103,6 +2121,10 @@ export class Niivue extends EventTarget {
             // Initialize drag state if not already dragging
             if (!this.uiData.isDragging) {
                 this.uiData.pan2DxyzmmAtMouseDown = vec4.clone(this.scene.pan2Dxyzmm)
+                // Store Zarr viewport center at drag start for all zarr volumes
+                for (const vol of this.getZarrVolumes()) {
+                    vol.zarrHelper?.beginDrag()
+                }
             }
             this.uiData.isDragging = true
 
@@ -2600,7 +2622,12 @@ export class Niivue extends EventTarget {
                 isManifest: imageItem.isManifest,
                 frame4D: imageItem.frame4D,
                 limitFrames4D: imageItem.limitFrames4D || this.opts.limitFrames4D,
-                colorbarVisible: imageItem.colorbarVisible
+                colorbarVisible: imageItem.colorbarVisible,
+                zarrLevel: imageItem.zarrLevel,
+                zarrMaxVolumeSize: imageItem.zarrMaxVolumeSize,
+                zarrChannel: imageItem.zarrChannel,
+                zarrConvertUnits: imageItem.zarrConvertUnits,
+                zarrCenterMM: imageItem.zarrCenterMM
             }
             const volume = await NVImage.loadFromUrl(imageOptions)
             this.document.addImageOptions(volume, imageOptions)
@@ -3256,6 +3283,36 @@ export class Niivue extends EventTarget {
         this.setVolume(volume, result.index)
         this._emitEvent('imageLoaded', volume)
         this.onImageLoaded(volume)
+        // Hook zarr chunk updates to trigger GL refresh.
+        // Register the callback BEFORE loading initial chunks so the first
+        // batch of data triggers a proper GPU upload and render.
+        if (volume.zarrHelper) {
+            // Auto-center zarr overlay on background volume if no explicit position was given
+            if (!volume._hasExplicitZarrCenter && this.back && this.back !== volume && this.back.hdr?.dims) {
+                const bg = this.back
+                const dims = bg.hdr.dims
+                const affine = bg.hdr.affine
+                const ci = (dims[1] - 1) / 2
+                const cj = (dims[2] - 1) / 2
+                const ck = (dims[3] - 1) / 2
+                const bgCenter: [number, number, number] = [
+                    affine[0][0] * ci + affine[0][1] * cj + affine[0][2] * ck + affine[0][3],
+                    affine[1][0] * ci + affine[1][1] * cj + affine[1][2] * ck + affine[1][3],
+                    affine[2][0] * ci + affine[2][1] * cj + affine[2][2] * ck + affine[2][3]
+                ]
+                volume.zarrHelper.setWorldCenter(bgCenter)
+            }
+
+            volume.zarrHelper.onChunksUpdated = (): void => {
+                this.updateGLVolume()
+                this._skipDragInDraw = true
+                this.drawScene()
+                this._skipDragInDraw = false
+            }
+            // Load initial chunks now (with callback registered).
+            // Not awaited — progressive rendering via onChunksUpdated handles GPU updates.
+            volume.zarrHelper.loadInitialChunks().catch((err) => log.error('Failed to load initial zarr chunks', err))
+        }
         log.debug('loaded volume', volume.name)
         log.debug(volume)
     }
@@ -6716,11 +6773,11 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             if (isAboveMax2D) {
                 log.error(`Image dimensions exceed maximum texture size of hardware.`)
             }
-            if (isAboveMax3D && hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
-                log.info(`Large RGBA image (>${this.uiData.max3D}) requires Texture2D`)
-                // high res 2D image
+            // Use 2D texture for any single-slice RGBA image (histology, etc.)
+            if (hdr.datatypeCode === NiiDataType.DT_RGBA32 && hdr.dims[3] < 2) {
+                log.info(`RGBA 2D image (${hdr.dims[1]}×${hdr.dims[2]}) using Texture2D`)
                 this.opts.is2DSliceShader = true
-                outTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array)
+                this.volumeTexture = this.rgbaTex2D(this.volumeTexture, TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL, overlayItem.dimsRAS!, img as Uint8Array, false)
                 return
             }
             if (isAboveMax3D) {
@@ -8127,6 +8184,112 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * @internal
      */
     dragForPanZoom(startXYendXY: number[]): void {
+        // Handle Zarr images with chunked pan
+        const zarrVolumes = this.getZarrVolumes()
+        const activeZarrVolumes = zarrVolumes.filter((vol) => vol.zarrHelper?.centerAtDragStart)
+
+        if (activeZarrVolumes.length > 0) {
+            const screenDeltaX = startXYendXY[2] - startXYendXY[0]
+            const screenDeltaY = startXYendXY[3] - startXYendXY[1]
+
+            if (screenDeltaX === 0 && screenDeltaY === 0) {
+                return
+            }
+
+            // Determine which slice the drag is happening on to map screen axes to volume axes
+            let axCorSag = SLICE_TYPE.AXIAL
+            for (const slice of this.screenSlices) {
+                if (slice.axCorSag > SLICE_TYPE.SAGITTAL) {
+                    continue
+                }
+                const ltwh = slice.leftTopWidthHeight
+                const mx = startXYendXY[0]
+                const my = startXYendXY[1]
+                if (mx >= ltwh[0] && my >= ltwh[1] && mx <= ltwh[0] + ltwh[2] && my <= ltwh[1] + ltwh[3]) {
+                    axCorSag = slice.axCorSag
+                    break
+                }
+            }
+
+            // Each slice type shows two physical axes on screen:
+            //   AXIAL:    horizontal=x(0), vertical=y(1)
+            //   CORONAL:  horizontal=x(0), vertical=z(2)
+            //   SAGITTAL: horizontal=y(1), vertical=z(2)
+            let hPhys: number
+            let vPhys: number
+            if (axCorSag === SLICE_TYPE.AXIAL) {
+                hPhys = 0
+                vPhys = 1
+            } else if (axCorSag === SLICE_TYPE.CORONAL) {
+                hPhys = 0
+                vPhys = 2
+            } else {
+                hPhys = 1
+                vPhys = 2
+            }
+
+            // Pan all zarr volumes simultaneously
+            const panPromises: Array<Promise<void>> = []
+            for (const zarrVol of activeZarrVolumes) {
+                const zarrHelper = zarrVol.zarrHelper!
+
+                // Map screen deltas to zarr volume axes using the actual affine matrix.
+                // The affine maps NIfTI columns (0=width/centerX, 1=height/centerY, 2=depth/centerZ)
+                // to physical axes (row 0=x, row 1=y, row 2=z). When OME axis names permute axes,
+                // the affine won't be diagonal, so we must derive the mapping dynamically.
+                const affine = zarrVol.hdr!.affine
+                // For each physical axis (row), find which NIfTI column dominates
+                // physToCol[physAxis] = { col, sign } where col is the center index (0=X,1=Y,2=Z)
+                const physToCol: Array<{ col: number; sign: number }> = [
+                    { col: 0, sign: -1 },
+                    { col: 1, sign: -1 },
+                    { col: 2, sign: -1 }
+                ]
+                for (let row = 0; row < 3; row++) {
+                    let maxVal = 0
+                    for (let col = 0; col < 3; col++) {
+                        const val = Math.abs(affine[row][col])
+                        if (val > maxVal) {
+                            maxVal = val
+                            physToCol[row] = { col, sign: affine[row][col] < 0 ? -1 : 1 }
+                        }
+                    }
+                }
+
+                const dragStart = zarrHelper.centerAtDragStart!
+                const centers = [dragStart.x, dragStart.y, dragStart.z]
+                centers[physToCol[hPhys].col] += screenDeltaX * physToCol[hPhys].sign
+                centers[physToCol[vPhys].col] += -screenDeltaY * physToCol[vPhys].sign
+                const newCenterX = centers[0]
+                const newCenterY = centers[1]
+                const newCenterZ = centers[2]
+
+                const state = zarrHelper.getViewportState()
+                const dx = Math.abs(newCenterX - state.centerX)
+                const dy = Math.abs(newCenterY - state.centerY)
+                const dz = Math.abs(newCenterZ - state.centerZ)
+                if (dx < 0.001 && dy < 0.001 && dz < 0.001) {
+                    continue
+                }
+
+                panPromises.push(zarrHelper.panTo(newCenterX, newCenterY, newCenterZ))
+            }
+
+            if (panPromises.length > 0) {
+                Promise.all(panPromises)
+                    .then(() => {
+                        this._skipDragInDraw = true
+                        this.drawScene()
+                        this._skipDragInDraw = false
+                    })
+                    .catch((err) => {
+                        log.error('Failed to pan Zarr:', err)
+                    })
+            }
+            this.canvas!.focus()
+            return
+        }
+
         const endMM = this.screenXY2mm(startXYendXY[2], startXYendXY[3])
         if (isNaN(endMM[0])) {
             return
@@ -8552,6 +8715,19 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
             this.gl.bindVertexArray(this.unusedVAO) // switch off to avoid tampering with settings
         }
+    }
+
+    getZarrVolume(): NVImage | null {
+        for (const vol of this.volumes) {
+            if (vol.zarrHelper) {
+                return vol
+            }
+        }
+        return null
+    }
+
+    getZarrVolumes(): NVImage[] {
+        return this.volumes.filter((vol) => vol.zarrHelper)
     }
 
     private drawBoundsBox(leftTopWidthHeight: number[], color: number[], thickness = 2): void {
@@ -11471,9 +11647,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * Call this at the start of every draw pass if multiple instances share a GL context.
      */
     private bindTextures(): void {
-        // Volume (3D texture)
+        // Volume texture (2D or 3D depending on is2DSliceShader)
         this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE0_BACK_VOL) // == gl.TEXTURE0
-        this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
+        if (this.opts.is2DSliceShader) {
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.volumeTexture)
+        } else {
+            this.gl.bindTexture(this.gl.TEXTURE_3D, this.volumeTexture)
+        }
 
         // Overlay (3D texture)
         this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE2_OVERLAY_VOL) // == gl.TEXTURE2
@@ -11890,7 +12070,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 this.dragForSlicer3D([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
                 return
             }
-            if (this.getCurrentDragMode() === DRAG_MODE.pan) {
+            if (this.getCurrentDragMode() === DRAG_MODE.pan && !this._skipDragInDraw) {
                 this.dragForPanZoom([this.uiData.dragStart[0], this.uiData.dragStart[1], this.uiData.dragEnd[0], this.uiData.dragEnd[1]])
                 return
             }

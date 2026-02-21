@@ -36,14 +36,17 @@ export function updateInterpolation(params: UpdateInterpolationParams): void {
 
     if (layer === 0) {
         gl.activeTexture(TEXTURE0_BACK_VOL) // background
+        // Use 2D texture for background when is2DSliceShader is true
+        if (is2DSliceShader) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, interp)
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, interp)
+        } else {
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, interp)
+            gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, interp)
+        }
     } else {
         gl.activeTexture(TEXTURE2_OVERLAY_VOL) // overlay
-    }
-
-    if (is2DSliceShader) {
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, interp)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, interp)
-    } else {
+        // Overlay is always a 3D texture
         gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, interp)
         gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, interp)
     }

@@ -85,4 +85,68 @@
   nv1.setMeshShader(nv1.meshes[0].id, 'crosscut')
   nv1.setMeshShader(nv1.meshes[1].id, 'crosscut')
   nv1.setClipPlane([0.0, 180, 20])
+
+  // Chunk-based random volume data animation
+  function startChunkAnimation() {
+    const vol = nv1.volumes[0]
+    if (!vol || !vol.img) return
+
+    const nx = vol.hdr.dims[1]
+    const ny = vol.hdr.dims[2]
+    const nz = vol.hdr.dims[3]
+    const datatype = vol.hdr.datatypeCode
+
+    const CHUNK_SIZE = 8
+
+    // Pre-compute chunks (only include voxels with value > 0)
+    const chunks = []
+    for (let cz = 0; cz < nz; cz += CHUNK_SIZE) {
+      for (let cy = 0; cy < ny; cy += CHUNK_SIZE) {
+        for (let cx = 0; cx < nx; cx += CHUNK_SIZE) {
+          const indices = []
+          for (let z = cz; z < Math.min(cz + CHUNK_SIZE, nz); z++) {
+            for (let y = cy; y < Math.min(cy + CHUNK_SIZE, ny); y++) {
+              for (let x = cx; x < Math.min(cx + CHUNK_SIZE, nx); x++) {
+                const idx = x + y * nx + z * nx * ny
+                if (vol.img[idx] > 0) {
+                  indices.push(idx)
+                }
+              }
+            }
+          }
+          // Only add chunk if it has non-zero voxels
+          if (indices.length > 0) {
+            chunks.push(indices)
+          }
+        }
+      }
+    }
+
+    // Get random value generator based on data type
+    function getRandomValue() {
+      switch (datatype) {
+        case 2:   return Math.floor(Math.random() * 256)           // UINT8
+        case 4:   return Math.floor(Math.random() * 65536) - 32768 // INT16
+        case 512: return Math.floor(Math.random() * 65536)         // UINT16
+        case 16:  return Math.random()                             // FLOAT32
+        default:  return Math.floor(Math.random() * 256)
+      }
+    }
+
+    // Animation loop - run as fast as possible
+    function animate() {
+      for (const chunkIndices of chunks) {
+        const value = getRandomValue()
+        for (const idx of chunkIndices) {
+          vol.img[idx] = value
+        }
+      }
+      nv1.updateGLVolume()
+      requestAnimationFrame(animate)
+    }
+    requestAnimationFrame(animate)
+  }
+
+  // Auto-execute on page load
+  //startChunkAnimation()
 </script>

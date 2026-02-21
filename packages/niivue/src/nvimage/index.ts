@@ -18,10 +18,11 @@ import * as ImageDataProcessor from '@/nvimage/ImageDataProcessor'
 import * as AffineProcessor from '@/nvimage/AffineProcessor'
 import * as ZarrProcessor from '@/nvimage/ZarrProcessor'
 import * as StreamingLoader from '@/nvimage/StreamingLoader'
+import { NVZarrHelper } from '@/nvimage/zarr/NVZarrHelper'
 import { AffineTransform, copyAffine, createTransformMatrix, multiplyAffine } from '@/nvimage/affineUtils'
 
 export * from '@/nvimage/utils'
-export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array
+export type TypedVoxelArray = Float32Array | Uint8Array | Int16Array | Float64Array | Uint16Array | Int32Array | Uint32Array
 
 /**
  * a NVImage encapsulates some image data and provides methods to query and operate on images
@@ -86,6 +87,9 @@ export class NVImage {
 
     onColormapChange: (img: NVImage) => void = () => {}
     onOpacityChange: (img: NVImage) => void = () => {}
+
+    zarrHelper: NVZarrHelper | null = null
+    _hasExplicitZarrCenter = false
 
     mm000?: vec3
     mm100?: vec3
@@ -858,7 +862,12 @@ export class NVImage {
         limitFrames4D = NaN,
         imageType = NVIMAGE_TYPE.UNKNOWN,
         colorbarVisible = true,
-        buffer = new ArrayBuffer(0)
+        buffer = new ArrayBuffer(0),
+        zarrLevel,
+        zarrMaxVolumeSize,
+        zarrChannel,
+        zarrConvertUnits,
+        zarrCenterMM
     }: Partial<Omit<ImageFromUrlOptions, 'url'>> & { url?: string | Uint8Array | ArrayBuffer } = {}): Promise<NVImage> {
         if (url === '') {
             throw Error('url must not be empty')
@@ -909,6 +918,19 @@ export class NVImage {
         }
         // try url and name attributes to test for .zarr
         if (imageType === NVIMAGE_TYPE.ZARR) {
+            if (zarrLevel !== undefined) {
+                // Chunked path: create virtual volume with helper
+                return await NVImage.createChunkedZarr(url as string, {
+                    level: zarrLevel,
+                    maxVolumeSize: zarrMaxVolumeSize,
+                    channel: zarrChannel,
+                    convertUnitsToMm: zarrConvertUnits,
+                    colormap,
+                    opacity,
+                    zarrCenterMM
+                })
+            }
+            // Light path: load entire array (unchanged)
             const zarrResult = await ZarrProcessor.loadZarrData(url)
             dataBuffer = zarrResult.dataBuffer
             zarrData = zarrResult.zarrData
@@ -978,6 +1000,47 @@ export class NVImage {
         )
         nvimage.url = url
         nvimage.colorbarVisible = colorbarVisible
+        return nvimage
+    }
+
+    /**
+     * Factory method: create a chunked zarr NVImage with an attached NVZarrHelper.
+     */
+    static async createChunkedZarr(
+        url: string,
+        options: {
+            level: number
+            maxVolumeSize?: number
+            maxTextureSize?: number
+            channel?: number
+            cacheSize?: number
+            convertUnitsToMm?: boolean
+            colormap?: string
+            opacity?: number
+            zarrCenterMM?: [number, number, number]
+        }
+    ): Promise<NVImage> {
+        const nvimage = new NVImage()
+        nvimage.zarrHelper = await NVZarrHelper.create(nvimage, url, {
+            url,
+            level: options.level,
+            maxVolumeSize: options.maxVolumeSize,
+            maxTextureSize: options.maxTextureSize,
+            channel: options.channel,
+            cacheSize: options.cacheSize,
+            convertUnitsToMm: options.convertUnitsToMm
+        })
+        if (options.zarrCenterMM) {
+            nvimage.zarrHelper.setWorldCenter(options.zarrCenterMM)
+            nvimage._hasExplicitZarrCenter = true
+        }
+        if (options.colormap) {
+            nvimage._colormap = options.colormap
+        }
+        if (options.opacity !== undefined) {
+            nvimage._opacity = options.opacity
+        }
+        nvimage.url = url
         return nvimage
     }
 
