@@ -6972,7 +6972,8 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             TEXTURE7: this.gl.TEXTURE7
         })
 
-        // Bind temporary 3D texture
+        // Bind temporary 3D texture to the correct texture unit
+        this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE9_ORIENT)
         this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
 
         // Render to output texture
