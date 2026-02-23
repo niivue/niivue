@@ -50,16 +50,12 @@
   const pzEl = document.getElementById("pz")
 
   function updateStatus() {
-    const pivot = nv.getPivot3DPoint()
-    if (pivot) {
-      status.textContent = `Current pivot: [${pivot[0].toFixed(2)}, ${pivot[1].toFixed(2)}, ${pivot[2].toFixed(2)}]`
-    } else {
-      status.textContent = "Current pivot: auto"
-    }
+    const pivot = nv.pivot3D
+    status.textContent = `Current pivot: [${pivot[0].toFixed(2)}, ${pivot[1].toFixed(2)}, ${pivot[2].toFixed(2)}]`
   }
 
   function updateInputsFromPivot() {
-    const pivot = nv.getPivot3DPoint()
+    const pivot = nv.pivot3D
     if (pivot) {
       pxEl.value = pivot[0].toFixed(2)
       pyEl.value = pivot[1].toFixed(2)

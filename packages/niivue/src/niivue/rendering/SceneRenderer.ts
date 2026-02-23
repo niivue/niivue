@@ -106,7 +106,7 @@ export interface CalculatePivot3DParams {
  * Result of pivot calculation
  */
 export interface Pivot3DResult {
-    pivot3D: number[]
+    pivot3D: [number, number, number]
     furthestFromPivot: number
     extentsMin: vec3
     extentsMax: vec3

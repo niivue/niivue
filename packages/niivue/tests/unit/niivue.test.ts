@@ -98,18 +98,21 @@ test('isRadiologicalConvention set by setRadiologicalConvention is tracked in do
 test('setPivot3DPoint sets and getPivot3DPoint retrieves the pivot point', () => {
   const nv = new Niivue()
 
+  const originalPivot = nv.pivot3D
   // Test setting a valid pivot point
   const pivot = [10, 20, 30] as [number, number, number]
   nv.setPivot3DPoint(pivot)
-  const retrieved = nv.getPivot3DPoint()
+  const retrieved = nv.pivot3D
   expect(retrieved).not.toBeNull()
-  expect(retrieved![0]).toBe(10)
-  expect(retrieved![1]).toBe(20)
-  expect(retrieved![2]).toBe(30)
+  expect(retrieved[0]).toBe(10)
+  expect(retrieved[1]).toBe(20)
+  expect(retrieved[2]).toBe(30)
 
-  // Test clearing the pivot point
+  // Test clearing the pivot point. Reset to original value
   nv.setPivot3DPoint(null)
-  expect(nv.getPivot3DPoint()).toBeNull()
+  expect(nv.pivot3D[0]).toBe(originalPivot[0])
+  expect(nv.pivot3D[1]).toBe(originalPivot[1])
+  expect(nv.pivot3D[2]).toBe(originalPivot[2])
 })
 
 test('setPivot3DPoint ignores non-finite values', () => {
@@ -117,17 +120,17 @@ test('setPivot3DPoint ignores non-finite values', () => {
 
   // Set a valid pivot first
   nv.setPivot3DPoint([1, 2, 3])
-  expect(nv.getPivot3DPoint()).not.toBeNull()
+  expect(nv.pivot3D).not.toBeNull()
 
   // Try to set invalid values - should be ignored
   nv.setPivot3DPoint([NaN, 0, 0])
-  expect(nv.getPivot3DPoint()).toEqual([1, 2, 3])
+  expect(nv.pivot3D).toEqual([1, 2, 3])
 
   nv.setPivot3DPoint([0, Infinity, 0])
-  expect(nv.getPivot3DPoint()).toEqual([1, 2, 3])
+  expect(nv.pivot3D).toEqual([1, 2, 3])
 
   nv.setPivot3DPoint([0, 0, -Infinity])
-  expect(nv.getPivot3DPoint()).toEqual([1, 2, 3])
+  expect(nv.pivot3D).toEqual([1, 2, 3])
 })
 
 test('setPivot3DPoint returns a copy not a reference', () => {
@@ -135,7 +138,7 @@ test('setPivot3DPoint returns a copy not a reference', () => {
   const original = [5, 10, 15] as [number, number, number]
   nv.setPivot3DPoint(original)
 
-  const retrieved = nv.getPivot3DPoint()
+  const retrieved = nv.pivot3D
   expect(retrieved).not.toBeNull()
 
   // Modify the retrieved array
@@ -145,7 +148,7 @@ test('setPivot3DPoint returns a copy not a reference', () => {
   expect(original[0]).toBe(5)
 
   // Internal state should not be modified
-  const retrievedAgain = nv.getPivot3DPoint()
+  const retrievedAgain = nv.pivot3D
   expect(retrievedAgain![0]).toBe(5)
 })
 

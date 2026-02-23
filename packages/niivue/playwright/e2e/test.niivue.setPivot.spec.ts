@@ -28,22 +28,21 @@ test.describe('NiiVue setPivot3DPoint', () => {
         )
     }
 
-    test('setPivot3DPoint and getPivot3DPoint work correctly', async ({ page }) => {
+    test('setPivot3DPoint and pivot3D work correctly', async ({ page }) => {
         await setupNiivue(page)
 
         const result = await page.evaluate(() => {
             const nv = (window as unknown as { nv: Niivue }).nv
 
-            // Initial state should be null
-            const initialPivot = nv.getPivot3DPoint()
+            const initialPivot = nv.pivot3D
 
             // Set a pivot point
             nv.setPivot3DPoint([10, 20, 30])
-            const setPivot = nv.getPivot3DPoint()
+            const setPivot = nv.pivot3D
 
             // Clear the pivot point
             nv.setPivot3DPoint(null)
-            const clearedPivot = nv.getPivot3DPoint()
+            const clearedPivot = nv.pivot3D
 
             return {
                 initialPivot,
@@ -52,12 +51,13 @@ test.describe('NiiVue setPivot3DPoint', () => {
             }
         })
 
-        expect(result.initialPivot).toBeNull()
-        expect(result.setPivot).not.toBeNull()
-        expect(result.setPivot![0]).toBeCloseTo(10, 6)
-        expect(result.setPivot![1]).toBeCloseTo(20, 6)
-        expect(result.setPivot![2]).toBeCloseTo(30, 6)
-        expect(result.clearedPivot).toBeNull()
+        expect(result.setPivot[0]).toBeCloseTo(10, 6)
+        expect(result.setPivot[1]).toBeCloseTo(20, 6)
+        expect(result.setPivot[2]).toBeCloseTo(30, 6)
+        expect(result.clearedPivot[0]).toBeCloseTo(result.initialPivot[0], 6)
+        expect(result.clearedPivot[1]).toBeCloseTo(result.initialPivot[1], 6)
+        expect(result.clearedPivot[2]).toBeCloseTo(result.initialPivot[2], 6)
+
     })
 
     test('setPivot3DPoint ignores invalid values', async ({ page }) => {
@@ -68,17 +68,17 @@ test.describe('NiiVue setPivot3DPoint', () => {
 
             // Set a valid pivot
             nv.setPivot3DPoint([5, 10, 15])
-            const validPivot = nv.getPivot3DPoint()
+            const validPivot = nv.pivot3D
 
             // Try to set invalid values
             nv.setPivot3DPoint([NaN, 0, 0])
-            const afterNaN = nv.getPivot3DPoint()
+            const afterNaN = nv.pivot3D
 
             nv.setPivot3DPoint([0, Infinity, 0])
-            const afterInfinity = nv.getPivot3DPoint()
+            const afterInfinity = nv.pivot3D
 
             nv.setPivot3DPoint([0, 0, -Infinity])
-            const afterNegInfinity = nv.getPivot3DPoint()
+            const afterNegInfinity = nv.pivot3D
 
             return {
                 validPivot,
@@ -148,14 +148,14 @@ test.describe('NiiVue setPivot3DPoint', () => {
             const original: [number, number, number] = [7, 14, 21]
             nv.setPivot3DPoint(original)
 
-            const retrieved = nv.getPivot3DPoint()
+            const retrieved = nv.pivot3D
             // Modify retrieved array
             if (retrieved) {
                 retrieved[0] = 999
             }
 
             // Get again to check internal state wasn't modified
-            const retrievedAgain = nv.getPivot3DPoint()
+            const retrievedAgain = nv.pivot3D
 
             return {
                 original: original[0],
