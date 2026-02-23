@@ -324,6 +324,7 @@ export class Niivue extends EventTarget {
     otherNV: Niivue[] | null = null // another niivue instance that we wish to sync position with
     volumeObject3D: NiivueObject3D | null = null
     pivot3D = [0, 0, 0] // center for rendering rotation
+    pivot3DPoint: [number, number, number] | null = null // optional user-specified pivot override
     furthestFromPivot = 10.0 // most distant point from pivot
 
     currentClipPlaneIndex = 0
@@ -3829,6 +3830,35 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         this._emitEvent('azimuthElevationChange', { azimuth: a, elevation: e })
         this.onAzimuthElevationChange(a, e)
         this.drawScene()
+    }
+
+    /**
+     * Set an optional manual 3D pivot point override.
+     * When set to a non-null point, this value is used as the render rotation pivot.
+     * Set to `null` to restore automatic pivot calculation from scene extents.
+     * @param pivot3DPoint - manual pivot `[x, y, z]` in scene units, or `null` to disable override
+     * @example niivue.setPivot3DPoint([0, 0, 0])
+     */
+    setPivot3DPoint(pivot3DPoint: [number, number, number] | null): void {
+        if (pivot3DPoint !== null) {
+            const [x, y, z] = pivot3DPoint
+            if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+                return
+            }
+            this.pivot3DPoint = [x, y, z]
+        } else {
+            this.pivot3DPoint = null
+        }
+        this.setPivot3D(this.pivot3DPoint)
+        this.drawScene()
+    }
+
+    /**
+     * Get the optional manual 3D pivot point override.
+     * @returns current manual pivot `[x, y, z]`, or `null` when automatic pivot is used
+     */
+    getPivot3DPoint(): [number, number, number] | null {
+        return this.pivot3DPoint ? [this.pivot3DPoint[0], this.pivot3DPoint[1], this.pivot3DPoint[2]] : null
     }
 
     /**
@@ -9837,13 +9867,37 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * Sets the 3D pivot point and scene scale based on volume and mesh extents.
      * @internal
      */
-    setPivot3D(): void {
+    setPivot3D(pivot3DPoint: [number, number, number] | null = this.pivot3DPoint): void {
         // compute extents of all volumes and meshes in scene
         // pivot around center of these.
         const [mn, mx] = this.sceneExtentsMinMax()
         const result = SceneRenderer.calculatePivot3D({ sceneMin: mn, sceneMax: mx })
-        this.pivot3D = result.pivot3D
-        this.furthestFromPivot = result.furthestFromPivot
+        if (pivot3DPoint === null) {
+            this.pivot3D = result.pivot3D
+            this.furthestFromPivot = result.furthestFromPivot
+        } else {
+            // Get maximum distance from pivot to any corner
+            this.pivot3D = [pivot3DPoint[0], pivot3DPoint[1], pivot3DPoint[2]]
+            const corners: Array<[number, number, number]> = [
+                [mn[0], mn[1], mn[2]],
+                [mn[0], mn[1], mx[2]],
+                [mn[0], mx[1], mn[2]],
+                [mn[0], mx[1], mx[2]],
+                [mx[0], mn[1], mn[2]],
+                [mx[0], mn[1], mx[2]],
+                [mx[0], mx[1], mn[2]],
+                [mx[0], mx[1], mx[2]]
+            ]
+            const pivot = vec3.fromValues(this.pivot3D[0], this.pivot3D[1], this.pivot3D[2])
+            let maxDistance = 0
+            for (const c of corners) {
+                const d = vec3.distance(pivot, vec3.fromValues(c[0], c[1], c[2]))
+                if (d > maxDistance) {
+                    maxDistance = d
+                }
+            }
+            this.furthestFromPivot = maxDistance > 0 ? maxDistance : result.furthestFromPivot
+        }
         this.extentsMin = result.extentsMin
         this.extentsMax = result.extentsMax
     }
