@@ -26,6 +26,7 @@
     },
     "scripts": {
         "dev": "vite",
+        "react": "vite --open /src/hot-react.html",
         "build:umd": "vite build --config vite.config.js --base=./ && vite build --config vite.config_inject.js --base=./",
         "build": "tsup --config tsup.config.ts && npm run build:forTests && npm run build:min && npm run build:umd",
         "build:forTests": "tsup --config tsup.config.tests.ts && npm run build:mindemos",

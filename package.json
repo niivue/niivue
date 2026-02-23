@@ -22,6 +22,7 @@
         "publish:niivue": "npm run pub -w @niivue/niivue",
         "demo": "npm run demo -w @niivue/niivue",
         "dev": "npm run dev -w @niivue/niivue",
+        "react": "npm run react -w @niivue/niivue --",
         "predev:desktop": "npm run build:niivue",
         "setup:desktop": "npm run setup -w niivue-desktop",
         "dev:desktop": "npm run dev -w niivue-desktop",

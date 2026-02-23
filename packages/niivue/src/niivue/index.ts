@@ -9743,10 +9743,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             this.draw2DMain(ltwh, axCorSag, customMM)
         } else {
             // inset as padded in tile
-            padLeftTop[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]))
-            padLeftTop[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]))
-            ltwh[0] += padLeftTop[0]
-            ltwh[1] += padLeftTop[1]
+            // issue1554 shift tile: do not change global padLeftTop
+            const padLeftTopX = [NaN, NaN]
+            padLeftTopX[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]))
+            padLeftTopX[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]))
+            ltwh[0] += padLeftTopX[0]
+            ltwh[1] += padLeftTopX[1]
             ltwh[2] = imageWidthHeight[0]
             ltwh[3] = imageWidthHeight[1]
             this.draw2DMain(ltwh, axCorSag, customMM)
