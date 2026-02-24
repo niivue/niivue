@@ -12,22 +12,24 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const REQUIRED_MODELS = [
+  'mindgrab',
   'model5_gw_ae',
   'model11_gw_ae',
   'model18cls',
   'model20chan3cls',
   'model21_104class',
   'model30chan18cls',
-  'model30chan50cls'
+  'model30chan50cls',
+  'subcortical'
 ]
 
 async function checkModelExists(modelId) {
   const modelDir = join(__dirname, '..', 'resources', 'brainchop-models', modelId)
 
   try {
-    // Check if model.json exists (the minimum required file)
-    const modelJsonPath = join(modelDir, 'model.json')
-    await fs.access(modelJsonPath)
+    // Check if model.bcmodel exists (the single required file)
+    const bcmodelPath = join(modelDir, 'model.bcmodel')
+    await fs.access(bcmodelPath)
     return true
   } catch {
     return false

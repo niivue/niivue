@@ -244,20 +244,65 @@ export const registerIpcHandlers = (): void => {
     }
   )
 
-  // Select a local model folder (must contain model.json)
+  // Select a local model folder (must contain model.json or model.bcmodel)
   ipcMain.handle('select-model-folder', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Select Model Folder',
       properties: ['openDirectory'],
-      message: 'Select a folder containing a TensorFlow.js model (model.json + weights)'
+      message: 'Select a folder containing a model (model.bcmodel or model.json + weights)'
     })
     if (result.canceled || result.filePaths.length === 0) return null
     const folderPath = result.filePaths[0]
 
+    // Check for .bcmodel first (preferred universal format)
+    const bcmodelPath = path.join(folderPath, 'model.bcmodel')
+    if (fs.existsSync(bcmodelPath)) {
+      console.log('[Main] Detected .bcmodel format in folder:', folderPath)
+      // Parse .bcmodel header to extract metadata
+      const buffer = fs.readFileSync(bcmodelPath)
+      const headerSize = buffer.readUInt32LE(0)
+      const headerJson = JSON.parse(buffer.subarray(8, 8 + headerSize).toString('utf-8'))
+
+      const meta = headerJson.metadata || {}
+      const inf = headerJson.inference || {}
+      const perf = headerJson.performance || {}
+      const hasLabels = Array.isArray(headerJson.labels) && headerJson.labels.length > 0
+
+      // Build a settings-like object from .bcmodel header
+      const settings = {
+        name: meta.name || path.basename(folderPath),
+        description: meta.description || '',
+        type: meta.type || 'tissue-segmentation',
+        outputClasses: headerJson.output?.num_classes || 2,
+        expectedInputShape: headerJson.input?.shape
+          ? [headerJson.input.shape[0], headerJson.input.shape[2], headerJson.input.shape[3], headerJson.input.shape[4]]
+          : [1, 256, 256, 256],
+        inference: {
+          enableSeqConv: inf.enable_seq_conv || false,
+          cropPadding: inf.crop_padding ?? 18,
+          autoThreshold: inf.auto_threshold ?? 0,
+          enableQuantileNorm: inf.enable_quantile_norm || false,
+          enableTranspose: inf.enable_transpose !== false
+        },
+        performance: {
+          estimatedTimeSeconds: perf.estimated_time_seconds || 10,
+          memoryRequirementMB: perf.memory_requirement_mb || 800
+        }
+      }
+
+      return {
+        folderPath,
+        modelJson: { bcmodel: true }, // Signal that this is a .bcmodel folder
+        hasLabels,
+        folderName: path.basename(folderPath),
+        settings
+      }
+    }
+
     // Validate: must contain model.json
     const modelJsonPath = path.join(folderPath, 'model.json')
     if (!fs.existsSync(modelJsonPath)) {
-      throw new Error('Selected folder does not contain a model.json file')
+      throw new Error('Selected folder does not contain a model.json or model.bcmodel file')
     }
 
     // Read model.json to extract metadata
@@ -353,11 +398,12 @@ export const registerIpcHandlers = (): void => {
     }
   })
 
-  // Load brainchop weight file
+  // Load brainchop weight/binary file
   ipcMain.handle('load-brainchop-weights', async (_event, weightPath: string) => {
     try {
-      console.log('[Main] Loading weight file:', weightPath)
-      const buffer = await fs.promises.readFile(weightPath)
+      const fullPath = path.isAbsolute(weightPath) ? weightPath : path.join(RESOURCES_DIR, weightPath)
+      console.log('[Main] Loading weight file:', fullPath)
+      const buffer = await fs.promises.readFile(fullPath)
       console.log('[Main] Weight file size:', buffer.byteLength, 'bytes')
 
       // Convert Node.js Buffer to ArrayBuffer explicitly

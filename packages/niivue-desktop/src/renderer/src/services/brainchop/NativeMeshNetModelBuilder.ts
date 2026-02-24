@@ -28,7 +28,7 @@ export interface NativeMeshNetSpec {
  */
 export function isNativeMeshNetFormat(
   modelJson: Record<string, unknown>
-): modelJson is NativeMeshNetSpec {
+): modelJson is NativeMeshNetSpec & Record<string, unknown> {
   return Array.isArray(modelJson.layers) && modelJson.format !== 'layers-model'
 }
 

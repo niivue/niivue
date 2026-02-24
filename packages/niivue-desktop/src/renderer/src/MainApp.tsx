@@ -18,6 +18,7 @@ import { brainchopService } from './services/brainchop/index.js'
 import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
+import { resolveColormapLabels } from './services/brainchop/BcmodelBuilder.js'
 
 const electron = window.electron
 
@@ -292,19 +293,17 @@ function MainApp(): JSX.Element {
         const overlayIndex = nv.volumes.length - 1
         nv.setOpacity(overlayIndex, 0.5)
 
-        // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
-        if (resultModelInfo.colormapPath) {
-          try {
-            const colormapJson = await window.electron.loadBrainchopLabels(resultModelInfo.colormapPath)
-            overlayVolume.setColormapLabel(colormapJson)
-            if (overlayVolume.colormapLabel?.lut) {
-              overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
-                i % 4 === 3 ? (v === 0 ? 0 : 178) : v
-              )
-            }
-          } catch (err) {
-            console.error('Failed to load colormap labels:', err)
+        // Apply colormap labels — embedded .bcmodel labels, then file-based, then fallback
+        try {
+          const colormapLabels = await resolveColormapLabels(resultModelInfo)
+          overlayVolume.setColormapLabel(colormapLabels as Parameters<typeof overlayVolume.setColormapLabel>[0])
+          if (overlayVolume.colormapLabel?.lut) {
+            overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
+              i % 4 === 3 ? (v === 0 ? 0 : 178) : v
+            )
           }
+        } catch (err) {
+          console.error('Failed to apply colormap labels:', err)
         }
       }
 

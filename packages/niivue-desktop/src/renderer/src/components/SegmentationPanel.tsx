@@ -16,6 +16,7 @@ import { useSelectedInstance } from '../AppContext.js'
 import { parseLabelJson } from '../../../common/labelResolver.js'
 import type { LabelEntry } from '../../../common/labelResolver.js'
 import type { ModelInfo, ModelCategory } from '../services/brainchop/types.js'
+import { resolveColormapLabels } from '../services/brainchop/BcmodelBuilder.js'
 
 interface LabelDisplayEntry extends LabelEntry {
   color: [number, number, number]
@@ -130,7 +131,7 @@ export function SegmentationPanel({
 
   // Load labels when extract mode is enabled and model changes
   useEffect(() => {
-    if (!extractSubvolume || !selectedModel?.labelsPath) {
+    if (!extractSubvolume || !selectedModel) {
       setLabelEntries([])
       return
     }
@@ -138,9 +139,10 @@ export function SegmentationPanel({
     let cancelled = false
     const loadLabels = async (): Promise<void> => {
       try {
-        const labelsJson = await window.electron.loadBrainchopLabels(selectedModel.labelsPath!)
+        // Resolve labels from embedded .bcmodel, external file, or fallback
+        const colormapData = await resolveColormapLabels(selectedModel)
         if (cancelled) return
-        const entries = parseLabelDisplayEntries(labelsJson)
+        const entries = parseLabelDisplayEntries(colormapData)
         setLabelEntries(entries)
         // Auto-select all non-background labels
         const nonBgValues = new Set(entries.filter((e) => e.value !== 0).map((e) => e.value))

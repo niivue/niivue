@@ -4,6 +4,7 @@ import '@tensorflow/tfjs-backend-webgpu'
 import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm'
 import type { ModelInfo, ModelCacheEntry } from './types.js'
 import { isNativeMeshNetFormat, nativeSpecToArtifacts } from './NativeMeshNetModelBuilder.js'
+import { isBcmodelPath, parseBcmodelBuffer, bcmodelToArtifacts, extractLabels } from './BcmodelBuilder.js'
 import modelsRegistry from './models/models.json' assert { type: 'json' }
 
 /**
@@ -19,6 +20,16 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
 
   async load(): Promise<tf.io.ModelArtifacts> {
     try {
+      // Handle .bcmodel format (universal single-file format)
+      if (isBcmodelPath(this.modelPath)) {
+        console.log('[ElectronIPCModelLoader] Loading .bcmodel file:', this.modelPath)
+        const buffer = await window.electron.loadBrainchopWeights(this.modelPath)
+        const { header, tensors } = parseBcmodelBuffer(buffer)
+        // Cache embedded labels for later use by segmentation handler
+        extractLabels(header, this.modelPath)
+        return bcmodelToArtifacts(header, tensors)
+      }
+
       // Load model.json via IPC
       const { modelJson, basePath } = await window.electron.loadBrainchopModel(this.modelPath)
 

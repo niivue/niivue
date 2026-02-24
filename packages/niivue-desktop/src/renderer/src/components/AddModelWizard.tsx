@@ -18,6 +18,7 @@ interface WizardState {
   folderPath: string
   remoteUrl: string
   hasLabelsFile: boolean
+  hasBcmodel: boolean
   // Basic info
   name: string
   description: string
@@ -43,6 +44,7 @@ const defaultState: WizardState = {
   folderPath: '',
   remoteUrl: '',
   hasLabelsFile: false,
+  hasBcmodel: false,
   name: '',
   description: '',
   type: 'tissue-segmentation',
@@ -94,16 +96,20 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
       const result = await window.electron.selectModelFolder()
       if (!result) return
 
+      // Detect .bcmodel format
+      const isBcmodel = result.modelJson?.bcmodel === true
+
       // Try to parse settings.json if present
       const settings = result.settings ? parseModelSettings(result.settings) : null
 
       if (settings) {
-        // Auto-populate all fields from settings.json
+        // Auto-populate all fields from settings.json (or .bcmodel header)
         setState((prev) => ({
           ...prev,
           sourceType: 'folder',
           folderPath: result.folderPath,
           hasLabelsFile: result.hasLabels,
+          hasBcmodel: isBcmodel,
           name: settings.name,
           description: settings.description,
           type: settings.type,
@@ -149,7 +155,9 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
       description: state.description,
       expectedInputShape: state.inputShape,
       outputClasses: state.outputClasses,
-      modelPath: state.sourceType === 'folder' ? state.folderPath : '',
+      modelPath: state.sourceType === 'folder'
+        ? (state.hasBcmodel ? `${state.folderPath}/model.bcmodel` : state.folderPath)
+        : '',
       labelsPath: state.labelsPath || undefined,
       previewPath: state.previewPath || undefined,
       estimatedTimeSeconds: state.estimatedTimeSeconds,

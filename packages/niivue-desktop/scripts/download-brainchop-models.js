@@ -1,5 +1,5 @@
 /**
- * Script to download brainchop MeshNet models from neuroneural/brainchop-models on GitHub
+ * Script to download brainchop MeshNet models in .bcmodel format
  * Run with: node scripts/download-brainchop-models.js
  */
 
@@ -10,25 +10,19 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/neuroneural/brainchop-models/main'
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/cdrake/brainchop-models/main'
 
-// Models to download from the meshnet/ directory of the neuroneural repo.
-// Native MeshNet format models have model.json (layer specs) + model.bin (weights).
-// TF.js format models have model.json (Keras topology + weightsManifest) + weight bin file.
+// All 9 meshnet models — each is a single self-contained .bcmodel file
 const MODEL_FILES = {
-  'model5_gw_ae': ['model.json', 'model.bin', 'colormap.json'],
-  'model11_gw_ae': ['model.json', 'model.bin'],
-  'model18cls': ['model.json', 'model.bin', 'colormap.json'],
-  'model20chan3cls': ['model.json', 'model.bin', 'colormap.json'],
-  'model21_104class': ['model.json', 'model.bin', 'colormap.json'],
-  'model30chan18cls': ['model.json', 'model.bin', 'colormap.json'],
-  'model30chan50cls': ['model.json', 'model.bin', 'colormap.json']
-}
-
-// model11_gw_ae's model.json weightsManifest references 'group1-shard1of1.bin',
-// but the neuroneural repo stores the file as 'model.bin'. Rename after download.
-const RENAME_AFTER_DOWNLOAD = {
-  'model11_gw_ae': { 'model.bin': 'group1-shard1of1.bin' }
+  'mindgrab':         ['model.bcmodel'],
+  'model5_gw_ae':     ['model.bcmodel'],
+  'model11_gw_ae':    ['model.bcmodel'],
+  'model18cls':       ['model.bcmodel'],
+  'model20chan3cls':   ['model.bcmodel'],
+  'model21_104class': ['model.bcmodel'],
+  'model30chan18cls':  ['model.bcmodel'],
+  'model30chan50cls':  ['model.bcmodel'],
+  'subcortical':      ['model.bcmodel']
 }
 
 async function downloadFile(url, destPath) {
@@ -61,7 +55,6 @@ async function downloadFile(url, destPath) {
 async function downloadModel(modelId, files) {
   console.log(`\nDownloading model: ${modelId}`)
 
-  // Files are under meshnet/ in the neuroneural repo but stored flat locally
   const baseDir = join(__dirname, '..', 'resources', 'brainchop-models', modelId)
 
   let successCount = 0
@@ -76,17 +69,6 @@ async function downloadModel(modelId, files) {
       successCount++
     } else {
       failCount++
-    }
-  }
-
-  // Rename files if needed (e.g. model.bin -> group1-shard1of1.bin)
-  const renames = RENAME_AFTER_DOWNLOAD[modelId]
-  if (renames) {
-    for (const [from, to] of Object.entries(renames)) {
-      const fromPath = join(baseDir, from)
-      const toPath = join(baseDir, to)
-      await fs.rename(fromPath, toPath)
-      console.log(`  Renamed: ${from} -> ${to}`)
     }
   }
 

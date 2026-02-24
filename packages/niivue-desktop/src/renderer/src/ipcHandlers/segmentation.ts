@@ -2,6 +2,7 @@ import React from 'react'
 import { Niivue, NVImage } from '@niivue/niivue'
 import { brainchopService } from '../services/brainchop/index.js'
 import type { SegmentationResult } from '../services/brainchop/types.js'
+import { resolveColormapLabels } from '../services/brainchop/BcmodelBuilder.js'
 
 const electron = window.electron
 
@@ -97,12 +98,11 @@ export const registerSegmentationHandlers = ({
       // Set opacity for overlay visibility
       nv.setOpacity(overlayIndex, 0.7) // 70% opacity for better visibility
 
-      // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
-      if (result.modelInfo.colormapPath) {
-        console.log('[Renderer] Loading colormap labels from:', result.modelInfo.colormapPath)
+      // Apply colormap labels — check .bcmodel embedded labels first, then file-based, then generate fallback
+      const colormapLabels = await resolveColormapLabels(result.modelInfo)
+      if (colormapLabels) {
         try {
-          const colormapJson = await window.electron.loadBrainchopLabels(result.modelInfo.colormapPath)
-          result.volume.setColormapLabel(colormapJson)
+          result.volume.setColormapLabel(colormapLabels as Parameters<typeof result.volume.setColormapLabel>[0])
           if (result.volume.colormapLabel?.lut) {
             result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>
               i % 4 === 3 ? (v === 0 ? 0 : 178) : v
@@ -110,7 +110,7 @@ export const registerSegmentationHandlers = ({
           }
           console.log('[Renderer] Applied colormap labels')
         } catch (err) {
-          console.error('[Renderer] Failed to load colormap labels:', err)
+          console.error('[Renderer] Failed to apply colormap labels:', err)
         }
       }
 
