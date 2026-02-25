@@ -24,6 +24,7 @@
         class="slider"
         id="radiusSlider"
       />
+      &nbsp;
       <label for="dxSlider">Mesh clipping</label>
       <input
         type="range"
@@ -33,22 +34,30 @@
         class="slider"
         id="dxSlider"
       />
-      <input type="checkbox" id="radiologicalCheck" unchecked />
+      &nbsp;
       <label for="radiologicalCheck">Radiological</label>
-      <input type="checkbox" id="cornerCheck" unchecked />
+      <input type="checkbox" id="radiologicalCheck" unchecked />
+      &nbsp;
       <label for="cornerCheck">Corner text</label>
-      <input type="checkbox" id="worldCheck" checked />
+      <input type="checkbox" id="cornerCheck" unchecked />
+      &nbsp;
       <label for="worldCheck">World space</label>
-      <input type="checkbox" id="colorbarCheck" unchecked />
+      <input type="checkbox" id="worldCheck" checked />
+      &nbsp;
       <label for="colorbarCheck">Colorbar</label>
-      <input type="checkbox" id="cubeCheck" unchecked />
+      <input type="checkbox" id="colorbarCheck" unchecked />
+      &nbsp;
       <label for="cubeCheck">Cube</label>
-      <input type="checkbox" id="padCheck" unchecked />
+      <input type="checkbox" id="cubeCheck" unchecked />
+      &nbsp;
       <label for="padCheck">Pad</label>
-      <input type="checkbox" id="dpiCheck" checked />
+      <input type="checkbox" id="padCheck" unchecked />
+      &nbsp;
       <label for="dpiCheck">HighDPI</label>
-      <input type="checkbox" id="renderCheck" unchecked />
+      <input type="checkbox" id="dpiCheck" checked />
+      &nbsp;
       <label for="renderCheck">Force Render</label>
+      <input type="checkbox" id="renderCheck" unchecked />
       &nbsp;
       <label for="dragMode">Drag mode</label>
       <select id="dragMode">
@@ -90,12 +99,13 @@
     }
   }
   radiologicalCheck.onchange = function () {
+    console.log(`bingo`, this.checked)
     nv1.setRadiologicalConvention(this.checked)
   }
   cornerCheck.onchange = function () {
     nv1.setCornerOrientationText(this.checked)
   }
-  radiologicalCheck.onchange = function () {
+  worldCheck.onchange = function () {
     nv1.setSliceMM(this.checked)
   }
   dxSlider.oninput = function () {

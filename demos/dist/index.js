@@ -49219,6 +49219,7 @@ var Niivue = class extends EventTarget {
       r8Tex: this.r8Tex.bind(this),
       TEXTURE7: this.gl.TEXTURE7
     });
+    this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE9_ORIENT);
     this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D);
     if (!this.back.dims) {
       throw new Error("back.dims undefined");
@@ -51622,10 +51623,11 @@ var Niivue = class extends EventTarget {
     if (isNaN(imageWidthHeight[0])) {
       this.draw2DMain(ltwh, axCorSag, customMM);
     } else {
-      padLeftTop[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]));
-      padLeftTop[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]));
-      ltwh[0] += padLeftTop[0];
-      ltwh[1] += padLeftTop[1];
+      const padLeftTopX = [NaN, NaN];
+      padLeftTopX[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]));
+      padLeftTopX[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]));
+      ltwh[0] += padLeftTopX[0];
+      ltwh[1] += padLeftTopX[1];
       ltwh[2] = imageWidthHeight[0];
       ltwh[3] = imageWidthHeight[1];
       this.draw2DMain(ltwh, axCorSag, customMM);
