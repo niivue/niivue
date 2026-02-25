@@ -10,6 +10,7 @@
  * - FloodFillTool.ts - Flood fill and click-to-segment (e.g. magic wand)
  */
 
+import { drawEllipse } from './ShapeTool'
 import { log } from '@/logger'
 import { decodeRLE } from '@/drawing'
 
@@ -46,6 +47,26 @@ export interface DrawPointParams {
     penSize: number
     /** Current slice orientation (-1, 0=axial, 1=coronal, 2=sagittal) */
     penAxCorSag: number
+}
+
+/**
+ * Parameters for drawing a 3D sphere
+ */
+export interface DrawSphereParams {
+    /** X coordinate of sphere center in voxel space */
+    x: number
+    /** Y coordinate of sphere center in voxel space */
+    y: number
+    /** Z coordinate of sphere center in voxel space */
+    z: number
+    /** Pen value (color index) to draw */
+    penValue: number
+    /** Drawing bitmap to modify */
+    drawBitmap: Uint8Array
+    /** Volume dimensions [unused, dimX, dimY, dimZ, ...] */
+    dims: number[]
+    /** Sphere radius in voxels, if an array, then [rx, ry, rz] with the ellipsoid: (x/rx)^2 + (y/ry)^2 + (z/rz)^2 < 1 */
+    radius: number | [number, number, number]
 }
 
 /**
@@ -195,6 +216,36 @@ export function drawPoint(params: DrawPointParams): void {
             }
         }
     }
+}
+
+/**
+ * Draw a 3D sphere in the drawing bitmap.
+ * Fills all voxels within the specified radius from the center point.
+ * This function delegates to drawEllipse from ShapeTool.ts.
+ *
+ * @param params - Parameters for drawing the sphere
+ */
+export function drawSphere(params: DrawSphereParams): void {
+    const { x: centerX, y: centerY, z: centerZ, penValue, drawBitmap, dims, radius } = params
+
+    console.log('drawSphere called:', { centerX, centerY, centerZ, radius, penValue, dims })
+
+    const [rx, ry, rz] = typeof radius === 'number' ? [radius, radius, radius] : radius
+
+    // Define bounding box corners for the ellipse
+    const ptA = [centerX - rx, centerY - ry, centerZ - rz]
+    const ptB = [centerX + rx, centerY + ry, centerZ + rz]
+
+    // Use drawEllipse with penSize=1 and penAxCorSag=-1 for 3D drawing
+    drawEllipse({
+        ptA,
+        ptB,
+        penValue,
+        drawBitmap,
+        dims,
+        penSize: 1,
+        penAxCorSag: -1
+    })
 }
 
 // ============================================================================
