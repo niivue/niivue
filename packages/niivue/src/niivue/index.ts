@@ -6972,7 +6972,8 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             TEXTURE7: this.gl.TEXTURE7
         })
 
-        // Bind temporary 3D texture
+        // Bind temporary 3D texture to the correct texture unit
+        this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE9_ORIENT)
         this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
 
         // Render to output texture
@@ -9742,10 +9743,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             this.draw2DMain(ltwh, axCorSag, customMM)
         } else {
             // inset as padded in tile
-            padLeftTop[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]))
-            padLeftTop[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]))
-            ltwh[0] += padLeftTop[0]
-            ltwh[1] += padLeftTop[1]
+            // issue1554 shift tile: do not change global padLeftTop
+            const padLeftTopX = [NaN, NaN]
+            padLeftTopX[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]))
+            padLeftTopX[1] = Math.floor(0.5 * (ltwh[3] - imageWidthHeight[1]))
+            ltwh[0] += padLeftTopX[0]
+            ltwh[1] += padLeftTopX[1]
             ltwh[2] = imageWidthHeight[0]
             ltwh[3] = imageWidthHeight[1]
             this.draw2DMain(ltwh, axCorSag, customMM)
