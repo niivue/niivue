@@ -25,6 +25,8 @@
         <option value="10">Filled Green</option>
         <option value="11">Filled Blue</option>
         <option value="12">Erase Selected Cluster</option>
+        <option value="13">Red (3D)</option>
+        <option value="14">Erase (3D)</option>
       </select>
       <button id="leftBtn">left</button>
       <button id="rightBtn">right</button>
@@ -36,6 +38,16 @@
       <button id="saveBtn">save drawing</button>
       <button id="undoBtn">undo</button>
       <button id="growcutBtn">grow cut</button>
+      <label for="penSizeSlider">pen size</label>
+      <input
+        type="range"
+        min="1"
+        max="20"
+        value="3"
+        class="slider"
+        id="penSizeSlider"
+      />
+      &nbsp;
       <label for="opacitySlider">drawing opacity</label>
       <input
         type="range"
@@ -77,6 +89,9 @@
 </html>
 <script type="module" async>
   import * as niivue from '../dist/index.js'
+  penSizeSlider.oninput = function () {
+    nv1.opts.penSize = parseInt(this.value)
+  }
   opacitySlider.oninput = function () {
     nv1.setDrawOpacity(this.value * 0.01)
   }
@@ -90,10 +105,24 @@
   penSelect.onchange = function () {
     const mode = parseInt(this.value)
     nv1.setDrawingEnabled(mode >= 0)
-    if (mode >= 0) nv1.setPenValue(mode & 7, mode > 7)
-    if (mode === 12)
-      //erase selected cluster
+    if (mode === 12) {
+      // Erase selected cluster
       nv1.setPenValue(-0)
+    } else if (mode === 13) {
+      // Red (3D)
+      nv1.opts.penType = niivue.PEN_TYPE.PEN_BALL_3D
+      nv1.setPenValue(1, false)
+    } else if (mode === 14) {
+      // Erase (3D)
+      nv1.opts.penType = niivue.PEN_TYPE.PEN_BALL_3D
+      nv1.setPenValue(0, false)
+      console.log('penType set to:', nv1.opts.penType, 'penSize:', nv1.opts.penSize)
+    } else if (mode >= 0) {
+      // Standard 2D pen modes
+      console.log('Setting standard PEN mode')
+      nv1.opts.penType = niivue.PEN_TYPE.PEN
+      nv1.setPenValue(mode & 7, mode > 7)
+    }
   }
   leftBtn.onclick = function () {
     nv1.moveCrosshairInVox(-1, 0, 0)
