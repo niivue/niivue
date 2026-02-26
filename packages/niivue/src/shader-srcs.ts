@@ -559,8 +559,8 @@ export const fragRenderGradientShader =
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
 			grad.rgb = grad.rgb*2.0 - 1.0;
-			float gLen = length(grad.rgb);
-			grad.rgb = gLen > 0.001 ? grad.rgb / gLen : vec3(0.0, 0.0, 1.0);
+			if (grad.a > 0.0)
+				grad.rgb = normalize(grad.rgb);
 			//if (grad.a < prevGrad.a)
 			//	grad.rgb = prevGrad.rgb;
 			//prevGrad = grad;
@@ -608,8 +608,8 @@ export const fragRenderGradientValuesShader =
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
 			grad.rgb = grad.rgb*2.0 - 1.0;
-			float gLen = length(grad.rgb);
-			grad.rgb = gLen > 0.001 ? grad.rgb / gLen : vec3(0.0, 0.0, 1.0);
+			if (grad.a > 0.0)
+				grad.rgb = normalize(grad.rgb);
 			colorSample.rgb = abs(grad.rgb);
 			if (firstHit.a > len)
 				firstHit = samplePos;
