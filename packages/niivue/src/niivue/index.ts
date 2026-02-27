@@ -12288,9 +12288,6 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             this.matCapTexture,
             (widthHeightRatio) => {
                 this.bmpTextureWH = widthHeightRatio
-            },
-            () => {
-                this.drawScene()
             }
         )
 
@@ -12302,7 +12299,9 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         } else if (textureNum === 5) {
             this.matCapTexture = texture
         }
-
+        
+        this.drawScene()
+        
         return texture
     }
 
