@@ -6175,7 +6175,29 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
             const glyph = this.fontMetrics.glyphs[i]
             const id = glyph.unicode
-            this.fontMets.mets[id].xadv = glyph.advance
+
+            if (glyph.advance === undefined) {
+                console.warn(`glyph.advance is undefined for glyph ${glyph.unicode}`)
+                // continue
+                debugger;
+            }
+            else{
+
+                if(!this.fontMets.mets[id]) {
+                    console.log("Found the bug! ID is:", id,  "Glyph is:", glyph)
+                    debugger;
+                    this.fontMets.mets[id] = {
+                        xadv: 0,
+                        uv_lbwh: [0, 0, 0, 0],
+                        lbwh: [0, 0, 0, 0]
+                    }
+                }
+
+
+                this.fontMets.mets[id].xadv = glyph.advance
+            }
+
+            
             if (glyph.planeBounds === undefined) {
                 continue
             }
