@@ -6162,14 +6162,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             size: this.fontMetrics.atlas.size,
             mets: {}
         }
-        for (let id = 0; id < 256; id++) {
-            // clear ASCII codes 0..256
-            this.fontMets.mets[id] = {
-                xadv: 0,
-                uv_lbwh: [0, 0, 0, 0],
-                lbwh: [0, 0, 0, 0]
-            }
-        }
+        
         const scaleW = this.fontMetrics.atlas.width
         const scaleH = this.fontMetrics.atlas.height
         for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
