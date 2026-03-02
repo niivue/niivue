@@ -35794,7 +35794,9 @@ var fragRenderGradientShader = kFragRenderGradientDecl + kRenderFunc + kRenderIn
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
-			grad.rgb = normalize(grad.rgb*2.0 - 1.0);
+			grad.rgb = grad.rgb*2.0 - 1.0;
+			if (grad.a > 0.0)
+				grad.rgb = normalize(grad.rgb);
 			//if (grad.a < prevGrad.a)
 			//	grad.rgb = prevGrad.rgb;
 			//prevGrad = grad;
@@ -35835,7 +35837,10 @@ var fragRenderGradientValuesShader = kFragRenderGradientDecl + kRenderFunc + kRe
 		vec4 colorSample = texture(volume, samplePos.xyz);
 		if (colorSample.a >= 0.0) {
 			vec4 grad = texture(gradient, samplePos.xyz);
-			colorSample.rgb = abs(normalize(grad.rgb*2.0 - 1.0));
+			grad.rgb = grad.rgb*2.0 - 1.0;
+			if (grad.a > 0.0)
+				grad.rgb = normalize(grad.rgb);
+			colorSample.rgb = abs(grad.rgb);
 			if (firstHit.a > len)
 				firstHit = samplePos;
 			backNearest = min(backNearest, samplePos.a);
@@ -37454,7 +37459,8 @@ void main(void) {
 ${kGradientMagnitude}
 	// 0.04242020977371934 = 1/(log2(3*8) - log2(1/(255**2*8))) // 3*8 -> max for 1st order gradient
 	gradientSample.a *= 0.04242020977371934;
-  gradientSample.rgb = normalize(gradientSample.rgb);
+  float gradLen = length(gradientSample.rgb);
+  gradientSample.rgb = gradLen > 0.001 ? gradientSample.rgb / gradLen : vec3(0.0);
   gradientSample.rgb = (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
 }`;
@@ -37495,7 +37501,8 @@ void main(void) {
   gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
 ${kGradientMagnitude}
 	gradientSample.a *= 0.0325;
-  gradientSample.rgb = normalize(gradientSample.rgb);
+  float gradLen = length(gradientSample.rgb);
+  gradientSample.rgb = gradLen > 0.001 ? gradientSample.rgb / gradLen : vec3(0.0);
   gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
   FragColor = gradientSample;
 }`;
@@ -39316,7 +39323,7 @@ function gradientGL(params) {
   gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1]);
   gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2]);
   gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3]);
-  for (let i = 0; i < hdr.dims[3] - 1; i++) {
+  for (let i = 0; i < hdr.dims[3]; i++) {
     const coordZ = 1 / hdr.dims[3] * (i + 0.5);
     gl.uniform1f(blurShader.uniforms.coordZ, coordZ);
     gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i);
@@ -39347,7 +39354,7 @@ function gradientGL(params) {
     gl.deleteTexture(gradientTexture);
   }
   gradientTexture = rgbaTex2(gradientTexture, TEXTURE6_GRADIENT, hdr.dims);
-  for (let i = 0; i < hdr.dims[3] - 1; i++) {
+  for (let i = 0; i < hdr.dims[3]; i++) {
     const coordZ = 1 / hdr.dims[3] * (i + 0.5);
     gl.uniform1f(sobelShader.uniforms.coordZ, coordZ);
     gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gradientTexture, 0, i);
