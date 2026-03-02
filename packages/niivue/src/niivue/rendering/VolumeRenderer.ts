@@ -162,7 +162,7 @@ export function gradientGL(params: GradientGLParams): WebGLTexture {
     gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
     gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2])
     gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3])
-    for (let i = 0; i < hdr.dims[3] - 1; i++) {
+    for (let i = 0; i < hdr.dims[3]; i++) {
         const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
         gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
         gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, tempTex3D, 0, i)
@@ -193,7 +193,7 @@ export function gradientGL(params: GradientGLParams): WebGLTexture {
         gl.deleteTexture(gradientTexture)
     }
     gradientTexture = rgbaTex(gradientTexture, TEXTURE6_GRADIENT, hdr.dims)
-    for (let i = 0; i < hdr.dims[3] - 1; i++) {
+    for (let i = 0; i < hdr.dims[3]; i++) {
         const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
         gl.uniform1f(sobelShader.uniforms.coordZ, coordZ)
         gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gradientTexture, 0, i)
