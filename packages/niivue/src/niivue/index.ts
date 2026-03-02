@@ -5593,6 +5593,29 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
+     * Draw a 3D sphere in the drawing bitmap in voxel coordinates
+     * @internal
+     */
+    private drawSphere(x: number, y: number, z: number, radius: number, penValue: number): void {
+        if (!this.drawBitmap) {
+            throw new Error('drawBitmap not set')
+        }
+        if (!this.back?.dims) {
+            throw new Error('back.dims not set')
+        }
+
+        PenTool.drawSphere({
+            x,
+            y,
+            z,
+            radius,
+            penValue,
+            drawBitmap: this.drawBitmap,
+            dims: this.back.dims
+        })
+    }
+
+    /**
      * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
      *
      * @param seedXYZ -  voxel index of the seed voxel in the mask array.
@@ -8060,6 +8083,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                         if (this.opts.isFilledPen) {
                             this.drawPenFillPts.push(pt)
                         }
+                        this.refreshDrawing(false, false) // Update GPU texture
+                    } else if (this.opts.penType === PEN_TYPE.PEN_BALL_3D) {
+                        this.drawPenLocation = pt
+
+                        // 3D ball or 3D eraser drawing - draws a sphere at the clicked location
+                        this.drawSphere(pt[0], pt[1], pt[2], this.opts.penSize, this.opts.penValue)
                         this.refreshDrawing(false, false) // Update GPU texture
                     } else if (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE) {
                         // Rectangle or ellipse drawing
