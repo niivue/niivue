@@ -2,6 +2,13 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { join } from 'path'
 import type { CLIOptions, ResolvedInput } from '../common/cliTypes.js'
+import type {
+  BidsConvertAndClassifyPayload,
+  BidsConvertAndClassifyResult,
+  BidsWritePayload,
+  BidsWriteResult,
+  BidsValidationResult
+} from '../common/bidsTypes.js'
 
 const api = {
   ...electronAPI,
@@ -93,6 +100,19 @@ const api = {
     bids?: 'y' | 'n'
   }): Promise<{ code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]> => {
     return ipcRenderer.invoke('headless:dcm2niix-convert', options)
+  },
+  // BIDS wizard methods
+  bidsConvertAndClassify: (payload: BidsConvertAndClassifyPayload): Promise<BidsConvertAndClassifyResult> => {
+    return ipcRenderer.invoke('bids:convert-and-classify', payload)
+  },
+  bidsValidate: (payload: BidsWritePayload): Promise<BidsValidationResult> => {
+    return ipcRenderer.invoke('bids:validate', payload)
+  },
+  bidsWrite: (payload: BidsWritePayload): Promise<BidsWriteResult> => {
+    return ipcRenderer.invoke('bids:write', payload)
+  },
+  bidsSelectOutputDir: (): Promise<string | null> => {
+    return ipcRenderer.invoke('bids:select-output-dir')
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

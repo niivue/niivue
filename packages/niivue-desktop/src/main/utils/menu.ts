@@ -509,6 +509,12 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
               )
             }
           }
+        },
+        {
+          label: 'Convert DICOM to BIDS...',
+          click: (): void => {
+            win.webContents.send('bids:open-wizard')
+          }
         }
       ]
     },

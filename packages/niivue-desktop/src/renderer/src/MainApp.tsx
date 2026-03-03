@@ -12,6 +12,7 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { layouts } from '../../common/layouts.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
+import { BidsWizard } from './components/BidsWizard/BidsWizard.js'
 import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
@@ -1244,6 +1245,7 @@ function MainApp(): JSX.Element {
         setEditMode={setLabelEditMode}
       />
       <DicomImportDialog />
+      <BidsWizard />
       <SegmentationDialog
         open={segmentationRunning}
         progress={segmentationProgress}
