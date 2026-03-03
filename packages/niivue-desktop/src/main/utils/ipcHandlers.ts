@@ -14,6 +14,7 @@ import path from 'path'
 import { convertSeriesByNumber } from './runDcm2niix.js'
 import type { ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
 import { openReplaceVolumeFileDialog } from './openReplaceVolumeFileDialog.js'
+import { registerBidsIpcHandlers } from './bidsIpcHandlers.js'
 
 const isDev = !app.isPackaged
 const RESOURCES_DIR = isDev
@@ -21,6 +22,7 @@ const RESOURCES_DIR = isDev
   : path.join(process.resourcesPath)
 
 export const registerIpcHandlers = (): void => {
+  registerBidsIpcHandlers()
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
   ipcMain.handle('loadFromFile', loadFromFileHandler)
   ipcMain.handle('loadStandard', loadStandardHandler)

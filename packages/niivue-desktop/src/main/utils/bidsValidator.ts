@@ -1,0 +1,120 @@
+import type { BidsSeriesMapping, BidsDatasetConfig, BidsValidationResult, BidsValidationIssue } from '../../common/bidsTypes.js'
+import { generateBidsFilename } from './bidsWriter.js'
+
+// BIDS naming pattern: sub-<label>[_ses-<label>][_task-<label>][_acq-<label>][_run-<index>]_<suffix>
+const BIDS_FILENAME_RE = /^sub-[a-zA-Z0-9]+(_ses-[a-zA-Z0-9]+)?(_task-[a-zA-Z0-9]+)?(_acq-[a-zA-Z0-9]+)?(_run-[0-9]+)?_[a-zA-Z0-9]+$/
+
+const REQUIRED_TASK_DATATYPES = new Set(['func'])
+
+export function validateProposedDataset(
+  config: BidsDatasetConfig,
+  mappings: BidsSeriesMapping[]
+): BidsValidationResult {
+  const errors: BidsValidationIssue[] = []
+  const warnings: BidsValidationIssue[] = []
+  const included = mappings.filter((m) => !m.excluded)
+
+  // Check dataset config
+  if (!config.name || config.name.trim() === '') {
+    errors.push({ severity: 'error', message: 'Dataset name is required' })
+  }
+
+  if (!config.outputDir || config.outputDir.trim() === '') {
+    errors.push({ severity: 'error', message: 'Output directory is required' })
+  }
+
+  if (included.length === 0) {
+    errors.push({ severity: 'error', message: 'No series selected for conversion' })
+    return { valid: false, errors, warnings }
+  }
+
+  // Check each mapping
+  for (const m of included) {
+    const filename = generateBidsFilename(m)
+
+    // Validate filename format
+    if (!BIDS_FILENAME_RE.test(filename)) {
+      errors.push({
+        severity: 'error',
+        message: `Invalid BIDS filename: "${filename}"`,
+        file: filename
+      })
+    }
+
+    // Subject label required
+    if (!m.subject || m.subject.trim() === '') {
+      errors.push({
+        severity: 'error',
+        message: `Subject label is required for series "${m.seriesDescription}"`,
+        file: filename
+      })
+    }
+
+    // Subject label must be alphanumeric
+    if (m.subject && !/^[a-zA-Z0-9]+$/.test(m.subject)) {
+      errors.push({
+        severity: 'error',
+        message: `Subject label must be alphanumeric: "${m.subject}"`,
+        file: filename
+      })
+    }
+
+    // Session label must be alphanumeric if provided
+    if (m.session && !/^[a-zA-Z0-9]+$/.test(m.session)) {
+      errors.push({
+        severity: 'error',
+        message: `Session label must be alphanumeric: "${m.session}"`,
+        file: filename
+      })
+    }
+
+    // Task label required for func
+    if (REQUIRED_TASK_DATATYPES.has(m.datatype) && m.suffix === 'bold' && !m.task) {
+      errors.push({
+        severity: 'error',
+        message: `Task label is required for ${m.datatype}/${m.suffix}: "${m.seriesDescription}"`,
+        file: filename
+      })
+    }
+
+    // Task label must be alphanumeric
+    if (m.task && !/^[a-zA-Z0-9]+$/.test(m.task)) {
+      errors.push({
+        severity: 'error',
+        message: `Task label must be alphanumeric: "${m.task}"`,
+        file: filename
+      })
+    }
+
+    // Confidence warnings
+    if (m.confidence === 'low') {
+      warnings.push({
+        severity: 'warning',
+        message: `Low confidence classification for "${m.seriesDescription}" — please verify`,
+        file: filename
+      })
+    }
+  }
+
+  // Check for duplicate filenames
+  const filenames = new Map<string, number>()
+  for (const m of included) {
+    const filename = generateBidsFilename(m)
+    filenames.set(filename, (filenames.get(filename) || 0) + 1)
+  }
+  for (const [name, count] of filenames) {
+    if (count > 1) {
+      errors.push({
+        severity: 'error',
+        message: `Duplicate BIDS filename: "${name}" appears ${count} times`,
+        file: name
+      })
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
+  }
+}

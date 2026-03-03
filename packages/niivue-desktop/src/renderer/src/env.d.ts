@@ -2,6 +2,13 @@
 
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { CLIOptions, ResolvedInput } from '../../common/cliTypes.js'
+import type {
+  BidsConvertAndClassifyPayload,
+  BidsConvertAndClassifyResult,
+  BidsWritePayload,
+  BidsWriteResult,
+  BidsValidationResult
+} from '../../common/bidsTypes.js'
 
 declare global {
   interface Window {
@@ -50,6 +57,11 @@ declare global {
         compress?: 'y' | 'n'
         bids?: 'y' | 'n'
       }) => Promise<{ code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]>
+      // BIDS wizard
+      bidsConvertAndClassify: (payload: BidsConvertAndClassifyPayload) => Promise<BidsConvertAndClassifyResult>
+      bidsValidate: (payload: BidsWritePayload) => Promise<BidsValidationResult>
+      bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
+      bidsSelectOutputDir: () => Promise<string | null>
     }
   }
 }

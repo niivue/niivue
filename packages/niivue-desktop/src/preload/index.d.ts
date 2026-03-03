@@ -1,4 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type {
+  BidsConvertAndClassifyPayload,
+  BidsConvertAndClassifyResult,
+  BidsWritePayload,
+  BidsWriteResult,
+  BidsValidationResult
+} from '../common/bidsTypes.js'
 
 declare global {
   interface Window {
@@ -21,6 +28,11 @@ declare global {
         settings: any | null
       } | null>
       selectColormapFile: () => Promise<string | null>
+      // BIDS wizard
+      bidsConvertAndClassify: (payload: BidsConvertAndClassifyPayload) => Promise<BidsConvertAndClassifyResult>
+      bidsValidate: (payload: BidsWritePayload) => Promise<BidsValidationResult>
+      bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
+      bidsSelectOutputDir: () => Promise<string | null>
     }
     api: unknown
   }
