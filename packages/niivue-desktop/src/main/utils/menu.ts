@@ -619,6 +619,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
                 win.webContents.send('open-right-panel-tab', 'niimath')
               }
             },
+            {
+              label: 'BIDS',
+              accelerator: 'CommandOrControl+7',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'bids')
+              }
+            },
             { type: 'separator' },
             {
               label: 'Hide Panel',

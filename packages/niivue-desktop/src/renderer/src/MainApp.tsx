@@ -19,6 +19,7 @@ import { brainchopService } from './services/brainchop/index.js'
 import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
+import type { BidsSeriesMapping } from '../../common/bidsTypes.js'
 
 const electron = window.electron
 
@@ -85,6 +86,9 @@ function MainApp(): JSX.Element {
   const [extractSubvolumeEnabled, setExtractSubvolumeEnabled] = useState(false)
   const [selectedExtractLabels, setSelectedExtractLabels] = useState<Set<number>>(new Set())
   const availableModels = brainchopService.getAvailableModels()
+
+  // BIDS panel state
+  const [bidsMappings, setBidsMappings] = useState<BidsSeriesMapping[]>([])
   // modelsVersion is used to trigger re-render when user adds models via wizard
   void modelsVersion
 
@@ -1230,6 +1234,7 @@ function MainApp(): JSX.Element {
               onExtractSubvolumeChange={setExtractSubvolumeEnabled}
               selectedExtractLabels={selectedExtractLabels}
               onSelectedExtractLabelsChange={setSelectedExtractLabels}
+              bidsMappings={bidsMappings}
             />
           </div>
         )}
@@ -1245,7 +1250,25 @@ function MainApp(): JSX.Element {
         setEditMode={setLabelEditMode}
       />
       <DicomImportDialog />
-      <BidsWizard />
+      <BidsWizard
+        onConversionComplete={async (mappings) => {
+          setBidsMappings(mappings)
+          // Load the first non-excluded NIfTI into the viewer
+          const first = mappings.find((m) => !m.excluded && m.niftiPath)
+          if (first) {
+            const { nvRef, setVolumes } = await getTarget()
+            const nv = nvRef.current!
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', first.niftiPath)
+            const vol = await NVImage.loadFromBase64({ base64, name: first.niftiPath })
+            nv.addVolume(vol)
+            setVolumes([...nv.volumes])
+            nv.drawScene()
+          }
+          // Open BIDS panel
+          setRightPanelTab('bids')
+          setRightPanelOpen(true)
+        }}
+      />
       <SegmentationDialog
         open={segmentationRunning}
         progress={segmentationProgress}

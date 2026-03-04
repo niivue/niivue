@@ -54,7 +54,8 @@ function classifyByDescription(desc: string): Classification | null {
         if (/rest(?:ing)?/i.test(desc)) {
           task = 'rest'
         } else {
-          const taskMatch = /task[-_]?(\w+)/i.exec(desc)
+          // Match task label: only capture alphanumeric chars (stop at _ or -)
+          const taskMatch = /task[-_]?([a-zA-Z0-9]+)/i.exec(desc)
           if (taskMatch) {
             task = taskMatch[1].toLowerCase()
           }

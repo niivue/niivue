@@ -5,7 +5,9 @@ import { VolumeTab } from './VolumeTab.js'
 import { AtlasTab } from './AtlasTab.js'
 import { SegmentationPanel } from './SegmentationPanel.js'
 import { NiimathToolbar } from './NiimathToolbar.js'
+import { BidsPanel } from './BidsPanel.js'
 import type { ModelInfo } from '../services/brainchop/types.js'
+import type { BidsSeriesMapping } from '../../../common/bidsTypes.js'
 
 interface RightPanelProps {
   activeTab: string
@@ -22,6 +24,7 @@ interface RightPanelProps {
   onExtractSubvolumeChange: (enabled: boolean) => void
   selectedExtractLabels: Set<number>
   onSelectedExtractLabelsChange: (labels: Set<number>) => void
+  bidsMappings: BidsSeriesMapping[]
 }
 
 const tabs = [
@@ -92,6 +95,17 @@ const tabs = [
         <line x1="16" y1="3" x2="14" y2="21" />
       </svg>
     )
+  },
+  {
+    id: 'bids',
+    title: 'BIDS',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        <line x1="12" y1="11" x2="12" y2="17" />
+        <line x1="9" y1="14" x2="15" y2="14" />
+      </svg>
+    )
   }
 ]
 
@@ -109,7 +123,8 @@ export function RightPanel({
   extractSubvolume,
   onExtractSubvolumeChange,
   selectedExtractLabels,
-  onSelectedExtractLabelsChange
+  onSelectedExtractLabelsChange,
+  bidsMappings
 }: RightPanelProps): JSX.Element {
   const activeTitle = tabs.find((t) => t.id === activeTab)?.title ?? ''
 
@@ -160,6 +175,9 @@ export function RightPanel({
           />
         )}
         {activeTab === 'niimath' && <NiimathToolbar modeMap={modeMap} indexMap={indexMap} />}
+        {activeTab === 'bids' && (
+          <BidsPanel mappings={bidsMappings} />
+        )}
       </div>
     </div>
   )

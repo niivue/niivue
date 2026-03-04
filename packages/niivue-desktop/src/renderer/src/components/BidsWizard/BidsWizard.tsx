@@ -13,6 +13,10 @@ import { StepValidation } from './StepValidation.js'
 
 const electron = window.electron
 
+interface BidsWizardProps {
+  onConversionComplete?: (mappings: BidsSeriesMapping[]) => void
+}
+
 const stepLabels = ['Source', 'Convert', 'Classify', 'Subject', 'Metadata', 'Validate']
 
 const defaultConfig: BidsDatasetConfig = {
@@ -23,7 +27,7 @@ const defaultConfig: BidsDatasetConfig = {
   outputDir: ''
 }
 
-export function BidsWizard(): JSX.Element {
+export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Element {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +89,7 @@ export function BidsWizard(): JSX.Element {
   const handleConversionComplete = (newMappings: BidsSeriesMapping[]): void => {
     setMappings(newMappings)
     setConverted(true)
+    onConversionComplete?.(newMappings)
   }
 
   const handleConversionError = (err: string): void => {
