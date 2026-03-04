@@ -1251,22 +1251,38 @@ function MainApp(): JSX.Element {
       />
       <DicomImportDialog />
       <BidsWizard
+        nv={selected?.nvRef.current ?? null}
         onConversionComplete={async (mappings) => {
           setBidsMappings(mappings)
-          // Load the first non-excluded NIfTI into the viewer
-          const first = mappings.find((m) => !m.excluded && m.niftiPath)
-          if (first) {
-            const { nvRef, setVolumes } = await getTarget()
-            const nv = nvRef.current!
-            const base64 = await electron.ipcRenderer.invoke('loadFromFile', first.niftiPath)
-            const vol = await NVImage.loadFromBase64({ base64, name: first.niftiPath })
-            nv.addVolume(vol)
-            setVolumes([...nv.volumes])
-            nv.drawScene()
-          }
-          // Open BIDS panel
           setRightPanelTab('bids')
           setRightPanelOpen(true)
+        }}
+        onLoadVolume={async (niftiPath) => {
+          const { nvRef, setVolumes } = await getTarget()
+          const nv = nvRef.current!
+          nv.volumes = []
+          const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+          const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+          nv.addVolume(vol)
+          setVolumes([...nv.volumes])
+          nv.drawScene()
+        }}
+        onLoadWithOverlay={async (basePath, overlayPath) => {
+          const { nvRef, setVolumes } = await getTarget()
+          const nv = nvRef.current!
+          nv.volumes = []
+          const [baseB64, overlayB64] = await Promise.all([
+            electron.ipcRenderer.invoke('loadFromFile', basePath) as Promise<string>,
+            electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
+          ])
+          const baseVol = await NVImage.loadFromBase64({ base64: baseB64, name: basePath })
+          const overlayVol = await NVImage.loadFromBase64({ base64: overlayB64, name: overlayPath })
+          overlayVol.colormap = 'red'
+          overlayVol.opacity = 0.5
+          nv.addVolume(baseVol)
+          nv.addVolume(overlayVol)
+          setVolumes([...nv.volumes])
+          nv.drawScene()
         }}
       />
       <SegmentationDialog

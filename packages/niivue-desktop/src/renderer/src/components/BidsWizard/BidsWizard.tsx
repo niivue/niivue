@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Button, Text, Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
+import type { Niivue } from '@niivue/niivue'
 import type { DicomSeries } from '../../../../common/dcm2niixTypes.js'
 import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics } from '../../../../common/bidsTypes.js'
 import { StepSelectSource } from './StepSelectSource.js'
 import { StepConversion } from './StepConversion.js'
+import { StepSkullStrip } from './StepSkullStrip.js'
 import { StepClassification } from './StepClassification.js'
 import { StepSubjectSession } from './StepSubjectSession.js'
 import { StepMetadata } from './StepMetadata.js'
@@ -14,10 +16,13 @@ import { StepValidation } from './StepValidation.js'
 const electron = window.electron
 
 interface BidsWizardProps {
+  nv: Niivue | null
   onConversionComplete?: (mappings: BidsSeriesMapping[]) => void
+  onLoadVolume?: (niftiPath: string) => Promise<void>
+  onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
 }
 
-const stepLabels = ['Source', 'Convert', 'Classify', 'Subject', 'Metadata', 'Validate']
+const stepLabels = ['Source', 'Convert', 'Skull Strip', 'Classify', 'Subject', 'Metadata', 'Validate']
 
 const defaultConfig: BidsDatasetConfig = {
   name: '',
@@ -27,7 +32,7 @@ const defaultConfig: BidsDatasetConfig = {
   outputDir: ''
 }
 
-export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Element {
+export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithOverlay }: BidsWizardProps): JSX.Element {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -125,10 +130,12 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
       case 1:
         return converted
       case 2:
-        return mappings.some((m) => !m.excluded)
+        return true // Skull strip is optional
       case 3:
-        return subject.trim() !== '' && /^[a-zA-Z0-9]+$/.test(subject)
+        return mappings.some((m) => !m.excluded)
       case 4:
+        return subject.trim() !== '' && /^[a-zA-Z0-9]+$/.test(subject)
+      case 5:
         return config.name.trim() !== '' && config.outputDir.trim() !== ''
       default:
         return true
@@ -212,13 +219,22 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
                   />
                 )}
                 {step === 2 && (
+                  <StepSkullStrip
+                    mappings={mappings}
+                    onMappingsUpdate={setMappings}
+                    nv={nv}
+                    onLoadVolume={onLoadVolume}
+                    onLoadWithOverlay={onLoadWithOverlay}
+                  />
+                )}
+                {step === 3 && (
                   <StepClassification
                     mappings={currentMappings}
                     onUpdateMapping={handleUpdateMapping}
                     datasetName={config.name}
                   />
                 )}
-                {step === 3 && (
+                {step === 4 && (
                   <StepSubjectSession
                     subject={subject}
                     setSubject={setSubject}
@@ -229,13 +245,13 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
                     setDemographics={setDemographics}
                   />
                 )}
-                {step === 4 && (
+                {step === 5 && (
                   <StepMetadata
                     config={config}
                     onUpdateConfig={updateConfig}
                   />
                 )}
-                {step === 5 && (
+                {step === 6 && (
                   <StepValidation
                     config={config}
                     mappings={currentMappings}
@@ -253,12 +269,12 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
                 >
                   {step === 0 ? 'Cancel' : 'Back'}
                 </Button>
-                {step < 5 && (
+                {step < 6 && (
                   <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
                     Next
                   </Button>
                 )}
-                {step === 5 && (
+                {step === 6 && (
                   <Button variant="soft" color="gray" onClick={handleClose}>
                     Close
                   </Button>
