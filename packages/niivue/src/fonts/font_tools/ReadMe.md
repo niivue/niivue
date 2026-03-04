@@ -8,4 +8,6 @@
 Check out online demo: https://niivue.com/demos/features/web.extras_zh.html
 
 or your can see the source code here: 
-https://github.com/niivue/niivue/blob/main/packages/niivue/demos/features/web.extras.html
+https://github.com/niivue/niivue/blob/main/packages/niivue/demos/features/web.extras_zh.html
+or
+https://github.com/aigigi/niivue/blob/fix-bugs/packages/niivue/demos/features/web.extras_zh.html
