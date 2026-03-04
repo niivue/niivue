@@ -1,11 +1,19 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { BidsSeriesMapping, BidsDatasetConfig } from '../../common/bidsTypes.js'
+import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics } from '../../common/bidsTypes.js'
 
 // Fields added by dcm2niix that should not appear in BIDS sidecars
 const INTERNAL_SIDECAR_FIELDS = new Set([
   'ConversionSoftware',
-  'ConversionSoftwareVersion'
+  'ConversionSoftwareVersion',
+  'PatientName',
+  'PatientID',
+  'PatientBirthDate',
+  'PatientAge',
+  'PatientSex',
+  'PatientWeight',
+  'SeriesInstanceUID',
+  'StudyInstanceUID'
 ])
 
 export function generateBidsFilename(mapping: BidsSeriesMapping): string {
@@ -79,13 +87,43 @@ function writeDatasetDescription(outputDir: string, config: BidsDatasetConfig): 
   fs.writeFileSync(path.join(outputDir, 'dataset_description.json'), JSON.stringify(desc, null, 2) + '\n')
 }
 
-function writeParticipantsTsv(outputDir: string, subjects: string[]): void {
+function writeParticipantsTsv(
+  outputDir: string,
+  subjects: string[],
+  demographics?: ParticipantDemographics
+): void {
   const unique = [...new Set(subjects)]
-  const lines = ['participant_id']
-  for (const sub of unique) {
-    lines.push(`sub-${sub}`)
+
+  // Determine which demographic columns have values
+  const cols: { key: keyof ParticipantDemographics; label: string }[] = [
+    { key: 'age', label: 'age' },
+    { key: 'sex', label: 'sex' },
+    { key: 'handedness', label: 'handedness' },
+    { key: 'group', label: 'group' }
+  ]
+  const activeCols = demographics
+    ? cols.filter((c) => demographics[c.key] !== '')
+    : []
+
+  // Write TSV
+  const header = ['participant_id', ...activeCols.map((c) => c.label)].join('\t')
+  const rows = unique.map((sub) => {
+    const values = [`sub-${sub}`, ...activeCols.map((c) => demographics![c.key])]
+    return values.join('\t')
+  })
+  fs.writeFileSync(path.join(outputDir, 'participants.tsv'), [header, ...rows].join('\n') + '\n')
+
+  // Write participants.json describing columns
+  if (activeCols.length > 0) {
+    const desc: Record<string, { Description: string; Units?: string; Levels?: Record<string, string> }> = {}
+    for (const c of activeCols) {
+      if (c.key === 'age') desc.age = { Description: 'Age of the participant', Units: 'years' }
+      else if (c.key === 'sex') desc.sex = { Description: 'Sex of the participant', Levels: { male: 'male', female: 'female', other: 'other' } }
+      else if (c.key === 'handedness') desc.handedness = { Description: 'Handedness of the participant', Levels: { left: 'left', right: 'right', ambidextrous: 'ambidextrous' } }
+      else if (c.key === 'group') desc.group = { Description: 'Group the participant belongs to' }
+    }
+    fs.writeFileSync(path.join(outputDir, 'participants.json'), JSON.stringify(desc, null, 2) + '\n')
   }
-  fs.writeFileSync(path.join(outputDir, 'participants.tsv'), lines.join('\n') + '\n')
 }
 
 function writeReadme(outputDir: string, config: BidsDatasetConfig): void {
@@ -118,7 +156,8 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
 
 export function writeDataset(
   config: BidsDatasetConfig,
-  mappings: BidsSeriesMapping[]
+  mappings: BidsSeriesMapping[],
+  demographics?: ParticipantDemographics
 ): { outputDir: string; filesCopied: number } {
   const outputDir = config.outputDir
 
@@ -128,7 +167,7 @@ export function writeDataset(
   // Write top-level files
   writeDatasetDescription(outputDir, config)
   const subjects = mappings.filter((m) => !m.excluded).map((m) => m.subject)
-  writeParticipantsTsv(outputDir, subjects)
+  writeParticipantsTsv(outputDir, subjects, demographics)
   writeReadme(outputDir, config)
   writeBidsIgnore(outputDir)
 

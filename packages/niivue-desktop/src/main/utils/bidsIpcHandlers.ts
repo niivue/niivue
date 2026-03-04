@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { spawnDcm2niix } from './runDcm2niix.js'
-import { classifyAll } from './bidsEngine.js'
+import { classifyAll, extractDemographics } from './bidsEngine.js'
 import { writeDataset } from './bidsWriter.js'
 import { validateProposedDataset } from './bidsValidator.js'
 import type {
@@ -25,6 +25,7 @@ export function registerBidsIpcHandlers(): void {
         const args = [
           '-f', '%p_%s',
           '-b', 'y',
+          '-ba', 'n',
           '-z', 'y',
           '-o', outDir,
           payload.dicomDir
@@ -43,7 +44,8 @@ export function registerBidsIpcHandlers(): void {
 
         const sidecarPaths = files.map((f) => path.join(outDir, f))
         const mappings = classifyAll(sidecarPaths)
-        return { success: true, mappings }
+        const demographics = extractDemographics(sidecarPaths[0])
+        return { success: true, mappings, demographics }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         return { success: false, error: msg }
@@ -73,7 +75,7 @@ export function registerBidsIpcHandlers(): void {
    */
   ipcMain.handle('bids:write', async (_evt, payload: BidsWritePayload) => {
     try {
-      const result = writeDataset(payload.config, payload.mappings)
+      const result = writeDataset(payload.config, payload.mappings, payload.demographics)
       return { success: true, outputDir: result.outputDir, filesCopied: result.filesCopied }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

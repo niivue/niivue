@@ -3,7 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { Button, Text, Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import type { DicomSeries } from '../../../../common/dcm2niixTypes.js'
-import type { BidsSeriesMapping, BidsDatasetConfig } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics } from '../../../../common/bidsTypes.js'
 import { StepSelectSource } from './StepSelectSource.js'
 import { StepConversion } from './StepConversion.js'
 import { StepClassification } from './StepClassification.js'
@@ -45,6 +45,11 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
   const [subject, setSubject] = useState('01')
   const [session, setSession] = useState('')
 
+  // Step 4: Demographics
+  const [demographics, setDemographics] = useState<ParticipantDemographics>({
+    age: '', sex: '', handedness: '', group: ''
+  })
+
   // Step 5: Metadata
   const [config, setConfig] = useState<BidsDatasetConfig>({ ...defaultConfig })
 
@@ -70,6 +75,7 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
     setSubject('01')
     setSession('')
     setConfig({ ...defaultConfig })
+    setDemographics({ age: '', sex: '', handedness: '', group: '' })
   }
 
   const handleClose = (): void => {
@@ -86,9 +92,12 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
     }))
   }
 
-  const handleConversionComplete = (newMappings: BidsSeriesMapping[]): void => {
+  const handleConversionComplete = (newMappings: BidsSeriesMapping[], newDemographics?: ParticipantDemographics): void => {
     setMappings(newMappings)
     setConverted(true)
+    if (newDemographics) {
+      setDemographics(newDemographics)
+    }
     onConversionComplete?.(newMappings)
   }
 
@@ -216,6 +225,8 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
                     session={session}
                     setSession={setSession}
                     mappings={currentMappings}
+                    demographics={demographics}
+                    setDemographics={setDemographics}
                   />
                 )}
                 {step === 4 && (
@@ -228,6 +239,7 @@ export function BidsWizard({ onConversionComplete }: BidsWizardProps): JSX.Eleme
                   <StepValidation
                     config={config}
                     mappings={currentMappings}
+                    demographics={demographics}
                   />
                 )}
               </div>

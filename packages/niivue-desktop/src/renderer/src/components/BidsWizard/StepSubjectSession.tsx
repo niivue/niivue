@@ -1,5 +1,5 @@
 import { Text } from '@radix-ui/themes'
-import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, ParticipantDemographics } from '../../../../common/bidsTypes.js'
 import { generateBidsFilename } from './bidsTreeUtil.js'
 
 interface StepSubjectSessionProps {
@@ -8,6 +8,8 @@ interface StepSubjectSessionProps {
   session: string
   setSession: (s: string) => void
   mappings: BidsSeriesMapping[]
+  demographics: ParticipantDemographics
+  setDemographics: (d: ParticipantDemographics) => void
 }
 
 export function StepSubjectSession({
@@ -15,7 +17,9 @@ export function StepSubjectSession({
   setSubject,
   session,
   setSession,
-  mappings
+  mappings,
+  demographics,
+  setDemographics
 }: StepSubjectSessionProps): JSX.Element {
   const included = mappings.filter((m) => !m.excluded)
 
@@ -25,6 +29,12 @@ export function StepSubjectSession({
     subject: subject || '01',
     session
   }))
+
+  const hasAutoDetected = demographics.age !== '' || demographics.sex !== ''
+
+  const updateField = (key: keyof ParticipantDemographics, value: string): void => {
+    setDemographics({ ...demographics, [key]: value })
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,6 +75,69 @@ export function StepSubjectSession({
           </div>
           <Text size="1" color="gray">Leave empty for single-session studies</Text>
         </label>
+      </div>
+
+      {/* Demographics */}
+      <div className="mt-2">
+        <Text size="1" weight="bold" className="block mb-2">
+          Participant Demographics
+        </Text>
+        {hasAutoDetected && (
+          <Text size="1" color="blue" className="block mb-2">
+            Some fields were auto-detected from DICOM headers.
+          </Text>
+        )}
+        <div className="flex gap-4">
+          <label className="flex flex-col gap-1 flex-1">
+            <Text size="1" weight="medium">Age (years)</Text>
+            <input
+              type="text"
+              value={demographics.age}
+              onChange={(e) => updateField('age', e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder=""
+              className="px-3 py-2 text-sm border border-gray-300 rounded"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 flex-1">
+            <Text size="1" weight="medium">Sex</Text>
+            <select
+              value={demographics.sex}
+              onChange={(e) => updateField('sex', e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded bg-white"
+            >
+              <option value="">--</option>
+              <option value="male">male</option>
+              <option value="female">female</option>
+              <option value="other">other</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 flex-1">
+            <Text size="1" weight="medium">Handedness</Text>
+            <select
+              value={demographics.handedness}
+              onChange={(e) => updateField('handedness', e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded bg-white"
+            >
+              <option value="">--</option>
+              <option value="left">left</option>
+              <option value="right">right</option>
+              <option value="ambidextrous">ambidextrous</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 flex-1">
+            <Text size="1" weight="medium">Group</Text>
+            <input
+              type="text"
+              value={demographics.group}
+              onChange={(e) => updateField('group', e.target.value)}
+              placeholder=""
+              className="px-3 py-2 text-sm border border-gray-300 rounded"
+            />
+          </label>
+        </div>
       </div>
 
       {/* Filename preview */}

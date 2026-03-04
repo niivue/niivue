@@ -3,7 +3,8 @@ import type {
   BidsDatatype,
   BidsSuffix,
   BidsSeriesMapping,
-  BidsConfidence
+  BidsConfidence,
+  ParticipantDemographics
 } from '../../common/bidsTypes.js'
 
 interface DcmSidecar {
@@ -191,6 +192,39 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     heuristicReason: reason,
     excluded: false
   }
+}
+
+export function extractDemographics(sidecarPath: string): ParticipantDemographics {
+  const demographics: ParticipantDemographics = { age: '', sex: '', handedness: '', group: '' }
+  try {
+    const raw = fs.readFileSync(sidecarPath, 'utf-8')
+    const sidecar = JSON.parse(raw)
+
+    // Parse PatientAge: DICOM format like "025Y", "030M", "003W", "010D" or plain number
+    if (sidecar.PatientAge) {
+      const ageStr = String(sidecar.PatientAge).trim()
+      const match = /^(\d+)([YMWD]?)$/i.exec(ageStr)
+      if (match) {
+        const num = parseInt(match[1], 10)
+        const unit = (match[2] || 'Y').toUpperCase()
+        if (unit === 'Y') demographics.age = String(num)
+        else if (unit === 'M') demographics.age = String(Math.round(num / 12))
+        else if (unit === 'W') demographics.age = String(Math.round(num / 52))
+        else if (unit === 'D') demographics.age = String(Math.round(num / 365))
+      }
+    }
+
+    // Parse PatientSex: "M" → "male", "F" → "female", "O" → "other"
+    if (sidecar.PatientSex) {
+      const s = String(sidecar.PatientSex).toUpperCase().trim()
+      if (s === 'M') demographics.sex = 'male'
+      else if (s === 'F') demographics.sex = 'female'
+      else if (s === 'O') demographics.sex = 'other'
+    }
+  } catch {
+    // If sidecar can't be read, return empty demographics
+  }
+  return demographics
 }
 
 export function classifyAll(sidecarPaths: string[]): BidsSeriesMapping[] {

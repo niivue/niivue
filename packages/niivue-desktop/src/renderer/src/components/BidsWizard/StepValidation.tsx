@@ -4,7 +4,8 @@ import type {
   BidsSeriesMapping,
   BidsDatasetConfig,
   BidsValidationResult,
-  BidsValidationIssue
+  BidsValidationIssue,
+  ParticipantDemographics
 } from '../../../../common/bidsTypes.js'
 
 const electron = window.electron
@@ -12,9 +13,10 @@ const electron = window.electron
 interface StepValidationProps {
   config: BidsDatasetConfig
   mappings: BidsSeriesMapping[]
+  demographics?: ParticipantDemographics
 }
 
-export function StepValidation({ config, mappings }: StepValidationProps): JSX.Element {
+export function StepValidation({ config, mappings, demographics }: StepValidationProps): JSX.Element {
   const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
   const [writing, setWriting] = useState(false)
   const [writeComplete, setWriteComplete] = useState(false)
@@ -27,7 +29,7 @@ export function StepValidation({ config, mappings }: StepValidationProps): JSX.E
     setValidationResult(null)
     try {
       // Write the dataset
-      const result = await electron.bidsWrite({ config, mappings })
+      const result = await electron.bidsWrite({ config, mappings, demographics })
       if (!result.success) {
         setWriteError(result.error || 'Write failed')
         setWriting(false)

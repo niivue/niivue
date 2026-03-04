@@ -86,6 +86,13 @@ export interface BidsValidationResult {
   warnings: BidsValidationIssue[]
 }
 
+export interface ParticipantDemographics {
+  age: string
+  sex: string
+  handedness: string
+  group: string
+}
+
 export interface BidsConvertAndClassifyPayload {
   dicomDir: string
   seriesNumbers: number[]
@@ -94,12 +101,14 @@ export interface BidsConvertAndClassifyPayload {
 export interface BidsConvertAndClassifyResult {
   success: boolean
   mappings?: BidsSeriesMapping[]
+  demographics?: ParticipantDemographics
   error?: string
 }
 
 export interface BidsWritePayload {
   config: BidsDatasetConfig
   mappings: BidsSeriesMapping[]
+  demographics?: ParticipantDemographics
 }
 
 export interface BidsWriteResult {
