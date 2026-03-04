@@ -2275,9 +2275,9 @@ void main(void) {
  vec4 xyz = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
 
  vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
- blurred.r = 2.0*(xOz.r +xOZ.r +xyO.r +xYO.r +xOO.r +XOz.r +XOZ.r +XyO.r +XYO.r +XOO.r) +xyz.r +xyZ.r +xYz.r +xYZ.r +Xyz.r +XyZ.r +XYz.r +XYZ.r;
- blurred.g = 2.0*(Oyz.r +OyZ.r +xyO.r +XyO.r +OyO.r +OYz.r +OYZ.r +xYO.r +XYO.r +OYO.r) +xyz.r +Xyz.r +xyZ.r +XyZ.r +xYz.r +XYz.r +xYZ.r +XYZ.r;
- blurred.b = 2.0*(Oyz.r +OYz.r +xOz.r +XOz.r +OOz.r +OyZ.r +OYZ.r +xOZ.r +XOZ.r +OOZ.r) +xyz.r +Xyz.r +xYz.r +XYz.r +xyZ.r +XyZ.r +XyZ.r +XYZ.r;
+ blurred.r = 2.0*(xOz.a +xOZ.a +xyO.a +xYO.a +xOO.a +XOz.a +XOZ.a +XyO.a +XYO.a +XOO.a) +xyz.a +xyZ.a +xYz.a +xYZ.a +Xyz.a +XyZ.a +XYz.a +XYZ.a;
+ blurred.g = 2.0*(Oyz.a +OyZ.a +xyO.a +XyO.a +OyO.a +OYz.a +OYZ.a +xYO.a +XYO.a +OYO.a) +xyz.a +Xyz.a +xyZ.a +XyZ.a +xYz.a +XYz.a +xYZ.a +XYZ.a;
+ blurred.b = 2.0*(Oyz.a +OYz.a +xOz.a +XOz.a +OOz.a +OyZ.a +OYZ.a +xOZ.a +XOZ.a +OOZ.a) +xyz.a +Xyz.a +xYz.a +XYz.a +xyZ.a +XyZ.a +XyZ.a +XYZ.a;
  blurred.a = 0.32*(abs(blurred.r)+abs(blurred.g)+abs(blurred.b));
  // 0.0357 = 1/28 to account for weights, rescale to 2**16,
  FragColor = 0.0357*blurred;
@@ -2303,14 +2303,14 @@ uniform highp sampler3D intensityVol;
 void main(void) {
   vec3 vx = vec3(TexCoord.xy, coordZ);
   //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
-  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).r;
-  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).r;
-  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).r;
-  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).r;
-  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).r;
-  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).r;
-  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
-  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
+  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).a;
+  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).a;
+  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).a;
+  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).a;
+  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).a;
+  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).a;
+  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).a;
+  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).a;
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
   gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
   gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
@@ -2356,9 +2356,9 @@ void main(void) {
   vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
   vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
-  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
-  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
+  gradientSample.r = -4.0*B.a +8.0*(BAR.a+BAL.a+BPR.a+BPL.a) -8.0*(TAR.a+TAL.a+TPR.a+TPL.a) +4.0*T.a;
+  gradientSample.g = -4.0*P.a +8.0*(TPR.a+TPL.a+BPR.a+BPL.a) -8.0*(TAR.a+TAL.a+BAR.a+BAL.a) +4.0*A.a;
+  gradientSample.b = -4.0*L.a +8.0*(TAL.a+TPL.a+BAL.a+BPL.a) -8.0*(TAR.a+TPR.a+BAR.a+BPR.a) +4.0*R.a;
 ${kGradientMagnitude}
 	gradientSample.a *= 0.0325;
   float gradLen = length(gradientSample.rgb);
