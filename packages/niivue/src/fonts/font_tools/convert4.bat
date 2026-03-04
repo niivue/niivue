@@ -1,0 +1,1 @@
+msdf-atlas-gen.exe -type msdf -font GuDianMingChaoKai.ttf -charset all_characters.txt -pxrange 2 -dimensions 4096 4096 -format png -json GuDianMingChaoKai.json -imageout GuDianMingChaoKai.png

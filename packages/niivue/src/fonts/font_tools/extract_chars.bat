@@ -1,0 +1,1 @@
+python extract_font_chars.py YeZiGongChangYanShanTingXingKai-2.ttf

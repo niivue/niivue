@@ -1,0 +1,1 @@
+msdf-atlas-gen.exe -type msdf -font FZFSK.ttf -charset all_characters.txt -pxrange 2 -dimensions 4096 4096 -format png -json FZFSK.json -imageout FZFSK.png
