@@ -9070,16 +9070,22 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             throw new Error('fontShader undefined')
         }
         // draw single character, never call directly: ALWAYS call from drawText()
-        const metrics = this.fontMets!.mets[char]!
-        const l = xy[0] + scale * metrics.lbwh[0]
-        const b = -(scale * metrics.lbwh[1])
-        const w = scale * metrics.lbwh[2]
-        const h = scale * metrics.lbwh[3]
-        const t = xy[1] + (b - h) + scale
-        this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
-        this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-        return scale * metrics.xadv
+        const metrics = this.fontMets!.mets[char]
+        if (!metrics) {
+            console.warn(`drawChar() : Missing font metric for char : "${char}"`)
+            return 0
+        }
+        else{
+            const l = xy[0] + scale * metrics.lbwh[0]
+            const b = -(scale * metrics.lbwh[1])
+            const w = scale * metrics.lbwh[2]
+            const h = scale * metrics.lbwh[3]
+            const t = xy[1] + (b - h) + scale
+            this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
+            this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+            return scale * metrics.xadv
+        }
     }
 
     /**
@@ -9130,11 +9136,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
         screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
         this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
-        const bytes = new TextEncoder().encode(str)
+
         this.gl.bindVertexArray(this.genericVAO)
-        for (let i = 0; i < str.length; i++) {
-            xy[0] += this.drawChar(xy, size, bytes[i])
+        for (const char of str) {
+            const codePoint = char.codePointAt(0)
+            xy[0] += this.drawChar(xy, size, codePoint)
         }
+
         this.gl.bindVertexArray(this.unusedVAO)
     }
 
