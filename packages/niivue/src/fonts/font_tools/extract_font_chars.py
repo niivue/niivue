@@ -3,54 +3,54 @@ from fontTools.ttLib import TTFont
 
 def extract_chars_from_font(font_path, output_txt_path):
     try:
-        # 1. 打开字体文件
+        # 1. Open the font file
         font = TTFont(font_path)
         
-        # 2. 获取最佳字符映射表 (cmap)
-        # cmap 字典的结构是 {unicode_integer: glyph_name}
+        # 2. Get the best character map (cmap)
+        # The cmap dictionary structure is {unicode_integer: glyph_name}
         cmap = font.getBestCmap()
         
         if not cmap:
-            print("错误：未在字体中找到字符映射表。")
+            print("Error: No character map found in the font.")
             return
 
-        # 3. 提取所有字符的 Unicode 编码并排序
-        # cmap.keys() 自动保证了字符是不重复的
+        # 3. Extract and sort all Unicode code points
+        # cmap.keys() automatically ensures characters are unique
         codes = sorted(cmap.keys())
         
-        # 4. 将编码转换为字符
-        # 注意：我们会过滤掉一些特殊的控制字符（如空字符），以免影响文本文件显示
-        chars = []
+        # 4. Convert code points to characters
+        # Note: We filter out special control characters (like NULL) to prevent text file display issues
+        chars =[]
         for code in codes:
-            # 过滤掉 NULL (0) 和一些不可见的控制字符，保留常用字符
+            # Filter out NULL (0) and some invisible control characters, keeping common ones
             if code > 0: 
                 chars.append(chr(code))
 
-        # 5. 拼接成一个长字符串
+        # 5. Concatenate into a single long string
         full_text = "".join(chars)
 
-        # 6. 写入 UTF-8 编码的文本文件
+        # 6. Write to a UTF-8 encoded text file
         with open(output_txt_path, "w", encoding="utf-8") as f:
             f.write(full_text)
 
-        print(f"成功！")
-        print(f"共提取了 {len(chars)} 个字符。")
-        print(f"结果已保存至: {output_txt_path}")
+        print(f"Success!")
+        print(f"Extracted a total of {len(chars)} characters.")
+        print(f"Result saved to: {output_txt_path}")
 
     except Exception as e:
-        print(f"发生错误: {e}")
+        print(f"An error occurred: {e}")
 
-# --- 配置部分 ---
+# --- Configuration section ---
 
-# 修改这里：你的字体文件路径 (支持 .ttf 或 .otf)
+# Modify here: Your font file path (supports .ttf or .otf)
 my_font_file = "your_font.ttf" 
 
-# 修改这里：输出的文本文件名
+# Modify here: The output text file name
 output_file = "all_characters.txt"
 
-# 运行函数
+# Run the function
 if __name__ == "__main__":
-    # 如果你想通过命令行传参： python script.py font.ttf
+    # If you want to pass arguments via command line: python script.py font.ttf
     if len(sys.argv) > 1:
         my_font_file = sys.argv[1]
     
