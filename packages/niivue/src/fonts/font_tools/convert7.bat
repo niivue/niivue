@@ -1,0 +1,1 @@
+msdf-atlas-gen.exe -type msdf -font YeZiGongChangYanShanTingXingKai.ttf -charset all_characters.txt -pxrange 2 -dimensions 4096 4096 -format png -json YeZiGongChangYanShanTingXingKai.json -imageout YeZiGongChangYanShanTingXingKai.png
