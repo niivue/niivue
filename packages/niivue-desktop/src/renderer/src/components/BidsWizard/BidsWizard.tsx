@@ -4,7 +4,7 @@ import { Button, Text, Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import type { Niivue } from '@niivue/niivue'
 import type { DicomSeries } from '../../../../common/dcm2niixTypes.js'
-import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics, DetectedSubject } from '../../../../common/bidsTypes.js'
 import { StepSelectSource } from './StepSelectSource.js'
 import { StepConversion } from './StepConversion.js'
 import { StepSkullStrip } from './StepSkullStrip.js'
@@ -55,6 +55,9 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     age: '', sex: '', handedness: '', group: ''
   })
 
+  // Multi-subject detection
+  const [detectedSubjects, setDetectedSubjects] = useState<DetectedSubject[]>([])
+
   // Step 5: Metadata
   const [config, setConfig] = useState<BidsDatasetConfig>({ ...defaultConfig })
 
@@ -81,6 +84,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     setSession('')
     setConfig({ ...defaultConfig })
     setDemographics({ age: '', sex: '', handedness: '', group: '' })
+    setDetectedSubjects([])
   }
 
   const handleClose = (): void => {
@@ -88,8 +92,12 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     setOpen(false)
   }
 
-  // Apply subject/session to all mappings when they change
+  // Apply subject/session to all mappings when they change (single-subject mode only)
   const applySubjectSession = (mappingList: BidsSeriesMapping[]): BidsSeriesMapping[] => {
+    if (detectedSubjects.length > 1) {
+      // Multi-subject: mappings already have per-series subject/session
+      return mappingList
+    }
     return mappingList.map((m) => ({
       ...m,
       subject: subject || '01',
@@ -97,11 +105,22 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     }))
   }
 
-  const handleConversionComplete = (newMappings: BidsSeriesMapping[], newDemographics?: ParticipantDemographics): void => {
+  const handleConversionComplete = (
+    newMappings: BidsSeriesMapping[],
+    newDemographics?: ParticipantDemographics,
+    newDetectedSubjects?: DetectedSubject[]
+  ): void => {
     setMappings(newMappings)
     setConverted(true)
     if (newDemographics) {
       setDemographics(newDemographics)
+    }
+    if (newDetectedSubjects) {
+      setDetectedSubjects(newDetectedSubjects)
+      // If single subject detected, use its label
+      if (newDetectedSubjects.length === 1) {
+        setSubject(newDetectedSubjects[0].label)
+      }
     }
     onConversionComplete?.(newMappings)
   }
@@ -116,12 +135,89 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     )
   }
 
+  const handleUpdateSidecar = (index: number, field: string, value: unknown): void => {
+    setMappings(prev => prev.map(m => {
+      if (m.index !== index || !m.sidecarData) return m
+      const newOverrides = { ...m.sidecarData.overrides }
+      if (value === undefined) {
+        delete (newOverrides as Record<string, unknown>)[field]
+      } else {
+        ;(newOverrides as Record<string, unknown>)[field] = value
+      }
+      return { ...m, sidecarData: { ...m.sidecarData, overrides: newOverrides } }
+    }))
+  }
+
+  const handleUpdateDetectedSubject = (subjectIndex: number, changes: Partial<DetectedSubject>): void => {
+    setDetectedSubjects(prev => {
+      const updated = [...prev]
+      const old = updated[subjectIndex]
+      const newSubject = { ...old, ...changes }
+      updated[subjectIndex] = newSubject
+
+      // If label changed, update corresponding mappings
+      if (changes.label && changes.label !== old.label) {
+        setMappings(prevMappings => prevMappings.map(m => {
+          if (m.subject === old.label) {
+            return { ...m, subject: changes.label! }
+          }
+          return m
+        }))
+      }
+
+      return updated
+    })
+  }
+
+  const handleUpdateDetectedSubjectDemographics = (subjectIndex: number, field: keyof ParticipantDemographics, value: string): void => {
+    setDetectedSubjects(prev => {
+      const updated = [...prev]
+      updated[subjectIndex] = {
+        ...updated[subjectIndex],
+        demographics: { ...updated[subjectIndex].demographics, [field]: value }
+      }
+      return updated
+    })
+  }
+
+  const handleUpdateDetectedSessionLabel = (subjectIndex: number, sessionIndex: number, label: string): void => {
+    setDetectedSubjects(prev => {
+      const updated = [...prev]
+      const sub = { ...updated[subjectIndex] }
+      const sessions = [...sub.sessions]
+      const oldLabel = sessions[sessionIndex].label
+      sessions[sessionIndex] = { ...sessions[sessionIndex], label }
+      sub.sessions = sessions
+      updated[subjectIndex] = sub
+
+      // Update corresponding mappings
+      setMappings(prevMappings => prevMappings.map(m => {
+        if (m.subject === sub.label && m.session === oldLabel) {
+          return { ...m, session: label }
+        }
+        return m
+      }))
+
+      return updated
+    })
+  }
+
   const updateConfig = <K extends keyof BidsDatasetConfig>(key: K, value: BidsDatasetConfig[K]): void => {
     setConfig((prev) => ({ ...prev, [key]: value }))
   }
 
   // Get mappings with current subject/session applied
   const currentMappings = applySubjectSession(mappings)
+
+  // Build allDemographics for multi-subject write
+  const getAllDemographics = (): Record<string, ParticipantDemographics> | undefined => {
+    if (detectedSubjects.length <= 1) return undefined
+    const result: Record<string, ParticipantDemographics> = {}
+    for (const ds of detectedSubjects) {
+      result[ds.label] = ds.demographics
+    }
+    return result
+  }
 
   const canProceed = (): boolean => {
     switch (step) {
@@ -134,6 +230,9 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
       case 3:
         return mappings.some((m) => !m.excluded)
       case 4:
+        if (detectedSubjects.length > 1) {
+          return detectedSubjects.every(ds => ds.label.trim() !== '' && /^[a-zA-Z0-9]+$/.test(ds.label))
+        }
         return subject.trim() !== '' && /^[a-zA-Z0-9]+$/.test(subject)
       case 5:
         return config.name.trim() !== '' && config.outputDir.trim() !== ''
@@ -231,6 +330,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                   <StepClassification
                     mappings={currentMappings}
                     onUpdateMapping={handleUpdateMapping}
+                    onUpdateSidecar={handleUpdateSidecar}
                     datasetName={config.name}
                   />
                 )}
@@ -243,6 +343,10 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     mappings={currentMappings}
                     demographics={demographics}
                     setDemographics={setDemographics}
+                    detectedSubjects={detectedSubjects}
+                    onUpdateDetectedSubject={handleUpdateDetectedSubject}
+                    onUpdateDetectedSubjectDemographics={handleUpdateDetectedSubjectDemographics}
+                    onUpdateDetectedSessionLabel={handleUpdateDetectedSessionLabel}
                   />
                 )}
                 {step === 5 && (
@@ -256,6 +360,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     config={config}
                     mappings={currentMappings}
                     demographics={demographics}
+                    allDemographics={getAllDemographics()}
                   />
                 )}
               </div>

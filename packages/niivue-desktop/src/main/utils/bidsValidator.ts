@@ -1,8 +1,8 @@
 import type { BidsSeriesMapping, BidsDatasetConfig, BidsValidationResult, BidsValidationIssue } from '../../common/bidsTypes.js'
 import { generateBidsFilename } from './bidsWriter.js'
 
-// BIDS naming pattern: sub-<label>[_ses-<label>][_task-<label>][_acq-<label>][_run-<index>]_<suffix>
-const BIDS_FILENAME_RE = /^sub-[a-zA-Z0-9]+(_ses-[a-zA-Z0-9]+)?(_task-[a-zA-Z0-9]+)?(_acq-[a-zA-Z0-9]+)?(_run-[0-9]+)?_[a-zA-Z0-9]+$/
+// BIDS naming pattern: sub-<label>[_ses-<label>][_task-<label>][_acq-<label>][_ce-<label>][_rec-<label>][_dir-<label>][_run-<index>][_echo-<index>]_<suffix>
+const BIDS_FILENAME_RE = /^sub-[a-zA-Z0-9]+(_ses-[a-zA-Z0-9]+)?(_task-[a-zA-Z0-9]+)?(_acq-[a-zA-Z0-9]+)?(_ce-[a-zA-Z0-9]+)?(_rec-[a-zA-Z0-9]+)?(_dir-[a-zA-Z0-9]+)?(_run-[0-9]+)?(_echo-[0-9]+)?_[a-zA-Z0-9]+$/
 
 const REQUIRED_TASK_DATATYPES = new Set(['func'])
 
@@ -82,6 +82,33 @@ export function validateProposedDataset(
       errors.push({
         severity: 'error',
         message: `Task label must be alphanumeric: "${m.task}"`,
+        file: filename
+      })
+    }
+
+    // ce label must be alphanumeric
+    if (m.ce && !/^[a-zA-Z0-9]+$/.test(m.ce)) {
+      errors.push({
+        severity: 'error',
+        message: `CE label must be alphanumeric: "${m.ce}"`,
+        file: filename
+      })
+    }
+
+    // rec label must be alphanumeric
+    if (m.rec && !/^[a-zA-Z0-9]+$/.test(m.rec)) {
+      errors.push({
+        severity: 'error',
+        message: `Rec label must be alphanumeric: "${m.rec}"`,
+        file: filename
+      })
+    }
+
+    // dir label must be alphanumeric
+    if (m.dir && !/^[a-zA-Z0-9]+$/.test(m.dir)) {
+      errors.push({
+        severity: 'error',
+        message: `Dir label must be alphanumeric: "${m.dir}"`,
         file: filename
       })
     }

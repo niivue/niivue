@@ -14,9 +14,10 @@ interface StepValidationProps {
   config: BidsDatasetConfig
   mappings: BidsSeriesMapping[]
   demographics?: ParticipantDemographics
+  allDemographics?: Record<string, ParticipantDemographics>
 }
 
-export function StepValidation({ config, mappings, demographics }: StepValidationProps): JSX.Element {
+export function StepValidation({ config, mappings, demographics, allDemographics }: StepValidationProps): JSX.Element {
   const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
   const [writing, setWriting] = useState(false)
   const [writeComplete, setWriteComplete] = useState(false)
@@ -29,7 +30,7 @@ export function StepValidation({ config, mappings, demographics }: StepValidatio
     setValidationResult(null)
     try {
       // Write the dataset
-      const result = await electron.bidsWrite({ config, mappings, demographics })
+      const result = await electron.bidsWrite({ config, mappings, demographics, allDemographics })
       if (!result.success) {
         setWriteError(result.error || 'Write failed')
         setWriting(false)

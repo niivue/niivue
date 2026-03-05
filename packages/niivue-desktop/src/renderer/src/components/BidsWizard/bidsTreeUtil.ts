@@ -5,7 +5,11 @@ function generateBidsFilename(mapping: BidsSeriesMapping): string {
   if (mapping.session) parts.push(`ses-${mapping.session}`)
   if (mapping.task) parts.push(`task-${mapping.task}`)
   if (mapping.acq) parts.push(`acq-${mapping.acq}`)
+  if (mapping.ce) parts.push(`ce-${mapping.ce}`)
+  if (mapping.rec) parts.push(`rec-${mapping.rec}`)
+  if (mapping.dir) parts.push(`dir-${mapping.dir}`)
   if (mapping.run > 0) parts.push(`run-${String(mapping.run).padStart(2, '0')}`)
+  if (mapping.echo > 0) parts.push(`echo-${mapping.echo}`)
   parts.push(mapping.suffix)
   return parts.join('_')
 }

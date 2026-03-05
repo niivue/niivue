@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Text } from '@radix-ui/themes'
-import type { BidsSeriesMapping, ParticipantDemographics } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, ParticipantDemographics, DetectedSubject } from '../../../../common/bidsTypes.js'
 
 const electron = window.electron
 
 interface StepConversionProps {
   dicomDir: string
   selectedSeries: Set<number>
-  onComplete: (mappings: BidsSeriesMapping[], demographics?: ParticipantDemographics) => void
+  onComplete: (mappings: BidsSeriesMapping[], demographics?: ParticipantDemographics, detectedSubjects?: DetectedSubject[]) => void
   onError: (error: string) => void
   alreadyConverted: boolean
 }
@@ -48,7 +48,7 @@ export function StepConversion({
         }
 
         setStatus('complete')
-        onComplete(result.mappings, result.demographics)
+        onComplete(result.mappings, result.demographics, result.detectedSubjects)
       } catch (err) {
         if (cancelled) return
         setStatus('error')

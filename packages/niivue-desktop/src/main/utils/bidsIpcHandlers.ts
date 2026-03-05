@@ -43,9 +43,9 @@ export function registerBidsIpcHandlers(): void {
         }
 
         const sidecarPaths = files.map((f) => path.join(outDir, f))
-        const mappings = classifyAll(sidecarPaths)
+        const { mappings, detectedSubjects } = classifyAll(sidecarPaths)
         const demographics = extractDemographics(sidecarPaths[0])
-        return { success: true, mappings, demographics }
+        return { success: true, mappings, demographics, detectedSubjects }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         return { success: false, error: msg }
@@ -75,7 +75,7 @@ export function registerBidsIpcHandlers(): void {
    */
   ipcMain.handle('bids:write', async (_evt, payload: BidsWritePayload) => {
     try {
-      const result = writeDataset(payload.config, payload.mappings, payload.demographics)
+      const result = writeDataset(payload.config, payload.mappings, payload.demographics, payload.allDemographics)
       return { success: true, outputDir: result.outputDir, filesCopied: result.filesCopied }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

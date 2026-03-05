@@ -3,7 +3,7 @@ import path from 'node:path'
 import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics } from '../../common/bidsTypes.js'
 
 // Fields added by dcm2niix that should not appear in BIDS sidecars
-const INTERNAL_SIDECAR_FIELDS = new Set([
+export const INTERNAL_SIDECAR_FIELDS = new Set([
   'ConversionSoftware',
   'ConversionSoftwareVersion',
   'PatientName',
@@ -31,9 +31,25 @@ export function generateBidsFilename(mapping: BidsSeriesMapping): string {
     parts.push(`acq-${mapping.acq}`)
   }
 
+  if (mapping.ce) {
+    parts.push(`ce-${mapping.ce}`)
+  }
+
+  if (mapping.rec) {
+    parts.push(`rec-${mapping.rec}`)
+  }
+
+  if (mapping.dir) {
+    parts.push(`dir-${mapping.dir}`)
+  }
+
   // Only add run label if there are multiple runs for this classification
   if (mapping.run > 0) {
     parts.push(`run-${String(mapping.run).padStart(2, '0')}`)
+  }
+
+  if (mapping.echo > 0) {
+    parts.push(`echo-${mapping.echo}`)
   }
 
   parts.push(mapping.suffix)
@@ -90,25 +106,32 @@ function writeDatasetDescription(outputDir: string, config: BidsDatasetConfig): 
 function writeParticipantsTsv(
   outputDir: string,
   subjects: string[],
-  demographics?: ParticipantDemographics
+  demographics?: ParticipantDemographics,
+  allDemographics?: Record<string, ParticipantDemographics>
 ): void {
   const unique = [...new Set(subjects)]
 
-  // Determine which demographic columns have values
   const cols: { key: keyof ParticipantDemographics; label: string }[] = [
     { key: 'age', label: 'age' },
     { key: 'sex', label: 'sex' },
     { key: 'handedness', label: 'handedness' },
     { key: 'group', label: 'group' }
   ]
-  const activeCols = demographics
-    ? cols.filter((c) => demographics[c.key] !== '')
-    : []
+
+  // Determine which columns have any values across all subjects
+  const hasValue = (key: keyof ParticipantDemographics): boolean => {
+    if (allDemographics) {
+      return Object.values(allDemographics).some((d) => d[key] !== '')
+    }
+    return demographics ? demographics[key] !== '' : false
+  }
+  const activeCols = cols.filter((c) => hasValue(c.key))
 
   // Write TSV
   const header = ['participant_id', ...activeCols.map((c) => c.label)].join('\t')
   const rows = unique.map((sub) => {
-    const values = [`sub-${sub}`, ...activeCols.map((c) => demographics![c.key])]
+    const demo = allDemographics?.[sub] || demographics || { age: '', sex: '', handedness: '', group: '' }
+    const values = [`sub-${sub}`, ...activeCols.map((c) => demo[c.key])]
     return values.join('\t')
   })
   fs.writeFileSync(path.join(outputDir, 'participants.tsv'), [header, ...rows].join('\n') + '\n')
@@ -157,7 +180,8 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
 export function writeDataset(
   config: BidsDatasetConfig,
   mappings: BidsSeriesMapping[],
-  demographics?: ParticipantDemographics
+  demographics?: ParticipantDemographics,
+  allDemographics?: Record<string, ParticipantDemographics>
 ): { outputDir: string; filesCopied: number } {
   const outputDir = config.outputDir
 
@@ -167,7 +191,7 @@ export function writeDataset(
   // Write top-level files
   writeDatasetDescription(outputDir, config)
   const subjects = mappings.filter((m) => !m.excluded).map((m) => m.subject)
-  writeParticipantsTsv(outputDir, subjects, demographics)
+  writeParticipantsTsv(outputDir, subjects, demographics, allDemographics)
   writeReadme(outputDir, config)
   writeBidsIgnore(outputDir)
 
@@ -190,18 +214,23 @@ export function writeDataset(
       filesCopied++
     }
 
-    // Write filtered sidecar
-    if (fs.existsSync(m.sidecarPath)) {
-      const sidecar = filterSidecar(m.sidecarPath)
-
-      // Add TaskName for func bold
-      if (m.datatype === 'func' && m.task) {
-        sidecar.TaskName = m.task
-      }
-
-      fs.writeFileSync(destJson, JSON.stringify(sidecar, null, 2) + '\n')
-      filesCopied++
+    // Write sidecar: use sidecarData with overrides if available, else filter from disk
+    let sidecar: Record<string, unknown>
+    if (m.sidecarData) {
+      sidecar = { ...m.sidecarData.original, ...m.sidecarData.overrides }
+    } else if (fs.existsSync(m.sidecarPath)) {
+      sidecar = filterSidecar(m.sidecarPath)
+    } else {
+      continue
     }
+
+    // Add TaskName for func bold
+    if (m.datatype === 'func' && m.task) {
+      sidecar.TaskName = m.task
+    }
+
+    fs.writeFileSync(destJson, JSON.stringify(sidecar, null, 2) + '\n')
+    filesCopied++
   }
 
   return { outputDir, filesCopied }

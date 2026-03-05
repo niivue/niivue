@@ -4,8 +4,12 @@ import type {
   BidsSuffix,
   BidsSeriesMapping,
   BidsConfidence,
-  ParticipantDemographics
+  ParticipantDemographics,
+  SeriesSidecarData,
+  DetectedSubject,
+  DetectedSession
 } from '../../common/bidsTypes.js'
+import { INTERNAL_SIDECAR_FIELDS } from './bidsWriter.js'
 
 interface DcmSidecar {
   SeriesDescription?: string
@@ -15,10 +19,19 @@ interface DcmSidecar {
   EchoTime?: number
   EchoTime1?: number
   EchoTime2?: number
+  EchoNumber?: number
   DiffusionDirectionality?: string
   PhaseEncodingDirection?: string
   NumberOfTemporalPositions?: number
   ArterialSpinLabelingType?: string
+  ContrastBolusAgent?: string
+  PatientID?: string
+  PatientName?: string
+  PatientAge?: string
+  PatientSex?: string
+  AcquisitionDate?: string
+  AcquisitionDateTime?: string
+  StudyDate?: string
   [key: string]: unknown
 }
 
@@ -128,6 +141,60 @@ function classifyBySidecar(sidecar: DcmSidecar): Classification | null {
   return null
 }
 
+const PHASE_DIR_MAP: Record<string, string> = {
+  j: 'AP', 'j-': 'PA',
+  i: 'LR', 'i-': 'RL',
+  k: 'IS', 'k-': 'SI'
+}
+
+interface ExtractedEntities {
+  ce: string
+  rec: string
+  dir: string
+  echo: number
+}
+
+function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
+  const entities: ExtractedEntities = { ce: '', rec: '', dir: '', echo: 0 }
+
+  // Phase encoding direction
+  if (sidecar.PhaseEncodingDirection) {
+    const ped = String(sidecar.PhaseEncodingDirection)
+    entities.dir = PHASE_DIR_MAP[ped] || ''
+  }
+
+  // Echo number
+  if (sidecar.EchoNumber != null && Number(sidecar.EchoNumber) > 0) {
+    entities.echo = Number(sidecar.EchoNumber)
+  }
+
+  // Contrast enhanced
+  if (sidecar.ContrastBolusAgent) {
+    entities.ce = 'enhanced'
+  } else if (/\+C|post[-_]?contrast|gad/i.test(desc)) {
+    entities.ce = 'enhanced'
+  }
+
+  // Reconstruction label
+  if (Array.isArray(sidecar.ImageType)) {
+    const types = sidecar.ImageType.map((t) => String(t).toUpperCase())
+    if (types.includes('NORM')) entities.rec = 'NORM'
+    else if (types.includes('ND')) entities.rec = 'ND'
+  }
+
+  return entities
+}
+
+function stripPiiFields(sidecar: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(sidecar)) {
+    if (!INTERNAL_SIDECAR_FIELDS.has(key)) {
+      cleaned[key] = val
+    }
+  }
+  return cleaned
+}
+
 export function classifySeries(sidecarPath: string, index: number): BidsSeriesMapping {
   const raw = fs.readFileSync(sidecarPath, 'utf-8')
   const sidecar: DcmSidecar = JSON.parse(raw)
@@ -176,6 +243,12 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     task = sidecarResult.task
   }
 
+  const entities = extractEntities(sidecar, desc)
+  const sidecarData: SeriesSidecarData = {
+    original: stripPiiFields(sidecar as Record<string, unknown>),
+    overrides: {}
+  }
+
   return {
     index,
     seriesDescription: desc,
@@ -185,12 +258,17 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     suffix,
     task,
     acq: '',
+    ce: entities.ce,
+    rec: entities.rec,
+    dir: entities.dir,
     run: 1,
+    echo: entities.echo,
     subject: '01',
     session: '',
     confidence,
     heuristicReason: reason,
-    excluded: false
+    excluded: false,
+    sidecarData
   }
 }
 
@@ -227,14 +305,83 @@ export function extractDemographics(sidecarPath: string): ParticipantDemographic
   return demographics
 }
 
-export function classifyAll(sidecarPaths: string[]): BidsSeriesMapping[] {
+export function detectSubjectsAndSessions(
+  sidecarPaths: string[],
+  mappings: BidsSeriesMapping[]
+): DetectedSubject[] {
+  // Parse PatientID and AcquisitionDate from each sidecar
+  const subjectMap = new Map<string, { indices: number[]; dates: Map<string, number[]>; sidecarPath: string }>()
+
+  for (let i = 0; i < sidecarPaths.length; i++) {
+    try {
+      const raw = fs.readFileSync(sidecarPaths[i], 'utf-8')
+      const sidecar: DcmSidecar = JSON.parse(raw)
+      const patientId = String(sidecar.PatientID || sidecar.PatientName || 'unknown').trim()
+      const acqDate = String(sidecar.AcquisitionDate || sidecar.AcquisitionDateTime || sidecar.StudyDate || '').trim()
+
+      if (!subjectMap.has(patientId)) {
+        subjectMap.set(patientId, { indices: [], dates: new Map(), sidecarPath: sidecarPaths[i] })
+      }
+      const entry = subjectMap.get(patientId)!
+      entry.indices.push(i)
+
+      const dateKey = acqDate || 'nodate'
+      if (!entry.dates.has(dateKey)) {
+        entry.dates.set(dateKey, [])
+      }
+      entry.dates.get(dateKey)!.push(i)
+    } catch {
+      // Skip unreadable sidecars
+    }
+  }
+
+  const subjects: DetectedSubject[] = []
+  let subjectIndex = 1
+
+  for (const [rawId, entry] of subjectMap) {
+    const label = String(subjectIndex).padStart(2, '0')
+    const demographics = extractDemographics(entry.sidecarPath)
+    const hasMultipleSessions = entry.dates.size > 1
+
+    const sessions: DetectedSession[] = []
+    let sessionIndex = 1
+    for (const [rawDate, indices] of entry.dates) {
+      sessions.push({
+        rawDate: rawDate === 'nodate' ? '' : rawDate,
+        label: hasMultipleSessions ? String(sessionIndex).padStart(2, '0') : '',
+        seriesIndices: indices
+      })
+      sessionIndex++
+    }
+
+    // Apply subject/session to mappings
+    for (const session of sessions) {
+      for (const idx of session.seriesIndices) {
+        if (idx < mappings.length) {
+          mappings[idx].subject = label
+          mappings[idx].session = session.label
+        }
+      }
+    }
+
+    subjects.push({ rawId, label, demographics, sessions })
+    subjectIndex++
+  }
+
+  return subjects
+}
+
+export function classifyAll(sidecarPaths: string[]): { mappings: BidsSeriesMapping[]; detectedSubjects: DetectedSubject[] } {
   const mappings = sidecarPaths.map((p, i) => classifySeries(p, i))
+
+  // Detect subjects and sessions
+  const detectedSubjects = detectSubjectsAndSessions(sidecarPaths, mappings)
 
   // Auto-assign run numbers for series with the same classification
   const groups = new Map<string, BidsSeriesMapping[]>()
   for (const m of mappings) {
     if (m.excluded) continue
-    const key = `${m.datatype}_${m.suffix}_${m.task}_${m.acq}`
+    const key = `${m.subject}_${m.session}_${m.datatype}_${m.suffix}_${m.task}_${m.acq}_${m.ce}_${m.rec}_${m.dir}_${m.echo}`
     const group = groups.get(key)
     if (group) {
       group.push(m)
@@ -251,5 +398,5 @@ export function classifyAll(sidecarPaths: string[]): BidsSeriesMapping[] {
     }
   }
 
-  return mappings
+  return { mappings, detectedSubjects }
 }

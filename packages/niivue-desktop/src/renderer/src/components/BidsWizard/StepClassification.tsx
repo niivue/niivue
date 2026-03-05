@@ -6,12 +6,14 @@ import { BidsPreview } from './BidsPreview.js'
 interface StepClassificationProps {
   mappings: BidsSeriesMapping[]
   onUpdateMapping: (index: number, changes: Partial<BidsSeriesMapping>) => void
+  onUpdateSidecar: (index: number, field: string, value: unknown) => void
   datasetName: string
 }
 
 export function StepClassification({
   mappings,
   onUpdateMapping,
+  onUpdateSidecar,
   datasetName
 }: StepClassificationProps): JSX.Element {
   return (
@@ -22,7 +24,7 @@ export function StepClassification({
           Review Classifications
         </Text>
         <Text size="1" color="gray" className="block mb-3">
-          Verify and edit the proposed BIDS classification for each series.
+          Verify and edit the proposed BIDS classification for each series. Click the chevron to edit additional entities and sidecar metadata.
         </Text>
 
         <div className="overflow-auto max-h-[350px] border rounded">
@@ -37,11 +39,17 @@ export function StepClassification({
                 <th className="py-1.5 px-1 text-left font-medium">Task</th>
                 <th className="py-1.5 px-1 text-left font-medium">Acq</th>
                 <th className="py-1.5 px-1 text-left font-medium">Run</th>
+                <th className="py-1.5 px-1 text-left font-medium w-6"></th>
               </tr>
             </thead>
             <tbody>
               {mappings.map((m) => (
-                <SeriesRow key={m.index} mapping={m} onUpdate={onUpdateMapping} />
+                <SeriesRow
+                  key={m.index}
+                  mapping={m}
+                  onUpdate={onUpdateMapping}
+                  onUpdateSidecar={onUpdateSidecar}
+                />
               ))}
             </tbody>
           </table>

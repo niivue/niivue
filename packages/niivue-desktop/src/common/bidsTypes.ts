@@ -37,6 +37,22 @@ export const SUFFIXES_BY_DATATYPE: Record<BidsDatatype, BidsSuffix[]> = {
 
 export type BidsConfidence = 'high' | 'medium' | 'low'
 
+export interface EditableSidecarFields {
+  RepetitionTime?: number
+  EchoTime?: number
+  FlipAngle?: number
+  PhaseEncodingDirection?: string
+  TotalReadoutTime?: number
+  SliceTiming?: number[]
+}
+
+export interface SeriesSidecarData {
+  /** All sidecar fields from dcm2niix (PII stripped) */
+  original: Record<string, unknown>
+  /** User edits — merged on top of original when writing */
+  overrides: EditableSidecarFields
+}
+
 export interface BidsSeriesMapping {
   /** Index within the batch (for ordering) */
   index: number
@@ -53,7 +69,11 @@ export interface BidsSeriesMapping {
   /** Custom BIDS labels */
   task: string
   acq: string
+  ce: string
+  rec: string
+  dir: string
   run: number
+  echo: number
   /** Subject label (without "sub-" prefix) */
   subject: string
   /** Session label (without "ses-" prefix, empty if unused) */
@@ -64,6 +84,8 @@ export interface BidsSeriesMapping {
   heuristicReason: string
   /** Whether this series is excluded from the BIDS output */
   excluded: boolean
+  /** Sidecar JSON data for metadata editing */
+  sidecarData?: SeriesSidecarData
 }
 
 export interface BidsDatasetConfig {
@@ -93,6 +115,19 @@ export interface ParticipantDemographics {
   group: string
 }
 
+export interface DetectedSession {
+  rawDate: string
+  label: string
+  seriesIndices: number[]
+}
+
+export interface DetectedSubject {
+  rawId: string
+  label: string
+  demographics: ParticipantDemographics
+  sessions: DetectedSession[]
+}
+
 export interface BidsConvertAndClassifyPayload {
   dicomDir: string
   seriesNumbers: number[]
@@ -102,6 +137,7 @@ export interface BidsConvertAndClassifyResult {
   success: boolean
   mappings?: BidsSeriesMapping[]
   demographics?: ParticipantDemographics
+  detectedSubjects?: DetectedSubject[]
   error?: string
 }
 
@@ -109,6 +145,7 @@ export interface BidsWritePayload {
   config: BidsDatasetConfig
   mappings: BidsSeriesMapping[]
   demographics?: ParticipantDemographics
+  allDemographics?: Record<string, ParticipantDemographics>
 }
 
 export interface BidsWriteResult {
