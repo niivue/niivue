@@ -10,6 +10,7 @@ import type {
   DetectedSubject,
   DetectedSession
 } from '../../common/bidsTypes.js'
+import { SUFFIXES_BY_DATATYPE } from '../../common/bidsTypes.js'
 import { INTERNAL_SIDECAR_FIELDS } from './bidsWriter.js'
 
 interface DcmSidecar {
@@ -33,6 +34,7 @@ interface DcmSidecar {
   AcquisitionDate?: string
   AcquisitionDateTime?: string
   StudyDate?: string
+  BidsGuess?: string[] | { datatype?: string; suffix?: string; entities?: Record<string, string>; filename_suffix?: string }
   [key: string]: unknown
 }
 
@@ -142,6 +144,82 @@ function classifyBySidecar(sidecar: DcmSidecar): Classification | null {
   return null
 }
 
+const VALID_DATATYPES = new Set<string>(['anat', 'func', 'dwi', 'fmap', 'perf'])
+const VALID_SUFFIXES = new Set<string>(Object.values(SUFFIXES_BY_DATATYPE).flat())
+
+interface BidsGuessEntities {
+  task: string
+  acq: string
+  [key: string]: string
+}
+
+function parseBidsGuessSuffix(suffixStr: string): { suffix: string; entities: BidsGuessEntities } {
+  const entities: BidsGuessEntities = { task: '', acq: '' }
+  // Remove leading underscore
+  const str = suffixStr.replace(/^_/, '')
+  // Split on underscore to get segments like "task-rest", "acq-tse2", "bold"
+  const segments = str.split('_')
+  // Last segment is the BIDS suffix
+  const suffix = segments.pop() || ''
+  // Remaining segments are entity key-value pairs
+  for (const seg of segments) {
+    const dashIdx = seg.indexOf('-')
+    if (dashIdx > 0) {
+      const key = seg.slice(0, dashIdx)
+      const val = seg.slice(dashIdx + 1)
+      entities[key] = val
+    }
+  }
+  return { suffix, entities }
+}
+
+function classifyByBidsGuess(sidecar: DcmSidecar): (Classification & { entities: BidsGuessEntities }) | null {
+  const guess = sidecar.BidsGuess
+  if (!guess) return null
+
+  let datatype: string | undefined
+  let suffix: string | undefined
+  let entities: BidsGuessEntities = { task: '', acq: '' }
+
+  if (Array.isArray(guess)) {
+    // Array format: ["func", "_task-rest_bold"]
+    if (guess.length < 2) return null
+    datatype = guess[0]
+    const parsed = parseBidsGuessSuffix(guess[1])
+    suffix = parsed.suffix
+    entities = parsed.entities
+  } else if (typeof guess === 'object') {
+    // Object format
+    datatype = guess.datatype
+    suffix = guess.suffix
+    if (guess.entities) {
+      entities = { task: '', acq: '', ...guess.entities }
+    }
+    // Fall back to parsing filename_suffix if suffix not directly provided
+    if (!suffix && guess.filename_suffix) {
+      const parsed = parseBidsGuessSuffix(guess.filename_suffix)
+      suffix = parsed.suffix
+      if (!entities.task && parsed.entities.task) entities.task = parsed.entities.task
+      if (!entities.acq && parsed.entities.acq) entities.acq = parsed.entities.acq
+    }
+  } else {
+    return null
+  }
+
+  if (!datatype || !suffix) return null
+  if (!VALID_DATATYPES.has(datatype)) return null
+  if (!VALID_SUFFIXES.has(suffix)) return null
+
+  return {
+    datatype: datatype as BidsDatatype,
+    suffix: suffix as BidsSuffix,
+    confidence: 'medium',
+    reason: `dcm2niix BidsGuess: ${datatype}/${suffix}`,
+    task: entities.task || '',
+    entities
+  }
+}
+
 const PHASE_DIR_MAP: Record<string, string> = {
   j: 'AP', 'j-': 'PA',
   i: 'LR', 'i-': 'RL',
@@ -203,6 +281,7 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
 
   const descResult = classifyByDescription(desc)
   const sidecarResult = classifyBySidecar(sidecar)
+  const guessResult = classifyByBidsGuess(sidecar)
 
   let datatype: BidsDatatype = 'anat'
   let suffix: BidsSuffix = 'T1w'
@@ -210,13 +289,37 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
   let reason = 'No matching heuristic — defaulting to anat/T1w'
   let task = ''
 
-  if (descResult && sidecarResult) {
-    // Both agree
+  // Combine classification signals: BidsGuess takes priority when present
+  const heuristicResult = descResult || sidecarResult
+  if (guessResult && heuristicResult) {
+    // Both BidsGuess and heuristic available
+    if (guessResult.datatype === heuristicResult.datatype && guessResult.suffix === heuristicResult.suffix) {
+      // Agreement → high confidence
+      datatype = guessResult.datatype
+      suffix = guessResult.suffix
+      confidence = 'high'
+      reason = `BidsGuess and heuristic agree: ${guessResult.reason}`
+    } else {
+      // Disagreement → prefer BidsGuess (dcm2niix has deeper DICOM knowledge)
+      datatype = guessResult.datatype
+      suffix = guessResult.suffix
+      confidence = 'medium'
+      reason = `${guessResult.reason} (overrides heuristic: ${heuristicResult.datatype}/${heuristicResult.suffix})`
+    }
+    task = guessResult.task || heuristicResult.task
+  } else if (guessResult) {
+    // Only BidsGuess
+    datatype = guessResult.datatype
+    suffix = guessResult.suffix
+    confidence = guessResult.confidence
+    reason = guessResult.reason
+    task = guessResult.task
+  } else if (descResult && sidecarResult) {
+    // No BidsGuess — original logic
     if (descResult.datatype === sidecarResult.datatype && descResult.suffix === sidecarResult.suffix) {
       confidence = 'high'
       reason = `Both signals agree: ${descResult.reason}`
     } else {
-      // Prefer description match
       confidence = 'medium'
       reason = descResult.reason
     }
@@ -239,6 +342,12 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
 
   const entities = extractEntities(sidecar, desc)
 
+  // Use BidsGuess entities as fallbacks
+  if (guessResult) {
+    if (!task && guessResult.entities.task) task = guessResult.entities.task
+    if (!entities.ce && guessResult.entities.ce) entities.ce = guessResult.entities.ce
+  }
+
   // Only populate dir for fmap series
   if (datatype !== 'fmap') {
     entities.dir = ''
@@ -256,7 +365,7 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     datatype,
     suffix,
     task,
-    acq: '',
+    acq: guessResult?.entities.acq || '',
     ce: entities.ce,
     rec: entities.rec,
     dir: entities.dir,
