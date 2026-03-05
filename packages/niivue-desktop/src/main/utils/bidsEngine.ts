@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import zlib from 'node:zlib'
 import type {
   BidsDatatype,
   BidsSuffix,
@@ -175,13 +176,6 @@ function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
     entities.ce = 'enhanced'
   }
 
-  // Reconstruction label
-  if (Array.isArray(sidecar.ImageType)) {
-    const types = sidecar.ImageType.map((t) => String(t).toUpperCase())
-    if (types.includes('NORM')) entities.rec = 'NORM'
-    else if (types.includes('ND')) entities.rec = 'ND'
-  }
-
   return entities
 }
 
@@ -244,6 +238,11 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
   }
 
   const entities = extractEntities(sidecar, desc)
+
+  // Only populate dir for fmap series
+  if (datatype !== 'fmap') {
+    entities.dir = ''
+  }
   const sidecarData: SeriesSidecarData = {
     original: stripPiiFields(sidecar as Record<string, unknown>),
     overrides: {}
@@ -261,7 +260,7 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     ce: entities.ce,
     rec: entities.rec,
     dir: entities.dir,
-    run: 1,
+    run: 0,
     echo: entities.echo,
     subject: '01',
     session: '',
@@ -295,9 +294,9 @@ export function extractDemographics(sidecarPath: string): ParticipantDemographic
     // Parse PatientSex: "M" → "male", "F" → "female", "O" → "other"
     if (sidecar.PatientSex) {
       const s = String(sidecar.PatientSex).toUpperCase().trim()
-      if (s === 'M') demographics.sex = 'male'
-      else if (s === 'F') demographics.sex = 'female'
-      else if (s === 'O') demographics.sex = 'other'
+      if (s === 'M') demographics.sex = 'M'
+      else if (s === 'F') demographics.sex = 'F'
+      else if (s === 'O') demographics.sex = 'O'
     }
   } catch {
     // If sidecar can't be read, return empty demographics
@@ -371,8 +370,41 @@ export function detectSubjectsAndSessions(
   return subjects
 }
 
+function readNiftiVolumeCount(niftiPath: string): number {
+  try {
+    let headerBuf: Buffer
+    if (niftiPath.endsWith('.nii.gz')) {
+      const compressed = fs.readFileSync(niftiPath)
+      const decompressed = zlib.gunzipSync(compressed)
+      headerBuf = Buffer.from(decompressed.buffer, decompressed.byteOffset, Math.min(decompressed.length, 352))
+    } else {
+      const fd = fs.openSync(niftiPath, 'r')
+      headerBuf = Buffer.alloc(352)
+      fs.readSync(fd, headerBuf, 0, 352, 0)
+      fs.closeSync(fd)
+    }
+    // dim[4] is at byte offset 42 (dim[0] at 40, each dim is 2 bytes as int16)
+    // NIfTI-1 header: dim array starts at offset 40, dim[4] = offset 40 + 4*2 = 48
+    const dim4 = headerBuf.readInt16LE(48)
+    return dim4 > 0 ? dim4 : 1
+  } catch {
+    return 1
+  }
+}
+
 export function classifyAll(sidecarPaths: string[]): { mappings: BidsSeriesMapping[]; detectedSubjects: DetectedSubject[] } {
   const mappings = sidecarPaths.map((p, i) => classifySeries(p, i))
+
+  // Auto-exclude low-volume functional series
+  for (const m of mappings) {
+    if (m.datatype === 'func' && m.suffix === 'bold' && !m.excluded && fs.existsSync(m.niftiPath)) {
+      const volumes = readNiftiVolumeCount(m.niftiPath)
+      if (volumes < 75) {
+        m.excluded = true
+        m.exclusionReason = `Too few volumes (${volumes} < 75)`
+      }
+    }
+  }
 
   // Detect subjects and sessions
   const detectedSubjects = detectSubjectsAndSessions(sidecarPaths, mappings)

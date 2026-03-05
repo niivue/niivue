@@ -84,6 +84,8 @@ export interface BidsSeriesMapping {
   heuristicReason: string
   /** Whether this series is excluded from the BIDS output */
   excluded: boolean
+  /** Reason for exclusion (e.g. too few volumes) */
+  exclusionReason?: string
   /** Sidecar JSON data for metadata editing */
   sidecarData?: SeriesSidecarData
 }

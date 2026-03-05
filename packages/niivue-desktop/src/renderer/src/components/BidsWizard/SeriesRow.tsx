@@ -65,6 +65,11 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
           <Text size="1" className="block truncate max-w-[180px]" title={mapping.seriesDescription}>
             {mapping.seriesDescription || '(unknown)'}
           </Text>
+          {mapping.exclusionReason && (
+            <Text size="1" color="red" className="block truncate max-w-[180px]">
+              {mapping.exclusionReason}
+            </Text>
+          )}
         </td>
 
         {/* Confidence badge */}
@@ -148,9 +153,9 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
         <td className="py-1 px-1">
           <input
             type="number"
-            min={1}
+            min={0}
             value={mapping.run}
-            onChange={(e) => onUpdate(idx, { run: parseInt(e.target.value) || 1 })}
+            onChange={(e) => onUpdate(idx, { run: parseInt(e.target.value) || 0 })}
             className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded"
           />
         </td>

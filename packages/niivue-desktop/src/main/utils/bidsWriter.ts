@@ -13,7 +13,8 @@ export const INTERNAL_SIDECAR_FIELDS = new Set([
   'PatientSex',
   'PatientWeight',
   'SeriesInstanceUID',
-  'StudyInstanceUID'
+  'StudyInstanceUID',
+  'BidsGuess'
 ])
 
 export function generateBidsFilename(mapping: BidsSeriesMapping): string {
@@ -140,8 +141,8 @@ function writeParticipantsTsv(
   if (activeCols.length > 0) {
     const desc: Record<string, { Description: string; Units?: string; Levels?: Record<string, string> }> = {}
     for (const c of activeCols) {
-      if (c.key === 'age') desc.age = { Description: 'Age of the participant', Units: 'years' }
-      else if (c.key === 'sex') desc.sex = { Description: 'Sex of the participant', Levels: { male: 'male', female: 'female', other: 'other' } }
+      if (c.key === 'age') desc.age = { Description: 'Age of the participant', Units: 'year' }
+      else if (c.key === 'sex') desc.sex = { Description: 'Sex of the participant', Levels: { M: 'male', F: 'female', O: 'other' } }
       else if (c.key === 'handedness') desc.handedness = { Description: 'Handedness of the participant', Levels: { left: 'left', right: 'right', ambidextrous: 'ambidextrous' } }
       else if (c.key === 'group') desc.group = { Description: 'Group the participant belongs to' }
     }
@@ -161,7 +162,7 @@ ${config.bidsVersion || '1.9.0'}
 }
 
 function writeBidsIgnore(outputDir: string): void {
-  fs.writeFileSync(path.join(outputDir, '.bidsignore'), '')
+  fs.writeFileSync(path.join(outputDir, '.bidsignore'), 'excluded/\n')
 }
 
 export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
@@ -230,6 +231,34 @@ export function writeDataset(
     }
 
     fs.writeFileSync(destJson, JSON.stringify(sidecar, null, 2) + '\n')
+    filesCopied++
+  }
+
+  // Write excluded series to sub-XX/excluded/
+  const excluded = mappings.filter((m) => m.excluded)
+  for (let i = 0; i < excluded.length; i++) {
+    const m = excluded[i]
+    const sanitizedDesc = (m.seriesDescription || 'unknown').replace(/[^a-zA-Z0-9]/g, '')
+    const baseName = `sub-${m.subject}${m.task ? `_task-${m.task}` : ''}_desc-${sanitizedDesc}_${i}_excluded`
+    const excludedDir = path.join(outputDir, `sub-${m.subject}`, 'excluded')
+    fs.mkdirSync(excludedDir, { recursive: true })
+
+    const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
+    if (fs.existsSync(m.niftiPath)) {
+      fs.copyFileSync(m.niftiPath, path.join(excludedDir, baseName + ext))
+      filesCopied++
+    }
+
+    // Write sidecar
+    let sidecar: Record<string, unknown>
+    if (m.sidecarData) {
+      sidecar = { ...m.sidecarData.original, ...m.sidecarData.overrides }
+    } else if (fs.existsSync(m.sidecarPath)) {
+      sidecar = filterSidecar(m.sidecarPath)
+    } else {
+      continue
+    }
+    fs.writeFileSync(path.join(excludedDir, baseName + '.json'), JSON.stringify(sidecar, null, 2) + '\n')
     filesCopied++
   }
 
