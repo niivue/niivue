@@ -12,6 +12,10 @@ import {
   AVAILABLE_MODELS
 } from '../common/cliTypes.js'
 
+// Enable WebGPU so TF.js can use GPU without conflicting with Niivue's WebGL context
+app.commandLine.appendSwitch('enable-unsafe-webgpu')
+app.commandLine.appendSwitch('enable-features', 'Vulkan')
+
 // Helper to check if in development mode
 const isDev = !app.isPackaged
 

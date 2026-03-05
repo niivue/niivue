@@ -4,6 +4,7 @@ import '@tensorflow/tfjs-backend-webgpu'
 import { setWasmPaths } from '@tensorflow/tfjs-backend-wasm'
 import type { ModelInfo, ModelCacheEntry } from './types.js'
 import modelsRegistry from './models/models.json' assert { type: 'json' }
+import { isBcmodelPath, parseBcmodelBuffer, bcmodelToArtifacts, extractLabels } from './BcmodelBuilder.js'
 
 /**
  * Custom IOHandler for loading TensorFlow.js models via Electron IPC
@@ -18,6 +19,14 @@ class ElectronIPCModelLoader implements tf.io.IOHandler {
 
   async load(): Promise<tf.io.ModelArtifacts> {
     try {
+      // Handle .bcmodel binary format
+      if (isBcmodelPath(this.modelPath)) {
+        const buffer = await window.electron.loadBrainchopWeights(this.modelPath)
+        const { header, tensors } = parseBcmodelBuffer(buffer)
+        extractLabels(header, this.modelPath)
+        return bcmodelToArtifacts(header, tensors)
+      }
+
       // Load model.json via IPC
       const { modelJson, basePath } = await window.electron.loadBrainchopModel(this.modelPath)
 
@@ -106,102 +115,60 @@ export class ModelManager {
     }
 
     try {
-      // Initialize WebGPU backend first (best for large models)
-      console.log('[ModelManager] Initializing WebGPU backend...')
-      try {
-        await tf.setBackend('webgpu')
-        await tf.ready()
+      // Backend priority: WebGPU (no WebGL conflict) → WebGL (fast, works) → WASM (slow fallback)
+      let backendReady = false
 
-        // Enable float16 support for reduced memory usage
-        // This halves the memory footprint of parcellation models
-        tf.env().set('WEBGPU_USE_IMPORT_POLYFILL', false)
-        console.log('[ModelManager] WebGPU backend initialized successfully')
-        console.log('[ModelManager] WebGPU float16 support:', tf.env().getBool('WEBGPU_CPU_FORWARD'))
-      } catch (webgpuError) {
-        console.warn('[ModelManager] WebGPU backend not available:', webgpuError)
-        console.log('[ModelManager] Falling back to WebGL backend')
-
-        // Fallback to WebGL
-        await tf.setBackend('webgl')
-        await tf.ready()
-
-        // Configure WebGL for better memory handling
-        tf.env().set('WEBGL_PACK', true)
-        tf.env().set('WEBGL_PACK_DEPTHWISECONV', true)
-        tf.env().set('WEBGL_FORCE_F16_TEXTURES', false)
-        tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0)
+      // 1. Try WebGPU — GPU acceleration without WebGL context conflict
+      if ('gpu' in navigator) {
+        console.log('[ModelManager] Trying WebGPU backend...')
+        try {
+          await tf.setBackend('webgpu')
+          await tf.ready()
+          tf.env().set('WEBGPU_USE_IMPORT_POLYFILL', false)
+          console.log('[ModelManager] WebGPU backend initialized successfully')
+          backendReady = true
+        } catch (webgpuError) {
+          console.warn('[ModelManager] WebGPU backend failed:', webgpuError)
+        }
       }
 
-      // Initialize WASM backend for large models
-      // Configure WASM file paths for Electron/Vite environment
-      // In development: Vite serves from public folder at root URL
-      // In production: Files are in out/renderer directory
-      console.log('[ModelManager] Configuring WASM backend...')
-
-      // Determine base path for WASM files
-      // In Electron renderer, we're either on:
-      // - Development: http://localhost:5173/ (Vite dev server)
-      // - Production: file:///path/to/out/renderer/index.html
-      const isDev = import.meta.env.DEV
-      const wasmPath = isDev
-        ? '/' // Vite serves public files at root in dev
-        : './' // Relative to index.html in production
-
-      console.log('[ModelManager] WASM path:', wasmPath, '(isDev:', isDev, ')')
-
-      // Log the actual URLs that will be used
-      const expectedWasmUrl = `${wasmPath}tfjs-backend-wasm.wasm`
-      console.log('[ModelManager] Expected WASM URL:', expectedWasmUrl)
-      console.log('[ModelManager] Current location:', window.location.href)
-
-      // Test if WASM file is accessible
-      try {
-        console.log('[ModelManager] Testing WASM file accessibility...')
-        const testUrl = new URL(expectedWasmUrl, window.location.href).href
-        console.log('[ModelManager] Full WASM URL:', testUrl)
-        const response = await fetch(testUrl, { method: 'HEAD' })
-        console.log('[ModelManager] WASM file accessible:', response.ok, 'Status:', response.status)
-      } catch (fetchError) {
-        console.error('[ModelManager] WASM file NOT accessible:', fetchError)
-        console.warn('[ModelManager] This may cause WASM backend to fail')
+      // 2. Try WebGL — TF.js creates its own context; may warn but works
+      if (!backendReady) {
+        console.log('[ModelManager] Trying WebGL backend...')
+        try {
+          await tf.setBackend('webgl')
+          await tf.ready()
+          console.log('[ModelManager] WebGL backend initialized successfully')
+          backendReady = true
+        } catch (webglError) {
+          console.warn('[ModelManager] WebGL backend failed:', webglError)
+        }
       }
 
-      setWasmPaths(wasmPath)
+      // 3. Try WASM — no GPU, limited memory, but works for smaller models
+      if (!backendReady) {
+        console.log('[ModelManager] Falling back to WASM backend...')
+        const isDev = import.meta.env.DEV
+        const wasmPath = isDev ? '/' : './'
+        setWasmPaths(wasmPath)
+        tf.env().set('WASM_HAS_SIMD_SUPPORT', false)
+        tf.env().set('WASM_HAS_MULTITHREAD_SUPPORT', false)
 
-      // Disable SIMD to reduce memory usage - parcellation models are very large
-      // SIMD uses more memory and may cause hangs
-      tf.env().set('WASM_HAS_SIMD_SUPPORT', false)
-      tf.env().set('WASM_HAS_MULTITHREAD_SUPPORT', false)
-      console.log('[ModelManager] WASM SIMD disabled to reduce memory usage')
-
-      // Note: WASM memory limits are browser-controlled and cannot be increased from JavaScript
-      // If parcellation models exceed WASM memory, they will automatically fall back to CPU
-
-      // Pre-load WASM backend
-      console.log('[ModelManager] Loading WASM backend...')
-      try {
-        await tf.setBackend('wasm')
-        await tf.ready()
-        console.log('[ModelManager] WASM backend loaded successfully')
-        console.log('[ModelManager] WASM backend ready:', tf.getBackend() === 'wasm')
-
-        // Test WASM backend with a simple operation
-        console.log('[ModelManager] Testing WASM backend with simple operation...')
-        const testTensor = tf.tensor1d([1, 2, 3, 4])
-        const testResult = testTensor.square()
-        await testResult.data()
-        testTensor.dispose()
-        testResult.dispose()
-        console.log('[ModelManager] WASM backend test successful')
-      } catch (wasmError) {
-        console.error('[ModelManager] WASM backend failed to load or test:', wasmError)
-        console.warn('[ModelManager] Parcellation models may fail. Consider using smaller models.')
+        try {
+          await tf.setBackend('wasm')
+          await tf.ready()
+          console.log('[ModelManager] WASM backend initialized successfully')
+          backendReady = true
+        } catch (wasmError) {
+          console.error('[ModelManager] WASM backend failed:', wasmError)
+        }
       }
 
-      // Switch back to WebGL as default backend (WebGPU produces zero output)
-      await tf.setBackend('webgl')
-      console.log('[ModelManager] Switched to webgl as default')
+      if (!backendReady) {
+        throw new Error('No suitable backend available (tried WebGPU, WebGL, WASM)')
+      }
 
+      console.log('[ModelManager] Active backend:', tf.getBackend())
       this.isInitialized = true
     } catch (error) {
       console.error('Failed to initialize TensorFlow.js:', error)
@@ -260,46 +227,15 @@ export class ModelManager {
       throw new Error(`Model not found: ${modelId}`)
     }
 
-    // Determine target backend BEFORE checking cache
-    const isParcellation = modelInfo.type === 'parcellation'
+    // Use whatever backend was selected during initialize()
     const currentBackend = tf.getBackend()
+    console.log(`[ModelManager] Loading model ${modelId} (type: ${modelInfo.type}) on ${currentBackend} backend`)
 
-    // Backend selection strategy:
-    // For parcellation models: WebGPU (handles large models) > WASM > CPU
-    // For other models: WebGPU/WebGL (whatever GPU is available)
-    let targetBackend: string
-    if (isParcellation) {
-      // Use WebGL for parcellation models - WebGPU produces all-zero output
-      if (tf.findBackend('webgl')) {
-        targetBackend = 'webgl'
-        console.log('[ModelManager] Using WebGL for parcellation model')
-      } else if (tf.findBackend('wasm')) {
-        targetBackend = 'wasm'
-        console.log('[ModelManager] Using WASM for parcellation model (WebGL not available)')
-      } else {
-        targetBackend = 'cpu'
-        console.warn('[ModelManager] Using CPU for parcellation model (WebGL and WASM not available)')
-      }
-    } else {
-      // For smaller models, use WebGL (WebGPU produces zero output)
-      targetBackend = 'webgl'
-    }
-
-    console.log(`[ModelManager] Model type: ${modelInfo.type}, isParcellation: ${isParcellation}, targetBackend: ${targetBackend}`)
-
-    // Switch to target backend BEFORE checking cache
-    // This ensures we're on the correct backend when accessing cached models
-    if (currentBackend !== targetBackend) {
-      console.log(`[ModelManager] Switching to ${targetBackend} backend before accessing model ${modelId}`)
-      await tf.setBackend(targetBackend)
-      await tf.ready()
-    }
-
-    // Check cache AFTER switching to target backend
+    // Check cache
     const cached = this.modelCache.get(modelId)
     if (cached) {
       cached.lastUsed = new Date()
-      console.log(`[ModelManager] Returning cached model ${modelId} on ${targetBackend} backend`)
+      console.log(`[ModelManager] Returning cached model ${modelId} on ${currentBackend} backend`)
       return cached.model
     }
 
@@ -311,14 +247,12 @@ export class ModelManager {
       const ioHandler = new ElectronIPCModelLoader(modelPath)
 
       let model: tf.LayersModel | undefined
-      let modelBackend: string = targetBackend
+      let modelBackend: string = currentBackend
 
       try {
         model = await tf.loadLayersModel(ioHandler)
-        // modelBackend is already set to targetBackend
-
         // Log model details
-        console.log(`[ModelManager] Model ${modelId} loaded on ${targetBackend} backend`)
+        console.log(`[ModelManager] Model ${modelId} loaded on ${currentBackend} backend`)
         console.log(`[ModelManager] Model input shape:`, model.inputs[0].shape)
         console.log(`[ModelManager] Model output shape:`, model.outputs[0].shape)
         console.log(`[ModelManager] Model total parameters:`, model.countParams())
@@ -350,16 +284,15 @@ export class ModelManager {
         // Fallback chain for loading failures
         // Try different backends in order: WebGPU → WASM → CPU
         if (errorMessage.includes('texture size') || errorMessage.includes('memory') || errorMessage.includes('out of bounds')) {
-          console.warn(`[ModelManager] Model ${modelId} failed on ${targetBackend}: ${errorMessage}`)
+          console.warn(`[ModelManager] Model ${modelId} failed on ${currentBackend}: ${errorMessage}`)
 
           // Try fallback backends in order
           const fallbackBackends: string[] = []
-          if (targetBackend === 'webgpu') {
+          if (currentBackend === 'webgpu') {
+            fallbackBackends.push('webgl', 'wasm', 'cpu')
+          } else if (currentBackend === 'webgl') {
             fallbackBackends.push('wasm', 'cpu')
-          } else if (targetBackend === 'webgl') {
-            if (tf.findBackend('webgpu')) fallbackBackends.push('webgpu')
-            fallbackBackends.push('wasm', 'cpu')
-          } else if (targetBackend === 'wasm') {
+          } else if (currentBackend === 'wasm') {
             fallbackBackends.push('cpu')
           }
 
@@ -393,11 +326,7 @@ export class ModelManager {
         }
       }
 
-      // For WASM models, keep on WASM to avoid triggering WebGL texture allocation
-      // For WebGL models, we're already on WebGL
-      // This means the app might stay on WASM after loading a parcellation model,
-      // but we'll switch back to WebGL when needed (preprocessing, loading other models)
-      console.log(`[ModelManager] Keeping backend on ${tf.getBackend()} for model ${modelId}`)
+      console.log(`[ModelManager] Backend: ${tf.getBackend()} for model ${modelId}`)
 
       // At this point, model must be defined (we threw an error if it wasn't)
       if (!model) {

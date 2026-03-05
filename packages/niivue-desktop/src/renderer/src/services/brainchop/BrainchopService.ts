@@ -107,7 +107,7 @@ export class BrainchopService {
           'Call nv.conform(volume, true) first.'
         )
       }
-      const slices3d = tf.tensor3d(Array.from(volumeData), [256, 256, 256])
+      const slices3d = tf.tensor3d(volumeData, [256, 256, 256])
 
       // Normalize
       onProgress?.(15, 'Normalizing')

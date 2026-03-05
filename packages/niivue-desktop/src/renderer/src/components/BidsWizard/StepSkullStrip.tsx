@@ -4,6 +4,7 @@ import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { brainchopService } from '../../services/brainchop/index.js'
 import type { ModelInfo } from '../../services/brainchop/types.js'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
+import { dilateMask3D } from '../../services/brainchop/dilate3D.js'
 
 const electron = window.electron
 
@@ -102,11 +103,12 @@ export function StepSkullStrip({
           }
         })
 
-        // Apply brain mask to conformed volume
+        // Apply brain mask to conformed volume (with 3-voxel dilation for safety margin)
         const brain = conformed.img!
         const mask = result.volume.img!
+        const dilatedMask = dilateMask3D(mask, 256, 256, 256, 3)
         for (let i = 0; i < brain.length; i++) {
-          if (mask[i] === 0) brain[i] = 0
+          if (dilatedMask[i] === 0) brain[i] = 0
         }
 
         // Save skull-stripped NIfTI back to disk

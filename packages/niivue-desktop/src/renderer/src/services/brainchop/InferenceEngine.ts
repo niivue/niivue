@@ -76,7 +76,7 @@ export class InferenceEngine {
     // 5. Layer-by-layer inference
     const layersLength = model.layers.length
     const loopEnd = modelInfo.enableSeqConv ? layersLength - 2 : layersLength - 1
-    const syncEvery = modelInfo.enableSeqConv ? 1 : 15
+    const syncEvery = modelInfo.enableSeqConv ? 5 : 15
 
     console.log(`[InferenceEngine] Running ${layersLength} layers (loopEnd=${loopEnd}, seqConv=${modelInfo.enableSeqConv})`)
 
@@ -121,21 +121,12 @@ export class InferenceEngine {
         throw new Error(`Inference failed at layer ${i}: ${err instanceof Error ? err.message : String(err)}`)
       }
 
-      // Sync GPU periodically to prevent timeout and update progress
+      // Yield to UI periodically for progress updates
       if (i % syncEvery === 0) {
-        const firstEl = currentTensor.slice(
-          Array(currentTensor.shape.length).fill(0),
-          Array(currentTensor.shape.length).fill(1)
-        )
-        await firstEl.data()
-        firstEl.dispose()
+        const progress = 10 + Math.floor((i / loopEnd) * 70)
+        onProgress?.(progress, `Layer ${i}/${loopEnd}`)
+        await new Promise(resolve => setTimeout(resolve, 0))
       }
-
-      const progress = 10 + Math.floor((i / loopEnd) * 70)
-      onProgress?.(progress, `Layer ${i}/${loopEnd}`)
-      // Yield to event loop so React can render progress updates
-      await new Promise(resolve => setTimeout(resolve, 0))
-      console.log(`[InferenceEngine] Layer ${i} output shape:`, currentTensor.shape)
     }
 
     // 6. Final layer processing
