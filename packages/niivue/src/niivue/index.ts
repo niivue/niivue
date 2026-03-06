@@ -1,130 +1,132 @@
 import { mat4, vec2, vec3, vec4 } from 'gl-matrix'
+
 import packageJson from '../../package.json' with { type: 'json' }
 import { TEXTURE_CONSTANTS } from './texture-constants'
-import { orientCube } from '@/orientCube'
-import { NiivueObject3D } from '@/niivue-object3D'
-import { LoadFromUrlParams, MeshType, NVMesh, NVMeshLayer } from '@/nvmesh'
-import defaultMatCap from '@/matcaps/Shiny.jpg'
-import defaultFontPNG from '@/fonts/Roboto-Regular.png'
+import { COLORMAP_TYPE, type ColorMap, cmapper } from '@/colortables'
+import { drawUndo, findBoundarySlices, interpolateMaskSlices } from '@/drawing'
+import { NiivueEvent, type NiivueEventListener, type NiivueEventListenerOptions, type NiivueEventMap } from '@/events'
 import defaultFontMetrics from '@/fonts/Roboto-Regular.json' with { type: 'json' }
-import { ColorMap, cmapper, COLORMAP_TYPE } from '@/colortables'
-import * as glUtils from '@/niivue/core/gl'
+import defaultFontPNG from '@/fonts/Roboto-Regular.png'
+import { log } from '@/logger'
+import defaultMatCap from '@/matcaps/Shiny.jpg'
 import * as CoordTransform from '@/niivue/core/CoordinateTransform'
+import * as glUtils from '@/niivue/core/gl'
 import * as ShaderManager from '@/niivue/core/ShaderManager'
-import * as VolumeManager from '@/niivue/data/VolumeManager'
-import * as VolumeTexture from '@/niivue/data/VolumeTexture'
-import * as VolumeColormap from '@/niivue/data/VolumeColormap'
-import * as VolumeModulation from '@/niivue/data/VolumeModulation'
-import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
-import * as MeshManager from '@/niivue/data/MeshManager'
 import * as ConnectomeManager from '@/niivue/data/ConnectomeManager'
 import * as FileLoader from '@/niivue/data/FileLoader'
-import * as SliceRenderer from '@/niivue/rendering/SliceRenderer'
-import * as VolumeRenderer from '@/niivue/rendering/VolumeRenderer'
-import * as MeshRenderer from '@/niivue/rendering/MeshRenderer'
-import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
-import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
-import * as EventController from '@/niivue/interaction/EventController'
-import * as MouseController from '@/niivue/interaction/MouseController'
-import * as TouchController from '@/niivue/interaction/TouchController'
-import * as KeyboardController from '@/niivue/interaction/KeyboardController'
-import * as WheelController from '@/niivue/interaction/WheelController'
-import * as DragModeManager from '@/niivue/interaction/DragModeManager'
-import * as DropHandler from '@/niivue/interaction/DropHandler'
-import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
-import * as LayoutManager from '@/niivue/navigation/LayoutManager'
-import * as CameraController from '@/niivue/navigation/CameraController'
-import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
+import * as MeshManager from '@/niivue/data/MeshManager'
+import * as VolumeColormap from '@/niivue/data/VolumeColormap'
+import * as VolumeLayerRenderer from '@/niivue/data/VolumeLayerRenderer'
+import * as VolumeManager from '@/niivue/data/VolumeManager'
+import * as VolumeModulation from '@/niivue/data/VolumeModulation'
+import * as VolumeTexture from '@/niivue/data/VolumeTexture'
+import { computeDescriptiveStats, createMask, scaleImageData } from '@/niivue/descriptives'
 import * as DrawingManager from '@/niivue/drawing/DrawingManager'
+import * as FloodFillTool from '@/niivue/drawing/FloodFillTool'
 import * as PenTool from '@/niivue/drawing/PenTool'
 import * as ShapeTool from '@/niivue/drawing/ShapeTool'
-import * as FloodFillTool from '@/niivue/drawing/FloodFillTool'
+import * as DragModeManager from '@/niivue/interaction/DragModeManager'
+import * as DropHandler from '@/niivue/interaction/DropHandler'
+import * as EventController from '@/niivue/interaction/EventController'
+import * as KeyboardController from '@/niivue/interaction/KeyboardController'
+import * as MouseController from '@/niivue/interaction/MouseController'
+import * as TouchController from '@/niivue/interaction/TouchController'
+import * as WheelController from '@/niivue/interaction/WheelController'
+import * as CameraController from '@/niivue/navigation/CameraController'
+import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
+import * as LayoutManager from '@/niivue/navigation/LayoutManager'
+import * as SliceNavigation from '@/niivue/navigation/SliceNavigation'
 import * as ImageProcessing from '@/niivue/processing/ImageProcessing'
-import { createMask, computeDescriptiveStats, scaleImageData } from '@/niivue/descriptives'
+import * as MeshRenderer from '@/niivue/rendering/MeshRenderer'
+import * as SceneRenderer from '@/niivue/rendering/SceneRenderer'
+import * as SliceRenderer from '@/niivue/rendering/SliceRenderer'
+import * as UIElementRenderer from '@/niivue/rendering/UIElementRenderer'
+import * as VolumeRenderer from '@/niivue/rendering/VolumeRenderer'
+import { NiivueObject3D } from '@/niivue-object3D'
+import { type FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
 import {
-    NVDocument,
-    NVConfigOptions,
-    Scene,
-    SLICE_TYPE,
-    PEN_TYPE,
-    SHOW_RENDER,
-    DRAG_MODE,
-    MULTIPLANAR_TYPE,
+    type CompletedAngle,
+    type CompletedMeasurement,
     DEFAULT_OPTIONS,
-    ExportDocumentData,
+    DRAG_MODE,
+    type ExportDocumentData,
     INITIAL_SCENE_DATA,
-    MouseEventConfig,
-    TouchEventConfig,
-    CompletedMeasurement,
-    CompletedAngle
+    type MouseEventConfig,
+    MULTIPLANAR_TYPE,
+    type NVConfigOptions,
+    NVDocument,
+    PEN_TYPE,
+    type Scene,
+    SHOW_RENDER,
+    SLICE_TYPE,
+    type TouchEventConfig
 } from '@/nvdocument'
-import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '@/nvlabel'
-import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
-import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
-import { AffineTransform } from '@/nvimage/affineUtils'
-import { NVUtilities } from '@/nvutilities'
-import { NiivueEventMap, NiivueEvent, NiivueEventListener, NiivueEventListenerOptions } from '@/events'
+import { type ImageFromUrlOptions, NiiDataType, NiiIntentCode, NVImage, NVImageFromUrlOptions } from '@/nvimage'
+import type { AffineTransform } from '@/nvimage/affineUtils'
+import { LabelAnchorFlag, LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, NVLabel3D, type NVLabel3DStyle } from '@/nvlabel'
+import { type LoadFromUrlParams, MeshType, NVMesh, type NVMeshLayer } from '@/nvmesh'
 import { NVMeshUtilities } from '@/nvmesh-utilities'
-import {
+import NVSerializer from '@/nvserializer'
+import { NVUtilities } from '@/nvutilities'
+import { orientCube } from '@/orientCube'
+import { Shader } from '@/shader'
+import { fragBmpShader, fragFontShader, fragMeshDepthShader, vertBmpShader, vertFontShader, vertMeshShader } from '@/shader-srcs'
+import type {
+    ColormapListEntry,
     Connectome,
-    LegacyConnectome,
-    NVConnectomeNode,
-    NiftiHeader,
+    Descriptive,
     DragReleaseParams,
+    FontMetrics,
+    Graph,
+    LegacyConnectome,
+    MM,
+    MvpMatrix2D,
+    NiftiHeader,
     NiiVueLocation,
     NiiVueLocationValue,
-    SyncOpts,
-    UIData,
-    FontMetrics,
-    ColormapListEntry,
-    Graph,
-    Descriptive,
+    NVConnectomeNode,
+    SaveImageOptions,
     SliceScale,
-    MvpMatrix2D,
-    MM,
-    SaveImageOptions
+    SyncOpts,
+    UIData
 } from '@/types'
-import { findBoundarySlices, interpolateMaskSlices, drawUndo } from '@/drawing'
-import { vertFontShader, fragFontShader, vertBmpShader, fragBmpShader, vertMeshShader, fragMeshDepthShader } from '@/shader-srcs'
-import { Shader } from '@/shader'
-import { log } from '@/logger'
-import { deg2rad, img2ras16, intensityRaw2Scaled, isRadiological, negMinMax, swizzleVec3, tickSpacing, unProject, unpackFloatFromVec4i, readFileAsDataURL } from '@/utils'
-import NVSerializer from '@/nvserializer'
-const { version } = packageJson
-export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
-export { ColorTables as colortables, cmapper } from '@/colortables'
+import { deg2rad, img2ras16, intensityRaw2Scaled, isRadiological, negMinMax, readFileAsDataURL, swizzleVec3, tickSpacing, unProject, unpackFloatFromVec4i } from '@/utils'
 
-export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
-export { NVZarrHelper, ZarrChunkClient, ZarrChunkCache } from '@/nvimage/zarr'
-export type { NVZarrHelperOptions, ZarrPyramidInfo, ZarrPyramidLevel, ChunkCoord } from '@/nvimage/zarr'
-export * from '@/nvimage/affineUtils'
-// address rollup error - https://github.com/rollup/plugins/issues/71
-export * from '@/nvdocument'
-export { NVUtilities } from '@/nvutilities'
-export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '@/nvlabel'
-export { NVMeshLoaders } from '@/nvmesh-loaders'
-export { NVMeshUtilities } from '@/nvmesh-utilities'
+const { version } = packageJson
+
+export { ColorTables as colortables, cmapper } from '@/colortables'
+export type { NiivueEventListener, NiivueEventListenerOptions, NiivueEventMap } from '@/events'
+export { NiivueEvent } from '@/events'
+export type { CustomLoader, GetFileExtOptions, LoaderRegistry, MeshLoaderResult, RegisterLoaderParams } from '@/niivue/data/FileLoader'
 export {
-    MESH_EXTENSIONS,
     getFileExt,
-    isMeshExt,
-    getMediaByUrl,
-    registerLoader,
     getLoader,
+    getMediaByUrl,
+    handleDragEnter,
+    handleDragOver,
     isDicomExtension,
-    traverseFileTree,
+    isMeshExt,
+    MESH_EXTENSIONS,
     readDirectory,
     readFileAsDataURL,
-    handleDragEnter,
-    handleDragOver
+    registerLoader,
+    traverseFileTree
 } from '@/niivue/data/FileLoader'
-export type { LoaderRegistry, CustomLoader, GetFileExtOptions, RegisterLoaderParams, MeshLoaderResult } from '@/niivue/data/FileLoader'
-
+// address rollup error - https://github.com/rollup/plugins/issues/71
+export * from '@/nvdocument'
+export { NVImage, NVImageFromUrlOptions } from '@/nvimage'
+export * from '@/nvimage/affineUtils'
+export type { ChunkCoord, NVZarrHelperOptions, ZarrPyramidInfo, ZarrPyramidLevel } from '@/nvimage/zarr'
+export { NVZarrHelper, ZarrChunkCache, ZarrChunkClient } from '@/nvimage/zarr'
+export { LabelAnchorPoint, LabelLineTerminator, LabelTextAlignment, NVLabel3D, NVLabel3DStyle } from '@/nvlabel'
+export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
+export { NVMeshLoaders } from '@/nvmesh-loaders'
+export { NVMeshUtilities } from '@/nvmesh-utilities'
+export { NVUtilities } from '@/nvutilities'
 // same rollup error as above during npm run dev, and during the umd build
 // TODO: at least remove the umd build when AFNI do not need it anymore
 export * from '@/types'
-export { NiivueEvent } from '@/events'
-export type { NiivueEventMap, NiivueEventListener, NiivueEventListenerOptions } from '@/events'
+
 const { MESH_EXTENSIONS } = FileLoader
 const { LEFT_MOUSE_BUTTON, CENTER_MOUSE_BUTTON, RIGHT_MOUSE_BUTTON } = MouseController
 
@@ -499,6 +501,7 @@ export class Niivue extends EventTarget {
      * }
      */
     onVolumeAddedFromUrl: (imageOptions: ImageFromUrlOptions, volume: NVImage) => void = () => {}
+
     onVolumeWithUrlRemoved: (url: string) => void = () => {}
 
     /**
@@ -553,7 +556,9 @@ export class Niivue extends EventTarget {
      */
     onClipPlaneChange: (clipPlane: number[]) => void = () => {}
     onCustomMeshShaderAdded: (fragmentShaderText: string, name: string) => void = () => {}
+
     onMeshShaderChanged: (meshIndex: number, shaderIndex: number) => void = () => {}
+
     onMeshPropertyChanged: (meshIndex: number, key: string, val: unknown) => void = () => {}
 
     onDicomLoaderFinishedWithImages: (files: NVImage[] | NVMesh[]) => void = () => {}
@@ -900,7 +905,9 @@ export class Niivue extends EventTarget {
                     }
                 }
             })
-            this.canvasObserver.observe(this.canvas.parentElement!, { childList: true })
+            this.canvasObserver.observe(this.canvas.parentElement!, {
+                childList: true
+            })
         }
         if (this.opts.interactive) {
             this.registerInteractions() // attach mouse click and touch screen event handlers for the canvas
@@ -1139,7 +1146,7 @@ export class Niivue extends EventTarget {
         const refAreaPts = 800 * 600
         const normalizedArea = Math.max(screenAreaPts / refAreaPts, 1)
         // Power-law scaling
-        const scale = Math.pow(normalizedArea, this.opts.fontSizeScaling)
+        const scale = normalizedArea ** this.opts.fontSizeScaling
         // Convert to pixels: multiply by dpi
         const fontPx = basePointSize * scale * dpi
         this.fontPx = fontPx
@@ -1395,7 +1402,11 @@ export class Niivue extends EventTarget {
                     // Get slice info using the current click position
                     const tileIdx = this.tileIndex(finalClickPos[0], finalClickPos[1])
 
-                    let sliceInfo = { sliceIndex: -1, sliceType: SLICE_TYPE.AXIAL, slicePosition: 0 }
+                    let sliceInfo = {
+                        sliceIndex: -1,
+                        sliceType: SLICE_TYPE.AXIAL,
+                        slicePosition: 0
+                    }
                     if (tileIdx >= 0 && tileIdx < this.screenSlices.length) {
                         const sliceType = this.screenSlices[tileIdx].axCorSag
                         let slicePosition = 0
@@ -2494,7 +2505,9 @@ export class Niivue extends EventTarget {
         // add mousedown
         this.canvas.addEventListener('mousedown', this.mouseDownListener.bind(this), { signal })
         // add mouseup
-        this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this), { signal })
+        this.canvas.addEventListener('mouseup', this.mouseUpListener.bind(this), {
+            signal
+        })
         // add mouse move
         this.canvas.addEventListener('mousemove', this.mouseMoveListener.bind(this), { signal })
         // add mouse leave listener
@@ -2503,21 +2516,29 @@ export class Niivue extends EventTarget {
         // add touchstart
         this.canvas.addEventListener('touchstart', this.touchStartListener.bind(this), { signal })
         // add touchend
-        this.canvas.addEventListener('touchend', this.touchEndListener.bind(this), { signal })
+        this.canvas.addEventListener('touchend', this.touchEndListener.bind(this), {
+            signal
+        })
         // add touchmove
         this.canvas.addEventListener('touchmove', this.touchMoveListener.bind(this), { signal })
 
         // add scroll wheel
-        this.canvas.addEventListener('wheel', this.wheelListener.bind(this), { signal })
+        this.canvas.addEventListener('wheel', this.wheelListener.bind(this), {
+            signal
+        })
         // add context event disabler
         this.canvas.addEventListener('contextmenu', this.mouseContextMenuListener.bind(this), { signal })
 
         // add double click
-        this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this), { signal })
+        this.canvas.addEventListener('dblclick', this.resetBriCon.bind(this), {
+            signal
+        })
 
         //  drag and drop support
         this.canvas.addEventListener('dragenter', this.dragEnterListener.bind(this), { signal })
-        this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), { signal })
+        this.canvas.addEventListener('dragover', this.dragOverListener.bind(this), {
+            signal
+        })
         this.canvas.addEventListener(
             'drop',
             (event) => {
@@ -2528,10 +2549,14 @@ export class Niivue extends EventTarget {
 
         // add keyup
         this.canvas.setAttribute('tabindex', '0')
-        this.canvas.addEventListener('keyup', this.keyUpListener.bind(this), { signal })
+        this.canvas.addEventListener('keyup', this.keyUpListener.bind(this), {
+            signal
+        })
 
         // keydown
-        this.canvas.addEventListener('keydown', this.keyDownListener.bind(this), { signal })
+        this.canvas.addEventListener('keydown', this.keyDownListener.bind(this), {
+            signal
+        })
     }
 
     /**
@@ -2927,7 +2952,11 @@ export class Niivue extends EventTarget {
      */
     private async handleMeshFileDrop(file: File): Promise<void> {
         try {
-            const mesh = await NVMesh.loadFromFile({ file, gl: this.gl, name: file.name })
+            const mesh = await NVMesh.loadFromFile({
+                file,
+                gl: this.gl,
+                name: file.name
+            })
             this.addMesh(mesh)
         } catch (err) {
             console.error('Error loading mesh:', err)
@@ -3439,7 +3468,10 @@ export class Niivue extends EventTarget {
         }
 
         // Calculate transformation and transform the bitmap
-        const transform = DrawingManager.calculateLoadDrawingTransform({ permRAS: perm, dims })
+        const transform = DrawingManager.calculateLoadDrawingTransform({
+            permRAS: perm,
+            dims
+        })
         this.drawBitmap = DrawingManager.transformBitmap({
             inputData: drawingBitmap.img!,
             dims,
@@ -4075,7 +4107,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             return
         }
         // Check if drag is significant enough to update camera
-        if (!CameraController.shouldUpdateCameraRotation({ dx: result.dx, dy: result.dy })) {
+        if (
+            !CameraController.shouldUpdateCameraRotation({
+                dx: result.dx,
+                dy: result.dy
+            })
+        ) {
             return
         }
 
@@ -4089,9 +4126,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (this.scene.renderAzimuth === rotation.azimuth && this.scene.renderElevation === rotation.elevation) {
             return
         }
-        this.scene.renderAzimuth = rotation.azimuth
-        this.scene.renderElevation = rotation.elevation
-        this.drawScene()
+        this.setRenderAzimuthElevation(rotation.azimuth, rotation.elevation)
     }
 
     /**
@@ -4247,7 +4282,11 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             }
             // Emit tool changed to 'off' when drawing is disabled
             const tool = this._deriveDrawingTool(this.opts.penValue)
-            this._emitEvent('drawingToolChanged', { tool, penValue: this.opts.penValue, isFilledPen: this.opts.isFilledPen })
+            this._emitEvent('drawingToolChanged', {
+                tool,
+                penValue: this.opts.penValue,
+                isFilledPen: this.opts.isFilledPen
+            })
             this.onDrawingToolChanged(tool, this.opts.penValue, this.opts.isFilledPen)
         }
         this.drawScene() // Redraw needed in both cases
@@ -6279,7 +6318,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             return
         }
         this.updateGLVolume()
-        this._emitEvent('meshShaderChanged', { meshIndex: result.meshIndex, shaderIndex: result.shaderIndex })
+        this._emitEvent('meshShaderChanged', {
+            meshIndex: result.meshIndex,
+            shaderIndex: result.shaderIndex
+        })
         this.onMeshShaderChanged(result.meshIndex, result.shaderIndex)
     }
 
@@ -7492,7 +7534,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         // Check if frame actually changed
         if (this.volumes[idx].frame4D !== oldFrame) {
             this.updateGLVolume()
-            this._emitEvent('frameChange', { volume: this.volumes[idx], index: this.volumes[idx].frame4D! })
+            this._emitEvent('frameChange', {
+                volume: this.volumes[idx],
+                index: this.volumes[idx].frame4D!
+            })
             this.onFrameChange(this.volumes[idx], this.volumes[idx].frame4D!)
             this.createOnLocationChange()
         }
@@ -8533,7 +8578,11 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * Get slice information for the current measurement/angle.
      * @internal
      */
-    getCurrentSliceInfo(): { sliceIndex: number; sliceType: SLICE_TYPE; slicePosition: number } {
+    getCurrentSliceInfo(): {
+        sliceIndex: number
+        sliceType: SLICE_TYPE
+        slicePosition: number
+    } {
         return SliceNavigation.getCurrentSliceInfo({
             dragStart: this.uiData.dragStart,
             screenSlices: this.screenSlices,
@@ -9841,7 +9890,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         // compute extents of all volumes and meshes in scene
         // pivot around center of these.
         const [mn, mx] = this.sceneExtentsMinMax()
-        const result = SceneRenderer.calculatePivot3D({ sceneMin: mn, sceneMax: mx })
+        const result = SceneRenderer.calculatePivot3D({
+            sceneMin: mn,
+            sceneMax: mx
+        })
         this.pivot3D = result.pivot3D
         this.furthestFromPivot = result.furthestFromPivot
         this.extentsMin = result.extentsMin
@@ -12362,7 +12414,11 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             return null
         }
 
-        const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] }
+        const dims = {
+            dimX: this.back.dims[1],
+            dimY: this.back.dims[2],
+            dimZ: this.back.dims[3]
+        }
         return findBoundarySlices(sliceType, this.drawBitmap, dims)
     }
 
@@ -12388,7 +12444,11 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             throw new Error('Background image and drawing bitmap must be loaded')
         }
 
-        const dims = { dimX: this.back.dims[1], dimY: this.back.dims[2], dimZ: this.back.dims[3] }
+        const dims = {
+            dimX: this.back.dims[1],
+            dimY: this.back.dims[2],
+            dimZ: this.back.dims[3]
+        }
         const imageData = this.back.img
         const maxVal = this.back.global_max
 
