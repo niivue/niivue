@@ -46750,9 +46750,7 @@ var Niivue = class extends EventTarget {
     if (this.scene.renderAzimuth === rotation.azimuth && this.scene.renderElevation === rotation.elevation) {
       return;
     }
-    this.scene.renderAzimuth = rotation.azimuth;
-    this.scene.renderElevation = rotation.elevation;
-    this.drawScene();
+    this.setRenderAzimuthElevation(rotation.azimuth, rotation.elevation);
   }
   /**
    * convert spherical AZIMUTH, ELEVATION to Cartesian
