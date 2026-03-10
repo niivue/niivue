@@ -270,7 +270,9 @@ export class NVSerializer {
                         urlImageData: v?.urlImgData ?? '',
                         cal_minNeg: v?.cal_minNeg ?? NaN,
                         cal_maxNeg: v?.cal_maxNeg ?? NaN,
-                        colorbarVisible: v?.colorbarVisible ?? true
+                        colorbarVisible: v?.colorbarVisible ?? true,
+                        colormapNegative: v?.colormapNegative ?? '',
+                        colormapType: v?.colormapType ?? 0
                     }
                 } else {
                     if (!('imageType' in imageOptions)) {
@@ -283,6 +285,11 @@ export class NVSerializer {
                 imageOptions.opacity = v.opacity
                 imageOptions.cal_max = v.cal_max ?? NaN
                 imageOptions.cal_min = v.cal_min ?? NaN
+                imageOptions.colormapNegative = v.colormapNegative ?? ''
+                imageOptions.cal_minNeg = v.cal_minNeg ?? NaN
+                imageOptions.cal_maxNeg = v.cal_maxNeg ?? NaN
+                imageOptions.colorbarVisible = v.colorbarVisible ?? true
+                imageOptions.colormapType = v.colormapType ?? 0
 
                 imageOptionsArray.push(imageOptions)
 

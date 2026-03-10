@@ -248,6 +248,107 @@ test('NVSerializer.rehydrateMeshes decodes legacy colorMap and numeric encodings
 })
 
 /**
+ * Test: Volume overlay colormap properties roundtrip via getImageOptions path
+ */
+test('NVSerializer.serializeDocument preserves overlay colormap properties (getImageOptions path)', () => {
+  const doc = new NVDocument()
+
+  // Create a mock volume with non-default colormap properties
+  const mockVolume: any = {
+    id: 'overlay-test',
+    name: 'overlay.nii',
+    _colormap: 'hot',
+    colormap: 'hot',
+    opacity: 0.7,
+    _opacity: 0.7,
+    cal_min: -5,
+    cal_max: 10,
+    trustCalMinMax: false,
+    percentileFrac: 0.05,
+    ignoreZeroVoxels: true,
+    useQFormNotSForm: false,
+    colormapNegative: 'winter',
+    frame4D: 0,
+    imageType: 2, // NVIMAGE_TYPE.NII
+    cal_minNeg: -3,
+    cal_maxNeg: -1,
+    colorbarVisible: false,
+    colormapType: 1,
+    colormapLabel: null,
+    toUint8Array: () => new Uint8Array([1, 2, 3]),
+    hdr: { cal_min: -5, cal_max: 10 }
+  }
+
+  ;(doc as any).volumes = [mockVolume]
+
+  const exported = NVSerializer.serializeDocument(doc, true, true)
+
+  expect(exported.imageOptionsArray).toBeDefined()
+  expect(exported.imageOptionsArray!.length).toBe(1)
+
+  const opts = exported.imageOptionsArray![0]
+  expect(opts.colormapNegative).toBe('winter')
+  expect(opts.cal_minNeg).toBe(-3)
+  expect(opts.cal_maxNeg).toBe(-1)
+  expect(opts.colorbarVisible).toBe(false)
+  expect(opts.colormapType).toBe(1)
+  expect(opts.cal_min).toBe(-5)
+  expect(opts.cal_max).toBe(10)
+})
+
+/**
+ * Test: Volume overlay colormap properties roundtrip via fallback path
+ * (when getImageOptions is not available)
+ */
+test('NVSerializer.serializeDocument preserves overlay colormap properties (fallback path)', () => {
+  const doc = new NVDocument()
+
+  // Create a mock volume with non-default colormap properties
+  const mockVolume: any = {
+    id: 'fallback-overlay-test',
+    name: 'overlay-fallback.nii',
+    _colormap: 'cool',
+    colormap: 'cool',
+    opacity: 0.5,
+    _opacity: 0.5,
+    cal_min: -2,
+    cal_max: 8,
+    trustCalMinMax: true,
+    percentileFrac: 0.02,
+    ignoreZeroVoxels: false,
+    useQFormNotSForm: false,
+    colormapNegative: 'blue2red',
+    frame4D: 0,
+    imageType: 2,
+    cal_minNeg: -4,
+    cal_maxNeg: -0.5,
+    colorbarVisible: true,
+    colormapType: 2,
+    colormapLabel: null,
+    toUint8Array: () => new Uint8Array([4, 5, 6]),
+    hdr: { cal_min: -2, cal_max: 8 }
+  }
+
+  ;(doc as any).volumes = [mockVolume]
+  // Remove getImageOptions to force fallback path
+  ;(doc as any).getImageOptions = undefined
+
+  const exported = NVSerializer.serializeDocument(doc, true, true)
+
+  expect(exported.imageOptionsArray).toBeDefined()
+  expect(exported.imageOptionsArray!.length).toBe(1)
+
+  const opts = exported.imageOptionsArray![0]
+  expect(opts.colormapNegative).toBe('blue2red')
+  expect(opts.cal_minNeg).toBe(-4)
+  expect(opts.cal_maxNeg).toBe(-0.5)
+  expect(opts.colorbarVisible).toBe(true)
+  expect(opts.colormapType).toBe(2)
+  expect(opts.cal_min).toBe(-2)
+  expect(opts.cal_max).toBe(8)
+})
+
+/**
  * Test: meshesString that looks like a structured-clone wrapper or a wrapper object
  * Ensures normalizeMeshesString path is exercised and that resulting layers are normalized.
  */
