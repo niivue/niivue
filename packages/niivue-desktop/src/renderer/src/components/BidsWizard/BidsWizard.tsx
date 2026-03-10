@@ -306,9 +306,9 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/40 fixed inset-0 z-40" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-lg w-[900px] max-h-[90vh] overflow-visible z-50">
+        <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-lg w-[900px] max-h-[90vh] overflow-hidden z-50">
           <Theme>
-            <div className="p-6">
+            <div className="p-6 flex flex-col" style={{ maxHeight: '90vh' }}>
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <Dialog.Title asChild>
@@ -358,7 +358,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
               )}
 
               {/* Step content */}
-              <div className="min-h-[300px]">
+              <div className="min-h-[300px] overflow-y-auto flex-1">
                 {step === 0 && (
                   <StepSelectSource
                     dicomDir={dicomDir}
@@ -436,7 +436,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
+              <div className="flex justify-between mt-6 pt-4 border-t border-gray-200 shrink-0">
                 <Button
                   variant="soft"
                   color="gray"
