@@ -7,6 +7,8 @@ import {
   decompressGzipBase64ToJson,
   isProbablyGzip
 } from '@renderer/utils/base64ToJSON.js'
+import type { BidsWizardState } from '../../../common/bidsTypes.js'
+import { deserializeBidsState } from '../../../common/bidsState.js'
 
 const electron = window.electron
 
@@ -20,13 +22,15 @@ export interface HandlerProps {
   }>
   /** Called when an .nvd document is successfully loaded */
   onDocumentLoaded?: (title: string, targetId: string) => void
+  onBidsStateRestored?: (state: BidsWizardState) => void
 }
 
 console.log('[Renderer] registering loadRecentFile handler')
 
 export const registerLoadRecentFileHandler = ({
   getTarget,
-  onDocumentLoaded
+  onDocumentLoaded,
+  onBidsStateRestored
 }: HandlerProps): void => {
   electron.ipcRenderer.removeAllListeners('loadRecentFile')
   electron.ipcRenderer.on('loadRecentFile', async (_, filePath: string) => {
@@ -57,6 +61,14 @@ export const registerLoadRecentFileHandler = ({
         const fileName = filePath.split('/').pop()!
         const friendly = fileName.replace(/\.nvd(\.gz)?$/i, '')
         onDocumentLoaded(friendly, id)
+      }
+
+      // Restore BIDS state from customData if present
+      if (onBidsStateRestored && nv.document.customData) {
+        const bidsState = deserializeBidsState(nv.document.customData)
+        if (bidsState) {
+          onBidsStateRestored(bidsState)
+        }
       }
     } else if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
       // Mesh case

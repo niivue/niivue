@@ -7,7 +7,10 @@ import type {
   BidsConvertAndClassifyResult,
   BidsWritePayload,
   BidsWriteResult,
-  BidsValidationResult
+  BidsValidationResult,
+  BidsSeriesMapping,
+  FieldmapIntendedFor,
+  ParseEventFileResult
 } from '../common/bidsTypes.js'
 
 const api = {
@@ -113,6 +116,15 @@ const api = {
   },
   bidsSelectOutputDir: (): Promise<string | null> => {
     return ipcRenderer.invoke('bids:select-output-dir')
+  },
+  bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]): Promise<FieldmapIntendedFor[]> => {
+    return ipcRenderer.invoke('bids:suggest-fieldmap-mappings', mappings)
+  },
+  bidsSelectEventFile: (): Promise<string | null> => {
+    return ipcRenderer.invoke('bids:select-event-file')
+  },
+  bidsParseEventFile: (filePath: string): Promise<ParseEventFileResult> => {
+    return ipcRenderer.invoke('bids:parse-event-file', filePath)
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

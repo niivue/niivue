@@ -185,6 +185,11 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
+      onBidsStateRestored: (state) => {
+        setBidsMappings(state.mappings)
+        setRightPanelTab('bids')
+        setRightPanelOpen(true)
+      },
       onMosaicStringChange: selected.setSliceMosaicString,
       onToggleSegmentationPanel: () => {
         setRightPanelTab('segmentation')
@@ -774,6 +779,7 @@ function MainApp(): JSX.Element {
       current.setVolumes([])
       current.setMeshes([])
       current.setSelectedImage(null)
+      setBidsMappings([])
 
       updateDocument(current.id, {
         volumes: [],

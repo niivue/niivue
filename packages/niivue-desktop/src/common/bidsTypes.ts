@@ -88,6 +88,38 @@ export interface BidsSeriesMapping {
   exclusionReason?: string
   /** Sidecar JSON data for metadata editing */
   sidecarData?: SeriesSidecarData
+  /** BIDS-relative IntendedFor paths (only for fmap series) */
+  intendedFor?: string[]
+  /** Event file configuration (only for func/bold series) */
+  eventFile?: EventFileConfig
+}
+
+export interface FieldmapIntendedFor {
+  fmapIndex: number
+  targetIndices: number[]
+}
+
+export interface EventColumnMapping {
+  sourceColumn: string
+  bidsColumn: string  // 'onset' | 'duration' | 'trial_type' | custom | 'skip'
+}
+
+export interface EventFileConfig {
+  sourcePath: string
+  filename: string
+  delimiter: string
+  convertMsToSeconds: boolean
+  columnMappings: EventColumnMapping[]
+  detectedColumns: string[]
+  previewRows?: string[][]
+}
+
+export interface ParseEventFileResult {
+  success: boolean
+  columns: string[]
+  previewRows: string[][]
+  detectedDelimiter: string
+  error?: string
 }
 
 export interface BidsDatasetConfig {
@@ -148,10 +180,24 @@ export interface BidsWritePayload {
   mappings: BidsSeriesMapping[]
   demographics?: ParticipantDemographics
   allDemographics?: Record<string, ParticipantDemographics>
+  fieldmapIntendedFor?: FieldmapIntendedFor[]
 }
 
 export interface BidsWriteResult {
   success: boolean
   outputDir?: string
   error?: string
+}
+
+/** Persistable BIDS wizard state for save/restore via NVDocument.customData */
+export interface BidsWizardState {
+  mappings: BidsSeriesMapping[]
+  fieldmapIntendedFor: FieldmapIntendedFor[]
+  demographics: ParticipantDemographics
+  detectedSubjects: DetectedSubject[]
+  config: BidsDatasetConfig
+  subject: string
+  session: string
+  step: number
+  dicomDir: string
 }

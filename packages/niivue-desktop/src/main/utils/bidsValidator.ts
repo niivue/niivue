@@ -123,6 +123,51 @@ export function validateProposedDataset(
     }
   }
 
+  // Check fmap series for IntendedFor
+  const hasFmaps = included.some(m => m.datatype === 'fmap')
+  if (hasFmaps) {
+    for (const m of included) {
+      if (m.datatype === 'fmap' && (!m.intendedFor || m.intendedFor.length === 0)) {
+        const fn = generateBidsFilename(m)
+        warnings.push({
+          severity: 'warning',
+          message: `Fieldmap "${m.seriesDescription}" has no IntendedFor mapping`,
+          file: fn
+        })
+      }
+    }
+  }
+
+  // Check func/bold for event files and validate event column mappings
+  for (const m of included) {
+    if (m.datatype === 'func' && m.suffix === 'bold' && !m.eventFile && m.task !== 'rest') {
+      const fn = generateBidsFilename(m)
+      warnings.push({
+        severity: 'warning',
+        message: `Functional run "${m.seriesDescription}" has no event file`,
+        file: fn
+      })
+    }
+    if (m.eventFile) {
+      const fn = generateBidsFilename(m)
+      const bidsColumns = m.eventFile.columnMappings.map(cm => cm.bidsColumn)
+      if (!bidsColumns.includes('onset')) {
+        errors.push({
+          severity: 'error',
+          message: `Event file for "${m.seriesDescription}" is missing onset column mapping`,
+          file: fn
+        })
+      }
+      if (!bidsColumns.includes('duration')) {
+        errors.push({
+          severity: 'error',
+          message: `Event file for "${m.seriesDescription}" is missing duration column mapping`,
+          file: fn
+        })
+      }
+    }
+  }
+
   // Check for duplicate filenames
   const filenames = new Map<string, number>()
   for (const m of included) {

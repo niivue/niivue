@@ -4,13 +4,15 @@ import { Button, Text, Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import type { Niivue } from '@niivue/niivue'
 import type { DicomSeries } from '../../../../common/dcm2niixTypes.js'
-import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics, DetectedSubject } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics, DetectedSubject, FieldmapIntendedFor, BidsWizardState } from '../../../../common/bidsTypes.js'
+import { serializeBidsState, deserializeBidsState } from '../../../../common/bidsState.js'
 import { StepSelectSource } from './StepSelectSource.js'
 import { StepConversion } from './StepConversion.js'
 import { StepSkullStrip } from './StepSkullStrip.js'
 import { StepClassification } from './StepClassification.js'
 import { StepSubjectSession } from './StepSubjectSession.js'
 import { StepMetadata } from './StepMetadata.js'
+import { StepTaskEvents } from './StepTaskEvents.js'
 import { StepValidation } from './StepValidation.js'
 
 const electron = window.electron
@@ -22,7 +24,7 @@ interface BidsWizardProps {
   onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
 }
 
-const stepLabels = ['Source', 'Convert', 'Skull Strip', 'Classify', 'Subject', 'Metadata', 'Validate']
+const stepLabels = ['Source', 'Convert', 'Skull Strip', 'Classify', 'Events', 'Subject', 'Metadata', 'Validate']
 
 const defaultConfig: BidsDatasetConfig = {
   name: '',
@@ -55,6 +57,9 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     age: '', sex: '', handedness: '', group: ''
   })
 
+  // Fieldmap IntendedFor mappings
+  const [fieldmapIntendedFor, setFieldmapIntendedFor] = useState<FieldmapIntendedFor[]>([])
+
   // Multi-subject detection
   const [detectedSubjects, setDetectedSubjects] = useState<DetectedSubject[]>([])
 
@@ -72,6 +77,54 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     }
   }, [])
 
+  // Clear BIDS wizard state when scene is cleared
+  useEffect((): (() => void) => {
+    const handleClearScene = (): void => {
+      reset()
+      setOpen(false)
+    }
+    electron.ipcRenderer.on('clear-scene', handleClearScene)
+    return (): void => {
+      electron.ipcRenderer.removeListener('clear-scene', handleClearScene)
+    }
+  }, [])
+
+  // Restore saved BIDS state when wizard opens
+  useEffect(() => {
+    if (!open || !nv) return
+    const saved = deserializeBidsState(nv.document.customData || '')
+    if (!saved) return
+    setMappings(saved.mappings)
+    setFieldmapIntendedFor(saved.fieldmapIntendedFor)
+    setDemographics(saved.demographics)
+    setDetectedSubjects(saved.detectedSubjects)
+    setConfig(saved.config)
+    setSubject(saved.subject)
+    setSession(saved.session)
+    setStep(saved.step)
+    setDicomDir(saved.dicomDir)
+    if (saved.mappings.length > 0) {
+      setConverted(true)
+    }
+  }, [open, nv])
+
+  // Auto-save BIDS state to NVDocument.customData on meaningful state changes
+  useEffect(() => {
+    if (!open || !nv || mappings.length === 0) return
+    const state: BidsWizardState = {
+      mappings,
+      fieldmapIntendedFor,
+      demographics,
+      detectedSubjects,
+      config,
+      subject,
+      session,
+      step,
+      dicomDir
+    }
+    nv.document.customData = serializeBidsState(nv.document.customData || '', state)
+  }, [open, nv, mappings, fieldmapIntendedFor, demographics, detectedSubjects, config, subject, session, step, dicomDir])
+
   const reset = (): void => {
     setStep(0)
     setError(null)
@@ -85,6 +138,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     setConfig({ ...defaultConfig })
     setDemographics({ age: '', sex: '', handedness: '', group: '' })
     setDetectedSubjects([])
+    setFieldmapIntendedFor([])
   }
 
   const handleClose = (): void => {
@@ -105,11 +159,11 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     }))
   }
 
-  const handleConversionComplete = (
+  const handleConversionComplete = async (
     newMappings: BidsSeriesMapping[],
     newDemographics?: ParticipantDemographics,
     newDetectedSubjects?: DetectedSubject[]
-  ): void => {
+  ): Promise<void> => {
     setMappings(newMappings)
     setConverted(true)
     if (newDemographics) {
@@ -123,6 +177,11 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
       }
     }
     onConversionComplete?.(newMappings)
+    // Auto-suggest fieldmap IntendedFor mappings
+    const suggested = await electron.bidsSuggestFieldmapMappings(newMappings)
+    if (suggested.length > 0) {
+      setFieldmapIntendedFor(suggested)
+    }
   }
 
   const handleConversionError = (err: string): void => {
@@ -230,11 +289,13 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
       case 3:
         return mappings.some((m) => !m.excluded)
       case 4:
+        return true // Events are optional
+      case 5:
         if (detectedSubjects.length > 1) {
           return detectedSubjects.every(ds => ds.label.trim() !== '' && /^[a-zA-Z0-9]+$/.test(ds.label))
         }
         return subject.trim() !== '' && /^[a-zA-Z0-9]+$/.test(subject)
-      case 5:
+      case 6:
         return config.name.trim() !== '' && config.outputDir.trim() !== ''
       default:
         return true
@@ -332,9 +393,17 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     onUpdateMapping={handleUpdateMapping}
                     onUpdateSidecar={handleUpdateSidecar}
                     datasetName={config.name}
+                    fieldmapIntendedFor={fieldmapIntendedFor}
+                    onUpdateFieldmapMappings={setFieldmapIntendedFor}
                   />
                 )}
                 {step === 4 && (
+                  <StepTaskEvents
+                    mappings={currentMappings}
+                    onUpdateMapping={handleUpdateMapping}
+                  />
+                )}
+                {step === 5 && (
                   <StepSubjectSession
                     subject={subject}
                     setSubject={setSubject}
@@ -349,18 +418,19 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     onUpdateDetectedSessionLabel={handleUpdateDetectedSessionLabel}
                   />
                 )}
-                {step === 5 && (
+                {step === 6 && (
                   <StepMetadata
                     config={config}
                     onUpdateConfig={updateConfig}
                   />
                 )}
-                {step === 6 && (
+                {step === 7 && (
                   <StepValidation
                     config={config}
                     mappings={currentMappings}
                     demographics={demographics}
                     allDemographics={getAllDemographics()}
+                    fieldmapIntendedFor={fieldmapIntendedFor}
                   />
                 )}
               </div>
@@ -374,12 +444,12 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                 >
                   {step === 0 ? 'Cancel' : 'Back'}
                 </Button>
-                {step < 6 && (
+                {step < 7 && (
                   <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
                     Next
                   </Button>
                 )}
-                {step === 6 && (
+                {step === 7 && (
                   <Button variant="soft" color="gray" onClick={handleClose}>
                     Close
                   </Button>

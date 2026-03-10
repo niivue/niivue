@@ -5,7 +5,8 @@ import type {
   BidsDatasetConfig,
   BidsValidationResult,
   BidsValidationIssue,
-  ParticipantDemographics
+  ParticipantDemographics,
+  FieldmapIntendedFor
 } from '../../../../common/bidsTypes.js'
 
 const electron = window.electron
@@ -15,9 +16,10 @@ interface StepValidationProps {
   mappings: BidsSeriesMapping[]
   demographics?: ParticipantDemographics
   allDemographics?: Record<string, ParticipantDemographics>
+  fieldmapIntendedFor?: FieldmapIntendedFor[]
 }
 
-export function StepValidation({ config, mappings, demographics, allDemographics }: StepValidationProps): JSX.Element {
+export function StepValidation({ config, mappings, demographics, allDemographics, fieldmapIntendedFor }: StepValidationProps): JSX.Element {
   const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
   const [writing, setWriting] = useState(false)
   const [writeComplete, setWriteComplete] = useState(false)
@@ -30,7 +32,7 @@ export function StepValidation({ config, mappings, demographics, allDemographics
     setValidationResult(null)
     try {
       // Write the dataset
-      const result = await electron.bidsWrite({ config, mappings, demographics, allDemographics })
+      const result = await electron.bidsWrite({ config, mappings, demographics, allDemographics, fieldmapIntendedFor })
       if (!result.success) {
         setWriteError(result.error || 'Write failed')
         setWriting(false)
@@ -41,7 +43,7 @@ export function StepValidation({ config, mappings, demographics, allDemographics
 
       // Auto-validate after writing
       try {
-        const validation = await electron.bidsValidate({ config, mappings })
+        const validation = await electron.bidsValidate({ config, mappings, fieldmapIntendedFor })
         setValidationResult(validation)
       } catch {
         // Validation failure is non-fatal

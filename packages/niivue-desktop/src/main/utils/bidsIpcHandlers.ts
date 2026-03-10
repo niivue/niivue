@@ -3,8 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { spawnDcm2niix } from './runDcm2niix.js'
-import { classifyAll, extractDemographics } from './bidsEngine.js'
-import { writeDataset } from './bidsWriter.js'
+import { classifyAll, extractDemographics, suggestFieldmapMappings, parseEventFile } from './bidsEngine.js'
+import { writeDataset, resolveIntendedForPaths } from './bidsWriter.js'
 import { validateProposedDataset } from './bidsValidator.js'
 import type {
   BidsConvertAndClassifyPayload,
@@ -58,7 +58,11 @@ export function registerBidsIpcHandlers(): void {
    */
   ipcMain.handle('bids:validate', async (_evt, payload: BidsWritePayload) => {
     try {
-      const result = validateProposedDataset(payload.config, payload.mappings)
+      let mappings = payload.mappings
+      if (payload.fieldmapIntendedFor && payload.fieldmapIntendedFor.length > 0) {
+        mappings = resolveIntendedForPaths(mappings, payload.fieldmapIntendedFor)
+      }
+      const result = validateProposedDataset(payload.config, mappings)
       return result
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -75,12 +79,44 @@ export function registerBidsIpcHandlers(): void {
    */
   ipcMain.handle('bids:write', async (_evt, payload: BidsWritePayload) => {
     try {
-      const result = writeDataset(payload.config, payload.mappings, payload.demographics, payload.allDemographics)
+      const result = writeDataset(payload.config, payload.mappings, payload.demographics, payload.allDemographics, payload.fieldmapIntendedFor)
       return { success: true, outputDir: result.outputDir, filesCopied: result.filesCopied }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       return { success: false, error: msg }
     }
+  })
+
+  /**
+   * Suggest fieldmap IntendedFor mappings
+   */
+  ipcMain.handle('bids:suggest-fieldmap-mappings', async (_evt, mappings) => {
+    return suggestFieldmapMappings(mappings)
+  })
+
+  /**
+   * Show file picker for event files
+   */
+  ipcMain.handle('bids:select-event-file', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select Event/Timing File',
+      filters: [
+        { name: 'Event files', extensions: ['tsv', 'csv', 'txt'] },
+        { name: 'All files', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
+
+  /**
+   * Parse an event file and return columns + preview
+   */
+  ipcMain.handle('bids:parse-event-file', async (_evt, filePath: string) => {
+    return parseEventFile(filePath)
   })
 
   /**

@@ -8,7 +8,9 @@ import type {
   ParticipantDemographics,
   SeriesSidecarData,
   DetectedSubject,
-  DetectedSession
+  DetectedSession,
+  FieldmapIntendedFor,
+  ParseEventFileResult
 } from '../../common/bidsTypes.js'
 import { SUFFIXES_BY_DATATYPE } from '../../common/bidsTypes.js'
 import { INTERNAL_SIDECAR_FIELDS } from './bidsWriter.js'
@@ -540,4 +542,91 @@ export function classifyAll(sidecarPaths: string[]): { mappings: BidsSeriesMappi
   }
 
   return { mappings, detectedSubjects }
+}
+
+export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): FieldmapIntendedFor[] {
+  const fmaps = mappings.filter(m => !m.excluded && m.datatype === 'fmap')
+  const targets = mappings.filter(m => !m.excluded && (m.datatype === 'func' || m.datatype === 'dwi'))
+
+  if (fmaps.length === 0 || targets.length === 0) return []
+
+  const result: FieldmapIntendedFor[] = []
+
+  for (const fm of fmaps) {
+    // Match by same subject + session
+    const eligible = targets.filter(t => t.subject === fm.subject && t.session === fm.session)
+    if (eligible.length === 0) continue
+
+    // If fmap has PhaseEncodingDirection, try to match opposite polarity EPI targets
+    const fmPE = fm.sidecarData?.original?.PhaseEncodingDirection as string | undefined
+    let matched = eligible
+
+    if (fmPE && fm.suffix === 'epi') {
+      // Opposite polarity: j vs j-, i vs i-
+      const opposite = fmPE.endsWith('-') ? fmPE.slice(0, -1) : fmPE + '-'
+      const peMatched = eligible.filter(t => {
+        const tPE = t.sidecarData?.original?.PhaseEncodingDirection as string | undefined
+        return tPE === opposite
+      })
+      if (peMatched.length > 0) {
+        matched = peMatched
+      }
+    }
+
+    result.push({
+      fmapIndex: fm.index,
+      targetIndices: matched.map(t => t.index)
+    })
+  }
+
+  return result
+}
+
+export function parseEventFile(filePath: string): ParseEventFileResult {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    const lines = content.split(/\r?\n/).filter(l => l.trim() !== '')
+    if (lines.length === 0) {
+      return { success: false, columns: [], previewRows: [], detectedDelimiter: '\t', error: 'File is empty' }
+    }
+
+    // Auto-detect delimiter
+    let delimiter = '\t'
+    const firstLine = lines[0]
+    if (firstLine.includes('\t')) {
+      delimiter = '\t'
+    } else if (firstLine.includes(',')) {
+      delimiter = ','
+    } else if (/\s{2,}/.test(firstLine) || firstLine.includes(' ')) {
+      delimiter = 'whitespace'
+    }
+
+    const splitLine = (line: string): string[] => {
+      if (delimiter === 'whitespace') {
+        return line.trim().split(/\s+/)
+      }
+      return line.split(delimiter)
+    }
+
+    const columns = splitLine(lines[0]).map(c => c.trim())
+    const previewRows: string[][] = []
+    for (let i = 1; i < Math.min(lines.length, 6); i++) {
+      previewRows.push(splitLine(lines[i]).map(c => c.trim()))
+    }
+
+    return {
+      success: true,
+      columns,
+      previewRows,
+      detectedDelimiter: delimiter
+    }
+  } catch (err) {
+    return {
+      success: false,
+      columns: [],
+      previewRows: [],
+      detectedDelimiter: '\t',
+      error: err instanceof Error ? err.message : String(err)
+    }
+  }
 }

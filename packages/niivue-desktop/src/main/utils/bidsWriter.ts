@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics } from '../../common/bidsTypes.js'
+import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics, FieldmapIntendedFor } from '../../common/bidsTypes.js'
 
 // Fields added by dcm2niix that should not appear in BIDS sidecars
 export const INTERNAL_SIDECAR_FIELDS = new Set([
@@ -69,6 +69,38 @@ export function generateBidsPath(mapping: BidsSeriesMapping): string {
   const filename = generateBidsFilename(mapping)
 
   return path.join(subDir, filename)
+}
+
+export function resolveIntendedForPaths(
+  mappings: BidsSeriesMapping[],
+  fieldmapMappings: FieldmapIntendedFor[]
+): BidsSeriesMapping[] {
+  const updated = mappings.map(m => ({ ...m }))
+  const byIndex = new Map(updated.map(m => [m.index, m]))
+
+  for (const fm of fieldmapMappings) {
+    const fmap = byIndex.get(fm.fmapIndex)
+    if (!fmap || fmap.excluded) continue
+
+    const paths: string[] = []
+    for (const targetIdx of fm.targetIndices) {
+      const target = byIndex.get(targetIdx)
+      if (!target || target.excluded) continue
+
+      // BIDS 1.7+: IntendedFor is relative to subject root
+      const bidsBase = generateBidsPath(target)
+      const ext = target.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
+      // Remove the sub-XX/ prefix to make it relative to subject root
+      const subPrefix = `sub-${target.subject}${target.session ? `/ses-${target.session}` : ''}/`
+      const fullPath = bidsBase + ext
+      const relativePath = fullPath.startsWith(subPrefix) ? fullPath.slice(subPrefix.length) : fullPath
+      paths.push(relativePath)
+    }
+
+    fmap.intendedFor = paths
+  }
+
+  return updated
 }
 
 function filterSidecar(sidecarPath: string): Record<string, unknown> {
@@ -173,18 +205,93 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
     const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
     paths.push(bidsBase + ext)
     paths.push(bidsBase + '.json')
+    if (m.datatype === 'func' && m.suffix === 'bold' && m.eventFile) {
+      paths.push(bidsBase + '_events.tsv')
+    }
   }
   paths.sort()
   return paths
+}
+
+function writeEventFile(eventFile: import('../../common/bidsTypes.js').EventFileConfig, destPath: string): void {
+  const content = fs.readFileSync(eventFile.sourcePath, 'utf-8')
+  const lines = content.split(/\r?\n/).filter(l => l.trim() !== '')
+  if (lines.length < 2) return
+
+  const splitLine = (line: string): string[] => {
+    if (eventFile.delimiter === 'whitespace') {
+      return line.trim().split(/\s+/)
+    }
+    return line.split(eventFile.delimiter)
+  }
+
+  const sourceColumns = splitLine(lines[0]).map(c => c.trim())
+
+  // Build column index mapping: sourceCol -> bidsCol
+  const colMap = new Map<number, string>()
+  for (const cm of eventFile.columnMappings) {
+    if (cm.bidsColumn === 'skip') continue
+    const srcIdx = sourceColumns.indexOf(cm.sourceColumn)
+    if (srcIdx >= 0) {
+      colMap.set(srcIdx, cm.bidsColumn)
+    }
+  }
+
+  if (colMap.size === 0) return
+
+  // Determine output column order: onset, duration first, then rest
+  const bidsColNames = [...colMap.values()]
+  const ordered: string[] = []
+  if (bidsColNames.includes('onset')) ordered.push('onset')
+  if (bidsColNames.includes('duration')) ordered.push('duration')
+  for (const c of bidsColNames) {
+    if (c !== 'onset' && c !== 'duration' && !ordered.includes(c)) {
+      ordered.push(c)
+    }
+  }
+
+  // Reverse map: bidsCol -> sourceIdx
+  const bidsToSrc = new Map<string, number>()
+  for (const [srcIdx, bidsCol] of colMap) {
+    bidsToSrc.set(bidsCol, srcIdx)
+  }
+
+  const outputLines: string[] = [ordered.join('\t')]
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = splitLine(lines[i]).map(c => c.trim())
+    const row: string[] = []
+    for (const col of ordered) {
+      const srcIdx = bidsToSrc.get(col)
+      let val = srcIdx != null && srcIdx < cells.length ? cells[srcIdx] : 'n/a'
+      // Convert ms to seconds for onset and duration
+      if (eventFile.convertMsToSeconds && (col === 'onset' || col === 'duration')) {
+        const num = parseFloat(val)
+        if (!isNaN(num)) {
+          val = (num / 1000).toFixed(3)
+        }
+      }
+      row.push(val)
+    }
+    outputLines.push(row.join('\t'))
+  }
+
+  fs.writeFileSync(destPath, outputLines.join('\n') + '\n')
 }
 
 export function writeDataset(
   config: BidsDatasetConfig,
   mappings: BidsSeriesMapping[],
   demographics?: ParticipantDemographics,
-  allDemographics?: Record<string, ParticipantDemographics>
+  allDemographics?: Record<string, ParticipantDemographics>,
+  fieldmapIntendedFor?: FieldmapIntendedFor[]
 ): { outputDir: string; filesCopied: number } {
   const outputDir = config.outputDir
+
+  // Resolve IntendedFor paths on fmap mappings
+  if (fieldmapIntendedFor && fieldmapIntendedFor.length > 0) {
+    mappings = resolveIntendedForPaths(mappings, fieldmapIntendedFor)
+  }
 
   // Create output directory
   fs.mkdirSync(outputDir, { recursive: true })
@@ -230,8 +337,20 @@ export function writeDataset(
       sidecar.TaskName = m.task
     }
 
+    // Add IntendedFor for fmap series
+    if (m.datatype === 'fmap' && m.intendedFor && m.intendedFor.length > 0) {
+      sidecar.IntendedFor = m.intendedFor
+    }
+
     fs.writeFileSync(destJson, JSON.stringify(sidecar, null, 2) + '\n')
     filesCopied++
+
+    // Write event file for func/bold with eventFile config
+    if (m.datatype === 'func' && m.suffix === 'bold' && m.eventFile) {
+      const evtDest = path.join(outputDir, bidsBase + '_events.tsv')
+      writeEventFile(m.eventFile, evtDest)
+      filesCopied++
+    }
   }
 
   // Write excluded series to sub-XX/excluded/

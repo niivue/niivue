@@ -4,7 +4,10 @@ import type {
   BidsConvertAndClassifyResult,
   BidsWritePayload,
   BidsWriteResult,
-  BidsValidationResult
+  BidsValidationResult,
+  BidsSeriesMapping,
+  FieldmapIntendedFor,
+  ParseEventFileResult
 } from '../common/bidsTypes.js'
 
 declare global {
@@ -33,6 +36,9 @@ declare global {
       bidsValidate: (payload: BidsWritePayload) => Promise<BidsValidationResult>
       bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
       bidsSelectOutputDir: () => Promise<string | null>
+      bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]) => Promise<FieldmapIntendedFor[]>
+      bidsSelectEventFile: () => Promise<string | null>
+      bidsParseEventFile: (filePath: string) => Promise<ParseEventFileResult>
     }
     api: unknown
   }

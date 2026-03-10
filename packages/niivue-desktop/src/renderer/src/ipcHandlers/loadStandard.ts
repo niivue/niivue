@@ -7,6 +7,8 @@ import {
   decompressGzipBase64ToJson,
   isProbablyGzip
 } from '@renderer/utils/base64ToJSON.js'
+import type { BidsWizardState } from '../../../common/bidsTypes.js'
+import { deserializeBidsState } from '../../../common/bidsState.js'
 
 const electron = window.electron
 
@@ -19,13 +21,15 @@ export interface HandlerProps {
     setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   }>
   onDocumentLoaded?: (title: string, targetId: string) => void
+  onBidsStateRestored?: (state: BidsWizardState) => void
 }
 
 console.log('[Renderer] registering loadStandard handler')
 
 export const registerLoadStandardHandler = ({
   getTarget,
-  onDocumentLoaded
+  onDocumentLoaded,
+  onBidsStateRestored
 }: HandlerProps): void => {
   electron.ipcRenderer.removeAllListeners('loadStandard')
   electron.ipcRenderer.on('loadStandard', async (_, path: string) => {
@@ -63,7 +67,15 @@ export const registerLoadStandardHandler = ({
         onDocumentLoaded(title, id)
       }
 
-      // 6️⃣ Redraw scene
+      // 6️⃣ Restore BIDS state from customData if present
+      if (onBidsStateRestored && nv.document.customData) {
+        const bidsState = deserializeBidsState(nv.document.customData)
+        if (bidsState) {
+          onBidsStateRestored(bidsState)
+        }
+      }
+
+      // 7️⃣ Redraw scene
       nv.drawScene()
     } else if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
       // Mesh case

@@ -1,21 +1,57 @@
-import { Text } from '@radix-ui/themes'
-import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
+import { useState } from 'react'
+import { Button, Text } from '@radix-ui/themes'
+import type { BidsSeriesMapping, FieldmapIntendedFor } from '../../../../common/bidsTypes.js'
 import { SeriesRow } from './SeriesRow.js'
 import { BidsPreview } from './BidsPreview.js'
+
+const electron = window.electron
 
 interface StepClassificationProps {
   mappings: BidsSeriesMapping[]
   onUpdateMapping: (index: number, changes: Partial<BidsSeriesMapping>) => void
   onUpdateSidecar: (index: number, field: string, value: unknown) => void
   datasetName: string
+  fieldmapIntendedFor: FieldmapIntendedFor[]
+  onUpdateFieldmapMappings: (mappings: FieldmapIntendedFor[]) => void
 }
 
 export function StepClassification({
   mappings,
   onUpdateMapping,
   onUpdateSidecar,
-  datasetName
+  datasetName,
+  fieldmapIntendedFor,
+  onUpdateFieldmapMappings
 }: StepClassificationProps): JSX.Element {
+  const [fmapExpanded, setFmapExpanded] = useState(true)
+
+  const fmapSeries = mappings.filter(m => !m.excluded && m.datatype === 'fmap')
+  const targetSeries = mappings.filter(m => !m.excluded && (m.datatype === 'func' || m.datatype === 'dwi'))
+  const hasFmaps = fmapSeries.length > 0 && targetSeries.length > 0
+
+  const handleAutoSuggest = async (): Promise<void> => {
+    const suggested = await electron.bidsSuggestFieldmapMappings(mappings)
+    onUpdateFieldmapMappings(suggested)
+  }
+
+  const handleToggleTarget = (fmapIndex: number, targetIndex: number): void => {
+    const updated = fieldmapIntendedFor.map(fm => {
+      if (fm.fmapIndex !== fmapIndex) return fm
+      const has = fm.targetIndices.includes(targetIndex)
+      return {
+        ...fm,
+        targetIndices: has
+          ? fm.targetIndices.filter(i => i !== targetIndex)
+          : [...fm.targetIndices, targetIndex]
+      }
+    })
+    // If no entry for this fmap yet, create one
+    if (!updated.find(fm => fm.fmapIndex === fmapIndex)) {
+      updated.push({ fmapIndex, targetIndices: [targetIndex] })
+    }
+    onUpdateFieldmapMappings(updated)
+  }
+
   return (
     <div className="flex gap-4">
       {/* Left: classification table */}
@@ -54,6 +90,62 @@ export function StepClassification({
             </tbody>
           </table>
         </div>
+
+        {/* Fieldmap IntendedFor mapping panel */}
+        {hasFmaps && (
+          <div className="mt-3 border rounded">
+            <button
+              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 text-xs font-medium"
+              onClick={() => setFmapExpanded(!fmapExpanded)}
+            >
+              <span>Fieldmap Mappings (IntendedFor)</span>
+              <span>{fmapExpanded ? '\u25B2' : '\u25BC'}</span>
+            </button>
+            {fmapExpanded && (
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <Text size="1" color="gray">
+                    Map each fieldmap to the functional/DWI runs it corrects.
+                  </Text>
+                  <Button size="1" variant="soft" onClick={handleAutoSuggest}>
+                    Auto-suggest
+                  </Button>
+                </div>
+                {fmapSeries.map(fm => {
+                  const entry = fieldmapIntendedFor.find(f => f.fmapIndex === fm.index)
+                  return (
+                    <div key={fm.index} className="mb-2 p-2 bg-gray-50 rounded text-xs">
+                      <div className="font-medium mb-1">
+                        {fm.seriesDescription || `${fm.datatype}/${fm.suffix}`}
+                        {fm.dir && <span className="text-gray-500 ml-1">(dir-{fm.dir})</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {targetSeries.map(t => {
+                          const checked = entry?.targetIndices.includes(t.index) ?? false
+                          return (
+                            <label key={t.index} className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => handleToggleTarget(fm.index, t.index)}
+                                className="w-3 h-3"
+                              />
+                              <span className={checked ? 'text-blue-700' : 'text-gray-600'}>
+                                {t.seriesDescription || `${t.datatype}/${t.suffix}`}
+                                {t.task && ` (task-${t.task})`}
+                                {t.run > 0 && ` run-${t.run}`}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right: BIDS tree preview */}

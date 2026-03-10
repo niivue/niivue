@@ -8,11 +8,14 @@ import {
   isProbablyGzip
 } from '@renderer/utils/base64ToJSON.js'
 
+import type { BidsWizardState } from '../../../common/bidsTypes.js'
+import { deserializeBidsState } from '../../../common/bidsState.js'
+
 const electron = window.electron
 
 export interface HandlerProps {
   /**
-   * Returns the proper Niivue instance or creates a new doc if it’s non-empty
+   * Returns the proper Niivue instance or creates a new doc if it's non-empty
    */
   getTarget: () => Promise<{
     id: string
@@ -24,13 +27,18 @@ export interface HandlerProps {
    * Called when an .nvd document is successfully loaded into the given document
    */
   onDocumentLoaded?: (title: string, targetId: string) => void
+  /**
+   * Called when BIDS state is found in a loaded document's customData
+   */
+  onBidsStateRestored?: (state: BidsWizardState) => void
 }
 
 console.log('[Renderer] registering loadDocument handler')
 
 export const registerLoadDocumentHandler = ({
   getTarget,
-  onDocumentLoaded
+  onDocumentLoaded,
+  onBidsStateRestored
 }: HandlerProps): void => {
   // Clear any existing listener
   electron.ipcRenderer.removeAllListeners('loadDocument')
@@ -67,7 +75,15 @@ export const registerLoadDocumentHandler = ({
       onDocumentLoaded(title, id)
     }
 
-    // 6️⃣ Redraw scene
+    // 6️⃣ Restore BIDS state from customData if present
+    if (onBidsStateRestored && nv.document.customData) {
+      const bidsState = deserializeBidsState(nv.document.customData)
+      if (bidsState) {
+        onBidsStateRestored(bidsState)
+      }
+    }
+
+    // 7️⃣ Redraw scene
     nv.drawScene()
   })
 }
