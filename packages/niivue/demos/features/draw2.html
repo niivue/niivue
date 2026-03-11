@@ -116,10 +116,8 @@
       // Erase (3D)
       nv1.opts.penType = niivue.PEN_TYPE.PEN_BALL_3D
       nv1.setPenValue(0, false)
-      console.log('penType set to:', nv1.opts.penType, 'penSize:', nv1.opts.penSize)
     } else if (mode >= 0) {
       // Standard 2D pen modes
-      console.log('Setting standard PEN mode')
       nv1.opts.penType = niivue.PEN_TYPE.PEN
       nv1.setPenValue(mode & 7, mode > 7)
     }

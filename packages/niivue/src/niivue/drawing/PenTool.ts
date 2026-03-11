@@ -10,7 +10,6 @@
  * - FloodFillTool.ts - Flood fill and click-to-segment (e.g. magic wand)
  */
 
-import { drawEllipse } from './ShapeTool'
 import { log } from '@/logger'
 import { decodeRLE } from '@/drawing'
 
@@ -216,36 +215,6 @@ export function drawPoint(params: DrawPointParams): void {
             }
         }
     }
-}
-
-/**
- * Draw a 3D sphere in the drawing bitmap.
- * Fills all voxels within the specified radius from the center point.
- * This function delegates to drawEllipse from ShapeTool.ts.
- *
- * @param params - Parameters for drawing the sphere
- */
-export function drawSphere(params: DrawSphereParams): void {
-    const { x: centerX, y: centerY, z: centerZ, penValue, drawBitmap, dims, radius } = params
-
-    console.log('drawSphere called:', { centerX, centerY, centerZ, radius, penValue, dims })
-
-    const [rx, ry, rz] = typeof radius === 'number' ? [radius, radius, radius] : radius
-
-    // Define bounding box corners for the ellipse
-    const ptA = [centerX - rx, centerY - ry, centerZ - rz]
-    const ptB = [centerX + rx, centerY + ry, centerZ + rz]
-
-    // Use drawEllipse with penSize=1 and penAxCorSag=-1 for 3D drawing
-    drawEllipse({
-        ptA,
-        ptB,
-        penValue,
-        drawBitmap,
-        dims,
-        penSize: 1,
-        penAxCorSag: -1
-    })
 }
 
 // ============================================================================

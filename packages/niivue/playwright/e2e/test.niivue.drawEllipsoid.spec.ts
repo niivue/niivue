@@ -18,7 +18,7 @@ test('niivue drawEllipsoid - sphere draws correctly in multiple layers', async (
           ...testOptions,
           show3Dcrosshair: true,
           backColor: [0.5, 0.5, 0.6, 1],
-          penType: 3, // PEN_TYPE.PEN_BALL_3D
+          penType: (globalThis as any).niivue.PEN_TYPE.PEN_BALL_3D,
           penSize: 5,
           penValue: 1,
 
@@ -74,7 +74,7 @@ test('niivue drawEllipsoid - sphere draws correctly in multiple layers', async (
     const clickedPointVox = nv.frac2vox(clickedPointFrac, 0)
 
     const dims = nv.volumes[0].dims
-    const radius = nv.opts.penSize
+    const radius = Math.floor(nv.opts.penSize / 2)
     const penValue = nv.opts.penValue
 
     // Helper function to calculate voxel index
