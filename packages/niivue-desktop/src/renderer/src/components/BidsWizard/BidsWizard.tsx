@@ -49,6 +49,7 @@ const defaultConfig: BidsDatasetConfig = {
   bidsVersion: '1.9.0',
   license: 'CC0',
   authors: [],
+  readme: '',
   outputDir: ''
 }
 

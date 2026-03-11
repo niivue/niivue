@@ -208,14 +208,16 @@ function writeParticipantsTsv(
 }
 
 function writeReadme(outputDir: string, config: BidsDatasetConfig): void {
-  const content = `# ${config.name}
+  const content = config.readme?.trim()
+    ? config.readme
+    : `# ${config.name}
 
 This dataset was converted to BIDS format using NiiVue Desktop.
 
 ## BIDS Version
 ${config.bidsVersion || '1.9.0'}
 `
-  fs.writeFileSync(path.join(outputDir, 'README'), content)
+  fs.writeFileSync(path.join(outputDir, 'README.md'), content)
 }
 
 function writeBidsIgnore(outputDir: string): void {

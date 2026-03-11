@@ -1,4 +1,6 @@
+import { useMemo, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
+import { marked } from 'marked'
 import type { BidsDatasetConfig } from '../../../../common/bidsTypes.js'
 
 const electron = window.electron
@@ -9,6 +11,8 @@ interface StepMetadataProps {
 }
 
 export function StepMetadata({ config, onUpdateConfig }: StepMetadataProps): JSX.Element {
+  const [readmeTab, setReadmeTab] = useState<'edit' | 'preview'>('edit')
+
   const handleSelectOutputDir = async (): Promise<void> => {
     const dir = await electron.bidsSelectOutputDir()
     if (dir) {
@@ -16,8 +20,40 @@ export function StepMetadata({ config, onUpdateConfig }: StepMetadataProps): JSX
     }
   }
 
+  const defaultReadme = `# ${config.name || 'My Dataset'}
+
+This dataset was converted to BIDS format using NiiVue Desktop.
+
+## Description
+
+*Describe your dataset here...*
+`
+
+  const readmeContent = config.readme || ''
+  const displayContent = readmeContent || defaultReadme
+
+  const renderedHtml = useMemo(() => {
+    return marked.parse(displayContent, { async: false }) as string
+  }, [displayContent])
+
   return (
     <div className="flex flex-col gap-3">
+      <style>{`
+        .markdown-preview h1 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0 0.3em; }
+        .markdown-preview h2 { font-size: 1.25em; font-weight: 600; margin: 0.5em 0 0.3em; }
+        .markdown-preview h3 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0 0.2em; }
+        .markdown-preview p { margin: 0.4em 0; }
+        .markdown-preview ul, .markdown-preview ol { margin: 0.3em 0; padding-left: 1.5em; }
+        .markdown-preview li { margin: 0.15em 0; }
+        .markdown-preview code { background: #f3f4f6; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
+        .markdown-preview pre { background: #f3f4f6; padding: 0.6em; border-radius: 4px; overflow-x: auto; margin: 0.4em 0; }
+        .markdown-preview pre code { background: none; padding: 0; }
+        .markdown-preview blockquote { border-left: 3px solid #d1d5db; padding-left: 0.8em; margin: 0.4em 0; color: #6b7280; }
+        .markdown-preview a { color: #2563eb; text-decoration: underline; }
+        .markdown-preview em { font-style: italic; }
+        .markdown-preview strong { font-weight: 700; }
+        .markdown-preview hr { border: none; border-top: 1px solid #e5e7eb; margin: 0.6em 0; }
+      `}</style>
       <Text size="2" weight="bold">Dataset Metadata</Text>
       <Text size="1" color="gray">
         Configure the dataset_description.json fields and output location.
@@ -75,6 +111,45 @@ export function StepMetadata({ config, onUpdateConfig }: StepMetadataProps): JSX
           className="px-3 py-2 text-sm border border-gray-300 rounded"
         />
       </label>
+
+      {/* README.md editor with preview */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <Text size="1" weight="medium">README.md</Text>
+          <div className="flex border border-gray-300 rounded overflow-hidden">
+            <button
+              className={`px-3 py-0.5 text-xs ${readmeTab === 'edit' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              onClick={() => setReadmeTab('edit')}
+            >
+              Edit
+            </button>
+            <button
+              className={`px-3 py-0.5 text-xs ${readmeTab === 'preview' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              onClick={() => setReadmeTab('preview')}
+            >
+              Preview
+            </button>
+          </div>
+        </div>
+
+        {readmeTab === 'edit' ? (
+          <textarea
+            value={readmeContent}
+            onChange={(e) => onUpdateConfig('readme', e.target.value)}
+            placeholder={defaultReadme}
+            rows={6}
+            className="px-3 py-2 text-sm border border-gray-300 rounded font-mono resize-y"
+          />
+        ) : (
+          <div
+            className="px-3 py-2 text-sm border border-gray-300 rounded bg-white min-h-[144px] max-h-[300px] overflow-y-auto markdown-preview"
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
+          />
+        )}
+        <Text size="1" color="gray">
+          Supports Markdown formatting. A detailed README avoids validator warnings.
+        </Text>
+      </div>
 
       <div className="flex flex-col gap-1">
         <Text size="1" weight="medium">

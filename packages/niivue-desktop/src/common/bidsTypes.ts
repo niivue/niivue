@@ -127,6 +127,7 @@ export interface BidsDatasetConfig {
   bidsVersion: string
   license: string
   authors: string[]
+  readme: string
   outputDir: string
 }
 
