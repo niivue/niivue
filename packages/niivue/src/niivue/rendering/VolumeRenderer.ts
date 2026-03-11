@@ -141,7 +141,20 @@ export interface GradientGLParams {
  * @returns The generated gradient texture
  */
 export function gradientGL(params: GradientGLParams): WebGLTexture {
-    const { gl, hdr, genericVAO, unusedVAO, volumeTexture, paqdTexture, gradientOrder, blurShader: blurShaderInput, gradientPrePassShader, sobelFirstOrderShader, sobelSecondOrderShader, rgbaTex } = params
+    const {
+        gl,
+        hdr,
+        genericVAO,
+        unusedVAO,
+        volumeTexture,
+        paqdTexture,
+        gradientOrder,
+        blurShader: blurShaderInput,
+        gradientPrePassShader,
+        sobelFirstOrderShader,
+        sobelSecondOrderShader,
+        rgbaTex
+    } = params
 
     let { gradientTexture } = params
 
