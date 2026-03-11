@@ -11,6 +11,7 @@ interface StepSelectSourceProps {
   setSeries: (series: DicomSeries[]) => void
   selectedSeries: Set<number>
   setSelectedSeries: (selected: Set<number>) => void
+  onImportNifti?: (dir: string) => Promise<void>
 }
 
 export function StepSelectSource({
@@ -19,9 +20,11 @@ export function StepSelectSource({
   series,
   setSeries,
   selectedSeries,
-  setSelectedSeries
+  setSelectedSeries,
+  onImportNifti
 }: StepSelectSourceProps): JSX.Element {
   const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [error, setError] = useState('')
 
   const folderName = useMemo(() => dicomDir.split(/[\\/]/).pop() ?? dicomDir, [dicomDir])
@@ -77,16 +80,39 @@ export function StepSelectSource({
     else setSelectedSeries(new Set<number>(allCheckable))
   }
 
+  const handleImportNifti = async (): Promise<void> => {
+    if (!onImportNifti) return
+    setError('')
+    try {
+      const dir = await electron.ipcRenderer.invoke('select-directory') as string | null
+      if (!dir) return
+      setImporting(true)
+      setDicomDir(dir)
+      await onImportNifti(dir)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold">Select DICOM Folder</Text>
+      <Text size="2" weight="bold">Select Source</Text>
       <Text size="1" color="gray">
-        Choose a folder containing DICOM files. The series will be listed for selection.
+        Choose a folder containing DICOM files, or import pre-converted NIfTI+JSON pairs.
       </Text>
 
-      <Button variant="soft" onClick={handleSelectFolder} disabled={loading}>
-        {loading ? 'Scanning...' : 'Select DICOM Folder'}
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="soft" onClick={handleSelectFolder} disabled={loading || importing}>
+          {loading ? 'Scanning...' : 'Select DICOM Folder'}
+        </Button>
+        {onImportNifti && (
+          <Button variant="outline" onClick={handleImportNifti} disabled={loading || importing}>
+            {importing ? 'Importing...' : 'Import NIfTI Folder'}
+          </Button>
+        )}
+      </div>
 
       {dicomDir && (
         <Text size="1" className="text-blue-700 truncate">{folderName}</Text>

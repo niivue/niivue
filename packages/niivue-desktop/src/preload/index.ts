@@ -119,6 +119,9 @@ const api = {
   ): Promise<BidsConvertAndClassifyResult> => {
     return ipcRenderer.invoke('bids:convert-and-classify', payload)
   },
+  bidsImportNiftiDir: (dirPath: string): Promise<BidsConvertAndClassifyResult> => {
+    return ipcRenderer.invoke('bids:import-nifti-dir', dirPath)
+  },
   bidsValidate: (payload: BidsValidatePayload): Promise<BidsValidationResult> => {
     return ipcRenderer.invoke('bids:validate', payload)
   },

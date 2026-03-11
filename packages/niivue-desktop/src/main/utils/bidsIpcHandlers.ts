@@ -70,6 +70,41 @@ export function registerBidsIpcHandlers(): void {
   )
 
   /**
+   * Import pre-converted NIfTI+JSON pairs from a directory and classify for BIDS
+   */
+  ipcMain.handle('bids:import-nifti-dir', async (_evt, dirPath: string) => {
+    try {
+      // Collect all JSON sidecar files recursively
+      const jsonFiles: string[] = []
+      const scan = (dir: string): void => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (entry.isDirectory()) {
+            scan(path.join(dir, entry.name))
+          } else if (entry.name.endsWith('.json')) {
+            // Check that a matching NIfTI exists
+            const base = path.join(dir, entry.name.replace(/\.json$/, ''))
+            if (fs.existsSync(base + '.nii.gz') || fs.existsSync(base + '.nii')) {
+              jsonFiles.push(path.join(dir, entry.name))
+            }
+          }
+        }
+      }
+      scan(dirPath)
+
+      if (jsonFiles.length === 0) {
+        return { success: false, error: 'No NIfTI+JSON pairs found in directory' }
+      }
+
+      const { mappings, detectedSubjects } = classifyAll(jsonFiles)
+      const demographics = extractDemographics(jsonFiles[0])
+      return { success: true, mappings, demographics, detectedSubjects }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return { success: false, error: msg }
+    }
+  })
+
+  /**
    * Validate proposed BIDS dataset by writing to a temp dir and running bids-validator
    */
   ipcMain.handle('bids:validate', async (_evt, payload: BidsValidatePayload) => {

@@ -95,7 +95,7 @@ export function BidsWizard({
 
   // Validation
   const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
-  const [validating, setValidating] = useState(false)
+  const [_validating, setValidating] = useState(false)
   const [highlightedSeriesIndex, setHighlightedSeriesIndex] = useState<number | null>(null)
 
   // Listen for menu trigger
@@ -393,7 +393,7 @@ export function BidsWizard({
   const canProceed = (): boolean => {
     switch (step) {
       case 0:
-        return dicomDir !== '' && selectedSeries.size > 0
+        return (dicomDir !== '' && selectedSeries.size > 0) || converted
       case 1:
         return converted
       case 2:
@@ -485,6 +485,20 @@ export function BidsWizard({
                     setSeries={setSeries}
                     selectedSeries={selectedSeries}
                     setSelectedSeries={setSelectedSeries}
+                    onImportNifti={async (dir: string) => {
+                      const result = await electron.bidsImportNiftiDir(dir)
+                      if (!result.success) {
+                        setError(result.error || 'Failed to import NIfTI directory')
+                        return
+                      }
+                      await handleConversionComplete(
+                        result.mappings!,
+                        result.demographics,
+                        result.detectedSubjects
+                      )
+                      // Skip conversion step — go straight to skull strip
+                      setStep(2)
+                    }}
                   />
                 )}
                 {step === 1 && (

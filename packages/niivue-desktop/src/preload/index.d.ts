@@ -36,6 +36,7 @@ declare global {
       bidsConvertAndClassify: (
         payload: BidsConvertAndClassifyPayload
       ) => Promise<BidsConvertAndClassifyResult>
+      bidsImportNiftiDir: (dirPath: string) => Promise<BidsConvertAndClassifyResult>
       bidsValidate: (payload: BidsValidatePayload) => Promise<BidsValidationResult>
       bidsValidateWritten: (
         dirPath: string,
