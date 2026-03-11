@@ -17,22 +17,39 @@ interface StepValidationProps {
   demographics?: ParticipantDemographics
   allDemographics?: Record<string, ParticipantDemographics>
   fieldmapIntendedFor?: FieldmapIntendedFor[]
+  validationResult?: BidsValidationResult | null
+  onNavigateToIssue?: (issue: BidsValidationIssue) => void
+  onRevalidate?: () => Promise<void>
 }
 
-export function StepValidation({ config, mappings, demographics, allDemographics, fieldmapIntendedFor }: StepValidationProps): JSX.Element {
-  const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
+export function StepValidation({
+  config,
+  mappings,
+  demographics,
+  allDemographics,
+  fieldmapIntendedFor,
+  validationResult,
+  onNavigateToIssue,
+  onRevalidate
+}: StepValidationProps): JSX.Element {
   const [writing, setWriting] = useState(false)
   const [writeComplete, setWriteComplete] = useState(false)
   const [writeError, setWriteError] = useState('')
   const [outputPath, setOutputPath] = useState('')
+  const [postWriteResult, setPostWriteResult] = useState<BidsValidationResult | null>(null)
 
   const handleWrite = async (): Promise<void> => {
     setWriting(true)
     setWriteError('')
-    setValidationResult(null)
+    setPostWriteResult(null)
     try {
-      // Write the dataset
-      const result = await electron.bidsWrite({ config, mappings, demographics, allDemographics, fieldmapIntendedFor })
+      const result = await electron.bidsWrite({
+        config,
+        mappings,
+        demographics,
+        allDemographics,
+        fieldmapIntendedFor
+      })
       if (!result.success) {
         setWriteError(result.error || 'Write failed')
         setWriting(false)
@@ -41,10 +58,13 @@ export function StepValidation({ config, mappings, demographics, allDemographics
 
       setOutputPath(result.outputDir || config.outputDir)
 
-      // Auto-validate after writing
+      // Run post-write validation against the actual output
       try {
-        const validation = await electron.bidsValidate({ config, mappings, fieldmapIntendedFor })
-        setValidationResult(validation)
+        const validation = await electron.bidsValidateWritten(
+          result.outputDir || config.outputDir,
+          mappings
+        )
+        setPostWriteResult(validation)
       } catch {
         // Validation failure is non-fatal
       }
@@ -57,19 +77,24 @@ export function StepValidation({ config, mappings, demographics, allDemographics
     }
   }
 
+  const displayResult = postWriteResult || validationResult
+
   const renderIssue = (issue: BidsValidationIssue, i: number): JSX.Element => {
     const isError = issue.severity === 'error'
+    const clickable = onNavigateToIssue && !writeComplete
     return (
-      <div
+      <button
         key={i}
-        className={`text-xs px-2 py-1 rounded ${
+        className={`text-left w-full text-xs px-2 py-1 rounded ${
           isError ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
-        }`}
+        } ${clickable ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
+        onClick={() => clickable && onNavigateToIssue(issue)}
+        disabled={!clickable}
       >
         <span className="font-medium">{isError ? 'ERROR' : 'WARN'}: </span>
         {issue.message}
         {issue.file && <span className="ml-1 opacity-70">({issue.file})</span>}
-      </div>
+      </button>
     )
   }
 
@@ -77,10 +102,12 @@ export function StepValidation({ config, mappings, demographics, allDemographics
     return (
       <div className="flex flex-col gap-4 items-center py-8">
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">
-          {validationResult?.valid !== false ? '\u2713' : '!'}
+          {displayResult?.valid !== false ? '\u2713' : '!'}
         </div>
         <Text size="3" weight="bold">
-          {validationResult?.valid !== false ? 'BIDS Dataset Created' : 'BIDS Dataset Written (with issues)'}
+          {displayResult?.valid !== false
+            ? 'BIDS Dataset Created'
+            : 'BIDS Dataset Written (with issues)'}
         </Text>
         <Text size="1" color="gray">
           Your dataset has been written to:
@@ -89,31 +116,32 @@ export function StepValidation({ config, mappings, demographics, allDemographics
           {outputPath}
         </Text>
 
-        {/* Show validation results inline */}
-        {validationResult && (
+        {displayResult && (
           <div className="w-full max-w-md">
             <div className="flex items-center gap-2 mb-2">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  validationResult.valid ? 'bg-green-500' : 'bg-red-500'
+                  displayResult.valid ? 'bg-green-500' : 'bg-red-500'
                 }`}
               />
               <Text size="1" weight="bold">
-                {validationResult.valid ? 'Validation Passed' : 'Validation Issues'}
+                {displayResult.valid ? 'Validation Passed' : 'Validation Issues'}
               </Text>
             </div>
-            {validationResult.errors.length > 0 && (
+            {displayResult.errors.length > 0 && (
               <div className="flex flex-col gap-1 mb-2">
-                {validationResult.errors.map((e, i) => renderIssue(e, i))}
+                {displayResult.errors.map((e, i) => renderIssue(e, i))}
               </div>
             )}
-            {validationResult.warnings.length > 0 && (
+            {displayResult.warnings.length > 0 && (
               <div className="flex flex-col gap-1">
-                {validationResult.warnings.map((w, i) => renderIssue(w, i))}
+                {displayResult.warnings.map((w, i) => renderIssue(w, i))}
               </div>
             )}
-            {validationResult.valid && validationResult.warnings.length === 0 && (
-              <Text size="1" color="green">No issues found.</Text>
+            {displayResult.valid && displayResult.warnings.length === 0 && (
+              <Text size="1" color="green">
+                No issues found.
+              </Text>
             )}
           </div>
         )}
@@ -123,15 +151,46 @@ export function StepValidation({ config, mappings, demographics, allDemographics
 
   return (
     <div className="flex flex-col gap-4">
-      <Text size="2" weight="bold">Write Dataset</Text>
+      <Text size="2" weight="bold">
+        Write Dataset
+      </Text>
       <Text size="1" color="gray">
-        Write the BIDS dataset to disk. Validation will run automatically after writing.
+        Write the BIDS dataset to disk. The official bids-validator will run automatically after
+        writing.
       </Text>
 
-      <Button
-        onClick={handleWrite}
-        disabled={writing}
-      >
+      {/* Pre-write validation summary */}
+      {validationResult && (
+        <div className="border rounded p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className={`w-3 h-3 rounded-full ${validationResult.valid ? 'bg-green-500' : 'bg-red-500'}`}
+            />
+            <Text size="1" weight="bold">
+              {validationResult.valid
+                ? 'Pre-write Validation Passed'
+                : 'Pre-write Validation Issues'}
+            </Text>
+            {onRevalidate && (
+              <Button size="1" variant="ghost" onClick={onRevalidate} className="ml-auto">
+                Re-validate
+              </Button>
+            )}
+          </div>
+          {validationResult.errors.length > 0 && (
+            <div className="flex flex-col gap-1 mb-2">
+              {validationResult.errors.map((e, i) => renderIssue(e, i))}
+            </div>
+          )}
+          {validationResult.warnings.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {validationResult.warnings.map((w, i) => renderIssue(w, i))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <Button onClick={handleWrite} disabled={writing}>
         {writing ? 'Writing & Validating...' : 'Write Dataset'}
       </Button>
 

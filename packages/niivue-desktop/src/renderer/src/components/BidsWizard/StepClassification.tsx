@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import type { BidsSeriesMapping, FieldmapIntendedFor } from '../../../../common/bidsTypes.js'
 import { SeriesRow } from './SeriesRow.js'
@@ -13,6 +13,8 @@ interface StepClassificationProps {
   datasetName: string
   fieldmapIntendedFor: FieldmapIntendedFor[]
   onUpdateFieldmapMappings: (mappings: FieldmapIntendedFor[]) => void
+  highlightedSeriesIndex?: number | null
+  onClearHighlight?: () => void
 }
 
 export function StepClassification({
@@ -21,12 +23,23 @@ export function StepClassification({
   onUpdateSidecar,
   datasetName,
   fieldmapIntendedFor,
-  onUpdateFieldmapMappings
+  onUpdateFieldmapMappings,
+  highlightedSeriesIndex,
+  onClearHighlight
 }: StepClassificationProps): JSX.Element {
+  const highlightedRowRef = useRef<HTMLTableRowElement>(null)
+
+  useEffect(() => {
+    if (highlightedSeriesIndex != null && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [highlightedSeriesIndex])
   const [fmapExpanded, setFmapExpanded] = useState(true)
 
-  const fmapSeries = mappings.filter(m => !m.excluded && m.datatype === 'fmap')
-  const targetSeries = mappings.filter(m => !m.excluded && (m.datatype === 'func' || m.datatype === 'dwi'))
+  const fmapSeries = mappings.filter((m) => !m.excluded && m.datatype === 'fmap')
+  const targetSeries = mappings.filter(
+    (m) => !m.excluded && (m.datatype === 'func' || m.datatype === 'dwi')
+  )
   const hasFmaps = fmapSeries.length > 0 && targetSeries.length > 0
 
   const handleAutoSuggest = async (): Promise<void> => {
@@ -35,18 +48,18 @@ export function StepClassification({
   }
 
   const handleToggleTarget = (fmapIndex: number, targetIndex: number): void => {
-    const updated = fieldmapIntendedFor.map(fm => {
+    const updated = fieldmapIntendedFor.map((fm) => {
       if (fm.fmapIndex !== fmapIndex) return fm
       const has = fm.targetIndices.includes(targetIndex)
       return {
         ...fm,
         targetIndices: has
-          ? fm.targetIndices.filter(i => i !== targetIndex)
+          ? fm.targetIndices.filter((i) => i !== targetIndex)
           : [...fm.targetIndices, targetIndex]
       }
     })
     // If no entry for this fmap yet, create one
-    if (!updated.find(fm => fm.fmapIndex === fmapIndex)) {
+    if (!updated.find((fm) => fm.fmapIndex === fmapIndex)) {
       updated.push({ fmapIndex, targetIndices: [targetIndex] })
     }
     onUpdateFieldmapMappings(updated)
@@ -60,7 +73,8 @@ export function StepClassification({
           Review Classifications
         </Text>
         <Text size="1" color="gray" className="block mb-3">
-          Verify and edit the proposed BIDS classification for each series. Click the chevron to edit additional entities and sidecar metadata.
+          Verify and edit the proposed BIDS classification for each series. Click the chevron to
+          edit additional entities and sidecar metadata.
         </Text>
 
         <div className="overflow-auto max-h-[350px] border rounded">
@@ -82,9 +96,12 @@ export function StepClassification({
               {mappings.map((m) => (
                 <SeriesRow
                   key={m.index}
+                  ref={m.index === highlightedSeriesIndex ? highlightedRowRef : undefined}
                   mapping={m}
                   onUpdate={onUpdateMapping}
                   onUpdateSidecar={onUpdateSidecar}
+                  highlighted={m.index === highlightedSeriesIndex}
+                  onClearHighlight={onClearHighlight}
                 />
               ))}
             </tbody>
@@ -111,8 +128,8 @@ export function StepClassification({
                     Auto-suggest
                   </Button>
                 </div>
-                {fmapSeries.map(fm => {
-                  const entry = fieldmapIntendedFor.find(f => f.fmapIndex === fm.index)
+                {fmapSeries.map((fm) => {
+                  const entry = fieldmapIntendedFor.find((f) => f.fmapIndex === fm.index)
                   return (
                     <div key={fm.index} className="mb-2 p-2 bg-gray-50 rounded text-xs">
                       <div className="font-medium mb-1">
@@ -120,7 +137,7 @@ export function StepClassification({
                         {fm.dir && <span className="text-gray-500 ml-1">(dir-{fm.dir})</span>}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {targetSeries.map(t => {
+                        {targetSeries.map((t) => {
                           const checked = entry?.targetIndices.includes(t.index) ?? false
                           return (
                             <label key={t.index} className="flex items-center gap-1 cursor-pointer">

@@ -1,6 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics, FieldmapIntendedFor } from '../../common/bidsTypes.js'
+import type {
+  BidsSeriesMapping,
+  BidsDatasetConfig,
+  ParticipantDemographics,
+  FieldmapIntendedFor
+} from '../../common/bidsTypes.js'
 
 // Fields added by dcm2niix that should not appear in BIDS sidecars
 export const INTERNAL_SIDECAR_FIELDS = new Set([
@@ -24,7 +29,7 @@ export function generateBidsFilename(mapping: BidsSeriesMapping): string {
     parts.push(`ses-${mapping.session}`)
   }
 
-  if (mapping.task) {
+  if (mapping.task && mapping.datatype !== 'fmap') {
     parts.push(`task-${mapping.task}`)
   }
 
@@ -75,8 +80,8 @@ export function resolveIntendedForPaths(
   mappings: BidsSeriesMapping[],
   fieldmapMappings: FieldmapIntendedFor[]
 ): BidsSeriesMapping[] {
-  const updated = mappings.map(m => ({ ...m }))
-  const byIndex = new Map(updated.map(m => [m.index, m]))
+  const updated = mappings.map((m) => ({ ...m }))
+  const byIndex = new Map(updated.map((m) => [m.index, m]))
 
   for (const fm of fieldmapMappings) {
     const fmap = byIndex.get(fm.fmapIndex)
@@ -93,7 +98,9 @@ export function resolveIntendedForPaths(
       // Remove the sub-XX/ prefix to make it relative to subject root
       const subPrefix = `sub-${target.subject}${target.session ? `/ses-${target.session}` : ''}/`
       const fullPath = bidsBase + ext
-      const relativePath = fullPath.startsWith(subPrefix) ? fullPath.slice(subPrefix.length) : fullPath
+      const relativePath = fullPath.startsWith(subPrefix)
+        ? fullPath.slice(subPrefix.length)
+        : fullPath
       paths.push(relativePath)
     }
 
@@ -133,7 +140,10 @@ function writeDatasetDescription(outputDir: string, config: BidsDatasetConfig): 
       }
     ]
   }
-  fs.writeFileSync(path.join(outputDir, 'dataset_description.json'), JSON.stringify(desc, null, 2) + '\n')
+  fs.writeFileSync(
+    path.join(outputDir, 'dataset_description.json'),
+    JSON.stringify(desc, null, 2) + '\n'
+  )
 }
 
 function writeParticipantsTsv(
@@ -163,7 +173,8 @@ function writeParticipantsTsv(
   // Write TSV
   const header = ['participant_id', ...activeCols.map((c) => c.label)].join('\t')
   const rows = unique.map((sub) => {
-    const demo = allDemographics?.[sub] || demographics || { age: '', sex: '', handedness: '', group: '' }
+    const demo = allDemographics?.[sub] ||
+      demographics || { age: '', sex: '', handedness: '', group: '' }
     const values = [`sub-${sub}`, ...activeCols.map((c) => demo[c.key])]
     return values.join('\t')
   })
@@ -171,14 +182,28 @@ function writeParticipantsTsv(
 
   // Write participants.json describing columns
   if (activeCols.length > 0) {
-    const desc: Record<string, { Description: string; Units?: string; Levels?: Record<string, string> }> = {}
+    const desc: Record<
+      string,
+      { Description: string; Units?: string; Levels?: Record<string, string> }
+    > = {}
     for (const c of activeCols) {
       if (c.key === 'age') desc.age = { Description: 'Age of the participant', Units: 'year' }
-      else if (c.key === 'sex') desc.sex = { Description: 'Sex of the participant', Levels: { M: 'male', F: 'female', O: 'other' } }
-      else if (c.key === 'handedness') desc.handedness = { Description: 'Handedness of the participant', Levels: { left: 'left', right: 'right', ambidextrous: 'ambidextrous' } }
+      else if (c.key === 'sex')
+        desc.sex = {
+          Description: 'Sex of the participant',
+          Levels: { M: 'male', F: 'female', O: 'other' }
+        }
+      else if (c.key === 'handedness')
+        desc.handedness = {
+          Description: 'Handedness of the participant',
+          Levels: { left: 'left', right: 'right', ambidextrous: 'ambidextrous' }
+        }
       else if (c.key === 'group') desc.group = { Description: 'Group the participant belongs to' }
     }
-    fs.writeFileSync(path.join(outputDir, 'participants.json'), JSON.stringify(desc, null, 2) + '\n')
+    fs.writeFileSync(
+      path.join(outputDir, 'participants.json'),
+      JSON.stringify(desc, null, 2) + '\n'
+    )
   }
 }
 
@@ -194,7 +219,10 @@ ${config.bidsVersion || '1.9.0'}
 }
 
 function writeBidsIgnore(outputDir: string): void {
-  fs.writeFileSync(path.join(outputDir, '.bidsignore'), 'excluded/\n')
+  fs.writeFileSync(
+    path.join(outputDir, '.bidsignore'),
+    'excluded/\n.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n'
+  )
 }
 
 export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
@@ -213,9 +241,12 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
   return paths
 }
 
-function writeEventFile(eventFile: import('../../common/bidsTypes.js').EventFileConfig, destPath: string): void {
+function writeEventFile(
+  eventFile: import('../../common/bidsTypes.js').EventFileConfig,
+  destPath: string
+): void {
   const content = fs.readFileSync(eventFile.sourcePath, 'utf-8')
-  const lines = content.split(/\r?\n/).filter(l => l.trim() !== '')
+  const lines = content.split(/\r?\n/).filter((l) => l.trim() !== '')
   if (lines.length < 2) return
 
   const splitLine = (line: string): string[] => {
@@ -225,7 +256,7 @@ function writeEventFile(eventFile: import('../../common/bidsTypes.js').EventFile
     return line.split(eventFile.delimiter)
   }
 
-  const sourceColumns = splitLine(lines[0]).map(c => c.trim())
+  const sourceColumns = splitLine(lines[0]).map((c) => c.trim())
 
   // Build column index mapping: sourceCol -> bidsCol
   const colMap = new Map<number, string>()
@@ -259,7 +290,7 @@ function writeEventFile(eventFile: import('../../common/bidsTypes.js').EventFile
   const outputLines: string[] = [ordered.join('\t')]
 
   for (let i = 1; i < lines.length; i++) {
-    const cells = splitLine(lines[i]).map(c => c.trim())
+    const cells = splitLine(lines[i]).map((c) => c.trim())
     const row: string[] = []
     for (const col of ordered) {
       const srcIdx = bidsToSrc.get(col)
@@ -286,7 +317,9 @@ export function writeDataset(
   allDemographics?: Record<string, ParticipantDemographics>,
   fieldmapIntendedFor?: FieldmapIntendedFor[]
 ): { outputDir: string; filesCopied: number } {
-  const outputDir = config.outputDir
+  // Create a subdirectory named after the dataset to avoid writing into a broad parent directory
+  const sanitizedName = (config.name || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')
+  const outputDir = path.join(config.outputDir, sanitizedName)
 
   // Resolve IntendedFor paths on fmap mappings
   if (fieldmapIntendedFor && fieldmapIntendedFor.length > 0) {
@@ -377,7 +410,10 @@ export function writeDataset(
     } else {
       continue
     }
-    fs.writeFileSync(path.join(excludedDir, baseName + '.json'), JSON.stringify(sidecar, null, 2) + '\n')
+    fs.writeFileSync(
+      path.join(excludedDir, baseName + '.json'),
+      JSON.stringify(sidecar, null, 2) + '\n'
+    )
     filesCopied++
   }
 

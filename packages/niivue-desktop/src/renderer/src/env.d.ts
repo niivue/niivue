@@ -8,6 +8,7 @@ import type {
   BidsWritePayload,
   BidsWriteResult,
   BidsValidationResult,
+  BidsValidatePayload,
   BidsSeriesMapping,
   FieldmapIntendedFor,
   ParseEventFileResult
@@ -38,8 +39,14 @@ declare global {
       // Headless mode - Subcommand architecture
       headlessGetOptions: () => Promise<CLIOptions>
       headlessResolveInput: (input: string) => Promise<ResolvedInput>
-      headlessSaveOutput: (data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
-      headlessSaveNifti: (base64Data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
+      headlessSaveOutput: (
+        data: string,
+        outputPath: string
+      ) => Promise<{ success: boolean; error?: string }>
+      headlessSaveNifti: (
+        base64Data: string,
+        outputPath: string
+      ) => Promise<{ success: boolean; error?: string }>
       headlessWriteStdout: (base64Data: string) => Promise<void>
       headlessLoadLabelJson: (labelJsonPath: string) => Promise<unknown>
       headlessComplete: () => void
@@ -59,10 +66,18 @@ declare global {
         outputDir?: string
         compress?: 'y' | 'n'
         bids?: 'y' | 'n'
-      }) => Promise<{ code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]>
+      }) => Promise<
+        { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]
+      >
       // BIDS wizard
-      bidsConvertAndClassify: (payload: BidsConvertAndClassifyPayload) => Promise<BidsConvertAndClassifyResult>
-      bidsValidate: (payload: BidsWritePayload) => Promise<BidsValidationResult>
+      bidsConvertAndClassify: (
+        payload: BidsConvertAndClassifyPayload
+      ) => Promise<BidsConvertAndClassifyResult>
+      bidsValidate: (payload: BidsValidatePayload) => Promise<BidsValidationResult>
+      bidsValidateWritten: (
+        dirPath: string,
+        mappings: BidsSeriesMapping[]
+      ) => Promise<BidsValidationResult>
       bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
       bidsSelectOutputDir: () => Promise<string | null>
       bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]) => Promise<FieldmapIntendedFor[]>

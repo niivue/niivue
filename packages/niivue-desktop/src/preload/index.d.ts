@@ -5,6 +5,7 @@ import type {
   BidsWritePayload,
   BidsWriteResult,
   BidsValidationResult,
+  BidsValidatePayload,
   BidsSeriesMapping,
   FieldmapIntendedFor,
   ParseEventFileResult
@@ -32,8 +33,14 @@ declare global {
       } | null>
       selectColormapFile: () => Promise<string | null>
       // BIDS wizard
-      bidsConvertAndClassify: (payload: BidsConvertAndClassifyPayload) => Promise<BidsConvertAndClassifyResult>
-      bidsValidate: (payload: BidsWritePayload) => Promise<BidsValidationResult>
+      bidsConvertAndClassify: (
+        payload: BidsConvertAndClassifyPayload
+      ) => Promise<BidsConvertAndClassifyResult>
+      bidsValidate: (payload: BidsValidatePayload) => Promise<BidsValidationResult>
+      bidsValidateWritten: (
+        dirPath: string,
+        mappings: BidsSeriesMapping[]
+      ) => Promise<BidsValidationResult>
       bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
       bidsSelectOutputDir: () => Promise<string | null>
       bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]) => Promise<FieldmapIntendedFor[]>

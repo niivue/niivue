@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { forwardRef, useEffect, useState } from 'react'
 import { Select, Text, Checkbox } from '@radix-ui/themes'
 import { ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
-import type { BidsSeriesMapping, BidsDatatype, BidsSuffix, EditableSidecarFields } from '../../../../common/bidsTypes.js'
+import type {
+  BidsSeriesMapping,
+  BidsDatatype,
+  BidsSuffix,
+  EditableSidecarFields
+} from '../../../../common/bidsTypes.js'
 import { SUFFIXES_BY_DATATYPE } from './bidsTreeUtil.js'
 
 interface SeriesRowProps {
   mapping: BidsSeriesMapping
   onUpdate: (index: number, changes: Partial<BidsSeriesMapping>) => void
   onUpdateSidecar: (index: number, field: string, value: unknown) => void
+  highlighted?: boolean
+  onClearHighlight?: () => void
 }
 
 const DATATYPES: BidsDatatype[] = ['anat', 'func', 'dwi', 'fmap', 'perf']
@@ -18,7 +25,12 @@ const confidenceColors: Record<string, string> = {
   low: 'bg-red-100 text-red-800'
 }
 
-const EDITABLE_SIDECAR_FIELDS: { key: keyof EditableSidecarFields; label: string; type: 'number' | 'text'; readOnly?: boolean }[] = [
+const EDITABLE_SIDECAR_FIELDS: {
+  key: keyof EditableSidecarFields
+  label: string
+  type: 'number' | 'text'
+  readOnly?: boolean
+}[] = [
   { key: 'RepetitionTime', label: 'TR (s)', type: 'number' },
   { key: 'EchoTime', label: 'TE (s)', type: 'number' },
   { key: 'FlipAngle', label: 'Flip Angle', type: 'number' },
@@ -27,12 +39,25 @@ const EDITABLE_SIDECAR_FIELDS: { key: keyof EditableSidecarFields; label: string
   { key: 'SliceTiming', label: 'Slice Timing', type: 'text', readOnly: true }
 ]
 
-export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps): JSX.Element {
+export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(function SeriesRow(
+  { mapping, onUpdate, onUpdateSidecar, highlighted, onClearHighlight },
+  ref
+) {
   const [expanded, setExpanded] = useState(false)
   const availableSuffixes = SUFFIXES_BY_DATATYPE[mapping.datatype] || []
   const idx = mapping.index
 
   const sidecar = mapping.sidecarData
+
+  // Auto-expand when highlighted
+  useEffect(() => {
+    if (!highlighted) return
+    setExpanded(true)
+    const timer = setTimeout(() => {
+      onClearHighlight?.()
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [highlighted, onClearHighlight])
 
   const getSidecarValue = (key: keyof EditableSidecarFields): string => {
     if (!sidecar) return ''
@@ -51,7 +76,10 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
 
   return (
     <>
-      <tr className={mapping.excluded ? 'opacity-40' : ''}>
+      <tr
+        ref={ref}
+        className={`${mapping.excluded ? 'opacity-40' : ''} ${highlighted ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
+      >
         {/* Exclude checkbox */}
         <td className="py-1 px-1">
           <Checkbox
@@ -178,10 +206,14 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
           <td colSpan={9} className="py-2 px-4 bg-gray-50 border-b border-gray-200">
             {/* Additional entity fields */}
             <div className="mb-3">
-              <Text size="1" weight="medium" className="block mb-1">Additional Entities</Text>
+              <Text size="1" weight="medium" className="block mb-1">
+                Additional Entities
+              </Text>
               <div className="flex gap-3 flex-wrap">
                 <label className="flex items-center gap-1">
-                  <Text size="1" color="gray">ce:</Text>
+                  <Text size="1" color="gray">
+                    ce:
+                  </Text>
                   <input
                     type="text"
                     value={mapping.ce}
@@ -191,7 +223,9 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
                   />
                 </label>
                 <label className="flex items-center gap-1">
-                  <Text size="1" color="gray">rec:</Text>
+                  <Text size="1" color="gray">
+                    rec:
+                  </Text>
                   <input
                     type="text"
                     value={mapping.rec}
@@ -201,7 +235,9 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
                   />
                 </label>
                 <label className="flex items-center gap-1">
-                  <Text size="1" color="gray">dir:</Text>
+                  <Text size="1" color="gray">
+                    dir:
+                  </Text>
                   <input
                     type="text"
                     value={mapping.dir}
@@ -211,7 +247,9 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
                   />
                 </label>
                 <label className="flex items-center gap-1">
-                  <Text size="1" color="gray">echo:</Text>
+                  <Text size="1" color="gray">
+                    echo:
+                  </Text>
                   <input
                     type="number"
                     min={0}
@@ -226,11 +264,15 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
             {/* Sidecar metadata */}
             {sidecar && (
               <div>
-                <Text size="1" weight="medium" className="block mb-1">Sidecar Metadata</Text>
+                <Text size="1" weight="medium" className="block mb-1">
+                  Sidecar Metadata
+                </Text>
                 <div className="flex gap-3 flex-wrap">
                   {EDITABLE_SIDECAR_FIELDS.map((field) => (
                     <label key={field.key} className="flex items-center gap-1">
-                      <Text size="1" color="gray">{field.label}:</Text>
+                      <Text size="1" color="gray">
+                        {field.label}:
+                      </Text>
                       <input
                         type={field.type === 'number' ? 'number' : 'text'}
                         step={field.type === 'number' ? 'any' : undefined}
@@ -238,9 +280,14 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
                         readOnly={field.readOnly}
                         onChange={(e) => {
                           if (field.readOnly) return
-                          const val = field.type === 'number'
-                            ? (e.target.value === '' ? undefined : parseFloat(e.target.value))
-                            : (e.target.value === '' ? undefined : e.target.value)
+                          const val =
+                            field.type === 'number'
+                              ? e.target.value === ''
+                                ? undefined
+                                : parseFloat(e.target.value)
+                              : e.target.value === ''
+                                ? undefined
+                                : e.target.value
                           onUpdateSidecar(idx, field.key, val)
                         }}
                         className={`w-24 px-1 py-0.5 text-xs border border-gray-300 rounded ${field.readOnly ? 'bg-gray-100 cursor-default' : ''}`}
@@ -255,4 +302,4 @@ export function SeriesRow({ mapping, onUpdate, onUpdateSidecar }: SeriesRowProps
       )}
     </>
   )
-}
+})

@@ -101,7 +101,7 @@ export interface FieldmapIntendedFor {
 
 export interface EventColumnMapping {
   sourceColumn: string
-  bidsColumn: string  // 'onset' | 'duration' | 'trial_type' | custom | 'skip'
+  bidsColumn: string // 'onset' | 'duration' | 'trial_type' | custom | 'skip'
 }
 
 export interface EventFileConfig {
@@ -134,6 +134,17 @@ export interface BidsValidationIssue {
   severity: 'error' | 'warning'
   message: string
   file?: string
+  seriesIndex?: number
+  targetStep?: number
+  code?: string
+}
+
+export interface BidsValidatePayload {
+  config: BidsDatasetConfig
+  mappings: BidsSeriesMapping[]
+  fieldmapIntendedFor?: FieldmapIntendedFor[]
+  demographics?: ParticipantDemographics
+  allDemographics?: Record<string, ParticipantDemographics>
 }
 
 export interface BidsValidationResult {

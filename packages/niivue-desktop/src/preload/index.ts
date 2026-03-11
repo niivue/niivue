@@ -8,6 +8,7 @@ import type {
   BidsWritePayload,
   BidsWriteResult,
   BidsValidationResult,
+  BidsValidatePayload,
   BidsSeriesMapping,
   FieldmapIntendedFor,
   ParseEventFileResult
@@ -62,10 +63,16 @@ const api = {
   headlessResolveInput: (input: string): Promise<ResolvedInput> => {
     return ipcRenderer.invoke('headless:resolve-input', input)
   },
-  headlessSaveOutput: (data: string, outputPath: string): Promise<{ success: boolean; error?: string }> => {
+  headlessSaveOutput: (
+    data: string,
+    outputPath: string
+  ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke('headless:save-output', data, outputPath)
   },
-  headlessSaveNifti: (base64Data: string, outputPath: string): Promise<{ success: boolean; error?: string }> => {
+  headlessSaveNifti: (
+    base64Data: string,
+    outputPath: string
+  ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke('headless:save-nifti', base64Data, outputPath)
   },
   headlessWriteStdout: (base64Data: string): Promise<void> => {
@@ -101,15 +108,25 @@ const api = {
     outputDir?: string
     compress?: 'y' | 'n'
     bids?: 'y' | 'n'
-  }): Promise<{ code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]> => {
+  }): Promise<
+    { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]
+  > => {
     return ipcRenderer.invoke('headless:dcm2niix-convert', options)
   },
   // BIDS wizard methods
-  bidsConvertAndClassify: (payload: BidsConvertAndClassifyPayload): Promise<BidsConvertAndClassifyResult> => {
+  bidsConvertAndClassify: (
+    payload: BidsConvertAndClassifyPayload
+  ): Promise<BidsConvertAndClassifyResult> => {
     return ipcRenderer.invoke('bids:convert-and-classify', payload)
   },
-  bidsValidate: (payload: BidsWritePayload): Promise<BidsValidationResult> => {
+  bidsValidate: (payload: BidsValidatePayload): Promise<BidsValidationResult> => {
     return ipcRenderer.invoke('bids:validate', payload)
+  },
+  bidsValidateWritten: (
+    dirPath: string,
+    mappings: BidsSeriesMapping[]
+  ): Promise<BidsValidationResult> => {
+    return ipcRenderer.invoke('bids:validate-written', { dirPath, mappings })
   },
   bidsWrite: (payload: BidsWritePayload): Promise<BidsWriteResult> => {
     return ipcRenderer.invoke('bids:write', payload)

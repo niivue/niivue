@@ -1,10 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Button, Text, Theme } from '@radix-ui/themes'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import type { Niivue } from '@niivue/niivue'
 import type { DicomSeries } from '../../../../common/dcm2niixTypes.js'
-import type { BidsSeriesMapping, BidsDatasetConfig, ParticipantDemographics, DetectedSubject, FieldmapIntendedFor, BidsWizardState } from '../../../../common/bidsTypes.js'
+import type {
+  BidsSeriesMapping,
+  BidsDatasetConfig,
+  ParticipantDemographics,
+  DetectedSubject,
+  FieldmapIntendedFor,
+  BidsWizardState,
+  BidsValidationResult,
+  BidsValidationIssue
+} from '../../../../common/bidsTypes.js'
 import { serializeBidsState, deserializeBidsState } from '../../../../common/bidsState.js'
 import { StepSelectSource } from './StepSelectSource.js'
 import { StepConversion } from './StepConversion.js'
@@ -24,7 +33,16 @@ interface BidsWizardProps {
   onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
 }
 
-const stepLabels = ['Source', 'Convert', 'Skull Strip', 'Classify', 'Events', 'Subject', 'Metadata', 'Validate']
+const stepLabels = [
+  'Source',
+  'Convert',
+  'Skull Strip',
+  'Classify',
+  'Events',
+  'Subject',
+  'Metadata',
+  'Validate'
+]
 
 const defaultConfig: BidsDatasetConfig = {
   name: '',
@@ -34,7 +52,12 @@ const defaultConfig: BidsDatasetConfig = {
   outputDir: ''
 }
 
-export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithOverlay }: BidsWizardProps): JSX.Element {
+export function BidsWizard({
+  nv,
+  onConversionComplete,
+  onLoadVolume,
+  onLoadWithOverlay
+}: BidsWizardProps): JSX.Element {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +77,10 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
 
   // Step 4: Demographics
   const [demographics, setDemographics] = useState<ParticipantDemographics>({
-    age: '', sex: '', handedness: '', group: ''
+    age: '',
+    sex: '',
+    handedness: '',
+    group: ''
   })
 
   // Fieldmap IntendedFor mappings
@@ -65,6 +91,11 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
 
   // Step 5: Metadata
   const [config, setConfig] = useState<BidsDatasetConfig>({ ...defaultConfig })
+
+  // Validation
+  const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
+  const [validating, setValidating] = useState(false)
+  const [highlightedSeriesIndex, setHighlightedSeriesIndex] = useState<number | null>(null)
 
   // Listen for menu trigger
   useEffect((): (() => void) => {
@@ -123,7 +154,19 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
       dicomDir
     }
     nv.document.customData = serializeBidsState(nv.document.customData || '', state)
-  }, [open, nv, mappings, fieldmapIntendedFor, demographics, detectedSubjects, config, subject, session, step, dicomDir])
+  }, [
+    open,
+    nv,
+    mappings,
+    fieldmapIntendedFor,
+    demographics,
+    detectedSubjects,
+    config,
+    subject,
+    session,
+    step,
+    dicomDir
+  ])
 
   const reset = (): void => {
     setStep(0)
@@ -139,6 +182,8 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     setDemographics({ age: '', sex: '', handedness: '', group: '' })
     setDetectedSubjects([])
     setFieldmapIntendedFor([])
+    setValidationResult(null)
+    setHighlightedSeriesIndex(null)
   }
 
   const handleClose = (): void => {
@@ -189,26 +234,29 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
   }
 
   const handleUpdateMapping = (index: number, changes: Partial<BidsSeriesMapping>): void => {
-    setMappings((prev) =>
-      prev.map((m) => (m.index === index ? { ...m, ...changes } : m))
-    )
+    setMappings((prev) => prev.map((m) => (m.index === index ? { ...m, ...changes } : m)))
   }
 
   const handleUpdateSidecar = (index: number, field: string, value: unknown): void => {
-    setMappings(prev => prev.map(m => {
-      if (m.index !== index || !m.sidecarData) return m
-      const newOverrides = { ...m.sidecarData.overrides }
-      if (value === undefined) {
-        delete (newOverrides as Record<string, unknown>)[field]
-      } else {
-        ;(newOverrides as Record<string, unknown>)[field] = value
-      }
-      return { ...m, sidecarData: { ...m.sidecarData, overrides: newOverrides } }
-    }))
+    setMappings((prev) =>
+      prev.map((m) => {
+        if (m.index !== index || !m.sidecarData) return m
+        const newOverrides = { ...m.sidecarData.overrides }
+        if (value === undefined) {
+          delete (newOverrides as Record<string, unknown>)[field]
+        } else {
+          ;(newOverrides as Record<string, unknown>)[field] = value
+        }
+        return { ...m, sidecarData: { ...m.sidecarData, overrides: newOverrides } }
+      })
+    )
   }
 
-  const handleUpdateDetectedSubject = (subjectIndex: number, changes: Partial<DetectedSubject>): void => {
-    setDetectedSubjects(prev => {
+  const handleUpdateDetectedSubject = (
+    subjectIndex: number,
+    changes: Partial<DetectedSubject>
+  ): void => {
+    setDetectedSubjects((prev) => {
       const updated = [...prev]
       const old = updated[subjectIndex]
       const newSubject = { ...old, ...changes }
@@ -216,20 +264,26 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
 
       // If label changed, update corresponding mappings
       if (changes.label && changes.label !== old.label) {
-        setMappings(prevMappings => prevMappings.map(m => {
-          if (m.subject === old.label) {
-            return { ...m, subject: changes.label! }
-          }
-          return m
-        }))
+        setMappings((prevMappings) =>
+          prevMappings.map((m) => {
+            if (m.subject === old.label) {
+              return { ...m, subject: changes.label! }
+            }
+            return m
+          })
+        )
       }
 
       return updated
     })
   }
 
-  const handleUpdateDetectedSubjectDemographics = (subjectIndex: number, field: keyof ParticipantDemographics, value: string): void => {
-    setDetectedSubjects(prev => {
+  const handleUpdateDetectedSubjectDemographics = (
+    subjectIndex: number,
+    field: keyof ParticipantDemographics,
+    value: string
+  ): void => {
+    setDetectedSubjects((prev) => {
       const updated = [...prev]
       updated[subjectIndex] = {
         ...updated[subjectIndex],
@@ -239,8 +293,12 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
     })
   }
 
-  const handleUpdateDetectedSessionLabel = (subjectIndex: number, sessionIndex: number, label: string): void => {
-    setDetectedSubjects(prev => {
+  const handleUpdateDetectedSessionLabel = (
+    subjectIndex: number,
+    sessionIndex: number,
+    label: string
+  ): void => {
+    setDetectedSubjects((prev) => {
       const updated = [...prev]
       const sub = { ...updated[subjectIndex] }
       const sessions = [...sub.sessions]
@@ -250,19 +308,72 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
       updated[subjectIndex] = sub
 
       // Update corresponding mappings
-      setMappings(prevMappings => prevMappings.map(m => {
-        if (m.subject === sub.label && m.session === oldLabel) {
-          return { ...m, session: label }
-        }
-        return m
-      }))
+      setMappings((prevMappings) =>
+        prevMappings.map((m) => {
+          if (m.subject === sub.label && m.session === oldLabel) {
+            return { ...m, session: label }
+          }
+          return m
+        })
+      )
 
       return updated
     })
   }
 
-  const updateConfig = <K extends keyof BidsDatasetConfig>(key: K, value: BidsDatasetConfig[K]): void => {
+  const updateConfig = <K extends keyof BidsDatasetConfig>(
+    key: K,
+    value: BidsDatasetConfig[K]
+  ): void => {
     setConfig((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const runValidation = useCallback(async (): Promise<void> => {
+    if (mappings.length === 0 || !converted) return
+    setValidating(true)
+    try {
+      const result = await electron.bidsValidate({
+        config,
+        mappings: applySubjectSession(mappings),
+        fieldmapIntendedFor,
+        demographics,
+        allDemographics:
+          detectedSubjects.length > 1
+            ? Object.fromEntries(detectedSubjects.map((ds) => [ds.label, ds.demographics]))
+            : undefined
+      })
+      setValidationResult(result)
+    } catch {
+      // validation failure is non-fatal
+    } finally {
+      setValidating(false)
+    }
+  }, [
+    mappings,
+    config,
+    fieldmapIntendedFor,
+    subject,
+    session,
+    demographics,
+    detectedSubjects,
+    converted
+  ])
+
+  function getStepForIssue(issue: BidsValidationIssue): number {
+    if (issue.targetStep != null) return issue.targetStep
+    const msg = (issue.message || '').toLowerCase()
+    if (msg.includes('dataset') || msg.includes('output dir') || msg.includes('readme')) return 6
+    if (msg.includes('participant') || msg.includes('subject') || msg.includes('session')) return 5
+    if (msg.includes('event') || msg.includes('onset') || msg.includes('duration')) return 4
+    return 3
+  }
+
+  const handleIssueClick = (issue: BidsValidationIssue): void => {
+    const targetStep = getStepForIssue(issue)
+    setStep(targetStep)
+    if (issue.seriesIndex != null) {
+      setHighlightedSeriesIndex(issue.seriesIndex)
+    }
   }
 
   // Get mappings with current subject/session applied
@@ -292,7 +403,9 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
         return true // Events are optional
       case 5:
         if (detectedSubjects.length > 1) {
-          return detectedSubjects.every(ds => ds.label.trim() !== '' && /^[a-zA-Z0-9]+$/.test(ds.label))
+          return detectedSubjects.every(
+            (ds) => ds.label.trim() !== '' && /^[a-zA-Z0-9]+$/.test(ds.label)
+          )
         }
         return subject.trim() !== '' && /^[a-zA-Z0-9]+$/.test(subject)
       case 6:
@@ -303,7 +416,12 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) handleClose()
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/40 fixed inset-0 z-40" />
         <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-lg w-[900px] max-h-[90vh] overflow-hidden z-50">
@@ -312,7 +430,9 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <Dialog.Title asChild>
-                  <Text size="4" weight="bold">Convert DICOM to BIDS</Text>
+                  <Text size="4" weight="bold">
+                    Convert DICOM to BIDS
+                  </Text>
                 </Dialog.Title>
                 <Dialog.Close asChild>
                   <button className="p-1 rounded hover:bg-gray-100">
@@ -348,10 +468,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
               {error && (
                 <div className="mb-3 p-2 text-xs text-red-700 bg-red-50 rounded border border-red-200">
                   {error}
-                  <button
-                    className="ml-2 underline text-red-600"
-                    onClick={() => setError(null)}
-                  >
+                  <button className="ml-2 underline text-red-600" onClick={() => setError(null)}>
                     Dismiss
                   </button>
                 </div>
@@ -395,6 +512,8 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     datasetName={config.name}
                     fieldmapIntendedFor={fieldmapIntendedFor}
                     onUpdateFieldmapMappings={setFieldmapIntendedFor}
+                    highlightedSeriesIndex={highlightedSeriesIndex}
+                    onClearHighlight={() => setHighlightedSeriesIndex(null)}
                   />
                 )}
                 {step === 4 && (
@@ -418,12 +537,7 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     onUpdateDetectedSessionLabel={handleUpdateDetectedSessionLabel}
                   />
                 )}
-                {step === 6 && (
-                  <StepMetadata
-                    config={config}
-                    onUpdateConfig={updateConfig}
-                  />
-                )}
+                {step === 6 && <StepMetadata config={config} onUpdateConfig={updateConfig} />}
                 {step === 7 && (
                   <StepValidation
                     config={config}
@@ -431,12 +545,15 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                     demographics={demographics}
                     allDemographics={getAllDemographics()}
                     fieldmapIntendedFor={fieldmapIntendedFor}
+                    validationResult={validationResult}
+                    onNavigateToIssue={handleIssueClick}
+                    onRevalidate={runValidation}
                   />
                 )}
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-between mt-6 pt-4 border-t border-gray-200 shrink-0">
+              <div className="flex justify-between mt-4 pt-4 border-t border-gray-200 shrink-0">
                 <Button
                   variant="soft"
                   color="gray"
@@ -444,16 +561,18 @@ export function BidsWizard({ nv, onConversionComplete, onLoadVolume, onLoadWithO
                 >
                   {step === 0 ? 'Cancel' : 'Back'}
                 </Button>
-                {step < 7 && (
-                  <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
-                    Next
-                  </Button>
-                )}
-                {step === 7 && (
-                  <Button variant="soft" color="gray" onClick={handleClose}>
-                    Close
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {step < 7 && (
+                    <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
+                      Next
+                    </Button>
+                  )}
+                  {step === 7 && (
+                    <Button variant="soft" color="gray" onClick={handleClose}>
+                      Close
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </Theme>
