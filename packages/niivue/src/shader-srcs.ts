@@ -2277,7 +2277,7 @@ void main(void) {
  vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
  blurred.r = 2.0*(xOz.a +xOZ.a +xyO.a +xYO.a +xOO.a +XOz.a +XOZ.a +XyO.a +XYO.a +XOO.a) +xyz.a +xyZ.a +xYz.a +xYZ.a +Xyz.a +XyZ.a +XYz.a +XYZ.a;
  blurred.g = 2.0*(Oyz.a +OyZ.a +xyO.a +XyO.a +OyO.a +OYz.a +OYZ.a +xYO.a +XYO.a +OYO.a) +xyz.a +Xyz.a +xyZ.a +XyZ.a +xYz.a +XYz.a +xYZ.a +XYZ.a;
- blurred.b = 2.0*(Oyz.a +OYz.a +xOz.a +XOz.a +OOz.a +OyZ.a +OYZ.a +xOZ.a +XOZ.a +OOZ.a) +xyz.a +Xyz.a +xYz.a +XYz.a +xyZ.a +XyZ.a +XyZ.a +XYZ.a;
+ blurred.b = 2.0*(Oyz.a +OYz.a +xOz.a +XOz.a +OOz.a +OyZ.a +OYZ.a +xOZ.a +XOZ.a +OOZ.a) +xyz.a +Xyz.a +xYz.a +XYz.a +xyZ.a +XyZ.a +xYZ.a +XYZ.a;
  blurred.a = 0.32*(abs(blurred.r)+abs(blurred.g)+abs(blurred.b));
  // 0.0357 = 1/28 to account for weights, rescale to 2**16,
  FragColor = 0.0357*blurred;
@@ -2356,9 +2356,9 @@ void main(void) {
   vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
   vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r = -4.0*B.a +8.0*(BAR.a+BAL.a+BPR.a+BPL.a) -8.0*(TAR.a+TAL.a+TPR.a+TPL.a) +4.0*T.a;
-  gradientSample.g = -4.0*P.a +8.0*(TPR.a+TPL.a+BPR.a+BPL.a) -8.0*(TAR.a+TAL.a+BAR.a+BAL.a) +4.0*A.a;
-  gradientSample.b = -4.0*L.a +8.0*(TAL.a+TPL.a+BAL.a+BPL.a) -8.0*(TAR.a+TPR.a+BAR.a+BPR.a) +4.0*R.a;
+  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
+  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
+  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
 ${kGradientMagnitude}
 	gradientSample.a *= 0.0325;
   float gradLen = length(gradientSample.rgb);
