@@ -9738,7 +9738,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         }
 
         if (isNaN(imageWidthHeight[0])) {
-            this.draw2DMain(ltwh, axCorSag, customMM)
+            // If original input had zero w/h (single-panel full-screen draw),
+            // pass [0,0,0,0] to draw2DMain to trigger isStretchToScreen,
+            // which expands the mm-space FoV to fill the canvas while
+            // keeping square pixels. This allows zoom to use the full canvas.
+            const wasZeroSized = leftTopWidthHeight[2] === 0 && leftTopWidthHeight[3] === 0
+            this.draw2DMain(wasZeroSized ? [0, 0, 0, 0] : ltwh, axCorSag, customMM)
         } else {
             // inset as padded in tile
             // issue1554 shift tile: do not change global padLeftTop
@@ -11860,15 +11865,9 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                     }
                 }
             } else if (this.opts.sliceType === SLICE_TYPE.AXIAL || this.opts.sliceType === SLICE_TYPE.CORONAL || this.opts.sliceType === SLICE_TYPE.SAGITTAL) {
-                const { volScale } = this.sliceScale()
-
-                // full available region
-                const leftTopWidthHeight = [vpX, vpY, vpW, vpH]
-
-                // preserve mm aspect ratio
-                const actualDimensions = this.calculateWidthHeight(this.opts.sliceType, volScale, leftTopWidthHeight[2], leftTopWidthHeight[3])
-
-                this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN, actualDimensions)
+                // Pass [0,0,0,0] without actualDimensions so draw2DMain's
+                // isStretchToScreen path fills the canvas with the slice
+                this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN)
             } else {
                 // sliceTypeMultiplanar
                 let isShowRender = false
