@@ -2231,7 +2231,7 @@ void main(void) {
  FragColor = samp*0.125;
 }`
 
-export const sobelBlurFragShader = `#version 300 es
+export const gradientPrePassFragShader = `#version 300 es
 #line 298
 precision highp int;
 precision highp float;
@@ -2243,44 +2243,48 @@ uniform float dY;
 uniform float dZ;
 uniform highp sampler3D intensityVol;
 void main(void) {
- vec3 vx = vec3(TexCoord.xy, coordZ);
- vec4 XYZ = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
- vec4 OYZ = texture(intensityVol,vx+vec3(0.0,+dY,+dZ));
- vec4 xYZ = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
- vec4 XOZ = texture(intensityVol,vx+vec3(+dX,0.0,+dZ));
- vec4 OOZ = texture(intensityVol,vx+vec3(0.0,0.0,+dZ));
- vec4 xOZ = texture(intensityVol,vx+vec3(-dX,0.0,+dZ));
- vec4 XyZ = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
- vec4 OyZ = texture(intensityVol,vx+vec3(0.0,-dY,+dZ));
- vec4 xyZ = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
-
- vec4 XYO = texture(intensityVol,vx+vec3(+dX,+dY,0.0));
- vec4 OYO = texture(intensityVol,vx+vec3(0.0,+dY,0.0));
- vec4 xYO = texture(intensityVol,vx+vec3(-dX,+dY,0.0));
- vec4 XOO = texture(intensityVol,vx+vec3(+dX,0.0,0.0));
- vec4 OOO = texture(intensityVol,vx+vec3(0.0,0.0,0.0));
- vec4 xOO = texture(intensityVol,vx+vec3(-dX,0.0,0.0));
- vec4 XyO = texture(intensityVol,vx+vec3(+dX,-dY,0.0));
- vec4 OyO = texture(intensityVol,vx+vec3(0.0,-dY,0.0));
- vec4 xyO = texture(intensityVol,vx+vec3(-dX,-dY,0.0));
-
- vec4 XYz = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
- vec4 OYz = texture(intensityVol,vx+vec3(0.0,+dY,-dZ));
- vec4 xYz = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
- vec4 XOz = texture(intensityVol,vx+vec3(+dX,0.0,-dZ));
- vec4 OOz = texture(intensityVol,vx+vec3(0.0,0.0,-dZ));
- vec4 xOz = texture(intensityVol,vx+vec3(-dX,0.0,-dZ));
- vec4 Xyz = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
- vec4 Oyz = texture(intensityVol,vx+vec3(0.0,-dY,-dZ));
- vec4 xyz = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
-
- vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
- blurred.r = 2.0*(xOz.a +xOZ.a +xyO.a +xYO.a +xOO.a +XOz.a +XOZ.a +XyO.a +XYO.a +XOO.a) +xyz.a +xyZ.a +xYz.a +xYZ.a +Xyz.a +XyZ.a +XYz.a +XYZ.a;
- blurred.g = 2.0*(Oyz.a +OyZ.a +xyO.a +XyO.a +OyO.a +OYz.a +OYZ.a +xYO.a +XYO.a +OYO.a) +xyz.a +Xyz.a +xyZ.a +XyZ.a +xYz.a +XYz.a +xYZ.a +XYZ.a;
- blurred.b = 2.0*(Oyz.a +OYz.a +xOz.a +XOz.a +OOz.a +OyZ.a +OYZ.a +xOZ.a +XOZ.a +OOZ.a) +xyz.a +Xyz.a +xYz.a +XYz.a +xyZ.a +XyZ.a +xYZ.a +XYZ.a;
- blurred.a = 0.32*(abs(blurred.r)+abs(blurred.g)+abs(blurred.b));
- // 0.0357 = 1/28 to account for weights, rescale to 2**16,
- FragColor = 0.0357*blurred;
+  vec3 vx = vec3(TexCoord.xy, coordZ);
+  // --- Z+ Plane (+dZ) ---
+  float XYZ = texture(intensityVol, vx + vec3(+dX, +dY, +dZ)).a;
+  float OYZ = texture(intensityVol, vx + vec3(0.0, +dY, +dZ)).a;
+  float xYZ = texture(intensityVol, vx + vec3(-dX, +dY, +dZ)).a;
+  float XOZ = texture(intensityVol, vx + vec3(+dX, 0.0, +dZ)).a;
+  float OOZ = texture(intensityVol, vx + vec3(0.0, 0.0, +dZ)).a;
+  float xOZ = texture(intensityVol, vx + vec3(-dX, 0.0, +dZ)).a;
+  float XyZ = texture(intensityVol, vx + vec3(+dX, -dY, +dZ)).a;
+  float OyZ = texture(intensityVol, vx + vec3(0.0, -dY, +dZ)).a;
+  float xyZ = texture(intensityVol, vx + vec3(-dX, -dY, +dZ)).a;
+  // --- Z0 Plane (0.0) ---
+  float XYO = texture(intensityVol, vx + vec3(+dX, +dY, 0.0)).a;
+  float OYO = texture(intensityVol, vx + vec3(0.0, +dY, 0.0)).a;
+  float xYO = texture(intensityVol, vx + vec3(-dX, +dY, 0.0)).a;
+  float XOO = texture(intensityVol, vx + vec3(+dX, 0.0, 0.0)).a;
+  float OOO = texture(intensityVol, vx + vec3(0.0, 0.0, 0.0)).a;
+  float xOO = texture(intensityVol, vx + vec3(-dX, 0.0, 0.0)).a;
+  float XyO = texture(intensityVol, vx + vec3(+dX, -dY, 0.0)).a;
+  float OyO = texture(intensityVol, vx + vec3(0.0, -dY, 0.0)).a;
+  float xyO = texture(intensityVol, vx + vec3(-dX, -dY, 0.0)).a;
+  // --- Z- Plane (-dZ) ---
+  float XYz = texture(intensityVol, vx + vec3(+dX, +dY, -dZ)).a;
+  float OYz = texture(intensityVol, vx + vec3(0.0, +dY, -dZ)).a;
+  float xYz = texture(intensityVol, vx + vec3(-dX, +dY, -dZ)).a;
+  float XOz = texture(intensityVol, vx + vec3(+dX, 0.0, -dZ)).a;
+  float OOz = texture(intensityVol, vx + vec3(0.0, 0.0, -dZ)).a;
+  float xOz = texture(intensityVol, vx + vec3(-dX, 0.0, -dZ)).a;
+  float Xyz = texture(intensityVol, vx + vec3(+dX, -dY, -dZ)).a;
+  float Oyz = texture(intensityVol, vx + vec3(0.0, -dY, -dZ)).a;
+  float xyz = texture(intensityVol, vx + vec3(-dX, -dY, -dZ)).a;
+  // --- Directional blur sums ---
+  vec3 blurred;
+  blurred.x = 2.0 * (xOz + xOZ + xyO + xYO + xOO + XOz + XOZ + XyO + XYO + XOO)
+              + xyz + xyZ + xYz + xYZ + Xyz + XyZ + XYz + XYZ;
+  blurred.y = 2.0 * (Oyz + OyZ + xyO + XyO + OyO + OYz + OYZ + xYO + XYO + OYO)
+              + xyz + Xyz + xyZ + XyZ + xYz + XYz + xYZ + XYZ;
+  blurred.z = 2.0 * (Oyz + OYz + xOz + XOz + OOz + OyZ + OYZ + xOZ + XOZ + OOZ)
+              + xyz + Xyz + xYz + XYz + xyZ + XyZ + xYZ + XYZ;
+  float finalAlpha = 0.32 * (abs(blurred.x) + abs(blurred.y) + abs(blurred.z));
+  // 0.0357 = 1/28 to account for weights, rescale to 2**16,
+  FragColor = 0.0357 * vec4(blurred, finalAlpha);
 }`
 
 // -18.988706873717717 = log2(1/(255**2*8)) // 8 is chosen for contrast
@@ -2356,13 +2360,13 @@ void main(void) {
   vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
   vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
-  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
-  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
+  gradientSample.x = -4.0*B.x +8.0*(BAR.x+BAL.x+BPR.x+BPL.x) -8.0*(TAR.x+TAL.x+TPR.x+TPL.x) +4.0*T.x;
+  gradientSample.y = -4.0*P.y +8.0*(TPR.y+TPL.y+BPR.y+BPL.y) -8.0*(TAR.y+TAL.y+BAR.y+BAL.y) +4.0*A.y;
+  gradientSample.z = -4.0*L.z +8.0*(TAL.z+TPL.z+BAL.z+BPL.z) -8.0*(TAR.z+TPR.z+BAR.z+BPR.z) +4.0*R.z;
 ${kGradientMagnitude}
 	gradientSample.a *= 0.0325;
-  float gradLen = length(gradientSample.rgb);
-  gradientSample.rgb = gradLen > 0.001 ? gradientSample.rgb / gradLen : vec3(0.0);
-  gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
+  float gradLen = length(gradientSample.xyz);
+  gradientSample.xyz = gradLen > 0.001 ? gradientSample.xyz / gradLen : vec3(0.0);
+  gradientSample.xyz =  (gradientSample.xyz * 0.5)+0.5;
   FragColor = gradientSample;
 }`

@@ -226,7 +226,7 @@ export class Niivue extends EventTarget {
     orientShaderPAQD: Shader | null = null
     surfaceShader: Shader | null = null
     blurShader: Shader | null = null
-    sobelBlurShader: Shader | null = null
+    gradientPrePassShader: Shader | null = null
     sobelFirstOrderShader: Shader | null = null
     sobelSecondOrderShader: Shader | null = null
     genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
@@ -6487,7 +6487,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         // Initialize image processing shaders
         const imageProcessingShaders = ShaderManager.initImageProcessingShaders(gl)
         this.blurShader = imageProcessingShaders.blurShader
-        this.sobelBlurShader = imageProcessingShaders.sobelBlurShader
+        this.gradientPrePassShader = imageProcessingShaders.gradientPrePassShader
         this.sobelFirstOrderShader = imageProcessingShaders.sobelFirstOrderShader
         this.sobelSecondOrderShader = imageProcessingShaders.sobelSecondOrderShader
         this.growCutShader = imageProcessingShaders.growCutShader
@@ -6537,7 +6537,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             gradientTexture: this.gradientTexture,
             gradientOrder: this.opts.gradientOrder,
             blurShader: this.blurShader!,
-            sobelBlurShader: this.sobelBlurShader!,
+            gradientPrePassShader: this.gradientPrePassShader!,
             sobelFirstOrderShader: this.sobelFirstOrderShader!,
             sobelSecondOrderShader: this.sobelSecondOrderShader!,
             rgbaTex: this.rgbaTex.bind(this)
@@ -7018,7 +7018,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 gradientTexture: this.gradientTexture,
                 gradientOrder: this.opts.gradientOrder,
                 blurShader: this.blurShader!,
-                sobelBlurShader: this.sobelBlurShader!,
+                gradientPrePassShader: this.gradientPrePassShader!,
                 sobelFirstOrderShader: this.sobelFirstOrderShader!,
                 sobelSecondOrderShader: this.sobelSecondOrderShader!,
                 rgbaTex: this.rgbaTex.bind(this)

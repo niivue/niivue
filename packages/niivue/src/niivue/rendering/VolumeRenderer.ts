@@ -129,7 +129,7 @@ export interface GradientGLParams {
     gradientTexture: WebGLTexture | null
     gradientOrder: number
     blurShader: Shader
-    sobelBlurShader: Shader
+    gradientPrePassShader: Shader
     sobelFirstOrderShader: Shader
     sobelSecondOrderShader: Shader
     rgbaTex: (tex: WebGLTexture | null, textureNum: number, dims: number[], isInit?: boolean) => WebGLTexture
@@ -141,7 +141,7 @@ export interface GradientGLParams {
  * @returns The generated gradient texture
  */
 export function gradientGL(params: GradientGLParams): WebGLTexture {
-    const { gl, hdr, genericVAO, unusedVAO, volumeTexture, paqdTexture, gradientOrder, blurShader: blurShaderInput, sobelBlurShader, sobelFirstOrderShader, sobelSecondOrderShader, rgbaTex } = params
+    const { gl, hdr, genericVAO, unusedVAO, volumeTexture, paqdTexture, gradientOrder, blurShader: blurShaderInput, gradientPrePassShader, sobelFirstOrderShader, sobelSecondOrderShader, rgbaTex } = params
 
     let { gradientTexture } = params
 
@@ -151,7 +151,7 @@ export function gradientGL(params: GradientGLParams): WebGLTexture {
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
     const tempTex3D = rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
-    const blurShader = gradientOrder === 2 ? sobelBlurShader : blurShaderInput
+    const blurShader = gradientOrder === 2 ? gradientPrePassShader : blurShaderInput
     blurShader.use(gl)
     gl.activeTexture(TEXTURE0_BACK_VOL)
     gl.bindTexture(gl.TEXTURE_3D, volumeTexture)
