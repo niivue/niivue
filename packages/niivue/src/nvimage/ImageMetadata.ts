@@ -53,8 +53,8 @@ export function getImageOptions(nvImage: NVImage): ImageFromUrlOptions {
         nvImage.name, // name
         nvImage._colormap, // colormap
         nvImage.opacity, // opacity
-        nvImage.hdr!.cal_min, // cal_min
-        nvImage.hdr!.cal_max, // cal_max
+        nvImage.cal_min, // cal_min
+        nvImage.cal_max, // cal_max
         nvImage.trustCalMinMax, // trustCalMinMax,
         nvImage.percentileFrac, // percentileFrac
         nvImage.ignoreZeroVoxels, // ignoreZeroVoxels
@@ -62,7 +62,9 @@ export function getImageOptions(nvImage: NVImage): ImageFromUrlOptions {
         nvImage.colormapNegative, // colormapNegative
         nvImage.frame4D,
         nvImage.imageType, // imageType
-        nvImage.colormapType
+        nvImage.cal_minNeg, // cal_minNeg
+        nvImage.cal_maxNeg, // cal_maxNeg
+        nvImage.colorbarVisible // colorbarVisible
     )
     return options
 }
