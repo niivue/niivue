@@ -28636,9 +28636,9 @@ function getImageOptions(nvImage) {
     // colormap
     nvImage.opacity,
     // opacity
-    nvImage.hdr.cal_min,
+    nvImage.cal_min,
     // cal_min
-    nvImage.hdr.cal_max,
+    nvImage.cal_max,
     // cal_max
     nvImage.trustCalMinMax,
     // trustCalMinMax,
@@ -28653,7 +28653,12 @@ function getImageOptions(nvImage) {
     nvImage.frame4D,
     nvImage.imageType,
     // imageType
-    nvImage.colormapType
+    nvImage.cal_minNeg,
+    // cal_minNeg
+    nvImage.cal_maxNeg,
+    // cal_maxNeg
+    nvImage.colorbarVisible
+    // colorbarVisible
   );
   return options;
 }
@@ -33715,7 +33720,9 @@ var NVSerializer = class _NVSerializer {
             urlImageData: v?.urlImgData ?? "",
             cal_minNeg: v?.cal_minNeg ?? NaN,
             cal_maxNeg: v?.cal_maxNeg ?? NaN,
-            colorbarVisible: v?.colorbarVisible ?? true
+            colorbarVisible: v?.colorbarVisible ?? true,
+            colormapNegative: v?.colormapNegative ?? "",
+            colormapType: v?.colormapType ?? 0
           };
         } else {
           if (!("imageType" in imageOptions)) {
@@ -33727,6 +33734,11 @@ var NVSerializer = class _NVSerializer {
         imageOptions.opacity = v.opacity;
         imageOptions.cal_max = v.cal_max ?? NaN;
         imageOptions.cal_min = v.cal_min ?? NaN;
+        imageOptions.colormapNegative = v.colormapNegative ?? "";
+        imageOptions.cal_minNeg = v.cal_minNeg ?? NaN;
+        imageOptions.cal_maxNeg = v.cal_maxNeg ?? NaN;
+        imageOptions.colorbarVisible = v.colorbarVisible ?? true;
+        imageOptions.colormapType = v.colormapType ?? 0;
         imageOptionsArray.push(imageOptions);
         if (embedImages) {
           const blob = NVUtilities.uint8tob64(v.toUint8Array());
