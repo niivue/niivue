@@ -37388,7 +37388,7 @@ void main(void) {
  samp += texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
  FragColor = samp*0.125;
 }`;
-var sobelBlurFragShader = `#version 300 es
+var gradientPrePassFragShader = `#version 300 es
 #line 298
 precision highp int;
 precision highp float;
@@ -37400,44 +37400,48 @@ uniform float dY;
 uniform float dZ;
 uniform highp sampler3D intensityVol;
 void main(void) {
- vec3 vx = vec3(TexCoord.xy, coordZ);
- vec4 XYZ = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
- vec4 OYZ = texture(intensityVol,vx+vec3(0.0,+dY,+dZ));
- vec4 xYZ = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
- vec4 XOZ = texture(intensityVol,vx+vec3(+dX,0.0,+dZ));
- vec4 OOZ = texture(intensityVol,vx+vec3(0.0,0.0,+dZ));
- vec4 xOZ = texture(intensityVol,vx+vec3(-dX,0.0,+dZ));
- vec4 XyZ = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
- vec4 OyZ = texture(intensityVol,vx+vec3(0.0,-dY,+dZ));
- vec4 xyZ = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
-
- vec4 XYO = texture(intensityVol,vx+vec3(+dX,+dY,0.0));
- vec4 OYO = texture(intensityVol,vx+vec3(0.0,+dY,0.0));
- vec4 xYO = texture(intensityVol,vx+vec3(-dX,+dY,0.0));
- vec4 XOO = texture(intensityVol,vx+vec3(+dX,0.0,0.0));
- vec4 OOO = texture(intensityVol,vx+vec3(0.0,0.0,0.0));
- vec4 xOO = texture(intensityVol,vx+vec3(-dX,0.0,0.0));
- vec4 XyO = texture(intensityVol,vx+vec3(+dX,-dY,0.0));
- vec4 OyO = texture(intensityVol,vx+vec3(0.0,-dY,0.0));
- vec4 xyO = texture(intensityVol,vx+vec3(-dX,-dY,0.0));
-
- vec4 XYz = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
- vec4 OYz = texture(intensityVol,vx+vec3(0.0,+dY,-dZ));
- vec4 xYz = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
- vec4 XOz = texture(intensityVol,vx+vec3(+dX,0.0,-dZ));
- vec4 OOz = texture(intensityVol,vx+vec3(0.0,0.0,-dZ));
- vec4 xOz = texture(intensityVol,vx+vec3(-dX,0.0,-dZ));
- vec4 Xyz = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
- vec4 Oyz = texture(intensityVol,vx+vec3(0.0,-dY,-dZ));
- vec4 xyz = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
-
- vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
- blurred.r = 2.0*(xOz.r +xOZ.r +xyO.r +xYO.r +xOO.r +XOz.r +XOZ.r +XyO.r +XYO.r +XOO.r) +xyz.r +xyZ.r +xYz.r +xYZ.r +Xyz.r +XyZ.r +XYz.r +XYZ.r;
- blurred.g = 2.0*(Oyz.r +OyZ.r +xyO.r +XyO.r +OyO.r +OYz.r +OYZ.r +xYO.r +XYO.r +OYO.r) +xyz.r +Xyz.r +xyZ.r +XyZ.r +xYz.r +XYz.r +xYZ.r +XYZ.r;
- blurred.b = 2.0*(Oyz.r +OYz.r +xOz.r +XOz.r +OOz.r +OyZ.r +OYZ.r +xOZ.r +XOZ.r +OOZ.r) +xyz.r +Xyz.r +xYz.r +XYz.r +xyZ.r +XyZ.r +XyZ.r +XYZ.r;
- blurred.a = 0.32*(abs(blurred.r)+abs(blurred.g)+abs(blurred.b));
- // 0.0357 = 1/28 to account for weights, rescale to 2**16,
- FragColor = 0.0357*blurred;
+  vec3 vx = vec3(TexCoord.xy, coordZ);
+  // --- Z+ Plane (+dZ) ---
+  float XYZ = texture(intensityVol, vx + vec3(+dX, +dY, +dZ)).a;
+  float OYZ = texture(intensityVol, vx + vec3(0.0, +dY, +dZ)).a;
+  float xYZ = texture(intensityVol, vx + vec3(-dX, +dY, +dZ)).a;
+  float XOZ = texture(intensityVol, vx + vec3(+dX, 0.0, +dZ)).a;
+  float OOZ = texture(intensityVol, vx + vec3(0.0, 0.0, +dZ)).a;
+  float xOZ = texture(intensityVol, vx + vec3(-dX, 0.0, +dZ)).a;
+  float XyZ = texture(intensityVol, vx + vec3(+dX, -dY, +dZ)).a;
+  float OyZ = texture(intensityVol, vx + vec3(0.0, -dY, +dZ)).a;
+  float xyZ = texture(intensityVol, vx + vec3(-dX, -dY, +dZ)).a;
+  // --- Z0 Plane (0.0) ---
+  float XYO = texture(intensityVol, vx + vec3(+dX, +dY, 0.0)).a;
+  float OYO = texture(intensityVol, vx + vec3(0.0, +dY, 0.0)).a;
+  float xYO = texture(intensityVol, vx + vec3(-dX, +dY, 0.0)).a;
+  float XOO = texture(intensityVol, vx + vec3(+dX, 0.0, 0.0)).a;
+  float OOO = texture(intensityVol, vx + vec3(0.0, 0.0, 0.0)).a;
+  float xOO = texture(intensityVol, vx + vec3(-dX, 0.0, 0.0)).a;
+  float XyO = texture(intensityVol, vx + vec3(+dX, -dY, 0.0)).a;
+  float OyO = texture(intensityVol, vx + vec3(0.0, -dY, 0.0)).a;
+  float xyO = texture(intensityVol, vx + vec3(-dX, -dY, 0.0)).a;
+  // --- Z- Plane (-dZ) ---
+  float XYz = texture(intensityVol, vx + vec3(+dX, +dY, -dZ)).a;
+  float OYz = texture(intensityVol, vx + vec3(0.0, +dY, -dZ)).a;
+  float xYz = texture(intensityVol, vx + vec3(-dX, +dY, -dZ)).a;
+  float XOz = texture(intensityVol, vx + vec3(+dX, 0.0, -dZ)).a;
+  float OOz = texture(intensityVol, vx + vec3(0.0, 0.0, -dZ)).a;
+  float xOz = texture(intensityVol, vx + vec3(-dX, 0.0, -dZ)).a;
+  float Xyz = texture(intensityVol, vx + vec3(+dX, -dY, -dZ)).a;
+  float Oyz = texture(intensityVol, vx + vec3(0.0, -dY, -dZ)).a;
+  float xyz = texture(intensityVol, vx + vec3(-dX, -dY, -dZ)).a;
+  // --- Directional blur sums ---
+  vec3 blurred;
+  blurred.x = 2.0 * (xOz + xOZ + xyO + xYO + xOO + XOz + XOZ + XyO + XYO + XOO)
+              + xyz + xyZ + xYz + xYZ + Xyz + XyZ + XYz + XYZ;
+  blurred.y = 2.0 * (Oyz + OyZ + xyO + XyO + OyO + OYz + OYZ + xYO + XYO + OYO)
+              + xyz + Xyz + xyZ + XyZ + xYz + XYz + xYZ + XYZ;
+  blurred.z = 2.0 * (Oyz + OYz + xOz + XOz + OOz + OyZ + OYZ + xOZ + XOZ + OOZ)
+              + xyz + Xyz + xYz + XYz + xyZ + XyZ + xYZ + XYZ;
+  float finalAlpha = 0.32 * (abs(blurred.x) + abs(blurred.y) + abs(blurred.z));
+  // 0.0357 = 1/28 to account for weights, rescale to 2**16,
+  FragColor = 0.0357 * vec4(blurred, finalAlpha);
 }`;
 var kGradientMagnitude = `
   gradientSample.a = log2(gradientSample.r*gradientSample.r + gradientSample.g*gradientSample.g + gradientSample.b*gradientSample.b + 1.922337562475971e-06) + 18.988706873717717;
@@ -37456,14 +37460,14 @@ uniform highp sampler3D intensityVol;
 void main(void) {
   vec3 vx = vec3(TexCoord.xy, coordZ);
   //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
-  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).r;
-  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).r;
-  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).r;
-  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).r;
-  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).r;
-  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).r;
-  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
-  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
+  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).a;
+  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).a;
+  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).a;
+  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).a;
+  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).a;
+  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).a;
+  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).a;
+  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).a;
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
   gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
   gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
@@ -37508,14 +37512,14 @@ void main(void) {
   vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
   vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
-  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
-  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
+  gradientSample.x = -4.0*B.x +8.0*(BAR.x+BAL.x+BPR.x+BPL.x) -8.0*(TAR.x+TAL.x+TPR.x+TPL.x) +4.0*T.x;
+  gradientSample.y = -4.0*P.y +8.0*(TPR.y+TPL.y+BPR.y+BPL.y) -8.0*(TAR.y+TAL.y+BAR.y+BAL.y) +4.0*A.y;
+  gradientSample.z = -4.0*L.z +8.0*(TAL.z+TPL.z+BAL.z+BPL.z) -8.0*(TAR.z+TPR.z+BAR.z+BPR.z) +4.0*R.z;
 ${kGradientMagnitude}
 	gradientSample.a *= 0.0325;
-  float gradLen = length(gradientSample.rgb);
-  gradientSample.rgb = gradLen > 0.001 ? gradientSample.rgb / gradLen : vec3(0.0);
-  gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
+  float gradLen = length(gradientSample.xyz);
+  gradientSample.xyz = gradLen > 0.001 ? gradientSample.xyz / gradLen : vec3(0.0);
+  gradientSample.xyz =  (gradientSample.xyz * 0.5)+0.5;
   FragColor = gradientSample;
 }`;
 
@@ -37753,14 +37757,14 @@ function initColorbarShader(gl) {
 }
 function initImageProcessingShaders(gl) {
   const blurShader = new Shader(gl, blurVertShader, blurFragShader);
-  const sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader);
+  const gradientPrePassShader = new Shader(gl, blurVertShader, gradientPrePassFragShader);
   const sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader);
   const sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader);
   const growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader);
   const passThroughShader = new Shader(gl, vertPassThroughShader, fragPassThroughShader);
   return {
     blurShader,
-    sobelBlurShader,
+    gradientPrePassShader,
     sobelFirstOrderShader,
     sobelSecondOrderShader,
     growCutShader,
@@ -39316,7 +39320,20 @@ function calculateRayDirection(params) {
   return worldRay;
 }
 function gradientGL(params) {
-  const { gl, hdr, genericVAO, unusedVAO, volumeTexture, paqdTexture, gradientOrder, blurShader: blurShaderInput, sobelBlurShader, sobelFirstOrderShader, sobelSecondOrderShader, rgbaTex: rgbaTex2 } = params;
+  const {
+    gl,
+    hdr,
+    genericVAO,
+    unusedVAO,
+    volumeTexture,
+    paqdTexture,
+    gradientOrder,
+    blurShader: blurShaderInput,
+    gradientPrePassShader,
+    sobelFirstOrderShader,
+    sobelSecondOrderShader,
+    rgbaTex: rgbaTex2
+  } = params;
   let { gradientTexture } = params;
   gl.bindVertexArray(genericVAO);
   const fb = gl.createFramebuffer();
@@ -39324,7 +39341,7 @@ function gradientGL(params) {
   gl.viewport(0, 0, hdr.dims[1], hdr.dims[2]);
   gl.disable(gl.BLEND);
   const tempTex3D = rgbaTex2(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true);
-  const blurShader = gradientOrder === 2 ? sobelBlurShader : blurShaderInput;
+  const blurShader = gradientOrder === 2 ? gradientPrePassShader : blurShaderInput;
   blurShader.use(gl);
   gl.activeTexture(TEXTURE0_BACK_VOL3);
   gl.bindTexture(gl.TEXTURE_3D, volumeTexture);
@@ -43518,7 +43535,7 @@ var Niivue = class extends EventTarget {
     __publicField(this, "orientShaderPAQD", null);
     __publicField(this, "surfaceShader", null);
     __publicField(this, "blurShader", null);
-    __publicField(this, "sobelBlurShader", null);
+    __publicField(this, "gradientPrePassShader", null);
     __publicField(this, "sobelFirstOrderShader", null);
     __publicField(this, "sobelSecondOrderShader", null);
     __publicField(this, "genericVAO", null);
@@ -48817,7 +48834,7 @@ var Niivue = class extends EventTarget {
     this.colorbarShader = initColorbarShader(gl);
     const imageProcessingShaders = initImageProcessingShaders(gl);
     this.blurShader = imageProcessingShaders.blurShader;
-    this.sobelBlurShader = imageProcessingShaders.sobelBlurShader;
+    this.gradientPrePassShader = imageProcessingShaders.gradientPrePassShader;
     this.sobelFirstOrderShader = imageProcessingShaders.sobelFirstOrderShader;
     this.sobelSecondOrderShader = imageProcessingShaders.sobelSecondOrderShader;
     this.growCutShader = imageProcessingShaders.growCutShader;
@@ -48862,7 +48879,7 @@ var Niivue = class extends EventTarget {
       gradientTexture: this.gradientTexture,
       gradientOrder: this.opts.gradientOrder,
       blurShader: this.blurShader,
-      sobelBlurShader: this.sobelBlurShader,
+      gradientPrePassShader: this.gradientPrePassShader,
       sobelFirstOrderShader: this.sobelFirstOrderShader,
       sobelSecondOrderShader: this.sobelSecondOrderShader,
       rgbaTex: this.rgbaTex.bind(this)
@@ -49276,7 +49293,7 @@ var Niivue = class extends EventTarget {
         gradientTexture: this.gradientTexture,
         gradientOrder: this.opts.gradientOrder,
         blurShader: this.blurShader,
-        sobelBlurShader: this.sobelBlurShader,
+        gradientPrePassShader: this.gradientPrePassShader,
         sobelFirstOrderShader: this.sobelFirstOrderShader,
         sobelSecondOrderShader: this.sobelSecondOrderShader,
         rgbaTex: this.rgbaTex.bind(this)

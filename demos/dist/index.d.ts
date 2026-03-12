@@ -2497,7 +2497,7 @@ declare class Niivue extends EventTarget {
     orientShaderPAQD: Shader | null;
     surfaceShader: Shader | null;
     blurShader: Shader | null;
-    sobelBlurShader: Shader | null;
+    gradientPrePassShader: Shader | null;
     sobelFirstOrderShader: Shader | null;
     sobelSecondOrderShader: Shader | null;
     genericVAO: WebGLVertexArrayObject | null;
