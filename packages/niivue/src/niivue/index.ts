@@ -4089,9 +4089,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (this.scene.renderAzimuth === rotation.azimuth && this.scene.renderElevation === rotation.elevation) {
             return
         }
-        this.scene.renderAzimuth = rotation.azimuth
-        this.scene.renderElevation = rotation.elevation
-        this.drawScene()
+        this.setRenderAzimuthElevation(rotation.azimuth, rotation.elevation)
     }
 
     /**
