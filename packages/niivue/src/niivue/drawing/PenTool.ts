@@ -49,6 +49,26 @@ export interface DrawPointParams {
 }
 
 /**
+ * Parameters for drawing a 3D sphere
+ */
+export interface DrawSphereParams {
+    /** X coordinate of sphere center in voxel space */
+    x: number
+    /** Y coordinate of sphere center in voxel space */
+    y: number
+    /** Z coordinate of sphere center in voxel space */
+    z: number
+    /** Pen value (color index) to draw */
+    penValue: number
+    /** Drawing bitmap to modify */
+    drawBitmap: Uint8Array
+    /** Volume dimensions [unused, dimX, dimY, dimZ, ...] */
+    dims: number[]
+    /** Sphere radius in voxels, if an array, then [rx, ry, rz] with the ellipsoid: (x/rx)^2 + (y/ry)^2 + (z/rz)^2 < 1 */
+    radius: number | [number, number, number]
+}
+
+/**
  * Parameters for drawing a line between two points
  */
 export interface DrawLineParams {

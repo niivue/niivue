@@ -90,6 +90,8 @@ import { Shader } from '@/shader'
 import { log } from '@/logger'
 import { deg2rad, img2ras16, intensityRaw2Scaled, isRadiological, negMinMax, swizzleVec3, tickSpacing, unProject, unpackFloatFromVec4i, readFileAsDataURL } from '@/utils'
 import NVSerializer from '@/nvserializer'
+import { drawEllipse } from '@/niivue/drawing/ShapeTool'
+
 const { version } = packageJson
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
@@ -1202,7 +1204,15 @@ export class Niivue extends EventTarget {
      * Returns mouse position relative to the canvas, excluding padding and borders.
      * @internal
      */
-    getNoPaddingNoBorderCanvasRelativeMousePosition(event: MouseEvent, target: EventTarget): { x: number; y: number } | undefined {
+    getNoPaddingNoBorderCanvasRelativeMousePosition(
+        event: MouseEvent,
+        target: EventTarget
+    ):
+        | {
+              x: number
+              y: number
+          }
+        | undefined {
         return EventController.getNoPaddingNoBorderCanvasRelativeMousePosition(event, target)
     }
 
@@ -4822,15 +4832,15 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
-* generates JavaScript to load the current scene as a document
-* @param canvasId - id of canvas NiiVue will be attached to
-* @param esm - bundled version of NiiVue
-* @example
-* const javascript = this.generateLoadDocumentJavaScript("gl1");
-* const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
-      ${javascript}</script></body></html>`;
-* @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
-*/
+   * generates JavaScript to load the current scene as a document
+   * @param canvasId - id of canvas NiiVue will be attached to
+   * @param esm - bundled version of NiiVue
+   * @example
+   * const javascript = this.generateLoadDocumentJavaScript("gl1");
+   * const html = `<html><body><canvas id="gl1"></canvas><script type="module" async>
+   ${javascript}</script></body></html>`;
+   * @see {@link https://niivue.com/demos/features/save.custom.html.html | live demo usage}
+   */
     async generateLoadDocumentJavaScript(canvasId: string, esm: string): Promise<string> {
         const json = this.json()
 
@@ -4989,7 +4999,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * await nv.saveDocument('scene.nvd', true, { embedImages:false, embedPreview:false });
      * @see {@link https://niivue.com/demos/features/document.3d.html | live demo usage}
      */
-    async saveDocument(fileName = 'untitled.nvd', compress = true, options: { embedImages?: boolean; embedPreview?: boolean } = {}): Promise<void> {
+    async saveDocument(
+        fileName = 'untitled.nvd',
+        compress = true,
+        options: {
+            embedImages?: boolean
+            embedPreview?: boolean
+        } = {}
+    ): Promise<void> {
         const { embedImages = true, embedPreview = true } = options
 
         this.document.title = fileName
@@ -5591,6 +5608,38 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
+     * Draw a 3D sphere in the drawing bitmap in voxel coordinates
+     * @internal
+     */
+    private drawSphere(x: number, y: number, z: number, radius: number, penValue: number): void {
+        if (!this.drawBitmap) {
+            throw new Error('drawBitmap not set')
+        }
+        if (!this.back?.dims) {
+            throw new Error('back.dims not set')
+        }
+        const drawBitmap = this.drawBitmap
+        const dims = this.back.dims
+
+        const [rx, ry, rz] = typeof radius === 'number' ? [radius, radius, radius] : radius
+
+        // Define bounding box corners for the ellipse
+        const ptA = [x - rx, y - ry, z - rz]
+        const ptB = [x + rx, y + ry, z + rz]
+
+        // Use drawEllipse with penSize=1 and penAxCorSag=-1 for 3D drawing
+        drawEllipse({
+            ptA,
+            ptB,
+            penValue,
+            drawBitmap,
+            dims,
+            penSize: 1,
+            penAxCorSag: -1
+        })
+    }
+
+    /**
      * Performs a 1-voxel binary dilation on a connected cluster within the drawing mask using the drawFloodFillCore function.
      *
      * @param seedXYZ -  voxel index of the seed voxel in the mask array.
@@ -5608,6 +5657,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             const nx = xDim
             const nxy = xDim * yDim
             const totalVoxels = nxy * zDim
+
             function xyz2vx(pt: number[]): number {
                 return pt[0] + pt[1] * nx + pt[2] * nxy
             }
@@ -5805,6 +5855,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         }
         const seedMM = vx2mm(seedXYZ)
         const maxDistanceMM2 = maxDistanceMM ** 2
+
         function isWithinDistance(vx: number): boolean {
             const xzyVox = vx2xyz(vx)
             if (constrainXYZ >= 0 && xzyVox[constrainXYZ] !== seedXYZ[constrainXYZ]) {
@@ -7668,12 +7719,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         }
         this.colormapTexture = this.createColormapTexture(this.colormapTexture, nMaps + 1)
         let luts: Uint8ClampedArray = new Uint8ClampedArray()
+
         function addColormap(lut: number[]): void {
             const c = new Uint8ClampedArray(luts.length + lut.length)
             c.set(luts)
             c.set(lut, luts.length)
             luts = c
         }
+
         for (let i = 0; i < nMaps; i++) {
             addColormap(Array.from(this.colormap(this.colormapLists[i].name, this.colormapLists[i].invert)))
         }
@@ -8059,6 +8112,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                             this.drawPenFillPts.push(pt)
                         }
                         this.refreshDrawing(false, false) // Update GPU texture
+                    } else if (this.opts.penType === PEN_TYPE.PEN_BALL_3D) {
+                        this.drawPenLocation = pt
+
+                        // 3D ball or 3D eraser drawing - draws a sphere at the clicked location
+                        this.drawSphere(pt[0], pt[1], pt[2], Math.floor(this.opts.penSize / 2), this.opts.penValue)
+                        this.refreshDrawing(false, false) // Update GPU texture
                     } else if (this.opts.penType === PEN_TYPE.RECTANGLE || this.opts.penType === PEN_TYPE.ELLIPSE) {
                         // Rectangle or ellipse drawing
                         if (isNaN(this.drawShapeStartLocation[0])) {
@@ -8351,7 +8410,16 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      */
     drawMeasurementTool(startXYendXY: number[], isDrawText: boolean = true): void {
         // Use UIElementRenderer helper for line extension calculations
-        const extendTo = (x0: number, y0: number, x1: number, y1: number, distance: number): { origin: number[]; terminus: number[] } => {
+        const extendTo = (
+            x0: number,
+            y0: number,
+            x1: number,
+            y1: number,
+            distance: number
+        ): {
+            origin: number[]
+            terminus: number[]
+        } => {
             return UIElementRenderer.extendMeasurementLine({
                 startXYendXY: [x0, y0, x1, y1],
                 distance
@@ -8969,11 +9037,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (ticMin < min) {
             ticMin += spacing
         }
+
         // determine font size
         function humanize(x: number): string {
             // drop trailing zeros from numerical string
             return x.toFixed(6).replace(/\.?0*$/, '')
         }
+
         let tic = ticMin
         const ticLTWH = [0, barLTWH[1] + barLTWH[3] - txtHt * 0.5, 2, txtHt * 0.75]
         const txtTop = ticLTWH[1] + ticLTWH[3]
@@ -9199,7 +9269,16 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (!this.canvas) {
             throw new Error('canvas undefined')
         }
-        const pos = UIElementRenderer.calculateTextBelowPosition({ xy, str, fontPx: this.fontPx, scale, canvasWidth: this.canvas.width }, (size, s) => this.textWidth(size, s))
+        const pos = UIElementRenderer.calculateTextBelowPosition(
+            {
+                xy,
+                str,
+                fontPx: this.fontPx,
+                scale,
+                canvasWidth: this.canvas.width
+            },
+            (size, s) => this.textWidth(size, s)
+        )
         this.drawText([pos.x, pos.y], str, pos.scale, color)
     }
 
@@ -9214,7 +9293,16 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (!this.canvas) {
             throw new Error('canvas undefined')
         }
-        const pos = UIElementRenderer.calculateTextAbovePosition({ xy, str, fontPx: this.fontPx, scale, canvasWidth: this.canvas.width }, (size, s) => this.textWidth(size, s))
+        const pos = UIElementRenderer.calculateTextAbovePosition(
+            {
+                xy,
+                str,
+                fontPx: this.fontPx,
+                scale,
+                canvasWidth: this.canvas.width
+            },
+            (size, s) => this.textWidth(size, s)
+        )
         this.drawText([pos.x, pos.y], str, pos.scale, color)
     }
 
@@ -10035,6 +10123,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         function humanize(x: number): string {
             return x.toFixed(6).replace(/\.?0*$/, '')
         }
+
         let fntSize = this.fontPx * 0.7
         const screenWidthPts = regionW / this.uiData.dpr
         const screenHeightPts = regionH / this.uiData.dpr
@@ -10275,15 +10364,19 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         // first: provide a string representation
         const [_mn, _mx, range] = this.sceneExtentsMinMax(true)
         const fov = Math.max(Math.max(range[0], range[1]), range[2])
+
         function dynamicDecimals(flt: number): number {
             return Math.max(0.0, -Math.ceil(Math.log10(Math.abs(flt))))
         }
+
         // dynamic decimal places: fov>100->0, fov>10->1, fov>1->2
         let deci = dynamicDecimals(fov * 0.001)
         const mm = this.frac2mm(this.scene.crosshairPos, 0, true)
+
         function flt2str(flt: number, decimals = 0): number {
             return parseFloat(Number(flt).toFixed(decimals))
         }
+
         let str = flt2str(mm[0], deci) + '×' + flt2str(mm[1], deci) + '×' + flt2str(mm[2], deci)
         if (this.volumes.length > 0 && this.volumes[0].nFrame4D! > 0) {
             str += '×' + flt2str(this.volumes[0].frame4D)
@@ -11918,9 +12011,11 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 if (innerPad < 0) {
                     innerPad = 2 * (2 + Math.ceil(this.fontPx))
                 }
+
                 function padPixelsWH(cols: number, rows: number): [number, number] {
                     return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad]
                 }
+
                 // Get this instance's bounds
                 // Get this instance's bounds
                 const [regionX, regionY, regionW, regionH] = this.getBoundsRegion()
