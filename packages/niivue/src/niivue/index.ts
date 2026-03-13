@@ -104,6 +104,8 @@ export { NVUtilities } from '@/nvutilities'
 export { LabelTextAlignment, LabelLineTerminator, NVLabel3DStyle, NVLabel3D, LabelAnchorPoint } from '@/nvlabel'
 export { NVMeshLoaders } from '@/nvmesh-loaders'
 export { NVMeshUtilities } from '@/nvmesh-utilities'
+// export { NiivueObject3D } from './niivue-object3D.js'
+export { NiivueObject3D } from '@/niivue-object3D'
 export {
     MESH_EXTENSIONS,
     getFileExt,
