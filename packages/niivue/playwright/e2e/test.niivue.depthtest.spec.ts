@@ -5,11 +5,19 @@ import { TEST_OPTIONS } from './test.types.js'
 
 test.beforeEach(async ({ page }) => {
     await page.goto(httpServerAddress)
+    page.on('console', msg => {
+        if (msg.type() === 'timeEnd' || msg.text().includes('ms')) {
+            console.log(`Browser: ${msg.text()}`)
+        }
+    })
 })
 
 test('niivue tractography regression: mesh should respect depth test (no UI controls)', async ({ page }) => {
     const result = await page.evaluate(async (testOptions) => {
+        console.time('total-setup')
+
         // Create Niivue instance using demo-like options
+        console.time('niivue-init')
         const nv1 = new Niivue({
             ...testOptions,
             show3Dcrosshair: true,
@@ -18,27 +26,45 @@ test('niivue tractography regression: mesh should respect depth test (no UI cont
 
         nv1.opts.isColorbar = true
         nv1.setSliceType(nv1.sliceTypeRender)
+        console.timeEnd('niivue-init')
 
         // attach to canvas id "gl1"
+        console.time('attach-canvas')
         await nv1.attachTo('gl')
+        console.timeEnd('attach-canvas')
 
         // load one volume and one mesh (paths relative to served page)
+        console.time('load-volumes')
         const volumeList1 = [{ url: './images/mni152.nii.gz' }]
         await nv1.loadVolumes(volumeList1)
+        console.timeEnd('load-volumes')
 
         // load mesh (use dpsv.trx like demo)
+        console.time('load-meshes')
         await nv1.loadMeshes([{ url: './images/dpsv.trx', rgba255: [0, 142, 0, 255] }])
+        console.timeEnd('load-meshes')
 
         // set some properties similar to demo (not UI-driven)
+        console.time('set-properties')
         nv1.setMeshProperty(0, 'colormap', 'blue')
-        nv1.setMeshProperty(0, 'rgba255', [0, 255, 255, 255])
+        console.timeEnd('set-properties')
+        console.time('set-properties-1')
 
-        // set a clip plane that reveals overlap situations to expose depth issues
+        nv1.setMeshProperty(0, 'rgba255', [0, 255, 255, 255])
+      console.timeEnd('set-properties-1')
+
+      console.time('set-properties-2')
+      // set a clip plane that reveals overlap situations to expose depth issues
         nv1.setClipPlane([-0.1, 270, 0])
+        console.timeEnd('set-properties-2')
 
         // draw and finish GL to ensure the frame is rendered
+        console.time('draw-scene')
         nv1.drawScene()
         nv1.gl.finish()
+        console.timeEnd('draw-scene')
+
+        console.timeEnd('total-setup')
 
         return {
             volumes: nv1.volumes.length,

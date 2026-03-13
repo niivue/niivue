@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Set 3D Pivot Point</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body style="font-family: sans-serif">
+    <header>
+      <strong>Manually set the 3D rotation pivot point.</strong>
+      <h3>Example 1: Manual Pivot Entry</h3>
+      <label for="px">Pivot X</label>
+      <input id="px" type="number" value="0" step="1" style="width: 72px" />
+      <label for="py">Y</label>
+      <input id="py" type="number" value="0" step="1" style="width: 72px" />
+      <label for="pz">Z</label>
+      <input id="pz" type="number" value="0" step="1" style="width: 72px" />
+      <button id="applyPivotBtn">Set Pivot</button>
+      <button id="clearPivotBtn">Reset to Auto</button>
+      <h3>Example 2: Pivot from Crosshair</h3>
+      <p>Click in 2D slices to move the crosshair, then use button below to set pivot to crosshair location.</p>
+      <button id="pivotCrosshairBtn">Set Pivot = Crosshair Position</button>
+      <p id="status" style="margin-top: 10px; font-weight: bold;">Current pivot: auto</p>
+    </header>
+    <main id="container">
+      <canvas id="gl"></canvas>
+    </main>
+  </body>
+</html>
+<script type="module" async>
+  import { Niivue, SHOW_RENDER } from "../dist/index.js"
+
+  const nv = new Niivue({
+    show3Dcrosshair: true,
+    dragAndDropEnabled: true
+  })
+  await nv.attachTo("gl")
+  await nv.loadVolumes([
+    { url: "../images/mni152.nii.gz", opacity: 1.0, colormap: "gray", cal_min: 30, cal_max: 80 }
+  ])
+  nv.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS
+  nv.setSliceType(nv.sliceTypeMultiplanar)
+  nv.setRenderAzimuthElevation(120, 20)
+
+  const status = document.getElementById("status")
+  const pxEl = document.getElementById("px")
+  const pyEl = document.getElementById("py")
+  const pzEl = document.getElementById("pz")
+
+  function updateStatus() {
+    const pivot = nv.pivot3D
+    status.textContent = `Current pivot: [${pivot[0].toFixed(2)}, ${pivot[1].toFixed(2)}, ${pivot[2].toFixed(2)}]`
+  }
+
+  function updateInputsFromPivot() {
+    const pivot = nv.pivot3D
+    if (pivot) {
+      pxEl.value = pivot[0].toFixed(2)
+      pyEl.value = pivot[1].toFixed(2)
+      pzEl.value = pivot[2].toFixed(2)
+    }
+  }
+
+  // Example 1: Manual pivot entry
+  document.getElementById("applyPivotBtn").onclick = () => {
+    const x = parseFloat(pxEl.value) || 0
+    const y = parseFloat(pyEl.value) || 0
+    const z = parseFloat(pzEl.value) || 0
+    nv.setPivot3DPoint([x, y, z])
+    updateStatus()
+  }
+
+  document.getElementById("clearPivotBtn").onclick = () => {
+    nv.setPivot3DPoint(null)
+    pxEl.value = "0"
+    pyEl.value = "0"
+    pzEl.value = "0"
+    updateStatus()
+  }
+
+  // Example 2: Set pivot from crosshair position
+  // Listen for crosshair location changes
+  nv.onLocationChange = (data) => {
+    // This callback fires when user clicks in 2D slices
+    updateStatus()
+  }
+
+  document.getElementById("pivotCrosshairBtn").onclick = () => {
+    if (!nv.scene?.crosshairPos) {
+      alert("No crosshair position available. Click in a 2D slice first.")
+      return
+    }
+    const mm = nv.frac2mm(nv.scene.crosshairPos)
+    nv.setPivot3DPoint([mm[0], mm[1], mm[2]])
+    updateInputsFromPivot()
+    updateStatus()
+  }
+
+  updateStatus()
+</script>
