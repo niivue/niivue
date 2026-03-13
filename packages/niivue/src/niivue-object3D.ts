@@ -379,4 +379,216 @@ export class NiivueObject3D {
         }
         colors.push(...clrs)
     }
+
+    // ==========================================
+    // ======== New additions: Cube & Cone ======
+    // ==========================================
+
+    static makeCube = function (
+        vertices: number[],
+        indices: number[],
+        size: number,
+        center: vec3 | vec4 = [0, 0, 0],
+    ): void {
+        const hs = size / 2.0
+        // 24 vertex positions
+       const vtx = [
+             hs, hs, -hs,
+             hs, hs, hs,
+             hs, -hs, hs, 
+             hs, -hs, -hs,
+             -hs, hs, hs, 
+            -hs, hs, -hs, 
+            -hs, -hs, -hs, 
+            -hs, -hs, hs, 
+            -hs, hs, hs,
+             hs, hs, hs, 
+             hs, hs, -hs,
+             -hs, hs, -hs, 
+            -hs, -hs, -hs,
+             hs, -hs, -hs, 
+             hs, -hs, hs, 
+            -hs, -hs, hs,
+             hs, hs, hs, 
+            -hs, hs, hs,
+            -hs, -hs, hs, 
+             hs, -hs, hs, 
+            -hs, hs, -hs, 
+             hs, hs, -hs, 
+             hs, -hs, -hs, 
+            -hs, -hs, -hs,
+        ]
+
+            //       6 ________ 7  (前, z=+k)
+            //      /|       /|
+            //     / |      / |
+            //  2 /__|_____/ 3|
+            //   |  4 ____ |__5
+            //   | / 0     | /
+            //   |/        |/
+            //   0 ________ 1  (后, z=-k)
+
+
+            const faceNormals = [
+                [+1, +0, +0],  // 0: 右面 (法线指向 +X)
+                [-1, +0, +0],  // 1: 左面 (法线指向 -X)
+                [+0, +1, +0],  // 2: 上面 (法线指向 +Y)
+                [+0, -1, +0],  // 3: 下面 (法线指向 -Y)
+                [+0, +0, +1],  // 4: 前面 (法线指向 +Z)
+                [+0, +0, -1],  // 5: 后面 (法线指向 -Z)
+            ]
+
+            const uvCoords = [
+                [1, 0],  // 0: 右上
+                [0, 0],  // 1: 左上
+                [0, 1],  // 2: 左下
+                [1, 1],  // 3: 右下
+            ]
+
+        // Add center offset
+        for (let i = 0; i < 24; i++) {
+            vtx[i * 3 + 0] += center[0]
+            vtx[i * 3 + 1] += center[1]
+            vtx[i * 3 + 2] += center[2]
+        }
+
+        const idx0 = Math.floor(vertices.length / 3)
+
+        // Counter-clochswise (CCW) triangle winding (6 faces, 2 triangles per face)       
+
+        const idx = 
+            [0, 1, 2, 0, 2, 3, 4,
+                 5, 6, 4, 6, 7, 
+            8, 9, 10, 8, 10, 11, 
+            12, 13, 14, 12, 14, 15, 
+            16, 17, 18, 16, 18, 19, 
+            20, 21, 22, 20, 22, 23
+        ]
+
+        // Append offset
+        for (let i = 0; i < idx.length; i++) {
+            idx[i] += idx0
+        }
+
+        indices.push(...idx)
+        vertices.push(...vtx)
+    }
+
+    static makeColoredCube = function (
+        vertices: number[],
+        indices: number[],
+        colors: number[],
+        size: number,
+        center: vec3 | vec4 = [0, 0, 0],
+        rgba255 = [192, 192, 192, 255],
+    ): void {
+        let nv = vertices.length / 3
+        NiivueObject3D.makeCube(vertices, indices, size, center)
+        nv = vertices.length / 3 - nv // Number of newly added vertices (8 in this case)
+        const clrs = []
+        // for (let i = 0; i < nv * 4 - 1; i += 4) {
+        for (let i = 0; i < nv * 4; i += 4) {
+            clrs[i] = rgba255[0]
+            clrs[i + 1] = rgba255[1]
+            clrs[i + 2] = rgba255[2]
+            clrs[i + 3] = rgba255[3]
+        }
+        colors.push(...clrs)
+    }
+
+    static makeCone = function (
+        vertices: number[],
+        indices: number[],
+        start: vec3,
+        dest: vec3,
+        radius: number,
+        sides = 20,
+    ): void {
+        if (sides < 3) {
+            sides = 3
+        }
+
+        const v1 = vec3.create()
+        vec3.subtract(v1, dest, start)
+        vec3.normalize(v1, v1) // Principal axis of cone (pointing to dest)
+        const v2 = NiivueObject3D.getFirstPerpVector(v1)
+        const v3 = vec3.create()
+        vec3.cross(v3, v1, v2)
+        vec3.normalize(v3, v3)
+
+        const num_v = sides + 2 // Base circle + cone tip + base center
+        const num_f = sides * 2 // Side triangles + base triangles
+
+        const idx0 = Math.floor(vertices.length / 3)
+        const idx = new Uint32Array(num_f * 3)
+        const vtx = new Float32Array(num_v * 3)
+
+        function setV(i: number, v: vec3 | Float32Array): void {
+            vtx[i * 3 + 0] = v[0]
+            vtx[i * 3 + 1] = v[1]
+            vtx[i * 3 + 2] = v[2]
+        }
+
+        function setI(i: number, a: number, b: number, c: number): void {
+            idx[i * 3 + 0] = a + idx0
+            idx[i * 3 + 1] = b + idx0
+            idx[i * 3 + 2] = c + idx0
+        }
+
+        const tipPole = sides
+        const startPole = sides + 1
+        setV(tipPole, dest) // Top tip
+        setV(startPole, start) // Bottom center
+
+        const pt1 = vec3.create()
+        const pt2 = vec3.create()
+
+        for (let i = 0; i < sides; i++) {
+            const c = Math.cos((i / sides) * 2 * Math.PI)
+            const s = Math.sin((i / sides) * 2 * Math.PI)
+            pt1[0] = radius * (c * v2[0] + s * v3[0])
+            pt1[1] = radius * (c * v2[1] + s * v3[1])
+            pt1[2] = radius * (c * v2[2] + s * v3[2])
+            vec3.add(pt2, start, pt1)
+            setV(i, pt2)
+
+            let nxt = 0
+            if (i < sides - 1) {
+                nxt = i + 1
+            }
+
+            // Side triangle: bottom current point -> bottom next point -> top tip
+            setI(i * 2, i, nxt, tipPole)
+
+            // Bottom cap triangle: bottom current point -> bottom center -> bottom next point (consistent with Cylinder's CCW standard)
+            setI(i * 2 + 1, i, startPole, nxt)
+        }
+
+        indices.push(...idx)
+        vertices.push(...vtx)
+    }
+
+    static makeColoredCone = function (
+        vertices: number[],
+        indices: number[],
+        colors: number[],
+        start: vec3,
+        dest: vec3,
+        radius: number,
+        rgba255 = [255, 192, 0, 255],
+        sides = 20,
+    ): void {
+        let nv = vertices.length / 3
+        NiivueObject3D.makeCone(vertices, indices, start, dest, radius, sides)
+        nv = vertices.length / 3 - nv
+        const clrs = []
+        // for (let i = 0; i < nv * 4 - 1; i += 4) {
+        for (let i = 0; i < nv * 4; i += 4) {
+            clrs[i] = rgba255[0]
+            clrs[i + 1] = rgba255[1]
+            clrs[i + 2] = rgba255[2]
+            clrs[i + 3] = rgba255[3]
+        }
+        colors.push(...clrs)
+    }
 }
