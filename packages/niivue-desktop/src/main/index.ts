@@ -20,7 +20,7 @@ app.commandLine.appendSwitch('enable-features', 'Vulkan')
 const isDev = !app.isPackaged
 
 // Valid subcommands
-const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath'] as const
+const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath', 'allineate'] as const
 
 // Parse CLI arguments with subcommand architecture
 function parseCLIArgs(): CLIOptions {
@@ -116,6 +116,24 @@ function parseCLIArgs(): CLIOptions {
       case '--label-names':
       case '-n':
         options.labelNames = args[++i] || null
+        break
+
+      // Allineate options
+      case '--stationary':
+      case '--target':
+        options.stationary = args[++i] || null
+        break
+      case '--cost':
+        options.cost = args[++i] || null
+        break
+      case '--cmass':
+        options.cmass = true
+        break
+      case '--source-automask':
+        options.sourceAutomask = true
+        break
+      case '--final':
+        options.final = args[++i] || null
         break
     }
   }
@@ -431,6 +449,15 @@ ipcMain.handle(
       results.push({ ...result, files: niftiFiles })
     }
     return results
+  }
+)
+
+ipcMain.handle(
+  'headless:allineate',
+  async (_event, movingPath: string, stationaryPath: string, outputPath: string, opts: string[]) => {
+    const { runAllineateJob } = await import('./utils/runAllineate.js')
+    const result = await runAllineateJob(movingPath, stationaryPath, outputPath, opts)
+    return { success: true, ...result }
   }
 )
 

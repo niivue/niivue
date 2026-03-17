@@ -3,6 +3,8 @@ import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
 import { saveCompressedNVDHandler, saveHTMLHandler } from './saveFile.js'
 import { runNiimath, startNiimathJob } from './runNiimath.js'
+import { runAllineate, runAllineateJob } from './runAllineate.js'
+import { getStandardImagePath } from './inputResolver.js'
 import { app, dialog, ipcMain, Menu, nativeImage } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
@@ -188,6 +190,46 @@ export const registerIpcHandlers = (): void => {
       }
     }
   )
+
+  // run allineate CLI
+  ipcMain.handle('allineate:run', async (_evt, args: string[]) => {
+    try {
+      const result = await runAllineate(args)
+      return { success: true, ...result }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  /**
+   * Run allineate registration: moving + stationary + opts → output file.
+   * Expects (movingPath, stationaryPath, outputPath, opts[]).
+   */
+  ipcMain.handle(
+    'allineate:register',
+    async (
+      _evt,
+      movingPath: string,
+      stationaryPath: string,
+      outputPath: string,
+      opts: string[]
+    ) => {
+      try {
+        const result = await runAllineateJob(movingPath, stationaryPath, outputPath, opts)
+        return { success: true, ...result }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { success: false, error: msg }
+      }
+    }
+  )
+
+  // Resolve standard image path for allineate (needs file path, not base64)
+  ipcMain.handle('allineate:standard-path', (_evt, name: string) => {
+    const imagePath = getStandardImagePath(name)
+    if (fs.existsSync(imagePath)) return imagePath
+    return null
+  })
 
   ipcMain.on('base-image-loaded', () => {
     const item = Menu.getApplicationMenu()?.getMenuItemById('addOverlay')

@@ -84,6 +84,40 @@ declare global {
       bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]) => Promise<FieldmapIntendedFor[]>
       bidsSelectEventFile: () => Promise<string | null>
       bidsParseEventFile: (filePath: string) => Promise<ParseEventFileResult>
+      // allineate headless
+      headlessAllineate: (
+        movingPath: string,
+        stationaryPath: string,
+        outputPath: string,
+        opts: string[]
+      ) => Promise<{
+        success: boolean
+        stdout: string
+        stderr: string
+        code: number
+        outputPath: string
+      }>
+      // allineate registration
+      allineateRun: (args: string[]) => Promise<{
+        success: boolean
+        stdout: string
+        stderr: string
+        code: number
+        error?: string
+      }>
+      allineateRegister: (
+        movingPath: string,
+        stationaryPath: string,
+        outputPath: string,
+        opts?: string[]
+      ) => Promise<{
+        success: boolean
+        stdout: string
+        stderr: string
+        code: number
+        outputPath: string
+        error?: string
+      }>
     }
   }
 }

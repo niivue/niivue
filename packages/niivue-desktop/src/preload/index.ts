@@ -145,6 +145,27 @@ const api = {
   },
   bidsParseEventFile: (filePath: string): Promise<ParseEventFileResult> => {
     return ipcRenderer.invoke('bids:parse-event-file', filePath)
+  },
+  // allineate headless
+  headlessAllineate: (
+    movingPath: string,
+    stationaryPath: string,
+    outputPath: string,
+    opts: string[]
+  ): Promise<{ success: boolean; stdout: string; stderr: string; code: number; outputPath: string }> => {
+    return ipcRenderer.invoke('headless:allineate', movingPath, stationaryPath, outputPath, opts)
+  },
+  // allineate registration
+  allineateRun: (args: string[]): Promise<{ success: boolean; stdout: string; stderr: string; code: number; error?: string }> => {
+    return ipcRenderer.invoke('allineate:run', args)
+  },
+  allineateRegister: (
+    movingPath: string,
+    stationaryPath: string,
+    outputPath: string,
+    opts: string[] = []
+  ): Promise<{ success: boolean; stdout: string; stderr: string; code: number; outputPath: string; error?: string }> => {
+    return ipcRenderer.invoke('allineate:register', movingPath, stationaryPath, outputPath, opts)
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

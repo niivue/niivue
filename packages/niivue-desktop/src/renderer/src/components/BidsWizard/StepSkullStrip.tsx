@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { brainchopService } from '../../services/brainchop/index.js'
-import type { ModelInfo } from '../../services/brainchop/types.js'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
 import { dilateMask3D } from '../../services/brainchop/dilate3D.js'
 
 const electron = window.electron
+
+type Engine = 'none' | 'allineate' | 'brainchop'
+type Scope = 'anat' | 'all'
 
 interface StepSkullStripProps {
   mappings: BidsSeriesMapping[]
@@ -31,7 +33,8 @@ export function StepSkullStrip({
   onLoadVolume,
   onLoadWithOverlay
 }: StepSkullStripProps): JSX.Element {
-  const [modelId, setModelId] = useState('')
+  const [engine, setEngine] = useState<Engine>('none')
+  const [scope, setScope] = useState<Scope>('anat')
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => {
     const anatIndices = new Set<number>()
     for (const m of mappings) {
@@ -46,26 +49,138 @@ export function StepSkullStrip({
   const [status, setStatus] = useState('')
   const [completed, setCompleted] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
+  const [commandLine, setCommandLine] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
-  // Track original paths so we can offer loading both original and stripped
   const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(new Map())
+  const [useStripped, setUseStripped] = useState<Map<number, boolean>>(new Map())
 
-  const brainModels: ModelInfo[] = brainchopService.getModelsByType('brain-extraction')
+  const nonExcluded = mappings.filter((m) => !m.excluded)
+
+  // Update selectedIndices when scope changes
+  useEffect(() => {
+    if (engine === 'none') return
+    const indices = new Set<number>()
+    for (const m of nonExcluded) {
+      if (scope === 'anat' && m.datatype === 'anat') {
+        indices.add(m.index)
+      } else if (scope === 'all') {
+        indices.add(m.index)
+      }
+    }
+    setSelectedIndices(indices)
+  }, [scope, engine])
 
   const toggleIndex = (index: number): void => {
     setSelectedIndices((prev) => {
       const next = new Set(prev)
-      if (next.has(index)) {
-        next.delete(index)
-      } else {
-        next.add(index)
-      }
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
       return next
     })
   }
 
+  /** Run allineate skull-strip for a single series */
+  const runAllineateSkullStrip = async (
+    mapping: BidsSeriesMapping,
+    onProgress: (pct: number) => void
+  ): Promise<string> => {
+    // Resolve paths to MNI152 head template and brain mask
+    const [templatePath, maskPath] = await Promise.all([
+      electron.ipcRenderer.invoke('allineate:standard-path', 'mni152_head') as Promise<
+        string | null
+      >,
+      electron.ipcRenderer.invoke('allineate:standard-path', 'mniMask') as Promise<string | null>
+    ])
+
+    if (!templatePath) throw new Error('MNI152 head template not found')
+    if (!maskPath) throw new Error('MNI brain mask not found')
+
+    const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+
+    // Show the exact command being run (matches allineate examples/README.md recipe)
+    const cmd = `allineate ${templatePath} ${mapping.niftiPath} -cost ls -skullstrip ${maskPath} ${outputPath}`
+    console.log(`[allineate] ${cmd}`)
+    setCommandLine(cmd)
+
+    onProgress(10)
+
+    // Run allineate with -skullstrip flag
+    // Recipe from examples: allineate MNI152_T1_2mm T1_head -cost ls -skullstrip mniMask output
+    // Moving = MNI152 head template, Stationary = subject's image
+    const result = await electron.allineateRegister(templatePath, mapping.niftiPath, outputPath, [
+      '-cost',
+      'ls',
+      '-skullstrip',
+      maskPath
+    ])
+
+    if (!result.success) {
+      throw new Error(`Allineate skull strip failed: ${result.error || result.stderr}`)
+    }
+
+    onProgress(100)
+    return outputPath
+  }
+
+  /** Run brainchop skull-strip for a single series */
+  const runBrainchopSkullStrip = async (
+    mapping: BidsSeriesMapping,
+    onProgress: (pct: number, msg?: string) => void
+  ): Promise<string> => {
+    if (!nv) throw new Error('No viewer instance available')
+
+    // Load NIfTI from disk
+    const base64 = await electron.ipcRenderer.invoke('loadFromFile', mapping.niftiPath)
+    const vol = await NVImage.loadFromBase64({ base64, name: mapping.niftiPath })
+
+    // Conform to 256^3 @ 1mm
+    const conformed = await nv.conform(vol, false)
+
+    // Run brain extraction with MindGrab model
+    const result = await brainchopService.runSegmentation(conformed, 'brain-extract-mindgrab', {
+      onProgress: (pct, msg) => {
+        onProgress(pct, msg)
+      }
+    })
+
+    // Apply brain mask with 3-voxel dilation
+    const brain = conformed.img!
+    const mask = result.volume.img!
+    const dilatedMask = dilateMask3D(mask, 256, 256, 256, 3)
+    for (let i = 0; i < brain.length; i++) {
+      if (dilatedMask[i] === 0) brain[i] = 0
+    }
+
+    // Save skull-stripped NIfTI
+    const niftiBytes = await conformed.saveToUint8Array('brain.nii.gz')
+    const b64out = uint8ArrayToBase64(niftiBytes)
+    const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+    const saveResult = await electron.headlessSaveNifti(b64out, outputPath)
+
+    if (!saveResult.success) {
+      throw new Error(`Failed to save skull-stripped file: ${saveResult.error}`)
+    }
+
+    // Set up preview with original and stripped
+    const originalClone = vol
+    setPreview({
+      seriesIndex: mapping.index,
+      original: originalClone,
+      stripped: conformed,
+      originalPath: mapping.niftiPath,
+      strippedPath: outputPath
+    })
+
+    return outputPath
+  }
+
   const handleRun = async (): Promise<void> => {
-    if (!modelId || !nv || selectedIndices.size === 0) return
+    if (engine === 'none' || selectedIndices.size === 0) return
+    if (engine === 'brainchop' && !nv) return
+
+    if (engine === 'brainchop') {
+      await brainchopService.initialize()
+    }
 
     setRunning(true)
     setError(null)
@@ -78,57 +193,47 @@ export function StepSkullStrip({
     let processedCount = 0
 
     try {
-      await brainchopService.initialize()
-
       for (const mapping of toProcess) {
         const seriesLabel = mapping.seriesDescription || `Series ${mapping.index}`
-        setStatus(`Skull stripping: ${seriesLabel}`)
+        setStatus(`Skull stripping (${engine}): ${seriesLabel}`)
 
-        // Load NIfTI from disk
-        const base64 = await electron.ipcRenderer.invoke('loadFromFile', mapping.niftiPath)
-        const vol = await NVImage.loadFromBase64({ base64, name: mapping.niftiPath })
+        let outputPath: string
 
-        // Conform to 256^3 @ 1mm
-        const conformed = await nv.conform(vol, false)
+        if (engine === 'allineate') {
+          outputPath = await runAllineateSkullStrip(mapping, (pct) => {
+            const overallPct = ((processedCount + pct / 100) / toProcess.length) * 100
+            setProgress(Math.round(overallPct))
+          })
 
-        // Clone the conformed volume before masking so we can show original
-        const originalClone = conformed.clone()
-
-        // Run brain extraction segmentation
-        const result = await brainchopService.runSegmentation(conformed, modelId, {
-          onProgress: (pct, msg) => {
+          // Load preview for allineate
+          if (nv) {
+            try {
+              const [origB64, strippedB64] = await Promise.all([
+                electron.ipcRenderer.invoke('loadFromFile', mapping.niftiPath) as Promise<string>,
+                electron.ipcRenderer.invoke('loadFromFile', outputPath) as Promise<string>
+              ])
+              const [origVol, strippedVol] = await Promise.all([
+                NVImage.loadFromBase64({ base64: origB64, name: mapping.niftiPath }),
+                NVImage.loadFromBase64({ base64: strippedB64, name: outputPath })
+              ])
+              setPreview({
+                seriesIndex: mapping.index,
+                original: origVol,
+                stripped: strippedVol,
+                originalPath: mapping.niftiPath,
+                strippedPath: outputPath
+              })
+            } catch {
+              // Preview is non-critical
+            }
+          }
+        } else {
+          outputPath = await runBrainchopSkullStrip(mapping, (pct, msg) => {
             const overallPct = ((processedCount + pct / 100) / toProcess.length) * 100
             setProgress(Math.round(overallPct))
             if (msg) setStatus(`${seriesLabel}: ${msg}`)
-          }
-        })
-
-        // Apply brain mask to conformed volume (with 3-voxel dilation for safety margin)
-        const brain = conformed.img!
-        const mask = result.volume.img!
-        const dilatedMask = dilateMask3D(mask, 256, 256, 256, 3)
-        for (let i = 0; i < brain.length; i++) {
-          if (dilatedMask[i] === 0) brain[i] = 0
+          })
         }
-
-        // Save skull-stripped NIfTI back to disk
-        const niftiBytes = await conformed.saveToUint8Array('brain.nii.gz')
-        const b64out = uint8ArrayToBase64(niftiBytes)
-        const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
-        const saveResult = await electron.headlessSaveNifti(b64out, outputPath)
-
-        if (!saveResult.success) {
-          throw new Error(`Failed to save skull-stripped file: ${saveResult.error}`)
-        }
-
-        // Update preview with original and skull-stripped volumes
-        setPreview({
-          seriesIndex: mapping.index,
-          original: originalClone,
-          stripped: conformed,
-          originalPath: mapping.niftiPath,
-          strippedPath: outputPath
-        })
 
         // Store original path before updating
         setOriginalPaths((prev) => new Map(prev).set(mapping.index, mapping.niftiPath))
@@ -141,6 +246,7 @@ export function StepSkullStrip({
 
         newCompleted.add(mapping.index)
         setCompleted(new Set(newCompleted))
+        setUseStripped((prev) => new Map(prev).set(mapping.index, true))
         processedCount++
         setProgress(Math.round((processedCount / toProcess.length) * 100))
       }
@@ -155,13 +261,9 @@ export function StepSkullStrip({
     }
   }
 
-  // Allow clicking a completed series row to preview it
   const handlePreviewSeries = async (mapping: BidsSeriesMapping): Promise<void> => {
     if (!nv) return
     try {
-      // Load the original (pre-skull-strip) NIfTI
-      // The original path is the current niftiPath if not yet processed,
-      // or we derive it from the _brain suffix
       const origPath = mapping.niftiPath.replace(/_brain\.nii(\.gz)?$/, '.nii.gz')
       const strippedPath = mapping.niftiPath
 
@@ -183,41 +285,84 @@ export function StepSkullStrip({
         strippedPath: strippedPath
       })
     } catch {
-      // Silently fail preview — not critical
+      // Silently fail preview
     }
   }
 
-  const nonExcluded = mappings.filter((m) => !m.excluded)
-  const isSkipping = !modelId
+  const isActive = engine !== 'none'
 
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold">Skull Stripping (Optional)</Text>
+      <Text size="2" weight="bold">
+        Skull Stripping (Optional)
+      </Text>
       <Text size="1" color="gray">
-        Optionally remove non-brain tissue from anatomical volumes using a brain extraction model.
-        You can skip this step by clicking Next.
+        Optionally remove non-brain tissue. Choose an engine below or select None to skip.
       </Text>
 
-      {/* Model selector */}
+      {/* Engine selector */}
       <div className="flex items-center gap-2">
-        <Text size="1" weight="medium">Model:</Text>
-        <select
-          className="border rounded px-2 py-1 text-xs flex-1"
-          value={modelId}
-          onChange={(e) => setModelId(e.target.value)}
-          disabled={running}
-        >
-          <option value="">Skip skull stripping</option>
-          {brainModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name} ({m.estimatedTimeSeconds}s est.)
-            </option>
+        <Text size="1" weight="medium">
+          Engine:
+        </Text>
+        <div className="flex gap-1">
+          {(
+            [
+              ['none', 'None (Skip)'],
+              ['allineate', 'Allineate'],
+              ['brainchop', 'Brainchop (MindGrab)']
+            ] as [Engine, string][]
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              className={
+                'px-3 py-1 text-xs rounded border transition-colors ' +
+                (engine === value
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50')
+              }
+              onClick={() => setEngine(value)}
+              disabled={running}
+            >
+              {label}
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
-      {/* Series selection */}
-      {!isSkipping && (
+      {/* Scope selector */}
+      {isActive && (
+        <div className="flex items-center gap-2">
+          <Text size="1" weight="medium">
+            Scope:
+          </Text>
+          <div className="flex gap-1">
+            {(
+              [
+                ['anat', 'Anatomical Only'],
+                ['all', 'All Series']
+              ] as [Scope, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                className={
+                  'px-3 py-1 text-xs rounded border transition-colors ' +
+                  (scope === value
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50')
+                }
+                onClick={() => setScope(value)}
+                disabled={running}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Series selection table */}
+      {isActive && (
         <div className="border rounded overflow-auto max-h-[140px]">
           <table className="w-full text-xs">
             <thead className="bg-gray-50 sticky top-0">
@@ -226,6 +371,7 @@ export function StepSkullStrip({
                 <th className="py-1 px-2 text-left font-medium">Series</th>
                 <th className="py-1 px-2 text-left font-medium">Type</th>
                 <th className="py-1 px-2 text-left font-medium">Status</th>
+                <th className="py-1 px-2 text-left font-medium">Output</th>
                 {onLoadVolume && <th className="py-1 px-2 text-left font-medium">Viewer</th>}
               </tr>
             </thead>
@@ -250,7 +396,9 @@ export function StepSkullStrip({
                     />
                   </td>
                   <td className="py-1 px-2">{m.seriesDescription || `Series ${m.index}`}</td>
-                  <td className="py-1 px-2">{m.datatype}/{m.suffix}</td>
+                  <td className="py-1 px-2">
+                    {m.datatype}/{m.suffix}
+                  </td>
                   <td className="py-1 px-2">
                     {completed.has(m.index) ? (
                       <span className="text-green-600">Done</span>
@@ -258,6 +406,35 @@ export function StepSkullStrip({
                       <span className="text-blue-600">Pending</span>
                     ) : (
                       <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
+                    {completed.has(m.index) ? (
+                      <select
+                        className="text-xs border rounded px-1 py-0.5"
+                        value={useStripped.get(m.index) !== false ? 'stripped' : 'original'}
+                        onChange={(e) => {
+                          const wantStripped = e.target.value === 'stripped'
+                          setUseStripped((prev) => new Map(prev).set(m.index, wantStripped))
+                          const origPath = originalPaths.get(m.index)
+                          if (origPath) {
+                            const strippedPath = origPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+                            onMappingsUpdate(
+                              mappings.map((mp) =>
+                                mp.index === m.index
+                                  ? { ...mp, niftiPath: wantStripped ? strippedPath : origPath }
+                                  : mp
+                              )
+                            )
+                          }
+                        }}
+                        disabled={running}
+                      >
+                        <option value="stripped">Skull Stripped</option>
+                        <option value="original">Original</option>
+                      </select>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Original</span>
                     )}
                   </td>
                   {onLoadVolume && (
@@ -283,7 +460,9 @@ export function StepSkullStrip({
                               <button
                                 className="text-purple-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
                                 disabled={running}
-                                onClick={() => void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)}
+                                onClick={() =>
+                                  void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
+                                }
                               >
                                 Original + Stripped
                               </button>
@@ -309,12 +488,12 @@ export function StepSkullStrip({
       )}
 
       {/* Run button + progress */}
-      {!isSkipping && (
+      {isActive && (
         <div className="flex items-center gap-3">
           <Button
             size="1"
             onClick={() => void handleRun()}
-            disabled={running || selectedIndices.size === 0 || !nv}
+            disabled={running || selectedIndices.size === 0 || (engine === 'brainchop' && !nv)}
           >
             {running ? 'Running...' : `Run Skull Strip (${selectedIndices.size} series)`}
           </Button>
@@ -332,8 +511,23 @@ export function StepSkullStrip({
       )}
 
       {/* Status text */}
-      {running && <Text size="1" color="gray">{status}</Text>}
-      {!running && completed.size > 0 && <Text size="1" color="green">{status}</Text>}
+      {running && (
+        <Text size="1" color="gray">
+          {status}
+        </Text>
+      )}
+      {!running && completed.size > 0 && (
+        <Text size="1" color="green">
+          {status}
+        </Text>
+      )}
+
+      {/* Command line display */}
+      {commandLine && (
+        <div className="p-2 bg-gray-900 text-green-400 rounded text-[11px] font-mono overflow-x-auto whitespace-pre-wrap break-all">
+          $ {commandLine}
+        </div>
+      )}
 
       {/* Side-by-side preview */}
       {preview && (
@@ -354,9 +548,9 @@ export function StepSkullStrip({
         </div>
       )}
 
-      {!nv && !isSkipping && (
+      {engine === 'brainchop' && !nv && (
         <Text size="1" color="orange">
-          No viewer instance available. Open a document first to enable skull stripping.
+          No viewer instance available. Open a document first to enable Brainchop skull stripping.
         </Text>
       )}
     </div>
@@ -384,27 +578,34 @@ function SkullStripPreview({
   const origNvRef = useRef<Niivue | null>(null)
   const stripNvRef = useRef<Niivue | null>(null)
 
-  const setupViewer = useCallback(async (
-    canvas: HTMLCanvasElement | null,
-    nvRef: React.MutableRefObject<Niivue | null>,
-    volume: NVImage
-  ): Promise<void> => {
-    if (!canvas) return
+  const setupViewer = useCallback(
+    async (
+      canvas: HTMLCanvasElement | null,
+      nvRef: React.MutableRefObject<Niivue | null>,
+      volume: NVImage
+    ): Promise<void> => {
+      if (!canvas) return
 
-    // Dispose previous instance
-    if (nvRef.current) {
-      try { nvRef.current.closeDrawing() } catch { /* ignore */ }
-      nvRef.current = null
-    }
+      // Dispose previous instance
+      if (nvRef.current) {
+        try {
+          nvRef.current.closeDrawing()
+        } catch {
+          /* ignore */
+        }
+        nvRef.current = null
+      }
 
-    const viewer = new Niivue({ dragAndDropEnabled: false, isResizeCanvas: false })
-    nvRef.current = viewer
-    await viewer.attachToCanvas(canvas)
-    viewer.addVolume(volume)
-    viewer.setSliceType(SLICE_TYPE.MULTIPLANAR)
-    viewer.updateGLVolume()
-    viewer.drawScene()
-  }, [])
+      const viewer = new Niivue({ dragAndDropEnabled: false, isResizeCanvas: false })
+      nvRef.current = viewer
+      await viewer.attachToCanvas(canvas)
+      viewer.addVolume(volume)
+      viewer.setSliceType(SLICE_TYPE.MULTIPLANAR)
+      viewer.updateGLVolume()
+      viewer.drawScene()
+    },
+    []
+  )
 
   useEffect(() => {
     void setupViewer(origCanvasRef.current, origNvRef, original)
@@ -421,7 +622,9 @@ function SkullStripPreview({
       <div className="flex gap-3">
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
-            <Text size="1" weight="medium">Original</Text>
+            <Text size="1" weight="medium">
+              Original
+            </Text>
             {onLoadVolume && (
               <button
                 className="text-blue-600 hover:underline text-[10px]"
@@ -440,7 +643,9 @@ function SkullStripPreview({
         </div>
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
-            <Text size="1" weight="medium">Skull Stripped</Text>
+            <Text size="1" weight="medium">
+              Skull Stripped
+            </Text>
             {onLoadVolume && (
               <button
                 className="text-blue-600 hover:underline text-[10px]"

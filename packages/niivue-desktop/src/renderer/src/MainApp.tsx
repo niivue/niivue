@@ -702,6 +702,73 @@ function MainApp(): JSX.Element {
       }
     }
 
+    // ALLINEATE command: Run affine registration
+    const runAllineateCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('allineate command requires --input (moving image)')
+      }
+      if (!options.stationary) {
+        throw new Error('allineate command requires --stationary (target image)')
+      }
+      if (!options.output) {
+        throw new Error('allineate command requires --output')
+      }
+
+      // Resolve input paths — allineate works with file paths, not base64
+      const resolvedMoving = await window.electron.headlessResolveInput(options.input)
+      const resolvedStationary = await window.electron.headlessResolveInput(options.stationary)
+
+      // Write resolved inputs to temp files if they came from stdin/URL/standard
+      const movingPath = await ensureFilePath(resolvedMoving)
+      const stationaryPath = await ensureFilePath(resolvedStationary)
+
+      // Build allineate options
+      const opts: string[] = []
+      if (options.cost) opts.push('-cost', options.cost)
+      if (options.cmass) opts.push('-cmass')
+      if (options.sourceAutomask) opts.push('-source_automask')
+      if (options.final) opts.push('-final', options.final)
+
+      const cmdLine = `allineate ${movingPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
+      console.error(`[niivue] ${cmdLine}`)
+
+      const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
+      const outputPath = isStdout ? `/tmp/allineate-out-${Date.now()}.nii.gz` : options.output
+
+      const result = await window.electron.headlessAllineate(
+        movingPath,
+        stationaryPath,
+        outputPath,
+        opts
+      )
+
+      if (!result.success) {
+        throw new Error(`allineate failed: ${result.stderr}`)
+      }
+
+      if (isStdout) {
+        // Read the output file and write to stdout
+        const base64 = await window.electron.ipcRenderer.invoke('read-file-as-base64', outputPath) as string
+        await window.electron.headlessWriteStdout(base64)
+      }
+    }
+
+    // Helper: ensure a resolved input is available as a file path on disk
+    const ensureFilePath = async (resolved: { type: string; base64: string; filename: string; originalPath: string }): Promise<string> => {
+      if (resolved.type === 'local-file') {
+        return resolved.originalPath
+      }
+      // For stdin, URL, or standard images, write to a temp file
+      const tmpPath = `/tmp/niivue-${Date.now()}-${resolved.filename}`
+      const saveResult = await window.electron.headlessSaveNifti(resolved.base64, tmpPath)
+      if (!saveResult.success) {
+        throw new Error(`Failed to write temp file: ${saveResult.error}`)
+      }
+      return tmpPath
+    }
+
     // Main headless workflow dispatcher
     const runHeadlessWorkflow = async (): Promise<void> => {
       try {
@@ -727,6 +794,9 @@ function MainApp(): JSX.Element {
             break
           case 'niimath':
             await runNiimathCommand(options)
+            break
+          case 'allineate':
+            await runAllineateCommand(options)
             break
           default:
             throw new Error(`Unknown subcommand: ${options.subcommand}`)
@@ -1271,6 +1341,7 @@ function MainApp(): JSX.Element {
           const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
           nv.addVolume(vol)
           setVolumes([...nv.volumes])
+          nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
           nv.drawScene()
         }}
         onLoadWithOverlay={async (basePath, overlayPath) => {
@@ -1288,6 +1359,7 @@ function MainApp(): JSX.Element {
           nv.addVolume(baseVol)
           nv.addVolume(overlayVol)
           setVolumes([...nv.volumes])
+          nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
           nv.drawScene()
         }}
       />
