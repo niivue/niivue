@@ -5,6 +5,7 @@ import { registerIpcHandlers } from './utils/ipcHandlers.js'
 import icon from '../../resources/icons/app_icon.png?asset'
 import { createMenu } from './utils/menu.js'
 import { getPlatformIcon } from './utils/getPlatformIcon.js'
+import { loadAllDefinitions } from './utils/workflowLoader.js'
 import {
   type CLIOptions,
   getDefaultCLIOptions,
@@ -498,6 +499,9 @@ app.whenReady().then(() => {
       })
     })
   }
+
+  // Load workflow definitions from JSON files
+  loadAllDefinitions()
 
   // register all IPC events at once
   registerIpcHandlers()

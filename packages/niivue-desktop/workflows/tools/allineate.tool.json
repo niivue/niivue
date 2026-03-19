@@ -1,0 +1,34 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "allineate",
+  "version": "1.0.0",
+  "description": "Skull strip a NIfTI volume using allineate registration with MNI152 template",
+  "inputs": {
+    "nifti_path": {
+      "type": "string",
+      "description": "Path to the input NIfTI volume"
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Path for the skull-stripped output NIfTI",
+      "optional": true
+    },
+    "cost": {
+      "type": "string",
+      "description": "Cost function for registration",
+      "optional": true,
+      "default": "ls",
+      "enum": ["ls", "mi", "nmi", "cr", "ncc"]
+    }
+  },
+  "outputs": {
+    "output_path": {
+      "type": "string",
+      "description": "Path to the skull-stripped NIfTI volume"
+    },
+    "command": {
+      "type": "string",
+      "description": "The allineate command that was executed"
+    }
+  }
+}

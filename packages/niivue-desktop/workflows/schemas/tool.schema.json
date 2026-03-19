@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://niivue.github.io/niivue/schemas/tool.schema.json",
+  "title": "NiiVue Tool Definition",
+  "description": "Describes a single operation (CLI or internal) with typed inputs and outputs",
+  "type": "object",
+  "required": ["name", "version", "description", "inputs", "outputs"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor support"
+    },
+    "name": {
+      "type": "string",
+      "description": "Unique tool identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the tool does"
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Named input parameters",
+      "additionalProperties": {
+        "$ref": "#/$defs/parameterDef"
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Named output values",
+      "additionalProperties": {
+        "$ref": "#/$defs/parameterDef"
+      }
+    }
+  },
+  "$defs": {
+    "parameterDef": {
+      "type": "object",
+      "required": ["type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Parameter type",
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "volume",
+            "volume[]",
+            "mask",
+            "dicom-folder",
+            "json[]",
+            "series-mapping[]",
+            "subject[]",
+            "number[]",
+            "bids-dir"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable label"
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Whether the parameter can be omitted",
+          "default": false
+        },
+        "default": {
+          "description": "Default value when optional"
+        },
+        "enum": {
+          "type": "array",
+          "description": "Constrained choices (renders as dropdown)",
+          "items": {}
+        },
+        "min": {
+          "type": "number",
+          "description": "Minimum value for numeric parameters"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum value for numeric parameters"
+        }
+      }
+    }
+  }
+}

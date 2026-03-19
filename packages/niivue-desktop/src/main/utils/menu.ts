@@ -11,6 +11,8 @@ import { runNiimath } from './runNiimath.js'
 import { join } from 'path'
 import { SeriesListEventPayload } from '../../common/dcm2niixTypes.js'
 import { listDicomSeries } from './runDcm2niix.js'
+import { getWorkflowDefinitions } from './workflowLoader.js'
+import type { WorkflowDefinition } from '../../common/workflowTypes.js'
 
 export const viewState = {
   layout: /** default */ 'Auto',
@@ -180,6 +182,65 @@ export function createDrawSubmenu(
 //     }
 //   })
 // }
+
+function handleWorkflowMenuClick(
+  win: Electron.BrowserWindow,
+  workflow: WorkflowDefinition
+): void {
+  // Inspect input types to determine which native dialog to show
+  const inputEntries = Object.entries(workflow.inputs)
+  if (inputEntries.length === 0) {
+    // No inputs needed, open workflow directly
+    win.webContents.send('workflow:open', { workflowName: workflow.name, inputs: {} })
+    return
+  }
+
+  // For each input, show appropriate dialog
+  const resolveInputs = async (): Promise<Record<string, unknown> | null> => {
+    const inputs: Record<string, unknown> = {}
+    for (const [key, inputDef] of inputEntries) {
+      if (inputDef.type === 'dicom-folder' || inputDef.type === 'folder') {
+        const result = await dialog.showOpenDialog(win, {
+          title: inputDef.description || `Select ${key}`,
+          properties: ['openDirectory']
+        })
+        if (result.canceled || result.filePaths.length === 0) return null
+        inputs[key] = result.filePaths[0]
+      } else if (inputDef.type === 'file') {
+        const result = await dialog.showOpenDialog(win, {
+          title: inputDef.description || `Select ${key}`,
+          properties: ['openFile']
+        })
+        if (result.canceled || result.filePaths.length === 0) return null
+        inputs[key] = result.filePaths[0]
+      }
+    }
+    return inputs
+  }
+
+  resolveInputs().then((inputs) => {
+    if (inputs) {
+      win.webContents.send('workflow:open', { workflowName: workflow.name, inputs })
+    }
+  })
+}
+
+function buildAllWorkflowMenuItems(
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] {
+  const workflows = getWorkflowDefinitions()
+  const items: Electron.MenuItemConstructorOptions[] = []
+  for (const wf of workflows.values()) {
+    items.push({
+      label: `${wf.description}`,
+      click: () => handleWorkflowMenuClick(win, wf)
+    })
+  }
+  if (items.length === 0) {
+    return [{ label: 'No Workflows Available', enabled: false }]
+  }
+  return items
+}
 
 export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
   const template = [
@@ -515,7 +576,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           click: (): void => {
             win.webContents.send('bids:open-wizard')
           }
-        }
+        },
       ]
     },
 
@@ -838,6 +899,11 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           ]
         }
       ]
+    },
+    // { role: 'workflowsMenu' }
+    {
+      label: 'Workflows',
+      submenu: buildAllWorkflowMenuItems(win)
     },
     // { role: 'windowMenu' }
     {

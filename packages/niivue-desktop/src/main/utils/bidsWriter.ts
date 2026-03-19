@@ -223,7 +223,7 @@ ${config.bidsVersion || '1.9.0'}
 function writeBidsIgnore(outputDir: string): void {
   fs.writeFileSync(
     path.join(outputDir, '.bidsignore'),
-    'excluded/\n.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n'
+    '**/excluded/\n.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n'
   )
 }
 
@@ -317,7 +317,8 @@ export function writeDataset(
   mappings: BidsSeriesMapping[],
   demographics?: ParticipantDemographics,
   allDemographics?: Record<string, ParticipantDemographics>,
-  fieldmapIntendedFor?: FieldmapIntendedFor[]
+  fieldmapIntendedFor?: FieldmapIntendedFor[],
+  skipExcluded?: boolean
 ): { outputDir: string; filesCopied: number } {
   // Create a subdirectory named after the dataset to avoid writing into a broad parent directory
   const sanitizedName = (config.name || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -389,6 +390,7 @@ export function writeDataset(
   }
 
   // Write excluded series to sub-XX/excluded/
+  if (skipExcluded) return { outputDir, filesCopied }
   const excluded = mappings.filter((m) => m.excluded)
   for (let i = 0; i < excluded.length; i++) {
     const m = excluded[i]

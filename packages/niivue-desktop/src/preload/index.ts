@@ -3,6 +3,11 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { join } from 'path'
 import type { CLIOptions, ResolvedInput } from '../common/cliTypes.js'
 import type {
+  WorkflowDefinition,
+  WorkflowRunState,
+  WorkflowListItem
+} from '../common/workflowTypes.js'
+import type {
   BidsConvertAndClassifyPayload,
   BidsConvertAndClassifyResult,
   BidsWritePayload,
@@ -166,6 +171,54 @@ const api = {
     opts: string[] = []
   ): Promise<{ success: boolean; stdout: string; stderr: string; code: number; outputPath: string; error?: string }> => {
     return ipcRenderer.invoke('allineate:register', movingPath, stationaryPath, outputPath, opts)
+  },
+  // Workflow engine methods
+  workflowList: (): Promise<WorkflowListItem[]> => {
+    return ipcRenderer.invoke('workflow:list')
+  },
+  workflowGetDefinition: (name: string): Promise<WorkflowDefinition> => {
+    return ipcRenderer.invoke('workflow:get-definition', name)
+  },
+  workflowStart: (
+    name: string,
+    inputs: Record<string, unknown>
+  ): Promise<{ runId: string; runState: WorkflowRunState; definition: WorkflowDefinition; autoSteps: string[] }> => {
+    return ipcRenderer.invoke('workflow:start', { name, inputs })
+  },
+  workflowRunAutoSteps: (
+    runId: string
+  ): Promise<{ executed: string[]; runState: WorkflowRunState }> => {
+    return ipcRenderer.invoke('workflow:run-auto-steps', { runId })
+  },
+  workflowRunHeuristic: (
+    runId: string,
+    fieldName: string
+  ): Promise<{ value: unknown; context: Record<string, unknown> }> => {
+    return ipcRenderer.invoke('workflow:run-heuristic', { runId, fieldName })
+  },
+  workflowUpdateContext: (
+    runId: string,
+    fieldName: string,
+    value: unknown
+  ): Promise<{ context: Record<string, unknown> }> => {
+    return ipcRenderer.invoke('workflow:update-context', { runId, fieldName, value })
+  },
+  workflowExecuteStep: (
+    runId: string,
+    stepName: string
+  ): Promise<{ outputs: Record<string, unknown>; runState: WorkflowRunState }> => {
+    return ipcRenderer.invoke('workflow:execute-step', { runId, stepName })
+  },
+  workflowExecuteAll: (
+    runId: string
+  ): Promise<{ outputs: Record<string, unknown>; runState: WorkflowRunState }> => {
+    return ipcRenderer.invoke('workflow:execute-all', { runId })
+  },
+  workflowCancel: (runId: string): Promise<{ success: boolean }> => {
+    return ipcRenderer.invoke('workflow:cancel', { runId })
+  },
+  workflowSelectDirectory: (title?: string): Promise<string | null> => {
+    return ipcRenderer.invoke('workflow:select-directory', { title })
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

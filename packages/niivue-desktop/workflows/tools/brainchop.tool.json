@@ -1,0 +1,37 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "brainchop",
+  "version": "1.0.0",
+  "description": "Skull strip a NIfTI volume using Brainchop MindGrab (in-browser WebGL inference)",
+  "inputs": {
+    "nifti_path": {
+      "type": "string",
+      "description": "Path to the input NIfTI volume"
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Path for the skull-stripped output NIfTI",
+      "optional": true
+    },
+    "model": {
+      "type": "string",
+      "description": "Brainchop model to use for brain extraction",
+      "optional": true,
+      "default": "brain-extract-mindgrab"
+    },
+    "dilation": {
+      "type": "number",
+      "description": "Number of voxels to dilate the brain mask",
+      "optional": true,
+      "default": 3,
+      "min": 0,
+      "max": 10
+    }
+  },
+  "outputs": {
+    "output_path": {
+      "type": "string",
+      "description": "Path to the skull-stripped NIfTI volume"
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "$schema": "../schemas/workflow.schema.json",
+  "name": "dicom-to-bids",
+  "version": "1.0.0",
+  "description": "Convert DICOM to a BIDS-compliant dataset with auto-classification and validation",
+  "menu": "Import",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "description": "BIDS dataset configuration accumulated during the workflow run",
+    "fields": {
+      "series_list": {
+        "type": "series-mapping[]",
+        "description": "Classified series with BIDS datatype, suffix, and metadata",
+        "heuristic": "bids-classify"
+      },
+      "subjects": {
+        "type": "subject[]",
+        "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
+        "heuristic": "detect-subjects"
+      },
+      "dataset_name": {
+        "type": "string",
+        "description": "BIDS dataset name",
+        "default": "My Dataset"
+      },
+      "dataset_version": {
+        "type": "string",
+        "description": "BIDS version for dataset_description.json",
+        "default": "1.9.0"
+      },
+      "license": {
+        "type": "string",
+        "description": "Dataset license",
+        "default": "CC0",
+        "enum": ["CC0", "CC-BY-4.0", "PDDL", "custom"]
+      },
+      "authors": {
+        "type": "string",
+        "description": "Dataset authors (comma-separated)",
+        "default": ""
+      },
+      "readme": {
+        "type": "string",
+        "description": "Dataset README content",
+        "default": ""
+      },
+      "output_dir": {
+        "type": "string",
+        "description": "Output directory for the BIDS dataset"
+      },
+      "skull_strip_config": {
+        "type": "object",
+        "description": "Skull stripping configuration (engine, scope, selections)",
+        "default": {}
+      }
+    }
+  },
+
+  "form": {
+    "sections": [
+      {
+        "title": "Classification",
+        "description": "Review auto-detected BIDS classification for each series",
+        "fields": ["series_list"],
+        "component": "bids-classification-table"
+      },
+      {
+        "title": "Subjects & Sessions",
+        "description": "Review detected subjects and sessions",
+        "fields": ["subjects"],
+        "component": "subject-session-editor"
+      },
+      {
+        "title": "Dataset Metadata",
+        "fields": ["dataset_name", "dataset_version", "license", "authors", "readme", "output_dir"]
+      },
+      {
+        "title": "Skull Stripping",
+        "description": "Optionally remove non-brain tissue before writing BIDS data",
+        "fields": ["skull_strip_config", "series_list"],
+        "component": "skull-strip-editor"
+      },
+      {
+        "title": "Review & Write",
+        "description": "Review the proposed BIDS dataset before writing to disk",
+        "fields": ["series_list", "subjects"],
+        "component": "bids-preview",
+        "buttonText": "Write BIDS"
+      }
+    ]
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "bids": { "constant": "y" },
+        "compress": { "constant": "y" }
+      }
+    },
+    "classify": {
+      "tool": "bids-classify",
+      "inputs": {
+        "sidecars": { "ref": "steps.convert.outputs.sidecars" },
+        "overrides": { "ref": "context.series_list" }
+      }
+    },
+    "validate": {
+      "tool": "bids-validate",
+      "inputs": {
+        "mappings": { "ref": "steps.classify.outputs.mappings" },
+        "config": { "ref": "context" }
+      }
+    },
+    "write": {
+      "tool": "bids-write",
+      "inputs": {
+        "volumes": { "ref": "steps.convert.outputs.volumes" },
+        "mappings": { "ref": "steps.classify.outputs.mappings" },
+        "config": { "ref": "context" }
+      }
+    }
+  },
+
+  "outputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "ref": "steps.write.outputs.bids_dir"
+    }
+  }
+}

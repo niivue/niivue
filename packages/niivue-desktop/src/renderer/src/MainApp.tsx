@@ -20,6 +20,7 @@ import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 import type { BidsSeriesMapping } from '../../common/bidsTypes.js'
+import { WorkflowDialog } from './components/WorkflowDialog.js'
 
 const electron = window.electron
 
@@ -89,6 +90,27 @@ function MainApp(): JSX.Element {
 
   // BIDS panel state
   const [bidsMappings, setBidsMappings] = useState<BidsSeriesMapping[]>([])
+
+  // Workflow dialog state
+  const [workflowOpen, setWorkflowOpen] = useState(false)
+  const [workflowName, setWorkflowName] = useState('')
+  const [workflowInputs, setWorkflowInputs] = useState<Record<string, unknown>>({})
+
+  // Listen for workflow:open from menu
+  useEffect(() => {
+    const handleWorkflowOpen = (
+      _evt: unknown,
+      payload: { workflowName: string; inputs: Record<string, unknown> }
+    ): void => {
+      setWorkflowName(payload.workflowName)
+      setWorkflowInputs(payload.inputs)
+      setWorkflowOpen(true)
+    }
+    electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
+    return (): void => {
+      electron.ipcRenderer.removeAllListeners('workflow:open')
+    }
+  }, [])
   // modelsVersion is used to trigger re-render when user adds models via wizard
   void modelsVersion
 
@@ -1370,6 +1392,12 @@ function MainApp(): JSX.Element {
         modelName={segmentationModelName}
         onCancel={handleCancelSegmentation}
         canCancel={true}
+      />
+      <WorkflowDialog
+        open={workflowOpen}
+        onClose={() => setWorkflowOpen(false)}
+        workflowName={workflowName}
+        inputs={workflowInputs}
       />
     </div>
   )

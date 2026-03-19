@@ -1,0 +1,64 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "dcm2niix",
+  "version": "1.0.0",
+  "description": "Convert DICOM images to NIfTI format using dcm2niix CLI",
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "Directory containing DICOM files"
+    },
+    "compress": {
+      "type": "string",
+      "description": "Compression method for output NIfTI",
+      "optional": true,
+      "default": "y",
+      "enum": ["y", "n"]
+    },
+    "bids": {
+      "type": "string",
+      "description": "Generate BIDS sidecar JSON files",
+      "optional": true,
+      "default": "y",
+      "enum": ["y", "n"]
+    },
+    "series": {
+      "type": "number",
+      "description": "Only convert series matching this CRC number (dcm2niix -n flag)"
+    },
+    "pattern": {
+      "type": "string",
+      "description": "Output filename format string (dcm2niix -f flag)",
+      "optional": true,
+      "default": "%f_%p_%t_%s"
+    },
+    "merge": {
+      "type": "number",
+      "description": "Merge 2D slices from same series (dcm2niix -m flag)",
+      "optional": true
+    },
+    "out_dir": {
+      "type": "string",
+      "description": "Output directory for converted files",
+      "optional": true
+    },
+    "verbose": {
+      "type": "number",
+      "description": "Verbosity level",
+      "optional": true,
+      "default": 0,
+      "min": 0,
+      "max": 2
+    }
+  },
+  "outputs": {
+    "volumes": {
+      "type": "volume[]",
+      "description": "Converted NIfTI volume files"
+    },
+    "sidecars": {
+      "type": "json[]",
+      "description": "BIDS sidecar JSON files (when bids=y)"
+    }
+  }
+}

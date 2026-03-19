@@ -1,0 +1,77 @@
+{
+  "$schema": "../schemas/workflow.schema.json",
+  "name": "dicom-to-nifti",
+  "version": "1.0.0",
+  "description": "Convert DICOM series to NIfTI volumes",
+  "menu": "Import",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "description": "Conversion options reviewed by the user before running",
+    "fields": {
+      "selected_series": {
+        "type": "number[]",
+        "description": "CRC numbers of DICOM series to convert",
+        "heuristic": "list-dicom-series"
+      },
+      "compress": {
+        "type": "string",
+        "description": "Compression method for output NIfTI",
+        "default": "y",
+        "enum": ["y", "n"]
+      },
+      "pattern": {
+        "type": "string",
+        "description": "Output filename format string",
+        "default": "%f_%p_%t_%s"
+      },
+      "merge": {
+        "type": "number",
+        "description": "Merge 2D slices from same series",
+        "default": 0,
+        "min": 0,
+        "max": 2
+      }
+    }
+  },
+
+  "form": {
+    "sections": [
+      {
+        "title": "Select Series",
+        "description": "Choose which DICOM series to convert",
+        "fields": ["selected_series"]
+      },
+      {
+        "title": "Options",
+        "fields": ["compress", "pattern", "merge"]
+      }
+    ]
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "series": { "ref": "context.selected_series" },
+        "compress": { "ref": "context.compress" },
+        "pattern": { "ref": "context.pattern" },
+        "merge": { "ref": "context.merge" }
+      }
+    }
+  },
+
+  "outputs": {
+    "volumes": {
+      "type": "volume[]",
+      "ref": "steps.convert.outputs.volumes"
+    }
+  }
+}

@@ -2,9 +2,17 @@ import { readFile } from 'fs/promises'
 import { store } from './appStore.js'
 import { refreshMenu } from './menu.js' // Import refreshMenu
 
+// Safe console wrappers to prevent EPIPE crashes in dev
+function safeLog(...args: unknown[]): void {
+  try { console.log(...args) } catch { /* EPIPE */ }
+}
+function safeError(...args: unknown[]): void {
+  try { console.error(...args) } catch { /* EPIPE */ }
+}
+
 // read a file and return it as a base64 string
 export const readFromFile = async (_: unknown, path: string): Promise<string> => {
-  console.log('[Main] readFromFile requested', path)
+  safeLog('[Main] readFromFile requested', path)
   try {
     const data = Buffer.from(await readFile(path))
     const base64 = data.toString('base64')
@@ -12,7 +20,7 @@ export const readFromFile = async (_: unknown, path: string): Promise<string> =>
     refreshMenu()
     return base64
   } catch (error) {
-    console.error(error)
+    safeError(error)
     return ''
   }
 }
@@ -23,7 +31,7 @@ export const loadFromFileHandler = async (_: unknown, path: string): Promise<str
     const base64 = await readFromFile(_, path)
     return base64
   } catch (error) {
-    console.error(error)
+    safeError(error)
     return ''
   }
 }

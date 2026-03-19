@@ -1,0 +1,27 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "bids-classify",
+  "version": "1.0.0",
+  "description": "Auto-classify DICOM series into BIDS datatypes and suffixes using heuristics",
+  "inputs": {
+    "sidecars": {
+      "type": "json[]",
+      "description": "dcm2niix sidecar JSON files to classify"
+    },
+    "overrides": {
+      "type": "series-mapping[]",
+      "description": "User-provided classification overrides from the form",
+      "optional": true
+    }
+  },
+  "outputs": {
+    "mappings": {
+      "type": "series-mapping[]",
+      "description": "Classified series with BIDS datatype, suffix, confidence, and auto-assigned run numbers"
+    },
+    "subjects": {
+      "type": "subject[]",
+      "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate"
+    }
+  }
+}

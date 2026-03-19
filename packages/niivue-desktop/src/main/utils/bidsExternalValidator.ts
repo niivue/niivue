@@ -205,8 +205,8 @@ export async function validateWithTempWrite(
   const tempConfig = { ...config, outputDir: tempDir }
 
   try {
-    writeDataset(tempConfig, mappings, demographics, allDemographics, fieldmapIntendedFor)
-    return await validateBidsDirectory(tempDir, mappings)
+    const { outputDir } = writeDataset(tempConfig, mappings, demographics, allDemographics, fieldmapIntendedFor, true)
+    return await validateBidsDirectory(outputDir, mappings)
   } finally {
     // Clean up temp directory
     try {
