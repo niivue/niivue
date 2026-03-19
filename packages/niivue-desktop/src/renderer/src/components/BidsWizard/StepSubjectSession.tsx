@@ -1,5 +1,5 @@
 import { Text } from '@radix-ui/themes'
-import type { BidsSeriesMapping, ParticipantDemographics, DetectedSubject } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, ParticipantDemographics, DetectedSubject, DetectedSession } from '../../../../common/bidsTypes.js'
 import { generateBidsFilename } from './bidsTreeUtil.js'
 
 interface StepSubjectSessionProps {
@@ -14,6 +14,7 @@ interface StepSubjectSessionProps {
   onUpdateDetectedSubject: (index: number, changes: Partial<DetectedSubject>) => void
   onUpdateDetectedSubjectDemographics: (index: number, field: keyof ParticipantDemographics, value: string) => void
   onUpdateDetectedSessionLabel: (subjectIndex: number, sessionIndex: number, label: string) => void
+  onUpdateDetectedSession?: (subjectIndex: number, sessionIndex: number, changes: Partial<DetectedSession>) => void
 }
 
 export function StepSubjectSession({
@@ -27,7 +28,8 @@ export function StepSubjectSession({
   detectedSubjects,
   onUpdateDetectedSubject,
   onUpdateDetectedSubjectDemographics,
-  onUpdateDetectedSessionLabel
+  onUpdateDetectedSessionLabel,
+  onUpdateDetectedSession
 }: StepSubjectSessionProps): JSX.Element {
   const included = mappings.filter((m) => !m.excluded)
   const isMultiSubject = detectedSubjects.length > 1
@@ -36,19 +38,22 @@ export function StepSubjectSession({
     setDemographics({ ...demographics, [key]: value })
   }
 
+  const includedSubjects = detectedSubjects
+    .map((ds, i) => ({ ds, originalIndex: i }))
+    .filter(({ ds }) => !ds.excluded)
+
   if (isMultiSubject) {
     return (
       <div className="flex flex-col gap-4">
-        <Text size="2" weight="bold">Subjects & Sessions (Multi-Subject)</Text>
+        <Text size="2" weight="bold">Sessions</Text>
         <Text size="1" color="gray">
-          {detectedSubjects.length} subjects detected from DICOM headers. Edit labels and demographics below.
+          {includedSubjects.length} included subject{includedSubjects.length !== 1 ? 's' : ''}. Edit labels, sessions, and demographics below.
         </Text>
 
         <div className="overflow-auto max-h-[350px] border rounded">
           <table className="w-full text-xs">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="py-1.5 px-2 text-left font-medium">Patient ID</th>
                 <th className="py-1.5 px-2 text-left font-medium">Subject</th>
                 <th className="py-1.5 px-2 text-left font-medium">Sessions</th>
                 <th className="py-1.5 px-2 text-left font-medium">Age</th>
@@ -58,15 +63,10 @@ export function StepSubjectSession({
               </tr>
             </thead>
             <tbody>
-              {detectedSubjects.map((ds, si) => {
+              {includedSubjects.map(({ ds, originalIndex: si }) => {
                 const totalSeries = ds.sessions.reduce((sum, s) => sum + s.seriesIndices.length, 0)
                 return (
                   <tr key={si} className="border-t border-gray-100">
-                    <td className="py-1.5 px-2">
-                      <Text size="1" className="block truncate max-w-[120px]" title={ds.rawId}>
-                        {ds.rawId}
-                      </Text>
-                    </td>
                     <td className="py-1.5 px-2">
                       <div className="flex items-center gap-0.5">
                         <Text size="1" color="gray">sub-</Text>
@@ -84,13 +84,22 @@ export function StepSubjectSession({
                       ) : (
                         <div className="flex flex-col gap-0.5">
                           {ds.sessions.map((ses, sei) => (
-                            <div key={sei} className="flex items-center gap-0.5">
+                            <div key={sei} className={`flex items-center gap-0.5${ses.excluded ? ' opacity-50' : ''}`}>
+                              {onUpdateDetectedSession && (
+                                <input
+                                  type="checkbox"
+                                  checked={!ses.excluded}
+                                  onChange={() => onUpdateDetectedSession(si, sei, { excluded: !ses.excluded })}
+                                  className="w-3 h-3"
+                                />
+                              )}
                               <Text size="1" color="gray">ses-</Text>
                               <input
                                 type="text"
                                 value={ses.label}
                                 onChange={(e) => onUpdateDetectedSessionLabel(si, sei, e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
                                 className="w-10 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                                disabled={ses.excluded}
                               />
                               <Text size="1" color="gray">({ses.seriesIndices.length})</Text>
                             </div>

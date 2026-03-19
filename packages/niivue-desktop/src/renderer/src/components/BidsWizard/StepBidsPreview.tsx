@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react'
-import { Text } from '@radix-ui/themes'
+import React, { useEffect, useRef, useState } from 'react'
+import { Button, Text } from '@radix-ui/themes'
+import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import type {
   BidsSeriesMapping,
   DetectedSubject,
   BidsValidationIssue
 } from '../../../../common/bidsTypes.js'
-import { buildBidsTree } from './bidsTreeUtil.js'
+import { buildBidsTree, generateBidsPath } from './bidsTreeUtil.js'
 
 const electron = window.electron
 
 interface StepBidsPreviewProps {
   context: Record<string, unknown>
   onFieldChange: (fieldName: string, value: unknown) => void
+  onLoadFile?: (niftiPath: string) => Promise<void>
 }
 
 interface ValidationResult {
@@ -20,7 +22,66 @@ interface ValidationResult {
   warnings: BidsValidationIssue[]
 }
 
-export function StepBidsPreview({ context }: StepBidsPreviewProps): React.ReactElement {
+/** Small NiiVue preview that loads a single volume on demand */
+function SeriesPreview({ niftiPath }: { niftiPath: string }): React.ReactElement {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const nvRef = useRef<Niivue | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async (): Promise<void> => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      if (nvRef.current) {
+        nvRef.current.volumes = []
+        nvRef.current = null
+      }
+
+      const nv = new Niivue({
+        isResizeCanvas: false,
+        show3Dcrosshair: false,
+        backColor: [0, 0, 0, 1],
+        crosshairWidth: 0
+      })
+      nvRef.current = nv
+      await nv.attachToCanvas(canvas)
+
+      try {
+        const base64: string = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+        if (cancelled || !base64) return
+        const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+        if (cancelled) return
+        nv.addVolume(vol)
+        nv.setSliceType(SLICE_TYPE.RENDER)
+        nv.updateGLVolume()
+      } catch {
+        // Preview is best-effort
+      }
+    }
+    void load()
+
+    return () => {
+      cancelled = true
+      if (nvRef.current) {
+        nvRef.current.volumes = []
+        nvRef.current = null
+      }
+    }
+  }, [niftiPath])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={120}
+      height={120}
+      className="rounded bg-black flex-shrink-0"
+      style={{ width: 60, height: 60 }}
+    />
+  )
+}
+
+export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
   const subjects = (context.subjects as DetectedSubject[]) || []
   const datasetName = (context.dataset_name as string) || 'my_bids_dataset'
@@ -31,6 +92,7 @@ export function StepBidsPreview({ context }: StepBidsPreviewProps): React.ReactE
 
   const included = mappings.filter((m) => !m.excluded)
   const excluded = mappings.filter((m) => m.excluded)
+  const includedSubjects = subjects.filter((s) => !s.excluded)
   const tree = buildBidsTree(mappings)
 
   // Count files by datatype
@@ -48,7 +110,9 @@ export function StepBidsPreview({ context }: StepBidsPreviewProps): React.ReactE
         // Build demographics map from detected subjects
         const allDemographics: Record<string, import('../../../../common/bidsTypes.js').ParticipantDemographics> = {}
         for (const sub of subjects) {
-          allDemographics[sub.label] = sub.demographics
+          if (!sub.excluded) {
+            allDemographics[sub.label] = sub.demographics
+          }
         }
 
         const result = await electron.ipcRenderer.invoke('bids:validate', {
@@ -80,8 +144,8 @@ export function StepBidsPreview({ context }: StepBidsPreviewProps): React.ReactE
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-center">
-          <Text size="4" weight="bold" color="blue">{subjects.length}</Text>
-          <Text size="1" color="gray" as="p">Subject{subjects.length !== 1 ? 's' : ''}</Text>
+          <Text size="4" weight="bold" color="blue">{includedSubjects.length}</Text>
+          <Text size="1" color="gray" as="p">Subject{includedSubjects.length !== 1 ? 's' : ''}</Text>
         </div>
         <div className="bg-green-50 border border-green-200 rounded p-3 text-center">
           <Text size="4" weight="bold" color="green">{included.length}</Text>
@@ -109,8 +173,49 @@ export function StepBidsPreview({ context }: StepBidsPreviewProps): React.ReactE
         </div>
       )}
 
+      {/* Series list with NIfTI previews */}
+      {included.length > 0 && (
+        <div>
+          <Text size="2" weight="medium" className="mb-1">Series</Text>
+          <div className="max-h-[300px] overflow-y-auto flex flex-col gap-1.5">
+            {included.map((m) => {
+              const bidsPath = generateBidsPath(m)
+              const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
+              return (
+                <div
+                  key={m.index}
+                  className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
+                >
+                  <SeriesPreview niftiPath={m.niftiPath} />
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <Text size="2" className="truncate">{bidsPath}{ext}</Text>
+                    <Text size="1" color="gray" className="truncate">
+                      {m.seriesDescription}
+                    </Text>
+                    <Text size="1" color="blue">{m.datatype}/{m.suffix}</Text>
+                  </div>
+                  {onLoadFile && (
+                    <Button
+                      size="1"
+                      variant="soft"
+                      className="flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void onLoadFile(m.niftiPath)
+                      }}
+                    >
+                      Open in Viewer
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Subject demographics table */}
-      {subjects.length > 0 && (
+      {includedSubjects.length > 0 && (
         <div>
           <Text size="2" weight="medium" className="mb-1">Participants</Text>
           <div className="border border-gray-200 rounded overflow-hidden">
@@ -125,7 +230,7 @@ export function StepBidsPreview({ context }: StepBidsPreviewProps): React.ReactE
                 </tr>
               </thead>
               <tbody>
-                {subjects.map((sub) => {
+                {includedSubjects.map((sub) => {
                   const totalSeries = sub.sessions.reduce((sum, ses) => sum + ses.seriesIndices.length, 0)
                   return (
                     <tr key={sub.label} className="border-t border-gray-100">

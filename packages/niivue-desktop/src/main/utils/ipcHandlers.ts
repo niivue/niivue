@@ -29,6 +29,10 @@ export const registerIpcHandlers = (): void => {
   registerWorkflowIpcHandlers()
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
   ipcMain.handle('loadFromFile', loadFromFileHandler)
+
+  ipcMain.handle('file-exists', (_evt, filePath: string) => {
+    return fs.existsSync(filePath)
+  })
   ipcMain.handle('loadStandard', loadStandardHandler)
   ipcMain.handle('saveCompressedNVD', saveCompressedNVDHandler)
   ipcMain.handle('saveHTML', saveHTMLHandler)

@@ -17,6 +17,7 @@ const dcm2niixExecutor: ToolExecutor = async (inputs) => {
     if (inputs.pattern) args.push('-f', String(inputs.pattern))
     if (inputs.compress) args.push('-z', String(inputs.compress))
     if (inputs.bids) args.push('-b', String(inputs.bids))
+    if (inputs.bids_anon) args.push('-ba', String(inputs.bids_anon))
     if (inputs.merge != null) args.push('-m', String(inputs.merge))
     if (inputs.verbose != null) args.push('-v', String(inputs.verbose))
     return args
@@ -179,7 +180,9 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
   if (subjects && subjects.length > 0) {
     allDemographics = {}
     for (const sub of subjects) {
-      allDemographics[sub.label] = sub.demographics
+      if (!sub.excluded) {
+        allDemographics[sub.label] = sub.demographics
+      }
     }
   }
 

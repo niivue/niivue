@@ -32,15 +32,15 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
     paths.push(bidsBase + '.json')
   }
 
-  // Add excluded series paths
+  // Add excluded series paths (stored in sourcedata/)
   const excluded = mappings.filter((m) => m.excluded)
   for (let i = 0; i < excluded.length; i++) {
     const m = excluded[i]
     const sanitizedDesc = (m.seriesDescription || 'unknown').replace(/[^a-zA-Z0-9]/g, '')
     const baseName = `sub-${m.subject}${m.task ? `_task-${m.task}` : ''}_desc-${sanitizedDesc}_${i}_excluded`
     const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
-    paths.push(`sub-${m.subject}/excluded/${baseName}${ext}`)
-    paths.push(`sub-${m.subject}/excluded/${baseName}.json`)
+    paths.push(`sourcedata/sub-${m.subject}/${baseName}${ext}`)
+    paths.push(`sourcedata/sub-${m.subject}/${baseName}.json`)
   }
 
   paths.sort()

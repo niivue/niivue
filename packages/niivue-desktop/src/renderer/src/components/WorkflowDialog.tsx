@@ -13,12 +13,13 @@ import type {
   ParticipantDemographics,
   DetectedSubject
 } from '../../../common/bidsTypes.js'
-import { Niivue } from '@niivue/niivue'
+import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import { marked } from 'marked'
 import { StepClassification } from './BidsWizard/StepClassification.js'
 import { StepSubjectSession } from './BidsWizard/StepSubjectSession.js'
 import { StepSkullStrip } from './BidsWizard/StepSkullStrip.js'
 import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
+import { generateBidsPath } from './BidsWizard/bidsTreeUtil.js'
 
 const electron = window.electron
 
@@ -409,7 +410,7 @@ function SubjectSessionAdapter({
   onFieldChange
 }: {
   context: Record<string, unknown>
-  onFieldChange: (fieldName: string, value: unknown) => void
+  onFieldChange: (fieldName: string, value: unknown) => void | Promise<void>
 }): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
   const detectedSubjects = (context.subjects as DetectedSubject[]) || []
@@ -433,10 +434,81 @@ function SubjectSessionAdapter({
       setDemographics={(d) => onFieldChange('_demographics', d)}
       detectedSubjects={detectedSubjects}
       onUpdateDetectedSubject={(index, changes) => {
+        const old = detectedSubjects[index]
         const updated = detectedSubjects.map((ds, i) =>
           i === index ? { ...ds, ...changes } : ds
         )
-        onFieldChange('subjects', updated)
+
+        // If excluded changed, cascade to series_list mappings
+        // Apply both updates sequentially to avoid race conditions
+        if (changes.excluded !== undefined) {
+          const subLabel = old.label
+          const updatedMappings = mappings.map((m) => {
+            if (m.subject === subLabel) {
+              return {
+                ...m,
+                excluded: changes.excluded!,
+                exclusionReason: changes.excluded ? 'Subject excluded' : undefined
+              }
+            }
+            return m
+          })
+          void (async () => {
+            await onFieldChange('subjects', updated)
+            await onFieldChange('series_list', updatedMappings)
+          })()
+          return
+        }
+
+        // If label changed, cascade to series_list mappings
+        if (changes.label && changes.label !== old.label) {
+          const updatedMappings = mappings.map((m) => {
+            if (m.subject === old.label) {
+              return { ...m, subject: changes.label! }
+            }
+            return m
+          })
+          void (async () => {
+            await onFieldChange('subjects', updated)
+            await onFieldChange('series_list', updatedMappings)
+          })()
+          return
+        }
+
+        void onFieldChange('subjects', updated)
+      }}
+      onUpdateDetectedSession={(subjectIndex, sessionIndex, changes) => {
+        const sub = detectedSubjects[subjectIndex]
+        const ses = sub.sessions[sessionIndex]
+        const updated = detectedSubjects.map((ds, si) => {
+          if (si !== subjectIndex) return ds
+          const sessions = ds.sessions.map((s, sei) =>
+            sei === sessionIndex ? { ...s, ...changes } : s
+          )
+          return { ...ds, sessions }
+        })
+
+        // If excluded changed, cascade to series_list mappings for this session
+        // Apply both updates sequentially to avoid race conditions
+        if (changes.excluded !== undefined) {
+          const updatedMappings = mappings.map((m) => {
+            if (m.subject === sub.label && m.session === ses.label) {
+              return {
+                ...m,
+                excluded: changes.excluded!,
+                exclusionReason: changes.excluded ? 'Session excluded' : undefined
+              }
+            }
+            return m
+          })
+          void (async () => {
+            await onFieldChange('subjects', updated)
+            await onFieldChange('series_list', updatedMappings)
+          })()
+          return
+        }
+
+        void onFieldChange('subjects', updated)
       }}
       onUpdateDetectedSubjectDemographics={(index, field, value) => {
         const updated = detectedSubjects.map((ds, i) =>
@@ -447,6 +519,8 @@ function SubjectSessionAdapter({
         onFieldChange('subjects', updated)
       }}
       onUpdateDetectedSessionLabel={(subjectIndex, sessionIndex, label) => {
+        const sub = detectedSubjects[subjectIndex]
+        const oldLabel = sub.sessions[sessionIndex].label
         const updated = detectedSubjects.map((ds, si) => {
           if (si !== subjectIndex) return ds
           const sessions = ds.sessions.map((ses, sei) =>
@@ -454,7 +528,24 @@ function SubjectSessionAdapter({
           )
           return { ...ds, sessions }
         })
-        onFieldChange('subjects', updated)
+
+        // Cascade session label change to series_list mappings
+        // Apply both updates sequentially to avoid race conditions
+        if (label !== oldLabel) {
+          const updatedMappings = mappings.map((m) => {
+            if (m.subject === sub.label && m.session === oldLabel) {
+              return { ...m, session: label }
+            }
+            return m
+          })
+          void (async () => {
+            await onFieldChange('subjects', updated)
+            await onFieldChange('series_list', updatedMappings)
+          })()
+          return
+        }
+
+        void onFieldChange('subjects', updated)
       }}
     />
   )
@@ -473,6 +564,16 @@ function SkullStripAdapter({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   // Use state (not ref) so the component re-renders once the NiiVue instance is ready
   const [nvInstance, setNvInstance] = useState<Niivue | null>(null)
+
+  // Restore originalPaths from context
+  const savedOriginalPaths = (context._originalPaths as Record<number, string>) || {}
+  const initialOriginalPaths = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const [k, v] of Object.entries(savedOriginalPaths)) {
+      map.set(Number(k), v)
+    }
+    return map
+  }, [])
 
   // Create a hidden 1×1 NiiVue instance for Brainchop's nv.conform() call
   useEffect(() => {
@@ -506,21 +607,131 @@ function SkullStripAdapter({
     [onFieldChange]
   )
 
+  const handleOriginalPathsChange = useCallback(
+    (paths: Map<number, string>) => {
+      const record: Record<number, string> = {}
+      paths.forEach((v, k) => { record[k] = v })
+      onFieldChange('_originalPaths', record)
+    },
+    [onFieldChange]
+  )
+
   return (
     <StepSkullStrip
       mappings={mappings}
       onMappingsUpdate={handleMappingsUpdate}
       nv={nvInstance}
+      initialOriginalPaths={initialOriginalPaths}
+      onOriginalPathsChange={handleOriginalPathsChange}
     />
+  )
+}
+
+// ── Subject selection adapter (shown before classification) ──────────
+
+function SubjectSelectAdapter({
+  context,
+  onFieldChange
+}: {
+  context: Record<string, unknown>
+  onFieldChange: (fieldName: string, value: unknown) => void | Promise<void>
+}): React.ReactElement {
+  const detectedSubjects = (context.subjects as DetectedSubject[]) || []
+
+  if (detectedSubjects.length <= 1) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Text size="2" weight="bold">Subjects</Text>
+        <Text size="1" color="gray">
+          {detectedSubjects.length === 1
+            ? `1 subject detected: ${detectedSubjects[0].rawId}`
+            : 'No subjects detected from DICOM headers.'}
+        </Text>
+      </div>
+    )
+  }
+
+  const toggleSubject = (index: number): void => {
+    const old = detectedSubjects[index]
+    const updated = detectedSubjects.map((ds, i) =>
+      i === index ? { ...ds, excluded: !old.excluded } : ds
+    )
+    void onFieldChange('subjects', updated)
+  }
+
+  const includedCount = detectedSubjects.filter((s) => !s.excluded).length
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Text size="2" weight="bold">Select Subjects</Text>
+      <Text size="1" color="gray">
+        {detectedSubjects.length} subjects detected from DICOM headers.
+        Uncheck any subjects you want to exclude from the BIDS dataset.
+      </Text>
+
+      <div className="overflow-auto max-h-[300px] border rounded">
+        <table className="w-full text-xs">
+          <thead className="bg-gray-50 sticky top-0">
+            <tr>
+              <th className="py-1.5 px-2 text-left font-medium w-8">Include</th>
+              <th className="py-1.5 px-2 text-left font-medium">Patient ID</th>
+              <th className="py-1.5 px-2 text-left font-medium">Subject</th>
+              <th className="py-1.5 px-2 text-left font-medium">Sessions</th>
+              <th className="py-1.5 px-2 text-left font-medium">Age</th>
+              <th className="py-1.5 px-2 text-left font-medium">Sex</th>
+              <th className="py-1.5 px-2 text-left font-medium">Series</th>
+            </tr>
+          </thead>
+          <tbody>
+            {detectedSubjects.map((ds, si) => {
+              const totalSeries = ds.sessions.reduce((sum, s) => sum + s.seriesIndices.length, 0)
+              const isExcluded = !!ds.excluded
+              return (
+                <tr key={si} className={`border-t border-gray-100${isExcluded ? ' opacity-50' : ''}`}>
+                  <td className="py-1.5 px-2">
+                    <input
+                      type="checkbox"
+                      checked={!isExcluded}
+                      onChange={() => toggleSubject(si)}
+                      className="w-3.5 h-3.5"
+                    />
+                  </td>
+                  <td className="py-1.5 px-2">
+                    <Text size="1" className="block truncate max-w-[160px]" title={ds.rawId}>
+                      {ds.rawId}
+                    </Text>
+                  </td>
+                  <td className="py-1.5 px-2">
+                    <Text size="1" className="font-mono">sub-{ds.label}</Text>
+                  </td>
+                  <td className="py-1.5 px-2">{ds.sessions.length}</td>
+                  <td className="py-1.5 px-2">{ds.demographics.age || '-'}</td>
+                  <td className="py-1.5 px-2">{ds.demographics.sex || '-'}</td>
+                  <td className="py-1.5 px-2">{totalSeries}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <Text size="1" color="gray">
+        {includedCount} of {detectedSubjects.length} subjects included
+      </Text>
+    </div>
   )
 }
 
 // ── Component registry ───────────────────────────────────────────────
 
-const COMPONENT_REGISTRY: Record<
-  string,
-  React.FC<{ context: Record<string, unknown>; onFieldChange: (fieldName: string, value: unknown) => void }>
-> = {
+interface CustomComponentProps {
+  context: Record<string, unknown>
+  onFieldChange: (fieldName: string, value: unknown) => void
+  onLoadFile?: (niftiPath: string) => Promise<void>
+}
+
+const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
+  'subject-select': SubjectSelectAdapter,
   'bids-classification-table': ClassificationAdapter,
   'subject-session-editor': SubjectSessionAdapter,
   'skull-strip-editor': SkullStripAdapter,
@@ -534,13 +745,15 @@ function FormSection({
   definition,
   context,
   onFieldChange,
-  heuristicLoading
+  heuristicLoading,
+  onLoadFile
 }: {
   section: FormSectionDef
   definition: WorkflowDefinition
   context: Record<string, unknown>
   onFieldChange: (fieldName: string, value: unknown) => void
   heuristicLoading: Set<string>
+  onLoadFile?: (niftiPath: string) => Promise<void>
 }): React.ReactElement {
   const fields = definition.context?.fields ?? {}
 
@@ -567,7 +780,7 @@ function FormSection({
               </Text>
             )}
           </div>
-          <CustomComponent context={context} onFieldChange={onFieldChange} />
+          <CustomComponent context={context} onFieldChange={onFieldChange} onLoadFile={onLoadFile} />
         </div>
       )
     }
@@ -640,11 +853,221 @@ function FormSection({
   )
 }
 
+// ── Completion screen with loadable files ────────────────────────────
+
+interface WrittenFile {
+  key: string
+  label: string
+  tag?: string
+  /** Path to the file in the BIDS output directory */
+  bidsPath: string
+  /** Source NIfTI path (for preview loading) */
+  sourcePath: string
+}
+
+function buildWrittenFileList(
+  mappings: BidsSeriesMapping[],
+  bidsDir: string,
+  originalPaths: Record<number, string> = {}
+): WrittenFile[] {
+  const included = mappings.filter((m) => !m.excluded)
+  const files: WrittenFile[] = []
+
+  for (const m of included) {
+    const bidsRelPath = generateBidsPath(m)
+    const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
+    const bidsPath = bidsDir ? `${bidsDir}/${bidsRelPath}${ext}` : m.niftiPath
+    const origPath = originalPaths[m.index]
+
+    if (origPath) {
+      // We have original path from skull strip — always show both entries
+      const strippedPath = origPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+      files.push({
+        key: `${m.index}-stripped`,
+        label: `${bidsRelPath}${ext}`,
+        tag: 'skull stripped',
+        bidsPath,
+        sourcePath: strippedPath
+      })
+      files.push({
+        key: `${m.index}-original`,
+        label: `${bidsRelPath}${ext}`,
+        tag: 'original',
+        bidsPath,
+        sourcePath: origPath
+      })
+    } else {
+      files.push({
+        key: `${m.index}`,
+        label: `${bidsRelPath}${ext}`,
+        bidsPath,
+        sourcePath: m.niftiPath
+      })
+    }
+  }
+
+  return files
+}
+
+/** Small NiiVue preview that loads a single volume on demand */
+function VolumePreview({ niftiPath }: { niftiPath: string }): React.ReactElement {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const nvRef = useRef<Niivue | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async (): Promise<void> => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      // Dispose previous
+      if (nvRef.current) {
+        nvRef.current.volumes = []
+        nvRef.current = null
+      }
+
+      const nv = new Niivue({
+        isResizeCanvas: false,
+        show3Dcrosshair: false,
+        backColor: [0, 0, 0, 1],
+        crosshairWidth: 0
+      })
+      nvRef.current = nv
+      await nv.attachToCanvas(canvas)
+
+      try {
+        const base64: string = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+        if (cancelled || !base64) return
+        const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+        if (cancelled) return
+        nv.addVolume(vol)
+        nv.setSliceType(SLICE_TYPE.RENDER)
+        nv.updateGLVolume()
+      } catch {
+        // Preview is best-effort
+      }
+    }
+    void load()
+
+    return () => {
+      cancelled = true
+      if (nvRef.current) {
+        nvRef.current.volumes = []
+        nvRef.current = null
+      }
+    }
+  }, [niftiPath])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={120}
+      height={120}
+      className="rounded bg-black flex-shrink-0"
+      style={{ width: 60, height: 60 }}
+    />
+  )
+}
+
+function CompletionScreen({
+  context,
+  outputs,
+  onClose
+}: {
+  context: Record<string, unknown>
+  outputs: Record<string, unknown> | null
+  onClose: (fileToLoad?: string) => void
+}): React.ReactElement {
+  const mappings = (context.series_list as BidsSeriesMapping[]) || []
+  const bidsDir = (outputs?.bids_dir as string) || ''
+  const originalPaths = (context._originalPaths as Record<number, string>) || {}
+
+  const writtenFiles = useMemo(
+    () => buildWrittenFileList(mappings, bidsDir, originalPaths),
+    [mappings, bidsDir, originalPaths]
+  )
+
+  const handleOpen = useCallback(
+    async (file: WrittenFile) => {
+      // Try bidsPath first (the written BIDS output), fall back to sourcePath
+      // (temp conversion dir). For "original" tagged entries, always use sourcePath
+      // since only the stripped version gets written to BIDS output.
+      let filePath: string
+      if (file.tag === 'original') {
+        filePath = file.sourcePath
+      } else {
+        // Check if the BIDS output file exists, fall back to source
+        const exists = await electron.ipcRenderer.invoke('file-exists', file.bidsPath).catch(() => false)
+        filePath = exists ? file.bidsPath : file.sourcePath
+      }
+      // Close dialog first, then load — avoids IPC race with registerAllIpcHandlers
+      onClose(filePath)
+    },
+    [onClose]
+  )
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="bg-green-50 border border-green-200 rounded p-3">
+        <Text size="2" color="green" weight="bold">Workflow completed successfully.</Text>
+        {bidsDir && (
+          <Text size="1" color="gray" as="p" className="mt-1">{bidsDir}</Text>
+        )}
+      </div>
+
+      {writtenFiles.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <Text size="2" weight="medium">Open in viewer:</Text>
+          <div className="max-h-[300px] overflow-y-auto flex flex-col gap-1.5">
+            {writtenFiles.map((f) => (
+              <div
+                key={f.key}
+                className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
+              >
+                <VolumePreview niftiPath={f.sourcePath} />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <Text size="2" className="truncate">{f.label}</Text>
+                  {f.tag && (
+                    <Text
+                      size="1"
+                      color={f.tag === 'skull stripped' ? 'blue' : 'gray'}
+                    >
+                      {f.tag}
+                    </Text>
+                  )}
+                </div>
+                <Button
+                  size="1"
+                  variant="soft"
+                  className="flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpen(f)
+                  }}
+                >
+                  Open
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end pt-2 border-t border-gray-200">
+        <Button variant="solid" onClick={() => onClose()}>
+          Done
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main dialog ──────────────────────────────────────────────────────
 
 interface WorkflowDialogProps {
   open: boolean
-  onClose: () => void
+  onClose: (fileToLoad?: string) => void
+  onLoadFile?: (niftiPath: string) => Promise<void>
   workflowName: string
   inputs: Record<string, unknown>
 }
@@ -652,6 +1075,7 @@ interface WorkflowDialogProps {
 export function WorkflowDialog({
   open,
   onClose,
+  onLoadFile,
   workflowName,
   inputs
 }: WorkflowDialogProps): React.ReactElement | null {
@@ -660,6 +1084,7 @@ export function WorkflowDialog({
   const [context, setContext] = useState<Record<string, unknown>>({})
   const [currentSection, setCurrentSection] = useState(0)
   const [status, setStatus] = useState<string>('idle')
+  const [completedOutputs, setCompletedOutputs] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heuristicLoading, setHeuristicLoading] = useState<Set<string>>(new Set())
   const [preparing, setPreparing] = useState(false)
@@ -783,15 +1208,32 @@ export function WorkflowDialog({
 
   const handleNext = async (): Promise<void> => {
     if (isLastSection) {
+      // For single-subject mode, apply _subject/_session to all mappings before write
+      const detectedSubjects = (context.subjects as DetectedSubject[]) || []
+      if (detectedSubjects.length <= 1) {
+        const subjectLabel = (context._subject as string) || '01'
+        const sessionLabel = (context._session as string) || ''
+        const currentMappings = (context.series_list as BidsSeriesMapping[]) || []
+        const needsUpdate = currentMappings.some(
+          (m) => m.subject !== subjectLabel || m.session !== sessionLabel
+        )
+        if (needsUpdate) {
+          const updatedMappings = currentMappings.map((m) => ({
+            ...m,
+            subject: subjectLabel,
+            session: sessionLabel
+          }))
+          await handleFieldChange('series_list', updatedMappings)
+        }
+      }
+
       // Execute all remaining steps
       setStatus('running')
       setError(null)
       try {
-        await electron.ipcRenderer.invoke('workflow:execute-all', { runId })
+        const result = await electron.ipcRenderer.invoke('workflow:execute-all', { runId })
         setStatus('completed')
-        setTimeout(() => {
-          onClose()
-        }, 800)
+        setCompletedOutputs(result.outputs ?? null)
       } catch (err) {
         setStatus('error')
         setError(err instanceof Error ? err.message : String(err))
@@ -814,7 +1256,11 @@ export function WorkflowDialog({
     }
   }
 
-  const handleClose = (): void => {
+  const closingRef = useRef(false)
+  const handleClose = (fileToLoad?: string): void => {
+    // Guard against double-close (Dialog.onOpenChange triggers handleClose again)
+    if (closingRef.current) return
+    closingRef.current = true
     if (runIdRef.current) {
       electron.ipcRenderer.invoke('workflow:cancel', { runId: runIdRef.current })
       runIdRef.current = null
@@ -826,7 +1272,10 @@ export function WorkflowDialog({
     setStatus('idle')
     setError(null)
     setPreparing(false)
-    onClose()
+    setCompletedOutputs(null)
+    onClose(fileToLoad)
+    // Reset guard after a tick so the dialog can be reopened later
+    setTimeout(() => { closingRef.current = false }, 0)
   }
 
   // Determine if dialog needs to be wider for custom components
@@ -841,7 +1290,7 @@ export function WorkflowDialog({
           <Theme style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <div className="p-6 flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
               {/* Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-shrink-0">
                 <Text size="4" weight="bold">
                   {definition?.description || workflowName}
                 </Text>
@@ -857,7 +1306,7 @@ export function WorkflowDialog({
 
               {/* Step indicator */}
               {sections.length > 1 && !preparing && (
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-shrink-0">
                   {sections.map((s, i) => (
                     <div
                       key={i}
@@ -892,6 +1341,7 @@ export function WorkflowDialog({
                       context={context}
                       onFieldChange={handleFieldChange}
                       heuristicLoading={heuristicLoading}
+                      onLoadFile={onLoadFile}
                     />
                   )}
                 </div>
@@ -912,14 +1362,16 @@ export function WorkflowDialog({
                 </div>
               )}
               {status === 'completed' && (
-                <div className="bg-green-50 border border-green-200 rounded p-3">
-                  <Text size="2" color="green">Workflow completed successfully.</Text>
-                </div>
+                <CompletionScreen
+                  context={context}
+                  outputs={completedOutputs}
+                  onClose={handleClose}
+                />
               )}
 
               {/* Navigation buttons */}
-              {!preparing && (
-                <div className="flex justify-between pt-2 border-t border-gray-200">
+              {!preparing && status !== 'completed' && (
+                <div className="flex justify-between pt-2 border-t border-gray-200 flex-shrink-0">
                   <Button
                     variant="soft"
                     color="gray"
@@ -929,13 +1381,13 @@ export function WorkflowDialog({
                     Back
                   </Button>
                   <div className="flex gap-2">
-                    <Button variant="soft" color="gray" onClick={handleClose}>
+                    <Button variant="soft" color="gray" onClick={() => handleClose()}>
                       Cancel
                     </Button>
                     <Button
                       variant="solid"
                       onClick={handleNext}
-                      disabled={status === 'running' || status === 'completed'}
+                      disabled={status === 'running'}
                     >
                       {isLastSection
                         ? (sections[currentSection]?.buttonText || 'Run')

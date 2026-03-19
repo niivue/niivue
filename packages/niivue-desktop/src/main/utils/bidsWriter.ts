@@ -223,7 +223,7 @@ ${config.bidsVersion || '1.9.0'}
 function writeBidsIgnore(outputDir: string): void {
   fs.writeFileSync(
     path.join(outputDir, '.bidsignore'),
-    '**/excluded/\n.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n'
+    '.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n'
   )
 }
 
@@ -389,14 +389,14 @@ export function writeDataset(
     }
   }
 
-  // Write excluded series to sub-XX/excluded/
+  // Write excluded series to sourcedata/ (BIDS-compliant location for non-BIDS data)
   if (skipExcluded) return { outputDir, filesCopied }
   const excluded = mappings.filter((m) => m.excluded)
   for (let i = 0; i < excluded.length; i++) {
     const m = excluded[i]
     const sanitizedDesc = (m.seriesDescription || 'unknown').replace(/[^a-zA-Z0-9]/g, '')
     const baseName = `sub-${m.subject}${m.task ? `_task-${m.task}` : ''}_desc-${sanitizedDesc}_${i}_excluded`
-    const excludedDir = path.join(outputDir, `sub-${m.subject}`, 'excluded')
+    const excludedDir = path.join(outputDir, 'sourcedata', `sub-${m.subject}`)
     fs.mkdirSync(excludedDir, { recursive: true })
 
     const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'

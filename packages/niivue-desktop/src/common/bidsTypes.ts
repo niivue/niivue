@@ -165,6 +165,7 @@ export interface DetectedSession {
   rawDate: string
   label: string
   seriesIndices: number[]
+  excluded?: boolean
 }
 
 export interface DetectedSubject {
@@ -172,6 +173,7 @@ export interface DetectedSubject {
   label: string
   demographics: ParticipantDemographics
   sessions: DetectedSession[]
+  excluded?: boolean
 }
 
 export interface BidsConvertAndClassifyPayload {

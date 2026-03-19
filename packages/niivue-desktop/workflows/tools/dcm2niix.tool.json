@@ -49,6 +49,13 @@
       "default": 0,
       "min": 0,
       "max": 2
+    },
+    "bids_anon": {
+      "type": "string",
+      "description": "Anonymize BIDS sidecar (y=strip patient fields, n=keep them)",
+      "optional": true,
+      "default": "y",
+      "enum": ["y", "n"]
     }
   },
   "outputs": {

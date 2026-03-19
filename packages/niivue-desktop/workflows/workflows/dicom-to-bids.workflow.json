@@ -66,14 +66,20 @@
   "form": {
     "sections": [
       {
+        "title": "Subject Selection",
+        "description": "Select which subjects to include in the BIDS dataset",
+        "fields": ["subjects"],
+        "component": "subject-select"
+      },
+      {
         "title": "Classification",
         "description": "Review auto-detected BIDS classification for each series",
         "fields": ["series_list"],
         "component": "bids-classification-table"
       },
       {
-        "title": "Subjects & Sessions",
-        "description": "Review detected subjects and sessions",
+        "title": "Sessions",
+        "description": "Edit session labels and demographics for included subjects",
         "fields": ["subjects"],
         "component": "subject-session-editor"
       },
@@ -103,7 +109,8 @@
       "inputs": {
         "dicom_dir": { "ref": "inputs.dicom_dir" },
         "bids": { "constant": "y" },
-        "compress": { "constant": "y" }
+        "compress": { "constant": "y" },
+        "bids_anon": { "constant": "n" }
       }
     },
     "classify": {
@@ -116,7 +123,7 @@
     "validate": {
       "tool": "bids-validate",
       "inputs": {
-        "mappings": { "ref": "steps.classify.outputs.mappings" },
+        "mappings": { "ref": "context.series_list" },
         "config": { "ref": "context" }
       }
     },
@@ -124,7 +131,7 @@
       "tool": "bids-write",
       "inputs": {
         "volumes": { "ref": "steps.convert.outputs.volumes" },
-        "mappings": { "ref": "steps.classify.outputs.mappings" },
+        "mappings": { "ref": "context.series_list" },
         "config": { "ref": "context" }
       }
     }

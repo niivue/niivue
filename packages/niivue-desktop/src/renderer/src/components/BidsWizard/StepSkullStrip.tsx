@@ -16,6 +16,8 @@ interface StepSkullStripProps {
   nv: Niivue | null
   onLoadVolume?: (niftiPath: string) => Promise<void>
   onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
+  initialOriginalPaths?: Map<number, string>
+  onOriginalPathsChange?: (paths: Map<number, string>) => void
 }
 
 interface PreviewState {
@@ -31,7 +33,9 @@ export function StepSkullStrip({
   onMappingsUpdate,
   nv,
   onLoadVolume,
-  onLoadWithOverlay
+  onLoadWithOverlay,
+  initialOriginalPaths,
+  onOriginalPathsChange
 }: StepSkullStripProps): JSX.Element {
   const [engine, setEngine] = useState<Engine>('none')
   const [scope, setScope] = useState<Scope>('anat')
@@ -51,7 +55,9 @@ export function StepSkullStrip({
   const [error, setError] = useState<string | null>(null)
   const [commandLine, setCommandLine] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
-  const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(new Map())
+  const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(
+    () => initialOriginalPaths ?? new Map()
+  )
   const [useStripped, setUseStripped] = useState<Map<number, boolean>>(new Map())
 
   const nonExcluded = mappings.filter((m) => !m.excluded)
@@ -190,6 +196,7 @@ export function StepSkullStrip({
     const toProcess = mappings.filter((m) => selectedIndices.has(m.index) && !m.excluded)
     const updatedMappings = [...mappings]
     const newCompleted = new Set(completed)
+    const newOriginalPaths = new Map(originalPaths)
     let processedCount = 0
 
     try {
@@ -235,8 +242,8 @@ export function StepSkullStrip({
           })
         }
 
-        // Store original path before updating
-        setOriginalPaths((prev) => new Map(prev).set(mapping.index, mapping.niftiPath))
+        // Accumulate original path locally
+        newOriginalPaths.set(mapping.index, mapping.niftiPath)
 
         // Update mapping to point to skull-stripped file
         const idx = updatedMappings.findIndex((m) => m.index === mapping.index)
@@ -250,6 +257,10 @@ export function StepSkullStrip({
         processedCount++
         setProgress(Math.round((processedCount / toProcess.length) * 100))
       }
+
+      // Persist all original paths at once after the loop
+      setOriginalPaths(newOriginalPaths)
+      onOriginalPathsChange?.(newOriginalPaths)
 
       setStatus(`Skull stripping complete (${processedCount} series)`)
       onMappingsUpdate(updatedMappings)
