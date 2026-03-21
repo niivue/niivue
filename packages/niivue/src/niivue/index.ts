@@ -6932,6 +6932,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             createColormapTexture: this.createColormapTexture.bind(this)
         })
         if (colormapLabelTexture === null) {
+            this.gl.uniform1i(orientShader.uniforms.isColormapLabel, 0)
             this.gl.bindTexture(this.gl.TEXTURE_2D, this.colormapTexture)
             this.gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.cal_min!)
             this.gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.cal_max!)

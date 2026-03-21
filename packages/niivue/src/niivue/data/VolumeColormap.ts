@@ -78,6 +78,7 @@ export function setupColormapLabel(params: ColormapLabelParams): ColormapLabelRe
 
     gl.uniform1f(orientShader.uniforms.cal_min, overlayItem.colormapLabel.min! - 0.5)
     gl.uniform1f(orientShader.uniforms.cal_max, overlayItem.colormapLabel.max! + 0.5)
+    gl.uniform1i(orientShader.uniforms.isColormapLabel, 1)
     gl.bindTexture(gl.TEXTURE_2D, colormapLabelTexture)
 
     return {
