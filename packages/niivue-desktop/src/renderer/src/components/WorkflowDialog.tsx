@@ -969,13 +969,24 @@ function VolumePreview({ niftiPath }: { niftiPath: string }): React.ReactElement
 function CompletionScreen({
   context,
   outputs,
-  onClose
+  onClose,
+  onLoadFile,
+  onBidsInit
 }: {
   context: Record<string, unknown>
   outputs: Record<string, unknown> | null
-  onClose: (fileToLoad?: string) => void
+  onClose: () => void
+  onLoadFile?: (niftiPath: string) => Promise<void>
+  onBidsInit?: (mappings: BidsSeriesMapping[]) => void
 }): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
+
+  // Initialize the BIDS sidepanel when the completion screen mounts
+  useEffect(() => {
+    if (onBidsInit && mappings.length > 0) {
+      onBidsInit(mappings)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const bidsDir = (outputs?.bids_dir as string) || ''
   const originalPaths = (context._originalPaths as Record<number, string>) || {}
 
@@ -997,10 +1008,12 @@ function CompletionScreen({
         const exists = await electron.ipcRenderer.invoke('file-exists', file.bidsPath).catch(() => false)
         filePath = exists ? file.bidsPath : file.sourcePath
       }
-      // Close dialog first, then load — avoids IPC race with registerAllIpcHandlers
-      onClose(filePath)
+      // Load the file into a new document without closing the dialog
+      if (onLoadFile) {
+        await onLoadFile(filePath)
+      }
     },
-    [onClose]
+    [onLoadFile]
   )
 
   return (
@@ -1063,8 +1076,9 @@ function CompletionScreen({
 
 interface WorkflowDialogProps {
   open: boolean
-  onClose: (fileToLoad?: string) => void
+  onClose: () => void
   onLoadFile?: (niftiPath: string) => Promise<void>
+  onBidsInit?: (mappings: BidsSeriesMapping[]) => void
   workflowName: string
   inputs: Record<string, unknown>
 }
@@ -1073,6 +1087,7 @@ export function WorkflowDialog({
   open,
   onClose,
   onLoadFile,
+  onBidsInit,
   workflowName,
   inputs
 }: WorkflowDialogProps): React.ReactElement | null {
@@ -1254,7 +1269,7 @@ export function WorkflowDialog({
   }
 
   const closingRef = useRef(false)
-  const handleClose = (fileToLoad?: string): void => {
+  const handleClose = (): void => {
     // Guard against double-close (Dialog.onOpenChange triggers handleClose again)
     if (closingRef.current) return
     closingRef.current = true
@@ -1270,7 +1285,7 @@ export function WorkflowDialog({
     setError(null)
     setPreparing(false)
     setCompletedOutputs(null)
-    onClose(fileToLoad)
+    onClose()
     // Reset guard after a tick so the dialog can be reopened later
     setTimeout(() => { closingRef.current = false }, 0)
   }
@@ -1284,10 +1299,10 @@ export function WorkflowDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/40 fixed inset-0 z-40" />
         <Dialog.Content className={`fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-xl ${dialogWidth} max-h-[85vh] flex flex-col z-50`}>
-          <Theme style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            <div className="p-6 flex-1 min-h-0 flex flex-col gap-4 overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between flex-shrink-0">
+          <Theme style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            {/* Header — always visible */}
+            <div className="px-6 pt-6 pb-2 flex-shrink-0">
+              <div className="flex items-center justify-between">
                 <Text size="4" weight="bold">
                   {definition?.description || workflowName}
                 </Text>
@@ -1303,7 +1318,7 @@ export function WorkflowDialog({
 
               {/* Step indicator */}
               {sections.length > 1 && !preparing && (
-                <div className="flex gap-1 flex-shrink-0">
+                <div className="flex gap-1 mt-3">
                   {sections.map((s, i) => (
                     <div
                       key={i}
@@ -1315,10 +1330,13 @@ export function WorkflowDialog({
                   ))}
                 </div>
               )}
+            </div>
 
+            {/* Scrollable content area */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-2">
               {/* Preparing / loading state */}
               {preparing && (
-                <div className="flex-1 flex items-center justify-center py-12">
+                <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3" />
                     <Text size="2" color="gray">
@@ -1330,7 +1348,7 @@ export function WorkflowDialog({
 
               {/* Form content */}
               {!preparing && definition && (
-                <div className="flex-1 overflow-y-auto min-h-0">
+                <>
                   {sections[currentSection] && (
                     <FormSection
                       section={sections[currentSection]}
@@ -1341,19 +1359,19 @@ export function WorkflowDialog({
                       onLoadFile={onLoadFile}
                     />
                   )}
-                </div>
+                </>
               )}
 
               {/* Error display */}
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded p-3">
+                <div className="bg-red-50 border border-red-200 rounded p-3 mt-3">
                   <Text size="2" color="red">{error}</Text>
                 </div>
               )}
 
               {/* Status display */}
               {status === 'running' && (
-                <div className="bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2">
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 flex items-center gap-2 mt-3">
                   <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
                   <Text size="2" color="blue">Running workflow...</Text>
                 </div>
@@ -1363,12 +1381,16 @@ export function WorkflowDialog({
                   context={context}
                   outputs={completedOutputs}
                   onClose={handleClose}
+                  onLoadFile={onLoadFile}
+                  onBidsInit={onBidsInit}
                 />
               )}
+            </div>
 
-              {/* Navigation buttons */}
-              {!preparing && status !== 'completed' && (
-                <div className="flex justify-between pt-2 border-t border-gray-200 flex-shrink-0">
+            {/* Footer — always visible */}
+            {!preparing && status !== 'completed' && (
+              <div className="px-6 pb-6 pt-2 flex-shrink-0">
+                <div className="flex justify-between pt-2 border-t border-gray-200">
                   <Button
                     variant="soft"
                     color="gray"
@@ -1392,8 +1414,8 @@ export function WorkflowDialog({
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </Theme>
         </Dialog.Content>
       </Dialog.Portal>

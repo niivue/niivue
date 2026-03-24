@@ -88,6 +88,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
   const [validation, setValidation] = useState<ValidationResult | null>(null)
   const [validating, setValidating] = useState(false)
 
+  const originalPaths = (context._originalPaths as Record<number, string>) || {}
   const included = mappings.filter((m) => !m.excluded)
   const excluded = mappings.filter((m) => m.excluded)
   const includedSubjects = subjects.filter((s) => !s.excluded)
@@ -176,12 +177,16 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
         <div>
           <Text size="2" weight="medium" className="mb-1">Series</Text>
           <div className="max-h-[300px] overflow-y-auto flex flex-col gap-1.5">
-            {included.map((m) => {
+            {included.flatMap((m) => {
               const bidsPath = generateBidsPath(m)
               const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
-              return (
+              const origPath = originalPaths[m.index]
+              const rows: React.ReactElement[] = []
+
+              // Skull-stripped version (or regular if no skull stripping)
+              rows.push(
                 <div
-                  key={m.index}
+                  key={`${m.index}-main`}
                   className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
                 >
                   <SeriesPreview niftiPath={m.niftiPath} />
@@ -190,7 +195,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                     <Text size="1" color="gray" className="truncate">
                       {m.seriesDescription}
                     </Text>
-                    <Text size="1" color="blue">{m.datatype}/{m.suffix}</Text>
+                    <Text size="1" color="blue">
+                      {m.datatype}/{m.suffix}{origPath ? ' (skull stripped)' : ''}
+                    </Text>
                   </div>
                   {onLoadFile && (
                     <Button
@@ -207,6 +214,40 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                   )}
                 </div>
               )
+
+              // Original anatomy (before skull stripping)
+              if (origPath) {
+                rows.push(
+                  <div
+                    key={`${m.index}-original`}
+                    className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
+                  >
+                    <SeriesPreview niftiPath={origPath} />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <Text size="2" className="truncate">{bidsPath}{ext}</Text>
+                      <Text size="1" color="gray" className="truncate">
+                        {m.seriesDescription}
+                      </Text>
+                      <Text size="1" color="gray">(original)</Text>
+                    </div>
+                    {onLoadFile && (
+                      <Button
+                        size="1"
+                        variant="soft"
+                        className="flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void onLoadFile(origPath)
+                        }}
+                      >
+                        Open in Viewer
+                      </Button>
+                    )}
+                  </div>
+                )
+              }
+
+              return rows
             })}
           </div>
         </div>

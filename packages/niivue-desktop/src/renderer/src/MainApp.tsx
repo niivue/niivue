@@ -1395,22 +1395,8 @@ function MainApp(): JSX.Element {
       />
       <WorkflowDialog
         open={workflowOpen}
-        onClose={async (fileToLoad?: string) => {
+        onClose={() => {
           setWorkflowOpen(false)
-          if (fileToLoad) {
-            try {
-              const { nvRef, setVolumes } = await getTarget()
-              const nv = nvRef.current!
-              nv.volumes = []
-              const base64 = await electron.ipcRenderer.invoke('loadFromFile', fileToLoad)
-              const vol = await NVImage.loadFromBase64({ base64, name: fileToLoad })
-              nv.addVolume(vol)
-              setVolumes([...nv.volumes])
-              nv.drawScene()
-            } catch (err) {
-              console.error('Failed to load volume from workflow:', err)
-            }
-          }
         }}
         onLoadFile={async (niftiPath: string) => {
           try {
@@ -1423,8 +1409,13 @@ function MainApp(): JSX.Element {
             setVolumes([...nv.volumes])
             nv.drawScene()
           } catch (err) {
-            console.error('Failed to load volume from preview:', err)
+            console.error('Failed to load volume from workflow:', err)
           }
+        }}
+        onBidsInit={(mappings) => {
+          setBidsMappings(mappings)
+          setRightPanelTab('bids')
+          setRightPanelOpen(true)
         }}
         workflowName={workflowName}
         inputs={workflowInputs}
