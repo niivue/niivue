@@ -96,7 +96,7 @@ export function resolveIntendedForPaths(
       const bidsBase = generateBidsPath(target)
       const ext = target.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
       // Remove the sub-XX/ prefix to make it relative to subject root
-      const subPrefix = `sub-${target.subject}${target.session ? `/ses-${target.session}` : ''}/`
+      const subPrefix = `sub-${target.subject}/`
       const fullPath = bidsBase + ext
       const relativePath = fullPath.startsWith(subPrefix)
         ? fullPath.slice(subPrefix.length)
