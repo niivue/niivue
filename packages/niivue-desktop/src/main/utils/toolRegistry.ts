@@ -10,7 +10,13 @@ import type { BidsDatasetConfig, BidsSeriesMapping, DetectedSubject, DetectedSes
 
 const dcm2niixExecutor: ToolExecutor = async (inputs) => {
   const dicomDir = inputs.dicom_dir as string
-  const outDir = inputs.out_dir as string | undefined ?? fs.mkdtempSync(path.join(os.tmpdir(), 'wf-dcm2niix-'))
+  const rawOutDir = inputs.out_dir as string | undefined
+  const outDir = rawOutDir || fs.mkdtempSync(path.join(os.tmpdir(), 'wf-dcm2niix-'))
+
+  // Create the output directory if it doesn't exist
+  if (!fs.existsSync(outDir)) {
+    fs.mkdirSync(outDir, { recursive: true })
+  }
 
   const buildBaseArgs = (): string[] => {
     const args: string[] = []

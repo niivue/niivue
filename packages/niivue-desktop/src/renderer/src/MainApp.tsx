@@ -753,11 +753,11 @@ function MainApp(): JSX.Element {
       if (options.sourceAutomask) opts.push('-source_automask')
       if (options.final) opts.push('-final', options.final)
 
-      const cmdLine = `allineate ${movingPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
-      console.error(`[niivue] ${cmdLine}`)
-
       const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
       const outputPath = isStdout ? `/tmp/allineate-out-${Date.now()}.nii.gz` : options.output
+
+      const cmdLine = `allineate ${movingPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
+      console.error(`[niivue] ${cmdLine}`)
 
       const result = await window.electron.headlessAllineate(
         movingPath,
@@ -1347,7 +1347,23 @@ function MainApp(): JSX.Element {
         editMode={labelEditMode}
         setEditMode={setLabelEditMode}
       />
-      <DicomImportDialog />
+      <DicomImportDialog
+        onLoadVolume={async (niftiPath) => {
+          const { id, nvRef, setVolumes } = await getTarget()
+          const nv = nvRef.current!
+          nv.volumes = []
+          const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+          const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+          nv.addVolume(vol)
+          setVolumes([...nv.volumes])
+          nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
+          nv.drawScene()
+          // Set the document title from the filename
+          const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+          const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+          updateDocument(id, { title })
+        }}
+      />
       <BidsWizard
         nv={selected?.nvRef.current ?? null}
         onConversionComplete={async (mappings) => {
@@ -1400,15 +1416,19 @@ function MainApp(): JSX.Element {
         }}
         onLoadFile={async (niftiPath: string) => {
           try {
-            const current = selectedRef.current
-            if (!current) throw new Error('no document!')
-            const nv = current.nvRef.current!
+            const { id, nvRef, setVolumes } = await getTarget()
+            const nv = nvRef.current!
             nv.volumes = []
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
-            current.setVolumes([...nv.volumes])
+            setVolumes([...nv.volumes])
+            nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
             nv.drawScene()
+            // Set the document title from the filename
+            const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+            const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+            updateDocument(id, { title })
           } catch (err) {
             console.error('Failed to load volume from workflow:', err)
           }

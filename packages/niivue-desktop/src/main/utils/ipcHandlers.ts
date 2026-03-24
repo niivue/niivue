@@ -254,7 +254,7 @@ export const registerIpcHandlers = (): void => {
   ipcMain.handle(
     'dcm2niix:convert-series',
     async (
-      evt,
+      _evt,
       payload: {
         dicomDir: string
         seriesNumbers: number[]
@@ -262,6 +262,7 @@ export const registerIpcHandlers = (): void => {
       }
     ) => {
       try {
+        const allFiles: string[] = []
         for (const seriesNumber of payload.seriesNumbers) {
           const res = await convertSeriesByNumber(payload.dicomDir, seriesNumber, {
             pattern: '%f_%p_%t_%s', // MRIcroGL-style filenames
@@ -272,7 +273,7 @@ export const registerIpcHandlers = (): void => {
             ...payload.options
           })
 
-          // Send each produced NIfTI to the existing renderer 'loadVolume' handler by PATH
+          // Collect produced NIfTI paths
           const files = fs
             .readdirSync(res.outDir)
             .filter((f) => !f.startsWith('.'))
@@ -282,11 +283,10 @@ export const registerIpcHandlers = (): void => {
             })
 
           for (const f of files) {
-            const full = path.join(res.outDir, f)
-            evt.sender.send('loadVolume', full)
+            allFiles.push(path.join(res.outDir, f))
           }
         }
-        return { success: true }
+        return { success: true, files: allFiles }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         return { success: false, error: msg }

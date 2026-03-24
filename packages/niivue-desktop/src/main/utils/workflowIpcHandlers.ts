@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { getWorkflowDefinitions } from './workflowLoader.js'
 import {
   startWorkflow,
@@ -102,11 +102,49 @@ export function registerWorkflowIpcHandlers(): void {
     return { runState: state, definition }
   })
 
-  ipcMain.handle('workflow:select-directory', async (_evt, payload: { title?: string }) => {
-    const result = await dialog.showOpenDialog({
-      title: payload?.title || 'Select Directory',
+  ipcMain.handle('workflow:select-directory', async (evt, payload: { title?: string }) => {
+    const win = BrowserWindow.fromWebContents(evt.sender)
+    const title = payload?.title || 'Select Directory'
+
+    if (process.platform === 'darwin') {
+      // On macOS, showOpenDialog doesn't reliably enable "New Folder" even with
+      // createDirectory. Use showSaveDialog instead, which always shows an enabled
+      // "New Folder" button natively. The user types a folder name and we create it.
+      const options: Electron.SaveDialogOptions = {
+        title,
+        message: title,
+        buttonLabel: 'Select',
+        defaultPath: app.getPath('home'),
+        nameFieldLabel: 'Folder Name:',
+        showsTagField: false
+      }
+      const result = win
+        ? await dialog.showSaveDialog(win, options)
+        : await dialog.showSaveDialog(options)
+      if (result.canceled || !result.filePath) {
+        return null
+      }
+      const fs = await import('node:fs')
+      // If the user navigated to an existing folder and typed its name, just use it.
+      // Otherwise create the new directory.
+      if (!fs.existsSync(result.filePath)) {
+        fs.mkdirSync(result.filePath, { recursive: true })
+      } else if (!fs.statSync(result.filePath).isDirectory()) {
+        // They selected a file — use its parent directory
+        const path = await import('node:path')
+        return path.dirname(result.filePath)
+      }
+      return result.filePath
+    }
+
+    // Non-macOS: showOpenDialog works fine with createDirectory
+    const options: Electron.OpenDialogOptions = {
+      title,
       properties: ['openDirectory', 'createDirectory']
-    })
+    }
+    const result = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
     if (result.canceled || result.filePaths.length === 0) {
       return null
     }

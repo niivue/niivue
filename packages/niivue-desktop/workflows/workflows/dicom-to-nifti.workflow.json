@@ -20,6 +20,10 @@
         "description": "CRC numbers of DICOM series to convert",
         "heuristic": "list-dicom-series"
       },
+      "output_dir": {
+        "type": "directory",
+        "description": "Destination directory for converted NIfTI files"
+      },
       "compress": {
         "type": "string",
         "description": "Compression method for output NIfTI",
@@ -49,8 +53,9 @@
         "fields": ["selected_series"]
       },
       {
-        "title": "Options",
-        "fields": ["compress", "pattern", "merge"]
+        "title": "Output",
+        "description": "Choose where to save the converted files and set conversion options",
+        "fields": ["output_dir", "compress", "pattern", "merge"]
       }
     ]
   },
@@ -61,6 +66,7 @@
       "inputs": {
         "dicom_dir": { "ref": "inputs.dicom_dir" },
         "series": { "ref": "context.selected_series" },
+        "out_dir": { "ref": "context.output_dir" },
         "compress": { "ref": "context.compress" },
         "pattern": { "ref": "context.pattern" },
         "merge": { "ref": "context.merge" }
@@ -72,6 +78,10 @@
     "volumes": {
       "type": "volume[]",
       "ref": "steps.convert.outputs.volumes"
+    },
+    "outDir": {
+      "type": "string",
+      "ref": "steps.convert.outputs.outDir"
     }
   }
 }

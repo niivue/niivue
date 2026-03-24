@@ -235,13 +235,16 @@ function DirectoryPickerField({
           type="text"
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Select a directory..."
+          placeholder="Select or type a directory path..."
           className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm"
         />
         <Button variant="soft" size="1" onClick={handleBrowse}>
           Browse...
         </Button>
       </div>
+      <Text size="1" color="gray">
+        New folders will be created automatically. Leave empty to use a temporary directory.
+      </Text>
     </div>
   )
 }
@@ -979,27 +982,27 @@ function CompletionScreen({
 }): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
   const bidsDir = (outputs?.bids_dir as string) || ''
+  const outDir = (outputs?.outDir as string) || ''
   const originalPaths = (context._originalPaths as Record<number, string>) || {}
 
+  // Plain NIfTI volumes from dicom-to-nifti workflow (no BIDS mappings)
+  const plainVolumes = (outputs?.volumes as string[]) || []
+  const isBidsWorkflow = mappings.length > 0
+
   const writtenFiles = useMemo(
-    () => buildWrittenFileList(mappings, bidsDir, originalPaths),
-    [mappings, bidsDir, originalPaths]
+    () => isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : [],
+    [mappings, bidsDir, originalPaths, isBidsWorkflow]
   )
 
-  const handleOpen = useCallback(
+  const handleOpenBidsFile = useCallback(
     async (file: WrittenFile) => {
-      // Try bidsPath first (the written BIDS output), fall back to sourcePath
-      // (temp conversion dir). For "original" tagged entries, always use sourcePath
-      // since only the stripped version gets written to BIDS output.
       let filePath: string
       if (file.tag === 'original') {
         filePath = file.sourcePath
       } else {
-        // Check if the BIDS output file exists, fall back to source
         const exists = await electron.ipcRenderer.invoke('file-exists', file.bidsPath).catch(() => false)
         filePath = exists ? file.bidsPath : file.sourcePath
       }
-      // Load the file into a new document without closing the dialog
       if (onLoadFile) {
         await onLoadFile(filePath)
       }
@@ -1007,16 +1010,41 @@ function CompletionScreen({
     [onLoadFile]
   )
 
+  const handleOpenVolume = useCallback(
+    async (volumePath: string) => {
+      if (onLoadFile) {
+        await onLoadFile(volumePath)
+      }
+    },
+    [onLoadFile]
+  )
+
+  const handleLoadAll = useCallback(
+    async () => {
+      if (!onLoadFile) return
+      const files = isBidsWorkflow
+        ? writtenFiles.map((f) => f.sourcePath)
+        : plainVolumes
+      for (const f of files) {
+        await onLoadFile(f)
+      }
+    },
+    [onLoadFile, isBidsWorkflow, writtenFiles, plainVolumes]
+  )
+
+  const displayDir = bidsDir || outDir
+
   return (
     <div className="flex flex-col gap-3">
       <div className="bg-green-50 border border-green-200 rounded p-3">
-        <Text size="2" color="green" weight="bold">Workflow completed successfully.</Text>
-        {bidsDir && (
-          <Text size="1" color="gray" as="p" className="mt-1">{bidsDir}</Text>
+        <Text size="2" color="green" weight="bold">Conversion completed successfully.</Text>
+        {displayDir && (
+          <Text size="1" color="gray" as="p" className="mt-1">{displayDir}</Text>
         )}
       </div>
 
-      {writtenFiles.length > 0 && (
+      {/* BIDS workflow file list */}
+      {isBidsWorkflow && writtenFiles.length > 0 && (
         <div className="flex flex-col gap-2">
           <Text size="2" weight="medium">Open in viewer:</Text>
           <div className="max-h-[300px] overflow-y-auto flex flex-col gap-1.5">
@@ -1043,7 +1071,7 @@ function CompletionScreen({
                   className="flex-shrink-0"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleOpen(f)
+                    handleOpenBidsFile(f)
                   }}
                 >
                   Open
@@ -1054,7 +1082,50 @@ function CompletionScreen({
         </div>
       )}
 
-      <div className="flex justify-end pt-2 border-t border-gray-200">
+      {/* Plain NIfTI volume list (dicom-to-nifti workflow) */}
+      {!isBidsWorkflow && plainVolumes.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <Text size="2" weight="medium">
+            {plainVolumes.length} NIfTI file{plainVolumes.length !== 1 ? 's' : ''} created:
+          </Text>
+          <div className="max-h-[300px] overflow-y-auto flex flex-col gap-1.5">
+            {plainVolumes.map((vol, i) => {
+              const fname = vol.split(/[\\/]/).pop() ?? vol
+              return (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
+                >
+                  <VolumePreview niftiPath={vol} />
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <Text size="2" className="truncate" title={vol}>{fname}</Text>
+                  </div>
+                  {onLoadFile && (
+                    <Button
+                      size="1"
+                      variant="soft"
+                      className="flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleOpenVolume(vol)
+                      }}
+                    >
+                      Load in Viewer
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
+        {onLoadFile && (isBidsWorkflow ? writtenFiles : plainVolumes).length > 1 && (
+          <Button variant="soft" onClick={handleLoadAll}>
+            Load All in Viewer
+          </Button>
+        )}
         <Button variant="solid" onClick={() => onClose()}>
           Done
         </Button>

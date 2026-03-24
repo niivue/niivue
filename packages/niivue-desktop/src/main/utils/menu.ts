@@ -202,7 +202,7 @@ function handleWorkflowMenuClick(
       if (inputDef.type === 'dicom-folder' || inputDef.type === 'folder') {
         const result = await dialog.showOpenDialog(win, {
           title: inputDef.description || `Select ${key}`,
-          properties: ['openDirectory']
+          properties: ['openDirectory', 'createDirectory']
         })
         if (result.canceled || result.filePaths.length === 0) return null
         inputs[key] = result.filePaths[0]
@@ -553,7 +553,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           click: async (): Promise<void> => {
             const result = await dialog.showOpenDialog(win, {
               title: 'Select DICOM directory',
-              properties: ['openDirectory']
+              properties: ['openDirectory', 'createDirectory']
             })
             if (result.canceled || result.filePaths.length === 0) return
 
