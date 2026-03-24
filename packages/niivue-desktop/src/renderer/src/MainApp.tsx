@@ -125,20 +125,6 @@ function MainApp(): JSX.Element {
     return createDocument()
   }
 
-  /** Wait for a document's GL context to be ready (canvas attached) */
-  const waitForGL = (doc: NiivueInstanceContext): Promise<void> => {
-    return new Promise((resolve) => {
-      const check = (): void => {
-        if (doc.nvRef.current?.gl) {
-          resolve()
-        } else {
-          setTimeout(check, 50)
-        }
-      }
-      check()
-    })
-  }
-
   // Create the first document on mount
   useEffect((): void => {
     window.electron.setZoomFactor(1)
@@ -1413,15 +1399,13 @@ function MainApp(): JSX.Element {
           setWorkflowOpen(false)
           if (fileToLoad) {
             try {
-              const doc = await getTarget()
-              await waitForGL(doc)
-              const nv = doc.nvRef.current!
+              const { nvRef, setVolumes } = await getTarget()
+              const nv = nvRef.current!
               nv.volumes = []
               const base64 = await electron.ipcRenderer.invoke('loadFromFile', fileToLoad)
               const vol = await NVImage.loadFromBase64({ base64, name: fileToLoad })
               nv.addVolume(vol)
-              doc.setVolumes([...nv.volumes])
-              nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
+              setVolumes([...nv.volumes])
               nv.drawScene()
             } catch (err) {
               console.error('Failed to load volume from workflow:', err)
@@ -1430,15 +1414,13 @@ function MainApp(): JSX.Element {
         }}
         onLoadFile={async (niftiPath: string) => {
           try {
-            const doc = await getTarget()
-            await waitForGL(doc)
-            const nv = doc.nvRef.current!
+            const { nvRef, setVolumes } = await getTarget()
+            const nv = nvRef.current!
             nv.volumes = []
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
-            doc.setVolumes([...nv.volumes])
-            nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
+            setVolumes([...nv.volumes])
             nv.drawScene()
           } catch (err) {
             console.error('Failed to load volume from preview:', err)

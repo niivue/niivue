@@ -909,22 +909,20 @@ function buildWrittenFileList(
   return files
 }
 
-/** Small NiiVue preview that loads a single volume on demand */
+/** Small NiiVue preview that renders a static thumbnail and releases the GL context */
 function VolumePreview({ niftiPath }: { niftiPath: string }): React.ReactElement {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const nvRef = useRef<Niivue | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const load = async (): Promise<void> => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-
-      // Dispose previous
-      if (nvRef.current) {
-        nvRef.current.volumes = []
-        nvRef.current = null
-      }
+    const render = async (): Promise<void> => {
+      // Create an offscreen canvas, render, capture, then destroy
+      const canvas = document.createElement('canvas')
+      canvas.width = 120
+      canvas.height = 120
+      canvas.style.position = 'absolute'
+      canvas.style.left = '-9999px'
+      document.body.appendChild(canvas)
 
       const nv = new Niivue({
         isResizeCanvas: false,
@@ -932,10 +930,9 @@ function VolumePreview({ niftiPath }: { niftiPath: string }): React.ReactElement
         backColor: [0, 0, 0, 1],
         crosshairWidth: 0
       })
-      nvRef.current = nv
-      await nv.attachToCanvas(canvas)
 
       try {
+        await nv.attachToCanvas(canvas)
         const base64: string = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
         if (cancelled || !base64) return
         const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
@@ -943,30 +940,30 @@ function VolumePreview({ niftiPath }: { niftiPath: string }): React.ReactElement
         nv.addVolume(vol)
         nv.setSliceType(SLICE_TYPE.RENDER)
         nv.updateGLVolume()
+        nv.drawScene()
+        // Capture as static image
+        const dataUrl = canvas.toDataURL('image/png')
+        if (!cancelled) setImageUrl(dataUrl)
       } catch {
         // Preview is best-effort
+      } finally {
+        // Release GL context immediately
+        nv.volumes = []
+        const gl = nv.gl
+        if (gl) {
+          const ext = gl.getExtension('WEBGL_lose_context')
+          ext?.loseContext()
+        }
+        document.body.removeChild(canvas)
       }
     }
-    void load()
-
-    return () => {
-      cancelled = true
-      if (nvRef.current) {
-        nvRef.current.volumes = []
-        nvRef.current = null
-      }
-    }
+    void render()
+    return () => { cancelled = true }
   }, [niftiPath])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      width={120}
-      height={120}
-      className="rounded bg-black flex-shrink-0"
-      style={{ width: 60, height: 60 }}
-    />
-  )
+  return imageUrl
+    ? <img src={imageUrl} width={60} height={60} className="rounded flex-shrink-0" />
+    : <div className="rounded bg-black flex-shrink-0" style={{ width: 60, height: 60 }} />
 }
 
 function CompletionScreen({
