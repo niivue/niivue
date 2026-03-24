@@ -3,6 +3,7 @@ import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { brainchopService } from '../../services/brainchop/index.js'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
+import { generateBidsPath } from './bidsTreeUtil.js'
 import { dilateMask3D } from '../../services/brainchop/dilate3D.js'
 
 const electron = window.electron
@@ -54,6 +55,7 @@ export function StepSkullStrip({
   const [completed, setCompleted] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [commandLine, setCommandLine] = useState<string | null>(null)
+  const [generatePreviews, setGeneratePreviews] = useState(true)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(
     () => initialOriginalPaths ?? new Map()
@@ -167,15 +169,17 @@ export function StepSkullStrip({
       throw new Error(`Failed to save skull-stripped file: ${saveResult.error}`)
     }
 
-    // Set up preview with original and stripped
-    const originalClone = vol
-    setPreview({
-      seriesIndex: mapping.index,
-      original: originalClone,
-      stripped: conformed,
-      originalPath: mapping.niftiPath,
-      strippedPath: outputPath
-    })
+    // Set up preview with original and stripped (only if user opted in)
+    if (generatePreviews) {
+      const originalClone = vol
+      setPreview({
+        seriesIndex: mapping.index,
+        original: originalClone,
+        stripped: conformed,
+        originalPath: mapping.niftiPath,
+        strippedPath: outputPath
+      })
+    }
 
     return outputPath
   }
@@ -212,8 +216,8 @@ export function StepSkullStrip({
             setProgress(Math.round(overallPct))
           })
 
-          // Load preview for allineate
-          if (nv) {
+          // Load preview for allineate (only if user opted in)
+          if (nv && generatePreviews) {
             try {
               const [origB64, strippedB64] = await Promise.all([
                 electron.ipcRenderer.invoke('loadFromFile', mapping.niftiPath) as Promise<string>,
@@ -500,24 +504,36 @@ export function StepSkullStrip({
 
       {/* Run button + progress */}
       {isActive && (
-        <div className="flex items-center gap-3">
-          <Button
-            size="1"
-            onClick={() => void handleRun()}
-            disabled={running || selectedIndices.size === 0 || (engine === 'brainchop' && !nv)}
-          >
-            {running ? 'Running...' : `Run Skull Strip (${selectedIndices.size} series)`}
-          </Button>
-          {running && (
-            <div className="flex-1">
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="h-2 rounded-full bg-blue-600 transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <Button
+              size="1"
+              onClick={() => void handleRun()}
+              disabled={running || selectedIndices.size === 0 || (engine === 'brainchop' && !nv)}
+            >
+              {running ? 'Running...' : `Run Skull Strip (${selectedIndices.size} series)`}
+            </Button>
+            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={generatePreviews}
+                onChange={(e) => setGeneratePreviews(e.target.checked)}
+                disabled={running}
+                className="w-3 h-3"
+              />
+              Generate previews
+            </label>
+            {running && (
+              <div className="flex-1">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
@@ -541,16 +557,27 @@ export function StepSkullStrip({
       )}
 
       {/* Side-by-side preview */}
-      {preview && (
-        <SkullStripPreview
-          original={preview.original}
-          stripped={preview.stripped}
-          originalPath={preview.originalPath}
-          strippedPath={preview.strippedPath}
-          onLoadVolume={onLoadVolume}
-          onLoadWithOverlay={onLoadWithOverlay}
-        />
+      {completed.size > 1 && preview && (
+        <Text size="1" color="gray">
+          Click a completed row above to preview a different series.
+        </Text>
       )}
+      {preview && (() => {
+        const previewMapping = mappings.find((m) => m.index === preview.seriesIndex)
+        const bidsPath = previewMapping ? generateBidsPath(previewMapping) : `Series ${preview.seriesIndex}`
+        return (
+          <SkullStripPreview
+            key={preview.seriesIndex}
+            bidsPath={bidsPath}
+            original={preview.original}
+            stripped={preview.stripped}
+            originalPath={preview.originalPath}
+            strippedPath={preview.strippedPath}
+            onLoadVolume={onLoadVolume}
+            onLoadWithOverlay={onLoadWithOverlay}
+          />
+        )
+      })()}
 
       {/* Error */}
       {error && (
@@ -570,6 +597,7 @@ export function StepSkullStrip({
 
 /** Side-by-side Niivue preview of original vs skull-stripped volume */
 function SkullStripPreview({
+  bidsPath,
   original,
   stripped,
   originalPath,
@@ -577,6 +605,7 @@ function SkullStripPreview({
   onLoadVolume,
   onLoadWithOverlay
 }: {
+  bidsPath: string
   original: NVImage
   stripped: NVImage
   originalPath: string
@@ -630,6 +659,9 @@ function SkullStripPreview({
 
   return (
     <div className="flex flex-col gap-2">
+      <Text size="1" weight="bold" className="text-gray-700">
+        Preview: {bidsPath}
+      </Text>
       <div className="flex gap-3">
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">

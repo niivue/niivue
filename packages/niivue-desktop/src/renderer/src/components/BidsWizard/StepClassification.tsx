@@ -133,7 +133,9 @@ export function StepClassification({
                   return (
                     <div key={fm.index} className="mb-2 p-2 bg-gray-50 rounded text-xs">
                       <div className="font-medium mb-1">
-                        {fm.seriesDescription || `${fm.datatype}/${fm.suffix}`}
+                        {fm.subject && <span className="text-gray-400 font-normal">sub-{fm.subject}</span>}
+                        {fm.session && <span className="text-gray-400 font-normal">/ses-{fm.session} </span>}
+                        {' '}{fm.seriesDescription || `${fm.datatype}/${fm.suffix}`}
                         {fm.dir && <span className="text-gray-500 ml-1">(dir-{fm.dir})</span>}
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -148,9 +150,16 @@ export function StepClassification({
                                 className="w-3 h-3"
                               />
                               <span className={checked ? 'text-blue-700' : 'text-gray-600'}>
+                                {t.subject && <span className="text-gray-400">sub-{t.subject}</span>}
+                                {t.session && <span className="text-gray-400">/ses-{t.session} </span>}
                                 {t.seriesDescription || `${t.datatype}/${t.suffix}`}
                                 {t.task && ` (task-${t.task})`}
                                 {t.run > 0 && ` run-${t.run}`}
+                                {t.niftiPath && (
+                                  <span className="text-gray-400 ml-1" title={t.niftiPath}>
+                                    [{t.niftiPath.split('/').pop()}]
+                                  </span>
+                                )}
                               </span>
                             </label>
                           )

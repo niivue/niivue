@@ -553,8 +553,11 @@ export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): Fieldmap
   const result: FieldmapIntendedFor[] = []
 
   for (const fm of fmaps) {
-    // Match by same subject + session
-    const eligible = targets.filter(t => t.subject === fm.subject && t.session === fm.session)
+    // Match by same subject, preferring same session but falling back to same subject only
+    let eligible = targets.filter(t => t.subject === fm.subject && t.session === fm.session)
+    if (eligible.length === 0) {
+      eligible = targets.filter(t => t.subject === fm.subject)
+    }
     if (eligible.length === 0) continue
 
     // If fmap has PhaseEncodingDirection, try to match opposite polarity EPI targets
