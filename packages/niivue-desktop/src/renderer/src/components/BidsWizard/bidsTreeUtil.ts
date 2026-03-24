@@ -49,6 +49,27 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
 
 export { generateBidsFilename, generateBidsPath }
 
+/** Check dcm2niix BidsGuess to determine if a series is T1-weighted */
+export function isBidsGuessT1(mapping: BidsSeriesMapping): boolean {
+  const guess = mapping.sidecarData?.original?.BidsGuess
+  if (guess) {
+    let suffix: string | undefined
+    if (Array.isArray(guess) && guess.length >= 2) {
+      // Array format: ["anat", "_T1w"]
+      suffix = String(guess[1])
+    } else if (typeof guess === 'object' && !Array.isArray(guess)) {
+      // Object format: { datatype: "anat", suffix: "T1w" }
+      const obj = guess as Record<string, unknown>
+      suffix = (obj.suffix as string) || (obj.filename_suffix as string)
+    }
+    if (suffix) {
+      return /T1w/i.test(suffix)
+    }
+  }
+  // No BidsGuess available — default to non-T1 (use hellinger)
+  return false
+}
+
 export const SUFFIXES_BY_DATATYPE: Record<BidsDatatype, BidsSuffix[]> = {
   anat: ['T1w', 'T2w', 'FLAIR', 'T2star', 'inplaneT1', 'inplaneT2', 'PDw', 'angio'],
   func: ['bold', 'sbref'],

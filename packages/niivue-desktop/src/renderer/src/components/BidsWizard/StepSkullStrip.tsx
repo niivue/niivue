@@ -3,7 +3,7 @@ import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { brainchopService } from '../../services/brainchop/index.js'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
-import { generateBidsPath } from './bidsTreeUtil.js'
+import { generateBidsPath, isBidsGuessT1 } from './bidsTreeUtil.js'
 import { dilateMask3D } from '../../services/brainchop/dilate3D.js'
 
 const electron = window.electron
@@ -105,19 +105,21 @@ export function StepSkullStrip({
 
     const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
 
-    // Show the exact command being run (matches allineate examples/README.md recipe)
-    const cmd = `allineate ${templatePath} ${mapping.niftiPath} -cost ls -skullstrip ${maskPath} ${outputPath}`
+    // Use ls cost for T1 images (same-modality to MNI T1 template), hellinger for others (cross-modal)
+    const cost = isBidsGuessT1(mapping) ? 'ls' : 'hel'
+
+    // Show the exact command being run
+    const cmd = `allineate ${templatePath} ${mapping.niftiPath} -cost ${cost} -skullstrip ${maskPath} ${outputPath}`
     console.log(`[allineate] ${cmd}`)
     setCommandLine(cmd)
 
     onProgress(10)
 
     // Run allineate with -skullstrip flag
-    // Recipe from examples: allineate MNI152_T1_2mm T1_head -cost ls -skullstrip mniMask output
     // Moving = MNI152 head template, Stationary = subject's image
     const result = await electron.allineateRegister(templatePath, mapping.niftiPath, outputPath, [
       '-cost',
-      'ls',
+      cost,
       '-skullstrip',
       maskPath
     ])

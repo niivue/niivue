@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
+import { isBidsGuessT1 } from './bidsTreeUtil.js'
 
 const electron = window.electron
 
@@ -39,10 +40,8 @@ export function StepRegister({
   const [targetFilePath, setTargetFilePath] = useState('')
   const [standardTemplate, setStandardTemplate] = useState('mni152')
 
-  // Cost function
-  const [costFunction, setCostFunction] = useState('hel')
+  // Registration options
   const [useCmass, setUseCmass] = useState(false)
-  const [useAutomask, setUseAutomask] = useState(false)
 
   // Series to register
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
@@ -156,11 +155,10 @@ export function StepRegister({
         const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_reg.nii.gz')
 
         // Build allineate options
-        const opts: string[] = ['-cost', costFunction]
+        // Use dcm2niix BidsGuess to determine if T1 — use ls (same-modality) for T1, hel (cross-modal) for others
+        const cost = isBidsGuessT1(mapping) ? 'ls' : 'hel'
+        const opts: string[] = ['-cost', cost]
         if (useCmass) opts.push('-cmass')
-        if (useAutomask && (costFunction === 'lpc' || costFunction === 'lpa')) {
-          opts.push('-source_automask')
-        }
 
         const cmdLine = `allineate ${mapping.niftiPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
         console.log(`[allineate] ${cmdLine}`)
@@ -346,22 +344,11 @@ export function StepRegister({
         )}
       </div>
 
-      {/* Cost function options */}
+      {/* Cost function info + options */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Text size="1" weight="medium">Cost:</Text>
-          <select
-            className="border rounded px-2 py-1 text-xs"
-            value={costFunction}
-            onChange={(e) => setCostFunction(e.target.value)}
-            disabled={running}
-          >
-            <option value="hel">Hellinger (default, cross-modal)</option>
-            <option value="ls">Least Squares (same-modality, fast)</option>
-            <option value="lpc">Local Pearson (cross-modal)</option>
-            <option value="lpa">Abs Local Pearson (cross-modal)</option>
-          </select>
-        </div>
+        <Text size="1" color="gray">
+          Cost: Least Squares for T1w, Hellinger for others (automatic)
+        </Text>
         <label className="flex items-center gap-1 text-xs">
           <input
             type="checkbox"
@@ -371,17 +358,6 @@ export function StepRegister({
           />
           Center-of-mass init
         </label>
-        {(costFunction === 'lpc' || costFunction === 'lpa') && (
-          <label className="flex items-center gap-1 text-xs">
-            <input
-              type="checkbox"
-              checked={useAutomask}
-              onChange={(e) => setUseAutomask(e.target.checked)}
-              disabled={running}
-            />
-            Source automask
-          </label>
-        )}
       </div>
 
       {/* Series selection */}
@@ -392,6 +368,7 @@ export function StepRegister({
               <th className="py-1 px-2 text-left font-medium w-8"></th>
               <th className="py-1 px-2 text-left font-medium">Series</th>
               <th className="py-1 px-2 text-left font-medium">Type</th>
+              <th className="py-1 px-2 text-left font-medium">Cost</th>
               <th className="py-1 px-2 text-left font-medium">Status</th>
               {onLoadVolume && <th className="py-1 px-2 text-left font-medium">Viewer</th>}
             </tr>
@@ -418,6 +395,7 @@ export function StepRegister({
                 </td>
                 <td className="py-1 px-2">{m.seriesDescription || `Series ${m.index}`}</td>
                 <td className="py-1 px-2">{m.datatype}/{m.suffix}</td>
+                <td className="py-1 px-2">{isBidsGuessT1(m) ? 'ls' : 'hel'}</td>
                 <td className="py-1 px-2">
                   {completed.has(m.index) ? (
                     <span className="text-green-600">Done</span>

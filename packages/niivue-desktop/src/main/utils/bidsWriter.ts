@@ -18,8 +18,7 @@ export const INTERNAL_SIDECAR_FIELDS = new Set([
   'PatientSex',
   'PatientWeight',
   'SeriesInstanceUID',
-  'StudyInstanceUID',
-  'BidsGuess'
+  'StudyInstanceUID'
 ])
 
 export function generateBidsFilename(mapping: BidsSeriesMapping): string {
@@ -359,9 +358,11 @@ export function writeDataset(
     }
 
     // Write sidecar: use sidecarData with overrides if available, else filter from disk
+    // Strip BidsGuess — it's a dcm2niix internal field, not valid BIDS sidecar content
     let sidecar: Record<string, unknown>
     if (m.sidecarData) {
-      sidecar = { ...m.sidecarData.original, ...m.sidecarData.overrides }
+      const { BidsGuess: _bg, ...rest } = m.sidecarData.original as Record<string, unknown> & { BidsGuess?: unknown }
+      sidecar = { ...rest, ...m.sidecarData.overrides }
     } else if (fs.existsSync(m.sidecarPath)) {
       sidecar = filterSidecar(m.sidecarPath)
     } else {
@@ -405,10 +406,11 @@ export function writeDataset(
       filesCopied++
     }
 
-    // Write sidecar
+    // Write sidecar (strip BidsGuess — dcm2niix internal, not valid BIDS)
     let sidecar: Record<string, unknown>
     if (m.sidecarData) {
-      sidecar = { ...m.sidecarData.original, ...m.sidecarData.overrides }
+      const { BidsGuess: _bg, ...rest } = m.sidecarData.original as Record<string, unknown> & { BidsGuess?: unknown }
+      sidecar = { ...rest, ...m.sidecarData.overrides }
     } else if (fs.existsSync(m.sidecarPath)) {
       sidecar = filterSidecar(m.sidecarPath)
     } else {
