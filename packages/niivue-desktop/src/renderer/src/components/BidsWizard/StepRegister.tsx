@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
@@ -531,6 +531,31 @@ export function StepRegister({
 }
 
 /** Side-by-side Niivue preview of original vs registered volume */
+/** Render a volume to an offscreen canvas, capture as data URL, release GL context */
+async function renderToImage(volume: NVImage): Promise<string> {
+  const canvas = document.createElement('canvas')
+  canvas.width = 360
+  canvas.height = 160
+  canvas.style.position = 'absolute'
+  canvas.style.left = '-9999px'
+  document.body.appendChild(canvas)
+
+  const nv = new Niivue({ dragAndDropEnabled: false, isResizeCanvas: false })
+  try {
+    await nv.attachToCanvas(canvas)
+    nv.addVolume(volume)
+    nv.setSliceType(SLICE_TYPE.MULTIPLANAR)
+    nv.updateGLVolume()
+    nv.drawScene()
+    return canvas.toDataURL('image/png')
+  } finally {
+    nv.volumes = []
+    const ext = nv.gl?.getExtension('WEBGL_lose_context')
+    if (ext) ext.loseContext()
+    document.body.removeChild(canvas)
+  }
+}
+
 function RegisterPreview({
   original,
   registered,
@@ -546,38 +571,23 @@ function RegisterPreview({
   onLoadVolume?: (niftiPath: string) => Promise<void>
   onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
 }): JSX.Element {
-  const origCanvasRef = useRef<HTMLCanvasElement>(null)
-  const regCanvasRef = useRef<HTMLCanvasElement>(null)
-  const origNvRef = useRef<Niivue | null>(null)
-  const regNvRef = useRef<Niivue | null>(null)
-
-  const setupViewer = useCallback(async (
-    canvas: HTMLCanvasElement | null,
-    nvRef: React.MutableRefObject<Niivue | null>,
-    volume: NVImage
-  ): Promise<void> => {
-    if (!canvas) return
-    if (nvRef.current) {
-      try { nvRef.current.closeDrawing() } catch { /* ignore */ }
-      nvRef.current = null
-    }
-    const viewer = new Niivue({ dragAndDropEnabled: false, isResizeCanvas: false })
-    nvRef.current = viewer
-    await viewer.attachToCanvas(canvas)
-    viewer.addVolume(volume)
-    viewer.setSliceType(SLICE_TYPE.MULTIPLANAR)
-    viewer.updateGLVolume()
-    viewer.drawScene()
-  }, [])
+  const [origImage, setOrigImage] = useState<string | null>(null)
+  const [regImage, setRegImage] = useState<string | null>(null)
 
   useEffect(() => {
-    void setupViewer(origCanvasRef.current, origNvRef, original)
-    void setupViewer(regCanvasRef.current, regNvRef, registered)
-    return (): void => {
-      origNvRef.current = null
-      regNvRef.current = null
-    }
-  }, [original, registered, setupViewer])
+    let cancelled = false
+    void (async () => {
+      const [origUrl, regUrl] = await Promise.all([
+        renderToImage(original),
+        renderToImage(registered)
+      ])
+      if (!cancelled) {
+        setOrigImage(origUrl)
+        setRegImage(regUrl)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [original, registered])
 
   return (
     <div className="flex flex-col gap-2">
@@ -594,12 +604,13 @@ function RegisterPreview({
               </button>
             )}
           </div>
-          <canvas
-            ref={origCanvasRef}
-            width={360}
-            height={160}
-            className="w-full h-[160px] bg-black rounded"
-          />
+          {origImage ? (
+            <img src={origImage} className="w-full h-[160px] bg-black rounded object-contain" />
+          ) : (
+            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-gray-500 text-xs">
+              Rendering...
+            </div>
+          )}
         </div>
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
@@ -613,12 +624,13 @@ function RegisterPreview({
               </button>
             )}
           </div>
-          <canvas
-            ref={regCanvasRef}
-            width={360}
-            height={160}
-            className="w-full h-[160px] bg-black rounded"
-          />
+          {regImage ? (
+            <img src={regImage} className="w-full h-[160px] bg-black rounded object-contain" />
+          ) : (
+            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-gray-500 text-xs">
+              Rendering...
+            </div>
+          )}
         </div>
       </div>
       {onLoadWithOverlay && (

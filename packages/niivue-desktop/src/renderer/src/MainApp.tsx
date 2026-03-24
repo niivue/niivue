@@ -125,6 +125,7 @@ function MainApp(): JSX.Element {
     return createDocument()
   }
 
+
   // Create the first document on mount
   useEffect((): void => {
     window.electron.setZoomFactor(1)
@@ -1349,19 +1350,25 @@ function MainApp(): JSX.Element {
       />
       <DicomImportDialog
         onLoadVolume={async (niftiPath) => {
-          const { id, nvRef, setVolumes } = await getTarget()
-          const nv = nvRef.current!
-          nv.volumes = []
-          const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-          const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-          nv.addVolume(vol)
-          setVolumes([...nv.volumes])
-          nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
-          nv.drawScene()
-          // Set the document title from the filename
-          const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
-          const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
-          updateDocument(id, { title })
+          try {
+            const current = selectedRef.current
+            if (!current) { console.error('[onLoadVolume] no selected document'); return }
+            const nv = current.nvRef.current
+            console.log('[onLoadVolume] nv.gl:', !!nv.gl, 'path:', niftiPath)
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            console.log('[onLoadVolume] base64 length:', base64?.length ?? 0)
+            if (!base64) { console.error('[onLoadVolume] empty base64'); return }
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            console.log('[onLoadVolume] volume dims:', vol.dims, 'img length:', vol.img?.length)
+            nv.addVolume(vol)
+            current.setVolumes([...nv.volumes])
+            nv.drawScene()
+            const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+            const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+            updateDocument(current.id, { title })
+          } catch (err) {
+            console.error('[onLoadVolume] error:', err)
+          }
         }}
       />
       <BidsWizard
@@ -1372,33 +1379,43 @@ function MainApp(): JSX.Element {
           setRightPanelOpen(true)
         }}
         onLoadVolume={async (niftiPath) => {
-          const { nvRef, setVolumes } = await getTarget()
-          const nv = nvRef.current!
-          nv.volumes = []
-          const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-          const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-          nv.addVolume(vol)
-          setVolumes([...nv.volumes])
-          nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
-          nv.drawScene()
+          try {
+            const current = selectedRef.current
+            if (!current) { console.error('[onLoadVolume] no selected document'); return }
+            const nv = current.nvRef.current
+            console.log('[onLoadVolume] nv.gl:', !!nv.gl, 'path:', niftiPath)
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            console.log('[onLoadVolume] base64 length:', base64?.length ?? 0)
+            if (!base64) { console.error('[onLoadVolume] empty base64'); return }
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            console.log('[onLoadVolume] volume dims:', vol.dims, 'img length:', vol.img?.length)
+            nv.addVolume(vol)
+            current.setVolumes([...nv.volumes])
+            nv.drawScene()
+          } catch (err) {
+            console.error('[onLoadVolume] error:', err)
+          }
         }}
         onLoadWithOverlay={async (basePath, overlayPath) => {
-          const { nvRef, setVolumes } = await getTarget()
-          const nv = nvRef.current!
-          nv.volumes = []
-          const [baseB64, overlayB64] = await Promise.all([
-            electron.ipcRenderer.invoke('loadFromFile', basePath) as Promise<string>,
-            electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
-          ])
-          const baseVol = await NVImage.loadFromBase64({ base64: baseB64, name: basePath })
-          const overlayVol = await NVImage.loadFromBase64({ base64: overlayB64, name: overlayPath })
-          overlayVol.colormap = 'red'
-          overlayVol.opacity = 0.5
-          nv.addVolume(baseVol)
-          nv.addVolume(overlayVol)
-          setVolumes([...nv.volumes])
-          nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
-          nv.drawScene()
+          try {
+            const current = selectedRef.current
+            if (!current) return
+            const nv = current.nvRef.current
+            const [baseB64, overlayB64] = await Promise.all([
+              electron.ipcRenderer.invoke('loadFromFile', basePath) as Promise<string>,
+              electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
+            ])
+            const baseVol = await NVImage.loadFromBase64({ base64: baseB64, name: basePath })
+            const overlayVol = await NVImage.loadFromBase64({ base64: overlayB64, name: overlayPath })
+            overlayVol.colormap = 'red'
+            overlayVol.opacity = 0.5
+            nv.addVolume(baseVol)
+            nv.addVolume(overlayVol)
+            current.setVolumes([...nv.volumes])
+            nv.drawScene()
+          } catch (err) {
+            console.error('[onLoadWithOverlay] error:', err)
+          }
         }}
       />
       <SegmentationDialog
@@ -1416,19 +1433,18 @@ function MainApp(): JSX.Element {
         }}
         onLoadFile={async (niftiPath: string) => {
           try {
-            const { id, nvRef, setVolumes } = await getTarget()
-            const nv = nvRef.current!
-            nv.volumes = []
+            const current = selectedRef.current
+            if (!current) return
+            const nv = current.nvRef.current
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            if (!base64) return
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
-            setVolumes([...nv.volumes])
-            nv.scene.crosshairPos = nv.mm2frac([0, 0, 0])
+            current.setVolumes([...nv.volumes])
             nv.drawScene()
-            // Set the document title from the filename
             const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
             const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
-            updateDocument(id, { title })
+            updateDocument(current.id, { title })
           } catch (err) {
             console.error('Failed to load volume from workflow:', err)
           }

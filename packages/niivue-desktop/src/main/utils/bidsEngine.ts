@@ -61,6 +61,7 @@ const SERIES_RULES: { pattern: RegExp; datatype: BidsDatatype; suffix: BidsSuffi
   { pattern: /magnitude2/i, datatype: 'fmap', suffix: 'magnitude2' },
   { pattern: /fieldmap|field_map/i, datatype: 'fmap', suffix: 'fieldmap' },
   { pattern: /spin[-_]?echo.*field|se[-_]?fmap|pepolar/i, datatype: 'fmap', suffix: 'epi' },
+  { pattern: /^fmap[-_]/i, datatype: 'fmap', suffix: 'fieldmap' },
   { pattern: /asl|pcasl|pasl|casl/i, datatype: 'perf', suffix: 'asl' },
   { pattern: /m0scan|m0/i, datatype: 'perf', suffix: 'm0scan' }
 ]
@@ -69,6 +70,8 @@ function classifyByDescription(desc: string): Classification | null {
   for (const rule of SERIES_RULES) {
     if (rule.pattern.test(desc)) {
       let task = ''
+      let suffix = rule.suffix
+
       if (rule.datatype === 'func' && rule.suffix === 'bold') {
         if (/rest(?:ing)?/i.test(desc)) {
           task = 'rest'
@@ -80,9 +83,19 @@ function classifyByDescription(desc: string): Classification | null {
           }
         }
       }
+
+      // Refine generic fmap match with REPROIN cues
+      if (rule.datatype === 'fmap' && /^fmap[-_]/i.test(desc)) {
+        // fmap_dir{XX} → EPI fieldmap (phase-encoding direction present)
+        if (/fmap[-_]dir/i.test(desc)) {
+          suffix = 'epi' as BidsSuffix
+        }
+        // fmap_acq{XX} → keep as fieldmap (magnitude/fieldmap pair)
+      }
+
       return {
         datatype: rule.datatype,
-        suffix: rule.suffix,
+        suffix,
         confidence: 'medium',
         reason: `SeriesDescription matches "${rule.pattern.source}"`,
         task
@@ -232,11 +245,12 @@ interface ExtractedEntities {
   ce: string
   rec: string
   dir: string
+  acq: string
   echo: number
 }
 
 function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
-  const entities: ExtractedEntities = { ce: '', rec: '', dir: '', echo: 0 }
+  const entities: ExtractedEntities = { ce: '', rec: '', dir: '', acq: '', echo: 0 }
 
   // Phase encoding direction
   if (sidecar.PhaseEncodingDirection) {
@@ -254,6 +268,19 @@ function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
     entities.ce = 'enhanced'
   } else if (/\+C|post[-_]?contrast|gad/i.test(desc)) {
     entities.ce = 'enhanced'
+  }
+
+  // REPROIN-style entities from description
+  // Extract acq label: _acq(\w+) or -acq(\w+)
+  const acqMatch = /[-_]acq[-_]?(\w+)/i.exec(desc)
+  if (acqMatch) {
+    entities.acq = acqMatch[1]
+  }
+
+  // Extract dir label from description: _dir(\w+) or -dir(\w+)
+  const dirMatch = /[-_]dir[-_]?([A-Za-z]+)/i.exec(desc)
+  if (dirMatch && !entities.dir) {
+    entities.dir = dirMatch[1].toUpperCase()
   }
 
   return entities
@@ -367,7 +394,7 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     datatype,
     suffix,
     task,
-    acq: guessResult?.entities.acq || '',
+    acq: guessResult?.entities.acq || entities.acq || '',
     ce: entities.ce,
     rec: entities.rec,
     dir: entities.dir,

@@ -237,6 +237,13 @@ export const registerIpcHandlers = (): void => {
     return null
   })
 
+  // Relay a load request from the renderer back through the same channel the menu uses.
+  // This ensures proper timing: the loadVolume event arrives on a fresh event tick,
+  // giving React time to render any new document Viewer before addVolume is called.
+  ipcMain.on('relay-load-volume', (event, filePath: string) => {
+    event.sender.send('loadVolume', filePath)
+  })
+
   ipcMain.on('base-image-loaded', () => {
     const item = Menu.getApplicationMenu()?.getMenuItemById('addOverlay')
     if (item) item.enabled = true

@@ -595,6 +595,11 @@ function SkullStripAdapter({
     setNvInstance(nv)
 
     return () => {
+      // Release GL context to prevent exhausting WebGL context limit
+      if (nv.gl) {
+        const ext = nv.gl.getExtension('WEBGL_lose_context')
+        if (ext) ext.loseContext()
+      }
       setNvInstance(null)
       if (canvasRef.current) {
         document.body.removeChild(canvasRef.current)
@@ -912,61 +917,62 @@ function buildWrittenFileList(
   return files
 }
 
-/** Small NiiVue preview that renders a static thumbnail and releases the GL context */
-function VolumePreview({ niftiPath }: { niftiPath: string }): React.ReactElement {
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+/** Render a single NIfTI file to a static thumbnail, releasing the GL context immediately */
+async function renderPreviewImage(niftiPath: string): Promise<string | null> {
+  const canvas = document.createElement('canvas')
+  canvas.width = 120
+  canvas.height = 120
+  canvas.style.position = 'absolute'
+  canvas.style.left = '-9999px'
+  document.body.appendChild(canvas)
+
+  const nv = new Niivue({
+    isResizeCanvas: false,
+    show3Dcrosshair: false,
+    backColor: [0, 0, 0, 1],
+    crosshairWidth: 0
+  })
+
+  try {
+    await nv.attachToCanvas(canvas)
+    const base64: string = await window.electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+    if (!base64) return null
+    const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+    nv.addVolume(vol)
+    nv.setSliceType(SLICE_TYPE.RENDER)
+    nv.updateGLVolume()
+    nv.drawScene()
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  } finally {
+    nv.volumes = []
+    const ext = nv.gl?.getExtension('WEBGL_lose_context')
+    if (ext) ext.loseContext()
+    document.body.removeChild(canvas)
+  }
+}
+
+/** Hook that renders preview thumbnails sequentially (one GL context at a time) */
+function useSeriesPreviews(paths: string[]): Map<string, string> {
+  const [images, setImages] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     let cancelled = false
-    const render = async (): Promise<void> => {
-      // Create an offscreen canvas, render, capture, then destroy
-      const canvas = document.createElement('canvas')
-      canvas.width = 120
-      canvas.height = 120
-      canvas.style.position = 'absolute'
-      canvas.style.left = '-9999px'
-      document.body.appendChild(canvas)
-
-      const nv = new Niivue({
-        isResizeCanvas: false,
-        show3Dcrosshair: false,
-        backColor: [0, 0, 0, 1],
-        crosshairWidth: 0
-      })
-
-      try {
-        await nv.attachToCanvas(canvas)
-        const base64: string = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-        if (cancelled || !base64) return
-        const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-        if (cancelled) return
-        nv.addVolume(vol)
-        nv.setSliceType(SLICE_TYPE.RENDER)
-        nv.updateGLVolume()
-        nv.drawScene()
-        // Capture as static image
-        const dataUrl = canvas.toDataURL('image/png')
-        if (!cancelled) setImageUrl(dataUrl)
-      } catch {
-        // Preview is best-effort
-      } finally {
-        // Release GL context immediately
-        nv.volumes = []
-        const gl = nv.gl
-        if (gl) {
-          const ext = gl.getExtension('WEBGL_lose_context')
-          ext?.loseContext()
+    void (async () => {
+      for (const path of paths) {
+        if (cancelled) break
+        const url = await renderPreviewImage(path)
+        if (cancelled) break
+        if (url) {
+          setImages((prev) => new Map(prev).set(path, url))
         }
-        document.body.removeChild(canvas)
       }
-    }
-    void render()
+    })()
     return () => { cancelled = true }
-  }, [niftiPath])
+  }, [paths.join('\n')])
 
-  return imageUrl
-    ? <img src={imageUrl} width={60} height={60} className="rounded flex-shrink-0" />
-    : <div className="rounded bg-black flex-shrink-0" style={{ width: 60, height: 60 }} />
+  return images
 }
 
 function CompletionScreen({
@@ -988,6 +994,18 @@ function CompletionScreen({
   // Plain NIfTI volumes from dicom-to-nifti workflow (no BIDS mappings)
   const plainVolumes = (outputs?.volumes as string[]) || []
   const isBidsWorkflow = mappings.length > 0
+
+  // Collect all NIfTI paths for serialized preview rendering
+  const previewPaths = useMemo(() => {
+    if (isBidsWorkflow) {
+      const paths: string[] = []
+      const wf = buildWrittenFileList(mappings, bidsDir, originalPaths)
+      for (const f of wf) paths.push(f.sourcePath)
+      return paths
+    }
+    return plainVolumes
+  }, [mappings, bidsDir, originalPaths, isBidsWorkflow, plainVolumes])
+  const previewImages = useSeriesPreviews(previewPaths)
 
   const writtenFiles = useMemo(
     () => isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : [],
@@ -1053,7 +1071,12 @@ function CompletionScreen({
                 key={f.key}
                 className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
               >
-                <VolumePreview niftiPath={f.sourcePath} />
+                {previewImages.has(f.sourcePath)
+                  ? <img src={previewImages.get(f.sourcePath)} width={60} height={60} className="rounded flex-shrink-0" />
+                  : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
+                      <div className="animate-spin w-3 h-3 border border-gray-500 border-t-transparent rounded-full" />
+                    </div>
+                }
                 <div className="flex flex-col min-w-0 flex-1">
                   <Text size="2" className="truncate">{f.label}</Text>
                   {f.tag && (
@@ -1096,7 +1119,12 @@ function CompletionScreen({
                   key={i}
                   className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
                 >
-                  <VolumePreview niftiPath={vol} />
+                  {previewImages.has(vol)
+                    ? <img src={previewImages.get(vol)} width={60} height={60} className="rounded flex-shrink-0" />
+                    : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
+                        <div className="animate-spin w-3 h-3 border border-gray-500 border-t-transparent rounded-full" />
+                      </div>
+                  }
                   <div className="flex flex-col min-w-0 flex-1">
                     <Text size="2" className="truncate" title={vol}>{fname}</Text>
                   </div>
