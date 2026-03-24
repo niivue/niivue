@@ -19,7 +19,6 @@ import { brainchopService } from './services/brainchop/index.js'
 import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
-import type { BidsSeriesMapping } from '../../common/bidsTypes.js'
 import { WorkflowDialog } from './components/WorkflowDialog.js'
 
 const electron = window.electron
@@ -88,8 +87,9 @@ function MainApp(): JSX.Element {
   const [selectedExtractLabels, setSelectedExtractLabels] = useState<Set<number>>(new Set())
   const availableModels = brainchopService.getAvailableModels()
 
-  // BIDS panel state
-  const [bidsMappings, setBidsMappings] = useState<BidsSeriesMapping[]>([])
+  // BIDS panel state — per-document
+  const bidsMappings = selected?.bidsMappings ?? []
+  const setBidsMappings = selected?.setBidsMappings
 
   // Workflow dialog state
   const [workflowOpen, setWorkflowOpen] = useState(false)
@@ -208,7 +208,7 @@ function MainApp(): JSX.Element {
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
       onBidsStateRestored: (state) => {
-        setBidsMappings(state.mappings)
+        setBidsMappings?.(state.mappings)
         setRightPanelTab('bids')
         setRightPanelOpen(true)
       },
@@ -871,7 +871,7 @@ function MainApp(): JSX.Element {
       current.setVolumes([])
       current.setMeshes([])
       current.setSelectedImage(null)
-      setBidsMappings([])
+      current.setBidsMappings([])
 
       updateDocument(current.id, {
         volumes: [],
@@ -1351,7 +1351,7 @@ function MainApp(): JSX.Element {
       <BidsWizard
         nv={selected?.nvRef.current ?? null}
         onConversionComplete={async (mappings) => {
-          setBidsMappings(mappings)
+          setBidsMappings?.(mappings)
           setRightPanelTab('bids')
           setRightPanelOpen(true)
         }}
@@ -1400,20 +1400,21 @@ function MainApp(): JSX.Element {
         }}
         onLoadFile={async (niftiPath: string) => {
           try {
-            const { nvRef, setVolumes } = await getTarget()
-            const nv = nvRef.current!
+            const current = selectedRef.current
+            if (!current) throw new Error('no document!')
+            const nv = current.nvRef.current!
             nv.volumes = []
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
-            setVolumes([...nv.volumes])
+            current.setVolumes([...nv.volumes])
             nv.drawScene()
           } catch (err) {
             console.error('Failed to load volume from workflow:', err)
           }
         }}
         onBidsInit={(mappings) => {
-          setBidsMappings(mappings)
+          setBidsMappings?.(mappings)
           setRightPanelTab('bids')
           setRightPanelOpen(true)
         }}

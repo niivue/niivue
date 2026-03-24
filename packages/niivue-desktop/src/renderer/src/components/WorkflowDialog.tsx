@@ -970,23 +970,14 @@ function CompletionScreen({
   context,
   outputs,
   onClose,
-  onLoadFile,
-  onBidsInit
+  onLoadFile
 }: {
   context: Record<string, unknown>
   outputs: Record<string, unknown> | null
   onClose: () => void
   onLoadFile?: (niftiPath: string) => Promise<void>
-  onBidsInit?: (mappings: BidsSeriesMapping[]) => void
 }): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
-
-  // Initialize the BIDS sidepanel when the completion screen mounts
-  useEffect(() => {
-    if (onBidsInit && mappings.length > 0) {
-      onBidsInit(mappings)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const bidsDir = (outputs?.bids_dir as string) || ''
   const originalPaths = (context._originalPaths as Record<number, string>) || {}
 
@@ -1102,6 +1093,20 @@ export function WorkflowDialog({
   const [preparing, setPreparing] = useState(false)
   // Track the runId via ref to avoid stale closures in cleanup
   const runIdRef = useRef<string | null>(null)
+
+  // Wrap onLoadFile to also initialize BIDS sidepanel
+  const handleLoadFile = useCallback(
+    async (niftiPath: string) => {
+      if (onLoadFile) {
+        await onLoadFile(niftiPath)
+      }
+      const mappings = (context.series_list as BidsSeriesMapping[]) || []
+      if (onBidsInit && mappings.length > 0) {
+        onBidsInit(mappings)
+      }
+    },
+    [onLoadFile, onBidsInit, context]
+  )
 
   // Start the workflow run when dialog opens
   useEffect(() => {
@@ -1356,7 +1361,7 @@ export function WorkflowDialog({
                       context={context}
                       onFieldChange={handleFieldChange}
                       heuristicLoading={heuristicLoading}
-                      onLoadFile={onLoadFile}
+                      onLoadFile={handleLoadFile}
                     />
                   )}
                 </>
@@ -1381,8 +1386,7 @@ export function WorkflowDialog({
                   context={context}
                   outputs={completedOutputs}
                   onClose={handleClose}
-                  onLoadFile={onLoadFile}
-                  onBidsInit={onBidsInit}
+                  onLoadFile={handleLoadFile}
                 />
               )}
             </div>
