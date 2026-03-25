@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
 import { isBidsGuessT1 } from './bidsTreeUtil.js'
+import { runWithConcurrency, defaultConcurrency } from '../../utils/concurrency.js'
 
 const electron = window.electron
 
@@ -146,23 +147,20 @@ export function StepRegister({
     const updatedMappings = [...mappings]
     const newCompleted = new Set(completed)
     let processedCount = 0
+    setStatus(`Registering: 0/${toProcess.length} complete`)
 
     try {
-      for (const mapping of toProcess) {
+      const tasks = toProcess.map((mapping) => async () => {
         const seriesLabel = mapping.seriesDescription || `Series ${mapping.index}`
-        setStatus(`Registering: ${seriesLabel}`)
-
         const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_reg.nii.gz')
 
         // Build allineate options
-        // Use dcm2niix BidsGuess to determine if T1 — use ls (same-modality) for T1, hel (cross-modal) for others
         const cost = isBidsGuessT1(mapping) ? 'ls' : 'hel'
         const opts: string[] = ['-cost', cost]
         if (useCmass) opts.push('-cmass')
 
         const cmdLine = `allineate ${mapping.niftiPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
         console.log(`[allineate] ${cmdLine}`)
-        setStatus(`Registering: ${seriesLabel}\n${cmdLine}`)
 
         const result = await electron.allineateRegister(
           mapping.niftiPath,
@@ -175,6 +173,12 @@ export function StepRegister({
           throw new Error(`Registration failed for ${seriesLabel}: ${result.error}`)
         }
 
+        return { mapping, outputPath }
+      })
+
+      await runWithConcurrency(tasks, defaultConcurrency, (result, _i) => {
+        const { mapping, outputPath } = result
+
         // Store original path before updating
         setOriginalPaths((prev) => new Map(prev).set(mapping.index, mapping.niftiPath))
 
@@ -184,33 +188,36 @@ export function StepRegister({
           updatedMappings[idx] = { ...updatedMappings[idx], niftiPath: outputPath }
         }
 
-        // Load preview for the last processed series
-        if (nv) {
-          try {
-            const [origB64, regB64] = await Promise.all([
-              electron.ipcRenderer.invoke('loadFromFile', mapping.niftiPath) as Promise<string>,
-              electron.ipcRenderer.invoke('loadFromFile', outputPath) as Promise<string>
-            ])
-            const [origVol, regVol] = await Promise.all([
-              NVImage.loadFromBase64({ base64: origB64, name: mapping.niftiPath }),
-              NVImage.loadFromBase64({ base64: regB64, name: outputPath })
-            ])
-            setPreview({
-              seriesIndex: mapping.index,
-              original: origVol,
-              registered: regVol,
-              originalPath: mapping.niftiPath,
-              registeredPath: outputPath
-            })
-          } catch {
-            // Preview is non-critical
-          }
-        }
-
         newCompleted.add(mapping.index)
         setCompleted(new Set(newCompleted))
         processedCount++
         setProgress(Math.round((processedCount / toProcess.length) * 100))
+        setStatus(`Registering: ${processedCount}/${toProcess.length} complete`)
+      })
+
+      // Load preview for the last processed series
+      const lastResult = toProcess[toProcess.length - 1]
+      if (nv && lastResult) {
+        const lastOutputPath = lastResult.niftiPath.replace(/\.nii(\.gz)?$/, '_reg.nii.gz')
+        try {
+          const [origB64, regB64] = await Promise.all([
+            electron.ipcRenderer.invoke('loadFromFile', lastResult.niftiPath) as Promise<string>,
+            electron.ipcRenderer.invoke('loadFromFile', lastOutputPath) as Promise<string>
+          ])
+          const [origVol, regVol] = await Promise.all([
+            NVImage.loadFromBase64({ base64: origB64, name: lastResult.niftiPath }),
+            NVImage.loadFromBase64({ base64: regB64, name: lastOutputPath })
+          ])
+          setPreview({
+            seriesIndex: lastResult.index,
+            original: origVol,
+            registered: regVol,
+            originalPath: lastResult.niftiPath,
+            registeredPath: lastOutputPath
+          })
+        } catch {
+          // Preview is non-critical
+        }
       }
 
       setStatus(`Registration complete (${processedCount} series)`)
@@ -219,6 +226,10 @@ export function StepRegister({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setStatus('Registration failed')
+      // Still commit any successful results
+      if (processedCount > 0) {
+        onMappingsUpdate(updatedMappings)
+      }
     } finally {
       setRunning(false)
     }

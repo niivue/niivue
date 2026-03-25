@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { brainchopService } from '../../services/brainchop/index.js'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
 import { generateBidsPath, isBidsGuessT1 } from './bidsTreeUtil.js'
 import { dilateMask3D } from '../../services/brainchop/dilate3D.js'
+import { runWithConcurrency, defaultConcurrency } from '../../utils/concurrency.js'
 
 const electron = window.electron
 
@@ -206,62 +207,84 @@ export function StepSkullStrip({
     let processedCount = 0
 
     try {
-      for (const mapping of toProcess) {
-        const seriesLabel = mapping.seriesDescription || `Series ${mapping.index}`
-        setStatus(`Skull stripping (${engine}): ${seriesLabel}`)
+      if (engine === 'allineate') {
+        // Parallel execution for allineate — each job spawns an independent child process
+        setStatus(`Skull stripping (allineate): 0/${toProcess.length} complete`)
 
-        let outputPath: string
-
-        if (engine === 'allineate') {
-          outputPath = await runAllineateSkullStrip(mapping, (pct) => {
-            const overallPct = ((processedCount + pct / 100) / toProcess.length) * 100
-            setProgress(Math.round(overallPct))
+        const tasks = toProcess.map((mapping) => async () => {
+          const outputPath = await runAllineateSkullStrip(mapping, () => {
+            // Individual progress not meaningful for parallel — we track by completion count
           })
+          return { mapping, outputPath }
+        })
 
-          // Load preview for allineate (only if user opted in)
-          if (nv && generatePreviews) {
-            try {
-              const [origB64, strippedB64] = await Promise.all([
-                electron.ipcRenderer.invoke('loadFromFile', mapping.niftiPath) as Promise<string>,
-                electron.ipcRenderer.invoke('loadFromFile', outputPath) as Promise<string>
-              ])
-              const [origVol, strippedVol] = await Promise.all([
-                NVImage.loadFromBase64({ base64: origB64, name: mapping.niftiPath }),
-                NVImage.loadFromBase64({ base64: strippedB64, name: outputPath })
-              ])
-              setPreview({
-                seriesIndex: mapping.index,
-                original: origVol,
-                stripped: strippedVol,
-                originalPath: mapping.niftiPath,
-                strippedPath: outputPath
-              })
-            } catch {
-              // Preview is non-critical
-            }
+        await runWithConcurrency(tasks, defaultConcurrency, (result) => {
+          const { mapping, outputPath } = result
+
+          newOriginalPaths.set(mapping.index, mapping.niftiPath)
+
+          const idx = updatedMappings.findIndex((m) => m.index === mapping.index)
+          if (idx >= 0) {
+            updatedMappings[idx] = { ...updatedMappings[idx], niftiPath: outputPath }
           }
-        } else {
-          outputPath = await runBrainchopSkullStrip(mapping, (pct, msg) => {
+
+          newCompleted.add(mapping.index)
+          setCompleted(new Set(newCompleted))
+          setUseStripped((prev) => new Map(prev).set(mapping.index, true))
+          processedCount++
+          setProgress(Math.round((processedCount / toProcess.length) * 100))
+          setStatus(`Skull stripping (allineate): ${processedCount}/${toProcess.length} complete`)
+        })
+
+        // Load preview for the last processed series (only if user opted in)
+        const lastMapping = toProcess[toProcess.length - 1]
+        if (nv && generatePreviews && lastMapping) {
+          const lastOutputPath = lastMapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+          try {
+            const [origB64, strippedB64] = await Promise.all([
+              electron.ipcRenderer.invoke('loadFromFile', lastMapping.niftiPath) as Promise<string>,
+              electron.ipcRenderer.invoke('loadFromFile', lastOutputPath) as Promise<string>
+            ])
+            const [origVol, strippedVol] = await Promise.all([
+              NVImage.loadFromBase64({ base64: origB64, name: lastMapping.niftiPath }),
+              NVImage.loadFromBase64({ base64: strippedB64, name: lastOutputPath })
+            ])
+            setPreview({
+              seriesIndex: lastMapping.index,
+              original: origVol,
+              stripped: strippedVol,
+              originalPath: lastMapping.niftiPath,
+              strippedPath: lastOutputPath
+            })
+          } catch {
+            // Preview is non-critical
+          }
+        }
+      } else {
+        // Serial execution for brainchop — uses shared WebGL context
+        for (const mapping of toProcess) {
+          const seriesLabel = mapping.seriesDescription || `Series ${mapping.index}`
+          setStatus(`Skull stripping (brainchop): ${seriesLabel}`)
+
+          const outputPath = await runBrainchopSkullStrip(mapping, (pct, msg) => {
             const overallPct = ((processedCount + pct / 100) / toProcess.length) * 100
             setProgress(Math.round(overallPct))
             if (msg) setStatus(`${seriesLabel}: ${msg}`)
           })
+
+          newOriginalPaths.set(mapping.index, mapping.niftiPath)
+
+          const idx = updatedMappings.findIndex((m) => m.index === mapping.index)
+          if (idx >= 0) {
+            updatedMappings[idx] = { ...updatedMappings[idx], niftiPath: outputPath }
+          }
+
+          newCompleted.add(mapping.index)
+          setCompleted(new Set(newCompleted))
+          setUseStripped((prev) => new Map(prev).set(mapping.index, true))
+          processedCount++
+          setProgress(Math.round((processedCount / toProcess.length) * 100))
         }
-
-        // Accumulate original path locally
-        newOriginalPaths.set(mapping.index, mapping.niftiPath)
-
-        // Update mapping to point to skull-stripped file
-        const idx = updatedMappings.findIndex((m) => m.index === mapping.index)
-        if (idx >= 0) {
-          updatedMappings[idx] = { ...updatedMappings[idx], niftiPath: outputPath }
-        }
-
-        newCompleted.add(mapping.index)
-        setCompleted(new Set(newCompleted))
-        setUseStripped((prev) => new Map(prev).set(mapping.index, true))
-        processedCount++
-        setProgress(Math.round((processedCount / toProcess.length) * 100))
       }
 
       // Persist all original paths at once after the loop
@@ -273,6 +296,10 @@ export function StepSkullStrip({
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setStatus('Skull stripping failed')
+      // Still commit any successful results
+      if (processedCount > 0) {
+        onMappingsUpdate(updatedMappings)
+      }
     } finally {
       setRunning(false)
     }
