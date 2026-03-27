@@ -95,6 +95,17 @@ test('isRadiologicalConvention set by setRadiologicalConvention is tracked in do
   expect(nv.document.opts.isRadiologicalConvention).toBe(false)
 })
 
+test('isNearestInterpolation set by setInterpolation is tracked in document', () => {
+  const nv = new Niivue()
+  expect(nv.document.opts.isNearestInterpolation).toBe(false)
+  nv.setInterpolation(true)
+  expect(nv.document.opts.isNearestInterpolation).toBe(true)
+  expect(nv.getNearestInterpolation()).toBe(true)
+  nv.setInterpolation(false)
+  expect(nv.document.opts.isNearestInterpolation).toBe(false)
+  expect(nv.getNearestInterpolation()).toBe(false)
+})
+
 test('isCornerOrientationText set by setCornerOrientationText is tracked in document', () => {
   const nv = new Niivue()
   nv.setCornerOrientationText(false)
