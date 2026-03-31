@@ -1,12 +1,15 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import type { ToolDefinition, WorkflowDefinition } from '../../common/workflowTypes.js'
+import type { ToolDefinition, WorkflowDefinition, HeuristicDefinition } from '../../common/workflowTypes.js'
+import { registerHeuristic } from './heuristicRegistry.js'
+import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
 
 const isDev = !app.isPackaged
 
 const toolDefinitions = new Map<string, ToolDefinition>()
 const workflowDefinitions = new Map<string, WorkflowDefinition>()
+const heuristicDefinitions = new Map<string, HeuristicDefinition>()
 
 function getWorkflowsRoot(): string {
   if (isDev) {
@@ -23,6 +26,15 @@ function loadJsonFiles<T>(dir: string): T[] {
     .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as T)
 }
 
+function loadHeuristics(dir: string): void {
+  const defs = loadJsonFiles<HeuristicDefinition>(dir)
+  for (const def of defs) {
+    heuristicDefinitions.set(def.name, def)
+    // Register the declarative heuristic as a HeuristicFn so the engine can use it
+    registerHeuristic(def.name, createDeclarativeHeuristic(def))
+  }
+}
+
 export function loadAllDefinitions(): void {
   const root = getWorkflowsRoot()
 
@@ -36,8 +48,11 @@ export function loadAllDefinitions(): void {
     workflowDefinitions.set(wf.name, wf)
   }
 
+  // Load declarative heuristics (if directory exists)
+  loadHeuristics(path.join(root, 'heuristics'))
+
   console.log(
-    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows`
+    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics`
   )
 }
 
@@ -56,8 +71,10 @@ export function loadDefinitionsFromPath(rootDir: string): void {
     workflowDefinitions.set(wf.name, wf)
   }
 
+  loadHeuristics(path.join(rootDir, 'heuristics'))
+
   console.log(
-    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows from ${rootDir}`
+    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics from ${rootDir}`
   )
 }
 
@@ -67,4 +84,8 @@ export function getToolDefinitions(): Map<string, ToolDefinition> {
 
 export function getWorkflowDefinitions(): Map<string, WorkflowDefinition> {
   return workflowDefinitions
+}
+
+export function getHeuristicDefinitions(): Map<string, HeuristicDefinition> {
+  return heuristicDefinitions
 }

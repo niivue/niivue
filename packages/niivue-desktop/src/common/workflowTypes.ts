@@ -89,6 +89,31 @@ export type HeuristicFn = (
   context: Record<string, unknown>
 ) => Promise<unknown>
 
+// ── Declarative heuristic definition ──────────────────────────────
+
+export interface HeuristicOperation {
+  op: string
+  field?: string
+  operator?: string
+  value?: unknown
+  fields?: string[]
+  order?: 'asc' | 'desc'
+  contextField?: string
+  targetField?: string
+  template?: string
+  description?: string
+}
+
+export interface HeuristicDefinition {
+  name: string
+  version: string
+  description: string
+  preserveExisting?: boolean
+  source: string
+  operations: HeuristicOperation[]
+  output: string
+}
+
 // ── Workflow list item (sent to renderer) ────────────────────────────
 
 export interface WorkflowListItem {

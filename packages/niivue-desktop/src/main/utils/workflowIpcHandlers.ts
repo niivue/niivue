@@ -1,5 +1,7 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getToolDefinitions, getHeuristicDefinitions } from './workflowLoader.js'
 import {
   startWorkflow,
   getRunState,
@@ -12,8 +14,9 @@ import {
   runAutoSteps,
   cancelRun
 } from './workflowEngine.js'
-import { getHeuristicNames } from './heuristicRegistry.js'
-import type { WorkflowListItem } from '../../common/workflowTypes.js'
+import { getHeuristicNames, registerHeuristic } from './heuristicRegistry.js'
+import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
+import type { WorkflowListItem, HeuristicDefinition } from '../../common/workflowTypes.js'
 
 export function registerWorkflowIpcHandlers(): void {
   ipcMain.handle('workflow:list', async () => {
@@ -110,6 +113,37 @@ export function registerWorkflowIpcHandlers(): void {
 
   ipcMain.handle('workflow:list-heuristics', async () => {
     return getHeuristicNames()
+  })
+
+  ipcMain.handle('workflow:list-heuristic-definitions', async () => {
+    const defs = getHeuristicDefinitions()
+    return Array.from(defs.values())
+  })
+
+  ipcMain.handle('workflow:get-heuristic-definition', async (_evt, name: string) => {
+    const defs = getHeuristicDefinitions()
+    return defs.get(name) ?? null
+  })
+
+  ipcMain.handle('workflow:save-heuristic', async (_evt, definition: HeuristicDefinition) => {
+    // Write to the heuristics directory
+    const isDev = !app.isPackaged
+    const root = isDev
+      ? path.resolve(__dirname, '..', '..', 'workflows')
+      : path.join(process.resourcesPath, 'workflows')
+    const heuristicsDir = path.join(root, 'heuristics')
+    if (!fs.existsSync(heuristicsDir)) {
+      fs.mkdirSync(heuristicsDir, { recursive: true })
+    }
+    const filePath = path.join(heuristicsDir, `${definition.name}.heuristic.json`)
+    fs.writeFileSync(filePath, JSON.stringify(definition, null, 2))
+
+    // Register/update the heuristic in the runtime registry
+    const defs = getHeuristicDefinitions()
+    defs.set(definition.name, definition)
+    registerHeuristic(definition.name, createDeclarativeHeuristic(definition))
+
+    return { success: true, path: filePath }
   })
 
   ipcMain.handle('workflow:select-directory', async (evt, payload: { title?: string }) => {

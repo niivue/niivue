@@ -21,6 +21,7 @@ import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 import { WorkflowDialog } from './components/WorkflowDialog.js'
 import { WorkflowDesigner } from './components/WorkflowDesigner.js'
+import { HeuristicDesigner } from './components/HeuristicDesigner.js'
 import { OpenTargetDialog } from './components/OpenTargetDialog.js'
 
 const electron = window.electron
@@ -102,6 +103,10 @@ function MainApp(): JSX.Element {
   const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
   const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
 
+  // Heuristic designer state
+  const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
+  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<import('../../common/workflowTypes').HeuristicDefinition | null>(null)
+
   // Listen for workflow:open from menu
   useEffect(() => {
     const handleWorkflowOpen = (
@@ -130,10 +135,30 @@ function MainApp(): JSX.Element {
     }
     electron.ipcRenderer.on('workflow:edit-designer', handleEditDesigner)
 
+    const handleOpenHeuristicDesigner = (): void => {
+      setHeuristicInitialDefinition(null)
+      setHeuristicDesignerOpen(true)
+    }
+    electron.ipcRenderer.on('heuristic:open-designer', handleOpenHeuristicDesigner)
+
+    const handleEditHeuristicDesigner = (_evt: unknown, heuristicName: string): void => {
+      electron.ipcRenderer.invoke('workflow:get-heuristic-definition', heuristicName).then(
+        (definition: import('../../common/workflowTypes').HeuristicDefinition | null) => {
+          if (definition) {
+            setHeuristicInitialDefinition(definition)
+            setHeuristicDesignerOpen(true)
+          }
+        }
+      )
+    }
+    electron.ipcRenderer.on('heuristic:edit-designer', handleEditHeuristicDesigner)
+
     return (): void => {
       electron.ipcRenderer.removeAllListeners('workflow:open')
       electron.ipcRenderer.removeAllListeners('workflow:open-designer')
       electron.ipcRenderer.removeAllListeners('workflow:edit-designer')
+      electron.ipcRenderer.removeAllListeners('heuristic:open-designer')
+      electron.ipcRenderer.removeAllListeners('heuristic:edit-designer')
     }
   }, [])
   // modelsVersion is used to trigger re-render when user adds models via wizard
@@ -1511,6 +1536,17 @@ function MainApp(): JSX.Element {
           setDesignerInitialDefinition(null)
         }}
         initialDefinition={designerInitialDefinition}
+      />
+      <HeuristicDesigner
+        open={heuristicDesignerOpen}
+        onClose={() => {
+          setHeuristicDesignerOpen(false)
+          setHeuristicInitialDefinition(null)
+        }}
+        onSave={() => {
+          // Keep designer open after save so user can continue editing
+        }}
+        initialDefinition={heuristicInitialDefinition}
       />
       <OpenTargetDialog
         open={openTargetDialogOpen}

@@ -11,7 +11,7 @@ import { runNiimath } from './runNiimath.js'
 import { join } from 'path'
 import { SeriesListEventPayload } from '../../common/dcm2niixTypes.js'
 import { listDicomSeries } from './runDcm2niix.js'
-import { getWorkflowDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getHeuristicDefinitions } from './workflowLoader.js'
 import type { WorkflowDefinition } from '../../common/workflowTypes.js'
 
 export const viewState = {
@@ -249,6 +249,27 @@ function buildAllWorkflowMenuItems(
   }
   if (items.length === 0) {
     return [{ label: 'No Workflows Available', enabled: false }]
+  }
+  return items
+}
+
+function buildHeuristicMenuItems(
+  win: Electron.BrowserWindow
+): Electron.MenuItemConstructorOptions[] {
+  const heuristics = getHeuristicDefinitions()
+  if (heuristics.size === 0) return []
+
+  const items: Electron.MenuItemConstructorOptions[] = [
+    { type: 'separator' },
+    { label: 'Heuristics', enabled: false }
+  ]
+  for (const def of heuristics.values()) {
+    items.push({
+      label: `${def.name} - ${def.description}`,
+      click: () => {
+        win.webContents.send('heuristic:edit-designer', def.name)
+      }
+    })
   }
   return items
 }
@@ -922,8 +943,15 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             win.webContents.send('workflow:open-designer')
           }
         },
+        {
+          label: 'New Heuristic...',
+          click: (): void => {
+            win.webContents.send('heuristic:open-designer')
+          }
+        },
         { type: 'separator' },
-        ...buildAllWorkflowMenuItems(win)
+        ...buildAllWorkflowMenuItems(win),
+        ...buildHeuristicMenuItems(win)
       ]
     },
     // { role: 'windowMenu' }

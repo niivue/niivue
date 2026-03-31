@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://niivue.github.io/niivue/schemas/heuristic.schema.json",
+  "title": "NiiVue Heuristic Definition",
+  "description": "Declarative heuristic that auto-populates a workflow context field via a chain of operations",
+  "type": "object",
+  "required": ["name", "version", "description", "source", "operations", "output"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor support"
+    },
+    "name": {
+      "type": "string",
+      "description": "Unique heuristic identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this heuristic computes"
+    },
+    "preserveExisting": {
+      "type": "boolean",
+      "description": "If true, return the existing context value when it is non-empty (preserves user edits)",
+      "default": false
+    },
+    "source": {
+      "type": "string",
+      "description": "Dot-path to the initial data source: inputs.X or context.Y (including _stepOutputs_*)"
+    },
+    "operations": {
+      "type": "array",
+      "description": "Ordered chain of data transformations applied to the source value",
+      "items": {
+        "$ref": "#/$defs/operationDef"
+      }
+    },
+    "output": {
+      "type": "string",
+      "description": "Type of the final output value",
+      "enum": ["string", "number", "boolean", "string[]", "number[]", "json[]", "object", "any"]
+    }
+  },
+  "$defs": {
+    "operationDef": {
+      "type": "object",
+      "required": ["op"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {
+          "type": "string",
+          "description": "Operation type",
+          "enum": [
+            "filter",
+            "map",
+            "sort",
+            "group-by",
+            "flatten",
+            "unique",
+            "count",
+            "first",
+            "last",
+            "default",
+            "lookup",
+            "set-field",
+            "merge",
+            "pick-fields",
+            "template"
+          ]
+        },
+        "field": {
+          "type": "string",
+          "description": "Dot-path to the field within each item (for filter, sort, group-by, etc.)"
+        },
+        "operator": {
+          "type": "string",
+          "description": "Comparison operator (for filter)",
+          "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "contains", "not-contains", "starts-with", "ends-with", "matches", "exists", "not-exists", "in", "not-in"]
+        },
+        "value": {
+          "description": "Comparison value (for filter), default value (for default op), or template string"
+        },
+        "fields": {
+          "type": "array",
+          "description": "Field names to pick (for pick-fields) or to merge (for merge)",
+          "items": { "type": "string" }
+        },
+        "order": {
+          "type": "string",
+          "description": "Sort order (for sort)",
+          "enum": ["asc", "desc"],
+          "default": "asc"
+        },
+        "contextField": {
+          "type": "string",
+          "description": "Dot-path to a context field for lookup operations"
+        },
+        "targetField": {
+          "type": "string",
+          "description": "Field name to write to on each item (for set-field)"
+        },
+        "template": {
+          "type": "string",
+          "description": "Template string with {{field}} placeholders (for template op)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional human-readable label for this operation"
+        }
+      }
+    }
+  }
+}
