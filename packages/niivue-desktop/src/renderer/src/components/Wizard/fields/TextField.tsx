@@ -1,8 +1,9 @@
-import { TextField as RadixTextField, Text } from '@radix-ui/themes'
+import { TextField as RadixTextField, Text, Tooltip } from '@radix-ui/themes'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 
 interface TextFieldProps {
   label: string
-  description?: string
+  tooltip?: string
   value: string
   onChange: (value: string) => void
   placeholder?: string
@@ -11,7 +12,7 @@ interface TextFieldProps {
 
 export function TextField({
   label,
-  description,
+  tooltip,
   value,
   onChange,
   placeholder,
@@ -19,9 +20,16 @@ export function TextField({
 }: TextFieldProps): React.ReactElement {
   return (
     <div className="flex flex-col gap-1.5 py-1">
-      <Text as="label" size="2" weight="medium" className="text-neutral-12">
-        {label}
-      </Text>
+      <div className="flex items-center gap-1">
+        <Text as="label" size="2" weight="medium" className="text-neutral-12">
+          {label}
+        </Text>
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <InfoCircledIcon className="text-neutral-8 shrink-0" />
+          </Tooltip>
+        )}
+      </div>
       <RadixTextField.Root
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -29,11 +37,6 @@ export function TextField({
         disabled={disabled}
         size="2"
       />
-      {description && (
-        <Text size="1" className="text-neutral-9">
-          {description}
-        </Text>
-      )}
     </div>
   )
 }

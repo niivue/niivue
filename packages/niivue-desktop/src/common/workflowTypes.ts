@@ -20,6 +20,7 @@ export interface ToolDefinition {
 
 export interface ContextFieldDef {
   type: string
+  label?: string
   description: string
   heuristic?: string
   default?: unknown

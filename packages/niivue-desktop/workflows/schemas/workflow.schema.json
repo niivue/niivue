@@ -106,8 +106,13 @@
         "type": {
           "type": "string"
         },
+        "label": {
+          "type": "string",
+          "description": "Short label displayed above the field in the form"
+        },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Tooltip text shown on hover"
         },
         "heuristic": {
           "type": "string",

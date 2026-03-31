@@ -24,9 +24,11 @@ import {
   ChevronDownIcon,
   CodeIcon,
   MixerHorizontalIcon,
-  LayersIcon
+  LayersIcon,
+  EyeOpenIcon
 } from '@radix-ui/react-icons'
-import type { ToolDefinition } from '../../../common/workflowTypes'
+import type { ToolDefinition, ContextFieldDef, FormSectionDef, WorkflowDefinition } from '../../../common/workflowTypes'
+import { AutoField } from './Wizard/AutoField'
 
 const electron = window.electron
 
@@ -42,6 +44,7 @@ interface FormSectionDraft {
 
 interface ContextFieldDraft {
   type: string
+  label: string
   description: string
   heuristic: string
   default: string // JSON-encoded default value
@@ -114,25 +117,37 @@ const DEFAULT_DRAFT: WorkflowDraft = {
   workflowOutputs: {}
 }
 
-// ── Section Editor (existing) ──────────────────────────────────────
+// ── Section Editor ─────────────────────────────────────────────────
 
 function SectionEditor({
   section,
   index,
   total,
+  contextFields,
+  allSectionFields,
   onUpdate,
   onRemove,
   onMoveUp,
-  onMoveDown
+  onMoveDown,
+  onCreateField
 }: {
   section: FormSectionDraft
   index: number
   total: number
+  contextFields: Record<string, ContextFieldDraft>
+  allSectionFields: Set<string>
   onUpdate: (section: FormSectionDraft) => void
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onCreateField: (name: string, field: ContextFieldDraft) => void
 }): React.ReactElement {
+  const [creatingField, setCreatingField] = useState(false)
+  const [newFieldName, setNewFieldName] = useState('')
+  const [newFieldType, setNewFieldType] = useState('string')
+  const [newFieldLabel, setNewFieldLabel] = useState('')
+  const [newFieldDesc, setNewFieldDesc] = useState('')
+
   const updateField = <K extends keyof FormSectionDraft>(
     key: K,
     value: FormSectionDraft[K]
@@ -140,18 +155,44 @@ function SectionEditor({
     onUpdate({ ...section, [key]: value })
   }
 
-  const addField = (): void => {
-    updateField('fields', [...section.fields, ''])
+  // Available fields: context fields not already used in any section
+  const availableFields = Object.keys(contextFields).filter(
+    (name) => !allSectionFields.has(name) || section.fields.includes(name)
+  )
+
+  const addExistingField = (fieldName: string): void => {
+    if (!section.fields.includes(fieldName)) {
+      updateField('fields', [...section.fields, fieldName])
+    }
   }
 
-  const updateFieldName = (fieldIndex: number, value: string): void => {
-    const updated = [...section.fields]
-    updated[fieldIndex] = value
-    updateField('fields', updated)
+  const handleCreateField = (): void => {
+    const name = newFieldName.trim()
+    if (!name) return
+    onCreateField(name, {
+      type: newFieldType,
+      label: newFieldLabel,
+      description: newFieldDesc,
+      heuristic: '',
+      default: ''
+    })
+    updateField('fields', [...section.fields, name])
+    setCreatingField(false)
+    setNewFieldName('')
+    setNewFieldType('string')
+    setNewFieldLabel('')
+    setNewFieldDesc('')
   }
 
-  const removeField = (fieldIndex: number): void => {
+  const removeFieldFromSection = (fieldIndex: number): void => {
     updateField('fields', section.fields.filter((_, i) => i !== fieldIndex))
+  }
+
+  const moveFieldInSection = (fieldIndex: number, direction: -1 | 1): void => {
+    const target = fieldIndex + direction
+    const fields = [...section.fields]
+    ;[fields[fieldIndex], fields[target]] = [fields[target], fields[fieldIndex]]
+    updateField('fields', fields)
   }
 
   return (
@@ -223,28 +264,150 @@ function SectionEditor({
         {/* Fields */}
         <div className="flex flex-col gap-1.5">
           <Text size="1" weight="medium" className="text-neutral-11">Context fields:</Text>
-          {section.fields.map((field, fi) => (
-            <div key={fi} className="flex items-center gap-2">
-              <TextField.Root
-                value={field}
-                onChange={(e) => updateFieldName(fi, e.target.value)}
-                placeholder="field_name"
+          {section.fields.map((fieldName, fi) => {
+            const fieldDef = contextFields[fieldName]
+            const displayLabel = fieldDef?.label || fieldName
+            const tooltipText = fieldDef
+              ? (fieldDef.description || `${fieldName} (${fieldDef.type})`)
+              : `${fieldName} — not defined in context fields`
+            return (
+              <div key={fi} className="flex items-center gap-2">
+                <Tooltip content={tooltipText}>
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <Text size="1" weight="medium" className={fieldDef ? 'text-neutral-12 truncate' : 'text-red-500 truncate'}>
+                      {displayLabel}
+                    </Text>
+                    <Badge variant="soft" size="1" color={fieldDef ? 'gray' : 'red'} className="font-mono shrink-0">
+                      {fieldDef?.type || '?'}
+                    </Badge>
+                  </div>
+                </Tooltip>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <IconButton
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => moveFieldInSection(fi, -1)}
+                    disabled={fi === 0}
+                  >
+                    <ChevronUpIcon />
+                  </IconButton>
+                  <IconButton
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => moveFieldInSection(fi, 1)}
+                    disabled={fi === section.fields.length - 1}
+                  >
+                    <ChevronDownIcon />
+                  </IconButton>
+                  <IconButton
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => removeFieldFromSection(fi)}
+                  >
+                    <Cross1Icon />
+                  </IconButton>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Add existing field or create new */}
+          <div className="flex items-center gap-2 mt-1">
+            {availableFields.filter((f) => !section.fields.includes(f)).length > 0 && (
+              <Select.Root
+                value=""
+                onValueChange={(v) => { if (v) addExistingField(v) }}
                 size="1"
-                className="flex-1 font-mono"
-              />
-              <IconButton
-                variant="ghost"
-                color="gray"
-                size="1"
-                onClick={() => removeField(fi)}
               >
-                <Cross1Icon />
-              </IconButton>
-            </div>
-          ))}
-          <Button variant="ghost" size="1" onClick={addField} className="w-fit">
-            <PlusIcon /> Add field
-          </Button>
+                <Select.Trigger placeholder="Add existing field..." className="flex-1" />
+                <Select.Content>
+                  {availableFields
+                    .filter((f) => !section.fields.includes(f))
+                    .map((f) => (
+                      <Select.Item key={f} value={f}>
+                        {contextFields[f]?.label || f}
+                        <span className="text-neutral-8 ml-2 font-mono">({f}: {contextFields[f]?.type})</span>
+                      </Select.Item>
+                    ))}
+                </Select.Content>
+              </Select.Root>
+            )}
+            <Button
+              variant="ghost"
+              size="1"
+              onClick={() => setCreatingField(true)}
+              className="shrink-0"
+            >
+              <PlusIcon /> New field
+            </Button>
+          </div>
+
+          {/* Inline new field creation */}
+          {creatingField && (
+            <Card size="1" className="mt-1">
+              <div className="flex flex-col gap-2">
+                <Text size="1" weight="medium" className="text-neutral-11">Create new context field</Text>
+                <div className="flex items-center gap-2">
+                  <TextField.Root
+                    value={newFieldName}
+                    onChange={(e) => setNewFieldName(e.target.value)}
+                    placeholder="field_name"
+                    size="1"
+                    className="flex-1 font-mono"
+                    autoFocus
+                  />
+                  <Select.Root
+                    value={newFieldType}
+                    onValueChange={setNewFieldType}
+                    size="1"
+                  >
+                    <Select.Trigger className="w-32" />
+                    <Select.Content>
+                      {PARAM_TYPES.map((t) => (
+                        <Select.Item key={t} value={t}>{t}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+                <TextField.Root
+                  value={newFieldLabel}
+                  onChange={(e) => setNewFieldLabel(e.target.value)}
+                  placeholder="Label (displayed above the field)"
+                  size="1"
+                />
+                <TextField.Root
+                  value={newFieldDesc}
+                  onChange={(e) => setNewFieldDesc(e.target.value)}
+                  placeholder="Description (shown as tooltip on hover)"
+                  size="1"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="soft"
+                    size="1"
+                    onClick={handleCreateField}
+                    disabled={!newFieldName.trim() || newFieldName.trim() in contextFields}
+                  >
+                    Create & Add
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => setCreatingField(false)}
+                  >
+                    Cancel
+                  </Button>
+                  {newFieldName.trim() in contextFields && (
+                    <Text size="1" color="red">Name already exists</Text>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Button text (for last section) */}
@@ -464,7 +627,7 @@ function ContextFieldsEditor({
 
   const addField = (): void => {
     const name = `field_${fieldEntries.length + 1}`
-    onChange({ ...fields, [name]: { type: 'string', description: '', heuristic: '', default: '' } })
+    onChange({ ...fields, [name]: { type: 'string', label: '', description: '', heuristic: '', default: '' } })
   }
 
   const updateField = (oldName: string, newName: string, field: ContextFieldDraft): void => {
@@ -517,9 +680,15 @@ function ContextFieldsEditor({
               </IconButton>
             </div>
             <TextField.Root
+              value={field.label}
+              onChange={(e) => updateField(name, name, { ...field, label: e.target.value })}
+              placeholder="Label (displayed above field)"
+              size="1"
+            />
+            <TextField.Root
               value={field.description}
               onChange={(e) => updateField(name, name, { ...field, description: e.target.value })}
-              placeholder="Description"
+              placeholder="Description (shown as tooltip)"
               size="1"
             />
             <div className="flex items-center gap-2">
@@ -555,6 +724,107 @@ function ContextFieldsEditor({
           No context fields defined. Add fields to store data between steps.
         </Text>
       )}
+    </div>
+  )
+}
+
+// ── Form Preview ───────────────────────────────────────────────────
+
+function FormPreview({
+  draft,
+  previewContext,
+  onPreviewChange
+}: {
+  draft: WorkflowDraft
+  previewContext: Record<string, unknown>
+  onPreviewChange: (fieldName: string, value: unknown) => void
+}): React.ReactElement {
+  // Build ContextFieldDef map from draft
+  const fieldDefs: Record<string, ContextFieldDef> = {}
+  for (const [name, field] of Object.entries(draft.contextFields)) {
+    let parsedDefault: unknown
+    if (field.default) {
+      try { parsedDefault = JSON.parse(field.default) } catch { parsedDefault = field.default }
+    }
+    fieldDefs[name] = {
+      type: field.type,
+      label: field.label || undefined,
+      description: field.description,
+      heuristic: field.heuristic || undefined,
+      default: parsedDefault,
+      enum: undefined // Could be added to ContextFieldDraft
+    }
+  }
+
+  const sections = draft.sections.filter((s) => s.title.trim())
+
+  if (sections.length === 0) {
+    return (
+      <Text size="2" className="text-neutral-8 py-8 text-center">
+        Add form sections in the Visual tab to see a preview here.
+      </Text>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-8">
+      <Text size="2" className="text-neutral-9">
+        Live preview of how the form will appear in the wizard. Changes here are for preview only.
+      </Text>
+      {sections.map((section, si) => (
+        <div key={si} className="flex flex-col gap-4">
+          <div>
+            <Heading size="3" weight="bold" className="text-neutral-12">
+              {section.title}
+            </Heading>
+            {section.description && (
+              <Text size="2" className="text-neutral-9 mt-1" as="p">
+                {section.description}
+              </Text>
+            )}
+          </div>
+          <Separator size="4" />
+          {section.component ? (
+            <Card size="2">
+              <div className="py-4 text-center">
+                <Badge variant="soft" size="2">{section.component}</Badge>
+                <Text size="2" className="text-neutral-8 mt-2 block">
+                  Custom component — rendered at runtime
+                </Text>
+              </div>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {section.fields.map((fieldName) => {
+                const fieldDef = fieldDefs[fieldName]
+                if (!fieldDef) {
+                  return (
+                    <Card key={fieldName} size="1">
+                      <Text size="1" className="text-red-500 font-mono">
+                        Field "{fieldName}" not found in context fields
+                      </Text>
+                    </Card>
+                  )
+                }
+                return (
+                  <AutoField
+                    key={fieldName}
+                    fieldName={fieldName}
+                    fieldDef={fieldDef}
+                    value={previewContext[fieldName]}
+                    onChange={(v) => onPreviewChange(fieldName, v)}
+                  />
+                )
+              })}
+              {section.fields.length === 0 && (
+                <Text size="2" className="text-neutral-8 py-2">
+                  No fields in this section
+                </Text>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
@@ -595,6 +865,7 @@ function definitionToDraft(parsed: Record<string, unknown>): WorkflowDraft {
     for (const [name, field] of Object.entries(context.fields)) {
       newDraft.contextFields[name] = {
         type: (field.type as string) || 'string',
+        label: (field.label as string) || '',
         description: (field.description as string) || '',
         heuristic: (field.heuristic as string) || '',
         default: field.default !== undefined ? JSON.stringify(field.default) : ''
@@ -641,6 +912,7 @@ export function WorkflowDesigner({
   const [tab, setTab] = useState<string>('visual')
   const [tools, setTools] = useState<ToolDefinition[]>([])
   const [heuristics, setHeuristics] = useState<string[]>([])
+  const [previewContext, setPreviewContext] = useState<Record<string, unknown>>({})
 
   useEffect(() => {
     if (!open) {
@@ -659,6 +931,19 @@ export function WorkflowDesigner({
       setDraft(definitionToDraft(initialDefinition))
     }
   }, [open, initialDefinition])
+
+  // Sync preview context from draft defaults when entering preview tab
+  const syncPreviewDefaults = useCallback(() => {
+    const ctx: Record<string, unknown> = {}
+    for (const [name, field] of Object.entries(draft.contextFields)) {
+      if (previewContext[name] !== undefined) {
+        ctx[name] = previewContext[name]
+      } else if (field.default) {
+        try { ctx[name] = JSON.parse(field.default) } catch { ctx[name] = field.default }
+      }
+    }
+    setPreviewContext(ctx)
+  }, [draft.contextFields, previewContext])
 
   const buildSchema = useCallback((): Record<string, unknown> => {
     const schema: Record<string, unknown> = {
@@ -692,6 +977,7 @@ export function WorkflowDesigner({
           type: field.type,
           description: field.description
         }
+        if (field.label) f.label = field.label
         if (field.heuristic) f.heuristic = field.heuristic
         if (field.default) {
           try {
@@ -868,6 +1154,7 @@ export function WorkflowDesigner({
           <div className="max-w-3xl mx-auto p-6">
             <Tabs.Root value={tab} onValueChange={(t) => {
               if (t === 'json') syncToJson()
+              if (t === 'preview') syncPreviewDefaults()
               setTab(t)
             }}>
               <Tabs.List size="2">
@@ -876,6 +1163,9 @@ export function WorkflowDesigner({
                 </Tabs.Trigger>
                 <Tabs.Trigger value="steps">
                   <LayersIcon className="mr-1.5" /> Steps
+                </Tabs.Trigger>
+                <Tabs.Trigger value="preview">
+                  <EyeOpenIcon className="mr-1.5" /> Form Preview
                 </Tabs.Trigger>
                 <Tabs.Trigger value="json">
                   <CodeIcon className="mr-1.5" /> JSON
@@ -955,18 +1245,30 @@ export function WorkflowDesigner({
                         </Button>
                       </div>
 
-                      {draft.sections.map((section, i) => (
-                        <SectionEditor
-                          key={i}
-                          section={section}
-                          index={i}
-                          total={draft.sections.length}
-                          onUpdate={(s) => updateSection(i, s)}
-                          onRemove={() => removeSection(i)}
-                          onMoveUp={() => moveSection(i, -1)}
-                          onMoveDown={() => moveSection(i, 1)}
-                        />
-                      ))}
+                      {draft.sections.map((section, i) => {
+                        // Compute all fields used across all sections
+                        const allSectionFields = new Set(draft.sections.flatMap((s) => s.fields))
+                        return (
+                          <SectionEditor
+                            key={i}
+                            section={section}
+                            index={i}
+                            total={draft.sections.length}
+                            contextFields={draft.contextFields}
+                            allSectionFields={allSectionFields}
+                            onUpdate={(s) => updateSection(i, s)}
+                            onRemove={() => removeSection(i)}
+                            onMoveUp={() => moveSection(i, -1)}
+                            onMoveDown={() => moveSection(i, 1)}
+                            onCreateField={(name, field) => {
+                              setDraft((prev) => ({
+                                ...prev,
+                                contextFields: { ...prev.contextFields, [name]: field }
+                              }))
+                            }}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
                 </Tabs.Content>
@@ -1008,6 +1310,17 @@ export function WorkflowDesigner({
                       )}
                     </div>
                   </div>
+                </Tabs.Content>
+
+                {/* ── Form Preview Tab ── */}
+                <Tabs.Content value="preview">
+                  <FormPreview
+                    draft={draft}
+                    previewContext={previewContext}
+                    onPreviewChange={(fieldName, value) => {
+                      setPreviewContext((prev) => ({ ...prev, [fieldName]: value }))
+                    }}
+                  />
                 </Tabs.Content>
 
                 {/* ── JSON Tab ── */}

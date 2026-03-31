@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Text, TextArea, Tabs, Box } from '@radix-ui/themes'
+import { Text, TextArea, Tabs, Box, Tooltip } from '@radix-ui/themes'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 import { marked } from 'marked'
 
 interface MarkdownFieldProps {
   label: string
-  description?: string
+  tooltip?: string
   value: string
   onChange: (value: string) => void
   placeholder?: string
@@ -13,7 +14,7 @@ interface MarkdownFieldProps {
 
 export function MarkdownField({
   label,
-  description,
+  tooltip,
   value,
   onChange,
   placeholder,
@@ -28,9 +29,16 @@ export function MarkdownField({
 
   return (
     <div className="flex flex-col gap-1.5 py-1">
-      <Text as="label" size="2" weight="medium" className="text-neutral-12">
-        {label}
-      </Text>
+      <div className="flex items-center gap-1">
+        <Text as="label" size="2" weight="medium" className="text-neutral-12">
+          {label}
+        </Text>
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <InfoCircledIcon className="text-neutral-8 shrink-0" />
+          </Tooltip>
+        )}
+      </div>
 
       <Tabs.Root value={tab} onValueChange={setTab}>
         <Tabs.List size="1">
@@ -59,12 +67,6 @@ export function MarkdownField({
           </Tabs.Content>
         </Box>
       </Tabs.Root>
-
-      {description && (
-        <Text size="1" className="text-neutral-9">
-          {description}
-        </Text>
-      )}
     </div>
   )
 }

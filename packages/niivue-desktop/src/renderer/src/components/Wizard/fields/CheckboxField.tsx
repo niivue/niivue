@@ -1,8 +1,9 @@
-import { Checkbox, Text } from '@radix-ui/themes'
+import { Checkbox, Text, Tooltip } from '@radix-ui/themes'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 
 interface CheckboxFieldProps {
   label: string
-  description?: string
+  tooltip?: string
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
@@ -10,7 +11,7 @@ interface CheckboxFieldProps {
 
 export function CheckboxField({
   label,
-  description,
+  tooltip,
   checked,
   onChange,
   disabled
@@ -25,12 +26,12 @@ export function CheckboxField({
           size="2"
         />
         <Text size="2" className="text-neutral-12">{label}</Text>
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <InfoCircledIcon className="text-neutral-8 shrink-0" />
+          </Tooltip>
+        )}
       </label>
-      {description && (
-        <Text size="1" className="text-neutral-9 ml-7">
-          {description}
-        </Text>
-      )}
     </div>
   )
 }

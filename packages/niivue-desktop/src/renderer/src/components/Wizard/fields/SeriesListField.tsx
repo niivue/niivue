@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Checkbox, Text } from '@radix-ui/themes'
+import { Checkbox, Text, Tooltip } from '@radix-ui/themes'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 
 interface DicomSeriesItem {
   seriesNumber: number
@@ -10,7 +11,7 @@ interface DicomSeriesItem {
 
 interface SeriesListFieldProps {
   label?: string
-  description?: string
+  tooltip?: string
   value: unknown
   onChange: (value: unknown) => void
   loading?: boolean
@@ -18,7 +19,7 @@ interface SeriesListFieldProps {
 
 export function SeriesListField({
   label,
-  description,
+  tooltip,
   value,
   onChange,
   loading
@@ -79,9 +80,16 @@ export function SeriesListField({
   return (
     <div className="flex flex-col gap-2 py-1">
       {label && (
-        <Text size="2" weight="medium" className="text-neutral-12">
-          {label}
-        </Text>
+        <div className="flex items-center gap-1">
+          <Text size="2" weight="medium" className="text-neutral-12">
+            {label}
+          </Text>
+          {tooltip && (
+            <Tooltip content={tooltip}>
+              <InfoCircledIcon className="text-neutral-8 shrink-0" />
+            </Tooltip>
+          )}
+        </div>
       )}
 
       <label className="flex items-center gap-2.5 cursor-pointer">
@@ -117,12 +125,6 @@ export function SeriesListField({
           </label>
         ))}
       </div>
-
-      {description && (
-        <Text size="1" className="text-neutral-9">
-          {description}
-        </Text>
-      )}
     </div>
   )
 }

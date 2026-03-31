@@ -1,10 +1,11 @@
-import { TextField, Text, Button } from '@radix-ui/themes'
+import { TextField, Text, Button, Tooltip } from '@radix-ui/themes'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 
 const electron = window.electron
 
 interface DirectoryFieldProps {
   label: string
-  description?: string
+  tooltip?: string
   value: string
   onChange: (value: string) => void
   disabled?: boolean
@@ -12,7 +13,7 @@ interface DirectoryFieldProps {
 
 export function DirectoryField({
   label,
-  description,
+  tooltip,
   value,
   onChange,
   disabled
@@ -26,9 +27,16 @@ export function DirectoryField({
 
   return (
     <div className="flex flex-col gap-1.5 py-1">
-      <Text as="label" size="2" weight="medium" className="text-neutral-12">
-        {label}
-      </Text>
+      <div className="flex items-center gap-1">
+        <Text as="label" size="2" weight="medium" className="text-neutral-12">
+          {label}
+        </Text>
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <InfoCircledIcon className="text-neutral-8 shrink-0" />
+          </Tooltip>
+        )}
+      </div>
       <div className="flex gap-2">
         <div className="flex-1">
           <TextField.Root
@@ -43,11 +51,6 @@ export function DirectoryField({
           Browse...
         </Button>
       </div>
-      {description && (
-        <Text size="1" className="text-neutral-9">
-          {description}
-        </Text>
-      )}
     </div>
   )
 }

@@ -1,8 +1,9 @@
-import { TextField, Text, Slider } from '@radix-ui/themes'
+import { TextField, Text, Slider, Tooltip } from '@radix-ui/themes'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 
 interface NumberFieldProps {
   label: string
-  description?: string
+  tooltip?: string
   value: number
   onChange: (value: number) => void
   min?: number
@@ -12,7 +13,7 @@ interface NumberFieldProps {
 
 export function NumberField({
   label,
-  description,
+  tooltip,
   value,
   onChange,
   min,
@@ -23,9 +24,16 @@ export function NumberField({
 
   return (
     <div className="flex flex-col gap-1.5 py-1">
-      <Text as="label" size="2" weight="medium" className="text-neutral-12">
-        {label}{hasRange ? `: ${value}` : ''}
-      </Text>
+      <div className="flex items-center gap-1">
+        <Text as="label" size="2" weight="medium" className="text-neutral-12">
+          {label}{hasRange ? `: ${value}` : ''}
+        </Text>
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <InfoCircledIcon className="text-neutral-8 shrink-0" />
+          </Tooltip>
+        )}
+      </div>
       {hasRange ? (
         <Slider
           value={[value]}
@@ -44,11 +52,6 @@ export function NumberField({
           disabled={disabled}
           size="2"
         />
-      )}
-      {description && (
-        <Text size="1" className="text-neutral-9">
-          {description}
-        </Text>
       )}
     </div>
   )

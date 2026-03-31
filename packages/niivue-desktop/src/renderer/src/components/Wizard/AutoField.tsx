@@ -24,13 +24,15 @@ export function AutoField({
   loading,
   datasetName
 }: AutoFieldProps): React.ReactElement {
-  const label = fieldDef.description || fieldName
+  const label = fieldDef.label || fieldDef.description || fieldName
+  const tooltip = fieldDef.label ? fieldDef.description : undefined
 
   // Series list (from heuristic)
   if (fieldDef.heuristic === 'list-dicom-series') {
     return (
       <SeriesListField
         label={label}
+        tooltip={tooltip}
         value={value}
         onChange={onChange}
         loading={loading}
@@ -43,7 +45,7 @@ export function AutoField({
     return (
       <MarkdownField
         label="README.md"
-        description="Supports Markdown formatting. A detailed README avoids validator warnings."
+        tooltip="Supports Markdown formatting. A detailed README avoids validator warnings."
         value={String(value ?? '')}
         onChange={(v) => onChange(v)}
         placeholder={`# ${datasetName || 'My Dataset'}\n\n## Description\n\n## Funding\n\n## Ethics Approvals\n\n## References and Links\n\n## License\n`}
@@ -56,7 +58,7 @@ export function AutoField({
     return (
       <DirectoryField
         label={label}
-        description="New folders will be created automatically. Leave empty to use a temporary directory."
+        tooltip={tooltip || 'New folders will be created automatically. Leave empty to use a temporary directory.'}
         value={String(value ?? '')}
         onChange={(v) => onChange(v)}
       />
@@ -68,6 +70,7 @@ export function AutoField({
     return (
       <CheckboxField
         label={label}
+        tooltip={tooltip}
         checked={!!value}
         onChange={(v) => onChange(v)}
       />
@@ -79,6 +82,7 @@ export function AutoField({
     return (
       <SelectField
         label={label}
+        tooltip={tooltip}
         value={String(value ?? '')}
         onChange={(v) => onChange(v)}
         options={fieldDef.enum.map((opt) => ({
@@ -94,6 +98,7 @@ export function AutoField({
     return (
       <NumberField
         label={label}
+        tooltip={tooltip}
         value={Number(value ?? fieldDef.min ?? 0)}
         onChange={(v) => onChange(v)}
         min={fieldDef.min}
@@ -106,6 +111,7 @@ export function AutoField({
   return (
     <TextField
       label={label}
+      tooltip={tooltip}
       value={String(value ?? '')}
       onChange={(v) => onChange(v)}
     />
