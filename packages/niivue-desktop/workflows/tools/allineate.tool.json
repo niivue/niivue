@@ -2,15 +2,21 @@
   "$schema": "../schemas/tool.schema.json",
   "name": "allineate",
   "version": "1.0.0",
-  "description": "Skull strip a NIfTI volume using allineate registration with MNI152 template",
+  "description": "Skull strip NIfTI volumes using allineate registration with MNI152 template",
   "inputs": {
     "nifti_path": {
       "type": "string",
-      "description": "Path to the input NIfTI volume"
+      "description": "Path to a single input NIfTI volume",
+      "optional": true
     },
-    "output_path": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Array of input NIfTI volume paths",
+      "optional": true
+    },
+    "output_dir": {
       "type": "string",
-      "description": "Path for the skull-stripped output NIfTI",
+      "description": "Output directory for skull-stripped files",
       "optional": true
     },
     "cost": {
@@ -18,17 +24,59 @@
       "description": "Cost function for registration",
       "optional": true,
       "default": "ls",
-      "enum": ["ls", "mi", "nmi", "cr", "ncc"]
+      "enum": ["ls", "hel", "mi", "nmi", "cr", "ncc"]
     }
   },
   "outputs": {
-    "output_path": {
-      "type": "string",
-      "description": "Path to the skull-stripped NIfTI volume"
+    "output_paths": {
+      "type": "volume[]",
+      "description": "Paths to skull-stripped NIfTI volumes"
     },
-    "command": {
+    "output_dir": {
       "type": "string",
-      "description": "The allineate command that was executed"
+      "description": "Directory containing output files"
+    }
+  },
+  "exec": {
+    "binary": {
+      "name": "allineate",
+      "paths": {
+        "darwin": "native-binaries/darwin/allineate",
+        "linux": "native-binaries/linux/allineate",
+        "win32": "native-binaries/win32/allineate.exe"
+      },
+      "packagedPaths": {
+        "darwin": "native/allineate-macos",
+        "linux": "native/allineate-linux",
+        "win32": "native/allineate.exe"
+      }
+    },
+    "outputDir": {
+      "input": "output_dir",
+      "tempPrefix": "wf-allineate-"
+    },
+    "resources": {
+      "templatePath": { "standardImage": "mni152_head" },
+      "maskPath": { "standardImage": "mniMask" }
+    },
+    "forEach": "nifti_paths",
+    "iterationVar": "nifti_path",
+    "parallel": true,
+    "outputFile": {
+      "template": "{{inputBasename}}_brain.nii.gz",
+      "stripExtensions": [".nii.gz", ".nii"]
+    },
+    "args": [
+      { "value": "{{resources.templatePath}}" },
+      { "input": "nifti_path" },
+      { "flag": "-cost", "input": "cost", "default": "ls" },
+      { "flag": "-skullstrip", "value": "{{resources.maskPath}}" },
+      { "value": "{{outputFile}}" }
+    ],
+    "exitCodes": [0],
+    "outputs": {
+      "output_paths": { "collect": "outputFiles" },
+      "output_dir": { "value": "{{outputDir}}" }
     }
   }
 }

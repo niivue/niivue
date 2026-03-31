@@ -66,6 +66,60 @@
     "sidecars": {
       "type": "json[]",
       "description": "BIDS sidecar JSON files (when bids=y)"
+    },
+    "stdout": {
+      "type": "string",
+      "description": "Combined stdout from dcm2niix"
+    },
+    "stderr": {
+      "type": "string",
+      "description": "Combined stderr from dcm2niix"
+    },
+    "outDir": {
+      "type": "string",
+      "description": "Output directory"
     }
+  },
+  "exec": {
+    "binary": {
+      "name": "dcm2niix",
+      "paths": {
+        "darwin": "native-binaries/darwin/dcm2niix",
+        "linux": "native-binaries/linux/dcm2niix",
+        "win32": "native-binaries/win32/dcm2niix.exe"
+      },
+      "packagedPaths": {
+        "darwin": "native-binaries/dcm2niix/darwin/dcm2niix",
+        "linux": "native-binaries/dcm2niix/linux/dcm2niix",
+        "win32": "native-binaries/dcm2niix/win32/dcm2niix.exe"
+      }
+    },
+    "outputDir": {
+      "input": "out_dir",
+      "tempPrefix": "wf-dcm2niix-"
+    },
+    "forEach": "series",
+    "iterationVar": "_series_item",
+    "parallel": false,
+    "args": [
+      { "flag": "-f", "input": "pattern" },
+      { "flag": "-z", "input": "compress" },
+      { "flag": "-b", "input": "bids" },
+      { "flag": "-ba", "input": "bids_anon" },
+      { "flag": "-m", "input": "merge" },
+      { "flag": "-v", "input": "verbose" },
+      { "flag": "-n", "input": "_series_item" },
+      { "flag": "-o", "value": "{{outputDir}}" },
+      { "input": "dicom_dir" }
+    ],
+    "exitCodes": [0, 1],
+    "outputs": {
+      "volumes": { "collect": "glob", "pattern": "*.nii*" },
+      "sidecars": { "collect": "glob", "pattern": "*.json" },
+      "stdout": { "fromStdout": true },
+      "stderr": { "fromStderr": true },
+      "outDir": { "value": "{{outputDir}}" }
+    },
+    "postProcess": "dcm2niix-extract-subjects"
   }
 }

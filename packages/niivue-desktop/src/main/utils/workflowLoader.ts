@@ -4,6 +4,8 @@ import { app } from 'electron'
 import type { ToolDefinition, WorkflowDefinition, HeuristicDefinition } from '../../common/workflowTypes.js'
 import { registerHeuristic } from './heuristicRegistry.js'
 import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
+import { registerToolExecutor } from './toolRegistry.js'
+import { createDeclarativeToolExecutor } from './declarativeToolExecutor.js'
 
 const isDev = !app.isPackaged
 
@@ -35,6 +37,17 @@ function loadHeuristics(dir: string): void {
   }
 }
 
+function loadDeclarativeTools(tools: ToolDefinition[]): number {
+  let count = 0
+  for (const tool of tools) {
+    if (tool.exec) {
+      registerToolExecutor(tool.name, createDeclarativeToolExecutor(tool))
+      count++
+    }
+  }
+  return count
+}
+
 export function loadAllDefinitions(): void {
   const root = getWorkflowsRoot()
 
@@ -42,6 +55,9 @@ export function loadAllDefinitions(): void {
   for (const tool of tools) {
     toolDefinitions.set(tool.name, tool)
   }
+
+  // Register declarative tool executors (tools with an `exec` section)
+  const declToolCount = loadDeclarativeTools(tools)
 
   const workflows = loadJsonFiles<WorkflowDefinition>(path.join(root, 'workflows'))
   for (const wf of workflows) {
@@ -52,7 +68,7 @@ export function loadAllDefinitions(): void {
   loadHeuristics(path.join(root, 'heuristics'))
 
   console.log(
-    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics`
+    `[workflow] Loaded ${toolDefinitions.size} tools (${declToolCount} declarative), ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics`
   )
 }
 
@@ -66,6 +82,8 @@ export function loadDefinitionsFromPath(rootDir: string): void {
     toolDefinitions.set(tool.name, tool)
   }
 
+  const declToolCount = loadDeclarativeTools(tools)
+
   const workflows = loadJsonFiles<WorkflowDefinition>(path.join(rootDir, 'workflows'))
   for (const wf of workflows) {
     workflowDefinitions.set(wf.name, wf)
@@ -74,7 +92,7 @@ export function loadDefinitionsFromPath(rootDir: string): void {
   loadHeuristics(path.join(rootDir, 'heuristics'))
 
   console.log(
-    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics from ${rootDir}`
+    `[workflow] Loaded ${toolDefinitions.size} tools (${declToolCount} declarative), ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics from ${rootDir}`
   )
 }
 

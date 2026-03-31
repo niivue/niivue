@@ -118,6 +118,14 @@ const api = {
   > => {
     return ipcRenderer.invoke('headless:dcm2niix-convert', options)
   },
+  // Workflow headless execution
+  headlessWorkflow: (
+    workflowName: string,
+    inputs: Record<string, unknown>,
+    contextOverrides?: Record<string, unknown>
+  ): Promise<{ outputs: Record<string, unknown>; context: Record<string, unknown> }> => {
+    return ipcRenderer.invoke('headless:workflow', workflowName, inputs, contextOverrides)
+  },
   // BIDS wizard methods
   bidsConvertAndClassify: (
     payload: BidsConvertAndClassifyPayload

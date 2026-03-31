@@ -1,9 +1,9 @@
 import path from 'path'
 import { app } from 'electron'
-import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import type { DicomSeries, ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
+import { spawnBinary } from './spawnBinary.js'
 
 const isDev = !app.isPackaged
 
@@ -26,25 +26,8 @@ export function getDcm2niixPath(): string {
 export function spawnDcm2niix(
   args: string[]
 ): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve, reject) => {
-    const bin = getDcm2niixPath()
-    if (!fs.existsSync(bin)) {
-      return reject(
-        new Error(`dcm2niix not found at ${bin}. Did you run "npm run ensure-dcm2niix"?`)
-      )
-    }
-    const child = spawn(bin, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
-    let out = ''
-    let err = ''
-    child.stdout.on('data', (d) => {
-      out += String(d)
-    })
-    child.stderr.on('data', (d) => {
-      err += String(d)
-    })
-    child.on('error', reject)
-    child.on('close', (code) => resolve({ stdout: out, stderr: err, code: code ?? -1 }))
-  })
+  const bin = getDcm2niixPath()
+  return spawnBinary(bin, args)
 }
 
 export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> {

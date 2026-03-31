@@ -16,6 +16,62 @@ export interface ToolDefinition {
   description: string
   inputs: Record<string, ToolParameterDef>
   outputs: Record<string, ToolParameterDef>
+  exec?: ToolExecDef
+}
+
+// ── Declarative tool executor definition ─────────────────────────────
+
+export interface BinaryDef {
+  /** Human-readable name for error messages */
+  name: string
+  /** Dev-mode paths relative to project root, keyed by process.platform */
+  paths: Record<string, string>
+  /** Packaged-app paths relative to process.resourcesPath */
+  packagedPaths: Record<string, string>
+}
+
+export interface OutputDirDef {
+  /** Input name that may supply the output directory */
+  input?: string
+  /** If the input is absent, create a temp dir with this prefix */
+  tempPrefix?: string
+}
+
+export interface OutputFileDef {
+  /** Template for the output filename, e.g. "{{inputBasename}}_brain.nii.gz" */
+  template: string
+  /** Extensions to strip from the input basename before applying the template */
+  stripExtensions?: string[]
+}
+
+export type ArgDef =
+  | { input: string; flag?: string; default?: unknown }
+  | { value: string; flag?: string }
+
+export type OutputCollectDef =
+  | { collect: 'outputFiles' }
+  | { collect: 'glob'; pattern: string }
+  | { value: string }
+  | { fromStdout: true }
+  | { fromStderr: true }
+
+export interface ToolExecDef {
+  binary: BinaryDef
+  outputDir?: OutputDirDef
+  resources?: Record<string, { standardImage: string }>
+  /** Input name containing an array to iterate over */
+  forEach?: string
+  /** Single-item input name bound on each iteration */
+  iterationVar?: string
+  /** Run iterations in parallel (default false) */
+  parallel?: boolean
+  outputFile?: OutputFileDef
+  args: ArgDef[]
+  /** Acceptable exit codes (default [0]) */
+  exitCodes?: number[]
+  outputs: Record<string, OutputCollectDef>
+  /** Name of a registered post-processor function */
+  postProcess?: string
 }
 
 export interface ContextFieldDef {

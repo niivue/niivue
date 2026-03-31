@@ -69,6 +69,12 @@ declare global {
       }) => Promise<
         { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]
       >
+      // Workflow headless execution
+      headlessWorkflow: (
+        workflowName: string,
+        inputs: Record<string, unknown>,
+        contextOverrides?: Record<string, unknown>
+      ) => Promise<{ outputs: Record<string, unknown>; context: Record<string, unknown> }>
       // BIDS wizard
       bidsConvertAndClassify: (
         payload: BidsConvertAndClassifyPayload

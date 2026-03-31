@@ -894,6 +894,30 @@ function MainApp(): JSX.Element {
           case 'allineate':
             await runAllineateCommand(options)
             break
+          case 'workflow': {
+            const workflowName = options.subcommandMode
+            if (!workflowName) throw new Error('workflow subcommand requires a workflow name')
+            const wfInputs = options.workflowInputs ? JSON.parse(options.workflowInputs) as Record<string, unknown> : {}
+            let wfContext: Record<string, unknown> | undefined
+            if (options.workflowContext) {
+              // Could be inline JSON or a file path — try parsing as JSON first
+              try {
+                wfContext = JSON.parse(options.workflowContext) as Record<string, unknown>
+              } catch {
+                // Assume it's a file path — load it via the main process
+                const resolved = await window.electron.headlessResolveInput(options.workflowContext)
+                wfContext = JSON.parse(atob(resolved.base64)) as Record<string, unknown>
+              }
+            }
+            // --output flag overrides output_dir in context
+            if (options.output) {
+              wfContext = wfContext || {}
+              wfContext.output_dir = options.output
+            }
+            const result = await window.electron.headlessWorkflow(workflowName, wfInputs, wfContext)
+            console.error(`[workflow] outputs: ${JSON.stringify(result.outputs)}`)
+            break
+          }
           default:
             throw new Error(`Unknown subcommand: ${options.subcommand}`)
         }

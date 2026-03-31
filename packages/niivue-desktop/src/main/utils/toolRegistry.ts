@@ -1,79 +1,29 @@
 import fs from 'node:fs'
-import path from 'node:path'
-import os from 'node:os'
 import type { ToolExecutor } from '../../common/workflowTypes.js'
-import { spawnDcm2niix } from './runDcm2niix.js'
 import { classifyAll, extractDemographics } from './bidsEngine.js'
 import { validateProposedDataset } from './bidsValidator.js'
 import { writeDataset } from './bidsWriter.js'
 import type { BidsDatasetConfig, BidsSeriesMapping, DetectedSubject, DetectedSession, ParticipantDemographics } from '../../common/bidsTypes.js'
 
-const dcm2niixExecutor: ToolExecutor = async (inputs) => {
-  const dicomDir = inputs.dicom_dir as string
-  const rawOutDir = inputs.out_dir as string | undefined
-  const outDir = rawOutDir || fs.mkdtempSync(path.join(os.tmpdir(), 'wf-dcm2niix-'))
+// ── Post-processor registry ─────────────────────────────────────────
 
-  // Create the output directory if it doesn't exist
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true })
-  }
+export type PostProcessor = (outputs: Record<string, unknown>) => Record<string, unknown>
 
-  const buildBaseArgs = (): string[] => {
-    const args: string[] = []
-    if (inputs.pattern) args.push('-f', String(inputs.pattern))
-    if (inputs.compress) args.push('-z', String(inputs.compress))
-    if (inputs.bids) args.push('-b', String(inputs.bids))
-    if (inputs.bids_anon) args.push('-ba', String(inputs.bids_anon))
-    if (inputs.merge != null) args.push('-m', String(inputs.merge))
-    if (inputs.verbose != null) args.push('-v', String(inputs.verbose))
-    return args
-  }
+const postProcessors = new Map<string, PostProcessor>()
 
-  let allStdout = ''
-  let allStderr = ''
-
-  if (inputs.series != null) {
-    const seriesNums = Array.isArray(inputs.series) ? inputs.series : [inputs.series]
-    // dcm2niix only accepts a single -n flag, so call once per series
-    for (const s of seriesNums) {
-      const args = [...buildBaseArgs(), '-n', String(s), '-o', outDir, dicomDir]
-      const { stdout, stderr, code } = await spawnDcm2niix(args)
-      if (code !== 0 && code !== 1) {
-        throw new Error(`dcm2niix exited with code ${code}: ${stderr}`)
-      }
-      allStdout += stdout
-      allStderr += stderr
-    }
-  } else {
-    // No series filter — convert everything
-    const args = [...buildBaseArgs(), '-o', outDir, dicomDir]
-    const { stdout, stderr, code } = await spawnDcm2niix(args)
-    if (code !== 0 && code !== 1) {
-      throw new Error(`dcm2niix exited with code ${code}: ${stderr}`)
-    }
-    allStdout = stdout
-    allStderr = stderr
-  }
-
-  const files = fs.readdirSync(outDir).filter((f) => !f.startsWith('.'))
-  const volumes = files
-    .filter((f) => f.endsWith('.nii') || f.endsWith('.nii.gz'))
-    .map((f) => path.join(outDir, f))
-  const sidecars = files
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => path.join(outDir, f))
-
-  // Extract subject bio data from DICOM sidecars so downstream steps can use it
-  const detectedSubjects = extractSubjectsFromSidecars(sidecars)
-
-  return { volumes, sidecars, detectedSubjects, stdout: allStdout, stderr: allStderr, outDir }
+export function registerPostProcessor(name: string, fn: PostProcessor): void {
+  postProcessors.set(name, fn)
 }
+
+export function getPostProcessor(name: string): PostProcessor | undefined {
+  return postProcessors.get(name)
+}
+
+// ── Built-in post-processors ────────────────────────────────────────
 
 /**
  * Parse dcm2niix JSON sidecars to detect unique subjects and extract demographics
  * (age, sex) from DICOM header fields (PatientID, PatientAge, PatientSex, etc.).
- * This runs immediately after conversion so the data is available in workflow context
- * for all subsequent steps and heuristics.
  */
 function extractSubjectsFromSidecars(sidecarPaths: string[]): DetectedSubject[] {
   const subjectMap = new Map<string, { sidecarPath: string; indices: number[]; dates: Map<string, number[]> }>()
@@ -126,6 +76,16 @@ function extractSubjectsFromSidecars(sidecarPaths: string[]): DetectedSubject[] 
 
   return subjects
 }
+
+registerPostProcessor('dcm2niix-extract-subjects', (outputs) => {
+  const sidecars = outputs.sidecars as string[] | undefined
+  if (sidecars && sidecars.length > 0) {
+    return { ...outputs, detectedSubjects: extractSubjectsFromSidecars(sidecars) }
+  }
+  return outputs
+})
+
+// ── Built-in tool executors (pure TypeScript, no CLI) ───────────────
 
 const bidsClassifyExecutor: ToolExecutor = async (inputs) => {
   const sidecars = inputs.sidecars as string[]
@@ -201,8 +161,9 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
   }
 }
 
+// ── Tool executor registry ──────────────────────────────────────────
+
 const toolExecutors = new Map<string, ToolExecutor>([
-  ['dcm2niix', dcm2niixExecutor],
   ['bids-classify', bidsClassifyExecutor],
   ['bids-validate', bidsValidateExecutor],
   ['bids-write', bidsWriteExecutor]

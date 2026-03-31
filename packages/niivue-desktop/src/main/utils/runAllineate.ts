@@ -1,8 +1,8 @@
 import { app } from 'electron'
-import { spawn } from 'child_process'
 import { join, resolve } from 'path'
 import fs from 'fs'
 import os from 'os'
+import { spawnBinary } from './spawnBinary.js'
 
 const isDev = !app.isPackaged
 
@@ -45,29 +45,8 @@ export function runAllineate(args: string[]): Promise<{
   stderr: string
   code: number
 }> {
-  console.log('running allineate', args)
-  return new Promise((resolve, reject) => {
-    const bin = getAllineatePath()
-    if (!fs.existsSync(bin)) {
-      return reject(
-        new Error(`allineate not found at ${bin}. Place the binary in native-binaries/${process.platform}/`)
-      )
-    }
-    const proc = spawn(bin, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
-
-    let stdout = ''
-    let stderr = ''
-
-    proc.stdout.on('data', (chunk) => {
-      stdout += chunk.toString()
-    })
-    proc.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-    })
-
-    proc.on('error', (err) => reject(err))
-    proc.on('close', (code) => resolve({ stdout, stderr, code: code ?? 0 }))
-  })
+  const bin = getAllineatePath()
+  return spawnBinary(bin, args)
 }
 
 /**
