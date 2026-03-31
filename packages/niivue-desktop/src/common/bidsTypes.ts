@@ -203,6 +203,15 @@ export interface BidsWriteResult {
   error?: string
 }
 
+export interface QualityMetrics {
+  volumeIndex: number
+  snr: number
+  motionMeanFD?: number
+  motionMaxFD?: number
+  artifactFlags: string[]
+  pass: boolean
+}
+
 /** Persistable BIDS wizard state for save/restore via NVDocument.customData */
 export interface BidsWizardState {
   mappings: BidsSeriesMapping[]

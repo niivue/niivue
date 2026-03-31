@@ -21,7 +21,7 @@ app.commandLine.appendSwitch('enable-features', 'Vulkan')
 const isDev = !app.isPackaged
 
 // Valid subcommands
-const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath', 'allineate'] as const
+const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath', 'allineate', 'workflow'] as const
 
 // Parse CLI arguments with subcommand architecture
 function parseCLIArgs(): CLIOptions {
@@ -35,7 +35,8 @@ function parseCLIArgs(): CLIOptions {
       options.subcommand = cmd as CLIOptions['subcommand']
 
       // dcm2niix has a second-level subcommand (list/convert)
-      if (cmd === 'dcm2niix' && args[1] && !args[1].startsWith('-')) {
+      // workflow has a second-level subcommand (workflow name)
+      if ((cmd === 'dcm2niix' || cmd === 'workflow') && args[1] && !args[1].startsWith('-')) {
         options.subcommandMode = args[1]
       }
     }
@@ -135,6 +136,14 @@ function parseCLIArgs(): CLIOptions {
         break
       case '--final':
         options.final = args[++i] || null
+        break
+
+      // Workflow options
+      case '--inputs':
+        options.workflowInputs = args[++i] || null
+        break
+      case '--context':
+        options.workflowContext = args[++i] || null
         break
     }
   }
@@ -256,6 +265,22 @@ Examples:
   niivue-desktop niimath --input brain.nii.gz --ops "-s 2 -thr 100 -bin" --output mask.nii.gz
   niivue-desktop view --input mni152 --output - | niivue-desktop niimath --input - --ops "-s 3" --output smooth.nii.gz
 `)
+  } else if (subcommand === 'workflow') {
+    console.log(`
+niivue-desktop workflow - Run a declarative workflow pipeline
+
+Usage:
+  niivue-desktop workflow <name> --inputs <json> [--context <json-file>] [--output <dir>]
+
+Options:
+  --inputs        JSON string of workflow inputs (e.g., '{"dicom_dir":"/path/to/dicoms"}')
+  --context       Path to JSON file with context overrides (skip interactive form)
+  --output, -o    Output directory (overrides context output_dir)
+
+Examples:
+  niivue-desktop workflow dicom-to-bids --inputs '{"dicom_dir":"/dicoms"}' --output /output
+  niivue-desktop workflow dicom-to-bids --inputs '{"dicom_dir":"/dicoms"}' --context overrides.json
+`)
   } else {
     console.log(`
 NiiVue Desktop - Neuroimaging visualization and processing
@@ -270,6 +295,7 @@ Subcommands:
   extract     Extract subvolume using label mask
   dcm2niix    Convert DICOM to NIfTI
   niimath     Apply niimath operations
+  workflow    Run a declarative workflow pipeline
 
 Universal Options:
   --input, -i     Input file, URL, standard name, or "-" for stdin
@@ -461,6 +487,16 @@ ipcMain.handle(
     return { success: true, ...result }
   }
 )
+
+ipcMain.handle('headless:workflow', async (_event, workflowName: string, inputs: Record<string, unknown>, contextOverrides?: Record<string, unknown>) => {
+  const { runWorkflowHeadless } = await import('./utils/headlessWorkflowRunner.js')
+  return runWorkflowHeadless({
+    workflowName,
+    inputs,
+    contextOverrides,
+    onProgress: (step, status) => process.stderr.write(`[workflow] ${step}: ${status}\n`)
+  })
+})
 
 ipcMain.on('headless:complete', () => {
   process.stderr.write('[niivue] Completed successfully\n')

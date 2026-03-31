@@ -1,0 +1,29 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "deface",
+  "version": "1.0.0",
+  "description": "Remove facial features from anatomical NIfTI volumes for anonymization",
+  "inputs": {
+    "nifti_path": {
+      "type": "string",
+      "description": "Path to anatomical volume"
+    },
+    "method": {
+      "type": "string",
+      "description": "Defacing method",
+      "default": "mask",
+      "enum": ["mask", "blur"]
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Output path for defaced volume",
+      "optional": true
+    }
+  },
+  "outputs": {
+    "output_path": {
+      "type": "string",
+      "description": "Path to defaced volume"
+    }
+  }
+}

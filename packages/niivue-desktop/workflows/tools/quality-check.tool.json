@@ -1,0 +1,26 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "quality-check",
+  "version": "1.0.0",
+  "description": "Run quality metrics on NIfTI volumes (SNR, motion, artifacts)",
+  "inputs": {
+    "volumes": {
+      "type": "volume[]",
+      "description": "NIfTI volumes to check"
+    },
+    "series_list": {
+      "type": "series-mapping[]",
+      "description": "Series classifications for context-aware QC"
+    }
+  },
+  "outputs": {
+    "metrics": {
+      "type": "json[]",
+      "description": "Per-volume quality metrics (SNR, motion, artifact flags)"
+    },
+    "flagged": {
+      "type": "json[]",
+      "description": "Volumes flagged for quality issues"
+    }
+  }
+}

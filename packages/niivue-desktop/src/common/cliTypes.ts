@@ -3,8 +3,8 @@
  */
 export interface CLIOptions {
   /** The subcommand to execute */
-  subcommand: 'view' | 'segment' | 'extract' | 'dcm2niix' | 'niimath' | 'allineate' | null
-  /** Second-level subcommand (for dcm2niix: 'list' | 'convert') */
+  subcommand: 'view' | 'segment' | 'extract' | 'dcm2niix' | 'niimath' | 'allineate' | 'workflow' | null
+  /** Second-level subcommand (for dcm2niix: 'list' | 'convert'; for workflow: workflow name) */
   subcommandMode?: string
   /** Input file path, URL, standard name, or '-' for stdin */
   input: string | null
@@ -44,6 +44,10 @@ export interface CLIOptions {
   sourceAutomask: boolean
   /** allineate: interpolation for output (NN, linear, cubic) */
   final: string | null
+  /** workflow: JSON string of workflow inputs */
+  workflowInputs: string | null
+  /** workflow: path to JSON file with context overrides */
+  workflowContext: string | null
   /** Show help */
   help: boolean
 }
@@ -97,7 +101,8 @@ export const EXIT_CODES = {
   NIIMATH_ERROR: 7,
   ALLINEATE_ERROR: 10,
   STDIN_TIMEOUT: 8,
-  URL_FETCH_ERROR: 9
+  URL_FETCH_ERROR: 9,
+  WORKFLOW_ERROR: 11
 } as const
 
 /**
@@ -126,6 +131,8 @@ export function getDefaultCLIOptions(): CLIOptions {
     cmass: false,
     sourceAutomask: false,
     final: null,
+    workflowInputs: null,
+    workflowContext: null,
     help: false
   }
 }

@@ -100,6 +100,7 @@ function MainApp(): JSX.Element {
 
   // Workflow designer state
   const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
+  const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
 
   // Listen for workflow:open from menu
   useEffect(() => {
@@ -114,13 +115,25 @@ function MainApp(): JSX.Element {
     electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
 
     const handleOpenDesigner = (): void => {
+      setDesignerInitialDefinition(null)
       setWorkflowDesignerOpen(true)
     }
     electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
 
+    const handleEditDesigner = (_evt: unknown, workflowName: string): void => {
+      electron.ipcRenderer.invoke('workflow:get-definition', workflowName).then(
+        (definition: Record<string, unknown>) => {
+          setDesignerInitialDefinition(definition)
+          setWorkflowDesignerOpen(true)
+        }
+      )
+    }
+    electron.ipcRenderer.on('workflow:edit-designer', handleEditDesigner)
+
     return (): void => {
       electron.ipcRenderer.removeAllListeners('workflow:open')
       electron.ipcRenderer.removeAllListeners('workflow:open-designer')
+      electron.ipcRenderer.removeAllListeners('workflow:edit-designer')
     }
   }, [])
   // modelsVersion is used to trigger re-render when user adds models via wizard
@@ -1488,11 +1501,16 @@ function MainApp(): JSX.Element {
       />
       <WorkflowDesigner
         open={workflowDesignerOpen}
-        onClose={() => setWorkflowDesignerOpen(false)}
+        onClose={() => {
+          setWorkflowDesignerOpen(false)
+          setDesignerInitialDefinition(null)
+        }}
         onSave={(schema) => {
           console.log('Workflow saved:', schema)
           setWorkflowDesignerOpen(false)
+          setDesignerInitialDefinition(null)
         }}
+        initialDefinition={designerInitialDefinition}
       />
       <OpenTargetDialog
         open={openTargetDialogOpen}

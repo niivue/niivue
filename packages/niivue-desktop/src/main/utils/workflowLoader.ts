@@ -41,6 +41,26 @@ export function loadAllDefinitions(): void {
   )
 }
 
+/**
+ * Load definitions from an explicit root directory.
+ * Does not depend on Electron's app module — suitable for headless/non-Electron use.
+ */
+export function loadDefinitionsFromPath(rootDir: string): void {
+  const tools = loadJsonFiles<ToolDefinition>(path.join(rootDir, 'tools'))
+  for (const tool of tools) {
+    toolDefinitions.set(tool.name, tool)
+  }
+
+  const workflows = loadJsonFiles<WorkflowDefinition>(path.join(rootDir, 'workflows'))
+  for (const wf of workflows) {
+    workflowDefinitions.set(wf.name, wf)
+  }
+
+  console.log(
+    `[workflow] Loaded ${toolDefinitions.size} tools, ${workflowDefinitions.size} workflows from ${rootDir}`
+  )
+}
+
 export function getToolDefinitions(): Map<string, ToolDefinition> {
   return toolDefinitions
 }

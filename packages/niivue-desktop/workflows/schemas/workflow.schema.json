@@ -173,6 +173,17 @@
           "additionalProperties": {
             "$ref": "#/$defs/bindingDef"
           }
+        },
+        "outputMappings": {
+          "type": "object",
+          "description": "Map tool output field names to context field names",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "condition": {
+          "type": "string",
+          "description": "Dot-path expression evaluated against the run state; step is skipped when the resolved value is falsy"
         }
       }
     },

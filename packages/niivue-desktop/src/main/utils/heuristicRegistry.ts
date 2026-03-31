@@ -115,3 +115,7 @@ export function getHeuristic(name: string): HeuristicFn | undefined {
 export function registerHeuristic(name: string, fn: HeuristicFn): void {
   heuristicRegistry.set(name, fn)
 }
+
+export function getHeuristicNames(): string[] {
+  return Array.from(heuristicRegistry.keys())
+}

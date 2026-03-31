@@ -1,0 +1,31 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "nifti-convert",
+  "version": "1.0.0",
+  "description": "Convert between NIfTI formats and apply basic preprocessing (reorient, resample)",
+  "inputs": {
+    "input_path": {
+      "type": "string",
+      "description": "Input volume path"
+    },
+    "reorient": {
+      "type": "string",
+      "description": "Target orientation (e.g., RAS, LPI)",
+      "default": "RAS",
+      "optional": true
+    },
+    "resample": {
+      "type": "number",
+      "description": "Isotropic voxel size in mm",
+      "optional": true,
+      "min": 0.1,
+      "max": 10
+    }
+  },
+  "outputs": {
+    "output_path": {
+      "type": "string",
+      "description": "Converted volume path"
+    }
+  }
+}

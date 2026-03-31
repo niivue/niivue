@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { getWorkflowDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
 import {
   startWorkflow,
   getRunState,
@@ -12,6 +12,7 @@ import {
   runAutoSteps,
   cancelRun
 } from './workflowEngine.js'
+import { getHeuristicNames } from './heuristicRegistry.js'
 import type { WorkflowListItem } from '../../common/workflowTypes.js'
 
 export function registerWorkflowIpcHandlers(): void {
@@ -100,6 +101,15 @@ export function registerWorkflowIpcHandlers(): void {
     const state = getRunState(payload.runId)
     const definition = getDefinitionForRun(payload.runId)
     return { runState: state, definition }
+  })
+
+  ipcMain.handle('workflow:list-tools', async () => {
+    const tools = getToolDefinitions()
+    return Array.from(tools.values())
+  })
+
+  ipcMain.handle('workflow:list-heuristics', async () => {
+    return getHeuristicNames()
   })
 
   ipcMain.handle('workflow:select-directory', async (evt, payload: { title?: string }) => {

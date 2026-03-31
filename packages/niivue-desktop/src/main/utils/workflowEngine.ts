@@ -2,13 +2,62 @@ import { randomUUID } from 'node:crypto'
 import type {
   WorkflowDefinition,
   WorkflowRunState,
+  StepDef,
   Binding
 } from '../../common/workflowTypes.js'
 import { getWorkflowDefinitions } from './workflowLoader.js'
 import { getToolExecutor } from './toolRegistry.js'
 import { getHeuristic } from './heuristicRegistry.js'
+import {
+  computeInputHash,
+  getCachedOutput,
+  setCachedOutput,
+  invalidateDownstream,
+  clearRunCache
+} from './workflowCache.js'
 
 const activeRuns = new Map<string, WorkflowRunState>()
+
+/**
+ * Safely resolve a dot-path expression against the workflow run state.
+ * Returns the value at the path, or undefined if any segment is missing.
+ * Supports paths like "context.skull_strip_config.enabled" or "inputs.dicom_dir".
+ */
+function resolveDotPath(expr: string, state: WorkflowRunState): unknown {
+  const parts = expr.split('.')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let current: any = state
+  for (const part of parts) {
+    if (current == null || typeof current !== 'object') return undefined
+    current = current[part]
+  }
+  return current
+}
+
+/**
+ * Evaluate a condition expression against the run state.
+ * The expression is a dot-path (e.g. "context.skull_strip_config.enabled")
+ * that is resolved and checked for truthiness.
+ */
+function evaluateCondition(expr: string, state: WorkflowRunState): boolean {
+  return !!resolveDotPath(expr, state)
+}
+
+/**
+ * Apply outputMappings from a step definition, writing tool outputs into the context.
+ */
+function applyOutputMappings(
+  step: StepDef,
+  outputs: Record<string, unknown>,
+  state: WorkflowRunState
+): void {
+  if (!step.outputMappings) return
+  for (const [outputKey, contextField] of Object.entries(step.outputMappings)) {
+    if (outputs[outputKey] !== undefined) {
+      state.context[contextField] = outputs[outputKey]
+    }
+  }
+}
 
 export function startWorkflow(
   name: string,
@@ -125,7 +174,24 @@ export function updateContext(
 ): void {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
+
+  const oldValue = state.context[fieldName]
   state.context[fieldName] = value
+
+  // Invalidate steps that consume this context field (and their downstream)
+  if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
+    const def = getWorkflowDefinitions().get(state.workflowName)
+    if (def) {
+      for (const [stepName, step] of Object.entries(def.steps)) {
+        const dependsOnField = Object.values(step.inputs).some(
+          (b) => 'ref' in b && (b as { ref: string }).ref === `context.${fieldName}`
+        )
+        if (dependsOnField) {
+          invalidateDownstream(runId, stepName, def, state)
+        }
+      }
+    }
+  }
 }
 
 export function resolveBinding(
@@ -174,6 +240,25 @@ export async function executeStep(
   const step = definition.steps[stepName]
   if (!step) throw new Error(`Unknown step: ${stepName}`)
 
+  // Evaluate condition — skip step if condition resolves to falsy
+  if (step.condition && !evaluateCondition(step.condition, state)) {
+    const emptyOutputs: Record<string, unknown> = {}
+    state.stepOutputs[stepName] = emptyOutputs
+    return emptyOutputs
+  }
+
+  // Check cache — reuse previous outputs if inputs haven't changed
+  const inputHash = computeInputHash(step, state, resolveBinding)
+  const cached = getCachedOutput(runId, stepName, inputHash)
+  if (cached) {
+    state.stepOutputs[stepName] = cached
+    for (const [outKey, outVal] of Object.entries(cached)) {
+      state.context[`_stepOutputs_${stepName}_${outKey}`] = outVal
+    }
+    applyOutputMappings(step, cached, state)
+    return cached
+  }
+
   const executor = getToolExecutor(step.tool)
   if (!executor) throw new Error(`No executor for tool: ${step.tool}`)
 
@@ -192,6 +277,12 @@ export async function executeStep(
     for (const [outKey, outVal] of Object.entries(outputs)) {
       state.context[`_stepOutputs_${stepName}_${outKey}`] = outVal
     }
+
+    // Apply explicit outputMappings to context
+    applyOutputMappings(step, outputs, state)
+
+    // Store in cache
+    setCachedOutput(runId, stepName, inputHash, outputs)
 
     return outputs
   } catch (err) {
@@ -277,4 +368,5 @@ export async function runUpToStep(
 
 export function cancelRun(runId: string): void {
   activeRuns.delete(runId)
+  clearRunCache(runId)
 }

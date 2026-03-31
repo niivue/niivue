@@ -1,0 +1,28 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "tissue-segment",
+  "version": "1.0.0",
+  "description": "Segment brain tissue (GM, WM, CSF) using Brainchop model",
+  "inputs": {
+    "nifti_path": {
+      "type": "string",
+      "description": "Path to skull-stripped volume"
+    },
+    "model": {
+      "type": "string",
+      "description": "Segmentation model",
+      "default": "tissue-seg-light",
+      "enum": ["tissue-seg-light", "tissue-seg-full"]
+    }
+  },
+  "outputs": {
+    "segmentation_path": {
+      "type": "string",
+      "description": "Path to tissue segmentation volume"
+    },
+    "volumes": {
+      "type": "json[]",
+      "description": "Tissue volume statistics (per-class voxel counts)"
+    }
+  }
+}

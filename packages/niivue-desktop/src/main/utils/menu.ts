@@ -233,7 +233,18 @@ function buildAllWorkflowMenuItems(
   for (const wf of workflows.values()) {
     items.push({
       label: `${wf.description}`,
-      click: () => handleWorkflowMenuClick(win, wf)
+      submenu: [
+        {
+          label: 'Run...',
+          click: () => handleWorkflowMenuClick(win, wf)
+        },
+        {
+          label: 'Edit...',
+          click: () => {
+            win.webContents.send('workflow:edit-designer', wf.name)
+          }
+        }
+      ]
     })
   }
   if (items.length === 0) {

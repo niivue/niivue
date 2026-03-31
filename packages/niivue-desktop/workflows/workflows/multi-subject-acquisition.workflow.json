@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/workflow.schema.json",
-  "name": "dicom-to-bids",
+  "name": "multi-subject-acquisition",
   "version": "1.0.0",
-  "description": "Convert DICOM to a BIDS-compliant dataset with auto-classification and validation",
+  "description": "Multi-subject image acquisition pipeline with QC, preprocessing, and BIDS organization",
   "menu": "Import",
 
   "inputs": {
@@ -13,17 +13,41 @@
   },
 
   "context": {
-    "description": "BIDS dataset configuration accumulated during the workflow run",
+    "description": "Accumulated state for multi-subject pipeline",
     "fields": {
+      "subjects": {
+        "type": "subject[]",
+        "description": "Detected subjects and sessions",
+        "heuristic": "detect-subjects"
+      },
       "series_list": {
         "type": "series-mapping[]",
         "description": "Classified series with BIDS datatype, suffix, and metadata",
         "heuristic": "bids-classify"
       },
-      "subjects": {
-        "type": "subject[]",
-        "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
-        "heuristic": "detect-subjects"
+      "quality_metrics": {
+        "type": "json[]",
+        "description": "Per-volume quality metrics"
+      },
+      "skull_strip_config": {
+        "type": "object",
+        "description": "Skull stripping configuration (engine, scope, selections)",
+        "default": {}
+      },
+      "deface_enabled": {
+        "type": "boolean",
+        "description": "Whether to deface anatomical volumes",
+        "default": false
+      },
+      "tissue_segment_enabled": {
+        "type": "boolean",
+        "description": "Whether to run tissue segmentation",
+        "default": false
+      },
+      "atlas_parcellate_enabled": {
+        "type": "boolean",
+        "description": "Whether to run atlas parcellation",
+        "default": false
       },
       "dataset_name": {
         "type": "string",
@@ -32,7 +56,7 @@
       },
       "dataset_version": {
         "type": "string",
-        "description": "BIDS version for dataset_description.json",
+        "description": "BIDS version",
         "default": "1.9.0"
       },
       "license": {
@@ -46,19 +70,9 @@
         "description": "Dataset authors (comma-separated)",
         "default": ""
       },
-      "readme": {
-        "type": "string",
-        "description": "Dataset README content",
-        "default": ""
-      },
       "output_dir": {
         "type": "string",
         "description": "Output directory for the BIDS dataset"
-      },
-      "skull_strip_config": {
-        "type": "object",
-        "description": "Skull stripping configuration (engine, scope, selections)",
-        "default": {}
       }
     }
   },
@@ -78,27 +92,27 @@
         "component": "bids-classification-table"
       },
       {
-        "title": "Sessions",
-        "description": "Edit session labels and demographics for included subjects",
-        "fields": ["subjects"],
-        "component": "subject-session-editor"
+        "title": "Quality Check",
+        "description": "Review quality metrics for each volume",
+        "fields": ["quality_metrics"],
+        "component": "quality-review"
+      },
+      {
+        "title": "Preprocessing",
+        "description": "Configure optional preprocessing steps",
+        "fields": ["skull_strip_config", "deface_enabled", "tissue_segment_enabled", "atlas_parcellate_enabled"],
+        "component": "preprocessing-config"
       },
       {
         "title": "Dataset Metadata",
-        "fields": ["dataset_name", "dataset_version", "license", "authors", "readme", "output_dir"]
-      },
-      {
-        "title": "Skull Stripping",
-        "description": "Optionally remove non-brain tissue before writing BIDS data",
-        "fields": ["skull_strip_config", "series_list"],
-        "component": "skull-strip-editor"
+        "fields": ["dataset_name", "dataset_version", "license", "authors", "output_dir"]
       },
       {
         "title": "Review & Write",
         "description": "Review the proposed BIDS dataset before writing to disk",
         "fields": ["series_list", "subjects"],
         "component": "bids-preview",
-        "buttonText": "Write BIDS"
+        "buttonText": "Process & Write"
       }
     ]
   },
@@ -116,9 +130,17 @@
         "sidecars": "_stepOutputs_convert_sidecars",
         "volumes": "_stepOutputs_convert_volumes",
         "detectedSubjects": "_stepOutputs_convert_detectedSubjects",
-        "outDir": "_stepOutputs_convert_outDir",
-        "stdout": "_stepOutputs_convert_stdout",
-        "stderr": "_stepOutputs_convert_stderr"
+        "outDir": "_stepOutputs_convert_outDir"
+      }
+    },
+    "quality_check": {
+      "tool": "quality-check",
+      "inputs": {
+        "volumes": { "ref": "steps.convert.outputs.volumes" },
+        "series_list": { "ref": "context.series_list" }
+      },
+      "outputMappings": {
+        "metrics": "quality_metrics"
       }
     },
     "classify": {

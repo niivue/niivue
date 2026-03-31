@@ -41,6 +41,8 @@ export type Binding = { ref: string } | { constant: unknown }
 export interface StepDef {
   tool: string
   inputs: Record<string, Binding>
+  outputMappings?: Record<string, string>
+  condition?: string
 }
 
 export interface WorkflowDefinition {
