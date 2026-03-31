@@ -42,10 +42,16 @@ export function StepClassification({
   )
   const hasFmaps = fmapSeries.length > 0 && targetSeries.length > 0
 
-  const handleAutoSuggest = async (): Promise<void> => {
-    const suggested = await electron.bidsSuggestFieldmapMappings(mappings)
-    onUpdateFieldmapMappings(suggested)
-  }
+  // Auto-suggest fieldmap mappings on mount if none are set yet
+  useEffect(() => {
+    if (!hasFmaps || fieldmapIntendedFor.length > 0) return
+    let cancelled = false
+    void (async () => {
+      const suggested = await electron.bidsSuggestFieldmapMappings(mappings)
+      if (!cancelled && suggested.length > 0) onUpdateFieldmapMappings(suggested)
+    })()
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleTarget = (fmapIndex: number, targetIndex: number): void => {
     const updated = fieldmapIntendedFor.map((fm) => {
@@ -124,9 +130,6 @@ export function StepClassification({
                   <Text size="1" color="gray">
                     Map each fieldmap to the functional/DWI runs it corrects.
                   </Text>
-                  <Button size="1" variant="soft" onClick={handleAutoSuggest}>
-                    Auto-suggest
-                  </Button>
                 </div>
                 {fmapSeries.map((fm) => {
                   const entry = fieldmapIntendedFor.find((f) => f.fmapIndex === fm.index)

@@ -25,7 +25,13 @@ export const registerLoadVolumeHandler = ({ getTarget }: HandlerProps): void => 
     console.log('[Renderer] loadVolume received for path:', path)
 
     // Pick or create an appropriate document
-    const { nvRef, setVolumes } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { nvRef, setVolumes } = target
     const nv = nvRef.current!
 
     // Load file data

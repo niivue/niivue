@@ -37,7 +37,13 @@ export const registerLoadRecentFileHandler = ({
     console.log('[Renderer] loadRecentFile received for path:', filePath)
 
     // Determine the target Niivue instance (create new doc if needed)
-    const { nvRef, setVolumes, setMeshes, id } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { nvRef, setVolumes, setMeshes, id } = target
     const nv = nvRef.current!
 
     // Load file data

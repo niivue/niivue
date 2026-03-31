@@ -18,8 +18,12 @@ interface StepSkullStripProps {
   nv: Niivue | null
   onLoadVolume?: (niftiPath: string) => Promise<void>
   onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
-  initialOriginalPaths?: Map<number, string>
-  onOriginalPathsChange?: (paths: Map<number, string>) => void
+  completed: Set<number>
+  onCompletedChange: (completed: Set<number>) => void
+  originalPaths: Map<number, string>
+  onOriginalPathsChange: (paths: Map<number, string>) => void
+  useStripped: Map<number, boolean>
+  onUseStrippedChange: (useStripped: Map<number, boolean>) => void
 }
 
 interface PreviewState {
@@ -36,10 +40,14 @@ export function StepSkullStrip({
   nv,
   onLoadVolume,
   onLoadWithOverlay,
-  initialOriginalPaths,
-  onOriginalPathsChange
+  completed,
+  onCompletedChange,
+  originalPaths,
+  onOriginalPathsChange,
+  useStripped,
+  onUseStrippedChange
 }: StepSkullStripProps): JSX.Element {
-  const [engine, setEngine] = useState<Engine>('none')
+  const [engine, setEngine] = useState<Engine>(() => completed.size > 0 ? 'allineate' : 'none')
   const [scope, setScope] = useState<Scope>('anat')
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => {
     const anatIndices = new Set<number>()
@@ -53,15 +61,24 @@ export function StepSkullStrip({
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState('')
-  const [completed, setCompleted] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [commandLine, setCommandLine] = useState<string | null>(null)
   const [generatePreviews, setGeneratePreviews] = useState(true)
   const [preview, setPreview] = useState<PreviewState | null>(null)
-  const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(
-    () => initialOriginalPaths ?? new Map()
-  )
-  const [useStripped, setUseStripped] = useState<Map<number, boolean>>(new Map())
+
+  // Helper setters that forward to parent
+  const setCompleted = (val: Set<number> | ((prev: Set<number>) => Set<number>)): void => {
+    const next = typeof val === 'function' ? val(completed) : val
+    onCompletedChange(next)
+  }
+  const setOriginalPaths = (val: Map<number, string> | ((prev: Map<number, string>) => Map<number, string>)): void => {
+    const next = typeof val === 'function' ? val(originalPaths) : val
+    onOriginalPathsChange(next)
+  }
+  const setUseStripped = (val: Map<number, boolean> | ((prev: Map<number, boolean>) => Map<number, boolean>)): void => {
+    const next = typeof val === 'function' ? val(useStripped) : val
+    onUseStrippedChange(next)
+  }
 
   const nonExcluded = mappings.filter((m) => !m.excluded)
 
@@ -289,7 +306,6 @@ export function StepSkullStrip({
 
       // Persist all original paths at once after the loop
       setOriginalPaths(newOriginalPaths)
-      onOriginalPathsChange?.(newOriginalPaths)
 
       setStatus(`Skull stripping complete (${processedCount} series)`)
       onMappingsUpdate(updatedMappings)
@@ -416,7 +432,7 @@ export function StepSkullStrip({
                 <th className="py-1 px-2 text-left font-medium">Type</th>
                 <th className="py-1 px-2 text-left font-medium">Status</th>
                 <th className="py-1 px-2 text-left font-medium">Output</th>
-                {onLoadVolume && <th className="py-1 px-2 text-left font-medium">Viewer</th>}
+                {onLoadVolume && completed.size > 0 && <th className="py-1 px-2 text-left font-medium">Viewer</th>}
               </tr>
             </thead>
             <tbody>
@@ -481,47 +497,39 @@ export function StepSkullStrip({
                       <span className="text-gray-400 text-xs">Original</span>
                     )}
                   </td>
-                  {onLoadVolume && (
+                  {onLoadVolume && completed.size > 0 && (
                     <td className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        {completed.has(m.index) && originalPaths.has(m.index) ? (
-                          <>
-                            <button
-                              className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
-                              disabled={running}
-                              onClick={() => void onLoadVolume(originalPaths.get(m.index)!)}
-                            >
-                              Load Original
-                            </button>
-                            <button
-                              className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
-                              disabled={running}
-                              onClick={() => void onLoadVolume(m.niftiPath)}
-                            >
-                              Load Stripped
-                            </button>
-                            {onLoadWithOverlay && (
-                              <button
-                                className="text-purple-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
-                                disabled={running}
-                                onClick={() =>
-                                  void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
-                                }
-                              >
-                                Original + Stripped
-                              </button>
-                            )}
-                          </>
-                        ) : (
+                      {completed.has(m.index) && originalPaths.has(m.index) ? (
+                        <div className="flex gap-1">
+                          <button
+                            className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
+                            disabled={running}
+                            onClick={() => void onLoadVolume(originalPaths.get(m.index)!)}
+                          >
+                            Load Original
+                          </button>
                           <button
                             className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
                             disabled={running}
                             onClick={() => void onLoadVolume(m.niftiPath)}
                           >
-                            Load
+                            Load Stripped
                           </button>
-                        )}
-                      </div>
+                          {onLoadWithOverlay && (
+                            <button
+                              className="text-purple-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
+                              disabled={running}
+                              onClick={() =>
+                                void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
+                              }
+                            >
+                              Original + Stripped
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </td>
                   )}
                 </tr>
@@ -585,13 +593,13 @@ export function StepSkullStrip({
         </div>
       )}
 
-      {/* Side-by-side preview */}
-      {completed.size > 1 && preview && (
+      {/* Side-by-side preview (hidden after BIDS write) */}
+      {onLoadVolume && completed.size > 1 && preview && (
         <Text size="1" color="gray">
           Click a completed row above to preview a different series.
         </Text>
       )}
-      {preview && (() => {
+      {onLoadVolume && preview && (() => {
         const previewMapping = mappings.find((m) => m.index === preview.seriesIndex)
         const bidsPath = previewMapping ? generateBidsPath(previewMapping) : `Series ${preview.seriesIndex}`
         return (

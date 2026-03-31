@@ -36,7 +36,13 @@ export const registerLoadStandardHandler = ({
     console.log('[Renderer] loadStandard received for path:', path)
 
     // Determine the target Niivue instance (create new document if needed)
-    const { id, nvRef, setVolumes, setMeshes } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { id, nvRef, setVolumes, setMeshes } = target
     const nv = nvRef.current!
 
     // Fetch file data

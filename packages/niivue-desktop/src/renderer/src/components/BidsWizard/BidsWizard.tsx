@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import * as Dialog from '@radix-ui/react-dialog'
-import { Button, Text, Theme } from '@radix-ui/themes'
-import { Cross2Icon } from '@radix-ui/react-icons'
+import { Text, Callout } from '@radix-ui/themes'
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type { Niivue } from '@niivue/niivue'
 import type { DicomSeries } from '../../../../common/dcm2niixTypes.js'
 import type {
@@ -15,6 +14,7 @@ import type {
   BidsValidationIssue
 } from '../../../../common/bidsTypes.js'
 import { serializeBidsState, deserializeBidsState } from '../../../../common/bidsState.js'
+import { WizardShell, type WizardStep } from '../Wizard/index.js'
 import { StepSelectSource } from './StepSelectSource.js'
 import { StepConversion } from './StepConversion.js'
 import { StepSkullStrip } from './StepSkullStrip.js'
@@ -33,15 +33,15 @@ interface BidsWizardProps {
   onLoadWithOverlay?: (basePath: string, overlayPath: string) => Promise<void>
 }
 
-const stepLabels = [
-  'Source',
-  'Convert',
-  'Skull Strip',
-  'Classify',
-  'Events',
-  'Subject',
-  'Metadata',
-  'Validate'
+const WIZARD_STEPS: WizardStep[] = [
+  { label: 'Source', description: 'Select DICOM source folder' },
+  { label: 'Convert', description: 'Convert DICOM to NIfTI' },
+  { label: 'Skull Strip', description: 'Optional brain extraction' },
+  { label: 'Classify', description: 'Assign BIDS labels' },
+  { label: 'Events', description: 'Task event annotations' },
+  { label: 'Subject', description: 'Subject & session info' },
+  { label: 'Metadata', description: 'Dataset metadata' },
+  { label: 'Validate', description: 'Review & write' }
 ]
 
 const defaultConfig: BidsDatasetConfig = {
@@ -75,41 +75,38 @@ export function BidsWizard({
   // Step 4: Subject/Session
   const [subject, setSubject] = useState('01')
   const [session, setSession] = useState('')
-
-  // Step 4: Demographics
   const [demographics, setDemographics] = useState<ParticipantDemographics>({
     age: '',
     sex: '',
     handedness: '',
     group: ''
   })
-
-  // Fieldmap IntendedFor mappings
   const [fieldmapIntendedFor, setFieldmapIntendedFor] = useState<FieldmapIntendedFor[]>([])
-
-  // Multi-subject detection
   const [detectedSubjects, setDetectedSubjects] = useState<DetectedSubject[]>([])
 
   // Step 5: Metadata
   const [config, setConfig] = useState<BidsDatasetConfig>({ ...defaultConfig })
 
+  // Skull strip cache (persists across step navigation)
+  const [skullStripCompleted, setSkullStripCompleted] = useState<Set<number>>(new Set())
+  const [skullStripOriginalPaths, setSkullStripOriginalPaths] = useState<Map<number, string>>(new Map())
+  const [skullStripUseStripped, setSkullStripUseStripped] = useState<Map<number, boolean>>(new Map())
+
   // Validation
   const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
   const [_validating, setValidating] = useState(false)
   const [highlightedSeriesIndex, setHighlightedSeriesIndex] = useState<number | null>(null)
+  const [bidsWritten, setBidsWritten] = useState(false)
 
   // Listen for menu trigger
   useEffect((): (() => void) => {
-    const handleOpen = (): void => {
-      setOpen(true)
-    }
+    const handleOpen = (): void => setOpen(true)
     electron.ipcRenderer.on('bids:open-wizard', handleOpen)
     return (): void => {
       electron.ipcRenderer.removeAllListeners('bids:open-wizard')
     }
   }, [])
 
-  // Clear BIDS wizard state when scene is cleared
   useEffect((): (() => void) => {
     const handleClearScene = (): void => {
       reset()
@@ -135,12 +132,10 @@ export function BidsWizard({
     setSession(saved.session)
     setStep(saved.step)
     setDicomDir(saved.dicomDir)
-    if (saved.mappings.length > 0) {
-      setConverted(true)
-    }
+    if (saved.mappings.length > 0) setConverted(true)
   }, [open, nv])
 
-  // Auto-save BIDS state to NVDocument.customData on meaningful state changes
+  // Auto-save BIDS state
   useEffect(() => {
     if (!open || !nv || mappings.length === 0) return
     const state: BidsWizardState = {
@@ -156,17 +151,8 @@ export function BidsWizard({
     }
     nv.document.customData = serializeBidsState(nv.document.customData || '', state)
   }, [
-    open,
-    nv,
-    mappings,
-    fieldmapIntendedFor,
-    demographics,
-    detectedSubjects,
-    config,
-    subject,
-    session,
-    step,
-    dicomDir
+    open, nv, mappings, fieldmapIntendedFor, demographics,
+    detectedSubjects, config, subject, session, step, dicomDir
   ])
 
   const reset = (): void => {
@@ -185,6 +171,10 @@ export function BidsWizard({
     setFieldmapIntendedFor([])
     setValidationResult(null)
     setHighlightedSeriesIndex(null)
+    setBidsWritten(false)
+    setSkullStripCompleted(new Set())
+    setSkullStripOriginalPaths(new Map())
+    setSkullStripUseStripped(new Map())
   }
 
   const handleClose = (): void => {
@@ -192,12 +182,8 @@ export function BidsWizard({
     setOpen(false)
   }
 
-  // Apply subject/session to all mappings when they change (single-subject mode only)
   const applySubjectSession = (mappingList: BidsSeriesMapping[]): BidsSeriesMapping[] => {
-    if (detectedSubjects.length > 1) {
-      // Multi-subject: mappings already have per-series subject/session
-      return mappingList
-    }
+    if (detectedSubjects.length > 1) return mappingList
     return mappingList.map((m) => ({
       ...m,
       subject: subject || '01',
@@ -212,26 +198,14 @@ export function BidsWizard({
   ): Promise<void> => {
     setMappings(newMappings)
     setConverted(true)
-    if (newDemographics) {
-      setDemographics(newDemographics)
-    }
+    if (newDemographics) setDemographics(newDemographics)
     if (newDetectedSubjects) {
       setDetectedSubjects(newDetectedSubjects)
-      // If single subject detected, use its label
-      if (newDetectedSubjects.length === 1) {
-        setSubject(newDetectedSubjects[0].label)
-      }
+      if (newDetectedSubjects.length === 1) setSubject(newDetectedSubjects[0].label)
     }
     onConversionComplete?.(newMappings)
-    // Auto-suggest fieldmap IntendedFor mappings
     const suggested = await electron.bidsSuggestFieldmapMappings(newMappings)
-    if (suggested.length > 0) {
-      setFieldmapIntendedFor(suggested)
-    }
-  }
-
-  const handleConversionError = (err: string): void => {
-    setError(err)
+    if (suggested.length > 0) setFieldmapIntendedFor(suggested)
   }
 
   const handleUpdateMapping = (index: number, changes: Partial<BidsSeriesMapping>): void => {
@@ -263,13 +237,10 @@ export function BidsWizard({
       const newSubject = { ...old, ...changes }
       updated[subjectIndex] = newSubject
 
-      // If label changed, update corresponding mappings
       if (changes.label && changes.label !== old.label) {
         setMappings((prevMappings) =>
           prevMappings.map((m) => {
-            if (m.subject === old.label) {
-              return { ...m, subject: changes.label! }
-            }
+            if (m.subject === old.label) return { ...m, subject: changes.label! }
             return m
           })
         )
@@ -308,7 +279,6 @@ export function BidsWizard({
       sub.sessions = sessions
       updated[subjectIndex] = sub
 
-      // Update corresponding mappings
       setMappings((prevMappings) =>
         prevMappings.map((m) => {
           if (m.subject === sub.label && m.session === oldLabel) {
@@ -349,16 +319,7 @@ export function BidsWizard({
     } finally {
       setValidating(false)
     }
-  }, [
-    mappings,
-    config,
-    fieldmapIntendedFor,
-    subject,
-    session,
-    demographics,
-    detectedSubjects,
-    converted
-  ])
+  }, [mappings, config, fieldmapIntendedFor, subject, session, demographics, detectedSubjects, converted])
 
   function getStepForIssue(issue: BidsValidationIssue): number {
     if (issue.targetStep != null) return issue.targetStep
@@ -372,21 +333,15 @@ export function BidsWizard({
   const handleIssueClick = (issue: BidsValidationIssue): void => {
     const targetStep = getStepForIssue(issue)
     setStep(targetStep)
-    if (issue.seriesIndex != null) {
-      setHighlightedSeriesIndex(issue.seriesIndex)
-    }
+    if (issue.seriesIndex != null) setHighlightedSeriesIndex(issue.seriesIndex)
   }
 
-  // Get mappings with current subject/session applied
   const currentMappings = applySubjectSession(mappings)
 
-  // Build allDemographics for multi-subject write
   const getAllDemographics = (): Record<string, ParticipantDemographics> | undefined => {
     if (detectedSubjects.length <= 1) return undefined
     const result: Record<string, ParticipantDemographics> = {}
-    for (const ds of detectedSubjects) {
-      result[ds.label] = ds.demographics
-    }
+    for (const ds of detectedSubjects) result[ds.label] = ds.demographics
     return result
   }
 
@@ -397,11 +352,11 @@ export function BidsWizard({
       case 1:
         return converted
       case 2:
-        return true // Skull strip is optional
+        return true
       case 3:
         return mappings.some((m) => !m.excluded)
       case 4:
-        return true // Events are optional
+        return true
       case 5:
         if (detectedSubjects.length > 1) {
           return detectedSubjects.every(
@@ -416,183 +371,129 @@ export function BidsWizard({
     }
   }
 
+  const handleStepChange = (newStep: number): void => {
+    setStep(newStep)
+  }
+
   return (
-    <Dialog.Root
+    <WizardShell
       open={open}
-      onOpenChange={(o) => {
-        if (!o) handleClose()
-      }}
+      onClose={handleClose}
+      title="Convert DICOM to BIDS"
+      steps={WIZARD_STEPS}
+      currentStep={step}
+      onStepChange={handleStepChange}
+      canProceed={canProceed()}
+      lastStepLabel="Validate & Write"
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/40 fixed inset-0 z-40" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-lg w-[900px] max-h-[90vh] overflow-hidden z-50">
-          <Theme>
-            <div className="p-6 flex flex-col" style={{ maxHeight: '90vh' }}>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <Dialog.Title asChild>
-                  <Text size="4" weight="bold">
-                    Convert DICOM to BIDS
-                  </Text>
-                </Dialog.Title>
-                <Dialog.Close asChild>
-                  <button className="p-1 rounded hover:bg-gray-100">
-                    <Cross2Icon />
-                  </button>
-                </Dialog.Close>
-              </div>
+      {error && (
+        <Callout.Root color="red" size="2" className="mb-4">
+          <Callout.Icon>
+            <ExclamationTriangleIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            {error}
+            <button className="ml-2 underline" onClick={() => setError(null)}>
+              Dismiss
+            </button>
+          </Callout.Text>
+        </Callout.Root>
+      )}
 
-              {/* Step indicator */}
-              <div className="flex gap-2 mb-5">
-                {stepLabels.map((label, i) => (
-                  <div key={label} className="flex items-center gap-1">
-                    <div
-                      className={
-                        'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ' +
-                        (i === step
-                          ? 'bg-blue-600 text-white'
-                          : i < step
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-200 text-gray-500')
-                      }
-                    >
-                      {i < step ? '\u2713' : i + 1}
-                    </div>
-                    <Text size="1" color={i === step ? undefined : 'gray'}>
-                      {label}
-                    </Text>
-                    {i < stepLabels.length - 1 && <div className="w-4 h-px bg-gray-300 mx-1" />}
-                  </div>
-                ))}
-              </div>
-
-              {error && (
-                <div className="mb-3 p-2 text-xs text-red-700 bg-red-50 rounded border border-red-200">
-                  {error}
-                  <button className="ml-2 underline text-red-600" onClick={() => setError(null)}>
-                    Dismiss
-                  </button>
-                </div>
-              )}
-
-              {/* Step content */}
-              <div className="min-h-[300px] overflow-y-auto flex-1">
-                {step === 0 && (
-                  <StepSelectSource
-                    dicomDir={dicomDir}
-                    setDicomDir={setDicomDir}
-                    series={series}
-                    setSeries={setSeries}
-                    selectedSeries={selectedSeries}
-                    setSelectedSeries={setSelectedSeries}
-                    onImportNifti={async (dir: string) => {
-                      const result = await electron.bidsImportNiftiDir(dir)
-                      if (!result.success) {
-                        setError(result.error || 'Failed to import NIfTI directory')
-                        return
-                      }
-                      await handleConversionComplete(
-                        result.mappings!,
-                        result.demographics,
-                        result.detectedSubjects
-                      )
-                      // Skip conversion step — go straight to skull strip
-                      setStep(2)
-                    }}
-                  />
-                )}
-                {step === 1 && (
-                  <StepConversion
-                    dicomDir={dicomDir}
-                    selectedSeries={selectedSeries}
-                    onComplete={handleConversionComplete}
-                    onError={handleConversionError}
-                    alreadyConverted={converted}
-                  />
-                )}
-                {step === 2 && (
-                  <StepSkullStrip
-                    mappings={mappings}
-                    onMappingsUpdate={setMappings}
-                    nv={nv}
-                    onLoadVolume={onLoadVolume}
-                    onLoadWithOverlay={onLoadWithOverlay}
-                  />
-                )}
-                {step === 3 && (
-                  <StepClassification
-                    mappings={currentMappings}
-                    onUpdateMapping={handleUpdateMapping}
-                    onUpdateSidecar={handleUpdateSidecar}
-                    datasetName={config.name}
-                    fieldmapIntendedFor={fieldmapIntendedFor}
-                    onUpdateFieldmapMappings={setFieldmapIntendedFor}
-                    highlightedSeriesIndex={highlightedSeriesIndex}
-                    onClearHighlight={() => setHighlightedSeriesIndex(null)}
-                  />
-                )}
-                {step === 4 && (
-                  <StepTaskEvents
-                    mappings={currentMappings}
-                    onUpdateMapping={handleUpdateMapping}
-                  />
-                )}
-                {step === 5 && (
-                  <StepSubjectSession
-                    subject={subject}
-                    setSubject={setSubject}
-                    session={session}
-                    setSession={setSession}
-                    mappings={currentMappings}
-                    demographics={demographics}
-                    setDemographics={setDemographics}
-                    detectedSubjects={detectedSubjects}
-                    onUpdateDetectedSubject={handleUpdateDetectedSubject}
-                    onUpdateDetectedSubjectDemographics={handleUpdateDetectedSubjectDemographics}
-                    onUpdateDetectedSessionLabel={handleUpdateDetectedSessionLabel}
-                  />
-                )}
-                {step === 6 && <StepMetadata config={config} onUpdateConfig={updateConfig} />}
-                {step === 7 && (
-                  <StepValidation
-                    config={config}
-                    mappings={currentMappings}
-                    demographics={demographics}
-                    allDemographics={getAllDemographics()}
-                    fieldmapIntendedFor={fieldmapIntendedFor}
-                    validationResult={validationResult}
-                    onNavigateToIssue={handleIssueClick}
-                    onRevalidate={runValidation}
-                  />
-                )}
-              </div>
-
-              {/* Navigation */}
-              <div className="flex justify-between mt-4 pt-4 border-t border-gray-200 shrink-0">
-                <Button
-                  variant="soft"
-                  color="gray"
-                  onClick={() => (step === 0 ? handleClose() : setStep(step - 1))}
-                >
-                  {step === 0 ? 'Cancel' : 'Back'}
-                </Button>
-                <div className="flex gap-2">
-                  {step < 7 && (
-                    <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
-                      Next
-                    </Button>
-                  )}
-                  {step === 7 && (
-                    <Button variant="soft" color="gray" onClick={handleClose}>
-                      Close
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Theme>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      {step === 0 && (
+        <StepSelectSource
+          dicomDir={dicomDir}
+          setDicomDir={setDicomDir}
+          series={series}
+          setSeries={setSeries}
+          selectedSeries={selectedSeries}
+          setSelectedSeries={setSelectedSeries}
+          onImportNifti={async (dir: string) => {
+            const result = await electron.bidsImportNiftiDir(dir)
+            if (!result.success) {
+              setError(result.error || 'Failed to import NIfTI directory')
+              return
+            }
+            await handleConversionComplete(
+              result.mappings!,
+              result.demographics,
+              result.detectedSubjects
+            )
+            setStep(2)
+          }}
+        />
+      )}
+      {step === 1 && (
+        <StepConversion
+          dicomDir={dicomDir}
+          selectedSeries={selectedSeries}
+          onComplete={handleConversionComplete}
+          onError={(err: string) => setError(err)}
+          alreadyConverted={converted}
+        />
+      )}
+      {step === 2 && (
+        <StepSkullStrip
+          mappings={mappings}
+          onMappingsUpdate={setMappings}
+          nv={nv}
+          onLoadVolume={bidsWritten ? undefined : onLoadVolume}
+          onLoadWithOverlay={bidsWritten ? undefined : onLoadWithOverlay}
+          completed={skullStripCompleted}
+          onCompletedChange={setSkullStripCompleted}
+          originalPaths={skullStripOriginalPaths}
+          onOriginalPathsChange={setSkullStripOriginalPaths}
+          useStripped={skullStripUseStripped}
+          onUseStrippedChange={setSkullStripUseStripped}
+        />
+      )}
+      {step === 3 && (
+        <StepClassification
+          mappings={currentMappings}
+          onUpdateMapping={handleUpdateMapping}
+          onUpdateSidecar={handleUpdateSidecar}
+          datasetName={config.name}
+          fieldmapIntendedFor={fieldmapIntendedFor}
+          onUpdateFieldmapMappings={setFieldmapIntendedFor}
+          highlightedSeriesIndex={highlightedSeriesIndex}
+          onClearHighlight={() => setHighlightedSeriesIndex(null)}
+        />
+      )}
+      {step === 4 && (
+        <StepTaskEvents
+          mappings={currentMappings}
+          onUpdateMapping={handleUpdateMapping}
+        />
+      )}
+      {step === 5 && (
+        <StepSubjectSession
+          subject={subject}
+          setSubject={setSubject}
+          session={session}
+          setSession={setSession}
+          mappings={currentMappings}
+          demographics={demographics}
+          setDemographics={setDemographics}
+          detectedSubjects={detectedSubjects}
+          onUpdateDetectedSubject={handleUpdateDetectedSubject}
+          onUpdateDetectedSubjectDemographics={handleUpdateDetectedSubjectDemographics}
+          onUpdateDetectedSessionLabel={handleUpdateDetectedSessionLabel}
+        />
+      )}
+      {step === 6 && <StepMetadata config={config} onUpdateConfig={updateConfig} />}
+      {step === 7 && (
+        <StepValidation
+          config={config}
+          mappings={currentMappings}
+          demographics={demographics}
+          allDemographics={getAllDemographics()}
+          fieldmapIntendedFor={fieldmapIntendedFor}
+          validationResult={validationResult}
+          onNavigateToIssue={handleIssueClick}
+          onRevalidate={runValidation}
+          onWriteComplete={() => setBidsWritten(true)}
+        />
+      )}
+    </WizardShell>
   )
 }

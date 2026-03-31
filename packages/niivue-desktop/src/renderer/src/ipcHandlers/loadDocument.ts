@@ -47,7 +47,13 @@ export const registerLoadDocumentHandler = ({
     console.log('[Renderer] loadDocument received for path:', filePath)
 
     // 1️⃣ Pick or create the Niivue instance
-    const { id, nvRef, setVolumes, setMeshes } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { id, nvRef, setVolumes, setMeshes } = target
     const nv = nvRef.current!
 
     // 2️⃣ Read & parse the .nvd JSON (gzip‐aware)

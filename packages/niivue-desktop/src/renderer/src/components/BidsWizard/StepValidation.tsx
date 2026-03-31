@@ -20,6 +20,7 @@ interface StepValidationProps {
   validationResult?: BidsValidationResult | null
   onNavigateToIssue?: (issue: BidsValidationIssue) => void
   onRevalidate?: () => Promise<void>
+  onWriteComplete?: () => void
 }
 
 export function StepValidation({
@@ -30,7 +31,8 @@ export function StepValidation({
   fieldmapIntendedFor,
   validationResult,
   onNavigateToIssue,
-  onRevalidate
+  onRevalidate,
+  onWriteComplete
 }: StepValidationProps): JSX.Element {
   const [writing, setWriting] = useState(false)
   const [writeComplete, setWriteComplete] = useState(false)
@@ -70,6 +72,7 @@ export function StepValidation({
       }
 
       setWriteComplete(true)
+      onWriteComplete?.()
     } catch (err) {
       setWriteError(err instanceof Error ? err.message : String(err))
     } finally {

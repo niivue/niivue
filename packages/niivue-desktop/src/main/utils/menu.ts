@@ -903,7 +903,17 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
     // { role: 'workflowsMenu' }
     {
       label: 'Workflows',
-      submenu: buildAllWorkflowMenuItems(win)
+      submenu: [
+        {
+          label: 'New Workflow...',
+          accelerator: 'CmdOrCtrl+Shift+N',
+          click: (): void => {
+            win.webContents.send('workflow:open-designer')
+          }
+        },
+        { type: 'separator' },
+        ...buildAllWorkflowMenuItems(win)
+      ]
     },
     // { role: 'windowMenu' }
     {

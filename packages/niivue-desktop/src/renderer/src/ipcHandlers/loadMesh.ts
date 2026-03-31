@@ -25,7 +25,13 @@ export const registerLoadMeshHandler = ({ getTarget }: HandlerProps): void => {
     console.log('[Renderer] loadMesh received for path:', path)
 
     // pick or create an appropriate document
-    const { nvRef, setMeshes } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { nvRef, setMeshes } = target
     const nv = nvRef.current!
 
     // fetch and parse the mesh file

@@ -20,6 +20,8 @@ import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 import { WorkflowDialog } from './components/WorkflowDialog.js'
+import { WorkflowDesigner } from './components/WorkflowDesigner.js'
+import { OpenTargetDialog } from './components/OpenTargetDialog.js'
 
 const electron = window.electron
 
@@ -96,6 +98,9 @@ function MainApp(): JSX.Element {
   const [workflowName, setWorkflowName] = useState('')
   const [workflowInputs, setWorkflowInputs] = useState<Record<string, unknown>>({})
 
+  // Workflow designer state
+  const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
+
   // Listen for workflow:open from menu
   useEffect(() => {
     const handleWorkflowOpen = (
@@ -107,12 +112,23 @@ function MainApp(): JSX.Element {
       setWorkflowOpen(true)
     }
     electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
+
+    const handleOpenDesigner = (): void => {
+      setWorkflowDesignerOpen(true)
+    }
+    electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
+
     return (): void => {
       electron.ipcRenderer.removeAllListeners('workflow:open')
+      electron.ipcRenderer.removeAllListeners('workflow:open-designer')
     }
   }, [])
   // modelsVersion is used to trigger re-render when user adds models via wizard
   void modelsVersion
+
+  // Open target dialog state (new doc vs add to current)
+  const [openTargetDialogOpen, setOpenTargetDialogOpen] = useState(false)
+  const openTargetResolverRef = useRef<((choice: 'new' | 'current' | 'cancel') => void) | null>(null)
 
   const getTarget = async (): Promise<NiivueInstanceContext> => {
     // Use ref to get latest selected, avoiding stale closures
@@ -122,6 +138,25 @@ function MainApp(): JSX.Element {
     const nv = current.nvRef.current
     const hasContent = nv.volumes.length > 0 || nv.meshes.length > 0
     if (!hasContent) return current
+
+    // Ask user whether to open in new document or add to current
+    const choice = await new Promise<'new' | 'current' | 'cancel'>((resolve) => {
+      openTargetResolverRef.current = resolve
+      setOpenTargetDialogOpen(true)
+    })
+
+    setOpenTargetDialogOpen(false)
+    openTargetResolverRef.current = null
+
+    if (choice === 'cancel') throw new Error('open cancelled by user')
+    if (choice === 'current') return current
+
+    // Create new document and copy BIDS data from current
+    const newDoc = await createDocument()
+    if (current.bidsMappings.length > 0) {
+      newDoc.setBidsMappings([...current.bidsMappings])
+    }
+    return newDoc
     return createDocument()
   }
 
@@ -1354,12 +1389,9 @@ function MainApp(): JSX.Element {
             const current = selectedRef.current
             if (!current) { console.error('[onLoadVolume] no selected document'); return }
             const nv = current.nvRef.current
-            console.log('[onLoadVolume] nv.gl:', !!nv.gl, 'path:', niftiPath)
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-            console.log('[onLoadVolume] base64 length:', base64?.length ?? 0)
             if (!base64) { console.error('[onLoadVolume] empty base64'); return }
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-            console.log('[onLoadVolume] volume dims:', vol.dims, 'img length:', vol.img?.length)
             nv.addVolume(vol)
             current.setVolumes([...nv.volumes])
             nv.drawScene()
@@ -1380,27 +1412,23 @@ function MainApp(): JSX.Element {
         }}
         onLoadVolume={async (niftiPath) => {
           try {
-            const current = selectedRef.current
-            if (!current) { console.error('[onLoadVolume] no selected document'); return }
-            const nv = current.nvRef.current
-            console.log('[onLoadVolume] nv.gl:', !!nv.gl, 'path:', niftiPath)
+            const target = await getTarget()
+            const nv = target.nvRef.current
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-            console.log('[onLoadVolume] base64 length:', base64?.length ?? 0)
             if (!base64) { console.error('[onLoadVolume] empty base64'); return }
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-            console.log('[onLoadVolume] volume dims:', vol.dims, 'img length:', vol.img?.length)
             nv.addVolume(vol)
-            current.setVolumes([...nv.volumes])
+            target.setVolumes([...nv.volumes])
             nv.drawScene()
           } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
             console.error('[onLoadVolume] error:', err)
           }
         }}
         onLoadWithOverlay={async (basePath, overlayPath) => {
           try {
-            const current = selectedRef.current
-            if (!current) return
-            const nv = current.nvRef.current
+            const target = await getTarget()
+            const nv = target.nvRef.current
             const [baseB64, overlayB64] = await Promise.all([
               electron.ipcRenderer.invoke('loadFromFile', basePath) as Promise<string>,
               electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
@@ -1411,9 +1439,10 @@ function MainApp(): JSX.Element {
             overlayVol.opacity = 0.5
             nv.addVolume(baseVol)
             nv.addVolume(overlayVol)
-            current.setVolumes([...nv.volumes])
+            target.setVolumes([...nv.volumes])
             nv.drawScene()
           } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
             console.error('[onLoadWithOverlay] error:', err)
           }
         }}
@@ -1433,19 +1462,19 @@ function MainApp(): JSX.Element {
         }}
         onLoadFile={async (niftiPath: string) => {
           try {
-            const current = selectedRef.current
-            if (!current) return
-            const nv = current.nvRef.current
+            const target = await getTarget()
+            const nv = target.nvRef.current
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
             if (!base64) return
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
-            current.setVolumes([...nv.volumes])
+            target.setVolumes([...nv.volumes])
             nv.drawScene()
             const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
             const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
-            updateDocument(current.id, { title })
+            updateDocument(target.id, { title })
           } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
             console.error('Failed to load volume from workflow:', err)
           }
         }}
@@ -1456,6 +1485,20 @@ function MainApp(): JSX.Element {
         }}
         workflowName={workflowName}
         inputs={workflowInputs}
+      />
+      <WorkflowDesigner
+        open={workflowDesignerOpen}
+        onClose={() => setWorkflowDesignerOpen(false)}
+        onSave={(schema) => {
+          console.log('Workflow saved:', schema)
+          setWorkflowDesignerOpen(false)
+        }}
+      />
+      <OpenTargetDialog
+        open={openTargetDialogOpen}
+        onNewDocument={() => openTargetResolverRef.current?.('new')}
+        onAddToCurrent={() => openTargetResolverRef.current?.('current')}
+        onCancel={() => openTargetResolverRef.current?.('cancel')}
       />
     </div>
   )
