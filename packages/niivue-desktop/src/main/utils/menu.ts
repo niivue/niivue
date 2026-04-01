@@ -719,6 +719,13 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
                 win.webContents.send('open-right-panel-tab', 'bids')
               }
             },
+            {
+              label: 'Clip Planes',
+              accelerator: 'CommandOrControl+8',
+              click: (): void => {
+                win.webContents.send('open-right-panel-tab', 'clipplanes')
+              }
+            },
             { type: 'separator' },
             {
               label: 'Hide Panel',
