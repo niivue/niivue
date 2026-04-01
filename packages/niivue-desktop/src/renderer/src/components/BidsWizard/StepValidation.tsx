@@ -89,7 +89,7 @@ export function StepValidation({
       <button
         key={i}
         className={`text-left w-full text-xs px-2 py-1 rounded ${
-          isError ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
+          isError ? 'bg-[var(--red-3)] text-[var(--red-11)]' : 'bg-[var(--yellow-3)] text-[var(--yellow-11)]'
         } ${clickable ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
         onClick={() => clickable && onNavigateToIssue(issue)}
         disabled={!clickable}
@@ -104,7 +104,7 @@ export function StepValidation({
   if (writeComplete) {
     return (
       <div className="flex flex-col gap-4 items-center py-8">
-        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+        <div className="w-16 h-16 rounded-full bg-[var(--green-3)] flex items-center justify-center text-3xl">
           {displayResult?.valid !== false ? '\u2713' : '!'}
         </div>
         <Text size="3" weight="bold">
@@ -115,7 +115,7 @@ export function StepValidation({
         <Text size="1" color="gray">
           Your dataset has been written to:
         </Text>
-        <Text size="1" className="font-mono bg-gray-100 px-3 py-1 rounded">
+        <Text size="1" className="font-mono bg-[var(--gray-3)] px-3 py-1 rounded">
           {outputPath}
         </Text>
 
@@ -124,7 +124,7 @@ export function StepValidation({
             <div className="flex items-center gap-2 mb-2">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  displayResult.valid ? 'bg-green-500' : 'bg-red-500'
+                  displayResult.valid ? 'bg-[var(--green-9)]' : 'bg-[var(--red-9)]'
                 }`}
               />
               <Text size="1" weight="bold">
@@ -167,7 +167,7 @@ export function StepValidation({
         <div className="border rounded p-3">
           <div className="flex items-center gap-2 mb-2">
             <div
-              className={`w-3 h-3 rounded-full ${validationResult.valid ? 'bg-green-500' : 'bg-red-500'}`}
+              className={`w-3 h-3 rounded-full ${validationResult.valid ? 'bg-[var(--green-9)]' : 'bg-[var(--red-9)]'}`}
             />
             <Text size="1" weight="bold">
               {validationResult.valid
@@ -198,7 +198,7 @@ export function StepValidation({
       </Button>
 
       {writeError && (
-        <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
+        <div className="text-xs text-[var(--red-11)] bg-[var(--red-3)] border border-[var(--red-6)] rounded p-2">
           {writeError}
         </div>
       )}

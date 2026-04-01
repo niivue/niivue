@@ -896,24 +896,39 @@ function MainApp(): JSX.Element {
             break
           case 'workflow': {
             const workflowName = options.subcommandMode
-            if (!workflowName) throw new Error('workflow subcommand requires a workflow name')
-            const wfInputs = options.workflowInputs ? JSON.parse(options.workflowInputs) as Record<string, unknown> : {}
+            if (!workflowName) throw new Error('workflow subcommand requires a workflow name. Usage: workflow <name> --inputs <json>')
+
+            let wfInputs: Record<string, unknown> = {}
+            if (options.workflowInputs) {
+              try {
+                wfInputs = JSON.parse(options.workflowInputs) as Record<string, unknown>
+              } catch (e) {
+                throw new Error(`Invalid JSON in --inputs: ${e instanceof Error ? e.message : String(e)}`)
+              }
+            }
+
             let wfContext: Record<string, unknown> | undefined
             if (options.workflowContext) {
               // Could be inline JSON or a file path — try parsing as JSON first
               try {
                 wfContext = JSON.parse(options.workflowContext) as Record<string, unknown>
               } catch {
-                // Assume it's a file path — load it via the main process
-                const resolved = await window.electron.headlessResolveInput(options.workflowContext)
-                wfContext = JSON.parse(atob(resolved.base64)) as Record<string, unknown>
+                // Not valid JSON — treat as a file path
+                try {
+                  const resolved = await window.electron.headlessResolveInput(options.workflowContext)
+                  wfContext = JSON.parse(atob(resolved.base64)) as Record<string, unknown>
+                } catch (e) {
+                  throw new Error(`Failed to load --context from '${options.workflowContext}': ${e instanceof Error ? e.message : String(e)}`)
+                }
               }
             }
+
             // --output flag overrides output_dir in context
             if (options.output) {
               wfContext = wfContext || {}
               wfContext.output_dir = options.output
             }
+
             const result = await window.electron.headlessWorkflow(workflowName, wfInputs, wfContext)
             console.error(`[workflow] outputs: ${JSON.stringify(result.outputs)}`)
             break

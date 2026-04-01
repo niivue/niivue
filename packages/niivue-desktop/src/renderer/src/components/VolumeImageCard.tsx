@@ -224,8 +224,8 @@ export function VolumeImageCard({
 
   return (
     <Card
-      className={`flex flex-col p-2 my-1 gap-2 bg-white border ${
-        isSelected ? 'bg-blue-100 border-blue-500 border-2 font-semibold' : 'border-gray-300'
+      className={`flex flex-col p-2 my-1 gap-2 bg-[var(--color-background)] border ${
+        isSelected ? 'bg-[var(--accent-3)] border-[var(--accent-9)] border-2 font-semibold' : 'border-[var(--gray-6)]'
       }`}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
@@ -420,7 +420,7 @@ export function VolumeImageCard({
           <button style={{ display: 'none' }}>Open Header</button>
         </Dialog.Trigger>
         <Dialog.Content
-          className="p-4 bg-white rounded shadow"
+          className="p-4 bg-[var(--color-background)] rounded shadow"
           style={{ width: 400, maxHeight: '80vh', overflowY: 'auto' }}
         >
           <Dialog.Title>NIfTI Header Information</Dialog.Title>

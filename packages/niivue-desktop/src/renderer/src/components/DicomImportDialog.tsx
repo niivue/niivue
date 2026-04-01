@@ -122,7 +122,7 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
 
   return (
     <div className="fixed inset-0 bg-black/40 grid place-items-center z-50">
-      <div className="bg-white rounded-2xl p-4 w-[720px] max-h-[80vh] flex flex-col gap-3 shadow-xl">
+      <div className="bg-[var(--color-background)] rounded-2xl p-4 w-[720px] max-h-[80vh] flex flex-col gap-3 shadow-xl">
         <div className="text-lg font-semibold">
           {done ? 'Conversion Complete' : 'Import DICOM Series'}
         </div>
@@ -180,7 +180,7 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
                   </span>
                   {onLoadVolume && (
                     <button
-                      className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-500 disabled:opacity-50"
+                      className="text-xs px-2 py-1 bg-[var(--accent-9)] text-white rounded hover:bg-[var(--accent-10)] disabled:opacity-50"
                       disabled={isLoading || loadingFile !== null}
                       onClick={() => handleLoadFile(f)}
                     >
@@ -194,7 +194,7 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
         )}
 
         {error && (
-          <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
+          <div className="text-xs text-[var(--red-11)] bg-[var(--red-3)] border border-[var(--red-6)] rounded p-2">
             {error}
           </div>
         )}
@@ -204,7 +204,7 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
             <>
               {onLoadVolume && convertedFiles.length > 1 && (
                 <button
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500 disabled:opacity-50"
+                  className="px-3 py-1 bg-[var(--accent-9)] text-white rounded hover:bg-[var(--accent-10)] disabled:opacity-50"
                   disabled={loadingFile !== null}
                   onClick={handleLoadAll}
                 >

@@ -157,16 +157,16 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
     <div className="flex flex-col gap-4">
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-center">
+        <div className="bg-[var(--accent-3)] border border-[var(--accent-6)] rounded p-3 text-center">
           <Text size="4" weight="bold" color="blue">{includedSubjects.length}</Text>
           <Text size="1" color="gray" as="p">Subject{includedSubjects.length !== 1 ? 's' : ''}</Text>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded p-3 text-center">
+        <div className="bg-[var(--green-3)] border border-[var(--green-6)] rounded p-3 text-center">
           <Text size="4" weight="bold" color="green">{included.length}</Text>
           <Text size="1" color="gray" as="p">Series included</Text>
         </div>
         {excluded.length > 0 && (
-          <div className="bg-orange-50 border border-orange-200 rounded p-3 text-center">
+          <div className="bg-[var(--orange-3)] border border-[var(--orange-6)] rounded p-3 text-center">
             <Text size="4" weight="bold" color="orange">{excluded.length}</Text>
             <Text size="1" color="gray" as="p">Series excluded</Text>
           </div>
@@ -179,7 +179,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
           {Object.entries(datatypeCounts).map(([dt, count]) => (
             <span
               key={dt}
-              className="px-2 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700"
+              className="px-2 py-1 bg-[var(--gray-3)] rounded text-xs font-medium text-[var(--gray-11)]"
             >
               {dt}: {count}
             </span>
@@ -202,12 +202,12 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
               rows.push(
                 <div
                   key={`${m.index}-main`}
-                  className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
+                  className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                 >
                   {previewImages.has(m.niftiPath)
                     ? <img src={previewImages.get(m.niftiPath)} width={60} height={60} className="rounded flex-shrink-0" />
                     : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
-                        <div className="animate-spin w-3 h-3 border border-gray-500 border-t-transparent rounded-full" />
+                        <div className="animate-spin w-3 h-3 border border-[var(--gray-9)] border-t-transparent rounded-full" />
                       </div>
                   }
                   <div className="flex flex-col min-w-0 flex-1">
@@ -240,12 +240,12 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                 rows.push(
                   <div
                     key={`${m.index}-original`}
-                    className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded hover:bg-gray-100"
+                    className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                   >
                     {previewImages.has(origPath)
                       ? <img src={previewImages.get(origPath)} width={60} height={60} className="rounded flex-shrink-0" />
                       : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
-                          <div className="animate-spin w-3 h-3 border border-gray-500 border-t-transparent rounded-full" />
+                          <div className="animate-spin w-3 h-3 border border-[var(--gray-9)] border-t-transparent rounded-full" />
                         </div>
                     }
                     <div className="flex flex-col min-w-0 flex-1">
@@ -282,10 +282,10 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {includedSubjects.length > 0 && (
         <div>
           <Text size="2" weight="medium" className="mb-1">Participants</Text>
-          <div className="border border-gray-200 rounded overflow-hidden">
+          <div className="border border-[var(--gray-5)] rounded overflow-hidden">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-gray-50">
+                <tr className="bg-[var(--gray-2)]">
                   <th className="text-left px-2 py-1 font-medium">Subject</th>
                   <th className="text-left px-2 py-1 font-medium">Age</th>
                   <th className="text-left px-2 py-1 font-medium">Sex</th>
@@ -297,7 +297,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                 {includedSubjects.map((sub) => {
                   const totalSeries = sub.sessions.reduce((sum, ses) => sum + ses.seriesIndices.length, 0)
                   return (
-                    <tr key={sub.label} className="border-t border-gray-100">
+                    <tr key={sub.label} className="border-t border-[var(--gray-4)]">
                       <td className="px-2 py-1 font-mono">sub-{sub.label}</td>
                       <td className="px-2 py-1">{sub.demographics.age || '-'}</td>
                       <td className="px-2 py-1">{sub.demographics.sex || '-'}</td>
@@ -314,24 +314,24 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
 
       {/* Validation results */}
       {validating && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <div className="animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full" />
+        <div className="flex items-center gap-2 text-sm text-[var(--gray-9)]">
+          <div className="animate-spin w-3 h-3 border-2 border-[var(--accent-9)] border-t-transparent rounded-full" />
           Validating...
         </div>
       )}
       {validation && !validating && (
         <div>
           {validation.valid && validation.errors.length === 0 && (
-            <div className="bg-green-50 border border-green-200 rounded p-2">
+            <div className="bg-[var(--green-3)] border border-[var(--green-6)] rounded p-2">
               <Text size="2" color="green">Validation passed</Text>
             </div>
           )}
           {validation.errors.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded p-2">
+            <div className="bg-[var(--red-3)] border border-[var(--red-6)] rounded p-2">
               <Text size="2" weight="medium" color="red">
                 {validation.errors.length} error{validation.errors.length !== 1 ? 's' : ''}
               </Text>
-              <ul className="mt-1 text-xs text-red-700 list-disc pl-4">
+              <ul className="mt-1 text-xs text-[var(--red-11)] list-disc pl-4">
                 {validation.errors.slice(0, 10).map((e, i) => (
                   <li key={i}>{e.message}</li>
                 ))}
@@ -342,11 +342,11 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
             </div>
           )}
           {validation.warnings.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">
+            <div className="bg-[var(--yellow-3)] border border-[var(--yellow-6)] rounded p-2 mt-2">
               <Text size="2" weight="medium" color="yellow">
                 {validation.warnings.length} warning{validation.warnings.length !== 1 ? 's' : ''}
               </Text>
-              <ul className="mt-1 text-xs text-yellow-700 list-disc pl-4">
+              <ul className="mt-1 text-xs text-[var(--yellow-11)] list-disc pl-4">
                 {validation.warnings.slice(0, 5).map((w, i) => (
                   <li key={i}>{w.message}</li>
                 ))}
@@ -361,7 +361,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
 
       {/* Output path */}
       {outputDir && (
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-[var(--gray-9)]">
           Output: <span className="font-mono">{outputDir}/{(datasetName || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')}/</span>
         </div>
       )}
@@ -369,7 +369,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {/* File tree */}
       <div>
         <Text size="2" weight="medium" className="mb-1">File tree</Text>
-        <div className="bg-gray-900 text-green-400 rounded p-3 text-xs font-mono overflow-auto max-h-[250px]">
+        <div className="bg-[var(--gray-12)] text-[var(--green-9)] rounded p-3 text-xs font-mono overflow-auto max-h-[250px]">
           <div>{(datasetName || 'my_bids_dataset').replace(/[^a-zA-Z0-9_-]/g, '_')}/</div>
           <div className="ml-3">dataset_description.json</div>
           <div className="ml-3">participants.tsv</div>
@@ -390,7 +390,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
             )
           })}
           {tree.length === 0 && (
-            <div className="ml-3 text-gray-500 italic">No series selected</div>
+            <div className="ml-3 text-[var(--gray-9)] italic">No series selected</div>
           )}
         </div>
       </div>

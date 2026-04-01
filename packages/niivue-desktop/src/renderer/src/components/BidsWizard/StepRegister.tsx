@@ -277,7 +277,7 @@ export function StepRegister({
       </Text>
 
       {/* Target selection */}
-      <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded border">
+      <div className="flex flex-col gap-2 p-3 bg-[var(--gray-2)] rounded border">
         <Text size="1" weight="medium">Target (Stationary) Image</Text>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1 text-xs">
@@ -374,7 +374,7 @@ export function StepRegister({
       {/* Series selection */}
       <div className="border rounded overflow-auto max-h-[140px]">
         <table className="w-full text-xs">
-          <thead className="bg-gray-50 sticky top-0">
+          <thead className="bg-[var(--gray-2)] sticky top-0">
             <tr>
               <th className="py-1 px-2 text-left font-medium w-8"></th>
               <th className="py-1 px-2 text-left font-medium">Series</th>
@@ -389,8 +389,8 @@ export function StepRegister({
               <tr
                 key={m.index}
                 className={
-                  'border-t hover:bg-gray-50 cursor-pointer' +
-                  (preview?.seriesIndex === m.index ? ' bg-blue-50' : '')
+                  'border-t hover:bg-[var(--gray-2)] cursor-pointer' +
+                  (preview?.seriesIndex === m.index ? ' bg-[var(--accent-3)]' : '')
                 }
                 onClick={() => {
                   if (completed.has(m.index)) void handlePreviewSeries(m)
@@ -409,11 +409,11 @@ export function StepRegister({
                 <td className="py-1 px-2">{isBidsGuessT1(m) ? 'ls' : 'hel'}</td>
                 <td className="py-1 px-2">
                   {completed.has(m.index) ? (
-                    <span className="text-green-600">Done</span>
+                    <span className="text-[var(--green-11)]">Done</span>
                   ) : running && selectedIndices.has(m.index) ? (
-                    <span className="text-blue-600">Pending</span>
+                    <span className="text-[var(--accent-11)]">Pending</span>
                   ) : (
-                    <span className="text-gray-400">-</span>
+                    <span className="text-[var(--gray-8)]">-</span>
                   )}
                 </td>
                 {onLoadVolume && (
@@ -422,14 +422,14 @@ export function StepRegister({
                       {completed.has(m.index) && originalPaths.has(m.index) ? (
                         <>
                           <button
-                            className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300"
+                            className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)]"
                             disabled={running}
                             onClick={() => void onLoadVolume(originalPaths.get(m.index)!)}
                           >
                             Original
                           </button>
                           <button
-                            className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300"
+                            className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)]"
                             disabled={running}
                             onClick={() => void onLoadVolume(m.niftiPath)}
                           >
@@ -437,7 +437,7 @@ export function StepRegister({
                           </button>
                           {onLoadWithOverlay && (
                             <button
-                              className="text-purple-600 hover:underline text-[10px] disabled:text-gray-300"
+                              className="text-[var(--purple-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)]"
                               disabled={running}
                               onClick={() => void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)}
                             >
@@ -447,7 +447,7 @@ export function StepRegister({
                         </>
                       ) : (
                         <button
-                          className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300"
+                          className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)]"
                           disabled={running}
                           onClick={() => void onLoadVolume(m.niftiPath)}
                         >
@@ -474,9 +474,9 @@ export function StepRegister({
         </Button>
         {running && (
           <div className="flex-1">
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-[var(--gray-4)] rounded-full h-2">
               <div
-                className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                className="h-2 rounded-full bg-[var(--accent-9)] transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -489,9 +489,9 @@ export function StepRegister({
 
       {/* Completion banner */}
       {showCompleteBanner && !running && (
-        <div className="p-2 text-xs text-green-700 bg-green-50 rounded border border-green-200 flex items-center justify-between">
+        <div className="p-2 text-xs text-[var(--green-11)] bg-[var(--green-3)] rounded border border-[var(--green-6)] flex items-center justify-between">
           <span>Registration complete ({completed.size} series registered successfully)</span>
-          <button className="ml-2 underline text-green-600" onClick={() => setShowCompleteBanner(false)}>
+          <button className="ml-2 underline text-[var(--green-11)]" onClick={() => setShowCompleteBanner(false)}>
             Dismiss
           </button>
         </div>
@@ -511,7 +511,7 @@ export function StepRegister({
 
       {/* Error */}
       {error && (
-        <div className="p-2 text-xs text-red-700 bg-red-50 rounded border border-red-200">
+        <div className="p-2 text-xs text-[var(--red-11)] bg-[var(--red-3)] rounded border border-[var(--red-6)]">
           {error}
         </div>
       )}
@@ -586,7 +586,7 @@ function RegisterPreview({
             <Text size="1" weight="medium">Original</Text>
             {onLoadVolume && (
               <button
-                className="text-blue-600 hover:underline text-[10px]"
+                className="text-[var(--accent-11)] hover:underline text-[10px]"
                 onClick={() => void onLoadVolume(originalPath)}
               >
                 Load in Viewer
@@ -596,7 +596,7 @@ function RegisterPreview({
           {origImage ? (
             <img src={origImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
-            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-gray-500 text-xs">
+            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
               Rendering...
             </div>
           )}
@@ -606,7 +606,7 @@ function RegisterPreview({
             <Text size="1" weight="medium">Registered</Text>
             {onLoadVolume && (
               <button
-                className="text-blue-600 hover:underline text-[10px]"
+                className="text-[var(--accent-11)] hover:underline text-[10px]"
                 onClick={() => void onLoadVolume(registeredPath)}
               >
                 Load in Viewer
@@ -616,7 +616,7 @@ function RegisterPreview({
           {regImage ? (
             <img src={regImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
-            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-gray-500 text-xs">
+            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
               Rendering...
             </div>
           )}
@@ -624,7 +624,7 @@ function RegisterPreview({
       </div>
       {onLoadWithOverlay && (
         <button
-          className="text-purple-600 hover:underline text-xs text-center"
+          className="text-[var(--purple-11)] hover:underline text-xs text-center"
           onClick={() => void onLoadWithOverlay(registeredPath, originalPath)}
         >
           Load Registered + Original Overlay in Viewer

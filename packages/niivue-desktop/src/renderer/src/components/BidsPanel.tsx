@@ -132,14 +132,14 @@ export function BidsPanel({ mappings }: BidsPanelProps): JSX.Element {
                   onClick={() => setSelectedIndex(i)}
                   className={`block w-full text-left px-2 py-1 text-[11px] border-b last:border-b-0 transition-colors ${
                     i === selectedIndex
-                      ? 'bg-blue-50 text-blue-800'
-                      : 'hover:bg-gray-50'
+                      ? 'bg-[var(--accent-3)] text-[var(--accent-11)]'
+                      : 'hover:bg-[var(--gray-3)]'
                   }`}
                 >
                   <span className="truncate block" title={m.seriesDescription}>
                     {m.seriesDescription || '(unknown)'}
                   </span>
-                  <span className="text-gray-400 text-[10px]">
+                  <span className="text-[var(--gray-8)] text-[10px]">
                     {m.datatype}/{m.suffix}
                   </span>
                 </button>
@@ -152,30 +152,30 @@ export function BidsPanel({ mappings }: BidsPanelProps): JSX.Element {
         {selected && (
           <div>
             <Text size="1" weight="bold" className="block mb-1">Classification</Text>
-            <div className="bg-gray-50 rounded border border-gray-200 p-2 text-[11px]">
+            <div className="bg-[var(--gray-2)] rounded border border-[var(--gray-5)] p-2 text-[11px]">
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-                <span className="text-gray-500">Datatype</span>
+                <span className="text-[var(--gray-9)]">Datatype</span>
                 <span className="font-medium">{selected.datatype}</span>
-                <span className="text-gray-500">Suffix</span>
+                <span className="text-[var(--gray-9)]">Suffix</span>
                 <span className="font-medium">{selected.suffix}</span>
                 {selected.task && (
                   <>
-                    <span className="text-gray-500">Task</span>
+                    <span className="text-[var(--gray-9)]">Task</span>
                     <span>{selected.task}</span>
                   </>
                 )}
                 {selected.acq && (
                   <>
-                    <span className="text-gray-500">Acq</span>
+                    <span className="text-[var(--gray-9)]">Acq</span>
                     <span>{selected.acq}</span>
                   </>
                 )}
-                <span className="text-gray-500">Run</span>
+                <span className="text-[var(--gray-9)]">Run</span>
                 <span>{selected.run}</span>
-                <span className="text-gray-500">Confidence</span>
+                <span className="text-[var(--gray-9)]">Confidence</span>
                 <span className={
-                  selected.confidence === 'high' ? 'text-green-700' :
-                  selected.confidence === 'medium' ? 'text-yellow-700' : 'text-red-700'
+                  selected.confidence === 'high' ? 'text-[var(--green-11)]' :
+                  selected.confidence === 'medium' ? 'text-[var(--yellow-11)]' : 'text-[var(--red-11)]'
                 }>
                   {selected.confidence}
                 </span>
@@ -198,11 +198,11 @@ export function BidsPanel({ mappings }: BidsPanelProps): JSX.Element {
           return (
             <div key={section.label}>
               <Text size="1" weight="bold" className="block mb-1">{section.label}</Text>
-              <div className="bg-gray-50 rounded border border-gray-200 p-2 text-[11px]">
+              <div className="bg-[var(--gray-2)] rounded border border-[var(--gray-5)] p-2 text-[11px]">
                 <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
                   {entries.map(({ key, value }) => (
                     <React.Fragment key={key}>
-                      <span className="text-gray-500 truncate" title={key}>{key}</span>
+                      <span className="text-[var(--gray-9)] truncate" title={key}>{key}</span>
                       <span className="truncate" title={formatValue(value)}>
                         {formatValue(value)}
                       </span>

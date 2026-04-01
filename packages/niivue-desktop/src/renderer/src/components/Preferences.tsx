@@ -37,7 +37,7 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const value = nv.opts[key]
     console.log(`rendering ${key} with value`, value)
     if (value === undefined) {
-      return <span className="text-sm text-gray-500">Not available</span>
+      return <span className="text-sm text-[var(--gray-9)]">Not available</span>
     }
 
     switch (meta.type) {
@@ -122,7 +122,7 @@ export const Preferences: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           />
         )
       default:
-        return <span className="text-sm text-gray-500">Unsupported</span>
+        return <span className="text-sm text-[var(--gray-9)]">Unsupported</span>
     }
   }
 

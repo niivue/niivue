@@ -131,7 +131,7 @@ export function RightPanel({
   return (
     <div className="flex flex-col h-full overflow-auto p-2">
       {/* Icon strip */}
-      <div className="flex items-center gap-1 pb-1 border-b border-gray-200">
+      <div className="flex items-center gap-1 pb-1 border-b border-[var(--gray-5)]">
         {tabs.map((tab) => (
           <Tooltip key={tab.id} content={tab.title}>
             <button
@@ -139,8 +139,8 @@ export function RightPanel({
               className={
                 'p-1.5 rounded transition-colors ' +
                 (activeTab === tab.id
-                  ? 'bg-gray-200 text-gray-900'
-                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100')
+                  ? 'bg-[var(--gray-4)] text-[var(--gray-12)]'
+                  : 'text-[var(--gray-9)] hover:text-[var(--gray-12)] hover:bg-[var(--gray-4)]')
               }
             >
               {tab.icon}

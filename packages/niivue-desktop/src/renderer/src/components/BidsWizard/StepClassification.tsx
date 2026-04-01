@@ -85,7 +85,7 @@ export function StepClassification({
 
         <div className="overflow-auto max-h-[350px] border rounded">
           <table className="w-full text-xs">
-            <thead className="bg-gray-50 sticky top-0">
+            <thead className="bg-[var(--gray-2)] sticky top-0">
               <tr>
                 <th className="py-1.5 px-1 text-left font-medium">Inc</th>
                 <th className="py-1.5 px-1 text-left font-medium">Series</th>
@@ -118,7 +118,7 @@ export function StepClassification({
         {hasFmaps && (
           <div className="mt-3 border rounded">
             <button
-              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 text-xs font-medium"
+              className="w-full flex items-center justify-between px-3 py-2 bg-[var(--gray-2)] hover:bg-[var(--gray-4)] text-xs font-medium"
               onClick={() => setFmapExpanded(!fmapExpanded)}
             >
               <span>Fieldmap Mappings (IntendedFor)</span>
@@ -134,12 +134,12 @@ export function StepClassification({
                 {fmapSeries.map((fm) => {
                   const entry = fieldmapIntendedFor.find((f) => f.fmapIndex === fm.index)
                   return (
-                    <div key={fm.index} className="mb-2 p-2 bg-gray-50 rounded text-xs">
+                    <div key={fm.index} className="mb-2 p-2 bg-[var(--gray-2)] rounded text-xs">
                       <div className="font-medium mb-1">
-                        {fm.subject && <span className="text-gray-400 font-normal">sub-{fm.subject}</span>}
-                        {fm.session && <span className="text-gray-400 font-normal">/ses-{fm.session} </span>}
+                        {fm.subject && <span className="text-[var(--gray-8)] font-normal">sub-{fm.subject}</span>}
+                        {fm.session && <span className="text-[var(--gray-8)] font-normal">/ses-{fm.session} </span>}
                         {' '}{fm.seriesDescription || `${fm.datatype}/${fm.suffix}`}
-                        {fm.dir && <span className="text-gray-500 ml-1">(dir-{fm.dir})</span>}
+                        {fm.dir && <span className="text-[var(--gray-9)] ml-1">(dir-{fm.dir})</span>}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {targetSeries.map((t) => {
@@ -152,14 +152,14 @@ export function StepClassification({
                                 onChange={() => handleToggleTarget(fm.index, t.index)}
                                 className="w-3 h-3"
                               />
-                              <span className={checked ? 'text-blue-700' : 'text-gray-600'}>
-                                {t.subject && <span className="text-gray-400">sub-{t.subject}</span>}
-                                {t.session && <span className="text-gray-400">/ses-{t.session} </span>}
+                              <span className={checked ? 'text-[var(--accent-11)]' : 'text-[var(--gray-10)]'}>
+                                {t.subject && <span className="text-[var(--gray-8)]">sub-{t.subject}</span>}
+                                {t.session && <span className="text-[var(--gray-8)]">/ses-{t.session} </span>}
                                 {t.seriesDescription || `${t.datatype}/${t.suffix}`}
                                 {t.task && ` (task-${t.task})`}
                                 {t.run > 0 && ` run-${t.run}`}
                                 {t.niftiPath && (
-                                  <span className="text-gray-400 ml-1" title={t.niftiPath}>
+                                  <span className="text-[var(--gray-8)] ml-1" title={t.niftiPath}>
                                     [{t.niftiPath.split('/').pop()}]
                                   </span>
                                 )}

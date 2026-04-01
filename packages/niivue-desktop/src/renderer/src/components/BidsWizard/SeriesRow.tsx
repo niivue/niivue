@@ -20,9 +20,9 @@ interface SeriesRowProps {
 const DATATYPES: BidsDatatype[] = ['anat', 'func', 'dwi', 'fmap', 'perf']
 
 const confidenceColors: Record<string, string> = {
-  high: 'bg-green-100 text-green-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  low: 'bg-red-100 text-red-800'
+  high: 'bg-[var(--green-3)] text-[var(--green-11)]',
+  medium: 'bg-[var(--yellow-3)] text-[var(--yellow-11)]',
+  low: 'bg-[var(--red-3)] text-[var(--red-11)]'
 }
 
 const EDITABLE_SIDECAR_FIELDS: {
@@ -78,7 +78,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
     <>
       <tr
         ref={ref}
-        className={`${mapping.excluded ? 'opacity-40' : ''} ${highlighted ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
+        className={`${mapping.excluded ? 'opacity-40' : ''} ${highlighted ? 'bg-[var(--accent-3)] border-l-2 border-l-blue-500' : ''}`}
       >
         {/* Exclude checkbox */}
         <td className="py-1 px-1">
@@ -162,7 +162,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
             onChange={(e) => onUpdate(idx, { task: e.target.value })}
             placeholder={mapping.datatype === 'func' ? 'rest' : ''}
             disabled={mapping.datatype !== 'func'}
-            className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded disabled:opacity-30"
+            className="w-16 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded disabled:opacity-30"
           />
         </td>
 
@@ -173,7 +173,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
             value={mapping.acq}
             onChange={(e) => onUpdate(idx, { acq: e.target.value })}
             placeholder=""
-            className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
+            className="w-16 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
           />
         </td>
 
@@ -184,7 +184,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
             min={0}
             value={mapping.run}
             onChange={(e) => onUpdate(idx, { run: parseInt(e.target.value) || 0 })}
-            className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded"
+            className="w-12 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
           />
         </td>
 
@@ -192,7 +192,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
         <td className="py-1 px-1">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="p-0.5 rounded hover:bg-gray-100"
+            className="p-0.5 rounded hover:bg-[var(--gray-4)]"
             title="Show additional entities and metadata"
           >
             {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
@@ -203,7 +203,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
       {/* Expanded sub-row */}
       {expanded && (
         <tr className={mapping.excluded ? 'opacity-40' : ''}>
-          <td colSpan={9} className="py-2 px-4 bg-gray-50 border-b border-gray-200">
+          <td colSpan={9} className="py-2 px-4 bg-[var(--gray-2)] border-b border-[var(--gray-5)]">
             {/* Additional entity fields */}
             <div className="mb-3">
               <Text size="1" weight="medium" className="block mb-1">
@@ -219,7 +219,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
                     value={mapping.ce}
                     onChange={(e) => onUpdate(idx, { ce: e.target.value })}
                     placeholder=""
-                    className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                    className="w-16 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                   />
                 </label>
                 <label className="flex items-center gap-1">
@@ -231,7 +231,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
                     value={mapping.rec}
                     onChange={(e) => onUpdate(idx, { rec: e.target.value })}
                     placeholder=""
-                    className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                    className="w-16 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                   />
                 </label>
                 <label className="flex items-center gap-1">
@@ -243,7 +243,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
                     value={mapping.dir}
                     onChange={(e) => onUpdate(idx, { dir: e.target.value })}
                     placeholder=""
-                    className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                    className="w-16 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                   />
                 </label>
                 <label className="flex items-center gap-1">
@@ -255,7 +255,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
                     min={0}
                     value={mapping.echo}
                     onChange={(e) => onUpdate(idx, { echo: parseInt(e.target.value) || 0 })}
-                    className="w-12 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                    className="w-12 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                   />
                 </label>
               </div>
@@ -290,7 +290,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
                                 : e.target.value
                           onUpdateSidecar(idx, field.key, val)
                         }}
-                        className={`w-24 px-1 py-0.5 text-xs border border-gray-300 rounded ${field.readOnly ? 'bg-gray-100 cursor-default' : ''}`}
+                        className={`w-24 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded ${field.readOnly ? 'bg-[var(--gray-3)] cursor-default' : ''}`}
                       />
                     </label>
                   ))}

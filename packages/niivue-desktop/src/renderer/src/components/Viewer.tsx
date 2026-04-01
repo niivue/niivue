@@ -101,7 +101,7 @@ export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPan
           <button
             data-testid="toggle-right-panel"
             onClick={onToggleRightPanel}
-            className="text-gray-400 hover:text-white transition-colors p-1.5 rounded hover:bg-gray-700"
+            className="text-[var(--gray-8)] hover:text-white transition-colors p-1.5 rounded hover:bg-[var(--gray-11)]"
             title={rightPanelOpen ? 'Close panel' : 'Open panel'}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -378,8 +378,8 @@ export function StepSkullStrip({
               className={
                 'px-3 py-1 text-xs rounded border transition-colors ' +
                 (engine === value
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50')
+                  ? 'bg-[var(--accent-9)] text-white border-[var(--accent-9)]'
+                  : 'bg-[var(--color-background)] text-[var(--gray-11)] border-[var(--gray-6)] hover:bg-[var(--gray-3)]')
               }
               onClick={() => setEngine(value)}
               disabled={running}
@@ -408,8 +408,8 @@ export function StepSkullStrip({
                 className={
                   'px-3 py-1 text-xs rounded border transition-colors ' +
                   (scope === value
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50')
+                    ? 'bg-[var(--accent-9)] text-white border-[var(--accent-9)]'
+                    : 'bg-[var(--color-background)] text-[var(--gray-11)] border-[var(--gray-6)] hover:bg-[var(--gray-3)]')
                 }
                 onClick={() => setScope(value)}
                 disabled={running}
@@ -425,7 +425,7 @@ export function StepSkullStrip({
       {isActive && (
         <div className="border rounded overflow-auto max-h-[140px]">
           <table className="w-full text-xs">
-            <thead className="bg-gray-50 sticky top-0">
+            <thead className="bg-[var(--gray-2)] sticky top-0">
               <tr>
                 <th className="py-1 px-2 text-left font-medium w-8"></th>
                 <th className="py-1 px-2 text-left font-medium">Series</th>
@@ -440,8 +440,8 @@ export function StepSkullStrip({
                 <tr
                   key={m.index}
                   className={
-                    'border-t hover:bg-gray-50 cursor-pointer' +
-                    (preview?.seriesIndex === m.index ? ' bg-blue-50' : '')
+                    'border-t hover:bg-[var(--gray-3)] cursor-pointer' +
+                    (preview?.seriesIndex === m.index ? ' bg-[var(--accent-3)]' : '')
                   }
                   onClick={() => {
                     if (completed.has(m.index)) void handlePreviewSeries(m)
@@ -461,11 +461,11 @@ export function StepSkullStrip({
                   </td>
                   <td className="py-1 px-2">
                     {completed.has(m.index) ? (
-                      <span className="text-green-600">Done</span>
+                      <span className="text-[var(--green-11)]">Done</span>
                     ) : running && selectedIndices.has(m.index) ? (
-                      <span className="text-blue-600">Pending</span>
+                      <span className="text-[var(--accent-11)]">Pending</span>
                     ) : (
-                      <span className="text-gray-400">-</span>
+                      <span className="text-[var(--gray-8)]">-</span>
                     )}
                   </td>
                   <td className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
@@ -494,7 +494,7 @@ export function StepSkullStrip({
                         <option value="original">Original</option>
                       </select>
                     ) : (
-                      <span className="text-gray-400 text-xs">Original</span>
+                      <span className="text-[var(--gray-8)] text-xs">Original</span>
                     )}
                   </td>
                   {onLoadVolume && completed.size > 0 && (
@@ -502,14 +502,14 @@ export function StepSkullStrip({
                       {completed.has(m.index) && originalPaths.has(m.index) ? (
                         <div className="flex gap-1">
                           <button
-                            className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
+                            className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
                             disabled={running}
                             onClick={() => void onLoadVolume(originalPaths.get(m.index)!)}
                           >
                             Load Original
                           </button>
                           <button
-                            className="text-blue-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
+                            className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
                             disabled={running}
                             onClick={() => void onLoadVolume(m.niftiPath)}
                           >
@@ -517,7 +517,7 @@ export function StepSkullStrip({
                           </button>
                           {onLoadWithOverlay && (
                             <button
-                              className="text-purple-600 hover:underline text-[10px] disabled:text-gray-300 disabled:no-underline"
+                              className="text-[var(--purple-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
                               disabled={running}
                               onClick={() =>
                                 void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
@@ -528,7 +528,7 @@ export function StepSkullStrip({
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-xs">-</span>
+                        <span className="text-[var(--gray-8)] text-xs">-</span>
                       )}
                     </td>
                   )}
@@ -550,7 +550,7 @@ export function StepSkullStrip({
             >
               {running ? 'Running...' : `Run Skull Strip (${selectedIndices.size} series)`}
             </Button>
-            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+            <label className="flex items-center gap-1.5 text-xs text-[var(--gray-10)] cursor-pointer">
               <input
                 type="checkbox"
                 checked={generatePreviews}
@@ -562,9 +562,9 @@ export function StepSkullStrip({
             </label>
             {running && (
               <div className="flex-1">
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-[var(--gray-4)] rounded-full h-2">
                   <div
-                    className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                    className="h-2 rounded-full bg-[var(--accent-9)] transition-all duration-300"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -588,7 +588,7 @@ export function StepSkullStrip({
 
       {/* Command line display */}
       {commandLine && (
-        <div className="p-2 bg-gray-900 text-green-400 rounded text-[11px] font-mono overflow-x-auto whitespace-pre-wrap break-all">
+        <div className="p-2 bg-[var(--gray-12)] text-[var(--green-9)] rounded text-[11px] font-mono overflow-x-auto whitespace-pre-wrap break-all">
           $ {commandLine}
         </div>
       )}
@@ -618,7 +618,7 @@ export function StepSkullStrip({
 
       {/* Error */}
       {error && (
-        <div className="p-2 text-xs text-red-700 bg-red-50 rounded border border-red-200">
+        <div className="p-2 text-xs text-[var(--red-11)] bg-[var(--red-3)] rounded border border-[var(--red-6)]">
           {error}
         </div>
       )}
@@ -695,7 +695,7 @@ function SkullStripPreview({
 
   return (
     <div className="flex flex-col gap-2">
-      <Text size="1" weight="bold" className="text-gray-700">
+      <Text size="1" weight="bold" className="text-[var(--gray-11)]">
         Preview: {bidsPath}
       </Text>
       <div className="flex gap-3">
@@ -706,7 +706,7 @@ function SkullStripPreview({
             </Text>
             {onLoadVolume && (
               <button
-                className="text-blue-600 hover:underline text-[10px]"
+                className="text-[var(--accent-11)] hover:underline text-[10px]"
                 onClick={() => void onLoadVolume(originalPath)}
               >
                 Load in Viewer
@@ -716,7 +716,7 @@ function SkullStripPreview({
           {origImage ? (
             <img src={origImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
-            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-gray-500 text-xs">
+            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
               Rendering...
             </div>
           )}
@@ -728,7 +728,7 @@ function SkullStripPreview({
             </Text>
             {onLoadVolume && (
               <button
-                className="text-blue-600 hover:underline text-[10px]"
+                className="text-[var(--accent-11)] hover:underline text-[10px]"
                 onClick={() => void onLoadVolume(strippedPath)}
               >
                 Load in Viewer
@@ -738,7 +738,7 @@ function SkullStripPreview({
           {stripImage ? (
             <img src={stripImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
-            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-gray-500 text-xs">
+            <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
               Rendering...
             </div>
           )}
@@ -746,7 +746,7 @@ function SkullStripPreview({
       </div>
       {onLoadWithOverlay && (
         <button
-          className="text-purple-600 hover:underline text-xs text-center"
+          className="text-[var(--purple-11)] hover:underline text-xs text-center"
           onClick={() => void onLoadWithOverlay(originalPath, strippedPath)}
         >
           Load Original + Stripped Overlay in Viewer

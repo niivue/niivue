@@ -52,7 +52,7 @@ export function StepSubjectSession({
 
         <div className="overflow-auto max-h-[350px] border rounded">
           <table className="w-full text-xs">
-            <thead className="bg-gray-50 sticky top-0">
+            <thead className="bg-[var(--gray-2)] sticky top-0">
               <tr>
                 <th className="py-1.5 px-2 text-left font-medium">Subject</th>
                 <th className="py-1.5 px-2 text-left font-medium">Sessions</th>
@@ -66,7 +66,7 @@ export function StepSubjectSession({
               {includedSubjects.map(({ ds, originalIndex: si }) => {
                 const totalSeries = ds.sessions.reduce((sum, s) => sum + s.seriesIndices.length, 0)
                 return (
-                  <tr key={si} className="border-t border-gray-100">
+                  <tr key={si} className="border-t border-[var(--gray-4)]">
                     <td className="py-1.5 px-2">
                       <div className="flex items-center gap-0.5">
                         <Text size="1" color="gray">sub-</Text>
@@ -74,7 +74,7 @@ export function StepSubjectSession({
                           type="text"
                           value={ds.label}
                           onChange={(e) => onUpdateDetectedSubject(si, { label: e.target.value.replace(/[^a-zA-Z0-9]/g, '') })}
-                          className="w-14 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                          className="w-14 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                         />
                       </div>
                     </td>
@@ -98,7 +98,7 @@ export function StepSubjectSession({
                                 type="text"
                                 value={ses.label}
                                 onChange={(e) => onUpdateDetectedSessionLabel(si, sei, e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
-                                className="w-10 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                                className="w-10 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                                 disabled={ses.excluded}
                               />
                               <Text size="1" color="gray">({ses.seriesIndices.length})</Text>
@@ -112,14 +112,14 @@ export function StepSubjectSession({
                         type="text"
                         value={ds.demographics.age}
                         onChange={(e) => onUpdateDetectedSubjectDemographics(si, 'age', e.target.value.replace(/[^0-9]/g, ''))}
-                        className="w-10 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                        className="w-10 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
                       />
                     </td>
                     <td className="py-1.5 px-2">
                       <select
                         value={ds.demographics.sex}
                         onChange={(e) => onUpdateDetectedSubjectDemographics(si, 'sex', e.target.value)}
-                        className="px-1 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                        className="px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded bg-[var(--color-background)]"
                       >
                         <option value="">--</option>
                         <option value="male">M</option>
@@ -131,7 +131,7 @@ export function StepSubjectSession({
                       <select
                         value={ds.demographics.handedness}
                         onChange={(e) => onUpdateDetectedSubjectDemographics(si, 'handedness', e.target.value)}
-                        className="px-1 py-0.5 text-xs border border-gray-300 rounded bg-white"
+                        className="px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded bg-[var(--color-background)]"
                       >
                         <option value="">--</option>
                         <option value="left">L</option>
@@ -171,7 +171,7 @@ export function StepSubjectSession({
       <div className="flex gap-4">
         <label className="flex flex-col gap-1 flex-1">
           <Text size="1" weight="medium">
-            Subject ID <span className="text-red-500">*</span>
+            Subject ID <span className="text-[var(--red-9)]">*</span>
           </Text>
           <div className="flex items-center gap-1">
             <Text size="1" color="gray">sub-</Text>
@@ -180,7 +180,7 @@ export function StepSubjectSession({
               value={subject}
               onChange={(e) => setSubject(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
               placeholder="01"
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded"
+              className="flex-1 px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
             />
           </div>
           <Text size="1" color="gray">Alphanumeric only (e.g., 01, control01, P001)</Text>
@@ -195,7 +195,7 @@ export function StepSubjectSession({
               value={session}
               onChange={(e) => setSession(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
               placeholder=""
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded"
+              className="flex-1 px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
             />
           </div>
           <Text size="1" color="gray">Leave empty for single-session studies</Text>
@@ -220,7 +220,7 @@ export function StepSubjectSession({
               value={demographics.age}
               onChange={(e) => updateField('age', e.target.value.replace(/[^0-9]/g, ''))}
               placeholder=""
-              className="px-3 py-2 text-sm border border-gray-300 rounded"
+              className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
             />
           </label>
 
@@ -229,7 +229,7 @@ export function StepSubjectSession({
             <select
               value={demographics.sex}
               onChange={(e) => updateField('sex', e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded bg-white"
+              className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded bg-[var(--color-background)]"
             >
               <option value="">--</option>
               <option value="male">male</option>
@@ -243,7 +243,7 @@ export function StepSubjectSession({
             <select
               value={demographics.handedness}
               onChange={(e) => updateField('handedness', e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 rounded bg-white"
+              className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded bg-[var(--color-background)]"
             >
               <option value="">--</option>
               <option value="left">left</option>
@@ -259,7 +259,7 @@ export function StepSubjectSession({
               value={demographics.group}
               onChange={(e) => updateField('group', e.target.value)}
               placeholder=""
-              className="px-3 py-2 text-sm border border-gray-300 rounded"
+              className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
             />
           </label>
         </div>
@@ -270,14 +270,14 @@ export function StepSubjectSession({
         <Text size="1" weight="medium" className="block mb-1">
           Filename Preview
         </Text>
-        <div className="bg-gray-50 rounded border border-gray-200 p-2 text-xs font-mono">
+        <div className="bg-[var(--gray-2)] rounded border border-[var(--gray-5)] p-2 text-xs font-mono">
           {previewMappings.map((m, i) => (
-            <div key={i} className="py-0.5 text-gray-700">
+            <div key={i} className="py-0.5 text-[var(--gray-11)]">
               {generateBidsFilename(m)}.nii.gz
             </div>
           ))}
           {included.length > 5 && (
-            <div className="py-0.5 text-gray-400 italic">...and {included.length - 5} more</div>
+            <div className="py-0.5 text-[var(--gray-8)] italic">...and {included.length - 5} more</div>
           )}
         </div>
       </div>

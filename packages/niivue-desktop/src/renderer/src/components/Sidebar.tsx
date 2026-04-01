@@ -111,7 +111,7 @@ export function Sidebar({
   return (
     <div data-testid="sidebar" className="flex h-full">
       {/* Activity Bar */}
-      <div data-testid="activity-bar" className="flex flex-col items-center w-12 bg-gray-800 py-2 gap-1 flex-shrink-0">
+      <div data-testid="activity-bar" className="flex flex-col items-center w-12 bg-[var(--gray-12)] py-2 gap-1 flex-shrink-0">
         {panels.map((panel) => (
           <Tooltip key={panel.id} content={panel.title} side="right">
             <button
@@ -119,8 +119,8 @@ export function Sidebar({
               className={
                 'p-2 rounded transition-colors ' +
                 (activePanel === panel.id
-                  ? 'bg-gray-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700')
+                  ? 'bg-[var(--gray-10)] text-white'
+                  : 'text-[var(--gray-8)] hover:text-white hover:bg-[var(--gray-11)]')
               }
             >
               {panel.icon}
@@ -131,7 +131,7 @@ export function Sidebar({
 
       {/* Panel area */}
       {isExpanded && (
-        <aside className="flex flex-col bg-gray-100 px-2 h-full w-80 min-w-[300px] transition-all duration-200">
+        <aside className="flex flex-col bg-[var(--gray-3)] px-2 h-full w-80 min-w-[300px] transition-all duration-200">
           {activePanel === 'layers' && instance && (
             <DragDropContext onDragEnd={handleDragEnd}>
               <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>

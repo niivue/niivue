@@ -206,6 +206,7 @@ export function resolveBinding(
   const parts = ref.split('.')
 
   if (parts[0] === 'inputs') {
+    if (parts.length < 2) throw new Error(`Invalid binding ref (missing input name): ${ref}`)
     return runState.inputs[parts[1]]
   }
 
@@ -219,6 +220,7 @@ export function resolveBinding(
 
   if (parts[0] === 'steps') {
     // steps.Y.outputs.Z
+    if (parts.length < 4) throw new Error(`Invalid binding ref (expected steps.<name>.outputs.<key>): ${ref}`)
     const stepName = parts[1]
     const outputName = parts[3]
     return runState.stepOutputs[stepName]?.[outputName]
@@ -287,8 +289,9 @@ export async function executeStep(
     return outputs
   } catch (err) {
     state.status = 'error'
-    state.error = err instanceof Error ? err.message : String(err)
-    throw err
+    const msg = err instanceof Error ? err.message : String(err)
+    state.error = `Step '${stepName}' (tool: ${step.tool}) failed: ${msg}`
+    throw new Error(state.error, { cause: err })
   }
 }
 
@@ -316,6 +319,11 @@ export async function executeAllSteps(
   for (const [key, outputDef] of Object.entries(definition.outputs)) {
     outputs[key] = resolveBinding({ ref: outputDef.ref }, state)
   }
+
+  // Clean up completed run to prevent memory leaks
+  clearRunCache(runId)
+  activeRuns.delete(runId)
+
   return outputs
 }
 

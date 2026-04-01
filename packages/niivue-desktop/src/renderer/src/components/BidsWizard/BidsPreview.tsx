@@ -15,7 +15,7 @@ export function BidsPreview({ mappings, datasetName }: BidsPreviewProps): JSX.El
       <Text size="1" weight="bold" color="gray">
         Preview
       </Text>
-      <div className="bg-gray-900 text-green-400 rounded p-3 text-xs font-mono overflow-auto max-h-[300px]">
+      <div className="bg-[var(--gray-12)] text-[var(--green-9)] rounded p-3 text-xs font-mono overflow-auto max-h-[300px]">
         <div>{datasetName || 'my_bids_dataset'}/</div>
         <div className="ml-3">dataset_description.json</div>
         <div className="ml-3">participants.tsv</div>
@@ -34,7 +34,7 @@ export function BidsPreview({ mappings, datasetName }: BidsPreviewProps): JSX.El
           )
         })}
         {tree.length === 0 && (
-          <div className="ml-3 text-gray-500 italic">No series selected</div>
+          <div className="ml-3 text-[var(--gray-9)] italic">No series selected</div>
         )}
       </div>
     </div>

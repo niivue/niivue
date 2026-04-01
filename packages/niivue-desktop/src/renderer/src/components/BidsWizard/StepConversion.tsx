@@ -71,10 +71,10 @@ export function StepConversion({
         {status === 'error' && 'Conversion Failed'}
       </Text>
 
-      <div className="w-full bg-gray-200 rounded-full h-3">
+      <div className="w-full bg-[var(--gray-4)] rounded-full h-3">
         <div
           className={`h-3 rounded-full transition-all duration-500 ${
-            status === 'error' ? 'bg-red-500' : 'bg-blue-600'
+            status === 'error' ? 'bg-[var(--red-9)]' : 'bg-[var(--accent-9)]'
           }`}
           style={{ width: `${progress}%` }}
         />

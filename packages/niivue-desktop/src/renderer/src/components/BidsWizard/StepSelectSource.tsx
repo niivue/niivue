@@ -115,11 +115,11 @@ export function StepSelectSource({
       </div>
 
       {dicomDir && (
-        <Text size="1" className="text-blue-700 truncate">{folderName}</Text>
+        <Text size="1" className="text-[var(--accent-11)] truncate">{folderName}</Text>
       )}
 
       {error && (
-        <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
+        <div className="text-xs text-[var(--red-11)] bg-[var(--red-3)] border border-[var(--red-6)] rounded p-2">
           {error}
         </div>
       )}

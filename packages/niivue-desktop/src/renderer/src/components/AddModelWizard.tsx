@@ -178,7 +178,7 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/40 fixed inset-0 z-40" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-visible z-50">
+        <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-[var(--color-background)] rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-visible z-50">
           <Theme>
             <div className="p-6">
               {/* Header */}
@@ -187,7 +187,7 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
                   <Text size="4" weight="bold">Add Model</Text>
                 </Dialog.Title>
                 <Dialog.Close asChild>
-                  <button className="p-1 rounded hover:bg-gray-100">
+                  <button className="p-1 rounded hover:bg-[var(--gray-4)]">
                     <Cross2Icon />
                   </button>
                 </Dialog.Close>
@@ -201,10 +201,10 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
                       className={
                         'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ' +
                         (i === step
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[var(--accent-9)] text-white'
                           : i < step
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-200 text-gray-500')
+                            ? 'bg-[var(--green-9)] text-white'
+                            : 'bg-[var(--gray-4)] text-[var(--gray-9)]')
                       }
                     >
                       {i < step ? '✓' : i + 1}
@@ -212,13 +212,13 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
                     <Text size="1" color={i === step ? undefined : 'gray'}>
                       {label}
                     </Text>
-                    {i < stepLabels.length - 1 && <div className="w-4 h-px bg-gray-300 mx-1" />}
+                    {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--gray-6)] mx-1" />}
                   </div>
                 ))}
               </div>
 
               {error && (
-                <div className="mb-3 p-2 text-xs text-red-700 bg-red-50 rounded border border-red-200">
+                <div className="mb-3 p-2 text-xs text-[var(--red-11)] bg-[var(--red-3)] rounded border border-[var(--red-6)]">
                   {error}
                 </div>
               )}
@@ -230,7 +230,7 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
               {step === 3 && <StepReview state={state} />}
 
               {/* Navigation */}
-              <div className="flex justify-between mt-6 pt-4 border-t border-gray-200">
+              <div className="flex justify-between mt-6 pt-4 border-t border-[var(--gray-5)]">
                 <Button
                   variant="soft"
                   color="gray"
@@ -275,8 +275,8 @@ function StepSource({
         className={
           'p-4 border-2 rounded-lg text-left transition-colors ' +
           (state.sourceType === 'folder'
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-200 hover:border-gray-400')
+            ? 'border-[var(--accent-9)] bg-[var(--accent-3)]'
+            : 'border-[var(--gray-5)] hover:border-[var(--gray-8)]')
         }
       >
         <Text size="2" weight="bold" className="block">Local Folder</Text>
@@ -284,7 +284,7 @@ function StepSource({
           Select a folder containing model.json and weight files
         </Text>
         {state.folderPath && (
-          <Text size="1" className="block mt-1 text-blue-700 truncate">{state.folderPath}</Text>
+          <Text size="1" className="block mt-1 text-[var(--accent-11)] truncate">{state.folderPath}</Text>
         )}
       </button>
 
@@ -293,8 +293,8 @@ function StepSource({
         className={
           'p-4 border-2 rounded-lg transition-colors ' +
           (state.sourceType === 'url'
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-200')
+            ? 'border-[var(--accent-9)] bg-[var(--accent-3)]'
+            : 'border-[var(--gray-5)]')
         }
       >
         <Text size="2" weight="bold" className="block mb-2">Remote URL</Text>
@@ -305,7 +305,7 @@ function StepSource({
           type="text"
           value={state.remoteUrl}
           placeholder="https://example.com/models/my-model/model.json"
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded"
+          className="w-full px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
           onFocus={() => onUpdate('sourceType', 'url')}
           onChange={(e) => {
             onUpdate('sourceType', 'url')
@@ -339,7 +339,7 @@ function StepBasicInfo({
           type="text"
           value={state.name}
           onChange={(e) => onUpdate('name', e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
         />
       </label>
 
@@ -349,7 +349,7 @@ function StepBasicInfo({
           value={state.description}
           onChange={(e) => onUpdate('description', e.target.value)}
           rows={2}
-          className="px-3 py-2 text-sm border border-gray-300 rounded resize-none"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded resize-none"
         />
       </label>
 
@@ -395,7 +395,7 @@ function StepBasicInfo({
           min={1}
           value={state.outputClasses}
           onChange={(e) => onUpdate('outputClasses', parseInt(e.target.value) || 1)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded w-24"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded w-24"
         />
       </label>
 
@@ -417,7 +417,7 @@ function StepBasicInfo({
             value={state.labelsPath}
             onChange={(e) => onUpdate('labelsPath', e.target.value)}
             placeholder="Local path or https://..."
-            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded"
+            className="flex-1 px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
           />
         </div>
         {state.hasLabelsFile && !state.labelsPath && (
@@ -455,7 +455,7 @@ function StepInference({
               min={1}
               value={v}
               onChange={(e) => updateShape(i, parseInt(e.target.value) || 1)}
-              className="px-2 py-1 text-sm border border-gray-300 rounded w-20"
+              className="px-2 py-1 text-sm border border-[var(--gray-6)] rounded w-20"
             />
           ))}
         </div>
@@ -495,7 +495,7 @@ function StepInference({
             min={0}
             value={state.cropPadding}
             onChange={(e) => onUpdate('cropPadding', parseInt(e.target.value) || 0)}
-            className="px-2 py-1 text-sm border border-gray-300 rounded w-20"
+            className="px-2 py-1 text-sm border border-[var(--gray-6)] rounded w-20"
           />
         </label>
 
@@ -508,7 +508,7 @@ function StepInference({
             step={0.01}
             value={state.autoThreshold}
             onChange={(e) => onUpdate('autoThreshold', parseFloat(e.target.value) || 0)}
-            className="px-2 py-1 text-sm border border-gray-300 rounded w-20"
+            className="px-2 py-1 text-sm border border-[var(--gray-6)] rounded w-20"
           />
         </label>
       </div>
@@ -532,7 +532,7 @@ function StepReview({ state }: { state: WizardState }): JSX.Element {
         </label>
       </div>
 
-      <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 text-xs">
+      <div className="bg-[var(--gray-2)] rounded-lg border border-[var(--gray-5)] p-3 text-xs">
         <div className="grid grid-cols-2 gap-y-1.5 gap-x-4">
           <Row label="Name" value={state.name} />
           <Row label="Type" value={state.type} />

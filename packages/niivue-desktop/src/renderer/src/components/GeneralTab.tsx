@@ -30,7 +30,7 @@ export const GeneralTab: React.FC = (): JSX.Element => {
     <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>
       <Accordion.Root type="multiple" defaultValue={[]} className="w-full">
         {/* Crosshair Settings */}
-        <Accordion.Item value="crosshair-settings" className="border-b border-gray-200">
+        <Accordion.Item value="crosshair-settings" className="border-b border-[var(--gray-5)]">
           <Accordion.Header>
             <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
@@ -68,7 +68,7 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Zoom Settings */}
-        <Accordion.Item value="zoom-settings" className="border-b border-gray-200">
+        <Accordion.Item value="zoom-settings" className="border-b border-[var(--gray-5)]">
           <Accordion.Header>
             <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
@@ -85,7 +85,7 @@ export const GeneralTab: React.FC = (): JSX.Element => {
         </Accordion.Item>
 
         {/* Controls Settings */}
-        <Accordion.Item value="controls-settings" className="border-b border-gray-200">
+        <Accordion.Item value="controls-settings" className="border-b border-[var(--gray-5)]">
           <Accordion.Header>
             <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">

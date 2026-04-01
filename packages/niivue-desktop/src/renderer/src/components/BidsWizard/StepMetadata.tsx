@@ -61,14 +61,14 @@ This dataset was converted to BIDS format using NiiVue Desktop.
 
       <label className="flex flex-col gap-1">
         <Text size="1" weight="medium">
-          Dataset Name <span className="text-red-500">*</span>
+          Dataset Name <span className="text-[var(--red-9)]">*</span>
         </Text>
         <input
           type="text"
           value={config.name}
           onChange={(e) => onUpdateConfig('name', e.target.value)}
           placeholder="My BIDS Dataset"
-          className="px-3 py-2 text-sm border border-gray-300 rounded"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
         />
       </label>
 
@@ -78,7 +78,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
           type="text"
           value={config.bidsVersion}
           onChange={(e) => onUpdateConfig('bidsVersion', e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 rounded w-32"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded w-32"
         />
       </label>
 
@@ -89,7 +89,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
           value={config.license}
           onChange={(e) => onUpdateConfig('license', e.target.value)}
           placeholder="CC0"
-          className="px-3 py-2 text-sm border border-gray-300 rounded w-48"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded w-48"
         />
       </label>
 
@@ -108,7 +108,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
             )
           }
           placeholder="Author One, Author Two"
-          className="px-3 py-2 text-sm border border-gray-300 rounded"
+          className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
         />
       </label>
 
@@ -116,15 +116,15 @@ This dataset was converted to BIDS format using NiiVue Desktop.
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <Text size="1" weight="medium">README.md</Text>
-          <div className="flex border border-gray-300 rounded overflow-hidden">
+          <div className="flex border border-[var(--gray-6)] rounded overflow-hidden">
             <button
-              className={`px-3 py-0.5 text-xs ${readmeTab === 'edit' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-0.5 text-xs ${readmeTab === 'edit' ? 'bg-[var(--accent-9)] text-white' : 'bg-[var(--color-background)] text-[var(--gray-10)] hover:bg-[var(--gray-3)]'}`}
               onClick={() => setReadmeTab('edit')}
             >
               Edit
             </button>
             <button
-              className={`px-3 py-0.5 text-xs ${readmeTab === 'preview' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-0.5 text-xs ${readmeTab === 'preview' ? 'bg-[var(--accent-9)] text-white' : 'bg-[var(--color-background)] text-[var(--gray-10)] hover:bg-[var(--gray-3)]'}`}
               onClick={() => setReadmeTab('preview')}
             >
               Preview
@@ -138,11 +138,11 @@ This dataset was converted to BIDS format using NiiVue Desktop.
             onChange={(e) => onUpdateConfig('readme', e.target.value)}
             placeholder={defaultReadme}
             rows={6}
-            className="px-3 py-2 text-sm border border-gray-300 rounded font-mono resize-y"
+            className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded font-mono resize-y"
           />
         ) : (
           <div
-            className="px-3 py-2 text-sm border border-gray-300 rounded bg-white min-h-[144px] max-h-[300px] overflow-y-auto markdown-preview"
+            className="px-3 py-2 text-sm border border-[var(--gray-6)] rounded bg-[var(--color-background)] min-h-[144px] max-h-[300px] overflow-y-auto markdown-preview"
             dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
         )}
@@ -153,7 +153,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
 
       <div className="flex flex-col gap-1">
         <Text size="1" weight="medium">
-          Output Directory <span className="text-red-500">*</span>
+          Output Directory <span className="text-[var(--red-9)]">*</span>
         </Text>
         <div className="flex gap-2">
           <Button variant="soft" size="2" onClick={handleSelectOutputDir}>
@@ -164,7 +164,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
             value={config.outputDir}
             onChange={(e) => onUpdateConfig('outputDir', e.target.value)}
             placeholder="Select output directory"
-            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded"
+            className="flex-1 px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
           />
         </div>
       </div>

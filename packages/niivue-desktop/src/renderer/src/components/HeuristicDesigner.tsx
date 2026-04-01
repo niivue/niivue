@@ -467,7 +467,7 @@ export function HeuristicDesigner({
           </div>
           <div className="flex items-center gap-2">
             {saveSuccess && (
-              <div className="flex items-center gap-1 text-green-600">
+              <div className="flex items-center gap-1 text-[var(--green-11)]">
                 <CheckCircledIcon />
                 <Text size="2">Saved</Text>
               </div>

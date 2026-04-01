@@ -274,7 +274,7 @@ function SectionEditor({
               <div key={fi} className="flex items-center gap-2">
                 <Tooltip content={tooltipText}>
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <Text size="1" weight="medium" className={fieldDef ? 'text-neutral-12 truncate' : 'text-red-500 truncate'}>
+                    <Text size="1" weight="medium" className={fieldDef ? 'text-neutral-12 truncate' : 'text-[var(--red-9)] truncate'}>
                       {displayLabel}
                     </Text>
                     <Badge variant="soft" size="1" color={fieldDef ? 'gray' : 'red'} className="font-mono shrink-0">
@@ -800,7 +800,7 @@ function FormPreview({
                 if (!fieldDef) {
                   return (
                     <Card key={fieldName} size="1">
-                      <Text size="1" className="text-red-500 font-mono">
+                      <Text size="1" className="text-[var(--red-9)] font-mono">
                         Field "{fieldName}" not found in context fields
                       </Text>
                     </Card>

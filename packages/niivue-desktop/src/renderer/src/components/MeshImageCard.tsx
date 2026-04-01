@@ -126,7 +126,7 @@ useEffect(() => {
 
   return (
     <React.Fragment>
-      <Card className="flex flex-col p-2 my-1 gap-2 bg-white">
+      <Card className="flex flex-col p-2 my-1 gap-2 bg-[var(--color-background)]">
         <div className="flex flex-row gap-2 items-center">
           <ContextMenu.Root>
             <ContextMenu.Trigger className="mr-auto">

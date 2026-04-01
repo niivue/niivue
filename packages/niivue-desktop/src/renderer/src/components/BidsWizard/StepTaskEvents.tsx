@@ -114,21 +114,21 @@ export function StepTaskEvents({ mappings, onUpdateMapping }: StepTaskEventsProp
           return (
             <div key={m.index} className="border rounded">
               <div
-                className="flex items-center justify-between px-3 py-2 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                className="flex items-center justify-between px-3 py-2 bg-[var(--gray-2)] cursor-pointer hover:bg-[var(--gray-4)]"
                 onClick={() => setExpandedIndex(isExpanded ? null : m.index)}
               >
                 <div className="text-xs">
                   <span className="font-medium">{m.seriesDescription || `bold`}</span>
-                  {m.task && <span className="text-gray-500 ml-1">(task-{m.task})</span>}
-                  {m.run > 0 && <span className="text-gray-500 ml-1">run-{m.run}</span>}
+                  {m.task && <span className="text-[var(--gray-9)] ml-1">(task-{m.task})</span>}
+                  {m.run > 0 && <span className="text-[var(--gray-9)] ml-1">run-{m.run}</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   {evt ? (
-                    <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                    <span className="text-xs text-[var(--green-11)] bg-[var(--green-3)] px-2 py-0.5 rounded">
                       {evt.filename}
                     </span>
                   ) : (
-                    <span className="text-xs text-gray-400">No events</span>
+                    <span className="text-xs text-[var(--gray-8)]">No events</span>
                   )}
                   <span className="text-xs">{isExpanded ? '\u25B2' : '\u25BC'}</span>
                 </div>
@@ -162,8 +162,8 @@ export function StepTaskEvents({ mappings, onUpdateMapping }: StepTaskEventsProp
                         <div className="space-y-1">
                           {evt.columnMappings.map(cm => (
                             <div key={cm.sourceColumn} className="flex items-center gap-2">
-                              <span className="w-28 text-gray-600 truncate">{cm.sourceColumn}</span>
-                              <span className="text-gray-400">&rarr;</span>
+                              <span className="w-28 text-[var(--gray-10)] truncate">{cm.sourceColumn}</span>
+                              <span className="text-[var(--gray-8)]">&rarr;</span>
                               <select
                                 value={cm.bidsColumn}
                                 onChange={e => handleColumnMappingChange(m, cm.sourceColumn, e.target.value)}
@@ -198,7 +198,7 @@ export function StepTaskEvents({ mappings, onUpdateMapping }: StepTaskEventsProp
                           <Text size="1" weight="medium" className="block mb-1">Preview (first {evt.previewRows.length} rows)</Text>
                           <div className="overflow-auto border rounded">
                             <table className="w-full text-xs">
-                              <thead className="bg-gray-50">
+                              <thead className="bg-[var(--gray-2)]">
                                 <tr>
                                   {evt.detectedColumns.map(col => (
                                     <th key={col} className="py-1 px-2 text-left font-medium">{col}</th>

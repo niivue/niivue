@@ -91,9 +91,10 @@ function resolveOutputDir(
     ? (inputs[exec.outputDir.input] as string | undefined)
     : undefined
 
-  const outDir = fromInput || fs.mkdtempSync(
-    path.join(os.tmpdir(), exec.outputDir.tempPrefix || 'wf-tool-')
-  )
+  // Resolve to absolute path to prevent path traversal
+  const outDir = fromInput
+    ? path.resolve(fromInput)
+    : fs.mkdtempSync(path.join(os.tmpdir(), exec.outputDir.tempPrefix || 'wf-tool-'))
 
   if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true })
@@ -155,7 +156,7 @@ function resolveOutputFile(
   let basename = path.basename(inputPath)
   if (exec.outputFile.stripExtensions) {
     for (const ext of exec.outputFile.stripExtensions) {
-      if (basename.endsWith(ext)) {
+      if (basename.endsWith(ext) && ext.length < basename.length) {
         basename = basename.slice(0, -ext.length)
         break
       }
@@ -211,13 +212,20 @@ function matchGlob(filename: string, pattern: string): boolean {
   const braceMatch = /\{([^}]+)\}/.exec(pattern)
   if (braceMatch) {
     const alternatives = braceMatch[1].split(',')
+    const prefix = pattern.slice(0, braceMatch.index)
+    const suffix = pattern.slice(braceMatch.index + braceMatch[0].length)
     return alternatives.some((alt) => {
-      const expanded = pattern.slice(0, braceMatch.index) + alt + pattern.slice(braceMatch.index + braceMatch[0].length)
-      return matchGlob(filename, expanded)
+      // Escape the alternative to prevent regex injection (e.g. [0-9] in brace content)
+      const safeAlt = alt.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      // Rebuild as a flat pattern with the alternative already escaped, then match
+      // We need to convert prefix/suffix globs separately
+      const prefixRegex = prefix.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
+      const suffixRegex = suffix.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
+      return new RegExp('^' + prefixRegex + safeAlt + suffixRegex + '$').test(filename)
     })
   }
 
-  // Convert glob to regex: * → [^/]*, . → \.
+  // Convert glob to regex: * → [^/]*, escape everything else
   const regex = new RegExp(
     '^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*') + '$'
   )
@@ -247,10 +255,6 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
       baseVars[`resources.${k}`] = v
     }
 
-    const allOutputFiles: string[] = []
-    let allStdout = ''
-    let allStderr = ''
-
     // Determine what to iterate over
     let items: unknown[]
     let iterVar: string
@@ -275,7 +279,7 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
 
     const acceptedCodes = new Set(exec.exitCodes ?? [0])
 
-    const runOne = async (item: unknown): Promise<void> => {
+    const runOne = async (item: unknown): Promise<{ outputFile: string; stdout: string; stderr: string }> => {
       // Build per-iteration inputs with the iteration variable bound
       const iterInputs = { ...inputs }
       if (iterVar && item != null) {
@@ -297,7 +301,7 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
         let basename = path.basename(inputFilePath)
         if (exec.outputFile?.stripExtensions) {
           for (const ext of exec.outputFile.stripExtensions) {
-            if (basename.endsWith(ext)) {
+            if (basename.endsWith(ext) && ext.length < basename.length) {
               basename = basename.slice(0, -ext.length)
               break
             }
@@ -313,20 +317,24 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
         throw new Error(`${def.name} exited with code ${code}: ${stderr}`)
       }
 
-      if (outputFile) {
-        allOutputFiles.push(outputFile)
-      }
-      allStdout += stdout
-      allStderr += stderr
+      return { outputFile, stdout, stderr }
     }
 
+    // Run iterations — collect results without shared mutation
+    // Promise.all rejects on first failure, so no partial results are returned
+    let results: { outputFile: string; stdout: string; stderr: string }[]
     if (exec.parallel && items.length > 1) {
-      await Promise.all(items.map(runOne))
+      results = await Promise.all(items.map(runOne))
     } else {
+      results = []
       for (const item of items) {
-        await runOne(item)
+        results.push(await runOne(item))
       }
     }
+
+    const allOutputFiles = results.map((r) => r.outputFile).filter(Boolean)
+    const allStdout = results.map((r) => r.stdout).join('')
+    const allStderr = results.map((r) => r.stderr).join('')
 
     const templateVars: Record<string, string> = { ...baseVars }
     let outputs = collectOutputs(exec.outputs, templateVars, allOutputFiles, outDir, allStdout, allStderr)
