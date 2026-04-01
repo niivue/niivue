@@ -33,7 +33,7 @@ export interface HeuristicDefinition {
 
 // ── Dot-path resolver ──────────────────────────────────────────────
 
-function resolvePath(obj: unknown, path: string): unknown {
+export function resolvePath(obj: unknown, path: string): unknown {
   const parts = path.split('.')
   let current: unknown = obj
   for (const part of parts) {
@@ -43,7 +43,7 @@ function resolvePath(obj: unknown, path: string): unknown {
   return current
 }
 
-function resolveSource(
+export function resolveSource(
   source: string,
   inputs: Record<string, unknown>,
   context: Record<string, unknown>
@@ -60,7 +60,7 @@ function resolveSource(
 
 // ── Comparison helpers ─────────────────────────────────────────────
 
-function compare(actual: unknown, operator: string, expected: unknown): boolean {
+export function compare(actual: unknown, operator: string, expected: unknown): boolean {
   switch (operator) {
     case 'eq': return actual === expected
     case 'neq': return actual !== expected
@@ -95,7 +95,7 @@ function compare(actual: unknown, operator: string, expected: unknown): boolean 
 
 // ── Operation executors ────────────────────────────────────────────
 
-function execFilter(data: unknown[], op: HeuristicOperation): unknown[] {
+export function execFilter(data: unknown[], op: HeuristicOperation): unknown[] {
   if (!op.field || !op.operator) return data
   return data.filter((item) => {
     const val = resolvePath(item, op.field!)
@@ -103,12 +103,12 @@ function execFilter(data: unknown[], op: HeuristicOperation): unknown[] {
   })
 }
 
-function execMap(data: unknown[], op: HeuristicOperation): unknown[] {
+export function execMap(data: unknown[], op: HeuristicOperation): unknown[] {
   if (!op.field) return data
   return data.map((item) => resolvePath(item, op.field!))
 }
 
-function execSort(data: unknown[], op: HeuristicOperation): unknown[] {
+export function execSort(data: unknown[], op: HeuristicOperation): unknown[] {
   if (!op.field) return data
   const dir = op.order === 'desc' ? -1 : 1
   return [...data].sort((a, b) => {
@@ -120,7 +120,7 @@ function execSort(data: unknown[], op: HeuristicOperation): unknown[] {
   })
 }
 
-function execGroupBy(data: unknown[], op: HeuristicOperation): Record<string, unknown[]> {
+export function execGroupBy(data: unknown[], op: HeuristicOperation): Record<string, unknown[]> {
   if (!op.field) return { default: data }
   const groups: Record<string, unknown[]> = {}
   for (const item of data) {
@@ -131,7 +131,7 @@ function execGroupBy(data: unknown[], op: HeuristicOperation): Record<string, un
   return groups
 }
 
-function execPickFields(data: unknown[], op: HeuristicOperation): unknown[] {
+export function execPickFields(data: unknown[], op: HeuristicOperation): unknown[] {
   if (!op.fields || op.fields.length === 0) return data
   return data.map((item) => {
     const picked: Record<string, unknown> = {}
@@ -142,7 +142,7 @@ function execPickFields(data: unknown[], op: HeuristicOperation): unknown[] {
   })
 }
 
-function execSetField(
+export function execSetField(
   data: unknown[],
   op: HeuristicOperation,
   context: Record<string, unknown>
@@ -165,7 +165,7 @@ function execSetField(
   })
 }
 
-function execMerge(data: unknown[], op: HeuristicOperation, context: Record<string, unknown>): unknown[] {
+export function execMerge(data: unknown[], op: HeuristicOperation, context: Record<string, unknown>): unknown[] {
   if (!op.contextField) return data
   const mergeSource = resolvePath(context, op.contextField) as Record<string, unknown>[] | undefined
   if (!Array.isArray(mergeSource)) return data
@@ -179,7 +179,7 @@ function execMerge(data: unknown[], op: HeuristicOperation, context: Record<stri
   })
 }
 
-function execTemplate(data: unknown, op: HeuristicOperation): string {
+export function execTemplate(data: unknown, op: HeuristicOperation): string {
   if (!op.template) return String(data)
   return op.template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_match, path) => {
     if (typeof data === 'object' && data !== null) {
@@ -191,7 +191,7 @@ function execTemplate(data: unknown, op: HeuristicOperation): string {
 
 // ── Main engine ────────────────────────────────────────────────────
 
-function applyOperations(
+export function applyOperations(
   data: unknown,
   operations: HeuristicOperation[],
   context: Record<string, unknown>

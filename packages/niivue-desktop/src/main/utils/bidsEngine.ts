@@ -66,7 +66,7 @@ const SERIES_RULES: { pattern: RegExp; datatype: BidsDatatype; suffix: BidsSuffi
   { pattern: /m0scan|m0/i, datatype: 'perf', suffix: 'm0scan' }
 ]
 
-function classifyByDescription(desc: string): Classification | null {
+export function classifyByDescription(desc: string): Classification | null {
   for (const rule of SERIES_RULES) {
     if (rule.pattern.test(desc)) {
       let task = ''
@@ -105,7 +105,7 @@ function classifyByDescription(desc: string): Classification | null {
   return null
 }
 
-function classifyBySidecar(sidecar: DcmSidecar): Classification | null {
+export function classifyBySidecar(sidecar: DcmSidecar): Classification | null {
   // DWI: DiffusionDirectionality present
   if (sidecar.DiffusionDirectionality) {
     return {
@@ -168,7 +168,7 @@ interface BidsGuessEntities {
   [key: string]: string
 }
 
-function parseBidsGuessSuffix(suffixStr: string): { suffix: string; entities: BidsGuessEntities } {
+export function parseBidsGuessSuffix(suffixStr: string): { suffix: string; entities: BidsGuessEntities } {
   const entities: BidsGuessEntities = { task: '', acq: '' }
   // Remove leading underscore
   const str = suffixStr.replace(/^_/, '')
@@ -188,7 +188,7 @@ function parseBidsGuessSuffix(suffixStr: string): { suffix: string; entities: Bi
   return { suffix, entities }
 }
 
-function classifyByBidsGuess(sidecar: DcmSidecar): (Classification & { entities: BidsGuessEntities }) | null {
+export function classifyByBidsGuess(sidecar: DcmSidecar): (Classification & { entities: BidsGuessEntities }) | null {
   const guess = sidecar.BidsGuess
   if (!guess) return null
 
@@ -249,7 +249,7 @@ interface ExtractedEntities {
   echo: number
 }
 
-function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
+export function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
   const entities: ExtractedEntities = { ce: '', rec: '', dir: '', acq: '', echo: 0 }
 
   // Phase encoding direction
@@ -286,7 +286,7 @@ function extractEntities(sidecar: DcmSidecar, desc: string): ExtractedEntities {
   return entities
 }
 
-function stripPiiFields(sidecar: Record<string, unknown>): Record<string, unknown> {
+export function stripPiiFields(sidecar: Record<string, unknown>): Record<string, unknown> {
   const cleaned: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(sidecar)) {
     if (!INTERNAL_SIDECAR_FIELDS.has(key)) {

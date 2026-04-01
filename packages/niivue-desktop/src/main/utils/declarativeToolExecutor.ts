@@ -19,7 +19,7 @@ const isDev = !app.isPackaged
 
 // ── Template interpolation ──────────────────────────────────────────
 
-function interpolate(template: string, vars: Record<string, string>): string {
+export function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_match, key) => {
     // Support dotted paths like "resources.templatePath"
     const parts = key.split('.')
@@ -105,7 +105,7 @@ function resolveOutputDir(
 
 // ── Arg building ────────────────────────────────────────────────────
 
-function buildArgs(
+export function buildArgs(
   argDefs: ArgDef[],
   inputs: Record<string, unknown>,
   templateVars: Record<string, string>
@@ -142,7 +142,7 @@ function buildArgs(
 
 // ── Output file naming ──────────────────────────────────────────────
 
-function resolveOutputFile(
+export function resolveOutputFile(
   exec: ToolExecDef,
   inputPath: string,
   outDir: string,
@@ -207,7 +207,7 @@ function collectOutputs(
  * Minimal glob matcher supporting * and {a,b} patterns.
  * Handles patterns like "*.nii.gz", "*.nii{,.gz}", "*.json".
  */
-function matchGlob(filename: string, pattern: string): boolean {
+export function matchGlob(filename: string, pattern: string): boolean {
   // Expand {a,b} alternatives into multiple patterns
   const braceMatch = /\{([^}]+)\}/.exec(pattern)
   if (braceMatch) {
@@ -216,7 +216,8 @@ function matchGlob(filename: string, pattern: string): boolean {
     const suffix = pattern.slice(braceMatch.index + braceMatch[0].length)
     return alternatives.some((alt) => {
       // Escape the alternative to prevent regex injection (e.g. [0-9] in brace content)
-      const safeAlt = alt.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      // Also convert glob * to regex [^/]* after escaping other special chars
+      const safeAlt = alt.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
       // Rebuild as a flat pattern with the alternative already escaped, then match
       // We need to convert prefix/suffix globs separately
       const prefixRegex = prefix.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')
